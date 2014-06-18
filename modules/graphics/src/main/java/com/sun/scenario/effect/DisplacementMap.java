@@ -32,12 +32,13 @@ import com.sun.javafx.geom.DirtyRegionPool;
 import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.scenario.effect.impl.state.RenderState;
 
 /**
  * An effect that shifts each pixel according to an (x,y) distance from
  * the (red,green) channels of a map image, respectively.
  */
-public class DisplacementMap extends CoreEffect {
+public class DisplacementMap extends CoreEffect<RenderState> {
 
     private FloatMap mapData;
     private float scaleX = 1f;
@@ -245,11 +246,6 @@ public class DisplacementMap extends CoreEffect {
         this.wrap = wrap;
     }
 
-    @Override
-    public boolean operatesInUserSpace() {
-        return true;
-    }
-
     /**
      * Transform the specified point {@code p} from the coordinate space
      * of the primary content input to the coordinate space of the effect
@@ -323,24 +319,26 @@ public class DisplacementMap extends CoreEffect {
     public ImageData filterImageDatas(FilterContext fctx,
                                       BaseTransform transform,
                                       Rectangle outputClip,
+                                      RenderState rstate,
                                       ImageData... inputs)
     {
         // NOTE: The floatmap is mapped to the entire output bounds so
         // we need to use unclipped math in the peers to get the
         // texture mapping right.
-        return super.filterImageDatas(fctx, transform, null, inputs);
+        return super.filterImageDatas(fctx, transform, null, rstate, inputs);
     }
-
     @Override
-    protected Rectangle getInputClip(int inputIndex,
-                                     BaseTransform transform,
-                                     Rectangle outputClip)
+    public RenderState getRenderState(FilterContext fctx,
+                                      BaseTransform transform,
+                                      Rectangle outputClip,
+                                      Object renderHelper,
+                                      Effect defaultInput)
     {
-        // NOTE: Scan the map and calculate all possible input points
+        // NOTE: We could scan the map and calculate all possible input points
         // that might contribute to the clipped output?  Until then, any
         // pixel in the output could come from any pixel in the input so
         // we will need the full input bounds to proceed...
-        return null;
+        return RenderState.UnclippedUserSpaceRenderState;
     }
 
     @Override

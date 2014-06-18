@@ -50,6 +50,7 @@ import com.sun.javafx.tk.Toolkit;
 import com.sun.prism.BasicStroke;
 import com.sun.prism.CompositeMode;
 import com.sun.prism.Graphics;
+import com.sun.prism.GraphicsPipeline;
 import com.sun.prism.Image;
 import com.sun.prism.PrinterGraphics;
 import com.sun.prism.RTTexture;
@@ -192,7 +193,9 @@ public class NGCanvas extends NGNode {
             }
             if (create) {
                 RTTexture oldtex = tex;
-                ResourceFactory factory = resg.getResourceFactory();
+                ResourceFactory factory = (resg == null)
+                    ? GraphicsPipeline.getDefaultResourceFactory()
+                    : resg.getResourceFactory();
                 RTTexture newtex =
                     factory.createRTTexture(tw, th, WrapMode.CLAMP_TO_ZERO);
                 this.tex = newtex;
@@ -223,7 +226,9 @@ public class NGCanvas extends NGNode {
                     this.g = tex.createGraphics();
                     if (this.g == null) {
                         tex.dispose();
-                        ResourceFactory factory = resg.getResourceFactory();
+                        ResourceFactory factory = (resg == null)
+                            ? GraphicsPipeline.getDefaultResourceFactory()
+                            : resg.getResourceFactory();
                         tex = factory.createRTTexture(tw, th, WrapMode.CLAMP_TO_ZERO);
                         this.g = tex.createGraphics();
                         this.input = new EffectInput(tex);
@@ -297,7 +302,6 @@ public class NGCanvas extends NGNode {
         }
     }
 
-    private static Image TMP_IMAGE = Image.fromIntArgbPreData(new int[1], 1, 1);
     private static Blend BLENDER = new MyBlend(Mode.SRC_OVER, null, null);
 
     private GrowableDataBuffer thebuf;
@@ -554,11 +558,9 @@ public class NGCanvas extends NGNode {
         texg.setCompositeMode(CompositeMode.SRC);
         if (cv.savedPixelData == null) {
             final PixelData pd = new PixelData(cw, ch);
-            runOnRenderThread(new Runnable() {
-                public void run() {
-                  pd.save(localTex);
-                  pd.restore(texg, tw, th);
-                }
+            runOnRenderThread(() -> {
+              pd.save(localTex);
+              pd.restore(texg, tw, th);
             });
         } else {
             cv.savedPixelData.restore(texg, tw, th);
@@ -588,6 +590,20 @@ public class NGCanvas extends NGNode {
             cv.save(tw, th);
         }
         this.temp.g = this.clip.g = this.cv.g = null;
+    }
+
+    @Override
+    public void renderForcedContent(Graphics gOptional) {
+        if (thebuf != null) {
+            initCanvas(gOptional);
+            if (cv.tex != null) {
+                renderStream(thebuf);
+                GrowableDataBuffer.returnBuffer(thebuf);
+                thebuf = null;
+                cv.save(tw, th);
+            }
+            this.temp.g = this.clip.g = this.cv.g = null;
+        }
     }
 
     private void initCanvas(Graphics g) {
@@ -803,21 +819,22 @@ public class NGCanvas extends NGNode {
                     float dx1 = buf.getInt();
                     float dy1 = buf.getInt();
                     int argb = buf.getInt();
-                    TMP_IMAGE.setArgb(0, 0, argb);
                     Graphics gr = cv.g;
                     gr.setExtraAlpha(1.0f);
                     gr.setCompositeMode(CompositeMode.SRC);
                     gr.setTransform(BaseTransform.IDENTITY_TRANSFORM);
-                    ResourceFactory factory = gr.getResourceFactory();
-                    Texture tex =
-                        factory.getCachedTexture(TMP_IMAGE, Texture.WrapMode.CLAMP_TO_EDGE);
                     dx1 *= highestPixelScale;
                     dy1 *= highestPixelScale;
-                    gr.drawTexture(tex,
-                                   dx1, dy1, dx1 + highestPixelScale, dy1 + highestPixelScale,
-                                   0, 0, 1, 1);
-                    tex.contentsNotUseful();
-                    tex.unlock();
+                    float a = ((argb) >>> 24) / 255.0f;
+                    float r = (((argb) >> 16) & 0xff) / 255.0f;
+                    float g = (((argb) >>  8) & 0xff) / 255.0f;
+                    float b = (((argb)      ) & 0xff) / 255.0f;
+                    gr.setPaint(new Color(r, g, b, a));
+                    // Note that we cannot use fillRect here because SRC
+                    // mode does not interact well with antialiasing.
+                    // fillQuad does hard edges which matches the concept
+                    // of setting adjacent abutting, non-overlapping "pixels"
+                    gr.fillQuad(dx1, dy1, dx1+highestPixelScale, dy1+highestPixelScale);
                     break;
                 }
                 case PUT_ARGBPRE_BUF:
@@ -1259,49 +1276,50 @@ public class NGCanvas extends NGNode {
                     case BASE_MIDDLE: yAlign = layoutHeight / 2; break;
                     case BASE_BOTTOM: yAlign = layoutHeight; break;
                 }
-                if (bounds != null) {
-                    TEMP_TX.setTransform(transform);
-                    if (maxWidth > 0.0 && layoutWidth > maxWidth) {
-                        float sx = maxWidth / layoutWidth;
-                        TEMP_TX.translate(x - xAlign * sx, y - yAlign);
-                        TEMP_TX.scale(sx, 1);
+                float scaleX = 1;
+                float layoutX = 0;
+                float layoutY = y - yAlign;
+                if (maxWidth > 0.0 && layoutWidth > maxWidth) {
+                    float sx = maxWidth / layoutWidth;
+                    if (rtl) {
+                        layoutX = -((x + maxWidth) / sx - xAlign);
+                        scaleX = -sx;
                     } else {
-                        TEMP_TX.translate(x - xAlign, y - yAlign);
+                        layoutX = x / sx - xAlign;
+                        scaleX = sx;
                     }
-                    textLayout.getBounds(null, bounds);
-                    TEMP_TX.transform(bounds, bounds);
-                    if (token == STROKE_TEXT) {
-                        int flag = PrismTextLayout.TYPE_TEXT;
-                        Shape textShape = textLayout.getShape(flag, null);
-                        RectBounds shapeBounds = new RectBounds();
-                        strokebounds(getStroke(), textShape, shapeBounds, TEMP_TX);
-                        bounds.unionWith(shapeBounds);
+                } else {
+                    if (rtl) {
+                        layoutX = -(x - xAlign + layoutWidth);
+                        scaleX = -1;
+                    } else {
+                        layoutX = x - xAlign;
                     }
                 }
+                if (bounds != null) {
+                    computeTextLayoutBounds(bounds, transform, scaleX, layoutX, layoutY, token);
+                }
                 if (gr != null) {
-                    if (maxWidth > 0.0 && layoutWidth > maxWidth) {
-                        float sx = maxWidth / layoutWidth;
-                        if (rtl) {
-                            x += maxWidth;
-                            gr.translate(x - xAlign * sx, y - yAlign);
-                            gr.scale(-sx, 1);
-                        } else {
-                            gr.translate(x - xAlign * sx, y - yAlign);
-                            gr.scale(sx, 1);
-                        }
-                        ngtext.setLayoutLocation(0, 0);
-                    } else {
-                        if (rtl) {
-                            x = -(x + layoutWidth);
-                            xAlign = -xAlign;
-                            gr.scale(-1, 1);
-                        }
-                        ngtext.setLayoutLocation(xAlign - x, yAlign - y);
+                    if (scaleX != 1) {
+                        gr.scale(scaleX, 1);
                     }
+                    ngtext.setLayoutLocation(-layoutX, -layoutY);
                     if (token == FILL_TEXT) {
                         ngtext.setMode(NGShape.Mode.FILL);
                         ngtext.setFillPaint(fillPaint);
+                        if (fillPaint.isProportional()) {
+                            RectBounds textBounds = new RectBounds();
+                            computeTextLayoutBounds(textBounds, BaseTransform.IDENTITY_TRANSFORM,
+                                                    1, layoutX, layoutY, token);
+                            ngtext.setContentBounds(textBounds);
+                        }
                     } else {
+                        if (strokePaint.isProportional()) {
+                            RectBounds textBounds = new RectBounds();
+                            computeTextLayoutBounds(textBounds, BaseTransform.IDENTITY_TRANSFORM,
+                                                    1, layoutX, layoutY, token);
+                            ngtext.setContentBounds(textBounds);
+                        }
                         ngtext.setMode(NGShape.Mode.STROKE);
                         ngtext.setDrawStroke(getStroke());
                         ngtext.setDrawPaint(strokePaint);
@@ -1329,6 +1347,24 @@ public class NGCanvas extends NGNode {
             if (transformBounds) {
                 txBounds(bounds, transform);
             }
+        }
+    }
+
+    void computeTextLayoutBounds(RectBounds bounds, BaseTransform transform,
+                                 float scaleX, float layoutX, float layoutY,
+                                 int token)
+    {
+        textLayout.getBounds(null, bounds);
+        TEMP_TX.setTransform(transform);
+        TEMP_TX.scale(scaleX, 1);
+        TEMP_TX.translate(layoutX, layoutY);
+        TEMP_TX.transform(bounds, bounds);
+        if (token == STROKE_TEXT) {
+            int flag = PrismTextLayout.TYPE_TEXT;
+            Shape textShape = textLayout.getShape(flag, null);
+            RectBounds shapeBounds = new RectBounds();
+            strokebounds(getStroke(), textShape, shapeBounds, TEMP_TX);
+            bounds.unionWith(shapeBounds);
         }
     }
 

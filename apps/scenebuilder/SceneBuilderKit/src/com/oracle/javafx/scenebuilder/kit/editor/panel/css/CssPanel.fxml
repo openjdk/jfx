@@ -72,7 +72,7 @@
 <Insets />
 </VBox.margin>
         </HBox>
-    <TableView fx:id="table" prefHeight="200.0" prefWidth="200.0" styleClass="css-table-view" VBox.vgrow="ALWAYS">
+    <TableView fx:id="table" prefHeight="200.0" prefWidth="200.0" VBox.vgrow="ALWAYS">
       <columns>
         <TableColumn fx:id="propertiesColumn" editable="false" maxWidth="200.0" minWidth="200.0" prefWidth="200.0" resizable="false" sortable="false" text="%csspanel.col.properties" />
         <TableColumn fx:id="defaultColumn" editable="false" minWidth="100.0" prefWidth="100.0" sortable="false" text="%csspanel.col.defaults" visible="true" />

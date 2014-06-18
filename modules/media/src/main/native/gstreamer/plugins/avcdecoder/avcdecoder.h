@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -66,6 +66,7 @@ struct _AvcDecoder
     GstClockTime frame_duration; // the duration of a single video frame (nsec)
 
     GQueue* ordered_frames;      // decoded frames sorted into order of increasign time stamp
+    GMutex* mutex;    // synchronize frames queue access
 
     GstClockTime previous_timestamp; // the timestamp of the most recent preceding frame
     GstClockTime timestamp_ceil;     // increment above previous timestamp in which frame should fall

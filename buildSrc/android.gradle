@@ -110,8 +110,7 @@ def sdk = project.hasProperty("ANDROID_SDK") ? "${ANDROID_SDK}" : null;
 def ndk = project.hasProperty("ANDROID_NDK") ? "${ANDROID_NDK}" : null;
 ANDROID.canBuild = sdk != null && ndk != null
 if (!ANDROID.canBuild) {
-    logger.error("Can't build Android. Path to SDK or NDK was not set or is invalid!")
-    return;
+    fail("Can't build Android. Path to SDK or NDK was not set or is invalid!")
 }
 
 ANDROID.canBuild = assertDir(sdk) && assertDir(ndk)
@@ -122,7 +121,7 @@ if (!ANDROID.canBuild) {
     if (!assertDir(ndk)) {
         logger.error("Path to ANDROID_NDK is invalid! [$ndk]")
     }
-    return
+    fail("Cannot build, missing android tools")
 }
 
 def sdk_target = project.hasProperty("ANDROID_SDK_TARGET") ?  "${ANDROID_SDK_TARGET}" : getLatestPlatform(sdk);
@@ -139,8 +138,7 @@ if (!assertDir(file("$ndk/platforms/$ndk_target"))) {
 
 ANDROID.canBuild = sdk_target != null && ndk_target != null
 if (!ANDROID.canBuild) {
-    logger.error("Can't determine sdk or ndk target platform!")
-    return
+    fail("Can't determine sdk or ndk target platform!")
 }
 
 def toolchainHome = project.hasProperty("ANDROID_CROSS_TOOLS_VER") ? 
@@ -159,8 +157,7 @@ file("$toolchainHome/prebuilt").eachDir() {subdir ->
 
 ANDROID.canBuild = compilerHome != null
 if (!ANDROID.canBuild) {
-    logger.error("Failed to access toolchain [$toolchainHome/prebuilt/$toolsPlatform]!")
-    return
+    fail("Failed to access toolchain [$toolchainHome/prebuilt/$toolsPlatform]!")
 }
 
 def freetypeDir = project.hasProperty("FREETYPE_DIR") ? "${FREETYPE_DIR}" : null
@@ -338,14 +335,12 @@ project(":web") {
 ANDROID.jfxrtJarExcludes = [
     "**/*.hlsl",
     "com/sun/glass/ui/win",
-    "com/sun/glass/ui/accessible/win",
     "com/sun/prism/d3d",
     "com/sun/prism/es2/gl/win",
     "com/sun/prism/null3d",
     "com/sun/scenario/effect/impl/hw/d3d",
     "com/sun/glass/events/mac",
     "com/sun/glass/ui/mac",
-    "com/sun/glass/ui/accessible/mac",
     "com/sun/prism/es2/gl/mac",
     "com/sun/glass/ui/gtk",
     "com/sun/glass/ui/ios",

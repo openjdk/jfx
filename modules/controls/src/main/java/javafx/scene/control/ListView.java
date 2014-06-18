@@ -30,6 +30,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
+import javafx.beans.InvalidationListener;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
@@ -39,29 +40,35 @@ import javafx.beans.property.ReadOnlyIntegerWrapper;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WeakChangeListener;
+import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ListChangeListener.Change;
+import javafx.collections.MapChangeListener;
 import javafx.collections.ObservableList;
 import javafx.css.StyleableDoubleProperty;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.geometry.Orientation;
+import javafx.scene.accessibility.Action;
+import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Role;
 import javafx.scene.layout.Region;
 import javafx.util.Callback;
-
 import javafx.css.StyleableObjectProperty;
 import javafx.css.CssMetaData;
+
 import com.sun.javafx.css.converters.EnumConverter;
+
 import javafx.collections.WeakListChangeListener;
+
 import com.sun.javafx.css.converters.SizeConverter;
-import com.sun.javafx.scene.control.accessible.AccessibleList;
 import com.sun.javafx.scene.control.skin.ListViewSkin;
+
 import java.lang.ref.WeakReference;
-import com.sun.javafx.accessible.providers.AccessibleProvider;
+
 import javafx.css.PseudoClass;
 import javafx.beans.DefaultProperty;
 import javafx.css.Styleable;
@@ -236,7 +243,7 @@ public class ListView<T> extends Control {
         return (EventType<ListView.EditEvent<T>>) EDIT_ANY_EVENT;
     }
     private static final EventType<?> EDIT_ANY_EVENT =
-            new EventType(Event.ANY, "LIST_VIEW_EDIT");
+            new EventType<>(Event.ANY, "LIST_VIEW_EDIT");
     
     /**
      * An EventType used to indicate that an edit event has started within the
@@ -247,7 +254,7 @@ public class ListView<T> extends Control {
         return (EventType<ListView.EditEvent<T>>) EDIT_START_EVENT;
     }
     private static final EventType<?> EDIT_START_EVENT =
-            new EventType(editAnyEvent(), "EDIT_START");
+            new EventType<>(editAnyEvent(), "EDIT_START");
 
     /**
      * An EventType used to indicate that an edit event has just been canceled
@@ -258,7 +265,7 @@ public class ListView<T> extends Control {
         return (EventType<ListView.EditEvent<T>>) EDIT_CANCEL_EVENT;
     }
     private static final EventType<?> EDIT_CANCEL_EVENT =
-            new EventType(editAnyEvent(), "EDIT_CANCEL");
+            new EventType<>(editAnyEvent(), "EDIT_CANCEL");
 
     /**
      * An EventType used to indicate that an edit event has been committed
@@ -269,7 +276,7 @@ public class ListView<T> extends Control {
         return (EventType<ListView.EditEvent<T>>) EDIT_COMMIT_EVENT;
     }
     private static final EventType<?> EDIT_COMMIT_EVENT =
-            new EventType(editAnyEvent(), "EDIT_COMMIT");
+            new EventType<>(editAnyEvent(), "EDIT_COMMIT");
     
     
 
@@ -318,6 +325,25 @@ public class ListView<T> extends Control {
 
         // ...edit commit handler
         setOnEditCommit(DEFAULT_EDIT_COMMIT_HANDLER);
+
+        // Fix for RT-35679
+        focusedProperty().addListener(focusedListener);
+
+        // Fix for RT-36651, which was introduced by RT-35679 (above) and resolved
+        // by having special-case code to remove the listener when requested.
+        // This is done by ComboBoxListViewSkin, so that selection is not done
+        // when a ComboBox is shown.
+        getProperties().addListener((MapChangeListener<Object, Object>) change -> {
+            if (change.wasAdded() && "selectOnFocusGain".equals(change.getKey())) {
+                Boolean selectOnFocusGain = (Boolean) change.getValueAdded();
+                if (selectOnFocusGain == null) return;
+                if (selectOnFocusGain) {
+                    focusedProperty().addListener(focusedListener);
+                } else {
+                    focusedProperty().removeListener(focusedListener);
+                }
+            }
+        });
     }
     
     
@@ -328,12 +354,24 @@ public class ListView<T> extends Control {
      *                                                                         *
      **************************************************************************/
     
-    private EventHandler<ListView.EditEvent<T>> DEFAULT_EDIT_COMMIT_HANDLER = new EventHandler<ListView.EditEvent<T>>() {
-        @Override public void handle(ListView.EditEvent<T> t) {
-            int index = t.getIndex();
-            List<T> list = getItems();
-            if (index < 0 || index >= list.size()) return;
-            list.set(index, t.getNewValue());
+    private EventHandler<ListView.EditEvent<T>> DEFAULT_EDIT_COMMIT_HANDLER = t -> {
+        int index = t.getIndex();
+        List<T> list = getItems();
+        if (index < 0 || index >= list.size()) return;
+        list.set(index, t.getNewValue());
+    };
+
+    private InvalidationListener focusedListener = observable -> {
+        // RT-25679 - we select the first item in the control if there is no
+        // current selection or focus on any other cell
+        List<T> items = getItems();
+        MultipleSelectionModel<T> sm = getSelectionModel();
+        FocusModel<T> fm = getFocusModel();
+
+        if (items != null && items.size() > 0 &&
+            sm != null && sm.isEmpty() &&
+            fm != null && fm.getFocusedIndex() == -1) {
+                sm.select(0);
         }
     };
     
@@ -939,17 +977,6 @@ public class ListView<T> extends Control {
         return onScrollTo;
     }
 
-    private AccessibleList accListView ;
-    /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
-     */
-    @Deprecated @Override public AccessibleProvider impl_getAccessible() {
-        if( accListView == null)
-            accListView = new AccessibleList(this);
-        return (AccessibleProvider)accListView ;
-    }
-
     /** {@inheritDoc} */
     @Override protected Skin<?> createDefaultSkin() {
         return new ListViewSkin<T>(this);
@@ -1010,7 +1037,7 @@ public class ListView<T> extends Control {
                 }
 
                 @Override public StyleableProperty<Number> getStyleableProperty(ListView<?> n) {
-                    return (StyleableProperty<Number>) n.fixedCellSizeProperty();
+                    return (StyleableProperty<Number>)(WritableValue<Number>)n.fixedCellSizeProperty();
                 }
             };
             
@@ -1046,6 +1073,32 @@ public class ListView<T> extends Control {
             PseudoClass.getPseudoClass("vertical");
     private static final PseudoClass PSEUDO_CLASS_HORIZONTAL =
             PseudoClass.getPseudoClass("horizontal");
+
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Accessibility handling                                                  *
+     *                                                                         *
+     **************************************************************************/
+
+    /** @treatAsPrivate */
+    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case ROLE: return Role.LIST_VIEW;
+            case ROW_COUNT: return getItems().size();
+            case MULTIPLE_SELECTION: {
+                MultipleSelectionModel<T> sm = getSelectionModel();
+                return sm != null && sm.getSelectionMode() == SelectionMode.MULTIPLE;
+            }
+            case ROW_AT_INDEX: //Skin
+            case SELECTED_ROWS: //Skin
+            case VERTICAL_SCROLLBAR: //Skin
+            case HORIZONTAL_SCROLLBAR: // Skin
+            default: return super.accGetAttribute(attribute, parameters);
+        }
+    }
+
 
     /***************************************************************************
      *                                                                         *
@@ -1200,12 +1253,8 @@ public class ListView<T> extends Control {
         };
         
         // watching for changes to the items list
-        private final ChangeListener<ObservableList<T>> itemsObserver = new ChangeListener<ObservableList<T>>() {
-            @Override
-            public void changed(ObservableValue<? extends ObservableList<T>> valueModel, 
-                ObservableList<T> oldList, ObservableList<T> newList) {
-                    updateItemsObserver(oldList, newList);
-            }
+        private final ChangeListener<ObservableList<T>> itemsObserver = (valueModel, oldList, newList) -> {
+                updateItemsObserver(oldList, newList);
         };
         
         private WeakListChangeListener<T> weakItemsContentObserver =
@@ -1227,8 +1276,16 @@ public class ListView<T> extends Control {
 
             // when the items list totally changes, we should clear out
             // the selection and focus
-            setSelectedIndex(-1);
-            focus(-1);
+            int newValueIndex = -1;
+            if (newList != null) {
+                T selectedItem = getSelectedItem();
+                if (selectedItem != null) {
+                    newValueIndex = newList.indexOf(selectedItem);
+                }
+            }
+
+            setSelectedIndex(newValueIndex);
+            focus(newValueIndex);
         }
 
 
@@ -1362,6 +1419,8 @@ public class ListView<T> extends Control {
         @Override protected void focus(int row) {
             if (listView.getFocusModel() == null) return;
             listView.getFocusModel().focus(row);
+
+            listView.accSendNotification(Attribute.SELECTED_ROWS);
         }
 
         /** {@inheritDoc} */
@@ -1414,12 +1473,8 @@ public class ListView<T> extends Control {
             updateItemCount();
         }
 
-        private ChangeListener<ObservableList<T>> itemsListener = new ChangeListener<ObservableList<T>>() {
-            @Override
-            public void changed(ObservableValue<? extends ObservableList<T>> observable, 
-                ObservableList<T> oldList, ObservableList<T> newList) {
-                    updateItemsObserver(oldList, newList);
-            }
+        private ChangeListener<ObservableList<T>> itemsListener = (observable, oldList, newList) -> {
+                updateItemsObserver(oldList, newList);
         };
         
         private WeakChangeListener<ObservableList<T>> weakItemsListener = 
@@ -1440,29 +1495,30 @@ public class ListView<T> extends Control {
             @Override public void onChanged(Change<? extends T> c) {
                 updateItemCount();
                 
-                c.next();
-                // looking at the first change
-                int from = c.getFrom();
-                if (getFocusedIndex() == -1 || from > getFocusedIndex()) {
-                    return;
-                }
-                
-                c.reset();
-                boolean added = false;
-                boolean removed = false;
-                int addedSize = 0;
-                int removedSize = 0;
                 while (c.next()) {
-                    added |= c.wasAdded();
-                    removed |= c.wasRemoved();
-                    addedSize += c.getAddedSize();
-                    removedSize += c.getRemovedSize();
-                }
-                
-                if (added && !removed) {
-                    focus(getFocusedIndex() + addedSize);
-                } else if (!added && removed) {
-                    focus(getFocusedIndex() - removedSize);
+                    // looking at the first change
+                    int from = c.getFrom();
+                    if (getFocusedIndex() == -1 || from > getFocusedIndex()) {
+                        return;
+                    }
+
+                    c.reset();
+                    boolean added = false;
+                    boolean removed = false;
+                    int addedSize = 0;
+                    int removedSize = 0;
+                    while (c.next()) {
+                        added |= c.wasAdded();
+                        removed |= c.wasRemoved();
+                        addedSize += c.getAddedSize();
+                        removedSize += c.getRemovedSize();
+                    }
+
+                    if (added && !removed) {
+                        focus(getFocusedIndex() + addedSize);
+                    } else if (!added && removed) {
+                        focus(getFocusedIndex() - removedSize);
+                    }
                 }
             }
         };

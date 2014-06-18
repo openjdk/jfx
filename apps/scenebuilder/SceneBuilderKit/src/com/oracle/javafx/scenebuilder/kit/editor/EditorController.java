@@ -42,6 +42,8 @@ import com.oracle.javafx.scenebuilder.kit.editor.job.CutSelectionJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.DeleteSelectionJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.DuplicateSelectionJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.FitToParentSelectionJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.ImportFileJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.IncludeFileJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.InsertAsAccessoryJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.InsertAsSubComponentJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
@@ -74,7 +76,6 @@ import com.oracle.javafx.scenebuilder.kit.editor.util.ContextMenuController;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMIntrinsic;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMNodes;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.glossary.Glossary;
 import com.oracle.javafx.scenebuilder.kit.glossary.BuiltinGlossary;
@@ -90,6 +91,7 @@ import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask.Acce
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PrefixedValue;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 import com.oracle.javafx.scenebuilder.kit.util.control.effectpicker.Utils;
+
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -101,6 +103,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.ResourceBundle;
 import java.util.Set;
+
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ListProperty;
 import javafx.beans.property.ObjectProperty;
@@ -178,6 +181,7 @@ public class EditorController {
         SEND_BACKWARD,
         UNWRAP,
         WRAP_IN_ANCHOR_PANE,
+        WRAP_IN_FLOW_PANE,
         WRAP_IN_GRID_PANE,
         WRAP_IN_GROUP,
         WRAP_IN_HBOX,
@@ -186,6 +190,7 @@ public class EditorController {
         WRAP_IN_SPLIT_PANE,
         WRAP_IN_STACK_PANE,
         WRAP_IN_TAB_PANE,
+        WRAP_IN_TILE_PANE,
         WRAP_IN_TITLED_PANE,
         WRAP_IN_TOOL_BAR,
         WRAP_IN_VBOX
@@ -269,12 +274,7 @@ public class EditorController {
      * Creates an empty editor controller (ie it has no associated fxom document).
      */
     public EditorController() {
-        jobManager.revisionProperty().addListener(new ChangeListener<Number>() {
-            @Override
-            public void changed(ObservableValue<? extends Number> ov, Number t, Number t1) {
-                jobManagerRevisionDidChange();
-            }
-        });
+        jobManager.revisionProperty().addListener((ChangeListener<Number>) (ov, t, t1) -> jobManagerRevisionDidChange());
     }
 
     /**
@@ -616,6 +616,7 @@ public class EditorController {
      * @param sampleDataEnabled true if sample data should be displayed
      */
     public void setSampleDataEnabled(boolean sampleDataEnabled) {
+        setPickModeEnabled(false);
         sampleDataEnabledProperty.setValue(sampleDataEnabled);
         if (getFxomDocument() != null) {
             getFxomDocument().setSampleDataEnabled(isSampleDataEnabled());
@@ -1050,6 +1051,10 @@ public class EditorController {
                 performWrap(javafx.scene.layout.AnchorPane.class);
                 break;
             }
+            case WRAP_IN_FLOW_PANE: {
+                performWrap(javafx.scene.layout.FlowPane.class);
+                break;
+            }
             case WRAP_IN_GRID_PANE: {
                 performWrap(javafx.scene.layout.GridPane.class);
                 break;
@@ -1080,6 +1085,10 @@ public class EditorController {
             }
             case WRAP_IN_TAB_PANE: {
                 performWrap(javafx.scene.control.TabPane.class);
+                break;
+            }
+            case WRAP_IN_TILE_PANE: {
+                performWrap(javafx.scene.layout.TilePane.class);
                 break;
             }
             case WRAP_IN_TITLED_PANE: {
@@ -1268,6 +1277,10 @@ public class EditorController {
                 result = canPerformWrap(javafx.scene.layout.AnchorPane.class);
                 break;
             }
+            case WRAP_IN_FLOW_PANE: {
+                result = canPerformWrap(javafx.scene.layout.FlowPane.class);
+                break;
+            }
             case WRAP_IN_GRID_PANE: {
                 result = canPerformWrap(javafx.scene.layout.GridPane.class);
                 break;
@@ -1298,6 +1311,10 @@ public class EditorController {
             }
             case WRAP_IN_TAB_PANE: {
                 result = canPerformWrap(javafx.scene.control.TabPane.class);
+                break;
+            }
+            case WRAP_IN_TILE_PANE: {
+                result = canPerformWrap(javafx.scene.layout.TilePane.class);
                 break;
             }
             case WRAP_IN_TITLED_PANE: {
@@ -1427,104 +1444,88 @@ public class EditorController {
      * Performs the 'import' FXML edit action.
      * This action creates an object matching the root node of the selected
      * FXML file and insert it in the document (either as root if the document
-     * is empty or under the root node otherwise).
+     * is empty or under the selection common ancestor node otherwise).
      * 
      * @param fxmlFile the FXML file to be imported
      */
     public void performImportFxml(File fxmlFile) {
-        assert fxmlFile != null;
-
-        final FXOMDocument targetDocument = getFxomDocument();
-        final FXOMObject newObject;
-
-        try {
-            newObject = FXOMNodes.newObject(targetDocument, fxmlFile);
-        } catch (IOException ex) {
-            getMessageLog().logWarningMessage("import.from.file.failed", 
-                    fxmlFile.getAbsolutePath());
-            return;
-        }
-        
-        // newObject is null when file is empty
-        if (newObject != null) {
-
-            // If the document is empty (root object is null), then we 
-            // insert the new object as root.
-            // Otherwise, we insert the new object under the root object.
-            final FXOMObject rootObject = targetDocument.getFxomRoot();
-
-            if (rootObject == null) {
-                final BatchJob result = new BatchJob(this, true,
-                        I18N.getString("import.from.file"));
-                result.addSubJob(new SetDocumentRootJob(newObject, this));
-                result.addSubJob(new UpdateSelectionJob(newObject, this));
-                getJobManager().push(result);
-            } else {
-                // Build InsertAsSubComponent jobs
-                final DesignHierarchyMask rootMask = new DesignHierarchyMask(rootObject);
-                if (rootMask.isAcceptingSubComponent(newObject)) {
-                    final BatchJob result = new BatchJob(this, true,
-                            I18N.getString("import.from.file"));
-                    result.addSubJob(new InsertAsSubComponentJob(
-                            newObject,
-                            rootObject,
-                            rootMask.getSubComponentCount(),
-                            this));
-                    result.addSubJob(new UpdateSelectionJob(newObject, this));
-                    getJobManager().push(result);
-                }
-            }
-        }
+        performImport(fxmlFile);
     }
 
     /**
      * Performs the 'import' media edit action.
      * This action creates an object matching the type of the selected
      * media file (either ImageView or MediaView) and insert it in the document 
-     * under the root node.
+     * (either as root if the document is empty or under the selection common 
+     * ancestor node otherwise).
      * 
      * @param mediaFile the media file to be imported
      */
     public void performImportMedia(File mediaFile) {
-        assert mediaFile != null;
-
-        final FXOMDocument targetDocument = getFxomDocument();
-        final FXOMObject newObject;
-
-        try {
-            newObject = FXOMNodes.newObject(targetDocument, mediaFile);
-        } catch (IOException ex) {
-            getMessageLog().logWarningMessage("import.from.file.failed", 
-                    mediaFile.getAbsolutePath());
-            return;
-        }
-
-        assert newObject != null;
-
-            // If the document is empty (root object is null), then we 
-        // insert the new object as root.
-        // Otherwise, we insert the new object under the root object.
-        final FXOMObject rootObject = targetDocument.getFxomRoot();
-
-        if (rootObject == null) {
-            final BatchJob result = new BatchJob(this, true,
-                    I18N.getString("import.from.file"));
-            result.addSubJob(new SetDocumentRootJob(newObject, this));
-            result.addSubJob(new UpdateSelectionJob(newObject, this));
-            getJobManager().push(result);
+        performImport(mediaFile);
+    }
+    
+    private void performImport(File file) {
+        final ImportFileJob job = new ImportFileJob(file, this);
+        if (job.isExecutable()) {
+            jobManager.push(job);
         } else {
-            // Build InsertAsSubComponent jobs
-            final DesignHierarchyMask rootMask = new DesignHierarchyMask(rootObject);
-            if (rootMask.isAcceptingSubComponent(newObject)) {
-                final BatchJob result = new BatchJob(this, true,
-                        I18N.getString("import.from.file"));
-                result.addSubJob(new InsertAsSubComponentJob(
-                        newObject,
-                        rootObject,
-                        rootMask.getSubComponentCount(),
-                        this));
-                result.addSubJob(new UpdateSelectionJob(newObject, this));
-                getJobManager().push(result);
+            final String target;
+            if (job.getTargetObject() == null) {
+                target = null;
+            } else {
+                final Object sceneGraphTarget
+                        = job.getTargetObject().getSceneGraphObject();
+                if (sceneGraphTarget == null) {
+                    target = null;
+                } else {
+                    target = sceneGraphTarget.getClass().getSimpleName();
+                }
+            }
+            if (target != null) {
+                getMessageLog().logWarningMessage(
+                        "import.from.file.failed.target",
+                        file.getName(), target);
+            } else {
+                getMessageLog().logWarningMessage(
+                        "import.from.file.failed",
+                        file.getName());
+            }
+        }
+    }
+
+    /**
+     * Performs the 'include' FXML edit action.
+     * As opposed to the 'import' edit action, the 'include' action does not
+     * copy the FXML content but adds an fx:include element to the FXML document.
+     *
+     * @param fxmlFile the FXML file to be included
+     */
+    public void performIncludeFxml(File fxmlFile) {
+        final IncludeFileJob job = new IncludeFileJob(fxmlFile, this);
+        if (job.isExecutable()) {
+            jobManager.push(job);
+        } else {
+            final String target;
+            if (job.getTargetObject() == null) {
+                target = null;
+            } else {
+                final Object sceneGraphTarget
+                        = job.getTargetObject().getSceneGraphObject();
+                if (sceneGraphTarget == null) {
+                    target = null;
+                } else {
+                    target = sceneGraphTarget.getClass().getSimpleName();
+                }
+            }
+            if (target != null) {
+                getMessageLog().logWarningMessage(
+                        "include.file.failed.target",
+                        fxmlFile.getName(), target);
+            } else {
+                getMessageLog().logWarningMessage(
+                        "include.file.failed",
+                        fxmlFile.getName());
             }
         }
     }
@@ -1597,11 +1598,13 @@ public class EditorController {
                 // For some reason, library is unable to instantiate this item
                 result = false;
             } else {
-                newItemDocument.getFxomRoot().moveToFxomDocument(getFxomDocument());
+                final FXOMObject newItemRoot = newItemDocument.getFxomRoot();
+                newItemRoot.moveToFxomDocument(getFxomDocument());
+                assert newItemDocument.getFxomRoot() == null;
                 final FXOMObject rootObject = getFxomDocument().getFxomRoot();
                 if (rootObject == null) { // Empty document
                     final SetDocumentRootJob job = new SetDocumentRootJob(
-                            newItemDocument.getFxomRoot(), this);
+                            newItemRoot, this);
                     result = job.isExecutable();
                 } else {
                     if (selection.isEmpty() || selection.isSelected(rootObject)) {
@@ -1613,7 +1616,7 @@ public class EditorController {
                         targetCandidate = selection.getAncestor();
                     }
                     final InsertAsSubComponentJob job = new InsertAsSubComponentJob(
-                            newItemDocument.getFxomRoot(), targetCandidate, -1, this);
+                            newItemRoot, targetCandidate, -1, this);
                     result = job.isExecutable();
                 }
             }
@@ -1622,16 +1625,6 @@ public class EditorController {
         return result;
     }
 
-    /**
-     * Return the list of library items that can be passed to 
-     * {@link EditorController#performInsert(com.oracle.javafx.scenebuilder.kit.library.LibraryItem)}.
-     * 
-     * @return the list of library items.
-     */
-    public static List<Object> getLibraryItemsSupportingInsertion() {
-        throw new UnsupportedOperationException("Not yet implemented"); //NOI18N
-    }
-    
     /**
      * Performs the 'wrap' edit action. This action creates an object
      * matching the specified class and reparent all the selected objects
@@ -1671,6 +1664,7 @@ public class EditorController {
         if (classesSupportingWrapping == null) {
             classesSupportingWrapping = new ArrayList<>();
             classesSupportingWrapping.add(javafx.scene.layout.AnchorPane.class);
+            classesSupportingWrapping.add(javafx.scene.layout.FlowPane.class);
             classesSupportingWrapping.add(javafx.scene.layout.GridPane.class);
             classesSupportingWrapping.add(javafx.scene.Group.class);
             classesSupportingWrapping.add(javafx.scene.layout.HBox.class);
@@ -1679,6 +1673,7 @@ public class EditorController {
             classesSupportingWrapping.add(javafx.scene.control.SplitPane.class);
             classesSupportingWrapping.add(javafx.scene.layout.StackPane.class);
             classesSupportingWrapping.add(javafx.scene.control.TabPane.class);
+            classesSupportingWrapping.add(javafx.scene.layout.TilePane.class);
             classesSupportingWrapping.add(javafx.scene.control.TitledPane.class);
             classesSupportingWrapping.add(javafx.scene.control.ToolBar.class);
             classesSupportingWrapping.add(javafx.scene.layout.VBox.class);
@@ -2216,6 +2211,7 @@ public class EditorController {
                 final FXOMObject contextMenuObject = contextMenuDocument.getFxomRoot();
                 assert contextMenuObject != null;
                 contextMenuObject.moveToFxomDocument(getFxomDocument());
+                assert contextMenuDocument.getFxomRoot() == null;
 
                 final Job insertJob = new InsertAsAccessoryJob(
                         contextMenuObject, fxomObject, Accessory.CONTEXT_MENU, this);
@@ -2270,6 +2266,7 @@ public class EditorController {
                 final FXOMObject tooltipObject = tooltipDocument.getFxomRoot();
                 assert tooltipObject != null;
                 tooltipObject.moveToFxomDocument(getFxomDocument());
+                assert tooltipDocument.getFxomRoot() == null;
 
                 final Job insertJob = new InsertAsAccessoryJob(
                         tooltipObject, fxomObject, Accessory.TOOLTIP, this);
@@ -2281,16 +2278,6 @@ public class EditorController {
         }
     }
     
-    /**
-     * Returns the list of library items that can be passed to
-     * {@link EditorController#performWrap(java.lang.Class)}.
-     * 
-     * @return the list of library items usable for wrapping.
-     */
-    public static List<Object> getLibraryItemsSupportingWrapping() {
-        throw new UnsupportedOperationException("Not yet implemented"); //NOI18N
-    }
-        
     /**
      * Returns the URL of the CSS style associated to EditorController class.
      * This stylesheet contains rules shareable by all other components of
@@ -2413,29 +2400,24 @@ public class EditorController {
     }
     
     private final ChangeListener<ClassLoader> libraryClassLoaderListener
-            = new ChangeListener<ClassLoader>() {
-                @Override
-                public void changed(ObservableValue<? extends ClassLoader> ov, ClassLoader t, ClassLoader t1) {
-                    libraryClassLoaderDidChange();
-                }
-            };
+            = (ov, t, t1) -> libraryClassLoaderDidChange();
     
     private void libraryClassLoaderDidChange() {
         if (getFxomDocument() != null) {
+            errorReport.forget();
             getFxomDocument().setClassLoader(libraryProperty.get().getClassLoader());
-            errorReport.requestUpdate();
         }
     }
     
     private void resourcesDidChange() {
         if (getFxomDocument() != null) {
+            errorReport.forget();
             getFxomDocument().setResources(getResources());
-            errorReport.requestUpdate();
         }
     }
     
     private void jobManagerRevisionDidChange() {
-        errorReport.requestUpdate();
+        errorReport.forget();
         watchingController.jobManagerRevisionDidChange();
 //        setPickModeEnabled(false);
     }

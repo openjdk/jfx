@@ -33,9 +33,9 @@ package com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.popupeditors;
 
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.EditorUtils;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
+
 import java.util.Set;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
+
 import javafx.fxml.FXML;
 import javafx.scene.Node;
 import javafx.scene.Parent;
@@ -65,13 +65,7 @@ public class StringPopupEditor extends PopupEditor {
     public void initializePopupContent() {
         root = EditorUtils.loadPopupFxml("StringPopupEditor.fxml", this);
         assert textField != null;
-        textField.setOnAction(new EventHandler<ActionEvent>() {
-
-            @Override
-            public void handle(ActionEvent t) {
-                commitValue(textField.getText());
-            }
-        });
+        textField.setOnAction(t -> commitValue(textField.getText()));
     }
 
     @Override

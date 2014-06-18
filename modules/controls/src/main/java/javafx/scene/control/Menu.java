@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -143,6 +143,13 @@ public class Menu extends MenuItem {
     public Menu(String text, Node graphic) {
         super(text,graphic);
         getStyleClass().add(DEFAULT_STYLE_CLASS);
+
+        parentPopupProperty().addListener(observable -> {
+            for (int i = 0; i < getItems().size(); i++) {
+                MenuItem item = getItems().get(i);
+                item.setParentPopup(getParentPopup());
+            }
+        });
     }
 
 
@@ -162,7 +169,7 @@ public class Menu extends MenuItem {
     
     private void setShowing(boolean value) {
         if (getItems().size() == 0 || (value && isShowing())) return;
-        
+
         // these events will not fire if the showing property is bound
         if (value) {
            if (getOnMenuValidation() != null) {
@@ -331,6 +338,7 @@ public class Menu extends MenuItem {
                 // remove the parent menu from all menu items that have been removed
                 for (MenuItem item : c.getRemoved()) {
                     item.setParentMenu(null);
+                    item.setParentPopup(null);
                 }
 
                 // set the parent menu to be this menu for all added menu items
@@ -343,6 +351,7 @@ public class Menu extends MenuItem {
                     }
 
                     item.setParentMenu(Menu.this);
+                    item.setParentPopup(getParentPopup());
                 }
             }
             if (getItems().size() == 0 && isShowing()) {

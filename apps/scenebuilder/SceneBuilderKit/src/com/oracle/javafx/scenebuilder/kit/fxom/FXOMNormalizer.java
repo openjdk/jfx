@@ -96,25 +96,18 @@ class FXOMNormalizer {
             = new PropertyName("expandedPane");
     
     private final FXOMDocument fxomDocument;
+    private int changeCount;
     
     public FXOMNormalizer(FXOMDocument fxomDocument) {
         this.fxomDocument = fxomDocument;
     }
     
     public void normalize() {
-        normalizeNullProperties();
+        changeCount = 0;
         normalizeExpandedPaneProperties();
         normalizeGridPanes();
-    }
-    
-    public void normalizeNullProperties() {
-        
-        final List<FXOMPropertyT> nullProperties
-                = fxomDocument.getFxomRoot().collectNullProperties();
-        
-        for (FXOMPropertyT p : nullProperties) {
-            assert p.getValue().equals("$null");
-            p.removeFromParentInstance();
+        if (changeCount >= 1) {
+            fxomDocument.refreshSceneGraph();
         }
     }
     
@@ -140,6 +133,8 @@ class FXOMNormalizer {
                 assert pt.getValue().equals("$null");
                 p.removeFromParentInstance();
             }
+            
+            changeCount++;
         }
     }
     
@@ -192,6 +187,7 @@ class FXOMNormalizer {
         final FXOMObject fxomRoot = fxomDocument.getFxomRoot();
         for (FXOMObject fxomGridPane : fxomRoot.collectObjectWithSceneGraphObjectClass(GridPane.class)) {
             normalizeGridPane(fxomGridPane);
+            changeCount++;
         }
     }
     

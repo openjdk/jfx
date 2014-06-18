@@ -1154,6 +1154,17 @@ public class RegionTest {
         assertTrue(r.willBeRepainted());
     }
 
+    @Test public void testBorderChangeUpdatesTheInsets() {
+        Region r = new Region();
+
+        r.setBorder(new Border(new BorderStroke(Color.BLACK, BorderStrokeStyle.SOLID, null, BorderWidths.DEFAULT, new Insets(10))));
+        assertEquals(new Insets(11), r.getInsets());
+
+        r.setBorder(new Border(new BorderStroke(Color.BLACK, BorderStrokeStyle.SOLID, null, null, new Insets(20))));
+
+        assertEquals(new Insets(21), r.getInsets());
+    }
+
     static final class ImageRegion extends Region {
         AtomicBoolean listenerAdded = new AtomicBoolean(false);
 

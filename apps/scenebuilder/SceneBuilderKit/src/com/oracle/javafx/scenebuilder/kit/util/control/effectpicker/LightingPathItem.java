@@ -31,8 +31,6 @@
  */
 package com.oracle.javafx.scenebuilder.kit.util.control.effectpicker;
 
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.scene.control.Menu;
 import javafx.scene.control.RadioMenuItem;
 import javafx.scene.control.SeparatorMenuItem;
@@ -105,22 +103,14 @@ public class LightingPathItem extends EffectPathItem {
         // Add Select Input Menu
         final Menu inputMenu = new Menu("Select Input"); //NOI18N
         bumpMenuItem.setToggleGroup(inputToggleGroup);
-        bumpMenuItem.setOnAction(new EventHandler<ActionEvent>() {
-
-            @Override
-            public void handle(ActionEvent event) {
-                toggle_button.setText(getSimpleName() + " (BumpInput)"); //NOI18N
-                effectPickerController.updateUI(LightingPathItem.this);
-            }
+        bumpMenuItem.setOnAction(event -> {
+            toggle_button.setText(getSimpleName() + " (BumpInput)"); //NOI18N
+            effectPickerController.updateUI(LightingPathItem.this);
         });
         contentMenuItem.setToggleGroup(inputToggleGroup);
-        contentMenuItem.setOnAction(new EventHandler<ActionEvent>() {
-
-            @Override
-            public void handle(ActionEvent event) {
-                toggle_button.setText(getSimpleName() + " (ContentInput)"); //NOI18N
-                effectPickerController.updateUI(LightingPathItem.this);
-            }
+        contentMenuItem.setOnAction(event -> {
+            toggle_button.setText(getSimpleName() + " (ContentInput)"); //NOI18N
+            effectPickerController.updateUI(LightingPathItem.this);
         });
 
         inputMenu.getItems().addAll(bumpMenuItem, contentMenuItem);

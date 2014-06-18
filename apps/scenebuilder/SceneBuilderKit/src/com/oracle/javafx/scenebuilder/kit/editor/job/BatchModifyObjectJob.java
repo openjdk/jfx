@@ -56,7 +56,7 @@ public class BatchModifyObjectJob extends CompositeJob {
             String description,
             Map<ValuePropertyMetadata, Object> valueMap,
             EditorController editorController) {
-        super(editorController);
+        super(editorController, true /* shouldRefreshSceneGraph */, false /* shouldUpdateSelection */);
         
         assert fxomInstance != null;
         assert valueMap != null;
@@ -71,11 +71,9 @@ public class BatchModifyObjectJob extends CompositeJob {
             ValuePropertyMetadata propertyMetadata,
             Object newValue,
             EditorController editorController) {
-        super(editorController);
-
+        super(editorController, true /* shouldRefreshSceneGraph */, false /* shouldUpdateSelection */);
         assert fxomInstance != null;
         assert propertyMetadata != null;
-        assert newValue != null;
 
         this.fxomInstance = fxomInstance;
         this.valueMap = new HashMap<>();

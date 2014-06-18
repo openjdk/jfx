@@ -34,11 +34,9 @@ import com.sun.javafx.geom.Path2D;
 
 class OS {
     static {
-        AccessController.doPrivileged(new PrivilegedAction<Void>() {
-           public Void run() {
-               NativeLibLoader.loadLibrary("javafx_font");
-               return null;
-           }
+        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+            NativeLibLoader.loadLibrary("javafx_font");
+            return null;
         });
     }
 
@@ -50,6 +48,7 @@ class OS {
     static final int kCGBitmapByteOrder32Host = ByteOrder.nativeOrder() == ByteOrder.LITTLE_ENDIAN ? kCGBitmapByteOrder32Little : kCGBitmapByteOrder32Big;
     static final int kCGImageAlphaPremultipliedFirst = 2;
     static final int kCGImageAlphaNone = 0;
+    static final int kCTWritingDirectionRightToLeft = 1;
 
     static final long CFStringCreate(String string) {
         char[] buffer = string.toCharArray();
@@ -76,6 +75,7 @@ class OS {
     static final native long kCFTypeDictionaryKeyCallBacks();
     static final native long kCFTypeDictionaryValueCallBacks();
     static final native long kCTFontAttributeName();
+    static final native long kCTParagraphStyleAttributeName();
     static final native long CFArrayGetCount(long theArray);
     static final native long CFArrayGetValueAtIndex(long theArray, long idx);
     static final native long CFAttributedStringCreate(long alloc, long str, long attributes);
@@ -107,5 +107,6 @@ class OS {
     static final native double CTLineGetTypographicBounds(long line);
     static final native long CTRunGetGlyphCount(long run);
     static final native long CTRunGetAttributes(long run);
+    static final native long CTParagraphStyleCreate(int dir);
 
 }

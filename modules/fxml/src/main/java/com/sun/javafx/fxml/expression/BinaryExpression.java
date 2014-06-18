@@ -26,15 +26,17 @@
 package com.sun.javafx.fxml.expression;
 
 import java.util.List;
+import java.util.function.BiFunction;
 
 /**
  * Abstract base class for binary expressions.
  */
-public abstract class BinaryExpression extends Expression {
-    private Expression left;
-    private Expression right;
+public final class BinaryExpression<U, T> extends Expression<T> {
+    private final BiFunction<U, U, T> evaluator;
+    private final Expression<U> left;
+    private final Expression<U> right;
 
-    public BinaryExpression(Expression left, Expression right) {
+    public BinaryExpression(Expression<U> left, Expression<U> right, BiFunction<U, U, T> evaluator) {
         if (left == null) {
             throw new NullPointerException();
         }
@@ -45,17 +47,13 @@ public abstract class BinaryExpression extends Expression {
 
         this.left = left;
         this.right = right;
+        this.evaluator = evaluator;
     }
 
-    public Expression getLeft() {
-        return left;
+    @Override
+    public T evaluate(Object namespace) {
+        return evaluator.apply(left.evaluate(namespace), right.evaluate(namespace));
     }
-
-    public Expression getRight() {
-        return right;
-    }
-
-    public abstract String getOperator();
 
     @Override
     public void update(Object namespace, Object value) {
@@ -78,8 +76,4 @@ public abstract class BinaryExpression extends Expression {
         right.getArguments(arguments);
     }
 
-    @Override
-    public String toString() {
-        return "(" + left + " " + getOperator() + " " + right + ")";
-    }
 }

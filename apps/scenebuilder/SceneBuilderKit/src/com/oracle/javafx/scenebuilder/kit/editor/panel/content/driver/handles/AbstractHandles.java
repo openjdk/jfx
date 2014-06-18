@@ -97,7 +97,7 @@ public abstract class AbstractHandles<T> extends AbstractDecoration<T> {
         final AbstractHandles<?> result;
         final Object value = node.getProperties().get(HANDLES);
         if (value instanceof AbstractHandles) {
-            result = (AbstractHandles) value;
+            result = (AbstractHandles<?>) value;
         } else {
             assert value == null;
             result = null;

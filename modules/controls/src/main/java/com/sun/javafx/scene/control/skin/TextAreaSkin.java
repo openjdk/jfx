@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,18 +25,16 @@
 
 package com.sun.javafx.scene.control.skin;
 
+import com.sun.javafx.scene.control.behavior.TextAreaBehavior;
+import com.sun.javafx.scene.text.HitInfo;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Platform;
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.beans.binding.BooleanBinding;
 import javafx.beans.binding.DoubleBinding;
 import javafx.beans.binding.IntegerBinding;
-import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableBooleanValue;
 import javafx.beans.value.ObservableIntegerValue;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
@@ -49,6 +47,7 @@ import javafx.geometry.VPos;
 import javafx.geometry.VerticalDirection;
 import javafx.scene.Group;
 import javafx.scene.Node;
+import javafx.scene.accessibility.Attribute;
 import javafx.scene.control.IndexRange;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextArea;
@@ -59,11 +58,9 @@ import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.Path;
 import javafx.scene.shape.PathElement;
 import javafx.scene.text.Text;
-import javafx.scene.text.TextBoundsType;
 import javafx.util.Duration;
+
 import java.util.List;
-import com.sun.javafx.scene.control.behavior.TextAreaBehavior;
-import com.sun.javafx.scene.text.HitInfo;
 
 /**
  * Text area skin.
@@ -94,25 +91,19 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         {
             getStyleClass().add("content");
 
-            addEventHandler(MouseEvent.MOUSE_PRESSED, new EventHandler<MouseEvent>() {
-                @Override public void handle(MouseEvent event) {
-                    getBehavior().mousePressed(event);
-                    event.consume();
-                }
+            addEventHandler(MouseEvent.MOUSE_PRESSED, event -> {
+                getBehavior().mousePressed(event);
+                event.consume();
             });
 
-            addEventHandler(MouseEvent.MOUSE_RELEASED, new EventHandler<MouseEvent>() {
-                @Override public void handle(MouseEvent event) {
-                    getBehavior().mouseReleased(event);
-                    event.consume();
-                }
+            addEventHandler(MouseEvent.MOUSE_RELEASED, event -> {
+                getBehavior().mouseReleased(event);
+                event.consume();
             });
 
-            addEventHandler(MouseEvent.MOUSE_DRAGGED, new EventHandler<MouseEvent>() {
-                @Override public void handle(MouseEvent event) {
-                    getBehavior().mouseDragged(event);
-                    event.consume();
-                }
+            addEventHandler(MouseEvent.MOUSE_DRAGGED, event -> {
+                getBehavior().mouseDragged(event);
+                event.consume();
             });
         }
 
@@ -382,19 +373,16 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
     private Path characterBoundingPath = new Path();
 
     private Timeline scrollSelectionTimeline = new Timeline();
-    private EventHandler<ActionEvent> scrollSelectionHandler = new EventHandler<ActionEvent>() {
-        @Override
-        public void handle(ActionEvent event) {
-            switch (scrollDirection) {
-                case UP: {
-                    // TODO Get previous offset
-                    break;
-                }
+    private EventHandler<ActionEvent> scrollSelectionHandler = event -> {
+        switch (scrollDirection) {
+            case UP: {
+                // TODO Get previous offset
+                break;
+            }
 
-                case DOWN: {
-                    // TODO Get next offset
-                    break;
-                }
+            case DOWN: {
+                // TODO Get next offset
+                break;
             }
         }
     };
@@ -402,6 +390,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
     public static final int SCROLL_RATE = 30;
 
     private double pressX, pressY; // For dragging handles on embedded
+    private boolean handlePressed;
 
     public TextAreaSkin(final TextArea textArea) {
         super(textArea, new TextAreaBehavior(textArea));
@@ -414,20 +403,16 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
                 return textArea.getCaretPosition();
             }
         };
-        caretPosition.addListener(new ChangeListener<Number>() {
-            @Override public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
-                targetCaretX = -1;
-                if (newValue.intValue() > oldValue.intValue()) {
-                    setForwardBias(true);
-                }
+        caretPosition.addListener((observable, oldValue, newValue) -> {
+            targetCaretX = -1;
+            if (newValue.intValue() > oldValue.intValue()) {
+                setForwardBias(true);
             }
         });
 
-        forwardBiasProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                if (textArea.getWidth() > 0) {
-                    updateTextNodeCaretPos(textArea.getCaretPosition());
-                }
+        forwardBiasProperty().addListener(observable -> {
+            if (textArea.getWidth() > 0) {
+                updateTextNodeCaretPos(textArea.getCaretPosition());
             }
         });
 
@@ -435,23 +420,15 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
 
         // Initialize content
         scrollPane = new ScrollPane();
-        scrollPane.setMinWidth(0);
-        scrollPane.setMinHeight(0);
         scrollPane.setFitToWidth(textArea.isWrapText());
         scrollPane.setContent(contentView);
         getChildren().add(scrollPane);
 
-        // RT-21658: We can currently only handle scroll events from touch if
-        // on the embedded platform.
-        if (!SHOW_HANDLES) {
-            scrollPane.addEventFilter(ScrollEvent.ANY, new EventHandler<ScrollEvent>() {
-                @Override public void handle(ScrollEvent event) {
-                    if (event.isDirect()) {
-                        event.consume();
-                    }
-                }
-            });
-        }
+        getSkinnable().addEventFilter(ScrollEvent.ANY, event -> {
+            if (event.isDirect() && handlePressed) {
+                event.consume();
+            }
+        });
 
         // Add selection
         selectionHighlightGroup.setManaged(false);
@@ -481,18 +458,12 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
             contentView.getChildren().addAll(caretHandle, selectionHandle1, selectionHandle2);
         }
 
-        scrollPane.hvalueProperty().addListener(new ChangeListener<Number>() {
-            @Override
-            public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
-                getSkinnable().setScrollLeft(newValue.doubleValue() * getScrollLeftMax());
-            }
+        scrollPane.hvalueProperty().addListener((observable, oldValue, newValue) -> {
+            getSkinnable().setScrollLeft(newValue.doubleValue() * getScrollLeftMax());
         });
 
-        scrollPane.vvalueProperty().addListener(new ChangeListener<Number>() {
-            @Override
-            public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
-                getSkinnable().setScrollTop(newValue.doubleValue() * getScrollTopMax());
-            }
+        scrollPane.vvalueProperty().addListener((observable, oldValue, newValue) -> {
+            getSkinnable().setScrollTop(newValue.doubleValue() * getScrollTopMax());
         });
 
         // Initialize the scroll selection timeline
@@ -507,127 +478,98 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
             addParagraphNode(i, paragraph.toString());
         }
 
-        textArea.selectionProperty().addListener(new ChangeListener<IndexRange>() {
-            @Override
-            public void changed(ObservableValue<? extends IndexRange> observable, IndexRange oldValue, IndexRange newValue) {
-                // TODO Why do we need two calls here?
-                textArea.requestLayout();
-                contentView.requestLayout();
-            }
+        textArea.selectionProperty().addListener((observable, oldValue, newValue) -> {
+            // TODO Why do we need two calls here?
+            textArea.requestLayout();
+            contentView.requestLayout();
         });
 
-        textArea.wrapTextProperty().addListener(new ChangeListener<Boolean>() {
-            @Override
-            public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-                invalidateMetrics();
-                scrollPane.setFitToWidth(newValue);
-            }
+        textArea.wrapTextProperty().addListener((observable, oldValue, newValue) -> {
+            invalidateMetrics();
+            scrollPane.setFitToWidth(newValue);
         });
 
-        textArea.prefColumnCountProperty().addListener(new ChangeListener<Number>() {
-            @Override
-            public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
-                invalidateMetrics();
-                updatePrefViewportWidth();
-            }
+        textArea.prefColumnCountProperty().addListener((observable, oldValue, newValue) -> {
+            invalidateMetrics();
+            updatePrefViewportWidth();
         });
 
-        textArea.prefRowCountProperty().addListener(new ChangeListener<Number>() {
-            @Override
-            public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
-                invalidateMetrics();
-                updatePrefViewportHeight();
-            }
+        textArea.prefRowCountProperty().addListener((observable, oldValue, newValue) -> {
+            invalidateMetrics();
+            updatePrefViewportHeight();
         });
 
         updateFontMetrics();
-        fontMetrics.addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable valueModel) {
-                updateFontMetrics();
-            }
+        fontMetrics.addListener(valueModel -> {
+            updateFontMetrics();
         });
 
-        contentView.paddingProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable valueModel) {
-                updatePrefViewportWidth();
-                updatePrefViewportHeight();
-            }
+        contentView.paddingProperty().addListener(valueModel -> {
+            updatePrefViewportWidth();
+            updatePrefViewportHeight();
         });
 
-        scrollPane.viewportBoundsProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable valueModel) {
-                if (scrollPane.getViewportBounds() != null) {
-                    // ScrollPane creates a new Bounds instance for each
-                    // layout pass, so we need to check if the width/height
-                    // have really changed to avoid infinite layout requests.
-                    Bounds newViewportBounds = scrollPane.getViewportBounds();
-                    if (oldViewportBounds == null ||
-                        oldViewportBounds.getWidth() != newViewportBounds.getWidth() ||
-                        oldViewportBounds.getHeight() != newViewportBounds.getHeight()) {
+        scrollPane.viewportBoundsProperty().addListener(valueModel -> {
+            if (scrollPane.getViewportBounds() != null) {
+                // ScrollPane creates a new Bounds instance for each
+                // layout pass, so we need to check if the width/height
+                // have really changed to avoid infinite layout requests.
+                Bounds newViewportBounds = scrollPane.getViewportBounds();
+                if (oldViewportBounds == null ||
+                    oldViewportBounds.getWidth() != newViewportBounds.getWidth() ||
+                    oldViewportBounds.getHeight() != newViewportBounds.getHeight()) {
 
-                        invalidateMetrics();
-                        oldViewportBounds = newViewportBounds;
-                        contentView.requestLayout();
-                    }
+                    invalidateMetrics();
+                    oldViewportBounds = newViewportBounds;
+                    contentView.requestLayout();
                 }
             }
         });
 
-        textArea.scrollTopProperty().addListener(new ChangeListener<Number>() {
-            @Override
-            public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
-                double vValue = (newValue.doubleValue() < getScrollTopMax())
-                                   ? (newValue.doubleValue() / getScrollTopMax()) : 1.0;
-                scrollPane.setVvalue(vValue);
-            }
+        textArea.scrollTopProperty().addListener((observable, oldValue, newValue) -> {
+            double vValue = (newValue.doubleValue() < getScrollTopMax())
+                               ? (newValue.doubleValue() / getScrollTopMax()) : 1.0;
+            scrollPane.setVvalue(vValue);
         });
 
-        textArea.scrollLeftProperty().addListener(new ChangeListener<Number>() {
-            @Override
-            public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
-                double hValue = (newValue.doubleValue() < getScrollLeftMax())
-                                   ? (newValue.doubleValue() / getScrollLeftMax()) : 1.0;
-                scrollPane.setHvalue(hValue);
-            }
+        textArea.scrollLeftProperty().addListener((observable, oldValue, newValue) -> {
+            double hValue = (newValue.doubleValue() < getScrollLeftMax())
+                               ? (newValue.doubleValue() / getScrollLeftMax()) : 1.0;
+            scrollPane.setHvalue(hValue);
         });
 
         if (USE_MULTIPLE_NODES) {
-            textArea.getParagraphs().addListener(new ListChangeListener<CharSequence>() {
-                @Override
-                public void onChanged(ListChangeListener.Change<? extends CharSequence> change) {
-                    while (change.next()) {
-                        int from = change.getFrom();
-                        int to = change.getTo();
-                        List<? extends CharSequence> removed = change.getRemoved();
-                        if (from < to) {
+            textArea.getParagraphs().addListener((ListChangeListener.Change<? extends CharSequence> change) -> {
+                while (change.next()) {
+                    int from = change.getFrom();
+                    int to = change.getTo();
+                    List<? extends CharSequence> removed = change.getRemoved();
+                    if (from < to) {
 
-                            if (removed.isEmpty()) {
-                                // This is an add
-                                for (int i = from, n = to; i < n; i++) {
-                                    addParagraphNode(i, change.getList().get(i).toString());
-                                }
-                            } else {
-                                // This is an update
-                                for (int i = from, n = to; i < n; i++) {
-                                    Node node = paragraphNodes.getChildren().get(i);
-                                    Text paragraphNode = (Text) node;
-                                    paragraphNode.setText(change.getList().get(i).toString());
-                                }
+                        if (removed.isEmpty()) {
+                            // This is an add
+                            for (int i = from, n = to; i < n; i++) {
+                                addParagraphNode(i, change.getList().get(i).toString());
                             }
                         } else {
-                            // This is a remove
-                            paragraphNodes.getChildren().subList(from, from + removed.size()).clear();
+                            // This is an update
+                            for (int i = from, n = to; i < n; i++) {
+                                Node node = paragraphNodes.getChildren().get(i);
+                                Text paragraphNode = (Text) node;
+                                paragraphNode.setText(change.getList().get(i).toString());
+                            }
                         }
+                    } else {
+                        // This is a remove
+                        paragraphNodes.getChildren().subList(from, from + removed.size()).clear();
                     }
                 }
             });
         } else {
-            textArea.textProperty().addListener(new InvalidationListener() {
-                @Override public void invalidated(Observable observable) {
-                    invalidateMetrics();
-                    ((Text)paragraphNodes.getChildren().get(0)).setText(textArea.textProperty().getValueSafe());
-                    contentView.requestLayout();
-                }
+            textArea.textProperty().addListener(observable -> {
+                invalidateMetrics();
+                ((Text)paragraphNodes.getChildren().get(0)).setText(textArea.textProperty().getValueSafe());
+                contentView.requestLayout();
             });
         }
 
@@ -645,11 +587,9 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
             createPromptNode();
         }
 
-        usePromptText.addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                createPromptNode();
-                textArea.requestLayout();
-            }
+        usePromptText.addListener(observable -> {
+            createPromptNode();
+            textArea.requestLayout();
         });
 
         updateHighlightFill();
@@ -660,38 +600,43 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         if (SHOW_HANDLES) {
             selectionHandle1.setRotate(180);
 
-            EventHandler<MouseEvent> handlePressHandler = new EventHandler<MouseEvent>() {
-                @Override public void handle(MouseEvent e) {
-                    pressX = e.getX();
-                    pressY = e.getY();
-                    e.consume();
-                }
+            EventHandler<MouseEvent> handlePressHandler = e -> {
+                pressX = e.getX();
+                pressY = e.getY();
+                handlePressed = true;
+                e.consume();
+            };
+
+            EventHandler<MouseEvent> handleReleaseHandler = event -> {
+                handlePressed = false;
             };
 
             caretHandle.setOnMousePressed(handlePressHandler);
             selectionHandle1.setOnMousePressed(handlePressHandler);
             selectionHandle2.setOnMousePressed(handlePressHandler);
 
-            caretHandle.setOnMouseDragged(new EventHandler<MouseEvent>() {
-                @Override public void handle(MouseEvent e) {
-                    Text textNode = getTextNode();
-                    Point2D tp = textNode.localToScene(0, 0);
-                    Point2D p = new Point2D(e.getSceneX() - tp.getX() + 10/*??*/ - pressX + caretHandle.getWidth() / 2,
-                                            e.getSceneY() - tp.getY() - pressY - 6);
-                    HitInfo hit = textNode.impl_hitTestChar(translateCaretPosition(p));
-                    int pos = hit.getCharIndex();
-                    if (pos > 0) {
-                        int oldPos = textNode.getImpl_caretPosition();
-                        textNode.setImpl_caretPosition(pos);
-                        PathElement element = textNode.getImpl_caretShape()[0];
-                        if (element instanceof MoveTo && ((MoveTo)element).getY() > e.getY() - getTextTranslateY()) {
-                            hit.setCharIndex(pos - 1);
-                        }
-                        textNode.setImpl_caretPosition(oldPos);
+            caretHandle.setOnMouseReleased(handleReleaseHandler);
+            selectionHandle1.setOnMouseReleased(handleReleaseHandler);
+            selectionHandle2.setOnMouseReleased(handleReleaseHandler);
+
+            caretHandle.setOnMouseDragged(e -> {
+                Text textNode = getTextNode();
+                Point2D tp = textNode.localToScene(0, 0);
+                Point2D p = new Point2D(e.getSceneX() - tp.getX() + 10/*??*/ - pressX + caretHandle.getWidth() / 2,
+                                        e.getSceneY() - tp.getY() - pressY - 6);
+                HitInfo hit = textNode.impl_hitTestChar(translateCaretPosition(p));
+                int pos = hit.getCharIndex();
+                if (pos > 0) {
+                    int oldPos = textNode.getImpl_caretPosition();
+                    textNode.setImpl_caretPosition(pos);
+                    PathElement element = textNode.getImpl_caretShape()[0];
+                    if (element instanceof MoveTo && ((MoveTo)element).getY() > e.getY() - getTextTranslateY()) {
+                        hit.setCharIndex(pos - 1);
                     }
-                    positionCaret(hit, false, false);
-                    e.consume();
+                    textNode.setImpl_caretPosition(oldPos);
                 }
+                positionCaret(hit, false, false);
+                e.consume();
             });
 
             selectionHandle1.setOnMouseDragged(new EventHandler<MouseEvent>() {
@@ -775,33 +720,15 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         paragraphNode.setTextOrigin(VPos.TOP);
         paragraphNode.setManaged(false);
         paragraphNode.getStyleClass().add("text");
-        paragraphNode.boundsTypeProperty().addListener(new ChangeListener<TextBoundsType>() {
-            @Override public void changed(ObservableValue<? extends TextBoundsType> observable, TextBoundsType oldValue, TextBoundsType newValue) {
-                invalidateMetrics();
-                updateFontMetrics();
-            }
+        paragraphNode.boundsTypeProperty().addListener((observable, oldValue, newValue) -> {
+            invalidateMetrics();
+            updateFontMetrics();
         });
         paragraphNodes.getChildren().add(i, paragraphNode);
 
         paragraphNode.fontProperty().bind(textArea.fontProperty());
         paragraphNode.fillProperty().bind(textFill);
         paragraphNode.impl_selectionFillProperty().bind(highlightTextFill);
-    }
-
-    @Override public void layoutChildren(final double x, final double y,
-            final double w, final double h) {
-        
-        scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
-        scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
-
-        super.layoutChildren(x,y,w,h);
-
-        Bounds bounds = scrollPane.getViewportBounds();
-        if (bounds != null && (bounds.getWidth() < contentView.minWidth(-1) ||
-                               bounds.getHeight() < contentView.minHeight(-1))) {
-            scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
-            scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
-        }
     }
 
     @Override
@@ -982,15 +909,12 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         // removed the bounds are not immediately updated; is this really
         // necessary?
 
-        Platform.runLater(new Runnable() {
-            @Override
-            public void run() {
-                if (getSkinnable().getLength() == 0) {
-                    return;
-                }
-                Rectangle2D characterBounds = getCharacterBounds(index);
-                scrollBoundsToVisible(characterBounds);
+        Platform.runLater(() -> {
+            if (getSkinnable().getLength() == 0) {
+                return;
             }
+            Rectangle2D characterBounds = getCharacterBounds(index);
+            scrollBoundsToVisible(characterBounds);
         });
     }
 
@@ -1121,18 +1045,18 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         return (Text)paragraphNodes.getChildren().get(0);
     }
 
-    public HitInfo getIndex(MouseEvent e) {
+    public HitInfo getIndex(double x, double y) {
         // adjust the event to be in the same coordinate space as the
         // text content of the textInputControl
         Text textNode = getTextNode();
-        Point2D p = new Point2D(e.getX() - textNode.getLayoutX(), e.getY() - getTextTranslateY());
+        Point2D p = new Point2D(x - textNode.getLayoutX(), y - getTextTranslateY());
         HitInfo hit = textNode.impl_hitTestChar(translateCaretPosition(p));
         int pos = hit.getCharIndex();
         if (pos > 0) {
             int oldPos = textNode.getImpl_caretPosition();
             textNode.setImpl_caretPosition(pos);
             PathElement element = textNode.getImpl_caretShape()[0];
-            if (element instanceof MoveTo && ((MoveTo)element).getY() > e.getY() - getTextTranslateY()) {
+            if (element instanceof MoveTo && ((MoveTo)element).getY() > y - getTextTranslateY()) {
                 hit.setCharIndex(pos - 1);
             }
             textNode.setImpl_caretPosition(oldPos);
@@ -1298,21 +1222,30 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         }
     }
 
-    public void paragraphEnd(boolean nextIfAtEnd, boolean select) {
+    public void paragraphEnd(boolean goPastInitialNewline, boolean goPastTrailingNewline, boolean select) {
         TextArea textArea = getSkinnable();
         String text = textArea.textProperty().getValueSafe();
         int pos = textArea.getCaretPosition();
         int len = text.length();
+        boolean wentPastInitialNewline = false;
 
         if (pos < len) {
-            if (nextIfAtEnd && text.codePointAt(pos) == 0x0a) {
-                // We are at the end of a paragraph.
-                // Move to the next paragraph.
+            if (goPastInitialNewline && text.codePointAt(pos) == 0x0a) {
+                // We are at the end of a paragraph, start by moving to the
+                // next paragraph.
                 pos++;
+                wentPastInitialNewline = true;
             }
-            // Go to the end of this paragraph
-            while (pos < len && text.codePointAt(pos) != 0x0a) {
-                pos++;
+            if (!(goPastTrailingNewline && wentPastInitialNewline)) {
+                // Go to the end of this paragraph
+                while (pos < len && text.codePointAt(pos) != 0x0a) {
+                    pos++;
+                }
+                if (goPastTrailingNewline && pos < len) {
+                    // We are at the end of a paragraph, finish by moving to
+                    // the beginning of the next paragraph (Windows behavior).
+                    pos++;
+                }
             }
             if (select) {
                 textArea.selectPositionCaret(pos);
@@ -1415,5 +1348,19 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
 
     public Bounds getCaretBounds() {
         return getSkinnable().sceneToLocal(caretPath.localToScene(caretPath.getBoundsInLocal()));
+    }
+
+    @Override
+    protected Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case LINE_FOR_OFFSET:
+            case LINE_START:
+            case LINE_END:
+            case BOUNDS_FOR_RANGE:
+            case OFFSET_AT_POINT:
+                Text text = getTextNode();
+                return text.accGetAttribute(attribute, parameters);
+            default: return super.accGetAttribute(attribute, parameters);
+        }
     }
 }

@@ -63,7 +63,7 @@ public abstract class AbstractPring<T> extends AbstractDecoration<T> {
         final AbstractPring<?> result;
         final Object value = node.getProperties().get(PRING);
         if (value instanceof AbstractPring) {
-            result = (AbstractPring) value;
+            result = (AbstractPring<?>) value;
         } else {
             assert value == null;
             result = null;

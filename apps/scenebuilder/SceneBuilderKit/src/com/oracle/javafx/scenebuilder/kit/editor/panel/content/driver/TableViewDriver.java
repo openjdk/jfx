@@ -76,7 +76,7 @@ public class TableViewDriver extends AbstractNodeDriver {
         assert fxomObject.getSceneGraphObject() instanceof TableView;
         
         final TableViewDesignInfoX di = new TableViewDesignInfoX();
-        final TableView<?> tv = (TableView) fxomObject.getSceneGraphObject();
+        final TableView<?> tv = (TableView<?>) fxomObject.getSceneGraphObject();
         final TableColumn<?,?> tc = di.lookupColumn(tv, sceneX, sceneY);
         final FXOMObject result;
         

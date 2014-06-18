@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,7 @@
 package com.sun.javafx.tk.quantum;
 
 import com.sun.javafx.logging.PulseLogger;
+import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
 import com.sun.prism.Graphics;
 import com.sun.prism.GraphicsPipeline;
 import com.sun.prism.impl.Disposer;
@@ -54,6 +55,7 @@ final class PresentingPainter extends ViewPainter {
                 if (QuantumToolkit.verbose) {
                     System.err.println("PresentingPainter: validateStageGraphics failed");
                 }
+                paintImpl(null);
                 return;
             }
             
@@ -79,6 +81,7 @@ final class PresentingPainter extends ViewPainter {
                 presentable = factory.createPresentable(sceneState);
                 penWidth  = viewWidth;
                 penHeight = viewHeight;
+                freshBackBuffer = true;
             }
             
             if (presentable != null) {
@@ -87,27 +90,23 @@ final class PresentingPainter extends ViewPainter {
                 ViewScene vs = (ViewScene) sceneState.getScene();
                 if (g != null) {
                     paintImpl(g);
+                    freshBackBuffer = false;
                 }
 
-                long start = PulseLogger.PULSE_LOGGING_ENABLED ? System.currentTimeMillis() : 0;
+                if (PULSE_LOGGING_ENABLED) {
+                    PulseLogger.newPhase("Presenting");
+                }
                 if (!presentable.prepare(null)) {
                     disposePresentable();
                     sceneState.getScene().entireSceneNeedsRepaint();
-                    if (PulseLogger.PULSE_LOGGING_ENABLED) {
-                        PulseLogger.PULSE_LOGGER.renderMessage(start, System.currentTimeMillis(), "Presentable.prepare");
-                    }
                     return;
                 }
                 
                 /* present for vsync buffer swap */
-                start = PulseLogger.PULSE_LOGGING_ENABLED ? System.currentTimeMillis() : 0;
                 if (vs.getDoPresent()) {
                     if (!presentable.present()) {
                         disposePresentable();
                         sceneState.getScene().entireSceneNeedsRepaint();
-                    }
-                    if (PulseLogger.PULSE_LOGGING_ENABLED) {
-                        PulseLogger.PULSE_LOGGER.renderMessage(start, System.currentTimeMillis(), "Presentable.present");
                     }
                 }
             }
@@ -115,9 +114,8 @@ final class PresentingPainter extends ViewPainter {
             errored = true;
             th.printStackTrace(System.err);
         } finally {
-            if (valid) {
-                Disposer.cleanUp();
-            }
+            Disposer.cleanUp();
+
             if (locked) {
                 sceneState.unlock();
             }
@@ -128,9 +126,6 @@ final class PresentingPainter extends ViewPainter {
             ManagedResource.freeDisposalRequestedAndCheckResources(errored);
 
             renderLock.unlock();
-            if (PulseLogger.PULSE_LOGGING_ENABLED) {
-                PulseLogger.PULSE_LOGGER.renderMessage(System.currentTimeMillis(), System.currentTimeMillis(), "Finished Presenting Painter");
-            }
         }
     }
 }

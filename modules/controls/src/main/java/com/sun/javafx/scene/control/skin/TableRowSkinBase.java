@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,10 +35,11 @@ import javafx.beans.property.ObjectProperty;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.WeakListChangeListener;
-import javafx.geometry.HPos;
+import javafx.css.StyleOrigin;
+import javafx.css.StyleableObjectProperty;
 import javafx.geometry.Pos;
-import javafx.geometry.VPos;
 import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.control.Control;
 import javafx.scene.control.IndexedCell;
 import javafx.scene.control.TableColumnBase;
@@ -153,6 +154,7 @@ public abstract class TableRowSkinBase<T,
         // --- end init bindings
 
         registerChangeListener(control.itemProperty(), "ITEM");
+        registerChangeListener(control.indexProperty(), "INDEX");
 
         if (fixedCellSizeProperty() != null) {
             registerChangeListener(fixedCellSizeProperty(), "FIXED_CELL_SIZE");
@@ -169,11 +171,9 @@ public abstract class TableRowSkinBase<T,
      *                                                                         *
      **************************************************************************/
 
-    private ListChangeListener<TableColumnBase> visibleLeafColumnsListener = new ListChangeListener<TableColumnBase>() {
-        @Override public void onChanged(Change<? extends TableColumnBase> c) {
-            isDirty = true;
-            getSkinnable().requestLayout();
-        }
+    private ListChangeListener<TableColumnBase> visibleLeafColumnsListener = c -> {
+        isDirty = true;
+        getSkinnable().requestLayout();
     };
 
     private WeakListChangeListener<TableColumnBase> weakVisibleLeafColumnsListener =
@@ -222,20 +222,16 @@ public abstract class TableRowSkinBase<T,
     @Override protected void handleControlPropertyChanged(String p) {
         super.handleControlPropertyChanged(p);
 
-        if ("ITEM".equals(p)) {
-            updateCells = true;
-            getSkinnable().requestLayout();
-
-            // update the index of all children cells (RT-29849).
-            // Note that we do this after the TableRow item has been updated,
-            // rather than when the TableRow index has changed (as this will be
-            // before the row has updated its item). This will result in the
-            // issue highlighted in RT-33602, where the table cell had the correct
-            // item whilst the row had the old item.
-            final int newIndex = getSkinnable().getIndex();
-            for (int i = 0, max = cells.size(); i < max; i++) {
-                cells.get(i).updateIndex(newIndex);
+        if ("INDEX".equals(p)) {
+            // Fix for RT-36661, where empty table cells were showing content, as they
+            // had incorrect table cell indices (but the table row index was correct).
+            // Note that we only do the update on empty cells to avoid the issue
+            // noted below in requestCellUpdate().
+            if (getSkinnable().isEmpty()) {
+                requestCellUpdate();
             }
+        } else if ("ITEM".equals(p)) {
+            requestCellUpdate();
         } else if ("FIXED_CELL_SIZE".equals(p)) {
             fixedCellSize = fixedCellSizeProperty().get();
             fixedCellSizeEnabled = fixedCellSize > 0;
@@ -243,7 +239,7 @@ public abstract class TableRowSkinBase<T,
     }
 
     @Override protected void layoutChildren(double x, final double y, final double w, final double h) {
-        checkState(true);
+        checkState();
         if (cellsMap.isEmpty()) return;
 
         ObservableList<? extends TableColumnBase> visibleLeafColumns = getVisibleLeafColumns();
@@ -291,6 +287,19 @@ public abstract class TableRowSkinBase<T,
                     disclosureWidth = disclosureNode.prefWidth(h);
                     if (disclosureWidth > defaultDisclosureWidth) {
                         maxDisclosureWidthMap.put(c, disclosureWidth);
+
+                        // RT-36359: The recorded max width of the disclosure node
+                        // has increased. We need to go back and request all
+                        // earlier rows to update themselves to take into account
+                        // this increased indentation.
+                        final VirtualFlow<C> flow = getVirtualFlow();
+                        final int thisIndex = getSkinnable().getIndex();
+                        for (int i = 0; i < flow.cells.size(); i++) {
+                            C cell = flow.cells.get(i);
+                            if (cell == null || cell.isEmpty() || cell.getIndex() >= thisIndex) continue;
+                            cell.requestLayout();
+                            cell.layout();
+                        }
                     }
                 }
             }
@@ -355,9 +364,15 @@ public abstract class TableRowSkinBase<T,
                 // alignment has not been manually changed, but for now this will
                 // do.
                 final boolean centreContent = h <= 24.0;
-                if (! centreContent && tableCell.getAlignment() == Pos.CENTER_LEFT) {
+
+                // if the style origin is null then the property has not been
+                // set (or it has been reset to its default), which means that
+                // we can set it without overwriting someone elses settings.
+                final StyleOrigin origin = ((StyleableObjectProperty<?>) tableCell.alignmentProperty()).getStyleOrigin();
+                if (! centreContent && origin == null) {
                     tableCell.setAlignment(Pos.TOP_LEFT);
                 }
+                // --- end of RT-32700 fix
 
                 ///////////////////////////////////////////
                 // further indentation code starts here
@@ -494,18 +509,23 @@ public abstract class TableRowSkinBase<T,
             updateCell(cell, skinnable);
             cell.updateIndex(skinnableIndex);
             cells.add(cell);
-            if (resetChildren) {
-                // RT-31084:When resetting children, we are already in the layout pass (with expection of one call during the init)
-                // Since we are manipulating with cells here and cannot wait for the next pulse to process CSS for the new situation,
-                // the CSS must be processed here
-                cell.impl_processCSS(false);
-            }
         }
 
         // update children of each row
         if (!fixedCellSizeEnabled && (resetChildren || cellsEmpty)) {
             getChildren().setAll(cells);
         }
+    }
+
+    private VirtualFlow<C> getVirtualFlow() {
+        Parent p = getSkinnable();
+        while (p != null) {
+            if (p instanceof VirtualFlow) {
+                return (VirtualFlow<C>) p;
+            }
+            p = p.getParent();
+        }
+        return null;
     }
 
     @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
@@ -525,7 +545,7 @@ public abstract class TableRowSkinBase<T,
         }
 
         // fix for RT-29080
-        checkState(false);
+        checkState();
 
         // Support for RT-18467: making it easier to specify a height for
         // cells via CSS, where the desired height is less than the height
@@ -554,7 +574,7 @@ public abstract class TableRowSkinBase<T,
         }
 
         // fix for RT-29080
-        checkState(false);
+        checkState();
 
         // Support for RT-18467: making it easier to specify a height for
         // cells via CSS, where the desired height is less than the height
@@ -583,13 +603,8 @@ public abstract class TableRowSkinBase<T,
     }
 
     // protected to allow subclasses to ensure a consistent state during layout
-    protected final void checkState(boolean doRecreateIfNecessary) {
+    protected final void checkState() {
         if (isDirty) {
-            // doRecreateIfNecessary was added to resolve RT-29382, which was
-            // introduced by the fix for RT-29080 above in computePrefHeight
-            if (doRecreateIfNecessary) {
-                recreateCells();
-            }
             updateCells(true);
             isDirty = false;
         } else if (updateCells) {
@@ -605,6 +620,22 @@ public abstract class TableRowSkinBase<T,
      * Private Implementation                                                  *
      *                                                                         *
      **************************************************************************/
+
+    private void requestCellUpdate() {
+        updateCells = true;
+        getSkinnable().requestLayout();
+
+        // update the index of all children cells (RT-29849).
+        // Note that we do this after the TableRow item has been updated,
+        // rather than when the TableRow index has changed (as this will be
+        // before the row has updated its item). This will result in the
+        // issue highlighted in RT-33602, where the table cell had the correct
+        // item whilst the row had the old item.
+        final int newIndex = getSkinnable().getIndex();
+        for (int i = 0, max = cells.size(); i < max; i++) {
+            cells.get(i).updateIndex(newIndex);
+        }
+    }
 
     private void recreateCells() {
         // This function is smart in the sense that we don't recreate all
@@ -622,6 +653,7 @@ public abstract class TableRowSkinBase<T,
                 R cell = cellsIter.next();
                 cell.updateIndex(-1);
                 cell.getSkin().dispose();
+                cell.setSkin(null);
             }
             cellsMap.clear();
         }

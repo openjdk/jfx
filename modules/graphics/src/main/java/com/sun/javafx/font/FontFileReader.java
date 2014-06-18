@@ -59,15 +59,14 @@ class FontFileReader implements FontConstants {
             return false;
         }
         raFile = AccessController.doPrivileged(
-                new PrivilegedAction<RandomAccessFile>() {
-                    public RandomAccessFile run()  {
-                        try {
-                            return new RandomAccessFile(filename, "r");
-                        } catch (FileNotFoundException fnfe) {
-                            return null;
-                        }
+                (PrivilegedAction<RandomAccessFile>) () -> {
+                    try {
+                        return new RandomAccessFile(filename, "r");
+                    } catch (FileNotFoundException fnfe) {
+                        return null;
                     }
-                });
+                }
+        );
         if (raFile != null) {
             try {
                 filesize = raFile.length();

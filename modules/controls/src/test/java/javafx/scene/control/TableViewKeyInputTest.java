@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,8 +29,10 @@ import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.beans.value.ObservableValue;
+import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.scene.input.KeyCode;
+import javafx.scene.layout.HBox;
 import javafx.util.Callback;
 import java.util.List;
 import com.sun.javafx.PlatformUtil;
@@ -50,6 +52,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class TableViewKeyInputTest {
     private TableView<String> tableView;
@@ -809,7 +812,7 @@ public class TableViewKeyInputTest {
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
         keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
         keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.SHIFT);
-        assertTrue(isSelected(0,1,2));
+        assertTrue(debug(), isSelected(0,1,2));
         assertTrue(isAnchor(2));
     }
     
@@ -1840,21 +1843,13 @@ public class TableViewKeyInputTest {
         tableView.setEditable(true);
         col0.setEditable(true);
 
-        col0.setCellValueFactory(new Callback<TableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
-            @Override public ObservableValue<String> call(TableColumn.CellDataFeatures<String, String> param) {
-                return new ReadOnlyStringWrapper("DUMMY TEXT");
-            }
-        });
+        col0.setCellValueFactory(param -> new ReadOnlyStringWrapper("DUMMY TEXT"));
 
-        col0.setOnEditStart(new EventHandler<TableColumn.CellEditEvent<String, String>>() {
-            @Override public void handle(TableColumn.CellEditEvent<String, String> t) {
-                rt29849_start_count++;
-            }
+        col0.setOnEditStart(t -> {
+            rt29849_start_count++;
         });
-        col0.setOnEditCancel(new EventHandler<TableColumn.CellEditEvent<String, String>>() {
-            @Override public void handle(TableColumn.CellEditEvent<String, String> t) {
-                rt29849_cancel_count++;
-            }
+        col0.setOnEditCancel(t -> {
+            rt29849_cancel_count++;
         });
 
         // initially the counts should be zero
@@ -1891,10 +1886,8 @@ public class TableViewKeyInputTest {
         // event when the selected items list changes (due to deselection).
         // It actually does always contain the right value - it just doesn't
         // let anyone know it!
-        sm.selectedItemProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                rt31577_count++;
-            }
+        sm.selectedItemProperty().addListener(observable -> {
+            rt31577_count++;
         });
 
         assertTrue(sm.getSelectedItems().isEmpty());
@@ -1981,11 +1974,7 @@ public class TableViewKeyInputTest {
             tableView.getItems().add("Row " + i);
         }
 
-        col0.setCellValueFactory(new Callback<TableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
-            @Override public ObservableValue<String> call(TableColumn.CellDataFeatures<String, String> param) {
-                return new ReadOnlyStringWrapper(param.getValue());
-            }
-        });
+        col0.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue()));
 
         final TableSelectionModel sm = tableView.getSelectionModel();
         sm.setSelectionMode(SelectionMode.SINGLE);
@@ -2013,11 +2002,7 @@ public class TableViewKeyInputTest {
             tableView.getItems().add("Row " + i);
         }
 
-        col0.setCellValueFactory(new Callback<TableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
-            @Override public ObservableValue<String> call(TableColumn.CellDataFeatures<String, String> param) {
-                return new ReadOnlyStringWrapper(param.getValue());
-            }
-        });
+        col0.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue()));
 
         final int lastIndex = 99;
 
@@ -2470,11 +2455,6 @@ public class TableViewKeyInputTest {
             tableView.getItems().add("Row " + i);
         }
 
-        final TableFocusModel fm = tableView.getFocusModel();
-        final TableSelectionModel sm = tableView.getSelectionModel();
-
-        new StageLoader(tableView);
-
         sm.clearAndSelect(99);
         tableView.scrollTo(99);
         assertEquals(99, getAnchor().getRow());
@@ -2493,12 +2473,7 @@ public class TableViewKeyInputTest {
             tableView.getItems().add("Row " + i);
         }
 
-        final TableFocusModel fm = tableView.getFocusModel();
-        final TableSelectionModel sm = tableView.getSelectionModel();
-
         sm.setCellSelectionEnabled(true);
-
-        new StageLoader(tableView);
 
         sm.clearAndSelect(99, col0);
         tableView.scrollTo(99);
@@ -2520,12 +2495,7 @@ public class TableViewKeyInputTest {
             tableView.getItems().add("Row " + i);
         }
 
-        final TableFocusModel fm = tableView.getFocusModel();
-        final TableSelectionModel sm = tableView.getSelectionModel();
-
         sm.setCellSelectionEnabled(false);
-
-        new StageLoader(tableView);
 
         sm.clearAndSelect(99);
         tableView.scrollTo(99);
@@ -2544,10 +2514,6 @@ public class TableViewKeyInputTest {
         for (int i = 0; i < items; i++) {
             tableView.getItems().add("Row " + i);
         }
-
-        new StageLoader(tableView);
-        final FocusModel fm = tableView.getFocusModel();
-        final MultipleSelectionModel sm = tableView.getSelectionModel();
 
         sm.clearAndSelect(1);
         assertEquals(1, getAnchor().getRow());
@@ -2590,10 +2556,6 @@ public class TableViewKeyInputTest {
             tableView.getItems().add("Row " + i);
         }
 
-        new StageLoader(tableView);
-        final FocusModel fm = tableView.getFocusModel();
-        final MultipleSelectionModel sm = tableView.getSelectionModel();
-
         sm.clearAndSelect(1);
         assertEquals(1, getAnchor().getRow());
         assertEquals(1, fm.getFocusedIndex());
@@ -2620,9 +2582,6 @@ public class TableViewKeyInputTest {
             tableView.getItems().add("Row " + i);
         }
 
-        new StageLoader(tableView);
-        final FocusModel fm = tableView.getFocusModel();
-        final TableSelectionModel sm = tableView.getSelectionModel();
         sm.setCellSelectionEnabled(true);
 
         sm.clearAndSelect(6, col0);
@@ -2655,9 +2614,6 @@ public class TableViewKeyInputTest {
             tableView.getItems().add("Row " + i);
         }
 
-        new StageLoader(tableView);
-        final TableFocusModel fm = tableView.getFocusModel();
-        final TableSelectionModel sm = tableView.getSelectionModel();
         sm.setCellSelectionEnabled(true);
 
         sm.clearAndSelect(6, col0);
@@ -2693,9 +2649,6 @@ public class TableViewKeyInputTest {
             tableView.getItems().add("Row " + i);
         }
 
-        new StageLoader(tableView);
-        final TableFocusModel fm = tableView.getFocusModel();
-        final TableSelectionModel sm = tableView.getSelectionModel();
         sm.setCellSelectionEnabled(true);
 
         sm.clearAndSelect(6, col1);
@@ -2731,9 +2684,6 @@ public class TableViewKeyInputTest {
             tableView.getItems().add("Row " + i);
         }
 
-        new StageLoader(tableView);
-        final FocusModel fm = tableView.getFocusModel();
-        final TableSelectionModel sm = tableView.getSelectionModel();
         sm.setCellSelectionEnabled(true);
 
         sm.clearAndSelect(3, col0);
@@ -2766,9 +2716,6 @@ public class TableViewKeyInputTest {
             tableView.getItems().add("Row " + i);
         }
 
-        new StageLoader(tableView);
-        final TableFocusModel fm = tableView.getFocusModel();
-        final TableSelectionModel sm = tableView.getSelectionModel();
         sm.setCellSelectionEnabled(true);
 
         sm.clearAndSelect(3, col0);
@@ -2804,9 +2751,6 @@ public class TableViewKeyInputTest {
             tableView.getItems().add("Row " + i);
         }
 
-        new StageLoader(tableView);
-        final TableFocusModel fm = tableView.getFocusModel();
-        final TableSelectionModel sm = tableView.getSelectionModel();
         sm.setCellSelectionEnabled(true);
 
         sm.clearAndSelect(3, col1);
@@ -2819,7 +2763,6 @@ public class TableViewKeyInputTest {
         keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.getShortcutKey());
         keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.getShortcutKey());
         keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.getShortcutKey());
-        Toolkit.getToolkit().firePulse();
         assertEquals(3, getAnchor().getRow());
         assertEquals(1, getAnchor().getColumn());
         assertTrue(fm.isFocused(6, col0));
@@ -2827,11 +2770,901 @@ public class TableViewKeyInputTest {
         assertFalse(sm.isSelected(6, col0));
 
         keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.SHIFT);
-        Toolkit.getToolkit().firePulse();
         assertEquals(3, getAnchor().getRow());
         assertEquals(1, getAnchor().getColumn());
         assertTrue(fm.isFocused(6, col0));
         assertTrue(sm.isSelected(6, col0));
         assertTrue(sm.isSelected(3, col1));
+    }
+
+    @Test public void test_rt18439() {
+        final int items = 10;
+        tableView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            tableView.getItems().add("Row " + i);
+        }
+
+        sm.setCellSelectionEnabled(true);
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        sm.clearAndSelect(0, col0);
+
+        keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT); // col 1
+        keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT); // col 2
+        keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT); // col 3
+        keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT); // col 4
+        assertEquals(0, getAnchor().getRow());
+        assertEquals(0, getAnchor().getColumn());              // anchor does not move
+        assertTrue(fm.isFocused(0, col4));
+        assertTrue(sm.isSelected(0, col0));
+        assertTrue(sm.isSelected(0, col1));
+        assertTrue(sm.isSelected(0, col2));
+        assertTrue(sm.isSelected(0, col3));
+        assertTrue(sm.isSelected(0, col4));
+
+        keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.SHIFT); // row 1
+        keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.SHIFT); // row 2
+        assertEquals(0, getAnchor().getRow());
+        assertEquals(0, getAnchor().getColumn());             // anchor does not move
+        assertTrue(fm.isFocused(2, col4));
+        assertTrue(sm.isSelected(0, col0));
+        assertTrue(sm.isSelected(0, col1));
+        assertTrue(sm.isSelected(0, col2));
+        assertTrue(sm.isSelected(0, col3));
+        assertTrue(sm.isSelected(0, col4));
+        assertTrue(sm.isSelected(1, col4));
+        assertTrue(sm.isSelected(2, col4));
+
+        keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 3
+        keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 2
+        keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 1
+        keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 0
+        assertEquals(0, getAnchor().getRow());
+        assertEquals(0, getAnchor().getColumn());             // anchor does not move
+        assertTrue(fm.isFocused(2, col0));
+        assertTrue(sm.isSelected(0, col0));
+        assertTrue(sm.isSelected(0, col1));
+        assertTrue(sm.isSelected(0, col2));
+        assertTrue(sm.isSelected(0, col3));
+        assertTrue(sm.isSelected(0, col4));
+        assertTrue(sm.isSelected(1, col4));
+        assertTrue(sm.isSelected(2, col4));
+        assertTrue(sm.isSelected(2, col3));
+        assertTrue(sm.isSelected(2, col2));
+        assertTrue(sm.isSelected(2, col1));
+        assertTrue(sm.isSelected(2, col0));
+
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT); // row 1
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT); // row 0
+        assertEquals(0, getAnchor().getRow());
+        assertEquals(0, getAnchor().getColumn());           // anchor does not move
+        assertTrue(fm.isFocused(0, col0));
+        assertFalse(sm.isSelected(0, col0));                // we've gone right around - this cell is now unselected
+        assertTrue(sm.isSelected(0, col1));
+        assertTrue(sm.isSelected(0, col2));
+        assertTrue(sm.isSelected(0, col3));
+        assertTrue(sm.isSelected(0, col4));
+        assertTrue(sm.isSelected(1, col4));
+        assertTrue(sm.isSelected(2, col4));
+        assertTrue(sm.isSelected(2, col3));
+        assertTrue(sm.isSelected(2, col2));
+        assertTrue(sm.isSelected(2, col1));
+        assertTrue(sm.isSelected(2, col0));
+        assertTrue(sm.isSelected(1, col0));
+    }
+
+    // this is an extension of the previous test, where we had a bug where going up resulted in all cells between the
+    // anchor (at (0,0)) and the first selected cell in column 0 were being selected. This wasn't visible in the previous
+    // test as we only went down two rows, so when we went up everything looked as expected
+    @Test public void test_rt18439_startAt_row0_col0_clockwise() {
+        final int items = 10;
+        tableView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            tableView.getItems().add("Row " + i);
+        }
+
+        sm.setCellSelectionEnabled(true);
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        sm.clearAndSelect(0, col0);
+
+        keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT); // col 1
+        keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT); // col 2
+        keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT); // col 3
+        keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT); // col 4
+
+        keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.SHIFT); // row 1
+        keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.SHIFT); // row 2
+        keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.SHIFT); // row 3
+        keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.SHIFT); // row 4
+
+        keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 3
+        keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 2
+        keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 1
+        keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 0
+
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT); // row 3
+        assertEquals(0, getAnchor().getRow());
+        assertEquals(0, getAnchor().getColumn());           // anchor does not move
+        assertTrue(fm.isFocused(3, col0));
+        assertTrue(sm.isSelected(0, col0));
+        assertTrue(sm.isSelected(0, col1));
+        assertTrue(sm.isSelected(0, col2));
+        assertTrue(sm.isSelected(0, col3));
+        assertTrue(sm.isSelected(0, col4));
+        assertTrue(sm.isSelected(1, col4));
+        assertTrue(sm.isSelected(2, col4));
+        assertTrue(sm.isSelected(3, col4));
+        assertTrue(sm.isSelected(4, col4));
+        assertTrue(sm.isSelected(4, col3));
+        assertTrue(sm.isSelected(4, col2));
+        assertTrue(sm.isSelected(4, col1));
+        assertTrue(sm.isSelected(4, col0));
+        assertTrue(sm.isSelected(3, col0));
+
+        // critical part - these cells should not be selected!
+        assertFalse(sm.isSelected(1, col0));
+        assertFalse(sm.isSelected(2, col0));
+    }
+
+    @Test public void test_rt18439_startAt_row0_col4_clockwise() {
+        final int items = 10;
+        tableView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            tableView.getItems().add("Row " + i);
+        }
+
+        sm.setCellSelectionEnabled(true);
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        sm.clearAndSelect(0, col4);
+
+        keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.SHIFT); // row 1
+        keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.SHIFT); // row 2
+        keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.SHIFT); // row 3
+        keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.SHIFT); // row 4
+
+        keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 3
+        keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 2
+        keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 1
+        keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 0
+
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT);   // row 3
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT);   // row 2
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT);   // row 1
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT);   // row 0
+
+        keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT); // col 1
+        assertEquals(0, getAnchor().getRow());
+        assertEquals(4, getAnchor().getColumn());           // anchor does not move
+        assertTrue(fm.isFocused(0, col1));
+        assertTrue(sm.isSelected(0, col4));
+        assertTrue(sm.isSelected(1, col4));
+        assertTrue(sm.isSelected(2, col4));
+        assertTrue(sm.isSelected(3, col4));
+        assertTrue(sm.isSelected(4, col4));
+        assertTrue(sm.isSelected(4, col3));
+        assertTrue(sm.isSelected(4, col2));
+        assertTrue(sm.isSelected(4, col1));
+        assertTrue(sm.isSelected(4, col0));
+        assertTrue(sm.isSelected(3, col0));
+        assertTrue(sm.isSelected(2, col0));
+        assertTrue(sm.isSelected(1, col0));
+        assertTrue(sm.isSelected(0, col0));
+        assertTrue(sm.isSelected(0, col1));
+
+        // critical part - these cells should not be selected!
+        assertFalse(sm.isSelected(0, col2));
+        assertFalse(sm.isSelected(0, col3));
+    }
+
+    @Test public void test_rt18439_startAt_row4_col4_clockwise() {
+        final int items = 10;
+        tableView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            tableView.getItems().add("Row " + i);
+        }
+
+        sm.setCellSelectionEnabled(true);
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        sm.clearAndSelect(4, col4);
+
+        keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 3
+        keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 2
+        keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 1
+        keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 0
+
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT);   // row 3
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT);   // row 2
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT);   // row 1
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT);   // row 0
+
+        keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT); // col 1
+        keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT); // col 2
+        keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT); // col 3
+        keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT); // col 4
+
+        keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.SHIFT); // row 1
+        assertEquals(4, getAnchor().getRow());
+        assertEquals(4, getAnchor().getColumn());           // anchor does not move
+        assertTrue(fm.isFocused(1, col4));
+        assertTrue(sm.isSelected(4, col4));
+        assertTrue(sm.isSelected(4, col2));
+        assertTrue(sm.isSelected(4, col2));
+        assertTrue(sm.isSelected(4, col1));
+        assertTrue(sm.isSelected(4, col0));
+        assertTrue(sm.isSelected(3, col0));
+        assertTrue(sm.isSelected(2, col0));
+        assertTrue(sm.isSelected(1, col0));
+        assertTrue(sm.isSelected(0, col0));
+        assertTrue(sm.isSelected(0, col1));
+        assertTrue(sm.isSelected(0, col2));
+        assertTrue(sm.isSelected(0, col3));
+        assertTrue(sm.isSelected(0, col4));
+        assertTrue(sm.isSelected(1, col4));
+
+        // critical part - these cells should not be selected!
+        assertFalse(sm.isSelected(2, col4));
+        assertFalse(sm.isSelected(3, col4));
+    }
+
+    @Test public void test_rt18439_startAt_row4_col0_clockwise() {
+        final int items = 10;
+        tableView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            tableView.getItems().add("Row " + i);
+        }
+
+        sm.setCellSelectionEnabled(true);
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        sm.clearAndSelect(4, col0);
+
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT); // row 3
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT); // row 2
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT); // row 1
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT); // row 0
+
+        keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT);   // col 1
+        keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT);   // col 2
+        keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT);   // col 3
+        keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT);   // col 4
+
+        keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.SHIFT); // row 1
+        keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.SHIFT); // row 2
+        keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.SHIFT); // row 3
+        keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.SHIFT); // row 4
+
+        keyboard.doKeyPress(KeyCode.LEFT, KeyModifier.SHIFT); // col 3
+        assertEquals(4, getAnchor().getRow());
+        assertEquals(0, getAnchor().getColumn());           // anchor does not move
+        assertTrue(fm.isFocused(4, col3));
+        assertTrue(sm.isSelected(4, col0));
+        assertTrue(sm.isSelected(3, col0));
+        assertTrue(sm.isSelected(2, col0));
+        assertTrue(sm.isSelected(1, col0));
+        assertTrue(sm.isSelected(0, col0));
+        assertTrue(sm.isSelected(0, col1));
+        assertTrue(sm.isSelected(0, col2));
+        assertTrue(sm.isSelected(0, col3));
+        assertTrue(sm.isSelected(0, col4));
+        assertTrue(sm.isSelected(1, col4));
+        assertTrue(sm.isSelected(2, col4));
+        assertTrue(sm.isSelected(3, col4));
+        assertTrue(sm.isSelected(4, col4));
+        assertTrue(sm.isSelected(4, col3));
+
+        // critical part - these cells should not be selected!
+        assertFalse(sm.isSelected(4, col2));
+        assertFalse(sm.isSelected(4, col1));
+    }
+
+    @Test public void test_rt34461_cellSelection() {
+        final int items = 10;
+        tableView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            tableView.getItems().add("Row " + i);
+        }
+
+        sm.setCellSelectionEnabled(true);
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        sm.clearAndSelect(0, col0);
+        assertEquals(0, getAnchor().getRow());
+        assertEquals(0, getAnchor().getColumn());
+        assertTrue(fm.isFocused(0, col0));
+        assertTrue(sm.isSelected(0, col0));
+        assertFalse(sm.isSelected(1, col0));
+
+        keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.getShortcutKey());
+        assertEquals(0, getAnchor().getRow());
+        assertEquals(0, getAnchor().getColumn());
+        assertTrue(fm.isFocused(1, col0));
+        assertTrue(sm.isSelected(0, col0));
+        assertFalse(sm.isSelected(1, col0));
+
+        keyboard.doKeyPress(KeyCode.SPACE);
+        assertEquals(1, getAnchor().getRow());      // new anchor point
+        assertEquals(0, getAnchor().getColumn());
+        assertTrue(fm.isFocused(1, col0));
+        assertTrue(sm.isSelected(0, col0));
+        assertTrue(sm.isSelected(1, col0));
+
+        keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.SHIFT);
+        assertEquals(1, getAnchor().getRow());
+        assertEquals(0, getAnchor().getColumn());
+        assertTrue(fm.isFocused(2, col0));
+        assertFalse(sm.isSelected(0, col0));    // selection moves off here as the anchor point moved with the space
+        assertTrue(sm.isSelected(1, col0));
+        assertTrue(sm.isSelected(2, col0));
+    }
+
+    @Test public void test_rt34461_rowSelection() {
+        final int items = 10;
+        tableView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            tableView.getItems().add("Row " + i);
+        }
+
+        sm.setCellSelectionEnabled(false);
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        sm.clearAndSelect(0);
+        assertEquals(0, getAnchor().getRow());
+        assertEquals(-1, getAnchor().getColumn());
+        assertTrue(fm.isFocused(0));
+        assertTrue(sm.isSelected(0));
+        assertFalse(sm.isSelected(1));
+
+        keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.getShortcutKey());
+        assertEquals(0, getAnchor().getRow());
+        assertEquals(-1, getAnchor().getColumn());
+        assertTrue(fm.isFocused(1));
+        assertTrue(sm.isSelected(0));
+        assertFalse(sm.isSelected(1));
+
+        keyboard.doKeyPress(KeyCode.SPACE);
+        assertEquals(1, getAnchor().getRow());      // new anchor point
+        assertEquals(-1, getAnchor().getColumn());
+        assertTrue(fm.isFocused(1));
+        assertTrue(sm.isSelected(0));
+        assertTrue(sm.isSelected(1));
+
+        keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.SHIFT);
+        assertEquals(1, getAnchor().getRow());
+        assertEquals(-1, getAnchor().getColumn());
+        assertTrue(fm.isFocused(2));
+        assertFalse(sm.isSelected(0));    // selection moves off here as the anchor point moved with the space
+        assertTrue(sm.isSelected(1));
+        assertTrue(sm.isSelected(2));
+    }
+
+    @Test public void test_rt34407_down_down_up() {
+        final int items = 100;
+        tableView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            tableView.getItems().add("Row " + i);
+        }
+        tableView.setPrefHeight(130); // roughly room for four rows
+
+        StageLoader sl = new StageLoader(tableView);
+        sm.setCellSelectionEnabled(false);
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        sm.clearAndSelect(0);
+        fm.focus(0);
+        assertEquals(0, getAnchor().getRow());
+        assertEquals(-1, getAnchor().getColumn());
+        assertTrue(fm.isFocused(0));
+        assertTrue(sm.isSelected(0));
+        assertFalse(sm.isSelected(1));
+
+        // we expect the final Page-up to return us back to this selected index and with the same number of selected indices
+        keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.SHIFT);
+        final int leadSelectedIndex = sm.getSelectedIndex();
+        final int selectedIndicesCount = sm.getSelectedIndices().size();
+        assertEquals(3, leadSelectedIndex);
+        assertEquals(3, fm.getFocusedIndex());
+        assertEquals(4, selectedIndicesCount);
+
+        keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.SHIFT);
+        assertEquals(leadSelectedIndex * 2, sm.getSelectedIndex());
+        assertEquals(leadSelectedIndex * 2, fm.getFocusedIndex());
+        assertEquals(selectedIndicesCount * 2 - 1, sm.getSelectedIndices().size());
+
+        keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.SHIFT);
+        assertEquals(leadSelectedIndex, sm.getSelectedIndex());
+        assertEquals(leadSelectedIndex, fm.getFocusedIndex());
+        assertEquals(selectedIndicesCount, sm.getSelectedIndices().size());
+
+        sl.dispose();
+    }
+
+    @Test public void test_rt34407_up_up_down() {
+        final int items = 100;
+        tableView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            tableView.getItems().add("Row " + i);
+        }
+        tableView.setPrefHeight(130); // roughly room for four rows
+
+        StageLoader sl = new StageLoader(tableView);
+        sm.setCellSelectionEnabled(false);
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        sm.clearAndSelect(99);
+        fm.focus(99);
+        tableView.scrollTo(99);
+        Toolkit.getToolkit().firePulse();
+
+        assertEquals(99, getAnchor().getRow());
+        assertEquals(-1, getAnchor().getColumn());
+        assertTrue(fm.isFocused(99));
+        assertTrue(sm.isSelected(99));
+        assertFalse(sm.isSelected(98));
+
+        // we expect the final Page-down to return us back to this selected index and with the same number of selected indices
+        keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.SHIFT);
+        final int leadSelectedIndex = sm.getSelectedIndex();
+        final int selectedIndicesCount = sm.getSelectedIndices().size();
+        final int diff = 99 - leadSelectedIndex;
+        assertEquals(99 - diff, leadSelectedIndex);
+        assertEquals(99 - diff, fm.getFocusedIndex());
+        assertEquals(4, selectedIndicesCount);
+
+        keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.SHIFT);
+        assertEquals(99 - diff * 2, sm.getSelectedIndex());
+        assertEquals(selectedIndicesCount * 2 - 1, sm.getSelectedIndices().size());
+
+        keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.SHIFT);
+        assertEquals(leadSelectedIndex, sm.getSelectedIndex());
+        assertEquals(selectedIndicesCount, sm.getSelectedIndices().size());
+
+        sl.dispose();
+    }
+
+    @Test public void test_rt34768() {
+        tableView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+        TableColumn<String, String> firstNameCol = new TableColumn<>("First Name");
+        tableView.getColumns().setAll(firstNameCol);
+        tableView.getItems().clear();
+
+        // no need for an assert here - we're testing for an AIOOBE
+        keyboard.doKeyPress(KeyCode.A, KeyModifier.getShortcutKey());
+    }
+
+    @Test public void test_rt35853_multipleSelection_rowSelection_shiftDown() {
+        final int items = 10;
+        tableView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            tableView.getItems().add("Row " + i);
+        }
+
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        sm.clearAndSelect(5);
+        assertEquals(5, getAnchor().getRow());
+        assertTrue(fm.isFocused(5));
+        assertTrue(sm.isSelected(5));
+
+        sm.selectedIndexProperty().addListener(observable -> {
+            // we expect only one selected index change event, from 5 to 4
+            assertEquals(4, sm.getSelectedIndex());
+        });
+
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT);
+        assertEquals(5, getAnchor().getRow());
+        assertTrue(fm.isFocused(4));
+        assertTrue(sm.isSelected(4));
+        assertTrue(sm.isSelected(5));
+    }
+
+    @Test public void test_rt35853_multipleSelection_rowSelection_noShiftDown() {
+        final int items = 10;
+        tableView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            tableView.getItems().add("Row " + i);
+        }
+
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        sm.clearAndSelect(5);
+        assertEquals(5, getAnchor().getRow());
+        assertTrue(fm.isFocused(5));
+        assertTrue(sm.isSelected(5));
+
+        sm.selectedIndexProperty().addListener(observable -> {
+            // we expect only one selected index change event, from 5 to 4
+            assertEquals(4, sm.getSelectedIndex());
+        });
+
+        keyboard.doKeyPress(KeyCode.UP);
+        assertEquals(4, getAnchor().getRow());
+        assertTrue(fm.isFocused(4));
+        assertTrue(sm.isSelected(4));
+        assertFalse(sm.isSelected(5));
+    }
+
+    @Test public void test_rt35853_singleSelection_rowSelection_shiftDown() {
+        final int items = 10;
+        tableView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            tableView.getItems().add("Row " + i);
+        }
+
+        sm.setSelectionMode(SelectionMode.SINGLE);
+
+        sm.clearAndSelect(5);
+        assertEquals(5, getAnchor().getRow());
+        assertTrue(fm.isFocused(5));
+        assertTrue(sm.isSelected(5));
+
+        sm.selectedIndexProperty().addListener(observable -> {
+            // we expect only one selected index change event, from 5 to 4
+            assertEquals(4, sm.getSelectedIndex());
+        });
+
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT);
+        assertEquals(4, getAnchor().getRow());
+        assertTrue(fm.isFocused(4));
+        assertTrue(sm.isSelected(4));
+        assertFalse(sm.isSelected(5));
+    }
+
+    @Test public void test_rt35853_singleSelection_rowSelection_noShiftDown() {
+        final int items = 10;
+        tableView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            tableView.getItems().add("Row " + i);
+        }
+
+        sm.setSelectionMode(SelectionMode.SINGLE);
+
+        sm.clearAndSelect(5);
+        assertEquals(5, getAnchor().getRow());
+        assertTrue(fm.isFocused(5));
+        assertTrue(sm.isSelected(5));
+
+        sm.selectedIndexProperty().addListener(observable -> {
+            // we expect only one selected index change event, from 5 to 4
+            assertEquals(4, sm.getSelectedIndex());
+        });
+
+        keyboard.doKeyPress(KeyCode.UP);
+        assertEquals(4, getAnchor().getRow());
+        assertTrue(fm.isFocused(4));
+        assertTrue(sm.isSelected(4));
+        assertFalse(sm.isSelected(5));
+    }
+
+    @Test public void test_rt35853_multipleSelection_cellSelection_shiftDown() {
+        final int items = 10;
+        tableView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            tableView.getItems().add("Row " + i);
+        }
+
+        TableColumn<String, String> col = new TableColumn<>("Column");
+        col.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue()));
+        tableView.getColumns().setAll(col);
+
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.setCellSelectionEnabled(true);
+
+        sm.clearAndSelect(5, col);
+        assertEquals(5, getAnchor().getRow());
+        assertTrue(fm.isFocused(5, col));
+        assertTrue(sm.isSelected(5, col));
+
+        sm.selectedIndexProperty().addListener(observable -> {
+            // we expect only one selected index change event, from 5 to 4
+            assertEquals(4, sm.getSelectedIndex());
+        });
+
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT);
+        assertEquals(5, getAnchor().getRow());
+        assertTrue(fm.isFocused(4, col));
+        assertTrue(sm.isSelected(4, col));
+        assertTrue(sm.isSelected(5, col));
+    }
+
+    @Test public void test_rt35853_multipleSelection_cellSelection_noShiftDown() {
+        final int items = 10;
+        tableView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            tableView.getItems().add("Row " + i);
+        }
+
+        TableColumn<String, String> col = new TableColumn<>("Column");
+        col.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue()));
+        tableView.getColumns().setAll(col);
+
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.setCellSelectionEnabled(true);
+
+        sm.clearAndSelect(5, col);
+        assertEquals(5, getAnchor().getRow());
+        assertTrue(fm.isFocused(5, col));
+        assertTrue(sm.isSelected(5, col));
+
+        sm.selectedIndexProperty().addListener(observable -> {
+            // we expect only one selected index change event, from 5 to 4
+            assertEquals(4, sm.getSelectedIndex());
+        });
+
+        keyboard.doKeyPress(KeyCode.UP);
+        assertEquals(4, getAnchor().getRow());
+        assertTrue(fm.isFocused(4, col));
+        assertTrue(sm.isSelected(4, col));
+        assertFalse(sm.isSelected(5, col));
+    }
+
+    @Test public void test_rt35853_singleSelection_cellSelection_shiftDown() {
+        final int items = 10;
+        tableView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            tableView.getItems().add("Row " + i);
+        }
+
+        TableColumn<String, String> col = new TableColumn<>("Column");
+        col.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue()));
+        tableView.getColumns().setAll(col);
+
+        sm.setSelectionMode(SelectionMode.SINGLE);
+        sm.setCellSelectionEnabled(true);
+
+        sm.clearAndSelect(5, col);
+        assertEquals(5, getAnchor().getRow());
+        assertTrue(fm.isFocused(5, col));
+        assertTrue(sm.isSelected(5, col));
+
+        sm.selectedIndexProperty().addListener(observable -> {
+            // we expect only one selected index change event, from 5 to 4
+            assertEquals(4, sm.getSelectedIndex());
+        });
+
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT);
+        assertEquals(4, getAnchor().getRow());
+        assertTrue(fm.isFocused(4, col));
+        assertTrue(sm.isSelected(4, col));
+        assertFalse(sm.isSelected(5, col));
+    }
+
+    @Test public void test_rt35853_singleSelection_cellSelection_noShiftDown() {
+        final int items = 10;
+        tableView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            tableView.getItems().add("Row " + i);
+        }
+
+        TableColumn<String, String> col = new TableColumn<>("Column");
+        col.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue()));
+        tableView.getColumns().setAll(col);
+
+        sm.setSelectionMode(SelectionMode.SINGLE);
+        sm.setCellSelectionEnabled(true);
+
+        sm.clearAndSelect(5, col);
+        assertEquals(5, getAnchor().getRow());
+        assertTrue(fm.isFocused(5, col));
+        assertTrue(sm.isSelected(5, col));
+
+        sm.selectedIndexProperty().addListener(observable -> {
+            // we expect only one selected index change event, from 5 to 4
+            assertEquals(4, sm.getSelectedIndex());
+        });
+
+        keyboard.doKeyPress(KeyCode.UP);
+        assertEquals(4, getAnchor().getRow());
+        assertTrue(fm.isFocused(4, col));
+        assertTrue(sm.isSelected(4, col));
+        assertFalse(sm.isSelected(5, col));
+    }
+
+    @Test public void test_rt36800_rowSelection() {
+        test_rt36800(false);
+    }
+
+    @Test public void test_rt36800_cellSelection() {
+        test_rt36800(true);
+    }
+
+    private void test_rt36800(boolean cellSelection) {
+        // get the current exception handler before replacing with our own,
+        // as ListListenerHelp intercepts the exception otherwise
+        final Thread.UncaughtExceptionHandler exceptionHandler = Thread.currentThread().getUncaughtExceptionHandler();
+        Thread.currentThread().setUncaughtExceptionHandler((t, e) -> fail("We don't expect any exceptions in this test!"));
+
+        final int items = 10;
+        tableView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            tableView.getItems().add("Row " + i);
+        }
+
+        TableColumn<String, String> col = new TableColumn<>("Column");
+        col.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue()));
+        tableView.getColumns().setAll(col);
+
+        sm.setSelectionMode(SelectionMode.SINGLE);
+        sm.setCellSelectionEnabled(cellSelection);
+
+        if (cellSelection) {
+            sm.clearAndSelect(5, col);
+            assertEquals(5, getAnchor().getRow());
+            assertEquals(col, getAnchor().getTableColumn());
+            assertTrue(fm.isFocused(5, col));
+            assertTrue(sm.isSelected(5, col));
+        } else {
+            sm.clearAndSelect(5);
+            assertEquals(5, getAnchor().getRow());
+            assertTrue(fm.isFocused(5));
+            assertTrue(sm.isSelected(5));
+        }
+
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT); // 4
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT); // 3
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT); // 2
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT); // 1
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT); // 0
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT); // bug time?
+
+        if (cellSelection) {
+            assertEquals(0, getAnchor().getRow());
+            assertEquals(col, getAnchor().getTableColumn());
+            assertTrue(fm.isFocused(0, col));
+            assertTrue(sm.isSelected(0, col));
+            assertFalse(sm.isSelected(1, col));
+            assertFalse(sm.isSelected(2, col));
+            assertFalse(sm.isSelected(3, col));
+            assertFalse(sm.isSelected(4, col));
+            assertFalse(sm.isSelected(5, col));
+        } else {
+            assertEquals(0, getAnchor().getRow());
+            assertTrue(fm.isFocused(0));
+            assertTrue(sm.isSelected(0));
+            assertFalse(sm.isSelected(1));
+            assertFalse(sm.isSelected(2));
+            assertFalse(sm.isSelected(3));
+            assertFalse(sm.isSelected(4));
+            assertFalse(sm.isSelected(5));
+        }
+
+        // reset the exception handler
+        Thread.currentThread().setUncaughtExceptionHandler(exceptionHandler);
+    }
+
+    @Test public void test_rt_36942() {
+        // get the current exception handler before replacing with our own,
+        // as ListListenerHelp intercepts the exception otherwise
+        final Thread.UncaughtExceptionHandler exceptionHandler = Thread.currentThread().getUncaughtExceptionHandler();
+        Thread.currentThread().setUncaughtExceptionHandler((t, e) -> fail("We don't expect any exceptions in this test!"));
+
+        final int items = 3;
+        tableView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            tableView.getItems().add("Row " + i);
+        }
+
+        TableColumn<String, String> col = new TableColumn<>("Column");
+        col.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue()));
+        tableView.getColumns().setAll(col);
+
+        MultipleSelectionModel<String> sm = tableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        ObservableList<String> selectedItems = sm.getSelectedItems();
+
+        TableView<String> selectedItemsTableView = new TableView<>(selectedItems);
+        selectedItemsTableView.getColumns().setAll(col);
+
+        HBox root = new HBox(5, tableView, selectedItemsTableView);
+
+        StageLoader sl = new StageLoader(root);
+
+        sm.select(0);
+        keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.SHIFT); // 0,1
+        keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.SHIFT); // 0,1,2
+        keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.SHIFT); // 0,1,2,Exception?
+
+        sl.dispose();
+
+        // reset the exception handler
+        Thread.currentThread().setUncaughtExceptionHandler(exceptionHandler);
+    }
+
+    @Test public void test_rt_37130_pageUpAtTop() {
+        final int items = 100;
+        tableView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            tableView.getItems().add("Row " + i);
+        }
+
+        TableColumn<String, String> col = new TableColumn<>("Column");
+        col.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue()));
+        tableView.getColumns().setAll(col);
+
+        TableSelectionModel<String> sm = tableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.setCellSelectionEnabled(true);
+
+        StageLoader sl = new StageLoader(tableView);
+
+        sm.select(5, col);
+        keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.SHIFT);
+        keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.SHIFT);
+
+        sl.dispose();
+    }
+
+    @Test public void test_rt_37130_pageUpAtBottom() {
+        final int items = 100;
+        tableView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            tableView.getItems().add("Row " + i);
+        }
+
+        TableColumn<String, String> col = new TableColumn<>("Column");
+        col.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue()));
+        tableView.getColumns().setAll(col);
+
+        TableSelectionModel<String> sm = tableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.setCellSelectionEnabled(true);
+
+        StageLoader sl = new StageLoader(tableView);
+
+        sm.select(95, col);
+        keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.SHIFT);
+        keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.SHIFT);
+
+        sl.dispose();
+    }
+
+    @Test public void test_rt_37130_pageDownAtTop() {
+        final int items = 100;
+        tableView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            tableView.getItems().add("Row " + i);
+        }
+
+        TableColumn<String, String> col = new TableColumn<>("Column");
+        col.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue()));
+        tableView.getColumns().setAll(col);
+
+        TableSelectionModel<String> sm = tableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.setCellSelectionEnabled(true);
+
+        StageLoader sl = new StageLoader(tableView);
+
+        sm.select(5, col);
+        keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.SHIFT);
+        keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.SHIFT);
+
+        sl.dispose();
+    }
+
+    @Test public void test_rt_37130_pageDownAtBottom() {
+        final int items = 100;
+        tableView.getItems().clear();
+        for (int i = 0; i < items; i++) {
+            tableView.getItems().add("Row " + i);
+        }
+
+        TableColumn<String, String> col = new TableColumn<>("Column");
+        col.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue()));
+        tableView.getColumns().setAll(col);
+
+        TableSelectionModel<String> sm = tableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.setCellSelectionEnabled(true);
+
+        StageLoader sl = new StageLoader(tableView);
+
+        sm.select(95, col);
+        keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.SHIFT);
+        keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.SHIFT);
+
+        sl.dispose();
     }
 }

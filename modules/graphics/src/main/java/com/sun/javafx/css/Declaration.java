@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,13 +26,13 @@
 package com.sun.javafx.css;
 
 import com.sun.javafx.css.converters.URLConverter;
+import javafx.css.ParsedValue;
+import javafx.css.StyleConverter;
+import javafx.css.StyleOrigin;
+
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.net.URL;
-import javafx.css.StyleOrigin;
-import javafx.css.ParsedValue;
-import javafx.css.StyleConverter;
 
 final public class Declaration {
     final String property;
@@ -162,7 +162,7 @@ final public class Declaration {
                 (ParsedValue<ParsedValue[], String>[])parsedValue.getValue();
             
             for (int layer = 0; layer < layers.length; layer++) {
-                final ParsedValue[] values = (ParsedValue[])layers[layer].getValue();
+                final ParsedValue[] values = layers[layer].getValue();
                 values[1] = new ParsedValueImpl<String,String>(stylesheetUrl, null);
             }
             

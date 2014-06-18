@@ -80,76 +80,54 @@ public class PlanetaryPlayerPane extends BorderPane {
         mvPane.getChildren().add(mediaViewerGroup);
         setCenter(mvPane);
 
-        mp1.setOnPlaying(new Runnable() {
-            @Override public void run() {
-                if (stopRequested) {
-                    mp1.pause();
-                    stopRequested = false;
-                }
+        mp1.setOnPlaying(() -> {
+            if (stopRequested) {
+                mp1.pause();
+                stopRequested = false;
             }
         });
-        mp1.setOnEndOfMedia(new Runnable() {
-            @Override public void run() {
-                if (!repeat) {
-                    stopRequested = true;
-                    atEndOfMedia = true;
-                }
+        mp1.setOnEndOfMedia(() -> {
+            if (!repeat) {
+                stopRequested = true;
+                atEndOfMedia = true;
             }
         });
         mp1.setCycleCount(repeat ? MediaPlayer.INDEFINITE : 1);
 
-        mp2.setOnPlaying(new Runnable() {
-            @Override public void run() {
-                if (stopRequested) {
-                    mp2.pause();
-                    stopRequested = false;
-                }
+        mp2.setOnPlaying(() -> {
+            if (stopRequested) {
+                mp2.pause();
+                stopRequested = false;
             }
         });
-        mp2.setOnEndOfMedia(new Runnable() {
-            @Override public void run() {
-                if (!repeat) {
-                    stopRequested = true;
-                    atEndOfMedia = true;
-                }
+        mp2.setOnEndOfMedia(() -> {
+            if (!repeat) {
+                stopRequested = true;
+                atEndOfMedia = true;
             }
         });
         mp2.setCycleCount(repeat ? MediaPlayer.INDEFINITE : 1);
 
-        final EventHandler<ActionEvent> backAction = new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent e) {
-                mp1.seek(Duration.ZERO);
-                mp2.seek(Duration.ZERO);
-            }
+        final EventHandler<ActionEvent> backAction = (ActionEvent e) -> {
+            mp1.seek(Duration.ZERO);
+            mp2.seek(Duration.ZERO);
         };
-        final EventHandler<ActionEvent> stopAction = new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent e) {
-                mp1.stop();
-                mp2.stop();
-            }
+        final EventHandler<ActionEvent> stopAction = (ActionEvent e) -> {
+            mp1.stop();
+            mp2.stop();
         };
-        final EventHandler<ActionEvent> playAction = new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent e) {
-                mp1.play();
-                mp2.play();
-            }
+        final EventHandler<ActionEvent> playAction = (ActionEvent e) -> {
+            mp1.play();
+            mp2.play();
         };
-        final EventHandler<ActionEvent> pauseAction = new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent e) {
-                mp1.pause();
-                mp2.pause();
-            }
+        final EventHandler<ActionEvent> pauseAction = (ActionEvent e) -> {
+            mp1.pause();
+            mp2.pause();
         };
-        final EventHandler<ActionEvent> forwardAction = new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent e) {
-                Duration currentTime = mp1.getCurrentTime();
-                mp1.seek(Duration.seconds(currentTime.toSeconds() + 0.1));
-                mp2.seek(Duration.seconds(currentTime.toSeconds() + 0.1));
-            }
+        final EventHandler<ActionEvent> forwardAction = (ActionEvent e) -> {
+            Duration currentTime = mp1.getCurrentTime();
+            mp1.seek(Duration.seconds(currentTime.toSeconds() + 0.1));
+            mp2.seek(Duration.seconds(currentTime.toSeconds() + 0.1));
         };
         
         mediaBottomBar = new HBox();

@@ -33,13 +33,14 @@ package com.oracle.javafx.scenebuilder.kit.editor.drag.target;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.drag.source.AbstractDragSource;
-import com.oracle.javafx.scenebuilder.kit.editor.drag.source.DocumentDragSource;
 import com.oracle.javafx.scenebuilder.kit.editor.job.BatchJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.DeleteObjectJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.InsertAsSubComponentJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
 import com.oracle.javafx.scenebuilder.kit.editor.job.RelocateNodeJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.togglegroup.AdjustAllToggleGroupJob;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMIntrinsic;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
 import java.util.HashMap;
@@ -93,8 +94,18 @@ public class ContainerXYDropTarget extends AbstractDropTarget {
         if (dragSource.getDraggedObjects().isEmpty()) {
             result = false;
         } else {
-            final DesignHierarchyMask m = new DesignHierarchyMask(targetContainer);
-            result = m.isAcceptingSubComponent(dragSource.getDraggedObjects());
+            boolean containsIntrinsic = false;
+            for (FXOMObject draggedObject : dragSource.getDraggedObjects()) {
+                if (draggedObject instanceof FXOMIntrinsic) {
+                    containsIntrinsic = true;
+                }
+            }
+            if (containsIntrinsic) {
+                result = false;
+            } else {
+                final DesignHierarchyMask m = new DesignHierarchyMask(targetContainer);
+                result = m.isAcceptingSubComponent(dragSource.getDraggedObjects());
+            }
         }
         
         return result;
@@ -137,6 +148,7 @@ public class ContainerXYDropTarget extends AbstractDropTarget {
             //  - remove drag source objects from their current parent (if any)
             //  - add drag source objects to this drop target
             //  - relocate the drag source objects
+            //  - adjust toggle group declaration (if any)
             
             final boolean shouldRefreshSceneGraph = true;
             result = new BatchJob(editorController, 
@@ -188,6 +200,8 @@ public class ContainerXYDropTarget extends AbstractDropTarget {
                 result.addSubJob(new RelocateNodeJob((FXOMInstance)draggedObject, 
                         newLayoutX, newLayoutY, editorController));
             }
+            
+            result.addSubJob(new AdjustAllToggleGroupJob(editorController));
         }
         
         assert result.isExecutable();

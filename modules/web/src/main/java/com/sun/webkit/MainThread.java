@@ -9,11 +9,8 @@ package com.sun.webkit;
 final class MainThread {
 
     private static void fwkScheduleDispatchFunctions() {
-        Invoker.getInvoker().postOnEventThread(new Runnable() {
-            @Override
-            public void run() {
-                twkScheduleDispatchFunctions();
-            }
+        Invoker.getInvoker().postOnEventThread(() -> {
+            twkScheduleDispatchFunctions();
         });
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,15 +26,15 @@
 package com.sun.javafx.css.converters;
 
 import com.sun.javafx.css.StyleConverterImpl;
-import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
-
 import javafx.css.ParsedValue;
 import javafx.css.StyleConverter;
 import javafx.scene.text.Font;
 import sun.util.logging.PlatformLogger;
+
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
 
 /**
  * Convert url("<path>") a URL string resolved relative to the location of the stylesheet.
@@ -43,8 +43,8 @@ public final class URLConverter extends StyleConverterImpl<ParsedValue[], String
 
     // lazy, thread-safe instatiation
     private static class Holder {
-        static URLConverter INSTANCE = new URLConverter();
-        static SequenceConverter SEQUENCE_INSTANCE = new SequenceConverter();
+        static final URLConverter INSTANCE = new URLConverter();
+        static final SequenceConverter SEQUENCE_INSTANCE = new SequenceConverter();
     }
 
     public static StyleConverter<ParsedValue[], String> getInstance() {

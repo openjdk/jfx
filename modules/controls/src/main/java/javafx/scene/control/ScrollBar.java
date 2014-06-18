@@ -25,24 +25,29 @@
 
 package javafx.scene.control;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.SimpleDoubleProperty;
-import javafx.geometry.Orientation;
-
 import com.sun.javafx.Utils;
-import javafx.css.CssMetaData;
-import javafx.css.PseudoClass;
-import javafx.css.StyleableDoubleProperty;
-import javafx.css.StyleableObjectProperty;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.skin.ScrollBarSkin;
+
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleDoubleProperty;
+import javafx.beans.value.WritableValue;
+import javafx.css.CssMetaData;
+import javafx.css.PseudoClass;
 import javafx.css.Styleable;
+import javafx.css.StyleableDoubleProperty;
+import javafx.css.StyleableObjectProperty;
 import javafx.css.StyleableProperty;
+import javafx.geometry.Orientation;
+import javafx.scene.accessibility.Action;
+import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Role;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 
 /**
@@ -88,7 +93,7 @@ public class ScrollBar extends Control {
         // makes it look to css like the user set the value and css will not 
         // override. Initializing focusTraversable by calling applyStyle with null
         // for StyleOrigin ensures that css will be able to override the value.
-        ((StyleableProperty)focusTraversableProperty()).applyStyle(null,Boolean.FALSE);
+        ((StyleableProperty<Boolean>)(WritableValue<Boolean>)focusTraversableProperty()).applyStyle(null,Boolean.FALSE);
 
         // set pseudo-class state to horizontal
         pseudoClassStateChanged(HORIZONTAL_PSEUDOCLASS_STATE, true);
@@ -101,7 +106,7 @@ public class ScrollBar extends Control {
      **************************************************************************/
     /**
      * The minimum value represented by this {@code ScrollBar}. This should be a
-     * value less than or equal to {@link #maxProperty max}.
+     * value less than or equal to {@link #maxProperty max}. Default value is 0.
      */
     private DoubleProperty min;
     public final void setMin(double value) {
@@ -120,7 +125,7 @@ public class ScrollBar extends Control {
     }
     /**
      * The maximum value represented by this {@code ScrollBar}. This should be a
-     * value greater than or equal to {@link #minProperty min}.
+     * value greater than or equal to {@link #minProperty min}. Default value is 100.
      */
     private DoubleProperty max;
     public final void setMax(double value) {
@@ -344,6 +349,14 @@ public class ScrollBar extends Control {
         setValue(Utils.clamp(getMin(), getValue() - getUnitIncrement(), getMax()));
     }
 
+    private void blockIncrement() {
+        adjustValue(getValue() + getBlockIncrement());
+    }
+
+    private void blockDecrement() {
+        adjustValue(getValue() - getBlockIncrement());
+    }
+
     /** {@inheritDoc} */
     @Override protected Skin<?> createDefaultSkin() {
         return new ScrollBarSkin(this);
@@ -382,7 +395,7 @@ public class ScrollBar extends Control {
 
             @Override
             public StyleableProperty<Orientation> getStyleableProperty(ScrollBar n) {
-                return (StyleableProperty<Orientation>)n.orientationProperty();
+                return (StyleableProperty<Orientation>)(WritableValue<Orientation>)n.orientationProperty();
             }
         };
         
@@ -397,7 +410,7 @@ public class ScrollBar extends Control {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(ScrollBar n) {
-                return (StyleableProperty<Number>)n.unitIncrementProperty();
+                return (StyleableProperty<Number>)(WritableValue<Number>)n.unitIncrementProperty();
             }
                     
         };
@@ -413,7 +426,7 @@ public class ScrollBar extends Control {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(ScrollBar n) {
-                return (StyleableProperty<Number>)n.blockIncrementProperty();
+                return (StyleableProperty<Number>)(WritableValue<Number>)n.blockIncrementProperty();
             }
                     
         };
@@ -470,5 +483,40 @@ public class ScrollBar extends Control {
     protected /*do not make final*/ Boolean impl_cssGetFocusTraversableInitialValue() {
         return Boolean.FALSE;
     }
-    
+
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Accessibility handling                                                  *
+     *                                                                         *
+     **************************************************************************/
+
+    /** @treatAsPrivate */
+    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case ROLE: return Role.SCROLL_BAR;
+            case VALUE: return getValue();
+            case MAX_VALUE: return getMax();
+            case MIN_VALUE: return getMin();
+            case ORIENTATION: return getOrientation();
+            default: return super.accGetAttribute(attribute, parameters);
+        }
+    }
+
+    /** @treatAsPrivate */
+    @Override public void accExecuteAction(Action action, Object... parameters) {
+        switch (action) {
+            case INCREMENT: increment(); break;
+            case DECREMENT: decrement(); break;
+            case BLOCK_INCREMENT: blockIncrement(); break;
+            case BLOCK_DECREMENT: blockDecrement(); break;
+            case SET_VALUE: {
+                Double value = (Double) parameters[0];
+                if (value != null) setValue(value);
+                break;
+            }
+            default: super.accExecuteAction(action, parameters);
+        }
+    }
 }

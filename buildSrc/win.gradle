@@ -33,36 +33,18 @@ WIN.compileSWT = true;
 WIN.compileFXPackager = true;
 WIN.compileDesignTime = true;
 
+WIN.includeNull3d = true
+
 // Lambda for naming the generated libs
 WIN.library = { name -> return "${name}.dll" as String }
 
 WIN.libDest = "bin"
-WIN.jfxrtJarExcludes = [
-    "com/sun/glass/events/mac",
-    "com/sun/glass/ui/mac",
-    "com/sun/glass/ui/accessible/mac",
-    "com/sun/prism/es2/gl/mac",
-    //"com/sun/prism/null3d", // TODO This is used in dev builds but not the final sdk
-
-    "com/sun/glass/ui/gtk",
-    
-    "com/sun/glass/ui/ios",
-    
-    "com/sun/glass/ui/lens",
-    "com/sun/prism/es2/gl/eglfb",
-    "com/sun/prism/es2/gl/eglx11",
-    "com/sun/prism/es2/gl/x11",
-    "com/sun/prism/es2/EGL*",
-    "com/sun/prism/es2/IOSGL*",
-    "com/sun/prism/es2/MacGL*",
-    "com/sun/prism/es2/X11GL*",
-]
 
 def ccFlags = ["/nologo", "/W3", "/EHsc", "/c",
         "/D_STATIC_CPPLIB", "/D_DISABLE_DEPRECATE_STATIC_CPPLIB", "/DINLINE=__inline",
         "/DUNICODE", "/D_UNICODE", "/DWIN32", "/DIAL", "/D_LITTLE_ENDIAN", "/DWIN32_LEAN_AND_MEAN",
         "/I$JDK_HOME/include", "/I$JDK_HOME/include/win32",
-        IS_DEBUG_NATIVE ? ["/MDd", "/Od", "/Zi", "/DDEBUG"] : ["/O2", "/MD"]].flatten();
+        IS_DEBUG_NATIVE ? ["/MDd", "/Od", "/Zi", "/DDEBUG"] : ["/O2", "/MD", "/DNDEBUG"]].flatten();
 
 def linkFlags = ["/nologo", "/dll", "/manifest", "/opt:REF", "/incremental:no"];
 if (IS_DEBUG_NATIVE) linkFlags.add("/debug");
@@ -156,8 +138,7 @@ WIN.glass = [:]
 WIN.glass.javahInclude = [
     "com/sun/glass/events/**",
     "com/sun/glass/ui/*",
-    "com/sun/glass/ui/win/*",
-    "com/sun/glass/ui/accessible/win/*"]
+    "com/sun/glass/ui/win/*"]
 WIN.glass.nativeSource = file("modules/graphics/src/main/native-glass/win")
 WIN.glass.compiler = compiler
 WIN.glass.rcCompiler = rcCompiler;
@@ -240,7 +221,7 @@ WIN.iconLauncher.linkFlags = ["/link", "/nologo", "/SUBSYSTEM:CONSOLE"];
 
 WIN.fxpackager = [:]
 WIN.fxpackager.nativeSource = [
-    file("modules/fxpackager/src/main/native/javafxpackager/win")]
+    file("modules/fxpackager/src/main/native/javapackager/win")]
 WIN.fxpackager.compiler = compiler
 WIN.fxpackager.ccFlags = ["/nologo", "/W3", "/EHsc", "/MT", "/GS",
                     "/DWIN32", "/D_LITTLE_ENDIAN", "/DWIN32_LEAN_AND_MEAN",

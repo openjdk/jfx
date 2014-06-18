@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,7 +36,11 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Collections;
 import java.util.List;
@@ -44,6 +48,7 @@ import java.util.Locale;
 import java.util.Map;
 
 import javafx.css.StyleableProperty;
+import javafx.geometry.NodeOrientation;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.geometry.VPos;
@@ -300,7 +305,7 @@ public class StylesheetTest {
             root.getChildren().add(rect);
             Scene scene = new Scene(root, 500, 500);
 
-            root.impl_processCSS(true);
+            root.applyCss();
 
             // Shows inline style works.
             assertEquals(Color.RED, rect.getFill());
@@ -310,7 +315,7 @@ public class StylesheetTest {
 
             // loop in style!
             rect.setStyle("-fx-base: -fx-fill; -fx-fill: -fx-base;");
-            root.impl_processCSS(true);
+            root.applyCss();
 
             // Shows value was left alone
             assertNull(rect.getFill());
@@ -335,7 +340,7 @@ public class StylesheetTest {
             root.getChildren().add(rect);
             Scene scene = new Scene(root, 500, 500);
 
-            root.impl_processCSS(true);
+            root.applyCss();
 
             // Shows inline style works.
             assertTrue(rect.getFill() instanceof RadialGradient);
@@ -346,7 +351,7 @@ public class StylesheetTest {
             // loop in style!
             rect.setStyle("-fx-base: -fx-color; -fx-color: -fx-base; -fx-fill: radial-gradient(radius 100%, red, -fx-color);");
 
-            root.impl_processCSS(true);
+            root.applyCss();
 
             // Shows value was left alone
             assertNull(rect.getFill());
@@ -376,7 +381,7 @@ public class StylesheetTest {
             root.getChildren().add(pane);
             Scene scene = new Scene(root, 500, 500);
 
-            root.impl_processCSS(true);
+            root.applyCss();
 
             // Shows inline style works.
             assertTrue(rect.getFill() instanceof RadialGradient);
@@ -387,7 +392,7 @@ public class StylesheetTest {
             // loop in style
             root.setStyle("-fx-base: -fx-color;");
 
-            root.impl_processCSS(true);
+            root.applyCss();
 
             // Shows value was left alone
             assertNull(rect.getFill());
@@ -411,7 +416,7 @@ public class StylesheetTest {
             root.getChildren().add(rect);
             Scene scene = new Scene(root, 500, 500);
 
-            root.impl_processCSS(true);
+            root.applyCss();
 
             // Shows inline style works.
             assertTrue(rect.getFill() instanceof RadialGradient);
@@ -424,7 +429,7 @@ public class StylesheetTest {
             rect.setStyle("-fx-fill: radial-gradient(radius 100%, derive(-fx-base, -25%), derive(-fx-base, 25%));");
 
 
-            root.impl_processCSS(true);
+            root.applyCss();
 
             // Shows value was left alone
             assertNull(rect.getFill());
@@ -578,6 +583,50 @@ public class StylesheetTest {
 
     private int checkFontFace(Stylesheet stylesheet) {
         return com.sun.javafx.css.parser.CSSParserTest.checkFontFace(stylesheet);
+    }
+
+   @Test
+   public void testRT_37122() {
+       try {
+           URL url = StylesheetTest.class.getResource("RT-37122.css");
+           File source = new File(url.toURI());
+           File target = File.createTempFile("RT_37122_", "bss");
+           Stylesheet.convertToBinary(source, target);
+           Stylesheet.convertToBinary(source, target);
+       } catch (URISyntaxException | IOException e) {
+           fail(e.toString());
+       }
+   }
+
+    @Test
+    public void testRT_37301() {
+        try {
+            File source = File.createTempFile("RT_37301_", "css");
+            FileWriter writer = new FileWriter(source);
+            writer.write("A:dir(rtl) {} B:dir(ltr) {} C {}");
+            writer.flush();
+            writer.close();
+            File target = File.createTempFile("RT_37301_", "bss");
+            Stylesheet.convertToBinary(source, target);
+            Stylesheet stylesheet = Stylesheet.loadBinary(target.toURL());
+            int good = 0;
+            for (Rule rule : stylesheet.getRules()) {
+                for (Selector sel : rule.getSelectors()) {
+                    SimpleSelector simpleSelector = (SimpleSelector)sel;
+                    if ("A".equals(simpleSelector.getName())) {
+                        assertEquals(NodeOrientation.RIGHT_TO_LEFT, simpleSelector.getNodeOrientation());
+                    } else if ("B".equals(simpleSelector.getName())) {
+                        assertEquals(NodeOrientation.LEFT_TO_RIGHT, simpleSelector.getNodeOrientation());
+                    } else if ("C".equals(simpleSelector.getName())) {
+                        assertEquals(NodeOrientation.INHERIT, simpleSelector.getNodeOrientation());
+                    } else {
+                        fail(simpleSelector.toString());
+                    }
+                }
+            }
+        } catch (IOException e) {
+            fail(e.toString());
+        }
     }
 
 }

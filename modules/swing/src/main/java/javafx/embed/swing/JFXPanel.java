@@ -66,6 +66,7 @@ import com.sun.javafx.embed.EmbeddedStageInterface;
 import com.sun.javafx.embed.HostInterface;
 import com.sun.javafx.stage.EmbeddedWindow;
 import com.sun.javafx.tk.Toolkit;
+import com.sun.javafx.PlatformUtil;
 
 import java.util.concurrent.atomic.AtomicInteger;
 import sun.awt.CausedFocusEvent;
@@ -195,10 +196,8 @@ public class JFXPanel extends JComponent {
     // Initialize FX runtime when the JFXPanel instance is constructed
     private synchronized static void initFx() {
         // Note that calling PlatformImpl.startup more than once is OK
-        PlatformImpl.startup(new Runnable() {
-            @Override public void run() {
-                // No need to do anything here
-            }
+        PlatformImpl.startup(() -> {
+            // No need to do anything here
         });
     }
 
@@ -254,12 +253,9 @@ public class JFXPanel extends JComponent {
             setSceneImpl(newScene);
         } else {
             final CountDownLatch initLatch = new CountDownLatch(1);
-            Platform.runLater(new Runnable() {
-                @Override
-                public void run() {
-                    setSceneImpl(newScene);
-                    initLatch.countDown();
-                }
+            Platform.runLater(() -> {
+                setSceneImpl(newScene);
+                initLatch.countDown();
             });
             try {
                 initLatch.await();
@@ -717,19 +713,13 @@ public class JFXPanel extends JComponent {
         }
     }
 
-    private final AWTEventListener ungrabListener = new AWTEventListener() {
-        @Override
-        public void eventDispatched(AWTEvent event) {
-            if (event instanceof sun.awt.UngrabEvent) {
-                SwingFXUtils.runOnFxThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        if (JFXPanel.this.stagePeer != null) {
-                            JFXPanel.this.stagePeer.focusUngrab();
-                        }
-                    }
-                });
-            }
+    private final AWTEventListener ungrabListener = event -> {
+        if (event instanceof sun.awt.UngrabEvent) {
+            SwingFXUtils.runOnFxThread(() -> {
+                if (JFXPanel.this.stagePeer != null) {
+                    JFXPanel.this.stagePeer.focusUngrab();
+                }
+            });
         }
     };
 
@@ -743,21 +733,16 @@ public class JFXPanel extends JComponent {
         super.addNotify();
 
         registerFinishListener();
-        AccessController.doPrivileged(new PrivilegedAction<Void>() {
-            public Void run() {
-                JFXPanel.this.getToolkit().addAWTEventListener(ungrabListener,
-                    sun.awt.SunToolkit.GRAB_EVENT_MASK);
-                return null;
-            }
+        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+            JFXPanel.this.getToolkit().addAWTEventListener(ungrabListener,
+                SunToolkit.GRAB_EVENT_MASK);
+            return null;
         });
         updateComponentSize(); // see RT-23603
-        SwingFXUtils.runOnFxThread(new Runnable() {
-            @Override
-            public void run() {
-                if ((stage != null) && !stage.isShowing()) {
-                    stage.show();
-                    sendMoveEventToFX();
-                }
+        SwingFXUtils.runOnFxThread(() -> {
+            if ((stage != null) && !stage.isShowing()) {
+                stage.show();
+                sendMoveEventToFX();
             }
         });
     }
@@ -776,12 +761,9 @@ public class JFXPanel extends JComponent {
      * chain of parent components are removed.
      */
     @Override public void removeNotify() {
-        SwingFXUtils.runOnFxThread(new Runnable() {
-            @Override
-            public void run() {
-                if ((stage != null) && stage.isShowing()) {
-                    stage.hide();
-                }
+        SwingFXUtils.runOnFxThread(() -> {
+            if ((stage != null) && stage.isShowing()) {
+                stage.hide();
             }
         });
 
@@ -791,11 +773,9 @@ public class JFXPanel extends JComponent {
 
         super.removeNotify();
 
-        AccessController.doPrivileged(new PrivilegedAction<Void>() {
-            public Void run() {
-                JFXPanel.this.getToolkit().removeAWTEventListener(ungrabListener);
-                return null;
-            }
+        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+            JFXPanel.this.getToolkit().removeAWTEventListener(ungrabListener);
+            return null;
         });
 
         /* see CR 4867453 */
@@ -828,26 +808,20 @@ public class JFXPanel extends JComponent {
             }
             scenePeer = embeddedScene;
             if (scenePeer == null) {
-                SwingUtilities.invokeLater(new Runnable() {
-                    @Override
-                    public void run() {
-                        dnd.removeNotify();
-                        dnd = null;
-                    }
+                SwingUtilities.invokeLater(() -> {
+                    dnd.removeNotify();
+                    dnd = null;
                 });
                 return;
             }
             if (pWidth > 0 && pHeight > 0) {
                 scenePeer.setSize(pWidth, pHeight);
             }
-            SwingUtilities.invokeLater(new Runnable() {
-                @Override
-                public void run() {
-                    dnd = new SwingDnD(JFXPanel.this, scenePeer);
-                    dnd.addNotify();
-                    if (scenePeer != null) {
-                        scenePeer.setDragStartListener(dnd.getDragStartListener());
-                    }
+            SwingUtilities.invokeLater(() -> {
+                dnd = new SwingDnD(JFXPanel.this, scenePeer);
+                dnd.addNotify();
+                if (scenePeer != null) {
+                    scenePeer.setDragStartListener(dnd.getDragStartListener());
                 }
             });
         }
@@ -877,12 +851,9 @@ public class JFXPanel extends JComponent {
 
         @Override
         public void repaint() {
-            SwingUtilities.invokeLater(new Runnable() {
-                @Override
-                public void run() {
-            JFXPanel.this.repaint();
-        }
-            });
+            SwingUtilities.invokeLater(() -> {
+        JFXPanel.this.repaint();
+    });
         }
 
         @Override
@@ -893,11 +864,8 @@ public class JFXPanel extends JComponent {
         @Override
         public void setCursor(CursorFrame cursorFrame) {
             final Cursor cursor = getPlatformCursor(cursorFrame);
-            SwingUtilities.invokeLater(new Runnable() {
-                @Override
-                public void run() {
-                    JFXPanel.this.setCursor(cursor);
-                }
+            SwingUtilities.invokeLater(() -> {
+                JFXPanel.this.setCursor(cursor);
             });
         }
 
@@ -919,14 +887,15 @@ public class JFXPanel extends JComponent {
 
         @Override
         public boolean grabFocus() {
-            SwingUtilities.invokeLater(new Runnable() {
-                @Override
-                public void run() {
-                    Window window = SwingUtilities.getWindowAncestor(JFXPanel.this);
-                    if (window != null) {
-                        if (JFXPanel.this.getToolkit() instanceof SunToolkit) {
-                            ((SunToolkit)JFXPanel.this.getToolkit()).grab(window);
-                        }
+            // On X11 grab is limited to a single XDisplay connection,
+            // so we can't delegate it to another GUI toolkit.
+            if (PlatformUtil.isLinux()) return true;
+
+            SwingUtilities.invokeLater(() -> {
+                Window window = SwingUtilities.getWindowAncestor(JFXPanel.this);
+                if (window != null) {
+                    if (JFXPanel.this.getToolkit() instanceof SunToolkit) {
+                        ((SunToolkit)JFXPanel.this.getToolkit()).grab(window);
                     }
                 }
             });
@@ -936,14 +905,15 @@ public class JFXPanel extends JComponent {
 
         @Override
         public void ungrabFocus() {
-            SwingUtilities.invokeLater(new Runnable() {
-                @Override
-                public void run() {
-                    Window window = SwingUtilities.getWindowAncestor(JFXPanel.this);
-                    if (window != null) {
-                        if (JFXPanel.this.getToolkit() instanceof SunToolkit) {
-                            ((SunToolkit)JFXPanel.this.getToolkit()).ungrab(window);
-                        }
+            // On X11 grab is limited to a single XDisplay connection,
+            // so we can't delegate it to another GUI toolkit.
+            if (PlatformUtil.isLinux()) return;
+
+            SwingUtilities.invokeLater(() -> {
+                Window window = SwingUtilities.getWindowAncestor(JFXPanel.this);
+                if (window != null) {
+                    if (JFXPanel.this.getToolkit() instanceof SunToolkit) {
+                        ((SunToolkit)JFXPanel.this.getToolkit()).ungrab(window);
                     }
                 }
             });

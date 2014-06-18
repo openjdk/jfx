@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,13 +25,14 @@
 
 package com.sun.javafx.scene.control.behavior;
 
+import javafx.event.EventTarget;
 import javafx.scene.Node;
 import javafx.scene.control.ComboBoxBase;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
-import com.sun.javafx.Utils;
 import static javafx.scene.input.KeyCode.DOWN;
 import static javafx.scene.input.KeyCode.ENTER;
 import static javafx.scene.input.KeyCode.F4;
@@ -76,7 +77,7 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
     @Override protected void focusChanged() {
         // If we did have the key down, but are now not focused, then we must
         // disarm the box.
-        final ComboBoxBase box = getControl();
+        final ComboBoxBase<T> box = getControl();
         if (keyDown && !box.isFocused()) {
             keyDown = false;
             box.disarm();
@@ -105,24 +106,18 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
         COMBO_BOX_BASE_BINDINGS.add(new KeyBinding(F4, KEY_RELEASED, "togglePopup"));
         COMBO_BOX_BASE_BINDINGS.add(new KeyBinding(UP, "togglePopup").alt());
         COMBO_BOX_BASE_BINDINGS.add(new KeyBinding(DOWN, "togglePopup").alt());
-        
-        if (Utils.isWindows()) {
-            COMBO_BOX_BASE_BINDINGS.add(new KeyBinding(ENTER, KEY_PRESSED, PRESS_ACTION));
-            COMBO_BOX_BASE_BINDINGS.add(new KeyBinding(ENTER, KEY_RELEASED, RELEASE_ACTION));
-            COMBO_BOX_BASE_BINDINGS.add(new KeyBinding(SPACE, KEY_PRESSED, PRESS_ACTION));
-            COMBO_BOX_BASE_BINDINGS.add(new KeyBinding(SPACE, KEY_RELEASED, RELEASE_ACTION));
-        } else {
-            COMBO_BOX_BASE_BINDINGS.add(new KeyBinding(SPACE, KEY_PRESSED, PRESS_ACTION));
-            COMBO_BOX_BASE_BINDINGS.add(new KeyBinding(SPACE, KEY_RELEASED, RELEASE_ACTION));
-            if (com.sun.javafx.scene.control.skin.Utils.isTwoLevelFocus()) {
-                COMBO_BOX_BASE_BINDINGS.add(new KeyBinding(ENTER, KEY_PRESSED, PRESS_ACTION));
-                COMBO_BOX_BASE_BINDINGS.add(new KeyBinding(ENTER, KEY_RELEASED, RELEASE_ACTION));
-            }
-        }
+
+        COMBO_BOX_BASE_BINDINGS.add(new KeyBinding(SPACE, KEY_PRESSED, PRESS_ACTION));
+        COMBO_BOX_BASE_BINDINGS.add(new KeyBinding(SPACE, KEY_RELEASED, RELEASE_ACTION));
 
         COMBO_BOX_BASE_BINDINGS.add(new KeyBinding(ENTER, KEY_PRESSED, PRESS_ACTION));
         COMBO_BOX_BASE_BINDINGS.add(new KeyBinding(ENTER, KEY_RELEASED, RELEASE_ACTION));
-        
+    }
+
+    @Override protected void callActionForEvent(KeyEvent e) {
+        // If popup is shown, KeyEvent causes popup to close
+        showPopupOnMouseRelease = true;
+        super.callActionForEvent(e);
     }
 
     @Override protected void callAction(String name) {
@@ -182,51 +177,46 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
      * Mouse Events                                                           *
      *                                                                        *
      *************************************************************************/
-    
+
     @Override public void mousePressed(MouseEvent e) {
         super.mousePressed(e);
-        getFocus();
         arm(e);
     }
-    
-    @Override public void mouseReleased(MouseEvent e) {
-        super.mousePressed(e);
 
-        boolean wasArmed = getControl().isArmed();
+    @Override public void mouseReleased(MouseEvent e) {
+        super.mouseReleased(e);
+
         disarm();
 
-        // The wasComboBoxButtonClickedForAutoHide boolean was added to resolve
+        // The showPopupOnMouseRelease boolean was added to resolve
         // RT-18151: namely, clicking on the comboBox button shouldn't hide, 
-        // and then immediately show the popup, which was occuring because we 
-        // didn't know where the popup autohide was occurring. Another comment
-        // appears below in the autoHide() method.
-        if (getControl().isShowing()) {
-            hide();
-        } else if (! wasComboBoxButtonClickedForAutoHide 
-                && getControl().contains(e.getX(), e.getY())
-                && e.getButton() == MouseButton.PRIMARY
-                && wasArmed) {
+        // and then immediately show the popup, which was occurring because we
+        // can't know whether the popup auto-hide was coming because of a MOUSE_PRESS
+        // since PopupWindow calls hide() before it calls onAutoHide().
+        if (showPopupOnMouseRelease) {
             show();
         } else {
-            wasComboBoxButtonClickedForAutoHide = false;
+            showPopupOnMouseRelease = true;
+            hide();
         }
     }
 
     @Override public void mouseEntered(MouseEvent e) {
-        if (getControl().isEditable()) {
-            Node arrowButton = getControl().lookup("#arrow-button");
-            mouseInsideButton = arrowButton != null && arrowButton.localToScene(arrowButton.getBoundsInLocal()).contains(e.getSceneX(), e.getSceneY());
-        } else {
-            mouseInsideButton = true;
-        }
-        
         super.mouseEntered(e);
+
+        if (!getControl().isEditable()) {
+            mouseInsideButton = true;
+        } else {
+            // This is strongly tied to ComboBoxBaseSkin
+            final EventTarget target = e.getTarget();
+            mouseInsideButton = (target instanceof Node && "arrow-button".equals(((Node) target).getId()));
+        }
         arm();
     }
 
     @Override public void mouseExited(MouseEvent e) {
-        mouseInsideButton = false;
         super.mouseExited(e);
+        mouseInsideButton = false;
         disarm();
     }
     
@@ -248,6 +238,7 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
     
     public void show() {
         if (! getControl().isShowing()) {
+            getControl().requestFocus();
             getControl().show();
         }
     }
@@ -257,18 +248,19 @@ public class ComboBoxBaseBehavior<T> extends BehaviorBase<ComboBoxBase<T>> {
             getControl().hide();
         }
     }
-    
-    boolean wasComboBoxButtonClickedForAutoHide = false;
-    boolean mouseInsideButton = false;
+
+    private boolean showPopupOnMouseRelease = true;
+    private boolean mouseInsideButton = false;
     public void onAutoHide() {
-        // if the ComboBox button was clicked, and it was this that forced the
-        // popup to disappear, we don't want the popup to immediately reappear,
-        // so we set wasComboBoxButtonClickedForAutoHide to reflect whether the
-        // mouse was within the comboBox button at the time of autohide occuring.
-        wasComboBoxButtonClickedForAutoHide = mouseInsideButton;
+        // RT-18151: if the ComboBox button was clicked, and it was this that forced the
+        // popup to disappear, we don't want the popup to immediately reappear.
+        // If the mouse was not within the comboBox button at the time of the auto-hide occurring,
+        // then showPopupOnMouseRelease returns to its default of true; otherwise, it toggles.
+        // Note that this logic depends on popup.setAutoHide(true) in ComboBoxPopupControl
         hide();
+        showPopupOnMouseRelease = mouseInsideButton ? !showPopupOnMouseRelease : true;
     }
-    
+
     public void arm() {
         if (getControl().isPressed()) {
             getControl().arm();

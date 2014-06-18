@@ -77,7 +77,7 @@ import com.oracle.javafx.scenebuilder.kit.editor.selection.GridSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMIndex;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMFxIdIndex;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.glossary.Glossary;
@@ -109,6 +109,9 @@ import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.ValuePropertyMetadataClassComparator;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.ValuePropertyMetadataNameComparator;
 import com.oracle.javafx.scenebuilder.kit.util.CssInternal;
+import com.oracle.javafx.scenebuilder.kit.util.Deprecation;
+
+import java.io.File;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -125,9 +128,13 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.Stack;
 import java.util.TreeMap;
+
 import javafx.application.Platform;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.geometry.HPos;
 import javafx.geometry.Point2D;
@@ -138,6 +145,7 @@ import javafx.scene.Parent;
 import javafx.scene.control.Accordion;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuButton;
+import javafx.scene.control.PasswordField;
 import javafx.scene.control.ProgressIndicator;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.SplitPane;
@@ -150,7 +158,6 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.RowConstraints;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
-import javafx.util.Callback;
 
 /**
  *
@@ -217,7 +224,6 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
     private String searchPattern;
     private SectionId previousExpandedSection;
     private PropertyEditor lastPropertyEditorValueChanged = null;
-    private boolean resetInProgress = false;
     private boolean dragOnGoing = false;
     //
     // Editor pools
@@ -270,8 +276,9 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
     private final SectionId[] sections = {SectionId.PROPERTIES, SectionId.LAYOUT, SectionId.CODE};
     //
     // State variables
-    private ViewMode viewMode;
-    private ShowMode showMode;
+    private final ObjectProperty<ViewMode> viewModeProperty = new SimpleObjectProperty<>();
+    private final ObjectProperty<ShowMode> showModeProperty = new SimpleObjectProperty<>();
+    private final ObjectProperty<SectionId> expandedSectionProperty = new SimpleObjectProperty<>();
 
     // Inspector state
     private SelectionState selectionState;
@@ -285,6 +292,33 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
     public InspectorPanelController(EditorController editorController) {
         super(InspectorPanelController.class.getResource(fxmlFile), I18N.getBundle(), editorController);
         this.editorController = editorController;
+        
+        viewModeProperty.setValue(ViewMode.SECTION);
+        viewModeProperty.addListener(new ChangeListener<ViewMode>() {
+            @Override
+            public void changed(ObservableValue<? extends ViewMode> arg0,
+                    ViewMode previousMode, ViewMode mode) {
+                viewModeChanged(previousMode, mode);
+            }
+        });
+
+        showModeProperty.setValue(ShowMode.ALL);
+        showModeProperty.addListener(new ChangeListener<ShowMode>() {
+            @Override
+            public void changed(ObservableValue<? extends ShowMode> arg0,
+                    ShowMode previousMode, ShowMode mode) {
+                showModeChanged();
+            }
+        });
+
+        expandedSectionProperty.setValue(SectionId.PROPERTIES);
+        expandedSectionProperty.addListener(new ChangeListener<SectionId>() {
+            @Override
+            public void changed(ObservableValue<? extends SectionId> arg0,
+                    SectionId previousSectionId, SectionId sectionId) {
+                expandedSectionChanged();
+            }
+        });
 
         // Editor pools init
         editorPools.put(I18nStringEditor.class, i18nStringEditorPool);
@@ -348,37 +382,16 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
         return result;
     }
 
-    public final void setExpandedSection(SectionId sectionId) {
-        final TitledPane tp;
-
-        switch (sectionId) {
-            case NONE:
-                tp = null;
-                break;
-            case PROPERTIES:
-                tp = propertiesTitledPane;
-                break;
-            case LAYOUT:
-                tp = layoutTitledPane;
-                break;
-            case CODE:
-                tp = codeTitledPane;
-                break;
-            default:
-                throw new IllegalStateException("Unexpected section id " + sectionId); //NOI18N
-            }
-
-        accordion.setExpandedPane(tp);
+    public ViewMode getViewMode() {
+        return viewModeProperty.getValue();
     }
-
+    
     public void setViewMode(ViewMode mode) {
         assert mode != null;
-        if (viewMode == mode) {
-            // no change
-            return;
-        }
-        ViewMode previousMode = viewMode;
-        viewMode = mode;
+        viewModeProperty.setValue(mode);
+    }
+    
+    private void viewModeChanged(ViewMode previousMode, ViewMode mode) {
         if (!isInspectorLoaded()) {
             return;
         }
@@ -405,29 +418,59 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
         updateClassNameInSectionTitles();
     }
 
-    public ViewMode getViewMode() {
-        return viewMode;
+    public ShowMode getShowMode() {
+        return showModeProperty.getValue();
     }
 
     public void setShowMode(ShowMode mode) {
         assert mode != null;
-        if (showMode == mode) {
-            // no change
-            return;
-        }
-        showMode = mode;
+        showModeProperty.setValue(mode);
+    }
+    
+    private void showModeChanged() {
         if (!isInspectorLoaded()) {
             return;
         }
         rebuild();
     }
 
-    public ShowMode getShowMode() {
-        return showMode;
+    public SectionId getExpandedSection() {
+        return expandedSectionProperty.getValue();
+    }
+
+    public void setExpandedSection(SectionId sectionId) {
+        assert sectionId != null;
+        expandedSectionProperty.setValue(sectionId);
+    }
+    
+    private void expandedSectionChanged() {
+        if (!isInspectorLoaded()) {
+            return;
+        }
+        final TitledPane tp;
+
+        switch (getExpandedSection()) {
+            case NONE:
+                tp = null;
+                break;
+            case PROPERTIES:
+                tp = propertiesTitledPane;
+                break;
+            case LAYOUT:
+                tp = layoutTitledPane;
+                break;
+            case CODE:
+                tp = codeTitledPane;
+                break;
+            default:
+                throw new IllegalStateException("Unexpected section id " + getExpandedSection()); //NOI18N
+            }
+
+        accordion.setExpandedPane(tp);
     }
 
     public boolean isEditedMode() {
-        return showMode == ShowMode.EDITED;
+        return getShowMode() == ShowMode.EDITED;
     }
 
     public String getSearchPattern() {
@@ -462,13 +505,9 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
     @Override
     protected void cssRevisionDidChange() {
 //        System.out.println("CSS changed.");
-        Platform.runLater(new Runnable() {
-
-            @Override
-            public void run() {
-                if (!dragOnGoing) {
-                    updateInspector();
-                }
+        Platform.runLater(() -> {
+            if (!dragOnGoing) {
+                updateInspector();
             }
         });
     }
@@ -484,6 +523,8 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
     @Override
     protected void editorSelectionDidChange() {
 //        System.out.println("Selection changed.");
+        // DTL-6570 should be resolved before this assertion is back.
+//        assert !editorController.isTextEditingSessionOnGoing();
         if (!dragOnGoing) {
             updateInspector();
         }
@@ -513,48 +554,32 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
         assert accordion != null;
         assert inspectorRoot != null;
 
-        propertiesTitledPane.expandedProperty().addListener(new ChangeListener<Boolean>() {
-            @Override
-            public void changed(ObservableValue<? extends Boolean> ov, Boolean wasExpanded, Boolean expanded) {
-                handleTitledPane(wasExpanded, expanded, SectionId.PROPERTIES);
-            }
-        });
-        layoutTitledPane.expandedProperty().addListener(new ChangeListener<Boolean>() {
-            @Override
-            public void changed(ObservableValue<? extends Boolean> ov, Boolean wasExpanded, Boolean expanded) {
-                handleTitledPane(wasExpanded, expanded, SectionId.LAYOUT);
-            }
-        });
-        codeTitledPane.expandedProperty().addListener(new ChangeListener<Boolean>() {
-            @Override
-            public void changed(ObservableValue<? extends Boolean> ov, Boolean wasExpanded, Boolean expanded) {
-                handleTitledPane(wasExpanded, expanded, SectionId.CODE);
-            }
-        });
+        propertiesTitledPane.expandedProperty().addListener((ChangeListener<Boolean>) (ov, wasExpanded, expanded) -> handleTitledPane(wasExpanded, expanded, SectionId.PROPERTIES));
+        layoutTitledPane.expandedProperty().addListener((ChangeListener<Boolean>) (ov, wasExpanded, expanded) -> handleTitledPane(wasExpanded, expanded, SectionId.LAYOUT));
+        codeTitledPane.expandedProperty().addListener((ChangeListener<Boolean>) (ov, wasExpanded, expanded) -> handleTitledPane(wasExpanded, expanded, SectionId.CODE));
 
         // Clean the potential nodes added for design purpose in fxml
         clearSections();
 
         // Listen the drag property changes
-        getEditorController().getDragController().dragSourceProperty().addListener(new ChangeListener<AbstractDragSource>() {
-
-            @Override
-            public void changed(ObservableValue<? extends AbstractDragSource> ov, AbstractDragSource oldVal, AbstractDragSource newVal) {
-                if (newVal != null) {
+        getEditorController().getDragController().dragSourceProperty().addListener((ChangeListener<AbstractDragSource>) (ov, oldVal, newVal) -> {
+            if (newVal != null) {
 //                    System.out.println("Drag started !");
-                    dragOnGoing = true;
-                } else {
+                dragOnGoing = true;
+            } else {
 //                    System.out.println("Drag finished.");
-                    dragOnGoing = false;
-                    updateInspector();
-                }
+                dragOnGoing = false;
+                updateInspector();
             }
         });
-
+        
+        // Listen the Scene stylesheets changes
+        getEditorController().sceneStyleSheetProperty().addListener((ChangeListener<ObservableList<File>>) (ov, t, t1) -> updateInspector());
+        
         accordion.getStyleClass().add("INSPECTOR_THEME"); //NOI18N
         selectionState = new SelectionState(editorController);
-        setViewMode(ViewMode.SECTION);
-        accordion.setExpandedPane(propertiesTitledPane);
+        viewModeChanged(null, getViewMode());
+        expandedSectionChanged();
         accordion.setPrefSize(300, 700);
         buildExpandedSection();
         updateClassNameInSectionTitles();
@@ -585,7 +610,7 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
         // - common parent change
         // - resolve state change
         return (!newSelectionState.getSelectedClasses().equals(selectionState.getSelectedClasses())
-                || (newSelectionState.getCommonParent() != selectionState.getCommonParent())
+                || (newSelectionState.getCommonParentClass() != selectionState.getCommonParentClass())
                 || (!newSelectionState.getUnresolvedInstances().equals(selectionState.getUnresolvedInstances())));
     }
 
@@ -615,7 +640,7 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
         // TBD: we could optimize this by only refreshing values if 
         //      same element class + same container class + same search pattern.
         clearSections();
-        if (viewMode == ViewMode.SECTION) {
+        if (getViewMode() == ViewMode.SECTION) {
             buildExpandedSection();
         } else {
             buildFlatContent(allContent);
@@ -635,7 +660,6 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
         // - reset the value
 //        System.out.println("Refresh all the editors in use...");
 
-        resetInProgress = true;
         for (Editor editor : editorsInUse) {
 
             if (editor instanceof PropertyEditor) {
@@ -649,7 +673,6 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
             }
             setEditorValueFromSelection(editor);
         }
-        resetInProgress = false;
     }
 
     private void buildExpandedSection() {
@@ -777,7 +800,6 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
         handleValueChange(propertyEditor);
         handleTransientValueChange(propertyEditor);
         handleEditingChange(propertyEditor);
-        handleIndeterminateChange(propertyEditor);
         handleNavigateRequest(propertyEditor);
     }
 
@@ -910,7 +932,7 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
             addMessage(gridPane, I18N.getString("inspector.message.searchpattern.empty"));
             return;
         }
-        boolean isOrderdByType = viewMode == ViewMode.PROPERTY_TYPE;
+        boolean isOrderdByType = getViewMode() == ViewMode.PROPERTY_TYPE;
 
         // Get Metadata
         Set<ValuePropertyMetadata> propMetadatas = getValuePropertyMetadata();
@@ -1026,7 +1048,7 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
             // PropertiesEditor
             propNameNode = ((PropertiesEditor) editor).getNameNode();
             propNameText = ((PropertiesEditor) editor).getPropertyNameText();
-            if (viewMode == ViewMode.SECTION) {
+            if (getViewMode() == ViewMode.SECTION) {
                 editorLayout = LayoutFormat.SIMPLE_LINE_NO_NAME;
             } else {
                 editorLayout = LayoutFormat.DOUBLE_LINE;
@@ -1086,32 +1108,26 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
 
     private void handleValueChange(PropertyEditor propertyEditor) {
         // Handle the value change
-        propertyEditor.addValueListener(new ChangeListener<Object>() {
-            @Override
-            public void changed(ObservableValue<? extends Object> ov, Object oldValue, Object newValue) {
+        propertyEditor.addValueListener((ov, oldValue, newValue) -> {
 //                System.out.println("Value change : " + newValue);
-                if (!propertyEditor.isUpdateFromModel()) {
-                    lastPropertyEditorValueChanged = propertyEditor;
-                    updateValueInModel(propertyEditor, oldValue, newValue);
-                }
-                if (propertyEditor.isRuledByCss()) {
-                    editorController.getMessageLog().logWarningMessage(
-                            "inspector.css.overridden", propertyEditor.getPropertyNameText());
-                }
+            if (!propertyEditor.isUpdateFromModel()) {
+                lastPropertyEditorValueChanged = propertyEditor;
+                updateValueInModel(propertyEditor, oldValue, newValue);
+            }
+            if (propertyEditor.isRuledByCss()) {
+                editorController.getMessageLog().logWarningMessage(
+                        "inspector.css.overridden", propertyEditor.getPropertyNameText());
             }
         });
     }
 
     private void handleTransientValueChange(PropertyEditor propertyEditor) {
         // Handle the transient value change (no job here, only the scene graph is updated)
-        propertyEditor.addTransientValueListener(new ChangeListener<Object>() {
-            @Override
-            public void changed(ObservableValue<? extends Object> ov, Object oldValue, Object newValue) {
+        propertyEditor.addTransientValueListener((ov, oldValue, newValue) -> {
 //                System.out.println("Transient value change : " + newValue);
-                lastPropertyEditorValueChanged = propertyEditor;
-                for (FXOMInstance fxomInstance : getSelectedInstances()) {
-                    propertyEditor.getPropertyMeta().setValueInSceneGraphObject(fxomInstance, newValue);
-                }
+            lastPropertyEditorValueChanged = propertyEditor;
+            for (FXOMInstance fxomInstance : getSelectedInstances()) {
+                propertyEditor.getPropertyMeta().setValueInSceneGraphObject(fxomInstance, newValue);
             }
         });
     }
@@ -1134,57 +1150,33 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
 
     private void handleEditingChange(PropertyEditor propertyEditor) {
         // Handle the editing change
-        propertyEditor.addEditingListener(new ChangeListener<Boolean>() {
-            @Override
-            public void changed(ObservableValue<? extends Boolean> ov, Boolean oldValue, Boolean newValue) {
-                if (newValue) {
-                    // Editing session starting
+        propertyEditor.addEditingListener((ov, oldValue, newValue) -> {
+            if (newValue) {
+                // Editing session starting
 //                    System.out.println("textEditingSessionDidBegin() called.");
-                    editorController.textEditingSessionDidBegin(new Callback<Void, Boolean>() {
-
-                        @Override
-                        public Boolean call(Void p) {
-                            // requestSessionEnd
-                            if (propertyEditor.getCommitListener() != null) {
-                                propertyEditor.getCommitListener().handle(null);
-                            }
-                            boolean hasError = propertyEditor.isInvalidValue();
-                            if (!hasError) {
+                editorController.textEditingSessionDidBegin(p -> {
+                    // requestSessionEnd
+                    if (propertyEditor.getCommitListener() != null) {
+                        propertyEditor.getCommitListener().handle(null);
+                    }
+                    boolean hasError = propertyEditor.isInvalidValue();
+                    if (!hasError) {
 //                                System.out.println("textEditingSessionDidEnd() called (from callback).");
-                                if (editorController.isTextEditingSessionOnGoing()) {
-                                    editorController.textEditingSessionDidEnd();
-                                }
-                            }
-//                            System.out.println("textEditingSessionDidBegin callback returns : " + !hasError);
-                            return !hasError;
-                        }
-                    });
-                } else {
-                    // Editing session completed
-                    if (editorController.isTextEditingSessionOnGoing()) {
-//                        System.out.println("textEditingSessionDidEnd() called.");
-                        editorController.textEditingSessionDidEnd();
-                        if (propertyEditor.getCommitListener() != null) {
-                            propertyEditor.getCommitListener().handle(null);
+                        if (editorController.isTextEditingSessionOnGoing()) {
+                            editorController.textEditingSessionDidEnd();
                         }
                     }
-                }
-            }
-        });
-
-    }
-
-    private void handleIndeterminateChange(PropertyEditor propertyEditor) {
-        // Handle the indeterminate change
-        propertyEditor.addIndeterminateListener(new ChangeListener<Boolean>() {
-            @Override
-            public void changed(ObservableValue<? extends Boolean> ov, Boolean oldValue, Boolean newValue) {
-                if (resetInProgress) {
-                    return;
-                }
-                if (!newValue) {
-                    // value is not anymore indeterminate: commit the current value
-                    updateValueInModel(propertyEditor, null, propertyEditor.getValue());
+//                            System.out.println("textEditingSessionDidBegin callback returns : " + !hasError);
+                    return !hasError;
+                });
+            } else {
+                // Editing session completed
+                if (editorController.isTextEditingSessionOnGoing()) {
+//                        System.out.println("textEditingSessionDidEnd() called.");
+                    editorController.textEditingSessionDidEnd();
+                    if (propertyEditor.getCommitListener() != null) {
+                        propertyEditor.getCommitListener().handle(null);
+                    }
                 }
             }
         });
@@ -1193,13 +1185,9 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
 
     private void handleNavigateRequest(PropertyEditor propertyEditor) {
         // Handle a navigate request from an editor
-        propertyEditor.addNavigateListener(new ChangeListener<String>() {
-
-            @Override
-            public void changed(ObservableValue<? extends String> ov, String oldStr, String newStr) {
-                if (newStr != null) {
-                    setFocusToEditor(new PropertyName(newStr));
-                }
+        propertyEditor.addNavigateListener((ov, oldStr, newStr) -> {
+            if (newStr != null) {
+                setFocusToEditor(new PropertyName(newStr));
             }
         });
     }
@@ -1490,10 +1478,9 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
             constants.put("REMAINING", GridPane.REMAINING); //NOI18N
         } else if (propNameStr.contains("prefColumnCount")) {
             if (getSelectedClasses().size() == 1) {
-                if (getSelectedClass() == TextField.class) {
+                if (getSelectedClass() == TextField.class || getSelectedClass() == PasswordField.class) {
                     constants.put("DEFAULT_PREF_COLUMN_COUNT", TextField.DEFAULT_PREF_COLUMN_COUNT); //NOI18N
-                } else {
-                    assert getSelectedClass() == TextArea.class;
+                } else if (getSelectedClass() == TextArea.class) {
                     constants.put("DEFAULT_PREF_COLUMN_COUNT", TextArea.DEFAULT_PREF_COLUMN_COUNT); //NOI18N
                 }
             }
@@ -1502,6 +1489,85 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
             constants.put("DEFAULT_PREF_ROW_COUNT", TextArea.DEFAULT_PREF_ROW_COUNT); //NOI18N
         }
         return constants;
+    }
+
+    private int getMax(IntegerPropertyMetadata integerPropMeta) {
+        String propNameStr = integerPropMeta.getName().getName();
+        if (propNameStr.contains("columnIndex") || propNameStr.contains("columnSpan")) { //NOI18N
+            GridPane gridPane = getGridPane(propNameStr);
+            if (gridPane == null) {
+                // multi-selection from different GridPanes: not supported for now
+                return getMin(integerPropMeta);
+            }
+            int nbColumns = Deprecation.getGridPaneColumnCount(gridPane);
+            if (propNameStr.contains("columnIndex")) {//NOI18N
+                // index start to 0
+                return nbColumns - 1;
+            }
+            if (propNameStr.contains("columnSpan")) {//NOI18N
+                int maxIndex = getSpanPropertyMaxIndex(propNameStr);
+                return nbColumns - maxIndex;
+            }
+        }
+        if (propNameStr.contains("rowIndex") || propNameStr.contains("rowSpan")) { //NOI18N
+            GridPane gridPane = getGridPane(propNameStr);
+            if (gridPane == null) {
+                // multi-selection from different GridPanes: not supported for now
+                return getMin(integerPropMeta);
+            }
+            int nbRow = Deprecation.getGridPaneRowCount(gridPane);
+            if (propNameStr.contains("rowIndex")) {//NOI18N
+                // index start to 0
+                return nbRow - 1;
+            }
+            if (propNameStr.contains("rowSpan")) {//NOI18N
+                int maxIndex = getSpanPropertyMaxIndex(propNameStr);
+                return nbRow - maxIndex;
+            }
+        }
+        return Integer.MAX_VALUE;
+    }
+
+    private int getMin(IntegerPropertyMetadata integerPropMeta) {
+        String propNameStr = integerPropMeta.getName().getName();
+        if (propNameStr.contains("columnSpan") || propNameStr.contains("rowSpan")) { //NOI18N
+            return 1;
+        }
+        return 0;
+    }
+
+    private int getSpanPropertyMaxIndex(String propNameStr) {
+        assert propNameStr.contains("columnSpan") || propNameStr.contains("rowSpan");
+        int maxIndex = 0;
+        for (FXOMInstance instance : getSelectedInstances()) {
+            assert instance.getSceneGraphObject() instanceof Node;
+            Integer index;
+            Node node = (Node) instance.getSceneGraphObject();
+            if (propNameStr.contains("columnSpan")) {//NOI18N
+                index = GridPane.getColumnIndex(node);
+            } else {
+                index = GridPane.getRowIndex(node);
+            }
+            if (index == null) {
+                index = 0;
+            }
+            if (index > maxIndex) {
+                maxIndex = index;
+            }
+        }
+        return maxIndex;
+    }
+    
+    private GridPane getGridPane(String propNameStr) {
+        assert propNameStr.contains("columnIndex") || propNameStr.contains("columnSpan") //NOI18N
+                || propNameStr.contains("rowIndex") || propNameStr.contains("rowSpan");//NOI18N
+            FXOMObject commonParent = selectionState.getCommonParentObject();
+            if (commonParent == null) {
+                return null;
+            }
+            Object parentObj = commonParent.getSceneGraphObject();
+            assert parentObj instanceof GridPane;
+            return (GridPane) parentObj;
     }
 
     private boolean isInspectorLoaded() {
@@ -1656,9 +1722,11 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
             assert propMeta instanceof IntegerPropertyMetadata;
             IntegerPropertyMetadata integerPropMeta = (IntegerPropertyMetadata) propMeta;
             if (propertyEditor != null) {
-                ((IntegerEditor) propertyEditor).reset(propMeta, selectedClasses, getConstants(integerPropMeta));
+                ((IntegerEditor) propertyEditor).reset(propMeta, selectedClasses,
+                        getConstants(integerPropMeta), getMin(integerPropMeta), getMax(integerPropMeta));
             } else {
-                propertyEditor = new IntegerEditor(propMeta, selectedClasses, getConstants(integerPropMeta));
+                propertyEditor = new IntegerEditor(propMeta, selectedClasses,
+                        getConstants(integerPropMeta), getMin(integerPropMeta), getMax(integerPropMeta));
             }
         } else if (editorClass == BooleanEditor.class) {
             if (propertyEditor != null) {
@@ -1779,9 +1847,9 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
             }
         } else if (editorClass == KeyCombinationPopupEditor.class) {
             if (propertyEditor != null) {
-                ((KeyCombinationPopupEditor) propertyEditor).reset(propMeta, selectedClasses);
+                ((KeyCombinationPopupEditor) propertyEditor).reset(propMeta, selectedClasses, getEditorController());
             } else {
-                propertyEditor = new KeyCombinationPopupEditor(propMeta, selectedClasses);
+                propertyEditor = new KeyCombinationPopupEditor(propMeta, selectedClasses, getEditorController());
             }
         } else if (editorClass == ColumnResizePolicyEditor.class) {
             if (propertyEditor != null) {
@@ -1824,16 +1892,13 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
 
         // Only AnchorPane for now
         assert editorClass == AnchorPaneConstraintsEditor.class;
-        Object sgObject = getFirstSelectedInstance().getSceneGraphObject();
-        assert sgObject instanceof Node;
-        Node sceneGraphNode = (Node) sgObject;
 
         if (editor != null) {
             assert editor instanceof AnchorPaneConstraintsEditor;
             ((AnchorPaneConstraintsEditor) editor).reset(
-                    propMetas[0], propMetas[1], propMetas[2], propMetas[3], sceneGraphNode);
+                    propMetas[0], propMetas[1], propMetas[2], propMetas[3], getSelectedInstances());
         } else {
-            editor = new AnchorPaneConstraintsEditor("AnchorPane Constraints", propMetas[0], propMetas[1], propMetas[2], propMetas[3], sceneGraphNode);
+            editor = new AnchorPaneConstraintsEditor("AnchorPane Constraints", propMetas[0], propMetas[1], propMetas[2], propMetas[3], getSelectedInstances());
         }
         propertiesEditor = (AnchorPaneConstraintsEditor) editor;
 
@@ -1918,7 +1983,7 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
     }
 
     private List<String> getFxIdsInUse() {
-        FXOMIndex fxomIndex = new FXOMIndex(getEditorController().getFxomDocument());
+        FXOMFxIdIndex fxomIndex = new FXOMFxIdIndex(getEditorController().getFxomDocument());
         return new ArrayList<>(fxomIndex.getFxIds().keySet());
     }
 
@@ -1935,7 +2000,7 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
     }
 
     private List<String> getSuggestedToggleGroups() {
-        FXOMIndex fxomIndex = new FXOMIndex(getEditorController().getFxomDocument());
+        FXOMFxIdIndex fxomIndex = new FXOMFxIdIndex(getEditorController().getFxomDocument());
         List<FXOMInstance> tgs = fxomIndex.collectToggleGroups();
         ArrayList<String> tgNames = new ArrayList<>();
         for (FXOMInstance tg : tgs) {
@@ -1960,10 +2025,6 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
         return (FXOMInstance) getSelectedInstances().toArray()[0];
     }
 
-    private FXOMInstance getFirstSelectedInstance() {
-        return (FXOMInstance) getSelectedInstances().toArray()[0];
-    }
-
     private Set<FXOMInstance> getUnresolvedInstances() {
         return selectionState.getUnresolvedInstances();
     }
@@ -1978,7 +2039,7 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
     }
 
     private Class<?> getCommonParent() {
-        return selectionState.getCommonParent();
+        return selectionState.getCommonParentClass();
     }
 
     /*
@@ -1994,7 +2055,8 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
         private final Selection selection;
         private final Set<FXOMInstance> selectedInstances = new HashSet<>();
         private final Set<Class<?>> selectedClasses = new HashSet<>();
-        private Class<?> commonParent;
+        private Class<?> commonParentClass;
+        private FXOMObject commonParentObject;
         private final Set<FXOMInstance> unresolvedInstances = new HashSet<>();
 
         public SelectionState(EditorController editorController) {
@@ -2031,14 +2093,27 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
                 }
             }
 
-            commonParent = null;
+            commonParentClass = null;
             for (FXOMInstance instance : selectedInstances) {
-                if (commonParent == null) {
+                if (commonParentClass == null) {
                     // first instance
-                    commonParent = getParentClass(instance);
+                    commonParentClass = getParentClass(instance);
                 } else {
-                    if (getParentClass(instance) != commonParent) {
-                        commonParent = null;
+                    if (getParentClass(instance) != commonParentClass) {
+                        commonParentClass = null;
+                        break;
+                    }
+                }
+            }
+
+            commonParentObject = null;
+            for (FXOMInstance instance : selectedInstances) {
+                if (commonParentObject == null) {
+                    // first instance
+                    commonParentObject = instance.getParentObject();
+                } else {
+                    if (instance.getParentObject() != commonParentObject) {
+                        commonParentObject = null;
                         break;
                     }
                 }
@@ -2060,8 +2135,12 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
             return selectedClasses;
         }
 
-        private Class<?> getCommonParent() {
-            return commonParent;
+        private Class<?> getCommonParentClass() {
+            return commonParentClass;
+        }
+
+        private FXOMObject getCommonParentObject() {
+            return commonParentObject;
         }
 
         private Set<FXOMInstance> getSelectedInstances() {

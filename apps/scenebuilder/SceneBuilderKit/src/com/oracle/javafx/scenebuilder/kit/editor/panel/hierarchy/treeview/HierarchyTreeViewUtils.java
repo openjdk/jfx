@@ -32,6 +32,7 @@
 package com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.treeview;
 
 import static com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.treeview.HierarchyTreeCell.HIERARCHY_TREE_CELL;
+import com.oracle.javafx.scenebuilder.kit.util.Deprecation;
 import java.util.List;
 import java.util.Set;
 import javafx.scene.Node;
@@ -92,7 +93,7 @@ public abstract class HierarchyTreeViewUtils {
         assert treeItem != null;
         for (Node node : treeCells) {
             assert node instanceof TreeCell;
-            final TreeCell<?> treeCell = (TreeCell) node;
+            final TreeCell<?> treeCell = (TreeCell<?>) node;
             if (treeItem.getValue() != null
                     && treeItem.getValue().equals(treeCell.getItem())) {
                 return treeCell;
@@ -112,7 +113,7 @@ public abstract class HierarchyTreeViewUtils {
         assert treeCells != null;
         for (Node node : treeCells) {
             assert node instanceof TreeCell;
-            final TreeCell<?> treeCell = (TreeCell) node;
+            final TreeCell<?> treeCell = (TreeCell<?>) node;
             if (treeCell.getIndex() == index) {
                 return treeCell;
             }
@@ -134,8 +135,8 @@ public abstract class HierarchyTreeViewUtils {
         if (child == parent) {
             return false;
         }
-        int childLevel = TreeView.getNodeLevel(child);
-        int parentLevel = TreeView.getNodeLevel(parent);
+        int childLevel = Deprecation.getNodeLevel(child);
+        int parentLevel = Deprecation.getNodeLevel(parent);
         while (parentLevel >= childLevel) {
             if (parent == child) {
                 return false;
@@ -161,7 +162,7 @@ public abstract class HierarchyTreeViewUtils {
         // TreeItems contains ROOT 
         // => return ROOT as the common parent
         for (TreeItem<T> treeItem : treeItems) {
-            if (TreeView.getNodeLevel(treeItem) == 0) {
+            if (Deprecation.getNodeLevel(treeItem) == 0) {
                 return treeItem;
             }
         }
@@ -180,7 +181,7 @@ public abstract class HierarchyTreeViewUtils {
                 parent = getCommonParentTreeItem(child, treeItems.get(index));
                 // We reached the ROOT level
                 // => common parent is ROOT TreeItem
-                if (TreeView.getNodeLevel(parent) == 0) {
+                if (Deprecation.getNodeLevel(parent) == 0) {
                     break;
                 } else {
                     child = parent;
@@ -196,8 +197,8 @@ public abstract class HierarchyTreeViewUtils {
 
         assert child1 != null && child2 != null;
 
-        int child1Level = TreeView.getNodeLevel(child1);
-        int child2Level = TreeView.getNodeLevel(child2);
+        int child1Level = Deprecation.getNodeLevel(child1);
+        int child2Level = Deprecation.getNodeLevel(child2);
         // Neither child1 nor child2 is ROOT TreeItem
         assert child1Level > 0 && child2Level > 0;
 

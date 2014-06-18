@@ -88,6 +88,9 @@ static jfieldID  jDelegateMenuField = 0;
                                                                    keyEquivalent:@""];
         [self->item setEnabled:(BOOL)jenabled];
         [self->item setTarget:self];
+
+        self->menu = [[NSMenu allocWithZone:[NSMenu menuZone]] initWithTitle:[self->item title]];
+        [self->menu setDelegate: self];
     }
     return self;
 }
@@ -161,7 +164,8 @@ static jfieldID  jDelegateMenuField = 0;
     }
 }
 
-
+// RT-37304: do not use menuNeedsUpdate here, even though Cocoa prohibits
+// changing the menu structure during menuWillOpen...
 - (void)menuWillOpen: (NSMenu *)menu
 {
     GET_MAIN_JENV;
@@ -194,7 +198,7 @@ static jfieldID  jDelegateMenuField = 0;
         (*env)->CallVoidMethod(env, self->jCallback, jMenuValidateMethod, NULL);
 
         return ([glassTargetItem->item isEnabled]);
-    } 
+    }
     return YES;
 }
 
@@ -357,9 +361,13 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacMenuDelegate__1initIDs
     jclass jMenuClass = [GlassHelper ClassForName:"com.sun.glass.ui.Menu" withEnv:env];
     
     jMenuActionMethod  = (*env)->GetMethodID(env, jCallbackClass,   "action",  "()V");
+    if ((*env)->ExceptionCheck(env)) return;
     jMenuValidateMethod = (*env)->GetMethodID(env, jCallbackClass,   "validate",  "()V");
+    if ((*env)->ExceptionCheck(env)) return;
     jMenuOpeningMethod = (*env)->GetMethodID(env, jMenuClass, "notifyMenuOpening", "()V");
+    if ((*env)->ExceptionCheck(env)) return;
     jMenuClosedMethod  = (*env)->GetMethodID(env, jMenuClass, "notifyMenuClosed",  "()V");
+    if ((*env)->ExceptionCheck(env)) return;
     jDelegateMenuField = (*env)->GetFieldID(env,  jMenuDelegateClass, "menu", "Lcom/sun/glass/ui/Menu;");
 }
 
@@ -432,11 +440,6 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacMenuDelegate__1insert
     GLASS_POOL_ENTER;
     {
         GlassMenu *menu = (GlassMenu *)jlong_to_ptr(jMenuPtr);
-        if (menu->menu == nil)
-        {
-            menu->menu = [[NSMenu allocWithZone:[NSMenu menuZone]] initWithTitle:[menu->item title]];
-            [menu->menu setDelegate: menu];
-        }
 
         if (jSubmenuPtr != 0)
         {

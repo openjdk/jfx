@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
+
 <!--
   Copyright (c) 2012, 2014, Oracle and/or its affiliates.
   All rights reserved. Use is subject to license terms.
@@ -30,19 +31,18 @@
   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 -->
+
 <?import java.lang.*?>
-<?import java.util.*?>
 <?import javafx.geometry.*?>
-<?import javafx.scene.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.image.*?>
 <?import javafx.scene.layout.*?>
 
-<VBox fx:id="vbox" alignment="CENTER" minHeight="-Infinity" minWidth="-Infinity" spacing="0.0" style="-fx-background-color: white;" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2">
+<VBox fx:id="vbox" alignment="CENTER" minHeight="-Infinity" minWidth="-Infinity" spacing="0.0" style="-fx-background-color: white;" styleClass="theme-presets" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
   <children>
     <ImageView onMousePressed="#onMousePressed" pickOnBounds="true" VBox.vgrow="NEVER">
       <image>
-        <Image url="@about-header.png" preserveRatio="true" smooth="true" />
+        <Image preserveRatio="true" smooth="true" url="@about-header.png" />
       </image>
       <VBox.margin>
         <Insets bottom="40.0" />
@@ -51,7 +51,7 @@
     <TextArea fx:id="textArea" editable="false" focusTraversable="false" prefWidth="200.0" text="" wrapText="true" VBox.vgrow="ALWAYS" />
     <ImageView pickOnBounds="true" VBox.vgrow="NEVER">
       <image>
-        <Image url="@about-footer.png" preserveRatio="true" smooth="true" />
+        <Image preserveRatio="true" smooth="true" url="@about-footer.png" />
       </image>
     </ImageView>
   </children>

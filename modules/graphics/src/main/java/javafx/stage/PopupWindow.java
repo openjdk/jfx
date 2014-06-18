@@ -66,13 +66,13 @@ import java.security.AllPermission;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
-import javafx.beans.property.ReadOnlyProperty;
 import javafx.beans.value.WeakChangeListener;
 import javafx.event.EventTarget;
 import javafx.event.EventType;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.Pane;
 
@@ -122,13 +122,9 @@ public abstract class PopupWindow extends Window {
      * RT-28454: When a parent node or parent window we are associated with is not
      * visible anymore, possibly because the scene was not valid anymore, we should hide.
      */
-    private ChangeListener<Boolean> changeListener = new ChangeListener<Boolean>() {
-        @Override public void changed(
-                ObservableValue<? extends Boolean> observable, 
-                Boolean oldValue, Boolean newValue) {
-            if (oldValue && !newValue) {
-                hide();
-            }
+    private ChangeListener<Boolean> changeListener = (observable, oldValue, newValue) -> {
+        if (oldValue && !newValue) {
+            hide();
         }
     };
     
@@ -271,6 +267,10 @@ public abstract class PopupWindow extends Window {
     /**
      * Specifies whether Popups should auto hide. If a popup loses focus and
      * autoHide is true, then the popup will be hidden automatically.
+     * <p>
+     * The only exception is when owner Node is specified using {@link #show(javafx.scene.Node, double, double)}.
+     * Focusing owner Node will not hide the PopupWindow.
+     * </p>
      * @defaultValue false
      */
     private BooleanProperty autoHide =
@@ -359,6 +359,10 @@ public abstract class PopupWindow extends Window {
      * which contains the owner node at the time of the call becomes an owner
      * window of the displayed popup.
      * </p>
+     * <p>
+     * Note that when {@link #autoHideProperty()} is set to true, mouse press on the owner Node
+     * will not hide the PopupWindow.
+     * </p>
      *
      * @param ownerNode The owner Node of the popup. It must not be null
      *        and must be associated with a Window.
@@ -427,14 +431,15 @@ public abstract class PopupWindow extends Window {
         }
 
         final Scene sceneValue = getScene();
-        if (sceneValue != null) {
-            SceneHelper.parentEffectiveOrientationInvalidated(sceneValue);            
-        }
+        SceneHelper.parentEffectiveOrientationInvalidated(sceneValue);            
         
         // RT-28447
         final Scene ownerScene = getRootWindow(owner).getScene();
         if (ownerScene != null) {
             sceneValue.getStylesheets().setAll(ownerScene.getStylesheets());
+            if (sceneValue.getCursor() == null) {
+                sceneValue.setCursor(ownerScene.getCursor());
+            }
         }
 
         // It is required that the root window exist and be visible to show the popup.
@@ -767,11 +772,11 @@ public abstract class PopupWindow extends Window {
 
         // update popup position
         // don't set Window.xExplicit unnecessarily
-        if (!Double.isNaN(windowScrMinX) || !Double.isNaN(getX())) {
+        if (!Double.isNaN(windowScrMinX)) {
             super.setXInternal(windowScrMinX);
         }
         // don't set Window.yExplicit unnecessarily
-        if (!Double.isNaN(windowScrMinY) || !Double.isNaN(getY())) {
+        if (!Double.isNaN(windowScrMinY)) {
             super.setYInternal(windowScrMinY);
         }
 
@@ -865,14 +870,7 @@ public abstract class PopupWindow extends Window {
 
     private void bindOwnerFocusedProperty(final Window ownerWindowValue) {
         ownerFocusedListener =
-            new ChangeListener<Boolean>() {
-                @Override
-                public void changed(
-                        ObservableValue<? extends Boolean> observable,
-                        Boolean oldValue, Boolean newValue) {
-                    setFocused(newValue);
-                }
-            };
+                (observable, oldValue, newValue) -> setFocused(newValue);
         ownerWindowValue.focusedProperty().addListener(ownerFocusedListener);
     }
 
@@ -961,8 +959,9 @@ public abstract class PopupWindow extends Window {
 
             final EventType<?> eventType = event.getEventType();
 
-            if (eventType == MouseEvent.MOUSE_PRESSED) {
-                handleMousePressedEvent(eventSource, event);
+            if (eventType == MouseEvent.MOUSE_PRESSED
+                    || eventType == ScrollEvent.SCROLL) {
+                handleAutoHidingEvents(eventSource, event);
                 return;
             }
 
@@ -982,7 +981,7 @@ public abstract class PopupWindow extends Window {
                 final Node sceneFocusOwner = scene.getFocusOwner();
                 final EventTarget eventTarget =
                         (sceneFocusOwner != null) ? sceneFocusOwner : scene;
-                if (EventUtil.fireEvent(eventTarget, new DirectEvent(event))
+                if (EventUtil.fireEvent(eventTarget, new DirectEvent(event.copyFor(popupWindow, eventTarget)))
                         == null) {
                     event.consume();
                     return;
@@ -1005,8 +1004,8 @@ public abstract class PopupWindow extends Window {
             }
         }
 
-        private void handleMousePressedEvent(final Object eventSource,
-                final Event event) {
+        private void handleAutoHidingEvents(final Object eventSource,
+                                            final Event event) {
             // we handle mouse pressed only for the immediate parent window,
             // where we can check whether the mouse press is inside of the owner
             // control or not, we will force possible child popups to close

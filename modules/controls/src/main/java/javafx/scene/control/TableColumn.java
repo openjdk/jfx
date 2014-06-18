@@ -51,8 +51,6 @@ import java.util.Collections;
 
 import java.util.List;
 import java.util.Map;
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.value.ObservableValue;
@@ -151,7 +149,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
         return (EventType<CellEditEvent<S,T>>) EDIT_ANY_EVENT;
     }
     private static final EventType<?> EDIT_ANY_EVENT =
-            new EventType(Event.ANY, "TABLE_COLUMN_EDIT");
+            new EventType<>(Event.ANY, "TABLE_COLUMN_EDIT");
 
     /**
      * Indicates that the user has performed some interaction to start an edit
@@ -163,7 +161,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
         return (EventType<CellEditEvent<S,T>>) EDIT_START_EVENT;
     }
     private static final EventType<?> EDIT_START_EVENT =
-            new EventType(editAnyEvent(), "EDIT_START");
+            new EventType<>(editAnyEvent(), "EDIT_START");
 
     /**
      * Indicates that the editing has been canceled, meaning that no change should
@@ -174,7 +172,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
         return (EventType<CellEditEvent<S,T>>) EDIT_CANCEL_EVENT;
     }
     private static final EventType<?> EDIT_CANCEL_EVENT =
-            new EventType(editAnyEvent(), "EDIT_CANCEL");
+            new EventType<>(editAnyEvent(), "EDIT_CANCEL");
 
     /**
      * Indicates that the editing has been committed by the user, meaning that
@@ -186,7 +184,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
         return (EventType<CellEditEvent<S,T>>) EDIT_COMMIT_EVENT;
     }
     private static final EventType<?> EDIT_COMMIT_EVENT =
-            new EventType(editAnyEvent(), "EDIT_COMMIT");
+            new EventType<>(editAnyEvent(), "EDIT_COMMIT");
     
     
     
@@ -245,21 +243,19 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
         // all children columns know that this TableColumn is their parent.
         getColumns().addListener(weakColumnsListener);
 
-        tableViewProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                // set all children of this tableView to have the same TableView
-                // as this column
-                for (TableColumn<S, ?> tc : getColumns()) {
-                    tc.setTableView(getTableView());
-                }
-                
-                // This code was commented out due to RT-22391, with this enabled
-                // the parent column will be null, which is not desired
+        tableViewProperty().addListener(observable -> {
+            // set all children of this tableView to have the same TableView
+            // as this column
+            for (TableColumn<S, ?> tc : getColumns()) {
+                tc.setTableView(getTableView());
+            }
+
+            // This code was commented out due to RT-22391, with this enabled
+            // the parent column will be null, which is not desired
 //                // set the parent of this column to also have this tableView
 //                if (getParentColumn() != null) {
 //                    getParentColumn().setTableView(getTableView());
 //                }
-            }
         });
     }
 
@@ -281,43 +277,39 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
      *                                                                         *
      **************************************************************************/
     
-    private EventHandler<CellEditEvent<S,T>> DEFAULT_EDIT_COMMIT_HANDLER = new EventHandler<CellEditEvent<S,T>>() {
-        @Override public void handle(CellEditEvent<S,T> t) {
-            int index = t.getTablePosition().getRow();
-            List<S> list = t.getTableView().getItems();
-            if (list == null || index < 0 || index >= list.size()) return;
-            S rowData = list.get(index);
-            ObservableValue<T> ov = getCellObservableValue(rowData);
-            
-            if (ov instanceof WritableValue) {
-                ((WritableValue)ov).setValue(t.getNewValue());
-            }
+    private EventHandler<CellEditEvent<S,T>> DEFAULT_EDIT_COMMIT_HANDLER = t -> {
+        int index = t.getTablePosition().getRow();
+        List<S> list = t.getTableView().getItems();
+        if (list == null || index < 0 || index >= list.size()) return;
+        S rowData = list.get(index);
+        ObservableValue<T> ov = getCellObservableValue(rowData);
+
+        if (ov instanceof WritableValue) {
+            ((WritableValue)ov).setValue(t.getNewValue());
         }
     };
     
-    private ListChangeListener<TableColumn<S,?>> columnsListener = new ListChangeListener<TableColumn<S,?>>() {
-        @Override public void onChanged(Change<? extends TableColumn<S,?>> c) {
-            while (c.next()) {
-                // update the TableColumn.tableView property
-                for (TableColumn<S,?> tc : c.getRemoved()) {
-                    // Fix for RT-16978. In TableColumnHeader we add before we
-                    // remove when moving a TableColumn. This means that for
-                    // a very brief moment the tc is duplicated, and we can prevent
-                    // nulling out the tableview and parent column. Without this
-                    // here, in a very special circumstance it is possible to null
-                    // out the entire content of a column by reordering and then
-                    // sorting another column.
-                    if (getColumns().contains(tc)) continue;
-                    
-                    tc.setTableView(null);
-                    tc.setParentColumn(null);
-                }
-                for (TableColumn<S,?> tc : c.getAddedSubList()) {
-                    tc.setTableView(getTableView());
-                }
+    private ListChangeListener<TableColumn<S,?>> columnsListener = c -> {
+        while (c.next()) {
+            // update the TableColumn.tableView property
+            for (TableColumn<S,?> tc : c.getRemoved()) {
+                // Fix for RT-16978. In TableColumnHeader we add before we
+                // remove when moving a TableColumn. This means that for
+                // a very brief moment the tc is duplicated, and we can prevent
+                // nulling out the tableview and parent column. Without this
+                // here, in a very special circumstance it is possible to null
+                // out the entire content of a column by reordering and then
+                // sorting another column.
+                if (getColumns().contains(tc)) continue;
 
-                updateColumnWidths();
+                tc.setTableView(null);
+                tc.setParentColumn(null);
             }
+            for (TableColumn<S,?> tc : c.getAddedSubList()) {
+                tc.setTableView(getTableView());
+            }
+
+            updateColumnWidths();
         }
     };
     
@@ -423,7 +415,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
         new SimpleObjectProperty<Callback<TableColumn<S,T>, TableCell<S,T>>>(
             this, "cellFactory", (Callback<TableColumn<S,T>, TableCell<S,T>>) ((Callback) DEFAULT_CELL_FACTORY)) {
                 @Override protected void invalidated() {
-                    TableView table = getTableView();
+                    TableView<S> table = getTableView();
                     if (table == null) return;
                     Map<Object,Object> properties = table.getProperties();
                     if (properties.containsKey(TableViewSkinBase.RECREATE)) {

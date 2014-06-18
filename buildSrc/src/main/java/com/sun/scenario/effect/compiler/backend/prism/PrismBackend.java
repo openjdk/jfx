@@ -62,9 +62,11 @@ public class PrismBackend extends TreeScanner {
     
     public String getGlueCode(String effectName,
                               String peerName,
+                              String genericsName,
                               String interfaceName)
     {
         Map<String, Variable> vars = parser.getSymbolTable().getGlobalVariables();
+        StringBuilder genericsDecl = new StringBuilder();
         StringBuilder interfaceDecl = new StringBuilder();
         StringBuilder samplerLinear = new StringBuilder();
         StringBuilder samplerInit = new StringBuilder();
@@ -116,6 +118,10 @@ public class PrismBackend extends TreeScanner {
             throw new RuntimeException("Must use zero, one, or two samplers (for now)");
         }
 
+        if (genericsName != null) {
+            genericsDecl.append("<"+genericsName+">");
+        }
+
         if (interfaceName != null) {
             interfaceDecl.append("implements "+interfaceName);
         }
@@ -124,6 +130,7 @@ public class PrismBackend extends TreeScanner {
         glue.setAttribute("effectName", effectName);
         glue.setAttribute("peerName", peerName);
         glue.setAttribute("superClass", superClass);
+        glue.setAttribute("genericsDecl", genericsDecl.toString());
         glue.setAttribute("interfaceDecl", interfaceDecl.toString());
         glue.setAttribute("usercode", usercode.toString());
         glue.setAttribute("samplerLinear", samplerLinear.toString());

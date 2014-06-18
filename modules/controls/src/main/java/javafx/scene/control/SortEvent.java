@@ -22,8 +22,7 @@ public class SortEvent<C> extends Event {
         return (EventType<SortEvent<C>>) SORT_EVENT;
     }
     
-    @SuppressWarnings("unchecked")
-    private static final EventType<?> SORT_EVENT = new EventType(SortEvent.ANY, "SORT_EVENT");
+    private static final EventType<?> SORT_EVENT = new EventType<>(SortEvent.ANY, "SORT_EVENT");
     
 //    /**
 //     * Construct a new {@code Event} with the specified event source, target

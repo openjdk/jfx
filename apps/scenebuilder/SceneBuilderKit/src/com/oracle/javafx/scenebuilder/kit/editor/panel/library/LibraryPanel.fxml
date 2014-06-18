@@ -42,7 +42,7 @@
   <children>
     <ListView fx:id="libSearchList" prefHeight="-1.0" prefWidth="-1.0" />
     <ListView fx:id="libList" prefHeight="-1.0" prefWidth="-1.0" />
-    <Label fx:id="noSearchResults" styleClass="library-no-results-label" text="%label.search.noresults" /><SplitPane layoutX="191.0" layoutY="131.0" maxHeight="10.0" orientation="VERTICAL" style="-fx-background-color: transparent;" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
+    <Label fx:id="noSearchResults" styleClass="library-no-results-label" text="%label.search.noresults" /><SplitPane focusTraversable="false" layoutX="191.0" layoutY="131.0" maxHeight="10.0" orientation="VERTICAL" style="-fx-background-color: transparent;" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
 <items>
 <VBox>
 <children>

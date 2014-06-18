@@ -1,0 +1,29 @@
+<project name="JavaFXSample" default="default" basedir="."
+         xmlns:fx="javafx:com.sun.javafx.tools.ant">
+    <target name="default">
+        <taskdef resource="com/sun/javafx/tools/ant/antlib.xml"
+                 uri="javafx:com.sun.javafx.tools.ant"
+                 classpath="../../../../../../../libs/ant-javafx.jar"/>
+        <!-- designed to be run in build/resoruce/test/... dir -->
+
+        <fx:application id="packagerTest"
+                        name="Packager Test"
+                        mainClass="hello.TestPackager"/>
+
+        <fx:resources id="appRes">
+            <fx:fileset dir="../../../../../../../tmp/tests/appResources" includes="mainApp.jar"/>
+        </fx:resources>
+
+        <fx:deploy outdir="../../../../../../../tmp/tests/ant" nativeBundles="image">
+
+            <fx:application refId="packagerTest"/>
+
+            <fx:resources refid="appRes"/>
+
+            <fx:info title="Packager Test"/>
+
+            <fx:bundleArgument arg="preferencesID" value="not.the.default.value"/>
+
+        </fx:deploy>
+    </target>
+</project>

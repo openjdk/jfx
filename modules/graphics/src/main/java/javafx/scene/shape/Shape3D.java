@@ -105,16 +105,11 @@ public abstract class Shape3D extends Node {
 
                 private Material old = null;
                 private final ChangeListener<Boolean> materialChangeListener =
-                        new ChangeListener<Boolean>() {
-                            
-                    @Override
-                    public void changed(ObservableValue<? extends Boolean> observable,
-                            Boolean oldValue, Boolean newValue) {
-                        if (newValue) {
-                            impl_markDirty(DirtyBits.MATERIAL);
-                        }
-                    }
-                };
+                        (observable, oldValue, newValue) -> {
+                            if (newValue) {
+                                impl_markDirty(DirtyBits.MATERIAL);
+                            }
+                        };
                 private final WeakChangeListener<Boolean> weakMaterialChangeListener =
                         new WeakChangeListener(materialChangeListener);
 
@@ -222,22 +217,17 @@ public abstract class Shape3D extends Node {
     @Override
     public void impl_updatePeer() {
         super.impl_updatePeer();
-        Material material = getMaterial();
         final NGShape3D peer = impl_getPeer();
         if (impl_isDirty(DirtyBits.MATERIAL)) {
-            if (material != null) {
-                material.impl_updatePG(); // new material should be updated
-                peer.setMaterial(material.impl_getNGMaterial());
-            } else {
-                DEFAULT_MATERIAL.impl_updatePG();
-                peer.setMaterial(DEFAULT_MATERIAL.impl_getNGMaterial());
-            }
+            Material mat = getMaterial() == null ? DEFAULT_MATERIAL : getMaterial();
+            mat.impl_updatePG(); // new material should be updated
+            peer.setMaterial(mat.impl_getNGMaterial());
         }
         if (impl_isDirty(DirtyBits.NODE_DRAWMODE)) {
-            peer.setDrawMode(getDrawMode());
+            peer.setDrawMode(getDrawMode() == null ? DrawMode.FILL : getDrawMode());
         }
         if (impl_isDirty(DirtyBits.NODE_CULLFACE)) {
-            peer.setCullFace(getCullFace());
+            peer.setCullFace(getCullFace() == null ? CullFace.BACK : getCullFace());
         }
     }
 

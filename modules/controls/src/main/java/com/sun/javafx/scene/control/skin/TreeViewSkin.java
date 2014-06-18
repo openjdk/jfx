@@ -28,19 +28,23 @@ package com.sun.javafx.scene.control.skin;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.WeakInvalidationListener;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.event.WeakEventHandler;
 import javafx.scene.Node;
+import javafx.scene.accessibility.Attribute;
 import javafx.scene.control.*;
 import javafx.scene.control.TreeItem.TreeModificationEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
-import javafx.util.Callback;
 import java.lang.ref.WeakReference;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.ArrayList;
+import java.util.List;
 
 import com.sun.javafx.scene.control.behavior.TreeViewBehavior;
 
@@ -52,12 +56,7 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
     // on embedded systems with touch screens which do not generate scroll
     // events for touch drag gestures.
     private static final boolean IS_PANNABLE =
-            AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
-                @Override
-                public Boolean run() {
-                    return Boolean.getBoolean("com.sun.javafx.scene.control.skin.TreeViewSkin.pannable");
-                }
-            });
+            AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("com.sun.javafx.scene.control.skin.TreeViewSkin.pannable"));
 
 
     public TreeViewSkin(final TreeView treeView) {
@@ -65,66 +64,45 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
 
         // init the VirtualFlow
         flow.setPannable(IS_PANNABLE);
-        flow.setFocusTraversable(getSkinnable().isFocusTraversable());
-        flow.setCreateCell(new Callback<VirtualFlow, TreeCell<T>>() {
-            @Override public TreeCell<T> call(VirtualFlow flow) {
-                return TreeViewSkin.this.createCell();
-            }
-        });
+        flow.setCreateCell(flow1 -> TreeViewSkin.this.createCell());
         flow.setFixedCellSize(treeView.getFixedCellSize());
         getChildren().add(flow);
         
         setRoot(getSkinnable().getRoot());
         
-        EventHandler<MouseEvent> ml = new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent event) { 
-                // RT-15127: cancel editing on scroll. This is a bit extreme
-                // (we are cancelling editing on touching the scrollbars).
-                // This can be improved at a later date.
-                if (treeView.getEditingItem() != null) {
-                    treeView.edit(null);
-                }
-                
-                // This ensures that the tree maintains the focus, even when the vbar
-                // and hbar controls inside the flow are clicked. Without this, the
-                // focus border will not be shown when the user interacts with the
-                // scrollbars, and more importantly, keyboard navigation won't be
-                // available to the user.
-                treeView.requestFocus(); }
+        EventHandler<MouseEvent> ml = event -> {
+            // RT-15127: cancel editing on scroll. This is a bit extreme
+            // (we are cancelling editing on touching the scrollbars).
+            // This can be improved at a later date.
+            if (treeView.getEditingItem() != null) {
+                treeView.edit(null);
+            }
+
+            // This ensures that the tree maintains the focus, even when the vbar
+            // and hbar controls inside the flow are clicked. Without this, the
+            // focus border will not be shown when the user interacts with the
+            // scrollbars, and more importantly, keyboard navigation won't be
+            // available to the user.
+            if (treeView.isFocusTraversable()) {
+                treeView.requestFocus();
+            }
         };
         flow.getVbar().addEventFilter(MouseEvent.MOUSE_PRESSED, ml);
         flow.getHbar().addEventFilter(MouseEvent.MOUSE_PRESSED, ml);
 
         // init the behavior 'closures'
-        getBehavior().setOnFocusPreviousRow(new Runnable() {
-            @Override public void run() { onFocusPreviousCell(); }
-        });
-        getBehavior().setOnFocusNextRow(new Runnable() {
-            @Override public void run() { onFocusNextCell(); }
-        });
-        getBehavior().setOnMoveToFirstCell(new Runnable() {
-            @Override public void run() { onMoveToFirstCell(); }
-        });
-        getBehavior().setOnMoveToLastCell(new Runnable() {
-            @Override public void run() { onMoveToLastCell(); }
-        });
-        getBehavior().setOnScrollPageDown(new Callback<Integer, Integer>() {
-            @Override public Integer call(Integer anchor) { return onScrollPageDown(anchor); }
-        });
-        getBehavior().setOnScrollPageUp(new Callback<Integer, Integer>() {
-            @Override public Integer call(Integer anchor) { return onScrollPageUp(anchor); }
-        });
-        getBehavior().setOnSelectPreviousRow(new Runnable() {
-            @Override public void run() { onSelectPreviousCell(); }
-        });
-        getBehavior().setOnSelectNextRow(new Runnable() {
-            @Override public void run() { onSelectNextCell(); }
-        });
+        getBehavior().setOnFocusPreviousRow(() -> { onFocusPreviousCell(); });
+        getBehavior().setOnFocusNextRow(() -> { onFocusNextCell(); });
+        getBehavior().setOnMoveToFirstCell(() -> { onMoveToFirstCell(); });
+        getBehavior().setOnMoveToLastCell(() -> { onMoveToLastCell(); });
+        getBehavior().setOnScrollPageDown(isFocusDriven -> onScrollPageDown(isFocusDriven));
+        getBehavior().setOnScrollPageUp(isFocusDriven -> onScrollPageUp(isFocusDriven));
+        getBehavior().setOnSelectPreviousRow(() -> { onSelectPreviousCell(); });
+        getBehavior().setOnSelectNextRow(() -> { onSelectNextCell(); });
 
         registerChangeListener(treeView.rootProperty(), "ROOT");
         registerChangeListener(treeView.showRootProperty(), "SHOW_ROOT");
         registerChangeListener(treeView.cellFactoryProperty(), "CELL_FACTORY");
-        registerChangeListener(treeView.focusTraversableProperty(), "FOCUS_TRAVERSABLE");
         registerChangeListener(treeView.fixedCellSizeProperty(), "FIXED_CELL_SIZE");
         
         updateRowCount();
@@ -146,8 +124,6 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
             updateRowCount();
         } else if ("CELL_FACTORY".equals(p)) {
             flow.recreateCells();
-        } else if ("FOCUS_TRAVERSABLE".equals(p)) {
-            flow.setFocusTraversable(getSkinnable().isFocusTraversable());
         } else if ("FIXED_CELL_SIZE".equals(p)) {
             flow.setFixedCellSize(getSkinnable().getFixedCellSize());
         }
@@ -157,50 +133,48 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
     private boolean needCellsRebuilt = true;
     private boolean needCellsReconfigured = false;
     
-    private EventHandler<TreeModificationEvent> rootListener = new EventHandler<TreeModificationEvent>() {
-        @Override public void handle(TreeModificationEvent e) {
-            if (e.wasAdded() && e.wasRemoved() && e.getAddedSize() == e.getRemovedSize()) {
-                // Fix for RT-14842, where the children of a TreeItem were changing,
-                // but because the overall item count was staying the same, there was 
-                // no event being fired to the skin to be informed that the items
-                // had changed. So, here we just watch for the case where the number
-                // of items being added is equal to the number of items being removed.
-                rowCountDirty = true;
-                getSkinnable().requestLayout();
-            } else if (e.getEventType().equals(TreeItem.valueChangedEvent())) {
-                // Fix for RT-14971 and RT-15338. 
-                needCellsRebuilt = true;
-                getSkinnable().requestLayout();
-            } else {
-                // Fix for RT-20090. We are checking to see if the event coming
-                // from the TreeItem root is an event where the count has changed.
-                EventType eventType = e.getEventType();
-                while (eventType != null) {
-                    if (eventType.equals(TreeItem.<T>expandedItemCountChangeEvent())) {
-                        rowCountDirty = true;
-                        getSkinnable().requestLayout();
-                        break;
-                    }
-                    eventType = eventType.getSuperType();
+    private EventHandler<TreeModificationEvent<T>> rootListener = e -> {
+        if (e.wasAdded() && e.wasRemoved() && e.getAddedSize() == e.getRemovedSize()) {
+            // Fix for RT-14842, where the children of a TreeItem were changing,
+            // but because the overall item count was staying the same, there was
+            // no event being fired to the skin to be informed that the items
+            // had changed. So, here we just watch for the case where the number
+            // of items being added is equal to the number of items being removed.
+            rowCountDirty = true;
+            getSkinnable().requestLayout();
+        } else if (e.getEventType().equals(TreeItem.valueChangedEvent())) {
+            // Fix for RT-14971 and RT-15338.
+            needCellsRebuilt = true;
+            getSkinnable().requestLayout();
+        } else {
+            // Fix for RT-20090. We are checking to see if the event coming
+            // from the TreeItem root is an event where the count has changed.
+            EventType<?> eventType = e.getEventType();
+            while (eventType != null) {
+                if (eventType.equals(TreeItem.<T>expandedItemCountChangeEvent())) {
+                    rowCountDirty = true;
+                    getSkinnable().requestLayout();
+                    break;
                 }
+                eventType = eventType.getSuperType();
             }
         }
     };
     
-    private WeakEventHandler weakRootListener;
+    private WeakEventHandler<TreeModificationEvent<T>> weakRootListener;
             
     
-    private WeakReference<TreeItem> weakRoot;
-    private TreeItem getRoot() {
+    private WeakReference<TreeItem<T>> weakRoot;
+    private TreeItem<T> getRoot() {
         return weakRoot == null ? null : weakRoot.get();
     }
-    private void setRoot(TreeItem newRoot) {
+    private void setRoot(TreeItem<T> newRoot) {
         if (getRoot() != null && weakRootListener != null) {
             getRoot().removeEventHandler(TreeItem.<T>treeNotificationEvent(), weakRootListener);
         }
-        weakRoot = new WeakReference<TreeItem>(newRoot);
+        weakRoot = new WeakReference<>(newRoot);
         if (getRoot() != null) {
-            weakRootListener = new WeakEventHandler(rootListener);
+            weakRootListener = new WeakEventHandler<>(rootListener);
             getRoot().addEventHandler(TreeItem.<T>treeNotificationEvent(), weakRootListener);
         }
         
@@ -240,6 +214,21 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
         // If there is no disclosure node, then add one of my own
         if (cell.getDisclosureNode() == null) {
             final StackPane disclosureNode = new StackPane();
+
+            /* This code is intentionally commented.
+             * Currently as it stands it does provided any functionality and interferes
+             * with TreeView. The VO cursor move over the DISCLOSURE_NODE instead of the 
+             * tree item itself. This is possibly caused by the order of item's children 
+             * (the Labeled and the disclosure node).
+             */
+//            final StackPane disclosureNode = new StackPane() {
+//                @Override protected Object accGetAttribute(Attribute attribute, Object... parameters) {
+//                    switch (attribute) {
+//                        case ROLE: return Role.DISCLOSURE_NODE;
+//                        default: return super.accGetAttribute(attribute, parameters);
+//                    }
+//                }
+//            };
             disclosureNode.getStyleClass().setAll("tree-disclosure-node");
 
             final StackPane disclosureNodeArrow = new StackPane();
@@ -262,10 +251,8 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
             
             private WeakReference<TreeItem<T>> treeItemRef;
             
-            private InvalidationListener treeItemGraphicListener = new InvalidationListener() {
-                @Override public void invalidated(Observable observable) {
-                    updateDisplay(getItem(), isEmpty());
-                }
+            private InvalidationListener treeItemGraphicListener = observable -> {
+                updateDisplay(getItem(), isEmpty());
             };
             
             private InvalidationListener treeItemListener = new InvalidationListener() {
@@ -368,13 +355,13 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
     }
     
     private void onFocusPreviousCell() {
-        FocusModel fm = getSkinnable().getFocusModel();
+        FocusModel<TreeItem<T>> fm = getSkinnable().getFocusModel();
         if (fm == null) return;
         flow.show(fm.getFocusedIndex());
     }
 
     private void onFocusNextCell() {
-        FocusModel fm = getSkinnable().getFocusModel();
+        FocusModel<TreeItem<T>> fm = getSkinnable().getFocusModel();
         if (fm == null) return;
         flow.show(fm.getFocusedIndex());
     }
@@ -402,22 +389,36 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
     /**
      * Function used to scroll the container down by one 'page'.
      */
-    public int onScrollPageDown(int anchor) {
+    public int onScrollPageDown(boolean isFocusDriven) {
         TreeCell<T> lastVisibleCell = flow.getLastVisibleCellWithinViewPort();
         if (lastVisibleCell == null) return -1;
 
-        final SelectionModel sm = getSkinnable().getSelectionModel();
-        final FocusModel fm = getSkinnable().getFocusModel();
+        final SelectionModel<TreeItem<T>> sm = getSkinnable().getSelectionModel();
+        final FocusModel<TreeItem<T>> fm = getSkinnable().getFocusModel();
         if (sm == null || fm == null) return -1;
 
         int lastVisibleCellIndex = lastVisibleCell.getIndex();
-        if (sm.isSelected(lastVisibleCellIndex) || fm.isFocused(lastVisibleCellIndex) || lastVisibleCellIndex == anchor) {
-            // if the last visible cell is selected, we want to shift that cell up
-            // to be the top-most cell, or at least as far to the top as we can go.
-            flow.showAsFirst(lastVisibleCell);
-            
-            TreeCell<T> newLastVisibleCell = flow.getLastVisibleCellWithinViewPort();
-            lastVisibleCell = newLastVisibleCell == null ? lastVisibleCell : newLastVisibleCell;
+
+        // isSelected represents focus OR selection
+        boolean isSelected = false;
+        if (isFocusDriven) {
+            isSelected = lastVisibleCell.isFocused() || fm.isFocused(lastVisibleCellIndex);
+        } else {
+            isSelected = lastVisibleCell.isSelected() || sm.isSelected(lastVisibleCellIndex);
+        }
+
+        if (isSelected) {
+            boolean isLeadIndex = (isFocusDriven && fm.getFocusedIndex() == lastVisibleCellIndex)
+                    || (! isFocusDriven && sm.getSelectedIndex() == lastVisibleCellIndex);
+
+            if (isLeadIndex) {
+                // if the last visible cell is selected, we want to shift that cell up
+                // to be the top-most cell, or at least as far to the top as we can go.
+                flow.showAsFirst(lastVisibleCell);
+
+                TreeCell<T> newLastVisibleCell = flow.getLastVisibleCellWithinViewPort();
+                lastVisibleCell = newLastVisibleCell == null ? lastVisibleCell : newLastVisibleCell;
+            }
         } else {
             // if the selection is not on the 'bottom' most cell, we firstly move
             // the selection down to that, without scrolling the contents, so
@@ -432,22 +433,36 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
     /**
      * Function used to scroll the container up by one 'page'.
      */
-    public int onScrollPageUp(int anchor) {
+    public int onScrollPageUp(boolean isFocusDriven) {
         TreeCell<T> firstVisibleCell = flow.getFirstVisibleCellWithinViewPort();
         if (firstVisibleCell == null) return -1;
 
-        final SelectionModel sm = getSkinnable().getSelectionModel();
-        final FocusModel fm = getSkinnable().getFocusModel();
+        final SelectionModel<TreeItem<T>> sm = getSkinnable().getSelectionModel();
+        final FocusModel<TreeItem<T>> fm = getSkinnable().getFocusModel();
         if (sm == null || fm == null) return -1;
 
         int firstVisibleCellIndex = firstVisibleCell.getIndex();
-        if (sm.isSelected(firstVisibleCellIndex) || fm.isFocused(firstVisibleCellIndex) || firstVisibleCellIndex == anchor) {
-            // if the first visible cell is selected, we want to shift that cell down
-            // to be the bottom-most cell, or at least as far to the bottom as we can go.
-            flow.showAsLast(firstVisibleCell);
 
-            TreeCell<T> newFirstVisibleCell = flow.getFirstVisibleCellWithinViewPort();
-            firstVisibleCell = newFirstVisibleCell == null ? firstVisibleCell : newFirstVisibleCell;
+        // isSelected represents focus OR selection
+        boolean isSelected = false;
+        if (isFocusDriven) {
+            isSelected = firstVisibleCell.isFocused() || fm.isFocused(firstVisibleCellIndex);
+        } else {
+            isSelected = firstVisibleCell.isSelected() || sm.isSelected(firstVisibleCellIndex);
+        }
+
+        if (isSelected) {
+            boolean isLeadIndex = (isFocusDriven && fm.getFocusedIndex() == firstVisibleCellIndex)
+                    || (! isFocusDriven && sm.getSelectedIndex() == firstVisibleCellIndex);
+
+            if (isLeadIndex) {
+                // if the first visible cell is selected, we want to shift that cell down
+                // to be the bottom-most cell, or at least as far to the bottom as we can go.
+                flow.showAsLast(firstVisibleCell);
+
+                TreeCell<T> newFirstVisibleCell = flow.getFirstVisibleCellWithinViewPort();
+                firstVisibleCell = newFirstVisibleCell == null ? firstVisibleCell : newFirstVisibleCell;
+            }
         } else {
             // if the selection is not on the 'top' most cell, we firstly move
             // the selection up to that, without scrolling the contents, so
@@ -457,5 +472,40 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
         int newSelectionIndex = firstVisibleCell.getIndex();
         flow.show(firstVisibleCell);
         return newSelectionIndex;
+    }
+
+    @Override
+    public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case FOCUS_ITEM: {
+                FocusModel<?> fm = getSkinnable().getFocusModel();
+                int focusedIndex = fm.getFocusedIndex();
+                if (focusedIndex == -1) {
+                    if (getItemCount() > 0) {
+                        focusedIndex = 0;
+                    } else {
+                        return null;
+                    }
+                }
+                return flow.getPrivateCell(focusedIndex);
+            }
+            case ROW_AT_INDEX: {
+                final int rowIndex = (Integer)parameters[0];
+                return rowIndex < 0 ? null : flow.getPrivateCell(rowIndex);
+            }
+            case SELECTED_ROWS: {
+                MultipleSelectionModel<TreeItem<T>> sm = getSkinnable().getSelectionModel();
+                ObservableList<Integer> indices = sm.getSelectedIndices();
+                List<Node> selection = new ArrayList<>(indices.size());
+                for (int i : indices) {
+                    TreeCell<T> row = flow.getPrivateCell(i);
+                    if (row != null) selection.add(row);
+                }
+                return FXCollections.observableArrayList(selection);
+            }
+            case VERTICAL_SCROLLBAR: return flow.getVbar();
+            case HORIZONTAL_SCROLLBAR: return flow.getHbar();
+            default: return super.accGetAttribute(attribute, parameters);
+        }
     }
 }

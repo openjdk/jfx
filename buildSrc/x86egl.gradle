@@ -25,8 +25,38 @@
 
 ext.X86EGL = [:]
 
+def sdk
+def compilerHome
+def compilerPrefix
+def pkgconfig
+def jniPlatform
+if (IS_MAC) {
+    jniPlatform="darwin"
+    fetchExternalTools('X86EGL', [ "x86egl-01.tgz" ], 
+        rootProject.CROSS_TOOLS_DIR, rootProject.IS_IMPORT_CROSS_TOOLS)
+    sdk=file("${rootProject.CROSS_TOOLS_DIR}/x86egl-01")
+    pkgconfig="${sdk}/bin/pkg-config"
+} else {
+    jniPlatform="linux"
+    sdk=""
+    pkgconfig="pkg-config"
+}
+
+if (rootProject.hasProperty("X86EGL_COMPILER")) {
+    logger.quiet "Using alternate X86EGL_COMPILER $rootProject.X86EGL_COMPILER"
+    compilerHome=file(rootProject.X86EGL_COMPILER);
+} else {
+    compilerHome=file("/usr");
+}
+if (rootProject.hasProperty("X86EGL_COMPILER_PREFIX")) {
+    logger.quiet "Using alternate X86EGL_COMPILER_PREFIX $rootProject.X86EGL_COMPILER_PREFIX"
+    compilerPrefix="${rootProject.X86EGL_COMPILER_PREFIX}"
+} else {
+    compilerPrefix=""
+}
+
 // Declare whether this particular target file applies to the current system
-X86EGL.canBuild = IS_LINUX
+X86EGL.canBuild = (IS_LINUX || IS_MAC) && compilerHome.exists()
 if (!X86EGL.canBuild) {
     return;
 }
@@ -34,55 +64,37 @@ if (!X86EGL.canBuild) {
 // Lambda for naming the generated libs
 X86EGL.library = { name -> return "lib${name}.so" as String }
 
-// alias for this platform in legacy artifacts
-X86EGL.artifactsName = "x86egl"
-
 X86EGL.compileSwing = false;
 X86EGL.compileSWT = false;
 X86EGL.compileFXPackager = false;
 X86EGL.compileDesignTime = false;
+X86EGL.compileWebnodeNative = false;
+X86EGL.compileMediaNative = false;
 
-// Libraries end up in the sdk/rt/lib/arm directory for arm builds
-X86EGL.libDest = "lib/$OS_ARCH"
+X86EGL.includeLens = true
+X86EGL.includeNull3d = true
+X86EGL.includeEGL = true
+X86EGL.includeSwing = false
+X86EGL.includeSWT = false
+X86EGL.includeGTK = true
 
-// TODO this is garbage. Each target file should define what it includes,
-// not what it excludes.
-X86EGL.jfxrtJarExcludes = [
-    "**/*.hlsl",
-    "com/sun/glass/ui/win",
-    "com/sun/glass/ui/accessible/win",
-    "com/sun/prism/d3d",
-    "com/sun/prism/es2/gl/win",
-    //"com/sun/prism/null3d",
-    "com/sun/scenario/effect/impl/hw/d3d",
-    
-    "com/sun/glass/events/mac",
-    "com/sun/glass/ui/mac",
-    "com/sun/glass/ui/accessible/mac",
-    "com/sun/prism/es2/gl/mac",
-    
-    "com/sun/glass/ui/android",
-    
-    "com/sun/glass/ui/ios",
-    
-    "com/sun/glass/ui/swt", // SWT glass
-    
-    "javafx/embed/swing", // Swing Interop
-    
-    "javafx/embed/swt", // SWT Interop
-
-    "com/sun/prism/es2/MacGL*",
-    "com/sun/prism/es2/IOSGL*",
-    "com/sun/prism/es2/WinGL*",
-]
+// Libraries end up in the sdk/rt/lib/[i386|amd46] directory depending on machine arch
+if (rootProject.hasProperty("X86EGL_ARCH")) {
+    X86EGL.arch = X86EGL_ARCH
+    X86EGL.libDest = "lib/${X86EGL_ARCH}"
+} else {
+    X86EGL.arch = OS_ARCH
+    X86EGL.libDest = "lib/${OS_ARCH}"
+}
 
 def commonFlags = [
         "-fno-strict-aliasing", "-fPIC", "-fno-omit-frame-pointer", // optimization flags
         "-W", "-Wall", "-Wno-unused", "-Wno-parentheses", "-Werror=implicit-function-declaration"] // warning flags
 // Specify the compilation parameters and link parameters
 def ccFlags = [
-        commonFlags, "-I$JDK_HOME/include", "-I$JDK_HOME/include/linux", "-c",
-        IS_DEBUG_NATIVE ? ["-ggdb", "-DVERBOSE"] : "-O2"].flatten()
+        commonFlags,
+        "-I$JDK_HOME/include", "-I$JDK_HOME/include/${jniPlatform}", "-c",
+        IS_DEBUG_NATIVE ? ["-ggdb", "-DVERBOSE"] : ["-O2", "-DNDEBUG"]].flatten()
 //ccFlags.addAll(["-Wnon-virtual-dtor", "-Woverloaded-virtual", "-std=c++0x"])
 def linkFlags = ["-shared", commonFlags].flatten()
 
@@ -90,12 +102,20 @@ def linkFlags = ["-shared", commonFlags].flatten()
 def extraCFlags = [
         "-I", "-L",
         ccFlags,
+        "-I$sdk/usr/include",
         "-DEGL_X11_FB_CONTAINER"].flatten();
 def extraLFlags = [
         "-I", "-L",
+        "-L$sdk/usr/lib",
+        "-L$sdk/usr/lib/i386-linux-gnu",
         linkFlags].flatten()
 
 def lensLFlags = [extraLFlags, "-lpthread", "-ludev", "-ldl", "-lm"].flatten()
+def monocleCFlags = [
+        extraCFlags,
+        "-Werror",
+        "-I", file("modules/graphics/src/main/native-glass/monocle/")].flatten();
+def monocleLFlags = [extraLFlags, "-ldl", "-lm"].flatten()
 
 def fontCFlags = [extraCFlags].flatten()
 def fontLFlags = [extraLFlags].flatten()
@@ -110,8 +130,8 @@ def es2X11CFlags = [extraCFlags, "-DUSE_XSHM", "-DDEBUG", "-DIS_EGLX11", "-DLINU
 def es2X11LFlags = [extraLFlags, "-lX11", "-lXext", "-lXdmcp", "-lXau"].flatten()
 
 def mediaCFlags = [extraCFlags,
-    "-I/usr/include/gstreamer-0.10",
-    "-I/usr/include/glib-2.0",
+    "-I${sdk}/usr/include/gstreamer-0.10",
+    "-I${sdk}/usr/include/glib-2.0",
     "-DENABLE.nativeSource=1", "-DENABLE_GST_FFMPEG=1"].flatten()
 def mediaLFlags = [extraLFlags, "-lgstreamer-0.10", "-lgstapp-0.10",
     "-lgstbase-0.10", "-lglib-2.0", "-lgobject-2.0", "-lgmodule-2.0", "-lgthread-2.0"].flatten()
@@ -125,15 +145,18 @@ def gtkLFlags = [extraLFlags].flatten()
 setupTools("x86egl_tools",
         { propFile ->
             ByteArrayOutputStream results = new ByteArrayOutputStream();
+
             exec {
-                commandLine("pkg-config", "--cflags", "gtk+-2.0", "gthread-2.0", "xtst");
+                commandLine("$pkgconfig", "--cflags", "gtk+-2.0",
+                        "gthread-2.0", "xtst");
                 setStandardOutput(results);
             }
             propFile << "cflags=" << results.toString().trim() << "\n";
 
             results = new ByteArrayOutputStream();
             exec {
-                commandLine "pkg-config", "--libs", "gtk+-2.0", "gthread-2.0", "xtst"
+                commandLine "$pkgconfig", "--libs", "gtk+-2.0",
+                        "gthread-2.0", "xtst"
                 standardOutput = results
             }
             propFile << "libs=" << results.toString().trim();
@@ -153,6 +176,9 @@ directfb.glass.lens=dfb
 directfb.prism.order=sw
 directfb.com.sun.javafx.isEmbedded=true
 directfb.com.sun.javafx.scene.control.skin.FXVK.cache=true
+directfb.com.sun.javafx.gestures.zoom=true
+directfb.com.sun.javafx.gestures.rotate=true
+directfb.com.sun.javafx.gestures.scroll=true
 eglfb.com.sun.javafx.scene.control.skin.ListViewSkin.pannable=true
 eglfb.com.sun.javafx.scene.control.skin.TreeViewSkin.pannable=true
 eglfb.com.sun.javafx.scene.control.skin.TableViewSkin.pannable=true
@@ -167,6 +193,9 @@ eglfb.embedded=eglfb
 eglfb.com.sun.javafx.isEmbedded=true
 eglfb.doNativeComposite=true
 eglfb.com.sun.javafx.scene.control.skin.FXVK.cache=true
+eglfb.com.sun.javafx.gestures.zoom=true
+eglfb.com.sun.javafx.gestures.rotate=true
+eglfb.com.sun.javafx.gestures.scroll=true
 fb.com.sun.javafx.scene.control.skin.ListViewSkin.pannable=true
 fb.com.sun.javafx.scene.control.skin.TreeViewSkin.pannable=true
 fb.com.sun.javafx.scene.control.skin.TableViewSkin.pannable=true
@@ -176,6 +205,25 @@ fb.prism.order=sw
 fb.com.sun.javafx.isEmbedded=true
 fb.glass.restrictWindowToScreen=true
 fb.com.sun.javafx.scene.control.skin.FXVK.cache=true
+fb.com.sun.javafx.gestures.zoom=true
+fb.com.sun.javafx.gestures.rotate=true
+fb.com.sun.javafx.gestures.scroll=true
+monocle.glass.platform=Monocle
+monocle.prism.order=es2,sw
+monocle.prism.eglfb=true
+monocle.prism.lcdtext=false
+monocle.prism.maxvram=128m
+monocle.prism.targetvram=112m
+monocle.use.egl=true
+monocle.use.gles2=true
+monocle.embedded=monocle
+monocle.com.sun.javafx.isEmbedded=true
+monocle.doNativeComposite=true
+monocle.com.sun.javafx.scene.control.skin.FXVK.cache=true
+monocle.com.sun.javafx.gestures.zoom=true
+monocle.com.sun.javafx.gestures.rotate=true
+monocle.com.sun.javafx.gestures.scroll=true
+monocle.prism.glDepthSize=0
 eglx11.com.sun.javafx.scene.control.skin.ListViewSkin.pannable=true
 eglx11.com.sun.javafx.scene.control.skin.TreeViewSkin.pannable=true
 eglx11.com.sun.javafx.scene.control.skin.TableViewSkin.pannable=true
@@ -189,28 +237,34 @@ eglx11.use.gles2=true
 eglx11.embedded=eglx11
 eglx11.com.sun.javafx.isEmbedded=true
 eglx11.com.sun.javafx.scene.control.skin.FXVK.cache=true
+eglx11.com.sun.javafx.gestures.zoom=true
+eglx11.com.sun.javafx.gestures.rotate=true
+eglx11.com.sun.javafx.gestures.scroll=true
 gtk.com.sun.javafx.scene.control.skin.ListViewSkin.pannable=true
 gtk.com.sun.javafx.scene.control.skin.TreeViewSkin.pannable=true
 gtk.com.sun.javafx.scene.control.skin.TableViewSkin.pannable=true
 gtk.glass.platform=gtk
 gtk.prism.order=sw
 gtk.com.sun.javafx.isEmbedded=true
-gtk.com.sun.javafx.scene.control.skin.FXVK.cache=true"""
+gtk.com.sun.javafx.scene.control.skin.FXVK.cache=true
+gtk.com.sun.javafx.gestures.zoom=true
+gtk.com.sun.javafx.gestures.rotate=true
+gtk.com.sun.javafx.gestures.scroll=true"""
 
 def pangoCCFlags = ["-D_ENABLE_PANGO"];
 def pangoLinkFlags = [];
-setupTools("linux_pango_tools",
+setupTools("x86egl_pango_tools",
         { propFile ->
             ByteArrayOutputStream results = new ByteArrayOutputStream();
             exec {
-                commandLine "pkg-config", "--cflags", "pangoft2"
+                commandLine "$pkgconfig", "--cflags", "pangoft2"
                 standardOutput = results
             }
             propFile << "cflags=" << results.toString().trim() << "\n";
 
             results = new ByteArrayOutputStream();
             exec {
-                commandLine "pkg-config", "--libs", "pangoft2"
+                commandLine "$pkgconfig", "--libs", "pangoft2"
                 standardOutput = results
             }
             propFile << "libs=" << results.toString().trim();
@@ -221,18 +275,67 @@ setupTools("linux_pango_tools",
         }
 )
 
-def compiler = "gcc"
-def linker = "g++"
+def freetypeCCFlags = [ext.IS_COMPILE_PANGO ? "-D_ENABLE_PANGO" :
+                       ext.IS_COMPILE_HARFBUZZ ? "-D_ENABLE_HARFBUZZ" : ""]
+def freetypeLinkFlags = []
+setupTools("x86egl_freetype_tools",
+    { propFile ->
+        ByteArrayOutputStream results = new ByteArrayOutputStream();
+        exec {
+            commandLine "pkg-config", "--cflags", "freetype2"
+            standardOutput = results
+        }
+        propFile << "cflags=" << results.toString().trim() << "\n";
+
+        results = new ByteArrayOutputStream();
+        exec {
+            commandLine "pkg-config", "--libs", "freetype2"
+            standardOutput = results
+        }
+        propFile << "libs=" << results.toString().trim();
+    },
+    { properties ->
+        freetypeCCFlags.addAll(properties.getProperty("cflags").split(" "))
+        freetypeLinkFlags.addAll(properties.getProperty("libs").split(" "))
+    }
+)
+
+def compiler = file("$compilerHome/bin/${compilerPrefix}gcc").getAbsolutePath()
+def linker = file("$compilerHome/bin/${compilerPrefix}g++").getAbsolutePath()
 
 X86EGL.glass = [:]
-X86EGL.glass.variants = ["eglfb", "directfb", "fb", "gtk", "lensport"]
+X86EGL.glass.variants = ["eglfb", "directfb", "fb", "gtk", "lensport", "monocle", "monocle_x11"]
 X86EGL.glass.javahInclude = [
     "com/sun/glass/events/**",
     "com/sun/glass/ui/*",
     "com/sun/glass/ui/lens/*",
-    "com/sun/glass/ui/gtk/*",
-    "com/sun/glass/ui/accessible/gtk/*"]
+    "com/sun/glass/ui/monocle/*",
+    "com/sun/glass/ui/monocle/linux/*",
+    "com/sun/glass/ui/monocle/util/*",
+    "com/sun/glass/ui/monocle/x11/*",
+    "com/sun/glass/ui/gtk/*"]
 X86EGL.glass.lib = "glass"
+
+X86EGL.glass.monocle = [:]
+X86EGL.glass.monocle.nativeSource = [
+        file("modules/graphics/src/main/native-glass/monocle"),
+        file("modules/graphics/src/main/native-glass/monocle/linux"),
+        file("modules/graphics/src/main/native-glass/monocle/util") ]
+X86EGL.glass.monocle.compiler = compiler
+X86EGL.glass.monocle.ccFlags = monocleCFlags
+X86EGL.glass.monocle.linker = linker
+X86EGL.glass.monocle.linkFlags = monocleLFlags
+X86EGL.glass.monocle.lib = "glass_monocle"
+
+X86EGL.glass.monocle_x11 = [:]
+X86EGL.glass.monocle_x11.nativeSource = [
+        file("modules/graphics/src/main/native-glass/monocle/util"),
+        file("modules/graphics/src/main/native-glass/monocle/x11") ]
+X86EGL.glass.monocle_x11.compiler = compiler
+X86EGL.glass.monocle_x11.ccFlags = monocleCFlags
+X86EGL.glass.monocle_x11.linker = linker
+X86EGL.glass.monocle_x11.linkFlags = [ monocleLFlags, "-lX11" ].flatten()
+X86EGL.glass.monocle_x11.lib = "glass_monocle_x11"
 
 X86EGL.glass.lensport = [:]
 X86EGL.glass.lensport.nativeSource = [
@@ -274,7 +377,8 @@ X86EGL.glass.directfb.nativeSource = [
     file("modules/graphics/src/main/native-glass/lens/lensport") ]
     //file("modules/graphics/src/main/native-glass/lens/wm/screen")]
 X86EGL.glass.directfb.compiler = compiler
-X86EGL.glass.directfb.ccFlags = ["-ffast-math", extraCFlags, "-I/usr/include/directfb", "-DLINUX"].flatten()
+X86EGL.glass.directfb.ccFlags = ["-ffast-math", extraCFlags,
+        "-I${sdk}/usr/include/directfb", "-DLINUX"].flatten()
 X86EGL.glass.directfb.linker = linker
 X86EGL.glass.directfb.linkFlags = [lensLFlags].flatten()
 X86EGL.glass.directfb.lib = "glass_lens_dfb"
@@ -353,7 +457,7 @@ X86EGL.iio.linkFlags = iioLFlags
 X86EGL.iio.lib = "javafx_iio"
 
 X86EGL.prismES2 = [:]
-X86EGL.prismES2.variants = ["eglfb"]
+X86EGL.prismES2.variants = ["eglfb", "monocle"]
 X86EGL.prismES2.javahInclude = ["com/sun/prism/es2/**/*"]
 
 X86EGL.prismES2.eglfb = [:]
@@ -380,6 +484,18 @@ X86EGL.prismES2.eglx11.linker = linker
 X86EGL.prismES2.eglx11.linkFlags = es2X11LFlags
 X86EGL.prismES2.eglx11.lib = "prism_es2_eglx11"
 
+X86EGL.prismES2.monocle= [:]
+X86EGL.prismES2.monocle.nativeSource = [
+        file("modules/graphics/src/main/native-prism-es2"),
+        file("modules/graphics/src/main/native-prism-es2/GL"),
+        file("modules/graphics/src/main/native-prism-es2/monocle")
+]
+X86EGL.prismES2.monocle.compiler = compiler
+X86EGL.prismES2.monocle.ccFlags = [ es2EglfbCFlags, "-I", X86EGL.glass.lensport.nativeSource ].flatten()
+X86EGL.prismES2.monocle.linker = linker
+X86EGL.prismES2.monocle.linkFlags = es2EglfbLFlags
+X86EGL.prismES2.monocle.lib = "prism_es2_monocle"
+
 def closedDir = file("$projectDir/../rt-closed")
 X86EGL.font = [:]
 X86EGL.font.javahInclude = [
@@ -403,18 +519,39 @@ X86EGL.fontT2K.linker = linker
 X86EGL.fontT2K.linkFlags = fontLFlags
 X86EGL.fontT2K.lib = "javafx_font_t2k"
 
+X86EGL.fontFreetype = [:]
+X86EGL.fontFreetype.javahInclude = ["com/sun/javafx/font/freetype/OSFreetype.class"]
+X86EGL.fontFreetype.nativeSource = ["src/main/native-font/freetype.c"]
+X86EGL.fontFreetype.compiler = compiler
+X86EGL.fontFreetype.ccFlags = ["-DJFXFONT_PLUS", ccFlags, freetypeCCFlags].flatten()
+X86EGL.fontFreetype.linker = linker
+X86EGL.fontFreetype.linkFlags = [linkFlags, freetypeLinkFlags].flatten()
+X86EGL.fontFreetype.lib = "javafx_font_freetype"
+
 X86EGL.fontPango = [:]
-X86EGL.fontPango.javahInclude = ["com/sun/javafx/font/pango/*"]
-X86EGL.fontPango.nativeSource = [
-    "src/main/native-font/pango.c",
-    "src/main/native-font/freetype.c"]
+X86EGL.fontPango.javahInclude = ["com/sun/javafx/font/freetype/OSPango.class"]
+X86EGL.fontPango.nativeSource = ["src/main/native-font/pango.c"]
 X86EGL.fontPango.compiler = compiler
 X86EGL.fontPango.ccFlags = ["-DJFXFONT_PLUS", ccFlags, pangoCCFlags].flatten()
 X86EGL.fontPango.linker = linker
 X86EGL.fontPango.linkFlags = [linkFlags, pangoLinkFlags].flatten()
 X86EGL.fontPango.lib = "javafx_font_pango"
 
+X86EGL.disableMedia = true
 X86EGL.media =[:]
 X86EGL.media.compiler = compiler
 X86EGL.media.linker = linker
 X86EGL.media.lib = "ar"
+
+X86EGL.deploy = [:]
+X86EGL.deploy.publicLibraryFilter = [
+  "fxavcodecplugin-52.so",
+  "fxavcodecplugin-53.so",
+  "fxplugins.so",
+  "libjfxwebkit.so",
+  "libgstplugins-lite.so",
+  "libgstreamer-lite.so",
+  "libprism_es2_eglx11.so",
+  "libglass_lens_fb.so"
+]
+X86EGL.deploy.compressBigJar=true

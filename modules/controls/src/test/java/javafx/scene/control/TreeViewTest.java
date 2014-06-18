@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,20 +26,17 @@
 package javafx.scene.control;
 
 import com.sun.javafx.application.PlatformImpl;
-import com.sun.javafx.runtime.VersionInfo;
 import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import com.sun.javafx.scene.control.infrastructure.StageLoader;
 import com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
+import com.sun.javafx.scene.control.skin.TextFieldSkin;
 import com.sun.javafx.scene.control.skin.VirtualScrollBar;
 import com.sun.javafx.scene.control.test.Employee;
 import com.sun.javafx.scene.control.test.Person;
 import com.sun.javafx.scene.control.test.RT_22463_Person;
 import com.sun.javafx.tk.Toolkit;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
@@ -50,21 +47,15 @@ import static org.junit.Assert.assertEquals;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.SimpleObjectProperty;
-import javafx.beans.property.SimpleStringProperty;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
-import javafx.event.Event;
-import javafx.event.EventHandler;
+import javafx.event.ActionEvent;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.cell.CheckBoxTreeCell;
-import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.control.cell.TextFieldTreeCell;
-import javafx.scene.control.cell.TreeItemPropertyValueFactory;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.VBox;
@@ -665,10 +656,8 @@ public class TreeViewTest {
             @Override public Object call(Object p) {
                 TreeCell treeCell = new TreeCell() {
                     {
-                        disclosureNodeProperty().addListener(new ChangeListener() {
-                            @Override public void changed(ObservableValue ov, Object t, Object t1) {
-                                setDisclosureNode(null);
-                            }
+                        disclosureNodeProperty().addListener((ov, t, t1) -> {
+                            setDisclosureNode(null);
                         });
                     }
                     
@@ -758,11 +747,7 @@ public class TreeViewTest {
         }
         
         // run sort
-        Collections.sort(rootNode.getChildren(), new Comparator<TreeItem<String>>() {
-            @Override public int compare(TreeItem<String> o1, TreeItem<String> o2) {
-                return o1.getValue().compareTo(o2.getValue());
-            }
-        });
+        Collections.sort(rootNode.getChildren(), (o1, o2) -> o1.getValue().compareTo(o2.getValue()));
         
         // ensure the same indentation exists after the sort (which is where the
         // bug is - it drops down to 21.0px indentation when it shouldn't).
@@ -1025,11 +1010,7 @@ public class TreeViewTest {
         treeView.setPrefHeight(100);
         treeView.setCellFactory(
                 CheckBoxTreeCell.forTreeView(
-                        new Callback<TreeItem<String>, ObservableValue<Boolean>>() {
-                            public javafx.beans.value.ObservableValue<Boolean> call(TreeItem<String> param) {
-                                return new ReadOnlyBooleanWrapper(true);
-                            }
-                        }));
+                        param -> new ReadOnlyBooleanWrapper(true)));
 
         // because only the first row has data, all other rows should be
         // empty (and not contain check boxes - we just check the first four here)
@@ -1123,6 +1104,8 @@ public class TreeViewTest {
         sl.getStage().setHeight(50);
         Toolkit.getToolkit().firePulse();
         assertEquals(24, rt_31200_count);
+
+        sl.dispose();
     }
 
     @Test public void test_rt_30484() {
@@ -1163,30 +1146,25 @@ public class TreeViewTest {
     private int rt_29650_cancel_count = 0;
     @Test public void test_rt_29650() {
         installChildren();
-        treeView.setOnEditStart(new EventHandler() {
-            @Override public void handle(Event t) {
-                rt_29650_start_count++;
-            }
+        treeView.setOnEditStart(t -> {
+            rt_29650_start_count++;
         });
-        treeView.setOnEditCommit(new EventHandler() {
-            @Override public void handle(Event t) {
-                rt_29650_commit_count++;
-            }
+        treeView.setOnEditCommit(t -> {
+            rt_29650_commit_count++;
         });
-        treeView.setOnEditCancel(new EventHandler() {
-            @Override public void handle(Event t) {
-                rt_29650_cancel_count++;
-            }
+        treeView.setOnEditCancel(t -> {
+            rt_29650_cancel_count++;
         });
 
         treeView.setEditable(true);
         treeView.setCellFactory(TextFieldTreeCell.forTreeView());
 
-        new StageLoader(treeView);
+        StageLoader sl = new StageLoader(treeView);
 
         treeView.edit(root);
         TreeCell rootCell = (TreeCell) VirtualFlowTestUtils.getCell(treeView, 0);
         TextField textField = (TextField) rootCell.getGraphic();
+        textField.setSkin(new TextFieldSkin(textField));
         textField.setText("Testing!");
         KeyEventFirer keyboard = new KeyEventFirer(textField);
         keyboard.doKeyPress(KeyCode.ENTER);
@@ -1195,6 +1173,8 @@ public class TreeViewTest {
         assertEquals(1, rt_29650_start_count);
         assertEquals(1, rt_29650_commit_count);
         assertEquals(0, rt_29650_cancel_count);
+
+        sl.dispose();
     }
 
     private int rt_33559_count = 0;
@@ -1206,12 +1186,10 @@ public class TreeViewTest {
         sm.setSelectionMode(SelectionMode.MULTIPLE);
         sm.clearAndSelect(0);
 
-        treeView.getSelectionModel().getSelectedItems().addListener(new ListChangeListener() {
-            @Override public void onChanged(Change c) {
-                while (c.next()) {
-                    System.out.println(c);
-                    rt_33559_count++;
-                }
+        treeView.getSelectionModel().getSelectedItems().addListener((ListChangeListener) c -> {
+            while (c.next()) {
+                System.out.println(c);
+                rt_33559_count++;
             }
         });
 
@@ -1405,5 +1383,558 @@ public class TreeViewTest {
         Toolkit.getToolkit().firePulse();
         assertEquals(treeView.getRoot(), treeView.getSelectionModel().getSelectedItem());
         assertEquals(treeView.getRoot(), treeView.getFocusModel().getFocusedItem());
+    }
+
+    @Test public void test_rt34694() {
+        TreeItem treeNode = new TreeItem("Controls");
+        treeNode.getChildren().addAll(
+            new TreeItem("Button"),
+            new TreeItem("ButtonBar"),
+            new TreeItem("LinkBar"),
+            new TreeItem("LinkButton"),
+            new TreeItem("PopUpButton"),
+            new TreeItem("ToggleButtonBar")
+        );
+
+        final TreeView treeView = new TreeView();
+        treeView.setRoot(treeNode);
+        treeNode.setExpanded(true);
+
+        treeView.getSelectionModel().select(0);
+        assertTrue(treeView.getSelectionModel().isSelected(0));
+        assertTrue(treeView.getFocusModel().isFocused(0));
+
+        treeNode.getChildren().clear();
+        treeNode.getChildren().addAll(
+                new TreeItem("Button1"),
+                new TreeItem("ButtonBar1"),
+                new TreeItem("LinkBar1"),
+                new TreeItem("LinkButton1"),
+                new TreeItem("PopUpButton1"),
+                new TreeItem("ToggleButtonBar1")
+        );
+        Toolkit.getToolkit().firePulse();
+
+        assertTrue(treeView.getSelectionModel().isSelected(0));
+        assertTrue(treeView.getFocusModel().isFocused(0));
+    }
+
+    private int test_rt_35213_eventCount = 0;
+    @Test public void test_rt35213() {
+        final TreeView<String> view = new TreeView<>();
+
+        TreeItem<String> root = new TreeItem<>("Boss");
+        view.setRoot(root);
+
+        TreeItem<String> group1 = new TreeItem<>("Group 1");
+        TreeItem<String> group2 = new TreeItem<>("Group 2");
+        TreeItem<String> group3 = new TreeItem<>("Group 3");
+
+        root.getChildren().addAll(group1, group2, group3);
+
+        TreeItem<String> employee1 = new TreeItem<>("Employee 1");
+        TreeItem<String> employee2 = new TreeItem<>("Employee 2");
+
+        group2.getChildren().addAll(employee1, employee2);
+
+        view.expandedItemCountProperty().addListener((observableValue, oldCount, newCount) -> {
+
+            // DEBUG OUTPUT
+//                System.out.println("new expanded item count: " + newCount.intValue());
+//                for (int i = 0; i < newCount.intValue(); i++) {
+//                    TreeItem<String> item = view.getTreeItem(i);
+//                    String text = item.getValue();
+//                    System.out.println("person found at index " + i + " is " + text);
+//                }
+//                System.out.println("------------------------------------------");
+
+            if (test_rt_35213_eventCount == 0) {
+                assertEquals(4, newCount);
+                assertEquals("Boss", view.getTreeItem(0).getValue());
+                assertEquals("Group 1", view.getTreeItem(1).getValue());
+                assertEquals("Group 2", view.getTreeItem(2).getValue());
+                assertEquals("Group 3", view.getTreeItem(3).getValue());
+            } else if (test_rt_35213_eventCount == 1) {
+                assertEquals(6, newCount);
+                assertEquals("Boss", view.getTreeItem(0).getValue());
+                assertEquals("Group 1", view.getTreeItem(1).getValue());
+                assertEquals("Group 2", view.getTreeItem(2).getValue());
+                assertEquals("Employee 1", view.getTreeItem(3).getValue());
+                assertEquals("Employee 2", view.getTreeItem(4).getValue());
+                assertEquals("Group 3", view.getTreeItem(5).getValue());
+            } else if (test_rt_35213_eventCount == 2) {
+                assertEquals(4, newCount);
+                assertEquals("Boss", view.getTreeItem(0).getValue());
+                assertEquals("Group 1", view.getTreeItem(1).getValue());
+                assertEquals("Group 2", view.getTreeItem(2).getValue());
+                assertEquals("Group 3", view.getTreeItem(3).getValue());
+            }
+
+            test_rt_35213_eventCount++;
+        });
+
+        StageLoader sl = new StageLoader(view);
+
+        root.setExpanded(true);
+        Toolkit.getToolkit().firePulse();
+
+        group2.setExpanded(true);
+        Toolkit.getToolkit().firePulse();
+
+        group2.setExpanded(false);
+        Toolkit.getToolkit().firePulse();
+
+        sl.dispose();
+    }
+
+    @Test public void test_rt23245_itemIsInTree() {
+        final TreeView<String> view = new TreeView<String>();
+        final List<TreeItem<String>> items = new ArrayList<>();
+        for (int i = 0; i < 10; i++) {
+            final TreeItem<String> item = new TreeItem<String>("Item" + i);
+            item.setExpanded(true);
+            items.add(item);
+        }
+
+        // link the items up so that the next item is the child of the current item
+        for (int i = 0; i < 9; i++) {
+            items.get(i).getChildren().add(items.get(i + 1));
+        }
+
+        view.setRoot(items.get(0));
+
+        for (int i = 0; i < 10; i++) {
+            // we expect the level of the tree item at the ith position to be
+            // 0, as every iteration we are setting the ith item as the root.
+            assertEquals(0, view.getTreeItemLevel(items.get(i)));
+
+            // whilst we are testing, we should also ensure that the ith item
+            // is indeed the root item, and that the ith item is indeed the item
+            // at the 0th position
+            assertEquals(items.get(i), view.getRoot());
+            assertEquals(items.get(i), view.getTreeItem(0));
+
+            // shuffle the next item into the root position (keeping its parent
+            // chain intact - which is what exposes this issue in the first place).
+            if (i < 9) {
+                view.setRoot(items.get(i + 1));
+            }
+        }
+    }
+
+    @Test public void test_rt23245_itemIsNotInTree_noRootNode() {
+        final TreeView<String> view = new TreeView<String>();
+        final List<TreeItem<String>> items = new ArrayList<>();
+        for (int i = 0; i < 10; i++) {
+            final TreeItem<String> item = new TreeItem<String>("Item" + i);
+            item.setExpanded(true);
+            items.add(item);
+        }
+
+        // link the items up so that the next item is the child of the current item
+        for (int i = 0; i < 9; i++) {
+            items.get(i).getChildren().add(items.get(i + 1));
+        }
+
+        for (int i = 0; i < 10; i++) {
+            // because we have no root (and we are not changing the root like
+            // the previous test), we expect the tree item level of the item
+            // in the ith position to be i.
+            assertEquals(i, view.getTreeItemLevel(items.get(i)));
+
+            // all items requested from the TreeView should be null, as the
+            // TreeView does not have a root item
+            assertNull(view.getTreeItem(i));
+        }
+    }
+
+    @Test public void test_rt23245_itemIsNotInTree_withUnrelatedRootNode() {
+        final TreeView<String> view = new TreeView<String>();
+        final List<TreeItem<String>> items = new ArrayList<>();
+        for (int i = 0; i < 10; i++) {
+            final TreeItem<String> item = new TreeItem<String>("Item" + i);
+            item.setExpanded(true);
+            items.add(item);
+        }
+
+        // link the items up so that the next item is the child of the current item
+        for (int i = 0; i < 9; i++) {
+            items.get(i).getChildren().add(items.get(i + 1));
+        }
+
+        view.setRoot(new TreeItem("Unrelated root node"));
+
+        for (int i = 0; i < 10; i++) {
+            // because we have no root (and we are not changing the root like
+            // the previous test), we expect the tree item level of the item
+            // in the ith position to be i.
+            assertEquals(i, view.getTreeItemLevel(items.get(i)));
+
+            // all items requested from the TreeView should be null except for
+            // the root node
+            assertNull(view.getTreeItem(i + 1));
+        }
+    }
+
+    @Test public void test_rt35039_setRoot() {
+        TreeItem<String> root = new TreeItem<>("Root");
+        root.setExpanded(true);
+        root.getChildren().addAll(
+                new TreeItem("aabbaa"),
+                new TreeItem("bbc"));
+
+        final TreeView<String> treeView = new TreeView<>();
+        treeView.setRoot(root);
+
+        StageLoader sl = new StageLoader(treeView);
+
+        // everything should be null to start with
+        assertNull(treeView.getSelectionModel().getSelectedItem());
+
+        // select "bbc" and ensure everything is set to that
+        treeView.getSelectionModel().select(2);
+        assertEquals("bbc", treeView.getSelectionModel().getSelectedItem().getValue());
+
+        // change the items list - but retain the same content. We expect
+        // that "bbc" remains selected as it is still in the list
+        treeView.setRoot(root);
+        assertEquals("bbc", treeView.getSelectionModel().getSelectedItem().getValue());
+
+        sl.dispose();
+    }
+
+    @Test public void test_rt35039_resetRootChildren() {
+        TreeItem aabbaa = new TreeItem("aabbaa");
+        TreeItem bbc = new TreeItem("bbc");
+
+        TreeItem<String> root = new TreeItem<>("Root");
+        root.setExpanded(true);
+        root.getChildren().setAll(aabbaa, bbc);
+
+        final TreeView<String> treeView = new TreeView<>();
+        treeView.setRoot(root);
+
+        StageLoader sl = new StageLoader(treeView);
+
+        // everything should be null to start with
+        assertNull(treeView.getSelectionModel().getSelectedItem());
+
+        // select "bbc" and ensure everything is set to that
+        treeView.getSelectionModel().select(2);
+        assertEquals("bbc", treeView.getSelectionModel().getSelectedItem().getValue());
+
+        // change the items list - but retain the same content. We expect
+        // that "bbc" remains selected as it is still in the list
+        root.getChildren().setAll(aabbaa, bbc);
+        assertEquals("bbc", treeView.getSelectionModel().getSelectedItem().getValue());
+
+        sl.dispose();
+    }
+
+    @Test public void test_rt35857() {
+        TreeItem<String> root = new TreeItem<>("Root");
+        root.setExpanded(true);
+        TreeItem a = new TreeItem("A");
+        TreeItem b = new TreeItem("B");
+        TreeItem c = new TreeItem("C");
+        root.getChildren().setAll(a, b, c);
+
+        final TreeView<String> treeTableView = new TreeView<String>(root);
+
+        treeTableView.getSelectionModel().select(1);
+
+        ObservableList<TreeItem<String>> selectedItems = treeTableView.getSelectionModel().getSelectedItems();
+        assertEquals(1, selectedItems.size());
+        assertEquals("A", selectedItems.get(0).getValue());
+
+        root.getChildren().removeAll(selectedItems);
+        assertEquals(2, root.getChildren().size());
+        assertEquals("B", root.getChildren().get(0).getValue());
+        assertEquals("C", root.getChildren().get(1).getValue());
+    }
+
+    private int rt_35889_cancel_count = 0;
+    @Test public void test_rt35889() {
+        TreeItem a = new TreeItem("a");
+        TreeItem b = new TreeItem("b");
+        TreeItem<String> root = new TreeItem<>("Root");
+        root.setExpanded(true);
+        root.getChildren().setAll(a, b);
+
+        final TreeView<String> textFieldTreeView = new TreeView<String>(root);
+        textFieldTreeView.setEditable(true);
+        textFieldTreeView.setCellFactory(TextFieldTreeCell.forTreeView());
+        textFieldTreeView.setOnEditCancel(t -> {
+            rt_35889_cancel_count++;
+            System.out.println("On Edit Cancel: " + t);
+        });
+
+        TreeCell cell0 = (TreeCell) VirtualFlowTestUtils.getCell(textFieldTreeView, 0);
+        assertNull(cell0.getGraphic());
+        assertEquals("Root", cell0.getText());
+
+        textFieldTreeView.edit(root);
+        TextField textField = (TextField) cell0.getGraphic();
+        assertNotNull(textField);
+
+        assertEquals(0, rt_35889_cancel_count);
+
+        textField.setText("Z");
+        textField.getOnAction().handle(new ActionEvent());
+
+        assertEquals(0, rt_35889_cancel_count);
+    }
+
+    @Test public void test_rt36255_selection_does_not_expand_item() {
+        TreeItem a = new TreeItem("a");
+        TreeItem b = new TreeItem("b");
+        b.getChildren().add(new TreeItem("bb"));
+
+        final TreeItem<String> root = new TreeItem<>();
+        root.getChildren().addAll(a, b);
+        root.setExpanded(true);
+        TreeView<String> view = new TreeView<>(root);
+        view.setCellFactory(TextFieldTreeCell.forTreeView());
+
+        view.getSelectionModel().select(a);
+
+        assertEquals(Arrays.asList(a), view.getSelectionModel().getSelectedItems());
+        assertFalse(b.isExpanded());
+
+        view.getSelectionModel().select(b);
+        assertEquals(Arrays.asList(b), view.getSelectionModel().getSelectedItems());
+        assertFalse(b.isExpanded());
+    }
+
+    @Test public void test_rt25679() {
+        Button focusBtn = new Button("Focus here");
+
+        TreeItem<String> root = new TreeItem<>("Root");
+        root.getChildren().setAll(new TreeItem("a"), new TreeItem("b"));
+        root.setExpanded(true);
+
+        final TreeView<String> treeView = new TreeView<>(root);
+        SelectionModel sm = treeView.getSelectionModel();
+
+        VBox vbox = new VBox(focusBtn, treeView);
+
+        StageLoader sl = new StageLoader(vbox);
+        sl.getStage().requestFocus();
+        focusBtn.requestFocus();
+        Toolkit.getToolkit().firePulse();
+
+        // test initial state
+        assertEquals(sl.getStage().getScene().getFocusOwner(), focusBtn);
+        assertTrue(focusBtn.isFocused());
+        assertEquals(-1, sm.getSelectedIndex());
+        assertNull(sm.getSelectedItem());
+
+        // move focus to the treeview
+        treeView.requestFocus();
+
+        // ensure that there is a selection (where previously there was not one)
+        assertEquals(sl.getStage().getScene().getFocusOwner(), treeView);
+        assertTrue(treeView.isFocused());
+        assertEquals(0, sm.getSelectedIndex());
+        assertEquals(root, sm.getSelectedItem());
+
+        sl.dispose();
+    }
+
+    @Test public void test_rt36885_addChildBeforeSelection() {
+        test_rt36885(false);
+    }
+
+    @Test public void test_rt36885_addChildAfterSelection() {
+        test_rt36885(true);
+    }
+
+    private void test_rt36885(boolean addChildToAAfterSelection) {
+        TreeItem<String> root = new TreeItem<>("Root");     // 0
+            TreeItem<String> a = new TreeItem<>("a");       // 1
+                TreeItem<String> a1 = new TreeItem<>("a1"); // a expanded = 2, a collapsed = -1
+            TreeItem<String> b = new TreeItem<>("b");       // a expanded = 3, a collapsed = 2
+                TreeItem<String> b1 = new TreeItem<>("b1"); // a expanded = 4, a collapsed = 3
+                TreeItem<String> b2 = new TreeItem<>("b2"); // a expanded = 5, a collapsed = 4
+
+        root.setExpanded(true);
+        root.getChildren().setAll(a, b);
+
+        a.setExpanded(false);
+        if (!addChildToAAfterSelection) {
+            a.getChildren().add(a1);
+        }
+
+        b.setExpanded(true);
+        b.getChildren().addAll(b1, b2);
+
+        final TreeView<String> treeView = new TreeView<String>(root);
+
+        treeView.getFocusModel().focusedIndexProperty().addListener((observable, oldValue, newValue) -> {
+            System.out.println("focusedIndex: " + oldValue + " to " + newValue);
+        });
+
+        MultipleSelectionModel<TreeItem<String>> sm = treeView.getSelectionModel();
+        FocusModel<TreeItem<String>> fm = treeView.getFocusModel();
+
+        sm.select(b1);
+        assertEquals(3, sm.getSelectedIndex());
+        assertEquals(b1, sm.getSelectedItem());
+        assertEquals(3, fm.getFocusedIndex());
+        assertEquals(b1, fm.getFocusedItem());
+
+        if (addChildToAAfterSelection) {
+            a.getChildren().add(a1);
+        }
+
+        a.setExpanded(true);
+        assertEquals(4, sm.getSelectedIndex());
+        assertEquals(b1, sm.getSelectedItem());
+        assertEquals(4, fm.getFocusedIndex());
+        assertEquals(b1, fm.getFocusedItem());
+    }
+
+    private int rt_37061_index_counter = 0;
+    private int rt_37061_item_counter = 0;
+    @Test public void test_rt_37061() {
+        TreeItem<Integer> root = new TreeItem<>(0);
+        root.setExpanded(true);
+        TreeView<Integer> tv = new TreeView<>();
+        tv.setRoot(root);
+        tv.getSelectionModel().select(0);
+
+        // note we add the listeners after the selection is made, so the counters
+        // at this point are still both at zero.
+        tv.getSelectionModel().selectedIndexProperty().addListener((observable, oldValue, newValue) -> {
+            rt_37061_index_counter++;
+        });
+
+        tv.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
+            rt_37061_item_counter++;
+        });
+
+        // add a new item. This does not impact the selected index or selected item
+        // so the counters should remain at zero.
+        tv.getRoot().getChildren().add(new TreeItem("1"));
+        assertEquals(0, rt_37061_index_counter);
+        assertEquals(0, rt_37061_item_counter);
+    }
+
+    private int rt_37395_index_addCount = 0;
+    private int rt_37395_index_removeCount = 0;
+    private int rt_37395_index_permutationCount = 0;
+    private int rt_37395_item_addCount = 0;
+    private int rt_37395_item_removeCount = 0;
+    private int rt_37395_item_permutationCount = 0;
+
+    @Test public void test_rt_37395() {
+        // tree items - 3 items, 2nd item has 2 children
+        TreeItem<String> root = new TreeItem<>();
+
+        TreeItem<String> two = new TreeItem<>("two");
+        two.getChildren().add(new TreeItem<>("childOne"));
+        two.getChildren().add(new TreeItem<>("childTwo"));
+
+        root.getChildren().add(new TreeItem<>("one"));
+        root.getChildren().add(two);
+        root.getChildren().add(new TreeItem<>("three"));
+
+        // tree
+        TreeView<String> tree = new TreeView<>();
+        tree.setShowRoot(false);
+        tree.setRoot(root);
+
+        MultipleSelectionModel sm = tree.getSelectionModel();
+        sm.getSelectedIndices().addListener(new ListChangeListener<Integer>() {
+            @Override public void onChanged(Change<? extends Integer> c) {
+                while (c.next()) {
+                    if (c.wasRemoved()) {
+                        c.getRemoved().forEach(item -> {
+                            if (item == null) {
+                                fail("Removed index should never be null");
+                            } else {
+                                rt_37395_index_removeCount++;
+                            }
+                        });
+                    }
+                    if (c.wasAdded()) {
+                        c.getAddedSubList().forEach(item -> {
+                            rt_37395_index_addCount++;
+                        });
+                    }
+                    if (c.wasPermutated()) {
+                        rt_37395_index_permutationCount++;
+                    }
+                }
+            }
+        });
+        sm.getSelectedItems().addListener(new ListChangeListener<TreeItem<String>>() {
+            @Override public void onChanged(Change<? extends TreeItem<String>> c) {
+                while (c.next()) {
+                    if (c.wasRemoved()) {
+                        c.getRemoved().forEach(item -> {
+                            if (item == null) {
+                                fail("Removed item should never be null");
+                            } else {
+                                rt_37395_item_removeCount++;
+                            }
+                        });
+                    }
+                    if (c.wasAdded()) {
+                        c.getAddedSubList().forEach(item -> {
+                            rt_37395_item_addCount++;
+                        });
+                    }
+                    if (c.wasPermutated()) {
+                        rt_37395_item_permutationCount++;
+                    }
+                }
+            }
+        });
+
+        assertEquals(0, rt_37395_index_removeCount);
+        assertEquals(0, rt_37395_index_addCount);
+        assertEquals(0, rt_37395_index_permutationCount);
+        assertEquals(0, rt_37395_item_removeCount);
+        assertEquals(0, rt_37395_item_addCount);
+        assertEquals(0, rt_37395_item_permutationCount);
+
+        StageLoader sl = new StageLoader(tree);
+
+        // step one: select item 'three' in index 2
+        sm.select(2);
+        assertEquals(0, rt_37395_index_removeCount);
+        assertEquals(1, rt_37395_index_addCount);
+        assertEquals(0, rt_37395_index_permutationCount);
+        assertEquals(0, rt_37395_item_removeCount);
+        assertEquals(1, rt_37395_item_addCount);
+        assertEquals(0, rt_37395_item_permutationCount);
+
+        // step two: expand item 'two'
+        // The first part of the bug report was that we received add/remove
+        // change events here, when in reality we shouldn't have, so lets enforce
+        // that. We do expect a permutation event on the index, as it has been
+        // pushed down, but this should not result in an item permutation event,
+        // as it remains unchanged
+        two.setExpanded(true);
+        assertEquals(0, rt_37395_index_removeCount);
+        assertEquals(1, rt_37395_index_addCount);
+        assertEquals(1, rt_37395_index_permutationCount);
+        assertEquals(0, rt_37395_item_removeCount);
+        assertEquals(1, rt_37395_item_addCount);
+        assertEquals(0, rt_37395_item_permutationCount);
+
+        // step three: collapse item 'two'
+        // Same argument as in step two above: no addition or removal, just a
+        // permutation on the index
+        two.setExpanded(false);
+        assertEquals(0, rt_37395_index_removeCount);
+        assertEquals(1, rt_37395_index_addCount);
+        assertEquals(2, rt_37395_index_permutationCount);
+        assertEquals(0, rt_37395_item_removeCount);
+        assertEquals(1, rt_37395_item_addCount);
+        assertEquals(0, rt_37395_item_permutationCount);
+
+        sl.dispose();
     }
 }

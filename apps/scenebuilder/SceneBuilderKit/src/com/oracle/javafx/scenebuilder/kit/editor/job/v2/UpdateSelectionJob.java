@@ -35,6 +35,7 @@ package com.oracle.javafx.scenebuilder.kit.editor.job.v2;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.AbstractSelectionGroup;
+import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import java.util.ArrayList;
@@ -46,21 +47,32 @@ import java.util.List;
  */
 public class UpdateSelectionJob extends Job {
 
-    private final List<FXOMObject> newSelectedObjects = new ArrayList<>();
     private AbstractSelectionGroup oldSelectionGroup;
+    private final AbstractSelectionGroup newSelectionGroup;
+
+    public UpdateSelectionJob(AbstractSelectionGroup group, EditorController editorController) {
+        super(editorController);
+        newSelectionGroup = group;
+    }
 
     public UpdateSelectionJob(FXOMObject newSelectedObject, EditorController editorController) {
         super(editorController);
-        
+
         assert newSelectedObject != null;
-        this.newSelectedObjects.add(newSelectedObject);
+        final List<FXOMObject> newSelectedObjects = new ArrayList<>();
+        newSelectedObjects.add(newSelectedObject);
+        newSelectionGroup = new ObjectSelectionGroup(newSelectedObjects, newSelectedObject, null);
     }
 
     public UpdateSelectionJob(Collection<FXOMObject> newSelectedObjects, EditorController editorController) {
         super(editorController);
-        
+
         assert newSelectedObjects != null; // But possibly empty
-        this.newSelectedObjects.addAll(newSelectedObjects);
+        if (newSelectedObjects.isEmpty()) {
+            newSelectionGroup = null;
+        } else {
+            newSelectionGroup = new ObjectSelectionGroup(newSelectedObjects, newSelectedObjects.iterator().next(), null);
+        }
     }
 
     /*
@@ -101,7 +113,7 @@ public class UpdateSelectionJob extends Job {
     @Override
     public void redo() {
         final Selection selection = getEditorController().getSelection();
-        selection.select(newSelectedObjects);
+        selection.select(newSelectionGroup);
         assert selection.isValid(getEditorController().getFxomDocument());
     }
 

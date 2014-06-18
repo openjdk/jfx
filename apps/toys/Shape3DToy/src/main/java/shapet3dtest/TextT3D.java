@@ -32,11 +32,9 @@ import javafx.animation.SequentialTransition;
 import javafx.application.Application;
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
-import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.PerspectiveCamera;
 import javafx.scene.Scene;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.scene.transform.Rotate;
@@ -51,24 +49,9 @@ public class TextT3D extends Application {
         Text text = new Text(50.0F, 150.0F, "This is a test LONGLONGLONG     LONG");
         text.setFont(new Font(50.0F));
         text.setRotationAxis(Rotate.Y_AXIS);
-        text.setOnMouseClicked(new EventHandler<MouseEvent>() {
-                @Override
-                public void handle(MouseEvent e) {
-                    System.out.println("Mouse Clicked:" + e);
-                }
-            });
-        text.setOnMouseEntered(new EventHandler<MouseEvent>() {
-                @Override
-                public void handle(MouseEvent e) {
-                    System.out.println("Mouse Entered");
-                }
-            });
-        text.setOnMouseExited(new EventHandler<MouseEvent>() {
-                @Override
-                public void handle(MouseEvent e) {
-                    System.out.println("Mouse Exited");
-                }
-            });
+        text.setOnMouseClicked(e -> System.out.println("Mouse Clicked:" + e));
+        text.setOnMouseEntered(e -> System.out.println("Mouse Entered"));
+        text.setOnMouseExited(e -> System.out.println("Mouse Exited"));
         ((Group)scene.getRoot()).getChildren().addAll(text);
         stage.setScene(scene);
         stage.sizeToScene();

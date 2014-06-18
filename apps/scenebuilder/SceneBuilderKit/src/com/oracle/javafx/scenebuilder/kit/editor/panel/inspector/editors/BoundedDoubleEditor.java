@@ -33,14 +33,15 @@ package com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors;
 
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+
 import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
@@ -101,53 +102,50 @@ public class BoundedDoubleEditor extends AutoSuggestEditor {
         //
         // Text field
         //
-        EventHandler<ActionEvent> onActionListener = new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent event) {
-                if (isHandlingError()) {
-                    // Event received because of focus lost due to error dialog
-                    return;
-                }
-                if (isUpdateFromModel() || updateFromSlider) {
-                    // nothing to do
-                    return;
-                }
-
-                Object value = getValue();
-                if (getPropertyMeta() != null) {
-                    if ((value == null)
-                            || !((DoublePropertyMetadata) getPropertyMeta()).isValidValue((Double) value)) {
-                        handleInvalidValue(getTextField().getText());
-                    }
-                }
-                assert value instanceof Double;
-                double valDouble = (Double) value;
-                // Check if the entered value is a constant string
-                boolean isConstant = constants.get(getTextField().getText().toUpperCase(Locale.ROOT)) != null;
-                // Check if the entered value is a constant value
-                for (Map.Entry<String, Object> entry : constants.entrySet()) {
-                    if (value.equals(entry.getValue())) {
-                        isConstant = true;
-                        break;
-                    }
-                }
-                // If the value is not a constant,
-                // and is less than the minimum, or more than the maximum,
-                // set the value to min or max
-                if (!minMaxForSliderOnly && !isConstant && (valDouble < min || valDouble > max)) {
-                    if (valDouble < min) {
-                        valDouble = min;
-                    } else if (valDouble > max) {
-                        valDouble = max;
-                    }
-                    getTextField().setText(EditorUtils.valAsStr(valDouble));
-                }
-                getTextField().selectAll();
-                updateFromTextField = true;
-                slider.setValue(valDouble);
-                updateFromTextField = false;
-                userUpdateValueProperty(valDouble);
+        EventHandler<ActionEvent> onActionListener = event -> {
+            if (isHandlingError()) {
+                // Event received because of focus lost due to error dialog
+                return;
             }
+            if (isUpdateFromModel() || updateFromSlider) {
+                // nothing to do
+                return;
+            }
+
+            Object value = getValue();
+            if (getPropertyMeta() != null) {
+                if ((value == null)
+                        || !((DoublePropertyMetadata) getPropertyMeta()).isValidValue((Double) value)) {
+                    handleInvalidValue(getTextField().getText());
+                }
+            }
+            assert value instanceof Double;
+            double valDouble = (Double) value;
+            // Check if the entered value is a constant string
+            boolean isConstant = constants.get(getTextField().getText().toUpperCase(Locale.ROOT)) != null;
+            // Check if the entered value is a constant value
+            for (Map.Entry<String, Object> entry : constants.entrySet()) {
+                if (value.equals(entry.getValue())) {
+                    isConstant = true;
+                    break;
+                }
+            }
+            // If the value is not a constant,
+            // and is less than the minimum, or more than the maximum,
+            // set the value to min or max
+            if (!minMaxForSliderOnly && !isConstant && (valDouble < min || valDouble > max)) {
+                if (valDouble < min) {
+                    valDouble = min;
+                } else if (valDouble > max) {
+                    valDouble = max;
+                }
+                getTextField().setText(EditorUtils.valAsStr(valDouble));
+            }
+            getTextField().selectAll();
+            updateFromTextField = true;
+            slider.setValue(valDouble);
+            updateFromTextField = false;
+            userUpdateValueProperty(valDouble);
         };
         setNumericEditorBehavior(this, getTextField(), onActionListener, false);
 
@@ -156,34 +154,27 @@ public class BoundedDoubleEditor extends AutoSuggestEditor {
         //
         configureSlider(getPropertyMeta());
 
-        slider.valueProperty().addListener(new InvalidationListener() {
-            @Override
-            public void invalidated(Observable valueModel) {
+        slider.valueProperty().addListener((InvalidationListener) valueModel -> {
 //                System.out.println("Slider : valueProperty changed!");
-                if (isUpdateFromModel() || updateFromTextField) {
-                    // nothing to do
-                    return;
-                }
-
-                // Slider button moved or left/right key typed.
-                // In this case, we want to round the value,
-                // since the Slider may returns many decimals.
-                double value = EditorUtils.round(slider.getValue(), roundingFactor);
-                updateFromSlider = true;
-                getTextField().setText(EditorUtils.valAsStr(value));
-                updateFromSlider = false;
-                userUpdateTransientValueProperty(value);
+            if (isUpdateFromModel() || updateFromTextField) {
+                // nothing to do
+                return;
             }
+
+            // Slider button moved or left/right key typed.
+            // In this case, we want to round the value,
+            // since the Slider may returns many decimals.
+            double value = EditorUtils.round(slider.getValue(), roundingFactor);
+            updateFromSlider = true;
+            getTextField().setText(EditorUtils.valAsStr(value));
+            updateFromSlider = false;
+            userUpdateTransientValueProperty(value);
         });
 
-        slider.pressedProperty().addListener(new InvalidationListener() {
-
-            @Override
-            public void invalidated(Observable valueModel) {
-                if (!slider.isPressed()) {
-                    double value = EditorUtils.round(slider.getValue(), roundingFactor);
-                    userUpdateValueProperty(value);
-                }
+        slider.pressedProperty().addListener((InvalidationListener) valueModel -> {
+            if (!slider.isPressed()) {
+                double value = EditorUtils.round(slider.getValue(), roundingFactor);
+                userUpdateValueProperty(value);
             }
         });
         // Add the AutoSuggest text field in the scene graph
@@ -263,12 +254,6 @@ public class BoundedDoubleEditor extends AutoSuggestEditor {
 
     @Override
     public void requestFocus() {
-        EditorUtils.doNextFrame(new Runnable() {
-
-            @Override
-            public void run() {
-                getTextField().requestFocus();
-            }
-        });
+        EditorUtils.doNextFrame(() -> getTextField().requestFocus());
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -94,69 +94,69 @@ public class HonorDeveloperSettingsTest {
 
     @Test
     public void testOpacityIsSetByCSSByDefault() {
-        rect.impl_processCSS(true);
+        rect.applyCss();
         assertEquals(.76, rect.getOpacity(), 0.01);
     }
 
     @Test
     public void testOpacityWithInitializedValueSameAsDefaultValueIsIgnoredByCSS() {
         rect.setOpacity(1.0);
-        rect.impl_processCSS(true);
+        rect.applyCss();
         assertEquals(1.0, rect.getOpacity(), 0.01);
     }
 
     @Test
     public void testOpacityWithInitializedValueIsIgnoredByCSS() {
         rect.setOpacity(0.535);
-        rect.impl_processCSS(true);
+        rect.applyCss();
         assertEquals(0.535, rect.getOpacity(), 0.01);
     }
 
     @Test
     public void testOpacityWithManuallyChangedValueIsIgnoredByCSS() {
-        rect.impl_processCSS(true);
+        rect.applyCss();
         assertEquals(.76, rect.getOpacity(), 0.01);
         rect.setOpacity(.873);
-        rect.impl_processCSS(true);
+        rect.applyCss();
         assertEquals(.873, rect.getOpacity(), 0.01);
     }
 
     @Test
     public void testOpacityWithManuallyChangedValueAndInlineStyleIsSetToInlineStyle() {
-        rect.impl_processCSS(true);
+        rect.applyCss();
         assertEquals(.76, rect.getOpacity(), 0.01);
         rect.setStyle("-fx-opacity: 42%;");
         rect.setOpacity(.873);
-        rect.impl_processCSS(true);
+        rect.applyCss();
         assertEquals(.42, rect.getOpacity(), 0.01);
     }
 
     @Test
     public void testCursorIsSetByCSSByDefault() {
-        rect.impl_processCSS(true);
+        rect.applyCss();
         assertEquals(Cursor.HAND, rect.getCursor());
     }
 
     @Test
     public void testCursorWithInitializedValueSameAsDefaultValueIsIgnoredByCSS() {
         rect.setCursor(null);
-        rect.impl_processCSS(true);
+        rect.applyCss();
         assertEquals(null, rect.getCursor());
     }
 
     @Test
     public void testCursorWithInitializedValueIsIgnoredByCSS() {
         rect.setCursor(Cursor.WAIT);
-        rect.impl_processCSS(true);
+        rect.applyCss();
         assertEquals(Cursor.WAIT, rect.getCursor());
     }
 
     @Test
     public void testCursorWithManuallyChangedValueIsIgnoredByCSS() {
-        rect.impl_processCSS(true);
+        rect.applyCss();
         assertEquals(Cursor.HAND, rect.getCursor());
         rect.setCursor(Cursor.WAIT);
-        rect.impl_processCSS(true);
+        rect.applyCss();
         assertEquals(Cursor.WAIT, rect.getCursor());
     }
 
@@ -164,7 +164,7 @@ public class HonorDeveloperSettingsTest {
 //        final Rectangle rect = Rectangle { id: "rectangle" }
 //        scene.stylesheets = "{__DIR__}HonorDeveloperSettingsTest.css";
 //        scene.content = rect;
-//        rect.impl_processCSS(true);
+//        rect.applyCss();
 //        assertNotNull(rect.effect);
 //    }
 //
@@ -175,7 +175,7 @@ public class HonorDeveloperSettingsTest {
 //        }
 //        scene.stylesheets = "{__DIR__}HonorDeveloperSettingsTest.css";
 //        scene.content = rect;
-//        rect.impl_processCSS(true);
+//        rect.applyCss();
 //        assertNull(rect.effect);
 //    }
 //
@@ -187,7 +187,7 @@ public class HonorDeveloperSettingsTest {
 //        }
 //        scene.stylesheets = "{__DIR__}HonorDeveloperSettingsTest.css";
 //        scene.content = rect;
-//        rect.impl_processCSS(true);
+//        rect.applyCss();
 //        assertSame(shadow, rect.effect);
 //    }
 //
@@ -196,23 +196,23 @@ public class HonorDeveloperSettingsTest {
 //        final Rectangle rect = Rectangle { id: "rectangle" }
 //        scene.stylesheets = "{__DIR__}HonorDeveloperSettingsTest.css";
 //        scene.content = rect;
-//        rect.impl_processCSS(true);
+//        rect.applyCss();
 //        assertNotSame(shadow, rect.effect);
 //        rect.effect = shadow;
-//        rect.impl_processCSS(true);
+//        rect.applyCss();
 //        assertSame(shadow, rect.effect);
 //    }
 
     @Test
     public void testFontIsSetByCSSByDefault() {
-        text.impl_processCSS(true);
+        text.applyCss();
         assertNotSame(Font.getDefault(), text.getFont());
     }
 
     @Test
     public void testFontWithInitializedValueSameAsDefaultValueIsIgnoredByCSS() {
         text.setFont(Font.getDefault());
-        text.impl_processCSS(true);
+        text.applyCss();
         assertSame(Font.getDefault(), text.getFont());
     }
 
@@ -220,17 +220,17 @@ public class HonorDeveloperSettingsTest {
     public void testFontWithInitializedValueIsIgnoredByCSS() {
         Font f = Font.font(Font.getDefault().getFamily(), 54.0);
         text.setFont(f);
-        text.impl_processCSS(true);
+        text.applyCss();
         assertSame(f, text.getFont());
     }
 
     @Test
     public void testFontWithManuallyChangedValueIsIgnoredByCSS() {
         Font f = Font.font(Font.getDefault().getFamily(), 54.0);
-        text.impl_processCSS(true);
+        text.applyCss();
         assertNotSame(f, text.getFont());
         text.setFont(f);
-        text.impl_processCSS(true);
+        text.applyCss();
         assertSame(f, text.getFont());
     }
     
@@ -239,7 +239,7 @@ public class HonorDeveloperSettingsTest {
         
         String url = getClass().getResource("HonorDeveloperSettingsTest_AUTHOR.css").toExternalForm();
         scene.getStylesheets().add(url);
-        scene.getRoot().impl_processCSS(true);
+        scene.getRoot().applyCss();
         assertEquals(20, rect.getStrokeWidth(), 0.00001);
         
     }
@@ -252,7 +252,7 @@ public class HonorDeveloperSettingsTest {
         String url = getClass().getResource("HonorDeveloperSettingsTest_AUTHOR.css").toExternalForm();
         scene.getStylesheets().add(url);
            
-        scene.getRoot().impl_processCSS(true);
+        scene.getRoot().applyCss();
         //
         // Stroke width is set to 1em in the author stylesheet. If 
         // RT-20145 is not working, then the code will pick up the 20px
@@ -271,7 +271,7 @@ public class HonorDeveloperSettingsTest {
         
         scene.getRoot().setStyle("-fx-font: 18 Amble;");
        
-        scene.getRoot().impl_processCSS(true);
+        scene.getRoot().applyCss();
         
         //
         // If RT-20513 is not working, then the code will _not_ 
@@ -291,7 +291,7 @@ public class HonorDeveloperSettingsTest {
         
         scene.getRoot().setStyle("-fx-font: 18 Amble;");
         
-        scene.getRoot().impl_processCSS(true);
+        scene.getRoot().applyCss();
                 
         assertEquals(14, text.getStrokeWidth(), 0.00001);
         
@@ -303,7 +303,7 @@ public class HonorDeveloperSettingsTest {
         text.setId("rt-20686-ua");
         text.setFontSmoothingType(FontSmoothingType.LCD);
         
-        scene.getRoot().impl_processCSS(true);
+        scene.getRoot().applyCss();
          
         assertEquals(FontSmoothingType.LCD, text.getFontSmoothingType());
         
@@ -317,7 +317,7 @@ public class HonorDeveloperSettingsTest {
         text.setId("rt-20686-author");
         text.setFontSmoothingType(FontSmoothingType.GRAY);
         
-        scene.getRoot().impl_processCSS(true);
+        scene.getRoot().applyCss();
                 
         assertEquals(FontSmoothingType.LCD, text.getFontSmoothingType());
         
@@ -329,7 +329,7 @@ public class HonorDeveloperSettingsTest {
         // text  has id "text". still, inline style should win out. 
         text.setStyle("-fx-font-size: 24;");
 
-        scene.getRoot().impl_processCSS(true);
+        scene.getRoot().applyCss();
 
         double size = text.getFont().getSize();
         assertEquals(24, size, .0001);
@@ -345,7 +345,7 @@ public class HonorDeveloperSettingsTest {
         // want text to get font style from .root
         text.setId(null);
         
-        scene.getRoot().impl_processCSS(true);
+        scene.getRoot().applyCss();
                 
         double size = text.getFont().getSize();
         assertEquals(20, size, .0001);
@@ -362,7 +362,7 @@ public class HonorDeveloperSettingsTest {
         text.setId(null);
         text.setStyle("-fx-font-size: 24;");
 
-        scene.getRoot().impl_processCSS(true);
+        scene.getRoot().applyCss();
                
         double size = text.getFont().getSize();
         assertEquals(24, size, .0001);
@@ -381,7 +381,7 @@ public class HonorDeveloperSettingsTest {
         Group g = (Group)scene.getRoot();
         g.setStyle("-fx-font-size: 32;");
         
-        g.impl_processCSS(true);
+        g.applyCss();
                 
         double size = text.getFont().getSize();
         assertEquals(32, size, .0001);

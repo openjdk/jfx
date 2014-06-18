@@ -71,8 +71,12 @@ static GtkWindow *gdk_window_handle_to_gtk(jlong handle) {
 
 static jobject create_empty_result() {
     jclass jFileChooserResult = (jclass) mainEnv->FindClass("com/sun/glass/ui/CommonDialogs$FileChooserResult");
+    if (EXCEPTION_OCCURED(mainEnv)) return NULL;
     jmethodID jFileChooserResultInit = mainEnv->GetMethodID(jFileChooserResult, "<init>", "()V");
-    return mainEnv->NewObject(jFileChooserResult, jFileChooserResultInit);
+    if (EXCEPTION_OCCURED(mainEnv)) return NULL;
+    jobject jResult = mainEnv->NewObject(jFileChooserResult, jFileChooserResultInit);
+    if (EXCEPTION_OCCURED(mainEnv)) return NULL;
+    return jResult;
 }
 
 extern "C" {
@@ -129,11 +133,14 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_gtk_GtkCommonDialogs__1showFileC
 
         if (fnames_list_len > 0) {
             jFileNames = env->NewObjectArray((jsize)fnames_list_len, jStringCls, NULL);
+            EXCEPTION_OCCURED(env);
             for (guint i = 0; i < fnames_list_len; i++) {
                 filename = (char*)g_slist_nth(fnames_gslist, i)->data;
                 LOG1("Add [%s] into returned filenames\n", filename)
                 jfilename = env->NewStringUTF(filename);
+                EXCEPTION_OCCURED(env);
                 env->SetObjectArrayElement(jFileNames, (jsize)i, jfilename);
+                EXCEPTION_OCCURED(env);
             }
             g_slist_foreach(fnames_gslist, (GFunc) free_fname, NULL);
             g_slist_free(fnames_gslist);
@@ -141,16 +148,20 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_gtk_GtkCommonDialogs__1showFileC
     }
     
     if (!jFileNames) {
-        jFileNames = env->NewObjectArray(0, jStringCls, NULL);
+        jFileNames = env->NewObjectArray(0, jStringCls, NULL);            
+        EXCEPTION_OCCURED(env);
     }
     
     int index = g_slist_index(filters, gtk_file_chooser_get_filter(GTK_FILE_CHOOSER(chooser)));
     
-    jclass jCommonDialogs = (jclass) env->FindClass("com/sun/glass/ui/CommonDialogs");
+    jclass jCommonDialogs = (jclass) env->FindClass("com/sun/glass/ui/CommonDialogs");            
+    EXCEPTION_OCCURED(env);    
     jmethodID jCreateFileChooserResult = env->GetStaticMethodID(jCommonDialogs,
             "createFileChooserResult",
             "([Ljava/lang/String;[Lcom/sun/glass/ui/CommonDialogs$ExtensionFilter;I)Lcom/sun/glass/ui/CommonDialogs$FileChooserResult;");
     
+    EXCEPTION_OCCURED(env);
+
     jobject result =
             env->CallStaticObjectMethod(jCommonDialogs, jCreateFileChooserResult, jFileNames, jFilters, index);
     LOG_EXCEPTION(env)
@@ -223,10 +234,13 @@ static GSList* setup_GtkFileFilters(GtkFileChooser* chooser, JNIEnv* env, jobjec
     LOG0("Setup filters\n")
     //setup methodIDs
     jclass jcls = env->FindClass("com/sun/glass/ui/CommonDialogs$ExtensionFilter");
+    if (EXCEPTION_OCCURED(env)) return NULL;
     jmethodID jgetDescription = env->GetMethodID(jcls,
                                          "getDescription", "()Ljava/lang/String;");
+    if (EXCEPTION_OCCURED(env)) return NULL;
     jmethodID jextensionsToArray = env->GetMethodID(jcls,
                                          "extensionsToArray", "()[Ljava/lang/String;");
+    if (EXCEPTION_OCCURED(env)) return NULL;
 
     jsize jfilters_size = env->GetArrayLength(extFilters);
     LOG1("Filters: %d\n", jfilters_size)
@@ -237,6 +251,7 @@ static GSList* setup_GtkFileFilters(GtkFileChooser* chooser, JNIEnv* env, jobjec
     for(i = 0; i<jfilters_size; i++) {
         GtkFileFilter* ffilter = gtk_file_filter_new();
         jobject jfilter = env->GetObjectArrayElement(extFilters, i);
+        EXCEPTION_OCCURED(env);
 
         //setup description
         jstring jdesc = (jstring)env->CallObjectMethod(jfilter, jgetDescription);
@@ -253,7 +268,8 @@ static GSList* setup_GtkFileFilters(GtkFileChooser* chooser, JNIEnv* env, jobjec
         LOG1("Patterns: %d\n", jextarray_size)
         int ext_idx;
         for(ext_idx = 0; ext_idx < jextarray_size; ext_idx++) {
-            jstring jext = (jstring)env->GetObjectArrayElement(jextensions, ext_idx);
+            jstring jext = (jstring)env->GetObjectArrayElement(jextensions, ext_idx);    
+            EXCEPTION_OCCURED(env);
             jsize jext_size = env->GetStringLength(jext);
             char* ext = (char *) g_malloc(jext_size + 1);
             env->GetStringUTFRegion(jext, 0, jext_size, ext);

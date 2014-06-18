@@ -43,8 +43,8 @@ final class LensView extends View {
 
     // Constants
     private static long multiClickTime =  300;
-    private static int multiClickMaxX = 2;
-    private static int multiClickMaxY = 2;
+    private static int multiClickMaxX = LensTouchInputSupport.touchTapRadius;
+    private static int multiClickMaxY = LensTouchInputSupport.touchTapRadius;
 
     // view variables
     private int x;

@@ -32,6 +32,8 @@ import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
+import javafx.scene.accessibility.Action;
+import javafx.scene.accessibility.Attribute;
 
 /**
  * Abstract base class for ComboBox-like controls. A ComboBox typically has
@@ -119,13 +121,11 @@ public abstract class ComboBoxBase<T> extends Control {
         getStyleClass().add(DEFAULT_STYLE_CLASS);
 
         // Fix for RT-29885
-        getProperties().addListener(new MapChangeListener<Object, Object>() {
-            @Override public void onChanged(Change<?,?> change) {
-                if (change.wasAdded()) {
-                    if (change.getKey() == "FOCUSED") {
-                        setFocused((Boolean)change.getValueAdded());
-                        getProperties().remove("FOCUSED");
-                    }
+        getProperties().addListener((MapChangeListener<Object, Object>) change -> {
+            if (change.wasAdded()) {
+                if (change.getKey() == "FOCUSED") {
+                    setFocused((Boolean)change.getValueAdded());
+                    getProperties().remove("FOCUSED");
                 }
             }
         });
@@ -208,6 +208,7 @@ public abstract class ComboBoxBase<T> extends Control {
             showing = new ReadOnlyBooleanWrapper(false) {
                 @Override protected void invalidated() {
                     pseudoClassStateChanged(PSEUDO_CLASS_SHOWING, get());
+                    accSendNotification(Attribute.EXPANDED);
                 }
 
                 @Override
@@ -443,7 +444,8 @@ public abstract class ComboBoxBase<T> extends Control {
             setArmed(false);
         }
     }
-    
+
+
     /***************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
@@ -458,5 +460,32 @@ public abstract class ComboBoxBase<T> extends Control {
             PseudoClass.getPseudoClass("showing");
     private static final PseudoClass PSEUDO_CLASS_ARMED =
             PseudoClass.getPseudoClass("armed");
-    
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Accessibility handling                                                  *
+     *                                                                         *
+     **************************************************************************/
+
+    /** @treatAsPrivate */
+    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case EXPANDED: return isShowing();
+            case EDITABLE: return isEditable();
+            case SELECTION_START: //skin
+            case SELECTION_END: //skin
+            default: return super.accGetAttribute(attribute, parameters);
+        }
+    }
+
+    /** @treatAsPrivate */
+    @Override public void accExecuteAction(Action action, Object... parameters) {
+        switch (action) {
+            case EXPAND: show(); break;
+            case COLLAPSE: hide(); break;
+            default: super.accExecuteAction(action); break;
+        }
+    }
 }
+

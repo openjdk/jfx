@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,37 +25,39 @@
 
 package com.sun.javafx.scene.control.skin;
 
+import com.sun.javafx.scene.control.Logging;
+import com.sun.javafx.scene.traversal.Algorithm;
+import com.sun.javafx.scene.traversal.Direction;
+import com.sun.javafx.scene.traversal.ParentTraversalEngine;
+import com.sun.javafx.scene.traversal.TraversalContext;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.BooleanPropertyBase;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
-import javafx.event.ActionEvent;
-import javafx.event.Event;
-import javafx.event.EventDispatchChain;
 import javafx.event.EventDispatcher;
 import javafx.event.EventHandler;
 import javafx.geometry.Orientation;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.control.Cell;
 import javafx.scene.control.IndexedCell;
 import javafx.scene.control.ScrollBar;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
-import javafx.scene.input.TouchEvent;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
 import javafx.util.Callback;
 import javafx.util.Duration;
+import sun.util.logging.PlatformLogger;
 import java.util.AbstractList;
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.List;
 
 /**
@@ -495,37 +497,28 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         ** In a VirtualFlow a vertical scroll should scroll on the vertical only,
         ** whereas in a horizontal ScrollBar it can scroll horizontally.
         */ 
-        final EventDispatcher blockEventDispatcher = new EventDispatcher() {
-           @Override public Event dispatchEvent(Event event, EventDispatchChain tail) {
-               // block the event from being passed down to children
-               return event;
-           }
-        };
+        final EventDispatcher blockEventDispatcher = (event, tail) -> event;
         // block ScrollEvent from being passed down to scrollbar's skin
         final EventDispatcher oldHsbEventDispatcher = hbar.getEventDispatcher();
-        hbar.setEventDispatcher(new EventDispatcher() {
-           @Override public Event dispatchEvent(Event event, EventDispatchChain tail) {
-               if (event.getEventType() == ScrollEvent.SCROLL && 
-                       !((ScrollEvent)event).isDirect()) {
-                   tail = tail.prepend(blockEventDispatcher);
-                   tail = tail.prepend(oldHsbEventDispatcher);
-                   return tail.dispatchEvent(event);
-               }
-               return oldHsbEventDispatcher.dispatchEvent(event, tail);
-           }
+        hbar.setEventDispatcher((event, tail) -> {
+            if (event.getEventType() == ScrollEvent.SCROLL &&
+                    !((ScrollEvent)event).isDirect()) {
+                tail = tail.prepend(blockEventDispatcher);
+                tail = tail.prepend(oldHsbEventDispatcher);
+                return tail.dispatchEvent(event);
+            }
+            return oldHsbEventDispatcher.dispatchEvent(event, tail);
         });
         // block ScrollEvent from being passed down to scrollbar's skin
         final EventDispatcher oldVsbEventDispatcher = vbar.getEventDispatcher();
-        vbar.setEventDispatcher(new EventDispatcher() {
-           @Override public Event dispatchEvent(Event event, EventDispatchChain tail) {
-               if (event.getEventType() == ScrollEvent.SCROLL &&
-                       !((ScrollEvent)event).isDirect()) {
-                   tail = tail.prepend(blockEventDispatcher);
-                   tail = tail.prepend(oldVsbEventDispatcher);
-                   return tail.dispatchEvent(event);
-               }
-               return oldVsbEventDispatcher.dispatchEvent(event, tail);
-           }
+        vbar.setEventDispatcher((event, tail) -> {
+            if (event.getEventType() == ScrollEvent.SCROLL &&
+                    !((ScrollEvent)event).isDirect()) {
+                tail = tail.prepend(blockEventDispatcher);
+                tail = tail.prepend(oldVsbEventDispatcher);
+                return tail.dispatchEvent(event);
+            }
+            return oldVsbEventDispatcher.dispatchEvent(event, tail);
         });
         /*
         ** listen for ScrollEvents over the whole of the VirtualFlow
@@ -590,20 +583,17 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                     /*
                     ** only consume it if we use it
                     */
-                    adjustPixels(-virtualDelta);
-                    event.consume();
+                    double result = adjustPixels(-virtualDelta);
+                    if (result != 0.0) {
+                        event.consume();
+                    }
                 }
-                else {
-                    /*
-                    ** we didn't scroll in the Virtual plane, lets see
-                    ** if we scrolled on the other plane.
-                    */
-                    ScrollBar nonVirtualBar = isVertical() ? hbar : vbar;
-                    if (nonVirtualBar.isVisible()) {                        
 
-                        double nonVirtualDelta = isVertical() ? event.getDeltaX() : event.getDeltaY();
+                ScrollBar nonVirtualBar = isVertical() ? hbar : vbar;
+                if (needBreadthBar) {
+                    double nonVirtualDelta = isVertical() ? event.getDeltaX() : event.getDeltaY();
+                    if (nonVirtualDelta != 0.0) {
                         double newValue = nonVirtualBar.getValue() - nonVirtualDelta;
-
                         if (newValue < nonVirtualBar.getMin()) {
                             nonVirtualBar.setValue(nonVirtualBar.getMin());
                         } else if (newValue > nonVirtualBar.getMax()) {
@@ -664,60 +654,54 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                         || hbar.getBoundsInParent().contains(e.getX(), e.getY()));
             }
         });
-        addEventFilter(MouseEvent.MOUSE_RELEASED, new EventHandler<MouseEvent>() {
-            @Override
-            public void handle(MouseEvent e) {
-                mouseDown = false;
-                if (BehaviorSkinBase.IS_TOUCH_SUPPORTED) {
-                    startSBReleasedAnimation();
-                }
+        addEventFilter(MouseEvent.MOUSE_RELEASED, e -> {
+            mouseDown = false;
+            if (BehaviorSkinBase.IS_TOUCH_SUPPORTED) {
+                startSBReleasedAnimation();
             }
         });
-        addEventFilter(MouseEvent.MOUSE_DRAGGED, new EventHandler<MouseEvent>() {
-            @Override
-            public void handle(MouseEvent e) {
-                if (BehaviorSkinBase.IS_TOUCH_SUPPORTED) {
-                    scrollBarOn();
-                }
-                if (! isPanning || ! isPannable()) return;
+        addEventFilter(MouseEvent.MOUSE_DRAGGED, e -> {
+            if (BehaviorSkinBase.IS_TOUCH_SUPPORTED) {
+                scrollBarOn();
+            }
+            if (! isPanning || ! isPannable()) return;
 
-                // With panning enabled, we support panning in both vertical
-                // and horizontal directions, regardless of the fact that
-                // VirtualFlow is virtual in only one direction.
-                double xDelta = lastX - e.getX();
-                double yDelta = lastY - e.getY();
+            // With panning enabled, we support panning in both vertical
+            // and horizontal directions, regardless of the fact that
+            // VirtualFlow is virtual in only one direction.
+            double xDelta = lastX - e.getX();
+            double yDelta = lastY - e.getY();
 
-                // figure out the distance that the mouse moved in the virtual
-                // direction, and then perform the movement along that axis
-                // virtualDelta will contain the amount we actually did move
-                double virtualDelta = isVertical() ? yDelta : xDelta;
-                double actual = adjustPixels(virtualDelta);
-                if (actual != 0) {
-                    // update last* here, as we know we've just adjusted the
-                    // scrollbar. This means we don't get the situation where a
-                    // user presses-and-drags a long way past the min or max
-                    // values, only to change directions and see the scrollbar
-                    // start moving immediately.
-                    if (isVertical()) lastY = e.getY();
-                    else lastX = e.getX();
-                }
+            // figure out the distance that the mouse moved in the virtual
+            // direction, and then perform the movement along that axis
+            // virtualDelta will contain the amount we actually did move
+            double virtualDelta = isVertical() ? yDelta : xDelta;
+            double actual = adjustPixels(virtualDelta);
+            if (actual != 0) {
+                // update last* here, as we know we've just adjusted the
+                // scrollbar. This means we don't get the situation where a
+                // user presses-and-drags a long way past the min or max
+                // values, only to change directions and see the scrollbar
+                // start moving immediately.
+                if (isVertical()) lastY = e.getY();
+                else lastX = e.getX();
+            }
 
-                // similarly, we do the same in the non-virtual direction
-                double nonVirtualDelta = isVertical() ? xDelta : yDelta;
-                ScrollBar nonVirtualBar = isVertical() ? hbar : vbar;
-                if (nonVirtualBar.isVisible()) {
-                    double newValue = nonVirtualBar.getValue() + nonVirtualDelta;
-                    if (newValue < nonVirtualBar.getMin()) {
-                        nonVirtualBar.setValue(nonVirtualBar.getMin());
-                    } else if (newValue > nonVirtualBar.getMax()) {
-                        nonVirtualBar.setValue(nonVirtualBar.getMax());
-                    } else {
-                        nonVirtualBar.setValue(newValue);
+            // similarly, we do the same in the non-virtual direction
+            double nonVirtualDelta = isVertical() ? xDelta : yDelta;
+            ScrollBar nonVirtualBar = isVertical() ? hbar : vbar;
+            if (nonVirtualBar.isVisible()) {
+                double newValue = nonVirtualBar.getValue() + nonVirtualDelta;
+                if (newValue < nonVirtualBar.getMin()) {
+                    nonVirtualBar.setValue(nonVirtualBar.getMin());
+                } else if (newValue > nonVirtualBar.getMax()) {
+                    nonVirtualBar.setValue(nonVirtualBar.getMax());
+                } else {
+                    nonVirtualBar.setValue(newValue);
 
-                        // same as the last* comment above
-                        if (isVertical()) lastX = e.getX();
-                        else lastY = e.getY();
-                    }
+                    // same as the last* comment above
+                    if (isVertical()) lastX = e.getX();
+                    else lastY = e.getY();
                 }
             }
         });
@@ -731,19 +715,15 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
          */
         // --- vbar
         vbar.setOrientation(Orientation.VERTICAL);
-        vbar.addEventHandler(MouseEvent.ANY, new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent event) {
-                event.consume();
-            }
+        vbar.addEventHandler(MouseEvent.ANY, event -> {
+            event.consume();
         });
         getChildren().add(vbar);
 
         // --- hbar
         hbar.setOrientation(Orientation.HORIZONTAL);
-        hbar.addEventHandler(MouseEvent.ANY, new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent event) {
-                event.consume();
-            }
+        hbar.addEventHandler(MouseEvent.ANY, event -> {
+            event.consume();
         });
         getChildren().add(hbar);
 
@@ -756,10 +736,8 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         
         // initBinds
         // clipView binds
-        InvalidationListener listenerX = new InvalidationListener() {
-            @Override public void invalidated(Observable valueModel) {
-                updateHbar();
-            }
+        InvalidationListener listenerX = valueModel -> {
+            updateHbar();
         };
         verticalProperty().addListener(listenerX);
         hbar.valueProperty().addListener(listenerX);
@@ -773,21 +751,16 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 //        addChangedListener(VERTICAL, listenerY);
 //        vbar.addChangedListener(ScrollBar.VALUE, listenerY);
 
-        ChangeListener listenerY = new ChangeListener() {
-            @Override public void changed(ObservableValue ov, Object t, Object t1) {
-                clipView.setClipY(isVertical() ? 0 : vbar.getValue());
-            }
+        ChangeListener<Number> listenerY = (ov, t, t1) -> {
+            clipView.setClipY(isVertical() ? 0 : vbar.getValue());
         };
         vbar.valueProperty().addListener(listenerY);
         
-        super.heightProperty().addListener(new ChangeListener<Number>() {
-            @Override
-            public void changed(ObservableValue<? extends Number> observable, Number oldHeight, Number newHeight) {
-                // Fix for RT-8480, where the VirtualFlow does not show its content
-                // after changing size to 0 and back.
-                if (oldHeight.doubleValue() == 0 && newHeight.doubleValue() > 0) {
-                    recreateCells();
-                }
+        super.heightProperty().addListener((observable, oldHeight, newHeight) -> {
+            // Fix for RT-8480, where the VirtualFlow does not show its content
+            // after changing size to 0 and back.
+            if (oldHeight.doubleValue() == 0 && newHeight.doubleValue() > 0) {
+                recreateCells();
             }
         });
 
@@ -796,20 +769,108 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         ** there are certain animations that need to know if the touch is
         ** happening.....
         */
-        setOnTouchPressed(new EventHandler<TouchEvent>() {
-            @Override public void handle(TouchEvent e) {
-                touchDetected = true;
-                scrollBarOn();
-            }
+        setOnTouchPressed(e -> {
+            touchDetected = true;
+            scrollBarOn();
         });
 
-        setOnTouchReleased(new EventHandler<TouchEvent>() {
-            @Override public void handle(TouchEvent e) {
-                touchDetected = false;
-                startSBReleasedAnimation();
-            }
+        setOnTouchReleased(e -> {
+            touchDetected = false;
+            startSBReleasedAnimation();
         });
 
+        setImpl_traversalEngine(new ParentTraversalEngine(this, new Algorithm() {
+
+            Node selectNextAfterIndex(int index, TraversalContext context) {
+                T nextCell;
+                while ((nextCell = getVisibleCell(++index)) != null) {
+                    if (nextCell.isFocusTraversable()) {
+                        return nextCell;
+                    }
+                    Node n = context.selectFirstInParent(nextCell);
+                    if (n != null) {
+                        return n;
+                    }
+                }
+                return null;
+            }
+
+            Node selectPreviousBeforeIndex(int index, TraversalContext context) {
+                T prevCell;
+                while ((prevCell = getVisibleCell(--index)) != null) {
+                    Node prev = context.selectLastInParent(prevCell);
+                    if (prev != null) {
+                        return prev;
+                    }
+                    if (prevCell.isFocusTraversable()) {
+                        return prevCell;
+                    }
+                }
+                return null;
+            }
+
+            @Override
+            public Node select(Node owner, Direction dir, TraversalContext context) {
+                T cell;
+                if (cells.isEmpty()) return null;
+                if (cells.contains(owner)) {
+                    cell = (T) owner;
+                } else {
+                    cell = findOwnerCell(owner);
+                    Node next = context.selectInSubtree(cell, owner, dir);
+                    if (next != null) {
+                        return next;
+                    }
+                    if (dir == Direction.NEXT) dir = Direction.NEXT_IN_LINE;
+                }
+                int cellIndex = cell.getIndex();
+                switch(dir) {
+                    case PREVIOUS:
+                        return selectPreviousBeforeIndex(cellIndex, context);
+                    case NEXT:
+                        Node n = context.selectFirstInParent(cell);
+                        if (n != null) {
+                            return n;
+                        }
+                        // Intentional fall-through
+                    case NEXT_IN_LINE:
+                        return selectNextAfterIndex(cellIndex, context);
+                }
+                return null;
+            }
+
+            private T findOwnerCell(Node owner) {
+                Parent p = owner.getParent();
+                while (!cells.contains(p)) {
+                    p = p.getParent();
+                }
+                return (T)p;
+            }
+
+            @Override
+            public Node selectFirst(TraversalContext context) {
+                T firstCell = cells.getFirst();
+                if (firstCell == null) return null;
+                if (firstCell.isFocusTraversable()) return firstCell;
+                Node n = context.selectFirstInParent(firstCell);
+                if (n != null) {
+                    return n;
+                }
+                return selectNextAfterIndex(firstCell.getIndex(), context);
+            }
+
+            @Override
+            public Node selectLast(TraversalContext context) {
+                T lastCell = cells.getLast();
+                if (lastCell == null) return null;
+                Node p = context.selectLastInParent(lastCell);
+                if (p != null) {
+                    return p;
+                }
+                if (lastCell.isFocusTraversable()) return lastCell;
+                return selectPreviousBeforeIndex(lastCell.getIndex(), context);
+            }
+        }));
 
     }
 
@@ -855,7 +916,6 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     
     @Override protected void layoutChildren() {
         if (needsRecreateCells) {
-            setMaxPrefBreadth(-1);
             lastWidth = -1;
             lastHeight = -1;
             releaseCell(accumCell);
@@ -867,8 +927,8 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             }
             cells.clear();
             pile.clear();
+            releaseAllPrivateCells();
         } else if (needsRebuildCells) {
-            setMaxPrefBreadth(-1);
             lastWidth = -1;
             lastHeight = -1;
             releaseCell(accumCell);
@@ -876,7 +936,27 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 cells.get(i).updateIndex(-1);
             }
             addAllToPile();
+            releaseAllPrivateCells();
         } else if (needsReconfigureCells) {
+            setMaxPrefBreadth(-1);
+            lastWidth = -1;
+            lastHeight = -1;
+        }
+
+        if (! dirtyCells.isEmpty()) {
+            int index;
+            final int cellsSize = cells.size();
+            while ((index = dirtyCells.nextSetBit(0)) != -1 && index < cellsSize) {
+                T cell = cells.get(index);
+                // updateIndex(-1) works for TableView, but breaks ListView.
+                // For now, the TableView just does not use the dirtyCells API
+//                cell.updateIndex(-1);
+                if (cell != null) {
+                    cell.requestLayout();
+                }
+                dirtyCells.clear(index);
+            }
+
             setMaxPrefBreadth(-1);
             lastWidth = -1;
             lastHeight = -1;
@@ -884,26 +964,26 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
         final boolean hasSizeChange = sizeChanged;
         boolean recreatedOrRebuilt = needsRebuildCells || needsRecreateCells || sizeChanged;
-       
+
         needsRecreateCells = false;
         needsReconfigureCells = false;
         needsRebuildCells = false;
         sizeChanged = false;
-        
+
         if (needsCellsLayout) {
             for (int i = 0, max = cells.size(); i < max; i++) {
-                Cell cell = cells.get(i);
+                Cell<?> cell = cells.get(i);
                 if (cell != null) {
                     cell.requestLayout();
                 }
             }
             needsCellsLayout = false;
 
-            // yes, we return here - if needsCellsLayout was set to true, we 
+            // yes, we return here - if needsCellsLayout was set to true, we
             // only did it to do the above - not rerun the entire layout.
             return;
         }
-        
+
         final double width = getWidth();
         final double height = getHeight();
         final boolean isVertical = isVertical();
@@ -920,13 +1000,12 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             corner.setVisible(false);
             return;
         }
-        
+
         // we check if any of the cells in the cells list need layout. This is a
         // sign that they are perhaps animating their sizes. Without this check,
         // we may not perform a layout here, meaning that the cell will likely
         // 'jump' (in height normally) when the user drags the virtual thumb as
         // that is the first time the layout would occur otherwise.
-        Cell cell;
         boolean cellNeedsLayout = false;
         boolean thumbNeedsLayout = false;
 
@@ -939,18 +1018,17 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
         if (!cellNeedsLayout) {
             for (int i = 0; i < cells.size(); i++) {
-                cell = cells.get(i);
+                Cell<?> cell = cells.get(i);
                 cellNeedsLayout = cell.isNeedsLayout();
                 if (cellNeedsLayout) break;
             }
         }
-        cell = null;
-        
+
 
         T firstCell = getFirstVisibleCell();
 
-        // If no cells need layout, we check other criteria to see if this 
-        // layout call is even necessary. If it is found that no layout is 
+        // If no cells need layout, we check other criteria to see if this
+        // layout call is even necessary. If it is found that no layout is
         // needed, we just punt.
         if (! cellNeedsLayout && !thumbNeedsLayout) {
             boolean cellSizeChanged = false;
@@ -979,8 +1057,6 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 return;
             }
         }
-
-//        layingOut = true;
 
         /*
          * This function may get called under a variety of circumstances.
@@ -1042,20 +1118,35 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 getMaxPrefBreadth() == -1  ||
                 position != lastPosition   ||
                 cellCount != lastCellCount ||
-                hasSizeChange;
+                hasSizeChange ||
+                (isVertical && height < lastHeight) || (! isVertical && width < lastWidth);
+
+        if (!rebuild) {
+            // Check if maxPrefBreadth didn't change
+            double maxPrefBreadth = getMaxPrefBreadth();
+            boolean foundMax = false;
+            for (int i = 0; i < cells.size(); ++i) {
+                double breadth = getCellBreadth(cells.get(i));
+                if (maxPrefBreadth == breadth) {
+                    foundMax = true;
+                } else if (breadth > maxPrefBreadth) {
+                    rebuild = true;
+                    break;
+                }
+            }
+            if (!foundMax) { // All values were lower
+                rebuild = true;
+            }
+        }
 
         if (! rebuild) {
-            if ((isVertical && height < lastHeight) || (! isVertical && width < lastWidth)) {
-                // resized in the non-virtual direction
-                rebuild = true;
-            } else if ((isVertical && height > lastHeight) || (! isVertical && width > lastWidth)) {
+            if ((isVertical && height > lastHeight) || (! isVertical && width > lastWidth)) {
                 // resized in the virtual direction
                 needTrailingCells = true;
             }
         }
 
-        updateViewport();
-        updateScrollBarsAndCells(recreatedOrRebuilt);
+        initViewport();
 
         // Get the index of the "current" cell
         int currentIndex = computeCurrentIndex();
@@ -1086,24 +1177,26 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         }
 
         if (rebuild) {
+            setMaxPrefBreadth(-1);
             // Start by dumping all the cells into the pile
             addAllToPile();
-            
+
             // The distance from the top of the viewport to the top of the
             // cell for the current index.
             double offset = -computeViewportOffset(getPosition());
-            
+
             // Add all the leading and trailing cells (the call to add leading
             // cells will add the current cell as well -- that is, the one that
             // represents the current position on the mapper).
             addLeadingCells(currentIndex, offset);
-            
+
             // Force filling of space with empty cells if necessary
             addTrailingCells(true);
         } else if (needTrailingCells) {
             addTrailingCells(true);
         }
-        updateViewport(); 
+
+        computeBarVisiblity();
         updateScrollBarsAndCells(recreatedOrRebuilt);
 
         lastWidth = getWidth();
@@ -1202,10 +1295,31 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         boolean filledWithNonEmpty = index <= cellCount;
 
         final double viewportLength = getViewportLength();
+
+        //
+        // RT-36507: viewportLength - offset gives the maximum number of
+        // additional cells that should ever be able to fit in the viewport if
+        // every cell had a height of 1. If index ever exceeds this count,
+        // then offset is not incrementing fast enough, or at all, which means
+        // there is something wrong with the cell size calculation.
+        //
+        final double maxCellCount = viewportLength - offset;
         while (offset < viewportLength) {
             if (index >= cellCount) {
                 if (offset < viewportLength) filledWithNonEmpty = false;
                 if (! fillEmptyCells) return filledWithNonEmpty;
+                // RT-36507 - return if we've exceeded the maximum
+                if (index > maxCellCount) {
+                    final PlatformLogger logger = Logging.getControlsLogger();
+                    if (logger.isLoggable(PlatformLogger.Level.INFO)) {
+                        if (startCell != null) {
+                            logger.info("index exceeds maxCellCount. Check size calculations for " + startCell.getClass());
+                        } else {
+                            logger.info("index exceeds maxCellCount");
+                        }
+                    }
+                    return filledWithNonEmpty;
+                }
             }
             T cell = getAvailableCell(index);
             setCellIndex(cell, index);
@@ -1279,7 +1393,64 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         return filledWithNonEmpty;
     }
 
-    private void updateViewport() {
+    /**
+     * @return true if bar visibility changed
+     */
+    private boolean computeBarVisiblity() {
+        if (cells.isEmpty()) {
+            // In case no cells are set yet, we assume no bars are needed
+            needLengthBar = false;
+            needBreadthBar = false;
+            return true;
+        }
+
+        final boolean isVertical = isVertical();
+        boolean barVisibilityChanged = false;
+
+        VirtualScrollBar breadthBar = isVertical ? hbar : vbar;
+        VirtualScrollBar lengthBar = isVertical ? vbar : hbar;
+        double breadthBarLength = snapSize(isVertical ? hbar.prefHeight(-1) : vbar.prefWidth(-1));
+        double lengthBarBreadth = snapSize(isVertical ? vbar.prefWidth(-1) : hbar.prefHeight(-1));
+
+        final double viewportBreadth = getViewportBreadth();
+
+        final int cellsSize = cells.size();
+        for (int i = 0; i < 2; i++) {
+            final boolean lengthBarVisible = getPosition() > 0 || cellCount > cellsSize ||
+                    (cellCount == cellsSize && (getCellPosition(cells.getLast()) + getCellLength(cells.getLast())) > getViewportLength());
+            if (lengthBarVisible ^ needLengthBar) {
+                needLengthBar = lengthBarVisible;
+                barVisibilityChanged = true;
+            }
+
+            // second conditional removed for RT-36669.
+            final boolean breadthBarVisible = (maxPrefBreadth > viewportBreadth);// || (needLengthBar && maxPrefBreadth > (viewportBreadth - lengthBarBreadth));
+            if (breadthBarVisible ^ needBreadthBar) {
+                needBreadthBar = breadthBarVisible;
+                barVisibilityChanged = true;
+            }
+        }
+
+        // Start by optimistically deciding whether the length bar and
+        // breadth bar are needed and adjust the viewport dimensions
+        // accordingly. If during layout we find that one or the other of the
+        // bars actually is needed, then we will perform a cleanup pass
+
+        if (!BehaviorSkinBase.IS_TOUCH_SUPPORTED) {
+            setViewportLength((isVertical ? getHeight() : getWidth()) - (needBreadthBar ? breadthBarLength : 0));
+            setViewportBreadth((isVertical ? getWidth() : getHeight()) - (needLengthBar ? lengthBarBreadth : 0));
+
+            breadthBar.setVisible(needBreadthBar);
+            lengthBar.setVisible(needLengthBar);
+        } else {
+            breadthBar.setVisible(needBreadthBar && tempVisibility);
+            lengthBar.setVisible(needLengthBar && tempVisibility);
+        }
+
+        return barVisibilityChanged;
+    }
+
+    private void initViewport() {
         // Initialize the viewportLength and viewportBreadth to match the
         // width/height of the flow
         final boolean isVertical = isVertical();
@@ -1288,59 +1459,13 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         setViewportLength(snapSize(isVertical ? height : width));
         setViewportBreadth(snapSize(isVertical ? width : height));
 
-        // Assign the hbar and vbar to the breadthBar and lengthBar so as
-        // to make some subsequent calculations easier.
         VirtualScrollBar breadthBar = isVertical ? hbar : vbar;
         VirtualScrollBar lengthBar = isVertical ? vbar : hbar;
-        double breadthBarLength = snapSize(isVertical ? hbar.prefHeight(-1) : vbar.prefWidth(-1));
-        double lengthBarBreadth = snapSize(isVertical ? vbar.prefWidth(-1) : hbar.prefHeight(-1));
 
         // If there has been a switch between the virtualized bar, then we
         // will want to do some stuff TODO.
         breadthBar.setVirtual(false);
         lengthBar.setVirtual(true);
-
-        // We need to determine whether the hbar and vbar are necessary. If the
-        // flow has been scrolled in the virtual direction, then we know for
-        // certain that the virtual scroll bar is required. If the
-        // maxPrefBreadth is already greater than the viewport, then we know
-        // we need the breadthBar as well. If neither of these two conditions
-        // are met, then we need to grab the first page worth of cells and
-        // compute the maxPrefBreadth and also determine if we have enough cells
-        // such that it will require more than a single page.
-
-        final double maxPrefBreadth = getMaxPrefBreadth();
-        if (maxPrefBreadth == -1) {
-            return;
-        }
-
-        final double viewportBreadth = getViewportBreadth();
-        final double viewportLength = getViewportLength();
-
-        // Perform a few computations used for understanding the effect of the
-        // bars on the viewport dimensions. Here we tentatively decide whether
-        // we need the breadth bar and the length bar.
-        // The last condition here (viewportLength >= getHeight()) was added to
-        // resolve the edge-case identified in RT-14350.
-        needLengthBar = getPosition() > 0 || cellCount >= cells.size();
-        needBreadthBar = maxPrefBreadth > viewportBreadth || (needLengthBar && maxPrefBreadth > (viewportBreadth - lengthBarBreadth));
-
-        // Start by optimistically deciding whether the length bar and
-        // breadth bar are needed and adjust the viewport dimensions
-        // accordingly. If during layout we find that one or the other of the
-        // bars actually is needed, then we will perform a cleanup pass
-
-        if (!BehaviorSkinBase.IS_TOUCH_SUPPORTED) {
-            if (needBreadthBar) setViewportLength(viewportLength - breadthBarLength);
-            if (needLengthBar) setViewportBreadth(viewportBreadth - lengthBarBreadth);
-
-            breadthBar.setVisible(needBreadthBar);
-            lengthBar.setVisible(needLengthBar);
-        }
-        else {
-            breadthBar.setVisible(needBreadthBar && tempVisibility);
-            lengthBar.setVisible(needLengthBar && tempVisibility);
-        }
     }
 
     @Override protected void setWidth(double value) {
@@ -1368,9 +1493,6 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         VirtualScrollBar breadthBar = isVertical ? hbar : vbar;
         VirtualScrollBar lengthBar = isVertical ? vbar : hbar;
         
-        double breadthBarLength = snapSize(isVertical ? hbar.prefHeight(-1) : vbar.prefWidth(-1));
-        double lengthBarBreadth = snapSize(isVertical ? vbar.prefWidth(-1) : hbar.prefHeight(-1));
-
         // Update cell positions.
         // When rebuilding the cells, we add the cells and along the way compute
         // the maxPrefBreadth. Based on the computed value, we may add
@@ -1400,58 +1522,6 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 positionCell(cell, offset);
 
                 offset += getCellLength(cell);
-            }
-        }
-
-        // Now that we've laid out the cells, we may need to adjust the scroll
-        // bars and update the viewport dimensions based on the bars
-        // We have to do the following work twice because the first pass
-        // through the loop may have made the breadth bar visible, which will
-        // adjust the viewportLength, which may make the lengthBar need to
-        // be visible as well.
-        final int cellsSize = cells.size();
-        for (int i = 0; i < 2; i++) {
-            if (! lengthBar.isVisible()) {
-                // If cellCount is > than cells.size(), then we know we need the
-                // length bar.
-                if (cellCount > cellsSize) {
-                    if (!BehaviorSkinBase.IS_TOUCH_SUPPORTED) {
-                        lengthBar.setVisible(true);
-                    }
-                    else {
-                        lengthBar.setVisible(tempVisibility);
-                    }
-                } else if (cellCount == cellsSize) {
-                    // We must check a corner case here where the cell count
-                    // exactly matches the number of cells laid out. In this case,
-                    // we need to check the last cell's layout position + length
-                    // to determine if we need the length bar
-                    T lastCell = cells.getLast();
-                    if (!BehaviorSkinBase.IS_TOUCH_SUPPORTED) {
-                        lengthBar.setVisible((getCellPosition(lastCell) + getCellLength(lastCell)) > getViewportLength());
-                    }
-                    else {
-                        lengthBar.setVisible(((getCellPosition(lastCell) + getCellLength(lastCell)) > getViewportLength()) && tempVisibility);
-                    }
-                }
-                
-                // If the bar is needed, adjust the viewportBreadth
-                if (lengthBar.isVisible() && !BehaviorSkinBase.IS_TOUCH_SUPPORTED) {
-                    setViewportBreadth(getViewportBreadth() - lengthBarBreadth);
-                }
-            }
-            
-            if (! breadthBar.isVisible()) {
-                final boolean visible = getMaxPrefBreadth() > getViewportBreadth();
-                if (!BehaviorSkinBase.IS_TOUCH_SUPPORTED) {
-                    breadthBar.setVisible(visible);
-                    if (visible) {
-                        setViewportLength(getViewportLength() - breadthBarLength);
-                    }
-                }
-                else {
-                    breadthBar.setVisible(visible && tempVisibility);
-                }
             }
         }
 
@@ -1489,21 +1559,19 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 }
             }
 
-            // There was a weird bug where the newMax would sometimes go < 0
-            // when switching vertical and that would drive the min value to
-            // something crazy negative.
-            // Math.abs(..) used here to resolve RT-31653
-            double newMax = Math.max(1, Math.abs(getMaxPrefBreadth() - viewportBreadth));
-            if (newMax != breadthBar.getMax()) {
-                breadthBar.setMax(newMax);
+            if (getMaxPrefBreadth() != -1) {
+                double newMax = Math.max(1, getMaxPrefBreadth() - viewportBreadth);
+                if (newMax != breadthBar.getMax()) {
+                    breadthBar.setMax(newMax);
 
-                double breadthBarValue = breadthBar.getValue();
-                boolean maxed = breadthBarValue != 0 && newMax == breadthBarValue;
-                if (maxed || breadthBarValue > newMax) {
-                    breadthBar.setValue(newMax);
+                    double breadthBarValue = breadthBar.getValue();
+                    boolean maxed = breadthBarValue != 0 && newMax == breadthBarValue;
+                    if (maxed || breadthBarValue > newMax) {
+                        breadthBar.setValue(newMax);
+                    }
+
+                    breadthBar.setVisibleAmount((viewportBreadth / getMaxPrefBreadth()) * newMax);
                 }
-
-                breadthBar.setVisibleAmount((viewportBreadth / getMaxPrefBreadth()) * newMax);
             }
         }
         
@@ -1610,7 +1678,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         // Note: Do not optimise this loop by pre-calculating the cells size and
         // storing that into a int value - this can lead to RT-32828
         for (int i = 0; i < cells.size(); i++) {
-            Cell cell = cells.get(i);
+            Cell<?> cell = cells.get(i);
             if (isVertical) {
                 cell.resize(size, cell.getHeight());
             } else {
@@ -1701,6 +1769,57 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     }
 
     /**
+     * This method is an experts-only method - if the requested index is not
+     * already an existing visible cell, it will create a cell for the
+     * given index and insert it into the sheet. From that point on it will be
+     * unmanaged, and is up to the caller of this method to manage it.
+     */
+    T getPrivateCell(int index)  {
+        T cell = null;
+
+        // If there are cells, then we will attempt to get an existing cell
+        if (! cells.isEmpty()) {
+            // First check the cells that have already been created and are
+            // in use. If this call returns a value, then we can use it
+            cell = getVisibleCell(index);
+            if (cell != null) return cell;
+        }
+
+        // check the existing sheet children
+        if (cell == null) {
+            for (int i = 0; i < sheetChildren.size(); i++) {
+                T _cell = (T) sheetChildren.get(i);
+                if (getCellIndex(_cell) == index) {
+                    return _cell;
+                }
+            }
+        }
+
+        if (cell == null) {
+            Callback<VirtualFlow, T> createCell = getCreateCell();
+            if (createCell != null) {
+                cell = createCell.call(this);
+            }
+        }
+
+        if (cell != null) {
+            setCellIndex(cell, index);
+            resizeCellSize(cell);
+            cell.setVisible(false);
+            sheetChildren.add(cell);
+            privateCells.add(cell);
+        }
+
+        return cell;
+    }
+
+    private final List<T> privateCells = new ArrayList<>();
+
+    private void releaseAllPrivateCells() {
+        sheetChildren.removeAll(privateCells);
+    }
+
+    /**
      * Compute and return the length of the cell for the given index. This is
      * called both internally when adjusting by pixels, and also at times
      * by PositionMapper (see the getItemSize callback). When called by
@@ -1778,11 +1897,11 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         if (cell == null) return;
         
         if (isVertical()) {
-            double width = cell.getWidth();
-            cell.resize(width, fixedCellSizeEnabled ? fixedCellSize : cell.prefHeight(width));
+            double width = Math.max(getMaxPrefBreadth(), getViewportBreadth());
+            cell.resize(width, fixedCellSizeEnabled ? fixedCellSize : Utils.boundedSize(cell.prefHeight(width), cell.minHeight(width), cell.maxHeight(width)));
         } else {
-            double height = cell.getHeight();
-            cell.resize(fixedCellSizeEnabled ? fixedCellSize : cell.prefWidth(height), height);
+            double height = Math.max(getMaxPrefBreadth(), getViewportBreadth());
+            cell.resize(fixedCellSizeEnabled ? fixedCellSize : Utils.boundedSize(cell.prefWidth(height), cell.minWidth(height), cell.maxWidth(height)), height);
         }
     }
 
@@ -1796,7 +1915,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         // RT-34333, where the sizes were being reported incorrectly to the
         // ComboBox popup.
         if (cell.isNeedsLayout() && cell.getScene() != null) {
-            cell.impl_processCSS(false);
+            cell.applyCss();
         }
     }
 
@@ -1882,10 +2001,41 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     }
 
     private void cleanPile() {
+        boolean wasFocusOwner = false;
+
         for (int i = 0, max = pile.size(); i < max; i++) {
             T cell = pile.get(i);
+            wasFocusOwner = wasFocusOwner || doesCellContainFocus(cell);
             cell.setVisible(false);
         }
+
+        // Fix for RT-35876: Rather than have the cells do weird things with
+        // focus (in particular, have focus jump between cells), we return focus
+        // to the VirtualFlow itself.
+        if (wasFocusOwner) {
+            requestFocus();
+        }
+    }
+
+    private boolean doesCellContainFocus(Cell<?> c) {
+        Scene scene = c.getScene();
+        final Node focusOwner = scene == null ? null : scene.getFocusOwner();
+
+        if (focusOwner != null) {
+            if (c.equals(focusOwner)) {
+                return true;
+            }
+
+            Parent p = focusOwner.getParent();
+            while (p != null && ! (p instanceof VirtualFlow)) {
+                if (c.equals(p)) {
+                    return true;
+                }
+                p = p.getParent();
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -1910,7 +2060,8 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
         // if index is > firstIndex and < lastIndex then we can get the index
         if (index > firstIndex && index < lastIndex) {
-            return cells.get(index - firstIndex);
+            T cell = cells.get(index - firstIndex);
+            if (getCellIndex(cell) == index) return cell;
         }
 
         // there is no visible cell for the specified index
@@ -1959,7 +2110,10 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
             final double cellStart = getCellPosition(cell);
             final double cellEnd = cellStart + getCellLength(cell);
-            if (cellEnd <= max) {
+
+            // we use the magic +2 to allow for a little bit of fuzziness,
+            // this is to help in situations such as RT-34407
+            if (cellEnd <= (max + 2)) {
                 return cell;
             }
         }
@@ -2110,7 +2264,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
         final boolean isVertical = isVertical();
         if (((isVertical && (tempVisibility ? !needLengthBar : !vbar.isVisible())) ||
-                (! isVertical && (tempVisibility ? !needBreadthBar : !hbar.isVisible())))) return 0;
+                (! isVertical && (tempVisibility ? !needLengthBar : !hbar.isVisible())))) return 0;
         
         double pos = getPosition();
         if (pos == 0.0f && delta < 0) return 0;
@@ -2142,6 +2296,10 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 assert cell != null;
                 positionCell(cell, getCellPosition(cell) - delta);
             }
+
+            // Now throw away any cells that don't fit
+            // (take one - this resolves RT-36556)
+            cull();
 
             // Fix for RT-32908
             T firstCell = cells.getFirst();
@@ -2203,7 +2361,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             }
         }
 
-        // Now throw away any cells that don't fit
+        // Now throw away any cells that don't fit (take two)
         cull();
 
         // Finally, update the scroll bars
@@ -2219,6 +2377,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     private boolean needsRebuildCells = false; // when cell contents have changed
     private boolean needsCellsLayout = false;
     private boolean sizeChanged = false;
+    private final BitSet dirtyCells = new BitSet();
     
     public void reconfigureCells() {
         needsReconfigureCells = true;
@@ -2237,6 +2396,11 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
     public void requestCellLayout() {
         needsCellsLayout = true;
+        requestLayout();
+    }
+
+    public void setCellDirty(int index) {
+        dirtyCells.set(index);
         requestLayout();
     }
 
@@ -2453,7 +2617,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
         private final Rectangle clipRect;
 
-        public ClippedContainer(final VirtualFlow flow) {
+        public ClippedContainer(final VirtualFlow<?> flow) {
             if (flow == null) {
                 throw new IllegalArgumentException("VirtualFlow can not be null");
             }
@@ -2466,15 +2630,11 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             setClip(clipRect);
             // --- clipping
             
-            super.widthProperty().addListener(new InvalidationListener() {
-                @Override public void invalidated(Observable valueModel) {
-                    clipRect.setWidth(getWidth());
-                }
+            super.widthProperty().addListener(valueModel -> {
+                clipRect.setWidth(getWidth());
             });
-            super.heightProperty().addListener(new InvalidationListener() {
-                @Override public void invalidated(Observable valueModel) {
-                    clipRect.setHeight(getHeight());
-                }
+            super.heightProperty().addListener(valueModel -> {
+                clipRect.setHeight(getHeight());
             });
         }
     }
@@ -2496,7 +2656,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      * <p>
      * This class is package private solely for the sake of testing.
      */
-    public static class ArrayLinkedList<T> extends AbstractList {
+    public static class ArrayLinkedList<T> extends AbstractList<T> {
         /**
          * The array list backing this class. We default the size of the array
          * list to be fairly large so as not to require resizing during normal
@@ -2647,19 +2807,15 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             ** while after a scroll/drag
             */
             sbTouchTimeline = new Timeline();
-            sbTouchKF1 = new KeyFrame(Duration.millis(0), new EventHandler<ActionEvent>() {
-                @Override public void handle(ActionEvent event) {
-                    tempVisibility = true;
-                    requestLayout();
-                }
+            sbTouchKF1 = new KeyFrame(Duration.millis(0), event -> {
+                tempVisibility = true;
+                requestLayout();
             });
 
-            sbTouchKF2 = new KeyFrame(Duration.millis(1000), new EventHandler<ActionEvent>() {
-                @Override public void handle(ActionEvent event) {
-                    if (touchDetected == false && mouseDown == false) {
-                        tempVisibility = false;
-                        requestLayout();
-                    }
+            sbTouchKF2 = new KeyFrame(Duration.millis(1000), event -> {
+                if (touchDetected == false && mouseDown == false) {
+                    tempVisibility = false;
+                    requestLayout();
                 }
             });
             sbTouchTimeline.getKeyFrames().addAll(sbTouchKF1, sbTouchKF2);

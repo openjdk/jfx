@@ -32,7 +32,6 @@
 package com.oracle.javafx.scenebuilder.kit.editor.drag.source;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
-import static com.oracle.javafx.scenebuilder.kit.editor.drag.source.AbstractDragSource.INTERNAL_DATA_FORMAT;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.editor.images.ImageUtils;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
@@ -48,6 +47,8 @@ import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
 import javafx.scene.Group;
 import javafx.scene.Node;
+import javafx.scene.chart.Axis;
+import javafx.scene.chart.Chart;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
 import javafx.scene.control.Tooltip;
@@ -145,8 +146,6 @@ public class DocumentDragSource extends AbstractDragSource {
     }
     
     private static Point2D computeDefaultHit(FXOMObject fxomObject) {
-        assert fxomObject.getSceneGraphObject() != null;
-        
         final double hitX, hitY;
         if (fxomObject.getSceneGraphObject() instanceof Node) {
             final Node sceneGraphNode = (Node) fxomObject.getSceneGraphObject();
@@ -164,6 +163,30 @@ public class DocumentDragSource extends AbstractDragSource {
     /*
      * AbstractDragSource
      */
+    
+    @Override
+    public boolean isAcceptable() {
+        /*
+         * Check if dragged objects contain any Axis.
+         * If one axis has a Chart parent, then drag operation should not be possible
+         * (because an Axis cannot be disconnected from its parent Chart).
+         * In that case, this drag source is declared as 'non acceptable'.
+         */
+        
+        boolean result = true;
+        for (FXOMObject draggedObject : draggedObjects) {
+            if (draggedObject.getSceneGraphObject() instanceof Axis) {
+                final FXOMObject parentObject = draggedObject.getParentObject();
+                if ((parentObject != null) && (parentObject.getSceneGraphObject() instanceof Chart)) {
+                    result = false;
+                    break;
+                }
+            }
+        }
+        
+        return result;
+    }
+
     
     @Override
     public List<FXOMObject> getDraggedObjects() {
@@ -193,10 +216,6 @@ public class DocumentDragSource extends AbstractDragSource {
         assert encoder.isEncodable();
         final ClipboardContent result = encoder.makeEncoding();
         
-        // Add an entry that indicates that this clipboard content has
-        // been created by Scene Builder itself.
-        result.put(INTERNAL_DATA_FORMAT, "" /* Unused */); //NOI18N
-        
         return result;
     }
 
@@ -214,7 +233,7 @@ public class DocumentDragSource extends AbstractDragSource {
 
         final Label visualNode = new Label();
         visualNode.setGraphic(new ImageView(image));
-        visualNode.setText(mask.getClassNameInfo());
+//        visualNode.setText(mask.getClassNameInfo());
         visualNode.getStylesheets().add(EditorController.getStylesheet().toString());
         visualNode.getStyleClass().add("drag-preview"); //NOI18N
 

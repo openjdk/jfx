@@ -105,7 +105,7 @@ public class TreeTableColumnDriver extends AbstractDriver {
     @Override
     public Node getInlineEditorBounds(FXOMObject fxomObject) {
         assert fxomObject.getSceneGraphObject() instanceof TreeTableColumn;
-        final TreeTableColumn<?,?> tc = (TreeTableColumn) fxomObject.getSceneGraphObject();
+        final TreeTableColumn<?,?> tc = (TreeTableColumn<?,?>) fxomObject.getSceneGraphObject();
         final TreeTableViewDesignInfoX di = new TreeTableViewDesignInfoX();
         return di.getColumnNode(tc);
     }
@@ -115,7 +115,7 @@ public class TreeTableColumnDriver extends AbstractDriver {
         assert fxomObject.getSceneGraphObject() instanceof TreeTableColumn;
         
         final TreeTableColumn<?,?> tc 
-                = (TreeTableColumn) fxomObject.getSceneGraphObject();
+                = (TreeTableColumn<?,?>) fxomObject.getSceneGraphObject();
         final TreeTableView<?> tv 
                 = tc.getTreeTableView();
         final TreeTableViewDesignInfoX di 

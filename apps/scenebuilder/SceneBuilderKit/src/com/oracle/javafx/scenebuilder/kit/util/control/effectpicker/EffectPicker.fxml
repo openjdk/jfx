@@ -31,6 +31,7 @@
   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 -->
+
 <?import java.lang.*?>
 <?import java.net.*?>
 <?import java.util.*?>
@@ -40,12 +41,9 @@
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.paint.*?>
 
-<VBox fx:id="root_vbox" alignment="TOP_LEFT" maxWidth="-1.0" prefWidth="-1.0" spacing="8.0" style="" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2" fx:controller="com.oracle.javafx.scenebuilder.kit.util.control.effectpicker.EffectPickerController">
+<VBox fx:id="root_vbox" alignment="TOP_LEFT" maxWidth="-1.0" prefWidth="-1.0" spacing="8.0" style="" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.oracle.javafx.scenebuilder.kit.util.control.effectpicker.EffectPickerController">
   <children>
     <HBox fx:id="effects_path_hbox" alignment="CENTER_LEFT" maxWidth="-1.0" minWidth="100.0" spacing="4.0" />
     <VBox fx:id="props_vbox" />
   </children>
-  <stylesheets>
-    <URL value="@EffectPicker.css" />
-  </stylesheets>
 </VBox>

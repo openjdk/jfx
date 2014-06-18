@@ -111,19 +111,9 @@ final class LensApplication extends Application {
     private static void initLibrary() {
         final String lensProperty = "glass.lens";
         final String platform = AccessController.doPrivileged(
-        new PrivilegedAction<String>() {
-            @Override
-            public String run() {
-                return System.getProperty(lensProperty, "");
-            }
-        });
+                (PrivilegedAction<String>) () -> System.getProperty(lensProperty, ""));
 
-        doComposite = AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
-            @Override
-            public Boolean run() {
-                return Boolean.getBoolean("doNativeComposite");
-            }
-        });
+        doComposite = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("doNativeComposite"));
 
         if (isInitialized) {
             //make sure we make this only once
@@ -137,12 +127,9 @@ final class LensApplication extends Application {
                 "System property " + lensProperty + " not defined");
         }
 
-        AccessController.doPrivileged(new PrivilegedAction<Void>() {
-            @Override
-            public Void run() {
-                Application.loadNativeLibrary("glass_lens_" + platform);
-                return null;
-            }
+        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+            Application.loadNativeLibrary("glass_lens_" + platform);
+            return null;
         });
         _initIDs();
         isInitialized = true;
@@ -709,6 +696,13 @@ final class LensApplication extends Application {
         }
     }
 
+    private class LensScreenEvent extends Event {
+         @Override
+         void dispatch() {
+             Screen.notifySettingsChanged();
+         }
+     }
+
     private final LinkedList<Event> eventList = new LinkedList<Event>();
 
     private void postEvent(Event e) {
@@ -907,16 +901,13 @@ final class LensApplication extends Application {
     protected void runLoop(Runnable launchable) {
         _invokeLater(launchable);
         Thread toolkitThread = new Thread(
-        new Runnable() {
-            @Override
-            public void run() {
-                if (!_initialize()) {
-                    LensLogger.getLogger().severe("Display failed initialization");
-                    throw new RuntimeException("Display failed initialization");
-                }
-                _runLoop();
-            }
-        }, "Lens Event Thread");
+                () -> {
+                    if (!_initialize()) {
+                        LensLogger.getLogger().severe("Display failed initialization");
+                        throw new RuntimeException("Display failed initialization");
+                    }
+                    _runLoop();
+                }, "Lens Event Thread");
         setEventThread(toolkitThread);
         toolkitThread.start();
         Runtime.getRuntime().addShutdownHook(new Thread() {
@@ -943,17 +934,14 @@ final class LensApplication extends Application {
         final LensApplication lensApplication =
             (LensApplication)Application.GetApplication();
 
-        Thread eventThread = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                registerEventLoop();
-                lensApplication.nativeEventLoop(lensApplication,
-                                                nativeEventHandler, data);
+        Thread eventThread = new Thread(() -> {
+            registerEventLoop();
+            lensApplication.nativeEventLoop(lensApplication,
+                                            nativeEventHandler, data);
 
-                //when the native function return
-                //event loop has exited
-                unregisterEventLoop();
-            }
+            //when the native function return
+            //event loop has exited
+            unregisterEventLoop();
         }, ("Lens Native Event Thread " + (nativeThreadCounter++)));
 
         LensLogger.getLogger().info("Starting native event thread");
@@ -1615,6 +1603,17 @@ final class LensApplication extends Application {
 
         postEvent(new LensDeviceEvent(flags, attach));
     }
+    
+    /**
+     * Notify changes in screen settings from native layer
+     * This method is triggered when native code detects a change in e.g. screen orientation
+     */
+    private void notifyScreenSettingsChanged() {
+        if (LensLogger.getLogger().isLoggable(Level.FINE)) {
+            LensLogger.getLogger().fine("Notify screen settings changed");
+        }    
+        postEvent(new LensScreenEvent());
+    }   
 
     //*******************************************************************
 

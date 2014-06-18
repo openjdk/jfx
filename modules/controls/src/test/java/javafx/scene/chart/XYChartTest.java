@@ -43,6 +43,7 @@ import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import org.junit.Assert;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertSame;
 
 
 public class XYChartTest extends ChartTestBase {
@@ -133,5 +134,28 @@ public class XYChartTest extends ChartTestBase {
         startApp();
         assertEquals(0, areachart.getLegend().prefHeight(-1), 0);            
         assertEquals(0, areachart.getLegend().prefWidth(-1), 0);            
+    }
+
+
+    @Test public void canModifySeriesWithoutChart() {
+        XYChart.Series series = new XYChart.Series();
+
+        ObservableList<XYChart.Data> dataList1 = FXCollections.observableArrayList();
+        dataList1.add(new XYChart.Data(0, 1));
+        dataList1.add(new XYChart.Data(1, 2));
+        dataList1.add(new XYChart.Data(2, 3));
+
+        series.setData(dataList1);
+
+        assertSame(dataList1, series.getData());
+
+        ObservableList<XYChart.Data> dataList2 = FXCollections.observableArrayList();
+        dataList2.add(new XYChart.Data(0, 3));
+        dataList2.add(new XYChart.Data(1, 2));
+        dataList2.add(new XYChart.Data(2, 1));
+
+        series.setData(dataList2);
+
+        assertSame(dataList2, series.getData());
     }
 }

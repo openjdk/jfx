@@ -110,6 +110,12 @@ class ES2SwapChain implements ES2RenderTarget, Presentable, GraphicsResource {
             stableBackbuffer.lock();
             if (stableBackbuffer.isSurfaceLost()) {
                 stableBackbuffer = null;
+                // For resizes we can keep the back buffer, but if we lose
+                // the back buffer then we need the caller to know that a
+                // new buffer is coming so that the entire scene can be
+                // redrawn.  To force this, we return true and the Presentable
+                // is recreated and repainted in its entirety.
+                return true;
             }
         }
         return false;
@@ -139,7 +145,7 @@ class ES2SwapChain implements ES2RenderTarget, Presentable, GraphicsResource {
                 if (isAntiAliasing()) {
                     context.flushVertexBuffer();
                     // Note must flip the z axis during blit
-                    context.blit(stableBackbuffer, null, x0, y0, x1, y1,
+                    g.blit(stableBackbuffer, null, x0, y0, x1, y1,
                             x0, y1, x1, y0);
                 } else {
                     drawTexture(g, stableBackbuffer, x0, y0, x1, y1,
@@ -211,6 +217,9 @@ class ES2SwapChain implements ES2RenderTarget, Presentable, GraphicsResource {
             stableBackbuffer = factory.createRTTexture(w, h,
                                                        WrapMode.CLAMP_NOT_NEEDED,
                                                        antiAliasing);
+            if (PrismSettings.dirtyOptsEnabled) {
+                stableBackbuffer.contentsUseful();
+            }
             copyFullBuffer = true;
         }
         ES2Graphics g = ES2Graphics.create(context, stableBackbuffer);

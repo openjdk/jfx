@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,9 +28,6 @@ package com.sun.javafx.css.converters;
 import com.sun.javafx.Utils;
 import com.sun.javafx.css.Size;
 import com.sun.javafx.css.StyleConverterImpl;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Map.Entry;
 import javafx.css.CssMetaData;
 import javafx.css.ParsedValue;
 import javafx.css.StyleConverter;
@@ -39,11 +36,15 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontPosture;
 import javafx.scene.text.FontWeight;
 
+import java.util.Locale;
+import java.util.Map;
+import java.util.Map.Entry;
+
 public final class FontConverter extends StyleConverterImpl<ParsedValue[], Font> {
 
     // lazy, thread-safe instatiation
     private static class Holder {
-        static FontConverter INSTANCE = new FontConverter();
+        static final FontConverter INSTANCE = new FontConverter();
     }
 
     public static StyleConverter<ParsedValue[], Font> getInstance() {
@@ -111,7 +112,7 @@ public final class FontConverter extends StyleConverterImpl<ParsedValue[], Font>
 
         // lazy, thread-safe instatiation
         private static class Holder {
-            static FontStyleConverter INSTANCE = new FontStyleConverter();
+            static final FontStyleConverter INSTANCE = new FontStyleConverter();
         }
 
         public static FontStyleConverter getInstance() {
@@ -157,7 +158,7 @@ public final class FontConverter extends StyleConverterImpl<ParsedValue[], Font>
 
         // lazy, thread-safe instatiation
         private static class Holder {
-            static FontWeightConverter INSTANCE = new FontWeightConverter();
+            static final FontWeightConverter INSTANCE = new FontWeightConverter();
         }
 
         public static FontWeightConverter getInstance() {
@@ -204,7 +205,7 @@ public final class FontConverter extends StyleConverterImpl<ParsedValue[], Font>
 
         // lazy, thread-safe instatiation
         private static class Holder {
-            static FontSizeConverter INSTANCE = new FontSizeConverter();
+            static final FontSizeConverter INSTANCE = new FontSizeConverter();
         }
 
         public static FontSizeConverter getInstance() {

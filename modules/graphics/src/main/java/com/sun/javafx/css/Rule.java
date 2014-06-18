@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,24 +26,20 @@
 package com.sun.javafx.css;
 
 import com.sun.javafx.collections.TrackableObservableList;
+import javafx.collections.ListChangeListener.Change;
+import javafx.collections.ObservableList;
+import javafx.css.PseudoClass;
+import javafx.css.StyleOrigin;
+import javafx.scene.Node;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-
-import javafx.collections.ListChangeListener.Change;
-import javafx.collections.ObservableList;
-import javafx.css.PseudoClass;
-import javafx.css.StyleOrigin;
-
-import javafx.scene.Node;
-import sun.util.logging.PlatformLogger;
 
 /*
  * A selector is a collection of selectors and declarations.
@@ -152,6 +148,13 @@ final public class Rule {
 
     /* package */
     void setStylesheet(Stylesheet stylesheet) {
+
+        // For an imported stylesheet, update origin, but not stylesheet ref
+        // TODO: I don't like this. Done as an expedient for at-import-rule.
+        if (this.stylesheet != null && stylesheet != null) {
+            this.stylesheet.setOrigin(stylesheet.getOrigin());
+            return;
+        }
 
         this.stylesheet = stylesheet;
         

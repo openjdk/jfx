@@ -38,6 +38,8 @@ import com.oracle.javafx.scenebuilder.kit.fxom.FXOMPropertyT;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.InspectorPath;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PrefixedValue;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
+import com.oracle.javafx.scenebuilder.kit.util.URLUtils;
+import java.net.URISyntaxException;
 import java.net.URL;
 
 /**
@@ -47,9 +49,17 @@ public class StringPropertyMetadata extends TextEncodablePropertyMetadata<String
     
     private static final PropertyName valueName = new PropertyName("value"); //NOI18N
 
+    private final boolean detectFileURL;
+    
+    public StringPropertyMetadata(PropertyName name, boolean readWrite, 
+            String defaultValue, InspectorPath inspectorPath, boolean detectFileURL) {
+        super(name, String.class, readWrite, defaultValue, inspectorPath);
+        this.detectFileURL = detectFileURL;
+    }
+
     public StringPropertyMetadata(PropertyName name, boolean readWrite, 
             String defaultValue, InspectorPath inspectorPath) {
-        super(name, String.class, readWrite, defaultValue, inspectorPath);
+        this(name, readWrite, defaultValue, inspectorPath, false);
     }
 
     /*
@@ -104,10 +114,23 @@ public class StringPropertyMetadata extends TextEncodablePropertyMetadata<String
 
     @Override
     public FXOMInstance makeFxomInstanceFromValue(String value, FXOMDocument fxomDocument) {
-        final PrefixedValue pv = new PrefixedValue(value);
-        
         final FXOMInstance result;
+        
+        boolean shouldEncodeAsURL;
+        final PrefixedValue pv = new PrefixedValue(value);
         if (pv.isClassLoaderRelativePath() || pv.isDocumentRelativePath()) {
+            shouldEncodeAsURL = true;
+        } else if (pv.isPlainString() && detectFileURL) {
+            try {
+                shouldEncodeAsURL = URLUtils.getFile(value) != null;
+            } catch(URISyntaxException x) {
+                shouldEncodeAsURL = false;
+            }
+        } else {
+            shouldEncodeAsURL = false;
+        }
+        
+        if (shouldEncodeAsURL) {
             // String value must be expressed using a URL element
             // <URL value="@Desktop/IssueTracking.css" />
             final FXOMPropertyT newProperty = new FXOMPropertyT(fxomDocument, valueName, value);

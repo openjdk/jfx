@@ -31,18 +31,9 @@
  */
 package com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.handles;
 
-import com.oracle.javafx.scenebuilder.kit.editor.panel.content.AbstractResilientHandles;
-import com.oracle.javafx.scenebuilder.kit.editor.panel.content.ContentPanelController;
-import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.TreeTableViewDesignInfoX;
-import com.oracle.javafx.scenebuilder.kit.editor.panel.content.gesture.AbstractGesture;
-import com.oracle.javafx.scenebuilder.kit.editor.panel.content.gesture.mouse.DiscardGesture;
-import com.oracle.javafx.scenebuilder.kit.editor.panel.content.gesture.mouse.ResizeTreeTableColumnGesture;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
-import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
 import java.util.List;
+
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
 import javafx.scene.Cursor;
@@ -53,6 +44,15 @@ import javafx.scene.control.TreeTableView;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Line;
 import javafx.scene.transform.Transform;
+
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.AbstractResilientHandles;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.ContentPanelController;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.TreeTableViewDesignInfoX;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.gesture.AbstractGesture;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.gesture.mouse.ResizeTreeTableColumnGesture;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
+import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
 
 /**
  *
@@ -87,19 +87,9 @@ public class TreeTableColumnHandles extends AbstractResilientHandles<Object> {
         getRootNode().getChildren().add(grips); // Above handles
         
         getTreeTableColumn().treeTableViewProperty().addListener(
-                new ChangeListener<Object>() {
-                    @Override
-                    public void changed(ObservableValue<? extends Object> ov, Object v1, Object v2) {
-                        treeTableViewOrVisibilityDidChange();
-                    }
-                });
+                (ChangeListener<Object>) (ov, v1, v2) -> treeTableViewOrVisibilityDidChange());
         getTreeTableColumn().visibleProperty().addListener(
-                new ChangeListener<Object>() {
-                    @Override
-                    public void changed(ObservableValue<? extends Object> ov, Object v1, Object v2) {
-                        treeTableViewOrVisibilityDidChange();
-                    }
-                });
+                (ChangeListener<Object>) (ov, v1, v2) -> treeTableViewOrVisibilityDidChange());
         
         treeTableViewOrVisibilityDidChange();
     }

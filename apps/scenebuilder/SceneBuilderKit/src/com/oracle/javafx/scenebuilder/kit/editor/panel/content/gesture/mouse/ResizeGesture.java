@@ -180,7 +180,9 @@ public class ResizeGesture extends AbstractMouseGesture {
                     "Resize", 
                     metaValueMap, 
                     editorController);
-            editorController.getJobManager().push(j);
+            if (j.isExecutable()) {
+                editorController.getJobManager().push(j);
+            }
         }
         
     }
@@ -316,6 +318,7 @@ public class ResizeGesture extends AbstractMouseGesture {
         resizer.changeWidth(guidedLayoutBounds.getWidth());
         resizer.changeHeight(guidedLayoutBounds.getHeight());
         if (relocater != null) {
+            sceneGraphObject.getParent().layout();
             relocater.moveToLayoutX(newLayoutX, guidedLayoutBounds);
             relocater.moveToLayoutY(newLayoutY, guidedLayoutBounds);
         }

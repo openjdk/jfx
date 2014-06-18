@@ -73,30 +73,27 @@ public class RotateEditor extends PropertyEditor {
         //
         // Text field
         //
-        EventHandler<ActionEvent> valueListener = new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent event) {
-                if (isHandlingError()) {
-                    // Event received because of focus lost due to error dialog
-                    return;
-                }
-                String valStr = rotateTf.getText();
-                double valDouble;
-                try {
-                    valDouble = Double.parseDouble(valStr);
-                } catch (NumberFormatException e) {
-                    handleInvalidValue(valStr);
-                    return;
-                }
-                if (!((DoublePropertyMetadata) getPropertyMeta()).isValidValue(valDouble)) {
-                    handleInvalidValue(valDouble);
-                    return;
-                }
-                rotate(valDouble);
-                rotateTf.selectAll();
-                userUpdateValueProperty(valDouble);
-
+        EventHandler<ActionEvent> valueListener = event -> {
+            if (isHandlingError()) {
+                // Event received because of focus lost due to error dialog
+                return;
             }
+            String valStr = rotateTf.getText();
+            double valDouble;
+            try {
+                valDouble = Double.parseDouble(valStr);
+            } catch (NumberFormatException e) {
+                handleInvalidValue(valStr);
+                return;
+            }
+            if (!((DoublePropertyMetadata) getPropertyMeta()).isValidValue(valDouble)) {
+                handleInvalidValue(valDouble);
+                return;
+            }
+            rotate(valDouble);
+            rotateTf.selectAll();
+            userUpdateValueProperty(valDouble);
+
         };
         initialize(valueListener);
     }
@@ -179,13 +176,7 @@ public class RotateEditor extends PropertyEditor {
 
     @Override
     public void requestFocus() {
-        EditorUtils.doNextFrame(new Runnable() {
-
-            @Override
-            public void run() {
-                rotateTf.requestFocus();
-            }
-        });
+        EditorUtils.doNextFrame(() -> rotateTf.requestFocus());
     }
 
 }

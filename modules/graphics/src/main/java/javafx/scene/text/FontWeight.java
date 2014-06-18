@@ -81,10 +81,11 @@ public enum FontWeight {
      */
     BLACK(900, "Black", "Heavy");
 
-    private int weight;
+    private final int weight;
     private final String[] names;
     
     private FontWeight(int weight, String... names) {
+        this.weight = weight;
         this.names = names;
     }
 

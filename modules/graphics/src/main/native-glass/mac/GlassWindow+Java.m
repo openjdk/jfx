@@ -327,15 +327,6 @@ static NSWindow *s_grabWindow = nil;
     return screen;
 }
 
-#pragma mark --- Accessibility
-
-- (void)_initAccessibility
-{
-    GET_MAIN_JENV;
-    (*env)->CallVoidMethod(env, self->jWindow, jWindowNotifyInitAccessibilityPtr);
-    GLASS_CHECK_EXCEPTION(env);
-}
-
 #pragma mark --- Flip
      
 - (void)_setFlipFrame:(NSRect)frameRect display:(BOOL)displayFlag animate:(BOOL)animateFlag

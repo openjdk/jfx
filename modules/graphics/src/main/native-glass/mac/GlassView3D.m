@@ -120,10 +120,13 @@
     if (jproperties != NULL)
     {
         jobject k3dDepthKey = (*env)->NewObject(env, jIntegerClass, jIntegerInitMethod, com_sun_glass_ui_View_Capability_k3dDepthKeyValue);
+        GLASS_CHECK_EXCEPTION(env);
         jobject k3dDepthKeyValue = (*env)->CallObjectMethod(env, jproperties, jMapGetMethod, k3dDepthKey);
+        GLASS_CHECK_EXCEPTION(env);
         if (k3dDepthKeyValue != NULL)
         {
             depthBits = (*env)->CallIntMethod(env, k3dDepthKeyValue, jIntegerValueMethod);
+            GLASS_CHECK_EXCEPTION(env);
         }
     }
     
@@ -132,9 +135,11 @@
     {
         jobject sharedContextPtrKey = (*env)->NewStringUTF(env, "shareContextPtr");
         jobject sharedContextPtrValue = (*env)->CallObjectMethod(env, jproperties, jMapGetMethod, sharedContextPtrKey);
+        GLASS_CHECK_EXCEPTION(env);
         if (sharedContextPtrValue != NULL)
         {
             jlong jsharedContextPtr = (*env)->CallLongMethod(env, sharedContextPtrValue, jLongValueMethod);
+            GLASS_CHECK_EXCEPTION(env);
             if (jsharedContextPtr != 0)
             {
                 NSOpenGLContext *sharedContextNS = (NSOpenGLContext*)jlong_to_ptr(jsharedContextPtr);
@@ -148,9 +153,11 @@
     {
         jobject contextPtrKey = (*env)->NewStringUTF(env, "contextPtr");
         jobject contextPtrValue = (*env)->CallObjectMethod(env, jproperties, jMapGetMethod, contextPtrKey);
+        GLASS_CHECK_EXCEPTION(env);
         if (contextPtrValue != NULL)
         {
             jlong jcontextPtr = (*env)->CallLongMethod(env, contextPtrValue, jLongValueMethod);
+            GLASS_CHECK_EXCEPTION(env);
             if (jcontextPtr != 0)
             {
                 NSOpenGLContext *clientContextNS = (NSOpenGLContext*)jlong_to_ptr(jcontextPtr);
@@ -173,10 +180,13 @@
     if (jproperties != NULL)
     {
         jobject kHiDPIAwareKey = (*env)->NewObject(env, jIntegerClass, jIntegerInitMethod, com_sun_glass_ui_View_Capability_kHiDPIAwareKeyValue);
+        GLASS_CHECK_EXCEPTION(env);
         jobject kHiDPIAwareValue = (*env)->CallObjectMethod(env, jproperties, jMapGetMethod, kHiDPIAwareKey);
+        GLASS_CHECK_EXCEPTION(env);
         if (kHiDPIAwareValue != NULL)
         {
             self->isHiDPIAware = (*env)->CallBooleanMethod(env, kHiDPIAwareValue, jBooleanValueMethod) ? YES : NO;
+            GLASS_CHECK_EXCEPTION(env);
         }
     }
 
@@ -443,10 +453,13 @@
 - (BOOL)performKeyEquivalent:(NSEvent *)theEvent
 {
     KEYLOG("performKeyEquivalent");
+    [GlassApplication registerKeyEvent:theEvent];
+
     // Crash if the FS window is released while performing a key equivalent
-    [self->_delegate->fullscreenWindow retain];
+    // Local copy of the id keeps the retain/release calls balanced.
+    id fsWindow = [self->_delegate->fullscreenWindow retain];
     [self->_delegate sendJavaKeyEvent:theEvent isDown:YES];
-    [self->_delegate->fullscreenWindow release];
+    [fsWindow release];
     return NO; // return NO to allow system-default processing of Cmd+Q, etc.
 }
 
@@ -780,5 +793,70 @@
     GlassLayer3D *layer = (GlassLayer3D*)[self layer];
     [layer notifyScaleFactorChanged:scale];
 }
+
+/* Accessibility support */
+
+- (NSArray *)accessibilityAttributeNames
+{
+    NSArray *names = NULL;
+    GlassAccessible *accessible = [self->_delegate getAccessible];
+    if (accessible) {
+        names = [accessible accessibilityAttributeNames];
+    }
+    if (names == NULL) {
+        names = [super accessibilityAttributeNames];
+    }
+    return names;
+}
+
+- (id)accessibilityAttributeValue:(NSString *)attribute
+{
+    id value = NULL;
+    GlassAccessible *accessible = [self->_delegate getAccessible];
+    if (accessible) {
+        value = [accessible accessibilityAttributeValue: attribute];
+    }
+    if (value == NULL) {
+        value = [super accessibilityAttributeValue: attribute];
+    }
+    return value;
+}
+
+- (BOOL)accessibilityIsIgnored
+{
+    BOOL value = TRUE; /* This default value in the OS */
+    GlassAccessible *accessible = [self->_delegate getAccessible];
+    if (accessible) {
+        value = [accessible accessibilityIsIgnored];
+    }
+    return value;
+}
+
+- (id)accessibilityHitTest:(NSPoint)point
+{
+    id value = NULL;
+    GlassAccessible *accessible = [self->_delegate getAccessible];
+    if (accessible) {
+        value = [accessible accessibilityHitTest: point];
+    }
+    if (value == NULL) {
+        value = [super accessibilityHitTest: point];
+    }
+    return value;
+}
+
+- (id)accessibilityFocusedUIElement
+{
+    id value = NULL;
+    GlassAccessible *accessible = [self->_delegate getAccessible];
+    if (accessible) {
+        value = [accessible accessibilityFocusedUIElement];
+    }
+    if (value == NULL) {
+        value = [super accessibilityFocusedUIElement];
+    }
+    return value;
+}
+
 
 @end

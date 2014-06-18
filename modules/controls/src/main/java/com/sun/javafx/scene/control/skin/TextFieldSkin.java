@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,18 +25,14 @@
 
 package com.sun.javafx.scene.control.skin;
 
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.beans.binding.BooleanBinding;
 import javafx.beans.binding.DoubleBinding;
 import javafx.beans.binding.ObjectBinding;
 import javafx.beans.binding.StringBinding;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
-import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableBooleanValue;
 import javafx.beans.value.ObservableDoubleValue;
-import javafx.beans.value.ObservableValue;
 import javafx.event.EventHandler;
 import javafx.geometry.Bounds;
 import javafx.geometry.HPos;
@@ -44,6 +40,7 @@ import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Group;
 import javafx.scene.Node;
+import javafx.scene.accessibility.Attribute;
 import javafx.scene.control.IndexRange;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
@@ -138,25 +135,20 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         behavior.setTextFieldSkin(this);
 
 
-        textField.caretPositionProperty().addListener(new ChangeListener<Number>() {
-            @Override
-            public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
-                if (textField.getWidth() > 0) {
-                    updateTextNodeCaretPos(textField.getCaretPosition());
-                    if (!isForwardBias()) {
-                        setForwardBias(true);
-                    }
-                    updateCaretOff();
+        textField.caretPositionProperty().addListener((observable, oldValue, newValue) -> {
+            if (textField.getWidth() > 0) {
+                updateTextNodeCaretPos(textField.getCaretPosition());
+                if (!isForwardBias()) {
+                    setForwardBias(true);
                 }
+                updateCaretOff();
             }
         });
 
-        forwardBiasProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                if (textField.getWidth() > 0) {
-                    updateTextNodeCaretPos(textField.getCaretPosition());
-                    updateCaretOff();
-                }
+        forwardBiasProperty().addListener(observable -> {
+            if (textField.getWidth() > 0) {
+                updateTextNodeCaretPos(textField.getCaretPosition());
+                updateCaretOff();
             }
         });
 
@@ -208,10 +200,8 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         });
         // updated by listener on caretPosition to ensure order
         updateTextNodeCaretPos(textField.getCaretPosition());
-        textField.selectionProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                updateSelection();
-            }
+        textField.selectionProperty().addListener(observable -> {
+            updateSelection();
         });
 
         // Add selection
@@ -220,10 +210,8 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         selectionHighlightPath.layoutXProperty().bind(textTranslateX);
         selectionHighlightPath.visibleProperty().bind(textField.anchorProperty().isNotEqualTo(textField.caretPositionProperty()).and(textField.focusedProperty()));
         selectionHighlightPath.fillProperty().bind(highlightFill);
-        textNode.impl_selectionShapeProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                updateSelection();
-            }
+        textNode.impl_selectionShapeProperty().addListener(observable -> {
+            updateSelection();
         });
 
         // Add caret
@@ -241,42 +229,36 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
             }
         });
         caretPath.layoutXProperty().bind(textTranslateX);
-        textNode.impl_caretShapeProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                caretPath.getElements().setAll(textNode.impl_caretShapeProperty().get());
-                if (caretPath.getElements().size() == 0) {
-                    // The caret pos is invalid.
-                    updateTextNodeCaretPos(textField.getCaretPosition());
-                } else if (caretPath.getElements().size() == 4) {
-                    // The caret is split. Ignore and keep the previous width value.
-                } else {
-                    caretWidth = Math.round(caretPath.getLayoutBounds().getWidth());
-                }
+        textNode.impl_caretShapeProperty().addListener(observable -> {
+            caretPath.getElements().setAll(textNode.impl_caretShapeProperty().get());
+            if (caretPath.getElements().size() == 0) {
+                // The caret pos is invalid.
+                updateTextNodeCaretPos(textField.getCaretPosition());
+            } else if (caretPath.getElements().size() == 4) {
+                // The caret is split. Ignore and keep the previous width value.
+            } else {
+                caretWidth = Math.round(caretPath.getLayoutBounds().getWidth());
             }
         });
 
         // Be sure to get the control to request layout when the font changes,
         // since this will affect the pref height and pref width.
-        textField.fontProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                // I do both so that any cached values for prefWidth/height are cleared.
-                // The problem is that the skin is unmanaged and so calling request layout
-                // doesn't walk up the tree all the way. I think....
-                textField.requestLayout();
-                getSkinnable().requestLayout();
-            }
+        textField.fontProperty().addListener(observable -> {
+            // I do both so that any cached values for prefWidth/height are cleared.
+            // The problem is that the skin is unmanaged and so calling request layout
+            // doesn't walk up the tree all the way. I think....
+            textField.requestLayout();
+            getSkinnable().requestLayout();
         });
 
         registerChangeListener(textField.prefColumnCountProperty(), "prefColumnCount");
         if (textField.isFocused()) setCaretAnimating(true);
 
-        textField.alignmentProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                if (textField.getWidth() > 0) {
-                    updateTextPos();
-                    updateCaretOff();
-                    textField.requestLayout();
-                }
+        textField.alignmentProperty().addListener(observable -> {
+            if (textField.getWidth() > 0) {
+                updateTextPos();
+                updateCaretOff();
+                textField.requestLayout();
             }
         });
 
@@ -293,18 +275,14 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
             }
         };
 
-        promptTextFill.addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                updateTextPos();
-            }
+        promptTextFill.addListener(observable -> {
+            updateTextPos();
         });
 
-        textField.textProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                if (!getBehavior().isEditing()) {
-                    // Text changed, but not by user action
-                    updateTextPos();
-                }
+        textField.textProperty().addListener(observable -> {
+            if (!getBehavior().isEditing()) {
+                // Text changed, but not by user action
+                updateTextPos();
             }
         });
 
@@ -312,36 +290,30 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
             createPromptNode();
         }
 
-        usePromptText.addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                createPromptNode();
-                textField.requestLayout();
-            }
+        usePromptText.addListener(observable -> {
+            createPromptNode();
+            textField.requestLayout();
         });
 
         if (SHOW_HANDLES) {
             selectionHandle1.setRotate(180);
 
-            EventHandler<MouseEvent> handlePressHandler = new EventHandler<MouseEvent>() {
-                @Override public void handle(MouseEvent e) {
-                    pressX = e.getX();
-                    pressY = e.getY();
-                    e.consume();
-                }
+            EventHandler<MouseEvent> handlePressHandler = e -> {
+                pressX = e.getX();
+                pressY = e.getY();
+                e.consume();
             };
 
             caretHandle.setOnMousePressed(handlePressHandler);
             selectionHandle1.setOnMousePressed(handlePressHandler);
             selectionHandle2.setOnMousePressed(handlePressHandler);
 
-            caretHandle.setOnMouseDragged(new EventHandler<MouseEvent>() {
-                @Override public void handle(MouseEvent e) {
-                    Point2D p = new Point2D(caretHandle.getLayoutX() + e.getX() + pressX - textNode.getLayoutX(),
-                                            caretHandle.getLayoutY() + e.getY() - pressY - 6);
-                    HitInfo hit = textNode.impl_hitTestChar(translateCaretPosition(p));
-                    positionCaret(hit, false);
-                    e.consume();
-                }
+            caretHandle.setOnMouseDragged(e -> {
+                Point2D p = new Point2D(caretHandle.getLayoutX() + e.getX() + pressX - textNode.getLayoutX(),
+                                        caretHandle.getLayoutY() + e.getY() - pressY - 6);
+                HitInfo hit = textNode.impl_hitTestChar(translateCaretPosition(p));
+                positionCaret(hit, false);
+                e.consume();
             });
 
             selectionHandle1.setOnMouseDragged(new EventHandler<MouseEvent>() {
@@ -499,21 +471,41 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         return topInset + textNode.getBaselineOffset();
     }
 
+    /**
+     * Updates the textTranslateX value for the Text node position. This is
+     * done for general layout, but care is taken to avoid resetting the
+     * position when there's a need to scroll the text due to caret movement,
+     * or when editing text that overflows on either side.
+     */
     private void updateTextPos() {
+        double oldX = textTranslateX.get();
+        double newX;
+        double textNodeWidth = textNode.getLayoutBounds().getWidth();
+
         switch (getHAlignment()) {
           case CENTER:
             double midPoint = textRight.get() / 2;
             if (usePromptText.get()) {
-                promptNode.setLayoutX(midPoint - promptNode.getLayoutBounds().getWidth() / 2);
-                textTranslateX.set(promptNode.getLayoutX());
+                // If a prompt is shown (which implies that the text is
+                // empty), then we align the Text node so that the caret will
+                // appear at the left of the centered prompt.
+                newX = midPoint - promptNode.getLayoutBounds().getWidth() / 2;
+                promptNode.setLayoutX(newX);
             } else {
-                textTranslateX.set(midPoint - textNode.getLayoutBounds().getWidth() / 2);
+                newX = midPoint - textNodeWidth / 2;
+            }
+            // Update if there is space on the right
+            if (newX + textNodeWidth <= textRight.get()) {
+                textTranslateX.set(newX);
             }
             break;
 
           case RIGHT:
-            textTranslateX.set(textRight.get() - textNode.getLayoutBounds().getWidth() -
-                               caretWidth / 2);
+            newX = textRight.get() - textNodeWidth - caretWidth / 2;
+            // Update if there is space on the right
+            if (newX > oldX || newX > 0) {
+                textTranslateX.set(newX);
+            }
             if (usePromptText.get()) {
                 promptNode.setLayoutX(textRight.get() - promptNode.getLayoutBounds().getWidth() -
                                       caretWidth / 2);
@@ -522,9 +514,13 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
 
           case LEFT:
           default:
-            textTranslateX.set(caretWidth / 2);
+            newX = caretWidth / 2;
+            // Update if there is space on either side.
+            if (newX < oldX || newX + textNodeWidth <= textRight.get()) {
+                textTranslateX.set(newX);
+            }
             if (usePromptText.get()) {
-                promptNode.layoutXProperty().set(caretWidth / 2);
+                promptNode.layoutXProperty().set(newX);
             }
         }
     }
@@ -607,10 +603,6 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         final Bounds caretBounds = caretPath.getLayoutBounds();
 
         switch (getHAlignment()) {
-          case CENTER:
-            updateTextPos();
-            break;
-
           case RIGHT:
             if (textBounds.getMaxX() > clipBounds.getMaxX()) {
                 double delta = caretMaxXOld - caretBounds.getMaxX() - textTranslateX.get();
@@ -628,6 +620,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
             break;
 
           case LEFT:
+          case CENTER:
           default:
             if (textBounds.getMinX() < clipBounds.getMinX() + caretWidth / 2 &&
                 textBounds.getMaxX() <= clipBounds.getMaxX()) {
@@ -646,13 +639,13 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         updateCaretOff();
     }
 
-    public HitInfo getIndex(MouseEvent e) {
+    public HitInfo getIndex(double x, double y) {
         // adjust the event to be in the same coordinate space as the
         // text content of the textInputControl
         Point2D p;
 
-        p = new Point2D(e.getX() - textTranslateX.get() - snappedLeftInset(),
-                        e.getY() - snappedTopInset());
+        p = new Point2D(x - textTranslateX.get() - snappedLeftInset(),
+                        y - snappedTopInset());
         return textNode.impl_hitTestChar(translateCaretPosition(p));
     }
 
@@ -820,6 +813,16 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
             return passwordBuilder.toString();
         } else {
             return txt;
+        }
+    }
+
+    @Override
+    protected Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case BOUNDS_FOR_RANGE:
+            case OFFSET_AT_POINT:
+                return textNode.accGetAttribute(attribute, parameters);
+            default: return super.accGetAttribute(attribute, parameters);
         }
     }
 }

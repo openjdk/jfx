@@ -32,9 +32,9 @@
 package com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors;
 
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
+
 import java.util.Set;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
+
 import javafx.fxml.FXML;
 import javafx.scene.Node;
 import javafx.scene.Parent;
@@ -76,13 +76,7 @@ public class TextAlignmentEditor extends PropertyEditor {
         toggleButtons[2] = rightTb;
         toggleButtons[3] = justifyTb;
         for (ToggleButton tb : toggleButtons) {
-            tb.setOnAction(new EventHandler<ActionEvent>() {
-
-                @Override
-                public void handle(ActionEvent t) {
-                    userUpdateValueProperty(getValue());
-                }
-            });
+            tb.setOnAction(t -> userUpdateValueProperty(getValue()));
             tb.disableProperty().bind(disableProperty());
         }
     }
@@ -147,12 +141,6 @@ public class TextAlignmentEditor extends PropertyEditor {
 
     @Override
     public void requestFocus() {
-        EditorUtils.doNextFrame(new Runnable() {
-
-            @Override
-            public void run() {
-                leftTb.requestFocus();
-            }
-        });
+        EditorUtils.doNextFrame(() -> leftTb.requestFocus());
     }
 }

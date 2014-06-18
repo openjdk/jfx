@@ -53,4 +53,6 @@
 + (void)registerKeyEvent:(NSEvent*)event;
 + (jint)getKeyCodeForChar:(jchar)c;
 
++ (BOOL)syncRenderingDisabled;
+
 @end

@@ -27,8 +27,6 @@ package javafx.scene.control;
 
 import javafx.collections.WeakListChangeListener;
 import com.sun.javafx.scene.control.skin.ComboBoxListViewSkin;
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.beans.property.*;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -37,6 +35,8 @@ import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.scene.Node;
+import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Role;
 import javafx.util.Callback;
 import javafx.util.StringConverter;
 
@@ -52,6 +52,29 @@ import javafx.util.StringConverter;
  * much the same way as the ListView {@link ListView#itemsProperty() items}
  * property. In other words, it is the content of the items list that is displayed
  * to users when they click on the ComboBox button.
+ *
+ * <p>The ComboBox exposes the {@link #valueProperty()} from
+ * {@link javafx.scene.control.ComboBoxBase}, but there are some important points
+ * of the value property that need to be understood in relation to ComboBox.
+ * These include:
+ *
+ * <ol>
+ *     <li>The value property <strong>is not</strong> constrained to items contained
+ *     within the items list - it can be anything as long as it is a valid value
+ *     of type T.</li>
+ *     <li>If the value property is set to a non-null object, and subsequently the
+ *     items list is cleared, the value property <strong>is not</strong> nulled out.</li>
+ *     <li>Clearing the {@link javafx.scene.control.SelectionModel#clearSelection()
+ *     selection} in the selection model <strong>does not</strong> null the value
+ *     property - it remains the same as before.</li>
+ *     <li>It is valid for the selection model to have a selection set to a given
+ *     index even if there is no items in the list (or less items in the list than
+ *     the given index). Once the items list is further populated, such that the
+ *     list contains enough items to have an item in the given index, both the
+ *     selection model {@link SelectionModel#selectedItemProperty()} and
+ *     value property will be updated to have this value. This is inconsistent with
+ *     other controls that use a selection model, but done intentionally for ComboBox.</li>
+ * </ol>
  * 
  * <p>By default, when the popup list is showing, the maximum number of rows
  * visible is 10, but this can be changed by modifying the 
@@ -210,38 +233,34 @@ public class ComboBox<T> extends ComboBoxBase<T> {
         // listen to the value property input by the user, and if the value is
         // set to something that exists in the items list, we should update the
         // selection model to indicate that this is the selected item
-        valueProperty().addListener(new ChangeListener<T>() {
-            @Override public void changed(ObservableValue<? extends T> ov, T t, T t1) {
-                if (getItems() == null) return;
-                
-                SelectionModel<T> sm = getSelectionModel();
-                int index = getItems().indexOf(t1);
-                
-                if (index == -1) {
-                    sm.setSelectedItem(t1);
-                } else {
-                    // we must compare the value here with the currently selected
-                    // item. If they are different, we overwrite the selection
-                    // properties to reflect the new value.
-                    // We do this as there can be circumstances where there are
-                    // multiple instances of a value in the ComboBox items list,
-                    // and if we don't check here we may change the selection
-                    // mistakenly because the indexOf above will return the first
-                    // instance always, and selection may be on the second or 
-                    // later instances. This is RT-19227.
-                    T selectedItem = sm.getSelectedItem();
-                    if (selectedItem == null || ! selectedItem.equals(getValue())) {
-                        sm.clearAndSelect(index);
-                    }
+        valueProperty().addListener((ov, t, t1) -> {
+            if (getItems() == null) return;
+
+            SelectionModel<T> sm = getSelectionModel();
+            int index = getItems().indexOf(t1);
+
+            if (index == -1) {
+                sm.setSelectedItem(t1);
+            } else {
+                // we must compare the value here with the currently selected
+                // item. If they are different, we overwrite the selection
+                // properties to reflect the new value.
+                // We do this as there can be circumstances where there are
+                // multiple instances of a value in the ComboBox items list,
+                // and if we don't check here we may change the selection
+                // mistakenly because the indexOf above will return the first
+                // instance always, and selection may be on the second or
+                // later instances. This is RT-19227.
+                T selectedItem = sm.getSelectedItem();
+                if (selectedItem == null || ! selectedItem.equals(getValue())) {
+                    sm.clearAndSelect(index);
                 }
             }
         });
         
-        editableProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable o) {
-                // when editable changes, we reset the selection / value states
-                getSelectionModel().clearSelection();
-            }
+        editableProperty().addListener(o -> {
+            // when editable changes, we reset the selection / value states
+            getSelectionModel().clearSelection();
         });
     }
     
@@ -474,12 +493,10 @@ public class ComboBox<T> extends ComboBoxBase<T> {
             }
             this.comboBox = cb;
             
-            selectedIndexProperty().addListener(new InvalidationListener() {
-                @Override public void invalidated(Observable valueModel) {
-                    // we used to lazily retrieve the selected item, but now we just
-                    // do it when the selection changes.
-                    setSelectedItem(getModelItem(getSelectedIndex()));
-                }
+            selectedIndexProperty().addListener(valueModel -> {
+                // we used to lazily retrieve the selected item, but now we just
+                // do it when the selection changes.
+                setSelectedItem(getModelItem(getSelectedIndex()));
             });
 
             /*
@@ -524,12 +541,8 @@ public class ComboBox<T> extends ComboBoxBase<T> {
         };
         
         // watching for changes to the items list
-        private final ChangeListener<ObservableList<T>> itemsObserver = new ChangeListener<ObservableList<T>>() {
-            @Override
-            public void changed(ObservableValue<? extends ObservableList<T>> valueModel, 
-                ObservableList<T> oldList, ObservableList<T> newList) {
-                    updateItemsObserver(oldList, newList);
-            }
+        private final ChangeListener<ObservableList<T>> itemsObserver = (valueModel, oldList, newList) -> {
+                updateItemsObserver(oldList, newList);
         };
         
         private WeakListChangeListener<T> weakItemsContentObserver =
@@ -549,7 +562,14 @@ public class ComboBox<T> extends ComboBoxBase<T> {
 
             // when the items list totally changes, we should clear out
             // the selection and focus
-            setSelectedIndex(-1);
+            int newValueIndex = -1;
+            if (newList != null) {
+                T value = comboBox.getValue();
+                if (value != null) {
+                    newValueIndex = newList.indexOf(value);
+                }
+            }
+            setSelectedIndex(newValueIndex);
         }
 
         // API Implementation
@@ -565,4 +585,29 @@ public class ComboBox<T> extends ComboBoxBase<T> {
             return items == null ? 0 : items.size();
         }
     }
+
+    /***************************************************************************
+     *                                                                         *
+     * Accessibility handling                                                  *
+     *                                                                         *
+     **************************************************************************/
+
+    /** @treatAsPrivate */
+    @Override
+    public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch(attribute) {
+            case ROLE: return Role.COMBOBOX;
+            case TITLE:
+                //let the skin first.
+                Object title = super.accGetAttribute(attribute, parameters);
+                if (title != null) return title;
+                StringConverter<T> converter = getConverter();
+                if (converter == null) {
+                    return getValue() != null ? getValue().toString() : "";
+                }
+                return converter.toString(getValue());
+            default: return super.accGetAttribute(attribute, parameters);
+        }
+    }
+
 }

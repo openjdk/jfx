@@ -117,13 +117,7 @@ public class JarAnalysisReportController extends AbstractFxmlWindowController {
         assert timestampLabel != null;
                 
         UserLibrary lib = (UserLibrary)editorController.getLibrary();
-        lib.getJarReports().addListener(new ListChangeListener<JarReport>() {
-
-            @Override
-            public void onChanged(ListChangeListener.Change<? extends JarReport> change) {
-                update();
-            }
-        });
+        lib.getJarReports().addListener((ListChangeListener<JarReport>) change -> update());
         
         update();
     }

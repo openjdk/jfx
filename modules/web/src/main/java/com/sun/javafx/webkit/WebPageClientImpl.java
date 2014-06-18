@@ -30,12 +30,8 @@ public final class WebPageClientImpl implements WebPageClient<WebView> {
       
     static {
         backBufferSupported = Boolean.valueOf(
-                AccessController.doPrivileged(new PrivilegedAction<String>() {
-                    @Override public String run() {
-                        return System.getProperty(
-                                "com.sun.webkit.pagebackbuffer", "true");
-                    }
-                }));
+                AccessController.doPrivileged((PrivilegedAction<String>) () -> System.getProperty(
+                        "com.sun.webkit.pagebackbuffer", "true")));
     }
 
     public WebPageClientImpl(Accessor accessor) {

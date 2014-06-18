@@ -194,13 +194,11 @@ public class SWTFXUtils {
     private static int readValue(final String name) throws Exception {
         final Class<?> clazz = ImageData.class;
         return AccessController.doPrivileged(
-            new PrivilegedExceptionAction<Integer>() {
-                public Integer run() throws Exception {
+                (PrivilegedExceptionAction<Integer>) () -> {
                     Field field = clazz.getDeclaredField(name);
                     field.setAccessible(true);
                     return field.getInt(clazz);
-                }
-            });
+                });
     }
 
     private static Method blitDirect;
@@ -226,14 +224,12 @@ public class SWTFXUtils {
                     I, I, I, I,
                     I, I, I, B, B};
             blitDirect = AccessController.doPrivileged(
-                new PrivilegedExceptionAction<Method>() {
-                    public Method run() throws Exception {
+                    (PrivilegedExceptionAction<Method>) () -> {
                         Method method = clazz.
                             getDeclaredMethod("blit", argClasses);
                         method.setAccessible(true);
                         return method;
-                    }
-                });
+                    });
         }
         if (blitDirect != null) {
             blitDirect.invoke(clazz, op,
@@ -271,14 +267,12 @@ public class SWTFXUtils {
                     I, I, I, I,
                     I, I, I, B, B};
             blitPalette = AccessController.doPrivileged(
-                new PrivilegedExceptionAction<Method>() {
-                    public Method run() throws Exception {
+                    (PrivilegedExceptionAction<Method>) () -> {
                         Method method = clazz.
                             getDeclaredMethod("blit", argClasses);
                         method.setAccessible(true);
                         return method;
-                    }
-                });
+                    });
         }
         if (blitPalette != null) {
             blitPalette.invoke(clazz, op,
@@ -298,13 +292,11 @@ public class SWTFXUtils {
         final Class<?> clazz = ImageData.class;
         if (getByteOrderMethod != null) {
             getByteOrderMethod = AccessController.doPrivileged(
-                new PrivilegedExceptionAction<Method>() {
-                    public Method run() throws Exception {
+                    (PrivilegedExceptionAction<Method>) () -> {
                         Method method = clazz.getDeclaredMethod("getByteOrder");
                         method.setAccessible(true);
                         return method;
-                    }
-                });
+                    });
         }
         if (getByteOrderMethod != null) {
             return (Integer)getByteOrderMethod.invoke(image);

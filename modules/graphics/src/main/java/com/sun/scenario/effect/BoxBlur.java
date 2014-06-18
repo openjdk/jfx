@@ -33,13 +33,14 @@ import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.scenario.effect.impl.Renderer;
 import com.sun.scenario.effect.impl.state.BoxBlurState;
+import com.sun.scenario.effect.impl.state.LinearConvolveKernel;
 
 /**
  * A blur effect using a box-shaped convolution kernel, with a configurable
  * size for each dimension of the kernel and a number of passes to control
  * the quality of the blur.
  */
-public class BoxBlur extends CoreEffect {
+public class BoxBlur extends LinearConvolveCoreEffect {
 
     private final BoxBlurState state = new BoxBlurState();
 
@@ -119,7 +120,7 @@ public class BoxBlur extends CoreEffect {
     }
 
     @Override
-    Object getState() {
+    LinearConvolveKernel getState() {
         return state;
     }
 
@@ -166,8 +167,7 @@ public class BoxBlur extends CoreEffect {
      * @throws IllegalArgumentException if {@code hsize}
      * is outside the allowable range
      */
-    public void setHorizontalSize(int hsize) {
-        int old = state.getHsize();
+    public final void setHorizontalSize(int hsize) {
         state.setHsize(hsize);
     }
 
@@ -193,8 +193,7 @@ public class BoxBlur extends CoreEffect {
      * @throws IllegalArgumentException if {@code vsize}
      * is outside the allowable range
      */
-    public void setVerticalSize(int vsize) {
-        int old = state.getVsize();
+    public final void setVerticalSize(int vsize) {
         state.setVsize(vsize);
     }
 
@@ -224,8 +223,7 @@ public class BoxBlur extends CoreEffect {
      * @throws IllegalArgumentException if {@code passes} is outside the
      * allowable range
      */
-    public void setPasses(int passes) {
-        int old = state.getBlurPasses();
+    public final void setPasses(int passes) {
         state.setBlurPasses(passes);
     }
 
@@ -254,39 +252,6 @@ public class BoxBlur extends CoreEffect {
         r = state.getResultBounds(r, 1);
         r.intersectWith(outputClip);
         return r;
-    }
-
-    @Override
-    public ImageData filterImageDatas(FilterContext fctx,
-                                      BaseTransform transform,
-                                      Rectangle outputClip,
-                                      ImageData... inputs)
-    {
-        return state.filterImageDatas(this, fctx, transform, outputClip, inputs);
-    }
-
-    @Override
-    public boolean operatesInUserSpace() {
-        return true;
-    }
-
-    @Override
-    protected Rectangle getInputClip(int inputIndex,
-                                     BaseTransform transform,
-                                     Rectangle outputClip)
-    {
-        // A blur needs as much "fringe" data from its input as it creates
-        // around its output so we use the same expansion as is used in the
-        // result bounds.
-        if (outputClip != null) {
-            int hgrow = state.getKernelSize(0) / 2;
-            int vgrow = state.getKernelSize(1) / 2;
-            if ((hgrow | vgrow) != 0) {
-                outputClip = new Rectangle(outputClip);
-                outputClip.grow(hgrow, vgrow);
-            }
-        }
-        return outputClip;
     }
 
     @Override

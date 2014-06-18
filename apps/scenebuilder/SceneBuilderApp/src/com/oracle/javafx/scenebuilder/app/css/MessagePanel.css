@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -31,7 +31,7 @@
  */
 
 .message-panel {
-    -fx-background-color: -sb-dark, -sb-warning-panel;
+    -fx-background-color: -sb-base-dark, -sb-warning-panel;
     -fx-background-insets: 0, 1 0 0 0;
 }
 .message-panel-shadow {
@@ -49,27 +49,27 @@
 }
 
 .message-panel-clear {
-    -fx-background-color: -sb-dark, -sb-warning-panel;
+    -fx-background-color: -sb-base-dark, -sb-warning-panel;
     -fx-background-insets: 0, 1 0 0 0;
 }
 .message-panel-clear .button {
-    -fx-background-color: -sb-dark, -sb-warning-panel;
+    -fx-background-color: -sb-base-dark, -sb-warning-panel;
     -fx-background-insets: 0, 1 0 0 1;
     -fx-background-radius: 0, 0;
-    -fx-text-fill: -sb-content-text;
+    -fx-text-fill: -sb-warning-panel-text;
 }
 .message-panel-clear .button:hover {
-    -fx-background-color: -sb-dark, derive(-sb-warning-panel, 20%);
+    -fx-background-color: -sb-base-dark, derive(-sb-warning-panel, 20%);
 }
 
 .message-panel .label {
     -fx-font-size: 0.875em;
-    -fx-text-fill: -sb-content-text;
+    -fx-text-fill: -sb-warning-panel-text;
     -fx-padding: 0 8 3 8;
 }
 .message-panel .label.timestamp {
     -fx-font-size: 0.7em;
-    -fx-text-fill: -sb-content-text-dimmed;
+    -fx-text-fill: -sb-warning-panel-text-dimmed;
     -fx-padding: 6 8 3 8;
 }
 

@@ -35,7 +35,7 @@ import com.sun.javafx.text.TextRun;
 
 class CTGlyphLayout extends GlyphLayout {
 
-    private long createCTLine(long fontRef, char[] chars,
+    private long createCTLine(long fontRef, char[] chars, boolean rtl,
                               int start, int length) {
         /* Use CoreText to analize the run */
         long alloc = OS.kCFAllocatorDefault();
@@ -47,6 +47,13 @@ class CTGlyphLayout extends GlyphLayout {
                                   OS.kCFTypeDictionaryValueCallBacks());
             if (attributes != 0) {
                 OS.CFDictionaryAddValue(attributes, OS.kCTFontAttributeName(), fontRef);
+                if (rtl) {
+                    long paragraphStyleRef = OS.CTParagraphStyleCreate(OS.kCTWritingDirectionRightToLeft);
+                    if (paragraphStyleRef != 0) {
+                        OS.CFDictionaryAddValue(attributes, OS.kCTParagraphStyleAttributeName(), paragraphStyleRef);
+                        OS.CFRelease(paragraphStyleRef);
+                    }
+                }
                 /* Note that by default CoreText will apply kerning depending on the font*/
                 long attString = OS.CFAttributedStringCreate(alloc, textRef, attributes);
                 if (attString != 0) {
@@ -93,7 +100,8 @@ class CTGlyphLayout extends GlyphLayout {
         String fontName = strike.getFontResource().getFullName();
         long fontRef = ((CTFontStrike)strike).getFontRef();
         if (fontRef == 0) return;
-        long lineRef = createCTLine(fontRef, text, run.getStart(), run.getLength());
+        boolean rtl = (run.getLevel() & 1) != 0;
+        long lineRef = createCTLine(fontRef, text, rtl, run.getStart(), run.getLength());
         if (lineRef == 0) return;
         long runs = OS.CTLineGetGlyphRuns(lineRef);
         if (runs != 0) {

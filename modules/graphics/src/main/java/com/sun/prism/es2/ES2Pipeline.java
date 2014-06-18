@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -46,28 +46,29 @@ public class ES2Pipeline extends GraphicsPipeline {
     private static boolean isEglfb = false;
 
     static {
-        AccessController.doPrivileged(new PrivilegedAction<Void>() {
+        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+            String libName = "prism_es2";
 
-            public Void run() {
-                String libName = "prism_es2";
-
-                String eglType = PlatformUtil.getEmbeddedType();
-                if ("eglfb".equals(eglType)) {
-                    isEglfb = true;
-                    libName = "prism_es2_eglfb";
-                }
-                else if ("eglx11".equals(eglType))
-                    libName = "prism_es2_eglx11";
-
-                if (PrismSettings.verbose) {
-                    System.out.println("Loading ES2 native library ... " + libName);
-                }
-                NativeLibLoader.loadLibrary(libName);
-                if (PrismSettings.verbose) {
-                    System.out.println("\tsucceeded.");
-                }
-                return null;
+            String eglType = PlatformUtil.getEmbeddedType();
+            if ("eglfb".equals(eglType)) {
+                isEglfb = true;
+                libName = "prism_es2_eglfb";
             }
+            else if ("monocle".equals(eglType)) {
+                isEglfb = true;
+                libName = "prism_es2_monocle";
+            }
+            else if ("eglx11".equals(eglType))
+                libName = "prism_es2_eglx11";
+
+            if (PrismSettings.verbose) {
+                System.out.println("Loading ES2 native library ... " + libName);
+            }
+            NativeLibLoader.loadLibrary(libName);
+            if (PrismSettings.verbose) {
+                System.out.println("\tsucceeded.");
+            }
+            return null;
         });
 
         // Initialize the prism-es2 pipe and a handler of it
@@ -135,11 +136,16 @@ public class ES2Pipeline extends GraphicsPipeline {
      */
     private static Screen getScreenForAdapter(List<Screen> screens, int adapterOrdinal) {
         for (Screen screen : screens) {
-            if (glFactory.getAdapterOrdinal(screen.getNativeScreen()) == adapterOrdinal) {
+            if (screen.getAdapterOrdinal() == adapterOrdinal) {
                 return screen;
             }
         }
         return Screen.getMainScreen();
+    }
+
+    @Override
+    public int getAdapterOrdinal(Screen screen) {
+        return glFactory.getAdapterOrdinal(screen.getNativeScreen());
     }
 
     private static ES2ResourceFactory findDefaultResourceFactory(List<Screen> screens) {
@@ -173,8 +179,7 @@ public class ES2Pipeline extends GraphicsPipeline {
 
     @Override
     public ResourceFactory getResourceFactory(Screen screen) {
-        return getES2ResourceFactory(
-                glFactory.getAdapterOrdinal(screen.getNativeScreen()), screen);
+        return getES2ResourceFactory(screen.getAdapterOrdinal(), screen);
     }
 
     @Override

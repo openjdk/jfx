@@ -95,12 +95,8 @@ public class Calculator extends Parent {
     }
 
     private void addKeyListener() {
-        setOnKeyPressed(new EventHandler<KeyEvent>() {
-
-            @Override
-            public void handle(KeyEvent ke) {
-                processKeyEvent(ke);
-            }
+        setOnKeyPressed((KeyEvent ke) -> {
+            processKeyEvent(ke);
         });
         setFocusTraversable(true);
         requestFocus();
@@ -164,11 +160,8 @@ public class Calculator extends Parent {
                 final Key key = new Key(Util.KEY_CODES[i][j]);
                 key.setTranslateX(background.getX() + (Key.WIDTH + 1) * j + BORDER);
                 key.setTranslateY(background.getY() + (Key.HEIGHT + 1) * i + BORDER + TR_Y);
-                key.setOnMousePressed(new EventHandler<MouseEvent>() {
-
-                    @Override public void handle(MouseEvent me) {
-                        onKey(key);
-                    }
+                key.setOnMousePressed((MouseEvent me) -> {
+                    onKey(key);
                 });
                 keys[i * Util.KEY_CODES[0].length + j] = key;
                 

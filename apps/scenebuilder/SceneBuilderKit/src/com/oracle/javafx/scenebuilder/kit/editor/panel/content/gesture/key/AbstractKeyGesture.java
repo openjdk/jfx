@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -34,7 +34,7 @@ package com.oracle.javafx.scenebuilder.kit.editor.panel.content.gesture.key;
 
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.ContentPanelController;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.gesture.AbstractGesture;
-import javafx.event.EventHandler;
+
 import javafx.scene.Node;
 import javafx.scene.input.InputEvent;
 import javafx.scene.input.KeyEvent;
@@ -84,30 +84,24 @@ public abstract class AbstractKeyGesture extends AbstractGesture {
         assert glassLayer.getOnKeyPressed() == null;
         assert glassLayer.getOnKeyReleased() == null;
         
-        glassLayer.setOnKeyPressed(new EventHandler<KeyEvent>() {
-            @Override
-            public void handle(KeyEvent e) {
-                if (e.getCode() == firstKeyPressedEvent.getCode()) {
-                    lastKeyEvent = e;
-                    try {
-                        keyPressed();
-                    } finally {
-                        e.consume();
-                    }
+        glassLayer.setOnKeyPressed(e1 -> {
+            if (e1.getCode() == firstKeyPressedEvent.getCode()) {
+                lastKeyEvent = e1;
+                try {
+                    keyPressed();
+                } finally {
+                    e1.consume();
                 }
             }
         });
-        glassLayer.setOnKeyReleased(new EventHandler<KeyEvent>() {
-            @Override
-            public void handle(KeyEvent e) {
-                if (e.getCode() == firstKeyPressedEvent.getCode()) {
-                    lastKeyEvent = e;
-                    try {
-                        keyReleased();
-                    } finally {
-                        performTermination();
-                        e.consume();
-                    }
+        glassLayer.setOnKeyReleased(e1 -> {
+            if (e1.getCode() == firstKeyPressedEvent.getCode()) {
+                lastKeyEvent = e1;
+                try {
+                    keyReleased();
+                } finally {
+                    performTermination();
+                    e1.consume();
                 }
             }
         });

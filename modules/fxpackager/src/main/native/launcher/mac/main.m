@@ -329,7 +329,7 @@ NSArray *getJVMOptions(NSDictionary *infoDictionary, NSString *mainBundlePath) {
     //Add preferences ID
     NSString *preferencesID = [infoDictionary objectForKey:@JVM_PREFERENCES_ID];
     if (preferencesID != nil) {
-        [expandedOptions addObject: [@"-Djvm.preferences.id=" stringByAppendingString: preferencesID]];
+        [expandedOptions addObject: [@"-Dapp.preferences.id=" stringByAppendingString: preferencesID]];
     }
 
     for (id option in options) {

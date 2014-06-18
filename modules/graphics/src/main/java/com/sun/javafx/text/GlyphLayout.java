@@ -61,6 +61,7 @@ import static com.sun.javafx.scene.text.TextLayout.FLAGS_HAS_BIDI;
 import static com.sun.javafx.scene.text.TextLayout.FLAGS_HAS_COMPLEX;
 import static com.sun.javafx.scene.text.TextLayout.FLAGS_HAS_EMBEDDED;
 import static com.sun.javafx.scene.text.TextLayout.FLAGS_HAS_TABS;
+import static com.sun.javafx.scene.text.TextLayout.FLAGS_HAS_CJK;
 import static com.sun.javafx.scene.text.TextLayout.FLAGS_RTL_BASE;
 
 import java.text.Bidi;
@@ -107,7 +108,13 @@ public abstract class GlyphLayout {
     private TextRun addTextRun(PrismTextLayout layout, char[] chars,
                                int start, int length, PGFont font,
                                TextSpan span, byte level, boolean complex) {
-        if (complex) {
+
+        /* The complex flag indicates complex script, and in general all
+         * bidi scripts are consider complex. That said, using directional 
+         * control (RLO) is possible to force RTL direction on non-complex
+         * scripts. Thus, odd level must be threat as complex.
+         */
+        if (complex || (level & 1) != 0) {
             return addTextRun(layout, chars, start, length, font, span, level);
         }
         TextRun run = new TextRun(start, length, level, false, 0, span, 0, false);
@@ -167,7 +174,7 @@ public abstract class GlyphLayout {
             bidiLevel = (byte)bidi.getLevelAt(bidi.getRunStart(bidiIndex));
             bidiEnd = bidi.getRunLimit(bidiIndex);
             if ((bidiLevel & 1) != 0) {
-                flags |= FLAGS_HAS_BIDI;
+                flags |= FLAGS_HAS_BIDI | FLAGS_HAS_COMPLEX;
             }
         }
 
@@ -202,6 +209,11 @@ public abstract class GlyphLayout {
                             codePoint = Character.toCodePoint(ch, chars[++i]);
                         }
                     }
+
+                    if (Character.isIdeographic(codePoint)) {
+                        flags |= FLAGS_HAS_CJK;
+                    }
+
                     /* Check for script changes */
                     script = ScriptMapper.getScript(codePoint);
                     if (scriptRun > ScriptMapper.INHERITED  &&
@@ -249,7 +261,7 @@ public abstract class GlyphLayout {
                 bidiLevel = (byte)bidi.getLevelAt(bidi.getRunStart(bidiIndex));
                 bidiEnd = bidi.getRunLimit(bidiIndex);
                 if ((bidiLevel & 1) != 0) {
-                    flags |= FLAGS_HAS_BIDI;
+                    flags |= FLAGS_HAS_BIDI | FLAGS_HAS_COMPLEX;
                 }
             }
             if (scriptChanged) {

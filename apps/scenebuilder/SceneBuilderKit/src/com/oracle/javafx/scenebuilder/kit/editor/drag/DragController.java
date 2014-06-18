@@ -31,11 +31,20 @@
  */
 package com.oracle.javafx.scenebuilder.kit.editor.drag;
 
-import com.oracle.javafx.scenebuilder.kit.editor.drag.source.AbstractDragSource;
-import com.oracle.javafx.scenebuilder.kit.editor.drag.target.AbstractDropTarget;
+import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
+
+import javafx.application.Platform;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.Property;
+import javafx.beans.property.SimpleObjectProperty;
+import javafx.scene.input.TransferMode;
+
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
+import com.oracle.javafx.scenebuilder.kit.editor.drag.source.AbstractDragSource;
 import com.oracle.javafx.scenebuilder.kit.editor.drag.source.DocumentDragSource;
-import com.oracle.javafx.scenebuilder.kit.editor.drag.target.ImageViewDropTarget;
+import com.oracle.javafx.scenebuilder.kit.editor.drag.target.AbstractDropTarget;
 import com.oracle.javafx.scenebuilder.kit.editor.drag.target.RootDropTarget;
 import com.oracle.javafx.scenebuilder.kit.editor.job.BatchJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
@@ -43,14 +52,6 @@ import com.oracle.javafx.scenebuilder.kit.editor.job.v2.BackupSelectionJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.v2.UpdateSelectionJob;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyPath;
-import java.util.List;
-import java.util.Timer;
-import java.util.TimerTask;
-import javafx.application.Platform;
-import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.Property;
-import javafx.beans.property.SimpleObjectProperty;
-import javafx.scene.input.TransferMode;
 
 /**
  *
@@ -75,6 +76,7 @@ public class DragController {
     
     public void begin(AbstractDragSource dragSource) {
         assert dragSource != null;
+        assert dragSource.isAcceptable();
         assert getDragSource() == null;
         assert getDropTarget() == null;
         assert liveUpdater == null;
@@ -247,11 +249,9 @@ public class DragController {
         
         mouseTimer.schedule(new TimerTask() {
             @Override public void run() {
-                Platform.runLater(new Runnable() {
-                    @Override public void run() {
-                        mouseTimer = null;
-                        mouseDidStopMoving();
-                    }
+                Platform.runLater(() -> {
+                    mouseTimer = null;
+                    mouseDidStopMoving();
                 });
             }
         }, MOUSE_TIMER_DELAY);

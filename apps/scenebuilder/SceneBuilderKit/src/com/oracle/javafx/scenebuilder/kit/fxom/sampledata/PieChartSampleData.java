@@ -57,7 +57,6 @@ class PieChartSampleData extends AbstractSampleData {
     public void applyTo(Object sceneGraphObject) {
         assert sceneGraphObject instanceof PieChart;
         
-        @SuppressWarnings("unchecked")        
         final PieChart pieChart = (PieChart) sceneGraphObject;
         pieChart.getData().clear();
         pieChart.getData().addAll(samples);
@@ -67,7 +66,6 @@ class PieChartSampleData extends AbstractSampleData {
     public void removeFrom(Object sceneGraphObject) {
         assert sceneGraphObject instanceof PieChart;
         
-        @SuppressWarnings("unchecked")        
         final PieChart pieChart = (PieChart) sceneGraphObject;
         pieChart.getData().clear();
     }

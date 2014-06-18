@@ -28,6 +28,9 @@ package com.sun.javafx.css;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+
+import com.sun.javafx.css.converters.StringConverter;
+import com.sun.javafx.css.parser.CSSParser;
 import javafx.scene.text.Font;
 
 import org.junit.Test;
@@ -259,6 +262,135 @@ public class ParsedValueTest {
         assertFalse(value5.equals(value6));
 
 
+    }
+
+    @Test
+    public void test_RT_24614() {
+
+        ParsedValue<String,String> value1 =
+                new ParsedValueImpl<>("FOO", null);
+
+        ParsedValue<String,String> value2 =
+                new ParsedValueImpl<>("FOO", null);
+
+        assertTrue(value1.equals(value2));
+
+        value1 =
+                new ParsedValueImpl<>("FOO", null);
+
+        value2 =
+                new ParsedValueImpl<>("foo", null);
+
+        assertTrue(value1.equals(value2));
+
+        ParsedValueImpl<ParsedValue<?,Size>,Number> value3 =
+                new ParsedValueImpl<>(
+                        new ParsedValueImpl<Size,Size>(new Size(1.0, SizeUnits.PX), null),
+                        SizeConverter.getInstance());
+
+        value1 =
+                new ParsedValueImpl<>("FOO", null);
+
+        assertFalse(value1.equals(value3));
+        assertFalse(value3.equals(value1));
+
+        ParsedValue<ParsedValue[],String[]> value4 =
+                new ParsedValueImpl<>(
+                        new ParsedValueImpl[] {
+                                new ParsedValueImpl<String,String>("FOO", null),
+                                new ParsedValueImpl<String,String>("BAR", null)
+                        }, null
+                );
+
+        ParsedValue<ParsedValue[],String[]> value5 =
+                new ParsedValueImpl<>(
+                        new ParsedValueImpl[] {
+                                new ParsedValueImpl<String,String>("foo", null),
+                                new ParsedValueImpl<String,String>("bar", null)
+                        }, null
+                );
+        assertTrue(value4.equals(value5));
+        assertTrue(value5.equals(value4));
+
+        value4 =
+                new ParsedValueImpl<>(
+                        new ParsedValueImpl[] {
+                                new ParsedValueImpl<String,String>("FOO", null),
+                                new ParsedValueImpl<String,String>("BAR", null)
+                        }, null
+                );
+
+        value5 =
+                new ParsedValueImpl<>(
+                        new ParsedValueImpl[] {
+                                new ParsedValueImpl<String,String>("foo", null),
+                                new ParsedValueImpl<String,String>("foo", null)
+                        }, null
+                );
+        assertFalse(value4.equals(value5));
+        assertFalse(value5.equals(value4));
+
+        ParsedValue<ParsedValue[][],String[][]> value6 =
+                new ParsedValueImpl<>(
+                        new ParsedValueImpl[][] {
+                                new ParsedValueImpl[] {
+                                        new ParsedValueImpl<String,String>("foo", null),
+                                        new ParsedValueImpl<String,String>("bar", null)
+                                },
+                                new ParsedValueImpl[] {
+                                        new ParsedValueImpl<String,String>("FOO", null),
+                                        new ParsedValueImpl<String,String>("BAR", null)
+                                }
+                        }, null
+                );
+
+        ParsedValue<ParsedValue[][],String[][]> value7 =
+                new ParsedValueImpl<>(
+                        new ParsedValueImpl[][] {
+                                new ParsedValueImpl[] {
+                                        new ParsedValueImpl<String,String>("FOO", null),
+                                        new ParsedValueImpl<String,String>("BAR", null)
+                                },
+                                new ParsedValueImpl[] {
+                                        new ParsedValueImpl<String,String>("foo", null),
+                                        new ParsedValueImpl<String,String>("bar", null)
+                                }
+                        }, null
+                );
+
+        assertTrue(value6.equals(value7));
+        assertTrue(value7.equals(value6));
+
+        value6 =
+                new ParsedValueImpl<>(
+                        new ParsedValueImpl[][] {
+                                new ParsedValueImpl[] {
+                                        new ParsedValueImpl<String,String>("foo", null),
+                                        new ParsedValueImpl<String,String>("bar", null)
+                                },
+                                new ParsedValueImpl[] {
+                                        new ParsedValueImpl<String,String>("FOO", null),
+                                        new ParsedValueImpl<String,String>("BAR", null)
+                                }
+                        }, null
+                );
+
+        value7 =
+                new ParsedValueImpl<>(
+                        new ParsedValueImpl[][] {
+                                new ParsedValueImpl[] {
+                                        new ParsedValueImpl<String,String>("FOO", null),
+                                        new ParsedValueImpl<String,String>("BAR", null)
+                                },
+                                new ParsedValueImpl[] {
+                                        new ParsedValueImpl<String,String>("foo", null),
+                                        new ParsedValueImpl<String,String>("foo", null)
+                                }
+                        }, null
+                );
+
+        assertFalse(value6.equals(value7));
+        assertFalse(value7.equals(value6));
     }
     
     private void writeBinary(ParsedValueImpl parsedValue) {

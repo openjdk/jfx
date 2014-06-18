@@ -116,9 +116,12 @@ is divided into following sections:
             </and>
         </condition>
         <condition property="do.archive">
-            <not>
-                <istrue value="${jar.archive.disabled}"/>
-            </not>
+            <or>
+                <not>
+                    <istrue value="${jar.archive.disabled}"/>
+                </not>
+                <istrue value="${not.archive.disabled}"/>
+            </or>
         </condition>
         <condition property="do.mkdist">
             <and>
@@ -155,13 +158,18 @@ is divided into following sections:
         </condition>
         <condition property="have.tests">
             <or>
-                <available file="${test.src.dir}"/>
+                <available file="${test.java.dir}"/>
                 <available file="${test.resources.dir}"/>
             </or>
         </condition>
         <condition property="have.sources">
             <or>
                 <available file="${src.dir}"/>
+                <available file="${src.resources.dir}"/>
+                <available file="${src.jsl-decora.dir}"/>
+                <available file="${src.jsl-decora3.dir}"/>
+                <available file="${src.jsl-prism3.dir}"/>
+                <available file="${src.jsl-prism.dir}"/>
             </or>
         </condition>
         <condition property="netbeans.home+have.tests">
@@ -249,7 +257,12 @@ is divided into following sections:
     </target>
     <target depends="-pre-init,-init-private,-init-user,-init-project,-do-init" name="-init-check">
         <fail unless="src.dir">Must set src.dir</fail>
-        <fail unless="test.src.dir">Must set test.src.dir</fail>
+        <fail unless="src.resources.dir">Must set src.resources.dir</fail>
+        <fail unless="src.jsl-decora.dir">Must set src.jsl-decora.dir</fail>
+        <fail unless="src.jsl-decora3.dir">Must set src.jsl-decora3.dir</fail>
+        <fail unless="src.jsl-prism3.dir">Must set src.jsl-prism3.dir</fail>
+        <fail unless="src.jsl-prism.dir">Must set src.jsl-prism.dir</fail>
+        <fail unless="test.java.dir">Must set test.java.dir</fail>
         <fail unless="test.resources.dir">Must set test.resources.dir</fail>
         <fail unless="build.dir">Must set build.dir</fail>
         <fail unless="dist.dir">Must set dist.dir</fail>
@@ -271,7 +284,7 @@ is divided into following sections:
     </target>
     <target depends="-init-ap-cmdline-properties" if="ap.supported.internal" name="-init-macrodef-javac-with-processors">
         <macrodef name="javac" uri="http://www.netbeans.org/ns/j2se-project/3">
-            <attribute default="${src.dir}" name="srcdir"/>
+            <attribute default="${src.dir}:${src.resources.dir}:${src.jsl-decora.dir}:${src.jsl-decora3.dir}:${src.jsl-prism3.dir}:${src.jsl-prism.dir}" name="srcdir"/>
             <attribute default="${build.classes.dir}" name="destdir"/>
             <attribute default="${javac.classpath}" name="classpath"/>
             <attribute default="${javac.processorpath}" name="processorpath"/>
@@ -312,7 +325,7 @@ is divided into following sections:
     </target>
     <target depends="-init-ap-cmdline-properties" name="-init-macrodef-javac-without-processors" unless="ap.supported.internal">
         <macrodef name="javac" uri="http://www.netbeans.org/ns/j2se-project/3">
-            <attribute default="${src.dir}" name="srcdir"/>
+            <attribute default="${src.dir}:${src.resources.dir}:${src.jsl-decora.dir}:${src.jsl-decora3.dir}:${src.jsl-prism3.dir}:${src.jsl-prism.dir}" name="srcdir"/>
             <attribute default="${build.classes.dir}" name="destdir"/>
             <attribute default="${javac.classpath}" name="classpath"/>
             <attribute default="${javac.processorpath}" name="processorpath"/>
@@ -345,7 +358,7 @@ is divided into following sections:
     </target>
     <target depends="-init-macrodef-javac-with-processors,-init-macrodef-javac-without-processors" name="-init-macrodef-javac">
         <macrodef name="depend" uri="http://www.netbeans.org/ns/j2se-project/3">
-            <attribute default="${src.dir}" name="srcdir"/>
+            <attribute default="${src.dir}:${src.resources.dir}:${src.jsl-decora.dir}:${src.jsl-decora3.dir}:${src.jsl-prism3.dir}:${src.jsl-prism.dir}" name="srcdir"/>
             <attribute default="${build.classes.dir}" name="destdir"/>
             <attribute default="${javac.classpath}" name="classpath"/>
             <sequential>
@@ -432,7 +445,7 @@ is divided into following sections:
                 <property name="junit.forkmode" value="perTest"/>
                 <junit dir="${work.dir}" errorproperty="tests.failed" failureproperty="tests.failed" fork="true" forkmode="${junit.forkmode}" jvm="${platform.java}" showoutput="true" tempdir="${build.dir}">
                     <batchtest todir="${build.test.results.dir}">
-                        <fileset dir="${test.src.dir}" excludes="@{excludes},${excludes}" includes="@{includes}">
+                        <fileset dir="${test.java.dir}" excludes="@{excludes},${excludes}" includes="@{includes}">
                             <filename name="@{testincludes}"/>
                         </fileset>
                         <fileset dir="${test.resources.dir}" excludes="@{excludes},${excludes}" includes="@{includes}">
@@ -467,7 +480,7 @@ is divided into following sections:
                     <isset property="test.method"/>
                 </condition>
                 <union id="test.set">
-                    <fileset dir="${test.src.dir}" excludes="@{excludes},**/*.xml,${excludes}" includes="@{includes}">
+                    <fileset dir="${test.java.dir}" excludes="@{excludes},**/*.xml,${excludes}" includes="@{includes}">
                         <filename name="@{testincludes}"/>
                     </fileset>
                     <fileset dir="${test.resources.dir}" excludes="@{excludes},**/*.xml,${excludes}" includes="@{includes}">
@@ -582,7 +595,7 @@ is divided into following sections:
                 <property name="junit.forkmode" value="perTest"/>
                 <junit dir="${work.dir}" errorproperty="tests.failed" failureproperty="tests.failed" fork="true" forkmode="${junit.forkmode}" jvm="${platform.java}" showoutput="true" tempdir="${build.dir}">
                     <batchtest todir="${build.test.results.dir}">
-                        <fileset dir="${test.src.dir}" excludes="@{excludes},${excludes}" includes="@{includes}">
+                        <fileset dir="${test.java.dir}" excludes="@{excludes},${excludes}" includes="@{includes}">
                             <filename name="@{testincludes}"/>
                         </fileset>
                         <fileset dir="${test.resources.dir}" excludes="@{excludes},${excludes}" includes="@{includes}">
@@ -942,6 +955,7 @@ is divided into following sections:
             <param location="${project.base}/build.xml" name="call.script"/>
             <param name="call.target" value="jar"/>
             <param name="transfer.built-jar.properties" value="${built-jar.properties}"/>
+            <param name="transfer.not.archive.disabled" value="true"/>
         </antcall>
         <antcall target="-maybe-call-dep">
             <param name="call.built.properties" value="${built-jar.properties}"/>
@@ -949,6 +963,7 @@ is divided into following sections:
             <param location="${project.buildSrc}/build.xml" name="call.script"/>
             <param name="call.target" value="jar"/>
             <param name="transfer.built-jar.properties" value="${built-jar.properties}"/>
+            <param name="transfer.not.archive.disabled" value="true"/>
         </antcall>
     </target>
     <target depends="init,-check-automatic-build,-clean-after-automatic-build" name="-verify-automatic-build"/>
@@ -971,12 +986,17 @@ is divided into following sections:
                 <include name="*"/>
             </dirset>
         </pathconvert>
-        <j2seproject3:depend srcdir="${src.dir}:${build.generated.subdirs}"/>
+        <j2seproject3:depend srcdir="${src.dir}:${src.resources.dir}:${src.jsl-decora.dir}:${src.jsl-decora3.dir}:${src.jsl-prism3.dir}:${src.jsl-prism.dir}:${build.generated.subdirs}"/>
     </target>
     <target depends="init,deps-jar,-pre-pre-compile,-pre-compile, -copy-persistence-xml,-compile-depend" if="have.sources" name="-do-compile">
         <j2seproject3:javac gensrcdir="${build.generated.sources.dir}"/>
         <copy todir="${build.classes.dir}">
             <fileset dir="${src.dir}" excludes="${build.classes.excludes},${excludes}" includes="${includes}"/>
+            <fileset dir="${src.resources.dir}" excludes="${build.classes.excludes},${excludes}" includes="${includes}"/>
+            <fileset dir="${src.jsl-decora.dir}" excludes="${build.classes.excludes},${excludes}" includes="${includes}"/>
+            <fileset dir="${src.jsl-decora3.dir}" excludes="${build.classes.excludes},${excludes}" includes="${includes}"/>
+            <fileset dir="${src.jsl-prism3.dir}" excludes="${build.classes.excludes},${excludes}" includes="${includes}"/>
+            <fileset dir="${src.jsl-prism.dir}" excludes="${build.classes.excludes},${excludes}" includes="${includes}"/>
         </copy>
     </target>
     <target if="has.persistence.xml" name="-copy-persistence-xml">
@@ -997,7 +1017,7 @@ is divided into following sections:
     <target depends="init,deps-jar,-pre-pre-compile" name="-do-compile-single">
         <fail unless="javac.includes">Must select some files in the IDE or set javac.includes</fail>
         <j2seproject3:force-recompile/>
-        <j2seproject3:javac excludes="" gensrcdir="${build.generated.sources.dir}" includes="${javac.includes}" sourcepath="${src.dir}"/>
+        <j2seproject3:javac excludes="" gensrcdir="${build.generated.sources.dir}" includes="${javac.includes}" sourcepath="${src.dir}:${src.resources.dir}:${src.jsl-decora.dir}:${src.jsl-decora3.dir}:${src.jsl-prism3.dir}:${src.jsl-prism.dir}"/>
     </target>
     <target name="-post-compile-single">
         <!-- Empty placeholder for easier customization. -->
@@ -1256,11 +1276,32 @@ is divided into following sections:
                 </not>
             </and>
         </condition>
-        <javadoc additionalparam="${javadoc.additionalparam}" author="${javadoc.author}" charset="UTF-8" destdir="${dist.javadoc.dir}" docencoding="UTF-8" encoding="${javadoc.encoding.used}" executable="${platform.javadoc}" failonerror="true" noindex="${javadoc.noindex}" nonavbar="${javadoc.nonavbar}" notree="${javadoc.notree}" private="${javadoc.private}" source="${javac.source}" splitindex="${javadoc.splitindex}" use="${javadoc.use}" useexternalfile="true" version="${javadoc.version}" windowtitle="${javadoc.windowtitle}">
+        <exec executable="${platform.java}" failonerror="false" outputproperty="platform.version.output">
+            <arg value="-version"/>
+        </exec>
+        <condition else="" property="bug5101868workaround" value="*.java">
+            <matches multiline="true" pattern="1\.[56](\..*)?" string="${platform.version.output}"/>
+        </condition>
+        <javadoc additionalparam="-J-Dfile.encoding=${file.encoding} ${javadoc.additionalparam}" author="${javadoc.author}" charset="UTF-8" destdir="${dist.javadoc.dir}" docencoding="UTF-8" encoding="${javadoc.encoding.used}" executable="${platform.javadoc}" failonerror="true" noindex="${javadoc.noindex}" nonavbar="${javadoc.nonavbar}" notree="${javadoc.notree}" private="${javadoc.private}" source="${javac.source}" splitindex="${javadoc.splitindex}" use="${javadoc.use}" useexternalfile="true" version="${javadoc.version}" windowtitle="${javadoc.windowtitle}">
             <classpath>
                 <path path="${javac.classpath}"/>
             </classpath>
-            <fileset dir="${src.dir}" excludes="*.java,${excludes}" includes="${includes}">
+            <fileset dir="${src.dir}" excludes="${bug5101868workaround},${excludes}" includes="${includes}">
+                <filename name="**/*.java"/>
+            </fileset>
+            <fileset dir="${src.resources.dir}" excludes="${bug5101868workaround},${excludes}" includes="${includes}">
+                <filename name="**/*.java"/>
+            </fileset>
+            <fileset dir="${src.jsl-decora.dir}" excludes="${bug5101868workaround},${excludes}" includes="${includes}">
+                <filename name="**/*.java"/>
+            </fileset>
+            <fileset dir="${src.jsl-decora3.dir}" excludes="${bug5101868workaround},${excludes}" includes="${includes}">
+                <filename name="**/*.java"/>
+            </fileset>
+            <fileset dir="${src.jsl-prism3.dir}" excludes="${bug5101868workaround},${excludes}" includes="${includes}">
+                <filename name="**/*.java"/>
+            </fileset>
+            <fileset dir="${src.jsl-prism.dir}" excludes="${bug5101868workaround},${excludes}" includes="${includes}">
                 <filename name="**/*.java"/>
             </fileset>
             <fileset dir="${build.generated.sources.dir}" erroronmissingdir="false">
@@ -1271,6 +1312,21 @@ is divided into following sections:
         </javadoc>
         <copy todir="${dist.javadoc.dir}">
             <fileset dir="${src.dir}" excludes="${excludes}" includes="${includes}">
+                <filename name="**/doc-files/**"/>
+            </fileset>
+            <fileset dir="${src.resources.dir}" excludes="${excludes}" includes="${includes}">
+                <filename name="**/doc-files/**"/>
+            </fileset>
+            <fileset dir="${src.jsl-decora.dir}" excludes="${excludes}" includes="${includes}">
+                <filename name="**/doc-files/**"/>
+            </fileset>
+            <fileset dir="${src.jsl-decora3.dir}" excludes="${excludes}" includes="${includes}">
+                <filename name="**/doc-files/**"/>
+            </fileset>
+            <fileset dir="${src.jsl-prism3.dir}" excludes="${excludes}" includes="${includes}">
+                <filename name="**/doc-files/**"/>
+            </fileset>
+            <fileset dir="${src.jsl-prism.dir}" excludes="${excludes}" includes="${includes}">
                 <filename name="**/doc-files/**"/>
             </fileset>
             <fileset dir="${build.generated.sources.dir}" erroronmissingdir="false">
@@ -1295,12 +1351,12 @@ is divided into following sections:
         <!-- You can override this target in the ../build.xml file. -->
     </target>
     <target if="do.depend.true" name="-compile-test-depend">
-        <j2seproject3:depend classpath="${javac.test.classpath}" destdir="${build.test.classes.dir}" srcdir="${test.src.dir}:${test.resources.dir}"/>
+        <j2seproject3:depend classpath="${javac.test.classpath}" destdir="${build.test.classes.dir}" srcdir="${test.java.dir}:${test.resources.dir}"/>
     </target>
     <target depends="init,deps-jar,compile,-pre-pre-compile-test,-pre-compile-test,-compile-test-depend" if="have.tests" name="-do-compile-test">
-        <j2seproject3:javac apgeneratedsrcdir="${build.test.classes.dir}" classpath="${javac.test.classpath}" debug="true" destdir="${build.test.classes.dir}" processorpath="${javac.test.processorpath}" srcdir="${test.src.dir}:${test.resources.dir}"/>
+        <j2seproject3:javac apgeneratedsrcdir="${build.test.classes.dir}" classpath="${javac.test.classpath}" debug="true" destdir="${build.test.classes.dir}" processorpath="${javac.test.processorpath}" srcdir="${test.java.dir}:${test.resources.dir}"/>
         <copy todir="${build.test.classes.dir}">
-            <fileset dir="${test.src.dir}" excludes="${build.classes.excludes},${excludes}" includes="${includes}"/>
+            <fileset dir="${test.java.dir}" excludes="${build.classes.excludes},${excludes}" includes="${includes}"/>
             <fileset dir="${test.resources.dir}" excludes="${build.classes.excludes},${excludes}" includes="${includes}"/>
         </copy>
     </target>
@@ -1316,9 +1372,9 @@ is divided into following sections:
     <target depends="init,deps-jar,compile,-pre-pre-compile-test,-pre-compile-test-single" if="have.tests" name="-do-compile-test-single">
         <fail unless="javac.includes">Must select some files in the IDE or set javac.includes</fail>
         <j2seproject3:force-recompile destdir="${build.test.classes.dir}"/>
-        <j2seproject3:javac apgeneratedsrcdir="${build.test.classes.dir}" classpath="${javac.test.classpath}" debug="true" destdir="${build.test.classes.dir}" excludes="" includes="${javac.includes}" processorpath="${javac.test.processorpath}" sourcepath="${test.src.dir}:${test.resources.dir}" srcdir="${test.src.dir}:${test.resources.dir}"/>
+        <j2seproject3:javac apgeneratedsrcdir="${build.test.classes.dir}" classpath="${javac.test.classpath}" debug="true" destdir="${build.test.classes.dir}" excludes="" includes="${javac.includes}" processorpath="${javac.test.processorpath}" sourcepath="${test.java.dir}:${test.resources.dir}" srcdir="${test.java.dir}:${test.resources.dir}"/>
         <copy todir="${build.test.classes.dir}">
-            <fileset dir="${test.src.dir}" excludes="${build.classes.excludes},${excludes}" includes="${includes}"/>
+            <fileset dir="${test.java.dir}" excludes="${build.classes.excludes},${excludes}" includes="${includes}"/>
             <fileset dir="${test.resources.dir}" excludes="${build.classes.excludes},${excludes}" includes="${includes}"/>
         </copy>
     </target>
@@ -1336,7 +1392,7 @@ is divided into following sections:
         <mkdir dir="${build.test.results.dir}"/>
     </target>
     <target depends="init,compile-test,-pre-test-run" if="have.tests" name="-do-test-run">
-        <j2seproject3:test testincludes="**/*Test.java"/>
+        <j2seproject3:test includes="${includes}" testincludes="**/*Test.java"/>
     </target>
     <target depends="init,compile-test,-pre-test-run,-do-test-run" if="have.tests" name="-post-test-run">
         <fail if="tests.failed" unless="ignore.failing.tests">Some tests failed; see details above.</fail>
@@ -1440,6 +1496,7 @@ is divided into following sections:
             <param location="${project.base}/build.xml" name="call.script"/>
             <param name="call.target" value="clean"/>
             <param name="transfer.built-clean.properties" value="${built-clean.properties}"/>
+            <param name="transfer.not.archive.disabled" value="true"/>
         </antcall>
         <antcall target="-maybe-call-dep">
             <param name="call.built.properties" value="${built-clean.properties}"/>
@@ -1447,6 +1504,7 @@ is divided into following sections:
             <param location="${project.buildSrc}/build.xml" name="call.script"/>
             <param name="call.target" value="clean"/>
             <param name="transfer.built-clean.properties" value="${built-clean.properties}"/>
+            <param name="transfer.not.archive.disabled" value="true"/>
         </antcall>
     </target>
     <target depends="init" name="-do-clean">

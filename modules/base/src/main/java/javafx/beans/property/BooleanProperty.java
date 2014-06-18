@@ -71,7 +71,7 @@ public abstract class BooleanProperty extends ReadOnlyBooleanProperty implements
     @Override
     public void setValue(Boolean v) {
         if (v == null) {
-            Logging.getLogger().info("Attempt to set boolean property to null, using default value instead.", new NullPointerException());
+            Logging.getLogger().fine("Attempt to set boolean property to null, using default value instead.", new NullPointerException());
             set(false);
         } else {
             set(v.booleanValue());

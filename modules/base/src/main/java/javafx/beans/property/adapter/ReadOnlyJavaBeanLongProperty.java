@@ -66,12 +66,7 @@ public final class ReadOnlyJavaBeanLongProperty extends ReadOnlyLongPropertyBase
         this.descriptor = descriptor;
         this.listener = descriptor.new ReadOnlyListener<Number>(bean, this);
         descriptor.addListener(listener);
-        Cleaner.create(this, new Runnable() {
-            @Override
-            public void run() {
-                ReadOnlyJavaBeanLongProperty.this.descriptor.removeListener(listener);
-            }
-        });
+        Cleaner.create(this, new DescriptorListenerCleaner(descriptor, listener));
     }
 
     /**
@@ -83,16 +78,14 @@ public final class ReadOnlyJavaBeanLongProperty extends ReadOnlyLongPropertyBase
      */
     @Override
     public long get() {
-        return AccessController.doPrivileged(new PrivilegedAction<Long>() {
-            public Long run() {
-                try {
-                    return ((Number)MethodUtil.invoke(
-                        descriptor.getGetter(), getBean(), (Object[])null)).longValue();
-                } catch (IllegalAccessException e) {
-                    throw new UndeclaredThrowableException(e);
-                } catch (InvocationTargetException e) {
-                    throw new UndeclaredThrowableException(e);
-                }
+        return AccessController.doPrivileged((PrivilegedAction<Long>) () -> {
+            try {
+                return ((Number)MethodUtil.invoke(
+                    descriptor.getGetter(), getBean(), (Object[])null)).longValue();
+            } catch (IllegalAccessException e) {
+                throw new UndeclaredThrowableException(e);
+            } catch (InvocationTargetException e) {
+                throw new UndeclaredThrowableException(e);
             }
         }, acc);
     }

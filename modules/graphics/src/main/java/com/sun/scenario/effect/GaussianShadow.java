@@ -33,6 +33,7 @@ import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.scenario.effect.impl.Renderer;
 import com.sun.scenario.effect.impl.state.GaussianShadowState;
+import com.sun.scenario.effect.impl.state.LinearConvolveKernel;
 
 /**
  * A blurred shadow effect using a Gaussian convolution kernel, with a
@@ -110,7 +111,7 @@ public class GaussianShadow extends AbstractShadow {
 
 
     @Override
-    Object getState() {
+    LinearConvolveKernel getState() {
         return state;
     }
 
@@ -355,39 +356,6 @@ public class GaussianShadow extends AbstractShadow {
         Rectangle ret = new Rectangle(r);
         ret.grow(hpad, vpad);
         return ret;
-    }
-
-    @Override
-    public ImageData filterImageDatas(FilterContext fctx,
-                                      BaseTransform transform,
-                                      Rectangle outputClip,
-                                      ImageData... inputs)
-    {
-        return state.filterImageDatas(this, fctx, transform, outputClip, inputs);
-    }
-
-    @Override
-    public boolean operatesInUserSpace() {
-        return true;
-    }
-
-    @Override
-    protected Rectangle getInputClip(int inputIndex,
-                                     BaseTransform transform,
-                                     Rectangle outputClip)
-    {
-        // A blur needs as much "fringe" data from its input as it creates
-        // around its output so we use the same expansion as is used in the
-        // result bounds.
-        if (outputClip != null) {
-            int hpad = state.getPad(0);
-            int vpad = state.getPad(1);
-            if ((hpad | vpad) != 0) {
-                outputClip = new Rectangle(outputClip);
-                outputClip.grow(hpad, vpad);
-            }
-        }
-        return outputClip;
     }
 
     @Override

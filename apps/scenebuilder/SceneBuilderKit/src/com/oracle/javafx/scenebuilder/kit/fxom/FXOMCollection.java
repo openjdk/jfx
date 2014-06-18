@@ -92,24 +92,28 @@ public class FXOMCollection extends FXOMObject {
     }    
     
     
-    public static FXOMCollection newInstance(FXOMCollection source) {
+    public static FXOMCollection newInstance(FXOMCollection source, FXOMDocument targetDocument) {
         final FXOMCollection result;
         
         assert source != null;
+        assert targetDocument != null;
+        assert source.getFxomDocument() != targetDocument;
         
         
         result = new FXOMCollection(
-                source.getFxomDocument(),
+                targetDocument,
                 source.getDeclaredClass());
         
         for (FXOMObject sourceItem : source.getItems()) {
-            final FXOMObject newItem = FXOMNodes.newObject(sourceItem);
+            final FXOMObject newItem = FXOMNodes.newObject(sourceItem, targetDocument);
             newItem.addToParentCollection(-1, result);
         }
         
         result.setFxConstant(source.getFxConstant());
-        result.setFxValue(source.getFxValue());
+        result.setFxController(source.getFxController());
         result.setFxFactory(source.getFxFactory());
+        result.setFxId(source.getFxId());
+        result.setFxValue(source.getFxValue());
         
         return result;
     }
@@ -200,6 +204,13 @@ public class FXOMCollection extends FXOMObject {
     protected void collectReferences(String source, List<FXOMIntrinsic> result) {
         for (FXOMObject i : items) {
             i.collectReferences(source, result);
+        }
+    }
+
+    @Override
+    protected void collectIncludes(String source, List<FXOMIntrinsic> result) {
+        for (FXOMObject i : items) {
+            i.collectIncludes(source, result);
         }
     }
 

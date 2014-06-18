@@ -32,9 +32,7 @@ import javafx.scene.Scene;
 import javafx.scene.input.KeyEvent;
 
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.event.Event;
-import javafx.event.EventDispatchChain;
 import javafx.event.EventDispatcher;
 import javafx.event.EventHandler;
 import javafx.scene.input.MouseEvent;
@@ -72,74 +70,70 @@ public class TwoLevelFocusListBehavior extends TwoLevelFocusBehavior {
     ** don't allow the Node handle a key event if it is in externalFocus mode.
     ** the only keyboard actions allowed are the navigation keys......
     */ 
-    final EventDispatcher preemptiveEventDispatcher = new EventDispatcher() {
-        @Override public Event dispatchEvent(Event event, EventDispatchChain tail) {
+    final EventDispatcher preemptiveEventDispatcher = (event, tail) -> {
 
-            // block the event from being passed down to children
-            if (event instanceof KeyEvent && event.getEventType() == KeyEvent.KEY_PRESSED) {
-                if (!((KeyEvent)event).isMetaDown() && !((KeyEvent)event).isControlDown()  && !((KeyEvent)event).isAltDown()) {
-                    if (isExternalFocus()) {
-                        //
-                        // don't let the behaviour leak any navigation keys when
-                        // we're not in blocking mode....
-                        //
-                        Object obj = event.getTarget();
+        // block the event from being passed down to children
+        if (event instanceof KeyEvent && event.getEventType() == KeyEvent.KEY_PRESSED) {
+            if (!((KeyEvent)event).isMetaDown() && !((KeyEvent)event).isControlDown()  && !((KeyEvent)event).isAltDown()) {
+                if (isExternalFocus()) {
+                    //
+                    // don't let the behaviour leak any navigation keys when
+                    // we're not in blocking mode....
+                    //
+                    Object obj = event.getTarget();
 
-                        switch (((KeyEvent)event).getCode()) {
-                          case TAB :
-                              if (((KeyEvent)event).isShiftDown()) {
-                                  ((Node)obj).impl_traverse(com.sun.javafx.scene.traversal.Direction.PREVIOUS);
-                              }
-                              else {
-                                  ((Node)obj).impl_traverse(com.sun.javafx.scene.traversal.Direction.NEXT);
-                              }
-                              event.consume();
-                              break;
-                          case UP :
-                              ((Node)obj).impl_traverse(com.sun.javafx.scene.traversal.Direction.UP);
-                              event.consume();
-                              break;
-                          case DOWN :
-                              ((Node)obj).impl_traverse(com.sun.javafx.scene.traversal.Direction.DOWN);
-                              event.consume();
-                              break;
-                          case LEFT :
-                              ((Node)obj).impl_traverse(com.sun.javafx.scene.traversal.Direction.LEFT);
-                              event.consume();
-                              break;
-                          case RIGHT :
-                              ((Node)obj).impl_traverse(com.sun.javafx.scene.traversal.Direction.RIGHT);
-                              event.consume();
-                              break;
-                          case ENTER :
-                              setExternalFocus(false);
-                              event.consume();
-                              break;
-                          default :
-                              // this'll kill mnemonics.... unless!
-                              Scene s = tlNode.getScene();
-                              Event.fireEvent(s, event);
-                              event.consume();
-                              break;
-                        }
+                    switch (((KeyEvent)event).getCode()) {
+                      case TAB :
+                          if (((KeyEvent)event).isShiftDown()) {
+                              ((Node)obj).impl_traverse(com.sun.javafx.scene.traversal.Direction.PREVIOUS);
+                          }
+                          else {
+                              ((Node)obj).impl_traverse(com.sun.javafx.scene.traversal.Direction.NEXT);
+                          }
+                          event.consume();
+                          break;
+                      case UP :
+                          ((Node)obj).impl_traverse(com.sun.javafx.scene.traversal.Direction.UP);
+                          event.consume();
+                          break;
+                      case DOWN :
+                          ((Node)obj).impl_traverse(com.sun.javafx.scene.traversal.Direction.DOWN);
+                          event.consume();
+                          break;
+                      case LEFT :
+                          ((Node)obj).impl_traverse(com.sun.javafx.scene.traversal.Direction.LEFT);
+                          event.consume();
+                          break;
+                      case RIGHT :
+                          ((Node)obj).impl_traverse(com.sun.javafx.scene.traversal.Direction.RIGHT);
+                          event.consume();
+                          break;
+                      case ENTER :
+                          setExternalFocus(false);
+                          event.consume();
+                          break;
+                      default :
+                          // this'll kill mnemonics.... unless!
+                          Scene s = tlNode.getScene();
+                          Event.fireEvent(s, event);
+                          event.consume();
+                          break;
                     }
                 }
             }
-            return event;
         }
+        return event;
     };
 
-    final EventDispatcher tlfEventDispatcher = new EventDispatcher() {
-           @Override public Event dispatchEvent(Event event, EventDispatchChain tail) {
-               if ((event instanceof KeyEvent)) {
-                   if (isExternalFocus()) {
-                       tail = tail.prepend(preemptiveEventDispatcher);
-                       return tail.dispatchEvent(event);
-                   }
-               }
-               return origEventDispatcher.dispatchEvent(event, tail);
-           }
-        };
+    final EventDispatcher tlfEventDispatcher = (event, tail) -> {
+        if ((event instanceof KeyEvent)) {
+            if (isExternalFocus()) {
+                tail = tail.prepend(preemptiveEventDispatcher);
+                return tail.dispatchEvent(event);
+            }
+        }
+        return origEventDispatcher.dispatchEvent(event, tail);
+    };
 
     private Event postDispatchTidyup(Event event) {
 
@@ -174,45 +168,39 @@ public class TwoLevelFocusListBehavior extends TwoLevelFocusBehavior {
     }
 
 
-    private final EventHandler<KeyEvent> keyEventListener = new EventHandler<KeyEvent>() {
-        @Override public void handle(KeyEvent e) {
-            postDispatchTidyup(e);
-        }
+    private final EventHandler<KeyEvent> keyEventListener = e -> {
+        postDispatchTidyup(e);
     };
 
 
     /*
     **  When a node gets focus, put it in external-focus mode.
     */
-    final ChangeListener<Boolean> focusListener = new ChangeListener<Boolean>() {
-        @Override public void changed(ObservableValue<? extends Boolean> observable, Boolean oldVal, Boolean newVal) {
+    final ChangeListener<Boolean> focusListener = (observable, oldVal, newVal) -> {
 
-            if (newVal && tlPopup != null) {
-                setExternalFocus(false);
-            }
-            else {
-                boolean b = true;
-                if (tlNode != null) {
-                    /*
-                    ** if the ListView is actually the popup for a combobox then
-                    ** we go straight to internal-focus
-                    */
-                    Parent p = tlNode.getParent();
-                    if (p != null) {
-                        if (ComboBoxPopupControl.COMBO_BOX_STYLE_CLASS.equals(p.getStyleClass().toString())) {
-                            b = false;
-                        }
+        if (newVal && tlPopup != null) {
+            setExternalFocus(false);
+        }
+        else {
+            boolean b = true;
+            if (tlNode != null) {
+                /*
+                ** if the ListView is actually the popup for a combobox then
+                ** we go straight to internal-focus
+                */
+                Parent p = tlNode.getParent();
+                if (p != null) {
+                    if (ComboBoxPopupControl.COMBO_BOX_STYLE_CLASS.equals(p.getStyleClass().toString())) {
+                        b = false;
                     }
                 }
-                
-                setExternalFocus(b);
             }
+
+            setExternalFocus(b);
         }
     };
 
-    private final EventHandler<MouseEvent> mouseEventListener  = new EventHandler<MouseEvent>() {
-        @Override public void handle(MouseEvent e) {
-            setExternalFocus(false);
-        }
+    private final EventHandler<MouseEvent> mouseEventListener  = e -> {
+        setExternalFocus(false);
     };
 }

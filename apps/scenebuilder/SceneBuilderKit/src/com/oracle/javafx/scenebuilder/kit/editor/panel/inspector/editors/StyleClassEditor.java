@@ -32,17 +32,24 @@
 package com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
+import com.oracle.javafx.scenebuilder.kit.editor.EditorPlatform;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorPlatform.Theme;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.util.CssInternal;
+import com.oracle.javafx.scenebuilder.kit.util.URLUtils;
+
+import java.io.File;
+import java.io.IOException;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
@@ -67,7 +74,7 @@ import javafx.scene.layout.StackPane;
 public class StyleClassEditor extends InlineListEditor {
 
     private Set<FXOMInstance> selectedInstances;
-    private List<String> cssClasses;
+    private Map<String, String> cssClassesMap;
     private List<String> themeClasses;
     private EditorController editorController;
 
@@ -82,22 +89,18 @@ public class StyleClassEditor extends InlineListEditor {
         addItem(getNewStyleClassItem());
 
         // On Theme change, update the themeClasses
-        editorController.themeProperty().addListener(new ChangeListener<Theme>() {
-
-            @Override
-            public void changed(ObservableValue<? extends Theme> ov, Theme t, Theme t1) {
-                themeClasses = CssInternal.getThemeStyleClasses(StyleClassEditor.this.editorController.getTheme());
-            }
-        });
+        editorController.themeProperty().addListener((ChangeListener<Theme>) (ov, t, t1) -> themeClasses = CssInternal.getThemeStyleClasses(StyleClassEditor.this.editorController.getTheme()));
     }
 
     private StyleClassItem getNewStyleClassItem() {
-        if (cssClasses == null) {
-            cssClasses = CssInternal.getStyleClasses(selectedInstances);
+        if (cssClassesMap == null) {
+            cssClassesMap = CssInternal.getStyleClassesMap(editorController, selectedInstances);
             // We don't want the theme classes to be suggested: remove them from the list
-            cssClasses.removeAll(themeClasses);
+            for (String themeClass : themeClasses) {
+                cssClassesMap.remove(themeClass);
+            }
         }
-        return new StyleClassItem(this, cssClasses);
+        return new StyleClassItem(this, cssClassesMap);
     }
 
     @Override
@@ -122,6 +125,7 @@ public class StyleClassEditor extends InlineListEditor {
     @SuppressWarnings("unchecked")
     @Override
     public void setValue(Object value) {
+        setValueGeneric(value);
         if (value == null) {
             reset();
             return;
@@ -137,10 +141,19 @@ public class StyleClassEditor extends InlineListEditor {
         Iterator<EditorItem> itemsIter = new ArrayList<>(getEditorItems()).iterator();
         for (String item : (List<String>) value) {
             item = item.trim();
-            if (item.isEmpty() || themeClasses.contains(item)) {
-                // We don't want to show the theme classes
+            if (item.isEmpty()) {
                 continue;
             }
+            
+            // We don't want to show the default theme classes
+            // (e.g. combo-box, combo-box-base for ComboBox)
+            Object defaultValue = getPropertyMeta().getDefaultValueObject();
+            assert defaultValue instanceof List;
+            List<String> defaultClasses = (List<String>) defaultValue;
+            if (defaultClasses.contains(item)) {
+                continue;
+            }
+            
             EditorItem editorItem;
             if (itemsIter.hasNext()) {
                 // re-use the current items first
@@ -163,7 +176,7 @@ public class StyleClassEditor extends InlineListEditor {
         super.reset(propMeta, selectedClasses);
         this.selectedInstances = selectedInstances;
         this.editorController = editorController;
-        cssClasses = null;
+        cssClassesMap = null;
         // add an empty item
         addItem(getNewStyleClassItem());
     }
@@ -195,22 +208,26 @@ public class StyleClassEditor extends InlineListEditor {
         @FXML
         private MenuItem moveDownMi;
         @FXML
+        private MenuItem openMi;
+        @FXML
+        private MenuItem revealMi;
+        @FXML
         private StackPane styleClassSp;
 
         private final Parent root;
         private TextField styleClassTf;
         private String currentValue;
-        private final List<String> suggestedList;
+        private final Map<String, String> cssClassesMap;
         private final EditorItemDelegate editor;
 
         @SuppressWarnings("LeakingThisInConstructor")
-        public StyleClassItem(EditorItemDelegate editor, List<String> suggestedList) {
+        public StyleClassItem(EditorItemDelegate editor, Map<String, String> cssClassesMap) {
 //            System.out.println("New StyleClassItem.");
             // It is an AutoSuggestEditor without MenuButton
-            super("", "", suggestedList, false);
+            super("", "", new ArrayList<>(cssClassesMap.keySet()), false); //NOI18N
             this.editor = editor;
-            this.suggestedList = suggestedList;
-            root = EditorUtils.loadFxml("StyleClassEditorItem.fxml", this);
+            this.cssClassesMap = cssClassesMap;
+            root = EditorUtils.loadFxml("StyleClassEditorItem.fxml", this);//NOI18N
 
             initialize();
         }
@@ -221,51 +238,41 @@ public class StyleClassEditor extends InlineListEditor {
             styleClassSp.getChildren().add(super.getRoot());
 
             styleClassTf = super.getTextField();
-            EventHandler<ActionEvent> onActionListener = new EventHandler<ActionEvent>() {
-                @Override
-                public void handle(ActionEvent event) {
+            EventHandler<ActionEvent> onActionListener = event -> {
 //                    System.out.println("StyleClassItem : onActionListener");
-                    if (getValue().equals(currentValue)) {
-                        // no change
-                        return;
-                    }
-                    if (styleClassTf.getText().isEmpty()) {
-                        remove(null);
-                    }
-//                        System.out.println("StyleEditorItem : COMMIT");
-                    editor.commit(StyleClassItem.this);
-                    if ((event != null) && event.getSource() instanceof TextField) {
-                        ((TextField) event.getSource()).selectAll();
-                    }
-                    updateButtons();
-                    currentValue = getValue();
+                if (getValue().equals(currentValue)) {
+                    // no change
+                    return;
                 }
+                if (styleClassTf.getText().isEmpty()) {
+                    remove(null);
+                }
+//                        System.out.println("StyleEditorItem : COMMIT");
+                editor.commit(StyleClassItem.this);
+                if ((event != null) && event.getSource() instanceof TextField) {
+                    ((TextField) event.getSource()).selectAll();
+                }
+                updateButtons();
+                currentValue = getValue();
             };
 
-            ChangeListener<String> textPropertyChange = new ChangeListener<String>() {
-
-                @Override
-                public void changed(ObservableValue<? extends String> ov, String prevText, String newText) {
-                    if (prevText.isEmpty() || newText.isEmpty()) {
-                        // Text changed FROM empty value, or TO empty value: buttons status change
-                        updateButtons();
-                    }
+            ChangeListener<String> textPropertyChange = (ov, prevText, newText) -> {
+                if (prevText.isEmpty() || newText.isEmpty()) {
+                    // Text changed FROM empty value, or TO empty value: buttons status change
+                    updateButtons();
                 }
             };
             styleClassTf.textProperty().addListener(textPropertyChange);
             updateButtons();
 
             setTextEditorBehavior(styleClassTf, onActionListener, false);
-            ChangeListener<Boolean> focusListener = new ChangeListener<Boolean>() {
-                @Override
-                public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-                    if (!newValue) {
-                        // focus lost: commit
-                        editor.editing(false, onActionListener);
-                    } else {
-                        // got focus
-                        editor.editing(true, onActionListener);
-                    }
+            ChangeListener<Boolean> focusListener = (observable, oldValue, newValue) -> {
+                if (!newValue) {
+                    // focus lost: commit
+                    editor.editing(false, onActionListener);
+                } else {
+                    // got focus
+                    editor.editing(true, onActionListener);
                 }
             };
             styleClassTf.focusedProperty().addListener(focusListener);
@@ -277,19 +284,16 @@ public class StyleClassEditor extends InlineListEditor {
 
             // Add suggested classes in the already existing action menu button, 
             // since we do not use the AutoSuggestEditor menu button for this editor.
-            if (!suggestedList.isEmpty()) {
+            if (!cssClassesMap.isEmpty()) {
                 actionMb.getItems().add(new SeparatorMenuItem());
             }
-            for (String className : suggestedList) {
+            for (String className : cssClassesMap.keySet()) {
+                // css classes menu items
                 MenuItem menuItem = new MenuItem(className);
                 menuItem.setMnemonicParsing(false);
-                menuItem.setOnAction(new EventHandler<ActionEvent>() {
-
-                    @Override
-                    public void handle(ActionEvent t) {
-                        styleClassTf.setText(className);
-                        StyleClassItem.this.getCommitListener().handle(null);
-                    }
+                menuItem.setOnAction(t -> {
+                    styleClassTf.setText(className);
+                    StyleClassItem.this.getCommitListener().handle(null);
                 });
                 actionMb.getItems().add(menuItem);
             }
@@ -379,6 +383,38 @@ public class StyleClassEditor extends InlineListEditor {
             }
         }
 
+        @FXML
+        void open(ActionEvent event) {
+            String urlStr = cssClassesMap.get(getValue());
+            if (urlStr == null) {
+                return;
+            }
+            try {
+                EditorPlatform.open(urlStr);
+            } catch (IOException ex) {
+                editorController.getMessageLog().logWarningMessage(
+                        "inspector.stylesheet.cannotopen", urlStr); //NOI18N
+            }
+        }
+
+        @FXML
+        void reveal(ActionEvent event) {
+            String urlStr = cssClassesMap.get(getValue());
+            if (urlStr == null) {
+                return;
+            }
+            try {
+                File file = URLUtils.getFile(urlStr);
+                if (file == null) { // urlStr is not a file URL
+                    return;
+                }
+                EditorPlatform.revealInFileBrowser(file);
+            } catch (URISyntaxException | IOException ex) {
+                editorController.getMessageLog().logWarningMessage(
+                        "inspector.stylesheet.cannotreveal", urlStr); //NOI18N
+            }
+        }
+
         private void updateButtons() {
             if (styleClassTf.getText().isEmpty()) {
                 // if no content, disable plus
@@ -389,12 +425,31 @@ public class StyleClassEditor extends InlineListEditor {
                 plusBt.setDisable(false);
                 removeMi.setDisable(false);
             }
+            // set text of open / reveal menu items
+            String stylesheetUrl = cssClassesMap.get(getValue());
+            if (stylesheetUrl == null) {
+                // className is unknown: open / reveal should not be visible
+                openMi.setVisible(false);
+                revealMi.setVisible(false);
+            } else {
+                openMi.setVisible(true);
+                revealMi.setVisible(true);
+                String stylesheet = EditorUtils.getSimpleFileName(stylesheetUrl);
+                openMi.setText(I18N.getString("inspector.list.open", stylesheet));
+                if (EditorPlatform.IS_MAC) {
+                    revealMi.setText(I18N.getString("inspector.list.reveal.finder", stylesheet));
+                } else {
+                    revealMi.setText(I18N.getString("inspector.list.reveal.explorer", stylesheet));
+                }
+            }
         }
 
+        @SuppressWarnings("unused")
         protected void disablePlusButton(boolean disable) {
             plusBt.setDisable(disable);
         }
 
+        @SuppressWarnings("unused")
         protected void disableRemove(boolean disable) {
             removeMi.setDisable(disable);
         }

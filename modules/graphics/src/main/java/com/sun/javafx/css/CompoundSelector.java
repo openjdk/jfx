@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,9 @@
 
 package com.sun.javafx.css;
 
+import javafx.css.PseudoClass;
+import javafx.css.Styleable;
+
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -32,10 +35,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-import javafx.css.PseudoClass;
-
-import javafx.css.Styleable;
-import javafx.scene.Node;
 
 /**
  * A compound selector which behaves according to the CSS standard. The selector is 
@@ -44,7 +43,7 @@ import javafx.scene.Node;
  * stage.  There must be exactly one less <code>Combinator</code> than 
  * there are selectors.
  * <p>
- * For example, the paramters <code>[selector1, selector2, selector3]</code> 
+ * For example, the parameters <code>[selector1, selector2, selector3]</code>
  * and <code>[Combinator.CHILD, Combinator.DESCENDANT]</code> will match 
  * a component when all of the following conditions hold:
  * <ol>

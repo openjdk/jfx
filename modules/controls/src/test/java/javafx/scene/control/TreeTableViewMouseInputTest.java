@@ -25,6 +25,7 @@
 
 package javafx.scene.control;
 
+import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.Utils;
 import com.sun.javafx.scene.control.behavior.TreeTableViewAnchorRetriever;
 import com.sun.javafx.scene.control.infrastructure.*;
@@ -48,6 +49,7 @@ import javafx.scene.control.cell.TreeItemPropertyValueFactory;
 import javafx.scene.input.KeyCode;
 
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import org.junit.After;
 
@@ -136,7 +138,9 @@ public class TreeTableViewMouseInputTest {
     }
     
     @After public void tearDown() {
-        tableView.getSkin().dispose();
+        if (tableView.getSkin() != null) {
+            tableView.getSkin().dispose();
+        }
         sm = null;
     }
     
@@ -235,6 +239,7 @@ public class TreeTableViewMouseInputTest {
     }
 
     private int rt30394_count = 0;
+    @Ignore("Ignoring due to RT-37166")
     @Test public void test_rt30394() {
         sm.setCellSelectionEnabled(false);
         sm.setSelectionMode(SelectionMode.MULTIPLE);
@@ -243,11 +248,9 @@ public class TreeTableViewMouseInputTest {
         final TableFocusModel fm = tableView.getFocusModel();
         fm.focus(-1);
 
-        fm.focusedIndexProperty().addListener(new ChangeListener<Number>() {
-            @Override public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
-                rt30394_count++;
-                assertEquals(0, fm.getFocusedIndex());
-            }
+        fm.focusedIndexProperty().addListener((observable, oldValue, newValue) -> {
+            rt30394_count++;
+            assertEquals(0, fm.getFocusedIndex());
         });
 
         // test pre-conditions
@@ -257,6 +260,7 @@ public class TreeTableViewMouseInputTest {
         // select the first row with the shift key held down. The focus event
         // should only fire once - for focus on 0 (never -1 as this bug shows).
         VirtualFlowTestUtils.clickOnRow(tableView, 0, KeyModifier.SHIFT);
+        Toolkit.getToolkit().firePulse();
         assertEquals(1, rt30394_count);
         assertTrue(fm.isFocused(0));
     }
@@ -427,7 +431,7 @@ public class TreeTableViewMouseInputTest {
             root.getChildren().add(new TreeItem<>("Row " + i));
         }
 
-        new StageLoader(tableView);
+        StageLoader sl = new StageLoader(tableView);
 
         tableView.setShowRoot(true);
         final MultipleSelectionModel sm = tableView.getSelectionModel();
@@ -447,6 +451,8 @@ public class TreeTableViewMouseInputTest {
         assertEquals(0, sm.getSelectedIndex());
         assertEquals(0, fm.getFocusedIndex());
         assertEquals(1, sm.getSelectedItems().size());
+
+        sl.dispose();
     }
 
     @Test public void test_rt_32963() {
@@ -489,7 +495,7 @@ public class TreeTableViewMouseInputTest {
         }
         tableView.setRoot(root);
 
-        new StageLoader(tableView);
+        StageLoader sl = new StageLoader(tableView);
 
         tableView.setShowRoot(true);
         final MultipleSelectionModel sm = tableView.getSelectionModel();
@@ -514,10 +520,12 @@ public class TreeTableViewMouseInputTest {
         mouse.fireMousePressAndRelease();
         assertTrue(root.isExpanded());
         assertEquals(9, tableView.getExpandedItemCount());
+
+        mouse.dispose();
+        sl.dispose();
     }
 
     private int rt_30626_count = 0;
-    @Ignore("This is now broken due to backing out RT-33897 (as it introduced RT-34685), so ignoring for now")
     @Test public void test_rt_30626() {
         final int items = 8;
         root.getChildren().clear();
@@ -532,11 +540,9 @@ public class TreeTableViewMouseInputTest {
         sm.setSelectionMode(SelectionMode.MULTIPLE);
         sm.clearAndSelect(0);
 
-        tableView.getSelectionModel().getSelectedItems().addListener(new ListChangeListener() {
-            @Override public void onChanged(Change c) {
-                while (c.next()) {
-                    rt_30626_count++;
-                }
+        tableView.getSelectionModel().getSelectedItems().addListener((ListChangeListener) c -> {
+            while (c.next()) {
+                rt_30626_count++;
             }
         });
 
@@ -548,7 +554,6 @@ public class TreeTableViewMouseInputTest {
         assertEquals(1, rt_30626_count);
     }
 
-    @Ignore("This is now broken due to backing out RT-33897 (as it introduced RT-34685), so ignoring for now")
     @Test public void test_rt_33897_rowSelection() {
         final int items = 8;
         root.getChildren().clear();
@@ -589,5 +594,103 @@ public class TreeTableViewMouseInputTest {
         TreeTablePosition pos = sm.getSelectedCells().get(0);
         assertEquals(1, pos.getRow());
         assertNotNull(pos.getTableColumn());
+    }
+
+    @Test public void test_rt_34649() {
+        final int items = 8;
+        root.getChildren().clear();
+        root.setExpanded(true);
+        for (int i = 0; i < items; i++) {
+            root.getChildren().add(new TreeItem<>("Row " + i));
+        }
+        tableView.setRoot(root);
+
+        final MultipleSelectionModel sm = tableView.getSelectionModel();
+        final FocusModel fm = tableView.getFocusModel();
+        sm.setSelectionMode(SelectionMode.SINGLE);
+
+        assertFalse(sm.isSelected(4));
+        assertFalse(fm.isFocused(4));
+        VirtualFlowTestUtils.clickOnRow(tableView, 4, true, KeyModifier.getShortcutKey());
+        assertTrue(sm.isSelected(4));
+        assertTrue(fm.isFocused(4));
+
+        VirtualFlowTestUtils.clickOnRow(tableView, 4, true, KeyModifier.getShortcutKey());
+        assertFalse(sm.isSelected(4));
+        assertTrue(fm.isFocused(4));
+    }
+
+    @Test public void test_rt_35338() {
+        root.getChildren().clear();
+        tableView.setRoot(root);
+        tableView.getColumns().setAll(col0);
+
+        col0.setWidth(20);
+        tableView.setMinWidth(1000);
+        tableView.setMinWidth(1000);
+
+        TreeTableRow row = (TreeTableRow) VirtualFlowTestUtils.getCell(tableView, 4);
+        assertNotNull(row);
+        assertNull(row.getItem());
+        assertEquals(4, row.getIndex());
+
+        MouseEventFirer mouse = new MouseEventFirer(row);
+        mouse.fireMousePressAndRelease(1, 100, 10);
+        mouse.dispose();
+    }
+
+    @Test public void test_rt_36509() {
+        final int items = 8;
+        root.getChildren().clear();
+        root.setExpanded(false);
+        for (int i = 0; i < items; i++) {
+            root.getChildren().add(new TreeItem<>("Row " + i));
+        }
+        tableView.setRoot(root);
+
+        // expand
+        assertFalse(root.isExpanded());
+        VirtualFlowTestUtils.clickOnRow(tableView, 0, 2);
+        assertTrue(root.isExpanded());
+
+        // collapse
+        VirtualFlowTestUtils.clickOnRow(tableView, 0, 2);
+        assertFalse(root.isExpanded());
+
+        // expand again
+        VirtualFlowTestUtils.clickOnRow(tableView, 0, 2);
+        assertTrue(root.isExpanded());
+    }
+
+    @Test public void test_rt_37069() {
+        final int items = 8;
+        root.getChildren().clear();
+        root.setExpanded(false);
+        for (int i = 0; i < items; i++) {
+            root.getChildren().add(new TreeItem<>("Row " + i));
+        }
+        tableView.setRoot(root);
+        tableView.setFocusTraversable(false);
+
+        Button btn = new Button("Button");
+        VBox vbox = new VBox(btn, tableView);
+
+        StageLoader sl = new StageLoader(vbox);
+        sl.getStage().requestFocus();
+        btn.requestFocus();
+        Toolkit.getToolkit().firePulse();
+        Scene scene = sl.getStage().getScene();
+
+        assertTrue(btn.isFocused());
+        assertFalse(tableView.isFocused());
+
+        ScrollBar vbar = VirtualFlowTestUtils.getVirtualFlowVerticalScrollbar(tableView);
+        MouseEventFirer mouse = new MouseEventFirer(vbar);
+        mouse.fireMousePressAndRelease();
+
+        assertTrue(btn.isFocused());
+        assertFalse(tableView.isFocused());
+
+        sl.dispose();
     }
 }

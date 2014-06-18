@@ -112,17 +112,22 @@ public class FXOMIntrinsic extends FXOMObject {
         return properties;
     }
     
-    public static FXOMIntrinsic newInstance(FXOMIntrinsic source) {
+    public static FXOMIntrinsic newInstance(FXOMIntrinsic source, FXOMDocument targetDocument) {
         final FXOMIntrinsic result;
         
         assert source != null;
+        assert targetDocument != null;
+        assert source.getFxomDocument() != targetDocument;
         
         result = new FXOMIntrinsic(
-                source.getFxomDocument(),
+                targetDocument,
                 source.getType(),
                 source.getSource());
         
         result.setFxConstant(source.getFxConstant());
+        result.setFxController(source.getFxController());
+        result.setFxFactory(source.getFxFactory());
+        result.setFxId(source.getFxId());
         result.setFxValue(source.getFxValue());
         
         
@@ -191,6 +196,16 @@ public class FXOMIntrinsic extends FXOMObject {
         assert result != null;
         
         if ((getType() == Type.FX_REFERENCE) 
+                && ((source == null) || source.equals(getSource()))) {
+            result.add(this);
+        }
+    }
+
+    @Override
+    protected void collectIncludes(String source, List<FXOMIntrinsic> result) {
+        assert result != null;
+        
+        if ((getType() == Type.FX_INCLUDE) 
                 && ((source == null) || source.equals(getSource()))) {
             result.add(this);
         }

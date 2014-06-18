@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,7 +34,9 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import javafx.beans.property.ObjectProperty;
@@ -44,6 +46,7 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.scene.control.cell.CheckBoxListCell;
@@ -388,10 +391,8 @@ public class ListViewTest {
         listView.setItems(emptyModel);
         assertTrue(listView.getItems().isEmpty());
 
-        sm.selectedItemProperty().addListener(new ChangeListener<String>() {
-            @Override public void changed(ObservableValue<? extends String> observable, String oldValue, final String newValue) {
-                rt_18969_hitCount++;
-            }
+        sm.selectedItemProperty().addListener((observable, oldValue, newValue) -> {
+            rt_18969_hitCount++;
         });
 
         ObservableList<String> mod = FXCollections.observableArrayList();
@@ -582,11 +583,7 @@ public class ListViewTest {
         final ListView<String> listView = new ListView<String>(items);
         listView.setMinHeight(100);
         listView.setPrefHeight(100);
-        listView.setCellFactory(CheckBoxListCell.forListView(new Callback<String, ObservableValue<Boolean>>() {
-            public javafx.beans.value.ObservableValue<Boolean> call(String param) {
-                return new ReadOnlyBooleanWrapper(true);
-            }
-        }));
+        listView.setCellFactory(CheckBoxListCell.forListView(param -> new ReadOnlyBooleanWrapper(true)));
 
         // because only the first row has data, all other rows should be 
         // empty (and not contain check boxes - we just check the first four here)
@@ -620,6 +617,8 @@ public class ListViewTest {
         Toolkit.getToolkit().firePulse();
         final double afterEmptiedWidth = listView.prefWidth(-1);
         assertEquals(initialWidth, afterEmptiedWidth, 0.00);
+
+        sl.dispose();
     }
 
     @Test public void test_rt31165() {
@@ -704,6 +703,8 @@ public class ListViewTest {
         sl.getStage().setHeight(50);
         Toolkit.getToolkit().firePulse();
         assertEquals(24, rt_31200_count);
+
+        sl.dispose();
     }
 
     @Test public void test_rt_30484() {
@@ -744,27 +745,21 @@ public class ListViewTest {
     private int rt_29650_commit_count = 0;
     private int rt_29650_cancel_count = 0;
     @Test public void test_rt_29650() {
-        listView.setOnEditStart(new EventHandler() {
-            @Override public void handle(Event t) {
-                rt_29650_start_count++;
-            }
+        listView.setOnEditStart(t -> {
+            rt_29650_start_count++;
         });
-        listView.setOnEditCommit(new EventHandler() {
-            @Override public void handle(Event t) {
-                rt_29650_commit_count++;
-            }
+        listView.setOnEditCommit(t -> {
+            rt_29650_commit_count++;
         });
-        listView.setOnEditCancel(new EventHandler() {
-            @Override public void handle(Event t) {
-                rt_29650_cancel_count++;
-            }
+        listView.setOnEditCancel(t -> {
+            rt_29650_cancel_count++;
         });
 
         listView.getItems().setAll("one", "two", "three", "four", "five");
         listView.setEditable(true);
         listView.setCellFactory(TextFieldListCell.forListView());
 
-        new StageLoader(listView);
+        StageLoader sl = new StageLoader(listView);
 
         listView.edit(0);
 
@@ -781,5 +776,131 @@ public class ListViewTest {
         assertEquals(1, rt_29650_start_count);
         assertEquals(1, rt_29650_commit_count);
         assertEquals(0, rt_29650_cancel_count);
+
+        sl.dispose();
+    }
+
+    @Test public void test_rt35039() {
+        final List<String> data = new ArrayList<>();
+        data.add("aabbaa");
+        data.add("bbc");
+
+        final ListView<String> listView = new ListView<>();
+        listView.setItems(FXCollections.observableArrayList(data));
+
+        StageLoader sl = new StageLoader(listView);
+
+        // everything should be null to start with
+        assertNull(listView.getSelectionModel().getSelectedItem());
+
+        // select "bbc" and ensure everything is set to that
+        listView.getSelectionModel().select(1);
+        assertEquals("bbc", listView.getSelectionModel().getSelectedItem());
+
+        // change the items list - but retain the same content. We expect
+        // that "bbc" remains selected as it is still in the list
+        listView.setItems(FXCollections.observableArrayList(data));
+        assertEquals("bbc", listView.getSelectionModel().getSelectedItem());
+
+        sl.dispose();
+    }
+
+    @Test public void test_rt35857() {
+        ObservableList<String> fxList = FXCollections.observableArrayList("A", "B", "C");
+        final ListView<String> listView = new ListView<String>(fxList);
+
+        listView.getSelectionModel().select(0);
+
+        ObservableList<String> selectedItems = listView.getSelectionModel().getSelectedItems();
+        assertEquals(1, selectedItems.size());
+        assertEquals("A", selectedItems.get(0));
+
+        listView.getItems().removeAll(selectedItems);
+        assertEquals(2, fxList.size());
+        assertEquals("B", fxList.get(0));
+        assertEquals("C", fxList.get(1));
+    }
+
+    private int rt_35889_cancel_count = 0;
+    @Test public void test_rt35889() {
+        final ListView<String> textFieldListView = new ListView<String>();
+        textFieldListView.setItems(FXCollections.observableArrayList("A", "B", "C"));
+        textFieldListView.setEditable(true);
+        textFieldListView.setCellFactory(TextFieldListCell.forListView());
+        textFieldListView.setOnEditCancel(t -> {
+            rt_35889_cancel_count++;
+            System.out.println("On Edit Cancel: " + t);
+        });
+
+        ListCell cell0 = (ListCell) VirtualFlowTestUtils.getCell(textFieldListView, 0);
+        assertNull(cell0.getGraphic());
+        assertEquals("A", cell0.getText());
+
+        textFieldListView.edit(0);
+        TextField textField = (TextField) cell0.getGraphic();
+        assertNotNull(textField);
+
+        assertEquals(0, rt_35889_cancel_count);
+
+        textField.setText("Z");
+        textField.getOnAction().handle(new ActionEvent());
+
+        assertEquals(0, rt_35889_cancel_count);
+    }
+
+    @Test public void test_rt25679() {
+        Button focusBtn = new Button("Focus here");
+
+        final ListView<String> listView = new ListView<String>();
+        SelectionModel sm = listView.getSelectionModel();
+        listView.setItems(FXCollections.observableArrayList("A", "B", "C"));
+
+        VBox vbox = new VBox(focusBtn, listView);
+
+        StageLoader sl = new StageLoader(vbox);
+        sl.getStage().requestFocus();
+        focusBtn.requestFocus();
+        Toolkit.getToolkit().firePulse();
+
+        // test initial state
+        assertEquals(sl.getStage().getScene().getFocusOwner(), focusBtn);
+        assertTrue(focusBtn.isFocused());
+        assertEquals(-1, sm.getSelectedIndex());
+        assertNull(sm.getSelectedItem());
+
+        // move focus to the listview
+        listView.requestFocus();
+
+        // ensure that there is a selection (where previously there was not one)
+        assertEquals(sl.getStage().getScene().getFocusOwner(), listView);
+        assertTrue(listView.isFocused());
+        assertEquals(0, sm.getSelectedIndex());
+        assertEquals("A", sm.getSelectedItem());
+
+        sl.dispose();
+    }
+
+    private int rt_37061_index_counter = 0;
+    private int rt_37061_item_counter = 0;
+    @Test public void test_rt_37061() {
+        ListView<Integer> tv = new ListView<>();
+        tv.getItems().add(1);
+        tv.getSelectionModel().select(0);
+
+        // note we add the listeners after the selection is made, so the counters
+        // at this point are still both at zero.
+        tv.getSelectionModel().selectedIndexProperty().addListener((observable, oldValue, newValue) -> {
+            rt_37061_index_counter++;
+        });
+
+        tv.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
+            rt_37061_item_counter++;
+        });
+
+        // add a new item. This does not impact the selected index or selected item
+        // so the counters should remain at zero.
+        tv.getItems().add(2);
+        assertEquals(0, rt_37061_index_counter);
+        assertEquals(0, rt_37061_item_counter);
     }
 }

@@ -241,7 +241,7 @@ public class SceneBuilderTest {
             Cell<?> cell = null;
             while (parent != null) {
                 if (parent instanceof Cell) {
-                    cell = (Cell) parent;
+                    cell = (Cell<?>) parent;
                     break;
                 }
             }

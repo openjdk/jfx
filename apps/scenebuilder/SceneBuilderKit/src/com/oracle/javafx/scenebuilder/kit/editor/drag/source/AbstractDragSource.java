@@ -36,15 +36,12 @@ import java.util.List;
 import javafx.scene.Node;
 import javafx.scene.image.Image;
 import javafx.scene.input.ClipboardContent;
-import javafx.scene.input.DataFormat;
 import javafx.stage.Window;
 
 /**
  *
  */
 public abstract class AbstractDragSource {
-    
-    public static final DataFormat INTERNAL_DATA_FORMAT = new DataFormat("scene.builder.internal"); //NOI18N
     
     private final Window ownerWindow;
     
@@ -56,6 +53,7 @@ public abstract class AbstractDragSource {
         return ownerWindow;
     }
     
+    public abstract boolean isAcceptable();
     public abstract List<FXOMObject> getDraggedObjects();
     public abstract FXOMObject getHitObject();
     public abstract double getHitX();

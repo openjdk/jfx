@@ -1,0 +1,98 @@
+/*
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates.
+ * All rights reserved. Use is subject to license terms.
+ *
+ * This file is available and licensed under the following license:
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ *  - Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *  - Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the distribution.
+ *  - Neither the name of Oracle Corporation nor the names of its
+ *    contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+.theme {
+    -fx-background-color: derive(grey, 70%);
+    -fx-font-size: 14px;
+}
+
+.split-pane {
+    -fx-padding: 0;
+    -fx-border-width: 0;
+    -fx-background-color: derive(grey, 100%);
+}
+
+.button {
+    -fx-background-color:
+        linear-gradient(
+            derive(grey, 120%), 
+            derive(grey, 90%)
+        ),
+        radial-gradient(
+            center 50% -40%, 
+            radius 180%, 
+            derive(grey, 95%) 55%, 
+            derive(grey, 75%) 55%
+        );
+    -fx-background-radius: 4, 3;
+    -fx-background-insets: 0, 1;
+    -fx-effect: dropshadow( three-pass-box , rgba(0,0,0,0.55) , 5, 0.0 , 0 , 1 );
+    -fx-text-fill: derive(grey, -60%);
+    -fx-padding: 3 11 3 11;
+}
+
+.darkList {
+    -fx-background-color: derive(grey, -60%);
+}
+
+.darkList .list-cell {
+    -fx-padding: 6 0 0 13;
+    -fx-background-color: derive(grey, -60%);
+    -fx-text-fill: lightgrey;
+}
+
+.darkList .list-cell:focused {
+    -fx-text-fill: white;
+}
+
+.table-view {
+    -fx-border-width: 0;
+    -fx-border-color: red;
+}
+
+.text-area, .text-field {
+    -fx-background-radius: 4;
+    -fx-border-radius: 4;
+}
+
+.text-area {
+    -fx-padding: 2;
+}
+
+.text-field {
+    -fx-padding: 3 6 3 6;
+}
+
+.label {
+    -fx-text-fill: derive(grey, -20%);
+    -fx-font-size: 12px;
+}

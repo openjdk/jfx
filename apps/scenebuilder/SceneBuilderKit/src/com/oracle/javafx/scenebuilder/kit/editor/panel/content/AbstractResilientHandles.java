@@ -32,11 +32,11 @@
 
 package com.oracle.javafx.scenebuilder.kit.editor.panel.content;
 
-import com.oracle.javafx.scenebuilder.kit.editor.panel.content.AbstractDecoration.State;
-import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.handles.AbstractGenericHandles;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import javafx.geometry.Point2D;
 import javafx.scene.transform.Transform;
+
+import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.handles.AbstractGenericHandles;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 
 /**
  *

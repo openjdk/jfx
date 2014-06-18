@@ -77,6 +77,7 @@ public class ChoiceBoxListCell<T> extends ListCell<T> {
      * @return A {@link Callback} that will return a ListCell that is able to 
      *      work on the type of element contained within the ListView.
      */
+    @SafeVarargs
     public static <T> Callback<ListView<T>, ListCell<T>> forListView(final T... items) {
         return forListView(FXCollections.observableArrayList(items));
     }
@@ -98,6 +99,7 @@ public class ChoiceBoxListCell<T> extends ListCell<T> {
      * @return A {@link Callback} that will return a ListCell that is able to 
      *      work on the type of element contained within the ListView.
      */
+    @SafeVarargs
     public static <T> Callback<ListView<T>, ListCell<T>> forListView(
             final StringConverter<T> converter, 
             final T... items) {
@@ -144,11 +146,7 @@ public class ChoiceBoxListCell<T> extends ListCell<T> {
     public static <T> Callback<ListView<T>, ListCell<T>> forListView(
             final StringConverter<T> converter, 
             final ObservableList<T> items) {
-        return new Callback<ListView<T>, ListCell<T>>() {
-            @Override public ListCell<T> call(ListView<T> list) {
-                return new ChoiceBoxListCell<T>(converter, items);
-            }
-        };
+        return list -> new ChoiceBoxListCell<T>(converter, items);
     }
     
     
@@ -185,6 +183,7 @@ public class ChoiceBoxListCell<T> extends ListCell<T> {
      * @param items The items to show in the ChoiceBox popup menu when selected 
      *      by the user.
      */
+    @SafeVarargs
     public ChoiceBoxListCell(T... items) {
         this(FXCollections.observableArrayList(items));
     }
@@ -201,6 +200,7 @@ public class ChoiceBoxListCell<T> extends ListCell<T> {
      * @param items The items to show in the ChoiceBox popup menu when selected 
      *      by the user.
      */
+    @SafeVarargs
     public ChoiceBoxListCell(StringConverter<T> converter, T... items) {
         this(converter, FXCollections.observableArrayList(items));
     }

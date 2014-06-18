@@ -127,9 +127,11 @@ public class JarExplorer {
             entryException = null;
         } else {
             final String className = makeClassName(entry.getName());
+            // Filtering out what starts with com.javafx. is bound to DTL-6378.
             if (className == null || className.startsWith("java.") //NOI18N
                     || className.startsWith("javax.") || className.startsWith("javafx.") //NOI18N
-                    || className.startsWith("com.oracle.javafx.scenebuilder.")) { //NOI18N
+                    || className.startsWith("com.oracle.javafx.scenebuilder.") //NOI18N
+                    || className.startsWith("com.javafx.")) { //NOI18N
                 status = JarReportEntry.Status.IGNORED;
                 entryClass = null;
                 entryException = null;
@@ -165,7 +167,7 @@ public class JarExplorer {
         
         if (entryName.endsWith(".class") == false) { //NOI18N
             result = null;
-        } else if (entryName.indexOf("$") != -1) { //NOI18N
+        } else if (entryName.contains("$")) { //NOI18N
             // We skip inner classes for now
             result = null;
         } else {

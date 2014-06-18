@@ -69,11 +69,11 @@ inline void D3DUtils_SetIdentityMatrix(D3DMATRIX *m) {
 
 // static
 HRESULT
-D3DContext::CreateInstance(IDirect3D9 *pd3d9, IDirect3D9Ex *pd3d9Ex, UINT adapter, D3DContext **ppCtx)
+D3DContext::CreateInstance(IDirect3D9 *pd3d9, IDirect3D9Ex *pd3d9Ex, UINT adapter, bool isVsyncEnabled, D3DContext **ppCtx)
 {
     HRESULT res;
     *ppCtx = new D3DContext(pd3d9, pd3d9Ex, adapter);
-    if (FAILED(res = (*ppCtx)->InitContext())) {
+    if (FAILED(res = (*ppCtx)->InitContext(isVsyncEnabled))) {
         delete *ppCtx;
         *ppCtx = NULL;
     }
@@ -103,6 +103,7 @@ D3DContext::D3DContext(IDirect3D9 *pd3d, IDirect3D9Ex *pd3dEx, UINT adapter)
 
     ZeroMemory(&devCaps, sizeof(D3DCAPS9));
     ZeroMemory(&curParams, sizeof(curParams));
+    ZeroMemory(textureCache, sizeof(textureCache));
 }
 
 /**
@@ -157,6 +158,10 @@ int D3DContext::release() {
                 "~D3DContext: pd3dDevice=0x%x, pd3dObject =0x%x",
                 pd3dDevice, pd3dObject);
     ReleaseContextResources(RELEASE_ALL);
+    for (int i = 0; i < NUM_TEXTURE_CACHE; i++) {
+        SAFE_RELEASE(textureCache[i].surface);
+        SAFE_RELEASE(textureCache[i].texture);
+    }
     SAFE_RELEASE(pd3dDevice);
     SAFE_RELEASE(pd3dDeviceEx);
 
@@ -732,7 +737,10 @@ D3DContext::TestCooperativeLevel()
 
     RETURN_STATUS_IF_NULL(pd3dDevice, E_FAIL);
 
-    HRESULT res = pd3dDevice->TestCooperativeLevel();
+    //TODO: call CheckDeviceState only if Present fails
+    HRESULT res = pd3dDeviceEx ?
+        pd3dDeviceEx->CheckDeviceState(NULL) :
+        pd3dDevice->TestCooperativeLevel();
 
     switch (res) {
     case S_OK: break;
@@ -743,6 +751,10 @@ D3DContext::TestCooperativeLevel()
     case D3DERR_DEVICENOTRESET:
         TraceLn1(NWT_TRACE_VERBOSE, "  device %d needs to be reset",
             adapterOrdinal);
+        break;
+    case S_PRESENT_OCCLUDED:
+        break;
+    case S_PRESENT_MODE_CHANGED:
         break;
     case E_FAIL:
         TraceLn(NWT_TRACE_VERBOSE, "  null device");
@@ -1246,4 +1258,54 @@ HRESULT D3DContext::InitContextCaps() {
         RlsTraceLn(NWT_TRACE_VERBOSE, "  CAPS_TEXNONSQUARE");
     }
     return S_OK;
+}
+
+IDirect3DTexture9 *createTexture(D3DFORMAT format, int w, int h, IDirect3DSurface9 **pSurface, IDirect3DDevice9 *dev) {
+    IDirect3DTexture9 *texture;
+    HRESULT hr = dev->CreateTexture(w, h, 1, D3DUSAGE_DYNAMIC, format, D3DPOOL_SYSTEMMEM, &texture, 0);
+    if (FAILED(hr)) {
+        RlsTraceLn1(NWT_TRACE_ERROR, "Failed to create system memory texture for update operation: %08X", hr);
+        return NULL;
+    }
+    TraceLn3(NWT_TRACE_VERBOSE, "Created system memory texture for update operation: %dx%d, format = %d", w, h, format);
+    if (pSurface) {
+        hr = texture->GetSurfaceLevel(0, pSurface);
+        if (FAILED(hr)) {
+            RlsTraceLn1(NWT_TRACE_ERROR, "Failed to get surface for update operation: %08X", hr);
+            SAFE_RELEASE(texture);
+            return NULL;
+        }
+    }
+    return texture;
+}
+
+IDirect3DTexture9 *D3DContext::TextureUpdateCache::getTexture(
+    D3DFORMAT format, int w, int h, IDirect3DSurface9 **pSurface, IDirect3DDevice9 *dev)
+{
+    if (w <= width && h <= height && texture != NULL) {
+        if (pSurface) *pSurface = surface;
+        return texture;
+    }
+    // grow the cache texture so that the new texture is
+    // at least as large as the previous one
+    if (w < width)  w = width;
+    if (h < height) h = height;
+    SAFE_RELEASE(surface);
+    SAFE_RELEASE(texture);
+    texture = createTexture(format, w, h, &surface, dev);
+    if (texture == NULL) {
+        return NULL;
+    }
+    width = w;
+    height = h;
+    if (pSurface) *pSurface = surface;
+    return texture;
+}
+
+IDirect3DTexture9 *D3DContext::getTextureCache(int formatIndex, D3DFORMAT format, int width, int height, IDirect3DSurface9 **pSurface) {
+    if (formatIndex < 0 || formatIndex >= NUM_TEXTURE_CACHE) {
+        return createTexture(format, width, height, pSurface, pd3dDevice);
+    }
+    TextureUpdateCache &cache = textureCache[formatIndex];
+    return cache.getTexture(format, width, height, pSurface, pd3dDevice);
 }

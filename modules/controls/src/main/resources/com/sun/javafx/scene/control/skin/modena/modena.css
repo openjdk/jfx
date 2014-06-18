@@ -5,7 +5,7 @@
 */
 
 /*
- * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved. 
+ * Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER. 
  *  
  * This code is free software; you can redistribute it and/or modify it 
@@ -361,6 +361,15 @@ is being used to size a border should also be in pixels.
     /* The colors to use in Pagination */
     -fx-page-bullet-border: #acacac;
     -fx-page-indicator-hover-border: #accee5;
+
+    -fx-focused-text-base-color : ladder(
+        -fx-selection-bar,
+        -fx-light-text-color 45%,
+        -fx-dark-text-color 46%,
+        -fx-dark-text-color 59%,
+        -fx-mid-text-color 60%
+    );
+    -fx-focused-mark-color : -fx-focused-text-base-color ;
 
     /***************************************************************************
      *                                                                         *
@@ -1094,7 +1103,7 @@ is being used to size a border should also be in pixels.
 }
 .scroll-pane.edge-to-edge > .scroll-bar,
 .tab-pane > * > .scroll-pane > .scroll-bar,
-.titled-pane > * > * > .scroll-pane > .scroll-bar {
+.titled-pane > .content > .scroll-pane > .scroll-bar {
     -fx-background-insets: 0;
     -fx-padding: 0;
 }
@@ -1102,8 +1111,8 @@ is being used to size a border should also be in pixels.
 .scroll-pane.edge-to-edge > .scroll-bar > .decrement-button,
 .tab-pane > * > .scroll-pane > .scroll-bar > .increment-button, 
 .tab-pane > * > .scroll-pane > .scroll-bar > .decrement-button,
-.titled-pane > * > * > .scroll-pane > .scroll-bar > .increment-button,
-.titled-pane > * > * > .scroll-pane > .scroll-bar > .decrement-button {
+.titled-pane > .content > .scroll-pane > .scroll-bar > .increment-button,
+.titled-pane > .content > .scroll-pane > .scroll-bar > .decrement-button {
     -fx-padding: 0.25em; /* 3px */
 }
 
@@ -1358,14 +1367,26 @@ is being used to size a border should also be in pixels.
 .html-editor-outdent {
     -fx-graphic: url("HTMLEditor-Outdent.png");
 }
+.html-editor-outdent:dir(rtl) {
+    -fx-graphic: url("HTMLEditor-Outdent-rtl.png");
+}
 .html-editor-indent {
     -fx-graphic: url("HTMLEditor-Indent.png");
+}
+.html-editor-indent:dir(rtl) {
+    -fx-graphic: url("HTMLEditor-Indent-rtl.png");
 }
 .html-editor-bullets {
     -fx-graphic: url("HTMLEditor-Bullets.png");
 }
+.html-editor-bullets:dir(rtl) {
+    -fx-graphic: url("HTMLEditor-Bullets-rtl.png");
+}
 .html-editor-numbers {
     -fx-graphic: url("HTMLEditor-Numbered.png");
+}
+.html-editor-numbers:dir(rtl) {
+    -fx-graphic: url("HTMLEditor-Numbered-rtl.png");
 }
 .html-editor-bold {
     -fx-graphic: url("HTMLEditor-Bold.png");
@@ -1437,7 +1458,7 @@ is being used to size a border should also be in pixels.
     -fx-scale-shape: false;
 }
 .menu:focused > .right-container > .arrow {
-    -fx-background-color: white;
+    -fx-background-color: -fx-focused-mark-color;
 }
 .menu-up-arrow {
     -fx-padding: 0.666667em 0.416667em 0.0em 0.416667em;  /* 8 5 0 5 */
@@ -1528,7 +1549,7 @@ is being used to size a border should also be in pixels.
      -fx-text-fill:  -fx-text-background-color;
 }
 .menu-item:focused > .label {
-    -fx-text-fill: white;
+    -fx-text-fill: -fx-focused-text-base-color;
 }
 .menu-item > .right-container {
     -fx-padding: 0em 0em 0em 0.5em;
@@ -1542,7 +1563,7 @@ is being used to size a border should also be in pixels.
     -fx-scale-shape: false;
 }
 .radio-menu-item:focused:checked > .left-container > .radio {
-    -fx-background-color: white;
+    -fx-background-color: -fx-focused-mark-color;
 }
 .check-menu-item:checked > .left-container > .check {
     -fx-background-color: -fx-mark-color;
@@ -1550,7 +1571,7 @@ is being used to size a border should also be in pixels.
     -fx-scale-shape: false;
 }
 .check-menu-item:focused:checked > .left-container > .check {
-    -fx-background-color: white;
+    -fx-background-color: -fx-focused-mark-color;
 }
 /*******************************************************************************
  *                                                                             *
@@ -1769,14 +1790,15 @@ is being used to size a border should also be in pixels.
     /* No alternate highlighting */
     -fx-background: -fx-control-inner-background;
 }
-.combo-box-popup > .list-view > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:selected {
-    -fx-background:  -fx-selection-bar-non-focused;
-    -fx-background-color:  -fx-background;
-}
-.combo-box-popup  > .list-view > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:hover,
-.combo-box-popup  > .list-view > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:selected:hover {
+.combo-box-popup > .list-view > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:hover {
     -fx-background: -fx-accent;
     -fx-background-color: -fx-selection-bar;
+}
+.combo-box-popup  > .list-view > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:selected,
+.combo-box-popup  > .list-view > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:selected:hover {
+    -fx-background: -fx-accent;
+    -fx-background-color: -fx-background, -fx-cell-focus-inner-border, -fx-background;
+    -fx-background-insets: 0, 1, 2;
 }
 .combo-box-popup > .list-view > .placeholder > .label {
     -fx-text-fill: derive(-fx-control-inner-background,-30%);
@@ -1790,6 +1812,9 @@ is being used to size a border should also be in pixels.
 
 .titled-pane {
     -fx-text-fill: -fx-text-base-color;
+}
+.titled-pane:focused {
+    -fx-color: -fx-base;
 }
 .titled-pane > .title {
     -fx-background-color:
@@ -1938,18 +1963,13 @@ is being used to size a border should also be in pixels.
     -fx-padding: 0.5px;
 }
 /* the color over which the user is hovering */
-.color-palette > .color-picker-grid > .color-square:focused, 
-.color-palette > .color-picker-grid > .color-square:selected:focused {
+.color-palette-region > .color-square.hover-square {
     -fx-background-color: -fx-faint-focus-color, -fx-focus-color;
-    -fx-background-insets: -2,0;
+    -fx-background-insets: -3,-1;
     -fx-background-radius: 5,0;
     -fx-scale-x: 1.5;
     -fx-scale-y: 1.5;
 }
-/* the currently selected color */
-.color-palette > .color-picker-grid > .color-square:selected {
-    -fx-background-color: black;
-} 
 /* ------- CUSTOM COLOR DIALOG ------- */
 .custom-color-dialog > .color-rect-pane {
     -fx-spacing: 0.75em;
@@ -2162,7 +2182,7 @@ is being used to size a border should also be in pixels.
 }
 .pagination > .pagination-control > .control-box > .number-button {
     -fx-background-radius: 0;
-    -fx-padding: 0.166667em 0.25em 0.25em 0.333em;
+    -fx-padding: 0.166667em 0.333em 0.25em 0.333em;
     -fx-background-color: -fx-shadow-highlight-color, -fx-outer-border, -fx-inner-border, -fx-body-color;
 }
 .pagination > .pagination-control > .control-box > .number-button:selected {   
@@ -2381,6 +2401,12 @@ is being used to size a border should also be in pixels.
     -fx-text-fill: -fx-selection-bar-text;
     -fx-padding: 0.166667em;
 }
+.table-view .column-header .context-menu,
+.tree-table-view .column-header .context-menu,
+.table-view > .column-header-background > .show-hide-columns-button .context-menu,
+.tree-table-view > .column-header-background > .show-hide-columns-button .context-menu {
+    -fx-font-weight: null;
+}
 .table-view .filler,
 .tree-table-view .filler,
 .table-view:constrained-resize .filler,
@@ -2529,6 +2555,9 @@ is being used to size a border should also be in pixels.
 
 .chart {
     -fx-padding: 5px;
+}
+.chart-plot-background {
+    -fx-background-color: -fx-background;
 }
 .chart-content {
     -fx-padding: 10px;
@@ -2826,6 +2855,7 @@ is being used to size a border should also be in pixels.
 }
 .chart-pie-label {
     -fx-padding: 3px;
+    -fx-fill: -fx-text-base-color;
 }
 .chart-pie-label-line {
     -fx-stroke: derive(-fx-background,-20%);
@@ -2878,6 +2908,9 @@ is being used to size a border should also be in pixels.
     -fx-background-insets: 0, 0;
     -fx-padding: 0;
  }
+ .tab-pane > * > .scroll-pane > .corner {
+     -fx-background-insets: 0;  /* Fix for RT-35067 */
+ }
 .tab-pane.floating > * > .table-view,
 .tab-pane.floating > * > .tree-table-view,
 .tab-pane.floating > * > .list-view,
@@ -2905,27 +2938,28 @@ is being used to size a border should also be in pixels.
 .split-pane > * > .accordion > .first-titled-pane:collapsed > .title  {
     -fx-background-insets: 0,0 0 0 0, 1 1 1 1;
 }
-.titled-pane > * > * > .split-pane,
-.titled-pane > * > * > .text-area,
-.titled-pane > * > * > .html-editor,
-.titled-pane > * > * > .list-view,
-.titled-pane > * > * > .tree-view,
-.titled-pane > * > * > .table-view,
-.titled-pane > * > * > .tree-table-view,
-.titled-pane > * > * > .scroll-pane {
+.titled-pane > .content > .split-pane,
+.titled-pane > .content > .text-area,
+.titled-pane > .content > .html-editor,
+.titled-pane > .content > .list-view,
+.titled-pane > .content > .tree-view,
+.titled-pane > .content > .table-view,
+.titled-pane > .content > .tree-table-view,
+.titled-pane > .content > .scroll-pane {
     -fx-background-color: null;
     -fx-background-insets: 0, 0;
     -fx-padding: 0;
 }
-.titled-pane > * > * > AnchorPane,
-.titled-pane > * > * > BorderPane,
-.titled-pane > * > * > FlowPane,
-.titled-pane > * > * > GridPane,
-.titled-pane > * > * > HBox,
-.titled-pane > * > * > Pane,
-.titled-pane > * > * > StackPane,
-.titled-pane > * > * > TilePane,
-.titled-pane > * > * > VBox {
+
+.titled-pane > .content > AnchorPane,
+.titled-pane > .content > BorderPane,
+.titled-pane > .content > FlowPane,
+.titled-pane > .content > GridPane,
+.titled-pane > .content > HBox,
+.titled-pane > .content > Pane,
+.titled-pane > .content > StackPane,
+.titled-pane > .content > TilePane,
+.titled-pane > .content > VBox {
     -fx-padding: 0.8em;
 }
 

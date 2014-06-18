@@ -69,7 +69,7 @@ jclass GlassApplication::ClassForName(JNIEnv *env, char *className)
 {
     // TODO: cache classCls as JNI global ref
     jclass classCls = env->FindClass("java/lang/Class");
-    if (!classCls) {
+    if (CheckAndClearException(env) || !classCls) {
         fprintf(stderr, "ClassForName error: classCls == NULL");
         return NULL;
     }
@@ -77,19 +77,20 @@ jclass GlassApplication::ClassForName(JNIEnv *env, char *className)
     // TODO: cache forNameMID as static
     jmethodID forNameMID =
         env->GetStaticMethodID(classCls, "forName", "(Ljava/lang/String;ZLjava/lang/ClassLoader;)Ljava/lang/Class;");
-    if (!forNameMID) {
+    if (CheckAndClearException(env) || !forNameMID) {
         fprintf(stderr, "ClassForName error: forNameMID == NULL");
         return NULL;
     }
 
     jstring classNameStr = env->NewStringUTF(className);
-    if (classNameStr == NULL) {
+    if (CheckAndClearException(env) || classNameStr == NULL) {
         fprintf(stderr, "ClassForName error: classNameStrs == NULL");
         return NULL;
     }
 
     jclass foundClass = (jclass)env->CallStaticObjectMethod(classCls,
         forNameMID, classNameStr, JNI_TRUE, sm_glassClassLoader);
+    if (CheckAndClearException(env)) return NULL;
 
     env->DeleteLocalRef(classNameStr);
     env->DeleteLocalRef(classCls);
@@ -120,6 +121,18 @@ GlassApplication::~GlassApplication()
 LPCTSTR GlassApplication::GetWindowClassNameSuffix()
 {
     return szGlassToolkitWindow;
+}
+
+jstring GlassApplication::GetThemeName(JNIEnv* env)
+{
+    HIGHCONTRAST contrastInfo;
+    contrastInfo.cbSize = sizeof(HIGHCONTRAST);
+    ::SystemParametersInfo(SPI_GETHIGHCONTRAST, sizeof(HIGHCONTRAST), &contrastInfo, 0);
+    if (contrastInfo.dwFlags & HCF_HIGHCONTRASTON) {
+        jsize length = (jsize) wcslen(contrastInfo.lpszDefaultScheme);
+        return env->NewString((jchar*)contrastInfo.lpszDefaultScheme, length);
+    }
+    return NULL;
 }
 
 LRESULT GlassApplication::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
@@ -173,6 +186,13 @@ LRESULT GlassApplication::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
         case WM_DISPLAYCHANGE:
             GlassScreen::HandleDisplayChange();
             break;
+        case WM_THEMECHANGED: {
+            JNIEnv* env = GetEnv();
+            jstring themeName = GlassApplication::GetThemeName(env);
+            jboolean result = env->CallBooleanMethod(m_grefThis, javaIDs.Application.notifyThemeChangedMID, themeName);
+            if (CheckAndClearException(env)) return 1;
+            return !result;
+        }
     }
     return ::DefWindowProc(GetHWND(), msg, wParam, lParam);
 }
@@ -330,12 +350,20 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinApplication_initIDs
     javaIDs.Application.reportExceptionMID =
         env->GetStaticMethodID(cls, "reportException", "(Ljava/lang/Throwable;)V");
     ASSERT(javaIDs.Application.reportExceptionMID);
+    if (CheckAndClearException(env)) return;
+
+    javaIDs.Application.notifyThemeChangedMID =
+        env->GetMethodID(cls, "notifyThemeChanged", "(Ljava/lang/String;)Z");
+    ASSERT(javaIDs.Application.notifyThemeChangedMID);
+    if (CheckAndClearException(env)) return;
 
     //NOTE: substitute the cls
     cls = (jclass)env->FindClass("java/lang/Runnable");
+    if (CheckAndClearException(env)) return;
 
     javaIDs.Runnable.run = env->GetMethodID(cls, "run", "()V");
     ASSERT(javaIDs.Runnable.run);
+    if (CheckAndClearException(env)) return;
 }
 
 /*
@@ -419,6 +447,17 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_win_WinApplication__1enterNested
   (JNIEnv * env, jobject self)
 {
     return GlassApplication::EnterNestedEventLoop(env);
+}
+
+/*
+ * Class:     com_sun_glass_ui_win_WinApplication
+ * Method:    _getHighContrastTheme
+ * Signature: ()Ljava/lang/String;
+ */
+JNIEXPORT jstring JNICALL Java_com_sun_glass_ui_win_WinApplication__1getHighContrastTheme
+  (JNIEnv * env, jobject self)
+{
+    return GlassApplication::GetThemeName(env);
 }
 
 /*

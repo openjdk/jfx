@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,7 +31,7 @@ import javafx.scene.text.Font;
  * A representation of a parsed CSS value. {@code V} is the type of the parsed
  * value, {@code T} is the {@code StyleableProperty} type of the converted value.
  * Instances of {@code ParsedValue} are created by the CSS parser. For example,
- * the parser creates a {@code ParsedValue<String,Color>} when it parses a 
+ * the parser creates a {@code ParsedValue&lt;String,Color&gt;} when it parses a
  * web Color. 
  * <p>
  * A ParsedValue is meaningful to the code that calculates actual values from

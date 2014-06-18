@@ -168,6 +168,15 @@ public class InsertAsSubComponentJob extends CompositeJob {
              */
             result.add(new UpdateSelectionJob(newObject, getEditorController()));
             
+            /*
+             * PrunePropertiesJob
+             */
+            final Job pruneJob = new PrunePropertiesJob(newObject, targetObject, 
+                    getEditorController());
+            if (pruneJob.isExecutable()) {
+                result.add(0, pruneJob);
+            }
+            
         } else {
             result = Collections.emptyList();
         }

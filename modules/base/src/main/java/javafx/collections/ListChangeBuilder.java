@@ -112,7 +112,7 @@ final class ListChangeBuilder<E> {
         } else {
             SubChange<E> change = addRemoveChanges.get(idx);
             change.to--; // Removed one element from the previously added list
-            if (change.from == change.to && change.removed == null || change.removed.isEmpty()) {
+            if (change.from == change.to && (change.removed == null || change.removed.isEmpty())) {
                     addRemoveChanges.remove(idx);
             }
         }

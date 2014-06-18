@@ -25,7 +25,7 @@
 
 import com.sun.scenario.effect.compiler.JSLC;
 import com.sun.scenario.effect.compiler.JSLC.JSLCInfo;
-import com.sun.scenario.effect.impl.state.LinearConvolveKernel;
+import com.sun.scenario.effect.impl.state.LinearConvolveRenderState;
 import java.io.File;
 
 /**
@@ -37,7 +37,7 @@ public class CompileLinearConvolve {
     /*
      * The basic idea here is to create a few different versions of the
      * LinearConvolve hardware effect peers, based on the kernel size.
-     * The LinearConvolveKernel state class contains the algorithm that
+     * The LinearConvolveRenderState state class contains the algorithm that
      * determines how many peers should be generated and at which optimized
      * sizes.
      */
@@ -51,11 +51,11 @@ public class CompileLinearConvolve {
         long basetime = baseFile.lastModified();
 
         // output one hardware shader for each unrolled size (as determined
-        // by the LinearConvolveKernel quantization algorithm)
+        // by the LinearConvolveRenderState quantization algorithm)
         jslcinfo.outTypes = (outTypes & JSLC.OUT_HW_SHADERS);
         int lastpeersize = -1;
-        for (int i = 1; i < LinearConvolveKernel.MAX_KERNEL_SIZE; i += 4) {
-            int peersize = LinearConvolveKernel.getPeerSize(i);
+        for (int i = 1; i < LinearConvolveRenderState.MAX_KERNEL_SIZE; i += 4) {
+            int peersize = LinearConvolveRenderState.getPeerSize(i);
             if (peersize != lastpeersize) {
                 String source = String.format(base, peersize/4, peersize/4);
                 jslcinfo.peerName = name + "_" + peersize;
@@ -68,8 +68,9 @@ public class CompileLinearConvolve {
         // each of the shaders generated above)
         jslcinfo.outTypes = (outTypes & JSLC.OUT_HW_PEERS);
         jslcinfo.peerName = name;
-        jslcinfo.interfaceName = "LinearConvolvePeer";
-        int peersize = LinearConvolveKernel.MAX_KERNEL_SIZE / 4;
+        jslcinfo.genericsName = "LinearConvolveRenderState";
+        jslcinfo.interfaceName = null; // "LinearConvolvePeer";
+        int peersize = LinearConvolveRenderState.MAX_KERNEL_SIZE / 4;
         String genericbase = String.format(base, peersize, 0);
         JSLC.compile(jslcinfo, genericbase, basetime);
 

@@ -160,12 +160,7 @@ final class NetworkContext {
         // HTTP exchanges, so return the value of the "http.maxConnections"
         // system property.
         int propValue = AccessController.doPrivileged(
-                new PrivilegedAction<Integer>() {
-                    @Override
-                    public Integer run() {
-                        return Integer.getInteger("http.maxConnections", -1);
-                    }
-                });
+                (PrivilegedAction<Integer>) () -> Integer.getInteger("http.maxConnections", -1));
         return propValue >= 0 ? propValue : DEFAULT_HTTP_MAX_CONNECTIONS;
     }
     

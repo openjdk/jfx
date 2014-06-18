@@ -64,11 +64,10 @@ public final class SortedList<E> extends TransformationList<E, E>{
 
     /**
      * Creates a new SortedList wrapped around the source list.
-     * The source list will be sorted using the comparator provided. If null is provided, a natural
-     * ordering of the elements is used if possible. Otherwise, the SortedList tries to sort the elements
-     * by their toString().
+     * The source list will be sorted using the comparator provided. If null is provided, the list
+     * stays unordered and is equal to the source list.
      * @param source a list to wrap
-     * @param comparator a comparator to use or null for the unordered List
+     * @param comparator a comparator to use or null for unordered List
      */
     @SuppressWarnings("unchecked")
     public SortedList(@NamedArg("source") ObservableList<? extends E> source, @NamedArg("comparator") Comparator<? super E> comparator) {
@@ -185,6 +184,9 @@ public final class SortedList<E> extends TransformationList<E, E>{
         } else {
             int[] perm = new int[size];
             int[] rperm = new int[size];
+            for (int i = 0; i < size; ++i) {
+                perm[i] = rperm[i] = i;
+            }
             boolean changed = false;
             int idx = 0;
             while (idx < size) {
@@ -237,9 +239,11 @@ public final class SortedList<E> extends TransformationList<E, E>{
                 final int removedTo = c.getFrom() + c.getRemovedSize();
                 System.arraycopy(sorted, removedTo, sorted, c.getFrom(), size - removedTo);
                 size -= c.getRemovedSize();
+                updateIndices(removedTo, -c.getRemovedSize());
             }
             if (c.wasAdded()) {
                 ensureSize(size + c.getAddedSize());
+                updateIndices(c.getFrom(), c.getAddedSize());
                 System.arraycopy(sorted, c.getFrom(), sorted, c.getTo(), size - c.getFrom());
                 size += c.getAddedSize();
                 for (int i = c.getFrom(); i < c.getTo(); ++i) {

@@ -30,15 +30,17 @@ import java.util.Collections;
 import java.util.List;
 
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.value.WritableValue;
 import javafx.geometry.HPos;
 import javafx.geometry.Orientation;
 import javafx.geometry.VPos;
-
 import javafx.css.StyleableObjectProperty;
 import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
+
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.scene.control.skin.SeparatorSkin;
+
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 
@@ -78,15 +80,7 @@ public class Separator extends Control {
      * respective CENTER values.
      */
     public Separator() {
-        getStyleClass().setAll(DEFAULT_STYLE_CLASS);
-        // focusTraversable is styleable through css. Calling setFocusTraversable
-        // makes it look to css like the user set the value and css will not 
-        // override. Initializing focusTraversable by calling applyStyle with null
-        // StyleOrigin ensures that css will be able to override the value.
-        ((StyleableProperty)focusTraversableProperty()).applyStyle(null, Boolean.FALSE);
-        
-        // initialize pseudo-class state
-        pseudoClassStateChanged(HORIZONTAL_PSEUDOCLASS_STATE, true);
+        this(Orientation.HORIZONTAL);
     }
 
     /**
@@ -97,8 +91,21 @@ public class Separator extends Control {
      *      vertical or horizontal.
      */
     public Separator(Orientation orientation) {
-        this();
-        setOrientation(orientation);
+
+        getStyleClass().setAll(DEFAULT_STYLE_CLASS);
+
+        // focusTraversable is styleable through css. Calling setFocusTraversable
+        // makes it look to css like the user set the value and css will not
+        // override. Initializing focusTraversable by calling applyStyle with null
+        // StyleOrigin ensures that css will be able to override the value.
+        ((StyleableProperty<Boolean>)(WritableValue<Boolean>)focusTraversableProperty()).applyStyle(null, Boolean.FALSE);
+
+        // initialize pseudo-class state
+        pseudoClassStateChanged(HORIZONTAL_PSEUDOCLASS_STATE, orientation != Orientation.VERTICAL);
+        pseudoClassStateChanged(VERTICAL_PSEUDOCLASS_STATE, orientation == Orientation.VERTICAL);
+
+        ((StyleableProperty<Orientation>)(WritableValue<Orientation>)orientationProperty())
+                .applyStyle(null, orientation != null ? orientation : Orientation.HORIZONTAL);
     }
 
     /***************************************************************************
@@ -229,9 +236,6 @@ public class Separator extends Control {
 
     private static final String DEFAULT_STYLE_CLASS = "separator";
 
-    private static final String PSEUDO_CLASS_VERTICAL = "vertical";
-    private static final String PSEUDO_CLASS_HORIZONTAL = "horizontal";
-
     private static class StyleableProperties {
         private static final CssMetaData<Separator,Orientation> ORIENTATION = 
                 new CssMetaData<Separator,Orientation>("-fx-orientation",
@@ -251,7 +255,7 @@ public class Separator extends Control {
 
             @Override
             public StyleableProperty<Orientation> getStyleableProperty(Separator n) {
-                return (StyleableProperty<Orientation>)n.orientationProperty();
+                return (StyleableProperty<Orientation>)(WritableValue<Orientation>)n.orientationProperty();
             }
         };
         
@@ -267,7 +271,7 @@ public class Separator extends Control {
 
             @Override
             public StyleableProperty<HPos> getStyleableProperty(Separator n) {
-                return (StyleableProperty<HPos>)n.halignmentProperty();
+                return (StyleableProperty<HPos>)(WritableValue<HPos>)n.halignmentProperty();
             }
         };
         
@@ -283,7 +287,7 @@ public class Separator extends Control {
 
             @Override
             public StyleableProperty<VPos> getStyleableProperty(Separator n) {
-                return (StyleableProperty<VPos>)n.valignmentProperty();
+                return (StyleableProperty<VPos>)(WritableValue<VPos>)n.valignmentProperty();
             }
         };
 

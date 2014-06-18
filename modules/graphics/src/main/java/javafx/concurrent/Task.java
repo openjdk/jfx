@@ -766,8 +766,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
     /**
      * A protected convenience method for subclasses, called whenever the
      * state of the Task has transitioned to the SCHEDULED state.
-     * This method is invoked on the FX Application Thread after any listeners
-     * of the state property and after the Task has been fully transitioned to
+     * This method is invoked on the FX Application Thread after the Task has been fully transitioned to
      * the new state.
      * @since JavaFX 2.1
      */
@@ -812,8 +811,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
     /**
      * A protected convenience method for subclasses, called whenever the
      * state of the Task has transitioned to the RUNNING state.
-     * This method is invoked on the FX Application Thread after any listeners
-     * of the state property and after the Task has been fully transitioned to
+     * This method is invoked on the FX Application Thread after the Task has been fully transitioned to
      * the new state.
      * @since JavaFX 2.1
      */
@@ -858,8 +856,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
     /**
      * A protected convenience method for subclasses, called whenever the
      * state of the Task has transitioned to the SUCCEEDED state.
-     * This method is invoked on the FX Application Thread after any listeners
-     * of the state property and after the Task has been fully transitioned to
+     * This method is invoked on the FX Application Thread after the Task has been fully transitioned to
      * the new state.
      * @since JavaFX 2.1
      */
@@ -904,8 +901,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
     /**
      * A protected convenience method for subclasses, called whenever the
      * state of the Task has transitioned to the CANCELLED state.
-     * This method is invoked on the FX Application Thread after any listeners
-     * of the state property and after the Task has been fully transitioned to
+     * This method is invoked on the FX Application Thread after the Task has been fully transitioned to
      * the new state.
      * @since JavaFX 2.1
      */
@@ -950,8 +946,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
     /**
      * A protected convenience method for subclasses, called whenever the
      * state of the Task has transitioned to the FAILED state.
-     * This method is invoked on the FX Application Thread after any listeners
-     * of the state property and after the Task has been fully transitioned to
+     * This method is invoked on the FX Application Thread after the Task has been fully transitioned to
      * the new state.
      * @since JavaFX 2.1
      */
@@ -1015,11 +1010,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
             if (isFxApplicationThread()) {
                 setState(State.CANCELLED);
             } else {
-                runLater(new Runnable() {
-                    @Override public void run() {
-                        setState(State.CANCELLED);
-                    }
-                });
+                runLater(() -> setState(State.CANCELLED));
             }
         }
         // return the flag
@@ -1096,11 +1087,9 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
         if (isFxApplicationThread()) {
             _updateProgress(workDone, max);
         } else if (progressUpdate.getAndSet(new ProgressUpdate(workDone, max)) == null) {
-            runLater(new Runnable() {
-                @Override public void run() {
-                    final ProgressUpdate update = progressUpdate.getAndSet(null);
-                    _updateProgress(update.workDone, update.totalWork);
-                }
+            runLater(() -> {
+                final ProgressUpdate update = progressUpdate.getAndSet(null);
+                _updateProgress(update.workDone, update.totalWork);
             });
         }
     }
@@ -1202,11 +1191,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
             // to throttle the updates so as not to completely clobber
             // the event dispatching system.
             if (valueUpdate.getAndSet(value) == null) {
-                runLater(new Runnable() {
-                    @Override public void run() {
-                        Task.this.value.set(valueUpdate.getAndSet(null));
-                    }
-                });
+                runLater(() -> Task.this.value.set(valueUpdate.getAndSet(null)));
             }
         }
     }
@@ -1415,11 +1400,9 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
             // effect. But we must ensure that SCHEDULED is visited before RUNNING
             // in all cases so that developer code can be consistent.
             task.started = true;
-            task.runLater(new Runnable() {
-                @Override public void run() {
-                    task.setState(State.SCHEDULED);
-                    task.setState(State.RUNNING);
-                }
+            task.runLater(() -> {
+                task.setState(State.SCHEDULED);
+                task.setState(State.RUNNING);
             });
             // Go ahead and delegate to the wrapped callable
             try {
@@ -1427,23 +1410,20 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
                 if (!task.isCancelled()) {
                     // If it was not cancelled, then we take the return
                     // value and set it as the result.
-                    task.runLater(new Runnable() {
-                        @Override public void run() {
-                            // The result must be set first, so that when the
-                            // SUCCEEDED flag is set, the value will be available
-                            // The alternative is not the case, because you
-                            // can assume if the result is set, it has
-                            // succeeded.
-                            task.updateValue(result);
-                            task.setState(State.SUCCEEDED);
-                        }
+                    task.runLater(() -> {
+                        // The result must be set first, so that when the
+                        // SUCCEEDED flag is set, the value will be available
+                        // The alternative is not the case, because you
+                        // can assume if the result is set, it has
+                        // succeeded.
+                        task.updateValue(result);
+                        task.setState(State.SUCCEEDED);
                     });
                     return result;
                 } else {
-                    // There may have been some intermediate result in the
-                    // task set from the background thread, so I want to be
-                    // sure to return the most recent intermediate value
-                    return task.getValue();
+                    // Since cancelled Future/FutureTask doesn't return any value,
+                    // the returned value is going to be trashed, so we can jus return null
+                    return null;
                 }
             } catch (final Throwable th) {
                 // Be sure to set the state after setting the cause of failure
@@ -1454,11 +1434,9 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
                 // though the state has not yet been updated, he can infer that
                 // it will be FAILED because it can be nothing other than FAILED
                 // in that circumstance.
-                task.runLater(new Runnable() {
-                    @Override public void run() {
-                        task._setException(th);
-                        task.setState(State.FAILED);
-                    }
+                task.runLater(() -> {
+                    task._setException(th);
+                    task.setState(State.FAILED);
                 });
                 // Some error occurred during the call (it might be
                 // an exception (either runtime or checked), or it might

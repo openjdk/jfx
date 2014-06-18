@@ -63,11 +63,9 @@ class AndroidFontFinder {
     final static String systemFontsDir = "/system/fonts";
 
     static {
-        AccessController.doPrivileged(new PrivilegedAction<Void>() {
-            public Void run() {
-                NativeLibLoader.loadLibrary("javafx_font");
-                return null;
-            }
+        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+            NativeLibLoader.loadLibrary("javafx_font");
+            return null;
         });
     }
 

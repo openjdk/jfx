@@ -44,17 +44,26 @@ public class ErrorReportEntry {
     public enum Type {
         UNRESOLVED_CLASS,
         UNRESOLVED_LOCATION,
-        UNRESOLVED_RESOURCE
+        UNRESOLVED_RESOURCE,
+        INVALID_CSS_CONTENT,
+        UNSUPPORTED_EXPRESSION
     }
     
     private final FXOMNode fxomNode;
     private final Type type;
+    private final CSSParsingReport cssParsingReport; // relevant for INVALID_CSS_CONTENT
     
-    public ErrorReportEntry(FXOMNode fxomNode, Type type) {
+    public ErrorReportEntry(FXOMNode fxomNode, Type type, CSSParsingReport cssParsingReport) {
         assert fxomNode != null;
+        assert (type == Type.INVALID_CSS_CONTENT) == (cssParsingReport != null);
         
         this.fxomNode = fxomNode;
         this.type = type;
+        this.cssParsingReport = cssParsingReport;
+    }
+
+    public ErrorReportEntry(FXOMNode fxomNode, Type type) {
+        this(fxomNode, type, null);
     }
 
     public FXOMNode getFxomNode() {
@@ -64,7 +73,10 @@ public class ErrorReportEntry {
     public Type getType() {
         return type;
     }
-    
+
+    public CSSParsingReport getCssParsingReport() {
+        return cssParsingReport;
+    }
     
     /*
      * Object
@@ -87,6 +99,12 @@ public class ErrorReportEntry {
                 break;
             case UNRESOLVED_RESOURCE:
                 result.append(",resource="); //NOI18N
+                break;
+            case INVALID_CSS_CONTENT:
+                result.append(",css file="); //NOI18N
+                break;
+            case UNSUPPORTED_EXPRESSION:
+                result.append(",expression="); //NOI18N
                 break;
         }
         if (fxomNode instanceof FXOMPropertyT) {

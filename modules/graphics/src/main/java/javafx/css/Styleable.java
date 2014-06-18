@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,11 +27,8 @@ package javafx.css;
 
 import java.util.List;
 
-import javafx.beans.property.Property;
-import javafx.beans.value.WritableValue;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableSet;
-import javafx.scene.text.Font;
 
 /** 
  * Styleable comprises the minimal interface required for an object to be styled by CSS.

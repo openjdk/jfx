@@ -40,6 +40,7 @@ import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadat
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 import java.util.ArrayList;
 import java.util.List;
+import javafx.scene.control.TableColumnBase;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.ColumnConstraints;
@@ -140,6 +141,10 @@ public class UseComputedSizesObjectJob extends Job {
         else if (sceneGraphObject instanceof ImageView) {
             subJobs.addAll(modifyFitHeightJob(fxomInstance));
             subJobs.addAll(modifyFitWidthJob(fxomInstance));
+        } //
+        // TableColumnBase: only width property is meaningfull
+        else if (sceneGraphObject instanceof TableColumnBase) {
+            subJobs.addAll(modifyWidthJobs(fxomInstance));
         }
     }
 

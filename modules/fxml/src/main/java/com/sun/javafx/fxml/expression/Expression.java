@@ -36,13 +36,14 @@ import java.util.List;
 import java.util.Map;
 
 import com.sun.javafx.fxml.BeanAdapter;
+import static com.sun.javafx.fxml.expression.Operator.*;
 
 /**
  * Abstract base class for expressions. Also provides static methods for
  * creating arithmetic and logical expressions as well as accessing namespace
  * values by key path.
  */
-public abstract class Expression {
+public abstract class Expression<T> {
     // Expression parser class
     private static class Parser {
         public static class Token {
@@ -73,7 +74,6 @@ public abstract class Expression {
         private int c = -1;
         private char[] pushbackBuffer = new char[PUSHBACK_BUFFER_SIZE];
 
-        private static final int MAX_PRIORITY = 6;
         private static final int PUSHBACK_BUFFER_SIZE = 6;
 
         public Expression parse(Reader reader) throws IOException {
@@ -82,7 +82,7 @@ public abstract class Expression {
             LinkedList<Expression> stack = new LinkedList<Expression>();
 
             for (Token token : tokens) {
-                Expression expression;
+                Expression<?> expression;
                 switch (token.type) {
                     case LITERAL: {
                         expression = new LiteralExpression(token.value);
@@ -106,53 +106,71 @@ public abstract class Expression {
                     }
 
                     case UNARY_OPERATOR: {
-                        String operator = (String)token.value;
+                        Operator operator = (Operator)token.value;
                         Expression operand = stack.pop();
 
-                        if (operator.equals(NEGATE)) {
-                            expression = negate(operand);
-                        } else if (operator.equals(NOT)) {
-                            expression = not(operand);
-                        } else {
-                            throw new UnsupportedOperationException();
+                        switch(operator) {
+                            case NEGATE:
+                                expression = negate(operand);
+                                break;
+                            case NOT:
+                                expression = not(operand);
+                                break;
+                            default:
+                                throw new UnsupportedOperationException();
+
                         }
 
                         break;
                     }
 
                     case BINARY_OPERATOR: {
-                        String operator = (String)token.value;
+                        Operator operator = (Operator)token.value;
                         Expression right = stack.pop();
                         Expression left = stack.pop();
 
-                        if (operator.equals(ADD)) {
-                            expression = add(left, right);
-                        } else if (operator.equals(SUBTRACT)) {
-                            expression = subtract(left, right);
-                        } else if (operator.equals(MULTIPLY)) {
-                            expression = multiply(left, right);
-                        } else if (operator.equals(DIVIDE)) {
-                            expression = divide(left, right);
-                        } else if (operator.equals(MODULO)) {
-                            expression = modulo(left, right);
-                        } else if (operator.equals(GREATER_THAN)) {
-                            expression = greaterThan(left, right);
-                        } else if (operator.equals(GREATER_THAN_OR_EQUAL_TO)) {
-                            expression = greaterThanOrEqualTo(left, right);
-                        } else if (operator.equals(LESS_THAN)) {
-                            expression = lessThan(left, right);
-                        } else if (operator.equals(LESS_THAN_OR_EQUAL_TO)) {
-                            expression = lessThanOrEqualTo(left, right);
-                        } else if (operator.equals(EQUAL_TO)) {
-                            expression = equalTo(left, right);
-                        } else if (operator.equals(NOT_EQUAL_TO)) {
-                            expression = notEqualTo(left, right);
-                        } else if (operator.equals(AND)) {
-                            expression = and(left, right);
-                        } else if (operator.equals(OR)) {
-                            expression = or(left, right);
-                        } else {
-                            throw new UnsupportedOperationException();
+                        switch(operator) {
+                            case ADD:
+                                expression = add(left, right);
+                                break;
+                            case SUBTRACT:
+                                expression = subtract(left, right);
+                                break;
+                            case MULTIPLY:
+                                expression = multiply(left, right);
+                                break;
+                            case DIVIDE:
+                                expression = divide(left, right);
+                                break;
+                            case MODULO:
+                                expression = modulo(left, right);
+                                break;
+                            case GREATER_THAN:
+                                expression = greaterThan(left, right);
+                                break;
+                            case GREATER_THAN_OR_EQUAL_TO:
+                                expression = greaterThanOrEqualTo(left, right);
+                                break;
+                            case LESS_THAN:
+                                expression = lessThan(left, right);
+                                break;
+                            case LESS_THAN_OR_EQUAL_TO:
+                                expression = lessThanOrEqualTo(left, right);
+                                break;
+                            case EQUAL_TO:
+                                expression = equalTo(left, right);
+                                break;
+                            case NOT_EQUAL_TO:
+                                expression = notEqualTo(left, right);
+                                break;
+                            case AND:
+                                expression = and(left, right);
+                                break;
+                            case OR:
+                                expression = or(left, right);
+                                break;
+                            default:
+                                throw new UnsupportedOperationException();
                         }
 
                         break;
@@ -298,77 +316,105 @@ public abstract class Expression {
                         token = new Token(TokenType.VARIABLE, KeyPath.parse(reader));
                         c = reader.read();
                     } else {
-                        if (c == NEGATE.charAt(0) && unary) {
-                            token = new Token(TokenType.UNARY_OPERATOR, NEGATE);
-                        } else if (c == NOT.charAt(0) && unary) {
-                            token = new Token(TokenType.UNARY_OPERATOR, NOT);
-                        } else if (c == ADD.charAt(0)) {
-                            token = new Token(TokenType.BINARY_OPERATOR, ADD);
-                        } else if (c == SUBTRACT.charAt(0)) {
-                            token = new Token(TokenType.BINARY_OPERATOR, SUBTRACT);
-                        } else if (c == MULTIPLY.charAt(0)) {
-                            token = new Token(TokenType.BINARY_OPERATOR, MULTIPLY);
-                        } else if (c == DIVIDE.charAt(0)) {
-                            token = new Token(TokenType.BINARY_OPERATOR, DIVIDE);
-                        } else if (c == MODULO.charAt(0)) {
-                            token = new Token(TokenType.BINARY_OPERATOR, MODULO);
-                        } else if (c == EQUAL_TO.charAt(0)) {
-                            c = reader.read();
-
-                            if (c == EQUAL_TO.charAt(1)) {
-                                token = new Token(TokenType.BINARY_OPERATOR, EQUAL_TO);
-                            } else {
-                                throw new IllegalArgumentException();
+                        boolean readNext = true;
+                        if (unary) {
+                            switch(c) {
+                                case '-':
+                                    token = new Token(TokenType.UNARY_OPERATOR, NEGATE);
+                                    break;
+                                case '!':
+                                    token = new Token(TokenType.UNARY_OPERATOR, NOT);
+                                    break;
+                                case '(':
+                                    token = new Token(TokenType.BEGIN_GROUP, null);
+                                    break;
+                                default:
+                                    throw new IllegalArgumentException("Unexpected character in expression.");
                             }
-                        } else if (c == NOT_EQUAL_TO.charAt(0)) {
-                            c = reader.read();
-
-                            if (c == NOT_EQUAL_TO.charAt(1)) {
-                                token = new Token(TokenType.BINARY_OPERATOR, NOT_EQUAL_TO);
-                            } else {
-                                throw new IllegalArgumentException();
-                            }
-                        } else if (c == GREATER_THAN.charAt(0)) {
-                            c = reader.read();
-
-                            if (c == GREATER_THAN_OR_EQUAL_TO.charAt(1)) {
-                                token = new Token(TokenType.BINARY_OPERATOR, GREATER_THAN_OR_EQUAL_TO);
-                            } else {
-                                token = new Token(TokenType.BINARY_OPERATOR, GREATER_THAN);
-                            }
-                        } else if (c == LESS_THAN.charAt(0)) {
-                            c = reader.read();
-
-                            if (c == LESS_THAN_OR_EQUAL_TO.charAt(1)) {
-                                token = new Token(TokenType.BINARY_OPERATOR, LESS_THAN_OR_EQUAL_TO);
-                            } else {
-                                token = new Token(TokenType.BINARY_OPERATOR, LESS_THAN);
-                            }
-                        } else if (c == AND.charAt(0)) {
-                            c = reader.read();
-
-                            if (c == AND.charAt(0)) {
-                                token = new Token(TokenType.BINARY_OPERATOR, AND);
-                            } else {
-                                throw new IllegalArgumentException();
-                            }
-                        } else if (c == OR.charAt(0)) {
-                            c = reader.read();
-
-                            if (c == OR.charAt(0)) {
-                                token = new Token(TokenType.BINARY_OPERATOR, OR);
-                            } else {
-                                throw new IllegalArgumentException();
-                            }
-                        } else if (c == '(') {
-                            token = new Token(TokenType.BEGIN_GROUP, LEFT_PARENTHESIS);
-                        } else if (c == ')') {
-                            token = new Token(TokenType.END_GROUP, RIGHT_PARENTHESIS);
                         } else {
-                            throw new IllegalArgumentException("Unexpected character in expression.");
-                        }
+                            switch(c) {
+                                case '+':
+                                    token = new Token(TokenType.BINARY_OPERATOR, ADD);
+                                    break;
+                                case '-':
+                                    token = new Token(TokenType.BINARY_OPERATOR, SUBTRACT);
+                                    break;
+                                case '*':
+                                    token = new Token(TokenType.BINARY_OPERATOR, MULTIPLY);
+                                    break;
+                                case '/':
+                                    token = new Token(TokenType.BINARY_OPERATOR, DIVIDE);
+                                    break;
+                                case '%':
+                                    token = new Token(TokenType.BINARY_OPERATOR, MODULO);
+                                    break;
+                                case '=':
+                                    c = reader.read();
+                                    if (c == '=') {
+                                        token = new Token(TokenType.BINARY_OPERATOR, EQUAL_TO);
+                                    } else {
+                                        throw new IllegalArgumentException("Unexpected character in expression.");
+                                    }
+                                    break;
+                                case '!':
+                                    c = reader.read();
 
-                        c = reader.read();
+                                    if (c == '=') {
+                                        token = new Token(TokenType.BINARY_OPERATOR, NOT_EQUAL_TO);
+                                    } else {
+                                        throw new IllegalArgumentException("Unexpected character in expression.");
+                                    }
+                                    break;
+                                case '>':
+                                    c = reader.read();
+
+                                    if (c == '=') {
+                                        token = new Token(TokenType.BINARY_OPERATOR, GREATER_THAN_OR_EQUAL_TO);
+                                    } else {
+                                        readNext = false;
+                                        token = new Token(TokenType.BINARY_OPERATOR, GREATER_THAN);
+                                    }
+                                    break;
+                                case '<':
+                                    c = reader.read();
+
+                                    if (c == '=') {
+                                        token = new Token(TokenType.BINARY_OPERATOR, LESS_THAN_OR_EQUAL_TO);
+                                    } else {
+                                        readNext = false;
+                                        token = new Token(TokenType.BINARY_OPERATOR, LESS_THAN);
+                                    }
+                                    break;
+                                case '&':
+                                    c = reader.read();
+
+                                    if (c == '&') {
+                                        token = new Token(TokenType.BINARY_OPERATOR, AND);
+                                    } else {
+                                        throw new IllegalArgumentException("Unexpected character in expression.");
+                                    }
+                                    break;
+                                case '|':
+                                    c = reader.read();
+
+                                    if (c == '|') {
+                                        token = new Token(TokenType.BINARY_OPERATOR, OR);
+                                    } else {
+                                        throw new IllegalArgumentException("Unexpected character in expression.");
+                                    }
+                                    break;
+
+                                case ')':
+                                    token = new Token(TokenType.END_GROUP, null);
+                                    break;
+                                default:
+                                    throw new IllegalArgumentException("Unexpected character in expression.");
+                            }
+
+                        }
+                        if (readNext) {
+                            c = reader.read();
+                        }
                     }
 
                     // Process the token
@@ -381,12 +427,12 @@ public abstract class Expression {
 
                         case UNARY_OPERATOR:
                         case BINARY_OPERATOR: {
-                            int priority = getPriority((String)token.value);
+                            int priority = ((Operator)token.value).getPriority();
 
                             while (!stack.isEmpty()
                                 && stack.peek().type != TokenType.BEGIN_GROUP
-                                && getPriority((String)stack.peek().value) >= priority
-                                && getPriority((String)stack.peek().value) != MAX_PRIORITY) {
+                                && ((Operator)stack.peek().value).getPriority() >= priority
+                                && ((Operator)stack.peek().value).getPriority() != Operator.MAX_PRIORITY) {
                                 tokens.add(stack.pop());
                             }
 
@@ -400,8 +446,8 @@ public abstract class Expression {
                         }
 
                         case END_GROUP: {
-                            for (token = stack.pop(); token.type != TokenType.BEGIN_GROUP; token = stack.pop()) {
-                                tokens.add(token);
+                            for (Token t = stack.pop(); t.type != TokenType.BEGIN_GROUP; t = stack.pop()) {
+                                tokens.add(t);
                             }
 
                             break;
@@ -412,7 +458,7 @@ public abstract class Expression {
                         }
                     }
 
-                    unary = !(token.type == TokenType.LITERAL || token.type == TokenType.VARIABLE);
+                    unary = !(token.type == TokenType.LITERAL || token.type == TokenType.VARIABLE || token.type == TokenType.END_GROUP);
                 }
             }
 
@@ -448,60 +494,7 @@ public abstract class Expression {
             return result;
         }
 
-        private int getPriority(String operator) {
-            int priority;
-
-            if (operator.equals(NEGATE)
-                || operator.equals(NOT)) {
-                priority = MAX_PRIORITY;
-            } else if (operator.equals(MULTIPLY)
-                || operator.equals(DIVIDE)
-                || operator.equals(MODULO)) {
-                priority = MAX_PRIORITY - 1;
-            } else if (operator.equals(ADD)
-                || operator.equals(SUBTRACT)) {
-                priority = MAX_PRIORITY - 2;
-            } else if (operator.equals(GREATER_THAN)
-                || operator.equals(GREATER_THAN_OR_EQUAL_TO)
-                || operator.equals(LESS_THAN)
-                || operator.equals(LESS_THAN_OR_EQUAL_TO)) {
-                priority = MAX_PRIORITY - 3;
-            } else if (operator.equals(EQUAL_TO)
-                || operator.equals(NOT_EQUAL_TO)) {
-                priority = MAX_PRIORITY - 4;
-            } else if (operator.equals(AND)) {
-                priority = MAX_PRIORITY - 5;
-            } else if (operator.equals(OR)) {
-                priority = MAX_PRIORITY - 6;
-            } else {
-                throw new IllegalArgumentException();
-            }
-
-            return priority;
-        }
     }
-
-    private static final String NEGATE = "-";
-    private static final String NOT = "!";
-
-    private static final String ADD = "+";
-    private static final String SUBTRACT = "-";
-    private static final String MULTIPLY = "*";
-    private static final String DIVIDE = "/";
-    private static final String MODULO = "%";
-
-    private static final String GREATER_THAN = ">";
-    private static final String GREATER_THAN_OR_EQUAL_TO = ">=";
-    private static final String LESS_THAN = "<";
-    private static final String LESS_THAN_OR_EQUAL_TO = "<=";
-    private static final String EQUAL_TO = "==";
-    private static final String NOT_EQUAL_TO = "!=";
-
-    private static final String AND = "&&";
-    private static final String OR = "||";
-
-    private static final String LEFT_PARENTHESIS = "(";
-    private static final String RIGHT_PARENTHESIS = ")";
 
     private static final String NULL_KEYWORD = "null";
     private static final String TRUE_KEYWORD = "true";
@@ -516,7 +509,7 @@ public abstract class Expression {
      * @return
      * The result of evaluating the expression.
      */
-    public abstract Object evaluate(Object namespace);
+    public abstract T evaluate(Object namespace);
 
     /**
      * Updates the expression value.
@@ -527,7 +520,7 @@ public abstract class Expression {
      * @param value
      * The value to assign to the expression.
      */
-    public abstract void update(Object namespace, Object value);
+    public abstract void update(Object namespace, T value);
 
     /**
      * Tests whether the expression is defined.
@@ -803,44 +796,33 @@ public abstract class Expression {
      * @param right
      */
     public static BinaryExpression add(Expression left, Expression right) {
-        return new BinaryExpression(left, right) {
-            @Override
-            public String getOperator() {
-                return ADD;
-            }
+        return new BinaryExpression(left, right, (leftValue, rightValue) -> {
+            Object value;
+            if (leftValue instanceof String || rightValue instanceof String) {
+                value = leftValue.toString().concat(rightValue.toString());
+            } else {
+                Number leftNumber = (Number)leftValue;
+                Number rightNumber = (Number)rightValue;
 
-            @Override
-            public Object evaluate(Object namespace) {
-                Object leftValue = getLeft().evaluate(namespace);
-                Object rightValue = getRight().evaluate(namespace);
-
-                Object value;
-                if (leftValue instanceof String || rightValue instanceof String) {
-                    value = leftValue.toString().concat(rightValue.toString());
+                if (leftNumber instanceof Double || rightNumber instanceof Double) {
+                    value = leftNumber.doubleValue() + rightNumber.doubleValue();
+                } else if (leftNumber instanceof Float || rightNumber instanceof Float) {
+                    value = leftNumber.floatValue() + rightNumber.floatValue();
+                } else if (leftNumber instanceof Long || rightNumber instanceof Long) {
+                    value = leftNumber.longValue() + rightNumber.longValue();
+                } else if (leftNumber instanceof Integer || rightNumber instanceof Integer) {
+                    value = leftNumber.intValue() + rightNumber.intValue();
+                } else if (leftNumber instanceof Short || rightNumber instanceof Short) {
+                    value = leftNumber.shortValue() + rightNumber.shortValue();
+                } else if (leftNumber instanceof Byte || rightNumber instanceof Byte) {
+                    value = leftNumber.byteValue() + rightNumber.byteValue();
                 } else {
-                    Number leftNumber = (Number)leftValue;
-                    Number rightNumber = (Number)rightValue;
-
-                    if (leftNumber instanceof Double || rightNumber instanceof Double) {
-                        value = leftNumber.doubleValue() + rightNumber.doubleValue();
-                    } else if (leftNumber instanceof Float || rightNumber instanceof Float) {
-                        value = leftNumber.floatValue() + rightNumber.floatValue();
-                    } else if (leftNumber instanceof Long || rightNumber instanceof Long) {
-                        value = leftNumber.longValue() + rightNumber.longValue();
-                    } else if (leftNumber instanceof Integer || rightNumber instanceof Integer) {
-                        value = leftNumber.intValue() + rightNumber.intValue();
-                    } else if (leftNumber instanceof Short || rightNumber instanceof Short) {
-                        value = leftNumber.shortValue() + rightNumber.shortValue();
-                    } else if (leftNumber instanceof Byte || rightNumber instanceof Byte) {
-                        value = leftNumber.byteValue() + rightNumber.byteValue();
-                    } else {
-                        throw new UnsupportedOperationException();
-                    }
+                    throw new UnsupportedOperationException();
                 }
-
-                return value;
             }
-        };
+
+            return value;
+        });
     }
 
     /**
@@ -880,37 +862,26 @@ public abstract class Expression {
      * @param right
      */
     public static BinaryExpression subtract(Expression left, Expression right) {
-        return new BinaryExpression(left, right) {
-            @Override
-            public String getOperator() {
-                return SUBTRACT;
+        return new BinaryExpression<Number, Number>(left, right, (Number leftValue, Number rightValue) -> {
+            Number value;
+            if (leftValue instanceof Double || rightValue instanceof Double) {
+                value = leftValue.doubleValue() - rightValue.doubleValue();
+            } else if (leftValue instanceof Float || rightValue instanceof Float) {
+                value = leftValue.floatValue() - rightValue.floatValue();
+            } else if (leftValue instanceof Long || rightValue instanceof Long) {
+                value = leftValue.longValue() - rightValue.longValue();
+            } else if (leftValue instanceof Integer || rightValue instanceof Integer) {
+                value = leftValue.intValue() - rightValue.intValue();
+            } else if (leftValue instanceof Short || rightValue instanceof Short) {
+                value = leftValue.shortValue() - rightValue.shortValue();
+            } else if (leftValue instanceof Byte || rightValue instanceof Byte) {
+                value = leftValue.byteValue() - rightValue.byteValue();
+            } else {
+                throw new UnsupportedOperationException();
             }
 
-            @Override
-            public Object evaluate(Object namespace) {
-                Number leftValue = (Number)getLeft().evaluate(namespace);
-                Number rightValue = (Number)getRight().evaluate(namespace);
-
-                Number value;
-                if (leftValue instanceof Double || rightValue instanceof Double) {
-                    value = leftValue.doubleValue() - rightValue.doubleValue();
-                } else if (leftValue instanceof Float || rightValue instanceof Float) {
-                    value = leftValue.floatValue() - rightValue.floatValue();
-                } else if (leftValue instanceof Long || rightValue instanceof Long) {
-                    value = leftValue.longValue() - rightValue.longValue();
-                } else if (leftValue instanceof Integer || rightValue instanceof Integer) {
-                    value = leftValue.intValue() - rightValue.intValue();
-                } else if (leftValue instanceof Short || rightValue instanceof Short) {
-                    value = leftValue.shortValue() - rightValue.shortValue();
-                } else if (leftValue instanceof Byte || rightValue instanceof Byte) {
-                    value = leftValue.byteValue() - rightValue.byteValue();
-                } else {
-                    throw new UnsupportedOperationException();
-                }
-
-                return value;
-            }
-        };
+            return value;
+        });
     }
 
     /**
@@ -950,37 +921,27 @@ public abstract class Expression {
      * @param right
      */
     public static BinaryExpression multiply(Expression left, Expression right) {
-        return new BinaryExpression(left, right) {
-            @Override
-            public String getOperator() {
-                return MULTIPLY;
+        return new BinaryExpression<Number, Number>(left, right, (Number leftValue, Number rightValue) -> {
+
+            Number value;
+            if (leftValue instanceof Double || rightValue instanceof Double) {
+                value = leftValue.doubleValue() * rightValue.doubleValue();
+            } else if (leftValue instanceof Float || rightValue instanceof Float) {
+                value = leftValue.floatValue() * rightValue.floatValue();
+            } else if (leftValue instanceof Long || rightValue instanceof Long) {
+                value = leftValue.longValue() * rightValue.longValue();
+            } else if (leftValue instanceof Integer || rightValue instanceof Integer) {
+                value = leftValue.intValue() * rightValue.intValue();
+            } else if (leftValue instanceof Short || rightValue instanceof Short) {
+                value = leftValue.shortValue() * rightValue.shortValue();
+            } else if (leftValue instanceof Byte || rightValue instanceof Byte) {
+                value = leftValue.byteValue() * rightValue.byteValue();
+            } else {
+                throw new UnsupportedOperationException();
             }
 
-            @Override
-            public Object evaluate(Object namespace) {
-                Number leftValue = (Number)getLeft().evaluate(namespace);
-                Number rightValue = (Number)getRight().evaluate(namespace);
-
-                Number value;
-                if (leftValue instanceof Double || rightValue instanceof Double) {
-                    value = leftValue.doubleValue() * rightValue.doubleValue();
-                } else if (leftValue instanceof Float || rightValue instanceof Float) {
-                    value = leftValue.floatValue() * rightValue.floatValue();
-                } else if (leftValue instanceof Long || rightValue instanceof Long) {
-                    value = leftValue.longValue() * rightValue.longValue();
-                } else if (leftValue instanceof Integer || rightValue instanceof Integer) {
-                    value = leftValue.intValue() * rightValue.intValue();
-                } else if (leftValue instanceof Short || rightValue instanceof Short) {
-                    value = leftValue.shortValue() * rightValue.shortValue();
-                } else if (leftValue instanceof Byte || rightValue instanceof Byte) {
-                    value = leftValue.byteValue() * rightValue.byteValue();
-                } else {
-                    throw new UnsupportedOperationException();
-                }
-
-                return value;
-            }
-        };
+            return value;
+        });
     }
 
     /**
@@ -1020,37 +981,27 @@ public abstract class Expression {
      * @param right
      */
     public static BinaryExpression divide(Expression left, Expression right) {
-        return new BinaryExpression(left, right) {
-            @Override
-            public String getOperator() {
-                return DIVIDE;
+        return new BinaryExpression<Number, Number>(left, right, (Number leftValue, Number rightValue) -> {
+
+            Number value;
+            if (leftValue instanceof Double || rightValue instanceof Double) {
+                value = leftValue.doubleValue() / rightValue.doubleValue();
+            } else if (leftValue instanceof Float || rightValue instanceof Float) {
+                value = leftValue.floatValue() / rightValue.floatValue();
+            } else if (leftValue instanceof Long || rightValue instanceof Long) {
+                value = leftValue.longValue() / rightValue.longValue();
+            } else if (leftValue instanceof Integer || rightValue instanceof Integer) {
+                value = leftValue.intValue() / rightValue.intValue();
+            } else if (leftValue instanceof Short || rightValue instanceof Short) {
+                value = leftValue.shortValue() / rightValue.shortValue();
+            } else if (leftValue instanceof Byte || rightValue instanceof Byte) {
+                value = leftValue.byteValue() / rightValue.byteValue();
+            } else {
+                throw new UnsupportedOperationException();
             }
 
-            @Override
-            public Object evaluate(Object namespace) {
-                Number leftValue = (Number)getLeft().evaluate(namespace);
-                Number rightValue = (Number)getRight().evaluate(namespace);
-
-                Number value;
-                if (leftValue instanceof Double || rightValue instanceof Double) {
-                    value = leftValue.doubleValue() / rightValue.doubleValue();
-                } else if (leftValue instanceof Float || rightValue instanceof Float) {
-                    value = leftValue.floatValue() / rightValue.floatValue();
-                } else if (leftValue instanceof Long || rightValue instanceof Long) {
-                    value = leftValue.longValue() / rightValue.longValue();
-                } else if (leftValue instanceof Integer || rightValue instanceof Integer) {
-                    value = leftValue.intValue() / rightValue.intValue();
-                } else if (leftValue instanceof Short || rightValue instanceof Short) {
-                    value = leftValue.shortValue() / rightValue.shortValue();
-                } else if (leftValue instanceof Byte || rightValue instanceof Byte) {
-                    value = leftValue.byteValue() / rightValue.byteValue();
-                } else {
-                    throw new UnsupportedOperationException();
-                }
-
-                return value;
-            }
-        };
+            return value;
+        });
     }
 
     /**
@@ -1069,7 +1020,7 @@ public abstract class Expression {
      * @param left
      * @param right
      */
-    public static BinaryExpression divide(Number left, Expression right) {
+    public static BinaryExpression divide(Number left, Expression<Number> right) {
         return divide(new LiteralExpression(left), right);
     }
 
@@ -1090,16 +1041,7 @@ public abstract class Expression {
      * @param right
      */
     public static BinaryExpression modulo(Expression left, Expression right) {
-        return new BinaryExpression(left, right) {
-            @Override
-            public String getOperator() {
-                return MODULO;
-            }
-
-            @Override
-            public Object evaluate(Object namespace) {
-                Number leftValue = (Number)getLeft().evaluate(namespace);
-                Number rightValue = (Number)getRight().evaluate(namespace);
+        return new BinaryExpression<Number, Number>(left, right, (Number leftValue, Number rightValue) -> {
 
                 Number value;
                 if (leftValue instanceof Double || rightValue instanceof Double) {
@@ -1119,8 +1061,7 @@ public abstract class Expression {
                 }
 
                 return value;
-            }
-        };
+            });
     }
 
     /**
@@ -1129,7 +1070,7 @@ public abstract class Expression {
      * @param left
      * @param right
      */
-    public static BinaryExpression modulo(Expression left, Number right) {
+    public static BinaryExpression modulo(Expression<Number> left, Number right) {
         return modulo(left, new LiteralExpression(right));
     }
 
@@ -1139,7 +1080,7 @@ public abstract class Expression {
      * @param left
      * @param right
      */
-    public static BinaryExpression modulo(Number left, Expression right) {
+    public static BinaryExpression modulo(Number left, Expression<Number> right) {
         return modulo(new LiteralExpression(left), right);
     }
 
@@ -1160,18 +1101,9 @@ public abstract class Expression {
      * @param right
      */
     public static BinaryExpression equalTo(Expression left, Expression right) {
-        return new BinaryExpression(left, right) {
-            @Override
-            public String getOperator() {
-                return EQUAL_TO;
-            }
-
-            @Override
-            @SuppressWarnings("unchecked")
-            public Object evaluate(Object namespace) {
-                return ((Comparable<Object>)getLeft().evaluate(namespace)).compareTo(getRight().evaluate(namespace)) == 0;
-            }
-        };
+        return new BinaryExpression<Comparable, Boolean>(left, right, (Comparable leftValue, Comparable rightValue) ->
+                leftValue.compareTo(rightValue) == 0
+            );
     }
 
     /**
@@ -1211,18 +1143,9 @@ public abstract class Expression {
      * @param right
      */
     public static BinaryExpression notEqualTo(Expression left, Expression right) {
-        return new BinaryExpression(left, right) {
-            @Override
-            public String getOperator() {
-                return NOT_EQUAL_TO;
-            }
-
-            @Override
-            @SuppressWarnings("unchecked")
-            public Object evaluate(Object namespace) {
-                return ((Comparable<Object>)getLeft().evaluate(namespace)).compareTo(getRight().evaluate(namespace)) != 0;
-            }
-        };
+        return new BinaryExpression<Comparable, Boolean>(left, right, (leftValue, rightValue) ->
+                 leftValue.compareTo(rightValue) != 0
+        );
     }
 
     /**
@@ -1262,18 +1185,9 @@ public abstract class Expression {
      * @param right
      */
     public static BinaryExpression greaterThan(Expression left, Expression right) {
-        return new BinaryExpression(left, right) {
-            @Override
-            public String getOperator() {
-                return GREATER_THAN;
-            }
-
-            @Override
-            @SuppressWarnings("unchecked")
-            public Object evaluate(Object namespace) {
-                return ((Comparable<Object>)getLeft().evaluate(namespace)).compareTo(getRight().evaluate(namespace)) > 0;
-            }
-        };
+        return new BinaryExpression<Comparable, Boolean>(left, right, (leftValue, rightValue) ->
+                leftValue.compareTo(rightValue) > 0
+        );
     }
 
     /**
@@ -1313,18 +1227,9 @@ public abstract class Expression {
      * @param right
      */
     public static BinaryExpression greaterThanOrEqualTo(Expression left, Expression right) {
-        return new BinaryExpression(left, right) {
-            @Override
-            public String getOperator() {
-                return GREATER_THAN_OR_EQUAL_TO;
-            }
-
-            @Override
-            @SuppressWarnings("unchecked")
-            public Object evaluate(Object namespace) {
-                return ((Comparable<Object>)getLeft().evaluate(namespace)).compareTo(getRight().evaluate(namespace)) >= 0;
-            }
-        };
+        return new BinaryExpression<Comparable, Boolean>(left, right, (leftValue, rightValue) ->
+                leftValue.compareTo(rightValue) >= 0
+        );
     }
 
     /**
@@ -1364,18 +1269,9 @@ public abstract class Expression {
      * @param right
      */
     public static BinaryExpression lessThan(Expression left, Expression right) {
-        return new BinaryExpression(left, right) {
-            @Override
-            public String getOperator() {
-                return LESS_THAN;
-            }
-
-            @Override
-            @SuppressWarnings("unchecked")
-            public Object evaluate(Object namespace) {
-                return ((Comparable<Object>)getLeft().evaluate(namespace)).compareTo(getRight().evaluate(namespace)) < 0;
-            }
-        };
+        return new BinaryExpression<Comparable, Boolean>(left, right, (leftValue, rightValue) ->
+                leftValue.compareTo(rightValue) < 0
+        );
     }
 
     /**
@@ -1415,18 +1311,9 @@ public abstract class Expression {
      * @param right
      */
     public static BinaryExpression lessThanOrEqualTo(Expression left, Expression right) {
-        return new BinaryExpression(left, right) {
-            @Override
-            public String getOperator() {
-                return LESS_THAN_OR_EQUAL_TO;
-            }
-
-            @Override
-            @SuppressWarnings("unchecked")
-            public Object evaluate(Object namespace) {
-                return ((Comparable<Object>)getLeft().evaluate(namespace)).compareTo(getRight().evaluate(namespace)) <= 0;
-            }
-        };
+        return new BinaryExpression<Comparable, Boolean>(left, right, (leftValue, rightValue) ->
+                leftValue.compareTo(rightValue) <= 0
+        );
     }
 
     /**
@@ -1466,17 +1353,9 @@ public abstract class Expression {
      * @param right
      */
     public static BinaryExpression and(Expression left, Expression right) {
-        return new BinaryExpression(left, right) {
-            @Override
-            public String getOperator() {
-                return AND;
-            }
-
-            @Override
-            public Object evaluate(Object namespace) {
-                return (Boolean)getLeft().evaluate(namespace) && (Boolean)getRight().evaluate(namespace);
-            }
-        };
+        return new BinaryExpression<Boolean, Boolean>(left, right, (leftValue, rightValue) ->
+                leftValue && rightValue
+        );
     }
 
     /**
@@ -1516,17 +1395,9 @@ public abstract class Expression {
      * @param right
      */
     public static BinaryExpression or(Expression left, Expression right) {
-        return new BinaryExpression(left, right) {
-            @Override
-            public String getOperator() {
-                return OR;
-            }
-
-            @Override
-            public Object evaluate(Object namespace) {
-                return (Boolean)getLeft().evaluate(namespace) || (Boolean)getRight().evaluate(namespace);
-            }
-        };
+        return new BinaryExpression<Boolean, Boolean>(left, right, (leftValue, rightValue) ->
+                leftValue || rightValue
+        );
     }
 
     /**
@@ -1565,36 +1436,26 @@ public abstract class Expression {
      * @param operand
      */
     public static UnaryExpression negate(Expression operand) {
-        return new UnaryExpression(operand) {
-            @Override
-            public String getOperator() {
-                return "-";
-            }
-
-            @Override
-            public Object evaluate(Object namespace) {
-                Number value = (Number)getOperand().evaluate(namespace);
+        return new UnaryExpression<Number, Number>(operand, (value) -> {
                 Class<? extends Number> type = value.getClass();
 
                 if (type == Byte.class) {
-                    value = -value.byteValue();
+                    return -value.byteValue();
                 } else if (type == Short.class) {
-                    value = -value.shortValue();
+                    return -value.shortValue();
                 } else if (type == Integer.class) {
-                    value = -value.intValue();
+                    return -value.intValue();
                 } else if (type == Long.class) {
-                    value = -value.longValue();
+                    return -value.longValue();
                 } else if (type == Float.class) {
-                    value = -value.floatValue();
+                    return -value.floatValue();
                 } else if (type == Double.class) {
-                    value = -value.doubleValue();
+                    return -value.doubleValue();
                 } else {
                     throw new UnsupportedOperationException();
                 }
 
-                return value;
-            }
-        };
+            });
     }
 
     /**
@@ -1602,7 +1463,7 @@ public abstract class Expression {
      *
      * @param operand
      */
-    public UnaryExpression negate(Number operand) {
+    public static UnaryExpression negate(Number operand) {
         return negate(new LiteralExpression(operand));
     }
 
@@ -1612,17 +1473,7 @@ public abstract class Expression {
      * @param operand
      */
     public static UnaryExpression not(Expression operand) {
-        return new UnaryExpression(operand) {
-            @Override
-            public String getOperator() {
-                return "!";
-            }
-
-            @Override
-            public Object evaluate(Object namespace) {
-                return !(Boolean)getOperand().evaluate(namespace);
-            }
-        };
+        return new UnaryExpression<Boolean, Boolean>(operand, (value) -> !value);
     }
 
     /**

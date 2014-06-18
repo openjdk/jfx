@@ -31,12 +31,12 @@
  */
 package com.oracle.javafx.scenebuilder.kit.fxom;
 
-import com.oracle.javafx.scenebuilder.kit.util.Deprecation;
-import java.net.URL;
 import javafx.fxml.JavaFXBuilderFactory;
 import javafx.scene.image.Image;
 import javafx.util.Builder;
 import javafx.util.BuilderFactory;
+
+import com.oracle.javafx.scenebuilder.kit.util.Deprecation;
 
 /**
  *

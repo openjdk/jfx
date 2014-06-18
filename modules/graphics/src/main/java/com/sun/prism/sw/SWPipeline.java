@@ -38,11 +38,9 @@ import java.util.HashMap;
 public final class SWPipeline extends GraphicsPipeline {
 
     static {
-        AccessController.doPrivileged(new PrivilegedAction<Object>() {
-            public Object run() {
-                NativeLibLoader.loadLibrary("prism_sw");
-                return null;
-            }
+        AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
+            NativeLibLoader.loadLibrary("prism_sw");
+            return null;
         });
     }
 
@@ -65,9 +63,13 @@ public final class SWPipeline extends GraphicsPipeline {
     private final HashMap<Integer, SWResourceFactory> factories =
             new HashMap<Integer, SWResourceFactory>(1);
 
+    @Override
+    public int getAdapterOrdinal(Screen screen) {
+        return Screen.getScreens().indexOf(screen);
+    }
+
     @Override public ResourceFactory getResourceFactory(Screen screen) {
-        List<Screen> screens = Screen.getScreens();
-        Integer index = new Integer(screens.indexOf(screen));
+        Integer index = new Integer(screen.getAdapterOrdinal());
         SWResourceFactory factory = factories.get(index);
         if (factory == null) {
             factory = new SWResourceFactory(screen);

@@ -193,7 +193,7 @@ public class NGNodeTest extends NGTestBase {
         n.opaqueRegionRecomputed = false;
         n.setTransformMatrix(BaseTransform.getTranslateInstance(1, 1));
         n.getOpaqueRegion();
-        assertTrue(n.opaqueRegionRecomputed);
+        assertFalse(n.opaqueRegionRecomputed);
 
         n.opaqueRegionRecomputed = false;
         n.setTransformMatrix(BaseTransform.IDENTITY_TRANSFORM);
@@ -203,7 +203,7 @@ public class NGNodeTest extends NGTestBase {
         n.opaqueRegionRecomputed = false;
         n.setTransformMatrix(BaseTransform.IDENTITY_TRANSFORM);
         n.getOpaqueRegion();
-        assertTrue(n.opaqueRegionRecomputed);
+        assertFalse(n.opaqueRegionRecomputed);
     }
 
     /**

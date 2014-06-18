@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -34,10 +34,8 @@ package com.oracle.javafx.scenebuilder.kit.editor.panel.content.mode;
 
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.AbstractDecoration;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.ContentPanelController;
-import com.oracle.javafx.scenebuilder.kit.editor.panel.content.util.Picker;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.util.RegionRectangle;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
-import java.util.List;
 import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
 import javafx.scene.Node;
@@ -48,28 +46,28 @@ import javafx.scene.transform.Transform;
  */
 public class HitNodeChrome extends AbstractDecoration<Object> {
     
-    private final Point2D hitPoint;
+    private Node hitNode;
     private final RegionRectangle chrome = new RegionRectangle();
     private Node closestNode;
-    private Node hitNode;
 
-    public HitNodeChrome(ContentPanelController contentPanelController, FXOMObject fxomObject, Point2D hitPoint) {
+    public HitNodeChrome(ContentPanelController contentPanelController, FXOMObject fxomObject, Node hitNode) {
         super(contentPanelController, fxomObject, Object.class);
-        this.hitPoint = hitPoint;
-        this.closestNode = findClosestNode();
-        this.hitNode = findHitNode();
         
-        assert closestNode != null;
         assert hitNode != null;
         assert hitNode.getScene() != null;
+        
+        this.hitNode = hitNode;
+        this.closestNode = findClosestNode();
+        assert closestNode != null;
+        assert closestNode.getScene() == hitNode.getScene();
         
         chrome.setMouseTransparent(true);
         chrome.getRegion().getStyleClass().add("css-pick-chrome"); //NOI18N
         getRootNode().getChildren().add(chrome);
     }
 
-    public Point2D getHitPoint() {
-        return hitPoint;
+    public Node getHitNode() {
+        return hitNode;
     }
     
     
@@ -115,7 +113,7 @@ public class HitNodeChrome extends AbstractDecoration<Object> {
     protected void layoutDecoration() {
         assert chrome.getScene() != null;
         
-        if ((hitNode == null) || (hitNode.getScene() == null)) {
+        if (getState() != State.CLEAN) {
             chrome.setVisible(false);
         } else {
             assert hitNode.getScene() != null;
@@ -136,8 +134,7 @@ public class HitNodeChrome extends AbstractDecoration<Object> {
         
         if (result == State.CLEAN) {
             final Node newClosestNode = findClosestNode();
-            final Node newHitNode = findHitNode();
-            if ((closestNode != newClosestNode) || (hitNode != newHitNode)) {
+            if (closestNode != newClosestNode) {
                 result = State.NEEDS_RECONCILE;
             }
         }
@@ -148,8 +145,7 @@ public class HitNodeChrome extends AbstractDecoration<Object> {
     @Override
     public void reconcile() {
         super.reconcile();
-        closestNode = findClosestNode();
-        hitNode = findHitNode();
+        hitNode = closestNode = findClosestNode();
     }
 
     
@@ -164,33 +160,4 @@ public class HitNodeChrome extends AbstractDecoration<Object> {
         assert nodeObject.getSceneGraphObject() instanceof Node;
         return (Node) nodeObject.getSceneGraphObject();
     }
-    
-    
-    private Node findHitNode() {
-        final Node result;
-        
-        if (hitPoint == null) {
-            if (getFxomObject().isNode()) {
-                result = (Node) getFxomObject().getSceneGraphObject();
-            } else {
-                result = null;
-            }
-        } else {
-            assert closestNode != null;
-            
-            final Picker picker = new Picker();
-            final List<Node> pick = picker.pickInLocal(closestNode, hitPoint.getX(), hitPoint.getY());
-            if (pick == null) {
-                result = null;
-            } else {
-                assert pick.isEmpty() == false;
-                result = pick.get(0);
-            }
-        }
-        
-        return result;
-    }
-    
-    
-    
 }

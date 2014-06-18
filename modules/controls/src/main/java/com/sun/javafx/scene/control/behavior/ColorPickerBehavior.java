@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,7 +34,6 @@ import java.util.List;
 import javafx.scene.control.ColorPicker;
 import com.sun.javafx.scene.control.skin.ColorPickerSkin;
 
-import javafx.scene.input.MouseEvent;
 import javafx.scene.paint.Color;
 
 public class ColorPickerBehavior extends ComboBoxBaseBehavior<Color> {
@@ -96,29 +95,12 @@ public class ColorPickerBehavior extends ComboBoxBaseBehavior<Color> {
     @Override public void onAutoHide() {
         // when we click on some non  interactive part of the 
         // Color Palette - we do not want to hide.
-        wasComboBoxButtonClickedForAutoHide = mouseInsideButton;
         ColorPicker colorPicker = (ColorPicker)getControl();
         ColorPickerSkin cpSkin = (ColorPickerSkin)colorPicker.getSkin();
         cpSkin.syncWithAutoUpdate();
+        // if the ColorPicker is no longer showing, then invoke the super method
+        // to keep its show/hide state in sync.
+        if (!colorPicker.isShowing()) super.onAutoHide();
     }
-    
-    @Override public void mouseReleased(MouseEvent e) {
-        // Overriding to not do the usual on mouseReleased.
-        // The event is handled by the skin instead, which calls
-        // the method below.
-    }
-//    
-    /**
-     * Handles mouse release events.  This will be called by the skin.
-     *
-     * @param e the mouse press event
-     * @param behaveLikeButton if true, this should act just like a button
-     */
-    public void mouseReleased(MouseEvent e, boolean showHidePopup) {
-        if (showHidePopup) {
-            super.mouseReleased(e);
-        } else {
-            disarm();
-        }
-    }
+
 }

@@ -36,10 +36,9 @@ import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.messagelog.MessageLogEntry;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.util.AbstractFxmlPanelController;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
+
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
@@ -119,17 +118,10 @@ public class MessagePanelController extends AbstractFxmlPanelController {
         assert scrollPane != null;
         assert gridPane != null;
         assert clearButton != null;
-        
-        clearButton.setText(I18N.getBundle().getString("message.panel.clear"));
-        
+                
         // Listens to the message log 
         getEditorController().getMessageLog().revisionProperty().addListener(
-                new ChangeListener<Number>() {
-                    @Override
-                    public void changed(ObservableValue<? extends Number> ov, Number t, Number t1) {
-                        messageLogDidChange();
-                    }
-                });
+                (ChangeListener<Number>) (ov, t, t1) -> messageLogDidChange());
         
         updateScrollPaneWidth();
         messageLogDidChange();
@@ -147,34 +139,30 @@ public class MessagePanelController extends AbstractFxmlPanelController {
         int rowIndex = 0;
         int columnIndex = 0;
         for (MessageLogEntry mle : getEditorController().getMessageLog().getEntries()) {
-            Button dismissButton = new Button("x"); //NOI18N
-            dismissButton.addEventHandler(MouseEvent.MOUSE_RELEASED, new EventHandler<MouseEvent>() {
+            if (mle.getType() == MessageLogEntry.Type.WARNING) {
+                Button dismissButton = new Button("x"); //NOI18N
+                dismissButton.addEventHandler(MouseEvent.MOUSE_RELEASED, t -> getEditorController().getMessageLog().clearEntry(mle));
+                StackPane paneForButton = new StackPane();
+                paneForButton.getChildren().add(dismissButton);
+                paneForButton.setAlignment(Pos.CENTER_RIGHT);
 
-                @Override
-                public void handle(MouseEvent t) {
-                    getEditorController().getMessageLog().clearEntry(mle);
-                }
-            });
-            StackPane paneForButton = new StackPane();
-            paneForButton.getChildren().add(dismissButton);
-            paneForButton.setAlignment(Pos.CENTER_RIGHT);
-            
-            Label msgLabel = new Label(mle.getText());
-            msgLabel.setTooltip(new Tooltip(mle.getText()));
-            Label timestampLabel = new Label(mle.getTimestamp());
-            timestampLabel.getStyleClass().add("timestamp"); //NOI18N
-            VBox labelBox = new VBox();
-            labelBox.getChildren().addAll(timestampLabel, msgLabel);
-            StackPane paneForLabel = new StackPane();
-            paneForLabel.getChildren().add(labelBox);
-            paneForLabel.setAlignment(Pos.CENTER_LEFT);
+                Label msgLabel = new Label(mle.getText());
+                msgLabel.setTooltip(new Tooltip(mle.getText()));
+                Label timestampLabel = new Label(mle.getTimestamp());
+                timestampLabel.getStyleClass().add("timestamp"); //NOI18N
+                VBox labelBox = new VBox();
+                labelBox.getChildren().addAll(timestampLabel, msgLabel);
+                StackPane paneForLabel = new StackPane();
+                paneForLabel.getChildren().add(labelBox);
+                paneForLabel.setAlignment(Pos.CENTER_LEFT);
 
-            gridPane.add(paneForLabel, columnIndex, rowIndex);
-            columnIndex++;
-            
-            gridPane.add(paneForButton, columnIndex, rowIndex);
-            columnIndex--;
-            rowIndex++;
+                gridPane.add(paneForLabel, columnIndex, rowIndex);
+                columnIndex++;
+
+                gridPane.add(paneForButton, columnIndex, rowIndex);
+                columnIndex--;
+                rowIndex++;
+            }
         }
     }
     

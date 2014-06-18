@@ -154,6 +154,11 @@ public class NGSubScene extends NGNode {
     }
 
     @Override
+    public void renderForcedContent(Graphics gOptional) {
+        root.renderForcedContent(gOptional);
+    }
+
+    @Override
     protected void renderContent(Graphics g) {
         if (rtWidth <= 0.0 || rtHeight <= 0.0) { return; }
         if (rtt != null) {

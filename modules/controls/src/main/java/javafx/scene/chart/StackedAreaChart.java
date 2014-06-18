@@ -34,8 +34,6 @@ import javafx.beans.property.SimpleDoubleProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.layout.StackPane;
@@ -69,7 +67,7 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
     // -------------- PRIVATE FIELDS ------------------------------------------
 
     /** A multiplier for teh Y values that we store for each series, it is used to animate in a new series */
-    private Map<Series, DoubleProperty> seriesYMultiplierMap = new HashMap<Series, DoubleProperty>();
+    private Map<Series<X,Y>, DoubleProperty> seriesYMultiplierMap = new HashMap<>();
     private Legend legend = new Legend();
 
     // -------------- PUBLIC PROPERTIES ----------------------------------------
@@ -192,16 +190,21 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
                 item.setCurrentY(series.getData().get(last).getYValue());
             } else if (symbol != null) {
                 // fade in new symbol
+                symbol.setOpacity(0);
+                getPlotChildren().add(symbol);
                 FadeTransition ft = new FadeTransition(Duration.millis(500),symbol);
                 ft.setToValue(1);
                 ft.play();
             }
             if (animate) {
                 animate(
-                    new KeyFrame(Duration.ZERO, new KeyValue(item.currentYProperty(),
-                                        item.getCurrentY()),
-                                        new KeyValue(item.currentXProperty(),
-                                        item.getCurrentX())),
+                    new KeyFrame(Duration.ZERO,
+                            (e) -> { if (!getPlotChildren().contains(symbol)) getPlotChildren().add(symbol); },
+                            new KeyValue(item.currentYProperty(),
+                                    item.getCurrentY()),
+                            new KeyValue(item.currentXProperty(),
+                                    item.getCurrentX())
+                    ),
                     new KeyFrame(Duration.millis(800), new KeyValue(item.currentYProperty(),
                                         item.getYValue(), Interpolator.EASE_BOTH),
                                         new KeyValue(item.currentXProperty(),
@@ -269,11 +272,10 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
                 symbol.setOpacity(0);
                 FadeTransition ft = new FadeTransition(Duration.millis(500),symbol);
                 ft.setToValue(0);
-                ft.setOnFinished(new EventHandler<ActionEvent>() {
-                    @Override public void handle(ActionEvent actionEvent) {
-                        getPlotChildren().remove(symbol);
-                        removeDataItemFromDisplay(series, item);
-                    }
+                ft.setOnFinished(actionEvent -> {
+                    getPlotChildren().remove(symbol);
+                    removeDataItemFromDisplay(series, item);
+                    symbol.setOpacity(1.0);
                 });
                 ft.play();
             }
@@ -281,11 +283,9 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
                 animate( new KeyFrame(Duration.ZERO, new KeyValue(item.currentYProperty(),
                             item.getCurrentY()), new KeyValue(item.currentXProperty(),
                             item.getCurrentX())),
-                            new KeyFrame(Duration.millis(800), new EventHandler<ActionEvent>() {
-                                @Override public void handle(ActionEvent actionEvent) {
-                                    getPlotChildren().remove(symbol);
-                                    removeDataItemFromDisplay(series, item);
-                                }
+                            new KeyFrame(Duration.millis(800), actionEvent -> {
+                                getPlotChildren().remove(symbol);
+                                removeDataItemFromDisplay(series, item);
                             },
                             new KeyValue(item.currentYProperty(),
                             item.getYValue(), Interpolator.EASE_BOTH),
@@ -313,7 +313,7 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
             seriesLine.getStyleClass().setAll("chart-series-area-line", "series" + i, s.defaultColorStyleClass);
             fillPath.getStyleClass().setAll("chart-series-area-fill", "series" + i, s.defaultColorStyleClass);
             for (int j=0; j < s.getData().size(); j++) {
-                final Data item = s.getData().get(j);
+                final Data<X,Y> item = s.getData().get(j);
                 final Node node = item.getNode();
                 if(node!=null) node.getStyleClass().setAll("chart-area-symbol", "series" + i, "data" + j, s.defaultColorStyleClass);
             }
@@ -353,7 +353,7 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
             ));
         }
         for (int j=0; j<series.getData().size(); j++) {
-            Data item = series.getData().get(j);
+            Data<X,Y> item = series.getData().get(j);
             final Node symbol = createSymbol(series, seriesIndex, item, j);
             if (symbol != null) {
                 if (shouldAnimate()) symbol.setOpacity(0);
@@ -376,7 +376,7 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
             // create list of all nodes we need to fade out
             final List<Node> nodes = new ArrayList<Node>();
             nodes.add(series.getNode());
-            for (Data d: series.getData()) nodes.add(d.getNode());
+            for (Data<X,Y> d: series.getData()) nodes.add(d.getNode());
             // fade out old and symbols
             if (getCreateSymbols()) {
                 KeyValue[] startValues = new KeyValue[nodes.size()];
@@ -388,29 +388,25 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
                 Timeline tl = new Timeline();
                 tl.getKeyFrames().addAll(
                     new KeyFrame(Duration.ZERO,startValues),
-                    new KeyFrame(Duration.millis(400), new EventHandler<ActionEvent>() {
-                        @Override public void handle(ActionEvent actionEvent) {
-                            getPlotChildren().removeAll(nodes);
-                            removeSeriesFromDisplay(series);
-                        }
+                    new KeyFrame(Duration.millis(400), actionEvent -> {
+                        getPlotChildren().removeAll(nodes);
+                        removeSeriesFromDisplay(series);
                     },endValues)
                 );
                 tl.play();
             } else {
                 Timeline tl = new Timeline();
                 tl.getKeyFrames().addAll(
-                    new KeyFrame(Duration.millis(400), new EventHandler<ActionEvent>() {
-                        @Override public void handle(ActionEvent actionEvent) {
-                            getPlotChildren().removeAll(nodes);
-                            removeSeriesFromDisplay(series);
-                        }
+                    new KeyFrame(Duration.millis(400), actionEvent -> {
+                        getPlotChildren().removeAll(nodes);
+                        removeSeriesFromDisplay(series);
                     })
                 );
                 tl.play();                
             }
         } else {
             getPlotChildren().remove(series.getNode());
-            for (Data d:series.getData()) getPlotChildren().remove(d.getNode());
+            for (Data<X,Y> d:series.getData()) getPlotChildren().remove(d.getNode());
             removeSeriesFromDisplay(series);
         }
     }
@@ -423,44 +419,105 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
         final Axis<Y> ya = getYAxis();
         if (xa.isAutoRanging()) {
             List xData = new ArrayList<Number>();
-            if(xData != null) {
-                for(Series<X,Y> series : getData()) {
-                    for(Data<X,Y> data: series.getData()) {
-                        if(xData != null) xData.add(data.getXValue());
-                    }
+            for(Series<X,Y> series : getData()) {
+                for(Data<X,Y> data: series.getData()) {
+                    xData.add(data.getXValue());
                 }
-                if(xData != null) xa.invalidateRange(xData);
             }
+            xa.invalidateRange(xData);
         }
         if (ya.isAutoRanging()) {
-            List yData = new ArrayList<Number>();
-            if(yData != null) {
-                double totalY = 0;
-                Iterator<Series<X, Y>> seriesIterator = getDisplayedSeriesIterator();
-                while (seriesIterator.hasNext()) {
-                    double maxY = 0;
-                    Series<X, Y> series = seriesIterator.next();
-                    for(Data<X,Y> item : series.getData()) {
-                        if(item != null) maxY = Math.max(maxY, ya.toNumericValue(item.getYValue()));
+            double totalMinY = Double.MAX_VALUE;
+            Iterator<Series<X, Y>> seriesIterator = getDisplayedSeriesIterator();
+            boolean first = true;
+            NavigableMap<Double, Double> accum = new TreeMap<>();
+            NavigableMap<Double, Double> prevAccum = new TreeMap<>();
+            NavigableMap<Double, Double> currentValues = new TreeMap<>();
+            while (seriesIterator.hasNext()) {
+                currentValues.clear();
+                Series<X, Y> series = seriesIterator.next();
+                for(Data<X,Y> item : series.getData()) {
+                    if(item != null) {
+                        final double xv = xa.toNumericValue(item.getXValue());
+                        final double yv = ya.toNumericValue(item.getYValue());
+                        currentValues.put(xv, yv);
+                        if (first) {
+                            // On the first pass, just fill the map
+                            accum.put(xv, yv);
+                            // minimum is applicable only in the first series
+                            totalMinY = Math.min(totalMinY, yv);
+                        } else {
+                            if (prevAccum.containsKey(xv)) {
+                                accum.put(xv, prevAccum.get(xv) + yv);
+                            } else {
+                                // If the point wasn't yet in the previous (accumulated) series
+                                Map.Entry<Double, Double> he = prevAccum.higherEntry(xv);
+                                Map.Entry<Double, Double> le = prevAccum.lowerEntry(xv);
+                                if (he != null && le != null) {
+                                    // If there's both point above and below this point, interpolate
+                                    accum.put(xv, ((xv - le.getKey()) / (he.getKey() - le.getKey())) *
+                                            (le.getValue() + he.getValue()) + yv);
+                                } else if (he != null) {
+                                    // The point is before the first point in the previously accumulated series
+                                    accum.put(xv, he.getValue() + yv);
+                                } else if (le != null) {
+                                    // The point is after the last point in the previously accumulated series
+                                    accum.put(xv, le.getValue() + yv);
+                                } else {
+                                    // The previously accumulated series is empty
+                                    accum.put(xv, yv);
+                                }
+                            }
+                        }
                     }
-                    totalY += maxY;
+                }
+                // Now update all the keys that were in the previous series, but not in the new one
+                for (Map.Entry<Double, Double> e : prevAccum.entrySet()) {
+                    if (accum.keySet().contains(e.getKey())) {
+                        continue;
+                    }
+                    Double k = e.getKey();
+                    final Double v = e.getValue();
+                    // Look at the values of the current series
+                    Map.Entry<Double, Double> he = currentValues.higherEntry(k);
+                    Map.Entry<Double, Double> le = currentValues.lowerEntry(k);
+                    if (he != null && le != null) {
+                        // Interpolate the for the point from current series and add the accumulated value
+                        accum.put(k, ((k - le.getKey()) / (he.getKey() - le.getKey())) *
+                                (le.getValue() + he.getValue()) + v);
+                    } else if (he != null) {
+                        // There accumulated value is before the first value in the current series
+                        accum.put(k, he.getValue() + v);
+                    } else if (le != null) {
+                        // There accumulated value is after the last value in the current series
+                        accum.put(k, le.getValue() + v);
+                    } else {
+                        // The current series are empty
+                        accum.put(k, v);
+                    }
 
                 }
-                if(totalY > 0) yData.add(totalY);
-                ya.invalidateRange(yData);
+
+                prevAccum.clear();
+                prevAccum.putAll(accum);
+                accum.clear();
+                first = (totalMinY == Double.MAX_VALUE); // If there was already some value in the series, we can consider as
+                                                         // being past the first series
+
             }
+            if(totalMinY != Double.MAX_VALUE) ya.invalidateRange(Arrays.asList(ya.toRealValue(totalMinY),
+                    ya.toRealValue(Collections.max(prevAccum.values()))));
+
         }
     }
 
      
     /** @inheritDoc */
     @Override protected void layoutPlotChildren() {
-        ArrayList<DataPointInfo> currentSeriesData = 
-                                new ArrayList<DataPointInfo>();
+        ArrayList<DataPointInfo<X,Y>> currentSeriesData = new ArrayList<>();
         // AggregateData hold the data points of both the current and the previous series.
             // The goal is to collect all the data, sort it and iterate.
-        ArrayList<DataPointInfo> aggregateData = 
-                                new ArrayList<DataPointInfo>();
+        ArrayList<DataPointInfo<X,Y>> aggregateData = new ArrayList<>();
         for (int seriesIndex=0; seriesIndex < getDataSize(); seriesIndex++) { // for every series
             Series<X, Y> series = getData().get(seriesIndex);
             aggregateData.clear();
@@ -472,7 +529,7 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
             currentSeriesData.clear(); 
             // now copy actual data of the current series. 
             for(Data<X, Y> item = series.begin; item != null; item = item.next) {
-                DataPointInfo<X,Y> itemInfo = new DataPointInfo(item, item.getXValue(), 
+                DataPointInfo<X,Y> itemInfo = new DataPointInfo<>(item, item.getXValue(), 
                         item.getYValue(), PartOf.CURRENT);
                 aggregateData.add(itemInfo);
             }
@@ -496,8 +553,8 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
                 if (dataIndex == firstCurrentIndex) firstCurrent = true;
                 double x = 0;
                 double y = 0;
-                DataPointInfo<X,Y> currentDataPoint = new DataPointInfo();
-                DataPointInfo<X,Y> dropDownDataPoint = new DataPointInfo(true);
+                DataPointInfo<X,Y> currentDataPoint = new DataPointInfo<>();
+                DataPointInfo<X,Y> dropDownDataPoint = new DataPointInfo<>(true);
                 Data<X,Y> item = dataInfo.dataItem;
                 if (dataInfo.partOf.equals(PartOf.CURRENT)) { // handle data from current series
                     int pIndex = findPreviousPrevious(aggregateData, dataIndex); 
@@ -643,7 +700,7 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
             // Draw the SeriesLine and Series fill
             seriesLine.getElements().add(new MoveTo(currentSeriesData.get(0).displayX, currentSeriesData.get(0).displayY));
             fillPath.getElements().add(new MoveTo(currentSeriesData.get(0).displayX, currentSeriesData.get(0).displayY));
-            for (DataPointInfo point : currentSeriesData) {
+            for (DataPointInfo<X,Y> point : currentSeriesData) {
                 if (!point.lineTo) {
                     seriesLine.getElements().add(new MoveTo(point.displayX, point.displayY));
                 } else {
@@ -661,7 +718,7 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
                 }
             }
             for(int i = aggregateData.size()-1; i > 0; i--) {
-                DataPointInfo point = aggregateData.get(i);
+                DataPointInfo<X,Y> point = aggregateData.get(i);
                 if (PartOf.PREVIOUS.equals(point.partOf)) {
                     fillPath.getElements().add(new  LineTo(point.displayX, point.displayY));
                 }
@@ -673,7 +730,7 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
      
      //-------------------- helper methods to retrieve data points from the previous
      // or current data series.
-     private int findNextCurrent(ArrayList<DataPointInfo> points, int index) {
+     private int findNextCurrent(ArrayList<DataPointInfo<X,Y>> points, int index) {
         for(int i = index+1; i < points.size(); i++) {
             if (points.get(i).partOf.equals(PartOf.CURRENT)) {
                 return i;
@@ -682,7 +739,7 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
         return -1;
      }
      
-     private int findPreviousCurrent(ArrayList<DataPointInfo> points, int index) {
+     private int findPreviousCurrent(ArrayList<DataPointInfo<X,Y>> points, int index) {
         for(int i = index-1; i >= 0; i--) {
             if (points.get(i).partOf.equals(PartOf.CURRENT)) {
                 return i;
@@ -692,7 +749,7 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
      }
      
      
-    private int findPreviousPrevious(ArrayList<DataPointInfo> points, int index) {
+    private int findPreviousPrevious(ArrayList<DataPointInfo<X,Y>> points, int index) {
        for(int i = index-1; i >= 0; i--) {
             if (points.get(i).partOf.equals(PartOf.PREVIOUS)) {
                 return i;
@@ -700,7 +757,7 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
         }
         return -1;
     }
-    private int findNextPrevious(ArrayList<DataPointInfo> points, int index) {
+    private int findNextPrevious(ArrayList<DataPointInfo<X,Y>> points, int index) {
         for(int i = index+1; i < points.size(); i++) {
             if (points.get(i).partOf.equals(PartOf.PREVIOUS)) {
                 return i;
@@ -710,15 +767,13 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
     }
      
     
-     private void sortAggregateList(ArrayList<DataPointInfo> aggregateList) {
-        Collections.sort(aggregateList, new Comparator(){
-            public int compare(Object o1, Object o2) {
-                Data<X,Y> d1 = ((DataPointInfo)o1).dataItem;
-                Data<X,Y> d2 = ((DataPointInfo)o2).dataItem;
-                double val1 = getXAxis().toNumericValue(d1.getXValue());
-                double val2 = getXAxis().toNumericValue(d2.getXValue());
-                return (val1 < val2 ? -1 : ( val1 == val2) ? 0 : 1);
-            }
+     private void sortAggregateList(ArrayList<DataPointInfo<X,Y>> aggregateList) {
+        Collections.sort(aggregateList, (o1, o2) -> {
+            Data<X,Y> d1 = o1.dataItem;
+            Data<X,Y> d2 = o2.dataItem;
+            double val1 = getXAxis().toNumericValue(d1.getXValue());
+            double val2 = getXAxis().toNumericValue(d2.getXValue());
+            return (val1 < val2 ? -1 : ( val1 == val2) ? 0 : 1);
         });
      }
     
@@ -727,7 +782,7 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
          return (((highY - lowY)/(highX - lowX))*(x - lowX))+lowY;
     }
 
-    private Node createSymbol(Series series, int seriesIndex, final Data item, int itemIndex) {
+    private Node createSymbol(Series<X,Y> series, int seriesIndex, final Data<X,Y> item, int itemIndex) {
         Node symbol = item.getNode();
         // check if symbol has already been created
         if (symbol == null && getCreateSymbols()) {
@@ -829,12 +884,12 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
                 new CssMetaData<StackedAreaChart<?, ?>, Boolean>("-fx-create-symbols",
                 BooleanConverter.getInstance(), Boolean.TRUE) {
             @Override
-            public boolean isSettable(StackedAreaChart node) {
+            public boolean isSettable(StackedAreaChart<?,?> node) {
                 return node.createSymbols == null || !node.createSymbols.isBound();
             }
 
             @Override
-            public StyleableProperty<Boolean> getStyleableProperty(StackedAreaChart node) {
+            public StyleableProperty<Boolean> getStyleableProperty(StackedAreaChart<?,?> node) {
                 return (StyleableProperty<Boolean>) node.createSymbolsProperty();
             }
         };

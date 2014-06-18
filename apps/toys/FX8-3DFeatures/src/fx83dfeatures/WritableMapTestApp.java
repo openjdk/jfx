@@ -26,8 +26,6 @@
 package fx83dfeatures;
 
 import javafx.application.Application;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.scene.Group;
 import javafx.scene.PerspectiveCamera;
 import javafx.scene.Scene;
@@ -125,58 +123,27 @@ public class WritableMapTestApp extends Application {
         Group root1 = new Group(sharedMatSphere, sharedMatSphere1, sharedMapSphere);
         
         diffuseMapPicker = new ColorPicker(Color.RED);
-        diffuseMapPicker.valueProperty().addListener(new ChangeListener<Color>() {
-            @Override
-            public void changed(ObservableValue<? extends Color> ov, Color t, Color t1) {
-                generateMap(diffuseMap, t1);
-            }
-        });
+        diffuseMapPicker.valueProperty().addListener((ov, t, t1) -> generateMap(diffuseMap, t1));
 
         diffuseMapCheckBox = new CheckBox("Set Diffuse Map for left two spheres");
         diffuseMapCheckBox.setSelected(false);
-        diffuseMapCheckBox.selectedProperty().addListener(new ChangeListener<Boolean>() {
-
-            @Override
-            public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
-                sharedMaterial.setDiffuseMap(t1 ? diffuseMap : null);
-            }
-        });
+        diffuseMapCheckBox.selectedProperty().addListener((ov, t, t1) -> sharedMaterial.setDiffuseMap(t1 ? diffuseMap : null));
 
         specularMapPicker = new ColorPicker(Color.ANTIQUEWHITE);
-        specularMapPicker.valueProperty().addListener(new ChangeListener<Color>() {
-            @Override
-            public void changed(ObservableValue<? extends Color> ov, Color t, Color t1) {
-                generateMap(specularMap, t1);
-            }
-        });
+        specularMapPicker.valueProperty().addListener((ov, t, t1) -> generateMap(specularMap, t1));
 
         specularMapCheckBox = new CheckBox("Set Specular Map for left two spheres");
         specularMapCheckBox.setSelected(false);
-        specularMapCheckBox.selectedProperty().addListener(new ChangeListener<Boolean>() {
-
-            @Override
-            public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
-                sharedMaterial.setSpecularMap(t1 ? specularMap : null);
-            }
-        });
+        specularMapCheckBox.selectedProperty().addListener((ov, t, t1) -> sharedMaterial.setSpecularMap(t1 ? specularMap : null));
 
         selfIllumMapPicker = new ColorPicker();
-        selfIllumMapPicker.valueProperty().addListener(new ChangeListener<Color>() {
-            @Override
-            public void changed(ObservableValue<? extends Color> ov, Color t, Color t1) {
-                generateMap(selfIllumMap, t1);
-            }
-        });
+        selfIllumMapPicker.valueProperty().addListener((ov, t, t1) -> generateMap(selfIllumMap, t1));
 
         selfIllumMapCheckBox = new CheckBox("Set SelfIllumination Map for left two spheres");
         selfIllumMapCheckBox.setSelected(false);
-        selfIllumMapCheckBox.selectedProperty().addListener(new ChangeListener<Boolean>() {
-
-            @Override
-            public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
-                sharedMapMaterial.setSelfIlluminationMap(selfIllumMap);
-                sharedMaterial.setSelfIlluminationMap(t1 ? selfIllumMap : null);
-            }
+        selfIllumMapCheckBox.selectedProperty().addListener((ov, t, t1) -> {
+            sharedMapMaterial.setSelfIlluminationMap(selfIllumMap);
+            sharedMaterial.setSelfIlluminationMap(t1 ? selfIllumMap : null);
         });
 
         HBox labelBox = new HBox(20);

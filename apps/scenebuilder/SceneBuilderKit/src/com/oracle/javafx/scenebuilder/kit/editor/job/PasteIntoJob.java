@@ -33,6 +33,7 @@ package com.oracle.javafx.scenebuilder.kit.editor.job;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
+import com.oracle.javafx.scenebuilder.kit.editor.job.togglegroup.AdjustAllToggleGroupJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.v2.ClearSelectionJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.v2.CompositeJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.v2.UpdateSelectionJob;
@@ -44,8 +45,11 @@ import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.ClipboardDecoder;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
+import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask.Accessory;
+
 import java.util.ArrayList;
 import java.util.List;
+
 import javafx.scene.input.Clipboard;
 
 /**
@@ -74,22 +78,47 @@ public class PasteIntoJob extends CompositeJob {
             final Selection selection = getEditorController().getSelection();
             if (selection.getGroup() instanceof ObjectSelectionGroup) {
                 final ObjectSelectionGroup osg = (ObjectSelectionGroup) selection.getGroup();
-                // Single selection
+                // Single target selection
                 if (osg.getItems().size() == 1) {
                     final FXOMObject targetObject = osg.getItems().iterator().next();
+
                     // Build InsertAsSubComponent jobs
                     final DesignHierarchyMask targetMask = new DesignHierarchyMask(targetObject);
                     if (targetMask.isAcceptingSubComponent(newObjects)) {
-                        result.add(new ClearSelectionJob(getEditorController()));
                         for (FXOMObject newObject : newObjects) {
                             final InsertAsSubComponentJob subJob = new InsertAsSubComponentJob(
                                     newObject,
                                     targetObject,
                                     targetMask.getSubComponentCount(),
                                     getEditorController());
-                            result.add(subJob);
+                            result.add(0, subJob);
                         }
-                        result.add(new UpdateSelectionJob(newObjects, getEditorController()));
+                    } // Build InsertAsAccessory jobs for single source selection
+                    else if (newObjects.size() == 1) {
+                        final FXOMObject newObject = newObjects.get(0);
+                        final Accessory[] accessories = {Accessory.CONTENT,
+                            Accessory.CONTEXT_MENU, Accessory.GRAPHIC,
+                            Accessory.TOOLTIP};
+                        for (Accessory a : accessories) {
+                            if (targetMask.isAcceptingAccessory(a, newObject)
+                                    && targetMask.getAccessory(a) == null) {
+                                final InsertAsAccessoryJob subJob = new InsertAsAccessoryJob(
+                                        newObject, targetObject, a,
+                                        getEditorController());
+                                result.add(subJob);
+                                break;
+                            }
+                        }
+                    }
+
+                    // Build Selection jobs if needed
+                    if (result.size() > 0) {
+                        result.add(0, new ClearSelectionJob(
+                                getEditorController()));
+                        result.add(new AdjustAllToggleGroupJob(
+                                getEditorController()));
+                        result.add(new UpdateSelectionJob(newObjects,
+                                getEditorController()));
                     }
                 }
             }
@@ -101,7 +130,7 @@ public class PasteIntoJob extends CompositeJob {
     protected String makeDescription() {
         final String result;
 
-        if (getSubJobs().size() == 3) { // ClearSelectionJob + InsertJob + UpdateSelectionJob
+        if (getSubJobs().size() == 4) { // ClearSelectionJob + InsertJob + AdjustAllToggleGroupJob + UpdateSelectionJob
             result = makeSingleSelectionDescription();
         } else {
             result = makeMultipleSelectionDescription();
@@ -113,12 +142,18 @@ public class PasteIntoJob extends CompositeJob {
     private String makeSingleSelectionDescription() {
         final String result;
 
-        assert getSubJobs().size() == 3; // ClearSelectionJob + InsertJob + UpdateSelectionJob
+        assert getSubJobs().size() == 4; // ClearSelectionJob + InsertJob + AdjustAllToggleGroupJob + UpdateSelectionJob
         final Job subJob0 = getSubJobs().get(1);
         final FXOMObject newObject;
-        assert subJob0 instanceof InsertAsSubComponentJob;
-        final InsertAsSubComponentJob insertJob = (InsertAsSubComponentJob) subJob0;
-        newObject = insertJob.getNewObject();
+        assert subJob0 instanceof InsertAsSubComponentJob
+                || subJob0 instanceof InsertAsAccessoryJob;
+        if (subJob0 instanceof InsertAsSubComponentJob) {
+            final InsertAsSubComponentJob insertJob = (InsertAsSubComponentJob) subJob0;
+            newObject = insertJob.getNewObject();
+        } else {
+            final InsertAsAccessoryJob insertJob = (InsertAsAccessoryJob) subJob0;
+            newObject = insertJob.getNewObject();
+        }
         if (newObject instanceof FXOMInstance) {
             final Object sceneGraphObject = newObject.getSceneGraphObject();
             if (sceneGraphObject != null) {
@@ -137,7 +172,7 @@ public class PasteIntoJob extends CompositeJob {
     }
 
     private String makeMultipleSelectionDescription() {
-        final int objectCount = getSubJobs().size() - 2;
+        final int objectCount = getSubJobs().size() - 3;
         return I18N.getString("label.action.edit.paste.into.n", objectCount);
     }
 }

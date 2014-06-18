@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>DEPLOY_DAEMON_IDENTIFIER</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>DEPLOY_DAEMON_LAUNCHER_PATH</string>
+    </array>
+    <key>RunAtLoad</key><DEPLOY_RUN_AT_LOAD/>
+    <key>KeepAlive</key><DEPLOY_KEEP_ALIVE/>
+</dict>
+</plist>

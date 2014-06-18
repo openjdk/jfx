@@ -35,36 +35,10 @@ LINUX.compileSWT = true;
 LINUX.compileFXPackager = true;
 LINUX.compileDesignTime = true;
 
+LINUX.includeLens = true
+
 // Libraries end up in the sdk/rt/lib/$OS_ARCH directory for Linux
 LINUX.libDest = "lib/$OS_ARCH"
-
-// TODO this is garbage. Each target file should define what it includes,
-// not what it excludes.
-LINUX.jfxrtJarExcludes = [
-    "**/*.hlsl",
-    "com/sun/glass/ui/win",
-    "com/sun/glass/ui/accessible/win",
-    "com/sun/prism/d3d",
-    "com/sun/prism/es2/gl/win",
-    //"com/sun/prism/null3d", // TODO This is used in dev builds but not the final sdk
-    "com/sun/scenario/effect/impl/hw/d3d",
-    
-    "com/sun/glass/events/mac",
-    "com/sun/glass/ui/mac",
-    "com/sun/glass/ui/accessible/mac",
-    "com/sun/prism/es2/gl/mac",
-        
-    "com/sun/glass/ui/ios",
-    
-    //"com/sun/glass/ui/lens", // TODO This probably shouldn't be on linux sdk
-    "com/sun/prism/es2/gl/eglfb",
-    "com/sun/prism/es2/gl/eglx11",
-    "com/sun/prism/es2/gl/x11",
-    "com/sun/prism/es2/EGL*",
-    "com/sun/prism/es2/IOSGL*",
-    "com/sun/prism/es2/WinGL*",
-    "com/sun/prism/es2/MacGL*",
-]
 
 // Lambda for naming the generated libs
 LINUX.library = { name -> return "lib${name}.so" as String }
@@ -77,7 +51,7 @@ def commonFlags = [
 // Specify the compilation parameters and link parameters
 def ccFlags = [
         commonFlags, "-I$JDK_HOME/include", "-I$JDK_HOME/include/linux", "-c",
-        IS_DEBUG_NATIVE ? ["-ggdb", "-DVERBOSE"] : "-O2"].flatten()
+        IS_DEBUG_NATIVE ? ["-ggdb", "-DVERBOSE"] : ["-O2", "-DNDEBUG"]].flatten()
 //ccFlags.addAll(["-Wnon-virtual-dtor", "-Woverloaded-virtual", "-std=c++0x"])
 def linkFlags = ["-shared", commonFlags].flatten()
 
@@ -128,8 +102,8 @@ setupTools("linux_pango_tools",
     }
 )
 
-def freetypeCCFlags = [ext.COMPILE_PANGO ? "-D_ENABLE_PANGO" : 
-                       ext.COMPILE_HARFBUZZ ? "-D_ENABLE_HARFBUZZ" : ""]
+def freetypeCCFlags = [ext.IS_COMPILE_PANGO ? "-D_ENABLE_PANGO" :
+                       ext.IS_COMPILE_HARFBUZZ ? "-D_ENABLE_HARFBUZZ" : ""]
 def freetypeLinkFlags = []
 setupTools("linux_freetype_tools",
     { propFile ->
@@ -161,8 +135,7 @@ LINUX.glass = [:]
 LINUX.glass.javahInclude = [
     "com/sun/glass/events/**",
     "com/sun/glass/ui/*",
-    "com/sun/glass/ui/gtk/*",
-    "com/sun/glass/ui/accessible/gtk/*"]
+    "com/sun/glass/ui/gtk/*"]
 LINUX.glass.nativeSource = file("modules/graphics/src/main/native-glass/gtk")
 LINUX.glass.compiler = compiler
 LINUX.glass.ccFlags = [ccFlags].flatten()

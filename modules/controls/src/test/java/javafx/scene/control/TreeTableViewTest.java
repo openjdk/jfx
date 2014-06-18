@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,6 +31,7 @@ import static javafx.scene.control.TreeTableColumn.SortType.DESCENDING;
 import static org.junit.Assert.*;
 import static org.junit.Assert.assertEquals;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Random;
@@ -42,16 +43,16 @@ import com.sun.javafx.scene.control.test.Data;
 
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
+import javafx.beans.binding.ObjectBinding;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.beans.property.SimpleObjectProperty;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
+import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
-import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.Node;
@@ -60,6 +61,8 @@ import javafx.scene.control.TreeTableView.TreeTableViewFocusModel;
 import javafx.scene.control.cell.*;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
+import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Rectangle;
@@ -298,34 +301,24 @@ public class TreeTableViewTest {
     // TODO test for sort policies returning null
     // TODO test for changing column sortType out of order
     
-    private static final Callback<TreeTableView<String>, Boolean> NO_SORT_FAILED_SORT_POLICY = 
-            new Callback<TreeTableView<String>, Boolean>() {
-        @Override public Boolean call(TreeTableView<String> treeTableView) {
-            return false;
-        }
-    };
+    private static final Callback<TreeTableView<String>, Boolean> NO_SORT_FAILED_SORT_POLICY =
+            treeTableView1 -> false;
     
-    private static final Callback<TreeTableView<String>, Boolean> SORT_SUCCESS_ASCENDING_SORT_POLICY = 
-            new Callback<TreeTableView<String>, Boolean>() {
-        @Override public Boolean call(TreeTableView<String> treeTableView) {
-            if (treeTableView.getSortOrder().isEmpty()) return true;
-            FXCollections.sort(treeTableView.getRoot().getChildren(), new Comparator<TreeItem<String>>() {
-                @Override public int compare(TreeItem<String> o1, TreeItem<String> o2) {
-                    return o1.getValue().compareTo(o2.getValue());
-                }
-            });
-            return true;
-        }
-    };
+    private static final Callback<TreeTableView<String>, Boolean> SORT_SUCCESS_ASCENDING_SORT_POLICY =
+            treeTableView1 -> {
+                if (treeTableView1.getSortOrder().isEmpty()) return true;
+                FXCollections.sort(treeTableView1.getRoot().getChildren(), new Comparator<TreeItem<String>>() {
+                    @Override public int compare(TreeItem<String> o1, TreeItem<String> o2) {
+                        return o1.getValue().compareTo(o2.getValue());
+                    }
+                });
+                return true;
+            };
     
     private TreeTableColumn<String, String> initSortTestStructure() {
         TreeTableColumn<String, String> col = new TreeTableColumn<String, String>("column");
         col.setSortType(ASCENDING);
-        col.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
-            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<String, String> param) {
-                return new ReadOnlyObjectWrapper<String>(param.getValue().getValue());
-            }
-        });
+        col.setCellValueFactory(param -> new ReadOnlyObjectWrapper<String>(param.getValue().getValue()));
         treeTableView.getColumns().add(col);
         
         TreeItem<String> newRoot = new TreeItem<String>("root");
@@ -343,10 +336,8 @@ public class TreeTableViewTest {
     @Ignore("This test is only valid if sort event consumption should revert changes")
     @Test public void testSortEventCanBeConsumedToStopSortOccurring_changeSortOrderList() {
         TreeTableColumn<String, String> col = initSortTestStructure();
-        treeTableView.setOnSort(new EventHandler<SortEvent<TreeTableView<String>>>() {
-            @Override public void handle(SortEvent<TreeTableView<String>> event) {
-                event.consume();
-            }
+        treeTableView.setOnSort(event -> {
+            event.consume();
         });
         
         VirtualFlowTestUtils.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), apple, orange, banana);
@@ -359,10 +350,8 @@ public class TreeTableViewTest {
     
     @Test public void testSortEventCanBeNotConsumedToAllowSortToOccur_changeSortOrderList() {
         TreeTableColumn<String, String> col = initSortTestStructure();
-        treeTableView.setOnSort(new EventHandler<SortEvent<TreeTableView<String>>>() {
-            @Override public void handle(SortEvent<TreeTableView<String>> event) {
-                // do not consume here - this allows the sort to happen
-            }
+        treeTableView.setOnSort(event -> {
+            // do not consume here - this allows the sort to happen
         });
         
         VirtualFlowTestUtils.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), apple, orange, banana);
@@ -377,10 +366,8 @@ public class TreeTableViewTest {
         TreeTableColumn<String, String> col = initSortTestStructure();
         assertEquals(ASCENDING, col.getSortType());
         treeTableView.getSortOrder().add(col);
-        treeTableView.setOnSort(new EventHandler<SortEvent<TreeTableView<String>>>() {
-            @Override public void handle(SortEvent<TreeTableView<String>> event) {
-                event.consume();
-            }
+        treeTableView.setOnSort(event -> {
+            event.consume();
         });
         
         VirtualFlowTestUtils.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), apple, banana, orange);
@@ -399,10 +386,8 @@ public class TreeTableViewTest {
         TreeTableColumn<String, String> col = initSortTestStructure();
         assertEquals(ASCENDING, col.getSortType());
         treeTableView.getSortOrder().add(col);
-        treeTableView.setOnSort(new EventHandler<SortEvent<TreeTableView<String>>>() {
-            @Override public void handle(SortEvent<TreeTableView<String>> event) {
-                // do not consume here - this allows the sort to happen
-            }
+        treeTableView.setOnSort(event -> {
+            // do not consume here - this allows the sort to happen
         });
         
         VirtualFlowTestUtils.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), apple, banana, orange);
@@ -420,10 +405,8 @@ public class TreeTableViewTest {
         col.setSortType(DESCENDING);
         assertEquals(DESCENDING, col.getSortType());
         treeTableView.getSortOrder().add(col);
-        treeTableView.setOnSort(new EventHandler<SortEvent<TreeTableView<String>>>() {
-            @Override public void handle(SortEvent<TreeTableView<String>> event) {
-                event.consume();
-            }
+        treeTableView.setOnSort(event -> {
+            event.consume();
         });
         
         VirtualFlowTestUtils.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), orange, banana, apple);
@@ -440,10 +423,8 @@ public class TreeTableViewTest {
         col.setSortType(DESCENDING);
         assertEquals(DESCENDING, col.getSortType());
         treeTableView.getSortOrder().add(col);
-        treeTableView.setOnSort(new EventHandler<SortEvent<TreeTableView<String>>>() {
-            @Override public void handle(SortEvent<TreeTableView<String>> event) {
-                // do not consume here - this allows the sort to happen
-            }
+        treeTableView.setOnSort(event -> {
+            // do not consume here - this allows the sort to happen
         });
         
         VirtualFlowTestUtils.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), orange, banana, apple);
@@ -461,10 +442,8 @@ public class TreeTableViewTest {
         col.setSortType(null);
         assertNull(col.getSortType());
         treeTableView.getSortOrder().add(col);
-        treeTableView.setOnSort(new EventHandler<SortEvent<TreeTableView<String>>>() {
-            @Override public void handle(SortEvent<TreeTableView<String>> event) {
-                event.consume();
-            }
+        treeTableView.setOnSort(event -> {
+            event.consume();
         });
         
         VirtualFlowTestUtils.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), apple, orange, banana);
@@ -481,10 +460,8 @@ public class TreeTableViewTest {
         col.setSortType(null);
         assertNull(col.getSortType());
         treeTableView.getSortOrder().add(col);
-        treeTableView.setOnSort(new EventHandler<SortEvent<TreeTableView<String>>>() {
-            @Override public void handle(SortEvent<TreeTableView<String>> event) {
-                // do not consume here - this allows the sort to happen
-            }
+        treeTableView.setOnSort(event -> {
+            // do not consume here - this allows the sort to happen
         });
         
         VirtualFlowTestUtils.assertListContainsItemsInOrder(treeTableView.getRoot().getChildren(), apple, orange, banana);
@@ -1339,10 +1316,8 @@ public class TreeTableViewTest {
             @Override public Object call(Object p) {
                 TreeTableRow treeCell = new TreeTableRow() {
                     {
-                        disclosureNodeProperty().addListener(new ChangeListener() {
-                            @Override public void changed(ObservableValue ov, Object t, Object t1) {
-                                setDisclosureNode(null);
-                            }
+                        disclosureNodeProperty().addListener((ov, t, t1) -> {
+                            setDisclosureNode(null);
                         });
                     }
                     
@@ -1502,11 +1477,7 @@ public class TreeTableViewTest {
         firstNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("firstName"));
         
         // set dummy comparator to lock items in place until new comparator is set
-        firstNameCol.setComparator(new Comparator() {
-            @Override public int compare(Object t, Object t1) {
-                return 0;
-            }
-        });
+        firstNameCol.setComparator((t, t1) -> 0);
 
         table.getColumns().addAll(firstNameCol);
         table.getSortOrder().add(firstNameCol);
@@ -1593,10 +1564,8 @@ public class TreeTableViewTest {
         
         parentColumn.getColumns().addAll(firstNameCol, lastNameCol);
 
-        table.setOnSort(new EventHandler<SortEvent<TreeTableView<Person>>>() {
-            @Override public void handle(SortEvent<TreeTableView<Person>> event) {
-                rt29330_count++;
-            }
+        table.setOnSort(event -> {
+            rt29330_count++;
         });
         
         // test preconditions
@@ -1644,10 +1613,8 @@ public class TreeTableViewTest {
         parentColumn.getColumns().addAll(firstNameCol, lastNameCol);
         table.getColumns().addAll(parentColumn);
 
-        table.setOnSort(new EventHandler<SortEvent<TreeTableView<Person>>>() {
-            @Override public void handle(SortEvent<TreeTableView<Person>> event) {
-                rt29330_count++;
-            }
+        table.setOnSort(event -> {
+            rt29330_count++;
         });
         
         // test preconditions
@@ -1886,18 +1853,12 @@ public class TreeTableViewTest {
 
         treeTableView.getRoot().setExpanded(true);
         TreeTableColumn<Data, String> column = new TreeTableColumn<Data, String>("Items' name");
-        column.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<Data, String>, ObservableValue<String>>() {
-            @Override
-            public ObservableValue<String> call(final TreeTableColumn.CellDataFeatures<Data, String> p) {
-                return new ReadOnlyStringWrapper(p.getValue().getValue().getData());
-            }
-        });
+        column.setCellValueFactory(p -> new ReadOnlyStringWrapper(p.getValue().getValue().getData()));
         treeTableView.getColumns().add(column);
 
         // show treeTableView
-        StageLoader stageLoader = new StageLoader(treeTableView);
-        stageLoader.getStage().show();
-        
+        StageLoader sl = new StageLoader(treeTableView);
+
         // expand all collapsed branches
         root.setExpanded(true);
         for (int i = 0; i < root.getChildren().size(); i++) {
@@ -1935,6 +1896,8 @@ public class TreeTableViewTest {
                 }
             }
         }
+
+        sl.dispose();
     }
     private void addLevel(TreeItem<Data> item, int level, int length) {
         for (int i = 0; i < 3; i++) {
@@ -2075,11 +2038,7 @@ public class TreeTableViewTest {
 
         TreeTableColumn firstNameCol = new TreeTableColumn("First Name");
         firstNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("firstName"));
-        firstNameCol.setCellFactory(CheckBoxTreeTableCell.forTreeTableColumn(new Callback<Integer, ObservableValue<Boolean>>() {
-            public javafx.beans.value.ObservableValue<Boolean> call(Integer param) {
-                return new ReadOnlyBooleanWrapper(true);
-            }
-        }));
+        firstNameCol.setCellFactory(CheckBoxTreeTableCell.forTreeTableColumn(param -> new ReadOnlyBooleanWrapper(true)));
         tableView.getColumns().add(firstNameCol);
 
         // because only the first row has data, all other rows should be
@@ -2097,11 +2056,7 @@ public class TreeTableViewTest {
         treeTableView.setEditable(true);
 
         TreeTableColumn firstNameCol = new TreeTableColumn("First Name");
-        firstNameCol.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures, ObservableValue>() {
-            @Override public ObservableValue call(TreeTableColumn.CellDataFeatures param) {
-                return new ReadOnlyStringWrapper("TEST");
-            }
-        });
+        firstNameCol.setCellValueFactory(param -> new ReadOnlyStringWrapper("TEST"));
         firstNameCol.setCellFactory(TextFieldTreeTableCell.forTreeTableColumn());
         firstNameCol.setEditable(true);
 
@@ -2127,11 +2082,7 @@ public class TreeTableViewTest {
         installChildren();
 
         TreeTableColumn<String,String> firstNameCol = new TreeTableColumn<>("First Name");
-        firstNameCol.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
-            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<String, String> param) {
-                return new ReadOnlyStringWrapper(param.getValue().getValue());
-            }
-        });
+        firstNameCol.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue().getValue()));
 
         treeTableView.getColumns().add(firstNameCol);
 
@@ -2146,11 +2097,7 @@ public class TreeTableViewTest {
         installChildren();
 
         TreeTableColumn<String,String> firstNameCol = new TreeTableColumn<>("First Name");
-        firstNameCol.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
-            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<String, String> param) {
-                return new ReadOnlyStringWrapper(param.getValue().getValue());
-            }
-        });
+        firstNameCol.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue().getValue()));
 
         treeTableView.getColumns().add(firstNameCol);
 
@@ -2173,11 +2120,7 @@ public class TreeTableViewTest {
         installChildren();
 
         TreeTableColumn<String,String> firstNameCol = new TreeTableColumn<>("First Name");
-        firstNameCol.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
-            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<String, String> param) {
-                return new ReadOnlyStringWrapper(param.getValue().getValue());
-            }
-        });
+        firstNameCol.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue().getValue()));
 
         treeTableView.getColumns().add(firstNameCol);
 
@@ -2223,11 +2166,7 @@ public class TreeTableViewTest {
 
         installChildren();
         TreeTableColumn<String,String> firstNameCol = new TreeTableColumn<>("First Name");
-        firstNameCol.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
-            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<String, String> param) {
-                return new ReadOnlyStringWrapper(param.getValue().getValue());
-            }
-        });
+        firstNameCol.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue().getValue()));
         treeTableView.getColumns().add(firstNameCol);
 
         firstNameCol.setCellFactory(new Callback<TreeTableColumn<String, String>, TreeTableCell<String, String>>() {
@@ -2269,6 +2208,8 @@ public class TreeTableViewTest {
         sl.getStage().setHeight(50);
         Toolkit.getToolkit().firePulse();
         assertEquals(12, rt_31200_count);
+
+        sl.dispose();
     }
 
     @Test public void test_rt_31200_tableRow() {
@@ -2276,11 +2217,7 @@ public class TreeTableViewTest {
 
         installChildren();
         TreeTableColumn<String,String> firstNameCol = new TreeTableColumn<>("First Name");
-        firstNameCol.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
-            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<String, String> param) {
-                return new ReadOnlyStringWrapper(param.getValue().getValue());
-            }
-        });
+        firstNameCol.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue().getValue()));
         treeTableView.getColumns().add(firstNameCol);
 
         treeTableView.setRowFactory(new Callback<TreeTableView<String>, TreeTableRow<String>>() {
@@ -2322,6 +2259,8 @@ public class TreeTableViewTest {
         sl.getStage().setHeight(50);
         Toolkit.getToolkit().firePulse();
         assertEquals(17, rt_31200_count);
+
+        sl.dispose();
     }
 
     @Test public void test_rt_31727() {
@@ -2329,11 +2268,7 @@ public class TreeTableViewTest {
         treeTableView.setEditable(true);
 
         TreeTableColumn firstNameCol = new TreeTableColumn("First Name");
-        firstNameCol.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures, ObservableValue>() {
-            @Override public ObservableValue call(TreeTableColumn.CellDataFeatures param) {
-                return new ReadOnlyStringWrapper("TEST");
-            }
-        });
+        firstNameCol.setCellValueFactory(param -> new ReadOnlyStringWrapper("TEST"));
         firstNameCol.setCellFactory(TextFieldTreeTableCell.forTreeTableColumn());
         firstNameCol.setEditable(true);
 
@@ -2363,11 +2298,7 @@ public class TreeTableViewTest {
 //        final TableSelectionModel sm = t.getSelectionModel();
         TreeTableColumn<String, String> col = new TreeTableColumn<String, String>("column");
         col.setSortType(ASCENDING);
-        col.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
-            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<String, String> param) {
-                return new ReadOnlyObjectWrapper<String>(param.getValue().getValue());
-            }
-        });
+        col.setCellValueFactory(param -> new ReadOnlyObjectWrapper<String>(param.getValue().getValue()));
         treeTableView.getColumns().add(col);
 
         // test pre-conditions
@@ -2432,11 +2363,7 @@ public class TreeTableViewTest {
 
         TreeTableColumn<String, String> col = new TreeTableColumn<String, String>("column");
         col.setSortType(ASCENDING);
-        col.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
-            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<String, String> param) {
-                return new ReadOnlyObjectWrapper<String>(param.getValue().getValue());
-            }
-        });
+        col.setCellValueFactory(param -> new ReadOnlyObjectWrapper<String>(param.getValue().getValue()));
         treeTableView.getColumns().add(col);
 
         col.setCellFactory(new Callback<TreeTableColumn<String, String>, TreeTableCell<String, String>>() {
@@ -2476,11 +2403,7 @@ public class TreeTableViewTest {
 
         TreeTableColumn<String, String> col = new TreeTableColumn<String, String>("column");
         col.setSortType(ASCENDING);
-        col.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
-            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<String, String> param) {
-                return new ReadOnlyObjectWrapper<String>(param.getValue().getValue());
-            }
-        });
+        col.setCellValueFactory(param -> new ReadOnlyObjectWrapper<String>(param.getValue().getValue()));
         treeTableView.getColumns().add(col);
 
         treeTableView.setRowFactory(new Callback<TreeTableView<String>, TreeTableRow<String>>() {
@@ -2521,11 +2444,7 @@ public class TreeTableViewTest {
         treeTableView.setEditable(true);
 
         TreeTableColumn<String, String> col = new TreeTableColumn<String, String>("column");
-        col.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
-            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<String, String> param) {
-                return new ReadOnlyObjectWrapper<String>(param.getValue().getValue());
-            }
-        });
+        col.setCellValueFactory(param -> new ReadOnlyObjectWrapper<String>(param.getValue().getValue()));
         treeTableView.getColumns().add(col);
 
         //Set cell factory for cells that allow editing
@@ -2541,7 +2460,7 @@ public class TreeTableViewTest {
         };
         col.setCellFactory(cellFactory);
 
-        new StageLoader(treeTableView);
+        StageLoader sl = new StageLoader(treeTableView);
 
         assertEquals(0, rt_31015_count);
 
@@ -2550,6 +2469,8 @@ public class TreeTableViewTest {
 
         treeTableView.edit(-1, null);
         assertEquals(1, rt_31015_count);
+
+        sl.dispose();
     }
 
     @Test public void test_rt_30688() {
@@ -2558,16 +2479,14 @@ public class TreeTableViewTest {
         treeTableView.setColumnResizePolicy(TreeTableView.CONSTRAINED_RESIZE_POLICY);
 
         TreeTableColumn<String, String> col = new TreeTableColumn<>("column");
-        col.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
-            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<String, String> param) {
-                return new ReadOnlyObjectWrapper<>(param.getValue().getValue());
-            }
-        });
+        col.setCellValueFactory(param -> new ReadOnlyObjectWrapper<>(param.getValue().getValue()));
         treeTableView.getColumns().add(col);
 
-        new StageLoader(treeTableView);
+        StageLoader sl = new StageLoader(treeTableView);
 
         assertEquals(treeTableView.contentWidth, col.getWidth(), 0.0);
+
+        sl.dispose();
     }
 
     private int rt_29650_start_count = 0;
@@ -2580,30 +2499,20 @@ public class TreeTableViewTest {
         TreeTableColumn<String, String> col = new TreeTableColumn<>("column");
         Callback<TreeTableColumn<String, String>, TreeTableCell<String, String>> factory = TextFieldTreeTableCell.forTreeTableColumn();
         col.setCellFactory(factory);
-        col.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
-            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<String, String> param) {
-                return new ReadOnlyObjectWrapper<>(param.getValue().getValue());
-            }
-        });
+        col.setCellValueFactory(param -> new ReadOnlyObjectWrapper<>(param.getValue().getValue()));
         treeTableView.getColumns().add(col);
 
-        col.setOnEditStart(new EventHandler() {
-            @Override public void handle(Event t) {
-                rt_29650_start_count++;
-            }
+        col.setOnEditStart(t -> {
+            rt_29650_start_count++;
         });
-        col.setOnEditCommit(new EventHandler() {
-            @Override public void handle(Event t) {
-                rt_29650_commit_count++;
-            }
+        col.setOnEditCommit(t -> {
+            rt_29650_commit_count++;
         });
-        col.setOnEditCancel(new EventHandler() {
-            @Override public void handle(Event t) {
-                rt_29650_cancel_count++;
-            }
+        col.setOnEditCancel(t -> {
+            rt_29650_cancel_count++;
         });
 
-        new StageLoader(treeTableView);
+        StageLoader sl = new StageLoader(treeTableView);
 
         treeTableView.edit(0, col);
 
@@ -2620,6 +2529,8 @@ public class TreeTableViewTest {
         assertEquals(1, rt_29650_start_count);
         assertEquals(1, rt_29650_commit_count);
         assertEquals(0, rt_29650_cancel_count);
+
+        sl.dispose();
     }
 
     private int rt_29849_start_count = 0;
@@ -2629,21 +2540,15 @@ public class TreeTableViewTest {
 
         TreeTableColumn<String, String> col = new TreeTableColumn<>("column");
         col.setEditable(true);
-        col.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
-            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<String, String> param) {
-                return new ReadOnlyObjectWrapper<>(param.getValue().getValue());
-            }
-        });
+        col.setCellValueFactory(param -> new ReadOnlyObjectWrapper<>(param.getValue().getValue()));
         treeTableView.getColumns().add(col);
 
-        col.setOnEditStart(new EventHandler() {
-            @Override public void handle(Event t) {
-                rt_29849_start_count++;
-            }
+        col.setOnEditStart(t -> {
+            rt_29849_start_count++;
         });
 
         // load the table so the default cells are created
-        new StageLoader(treeTableView);
+        StageLoader sl = new StageLoader(treeTableView);
 
         // now replace the cell factory
         Callback<TreeTableColumn<String, String>, TreeTableCell<String, String>> factory = TextFieldTreeTableCell.forTreeTableColumn();
@@ -2654,6 +2559,8 @@ public class TreeTableViewTest {
         // now start an edit and count the start edit events - it should be just 1
         treeTableView.edit(0, col);
         assertEquals(1, rt_29849_start_count);
+
+        sl.dispose();
     }
 
     @Test public void test_rt_34327() {
@@ -2669,11 +2576,7 @@ public class TreeTableViewTest {
         // add in a column and some data
         TreeTableColumn<String, String> col = new TreeTableColumn<>("column");
         col.setEditable(true);
-        col.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
-            @Override public ObservableValue<String> call(TreeTableColumn.CellDataFeatures<String, String> param) {
-                return new ReadOnlyObjectWrapper<>(param.getValue().getValue());
-            }
-        });
+        col.setCellValueFactory(param -> new ReadOnlyObjectWrapper<>(param.getValue().getValue()));
         treeTableView.getColumns().add(col);
 
         installChildren();
@@ -2749,6 +2652,7 @@ public class TreeTableViewTest {
         assertEquals(3, treeTableView.getFocusModel().getFocusedIndex());
     }
 
+    @Ignore("Test started intermittently failing, most probably due to RT-36855 changeset")
     @Test public void test_rt_34493() {
         ObservableList<TreeItem<Person>> persons = FXCollections.observableArrayList(
             new TreeItem<Person>(new Person("Jacob", "Smith", "jacob.smith@example.com"))
@@ -2774,7 +2678,7 @@ public class TreeTableViewTest {
         table.getColumns().addAll(first, last, email);
 
         // load the table
-        new StageLoader(table);
+        StageLoader sl = new StageLoader(table);
 
         // resize the last column
         last.impl_setWidth(400);
@@ -2787,6 +2691,8 @@ public class TreeTableViewTest {
         // the last column should still be 400px, not the default width or any
         // other value (based on the width of the content in that column)
         assertEquals(400, last.getWidth(), 0.0);
+
+        sl.dispose();
     }
 
     @Test public void test_rt26721_collapseParent_firstRootChild() {
@@ -2977,6 +2883,7 @@ public class TreeTableViewTest {
         if (useMouseToInitiateEdit) {
             MouseEventFirer mouse = new MouseEventFirer(cell);
             mouse.fireMousePressAndRelease(2, 10, 10);  // click 10 pixels in and 10 pixels down
+            mouse.dispose();
         } else {
             table.edit(0,first);
         }
@@ -3002,5 +2909,701 @@ public class TreeTableViewTest {
         assertEquals("Andrew", cell.getText());
         assertEquals("Andrew", person1.getFirstName());
         assertEquals(1, test_rt_34685_commitCount);
+    }
+
+    @Test public void test_rt34694() {
+        TreeItem treeNode = new TreeItem("Controls");
+        treeNode.getChildren().addAll(
+                new TreeItem("Button"),
+                new TreeItem("ButtonBar"),
+                new TreeItem("LinkBar"),
+                new TreeItem("LinkButton"),
+                new TreeItem("PopUpButton"),
+                new TreeItem("ToggleButtonBar")
+        );
+
+        final TreeTableView<String> table = new TreeTableView<>();
+        table.setRoot(treeNode);
+        treeNode.setExpanded(true);
+
+        table.getSelectionModel().select(0);
+        assertTrue(table.getSelectionModel().isSelected(0));
+        assertTrue(table.getFocusModel().isFocused(0));
+
+        treeNode.getChildren().clear();
+        treeNode.getChildren().addAll(
+                new TreeItem("Button1"),
+                new TreeItem("ButtonBar1"),
+                new TreeItem("LinkBar1"),
+                new TreeItem("LinkButton1"),
+                new TreeItem("PopUpButton1"),
+                new TreeItem("ToggleButtonBar1")
+        );
+        Toolkit.getToolkit().firePulse();
+
+        assertTrue(table.getSelectionModel().isSelected(0));
+        assertTrue(table.getFocusModel().isFocused(0));
+    }
+
+    private int test_rt_35213_eventCount = 0;
+    @Test public void test_rt35213() {
+        final TreeTableView<String> view = new TreeTableView<>();
+
+        TreeItem<String> root = new TreeItem<>("Boss");
+        view.setRoot(root);
+
+        TreeItem<String> group1 = new TreeItem<>("Group 1");
+        TreeItem<String> group2 = new TreeItem<>("Group 2");
+        TreeItem<String> group3 = new TreeItem<>("Group 3");
+
+        root.getChildren().addAll(group1, group2, group3);
+
+        TreeItem<String> employee1 = new TreeItem<>("Employee 1");
+        TreeItem<String> employee2 = new TreeItem<>("Employee 2");
+
+        group2.getChildren().addAll(employee1, employee2);
+
+        TreeTableColumn<String, String> nameColumn = new TreeTableColumn<>("Name");
+        nameColumn.setCellValueFactory(new TreeItemPropertyValueFactory<String, String>("name"));
+        view.getColumns().add(nameColumn);
+
+        view.expandedItemCountProperty().addListener((observableValue, oldCount, newCount) -> {
+
+            // DEBUG OUTPUT
+//                System.out.println("new expanded item count: " + newCount.intValue());
+//                for (int i = 0; i < newCount.intValue(); i++) {
+//                    TreeItem<String> item = view.getTreeItem(i);
+//                    String text = item.getValue();
+//                    System.out.println("person found at index " + i + " is " + text);
+//                }
+//                System.out.println("------------------------------------------");
+
+            if (test_rt_35213_eventCount == 0) {
+                assertEquals(4, newCount);
+                assertEquals("Boss", view.getTreeItem(0).getValue());
+                assertEquals("Group 1", view.getTreeItem(1).getValue());
+                assertEquals("Group 2", view.getTreeItem(2).getValue());
+                assertEquals("Group 3", view.getTreeItem(3).getValue());
+            } else if (test_rt_35213_eventCount == 1) {
+                assertEquals(6, newCount);
+                assertEquals("Boss", view.getTreeItem(0).getValue());
+                assertEquals("Group 1", view.getTreeItem(1).getValue());
+                assertEquals("Group 2", view.getTreeItem(2).getValue());
+                assertEquals("Employee 1", view.getTreeItem(3).getValue());
+                assertEquals("Employee 2", view.getTreeItem(4).getValue());
+                assertEquals("Group 3", view.getTreeItem(5).getValue());
+            } else if (test_rt_35213_eventCount == 2) {
+                assertEquals(4, newCount);
+                assertEquals("Boss", view.getTreeItem(0).getValue());
+                assertEquals("Group 1", view.getTreeItem(1).getValue());
+                assertEquals("Group 2", view.getTreeItem(2).getValue());
+                assertEquals("Group 3", view.getTreeItem(3).getValue());
+            }
+
+            test_rt_35213_eventCount++;
+        });
+
+        StageLoader sl = new StageLoader(view);
+
+        root.setExpanded(true);
+        Toolkit.getToolkit().firePulse();
+
+        group2.setExpanded(true);
+        Toolkit.getToolkit().firePulse();
+
+        group2.setExpanded(false);
+        Toolkit.getToolkit().firePulse();
+
+        sl.dispose();
+    }
+
+    @Test public void test_rt23245_itemIsInTree() {
+        final TreeTableView<String> view = new TreeTableView<String>();
+        final List<TreeItem<String>> items = new ArrayList<>();
+        for (int i = 0; i < 10; i++) {
+            final TreeItem<String> item = new TreeItem<String>("Item" + i);
+            item.setExpanded(true);
+            items.add(item);
+        }
+
+        // link the items up so that the next item is the child of the current item
+        for (int i = 0; i < 9; i++) {
+            items.get(i).getChildren().add(items.get(i + 1));
+        }
+
+        view.setRoot(items.get(0));
+
+        for (int i = 0; i < 10; i++) {
+            // we expect the level of the tree item at the ith position to be
+            // 0, as every iteration we are setting the ith item as the root.
+            assertEquals(0, view.getTreeItemLevel(items.get(i)));
+
+            // whilst we are testing, we should also ensure that the ith item
+            // is indeed the root item, and that the ith item is indeed the item
+            // at the 0th position
+            assertEquals(items.get(i), view.getRoot());
+            assertEquals(items.get(i), view.getTreeItem(0));
+
+            // shuffle the next item into the root position (keeping its parent
+            // chain intact - which is what exposes this issue in the first place).
+            if (i < 9) {
+                view.setRoot(items.get(i + 1));
+            }
+        }
+    }
+
+    @Test public void test_rt23245_itemIsNotInTree_noRootNode() {
+        final TreeView<String> view = new TreeView<String>();
+        final List<TreeItem<String>> items = new ArrayList<>();
+        for (int i = 0; i < 10; i++) {
+            final TreeItem<String> item = new TreeItem<String>("Item" + i);
+            item.setExpanded(true);
+            items.add(item);
+        }
+
+        // link the items up so that the next item is the child of the current item
+        for (int i = 0; i < 9; i++) {
+            items.get(i).getChildren().add(items.get(i + 1));
+        }
+
+        for (int i = 0; i < 10; i++) {
+            // because we have no root (and we are not changing the root like
+            // the previous test), we expect the tree item level of the item
+            // in the ith position to be i.
+            assertEquals(i, view.getTreeItemLevel(items.get(i)));
+
+            // all items requested from the TreeView should be null, as the
+            // TreeView does not have a root item
+            assertNull(view.getTreeItem(i));
+        }
+    }
+
+    @Test public void test_rt23245_itemIsNotInTree_withUnrelatedRootNode() {
+        final TreeView<String> view = new TreeView<String>();
+        final List<TreeItem<String>> items = new ArrayList<>();
+        for (int i = 0; i < 10; i++) {
+            final TreeItem<String> item = new TreeItem<String>("Item" + i);
+            item.setExpanded(true);
+            items.add(item);
+        }
+
+        // link the items up so that the next item is the child of the current item
+        for (int i = 0; i < 9; i++) {
+            items.get(i).getChildren().add(items.get(i + 1));
+        }
+
+        view.setRoot(new TreeItem("Unrelated root node"));
+
+        for (int i = 0; i < 10; i++) {
+            // because we have no root (and we are not changing the root like
+            // the previous test), we expect the tree item level of the item
+            // in the ith position to be i.
+            assertEquals(i, view.getTreeItemLevel(items.get(i)));
+
+            // all items requested from the TreeView should be null except for
+            // the root node
+            assertNull(view.getTreeItem(i + 1));
+        }
+    }
+
+    @Test public void test_rt35039_setRoot() {
+        TreeItem<String> root = new TreeItem<>("Root");
+        root.setExpanded(true);
+        root.getChildren().addAll(
+                new TreeItem("aabbaa"),
+                new TreeItem("bbc"));
+
+        final TreeTableView<String> treeView = new TreeTableView<>();
+        treeView.setRoot(root);
+
+        StageLoader sl = new StageLoader(treeView);
+
+        // everything should be null to start with
+        assertNull(treeView.getSelectionModel().getSelectedItem());
+
+        // select "bbc" and ensure everything is set to that
+        treeView.getSelectionModel().select(2);
+        assertEquals("bbc", treeView.getSelectionModel().getSelectedItem().getValue());
+
+        // change the items list - but retain the same content. We expect
+        // that "bbc" remains selected as it is still in the list
+        treeView.setRoot(root);
+        assertEquals("bbc", treeView.getSelectionModel().getSelectedItem().getValue());
+
+        sl.dispose();
+    }
+
+    @Test public void test_rt35039_resetRootChildren() {
+        TreeItem aabbaa = new TreeItem("aabbaa");
+        TreeItem bbc = new TreeItem("bbc");
+
+        TreeItem<String> root = new TreeItem<>("Root");
+        root.setExpanded(true);
+        root.getChildren().setAll(aabbaa, bbc);
+
+        final TreeTableView<String> treeView = new TreeTableView<>();
+        treeView.setRoot(root);
+
+        StageLoader sl = new StageLoader(treeView);
+
+        // everything should be null to start with
+        assertNull(treeView.getSelectionModel().getSelectedItem());
+
+        // select "bbc" and ensure everything is set to that
+        treeView.getSelectionModel().select(2);
+        assertEquals("bbc", treeView.getSelectionModel().getSelectedItem().getValue());
+
+        // change the items list - but retain the same content. We expect
+        // that "bbc" remains selected as it is still in the list
+        root.getChildren().setAll(aabbaa, bbc);
+        assertEquals("bbc", treeView.getSelectionModel().getSelectedItem().getValue());
+
+        sl.dispose();
+    }
+
+    @Test public void test_rt35763() {
+        TreeItem<String> root = new TreeItem<>("Root");
+        root.setExpanded(true);
+        TreeItem aaa = new TreeItem("aaa");
+        TreeItem bbb = new TreeItem("bbb");
+        root.getChildren().setAll(bbb, aaa);
+
+        final TreeTableView<String> treeView = new TreeTableView<>();
+
+        TreeTableColumn<String, String> col = new TreeTableColumn<>("Column");
+        col.setCellValueFactory(param -> param.getValue().valueProperty());
+
+        treeView.getColumns().add(col);
+        treeView.setRoot(root);
+
+        assertEquals(root, treeView.getTreeItem(0));
+        assertEquals(bbb, treeView.getTreeItem(1));
+        assertEquals(aaa,treeView.getTreeItem(2));
+
+        // change sort order - expect items to be sorted
+        treeView.getSortOrder().setAll(col);
+
+        assertEquals(1, treeView.getSortOrder().size());
+        assertEquals(col, treeView.getSortOrder().get(0));
+
+        Toolkit.getToolkit().firePulse();
+
+        assertEquals(root, treeView.getTreeItem(0));
+        assertEquals(bbb, treeView.getTreeItem(2));
+        assertEquals(aaa,treeView.getTreeItem(1));
+
+        // set new items into items list - expect sortOrder list to be reset
+        // and the items list to remain unsorted
+        TreeItem<String> root2 = new TreeItem<>("Root");
+        root2.setExpanded(true);
+        TreeItem ccc = new TreeItem("ccc");
+        TreeItem ddd = new TreeItem("ddd");
+        root2.getChildren().setAll(ddd, ccc);
+        treeView.setRoot(root2);
+
+        assertEquals(root2, treeView.getTreeItem(0));
+        assertEquals(ddd, treeView.getTreeItem(1));
+        assertEquals(ccc,treeView.getTreeItem(2));
+
+        assertTrue(treeView.getSortOrder().isEmpty());
+    }
+
+    @Test public void test_rt35857() {
+        TreeItem<String> root = new TreeItem<>("Root");
+        root.setExpanded(true);
+        TreeItem a = new TreeItem("A");
+        TreeItem b = new TreeItem("B");
+        TreeItem c = new TreeItem("C");
+        root.getChildren().setAll(a, b, c);
+
+        final TreeTableView<String> treeTableView = new TreeTableView<String>(root);
+
+        treeTableView.getSelectionModel().select(1);
+
+        ObservableList<TreeItem<String>> selectedItems = treeTableView.getSelectionModel().getSelectedItems();
+        assertEquals(1, selectedItems.size());
+        assertEquals("A", selectedItems.get(0).getValue());
+
+        root.getChildren().removeAll(selectedItems);
+        assertEquals(2, root.getChildren().size());
+        assertEquals("B", root.getChildren().get(0).getValue());
+        assertEquals("C", root.getChildren().get(1).getValue());
+    }
+
+    private int rt36452_instanceCount = 0;
+    @Test public void test_rt36452() {
+        TreeTableColumn<String, String> myColumn = new TreeTableColumn<String,String>();
+        myColumn.setCellValueFactory((item)->(new ReadOnlyObjectWrapper<>(item.getValue().getValue())));
+        myColumn.setCellFactory(column -> new TreeTableCell<String, String>() {
+            {
+                rt36452_instanceCount++;
+            }
+        });
+
+        TreeTableView<String> ttv = new TreeTableView<>();
+        ttv.setShowRoot(false);
+        ttv.getColumns().add(myColumn);
+
+        TreeItem<String> treeRootItem = new TreeItem<>("root");
+        treeRootItem.setExpanded(true);
+
+        for (int i = 0; i < 100; i++) {
+            treeRootItem.getChildren().add(new TreeItem<>("Child: " + i));
+        }
+
+        ttv.setRoot(treeRootItem);
+        ttv.setFixedCellSize(25);
+
+        StackPane root = new StackPane();
+        root.getChildren().add(ttv);
+
+        StageLoader sl = new StageLoader(root);
+
+        final int cellCountAtStart = rt36452_instanceCount;
+
+        // start scrolling
+        for (int i = 0; i < 100; i++) {
+            ttv.scrollTo(i);
+            Toolkit.getToolkit().firePulse();
+        }
+
+        // we don't mind if an extra few cells are created. What we are really
+        // testing for here is that we don't end up with an order of magnitude
+        // extra cells.
+        // On my machine the cellCountAtStart is 16. Before this issue was fixed
+        // I would end up with 102 instances after running this test. Once the
+        // bug was fixed, I would consistently see that 17 cells had been
+        // created in total.
+        // However, for now, we'll test on the assumption that across all
+        // platforms we only get one extra cell created, and we can loosen this
+        // up if necessary.
+        assertEquals(cellCountAtStart + 1, rt36452_instanceCount);
+
+        sl.dispose();
+    }
+
+    @Test public void test_rt25679_rowSelection() {
+        test_rt25679(true);
+    }
+
+    @Test public void test_rt25679_cellSelection() {
+        test_rt25679(false);
+    }
+
+    private void test_rt25679(boolean rowSelection) {
+        Button focusBtn = new Button("Focus here");
+
+        TreeItem<String> root = new TreeItem<>("Root");
+        root.getChildren().setAll(new TreeItem("a"), new TreeItem("b"));
+        root.setExpanded(true);
+
+        final TreeTableView<String> treeView = new TreeTableView<>(root);
+        TreeTableColumn<String, String> tableColumn = new TreeTableColumn<>();
+        tableColumn.setCellValueFactory(rowValue -> new SimpleStringProperty(rowValue.getValue().getValue()));
+        treeView.getColumns().add(tableColumn);
+
+        TreeTableView.TreeTableViewSelectionModel<String> sm = treeView.getSelectionModel();
+        sm.setCellSelectionEnabled(! rowSelection);
+
+        VBox vbox = new VBox(focusBtn, treeView);
+
+        StageLoader sl = new StageLoader(vbox);
+        sl.getStage().requestFocus();
+        focusBtn.requestFocus();
+        Toolkit.getToolkit().firePulse();
+
+        // test initial state
+        assertEquals(sl.getStage().getScene().getFocusOwner(), focusBtn);
+        assertTrue(focusBtn.isFocused());
+        assertEquals(-1, sm.getSelectedIndex());
+        assertNull(sm.getSelectedItem());
+
+        // move focus to the TreeTableView
+        treeView.requestFocus();
+
+        // ensure that there is a selection (where previously there was not one)
+        assertEquals(sl.getStage().getScene().getFocusOwner(), treeView);
+        assertTrue(treeView.isFocused());
+
+        if (rowSelection) {
+            assertEquals(1, sm.getSelectedIndices().size());
+            assertEquals(root, sm.getSelectedItem());
+            assertTrue(sm.isSelected(0));
+
+            assertEquals(1, sm.getSelectedCells().size());
+            TreeTablePosition selectedCell = sm.getSelectedCells().get(0);
+            assertEquals(0, selectedCell.getRow());
+            assertEquals(-1, selectedCell.getColumn());
+            assertNull(selectedCell.getTableColumn());
+        } else {
+            assertTrue(sm.isSelected(0, tableColumn));
+            assertEquals(1, sm.getSelectedCells().size());
+            TreeTablePosition selectedCell = sm.getSelectedCells().get(0);
+            assertEquals(0, selectedCell.getRow());
+            assertEquals(0, selectedCell.getColumn());
+            assertEquals(tableColumn, selectedCell.getTableColumn());
+        }
+
+        sl.dispose();
+    }
+
+    @Test public void test_rt36885() {
+        test_rt36885(false);
+    }
+
+    @Test public void test_rt36885_addChildAfterSelection() {
+        test_rt36885(true);
+    }
+
+    private void test_rt36885(boolean addChildToAAfterSelection) {
+        TreeItem<String> root = new TreeItem<>("Root");         // 0
+                TreeItem<String> a = new TreeItem<>("a");       // 1
+                    TreeItem<String> a1 = new TreeItem<>("a1"); // a expanded = 2, a collapsed = -1
+            TreeItem<String> b = new TreeItem<>("b");           // a expanded = 3, a collapsed = 2
+                TreeItem<String> b1 = new TreeItem<>("b1");     // a expanded = 4, a collapsed = 3
+                TreeItem<String> b2 = new TreeItem<>("b2");     // a expanded = 5, a collapsed = 4
+
+        root.setExpanded(true);
+        root.getChildren().setAll(a, b);
+
+        a.setExpanded(false);
+        if (!addChildToAAfterSelection) {
+            a.getChildren().add(a1);
+        }
+
+        b.setExpanded(true);
+        b.getChildren().addAll(b1, b2);
+
+        final TreeTableView<String> treeView = new TreeTableView<>(root);
+        TreeTableColumn<String, String> tableColumn = new TreeTableColumn<>();
+        tableColumn.setCellValueFactory(rowValue -> new SimpleStringProperty(rowValue.getValue().getValue()));
+        treeView.getColumns().add(tableColumn);
+
+        TreeTableView.TreeTableViewSelectionModel<String> sm = treeView.getSelectionModel();
+        FocusModel<TreeItem<String>> fm = treeView.getFocusModel();
+
+        sm.select(b1);
+        assertEquals(3, sm.getSelectedIndex());
+        assertEquals(b1, sm.getSelectedItem());
+        assertEquals(3, fm.getFocusedIndex());
+        assertEquals(b1, fm.getFocusedItem());
+
+        if (addChildToAAfterSelection) {
+            a.getChildren().add(a1);
+        }
+
+        a.setExpanded(true);
+        assertEquals(4, sm.getSelectedIndex());
+        assertEquals(b1, sm.getSelectedItem());
+        assertEquals(4, fm.getFocusedIndex());
+        assertEquals(b1, fm.getFocusedItem());
+    }
+
+    private int rt_37061_index_counter = 0;
+    private int rt_37061_item_counter = 0;
+    @Test public void test_rt_37061() {
+        TreeItem<Integer> root = new TreeItem<>(0);
+        root.setExpanded(true);
+        TreeTableView<Integer> tv = new TreeTableView<>();
+        tv.setRoot(root);
+        tv.getSelectionModel().select(0);
+
+        // note we add the listeners after the selection is made, so the counters
+        // at this point are still both at zero.
+        tv.getSelectionModel().selectedIndexProperty().addListener((observable, oldValue, newValue) -> {
+            rt_37061_index_counter++;
+        });
+
+        tv.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
+            rt_37061_item_counter++;
+        });
+
+        // add a new item. This does not impact the selected index or selected item
+        // so the counters should remain at zero.
+        tv.getRoot().getChildren().add(new TreeItem("1"));
+        assertEquals(0, rt_37061_index_counter);
+        assertEquals(0, rt_37061_item_counter);
+    }
+
+    @Test public void test_rt_37054_noScroll() {
+        test_rt_37054(false);
+    }
+
+    @Test public void test_rt_37054_scroll() {
+        test_rt_37054(true);
+    }
+
+    private void test_rt_37054(boolean scroll) {
+        ObjectProperty<Integer> offset = new SimpleObjectProperty<Integer>(0);
+
+        // create table with a bunch of rows and 1 column...
+        TreeItem<Integer> root = new TreeItem<>(0);
+        root.setExpanded(true);
+        for (int i = 1; i <= 50; i++) {
+            root.getChildren().add(new TreeItem<>(i));
+        }
+
+        final TreeTableColumn<Integer, Integer> column = new TreeTableColumn<>("Column");
+
+        final TreeTableView<Integer> table = new TreeTableView<>(root);
+        table.getColumns().add( column );
+        column.setPrefWidth( 150 );
+
+        // each cell displays x, where x = "cell row number + offset"
+        column.setCellValueFactory( cdf -> new ObjectBinding<Integer>() {
+            { super.bind( offset ); }
+
+            @Override protected Integer computeValue() {
+                return cdf.getValue().getValue() + offset.get();
+            }
+        });
+
+        StackPane stack = new StackPane();
+        stack.getChildren().add(table);
+        StageLoader sl = new StageLoader(stack);
+
+        int index = scroll ? 0 : 25;
+
+        if (scroll) {
+            // we scroll to force the table cells to update the objects they observe
+            table.scrollTo(index);
+            Toolkit.getToolkit().firePulse();
+        }
+
+        TreeTableCell cell = (TreeTableCell) VirtualFlowTestUtils.getCell(table, index + 3, 0);
+        final int initialValue = (Integer) cell.getItem();
+
+        // increment the offset value
+        offset.setValue(offset.get() + 1);
+        Toolkit.getToolkit().firePulse();
+
+        final int incrementedValue = (Integer) cell.getItem();
+        assertEquals(initialValue + 1, incrementedValue);
+
+        sl.dispose();
+    }
+
+    private int rt_37395_index_addCount = 0;
+    private int rt_37395_index_removeCount = 0;
+    private int rt_37395_index_permutationCount = 0;
+    private int rt_37395_item_addCount = 0;
+    private int rt_37395_item_removeCount = 0;
+    private int rt_37395_item_permutationCount = 0;
+
+    @Test public void test_rt_37395() {
+        // table items - 3 items, 2nd item has 2 children
+        TreeItem<String> root = new TreeItem<>();
+
+        TreeItem<String> two = new TreeItem<>("two");
+        two.getChildren().add(new TreeItem<>("childOne"));
+        two.getChildren().add(new TreeItem<>("childTwo"));
+
+        root.getChildren().add(new TreeItem<>("one"));
+        root.getChildren().add(two);
+        root.getChildren().add(new TreeItem<>("three"));
+
+        // table columns - 1 column; name
+        TreeTableColumn<String, String> nameColumn = new TreeTableColumn<>("name");
+        nameColumn.setCellValueFactory(param -> new ReadOnlyObjectWrapper(param.getValue().getValue()));
+        nameColumn.setPrefWidth(200);
+
+        // table
+        TreeTableView<String> table = new TreeTableView<>();
+        table.setShowRoot(false);
+        table.setRoot(root);
+        table.getColumns().addAll(nameColumn);
+
+        TreeTableView.TreeTableViewSelectionModel sm = table.getSelectionModel();
+        sm.getSelectedIndices().addListener(new ListChangeListener<Integer>() {
+            @Override public void onChanged(Change<? extends Integer> c) {
+                while (c.next()) {
+                    if (c.wasRemoved()) {
+                        c.getRemoved().forEach(item -> {
+                            if (item == null) {
+                                fail("Removed index should never be null");
+                            } else {
+                                rt_37395_index_removeCount++;
+                            }
+                        });
+                    }
+                    if (c.wasAdded()) {
+                        c.getAddedSubList().forEach(item -> {
+                            rt_37395_index_addCount++;
+                        });
+                    }
+                    if (c.wasPermutated()) {
+                        rt_37395_index_permutationCount++;
+                    }
+                }
+            }
+        });
+        sm.getSelectedItems().addListener(new ListChangeListener<TreeItem<String>>() {
+            @Override public void onChanged(Change<? extends TreeItem<String>> c) {
+                while (c.next()) {
+                    if (c.wasRemoved()) {
+                        c.getRemoved().forEach(item -> {
+                            if (item == null) {
+                                fail("Removed item should never be null");
+                            } else {
+                                rt_37395_item_removeCount++;
+                            }
+                        });
+                    }
+                    if (c.wasAdded()) {
+                        c.getAddedSubList().forEach(item -> {
+                            rt_37395_item_addCount++;
+                        });
+                    }
+                    if (c.wasPermutated()) {
+                        rt_37395_item_permutationCount++;
+                    }
+                }
+            }
+        });
+
+        assertEquals(0, rt_37395_index_removeCount);
+        assertEquals(0, rt_37395_index_addCount);
+        assertEquals(0, rt_37395_index_permutationCount);
+        assertEquals(0, rt_37395_item_removeCount);
+        assertEquals(0, rt_37395_item_addCount);
+        assertEquals(0, rt_37395_item_permutationCount);
+
+        StageLoader sl = new StageLoader(table);
+
+        // step one: select item 'three' in index 2
+        sm.select(2);
+        assertEquals(0, rt_37395_index_removeCount);
+        assertEquals(1, rt_37395_index_addCount);
+        assertEquals(0, rt_37395_index_permutationCount);
+        assertEquals(0, rt_37395_item_removeCount);
+        assertEquals(1, rt_37395_item_addCount);
+        assertEquals(0, rt_37395_item_permutationCount);
+
+        // step two: expand item 'two'
+        // The first part of the bug report was that we received add/remove
+        // change events here, when in reality we shouldn't have, so lets enforce
+        // that. We do expect a permutation event on the index, as it has been
+        // pushed down, but this should not result in an item permutation event,
+        // as it remains unchanged
+        two.setExpanded(true);
+        assertEquals(0, rt_37395_index_removeCount);
+        assertEquals(1, rt_37395_index_addCount);
+        assertEquals(1, rt_37395_index_permutationCount);
+        assertEquals(0, rt_37395_item_removeCount);
+        assertEquals(1, rt_37395_item_addCount);
+        assertEquals(0, rt_37395_item_permutationCount);
+
+        // step three: collapse item 'two'
+        // Same argument as in step two above: no addition or removal, just a
+        // permutation on the index
+        two.setExpanded(false);
+        assertEquals(0, rt_37395_index_removeCount);
+        assertEquals(1, rt_37395_index_addCount);
+        assertEquals(2, rt_37395_index_permutationCount);
+        assertEquals(0, rt_37395_item_removeCount);
+        assertEquals(1, rt_37395_item_addCount);
+        assertEquals(0, rt_37395_item_permutationCount);
+
+        sl.dispose();
     }
 }

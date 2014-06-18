@@ -27,7 +27,6 @@ package com.sun.javafx.scene.control.skin;
 
 import com.sun.javafx.event.EventDispatchChainImpl;
 import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.event.EventDispatchChain;
 import javafx.scene.Node;
 import javafx.scene.control.Skin;
@@ -90,12 +89,11 @@ abstract class InputFieldSkin implements Skin<InputField> {
         };
 
         textField.setId("input-text-field");
+        textField.setFocusTraversable(false);
         control.getStyleClass().addAll(textField.getStyleClass());
         textField.getStyleClass().setAll(control.getStyleClass());
-        control.getStyleClass().addListener(InputFieldStyleClassListener = new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                textField.getStyleClass().setAll(control.getStyleClass());
-            }
+        control.getStyleClass().addListener(InputFieldStyleClassListener = observable -> {
+            textField.getStyleClass().setAll(control.getStyleClass());
         });
 
 //        // Align the text to the right
@@ -106,10 +104,8 @@ abstract class InputFieldSkin implements Skin<InputField> {
 
         // Whenever the text of the textField changes, we may need to
         // update the value.
-        textField.textProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                updateValue();
-            }
+        textField.textProperty().addListener(observable -> {
+            updateValue();
         });
 
         // Right now there is some funny business regarding focus in JavaFX. So
@@ -117,10 +113,8 @@ abstract class InputFieldSkin implements Skin<InputField> {
         // to give it to the InputField. This isn't right, but we need to fix
         // this in JavaFX, I don't think I can hack around it
 //        textField.setFocusTraversable(false);
-        control.focusedProperty().addListener(InputFieldFocusListener = new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                textField.handleFocus(control.isFocused());
-            }
+        control.focusedProperty().addListener(InputFieldFocusListener = observable -> {
+            textField.handleFocus(control.isFocused());
         });
         // getting an exception with this...
 //        control.addEventFilter(InputEvent.ANY, new EventHandler<InputEvent>() {

@@ -103,19 +103,17 @@ public class NativeMediaManager {
 
             // Load native libraries.
             try {
-                AccessController.doPrivileged(new PrivilegedExceptionAction() {
-                    public Object run() throws Exception {
-                        if (HostUtils.isWindows() || HostUtils.isMacOSX()) {
-                            NativeLibLoader.loadLibrary("glib-lite");
-                        }
-
-                        if (!HostUtils.isLinux() && !HostUtils.isIOS()) {
-                            NativeLibLoader.loadLibrary("gstreamer-lite");
-                        }
-
-                        NativeLibLoader.loadLibrary("jfxmedia");
-                        return null;
+                AccessController.doPrivileged((PrivilegedExceptionAction) () -> {
+                    if (HostUtils.isWindows() || HostUtils.isMacOSX()) {
+                        NativeLibLoader.loadLibrary("glib-lite");
                     }
+
+                    if (!HostUtils.isLinux() && !HostUtils.isIOS()) {
+                        NativeLibLoader.loadLibrary("gstreamer-lite");
+                    }
+
+                    NativeLibLoader.loadLibrary("jfxmedia");
+                    return null;
                 });
             } catch (Exception e) {
                 MediaUtils.error(null, MediaError.ERROR_MANAGER_ENGINEINIT_FAIL.code(),

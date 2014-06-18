@@ -33,6 +33,7 @@ package com.oracle.javafx.scenebuilder.kit.editor.job;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
+import com.oracle.javafx.scenebuilder.kit.editor.job.togglegroup.AdjustAllToggleGroupJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.v2.ClearSelectionJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.v2.CompositeJob;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
@@ -77,6 +78,9 @@ public class DeleteObjectSelectionJob extends CompositeJob {
             }
         }
         
+        // Finally we adjust toggle groups
+        result.add(new AdjustAllToggleGroupJob(getEditorController()));
+        
         // If some objects cannot be deleted, then we clear all to
         // make this job not executable.
         if (cannotDeleteCount >= 1) {
@@ -91,17 +95,17 @@ public class DeleteObjectSelectionJob extends CompositeJob {
         final String result;
         final List<Job> subJobs = getSubJobs();
         final int subJobCount = subJobs.size();
-        assert (subJobCount == 0) || (subJobCount >= 2);
+        assert (subJobCount == 0) || (subJobCount >= 3);
         
         switch (subJobCount) {
             case 0:
                 result = "Unexecutable Delete"; // NO18N
                 break;
-            case 2: // Clear + one delete
+            case 3: // Clear + one delete + one AdjustAllToggleGroup
                 result = subJobs.get(1).getDescription();
                 break;
             default:
-                result = I18N.getString("label.action.edit.delete.n", subJobCount-1);
+                result = I18N.getString("label.action.edit.delete.n", subJobCount-2);
                 break;
         }
         

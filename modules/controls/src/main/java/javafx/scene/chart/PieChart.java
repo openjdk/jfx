@@ -42,7 +42,6 @@ import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleDoubleProperty;
-import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.property.StringPropertyBase;
 import javafx.collections.FXCollections;
@@ -87,7 +86,6 @@ public class PieChart extends Chart {
 
     // -------------- PRIVATE FIELDS -----------------------------------------------------------------------------------
     private static final int MIN_PIE_RADIUS = 25;
-    private int defaultColorIndex = 0;
     private static final double LABEL_TICK_GAP = 6;
     private static final double LABEL_BALL_RADIUS = 2;
     private static int uniqueId = 0;
@@ -99,61 +97,59 @@ public class PieChart extends Chart {
     private Legend legend = new Legend();
     private Data dataItemBeingRemoved = null;
     private Timeline dataRemoveTimeline = null;
-    private final ListChangeListener<Data> dataChangeListener = new ListChangeListener<Data>() {
-        @Override public void onChanged(Change<? extends Data> c) {
-            while(c.next()) {
-                // RT-28090 Probably a sort happened, just reorder the pointers.
-                if (c.wasPermutated()) {
-                    Data ptr = begin;
-                    for(int i = 0; i < getData().size(); i++) {
-                        Data item = getData().get(i);
-                        if (i == 0) {
-                            begin = item;
-                            ptr = begin;
-                            begin.next = null;
-                        } else {
-                            ptr.next = item;
-                            item.next = null;
-                            ptr = item;
-                        }
-                    }
-                    requestChartLayout();
-                    return;
-                }
-            // recreate linked list & set chart on new data
-            for(int i=c.getFrom(); i<c.getTo(); i++) {
-                getData().get(i).setChart(PieChart.this);
-                if (begin == null) {
-                    begin = getData().get(i);
-                    begin.next = null;
-                } else {
+    private final ListChangeListener<Data> dataChangeListener = c -> {
+        while(c.next()) {
+            // RT-28090 Probably a sort happened, just reorder the pointers.
+            if (c.wasPermutated()) {
+                Data ptr = begin;
+                for(int i = 0; i < getData().size(); i++) {
+                    Data item = getData().get(i);
                     if (i == 0) {
-                        getData().get(0).next = begin;
-                        begin = getData().get(0);
+                        begin = item;
+                        ptr = begin;
+                        begin.next = null;
                     } else {
-                        Data ptr = begin;
-                        for (int j = 0; j < i -1 ; j++) {
-                            ptr = ptr.next;
-                        }
-                        getData().get(i).next = ptr.next;
-                        ptr.next = getData().get(i);
+                        ptr.next = item;
+                        item.next = null;
+                        ptr = item;
                     }
                 }
+                requestChartLayout();
+                return;
             }
-            // call data added/removed methods
-            for (Data item : c.getRemoved()) {
-                dataItemRemoved(item);
+        // recreate linked list & set chart on new data
+        for(int i=c.getFrom(); i<c.getTo(); i++) {
+            getData().get(i).setChart(PieChart.this);
+            if (begin == null) {
+                begin = getData().get(i);
+                begin.next = null;
+            } else {
+                if (i == 0) {
+                    getData().get(0).next = begin;
+                    begin = getData().get(0);
+                } else {
+                    Data ptr = begin;
+                    for (int j = 0; j < i -1 ; j++) {
+                        ptr = ptr.next;
+                    }
+                    getData().get(i).next = ptr.next;
+                    ptr.next = getData().get(i);
+                }
             }
-            for(int i=c.getFrom(); i<c.getTo(); i++) {
-                Data item = getData().get(i);
-                dataItemAdded(item);
-            }
-            // update legend if any data has changed
-            if (isLegendVisible() && (c.getRemoved().size() > 0 || c.getFrom() < c.getTo())) updateLegend();
-            // re-layout everything
-            }
-            requestChartLayout();
         }
+        // call data added/removed methods
+        for (Data item : c.getRemoved()) {
+            dataItemRemoved(item);
+        }
+        for(int i=c.getFrom(); i<c.getTo(); i++) {
+            Data item = getData().get(i);
+            dataItemAdded(item, i);
+        }
+        // update legend if any data has changed
+        if (isLegendVisible() && (c.getRemoved().size() > 0 || c.getFrom() < c.getTo())) updateLegend();
+        // re-layout everything
+        }
+        requestChartLayout();
     };
 
     // -------------- PUBLIC PROPERTIES ----------------------------------------
@@ -361,7 +357,7 @@ public class PieChart extends Chart {
         }
     }
 
-    private Node createArcRegion(Data item) {
+    private Node createArcRegion(Data item, int index) {
         Node arcRegion = item.getNode();
         // check if symbol has already been created
         if (arcRegion == null) {
@@ -370,7 +366,7 @@ public class PieChart extends Chart {
             item.setNode(arcRegion);
         }
         // Note: not sure if we want to add or check, ie be more careful and efficient here
-        arcRegion.getStyleClass().setAll("chart-pie", "data" + getUniqueId(), item.defaultColorStyleString);
+        arcRegion.getStyleClass().setAll("chart-pie", "data" + getUniqueId(), "default-color"+(index % 8));
         if (item.getPieValue() < 0) {
             arcRegion.getStyleClass().add("negative");
         }
@@ -383,12 +379,10 @@ public class PieChart extends Chart {
         return text;
     }
 
-    private void dataItemAdded(final Data item) {
+    private void dataItemAdded(final Data item, int index) {
         // set default color styleClass
-        item.defaultColorStyleString = "default-color"+(defaultColorIndex % 8);
-        defaultColorIndex ++;
         // create shape
-        Node shape = createArcRegion(item);
+        Node shape = createArcRegion(item, index);
         final Text text = createPieLabel(item);
         item.getChart().getChartChildren().add(shape);
         if (shouldAnimate()) {
@@ -408,8 +402,7 @@ public class PieChart extends Chart {
                     new KeyValue(item.currentPieValueProperty(), item.getCurrentPieValue()),
                     new KeyValue(item.radiusMultiplierProperty(), item.getRadiusMultiplier())),
                 new KeyFrame(Duration.millis(500),
-                    new EventHandler<ActionEvent>() {
-                        @Override public void handle(ActionEvent actionEvent) {
+                        actionEvent -> {
                             text.setOpacity(0);
                             // RT-23597 : item's chart might have been set to null if
                             // this item is added and removed before its add animation finishes.
@@ -418,8 +411,7 @@ public class PieChart extends Chart {
                             FadeTransition ft = new FadeTransition(Duration.millis(150),text);
                             ft.setToValue(1);
                             ft.play();
-                        }
-                    },
+                        },
                     new KeyValue(item.currentPieValueProperty(), item.getPieValue(), Interpolator.EASE_BOTH),
                     new KeyValue(item.radiusMultiplierProperty(), 1, Interpolator.EASE_BOTH))
             );
@@ -427,6 +419,15 @@ public class PieChart extends Chart {
             getChartChildren().add(text);
             item.setRadiusMultiplier(1);
             item.setCurrentPieValue(item.getPieValue());
+        }
+
+        // we sort the text nodes to always be at the end of the children list, so they have a higher z-order
+        // (Fix for RT-34564)
+        for (int i = 0; i < getChartChildren().size(); i++) {
+            Node n = getChartChildren().get(i);
+            if (n instanceof Text) {
+                n.toFront();
+            }
         }
     }
 
@@ -449,8 +450,7 @@ public class PieChart extends Chart {
                     new KeyValue(item.currentPieValueProperty(), item.getCurrentPieValue()),
                     new KeyValue(item.radiusMultiplierProperty(), item.getRadiusMultiplier())),
                 new KeyFrame(Duration.millis(500),
-                    new EventHandler<ActionEvent>() {
-                        @Override public void handle(ActionEvent actionEvent) {
+                        actionEvent -> {
                             // removing item
                             getChartChildren().remove(shape);
                             // fade out label
@@ -463,11 +463,11 @@ public class PieChart extends Chart {
                                      // remove chart references from old data - RT-22553
                                      item.setChart(null);
                                      removeDataItemRef(item);
+                                     item.textNode.setOpacity(1.0);
                                  }
                             });
                             ft.play();
-                        }
-                    },
+                        },
                     new KeyValue(item.currentPieValueProperty(), 0, Interpolator.EASE_BOTH),
                     new KeyValue(item.radiusMultiplierProperty(), 0))
                 );
@@ -509,10 +509,8 @@ public class PieChart extends Chart {
         boolean shouldShowLabels = getLabelsVisible();
         if(getLabelsVisible()) {
 
-            double minX = begin != null ? Double.MAX_VALUE : 0d;
-            double minY = begin != null ? Double.MAX_VALUE : 0d;
-            double maxX = begin != null ? Double.MIN_VALUE : 0d;
-            double maxY = begin != null ? Double.MIN_VALUE : 0d;
+            double xPad = 0d;
+            double yPad = 0d;
 
             labelsX = new double[getDataSize()];
             labelsY = new double[getDataSize()];
@@ -530,22 +528,15 @@ public class PieChart extends Chart {
                 final double sproutY = calcY(labelAngles[index], getLabelLineLength(), 0);
                 labelsX[index] = sproutX;
                 labelsY[index] = sproutY;
-                if (sproutX < 0) { // on left
-                    minX = Math.min(minX, sproutX-item.textNode.getLayoutBounds().getWidth()-LABEL_TICK_GAP);
-                } else { // on right
-                    maxX = Math.max(maxX, sproutX+item.textNode.getLayoutBounds().getWidth()+LABEL_TICK_GAP);
-
-                }
+                xPad = Math.max(xPad, 2 * (item.textNode.getLayoutBounds().getWidth() + LABEL_TICK_GAP + Math.abs(sproutX)));
                 if (sproutY > 0) { // on bottom
-                    maxY = Math.max(maxY, sproutY+item.textNode.getLayoutBounds().getMaxY());
+                    yPad = Math.max(yPad, 2 * Math.abs(sproutY+item.textNode.getLayoutBounds().getMaxY()));
                 } else { // on top
-                    minY = Math.min(minY, sproutY + item.textNode.getLayoutBounds().getMinY());
+                    yPad = Math.max(yPad, 2 * Math.abs(sproutY + item.textNode.getLayoutBounds().getMinY()));
                 }
                 start+= size;
                 index++;
             }
-            double xPad = (Math.max(Math.abs(minX), Math.abs(maxX))) * 2;
-            double yPad = (Math.max(Math.abs(minY), Math.abs(maxY))) * 2;
             pieRadius = Math.min(contentWidth - xPad, contentHeight - yPad) / 2;
             // check if this makes the pie too small
             if (pieRadius < MIN_PIE_RADIUS ) {
@@ -800,7 +791,6 @@ public class PieChart extends Chart {
          * Next pointer for the next data item : so we can do animation on data delete.
          */
         private Data next = null;
-        private String defaultColorStyleString;
 
         // -------------- PUBLIC PROPERTIES ------------------------------------
 
@@ -923,8 +913,12 @@ public class PieChart extends Chart {
         /**
          * Readonly access to the node that represents the pie slice. You can use this to add mouse event listeners etc.
          */
-        private ObjectProperty<Node> node = new SimpleObjectProperty<Node>(this, "node");
+        private ReadOnlyObjectWrapper<Node> node = new ReadOnlyObjectWrapper<>(this, "node");
 
+        /**
+         * Returns the node that represents the pie slice. You can use this to
+         * add mouse event listeners etc.
+         */
         public Node getNode() {
             return node.getValue();
         }
@@ -933,8 +927,8 @@ public class PieChart extends Chart {
             node.setValue(value);
         }
 
-        private ObjectProperty<Node> nodeProperty() {
-            return node;
+        public ReadOnlyObjectProperty<Node> nodeProperty() {
+            return node.getReadOnlyProperty();
         }
 
         // -------------- CONSTRUCTOR -------------------------------------------------

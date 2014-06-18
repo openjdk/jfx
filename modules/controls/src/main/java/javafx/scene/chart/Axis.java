@@ -35,9 +35,8 @@ import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.PaintConverter;
 import com.sun.javafx.css.converters.SizeConverter;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+
+import java.util.*;
 
 import javafx.animation.FadeTransition;
 import javafx.beans.binding.DoubleExpression;
@@ -48,10 +47,9 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.css.FontCssMetaData;
 import javafx.css.StyleableProperty;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.geometry.Bounds;
 import javafx.geometry.Dimension2D;
+import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.geometry.Side;
 import javafx.scene.control.Label;
@@ -82,17 +80,17 @@ public abstract class Axis<T> extends Region {
     // -------------- PRIVATE FIELDS -----------------------------------------------------------------------------------
 
     Text measure = new Text();
+    private Orientation effectiveOrientation;
+    private double effectiveTickLabelRotation = Double.NaN;
     private Label axisLabel = new Label();
     private final Path tickMarkPath = new Path();
     private double oldLength = 0;
     /** True when the current range invalid and all dependent calculations need to be updated */
     boolean rangeValid = false;
-    private boolean tickPropertyChanged = false;
-    /** True when labelFormatter changes programmatically - only tick marks text needs to updated */
-    boolean formatterValid = false;
-    
-    double maxWidth = 0;
-    double maxHeight = 0;
+    private boolean measureInvalid = false;
+
+    private BitSet labelsToSkip = new BitSet();
+
     // -------------- PUBLIC PROPERTIES --------------------------------------------------------------------------------
 
     private final ObservableList<TickMark<T>> tickMarks = FXCollections.observableArrayList();
@@ -116,7 +114,7 @@ public abstract class Axis<T> extends Region {
             pseudoClassStateChanged(LEFT_PSEUDOCLASS_STATE, edge == Side.LEFT);
             requestAxisLayout();
         }
-        
+
         @Override
         public CssMetaData<Axis<?>,Side> getCssMetaData() {
             return StyleableProperties.SIDE;
@@ -135,6 +133,20 @@ public abstract class Axis<T> extends Region {
     public final Side getSide() { return side.get(); }
     public final void setSide(Side value) { side.set(value); }
     public final ObjectProperty<Side> sideProperty() { return side; }
+
+    final void setEffectiveOrientation(Orientation orientation) {
+        effectiveOrientation = orientation;
+    }
+
+    final Side getEffectiveSide() {
+        final Side side = getSide();
+        if (side == null || (side.isVertical() && effectiveOrientation == Orientation.HORIZONTAL)
+                || side.isHorizontal() && effectiveOrientation == Orientation.VERTICAL) {
+            // Means side == null && effectiveOrientation == null produces Side.BOTTOM
+            return effectiveOrientation == Orientation.VERTICAL ? Side.LEFT : Side.BOTTOM;
+        }
+        return side;
+    }
 
     /** The axis label */
     private ObjectProperty<String> label = new ObjectPropertyBase<String>() {
@@ -191,7 +203,7 @@ public abstract class Axis<T> extends Region {
             }
             requestAxisLayout();
         }
-        
+
         @Override
         public CssMetaData<Axis<?>,Boolean> getCssMetaData() {
             return StyleableProperties.TICK_LABELS_VISIBLE;
@@ -225,7 +237,7 @@ public abstract class Axis<T> extends Region {
         @Override
         public CssMetaData<Axis<?>,Number> getCssMetaData() {
             return StyleableProperties.TICK_LENGTH;
-        }        
+        }
         @Override
         public Object getBean() {
             return Axis.this;
@@ -272,14 +284,15 @@ public abstract class Axis<T> extends Region {
             for(TickMark<T> tm : getTickMarks()) {
                 tm.textNode.setFont(f);
             }
+            measureInvalid = true;
             requestAxisLayout();
         }
 
-        @Override 
+        @Override
         public CssMetaData<Axis<?>,Font> getCssMetaData() {
             return StyleableProperties.TICK_LABEL_FONT;
         }
-        
+
         @Override
         public Object getBean() {
             return Axis.this;
@@ -297,15 +310,16 @@ public abstract class Axis<T> extends Region {
     /** The fill for all tick labels */
     private ObjectProperty<Paint> tickLabelFill = new StyleableObjectProperty<Paint>(Color.BLACK) {
         @Override protected void invalidated() {
-            tickPropertyChanged = true;
-            requestAxisLayout();
+            for (TickMark<T> tick : tickMarks) {
+                tick.textNode.setFill(getTickLabelFill());
+            }
         }
 
         @Override
         public CssMetaData<Axis<?>,Paint> getCssMetaData() {
             return StyleableProperties.TICK_LABEL_FILL;
         }
-        
+
         @Override
         public Object getBean() {
             return Axis.this;
@@ -330,7 +344,7 @@ public abstract class Axis<T> extends Region {
         public CssMetaData<Axis<?>,Number> getCssMetaData() {
             return StyleableProperties.TICK_LABEL_TICK_GAP;
         }
-        
+
         @Override
         public Object getBean() {
             return Axis.this;
@@ -482,10 +496,15 @@ public abstract class Axis<T> extends Region {
     public abstract double getZeroPosition();
 
     /**
-     * Get the display position along this axis for a given value
+     * Get the display position along this axis for a given value.
+     * If the value is not in the current range, the returned value will be an extrapolation of the display
+     * position.
+     *
+     * If the value is not valid for this Axis and the axis cannot display such value in any range,
+     * Double.NaN is returned
      *
      * @param value The data value to work out display position for
-     * @return display position or Double.NaN if zero is not in current range;
+     * @return display position or Double.NaN if value not valid
      */
     public abstract double getDisplayPosition(T value);
 
@@ -540,8 +559,8 @@ public abstract class Axis<T> extends Region {
      * @return the computed preferred width for this axis
      */
     @Override protected double computePrefHeight(double width) {
-        final Side side = getSide();
-        if (Side.LEFT.equals(side) || Side.RIGHT.equals(side)) { // VERTICAL
+        final Side side = getEffectiveSide();
+        if (side.isVertical()) {
             // TODO for now we have no hard and fast answer here, I guess it should work
             // TODO out the minimum size needed to display min, max and zero tick mark labels.
             return 100;
@@ -564,7 +583,7 @@ public abstract class Axis<T> extends Region {
                     axisLabel.getText() == null || axisLabel.getText().length() == 0 ?
                     0 : axisLabel.prefHeight(-1);
             return maxLabelHeight + getTickLabelGap() + tickMarkLength + labelHeight;
-        } 
+        }
     }
 
     /**
@@ -575,8 +594,8 @@ public abstract class Axis<T> extends Region {
      * @return the computed preferred width for this axis
      */
     @Override protected double computePrefWidth(double height) {
-        final Side side = getSide();
-        if (Side.LEFT.equals(side) || Side.RIGHT.equals(side)) { // VERTICAL
+        final Side side = getEffectiveSide();
+        if (side.isVertical()) {
             // we need to first auto range as this may/will effect tick marks
             Object range = autoRange(height);
             // calculate max tick label width
@@ -599,7 +618,7 @@ public abstract class Axis<T> extends Region {
             // TODO for now we have no hard and fast answer here, I guess it should work
             // TODO out the minimum size needed to display min, max and zero tick mark labels.
             return 100;
-        } 
+        }
     }
 
     /**
@@ -614,82 +633,49 @@ public abstract class Axis<T> extends Region {
     @Override protected void layoutChildren() {
         final double width = getWidth();
         final double height = getHeight();
-        final double tickMarkLength = (getTickLength() > 0) ? getTickLength() : 0;
+        final double tickMarkLength = (isTickMarkVisible() && getTickLength() > 0) ? getTickLength() : 0;
         final boolean isFirstPass = oldLength == 0;
         // auto range if it is not valid
-        final Side side = getSide();
-        final double length = (Side.LEFT.equals(side) || Side.RIGHT.equals(side)) ? height : width;
-        int numLabelsToSkip = 1;
+        final Side side = getEffectiveSide();
+        final double length = (side.isVertical()) ? height : width;
         int tickIndex = 0;
-        if (oldLength != length || !isRangeValid() || tickPropertyChanged || formatterValid) {
+        boolean rangeInvalid = !isRangeValid();
+        boolean lengthDiffers = oldLength != length;
+        if (lengthDiffers || rangeInvalid) {
             // get range
             Object range;
             if(isAutoRanging()) {
                 // auto range
                 range = autoRange(length);
                 // set current range to new range
-                setRange(range, getAnimated() && !isFirstPass && impl_isTreeVisible() && !isRangeValid());
+                setRange(range, getAnimated() && !isFirstPass && impl_isTreeVisible() && rangeInvalid);
             } else {
                 range = getRange();
             }
             // calculate new tick marks
             List<T> newTickValues = calculateTickValues(length, range);
 
-             // calculate maxLabelWidth / maxLabelHeight for respective orientations
-            maxWidth = 0; maxHeight = 0;
-            if (Side.LEFT.equals(side) || Side.RIGHT.equals(side)) {
-                for (T value: newTickValues) {
-                    maxHeight = Math.round(Math.max(maxHeight, measureTickMarkSize(value, range).getHeight()));
-                }
-            } else {
-                for (T value: newTickValues) {
-                    maxWidth = Math.round(Math.max(maxWidth, measureTickMarkSize(value, range).getWidth()));
-                }
-            }
-            // we have to work out what new or removed tick marks there are, then create new tick marks and their
-            // text nodes where needed
-            // find everything added or removed
-            List<T> added = new ArrayList<T>();
-            List<TickMark<T>> removed = new ArrayList<TickMark<T>>();
-            if(tickMarks.isEmpty()) {
-                added.addAll(newTickValues);
-            } else {
-                // find removed
-                for (TickMark<T> tick: tickMarks) {
-                    if(!newTickValues.contains(tick.getValue())) removed.add(tick);
-                }
-                // find added
-                for(T newValue: newTickValues) {
-                    boolean found = false;
-                    for (TickMark<T> tick: tickMarks) {
-                        if(tick.getValue().equals(newValue)) {
-                            found = true;
-                            break;
-                        }
-                    }
-                    if(!found) added.add(newValue);
-                }
-            }
-            // remove everything that needs to go
-            for(TickMark<T> tick: removed) {
+            // remove everything
+            Iterator<TickMark<T>> tickMarkIterator = tickMarks.iterator();
+            while (tickMarkIterator.hasNext()) {
+                TickMark<T> tick = tickMarkIterator.next();
                 final TickMark<T> tm = tick;
                 if (shouldAnimate()) {
                     FadeTransition ft = new FadeTransition(Duration.millis(250),tick.textNode);
                     ft.setToValue(0);
-                    ft.setOnFinished(new EventHandler<ActionEvent>() {
-                        @Override public void handle(ActionEvent actionEvent) {
-                            getChildren().remove(tm.textNode);
-                        }
+                    ft.setOnFinished(actionEvent -> {
+                        getChildren().remove(tm.textNode);
                     });
                     ft.play();
                 } else {
                     getChildren().remove(tm.textNode);
                 }
                 // we have to remove the tick mark immediately so we don't draw tick line for it or grid lines and fills
-                tickMarks.remove(tm);
+                tickMarkIterator.remove();
             }
+
             // add new tick marks for new values
-            for(T newValue: added) {
+            for(T newValue: newTickValues) {
                 final TickMark<T> tick = new TickMark<T>();
                 tick.setValue(newValue);
                 tick.textNode.setText(getTickMarkLabel(newValue));
@@ -706,20 +692,7 @@ public abstract class Axis<T> extends Region {
                     ft.play();
                 }
             }
-            if (tickPropertyChanged) {
-                tickPropertyChanged = false;
-                for (TickMark<T> tick : tickMarks) {
-                    tick.textNode.setFill(getTickLabelFill());
-                }
-            }
-            if (formatterValid) {
-                // update tick's textNode text for all ticks as formatter has changed.
-                formatterValid = false;
-                for (TickMark<T> tick : tickMarks) {
-                    tick.textNode.setText(getTickMarkLabel(tick.getValue()));
-                }
-            }
-           
+
             // call tick marks updated to inform subclasses that we have updated tick marks
             tickMarksUpdated();
             // mark all done
@@ -727,19 +700,68 @@ public abstract class Axis<T> extends Region {
             rangeValid = true;
         }
 
-        // RT-12272 : tick labels overlapping
-        int numLabels = 0;
-        if (Side.LEFT.equals(side) || Side.RIGHT.equals(side)) {
-            numLabels = (maxHeight > 0) ? (int) (length/maxHeight) : 0;
-        } else {
-            numLabels = (maxWidth > 0) ? (int)(length/maxWidth) : 0;
+        if (lengthDiffers || rangeInvalid || measureInvalid) {
+            measureInvalid = false;
+            // RT-12272 : tick labels overlapping
+            labelsToSkip.clear();
+            double prevEnd = -Double.MAX_VALUE;
+            double lastStart = Double.MAX_VALUE;
+            switch (side) {
+                case LEFT:
+                case RIGHT:
+                    int stop = 0;
+                    for (; stop < tickMarks.size(); ++stop) {
+                        TickMark<T> m = tickMarks.get(stop);
+                        if (m.isTextVisible()) {
+                            double tickHeight = measureTickMarkSize(m.getValue(), getRange()).getHeight();
+                            lastStart = updateAndGetDisplayPosition(m) - tickHeight / 2;
+                        }
+                        break;
+                    }
+
+                    for (int i = tickMarks.size() - 1; i > stop; i--) {
+                        TickMark<T> m = tickMarks.get(i);
+                        if (!m.isTextVisible()) continue;
+                        double tickHeight = measureTickMarkSize(m.getValue(), getRange()).getHeight();
+                        double tickStart = updateAndGetDisplayPosition(m) - tickHeight / 2;
+                        if (tickStart <= prevEnd || tickStart + tickHeight > lastStart) {
+                            labelsToSkip.set(i);
+                        } else {
+                            prevEnd = tickStart + tickHeight;
+                        }
+                    }
+                    break;
+                case BOTTOM:
+                case TOP:
+                    stop = tickMarks.size() - 1;
+                    for (; stop >= 0; --stop) {
+                        TickMark<T> m = tickMarks.get(stop);
+                        if (m.isTextVisible()) {
+                            double tickWidth = measureTickMarkSize(m.getValue(), getRange()).getWidth();
+                            lastStart = updateAndGetDisplayPosition(m) - tickWidth / 2;
+                        }
+                        break;
+                    }
+
+                    for (int i = 0; i < stop; ++i) {
+                        TickMark<T> m = tickMarks.get(i);
+                        if (!m.isTextVisible()) continue;
+                        double tickWidth = measureTickMarkSize(m.getValue(), getRange()).getWidth();
+                        double tickStart = updateAndGetDisplayPosition(m) - tickWidth / 2;
+                        if (tickStart <= prevEnd || tickStart + tickWidth > lastStart) {
+                            labelsToSkip.set(i);
+                        } else {
+                            prevEnd = tickStart + tickWidth;
+                        }
+                    }
+                    break;
+            }
         }
-        if (numLabels > 0) {
-            numLabelsToSkip = ((int)(tickMarks.size()/numLabels)) + 1;
-        }
+
         // clear tick mark path elements as we will recreate
         tickMarkPath.getElements().clear();
         // do layout of axis label, tick mark lines and text
+        double effectiveLabelRotation = getEffectiveTickLabelRotation();
         if (Side.LEFT.equals(side)) {
             // offset path to make strokes snap to pixel
             tickMarkPath.setLayoutX(-0.5);
@@ -752,21 +774,21 @@ public abstract class Axis<T> extends Region {
                 axisLabel.resize(height, Math.ceil(axisLabel.prefHeight(width)));
             }
             tickIndex = 0;
-            for (TickMark<T> tick : tickMarks) {
-                tick.setPosition(getDisplayPosition(tick.getValue()));
+            for (int i = 0; i < tickMarks.size(); i++) {
+                TickMark<T> tick = tickMarks.get(i);
                 positionTextNode(tick.textNode, width - getTickLabelGap() - tickMarkLength,
-                                 tick.getPosition(),getTickLabelRotation(),side);
+                        tick.getPosition(), effectiveLabelRotation, side);
 
                 // check if position is inside bounds
-                if(tick.getPosition() >= 0 && tick.getPosition() <= Math.ceil(length)) {
+                if (tick.getPosition() >= 0 && tick.getPosition() <= Math.ceil(length)) {
                     if (isTickLabelsVisible()) {
-                        tick.textNode.setVisible((tickIndex % numLabelsToSkip) == 0);
+                        tick.textNode.setVisible(!labelsToSkip.get(i));
                         tickIndex++;
                     }
                     // add tick mark line
                     tickMarkPath.getElements().addAll(
-                        new MoveTo(width - tickMarkLength, tick.getPosition()),
-                        new LineTo(width, tick.getPosition())
+                            new MoveTo(width - tickMarkLength, tick.getPosition()),
+                            new LineTo(width, tick.getPosition())
                     );
                 } else {
                     tick.textNode.setVisible(false);
@@ -777,20 +799,20 @@ public abstract class Axis<T> extends Region {
             tickMarkPath.setLayoutX(0.5);
             tickMarkPath.setLayoutY(0.5);
             tickIndex = 0;
-            for (TickMark<T> tick : tickMarks) {
-                tick.setPosition(getDisplayPosition(tick.getValue()));
+            for (int i = 0; i < tickMarks.size(); i++) {
+                TickMark<T> tick = tickMarks.get(i);
                 positionTextNode(tick.textNode, getTickLabelGap() + tickMarkLength,
-                                 tick.getPosition(),getTickLabelRotation(),side);
+                        tick.getPosition(), effectiveLabelRotation, side);
                 // check if position is inside bounds
-                if(tick.getPosition() >= 0 && tick.getPosition() <= Math.ceil(length)) {
+                if (tick.getPosition() >= 0 && tick.getPosition() <= Math.ceil(length)) {
                     if (isTickLabelsVisible()) {
-                        tick.textNode.setVisible((tickIndex % numLabelsToSkip) == 0);
+                        tick.textNode.setVisible(!labelsToSkip.get(i));
                         tickIndex++;
                     }
                     // add tick mark line
                     tickMarkPath.getElements().addAll(
-                        new MoveTo(0, tick.getPosition()),
-                        new LineTo(tickMarkLength, tick.getPosition())
+                            new MoveTo(0, tick.getPosition()),
+                            new LineTo(tickMarkLength, tick.getPosition())
                     );
                 } else {
                     tick.textNode.setVisible(false);
@@ -815,20 +837,20 @@ public abstract class Axis<T> extends Region {
                 axisLabel.resize(width, Math.ceil(axisLabel.prefHeight(width)));
             }
             tickIndex = 0;
-            for (TickMark<T> tick : tickMarks) {
-                tick.setPosition(getDisplayPosition(tick.getValue()));
+            for (int i = 0; i < tickMarks.size(); i++) {
+                TickMark<T> tick = tickMarks.get(i);
                 positionTextNode(tick.textNode, tick.getPosition(), height - tickMarkLength - getTickLabelGap(),
-                        getTickLabelRotation(), side);
+                        effectiveLabelRotation, side);
                 // check if position is inside bounds
-                if(tick.getPosition() >= 0 && tick.getPosition() <= Math.ceil(length)) {
+                if (tick.getPosition() >= 0 && tick.getPosition() <= Math.ceil(length)) {
                     if (isTickLabelsVisible()) {
-                        tick.textNode.setVisible((tickIndex % numLabelsToSkip) == 0);
+                        tick.textNode.setVisible(!labelsToSkip.get(i));
                         tickIndex++;
                     }
                     // add tick mark line
                     tickMarkPath.getElements().addAll(
-                        new MoveTo(tick.getPosition(), height),
-                        new LineTo(tick.getPosition(), height - tickMarkLength)
+                            new MoveTo(tick.getPosition(), height),
+                            new LineTo(tick.getPosition(), height - tickMarkLength)
                     );
                 } else {
                     tick.textNode.setVisible(false);
@@ -840,22 +862,22 @@ public abstract class Axis<T> extends Region {
             tickMarkPath.setLayoutX(0.5);
             tickMarkPath.setLayoutY(0.5);
             tickIndex = 0;
-            for (TickMark<T> tick : tickMarks) {
+            for (int i = 0; i < tickMarks.size(); i++) {
+                TickMark<T> tick = tickMarks.get(i);
                 final double xPos = Math.round(getDisplayPosition(tick.getValue()));
-                tick.setPosition(xPos);
 //                System.out.println("tick pos at : "+tickIndex+" = "+xPos);
-                positionTextNode(tick.textNode,xPos, tickMarkLength + getTickLabelGap(),
-                                getTickLabelRotation(),side);
+                positionTextNode(tick.textNode, xPos, tickMarkLength + getTickLabelGap(),
+                        effectiveLabelRotation, side);
                 // check if position is inside bounds
-                if(xPos >= 0 && xPos <= Math.ceil(length)) {
+                if (xPos >= 0 && xPos <= Math.ceil(length)) {
                     if (isTickLabelsVisible()) {
-                        tick.textNode.setVisible((tickIndex % numLabelsToSkip) == 0);
+                        tick.textNode.setVisible(!labelsToSkip.get(i));
                         tickIndex++;
                     }
                     // add tick mark line
                     tickMarkPath.getElements().addAll(
-                        new MoveTo(xPos, 0),
-                        new LineTo(xPos, tickMarkLength)
+                            new MoveTo(xPos, 0),
+                            new LineTo(xPos, tickMarkLength)
                     );
                 } else {
                     tick.textNode.setVisible(false);
@@ -869,6 +891,12 @@ public abstract class Axis<T> extends Region {
                 axisLabel.resize(width, labelHeight);
             }
         }
+    }
+
+    private double updateAndGetDisplayPosition(TickMark<T> m) {
+        double displayPosition = getDisplayPosition(m.getValue());
+        m.setPosition(displayPosition);
+        return displayPosition;
     }
 
     /**
@@ -943,7 +971,19 @@ public abstract class Axis<T> extends Region {
      * @return size of tick mark label for given value
      */
     protected Dimension2D measureTickMarkSize(T value, Object range) {
-        return measureTickMarkSize(value,getTickLabelRotation());
+        return measureTickMarkSize(value, getEffectiveTickLabelRotation());
+    }
+
+    final double getEffectiveTickLabelRotation() {
+        return Double.isNaN(effectiveTickLabelRotation) ? getTickLabelRotation() : effectiveTickLabelRotation;
+    }
+
+    /**
+     *
+     * @param rotation NaN for using the tickLabelRotationProperty()
+     */
+    final void setEffectiveTickLabelRotation(double rotation) {
+        effectiveTickLabelRotation = rotation;
     }
 
     // -------------- TICKMARK INNER CLASS -----------------------------------------------------------------------------
@@ -1018,10 +1058,15 @@ public abstract class Axis<T> extends Region {
          * @return true if tick mark label text is visible and false otherwise
          */
         public final boolean isTextVisible() { return textVisible.get(); }
+
+        /**
+         * Specifies whether this tick mark label text is displayed or not.
+         * @param value true if tick mark label text is visible and false otherwise
+         */
         public final void setTextVisible(boolean value) { textVisible.set(value); }
 
         /**
-         * Creates and initializes an instance of TickMark. 
+         * Creates and initializes an instance of TickMark.
          */
         public TickMark() {
         }
@@ -1029,7 +1074,7 @@ public abstract class Axis<T> extends Region {
         /**
          * Returns a string representation of this {@code TickMark} object.
          * @return a string representation of this {@code TickMark} object.
-         */ 
+         */
         @Override public String toString() {
             return value.get().toString();
         }
@@ -1044,23 +1089,23 @@ public abstract class Axis<T> extends Region {
                 new EnumConverter<Side>(Side.class)) {
 
             @Override
-            public boolean isSettable(Axis n) {
+            public boolean isSettable(Axis<?> n) {
                 return n.side == null || !n.side.isBound();
             }
 
-            @SuppressWarnings("unchecked") // sideProperty() is StyleableProperty<Side>              
+            @SuppressWarnings("unchecked") // sideProperty() is StyleableProperty<Side>
             @Override
-            public StyleableProperty<Side> getStyleableProperty(Axis n) {
+            public StyleableProperty<Side> getStyleableProperty(Axis<?> n) {
                 return (StyleableProperty<Side>)n.sideProperty();
             }
         };
-        
+
         private static final CssMetaData<Axis<?>,Number> TICK_LENGTH =
             new CssMetaData<Axis<?>,Number>("-fx-tick-length",
                 SizeConverter.getInstance(), 8.0) {
 
             @Override
-            public boolean isSettable(Axis n) {
+            public boolean isSettable(Axis<?> n) {
                 return n.tickLength == null || !n.tickLength.isBound();
             }
 
@@ -1069,19 +1114,19 @@ public abstract class Axis<T> extends Region {
                 return (StyleableProperty<Number>)n.tickLengthProperty();
             }
         };
-        
+
         private static final CssMetaData<Axis<?>,Font> TICK_LABEL_FONT =
             new FontCssMetaData<Axis<?>>("-fx-tick-label-font",
                 Font.font("system", 8.0)) {
 
             @Override
-            public boolean isSettable(Axis n) {
+            public boolean isSettable(Axis<?> n) {
                 return n.tickLabelFont == null || !n.tickLabelFont.isBound();
             }
 
-            @SuppressWarnings("unchecked") // tickLabelFontProperty() is StyleableProperty<Font>              
+            @SuppressWarnings("unchecked") // tickLabelFontProperty() is StyleableProperty<Font>
             @Override
-            public StyleableProperty<Font> getStyleableProperty(Axis n) {
+            public StyleableProperty<Font> getStyleableProperty(Axis<?> n) {
                 return (StyleableProperty<Font>)n.tickLabelFontProperty();
             }
         };
@@ -1091,58 +1136,58 @@ public abstract class Axis<T> extends Region {
                 PaintConverter.getInstance(), Color.BLACK) {
 
             @Override
-            public boolean isSettable(Axis n) {
+            public boolean isSettable(Axis<?> n) {
                 return n.tickLabelFill == null | !n.tickLabelFill.isBound();
             }
 
-            @SuppressWarnings("unchecked") // tickLabelFillProperty() is StyleableProperty<Paint>            
+            @SuppressWarnings("unchecked") // tickLabelFillProperty() is StyleableProperty<Paint>
             @Override
-            public StyleableProperty<Paint> getStyleableProperty(Axis n) {
+            public StyleableProperty<Paint> getStyleableProperty(Axis<?> n) {
                 return (StyleableProperty<Paint>)n.tickLabelFillProperty();
             }
         };
-        
+
         private static final CssMetaData<Axis<?>,Number> TICK_LABEL_TICK_GAP =
             new CssMetaData<Axis<?>,Number>("-fx-tick-label-gap",
                 SizeConverter.getInstance(), 3.0) {
 
             @Override
-            public boolean isSettable(Axis n) {
+            public boolean isSettable(Axis<?> n) {
                 return n.tickLabelGap == null || !n.tickLabelGap.isBound();
             }
 
             @Override
-            public StyleableProperty<Number> getStyleableProperty(Axis n) {
+            public StyleableProperty<Number> getStyleableProperty(Axis<?> n) {
                 return (StyleableProperty<Number>)n.tickLabelGapProperty();
             }
         };
-        
+
         private static final CssMetaData<Axis<?>,Boolean> TICK_MARK_VISIBLE =
             new CssMetaData<Axis<?>,Boolean>("-fx-tick-mark-visible",
                 BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
-            public boolean isSettable(Axis n) {
+            public boolean isSettable(Axis<?> n) {
                 return n.tickMarkVisible == null || !n.tickMarkVisible.isBound();
             }
 
             @Override
-            public StyleableProperty<Boolean> getStyleableProperty(Axis n) {
+            public StyleableProperty<Boolean> getStyleableProperty(Axis<?> n) {
                 return (StyleableProperty<Boolean>)n.tickMarkVisibleProperty();
             }
         };
-        
+
         private static final CssMetaData<Axis<?>,Boolean> TICK_LABELS_VISIBLE =
             new CssMetaData<Axis<?>,Boolean>("-fx-tick-labels-visible",
                 BooleanConverter.getInstance(), Boolean.TRUE) {
 
             @Override
-            public boolean isSettable(Axis n) {
+            public boolean isSettable(Axis<?> n) {
                 return n.tickLabelsVisible == null || !n.tickLabelsVisible.isBound();
             }
 
             @Override
-            public StyleableProperty<Boolean> getStyleableProperty(Axis n) {
+            public StyleableProperty<Boolean> getStyleableProperty(Axis<?> n) {
                 return (StyleableProperty<Boolean>)n.tickLabelsVisibleProperty();
             }
         };

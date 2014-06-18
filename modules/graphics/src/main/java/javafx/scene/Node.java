@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -75,6 +75,10 @@ import javafx.geometry.Orientation;
 import javafx.geometry.Point2D;
 import javafx.geometry.Point3D;
 import javafx.geometry.Rectangle2D;
+import javafx.scene.accessibility.Accessible;
+import javafx.scene.accessibility.Action;
+import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Role;
 import javafx.scene.effect.Blend;
 import javafx.scene.effect.BlendMode;
 import javafx.scene.effect.Effect;
@@ -99,16 +103,18 @@ import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Transform;
 import javafx.stage.Window;
 import javafx.util.Callback;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+
 import com.sun.javafx.Logging;
 import com.sun.javafx.TempState;
 import com.sun.javafx.Utils;
-import com.sun.javafx.accessible.providers.AccessibleProvider;
 import com.sun.javafx.beans.IDProperty;
 import com.sun.javafx.beans.event.AbstractNotifyListener;
 import com.sun.javafx.binding.ExpressionHelper;
@@ -151,6 +157,7 @@ import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.prism.impl.PrismSettings;
+
 import javafx.scene.shape.Shape3D;
 import sun.util.logging.PlatformLogger;
 import sun.util.logging.PlatformLogger.Level;
@@ -487,7 +494,11 @@ public abstract class Node implements EventTarget, Styleable {
     @Deprecated
     public final void impl_syncPeer() {
         // Do not synchronize invisible nodes unless their visibility has changed
-        if (!impl_isDirtyEmpty() && (treeVisible || impl_isDirty(DirtyBits.NODE_VISIBLE))) {
+        // or they have requested a forced synchronization
+        if (!impl_isDirtyEmpty() && (treeVisible
+                                     || impl_isDirty(DirtyBits.NODE_VISIBLE)
+                                     || impl_isDirty(DirtyBits.NODE_FORCE_SYNC)))
+        {
             impl_updatePeer();
             clearDirty();
         }
@@ -750,17 +761,9 @@ public abstract class Node implements EventTarget, Styleable {
         return parent;
     }
 
-    private final InvalidationListener parentDisabledChangedListener = new InvalidationListener() {
-        @Override public void invalidated(Observable valueModel) {
-            updateDisabled();
-        }
-    };
+    private final InvalidationListener parentDisabledChangedListener = valueModel -> updateDisabled();
 
-    private final InvalidationListener parentTreeVisibleChangedListener = new InvalidationListener() {
-        @Override public void invalidated(Observable valueModel) {
-            updateTreeVisible(true);
-        }
-    };
+    private final InvalidationListener parentTreeVisibleChangedListener = valueModel -> updateTreeVisible(true);
 
     private SubScene subScene = null;
 
@@ -814,18 +817,15 @@ public abstract class Node implements EventTarget, Styleable {
         if (sceneChanged) {
             updateCanReceiveFocus();
             if (isFocusTraversable()) {
-                if (oldScene != null) {
-                    oldScene.unregisterTraversable(Node.this);
-                }
                 if (newScene != null) {
-                    newScene.registerTraversable(Node.this);
+                    newScene.initializeInternalEventDispatcher();
                 }
             }
             focusSetDirty(oldScene);
             focusSetDirty(newScene);
         }
         scenesChanged(newScene, newSubScene, oldScene, oldSubScene);
-        impl_reapplyCSS();
+        if (sceneChanged) impl_reapplyCSS();
 
         if (sceneChanged && !impl_isDirtyEmpty()) {
             //Note: no need to remove from scene's dirty list
@@ -843,12 +843,45 @@ public abstract class Node implements EventTarget, Styleable {
         if (newScene == null && peer != null) {
             peer.release();
         }
+
+        if (oldScene != null) {
+            oldScene.clearNodeMnemonics(this);
+        }
         if (getParent() == null) {
             // if we are the root we need to handle scene change
             parentResolvedOrientationInvalidated();
         }
 
         if (sceneChanged) { scene.fireSuperValueChangedEvent(); }
+
+        /* Dispose the accessible peer, if any. If AT ever needs this node again
+         * a new accessible peer is created. */
+        if (accessible != null) {
+            /* Generally accessibility does not retain any state, therefore deleting objects
+             * generally does not cause problems (AT just asks everything back).
+             * The exception to this rule is when the object sends a notifications to the AT, 
+             * in which case it is expected to be around to answer request for the new values. 
+             * It is possible that a object is reparented (within the scene) in the middle of
+             * this process. For example, when a tree item is expanded, the notification is 
+             * sent to the AT by the cell. But when the TreeView relayouts the cell can be 
+             * reparented before AT can query the relevant information about the expand event.
+             * If the accessible was disposed, AT can't properly report the event.
+             * 
+             * The fix is to defer the disposal of the accessible to the next pulse.
+             * If at that time the node is placed back to the scene, then the accessible is hooked
+             * to Node and AT requests are processed. Otherwise the accessible is disposed.
+             */
+            if (oldScene != null && oldScene != newScene && newScene == null) {
+                // Strictly speaking we need some type of accessible.thaw() at this point.
+                oldScene.addAccessible(Node.this, accessible);
+            } else {
+                accessible.dispose();
+            }
+            /* Always set to null to ensure this accessible is never on more than one 
+             * Scene#accMap at the same time (At lest not with the same accessible). 
+             */
+            accessible = null;
+        }
     }
 
     final void setScenes(Scene newScene, SubScene newSubScene) {
@@ -1044,15 +1077,9 @@ public abstract class Node implements EventTarget, Styleable {
 
                 @Override
                 protected void invalidated() {
-
-                    if (getScene() == null) return;
-
                     // If the style has changed, then styles of this node
                     // and child nodes might be affected.
-                    if (cssFlag != CssFlags.REAPPLY) {
-                        cssFlag = CssFlags.REAPPLY;
-                        notifyParentsOfInvalidatedCSS();
-                    }
+                    impl_reapplyCSS();
                 }
 
                 @Override
@@ -1727,7 +1754,7 @@ public abstract class Node implements EventTarget, Styleable {
             // TODO: is this the right thing to do?
             // this.impl_clearDirty(com.sun.javafx.scene.DirtyBits.NODE_CSS);
 
-            this.processCSS(null);
+            this.processCSS();
         }
     }
 
@@ -1987,17 +2014,15 @@ public abstract class Node implements EventTarget, Styleable {
         // Create a deferred runnable that will be run from a pulse listener
         // that is called after all of the scenes have been synced but before
         // any of them have been rendered.
-        final Runnable snapshotRunnable = new Runnable() {
-            @Override public void run() {
-                WritableImage img = doSnapshot(theParams, theImage);
-                SnapshotResult result = new SnapshotResult(img, Node.this, theParams);
+        final Runnable snapshotRunnable = () -> {
+            WritableImage img = doSnapshot(theParams, theImage);
+            SnapshotResult result = new SnapshotResult(img, Node.this, theParams);
 //                System.err.println("Calling snapshot callback");
-                try {
-                    Void v = theCallback.call(result);
-                } catch (Throwable th) {
-                    System.err.println("Exception in snapshot callback");
-                    th.printStackTrace(System.err);
-                }
+            try {
+                Void v = theCallback.call(result);
+            } catch (Throwable th) {
+                System.err.println("Exception in snapshot callback");
+                th.printStackTrace(System.err);
             }
         };
 
@@ -3949,10 +3974,10 @@ public abstract class Node implements EventTarget, Styleable {
      */
     public Point2D screenToLocal(double screenX, double screenY) {
         Scene scene = getScene();
+        if (scene == null) return null;
         Window window = scene.getWindow();
-        if (scene == null || window == null) {
-            return null;
-        }
+        if (window == null) return null;
+
         final com.sun.javafx.geom.Point2D tempPt =
                 TempState.getInstance().point;
 
@@ -4161,10 +4186,9 @@ public abstract class Node implements EventTarget, Styleable {
      */
     public Point2D localToScreen(double localX, double localY, double localZ) {
         Scene scene = getScene();
+        if (scene == null) return null;
         Window window = scene.getWindow();
-        if (scene == null || window == null) {
-            return null;
-        }
+        if (window == null) return null;
 
         Point3D pt = localToScene(localX, localY, localZ);
         final SubScene subScene = getSubScene();
@@ -5329,12 +5353,7 @@ public abstract class Node implements EventTarget, Styleable {
 
         private InvalidationListener getLocalToSceneInvalidationListener() {
             if (localToSceneInvLstnr == null) {
-                localToSceneInvLstnr = new InvalidationListener() {
-                    @Override
-                    public void invalidated(Observable observable) {
-                        invalidateLocalToSceneTransform();
-                    }
-                };
+                localToSceneInvLstnr = observable -> invalidateLocalToSceneTransform();
             }
             return localToSceneInvLstnr;
         }
@@ -5357,6 +5376,9 @@ public abstract class Node implements EventTarget, Styleable {
                 if (n != null) {
                     n.localToSceneTransformProperty().removeListener(
                             getLocalToSceneInvalidationListener());
+                }
+                if (localToSceneTransform != null) {
+                    localToSceneTransform.validityUnknown();
                 }
             }
         }
@@ -6022,6 +6044,23 @@ public abstract class Node implements EventTarget, Styleable {
         // overriden in Parent
     }
 
+    private Node getMirroringOrientationParent() {
+        Node parentValue = getParent();
+        while (parentValue != null) {
+            if (parentValue.usesMirroring()) {
+                return parentValue;
+            }
+            parentValue = parentValue.getParent();
+        }
+
+        final Node subSceneValue = getSubScene();
+        if (subSceneValue != null) {
+            return subSceneValue;
+        }
+
+        return null;
+    }
+
     private Node getOrientationParent() {
         final Node parentValue = getParent();
         if (parentValue != null) {
@@ -6072,7 +6111,7 @@ public abstract class Node implements EventTarget, Styleable {
                        : AUTOMATIC_ORIENTATION_RTL;
         }
 
-        final Node parentValue = getOrientationParent();
+        final Node parentValue = getMirroringOrientationParent();
         if (parentValue != null) {
             // automatic node orientation is inherited
             return getAutomaticOrientation(parentValue.resolvedNodeOrientation);
@@ -7499,6 +7538,8 @@ public abstract class Node implements EventTarget, Styleable {
                 }
 
                 needsChangeEvent = true;
+
+                accSendNotification(Attribute.FOCUSED);
             }
         }
 
@@ -7587,9 +7628,7 @@ public abstract class Node implements EventTarget, Styleable {
                     Scene _scene = getScene();
                     if (_scene != null) {
                         if (get()) {
-                            _scene.registerTraversable(Node.this);
-                        } else {
-                            _scene.unregisterTraversable(Node.this);
+                            _scene.initializeInternalEventDispatcher();
                         }
                         focusSetDirty(_scene);
                     }
@@ -7658,11 +7697,11 @@ public abstract class Node implements EventTarget, Styleable {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    public final void impl_traverse(Direction dir) {
+    public final boolean impl_traverse(Direction dir) {
         if (getScene() == null) {
-            return;
+            return false;
         }
-        getScene().traverse(this, dir);
+        return getScene().traverse(this, dir);
     }
 
     ////////////////////////////
@@ -7936,7 +7975,11 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
 
-
+    /**
+     * References a node that is a labelFor this node.
+     * Accessible via a NodeAccessor. See Label.labelFor for details.
+     */
+    private Node labeledBy = null;
 
 
     /***************************************************************************
@@ -8047,8 +8090,9 @@ public abstract class Node implements EventTarget, Styleable {
 
     /**
      * Sets the handler to use for this event type. There can only be one such handler
-     * specified at a time. This handler is guaranteed to be called first. This is
-     * used for registering the user-defined onFoo event handlers.
+     * specified at a time. This handler is guaranteed to be called as the last, after
+     * handlers added using {@link #addEventHandler(javafx.event.EventType, javafx.event.EventHandler)}.
+     * This is used for registering the user-defined onFoo event handlers.
      *
      * @param <T> the specific event class of the handler
      * @param eventType the event type to associate with the given eventHandler
@@ -8099,17 +8143,13 @@ public abstract class Node implements EventTarget, Styleable {
             EventDispatchChain tail) {
 
         if (preprocessMouseEventDispatcher == null) {
-            preprocessMouseEventDispatcher = new EventDispatcher() {
-                @Override
-                public Event dispatchEvent(Event event,
-                                           EventDispatchChain tail) {
-                    event = tail.dispatchEvent(event);
-                    if (event instanceof MouseEvent) {
-                        preprocessMouseEvent((MouseEvent) event);
-                    }
-
-                    return event;
+            preprocessMouseEventDispatcher = (event, tail1) -> {
+                event = tail1.dispatchEvent(event);
+                if (event instanceof MouseEvent) {
+                    preprocessMouseEvent((MouseEvent) event);
                 }
+
+                return event;
             };
         }
 
@@ -8524,16 +8564,7 @@ public abstract class Node implements EventTarget, Styleable {
      */
      @Deprecated // SB-dependency: RT-21096 has been filed to track this
     public static List<Style> impl_getMatchingStyles(CssMetaData cssMetaData, Styleable styleable) {
-        if (styleable != null && cssMetaData != null && styleable instanceof Node) {
-
-            Node node = (Node)styleable;
-
-            if (node.styleHelper != null) {
-                return node.styleHelper.getMatchingStyles(node, cssMetaData);
-            }
-
-        }
-        return Collections.<Style>emptyList();
+         return CssStyleHelper.getMatchingStyles(styleable, cssMetaData);
     }
 
      /**
@@ -8543,9 +8574,14 @@ public abstract class Node implements EventTarget, Styleable {
       */
      @Deprecated // SB-dependency: RT-21096 has been filed to track this
      public final ObservableMap<StyleableProperty<?>, List<Style>> impl_getStyleMap() {
-         return styleHelper != null
-             ? styleHelper.getObservableStyleMap()
-             : FXCollections.<StyleableProperty<?>, List<Style>>emptyObservableMap();
+         ObservableMap<StyleableProperty<?>, List<Style>> map =
+                 (ObservableMap<StyleableProperty<?>, List<Style>>)getProperties().get("STYLEMAP");
+         Map<StyleableProperty<?>, List<Style>> ret = CssStyleHelper.getMatchingStyles(map, this);
+         if (ret != null) {
+             if (ret instanceof ObservableMap) return (ObservableMap)ret;
+             return FXCollections.observableMap(ret);
+         }
+         return FXCollections.<StyleableProperty<?>, List<Style>>emptyObservableMap();
      }
 
      /**
@@ -8555,17 +8591,25 @@ public abstract class Node implements EventTarget, Styleable {
       */
      @Deprecated // SB-dependency: RT-21096 has been filed to track this
      public final void impl_setStyleMap(ObservableMap<StyleableProperty<?>, List<Style>> styleMap) {
-         //
-         // Node doesn't have a field for this map. Rather, this is held by CssStyleHelper. If this node
-         // doesn't have a styleHelper, then there is nothing to attach the listener to. So a styleHelper has
-         // to be created.
-         //
-         if (styleHelper == null) {
-             styleHelper = CssStyleHelper.createStyleHelper(this, null, styleMap);
-         } else {
-             styleHelper.setObservableStyleMap(styleMap);
-         }
+         if (styleMap != null) getProperties().put("STYLEMAP", styleMap);
+         else getProperties().remove("STYLEMAP");
      }
+
+    /**
+     * Find CSS styles that were used to style this Node in its current pseudo-class state. The map will contain the styles from this node and,
+     * if the node is a Parent, its children. The node corresponding to an entry in the Map can be obtained by casting a StyleableProperty key to a
+     * javafx.beans.property.Property and calling getBean(). The List<Style> contains only those styles used to style the property and will contain
+     * styles used to resolve lookup values.
+     *
+     * @param styleMap A Map to be populated with the styles. If null, a new Map will be allocated.
+     * @return The Map populated with matching styles.
+     */
+    @Deprecated // SB-dependency: RT-21096 has been filed to track this
+    public Map<StyleableProperty<?>,List<Style>> impl_findStyles(Map<StyleableProperty<?>,List<Style>> styleMap) {
+
+        Map<StyleableProperty<?>, List<Style>> ret = CssStyleHelper.getMatchingStyles(styleMap, this);
+        return (ret != null) ? ret : Collections.<StyleableProperty<?>, List<Style>>emptyMap();
+    }
 
     /**
      * Flags used to indicate in which way this node is dirty (or whether it
@@ -8688,14 +8732,21 @@ public abstract class Node implements EventTarget, Styleable {
      */
     @Deprecated
     public final void impl_reapplyCSS() {
-        // If there is no scene, then we cannot make it dirty, so we'll leave
-        // the flag alone
-        if (getScene() == null) return;
-        // If the css flag is already "REAPPLY", then do nothing
-        if (cssFlag == CssFlags.REAPPLY) return;
-        // Update the flag
-        cssFlag = CssFlags.REAPPLY;
 
+        if (getScene() == null) return;
+
+        if (cssFlag == CssFlags.REAPPLY) return;
+
+        // RT-36838 - don't reapply CSS in the middle of an update
+        if (cssFlag == CssFlags.UPDATE) {
+            cssFlag = CssFlags.REAPPLY;
+            notifyParentsOfInvalidatedCSS();
+            return;
+        }
+
+        reapplyCss();
+
+        //
         // One idiom employed by developers is to, during the layout pass,
         // add or remove nodes from the scene. For example, a ScrollPane
         // might add scroll bars to itself if it determines during layout
@@ -8703,14 +8754,88 @@ public abstract class Node implements EventTarget, Styleable {
         // it determines that it needs to. In such situations we must
         // apply the CSS immediately and not add it to the scene's queue
         // for deferred action.
+        //
         if (getParent() != null && getParent().performingLayout) {
             impl_processCSS(null);
-        } else if (getScene() != null) {
+        } else {
             notifyParentsOfInvalidatedCSS();
         }
+
     }
 
-    void processCSS(final WritableValue<Boolean> cacheHint) {
+    //
+    // This method "reapplies" CSS to this node and all of its children. Reapplying CSS
+    // means that new style maps are calculated for the node. The process of reapplying
+    // CSS may reset the CSS properties of a node to their initial state, but the _new_
+    // styles are not applied as part of this process.
+    //
+    // There is no check of the CSS state of a child since reapply takes precedence
+    // over other CSS states.
+    //
+    private void reapplyCss() {
+
+        // Hang on to current styleHelper so we can know whether
+        // createStyleHelper returned the same styleHelper
+        final CssStyleHelper oldStyleHelper = styleHelper;
+
+        // CSS state is "REAPPLY"
+        cssFlag = CssFlags.REAPPLY;
+
+        styleHelper = CssStyleHelper.createStyleHelper(this);
+
+        // REAPPLY to my children, too.
+        if (this instanceof Parent) {
+
+            // minor optimization to avoid calling createStyleHelper on children
+            // when we know there will not be any change in the style maps.
+            final boolean visitChildren =
+                    // If we don't have a styleHelper, then we should visit the children of this parent
+                    // since there might be styles that depend on being a child of this parent.
+                    // In other words, we have .a > .b { blah: blort; }, but no styles for ".a" itself.
+                    styleHelper == null ||
+                    // if the styleHelper changed, then we definitely need to visit the children
+                    // since the new styles may have an effect on the children's styles calculated values.
+                    (oldStyleHelper != styleHelper) ||
+                    // If our parent is null, then we're the root of a scene or sub-scene, most likely,
+                    // and we'll visit children because elsewhere the code depends on root.impl_reapplyCSS()
+                    // to force css to be reapplied (whether it needs to be or not).
+                    (getParent() == null) ||
+                    // If our parent's cssFlag is other than clean, then the parent may have just had
+                    // CSS reapplied. If the parent just had CSS reapplied, then some of its styles
+                    // may affect my children's styles.
+                    (getParent().cssFlag != CssFlags.CLEAN);
+
+            if (visitChildren) {
+
+                List<Node> children = ((Parent) this).getChildren();
+                for (int n = 0, nMax = children.size(); n < nMax; n++) {
+                    Node child = children.get(n);
+                    child.reapplyCss();
+                }
+            }
+
+        } else if (this instanceof SubScene) {
+
+            // SubScene root is a Parent, but reapplyCss is a private method in Node
+            final Node subSceneRoot = ((SubScene)this).getRoot();
+            if (subSceneRoot != null) {
+                subSceneRoot.reapplyCss();
+            }
+
+        } else if (styleHelper == null) {
+            //
+            // If this is not a Parent and there is no styleHelper, then the CSS state is "CLEAN"
+            // since there are no styles to apply or children to update.
+            //
+            cssFlag = CssFlags.CLEAN;
+            return;
+        }
+
+        cssFlag = CssFlags.UPDATE;
+
+    }
+
+    void processCSS() {
         switch (cssFlag) {
             case CLEAN:
                 break;
@@ -8722,27 +8847,24 @@ public abstract class Node implements EventTarget, Styleable {
                 me.cssFlag = CssFlags.CLEAN;
                 List<Node> children = me.getChildren();
                 for (int i=0, max=children.size(); i<max; i++) {
-                    children.get(i).processCSS(cacheHint);
+                    children.get(i).processCSS();
                 }
                 break;
             }
             case REAPPLY:
             case UPDATE:
             default:
-                impl_processCSS(cacheHint);
+                impl_processCSS(null);
         }
     }
 
     /**
+     * This method simply calls {@link #applyCss()}
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
      @Deprecated
     public final void impl_processCSS(boolean reapply) {
-
-         final boolean flag = (reapply || cssFlag == CssFlags.REAPPLY);
-         cssFlag = flag ? CssFlags.REAPPLY : CssFlags.UPDATE;
-
          applyCss();
      }
 
@@ -8786,6 +8908,7 @@ public abstract class Node implements EventTarget, Styleable {
      *    stage.show();
      * }
      * </code></pre>
+     * @since JavaFX 8.0
      */
     public final void applyCss() {
 
@@ -8793,102 +8916,81 @@ public abstract class Node implements EventTarget, Styleable {
             return;
         }
 
-        // If this flag is clean or dirty_branch, make it update
-        if (cssFlag != CssFlags.REAPPLY) {
-            cssFlag = CssFlags.UPDATE;
-        }
+        // update, unless reapply
+        if (cssFlag != CssFlags.REAPPLY) cssFlag = CssFlags.UPDATE;
 
         //
-        // RT-28394 - need to see if any ancestor has a flag other than clean
-        // If so, process css from the top-most css-dirty node
+        // RT-28394 - need to see if any ancestor has a flag UPDATE
+        // If so, process css from the top-most CssFlags.UPDATE node
+        // since my ancestor's styles may affect mine.
+        //
+        // If the scene-graph root isn't NODE_CSS dirty, then all my
+        // ancestor flags should be CLEAN and I can skip this lookup.
         //
         Node topMost = this;
-        Node _parent = getParent();
-        while (_parent != null) {
-            if (_parent.cssFlag != CssFlags.CLEAN) {
-                topMost = _parent;
+
+        final boolean dirtyRoot = getScene().getRoot().impl_isDirty(com.sun.javafx.scene.DirtyBits.NODE_CSS);
+        if (dirtyRoot) {
+
+            Node _parent = getParent();
+            while (_parent != null) {
+                if (_parent.cssFlag == CssFlags.UPDATE) {
+                    topMost = _parent;
+                }
+                _parent = _parent.getParent();
             }
-            _parent = _parent.getParent();
+
+            // Note: this code used to mark the parent nodes with DIRTY_BRANCH,
+            // but that isn't necessary since UPDATE will apply css to all of
+            // a Parent's children.
+
+            // If we're at the root of the scene-graph, make sure the NODE_CSS
+            // dirty bit is cleared (see Scene#doCSSPass())
+            if (topMost == getScene().getRoot()) {
+                getScene().getRoot().impl_clearDirty(DirtyBits.NODE_CSS);
+            }
         }
 
-        _parent = this;
-        while (_parent != topMost) {
-            if (_parent.cssFlag == CssFlags.CLEAN) {
-                _parent.cssFlag = CssFlags.DIRTY_BRANCH;
-            }
-            _parent = _parent.getParent();
-        }
-        // If we're at the root of the scene-graph, make sure the NODE_CSS dirty bit is cleared (see Scene#doCSSPass())
-        if (topMost == getScene().getRoot()) {
-            getScene().getRoot().impl_clearDirty(DirtyBits.NODE_CSS);
-        }
-        topMost.processCSS(new SimpleBooleanProperty(false));
+        topMost.processCSS();
 
     }
 
     /**
-     * If invoked, will update / reapply styles from here on down. This method should not be called directly. If
+     * If invoked, will update styles from here on down. This method should not be called directly. If
      * overridden, the overriding method must at some point call {@code super.impl_processCSS()} to ensure that
      * this Node's CSS state is properly updated.
      *
-     * Note that the WritableValue&lt;Boolean&gt; here has a different meaning than that of the {@link #impl_processCSS(boolean)}
-     * method. Passing a true value here does not force CSS to be reapplied. Rather, this flag is passed along
-     * to the CSS engine to decide whether or not a portion of cache should be invalidated when CSS is being reapplied.
+     * Note that the difference between this method and {@link #impl_processCSS(boolean)} is that this method
+     * updates styles for this node on down; whereas, {@code impl_processCSS(boolean)} invokes
+     * {@link #applyCss()} which will look for the top-most ancestor that needs CSS update and apply styles
+     * from that node on down.
+     *
+     * The WritableValue&lt;Boolean&gt; parameter is no longer used.
      *
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated // SB-dependency: RT-21206 has been filed to track this
-    protected void impl_processCSS(final WritableValue<Boolean> cacheHint) {
+    protected void impl_processCSS(WritableValue<Boolean> unused) {
 
         // Nothing to do...
         if (cssFlag == CssFlags.CLEAN) return;
 
-        final Scene scene = getScene();
-        if (scene == null) {
-            cssFlag = CssFlags.CLEAN;
-            return;
-        }
-
+        // if REAPPLY was deferred, process it now...
         if (cssFlag == CssFlags.REAPPLY) {
-
-            // RT-24621 - If this node's parent's cssFlag is REAPPLY, then CSS should be applied to the parent first,
-            // otherwise the styles this node uses will be incomplete (missing lookups, missing inherited styles, etc).
-            // find the top-most parent whose flag is REAPPLY and start from there, if there is one.
-            Parent _parent = getParent();
-            Parent _topmostParent = null;
-            while(_parent != null) {
-                if (_parent.cssFlag == CssFlags.REAPPLY) {
-                    _topmostParent = _parent;
-                }
-                _parent = _parent.getParent();
-
-            }
-            // TODO: danger of infinite loop here!
-            if (_topmostParent != null) {
-                _topmostParent.impl_processCSS(cacheHint);
-                return;
-            }
-
-            ObservableMap<StyleableProperty<?>, List<Style>> styleObserver =
-                    styleHelper != null ? styleHelper.observableStyleMap : null;
-
-            // Match new styles if my own indicates I need to reapply
-            styleHelper = CssStyleHelper.createStyleHelper(this, cacheHint, styleObserver);
-
+            reapplyCss();
         }
-
-        final CssFlags flag = cssFlag;
 
         // Clear the flag first in case the flag is set to something
         // other than clean by downstream processing.
         cssFlag = CssFlags.CLEAN;
 
         // Transition to the new state and apply styles
-        if (styleHelper != null) {
-                styleHelper.transitionToState(this, flag);
+        if (styleHelper != null && getScene() != null) {
+            styleHelper.transitionToState(this);
         }
     }
+
 
     /**
      * A StyleHelper for this node.
@@ -8954,6 +9056,12 @@ public abstract class Node implements EventTarget, Styleable {
             return transform;
         }
 
+        public void validityUnknown() {
+            if (valid == VALID) {
+                valid = VALIDITY_UNKNOWN;
+            }
+        }
+
         public void invalidate() {
             if (valid != INVALID) {
                 valid = INVALID;
@@ -9013,12 +9121,7 @@ public abstract class Node implements EventTarget, Styleable {
         protected abstract Bounds computeBounds();
     }
 
-    private static final BoundsAccessor boundsAccessor = new BoundsAccessor() {
-        @Override
-        public BaseBounds getGeomBounds(BaseBounds bounds, BaseTransform tx, Node node) {
-            return node.getGeomBounds(bounds, tx);
-        }
-    };
+    private static final BoundsAccessor boundsAccessor = (bounds, tx, node) -> node.getGeomBounds(bounds, tx);
 
     /**
      * This method is used by Scene-graph JMX bean to obtain the Scene-graph structure.
@@ -9051,15 +9154,103 @@ public abstract class Node implements EventTarget, Styleable {
             public SubScene getSubScene(Node node) {
                 return node.getSubScene();
             }
+
+            @Override public void setLabeledBy(Node node, Node labeledBy) {
+                node.labeledBy = labeledBy;
+            }
         });
     }
 
     /**
-     * @treatAsPrivate implementation detail
-     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     * Experimental API - Do not use (will be removed).
+     *
+     * @treatAsPrivate
      */
-    @Deprecated public AccessibleProvider impl_getAccessible() {
-        return null; // return a valid value for specific controls accessible objects
+    public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case ROLE: return Role.NODE;
+            case PARENT: return getParent();
+            case SCENE: return getScene();
+            case BOUNDS: return localToScreen(getBoundsInLocal());
+            case ENABLED: return !isDisabled();
+            case FOCUSED: return isFocused();
+            case VISIBLE: return isVisible();
+            case LABELED_BY: return labeledBy;
+            default: return null;
+        }
     }
+
+    /**
+     * Experimental API - Do not use (will be removed).
+     *
+     * @treatAsPrivate
+     */
+    public void accExecuteAction(Action action, Object... parameters) {
+    }
+
+    /**
+     * Experimental API - Do not use (will be removed).
+     *
+     * @treatAsPrivate
+     */
+    public final void accSendNotification(Attribute attributes) {
+        if (accessible == null) {
+            Scene scene = getScene();
+            if (scene != null) {
+                accessible = scene.removeAccessible(this);
+            }
+        }
+        if (accessible != null) {
+            accessible.sendNotification(attributes);
+        }
+    }
+
+    Accessible accessible;
+
+    /**
+     * Experimental API - Do not use (will be removed).
+     *
+     * @treatAsPrivate
+     */
+    public final Accessible getAccessible() {
+        if (accessible == null) {
+            Scene scene = getScene();
+            /* It is possible the node was reparented and getAccessible() 
+             * is called before the pulse. Try to recycle the accessible
+             * before creating a new one.
+             * Note: this code relies that an accessible can never be on
+             * more than one Scene#accMap. Thus, the only way
+             * scene#removeAccessible() returns non-null is if the node
+             * old scene and new scene are the same object.
+             */
+            if (scene != null) {
+                accessible = scene.removeAccessible(this);
+            }
+        }
+        if (accessible == null) {
+            accessible = new Accessible() {
+                @Override public Object getAttribute(Attribute attribute, Object... parameters) {
+                    return accGetAttribute(attribute, parameters);
+                }
+                @Override public void executeAction(Action action, Object... parameters) {
+                    accExecuteAction(action, parameters);
+                }
+                @Override public String toString() {
+                    String klassName = Node.this.getClass().getName();
+                    return klassName.substring(klassName.lastIndexOf('.')+1);
+                }
+            };
+        }
+        return accessible;
+    }
+
+    void releaseAccessible() {
+        Accessible acc = this.accessible;
+        if (acc != null) {
+            accessible = null;
+            acc.dispose();
+        }
+    }
+
 }
 
