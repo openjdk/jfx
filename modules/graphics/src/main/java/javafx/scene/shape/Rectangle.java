@@ -50,8 +50,8 @@ import com.sun.javafx.sg.prism.NGShape;
 /**
  * The {@code Rectangle} class defines a rectangle
  * with the specified size and location. By default the rectangle
- * has sharp corners. Rounded corners can be specified using
- * the arcWidth and arcHeight variables.
+ * has sharp corners. Rounded corners can be specified by setting both of
+ * the arcWidth and arcHeight properties to positive values {@code (> 0.0)}.
 
  * <p>Example code: the following code creates a rectangle with 20 pixel
  * rounded corners.</p>
@@ -279,6 +279,8 @@ public  class Rectangle extends Shape {
     /**
      * Defines the horizontal diameter of the arc
      * at the four corners of the rectangle.
+     * The rectangle will have rounded corners if and only if both of
+     * the arc width and arc height properties are greater than 0.0.
      *
      * @defaultValue 0.0
      */
@@ -326,6 +328,8 @@ public  class Rectangle extends Shape {
     /**
      * Defines the vertical diameter of the arc
      * at the four corners of the rectangle.
+     * The rectangle will have rounded corners if and only if both of
+     * the arc width and arc height properties are greater than 0.0.
      *
      * @defaultValue 0.0
      */

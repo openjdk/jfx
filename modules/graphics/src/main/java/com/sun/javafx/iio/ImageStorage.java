@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -300,7 +300,8 @@ public class ImageStorage {
                 if (pixelScale > 1.9f) {
                     // Use Mac Retina conventions for > 1.9f
                     StringBuilder new_input = new StringBuilder();
-                    final int last_dot_idx = input.lastIndexOf(".");
+                    int last_dot_idx = input.lastIndexOf(".");
+                    if (last_dot_idx < 0) last_dot_idx = input.length();
                     new_input.append(input.substring(0, last_dot_idx));
                     new_input.append("@2x");
                     new_input.append(input.substring(last_dot_idx));

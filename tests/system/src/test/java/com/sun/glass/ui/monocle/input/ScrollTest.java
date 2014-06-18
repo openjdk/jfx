@@ -229,12 +229,15 @@ public class ScrollTest extends ScrollTestBase {
         TestLog.waitForLogContaining("Scroll started, DeltaX: " + 0
                 + ", DeltaY: " + 0
                 + ", totalDeltaX: " + 0
-                + ", totalDeltaY: " + 0);
+                + ", totalDeltaY: " + 0
+                + ", touch points: " + 2
+                + ", inertia value: false");
         TestLog.waitForLogContaining("Scroll, DeltaX: " + 0
                 + ", DeltaY: " + avgDelta
                 + ", totalDeltaX: " + 0
                 + ", totalDeltaY: " + totalDeltaY
-                + ", touch points: " + 2);
+                + ", touch points: " + 2
+                + ", inertia value: false");
         String expectedLog;
         for (int i = 2; i <= numOfIterations; i++) {
             point1Y += deltaY1;
@@ -248,7 +251,8 @@ public class ScrollTest extends ScrollTestBase {
             totalDeltaY = avgDelta * i;
             expectedLog = "Scroll, DeltaX: " + 0 + ", DeltaY: " + avgDelta
                     + ", totalDeltaX: " + 0
-                    + ", totalDeltaY: " + totalDeltaY;
+                    + ", totalDeltaY: " + totalDeltaY
+                    + ", touch points: " + 2 + ", inertia value: false";
             TestLog.waitForLogContaining(expectedLog);
         }
         releaseAllFingers();

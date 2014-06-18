@@ -33,6 +33,10 @@ import java.nio.IntBuffer;
 import java.nio.ShortBuffer;
 import java.nio.channels.WritableByteChannel;
 
+/**
+ * A ByteBuffer used as a rendering target for window composition. Stored as
+ * 32-bit and can write to a 16-bit or 32-bit target.
+ */
 public class Framebuffer {
 
     private ByteBuffer bb;
@@ -51,7 +55,7 @@ public class Framebuffer {
         this.height = height;
         this.byteDepth = depth >>> 3;
         if (clear) {
-            clearBuffer = ByteBuffer.allocate(width * byteDepth);
+            clearBuffer = ByteBuffer.allocate(width * 4);
         }
     }
 
@@ -71,7 +75,7 @@ public class Framebuffer {
     public void clearBufferContents() {
         bb.clear();
         bb.position(address);
-        bb.limit(address + width * height * byteDepth);
+        bb.limit(address + width * height * 4);
         for (int i = 0; i < height; i++) {
             clearBuffer.clear();
             bb.put(clearBuffer);
@@ -108,15 +112,14 @@ public class Framebuffer {
             return;
         }
         // If clearBuffer is set, clear the buffer on the first upload of each
-        // frame, unless that upload alread overwrites the whole buffer.
+        // frame, unless that upload already overwrites the whole buffer.
         if (!receivedData && clearBuffer != null) {
             if (alphaMultiplier < 256 || start != 0 || pW != width || pH != height) {
                 clearBufferContents();
             }
         }
-        bb.position(address + pX * byteDepth + pY * width * 4);
+        bb.position(address + pX * 4 + pY * width * 4);
         bb.limit(bb.capacity());
-        // TODO: implement 16-bit framebuffer composition
         // TODO: use a back buffer in Java when double buffering is not available in /dev/fb0
         // TODO: move alpha blending into native
         if (receivedData) {
@@ -174,7 +177,7 @@ public class Framebuffer {
                     }
                 } else {
                     bb.position(address);
-                    bb.limit(address + width * height * byteDepth);
+                    bb.limit(address + width * height * 4);
                     IntBuffer dstPixels = bb.asIntBuffer();
                     IntBuffer srcPixels = (IntBuffer) src;
                     for (int i = 0; i < pH; i++) {

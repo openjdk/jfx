@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013 Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -298,7 +298,7 @@ class PlaygroundTabs extends TabPane {
             setController(slider);
 
             TextField preview = new TextField();
-            preview.setPrefWidth(30);
+            preview.setPrefColumnCount(4);
             preview.textProperty().bindBidirectional(prop, new StringConverter<Number>() {
 
                 @Override
