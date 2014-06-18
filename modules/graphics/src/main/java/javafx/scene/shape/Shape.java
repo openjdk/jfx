@@ -299,11 +299,23 @@ public abstract class Shape extends Node {
      * the user space distance that the pen travels is accumulated.
      * The distance value is used to index into the dash array.
      * The pen is opaque when its current cumulative distance maps
-     * to an even element of the dash array and transparent otherwise.
+     * to an even element of the dash array (counting from {@code 0}) and
+     * transparent otherwise.
+     * <p>
      * An empty strokeDashArray indicates a solid line with no spaces.
+     * An odd length strokeDashArray behaves the same as an even length
+     * array constructed by implicitly repeating the indicated odd length
+     * array twice in succession ({@code [20, 5, 15]} behaves as if it
+     * were {@code [20, 5, 15, 20, 5, 15]}).
+     * <p>
+     * Note that each dash segment will be capped by the decoration specified
+     * by the current stroke line cap.
      *
      * <p>
      * The image shows a shape with stroke dash array {@code [25, 20, 5, 20]}
+     * and 3 different values for the stroke line cap:
+     * {@code StrokeLineCap.BUTT}, {@code StrokeLineCap.SQUARE} (the default),
+     * and {@code StrokeLineCap.ROUND}
      * </p><p>
      * <img src="doc-files/strokedasharray.png"/>
      * </p>
