@@ -997,7 +997,7 @@ public final class GraphicsContext {
     }
 
     /**
-     * Fills the given string of text at position x, y (0,0 at top left)
+     * Fills the given string of text at position x, y
      * with the current fill paint attribute.
      * A {@code null} text value will be ignored.
      * 
@@ -1010,7 +1010,7 @@ public final class GraphicsContext {
     }
 
     /**
-     * draws the given string of text at position x, y (0,0 at top left)
+     * Draws the given string of text at position x, y
      * with the current stroke paint attribute.
      * A {@code null} text value will be ignored.
      * 
