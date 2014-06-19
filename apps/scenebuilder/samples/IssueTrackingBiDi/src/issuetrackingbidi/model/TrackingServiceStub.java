@@ -62,14 +62,13 @@ public class TrackingServiceStub implements TrackingService {
 
     // The projectNames list is kept in sync with the project's map by observing
     // the projectsMap and modifying the projectNames list in consequence.
-    ObservableList<String> projectNames;
+    final ObservableList<String> projectNames = FXCollections.<String>observableArrayList();
     final MapChangeListener<String, ObservableList<String>> projectsMapChangeListener = change -> {
         if (change.wasAdded()) projectNames.add(change.getKey());
         if (change.wasRemoved()) projectNames.remove(change.getKey());
     };
     
     {
-        projectNames = FXCollections.<String>observableArrayList();
         projectNames.addAll(projectsMap.keySet());
         projectsMap.addListener(projectsMapChangeListener);
     }
