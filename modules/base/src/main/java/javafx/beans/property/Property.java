@@ -41,6 +41,9 @@ public interface Property<T> extends ReadOnlyProperty<T>, WritableValue<T> {
 
     /**
      * Create a unidirection binding for this {@code Property}.
+     * <p>
+     * Note that JavaFX has all the bind calls implemented through weak listeners. This means the bound property
+     * can be garbage collected and stopped from being updated.
      * 
      * @param observable
      *            The observable this {@code Property} should be bound to.
@@ -53,12 +56,14 @@ public interface Property<T> extends ReadOnlyProperty<T>, WritableValue<T> {
      * Remove the unidirectional binding for this {@code Property}.
      * 
      * If the {@code Property} is not bound, calling this method has no effect.
+     * @see #bind(javafx.beans.value.ObservableValue)
      */
     void unbind();
 
     /**
      * Can be used to check, if a {@code Property} is bound.
-     * 
+     * @see #bind(javafx.beans.value.ObservableValue)
+     *
      * @return {@code true} if the {@code Property} is bound, {@code false}
      *         otherwise
      */
@@ -70,8 +75,11 @@ public interface Property<T> extends ReadOnlyProperty<T>, WritableValue<T> {
      * Bidirectional bindings exists independently of unidirectional bindings. So it is possible to
      * add unidirectional binding to a property with bidirectional binding and vice-versa. However, this practice is
      * discouraged.
-     *
+     * <p>
      * It is possible to have multiple bidirectional bindings of one Property.
+     * <p>
+     * JavaFX bidirectional binding implementation use weak listeners. This means bidirectional binding does not prevent
+     * properties from being garbage collected.
      * 
      * @param other
      *            the other {@code Property}

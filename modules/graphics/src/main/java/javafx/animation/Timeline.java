@@ -60,6 +60,21 @@ import com.sun.scenario.animation.shared.TimelineClipCore;
  * It is not possible to change the {@code keyFrames} of a running {@code Timeline}.
  * If the value of {@code keyFrames} is changed for a running {@code Timeline}, it 
  * has to be stopped and started again to pick up the new value.
+ * <p>
+ * A simple Timeline can be created like this:
+ * <pre>{@code
+ * final Timeline timeline = new Timeline();
+ * timeline.setCycleCount(2);
+ * timeline.setAutoReverse(true);
+ * timeline.getKeyFrames().add(new KeyFrame(Duration.millis(5000),
+ *   new KeyValue (node.translateXProperty(), 25)));
+ * timeline.play();
+ * }</pre>
+ * <p>
+ * This Timeline will run for 10s, animating the node by x axis to value 25 and then back to 0 on the second cycle.
+ * <p>
+ * <b>Warning :</b> A running Timeline is being referenced from the FX runtime. Infinite Timeline
+ * might result in a memory leak if not stopped properly. All the objects with animated properties would not be garbage collected.
  * 
  * @see Animation
  * @see KeyFrame

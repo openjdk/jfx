@@ -154,6 +154,7 @@ public abstract class BooleanPropertyBase extends BooleanProperty {
 
     /**
      * {@inheritDoc}
+     * Note:
      */
     @Override
     public void bind(final ObservableValue<? extends Boolean> rawObservable) {
