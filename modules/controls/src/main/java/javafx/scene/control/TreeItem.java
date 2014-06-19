@@ -362,7 +362,9 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
      * Instance Variables                                                      *
      *                                                                         *
      **************************************************************************/
-    
+
+    private boolean ignoreSortUpdate = false;
+
     private boolean expandedDescendentCountDirty = true;
 
     // The ObservableList containing all children belonging to this TreeItem.
@@ -632,8 +634,15 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
         // we need to check if this TreeItem needs to have its children sorted.
         // There are two different ways that this could be possible.
         if (children.isEmpty()) return children;
-        
-        checkSortState();
+
+        // checkSortState should in almost all instances be called, but there
+        // are situations where checking the sort state will result in
+        // unwanted permutation events being fired (if a sort is applied). To
+        // avoid this (which resolves RT-37593), we set the ignoreSortUpdate
+        // to true (and of course, we're careful to set it back to false again)
+        if (!ignoreSortUpdate) {
+            checkSortState();
+        }
         
         return children;
     }
@@ -875,17 +884,19 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
         }
         return expandedDescendentCount;
     }
-    
+
     private void updateExpandedDescendentCount(boolean reset) {
         previousExpandedDescendentCount = expandedDescendentCount;
         expandedDescendentCount = 1;
-        
+
+        ignoreSortUpdate = true;
         if (!isLeaf() && isExpanded()) {
             for (TreeItem<T> child : getChildren()) {
                 if (child == null) continue;
                 expandedDescendentCount += child.isExpanded() ? child.getExpandedDescendentCount(reset) : 1;
             }
         }
+        ignoreSortUpdate = false;
     }
 
     private void updateChildren(List<? extends TreeItem<T>> added, List<? extends TreeItem<T>> removed) {

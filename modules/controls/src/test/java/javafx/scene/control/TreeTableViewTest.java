@@ -3770,4 +3770,43 @@ public class TreeTableViewTest {
         assertEquals(1, rt_37538_count);
         sl.dispose();
     }
+
+    @Test public void test_rt_37593() {
+        TreeItem<String> root = new TreeItem<>();
+
+        TreeItem<String> one = new TreeItem<>("one");
+        root.getChildren().add(one);
+
+        TreeItem<String> two = new TreeItem<>("two");
+        two.getChildren().add(new TreeItem<>("childOne"));
+        two.getChildren().add(new TreeItem<>("childTwo"));
+        root.getChildren().add(two);
+
+        root.getChildren().add(new TreeItem<>("three"));
+
+        TreeTableColumn<String, String> nameColumn = new TreeTableColumn<>("name");
+        nameColumn.setCellValueFactory(param -> new ReadOnlyObjectWrapper(param.getValue().getValue()));
+
+        treeTableView.setShowRoot(false);
+        treeTableView.setRoot(root);
+        treeTableView.getColumns().addAll(nameColumn);
+
+        treeTableView.getSortOrder().add(nameColumn);
+        nameColumn.setSortType(TreeTableColumn.SortType.DESCENDING);
+        sm.select(one);
+
+        // at this point, the 'one' item should be in row 2
+        assertTrue(sm.isSelected(2));
+        assertEquals(one, sm.getSelectedItem());
+
+        two.setExpanded(true);
+
+        // this line would create a NPE
+        VirtualFlowTestUtils.clickOnRow(treeTableView, 4);
+
+        // we should end up with the selection being on index 4, which is the
+        // final location of the 'one' tree item, after sorting and expanding 'two'
+        assertEquals(one, sm.getSelectedItem());
+        assertTrue(debug(), sm.isSelected(4));
+    }
 }
