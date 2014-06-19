@@ -29,12 +29,13 @@
 #include <dlfcn.h>
 #include "dalvikInput.h"
 #include "dalvikUtils.h"
-#include "../../wm/LensWindowManager.h"
+#include "../wm/LensWindowManager.h"
 #include "com_sun_glass_ui_lens_LensApplication.h"
 #include "com_sun_glass_events_TouchEvent.h"    
 #include "com_sun_glass_ui_android_SoftwareKeyboard.h"
 #include "com_sun_glass_ui_android_Activity.h"
 #include "javafxports_android_FXActivity_InternalSurfaceView.h"
+#include "com_sun_glass_ui_android_DalvikInput.h"
 
 #define THROW_RUNTIME_EXCEPTION(ENV, MESSAGE, ...)                          \
     char error_msg[256];                                                    \
@@ -123,10 +124,11 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_android_SoftwareKeyboard__1hide
 
 /*
  * Class:     javafxports_android_FXActivity_InternalSurfaceView
+ * Class: com_sun_glass_ui_android_DalvikInput
  * Method:    onMultiTouchEventNative
  * Signature: (I[I[I[I[I)V
  */
-JNIEXPORT void JNICALL Java_javafxports_android_FXActivity_00024InternalSurfaceView_onMultiTouchEventNative
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_android_DalvikInput_onMultiTouchEventNative
   (JNIEnv *env, jobject that, jint jcount, jintArray jactions, jintArray jids, jintArray jxs, jintArray jys) {
     GLASS_LOG_FINE("Call InternalSurfaceView_onMultiTouchEventNative");
     
@@ -160,11 +162,11 @@ JNIEXPORT void JNICALL Java_javafxports_android_FXActivity_00024InternalSurfaceV
 }
 
 /*
- * Class:     javafxports_android_FXActivity_InternalSurfaceView
+ * Class: com_sun_glass_ui_android_DalvikInput
  * Method:    onKeyEventNative
  * Signature: (IILjava/lang/String;)V
  */
-JNIEXPORT void JNICALL Java_javafxports_android_FXActivity_00024InternalSurfaceView_onKeyEventNative
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_android_DalvikInput_onKeyEventNative
   (JNIEnv *env, jobject that, jint action, jint keycode, jstring s) {    
     GLASS_LOG_FINEST("Key event: [action: %s, keyCode: %i]",
             describe_key_action(action), keycode);
@@ -187,24 +189,24 @@ JNIEXPORT void JNICALL Java_javafxports_android_FXActivity_00024InternalSurfaceV
 }
 
 /*
- * Class:     javafxports_android_FXActivity
- * Method:    _surfaceChanged
- * Signature: (Landroid/view/Surface;)V
+ * Class: com_sun_glass_ui_android_DalvikInput
+ * Method: onSurfaceChangedNative
+ * Signature: ()V
  */
-JNIEXPORT void JNICALL Java_javafxports_android_FXActivity__1surfaceChanged__Landroid_view_Surface_2
-  (JNIEnv *env, jobject that, jobject jsurface) {    
-    GLASS_LOG_FINEST("Notify JFX that surface has changed! jsurface=%d", jsurface); 
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_android_DalvikInput_onSurfaceChangedNative__
+ (JNIEnv *env, jobject that) {
+ GLASS_LOG_FINEST("Notify JFX that surface has changed!");
     glass_application_notifyScreenSettingsChanged(env);
     lens_wm_repaint_all(env);
 }
 
 /*
- * Class:     javafxports_android_FXActivity
- * Method:    _surfaceChanged
- * Signature: (Landroid/view/Surface;III)V
+ * Class: com_sun_glass_ui_android_DalvikInput
+ * Method: onSurfaceChangedNative
+ * Signature: (III)V
  */
-JNIEXPORT void JNICALL Java_javafxports_android_FXActivity__1surfaceChanged__Landroid_view_Surface_2III
-  (JNIEnv *env, jobject that, jobject jsurface, jint fmt, jint w, jint h) {
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_android_DalvikInput_onSurfaceChangedNative__III
+ (JNIEnv *env, jobject that, jint fmt, jint w, jint h) {
     GLASS_LOG_FINEST("Notify JFX that surface has changed."); 
     GLASS_LOG_FINEST("Surface format:%d width:%d height%d", fmt, w, h);     
     glass_application_notifyScreenSettingsChanged(env);
@@ -212,22 +214,22 @@ JNIEXPORT void JNICALL Java_javafxports_android_FXActivity__1surfaceChanged__Lan
 }
 
 /*
- * Class:     javafxports_android_FXActivity
- * Method:    _surfaceRedrawNeeded
- * Signature: (Landroid/view/Surface;)V
+ * Class: com_sun_glass_ui_android_DalvikInput
+ * Method: onSurfaceRedrawNeededNative
+ * Signature: ()V
  */
-JNIEXPORT void JNICALL Java_javafxports_android_FXActivity__1surfaceRedrawNeeded
-  (JNIEnv *env, jobject that, jobject jsurface) {
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_android_DalvikInput_onSurfaceRedrawNeededNative
+ (JNIEnv *env, jobject that) {
     GLASS_LOG_WARNING("Call surfaceRedrawNeeded");
     lens_wm_repaint_all(env);
 }
 
 /*
- * Class:     javafxports_android_FXActivity
- * Method:    _configurationChanged
+ * Class: com_sun_glass_ui_android_DalvikInput
+ * Method: onConfigurationChangedNative
  * Signature: (I)V
  */
-JNIEXPORT void JNICALL Java_javafxports_android_FXActivity__1configurationChanged
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_android_DalvikInput_onConfigurationChangedNative
   (JNIEnv *env, jobject that, jint flags) {    
     GLASS_LOG_FINEST("Call configuration changed.");
     glass_application_notifyScreenSettingsChanged(env);   
