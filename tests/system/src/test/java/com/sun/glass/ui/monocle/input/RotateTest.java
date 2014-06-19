@@ -206,7 +206,6 @@ public class RotateTest extends ParameterizedTestBase {
         device.sync();
         device.removePoint(p2);
         device.sync();
-        Assert.assertEquals(0, TestLog.countLogContaining("inertia value: true"));
         TestLog.waitForLogContaining("TouchPoint: RELEASED %d, %d", x2, y2);
     }
 

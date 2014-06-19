@@ -369,9 +369,6 @@ public abstract class ScrollTestBase extends ParameterizedTestBase {
         totalDeltaX = 0;
         totalDeltaY = 0;
         Assert.assertEquals(expectedValue, TestLog.countLogContaining(expectedLog));
-        if (TestLog.countLogContaining("Scroll finished") > 0 && device.getPressedPoints() == 0) {
-            TestLog.waitForLogContaining("Scroll", "inertia value: true");
-        }
     }
 
     /**
@@ -405,5 +402,15 @@ public abstract class ScrollTestBase extends ParameterizedTestBase {
         if (TestLog.countLogContaining("Scroll finished") > 0) {
             TestLog.waitForLogContaining("Scroll", "inertia value: true");
         }
+    }
+
+    protected void tapToStopInertia() throws Exception {
+        Assert.assertEquals(0, device.getPressedPoints());
+        TestLog.reset();
+        int p = device.addPoint(point1X, point1Y);
+        device.sync();
+        device.removePoint(p);
+        device.sync();
+        TestLog.waitForLogContaining("TouchPoint: RELEASED %d, %d", point1X, point1Y);
     }
 }

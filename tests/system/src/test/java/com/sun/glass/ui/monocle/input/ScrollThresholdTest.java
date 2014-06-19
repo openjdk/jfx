@@ -66,6 +66,7 @@ public class ScrollThresholdTest extends ScrollTestBase {
         pressFirstFinger();
         moveOneFinger(0, -delta , 1, true);
         releaseFirstFinger();
+        tapToStopInertia();
     }
 
     /**
@@ -75,7 +76,8 @@ public class ScrollThresholdTest extends ScrollTestBase {
     @Test
     public void testMoveDownCheckThreshold() throws Exception {
         pressFirstFinger();
-        moveOneFinger(0, delta , 2, true);
+        moveOneFinger(0, delta , 3, true);
         releaseFirstFinger();
+        tapToStopInertia();
     }
 }
