@@ -53,6 +53,9 @@ public class ScrollThresholdTest extends ScrollTestBase {
         super.init();
         Assume.assumeTrue(device.getTapRadius() < getScrollThreshold());
         delta = getScrollThreshold() - 1;
+        String os = System.getProperty("os.name").toLowerCase();
+        Assume.assumeTrue(os.indexOf("win") < 0);
+        Assume.assumeTrue(os.indexOf("mac") < 0);
     }
 
     /**
