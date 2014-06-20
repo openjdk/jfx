@@ -206,6 +206,7 @@ public class TrackingServiceStub implements TrackingService {
         ts.setDescription("William Butler Yeats.");
     }
 
+    @SafeVarargs
     private static <T> List<T> newList(T... items) {
         return Arrays.asList(items);
     }
