@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project default="jar" basedir=".">
+
+    <target name="jar">
+        <ant dir="samples" target="jar" inheritAll="true"/>
+    </target>
+
+    <target name="clean">
+        <ant dir="samples" target="clean" inheritAll="true"/>
+    </target>
+
+</project>
+
+

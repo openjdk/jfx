@@ -3013,6 +3013,7 @@ project(":apps") {
               ant.properties['jfxbuild.jfxrt.jar'] = jfxrtJar
               ant.properties['platforms.JDK_1.8.home'] = "${rootProject.ext.JDK_HOME}"
               ant.project.executeTarget("sampleAppsJar")
+              ant.project.executeTarget("scenebuilderSampleAppsJar")
             }
         }
         rootProject.appsjar.dependsOn(appsJar)
@@ -3022,6 +3023,7 @@ project(":apps") {
               ant.properties['targetBld'] = "$t.name"
               ant.properties['platforms.JDK_1.8.home'] = "${rootProject.ext.JDK_HOME}"
               ant.project.executeTarget("sampleAppsClean")
+              ant.project.executeTarget("scenebuilderSampleAppsClean")
             }
         }
         rootProject.clean.dependsOn(appsClean)
