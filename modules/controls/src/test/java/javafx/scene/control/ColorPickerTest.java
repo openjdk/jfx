@@ -25,10 +25,6 @@
 
 package javafx.scene.control;
 
-/*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
- */
-
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.Scene;
