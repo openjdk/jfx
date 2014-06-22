@@ -144,7 +144,7 @@ public class ZoomTest extends ParameterizedTestBase {
         TestLog.waitForLogContaining("TouchPoint: RELEASED %d, %d", x2, newy2);
         TestLog.waitForLog("Mouse released: %d, %d", x2, newy2);
         TestLog.waitForLog("Mouse clicked: %d, %d", x2, newy2);
-        TestLog.waitForLogContaining("Zoom", "inertia value: true");
+        TestLog.waitForLogContainingSubstrings("Zoom", "inertia value: true");
         Assert.assertEquals(1, TestLog.countLogContaining("Mouse clicked: "
                 + x2 +", " + newy2));
     }
@@ -223,7 +223,7 @@ public class ZoomTest extends ParameterizedTestBase {
                 x2, newy2);
         TestLog.waitForLog("Mouse released: %d, %d", x2, newy2);
         TestLog.waitForLog("Mouse clicked: %d, %d", x2, newy2);
-        TestLog.waitForLogContaining("Zoom", "inertia value: true");
+        TestLog.waitForLogContainingSubstrings("Zoom", "inertia value: true");
         Assert.assertEquals(1, TestLog.countLogContaining("Mouse clicked: "
                 + x2 +", " + newy2));
     }
@@ -321,7 +321,7 @@ public class ZoomTest extends ParameterizedTestBase {
                 x2, newy2);
         TestLog.waitForLog("Mouse released: %d, %d", x2, newy2);
         TestLog.waitForLog("Mouse clicked: %d, %d", x2, newy2);
-        TestLog.waitForLogContaining("Zoom", "inertia value: true");
+        TestLog.waitForLogContainingSubstrings("Zoom", "inertia value: true");
         Assert.assertEquals(1, TestLog.countLogContaining("Mouse clicked: "
                 + x2 +", " + newy2));
     }
@@ -439,7 +439,7 @@ public class ZoomTest extends ParameterizedTestBase {
                 x2, newy2);
         TestLog.waitForLog("Mouse released: %d, %d", x2, newy2);
         TestLog.waitForLog("Mouse clicked: %d, %d", x2, newy2);
-        TestLog.waitForLogContaining("Zoom", "inertia value: true");
+        TestLog.waitForLogContainingSubstrings("Zoom", "inertia value: true");
         Assert.assertEquals(1, TestLog.countLogContaining("Mouse clicked: "
                 + x2 +", " + newy2));
     }

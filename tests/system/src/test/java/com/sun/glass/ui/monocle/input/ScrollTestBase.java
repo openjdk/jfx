@@ -337,7 +337,7 @@ public abstract class ScrollTestBase extends ParameterizedTestBase {
         totalDeltaY = 0;
         Assert.assertEquals(expectedValue, TestLog.countLogContaining(expectedLog));
         if (TestLog.countLogContaining("Scroll finished") > 0) {
-            TestLog.waitForLogContaining("Scroll", "inertia value: true");
+            TestLog.waitForLogContainingSubstrings("Scroll", "inertia value: true");
         }
     }
 
@@ -400,7 +400,7 @@ public abstract class ScrollTestBase extends ParameterizedTestBase {
         totalDeltaY = 0;
         Assert.assertEquals(expectedValue, TestLog.countLogContaining(expectedLog));
         if (TestLog.countLogContaining("Scroll finished") > 0) {
-            TestLog.waitForLogContaining("Scroll", "inertia value: true");
+            TestLog.waitForLogContainingSubstrings("Scroll", "inertia value: true");
         }
     }
 

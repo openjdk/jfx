@@ -240,8 +240,7 @@ public class TestLog {
                           DEFAULT_TIMEOUT);
     }
 
-    public static String waitForLogContaining(String... s) throws InterruptedException {
+    public static String waitForLogContainingSubstrings(String... s) throws InterruptedException {
         return waitForLog(s, DEFAULT_TIMEOUT, false);
     }
-
 }

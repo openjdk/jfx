@@ -199,7 +199,7 @@ public class RotateTest extends ParameterizedTestBase {
                     + ", inertia value: false"));
         }
         if (TestLog.countLogContaining("Rotation finished") > 0) {
-            TestLog.waitForLogContaining("Rotation", "inertia value: true");
+            TestLog.waitForLogContainingSubstrings("Rotation", "inertia value: true");
         }
         TestLog.reset();
         p2 = device.addPoint(x2, y2);
