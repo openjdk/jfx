@@ -163,30 +163,30 @@ public class KeyInput {
             c = '/';
         } else if (shifted) {
             switch (key) {
-                case KeyEvent.VK_BACK_QUOTE: c = '~';
-                case KeyEvent.VK_COMMA: c = '<';
-                case KeyEvent.VK_PERIOD: c = '>';
-                case KeyEvent.VK_SLASH: c = '?';
-                case KeyEvent.VK_SEMICOLON: c = ':';
-                case KeyEvent.VK_QUOTE: c = '\"';
-                case KeyEvent.VK_BRACELEFT: c = '{';
-                case KeyEvent.VK_BRACERIGHT: c = '}';
-                case KeyEvent.VK_BACK_SLASH: c = '|';
-                case KeyEvent.VK_MINUS: c = '_';
-                case KeyEvent.VK_EQUALS: c = '+';
+                case KeyEvent.VK_BACK_QUOTE: c = '~'; break;
+                case KeyEvent.VK_COMMA: c = '<'; break;
+                case KeyEvent.VK_PERIOD: c = '>'; break;
+                case KeyEvent.VK_SLASH: c = '?'; break;
+                case KeyEvent.VK_SEMICOLON: c = ':'; break;
+                case KeyEvent.VK_QUOTE: c = '\"'; break;
+                case KeyEvent.VK_BRACELEFT: c = '{'; break;
+                case KeyEvent.VK_BRACERIGHT: c = '}'; break;
+                case KeyEvent.VK_BACK_SLASH: c = '|'; break;
+                case KeyEvent.VK_MINUS: c = '_'; break;
+                case KeyEvent.VK_EQUALS: c = '+'; break;
             }        } else {
             switch (key) {
-                case KeyEvent.VK_BACK_QUOTE: c = '`';
-                case KeyEvent.VK_COMMA: c = ',';
-                case KeyEvent.VK_PERIOD: c = '.';
-                case KeyEvent.VK_SLASH: c = '/';
-                case KeyEvent.VK_SEMICOLON: c = ';';
-                case KeyEvent.VK_QUOTE: c = '\'';
-                case KeyEvent.VK_BRACELEFT: c = '[';
-                case KeyEvent.VK_BRACERIGHT: c = ']';
-                case KeyEvent.VK_BACK_SLASH: c = '\\';
-                case KeyEvent.VK_MINUS: c = '-';
-                case KeyEvent.VK_EQUALS: c = '=';
+                case KeyEvent.VK_BACK_QUOTE: c = '`'; break;
+                case KeyEvent.VK_COMMA: c = ','; break;
+                case KeyEvent.VK_PERIOD: c = '.'; break;
+                case KeyEvent.VK_SLASH: c = '/'; break;
+                case KeyEvent.VK_SEMICOLON: c = ';'; break;
+                case KeyEvent.VK_QUOTE: c = '\''; break;
+                case KeyEvent.VK_BRACELEFT: c = '['; break;
+                case KeyEvent.VK_BRACERIGHT: c = ']'; break;
+                case KeyEvent.VK_BACK_SLASH: c = '\\'; break;
+                case KeyEvent.VK_MINUS: c = '-'; break;
+                case KeyEvent.VK_EQUALS: c = '='; break;
             }
         }
         return c == '\000' ? NO_CHAR : new char[] { c };
