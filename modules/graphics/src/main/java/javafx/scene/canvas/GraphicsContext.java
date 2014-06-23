@@ -64,7 +64,8 @@ import java.util.LinkedList;
  * This class is used to issue draw calls to a {@code Canvas} using a buffer. 
  * <p>
  * Each call pushes the necessary parameters onto the buffer
- * where it is executed on the image of the {@code Canvas} node.
+ * where they will be later rendered onto the image of the {@code Canvas} node
+ * by the rendering thread at the end of a pulse.
  * <p>
  * A {@code Canvas} only contains one {@code GraphicsContext}, and only one buffer.
  * If it is not attached to any scene, then it can be modified by any thread,
@@ -77,7 +78,362 @@ import java.util.LinkedList;
  * rules. 
  * <p>
  * A {@code GraphicsContext} also manages a stack of state objects that can
- * be saved or restored at anytime. 
+ * be saved or restored at anytime.
+ * <p>
+ * The {@code GraphicsContext} maintains the following rendering attributes
+ * which affect various subsets of the rendering methods:
+ * <table class="overviewSummary" style="width:80%; margin-left:auto; margin-right:auto">
+ * <tr>
+ * <th class="colLast" style="width:15%">Attribute</th>
+ * <th class="colLast" style="width:10%; text-align:center">Save/Restore?</th>
+ * <th class="colLast" style="width:10%; text-align:center">Default value</th>
+ * <th class="colLast">Description</th>
+ * </tr>
+ * 
+ * <tr><th colspan="3"><a name="comm-attr"><p align="center">Common Rendering Attributes</p></a></th></tr>
+ * <tr class="rowColor">
+ * <td class="colLast" style="width:15%">{@link #clip() Clip}</td>
+ * <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
+ * <td class="colLast" style="width:10%; text-align:center">No clipping</td>
+ * <td class="colLast">
+ * An anti-aliased intersection of various clip paths to which rendering
+ * is restricted.
+ * </td></tr>
+ * <tr class="altColor">
+ * <td class="colLast" style="width:15%">{@link #setGlobalAlpha(double) Global Alpha}</td>
+ * <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
+ * <td class="colLast" style="width:10%; text-align:center">{@code 1.0}</td>
+ * <td class="colLast">
+ * An opacity value that controls the visibility or fading of each rendering
+ * operation.
+ * </td></tr>
+ * <tr class="rowColor">
+ * <td class="colLast" style="width:15%">{@link #setGlobalBlendMode(javafx.scene.effect.BlendMode) Global Blend Mode}</td>
+ * <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
+ * <td class="colLast" style="width:10%; text-align:center">{@link BlendMode#SRC_OVER SRC_OVER}</td>
+ * <td class="colLast">
+ * A {@link BlendMode} enum value that controls how pixels from each rendering
+ * operation are composited into the existing image.
+ * </td></tr>
+ * <tr class="altColor">
+ * <td class="colLast" style="width:15%">{@link #setTransform(javafx.scene.transform.Affine) Transform}</td>
+ * <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
+ * <td class="colLast" style="width:10%; text-align:center">{@code Identity}</td>
+ * <td class="colLast">
+ * A 3x2 2D affine transformation matrix that controls how coordinates are
+ * mapped onto the logical pixels of the canvas image.
+ * </td></tr>
+ * <tr class="altColor">
+ * <td class="colLast" style="width:15%">{@link #setEffect(javafx.scene.effect.Effect) Effect}</td>
+ * <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
+ * <td class="colLast" style="width:10%; text-align:center">{@code null}</td>
+ * <td class="colLast">
+ * An {@link Effect} applied individually to each rendering operation.
+ * </td></tr>
+ * 
+ * <tr><th colspan="3"><a name="fill-attr"><p align="center">Fill Attributes</p></a></th></tr>
+ * <tr class="rowColor">
+ * <td class="colLast" style="width:15%">{@link #setFill(javafx.scene.paint.Paint) Fill Paint}</td>
+ * <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
+ * <td class="colLast" style="width:10%; text-align:center">{@link Color#BLACK BLACK}</td>
+ * <td class="colLast">
+ * The {@link Paint} to be applied to the interior of shapes in a
+ * fill operation.
+ * </td></tr>
+ * 
+ * <tr><th colspan="3"><a name="strk-attr"><p align="center">Stroke Attributes</p></a></th></tr>
+ * <tr class="rowColor">
+ * <td class="colLast" style="width:15%">{@link #setStroke(javafx.scene.paint.Paint) Stroke Paint}</td>
+ * <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
+ * <td class="colLast" style="width:10%; text-align:center">{@link Color#BLACK BLACK}</td>
+ * <td class="colLast">
+ * The {@link Paint} to be applied to the boundary of shapes in a
+ * stroke operation.
+ * </td></tr>
+ * <tr class="altColor">
+ * <td class="colLast" style="width:15%">{@link #setLineWidth(double) Line Width}</td>
+ * <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
+ * <td class="colLast" style="width:10%; text-align:center">{@code 1.0}</td>
+ * <td class="colLast">
+ * The width of the stroke applied to the boundary of shapes in a
+ * stroke operation.
+ * </td></tr>
+ * <tr class="rowColor">
+ * <td class="colLast" style="width:15%">{@link #setLineCap(javafx.scene.shape.StrokeLineCap) Line Cap}</td>
+ * <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
+ * <td class="colLast" style="width:10%; text-align:center">{@link StrokeLineCap#SQUARE SQUARE}</td>
+ * <td class="colLast">
+ * The style of the end caps applied to the beginnings and ends of each
+ * dash and/or subpath in a stroke operation.
+ * </td></tr>
+ * <tr class="altColor">
+ * <td class="colLast" style="width:15%">{@link #setLineJoin(javafx.scene.shape.StrokeLineJoin) Line Join}</td>
+ * <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
+ * <td class="colLast" style="width:10%; text-align:center">{@link StrokeLineJoin#MITER MITER}</td>
+ * <td class="colLast">
+ * The style of the joins applied between individual segments in the boundary
+ * paths of shapes in a stroke operation.
+ * </td></tr>
+ * <tr class="rowColor">
+ * <td class="colLast" style="width:15%">{@link #setMiterLimit(double) Miter Limit}</td>
+ * <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
+ * <td class="colLast" style="width:10%; text-align:center">{@code 10.0}</td>
+ * <td class="colLast">
+ * The ratio limit of how far a {@link StrokeLineJoin#MITER MITER} line join
+ * may extend in the direction of a sharp corner between segments in the
+ * boundary path of a shape, relative to the line width, before it is truncated
+ * to a {@link StrokeLineJoin#BEVEL BEVEL} join in a stroke operation.
+ * </td></tr>
+ * 
+ * <tr><th colspan="3"><a name="text-attr"><p align="center">Text Attributes</p></a></th></tr>
+ * <tr class="rowColor">
+ * <td class="colLast" style="width:15%">{@link #setFont(javafx.scene.text.Font) Font}</td>
+ * <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
+ * <td class="colLast" style="width:10%; text-align:center">{@link Font#getDefault() Default Font}</td>
+ * <td class="colLast">
+ * The font used for all fill and stroke text operations.
+ * </td></tr>
+ * <tr class="altColor">
+ * <td class="colLast" style="width:15%">{@link #setTextAlign(javafx.scene.text.TextAlignment) Text Align}</td>
+ * <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
+ * <td class="colLast" style="width:10%; text-align:center">{@link TextAlignment#LEFT LEFT}</td>
+ * <td class="colLast">
+ * The horizontal alignment of text with respect to the {@code X} coordinate
+ * specified in the text operation.
+ * </td></tr>
+ * <tr class="rowColor">
+ * <td class="colLast" style="width:15%">{@link #setTextBaseline(javafx.geometry.VPos) Text Baseline}</td>
+ * <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
+ * <td class="colLast" style="width:10%; text-align:center">{@link VPos#BASELINE BASELINE}</td>
+ * <td class="colLast">
+ * The vertical position of the text relative to the {@code Y} coordinate
+ * specified in the text operation.
+ * </td></tr>
+ * 
+ * <tr><th colspan="3"><a name="path-attr"><p align="center">Path Attributes</p></a></th></tr>
+ * <tr class="rowColor">
+ * <td class="colLast" style="width:15%">{@link #beginPath() Current Path}</td>
+ * <td class="colLast" style="width:10%; text-align:center; color:#c00">No</td>
+ * <td class="colLast" style="width:10%; text-align:center">Empty path</td>
+ * <td class="colLast">
+ * The path constructed using various path construction methods to be used
+ * in various path filling, stroking, or clipping operations.
+ * </td></tr>
+ * <tr class="altColor">
+ * <td class="colLast" style="width:15%">{@link #setFillRule(javafx.scene.shape.FillRule) Fill Rule}</td>
+ * <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
+ * <td class="colLast" style="width:10%; text-align:center">{@link FillRule#NON_ZERO NON_ZERO}</td>
+ * <td class="colLast">
+ * The method used to determine the interior of paths for a path fill or
+ * clip operation.
+ * </td></tr>
+ * </table>
+ * 
+ * <p>
+ * <a name="attr-ops-table">
+ * The various rendering methods on the {@code GraphicsContext} use the
+ * following sets of rendering attributes:
+ * </a>
+ * <table class="overviewSummary" style="width:80%; margin-left:auto; margin-right:auto">
+ * <tr>
+ * <th class="colLast" style="width:25%">Method</th>
+ * <th class="colLast" style="width:15%; text-align:center"><a href="#comm-attr">Common Rendering Attributes</a></th>
+ * <th class="colLast" style="width:15%; text-align:center"><a href="#fill-attr">Fill Attributes</a></th>
+ * <th class="colLast" style="width:15%; text-align:center"><a href="#strk-attr">Stroke Attributes</a></th>
+ * <th class="colLast" style="width:15%; text-align:center"><a href="#text-attr">Text Attributes</a></th>
+ * <th class="colLast" style="width:15%; text-align:center"><a href="#path-attr">Path Attributes</a></th>
+ * </tr>
+ * 
+ * <tr><th colspan="1"><p align="center">Basic Shape Rendering</p></th></tr>
+ * <tr class="rowColor">
+ * <td class="colLast" style="width:25%">
+ * <a name="fill-basic-ops">
+ * {@link #fillRect(double, double, double, double) fillRect()},
+ * {@link #fillRoundRect(double, double, double, double, double, double) fillRoundRect()},
+ * {@link #fillOval(double, double, double, double) fillOval()},
+ * {@link #fillArc(double, double, double, double, double, double, javafx.scene.shape.ArcType) fillArc()}
+ * </a>
+ * </td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes</td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes</td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
+ * </tr>
+ * <tr class="altColor">
+ * <td class="colLast" style="width:25%">
+ * <a name="strk-basic-ops">
+ * {@link #strokeLine(double, double, double, double) strokeLine()},
+ * {@link #strokeRect(double, double, double, double) strokeRect()},
+ * {@link #strokeRoundRect(double, double, double, double, double, double) strokeRoundRect()},
+ * {@link #strokeOval(double, double, double, double) strokeOval()},
+ * {@link #strokeArc(double, double, double, double, double, double, javafx.scene.shape.ArcType) strokeArc()}
+ * </a>
+ * </td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes</td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes</td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
+ * </tr>
+ * <tr class="rowColor">
+ * <td class="colLast" style="width:25%">
+ * <a name="fill-basic-ops">
+ * {@link #clearRect(double, double, double, double) clearRect()}
+ * </a>
+ * </td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes <a href="#base-fn-1">[1]</a></td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
+ * </tr>
+ * <tr class="altColor">
+ * <td class="colLast" style="width:25%">
+ * <a name="strk-basic-ops">
+ * {@link #fillPolygon(double[], double[], int) fillPolygon()}
+ * </a>
+ * </td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes</td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes</td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes <a href="#base-fn-2">[2]</a></td>
+ * </tr>
+ * <tr class="rowColor">
+ * <td class="colLast" style="width:25%">
+ * <a name="strk-basic-ops">
+ * {@link #strokePolygon(double[], double[], int) strokePolygon()},
+ * {@link #strokePolyline(double[], double[], int) strokePolyline()}
+ * </a>
+ * </td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes</td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes</td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
+ * </tr>
+ * <tr><td colspan="6"><p align="center">
+ * <a name="base-fn-1">[1]</a>Only the Transform, Clip, and Effect apply to clearRect()<br>
+ * <a name="base-fn-2">[2]</a>Only the Fill Rule applies to fillPolygon(), the current path is left unchanged
+ * </p></td></tr>
+ * 
+ * <tr><th colspan="1"><p align="center">Text Rendering</p></th></tr>
+ * <tr class="rowColor">
+ * <td class="colLast" style="width:25%">
+ * <a name="fill-text-ops">
+ * {@link #fillText(java.lang.String, double, double) fillText()},
+ * {@link #fillText(java.lang.String, double, double, double) fillText(with maxWidth)}
+ * </a>
+ * </td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes</td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes</td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes</td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
+ * </tr>
+ * <tr class="altColor">
+ * <td class="colLast" style="width:25%">
+ * <a name="strk-text-ops">
+ * {@link #strokeText(java.lang.String, double, double) strokeText()},
+ * {@link #strokeText(java.lang.String, double, double, double) strokeText(with maxWidth)}
+ * </a>
+ * </td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes</td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes</td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes</td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
+ * </tr>
+ * 
+ * <tr><th colspan="1"><p align="center">Path Rendering</p></th></tr>
+ * <tr class="rowColor">
+ * <td class="colLast" style="width:25%">
+ * {@link #beginPath() beginPath()},
+ * {@link #moveTo(double, double) moveTo()},
+ * {@link #lineTo(double, double) lineTo()},
+ * {@link #quadraticCurveTo(double, double, double, double) quadraticCurveTo()},
+ * {@link #bezierCurveTo(double, double, double, double, double, double) bezierCurveTo()},
+ * {@link #arc(double, double, double, double, double, double) arc()},
+ * {@link #arcTo(double, double, double, double, double) arcTo()},
+ * {@link #appendSVGPath(java.lang.String) appendSVGPath()},
+ * {@link #closePath() closePath()},
+ * {@link #rect(double, double, double, double) rect()}
+ * </td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes <a href="#path-fn-3">[3]</a></td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
+ * </tr>
+ * <tr class="altColor">
+ * <td class="colLast" style="width:25%">
+ * <a name="fill-path-ops">
+ * {@link #fill() fill()}
+ * </a>
+ * </td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes <a href="#path-fn-3">[3]</a></td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes</td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes</td>
+ * </tr>
+ * <tr class="rowColor">
+ * <td class="colLast" style="width:25%">
+ * <a name="strk-path-ops">
+ * {@link #stroke() stroke()}
+ * </a>
+ * </td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes <a href="#path-fn-3">[3]</a></td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes</td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes <a href="#path-fn-4">[4]</a></td>
+ * </tr>
+ * <tr class="altColor">
+ * <td class="colLast" style="width:25%">
+ * <a name="clip-path-ops">
+ * {@link #clip() clip()}
+ * </a>
+ * </td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes</td>
+ * </tr>
+ * <tr><td colspan="6"><p align="center">
+ * <a name="path-fn-3">[3]</a>Transform applied only during path construction<br>
+ * <a name="path-fn-4">[4]</a>Fill Rule only used for fill() and clip()
+ * </p></td></tr>
+ * 
+ * <tr><th colspan="1"><p align="center">Image Rendering</p></th></tr>
+ * <tr class="rowColor">
+ * <td class="colLast" style="width:25%">
+ * <a name="draw-img-ops">
+ * {@link #drawImage(javafx.scene.image.Image, double, double) drawImage(all forms)}
+ * </a>
+ * </td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes</td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
+ * </tr>
+ * 
+ * <tr><th colspan="1"><p align="center">Miscellaneous</p></th></tr>
+ * <tr class="rowColor">
+ * <td class="colLast" style="width:25%">
+ * {@link #applyEffect(javafx.scene.effect.Effect) applyEffect()},
+ * {@link #getPixelWriter() PixelWriter methods}
+ * </td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
+ * </tr>
+ * </table>
  *
  * <p>Example:</p>
  *
@@ -511,14 +867,14 @@ public final class GraphicsContext {
      *     <li>Line Cap</li>
      *     <li>Line Join</li>
      *     <li>Miter Limit</li>
-     *     <li>Number of Clip Paths</li>
+     *     <li>Clip</li>
      *     <li>Font</li>
      *     <li>Text Align</li>
      *     <li>Text Baseline</li>
      *     <li>Effect</li>
      *     <li>Fill Rule</li>
      * </ul>
-     * This method does NOT alter the current state in any way. Also, not that
+     * This method does NOT alter the current state in any way. Also, note that
      * the current path is not saved.
      */
     public void save() {
@@ -540,13 +896,14 @@ public final class GraphicsContext {
      *     <li>Line Cap</li>
      *     <li>Line Join</li>
      *     <li>Miter Limit</li>
-     *     <li>Number of Clip Paths</li>
+     *     <li>Clip</li>
      *     <li>Font</li>
      *     <li>Text Align</li>
      *     <li>Text Baseline</li>
      *     <li>Effect</li>
      *     <li>Fill Rule</li>
      * </ul>
+     * Note that the current path is not restored.
      */
     public void restore() {
         if (!stateStack.isEmpty()) {
@@ -652,7 +1009,9 @@ public final class GraphicsContext {
     }
     
     /**
-     * Returns a copy of the current transform. 
+     * Copies the current transform into the supplied object, creating
+     * a new {@link Affine} object if it is null, and returns the object
+     * containing the copy.
      * 
      * @param xform A transform object that will be used to hold the result.
      * If xform is non null, then this method will copy the current transform 
@@ -694,9 +1053,16 @@ public final class GraphicsContext {
 
     /**
      * Sets the global alpha of the current state.
+     * The default value is {@code 1.0}.
+     * Any valid double can be set, but only values in the range
+     * {@code [0.0, 1.0]} are valid and the nearest value in that
+     * range will be used for rendering.
+     * The global alpha is a <a href="#comm-attr">common attribute</a>
+     * used for nearly all rendering methods as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>.
      * 
-     * @param alpha value in the range {@code 0.0-1.0}. The value is clamped if it is 
-     * out of range.
+     * @param alpha the new alpha value, clamped to {@code [0.0, 1.0]}
+     *              during actual use.
      */
     public void setGlobalAlpha(double alpha) {
         if (curState.globalAlpha != alpha) {
@@ -708,6 +1074,10 @@ public final class GraphicsContext {
     
     /**
      * Gets the current global alpha.
+     * The default value is {@code 1.0}.
+     * The global alpha is a <a href="#comm-attr">common attribute</a>
+     * used for nearly all rendering methods as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>.
      * 
      * @return the current global alpha. 
      */
@@ -717,7 +1087,11 @@ public final class GraphicsContext {
 
     /**
      * Sets the global blend mode.
+     * The default value is {@link BlendMode#SRC_OVER SRC_OVER}.
      * A {@code null} value will be ignored and the current value will remain unchanged.
+     * The blend mode is a <a href="#comm-attr">common attribute</a>
+     * used for nearly all rendering methods as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>.
      * 
      * @param op the {@code BlendMode} that will be set or null.
      */
@@ -732,6 +1106,10 @@ public final class GraphicsContext {
     
     /**
      * Gets the global blend mode.
+     * The default value is {@link BlendMode#SRC_OVER SRC_OVER}.
+     * The blend mode is a <a href="#comm-attr">common attribute</a>
+     * used for nearly all rendering methods as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>.
      * 
      * @return the global {@code BlendMode} of the current state.
      */
@@ -740,8 +1118,11 @@ public final class GraphicsContext {
     }
 
     /**
-     * Sets the current fill attribute. This method affects the paint used for any
-     * method with "fill" in it. For Example, fillRect(...), fillOval(...).
+     * Sets the current fill paint attribute.
+     * The default value is {@link Color#BLACK BLACK}.
+     * The fill paint is a <a href="#fill-attr">fill attribute</a>
+     * used for any of the fill methods as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>.
      * A {@code null} value will be ignored and the current value will remain unchanged.
      * 
      * @param p The {@code Paint} to be used as the fill {@code Paint} or null.
@@ -754,8 +1135,11 @@ public final class GraphicsContext {
     }
     
     /**
-     * Gets the current fill attribute. This method affects the paint used for any
-     * method with "fill" in it. For Example, fillRect(...), fillOval(...).
+     * Gets the current fill paint attribute.
+     * The default value is {@link Color#BLACK BLACK}.
+     * The fill paint is a <a href="#fill-attr">fill attribute</a>
+     * used for any of the fill methods as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>.
      * 
      * @return p The {@code Paint} to be used as the fill {@code Paint}.
      */
@@ -764,7 +1148,11 @@ public final class GraphicsContext {
     }
 
     /**
-     * Sets the current stroke.
+     * Sets the current stroke paint attribute.
+     * The default value is {@link Color#BLACK BLACK}.
+     * The stroke paint is a <a href="#strk-attr">stroke attribute</a>
+     * used for any of the stroke methods as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>.
      * A {@code null} value will be ignored and the current value will remain unchanged.
      * 
      * @param p The Paint to be used as the stroke Paint or null.
@@ -778,6 +1166,10 @@ public final class GraphicsContext {
     
     /**
      * Gets the current stroke.
+     * The default value is {@link Color#BLACK BLACK}.
+     * The stroke paint is a <a href="#strk-attr">stroke attribute</a>
+     * used for any of the stroke methods as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>.
      * 
      * @return the {@code Paint} to be used as the stroke {@code Paint}.
      */
@@ -787,6 +1179,12 @@ public final class GraphicsContext {
 
     /**
      * Sets the current line width.
+     * The default value is {@code 1.0}.
+     * The line width is a <a href="#strk-attr">stroke attribute</a>
+     * used for any of the stroke methods as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>.
+     * An infinite or non-positive value outside of the range {@code (0, +inf)}
+     * will be ignored and the current value will remain unchanged.
      * 
      * @param lw value in the range {0-positive infinity}, with any other value 
      * being ignored and leaving the value unchanged.
@@ -804,6 +1202,10 @@ public final class GraphicsContext {
     
     /**
      * Gets the current line width.
+     * The default value is {@code 1.0}.
+     * The line width is a <a href="#strk-attr">stroke attribute</a>
+     * used for any of the stroke methods as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>.
      * 
      * @return value between 0 and infinity.
      */
@@ -813,6 +1215,10 @@ public final class GraphicsContext {
 
     /**
      * Sets the current stroke line cap.
+     * The default value is {@link StrokeLineCap#SQUARE SQUARE}.
+     * The line cap is a <a href="#strk-attr">stroke attribute</a>
+     * used for any of the stroke methods as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>.
      * A {@code null} value will be ignored and the current value will remain unchanged.
      * 
      * @param cap {@code StrokeLineCap} with a value of Butt, Round, or Square or null.
@@ -833,6 +1239,10 @@ public final class GraphicsContext {
     
     /**
      * Gets the current stroke line cap. 
+     * The default value is {@link StrokeLineCap#SQUARE SQUARE}.
+     * The line cap is a <a href="#strk-attr">stroke attribute</a>
+     * used for any of the stroke methods as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>.
      * 
      * @return {@code StrokeLineCap} with a value of Butt, Round, or Square.
      */
@@ -842,6 +1252,10 @@ public final class GraphicsContext {
 
     /**
      * Sets the current stroke line join.
+     * The default value is {@link StrokeLineJoin#MITER}.
+     * The line join is a <a href="#strk-attr">stroke attribute</a>
+     * used for any of the stroke methods as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>.
      * A {@code null} value will be ignored and the current value will remain unchanged.
      * 
      * @param join {@code StrokeLineJoin} with a value of Miter, Bevel, or Round or null.
@@ -862,6 +1276,10 @@ public final class GraphicsContext {
     
     /**
      * Gets the current stroke line join.
+     * The default value is {@link StrokeLineJoin#MITER}.
+     * The line join is a <a href="#strk-attr">stroke attribute</a>
+     * used for any of the stroke methods as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>.
      * 
      * @return {@code StrokeLineJoin} with a value of Miter, Bevel, or Round.
      */
@@ -871,6 +1289,12 @@ public final class GraphicsContext {
 
     /**
      * Sets the current miter limit.
+     * The default value is {@code 10.0}.
+     * The miter limit is a <a href="#strk-attr">stroke attribute</a>
+     * used for any of the stroke methods as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>.
+     * An infinite or non-positive value outside of the range {@code (0, +inf)}
+     * will be ignored and the current value will remain unchanged.
      * 
      * @param ml miter limit value between 0 and positive infinity with 
      * any other value being ignored and leaving the value unchanged.
@@ -888,6 +1312,10 @@ public final class GraphicsContext {
     
     /**
      * Gets the current miter limit.
+     * The default value is {@code 10.0}.
+     * The miter limit is a <a href="#strk-attr">stroke attribute</a>
+     * used for any of the stroke methods as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>.
      * 
      * @return the miter limit value in the range {@code 0.0-positive infinity}
      */
@@ -897,6 +1325,10 @@ public final class GraphicsContext {
 
     /**
      * Sets the current Font.
+     * The default value is specified by {@link Font#getDefault()}.
+     * The font is a <a href="#text-attr">text attribute</a>
+     * used for any of the text methods as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>.
      * A {@code null} value will be ignored and the current value will remain unchanged.
      * 
      * @param f the Font or null.
@@ -912,6 +1344,10 @@ public final class GraphicsContext {
     
     /**
      * Gets the current Font.
+     * The default value is specified by {@link Font#getDefault()}.
+     * The font is a <a href="#text-attr">text attribute</a>
+     * used for any of the text methods as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>.
      * 
      * @return the Font 
      */
@@ -921,6 +1357,10 @@ public final class GraphicsContext {
 
     /**
      * Defines horizontal text alignment, relative to the text {@code x} origin.
+     * The default value is {@link TextAlignment#LEFT LEFT}.
+     * The text alignment is a <a href="#text-attr">text attribute</a>
+     * used for any of the text methods as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>.
      * <p>
      * Let horizontal bounds represent the logical width of a single line of
      * text. Where each line of text has a separate horizontal bounds.
@@ -958,6 +1398,10 @@ public final class GraphicsContext {
     
     /**
      * Gets the current {@code TextAlignment}.
+     * The default value is {@link TextAlignment#LEFT LEFT}.
+     * The text alignment is a <a href="#text-attr">text attribute</a>
+     * used for any of the text methods as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>.
      * 
      * @return {@code TextAlignment} with values of Left, Center, Right, or
      * Justify.
@@ -968,6 +1412,10 @@ public final class GraphicsContext {
 
     /**
      * Sets the current Text Baseline.
+     * The default value is {@link VPos#BASELINE BASELINE}.
+     * The text baseline is a <a href="#text-attr">text attribute</a>
+     * used for any of the text methods as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>.
      * A {@code null} value will be ignored and the current value will remain unchanged.
      * 
      * @param baseline {@code VPos} with values of Top, Center, Baseline, or Bottom or null.
@@ -989,6 +1437,10 @@ public final class GraphicsContext {
     
     /**
      * Gets the current Text Baseline.
+     * The default value is {@link VPos#BASELINE BASELINE}.
+     * The text baseline is a <a href="#text-attr">text attribute</a>
+     * used for any of the text methods as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>.
      * 
      * @return {@code VPos} with values of Top, Center, Baseline, or Bottom
      */
@@ -1000,6 +1452,14 @@ public final class GraphicsContext {
      * Fills the given string of text at position x, y
      * with the current fill paint attribute.
      * A {@code null} text value will be ignored.
+     * <p>
+     * This method will be affected by any of the
+     * <a href="#comm-attr">global common</a>,
+     * <a href="#fill-attr">fill</a>,
+     * or <a href="#text-attr">text</a>
+     * attributes as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>.
+     * </p>
      * 
      * @param text the string of text or null.
      * @param x position on the x axis.
@@ -1013,6 +1473,14 @@ public final class GraphicsContext {
      * Draws the given string of text at position x, y
      * with the current stroke paint attribute.
      * A {@code null} text value will be ignored.
+     * <p>
+     * This method will be affected by any of the
+     * <a href="#comm-attr">global common</a>,
+     * <a href="#strk-attr">stroke</a>,
+     * or <a href="#text-attr">text</a>
+     * attributes as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>.
+     * </p>
      * 
      * @param text the string of text or null.
      * @param x position on the x axis.
@@ -1024,10 +1492,17 @@ public final class GraphicsContext {
 
     /**
      * Fills text and includes a maximum width of the string. 
-     * 
      * If the width of the text extends past max width, then it will be sized
      * to fit.
      * A {@code null} text value will be ignored.
+     * <p>
+     * This method will be affected by any of the
+     * <a href="#comm-attr">global common</a>,
+     * <a href="#fill-attr">fill</a>,
+     * or <a href="#text-attr">text</a>
+     * attributes as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>.
+     * </p>
      * 
      * @param text the string of text or null.
      * @param x position on the x axis.
@@ -1040,11 +1515,18 @@ public final class GraphicsContext {
     }
 
     /**
-     * Draws text with stroke paint and includes a maximum width of the string. 
-     * 
+     * Draws text with stroke paint and includes a maximum width of the string.
      * If the width of the text extends past max width, then it will be sized
      * to fit.
      * A {@code null} text value will be ignored.
+     * <p>
+     * This method will be affected by any of the
+     * <a href="#comm-attr">global common</a>,
+     * <a href="#strk-attr">stroke</a>,
+     * or <a href="#text-attr">text</a>
+     * attributes as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>.
+     * </p>
      * 
      * @param text the string of text or null.
      * @param x position on the x axis.
@@ -1058,8 +1540,13 @@ public final class GraphicsContext {
 
 
     /**
-     * Set the filling rule constant for determining the interior of the path.
+     * Set the filling rule attribute for determining the interior of paths
+     * in fill or clip operations.
+     * The default value is {@code FillRule.NON_ZERO}.
      * A {@code null} value will be ignored and the current value will remain unchanged.
+     * The fill rule is a <a href="#path-attr">path attribute</a>
+     * used for any of the fill or clip path methods as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>.
      *
      * @param fillRule {@code FillRule} with a value of  Even_odd or Non_zero or null.
      */
@@ -1077,17 +1564,27 @@ public final class GraphicsContext {
      }
     
     /**
-     * Get the filling rule constant for determining the interior of the path.
+     * Get the filling rule attribute for determining the interior of paths
+     * in fill and clip operations.
      * The default value is {@code FillRule.NON_ZERO}.
+     * The fill rule is a <a href="#path-attr">path attribute</a>
+     * used for any of the fill or clip path methods as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>.
      *
      * @return current fill rule.
      */
      public FillRule getFillRule() {
          return curState.fillRule;
      }
-    
+
     /**
-     * Starts a Path 
+     * Resets the current path to empty.
+     * The default path is empty.
+     * The current path is a <a href="#path-attr">path attribute</a>
+     * used for any of the path methods as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>
+     * and <b>is not affected</b> by the {@link #save()} and
+     * {@link #restore()} operations.
      */
     public void beginPath() {
         path.reset();
@@ -1096,6 +1593,13 @@ public final class GraphicsContext {
 
     /**
      * Issues a move command for the current path to the given x,y coordinate.
+     * The coordinates are transformed by the current transform as they are
+     * added to the path and unaffected by subsequent changes to the transform.
+     * The current path is a <a href="#path-attr">path attribute</a>
+     * used for any of the path methods as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>
+     * and <b>is not affected</b> by the {@link #save()} and
+     * {@link #restore()} operations.
      * 
      * @param x0 the X position for the move to command.
      * @param y0 the Y position for the move to command.
@@ -1109,8 +1613,15 @@ public final class GraphicsContext {
     }
 
     /**
-     * Adds segments to the current path to make a line at the given x,y
+     * Adds segments to the current path to make a line to the given x,y
      * coordinate.
+     * The coordinates are transformed by the current transform as they are
+     * added to the path and unaffected by subsequent changes to the transform.
+     * The current path is a <a href="#path-attr">path attribute</a>
+     * used for any of the path methods as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>
+     * and <b>is not affected</b> by the {@link #save()} and
+     * {@link #restore()} operations.
      * 
      * @param x1 the X coordinate of the ending point of the line.
      * @param y1 the Y coordinate of the ending point of the line.
@@ -1127,7 +1638,14 @@ public final class GraphicsContext {
     }
 
     /**
-     * Adds segments to the current path to make a quadratic curve.
+     * Adds segments to the current path to make a quadratic Bezier curve.
+     * The coordinates are transformed by the current transform as they are
+     * added to the path and unaffected by subsequent changes to the transform.
+     * The current path is a <a href="#path-attr">path attribute</a>
+     * used for any of the path methods as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>
+     * and <b>is not affected</b> by the {@link #save()} and
+     * {@link #restore()} operations.
      * 
      * @param xc the X coordinate of the control point
      * @param yc the Y coordinate of the control point
@@ -1148,12 +1666,19 @@ public final class GraphicsContext {
     }
 
     /**
-     * Adds segments to the current path to make a cubic bezier curve.
+     * Adds segments to the current path to make a cubic Bezier curve.
+     * The coordinates are transformed by the current transform as they are
+     * added to the path and unaffected by subsequent changes to the transform.
+     * The current path is a <a href="#path-attr">path attribute</a>
+     * used for any of the path methods as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>
+     * and <b>is not affected</b> by the {@link #save()} and
+     * {@link #restore()} operations.
      * 
-     * @param xc1 the X coordinate of first bezier control point.
-     * @param yc1 the Y coordinate of the first bezier control point.
-     * @param xc2 the X coordinate of the second bezier control point.
-     * @param yc2 the Y coordinate of the second bezier control point.
+     * @param xc1 the X coordinate of first Bezier control point.
+     * @param yc1 the Y coordinate of the first Bezier control point.
+     * @param xc2 the X coordinate of the second Bezier control point.
+     * @param yc2 the Y coordinate of the second Bezier control point.
      * @param x1  the X coordinate of the end point.
      * @param y1  the Y coordinate of the end point.
      */
@@ -1174,6 +1699,46 @@ public final class GraphicsContext {
 
     /**
      * Adds segments to the current path to make an arc.
+     * The coordinates are transformed by the current transform as they are
+     * added to the path and unaffected by subsequent changes to the transform.
+     * The current path is a <a href="#path-attr">path attribute</a>
+     * used for any of the path methods as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>
+     * and <b>is not affected</b> by the {@link #save()} and
+     * {@link #restore()} operations.
+     * <p>
+     * If {@code p0} is the current point in the path and {@code p1} is the
+     * point specified by {@code (x1, y1)} and {@code p2} is the point
+     * specified by {@code (x2, y2)}, then the arc segments appended will
+     * be segments along the circumference of a circle of the specified
+     * radius touching and inscribed into the convex (interior) side of
+     * {@code p0->p1->p2}.  The path will contain a line segment (if
+     * needed) to the tangent point between that circle and {@code p0->p1}
+     * followed by circular arc segments to reach the tangent point between
+     * the circle and {@code p1->p2} and will end with the current point at
+     * that tangent point (not at {@code p2}).
+     * Note that the radius and circularity of the arc segments will be
+     * measured or considered relative to the current transform, but the
+     * resulting segments that are computed from those untransformed
+     * points will then be transformed when they are added to the path.
+     * Since all computation is done in untransformed space, but the
+     * pre-existing path segments are all transformed, the ability to
+     * correctly perform the computation may implicitly depend on being
+     * able to inverse transform the current end of the current path back
+     * into untransformed coordinates.
+     * </p>
+     * <p>
+     * If there is no way to compute and inscribe the indicated circle
+     * for any reason then the entire operation will simply append segments
+     * to force a line to point {@code p1}.  Possible reasons that the
+     * computation may fail include:
+     * <ul>
+     * <li>The current path is empty.</li>
+     * <li>The segments {@code p0->p1->p2} are colinear.</li>
+     * <li>the current transform is non-invertible so that the current end
+     * point of the current path cannot be untransformed for computation.</li>
+     * </ul>
+     * </p>
      * 
      * @param x1 the X coordinate of the first point of the arc.
      * @param y1 the Y coordinate of the first point of the arc.
@@ -1336,7 +1901,14 @@ public final class GraphicsContext {
     /**
      * Adds path elements to the current path to make an arc that uses Euclidean
      * degrees. This Euclidean orientation sweeps from East to North, then West,
-     * then South, then back to East. 
+     * then South, then back to East.
+     * The coordinates are transformed by the current transform as they are
+     * added to the path and unaffected by subsequent changes to the transform.
+     * The current path is a <a href="#path-attr">path attribute</a>
+     * used for any of the path methods as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>
+     * and <b>is not affected</b> by the {@link #save()} and
+     * {@link #restore()} operations.
      *
      * @param centerX the center x position of the arc.
      * @param centerY the center y position of the arc.
@@ -1362,6 +1934,13 @@ public final class GraphicsContext {
 
     /**
      * Adds path elements to the current path to make a rectangle.
+     * The coordinates are transformed by the current transform as they are
+     * added to the path and unaffected by subsequent changes to the transform.
+     * The current path is a <a href="#path-attr">path attribute</a>
+     * used for any of the path methods as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>
+     * and <b>is not affected</b> by the {@link #save()} and
+     * {@link #restore()} operations.
      * 
      * @param x x position of the upper left corner of the rectangle.
      * @param y y position of the upper left corner of the rectangle.
@@ -1395,8 +1974,15 @@ public final class GraphicsContext {
      * Appends an SVG Path string to the current path. If there is no current 
      * path the string must then start with either type of move command.
      * A {@code null} value or incorrect SVG path will be ignored.
+     * The coordinates are transformed by the current transform as they are
+     * added to the path and unaffected by subsequent changes to the transform.
+     * The current path is a <a href="#path-attr">path attribute</a>
+     * used for any of the path methods as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>
+     * and <b>is not affected</b> by the {@link #save()} and
+     * {@link #restore()} operations.
+     * 
      * @param svgpath the SVG Path string.
-     *
      */
     public void appendSVGPath(String svgpath) {
         if (svgpath == null) return;
@@ -1462,6 +2048,11 @@ public final class GraphicsContext {
 
     /**
      * Closes the path.
+     * The current path is a <a href="#path-attr">path attribute</a>
+     * used for any of the path methods as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>
+     * and <b>is not affected</b> by the {@link #save()} and
+     * {@link #restore()} operations.
      */
     public void closePath() {
         if (path.getNumCommands() > 0) {
@@ -1472,6 +2063,18 @@ public final class GraphicsContext {
 
     /**
      * Fills the path with the current fill paint.
+     * <p>
+     * This method will be affected by any of the
+     * <a href="#comm-attr">global common</a>,
+     * <a href="#fill-attr">fill</a>,
+     * or <a href="#path-attr">path</a>
+     * attributes as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>.
+     * Note that the path segments were transformed as they were originally
+     * added to the current path so the current transform will not affect
+     * those path segments again, but it may affect other attributes in
+     * affect at the time of the {@code fill()} operation.
+     * </p>
      */
     public void fill() {
         writePath(NGCanvas.FILL_PATH);
@@ -1479,13 +2082,39 @@ public final class GraphicsContext {
 
     /**
      * Strokes the path with the current stroke paint.
+     * <p>
+     * This method will be affected by any of the
+     * <a href="#comm-attr">global common</a>,
+     * <a href="#strk-attr">stroke</a>,
+     * or <a href="#path-attr">path</a>
+     * attributes as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>.
+     * Note that the path segments were transformed as they were originally
+     * added to the current path so the current transform will not affect
+     * those path segments again, but it may affect other attributes in
+     * affect at the time of the {@code stroke()} operation.
+     * </p>
      */
     public void stroke() {
         writePath(NGCanvas.STROKE_PATH);
     }
 
     /**
-     * Clips using the current path 
+     * Intersects the current clip with the current path and applies it to
+     * subsequent rendering operation as an anti-aliased mask.
+     * The current clip is a <a href="#comm-attr">common attribute</a>
+     * used for nearly all rendering operations as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>.
+     * <p>
+     * This method will itself be affected only by the
+     * <a href="#path-attr">path</a>
+     * attributes as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>.
+     * Note that the path segments were transformed as they were originally
+     * added to the current path so the current transform will not affect
+     * those path segments again, but it may affect other attributes in
+     * affect at the time of the {@code stroke()} operation.
+     * </p>
      */
     public void clip() {
         Path2D clip = new Path2D(path);
@@ -1512,6 +2141,10 @@ public final class GraphicsContext {
 
     /**
      * Clears a portion of the canvas with a transparent color value.
+     * <p>
+     * This method will be affected only by the current transform, clip,
+     * and effect.
+     * </p>
      * 
      * @param x X position of the upper left corner of the rectangle.
      * @param y Y position of the upper left corner of the rectangle.
@@ -1527,6 +2160,13 @@ public final class GraphicsContext {
 
     /**
      * Fills a rectangle using the current fill paint.
+     * <p>
+     * This method will be affected by any of the
+     * <a href="#comm-attr">global common</a>
+     * or <a href="#fill-attr">fill</a>
+     * attributes as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>.
+     * </p>
      * 
      * @param x the X position of the upper left corner of the rectangle.
      * @param y the Y position of the upper left corner of the rectangle.
@@ -1542,6 +2182,13 @@ public final class GraphicsContext {
 
     /**
      * Strokes a rectangle using the current stroke paint.
+     * <p>
+     * This method will be affected by any of the
+     * <a href="#comm-attr">global common</a>
+     * or <a href="#strk-attr">stroke</a>
+     * attributes as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>.
+     * </p>
      * 
      * @param x the X position of the upper left corner of the rectangle.
      * @param y the Y position of the upper left corner of the rectangle.
@@ -1556,6 +2203,13 @@ public final class GraphicsContext {
 
     /**
      * Fills an oval using the current fill paint.
+     * <p>
+     * This method will be affected by any of the
+     * <a href="#comm-attr">global common</a>
+     * or <a href="#fill-attr">fill</a>
+     * attributes as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>.
+     * </p>
      * 
      * @param x the X coordinate of the upper left bound of the oval.
      * @param y the Y coordinate of the upper left bound of the oval.
@@ -1569,7 +2223,14 @@ public final class GraphicsContext {
     }
 
     /**
-     * Strokes a rectangle using the current stroke paint.
+     * Strokes an oval using the current stroke paint.
+     * <p>
+     * This method will be affected by any of the
+     * <a href="#comm-attr">global common</a>
+     * or <a href="#strk-attr">stroke</a>
+     * attributes as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>.
+     * </p>
      * 
      * @param x the X coordinate of the upper left bound of the oval.
      * @param y the Y coordinate of the upper left bound of the oval.
@@ -1585,6 +2246,13 @@ public final class GraphicsContext {
     /**
      * Fills an arc using the current fill paint. A {@code null} ArcType or 
      * non positive width or height will cause the render command to be ignored.
+     * <p>
+     * This method will be affected by any of the
+     * <a href="#comm-attr">global common</a>
+     * or <a href="#fill-attr">fill</a>
+     * attributes as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>.
+     * </p>
      * 
      * @param x the X coordinate of the arc.
      * @param y the Y coordinate of the arc.
@@ -1606,6 +2274,13 @@ public final class GraphicsContext {
     /**
      * Strokes an Arc using the current stroke paint. A {@code null} ArcType or 
      * non positive width or height will cause the render command to be ignored.
+     * <p>
+     * This method will be affected by any of the
+     * <a href="#comm-attr">global common</a>
+     * or <a href="#strk-attr">stroke</a>
+     * attributes as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>.
+     * </p>
      *
      * @param x the X coordinate of the arc.
      * @param y the Y coordinate of the arc.
@@ -1626,6 +2301,13 @@ public final class GraphicsContext {
 
     /**
      * Fills a rounded rectangle using the current fill paint.
+     * <p>
+     * This method will be affected by any of the
+     * <a href="#comm-attr">global common</a>
+     * or <a href="#fill-attr">fill</a>
+     * attributes as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>.
+     * </p>
      * 
      * @param x the X coordinate of the upper left bound of the oval.
      * @param y the Y coordinate of the upper left bound of the oval.
@@ -1644,6 +2326,13 @@ public final class GraphicsContext {
 
     /**
      * Strokes a rounded rectangle using the current stroke paint.
+     * <p>
+     * This method will be affected by any of the
+     * <a href="#comm-attr">global common</a>
+     * or <a href="#strk-attr">stroke</a>
+     * attributes as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>.
+     * </p>
      * 
      * @param x the X coordinate of the upper left bound of the oval.
      * @param y the Y coordinate of the upper left bound of the oval.
@@ -1662,6 +2351,13 @@ public final class GraphicsContext {
 
     /**
      * Strokes a line using the current stroke paint.
+     * <p>
+     * This method will be affected by any of the
+     * <a href="#comm-attr">global common</a>
+     * or <a href="#strk-attr">stroke</a>
+     * attributes as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>.
+     * </p>
      * 
      * @param x1 the X coordinate of the starting point of the line.
      * @param y1 the Y coordinate of the starting point of the line.
@@ -1674,7 +2370,15 @@ public final class GraphicsContext {
 
     /**
      * Fills a polygon with the given points using the currently set fill paint.
-     * A {@code null} value for one of the arrays will be ignored and nothing will be drawn.
+     * A {@code null} value for any of the arrays will be ignored and nothing will be drawn.
+     * <p>
+     * This method will be affected by any of the
+     * <a href="#comm-attr">global common</a>,
+     * <a href="#fill-attr">fill</a>,
+     * or <a href="#path-attr">Fill Rule</a>
+     * attributes as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>.
+     * </p>
      * 
      * @param xPoints array containing the x coordinates of the polygon's points or null.
      * @param yPoints array containing the y coordinates of the polygon's points or null.
@@ -1688,7 +2392,14 @@ public final class GraphicsContext {
 
     /**
      * Strokes a polygon with the given points using the currently set stroke paint.
-     * A {@code null} value for one of the arrays will be ignored and nothing will be drawn.
+     * A {@code null} value for any of the arrays will be ignored and nothing will be drawn.
+     * <p>
+     * This method will be affected by any of the
+     * <a href="#comm-attr">global common</a>
+     * or <a href="#strk-attr">stroke</a>
+     * attributes as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>.
+     * </p>
      * 
      * @param xPoints array containing the x coordinates of the polygon's points or null.
      * @param yPoints array containing the y coordinates of the polygon's points or null.
@@ -1701,9 +2412,16 @@ public final class GraphicsContext {
     }
 
     /**
-     * Draws a polyline with the given points using the currently set stroke 
+     * Strokes a polyline with the given points using the currently set stroke 
      * paint attribute.
-     * A {@code null} value for one of the arrays will be ignored and nothing will be drawn.
+     * A {@code null} value for any of the arrays will be ignored and nothing will be drawn.
+     * <p>
+     * This method will be affected by any of the
+     * <a href="#comm-attr">global common</a>
+     * or <a href="#strk-attr">stroke</a>
+     * attributes as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>.
+     * </p>
      * 
      * @param xPoints array containing the x coordinates of the polyline's points or null.
      * @param yPoints array containing the y coordinates of the polyline's points or null.
@@ -1719,6 +2437,12 @@ public final class GraphicsContext {
      * Draws an image at the given x, y position using the width
      * and height of the given image.
      * A {@code null} image value or an image still in progress will be ignored.
+     * <p>
+     * This method will be affected by any of the
+     * <a href="#comm-attr">global common</a>
+     * attributes as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>.
+     * </p>
      * 
      * @param img the image to be drawn or null.
      * @param x the X coordinate on the destination for the upper left of the image.
@@ -1735,6 +2459,12 @@ public final class GraphicsContext {
      * Draws an image into the given destination rectangle of the canvas. The
      * Image is scaled to fit into the destination rectagnle.
      * A {@code null} image value or an image still in progress will be ignored.
+     * <p>
+     * This method will be affected by any of the
+     * <a href="#comm-attr">global common</a>
+     * attributes as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>.
+     * </p>
      * 
      * @param img the image to be drawn or null.
      * @param x the X coordinate on the destination for the upper left of the image.
@@ -1747,9 +2477,15 @@ public final class GraphicsContext {
     }
 
     /**
-     * Draws the current source rectangle of the given image to the given 
+     * Draws the specified source rectangle of the given image to the given 
      * destination rectangle of the Canvas.
      * A {@code null} image value or an image still in progress will be ignored.
+     * <p>
+     * This method will be affected by any of the
+     * <a href="#comm-attr">global common</a>
+     * attributes as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>.
+     * </p>
      * 
      * @param img the image to be drawn or null.
      * @param sx the source rectangle's X coordinate position.
@@ -1774,7 +2510,9 @@ public final class GraphicsContext {
      * the pixels of the {@link Canvas} associated with this
      * {@code GraphicsContext}.
      * All coordinates in the {@code PixelWriter} methods on the returned
-     * object will be in device space since they refer directly to pixels.
+     * object will be in device space since they refer directly to pixels
+     * and no other rendering attributes will be applied when modifying
+     * pixels using this object.
      * 
      * @return the {@code PixelWriter} for modifying the pixels of this
      *         {@code Canvas}
@@ -1996,6 +2734,10 @@ public final class GraphicsContext {
     /**
      * Sets the effect to be applied after the next draw call, or null to
      * disable effects.
+     * The current effect is a <a href="#comm-attr">common attribute</a>
+     * used for nearly all rendering operations as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>.
+     * 
      * @param e the effect to use, or null to disable effects
      */
     public void setEffect(Effect e) {
@@ -2013,8 +2755,12 @@ public final class GraphicsContext {
     
     /**
      * Gets a copy of the effect to be applied after the next draw call.
-     * A null return value means that no effect will be applied after future
+     * A null return value means that no effect will be applied after subsequent
      * rendering calls.
+     * The current effect is a <a href="#comm-attr">common attribute</a>
+     * used for nearly all rendering operations as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>.
+     * 
      * @param e an {@code Effect} object that may be used to store the
      *        copy of the current effect, if it is of a compatible type
      * @return the current effect used for all rendering calls,
@@ -2025,8 +2771,18 @@ public final class GraphicsContext {
     }
 
     /**
-     * Applies the given effect to the entire canvas.
+     * Applies the given effect to the entire bounds of the canvas and stores
+     * the result back into the same canvas.
      * A {@code null} value will be ignored.
+     * The effect will be applied without any other rendering attributes and
+     * under an Identity coordinate transform.
+     * Since the effect is applied to the entire bounds of the canvas, some
+     * effects may have a confusing result, such as a Reflection effect
+     * that will apply its reflection off of the bottom of the canvas even if
+     * only a portion of the canvas has been rendered to and will not be
+     * visible unless a negative offset is used to bring the reflection back
+     * into view.
+     * 
      * @param e the effect to apply onto the entire destination or null.
      */
     public void applyEffect(Effect e) {
