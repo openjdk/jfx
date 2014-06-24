@@ -35,6 +35,8 @@ import com.sun.glass.ui.Robot;
 import junit.framework.AssertionFailedError;
 import org.junit.*;
 import org.junit.rules.TestName;
+import com.sun.glass.ui.monocle.input.TestLog;
+import com.sun.glass.ui.monocle.input.TestApplication;
 
 import java.util.concurrent.CountDownLatch;
 
