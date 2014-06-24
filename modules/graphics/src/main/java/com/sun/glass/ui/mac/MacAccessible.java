@@ -92,7 +92,7 @@ final class MacAccessible extends PlatformAccessible {
         NSAccessibilityChildrenAttribute(CHILDREN, MacVariant::createNSArray),
         NSAccessibilityDescriptionAttribute(DESCRIPTION, MacVariant::createNSString),
         NSAccessibilityEnabledAttribute(ENABLED, MacVariant::createNSNumberForBoolean),
-        NSAccessibilityHelpAttribute(TOOLTIP, MacVariant::createNSString),
+        NSAccessibilityHelpAttribute(HELP, MacVariant::createNSString),
 
         // FOCUSED might not match the result of accessibilityFocusedUIElement() cause of FOCUS_ITEM 
         NSAccessibilityFocusedAttribute(FOCUSED, MacVariant::createNSNumberForBoolean),

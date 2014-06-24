@@ -752,11 +752,11 @@ final class WinAccessible extends PlatformAccessible {
                 break;
             }
             case UIA_HelpTextPropertyId: {
-                String tooltip = (String)getAttribute(TOOLTIP);
-                if (tooltip != null) {
+                String help = (String)getAttribute(HELP);
+                if (help != null) {
                     variant = new WinVariant();
                     variant.vt = WinVariant.VT_BSTR;
-                    variant.bstrVal = tooltip;
+                    variant.bstrVal = help;
                 }
                 break;
             }

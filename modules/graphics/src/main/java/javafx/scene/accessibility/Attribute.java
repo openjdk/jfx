@@ -179,6 +179,12 @@ public enum Attribute {
     HEADER("Header", Node.class),
 
     /**
+     * Returns the help for the Node.
+     * Type: String
+     */
+    HELP("Help", String.class),
+
+    /**
      * Returns the horizontal scroll bar of a scroll pane
      * Type: Node
      */
@@ -399,13 +405,6 @@ public enum Attribute {
      * Type: String
      */
     TITLE("Title", String.class),
-
-    /**
-     * The text of the Tooltip associated with a given node, although for now this
-     * is only supported on Control subclasses.
-     * Type: String
-     */
-    TOOLTIP("Tooltip", String.class),
 
     /**
      * Returns a tree item (Role.TREE_ITEM or Role.TREE_TABLE_ITEM) at the given
