@@ -502,7 +502,7 @@ final class WinAccessible extends PlatformAccessible {
             case TEXT: return UIA_TextControlTypeId;
             case TEXT_FIELD:
             case PASSWORD_FIELD:
-            case TEXT_AREA: return UIA_TextControlTypeId;
+            case TEXT_AREA: return UIA_EditControlTypeId;
             case TABLE_VIEW: return UIA_TableControlTypeId;
             case LIST_VIEW: return UIA_ListControlTypeId;
             case LIST_ITEM: return UIA_ListItemControlTypeId;
