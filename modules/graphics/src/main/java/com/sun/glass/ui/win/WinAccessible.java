@@ -760,6 +760,15 @@ final class WinAccessible extends PlatformAccessible {
                 }
                 break;
             }
+            case UIA_LocalizedControlTypePropertyId: {
+                String description = (String)getAttribute(DESCRIPTION);
+                if (description != null) {
+                    variant = new WinVariant();
+                    variant.vt = WinVariant.VT_BSTR;
+                    variant.bstrVal = description;
+                }
+                break;
+            }
             case UIA_HasKeyboardFocusPropertyId: {
                 Boolean focus = (Boolean)getAttribute(FOCUSED);
                 /* 
