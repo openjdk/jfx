@@ -23,7 +23,7 @@
  * questions.
  */
 
-package com.sun.javafx.scene.accessibility;
+package javafx.scene.accessibility;
 
 /**
  * Experimental API - Do not use (will be removed).

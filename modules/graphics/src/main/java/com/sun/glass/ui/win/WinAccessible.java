@@ -31,14 +31,14 @@ import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
 import javafx.scene.Node;
 import javafx.scene.Scene;
-import com.sun.javafx.scene.accessibility.Accessible;
-import com.sun.javafx.scene.accessibility.Action;
-import com.sun.javafx.scene.accessibility.Attribute;
-import com.sun.javafx.scene.accessibility.Role;
+import javafx.scene.accessibility.Accessible;
+import javafx.scene.accessibility.Action;
+import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Role;
 import javafx.scene.input.KeyCombination;
 import com.sun.glass.ui.PlatformAccessible;
 import com.sun.glass.ui.View;
-import static com.sun.javafx.scene.accessibility.Attribute.*;
+import static javafx.scene.accessibility.Attribute.*;
 
 /*
  * This class is the Java peer for GlassAccessible.
@@ -62,7 +62,7 @@ final class WinAccessible extends PlatformAccessible {
 
     private native static void _initIDs();
     static {
-//        _initIDs();
+        _initIDs();
     }
 
     private static int idCount = 1;
@@ -233,12 +233,11 @@ final class WinAccessible extends PlatformAccessible {
     }
 
     static WinAccessible createAccessible(Accessible accessible) {
-//        if (accessible == null) return null;
-//        WinAccessible winAccessible = new WinAccessible(accessible);
-//        if (winAccessible.peer == 0L) return null;
-//        winAccessible.id = idCount++;
-//        return winAccessible;
-        return null;
+        if (accessible == null) return null;
+        WinAccessible winAccessible = new WinAccessible(accessible);
+        if (winAccessible.peer == 0L) return null;
+        winAccessible.id = idCount++;
+        return winAccessible;
     }
 
     @Override
@@ -280,10 +279,10 @@ final class WinAccessible extends PlatformAccessible {
                         // Delegate back to the Scene if the transient focus owner is null
                         Scene scene = (Scene)getAttribute(SCENE);
                         if (scene != null) {
-//                            Accessible acc = scene.getAccessible();
-//                            if (acc != null) {
-//                                acc.sendNotification(FOCUS_NODE);
-//                            }
+                            Accessible acc = scene.getAccessible();
+                            if (acc != null) {
+                                acc.sendNotification(FOCUS_NODE);
+                            }
                         }
                     }
                 }
@@ -735,7 +734,7 @@ final class WinAccessible extends PlatformAccessible {
                 if (name == null || name.length() == 0) {
                     Node label = (Node)getAttribute(LABELED_BY);
                     if (label != null) {
-//                        name = (String)label.getAccessible().getAttribute(TITLE);
+                        name = (String)label.getAccessible().getAttribute(TITLE);
                     }
                 }
                 if (name == null || name.length() == 0) {
@@ -773,16 +772,16 @@ final class WinAccessible extends PlatformAccessible {
                 if (Boolean.FALSE.equals(focus)) {
                     Scene scene = (Scene)getAttribute(SCENE);
                     if (scene != null) {
-//                        Accessible acc = scene.getAccessible();
-//                        if (acc != null) {
-//                            Node node = (Node)acc.getAttribute(FOCUS_NODE);
-//                            if (node != null) {
-//                                Node item = (Node)node.getAccessible().getAttribute(FOCUS_ITEM);
-//                                if (getAccessible(item) == peer) {
-//                                    focus = true;
-//                                }
-//                            }
-//                        }
+                        Accessible acc = scene.getAccessible();
+                        if (acc != null) {
+                            Node node = (Node)acc.getAttribute(FOCUS_NODE);
+                            if (node != null) {
+                                Node item = (Node)node.getAccessible().getAttribute(FOCUS_ITEM);
+                                if (getAccessible(item) == peer) {
+                                    focus = true;
+                                }
+                            }
+                        }
                     }
                 }
                 variant = new WinVariant();
@@ -857,7 +856,7 @@ final class WinAccessible extends PlatformAccessible {
         if (isDisposed()) return 0L;
         Scene scene = (Scene)getAttribute(SCENE);
         if (scene == null) return 0L;
-        Accessible acc = null;//scene.getAccessible();
+        Accessible acc = scene.getAccessible();
         if (acc == null) return 0L;
         WinAccessible winAcc = (WinAccessible)acc.impl_getDelegate();
         if (winAcc == null || winAcc.isDisposed()) return 0L;
@@ -880,7 +879,7 @@ final class WinAccessible extends PlatformAccessible {
     private long NavigateListView(WinAccessible listItemAccessible, int direction) {
         Node list = listItemAccessible.getContainerNode();
         if (list == null) return 0;
-        Accessible listAccessible = null;//list.getAccessible();
+        Accessible listAccessible = list.getAccessible();
         if (listAccessible == null) return 0;
         Integer count = (Integer)listAccessible.getAttribute(ROW_COUNT);
         if (count == null || count == 0) return 0;
@@ -923,7 +922,7 @@ final class WinAccessible extends PlatformAccessible {
                         /* scene root node case */
                         Scene scene = (Scene)getAttribute(SCENE);
                         if (scene == null) return 0L;
-                        Accessible acc = null;//scene.getAccessible();
+                        Accessible acc = scene.getAccessible();
                         if (acc == null) return 0L;
                         WinAccessible winAcc = (WinAccessible)acc.impl_getDelegate();
                         if (winAcc == null || winAcc.isDisposed()) return 0L;
@@ -944,7 +943,7 @@ final class WinAccessible extends PlatformAccessible {
                  * or the root tree item in a tree view. Either way, there is no siblings. 
                  */
                 if (parent != null) {
-                    Accessible parentAccessible = null;//parent.getAccessible();
+                    Accessible parentAccessible = parent.getAccessible();
                     Function<Integer, Node> getChild;
                     int count = 0;
                     if (treeCell) {
@@ -1010,11 +1009,11 @@ final class WinAccessible extends PlatformAccessible {
                         node = children.get(lastIndex);
                     }
                     if (node != null) {
-//                        role = (Role)node.getAccessible().getAttribute(ROLE);
-//                        if (role == Role.LIST_ITEM) {
-//                            WinAccessible itemAcc = (WinAccessible)node.getAccessible().impl_getDelegate();
-//                            return NavigateListView(itemAcc, direction);
-//                        }
+                        role = (Role)node.getAccessible().getAttribute(ROLE);
+                        if (role == Role.LIST_ITEM) {
+                            WinAccessible itemAcc = (WinAccessible)node.getAccessible().impl_getDelegate();
+                            return NavigateListView(itemAcc, direction);
+                        }
                     }
                 }
                 break;
@@ -1039,7 +1038,7 @@ final class WinAccessible extends PlatformAccessible {
     long GetFocus() {
         Node node = (Node)getAttribute(FOCUS_NODE);
         if (node == null) return 0L;
-        Node item = null;//(Node)node.getAccessible().getAttribute(FOCUS_ITEM);
+        Node item = (Node)node.getAccessible().getAttribute(FOCUS_ITEM);
         if (item != null) return getAccessible(item);
         return getAccessible(node);
     }
@@ -1441,7 +1440,7 @@ final class WinAccessible extends PlatformAccessible {
        Node table = null;
        Node node = (Node)getAttribute(PARENT);
        while (node != null) {
-           Accessible acc = null;//node.getAccessible();
+           Accessible acc = node.getAccessible();
            Role role = (Role)acc.getAttribute(ROLE);
            if (role == Role.TABLE_VIEW || role == Role.TREE_TABLE_VIEW) {
                table = node;
@@ -1450,7 +1449,7 @@ final class WinAccessible extends PlatformAccessible {
            node = (Node)acc.getAttribute(PARENT);
        }
        if (table == null) return null;
-       Node column = null;//(Node)table.getAccessible().getAttribute(COLUMN_AT_INDEX, columnIndex);
+       Node column = (Node)table.getAccessible().getAttribute(COLUMN_AT_INDEX, columnIndex);
        return new long[] {getAccessible(column)};
     }
 
@@ -1486,7 +1485,7 @@ final class WinAccessible extends PlatformAccessible {
         if (role == Role.TOOLBAR) {
             Node button = (Node)getAttribute(OVERFLOW_BUTTON);
             if (button != null) {
-//                button.getAccessible().executeAction(Action.FIRE);
+                button.getAccessible().executeAction(Action.FIRE);
             }
             return;
         }
@@ -1499,7 +1498,7 @@ final class WinAccessible extends PlatformAccessible {
         if (role == Role.TOOLBAR) {
             Node button = (Node)getAttribute(OVERFLOW_BUTTON);
             if (button != null) {
-//                button.getAccessible().executeAction(Action.FIRE);
+                button.getAccessible().executeAction(Action.FIRE);
             }
             return;
         }
@@ -1513,8 +1512,8 @@ final class WinAccessible extends PlatformAccessible {
         if (role == Role.TOOLBAR) {
             Node button = (Node)getAttribute(OVERFLOW_BUTTON);
             if (button != null) {
-//                boolean visible = Boolean.TRUE.equals(button.getAccessible().getAttribute(VISIBLE));
-//                return visible ? ExpandCollapseState_Collapsed : ExpandCollapseState_Expanded;
+                boolean visible = Boolean.TRUE.equals(button.getAccessible().getAttribute(VISIBLE));
+                return visible ? ExpandCollapseState_Collapsed : ExpandCollapseState_Expanded;
             }
         }
 
@@ -1571,43 +1570,43 @@ final class WinAccessible extends PlatformAccessible {
         /* dealing with vertical scroll first */
         if (get_VerticallyScrollable()) {
             Node vsb = (Node)getAttribute(VERTICAL_SCROLLBAR);
-//            Accessible vsba = vsb.getAccessible();
-//            switch (verticalAmount) {
-//                case ScrollAmount_LargeIncrement:
-//                    vsba.executeAction(Action.BLOCK_INCREMENT);
-//                    break;
-//                case ScrollAmount_SmallIncrement:
-//                    vsba.executeAction(Action.INCREMENT);
-//                    break;
-//                case ScrollAmount_LargeDecrement:
-//                    vsba.executeAction(Action.BLOCK_DECREMENT);
-//                    break;
-//                case ScrollAmount_SmallDecrement:
-//                    vsba.executeAction(Action.DECREMENT);
-//                    break;
-//                default:
-//            }
+            Accessible vsba = vsb.getAccessible();
+            switch (verticalAmount) {
+                case ScrollAmount_LargeIncrement:
+                    vsba.executeAction(Action.BLOCK_INCREMENT);
+                    break;
+                case ScrollAmount_SmallIncrement:
+                    vsba.executeAction(Action.INCREMENT);
+                    break;
+                case ScrollAmount_LargeDecrement:
+                    vsba.executeAction(Action.BLOCK_DECREMENT);
+                    break;
+                case ScrollAmount_SmallDecrement:
+                    vsba.executeAction(Action.DECREMENT);
+                    break;
+                default:
+            }
         }
 
         /* now dealing with horizontal scroll */
         if (get_HorizontallyScrollable()) {
             Node hsb = (Node)getAttribute(HORIZONTAL_SCROLLBAR);
-//            Accessible hsba = hsb.getAccessible();
-//            switch (horizontalAmount) {
-//                case ScrollAmount_LargeIncrement:
-//                    hsba.executeAction(Action.BLOCK_INCREMENT);
-//                    break;
-//                case ScrollAmount_SmallIncrement:
-//                    hsba.executeAction(Action.INCREMENT);
-//                    break;
-//                case ScrollAmount_LargeDecrement:
-//                    hsba.executeAction(Action.BLOCK_DECREMENT);
-//                    break;
-//                case ScrollAmount_SmallDecrement:
-//                    hsba.executeAction(Action.DECREMENT);
-//                    break;
-//                default:
-//            }
+            Accessible hsba = hsb.getAccessible();
+            switch (horizontalAmount) {
+                case ScrollAmount_LargeIncrement:
+                    hsba.executeAction(Action.BLOCK_INCREMENT);
+                    break;
+                case ScrollAmount_SmallIncrement:
+                    hsba.executeAction(Action.INCREMENT);
+                    break;
+                case ScrollAmount_LargeDecrement:
+                    hsba.executeAction(Action.BLOCK_DECREMENT);
+                    break;
+                case ScrollAmount_SmallDecrement:
+                    hsba.executeAction(Action.DECREMENT);
+                    break;
+                default:
+            }
         }
     }
 
@@ -1617,21 +1616,21 @@ final class WinAccessible extends PlatformAccessible {
         /* dealing with vertical scroll first */
         if (verticalPercent != UIA_ScrollPatternNoScroll && get_VerticallyScrollable()) {
             Node vsb = (Node)getAttribute(VERTICAL_SCROLLBAR);
-//            Double min = (Double)vsb.getAccessible().getAttribute(MIN_VALUE);
-//            Double max = (Double)vsb.getAccessible().getAttribute(MAX_VALUE);
-//            if (min != null && max != null) {
-//                vsb.getAccessible().executeAction(Action.SET_VALUE, (max-min)*(verticalPercent/100)+min);
-//            }
+            Double min = (Double)vsb.getAccessible().getAttribute(MIN_VALUE);
+            Double max = (Double)vsb.getAccessible().getAttribute(MAX_VALUE);
+            if (min != null && max != null) {
+                vsb.getAccessible().executeAction(Action.SET_VALUE, (max-min)*(verticalPercent/100)+min);
+            }
         }
 
         /* now dealing with horizontal scroll */
         if (horizontalPercent != UIA_ScrollPatternNoScroll && get_HorizontallyScrollable()) {
             Node hsb = (Node)getAttribute(HORIZONTAL_SCROLLBAR);
-//            Double min = (Double)hsb.getAccessible().getAttribute(MIN_VALUE);
-//            Double max = (Double)hsb.getAccessible().getAttribute(MAX_VALUE);
-//            if (min != null && max != null) {
-//                hsb.getAccessible().executeAction(Action.SET_VALUE, (max-min)*(horizontalPercent/100)+min);
-//            }
+            Double min = (Double)hsb.getAccessible().getAttribute(MIN_VALUE);
+            Double max = (Double)hsb.getAccessible().getAttribute(MAX_VALUE);
+            if (min != null && max != null) {
+                hsb.getAccessible().executeAction(Action.SET_VALUE, (max-min)*(horizontalPercent/100)+min);
+            }
         }
     }
 
@@ -1641,7 +1640,7 @@ final class WinAccessible extends PlatformAccessible {
         Node hsb = (Node)getAttribute(HORIZONTAL_SCROLLBAR);
         if (hsb == null) return false;
 
-        Boolean visible = null;//(Boolean)hsb.getAccessible().getAttribute(VISIBLE);
+        Boolean visible = (Boolean)hsb.getAccessible().getAttribute(VISIBLE);
         return Boolean.TRUE.equals(visible);
     }
 
@@ -1655,14 +1654,14 @@ final class WinAccessible extends PlatformAccessible {
         Node hsb = (Node) getAttribute(HORIZONTAL_SCROLLBAR);
         if (hsb != null) {
             /* Windows expects a percentage between 0 and 100 */
-//            Accessible hsba = hsb.getAccessible();
-//            Double value = (Double)hsba.getAttribute(VALUE);
-//            if (value == null) return 0;
-//            Double max = (Double)hsba.getAttribute(MAX_VALUE);
-//            if (max == null) return 0;
-//            Double min = (Double)hsba.getAttribute(MIN_VALUE);
-//            if (min == null) return 0;
-//            return (100 * (value - min)) / (max - min);
+            Accessible hsba = hsb.getAccessible();
+            Double value = (Double)hsba.getAttribute(VALUE);
+            if (value == null) return 0;
+            Double max = (Double)hsba.getAttribute(MAX_VALUE);
+            if (max == null) return 0;
+            Double min = (Double)hsba.getAttribute(MIN_VALUE);
+            if (min == null) return 0;
+            return (100 * (value - min)) / (max - min);
         }
 
         return 0;
@@ -1673,7 +1672,7 @@ final class WinAccessible extends PlatformAccessible {
         if (!get_HorizontallyScrollable()) return 100; /* MSDN spec */
         Node content = (Node) getAttribute(CONTENTS);
         if (content == null) return 100;
-        Bounds contentBounds = null;//(Bounds) content.getAccessible().getAttribute(BOUNDS);
+        Bounds contentBounds = (Bounds) content.getAccessible().getAttribute(BOUNDS);
         if (contentBounds == null) return 0;
         Bounds scrollPaneBounds = (Bounds)getAttribute(BOUNDS);
         if (scrollPaneBounds == null) return 0;
@@ -1686,7 +1685,7 @@ final class WinAccessible extends PlatformAccessible {
         Node vsb = (Node) getAttribute(VERTICAL_SCROLLBAR);
         if (vsb == null) return false;
 
-        Boolean visible = null;//(Boolean)vsb.getAccessible().getAttribute(VISIBLE);
+        Boolean visible = (Boolean)vsb.getAccessible().getAttribute(VISIBLE);
         return Boolean.TRUE.equals(visible);
     }
 
@@ -1700,14 +1699,14 @@ final class WinAccessible extends PlatformAccessible {
         Node vsb = (Node) getAttribute(Attribute.VERTICAL_SCROLLBAR);
         if (vsb != null) {
             /* Windows expects a percentage between 0 and 100 */
-//            Accessible vsba = vsb.getAccessible();
-//            Double value = (Double)vsba.getAttribute(VALUE);
-//            if (value == null) return 0;
-//            Double max = (Double)vsba.getAttribute(MAX_VALUE);
-//            if (max == null) return 0;
-//            Double min = (Double)vsba.getAttribute(MIN_VALUE);
-//            if (min == null) return 0;
-//            return (100 * (value - min)) / (max - min);
+            Accessible vsba = vsb.getAccessible();
+            Double value = (Double)vsba.getAttribute(VALUE);
+            if (value == null) return 0;
+            Double max = (Double)vsba.getAttribute(MAX_VALUE);
+            if (max == null) return 0;
+            Double min = (Double)vsba.getAttribute(MIN_VALUE);
+            if (min == null) return 0;
+            return (100 * (value - min)) / (max - min);
         }
 
         return 0;
@@ -1727,8 +1726,8 @@ final class WinAccessible extends PlatformAccessible {
         if (role == Role.SCROLL_PANE) {
             Node content = (Node) getAttribute(CONTENTS);
             if (content != null) {
-//                Bounds contentBounds = (Bounds) content.getAccessible().getAttribute(BOUNDS);
-//                contentHeight = contentBounds == null ? 0 : contentBounds.getHeight();
+                Bounds contentBounds = (Bounds) content.getAccessible().getAttribute(BOUNDS);
+                contentHeight = contentBounds == null ? 0 : contentBounds.getHeight();
             }
         } else {
             Integer itemCount = 0;
@@ -1764,7 +1763,7 @@ final class WinAccessible extends PlatformAccessible {
         if (cellIndex == null) cellIndex = (Integer)getAttribute(ROW_INDEX);
         Node container = getContainerNode();
         if (cellIndex != null && container != null) {
-//            container.getAccessible().executeAction(Action.SCROLL_TO_INDEX, cellIndex);
+            container.getAccessible().executeAction(Action.SCROLL_TO_INDEX, cellIndex);
         }
     }
 }

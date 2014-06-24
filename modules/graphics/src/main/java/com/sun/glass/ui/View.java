@@ -31,7 +31,7 @@ import java.lang.ref.WeakReference;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.Map;
-import com.sun.javafx.scene.accessibility.Accessible;
+import javafx.scene.accessibility.Accessible;
 
 public abstract class View {
 

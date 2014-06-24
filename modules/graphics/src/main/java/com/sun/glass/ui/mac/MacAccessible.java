@@ -37,10 +37,10 @@ import javafx.geometry.Point2D;
 import javafx.geometry.Orientation;
 import javafx.scene.Scene;
 import javafx.scene.Node;
-import com.sun.javafx.scene.accessibility.Accessible;
-import com.sun.javafx.scene.accessibility.Action;
-import com.sun.javafx.scene.accessibility.Attribute;
-import com.sun.javafx.scene.accessibility.Role;
+import javafx.scene.accessibility.Accessible;
+import javafx.scene.accessibility.Action;
+import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Role;
 import javafx.scene.input.KeyCharacterCombination;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
@@ -49,7 +49,7 @@ import javafx.scene.text.Font;
 import com.sun.glass.ui.PlatformAccessible;
 import com.sun.glass.ui.Screen;
 import com.sun.glass.ui.View;
-import static com.sun.javafx.scene.accessibility.Attribute.*;
+import static javafx.scene.accessibility.Attribute.*;
 
 /**
  * Native Interface - Implements NSAccessibility Protocol
@@ -60,28 +60,28 @@ final class MacAccessible extends PlatformAccessible {
     private native static void _initIDs();
     private native static boolean _initEnum(String enumName);
     static {
-//        _initIDs();
-//        if (!_initEnum("MacAttribute")) {
-//            System.err.println("Fail linking MacAttribute");
-//        }
-//        if (!_initEnum("MacAction")) {
-//            System.err.println("Fail linking MacAction");
-//        }
-//        if (!_initEnum("MacRole")) {
-//            System.err.println("Fail linking MacRole");
-//        }
-//        if (!_initEnum("MacSubrole")) {
-//            System.err.println("Fail linking MacSubrole");
-//        }
-//        if (!_initEnum("MacNotification")) {
-//            System.err.println("Fail linking MacNotification");
-//        }
-//        if (!_initEnum("MacOrientation")) {
-//            System.err.println("Fail linking MacOrientation");
-//        }
-//        if (!_initEnum("MacText")) {
-//            System.err.println("Fail linking MacText");
-//        }
+        _initIDs();
+        if (!_initEnum("MacAttribute")) {
+            System.err.println("Fail linking MacAttribute");
+        }
+        if (!_initEnum("MacAction")) {
+            System.err.println("Fail linking MacAction");
+        }
+        if (!_initEnum("MacRole")) {
+            System.err.println("Fail linking MacRole");
+        }
+        if (!_initEnum("MacSubrole")) {
+            System.err.println("Fail linking MacSubrole");
+        }
+        if (!_initEnum("MacNotification")) {
+            System.err.println("Fail linking MacNotification");
+        }
+        if (!_initEnum("MacOrientation")) {
+            System.err.println("Fail linking MacOrientation");
+        }
+        if (!_initEnum("MacText")) {
+            System.err.println("Fail linking MacText");
+        }
     }
 
     static enum MacAttribute {
@@ -650,11 +650,10 @@ final class MacAccessible extends PlatformAccessible {
     }
 
     static MacAccessible createAccessible(Accessible accessible) {
-//        if (accessible == null) return null;
-//        MacAccessible macAccessible = new MacAccessible(accessible);
-//        if (macAccessible.peer == 0L) return null;
-//        return macAccessible;
-        return null;
+        if (accessible == null) return null;
+        MacAccessible macAccessible = new MacAccessible(accessible);
+        if (macAccessible.peer == 0L) return null;
+        return macAccessible;
     }
 
     @Override
@@ -700,7 +699,7 @@ final class MacAccessible extends PlatformAccessible {
                      */
                     Scene scene = (Scene)getAttribute(SCENE);
                     if (scene != null) {
-                        Accessible acc = null;//scene.getAccessible();
+                        Accessible acc = scene.getAccessible();
                         if (acc != null) {
                             node = (Node)acc.getAttribute(FOCUS_NODE);
                         }
@@ -709,7 +708,7 @@ final class MacAccessible extends PlatformAccessible {
 
                 long id = 0L;
                 if (node != null) {
-                    Node item = null;//(Node)node.getAccessible().getAttribute(FOCUS_ITEM);
+                    Node item = (Node)node.getAccessible().getAttribute(FOCUS_ITEM);
                     id = item != null ? getAccessible(item) : getAccessible(node);
                 } else {
                     /* 
@@ -794,7 +793,7 @@ final class MacAccessible extends PlatformAccessible {
     @SuppressWarnings("deprecation")
     private View getRootView(Scene scene) {
         if (scene == null) return null;
-        Accessible acc = null;//scene.getAccessible();
+        Accessible acc = scene.getAccessible();
         if (acc == null) return null;
         MacAccessible macAcc = (MacAccessible)acc.impl_getDelegate();
         if (macAcc == null || macAcc.isDisposed()) return null;
@@ -846,7 +845,7 @@ final class MacAccessible extends PlatformAccessible {
         if (role == Role.TEXT) {
             Node parent = (Node)getAttribute(PARENT);
             if (parent == null) return ignoreInnerText;
-            Role parentRole = null;//(Role)parent.getAccessible().getAttribute(ROLE);
+            Role parentRole = (Role)parent.getAccessible().getAttribute(ROLE);
             if (parentRole == null) return ignoreInnerText;
             switch (parentRole) {
                 case BUTTON:
@@ -1169,26 +1168,26 @@ final class MacAccessible extends PlatformAccessible {
                     if (role == Role.CONTEXT_MENU) {
                         Scene scene = (Scene)getAttribute(SCENE);
                         if (scene != null) {
-//                            Accessible acc = scene.getAccessible();
-//                            if (acc != null) {
-//                                Node focus = (Node)acc.getAttribute(FOCUS_NODE);
-//                                if (focus != null && focus.getAccessible().getAttribute(ROLE) == Role.MENU_ITEM) {
-//                                    long[] result = {getAccessible(focus)};
-//                                    return attr.map.apply(result);
-//                                } else {
-//                                    return null;
-//                                }
-//                            }
+                            Accessible acc = scene.getAccessible();
+                            if (acc != null) {
+                                Node focus = (Node)acc.getAttribute(FOCUS_NODE);
+                                if (focus != null && focus.getAccessible().getAttribute(ROLE) == Role.MENU_ITEM) {
+                                    long[] result = {getAccessible(focus)};
+                                    return attr.map.apply(result);
+                                } else {
+                                    return null;
+                                }
+                            }
                         }
                     }
                     if (role == Role.MENU_BAR) {
                         Node focus = (Node)getAttribute(FOCUS_NODE);
-//                        if (focus != null && focus.getAccessible().getAttribute(ROLE) == Role.MENU_ITEM) {
-//                            long[] result = {getAccessible(focus)};
-//                            return attr.map.apply(result);
-//                        } else {
-//                            return null;
-//                        }
+                        if (focus != null && focus.getAccessible().getAttribute(ROLE) == Role.MENU_ITEM) {
+                            long[] result = {getAccessible(focus)};
+                            return attr.map.apply(result);
+                        } else {
+                            return null;
+                        }
                     }
                     return null;
                 }
@@ -1283,9 +1282,9 @@ final class MacAccessible extends PlatformAccessible {
                     if (role == Role.CONTEXT_MENU) {
                         Node menuItem = (Node)getAttribute(MENU_FOR);
                         if (menuItem != null) {
-//                            if (menuItem.getAccessible().getAttribute(ROLE) == Role.MENU_ITEM) {
-//                                result = menuItem;
-//                            }
+                            if (menuItem.getAccessible().getAttribute(ROLE) == Role.MENU_ITEM) {
+                                result = menuItem;
+                            }
                         }
                     }
                     result = getAccessible((Node)result);
@@ -1357,17 +1356,17 @@ final class MacAccessible extends PlatformAccessible {
                          */
                         Node parent = (Node)getAttribute(PARENT);
                         if (parent == null) return null;
-//                        Accessible acc = parent.getAccessible();
-//                        if (acc.getAttribute(ROLE) == Role.TREE_TABLE_ITEM) {
-//                            Stream<Node> children = ((List<Node>)acc.getAttribute(CHILDREN)).stream();
-//
-//                            result = children.map(n -> n.getAccessible())
-//                                             .filter(a -> a.getAttribute(ROLE) == Role.TREE_TABLE_CELL)
-//                                             .map(a -> (String)a.getAttribute(TITLE))
-//                                             .filter(t -> t != null && !t.isEmpty()) //Consider reporting empty cells as "(blank)"
-//                                             .reduce((s1, s2) -> s1 + " " + s2)
-//                                             .orElse("");
-//                        }
+                        Accessible acc = parent.getAccessible();
+                        if (acc.getAttribute(ROLE) == Role.TREE_TABLE_ITEM) {
+                            Stream<Node> children = ((List<Node>)acc.getAttribute(CHILDREN)).stream();
+
+                            result = children.map(n -> n.getAccessible())
+                                             .filter(a -> a.getAttribute(ROLE) == Role.TREE_TABLE_CELL)
+                                             .map(a -> (String)a.getAttribute(TITLE))
+                                             .filter(t -> t != null && !t.isEmpty()) //Consider reporting empty cells as "(blank)"
+                                             .reduce((s1, s2) -> s1 + " " + s2)
+                                             .orElse("");
+                        }
                         break;
                     }
                     default:
@@ -1776,7 +1775,7 @@ final class MacAccessible extends PlatformAccessible {
         Node node = (Node)getAttribute(FOCUS_NODE);
         if (node == null) return 0L;
 
-        Node item = null;//(Node)node.getAccessible().getAttribute(FOCUS_ITEM);
+        Node item = (Node)node.getAccessible().getAttribute(FOCUS_ITEM);
         if (item != null) return getAccessible(item);
         return getAccessible(node);
     }

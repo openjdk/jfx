@@ -43,8 +43,8 @@ import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.geometry.Side;
 import javafx.scene.Node;
-//import javafx.scene.accessibility.Action;
-//import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Action;
+import javafx.scene.accessibility.Attribute;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.layout.Region;
 import com.sun.javafx.application.PlatformImpl;
@@ -921,35 +921,35 @@ public abstract class Control extends Region implements Skinnable {
      *                                                                         *
      **************************************************************************/
 
-//    /** @treatAsPrivate */
-//    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//        switch (attribute) {
-//            case TOOLTIP:
-//                Tooltip tooltip = getTooltip();
-//                return tooltip == null ? "" : tooltip.getText();
-//            default:
-//        }
-//        if (skinBase != null) {
-//            Object result = skinBase.accGetAttribute(attribute, parameters);
-//            if (result != null) return result;
-//        }
-//        return super.accGetAttribute(attribute, parameters);
-//    }
-//
-//    /** @treatAsPrivate */
-//    @Override public void accExecuteAction(Action action, Object... parameters) {
-//        switch (action) {
-//            case SHOW_MENU:
-//                ContextMenu menu = getContextMenu();
-//                if (menu != null) {
-//                    menu.show(this, Side.RIGHT, 0, 0);
-//                }
-//                break;
-//            default:
-//        }
-//        if (skinBase != null) {
-//            skinBase.accExecuteAction(action, parameters);
-//        }
-//        super.accExecuteAction(action, parameters);
-//    }
+    /** @treatAsPrivate */
+    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case TOOLTIP:
+                Tooltip tooltip = getTooltip();
+                return tooltip == null ? "" : tooltip.getText();
+            default:
+        }
+        if (skinBase != null) {
+            Object result = skinBase.accGetAttribute(attribute, parameters);
+            if (result != null) return result;
+        }
+        return super.accGetAttribute(attribute, parameters);
+    }
+
+    /** @treatAsPrivate */
+    @Override public void accExecuteAction(Action action, Object... parameters) {
+        switch (action) {
+            case SHOW_MENU:
+                ContextMenu menu = getContextMenu();
+                if (menu != null) {
+                    menu.show(this, Side.RIGHT, 0, 0);
+                }
+                break;
+            default:
+        }
+        if (skinBase != null) {
+            skinBase.accExecuteAction(action, parameters);
+        }
+        super.accExecuteAction(action, parameters);
+    }
 }

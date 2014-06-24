@@ -38,9 +38,9 @@ import java.lang.ref.WeakReference;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 
-//import javafx.scene.accessibility.Action;
-//import javafx.scene.accessibility.Attribute;
-//import javafx.scene.accessibility.Role;
+import javafx.scene.accessibility.Action;
+import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Role;
 import javafx.scene.control.TreeTableColumn.CellEditEvent;
 
 
@@ -773,37 +773,37 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
      *                                                                         *
      **************************************************************************/
 
-//    /** @treatAsPrivate */
-//    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//        switch (attribute) {
-//            case ROLE: return Role.TREE_TABLE_CELL;
-//            case TITLE: return getText();
-//            case ROW_INDEX: return getIndex();
-//            case COLUMN_INDEX: return columnIndex;
-//            case SELECTED: return isInCellSelectionMode() ? isSelected() : getTreeTableRow().isSelected();
-//            default: return super.accGetAttribute(attribute, parameters);
-//        }
-//    }
-//
-//    /** @treatAsPrivate */
-//    @Override public void accExecuteAction(Action action, Object... parameters) {
-//        final TreeTableView<S> treeTableView = getTreeTableView();
-//        final TreeTableView.TreeTableViewSelectionModel<S> sm = treeTableView == null ? null : treeTableView.getSelectionModel();
-//
-//        switch (action) {
-//            case SELECT: {
-//                if (sm != null) sm.clearAndSelect(getIndex(), getTableColumn());
-//                break;
-//            }
-//            case ADD_TO_SELECTION: {
-//                if (sm != null) sm.select(getIndex(), getTableColumn());
-//                break;
-//            }
-//            case REMOVE_FROM_SELECTION: {
-//                if (sm != null) sm.clearSelection(getIndex(), getTableColumn());
-//                break;
-//            }
-//            default: super.accExecuteAction(action);
-//        }
-//    }
+    /** @treatAsPrivate */
+    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case ROLE: return Role.TREE_TABLE_CELL;
+            case TITLE: return getText();
+            case ROW_INDEX: return getIndex();
+            case COLUMN_INDEX: return columnIndex;
+            case SELECTED: return isInCellSelectionMode() ? isSelected() : getTreeTableRow().isSelected();
+            default: return super.accGetAttribute(attribute, parameters);
+        }
+    }
+
+    /** @treatAsPrivate */
+    @Override public void accExecuteAction(Action action, Object... parameters) {
+        final TreeTableView<S> treeTableView = getTreeTableView();
+        final TreeTableView.TreeTableViewSelectionModel<S> sm = treeTableView == null ? null : treeTableView.getSelectionModel();
+
+        switch (action) {
+            case SELECT: {
+                if (sm != null) sm.clearAndSelect(getIndex(), getTableColumn());
+                break;
+            }
+            case ADD_TO_SELECTION: {
+                if (sm != null) sm.select(getIndex(), getTableColumn());
+                break;
+            }
+            case REMOVE_FROM_SELECTION: {
+                if (sm != null) sm.clearSelection(getIndex(), getTableColumn());
+                break;
+            }
+            default: super.accExecuteAction(action);
+        }
+    }
 }

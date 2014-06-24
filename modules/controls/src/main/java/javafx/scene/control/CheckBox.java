@@ -32,8 +32,8 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.event.ActionEvent;
 import javafx.geometry.Pos;
 import javafx.css.PseudoClass;
-//import javafx.scene.accessibility.Attribute;
-//import javafx.scene.accessibility.Role;
+import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Role;
 import com.sun.javafx.scene.control.skin.CheckBoxSkin;
 
 /**
@@ -131,7 +131,7 @@ public class CheckBox extends ButtonBase {
                     final boolean active = get();
                     pseudoClassStateChanged(PSEUDO_CLASS_DETERMINATE,  !active);
                     pseudoClassStateChanged(PSEUDO_CLASS_INDETERMINATE, active);
-//                    accSendNotification(Attribute.INDETERMINATE);
+                    accSendNotification(Attribute.INDETERMINATE);
                 }
 
                 @Override
@@ -165,7 +165,7 @@ public class CheckBox extends ButtonBase {
                 @Override protected void invalidated() {
                     final Boolean v = get();
                     pseudoClassStateChanged(PSEUDO_CLASS_SELECTED, v);
-//                    accSendNotification(Attribute.SELECTED);
+                    accSendNotification(Attribute.SELECTED);
                 }
 
                 @Override
@@ -266,13 +266,13 @@ public class CheckBox extends ButtonBase {
      *                                                                         *
      **************************************************************************/
 
-//    /** @treatAsPrivate */
-//    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//        switch (attribute) {
-//            case ROLE: return Role.CHECKBOX;
-//            case SELECTED: return isSelected();
-//            case INDETERMINATE: return isIndeterminate();
-//            default: return super.accGetAttribute(attribute, parameters);
-//        }
-//    }
+    /** @treatAsPrivate */
+    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case ROLE: return Role.CHECKBOX;
+            case SELECTED: return isSelected();
+            case INDETERMINATE: return isIndeterminate();
+            default: return super.accGetAttribute(attribute, parameters);
+        }
+    }
 }

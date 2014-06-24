@@ -23,7 +23,7 @@
  * questions.
  */
 
-package com.sun.javafx.scene.accessibility;
+package javafx.scene.accessibility;
 
 import com.sun.glass.ui.PlatformAccessible;
 import com.sun.glass.ui.Application;

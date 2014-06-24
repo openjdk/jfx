@@ -35,8 +35,8 @@ import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.scene.Node;
-//import javafx.scene.accessibility.Attribute;
-//import javafx.scene.accessibility.Role;
+import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Role;
 import javafx.util.Callback;
 import javafx.util.StringConverter;
 
@@ -592,22 +592,22 @@ public class ComboBox<T> extends ComboBoxBase<T> {
      *                                                                         *
      **************************************************************************/
 
-//    /** @treatAsPrivate */
-//    @Override
-//    public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//        switch(attribute) {
-//            case ROLE: return Role.COMBOBOX;
-//            case TITLE:
-//                //let the skin first.
-//                Object title = super.accGetAttribute(attribute, parameters);
-//                if (title != null) return title;
-//                StringConverter<T> converter = getConverter();
-//                if (converter == null) {
-//                    return getValue() != null ? getValue().toString() : "";
-//                }
-//                return converter.toString(getValue());
-//            default: return super.accGetAttribute(attribute, parameters);
-//        }
-//    }
+    /** @treatAsPrivate */
+    @Override
+    public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch(attribute) {
+            case ROLE: return Role.COMBOBOX;
+            case TITLE:
+                //let the skin first.
+                Object title = super.accGetAttribute(attribute, parameters);
+                if (title != null) return title;
+                StringConverter<T> converter = getConverter();
+                if (converter == null) {
+                    return getValue() != null ? getValue().toString() : "";
+                }
+                return converter.toString(getValue());
+            default: return super.accGetAttribute(attribute, parameters);
+        }
+    }
 
 }
