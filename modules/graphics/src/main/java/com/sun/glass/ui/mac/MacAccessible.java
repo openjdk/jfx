@@ -90,7 +90,6 @@ final class MacAccessible extends PlatformAccessible {
 
         // 1-to-1 mapping between FX attribute and Mac attribute, static return type
         NSAccessibilityChildrenAttribute(CHILDREN, MacVariant::createNSArray),
-        NSAccessibilityDescriptionAttribute(DESCRIPTION, MacVariant::createNSString),
         NSAccessibilityEnabledAttribute(ENABLED, MacVariant::createNSNumberForBoolean),
         NSAccessibilityHelpAttribute(HELP, MacVariant::createNSString),
 
@@ -103,7 +102,7 @@ final class MacAccessible extends PlatformAccessible {
         NSAccessibilityPositionAttribute(BOUNDS, MacVariant::createNSValueForPoint),
         NSAccessibilityRoleAttribute(ROLE, MacVariant::createNSObject),
         NSAccessibilitySubroleAttribute(ROLE, MacVariant::createNSObject),
-        NSAccessibilityRoleDescriptionAttribute(ROLE, MacVariant::createNSString),
+        NSAccessibilityRoleDescriptionAttribute(DESCRIPTION, MacVariant::createNSString),
         NSAccessibilitySizeAttribute(BOUNDS, MacVariant::createNSValueForSize),
         NSAccessibilityTabsAttribute(null, MacVariant::createNSArray),
         NSAccessibilityTitleAttribute(TITLE, MacVariant::createNSString),
@@ -1219,6 +1218,28 @@ final class MacAccessible extends PlatformAccessible {
                     break;
                 case AXMenuItemCmdModifiers:
                     return attr.map.apply(kAXMenuItemModifierNoCommand);
+                case NSAccessibilityRoleDescriptionAttribute: {
+                    /*
+                     * In some cases there is no proper mapping from a JFX role
+                     * to a Mac role. For example, reporting 'disclosure triangle'
+                     * for a TITLED_PANE is not appropriate.
+                     * Providing a custom role description makes it much better.
+                     * 
+                     * Note: The user can redefine this attribuet by specifying
+                     * a DESCRIPTION.
+                     */
+                    switch (role) {
+                        case TITLED_PANE: result = "title pane"; break;
+                        case SPLIT_MENU_BUTTON: result = "split button"; break;
+                        case PAGE: result = "page"; break;
+                        case TAB_ITEM: result = "tab"; break;
+                        default:
+                            MacRole macRole = getRole(role);
+                            MacSubrole subRole = MacSubrole.getRole(role);
+                            result = NSAccessibilityRoleDescription(macRole.ptr, subRole != null ? subRole.ptr : 0l);
+                    }
+                    break;
+                }
                 default: return null;
             }
         }
@@ -1244,25 +1265,6 @@ final class MacAccessible extends PlatformAccessible {
             case NSAccessibilityRoleAttribute: {
                 MacRole macRole = getRole(role);
                 result = macRole != null ? macRole.ptr : 0L;
-                break;
-            }
-            case NSAccessibilityRoleDescriptionAttribute: {
-                MacRole macRole = getRole(role);
-                /* 
-                 * In some cases there is no proper mapping from a JFX role
-                 * to a Mac role. For example, reporting 'disclosure triangle'
-                 * for a TITLED_PANE is not appropriate.
-                 * Providing a custom role description makes it much better.
-                 */
-                switch (role) {
-                    case TITLED_PANE: result = "title pane"; break;
-                    case SPLIT_MENU_BUTTON: result = "split button"; break;
-                    case PAGE: result = "page"; break;
-                    case TAB_ITEM: result = "tab"; break;
-                    default:
-                        MacSubrole subRole = MacSubrole.getRole(role);
-                        result = NSAccessibilityRoleDescription(macRole.ptr, subRole != null ? subRole.ptr : 0l);
-                }
                 break;
             }
             case NSAccessibilitySelectedCellsAttribute:
@@ -1358,6 +1360,7 @@ final class MacAccessible extends PlatformAccessible {
                         if (parent == null) return null;
                         Accessible acc = parent.getAccessible();
                         if (acc.getAttribute(ROLE) == Role.TREE_TABLE_ITEM) {
+                            @SuppressWarnings("unchecked")
                             Stream<Node> children = ((List<Node>)acc.getAttribute(CHILDREN)).stream();
 
                             result = children.map(n -> n.getAccessible())
