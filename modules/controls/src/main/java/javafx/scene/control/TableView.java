@@ -1933,6 +1933,7 @@ public class TableView<S> extends Control {
 
         void focus(int row, TableColumn<S,?> column) {
             focus(new TablePosition<>(getTableView(), row, column));
+            getTableView().accSendNotification(Attribute.SELECTED_CELLS);
         }
 
         void focus(TablePosition<S,?> pos) {
@@ -2723,9 +2724,6 @@ public class TableView<S> extends Control {
         private void updateSelectedIndex(int row) {
             setSelectedIndex(row);
             setSelectedItem(getModelItem(row));
-
-            /* Does this get all the change events ? */
-            getTableView().accSendNotification(Attribute.SELECTED_CELLS);
         }
         
         /** {@inheritDoc} */
