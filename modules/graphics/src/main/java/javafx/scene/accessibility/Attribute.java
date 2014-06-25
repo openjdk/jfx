@@ -113,6 +113,12 @@ public enum Attribute {
     DESCRIPTION("Description", String.class),
 
     /**
+     * Returns true if the Node is disabled.
+     * Type: Boolean
+     */
+    DISABLED("Disabled", Boolean.class),
+
+    /**
      * Depth of a row in a disclosure hierarchy.
      * Type: Integer
      */
@@ -129,12 +135,6 @@ public enum Attribute {
      * Type: Boolean
      */
     EDITABLE("Editable", Boolean.class),
-
-    /**
-     * Returns true if the Node is enabled.
-     * Type: Boolean
-     */
-    ENABLED("Enabled", Boolean.class),
 
     /**
      * Indicates if a popup is expanded.

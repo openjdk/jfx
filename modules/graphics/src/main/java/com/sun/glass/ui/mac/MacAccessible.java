@@ -90,7 +90,7 @@ final class MacAccessible extends PlatformAccessible {
 
         // 1-to-1 mapping between FX attribute and Mac attribute, static return type
         NSAccessibilityChildrenAttribute(CHILDREN, MacVariant::createNSArray),
-        NSAccessibilityEnabledAttribute(ENABLED, MacVariant::createNSNumberForBoolean),
+        NSAccessibilityEnabledAttribute(DISABLED, MacVariant::createNSNumberForBoolean),
         NSAccessibilityHelpAttribute(HELP, MacVariant::createNSString),
 
         // FOCUSED might not match the result of accessibilityFocusedUIElement() cause of FOCUS_ITEM 
@@ -1265,6 +1265,10 @@ final class MacAccessible extends PlatformAccessible {
             case NSAccessibilityRoleAttribute: {
                 MacRole macRole = getRole(role);
                 result = macRole != null ? macRole.ptr : 0L;
+                break;
+            }
+            case NSAccessibilityEnabledAttribute: {
+                result = Boolean.FALSE.equals(result);
                 break;
             }
             case NSAccessibilitySelectedCellsAttribute:

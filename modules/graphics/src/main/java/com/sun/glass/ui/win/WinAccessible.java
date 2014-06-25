@@ -807,10 +807,10 @@ final class WinAccessible extends PlatformAccessible {
                 break;
             }
             case UIA_IsEnabledPropertyId: {
-                Boolean enabled = (Boolean)getAttribute(ENABLED);
+                Boolean disabled = (Boolean)getAttribute(DISABLED);
                 variant = new WinVariant();
                 variant.vt = WinVariant.VT_BOOL;
-                variant.boolVal = enabled != null ? enabled : true;
+                variant.boolVal = disabled != null ? !disabled : true;
                 break;
             }
             case UIA_IsKeyboardFocusablePropertyId: {

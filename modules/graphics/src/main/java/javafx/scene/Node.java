@@ -9173,7 +9173,7 @@ public abstract class Node implements EventTarget, Styleable {
             case PARENT: return getParent();
             case SCENE: return getScene();
             case BOUNDS: return localToScreen(getBoundsInLocal());
-            case ENABLED: return !isDisabled();
+            case DISABLED: return isDisabled();
             case FOCUSED: return isFocused();
             case VISIBLE: return isVisible();
             case LABELED_BY: return labeledBy;
