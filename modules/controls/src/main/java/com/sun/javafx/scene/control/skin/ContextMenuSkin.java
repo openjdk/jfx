@@ -28,7 +28,7 @@ package com.sun.javafx.scene.control.skin;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.scene.Node;
-//import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Attribute;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Menu;
 import javafx.scene.control.Skin;
@@ -86,7 +86,7 @@ public class ContextMenuSkin implements Skin<ContextMenu> {
                     cmContent.requestFocus();
                     if (cmContent instanceof ContextMenuContent) {
                         Node accMenu = ((ContextMenuContent)cmContent).getItemsContainer();
-//                        accMenu.accSendNotification(Attribute.VISIBLE);
+                        accMenu.accSendNotification(Attribute.VISIBLE);
                     }
                 }
                 
@@ -110,7 +110,7 @@ public class ContextMenuSkin implements Skin<ContextMenu> {
                 Node cmContent = popupMenu.getSkin().getNode();
                 if (cmContent instanceof ContextMenuContent) {
                     Node accMenu = ((ContextMenuContent)cmContent).getItemsContainer();
-//                    accMenu.accSendNotification(Attribute.VISIBLE);
+                    accMenu.accSendNotification(Attribute.VISIBLE);
                 }
             }
         });

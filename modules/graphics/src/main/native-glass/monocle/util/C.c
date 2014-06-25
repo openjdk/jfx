@@ -23,18 +23,18 @@
  * questions.
  */
 
-#include "com_sun_glass_ui_monocle_util_C.h"
+#include "com_sun_glass_ui_monocle_C.h"
 #include "Monocle.h"
 
 JNIEXPORT jobject JNICALL
- Java_com_sun_glass_ui_monocle_util_C_NewDirectByteBuffer
+ Java_com_sun_glass_ui_monocle_C_NewDirectByteBuffer
     (JNIEnv *env, jobject UNUSED(obj), jlong ptr, jint size) {
     return (*env)->NewDirectByteBuffer(env,
             (void *) (unsigned long) ptr, (jlong) size);
 }
 
 JNIEXPORT jlong JNICALL
- Java_com_sun_glass_ui_monocle_util_C_GetDirectBufferAddress
+ Java_com_sun_glass_ui_monocle_C_GetDirectBufferAddress
     (JNIEnv *env, jobject UNUSED(obj), jobject byteBuffer) {
     return byteBuffer
             ? asJLong((*env)->GetDirectBufferAddress(env, byteBuffer))

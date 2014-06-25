@@ -27,30 +27,30 @@ package com.sun.glass.ui.monocle;
 
 import com.sun.glass.ui.Size;
 
-public class NullCursor extends NativeCursor {
+class NullCursor extends NativeCursor {
 
     @Override
-    public Size getBestSize() {
+    Size getBestSize() {
         return new Size(16, 16);
     }
 
     @Override
-    public void setVisibility(boolean visibility) {
+    void setVisibility(boolean visibility) {
     }
 
     @Override
-    public void setImage(byte[] cursorImage) {
+    void setImage(byte[] cursorImage) {
     }
 
     @Override
-    public void setLocation(int x, int y) {
+    void setLocation(int x, int y) {
     }
 
     @Override
-    public void setHotSpot(int hotspotX, int hotspotY) {
+    void setHotSpot(int hotspotX, int hotspotY) {
     }
 
     @Override
-    public void shutdown() {
+    void shutdown() {
     }
 }

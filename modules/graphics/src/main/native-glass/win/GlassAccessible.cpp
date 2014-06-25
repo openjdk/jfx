@@ -27,6 +27,7 @@
 #include "common.h"
 #include "com_sun_glass_ui_win_WinAccessible.h"
 #include "GlassAccessible.h"
+#include "GlassTextRangeProvider.h"
 
 /* WinAccessible Method IDs */
 static jmethodID mid_GetPatternProvider;
@@ -221,7 +222,7 @@ static jfieldID fid_pDblVal;
     return hr;
 }
 
-HRESULT GlassAccessible::callLongMethod(jmethodID mid,  IUnknown **pRetVal, ...)
+HRESULT GlassAccessible::callLongMethod(jmethodID mid,  GlassAccessible **pRetVal, ...)
 {
     va_list vl;
     va_start(vl, pRetVal);
@@ -231,9 +232,9 @@ HRESULT GlassAccessible::callLongMethod(jmethodID mid,  IUnknown **pRetVal, ...)
     if (CheckAndClearException(env)) return E_FAIL;
 
     /* AddRef the result */
-    IUnknown* iUnknown = reinterpret_cast<IUnknown*>(ptr);
-    if (iUnknown) iUnknown->AddRef();
-    *pRetVal = iUnknown;
+    GlassAccessible* ga = reinterpret_cast<GlassAccessible*>(ptr);
+    if (ga) ga->AddRef();
+    *pRetVal = ga;
     return S_OK;
 }
 
@@ -359,7 +360,10 @@ IFACEMETHODIMP GlassAccessible::get_ProviderOptions(ProviderOptions* pRetVal)
 IFACEMETHODIMP GlassAccessible::GetPatternProvider(PATTERNID patternId, IUnknown** pRetVal)
 {
     if (pRetVal == NULL) return E_INVALIDARG;
-    return callLongMethod(mid_GetPatternProvider, pRetVal, patternId);
+    GlassAccessible* ptr = NULL;
+    HRESULT hr = callLongMethod(mid_GetPatternProvider, &ptr, patternId);
+    *pRetVal = reinterpret_cast<IUnknown*>(ptr);
+    return hr;
 }
 
 IFACEMETHODIMP GlassAccessible::GetPropertyValue(PROPERTYID propertyId, VARIANT* pRetVal)
@@ -396,9 +400,9 @@ IFACEMETHODIMP GlassAccessible::get_BoundingRectangle(UiaRect *pRetVal)
 IFACEMETHODIMP GlassAccessible::get_FragmentRoot(IRawElementProviderFragmentRoot **pRetVal)
 {
     if (pRetVal == NULL) return E_INVALIDARG;
-    IUnknown* ptr = NULL;
+    GlassAccessible* ptr = NULL;
     HRESULT hr = callLongMethod(mid_get_FragmentRoot, &ptr);
-    *pRetVal = reinterpret_cast<IRawElementProviderFragmentRoot*>(ptr);
+    *pRetVal = static_cast<IRawElementProviderFragmentRoot*>(ptr);
     return hr;
 }
 
@@ -417,9 +421,9 @@ IFACEMETHODIMP GlassAccessible::GetRuntimeId(SAFEARRAY **pRetVal)
 IFACEMETHODIMP GlassAccessible::Navigate(NavigateDirection direction, IRawElementProviderFragment **pRetVal)
 {
     if (pRetVal == NULL) return E_INVALIDARG;
-    IUnknown* ptr = NULL;
+    GlassAccessible* ptr = NULL;
     HRESULT hr = callLongMethod(mid_Navigate, &ptr, direction);
-    *pRetVal = reinterpret_cast<IRawElementProviderFragment*>(ptr);
+    *pRetVal = static_cast<IRawElementProviderFragment*>(ptr);
     return hr;
 }
 
@@ -437,18 +441,18 @@ IFACEMETHODIMP GlassAccessible::SetFocus()
 IFACEMETHODIMP GlassAccessible::ElementProviderFromPoint(double x, double y, IRawElementProviderFragment **pRetVal)
 {
     if (pRetVal == NULL) return E_INVALIDARG;
-    IUnknown* ptr = NULL;
+    GlassAccessible* ptr = NULL;
     HRESULT hr = callLongMethod(mid_ElementProviderFromPoint, &ptr, x, y);
-    *pRetVal = reinterpret_cast<IRawElementProviderFragment*>(ptr);
+    *pRetVal = static_cast<IRawElementProviderFragment*>(ptr);
     return hr;
 }
 
 IFACEMETHODIMP GlassAccessible::GetFocus(IRawElementProviderFragment **pRetVal)
 {
     if (pRetVal == NULL) return E_INVALIDARG;
-    IUnknown* ptr = NULL;
+    GlassAccessible* ptr = NULL;
     HRESULT hr = callLongMethod(mid_GetFocus, &ptr);
-    *pRetVal = reinterpret_cast<IRawElementProviderFragment*>(ptr);
+    *pRetVal = static_cast<IRawElementProviderFragment*>(ptr);
     return hr;
 }
 
@@ -556,9 +560,9 @@ IFACEMETHODIMP GlassAccessible::get_IsSelected(BOOL *pRetVal)
 IFACEMETHODIMP GlassAccessible::get_SelectionContainer(IRawElementProviderSimple **pRetVal)
 {
     if (pRetVal == NULL) return E_INVALIDARG;
-    IUnknown* ptr = NULL;
+    GlassAccessible* ptr = NULL;
     HRESULT hr = callLongMethod(mid_get_SelectionContainer, &ptr);
-    *pRetVal = reinterpret_cast<IRawElementProviderSimple*>(ptr);
+    *pRetVal = static_cast<IRawElementProviderSimple*>(ptr);
     return hr;
 }
 
@@ -662,14 +666,14 @@ IFACEMETHODIMP GlassAccessible::RangeFromChild(IRawElementProviderSimple *childE
     jlong ptr = env->CallLongMethod(m_jAccessible, mid_RangeFromChild, (jlong)childElement);
     if (CheckAndClearException(env)) return E_FAIL;
 
+    GlassTextRangeProvider* gtrp = reinterpret_cast<GlassTextRangeProvider*>(ptr);
     /* This code is intentionally commented.
      * JavaFX returns a new ITextRangeProvider instance each time.
      * The caller holds the only reference to this object.
      */
-//    ITextRangeProvider* iUnknown = reinterpret_cast<ITextRangeProvider*>(ptr);
-//    if (iUnknown) iUnknown->AddRef();
+//    if (gtrp) gtrp->AddRef();
 
-    *pRetVal = reinterpret_cast<ITextRangeProvider*>(ptr);
+    *pRetVal = static_cast<ITextRangeProvider*>(gtrp);
     return S_OK;
 }
 
@@ -680,24 +684,28 @@ IFACEMETHODIMP GlassAccessible::RangeFromPoint(UiaPoint point, ITextRangeProvide
     jlong ptr = env->CallLongMethod(m_jAccessible, mid_RangeFromPoint, point.x, point.y);
     if (CheckAndClearException(env)) return E_FAIL;
 
+    GlassTextRangeProvider* gtrp = reinterpret_cast<GlassTextRangeProvider*>(ptr);
     /* This code is intentionally commented.
      * JavaFX returns a new ITextRangeProvider instance each time.
      * The caller holds the only reference to this object.
      */
-//    ITextRangeProvider* iUnknown = reinterpret_cast<ITextRangeProvider*>(ptr);
-//    if (iUnknown) iUnknown->AddRef();
+//    if (gtrp) gtrp->AddRef();
 
-    *pRetVal = reinterpret_cast<ITextRangeProvider*>(ptr);
+    *pRetVal = static_cast<ITextRangeProvider*>(gtrp);
     return S_OK;
 }
 
 IFACEMETHODIMP GlassAccessible::get_DocumentRange(ITextRangeProvider **pRetVal)
 {
     if (pRetVal == NULL) return E_INVALIDARG;
-    IUnknown* ptr = NULL;
-    HRESULT hr = callLongMethod(mid_get_DocumentRange, &ptr);
-    *pRetVal = reinterpret_cast<ITextRangeProvider*>(ptr);
-    return hr;
+    JNIEnv* env = GetEnv();
+    jlong ptr = env->CallLongMethod(m_jAccessible, mid_get_DocumentRange);
+    if (CheckAndClearException(env)) return E_FAIL;
+
+    GlassTextRangeProvider* gtrp = reinterpret_cast<GlassTextRangeProvider*>(ptr);
+    if (gtrp) gtrp->AddRef();
+    *pRetVal = static_cast<ITextRangeProvider*>(gtrp);
+    return S_OK;
 }
 
 IFACEMETHODIMP GlassAccessible::get_SupportedTextSelection(SupportedTextSelection *pRetVal)
@@ -728,9 +736,9 @@ IFACEMETHODIMP GlassAccessible::get_RowCount(int *pRetVal) {
 
 IFACEMETHODIMP GlassAccessible::GetItem(int row, int column, IRawElementProviderSimple **pRetVal) {
     if (pRetVal == NULL) return E_INVALIDARG;
-    IUnknown* ptr = NULL;
+    GlassAccessible* ptr = NULL;
     HRESULT hr = callLongMethod(mid_GetItem, &ptr, row, column);
-    *pRetVal = reinterpret_cast<IRawElementProviderSimple*>(ptr);
+    *pRetVal = static_cast<IRawElementProviderSimple*>(ptr);
     return hr;
 }
 
@@ -754,9 +762,9 @@ IFACEMETHODIMP GlassAccessible::get_ColumnSpan(int *pRetVal)
 
 IFACEMETHODIMP GlassAccessible::get_ContainingGrid(IRawElementProviderSimple **pRetVal){
     if (pRetVal == NULL) return E_INVALIDARG;
-    IUnknown* ptr = NULL;
+    GlassAccessible* ptr = NULL;
     HRESULT hr = callLongMethod(mid_get_ContainingGrid, &ptr);
-    *pRetVal = reinterpret_cast<IRawElementProviderSimple*>(ptr);
+    *pRetVal = static_cast<IRawElementProviderSimple*>(ptr);
     return hr;
 }
 
@@ -1232,7 +1240,8 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinAccessible__1destroyGlassAcc
 JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_win_WinAccessible_UiaRaiseAutomationEvent
   (JNIEnv *env, jclass jClass, jlong jAccessible, jint id)
 {
-    IRawElementProviderSimple* pProvider = reinterpret_cast<IRawElementProviderSimple*>(jAccessible);
+    GlassAccessible* acc = reinterpret_cast<GlassAccessible*>(jAccessible);
+    IRawElementProviderSimple* pProvider = static_cast<IRawElementProviderSimple*>(acc);
     return (jlong)UiaRaiseAutomationEvent(pProvider, (EVENTID)id);
 }
 
@@ -1244,7 +1253,8 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_win_WinAccessible_UiaRaiseAutomati
 JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_win_WinAccessible_UiaRaiseAutomationPropertyChangedEvent
   (JNIEnv *env, jclass jClass, jlong jAccessible, jint id, jobject oldV, jobject newV)
 {
-    IRawElementProviderSimple* pProvider = reinterpret_cast<IRawElementProviderSimple*>(jAccessible);
+    GlassAccessible* acc = reinterpret_cast<GlassAccessible*>(jAccessible);
+    IRawElementProviderSimple* pProvider = static_cast<IRawElementProviderSimple*>(acc);
     VARIANT ov = {0}, nv = {0};
     HRESULT hr = E_FAIL;
 

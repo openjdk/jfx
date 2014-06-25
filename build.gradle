@@ -631,6 +631,7 @@ compileTargets { t ->
     if (!targetProperties.containsKey('includeSwing')) targetProperties.includeSwing = true
     if (!targetProperties.containsKey('includeNull3d')) targetProperties.includeNull3d = true
     if (!targetProperties.containsKey('includeLens')) targetProperties.includeLens = false
+    if (!targetProperties.containsKey('includeMonocle')) targetProperties.includeMonocle = false
     if (!targetProperties.containsKey('includeEGL')) targetProperties.includeEGL = false
 
     if (!targetProperties.containsKey('includeGTK')) targetProperties.includeGTK = IS_LINUX
@@ -2740,6 +2741,12 @@ compileTargets { t ->
         if (!targetProperties.includeLens) {
             exclude ("com/sun/glass/ui/lens")
         }
+        /* Note: Monocle is used in the test harness, and so should
+         * not be excluded until the deploy phase
+        if (!targetProperties.includeMonocle) {
+            exclude ("com/sun/glass/ui/monocle")
+        }
+        */
         if (!targetProperties.includeNull3d) {
             // "com/sun/prism/null3d", // TODO This is used in dev builds but not the final sdk
             exclude ("com/sun/prism/null3d")
@@ -2888,11 +2895,12 @@ compileTargets { t ->
             final File javafxProperties = file("build/${sdkDirName}/rt/lib/javafx.properties")
             javafxProperties.delete()
             javafxProperties << "javafx.runtime.version=$RAW_VERSION";
+            javafxProperties << "\n"
             // Include any properties that have been defined (most likely in
             // one of the various platform gradle files)
             if (targetProperties.containsKey("javafxProperties")) {
-                javafxProperties << "\n"
                 javafxProperties << targetProperties.javafxProperties
+                javafxProperties << "\n"
             }
 
             // Embedded builds define this file as well
@@ -2900,6 +2908,7 @@ compileTargets { t ->
                 final File javafxPlatformProperties = file("build/${sdkDirName}/rt/lib/javafx.platform.properties")
                 javafxPlatformProperties.delete()
                 javafxPlatformProperties << targetProperties.javafxPlatformProperties
+                javafxPlatformProperties << "\n"
             }
 
             // Copy over the javadocs that were generated. This is done rather than just generating

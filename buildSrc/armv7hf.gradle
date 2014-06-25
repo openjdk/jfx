@@ -61,6 +61,9 @@ if (rootProject.hasProperty("ARMV7HF_COMPILER_PREFIX")) {
     compilerPrefix="${rootProject.ARMV7HF_COMPILER_PREFIX}"
 }
 
+def compiler = file("$compilerHome/bin/${compilerPrefix}gcc").getAbsolutePath()
+def linker = file("$compilerHome/bin/${compilerPrefix}g++").getAbsolutePath()
+
 // Declare whether this particular target file applies to the current system
 ARMV7HF.canBuild = (IS_LINUX || IS_MAC) && compilerHome.exists() && sdk.exists()
 if (!ARMV7HF.canBuild) {
@@ -80,10 +83,13 @@ ARMV7HF.compileWebnodeNative = false;
 ARMV7HF.compileMediaNative = false;
 
 ARMV7HF.includeLens = true
+ARMV7HF.includeMonocle = true
 ARMV7HF.includeNull3d = true
 ARMV7HF.includeEGL = true
 ARMV7HF.includeSwing = false
 ARMV7HF.includeSWT = false
+
+ARMV7HF.javafxPlatformDefault="monocle"
 
 // Libraries end up in the sdk/rt/lib/arm directory for arm builds
 ARMV7HF.arch = "arm"
@@ -156,7 +162,7 @@ def webLFlags = [extraLFlags].flatten()
 
 def gtkCFlags = [extraCFlags].flatten()
 def gtkLFlags = [extraLFlags].flatten()
-setupTools("armv6hf_tools",
+setupTools("armv7hf_tools",
     { propFile ->
         ByteArrayOutputStream results = new ByteArrayOutputStream();
         exec {
@@ -178,7 +184,25 @@ setupTools("armv6hf_tools",
     }
 )
 
-ARMV7HF.javafxPlatformProperties ="""javafx.platform=monocle
+def monoclePlatformAdditions = """
+monocle.glass.platform=Monocle
+monocle.prism.order=es2,sw
+monocle.prism.eglfb=true
+monocle.prism.lcdtext=false
+monocle.prism.maxvram=128m
+monocle.prism.targetvram=112m
+monocle.use.egl=true
+monocle.use.gles2=true
+monocle.embedded=monocle
+monocle.com.sun.javafx.isEmbedded=true
+monocle.doNativeComposite=true
+monocle.com.sun.javafx.scene.control.skin.FXVK.cache=true
+monocle.prism.glDepthSize=0
+monocle.com.sun.javafx.gestures.zoom=true
+monocle.com.sun.javafx.gestures.rotate=true
+monocle.com.sun.javafx.gestures.scroll=true"""
+
+def lensPlatformAdditions = """
 directfb.com.sun.javafx.scene.control.skin.ListViewSkin.pannable=true
 directfb.com.sun.javafx.scene.control.skin.TreeViewSkin.pannable=true
 directfb.com.sun.javafx.scene.control.skin.TableViewSkin.pannable=true
@@ -206,10 +230,10 @@ eglfb.embedded=eglfb
 eglfb.com.sun.javafx.isEmbedded=true
 eglfb.doNativeComposite=true
 eglfb.com.sun.javafx.scene.control.skin.FXVK.cache=true
+eglfb.prism.glDepthSize=0
 eglfb.com.sun.javafx.gestures.zoom=true
 eglfb.com.sun.javafx.gestures.rotate=true
 eglfb.com.sun.javafx.gestures.scroll=true
-eglfb.prism.glDepthSize=0
 fb.com.sun.javafx.scene.control.skin.ListViewSkin.pannable=true
 fb.com.sun.javafx.scene.control.skin.TreeViewSkin.pannable=true
 fb.com.sun.javafx.scene.control.skin.TableViewSkin.pannable=true
@@ -222,22 +246,6 @@ fb.com.sun.javafx.scene.control.skin.FXVK.cache=true
 fb.com.sun.javafx.gestures.zoom=true
 fb.com.sun.javafx.gestures.rotate=true
 fb.com.sun.javafx.gestures.scroll=true
-monocle.glass.platform=Monocle
-monocle.prism.order=es2,sw
-monocle.prism.eglfb=true
-monocle.prism.lcdtext=false
-monocle.prism.maxvram=128m
-monocle.prism.targetvram=112m
-monocle.use.egl=true
-monocle.use.gles2=true
-monocle.embedded=monocle
-monocle.com.sun.javafx.isEmbedded=true
-monocle.doNativeComposite=true
-monocle.com.sun.javafx.scene.control.skin.FXVK.cache=true
-monocle.com.sun.javafx.gestures.zoom=true
-monocle.com.sun.javafx.gestures.rotate=true
-monocle.com.sun.javafx.gestures.scroll=true
-monocle.prism.glDepthSize=0
 eglx11.com.sun.javafx.scene.control.skin.ListViewSkin.pannable=true
 eglx11.com.sun.javafx.scene.control.skin.TreeViewSkin.pannable=true
 eglx11.com.sun.javafx.scene.control.skin.TableViewSkin.pannable=true
@@ -253,10 +261,12 @@ eglx11.use.gles2=true
 eglx11.embedded=eglx11
 eglx11.com.sun.javafx.isEmbedded=true
 eglx11.com.sun.javafx.scene.control.skin.FXVK.cache=true
+eglx11.prism.glDepthSize=0
 eglx11.com.sun.javafx.gestures.zoom=true
 eglx11.com.sun.javafx.gestures.rotate=true
-eglx11.com.sun.javafx.gestures.scroll=true
-eglx11.prism.glDepthSize=0
+eglx11.com.sun.javafx.gestures.scroll=true"""
+
+def gtkPlatformAdditions = """
 gtk.com.sun.javafx.scene.control.skin.ListViewSkin.pannable=true
 gtk.com.sun.javafx.scene.control.skin.TreeViewSkin.pannable=true
 gtk.com.sun.javafx.scene.control.skin.TableViewSkin.pannable=true
@@ -270,7 +280,7 @@ gtk.com.sun.javafx.gestures.scroll=true"""
 
 def pangoCCFlags = [extraCFlags, "-D_ENABLE_PANGO"];
 def pangoLinkFlags = [extraLFlags];
-setupTools("armv6hf_pango_tools",
+setupTools("armv7hf_pango_tools",
     { propFile ->
         ByteArrayOutputStream results = new ByteArrayOutputStream();
         exec {
@@ -295,7 +305,7 @@ setupTools("armv6hf_pango_tools",
 def freetypeCCFlags = [ext.IS_COMPILE_PANGO ? "-D_ENABLE_PANGO" :
                        ext.IS_COMPILE_HARFBUZZ ? "-D_ENABLE_HARFBUZZ" : ""]
 def freetypeLinkFlags = []
-setupTools("armv6hf_freetype_tools",
+setupTools("armv7hf_freetype_tools",
     { propFile ->
         ByteArrayOutputStream results = new ByteArrayOutputStream();
         exec {
@@ -317,19 +327,35 @@ setupTools("armv6hf_freetype_tools",
     }
 )
 
-def compiler = file("$compilerHome/bin/${compilerPrefix}gcc").getAbsolutePath()
-def linker = file("$compilerHome/bin/${compilerPrefix}g++").getAbsolutePath()
+ARMV7HF.javafxPlatformProperties = "javafx.platform=${ARMV7HF.javafxPlatformDefault}"
 
 ARMV7HF.glass = [:]
-ARMV7HF.glass.variants = ["eglfb", "directfb", "fb", "gtk", "lensport", "monocle", "monocle_x11" ]
 ARMV7HF.glass.javahInclude = [
     "com/sun/glass/events/**",
-    "com/sun/glass/ui/*",
-    "com/sun/glass/ui/lens/*",
-    "com/sun/glass/ui/monocle/linux/*",
-    "com/sun/glass/ui/monocle/util/*",
-    "com/sun/glass/ui/monocle/x11/*",
-    "com/sun/glass/ui/gtk/*"]
+    "com/sun/glass/ui/*"]
+ARMV7HF.glass.variants = [ ]
+if (ARMV7HF.includeLens) { 
+    ARMV7HF.glass.variants.addAll("eglfb", "directfb", "fb", "lensport" );
+    ARMV7HF.glass.javahInclude.addAll("com/sun/glass/ui/lens/*");
+    ARMV7HF.javafxPlatformProperties = ARMV7HF.javafxPlatformProperties + lensPlatformAdditions
+}
+if (ARMV7HF.includeMonocle) { 
+    ARMV7HF.glass.variants.addAll("monocle", "monocle_x11");
+    ARMV7HF.glass.javahInclude.addAll(
+        "com/sun/glass/ui/monocle/*",
+        "com/sun/glass/ui/monocle/dispman/*",
+        "com/sun/glass/ui/monocle/mx6/*",
+        "com/sun/glass/ui/monocle/linux/*",
+        "com/sun/glass/ui/monocle/util/*",
+        "com/sun/glass/ui/monocle/x11/*");
+    ARMV7HF.javafxPlatformProperties = ARMV7HF.javafxPlatformProperties + monoclePlatformAdditions
+}
+if (ARMV7HF.includeGTK) {
+    ARMV7HF.glass.variants.addAll("gtk");
+    ARMV7HF.glass.javahInclude.addAll("com/sun/glass/ui/gtk/*");
+    ARMV7HF.javafxPlatformProperties = ARMV7HF.javafxPlatformProperties + gtkPlatformAdditions
+}
+
 ARMV7HF.glass.lib = "glass"
 
 ARMV7HF.glass.lensport = [:]

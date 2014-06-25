@@ -27,24 +27,24 @@ package com.sun.glass.ui.monocle;
 
 import com.sun.glass.ui.Size;
 
-public abstract class NativeCursor {
+abstract class NativeCursor {
 
-    public boolean isVisible = false;
+    protected boolean isVisible = false;
 
-    public abstract Size getBestSize();
+    abstract Size getBestSize();
 
     // setVisibility can fail silently; use getVisibility to check the results
-    public abstract void setVisibility(boolean visibility);
+    abstract void setVisibility(boolean visibility);
 
-    public boolean getVisiblity() {
+    boolean getVisiblity() {
         return isVisible;
     }
 
-    public abstract void setImage(byte[] cursorImage);
+    abstract void setImage(byte[] cursorImage);
 
-    public abstract void setLocation(int x, int y);
+    abstract void setLocation(int x, int y);
 
-    public abstract void setHotSpot(int hotspotX, int hotspotY);
+    abstract void setHotSpot(int hotspotX, int hotspotY);
 
-    public abstract void shutdown();
+    abstract void shutdown();
 }
