@@ -227,6 +227,7 @@ HRESULT GlassAccessible::callLongMethod(jmethodID mid,  GlassAccessible **pRetVa
     va_list vl;
     va_start(vl, pRetVal);
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     jlong ptr = env->CallLongMethodV(m_jAccessible, mid, vl);
     va_end(vl);
     if (CheckAndClearException(env)) return E_FAIL;
@@ -241,6 +242,7 @@ HRESULT GlassAccessible::callLongMethod(jmethodID mid,  GlassAccessible **pRetVa
 HRESULT GlassAccessible::callArrayMethod(jmethodID mid, VARTYPE vt, SAFEARRAY **pRetVal)
 {
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     jarray list = (jarray)env->CallObjectMethod(m_jAccessible, mid);
     if (CheckAndClearException(env)) return E_FAIL;
 
@@ -334,6 +336,7 @@ IFACEMETHODIMP GlassAccessible::get_HostRawElementProvider(IRawElementProviderSi
 {
     if (pRetVal == NULL) return E_INVALIDARG;
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     jlong hwnd = env->CallLongMethod(m_jAccessible, mid_get_HostRawElementProvider);
     if (CheckAndClearException(env)) return E_FAIL;
     
@@ -370,6 +373,7 @@ IFACEMETHODIMP GlassAccessible::GetPropertyValue(PROPERTYID propertyId, VARIANT*
 {
     if (pRetVal == NULL) return E_INVALIDARG;
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     jobject jVariant = env->CallObjectMethod(m_jAccessible, mid_GetPropertyValue, propertyId);
     if (CheckAndClearException(env)) return E_FAIL;
 
@@ -383,6 +387,7 @@ IFACEMETHODIMP GlassAccessible::get_BoundingRectangle(UiaRect *pRetVal)
 {
     if (pRetVal == NULL) return E_INVALIDARG;
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     jfloatArray bounds = (jfloatArray)env->CallObjectMethod(m_jAccessible, mid_get_BoundingRectangle);
     if (CheckAndClearException(env)) return E_FAIL;
 
@@ -430,6 +435,7 @@ IFACEMETHODIMP GlassAccessible::Navigate(NavigateDirection direction, IRawElemen
 IFACEMETHODIMP GlassAccessible::SetFocus()
 {
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     env->CallVoidMethod(m_jAccessible, mid_SetFocus);
     if (CheckAndClearException(env)) return E_FAIL;
     return S_OK;
@@ -492,6 +498,7 @@ IFACEMETHODIMP GlassAccessible::AdviseEventRemoved(EVENTID eventId, SAFEARRAY *p
 IFACEMETHODIMP GlassAccessible::Invoke()
 {
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     env->CallVoidMethod(m_jAccessible, mid_Invoke);
     if (CheckAndClearException(env)) return E_FAIL;
     return S_OK;
@@ -509,6 +516,7 @@ IFACEMETHODIMP GlassAccessible::GetSelection(SAFEARRAY **pRetVal)
 IFACEMETHODIMP GlassAccessible::get_CanSelectMultiple(BOOL *pRetVal)
 {
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     *pRetVal = env->CallBooleanMethod(m_jAccessible, mid_get_CanSelectMultiple);
     if (CheckAndClearException(env)) return E_FAIL;
     return S_OK;
@@ -517,6 +525,7 @@ IFACEMETHODIMP GlassAccessible::get_CanSelectMultiple(BOOL *pRetVal)
 IFACEMETHODIMP GlassAccessible::get_IsSelectionRequired(BOOL *pRetVal)
 {
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     *pRetVal = env->CallBooleanMethod(m_jAccessible, mid_get_IsSelectionRequired);
     if (CheckAndClearException(env)) return E_FAIL;
     return S_OK;
@@ -528,6 +537,7 @@ IFACEMETHODIMP GlassAccessible::get_IsSelectionRequired(BOOL *pRetVal)
 IFACEMETHODIMP GlassAccessible::Select()
 {
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     env->CallVoidMethod(m_jAccessible, mid_Select);
     if (CheckAndClearException(env)) return E_FAIL;
     return S_OK;
@@ -536,6 +546,7 @@ IFACEMETHODIMP GlassAccessible::Select()
 IFACEMETHODIMP GlassAccessible::AddToSelection()
 {
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     env->CallVoidMethod(m_jAccessible, mid_AddToSelection);
     if (CheckAndClearException(env)) return E_FAIL;
     return S_OK;
@@ -544,6 +555,7 @@ IFACEMETHODIMP GlassAccessible::AddToSelection()
 IFACEMETHODIMP GlassAccessible::RemoveFromSelection()
 {
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     env->CallVoidMethod(m_jAccessible, mid_RemoveFromSelection);
     if (CheckAndClearException(env)) return E_FAIL;
     return S_OK;
@@ -552,6 +564,7 @@ IFACEMETHODIMP GlassAccessible::RemoveFromSelection()
 IFACEMETHODIMP GlassAccessible::get_IsSelected(BOOL *pRetVal)
 {
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     *pRetVal = env->CallBooleanMethod(m_jAccessible, mid_get_IsSelected);
     if (CheckAndClearException(env)) return E_FAIL;
     return S_OK;
@@ -572,6 +585,7 @@ IFACEMETHODIMP GlassAccessible::get_SelectionContainer(IRawElementProviderSimple
 IFACEMETHODIMP GlassAccessible::SetValue(double val)
 {
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     env->CallVoidMethod(m_jAccessible, mid_SetValue, val);
     if (CheckAndClearException(env)) return E_FAIL;
     return S_OK;
@@ -580,6 +594,7 @@ IFACEMETHODIMP GlassAccessible::SetValue(double val)
 IFACEMETHODIMP GlassAccessible::get_Value(double *pRetVal)
 {
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     *pRetVal = env->CallDoubleMethod(m_jAccessible, mid_get_Value);
     if (CheckAndClearException(env)) return E_FAIL;
     return S_OK;
@@ -588,6 +603,7 @@ IFACEMETHODIMP GlassAccessible::get_Value(double *pRetVal)
 IFACEMETHODIMP GlassAccessible::get_IsReadOnly(BOOL *pRetVal)
 {
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     *pRetVal = env->CallBooleanMethod(m_jAccessible, mid_get_IsReadOnly);
     if (CheckAndClearException(env)) return E_FAIL;
     return S_OK;
@@ -596,6 +612,7 @@ IFACEMETHODIMP GlassAccessible::get_IsReadOnly(BOOL *pRetVal)
 IFACEMETHODIMP GlassAccessible::get_Maximum(double *pRetVal)
 {
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     *pRetVal = env->CallDoubleMethod(m_jAccessible, mid_get_Maximum);
     if (CheckAndClearException(env)) return E_FAIL;
     return S_OK;
@@ -604,6 +621,7 @@ IFACEMETHODIMP GlassAccessible::get_Maximum(double *pRetVal)
 IFACEMETHODIMP GlassAccessible::get_Minimum(double *pRetVal)
 {
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     *pRetVal = env->CallDoubleMethod(m_jAccessible, mid_get_Minimum);
     if (CheckAndClearException(env)) return E_FAIL;
     return S_OK;
@@ -612,6 +630,7 @@ IFACEMETHODIMP GlassAccessible::get_Minimum(double *pRetVal)
 IFACEMETHODIMP GlassAccessible::get_LargeChange(double *pRetVal)
 {
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     *pRetVal = env->CallDoubleMethod(m_jAccessible, mid_get_LargeChange);
     if (CheckAndClearException(env)) return E_FAIL;
     return S_OK;
@@ -620,6 +639,7 @@ IFACEMETHODIMP GlassAccessible::get_LargeChange(double *pRetVal)
 IFACEMETHODIMP GlassAccessible::get_SmallChange(double *pRetVal)
 {
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     *pRetVal = env->CallDoubleMethod(m_jAccessible, mid_get_SmallChange);
     if (CheckAndClearException(env)) return E_FAIL;
     return S_OK;
@@ -633,6 +653,7 @@ IFACEMETHODIMP GlassAccessible::SetValue(LPCWSTR val)
     if (!val) return S_OK;
     size_t size = wcslen(val);
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     jstring str = env->NewString((const jchar *)val, (jsize)size);
     if (!CheckAndClearException(env)) {
     	env->CallVoidMethod(m_jAccessible, mid_SetValueString, str);
@@ -644,6 +665,7 @@ IFACEMETHODIMP GlassAccessible::SetValue(LPCWSTR val)
 IFACEMETHODIMP GlassAccessible::get_Value(BSTR *pRetVal)
 {
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     jstring str = (jstring)env->CallObjectMethod(m_jAccessible, mid_get_ValueString);
     if (CheckAndClearException(env)) return E_FAIL;
 
@@ -663,6 +685,7 @@ IFACEMETHODIMP GlassAccessible::RangeFromChild(IRawElementProviderSimple *childE
 {
     if (pRetVal == NULL) return E_INVALIDARG;
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     jlong ptr = env->CallLongMethod(m_jAccessible, mid_RangeFromChild, (jlong)childElement);
     if (CheckAndClearException(env)) return E_FAIL;
 
@@ -681,6 +704,7 @@ IFACEMETHODIMP GlassAccessible::RangeFromPoint(UiaPoint point, ITextRangeProvide
 {
     if (pRetVal == NULL) return E_INVALIDARG;
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     jlong ptr = env->CallLongMethod(m_jAccessible, mid_RangeFromPoint, point.x, point.y);
     if (CheckAndClearException(env)) return E_FAIL;
 
@@ -699,6 +723,7 @@ IFACEMETHODIMP GlassAccessible::get_DocumentRange(ITextRangeProvider **pRetVal)
 {
     if (pRetVal == NULL) return E_INVALIDARG;
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     jlong ptr = env->CallLongMethod(m_jAccessible, mid_get_DocumentRange);
     if (CheckAndClearException(env)) return E_FAIL;
 
@@ -711,6 +736,7 @@ IFACEMETHODIMP GlassAccessible::get_DocumentRange(ITextRangeProvider **pRetVal)
 IFACEMETHODIMP GlassAccessible::get_SupportedTextSelection(SupportedTextSelection *pRetVal)
 {
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     *pRetVal = (SupportedTextSelection)env->CallIntMethod(m_jAccessible, mid_get_SupportedTextSelection);
     if (CheckAndClearException(env)) return E_FAIL;
     return S_OK;
@@ -722,6 +748,7 @@ IFACEMETHODIMP GlassAccessible::get_SupportedTextSelection(SupportedTextSelectio
 IFACEMETHODIMP GlassAccessible::get_ColumnCount(int *pRetVal)
 {
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     *pRetVal = env->CallIntMethod(m_jAccessible, mid_get_ColumnCount);
     if (CheckAndClearException(env)) return E_FAIL;
     return S_OK;
@@ -729,6 +756,7 @@ IFACEMETHODIMP GlassAccessible::get_ColumnCount(int *pRetVal)
 
 IFACEMETHODIMP GlassAccessible::get_RowCount(int *pRetVal) {
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     *pRetVal = env->CallIntMethod(m_jAccessible, mid_get_RowCount);
     if (CheckAndClearException(env)) return E_FAIL;
     return S_OK;
@@ -747,6 +775,7 @@ IFACEMETHODIMP GlassAccessible::GetItem(int row, int column, IRawElementProvider
 /***********************************************/
 IFACEMETHODIMP GlassAccessible::get_Column(int *pRetVal) {
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     *pRetVal = env->CallIntMethod(m_jAccessible, mid_get_Column);
     if (CheckAndClearException(env)) return E_FAIL;
     return S_OK;
@@ -755,6 +784,7 @@ IFACEMETHODIMP GlassAccessible::get_Column(int *pRetVal) {
 IFACEMETHODIMP GlassAccessible::get_ColumnSpan(int *pRetVal)
 {
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     *pRetVal = env->CallIntMethod(m_jAccessible, mid_get_ColumnSpan);
     if (CheckAndClearException(env)) return E_FAIL;
     return S_OK;
@@ -771,6 +801,7 @@ IFACEMETHODIMP GlassAccessible::get_ContainingGrid(IRawElementProviderSimple **p
 IFACEMETHODIMP GlassAccessible::get_Row(int *pRetVal)
 {
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     *pRetVal = env->CallIntMethod(m_jAccessible, mid_get_Row);
     if (CheckAndClearException(env)) return E_FAIL;
     return S_OK;
@@ -778,6 +809,7 @@ IFACEMETHODIMP GlassAccessible::get_Row(int *pRetVal)
 
 IFACEMETHODIMP GlassAccessible::get_RowSpan(int *pRetVal) {
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     *pRetVal = env->CallIntMethod(m_jAccessible, mid_get_RowSpan);
     if (CheckAndClearException(env)) return E_FAIL;
     return S_OK;
@@ -800,6 +832,7 @@ IFACEMETHODIMP GlassAccessible::GetRowHeaders(SAFEARRAY **pRetVal)
 
 IFACEMETHODIMP GlassAccessible::get_RowOrColumnMajor(RowOrColumnMajor *pRetVal) {
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     *pRetVal = (RowOrColumnMajor) env->CallIntMethod(m_jAccessible, mid_get_RowOrColumnMajor);
     if (CheckAndClearException(env)) return E_FAIL;
     return S_OK;
@@ -828,6 +861,7 @@ IFACEMETHODIMP GlassAccessible::GetRowHeaderItems(SAFEARRAY **pRetVal)
 IFACEMETHODIMP GlassAccessible::Toggle()
 {
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     env->CallVoidMethod(m_jAccessible, mid_Toggle);
     if (CheckAndClearException(env)) return E_FAIL;
     return S_OK;
@@ -836,6 +870,7 @@ IFACEMETHODIMP GlassAccessible::Toggle()
 IFACEMETHODIMP GlassAccessible::get_ToggleState(ToggleState *pRetVal)
 {
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     *pRetVal = (ToggleState) env->CallIntMethod(m_jAccessible, mid_get_ToggleState);
     if (CheckAndClearException(env)) return E_FAIL;
     return S_OK;
@@ -847,6 +882,7 @@ IFACEMETHODIMP GlassAccessible::get_ToggleState(ToggleState *pRetVal)
 IFACEMETHODIMP GlassAccessible::Collapse()
 {
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     env->CallVoidMethod(m_jAccessible, mid_Collapse);
     if (CheckAndClearException(env)) return E_FAIL;
     return S_OK;
@@ -855,6 +891,7 @@ IFACEMETHODIMP GlassAccessible::Collapse()
 IFACEMETHODIMP GlassAccessible::Expand()
 {
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     env->CallVoidMethod(m_jAccessible, mid_Expand);
     if (CheckAndClearException(env)) return E_FAIL;
     return S_OK;
@@ -863,6 +900,7 @@ IFACEMETHODIMP GlassAccessible::Expand()
 IFACEMETHODIMP GlassAccessible::get_ExpandCollapseState(ExpandCollapseState *pRetVal)
 {
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     *pRetVal = (ExpandCollapseState) env->CallIntMethod(m_jAccessible, mid_get_ExpandCollapseState);
     if (CheckAndClearException(env)) return E_FAIL;
     return S_OK;
@@ -874,6 +912,7 @@ IFACEMETHODIMP GlassAccessible::get_ExpandCollapseState(ExpandCollapseState *pRe
 IFACEMETHODIMP GlassAccessible::get_CanMove(BOOL *pRetVal)
 {
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     *pRetVal = env->CallBooleanMethod(m_jAccessible, mid_get_CanMove);
     if (CheckAndClearException(env)) return E_FAIL;
     return S_OK;
@@ -882,6 +921,7 @@ IFACEMETHODIMP GlassAccessible::get_CanMove(BOOL *pRetVal)
 IFACEMETHODIMP GlassAccessible::get_CanResize(BOOL *pRetVal)
 {
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     *pRetVal = env->CallBooleanMethod(m_jAccessible, mid_get_CanResize);
     if (CheckAndClearException(env)) return E_FAIL;
     return S_OK;
@@ -890,6 +930,7 @@ IFACEMETHODIMP GlassAccessible::get_CanResize(BOOL *pRetVal)
 IFACEMETHODIMP GlassAccessible::get_CanRotate(BOOL *pRetVal)
 {
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     *pRetVal = env->CallBooleanMethod(m_jAccessible, mid_get_CanRotate);
     if (CheckAndClearException(env)) return E_FAIL;
     return S_OK;
@@ -898,6 +939,7 @@ IFACEMETHODIMP GlassAccessible::get_CanRotate(BOOL *pRetVal)
 IFACEMETHODIMP GlassAccessible::Move(double x, double y)
 {
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     env->CallVoidMethod(m_jAccessible, mid_Move, x, y);
     if (CheckAndClearException(env)) return E_FAIL;
     return S_OK;
@@ -906,6 +948,7 @@ IFACEMETHODIMP GlassAccessible::Move(double x, double y)
 IFACEMETHODIMP GlassAccessible::Resize(double width, double height)
 {
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     env->CallVoidMethod(m_jAccessible, mid_Resize, width, height);
     if (CheckAndClearException(env)) return E_FAIL;
     return S_OK;
@@ -914,6 +957,7 @@ IFACEMETHODIMP GlassAccessible::Resize(double width, double height)
 IFACEMETHODIMP GlassAccessible::Rotate(double degrees)
 {
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     env->CallVoidMethod(m_jAccessible, mid_Rotate, degrees);
     if (CheckAndClearException(env)) return E_FAIL;
     return S_OK;
@@ -925,6 +969,7 @@ IFACEMETHODIMP GlassAccessible::Rotate(double degrees)
 IFACEMETHODIMP GlassAccessible::Scroll(ScrollAmount horizontalAmount, ScrollAmount verticalAmount)
 {
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     env->CallVoidMethod(m_jAccessible, mid_Scroll, horizontalAmount, verticalAmount);
     if (CheckAndClearException(env)) return E_FAIL;
     return S_OK;
@@ -933,6 +978,7 @@ IFACEMETHODIMP GlassAccessible::Scroll(ScrollAmount horizontalAmount, ScrollAmou
 IFACEMETHODIMP GlassAccessible::SetScrollPercent(double horizontalPercent, double verticalPercent)
 {
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     env->CallVoidMethod(m_jAccessible, mid_SetScrollPercent, horizontalPercent, verticalPercent);
     if (CheckAndClearException(env)) return E_FAIL;
     return S_OK;
@@ -941,6 +987,7 @@ IFACEMETHODIMP GlassAccessible::SetScrollPercent(double horizontalPercent, doubl
 IFACEMETHODIMP GlassAccessible::get_HorizontallyScrollable(BOOL *pRetVal)
 {
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     *pRetVal = env->CallBooleanMethod(m_jAccessible, mid_get_HorizontallyScrollable);
     if (CheckAndClearException(env)) return E_FAIL;
     return S_OK;
@@ -949,6 +996,7 @@ IFACEMETHODIMP GlassAccessible::get_HorizontallyScrollable(BOOL *pRetVal)
 IFACEMETHODIMP GlassAccessible::get_HorizontalScrollPercent(double *pRetVal)
 {
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     *pRetVal = env->CallDoubleMethod(m_jAccessible, mid_get_HorizontalScrollPercent);
     if (CheckAndClearException(env)) return E_FAIL;
     return S_OK;
@@ -957,6 +1005,7 @@ IFACEMETHODIMP GlassAccessible::get_HorizontalScrollPercent(double *pRetVal)
 IFACEMETHODIMP GlassAccessible::get_HorizontalViewSize(double *pRetVal)
 {
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     *pRetVal = env->CallDoubleMethod(m_jAccessible, mid_get_HorizontalViewSize);
     if (CheckAndClearException(env)) return E_FAIL;
     return S_OK;
@@ -965,6 +1014,7 @@ IFACEMETHODIMP GlassAccessible::get_HorizontalViewSize(double *pRetVal)
 IFACEMETHODIMP GlassAccessible::get_VerticallyScrollable(BOOL *pRetVal)
 {
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     *pRetVal = env->CallBooleanMethod(m_jAccessible, mid_get_VerticallyScrollable);
     if (CheckAndClearException(env)) return E_FAIL;
     return S_OK;
@@ -973,6 +1023,7 @@ IFACEMETHODIMP GlassAccessible::get_VerticallyScrollable(BOOL *pRetVal)
 IFACEMETHODIMP GlassAccessible::get_VerticalScrollPercent(double *pRetVal)
 {
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     *pRetVal = env->CallDoubleMethod(m_jAccessible, mid_get_VerticalScrollPercent);
     if (CheckAndClearException(env)) return E_FAIL;
     return S_OK;
@@ -981,6 +1032,7 @@ IFACEMETHODIMP GlassAccessible::get_VerticalScrollPercent(double *pRetVal)
 IFACEMETHODIMP GlassAccessible::get_VerticalViewSize(double *pRetVal)
 {
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     *pRetVal = env->CallDoubleMethod(m_jAccessible, mid_get_VerticalViewSize);
     if (CheckAndClearException(env)) return E_FAIL;
     return S_OK;
@@ -992,6 +1044,7 @@ IFACEMETHODIMP GlassAccessible::get_VerticalViewSize(double *pRetVal)
 IFACEMETHODIMP GlassAccessible::ScrollIntoView()
 {
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     env->CallVoidMethod(m_jAccessible, mid_ScrollIntoView);
     if (CheckAndClearException(env)) return E_FAIL;
     return S_OK;
