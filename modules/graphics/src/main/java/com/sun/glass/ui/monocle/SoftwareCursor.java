@@ -29,6 +29,7 @@ import com.sun.glass.ui.Size;
 
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 class SoftwareCursor extends NativeCursor {
 
@@ -55,6 +56,7 @@ class SoftwareCursor extends NativeCursor {
     void setImage(byte[] cursorImage) {
         cursorBuffer = ByteBuffer.allocate(cursorImage.length);
         NativeCursors.colorKeyCursor(cursorImage, cursorBuffer.asIntBuffer(), 32, 0);
+        cursorBuffer = cursorBuffer.order(ByteOrder.nativeOrder());
     }
 
     @Override
