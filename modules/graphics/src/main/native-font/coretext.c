@@ -683,7 +683,11 @@ JNIEXPORT jbyteArray JNICALL OS_NATIVE(CGBitmapContextGetData)
     (JNIEnv *env, jclass that, jlong arg0, jint dstWidth, jint dstHeight, jint bpp)
 {
     jbyteArray result = NULL;
+    if (dstWidth < 0) return NULL;
+    if (dstHeight < 0) return NULL;
+    if (bpp != 8 && bpp != 24) return NULL;
     CGContextRef context = (CGContextRef)arg0;
+    if (context == NULL) return NULL;
     jbyte *srcData = (jbyte*)CGBitmapContextGetData(context);
 
     if (srcData) {
@@ -700,7 +704,8 @@ JNIEXPORT jbyteArray JNICALL OS_NATIVE(CGBitmapContextGetData)
         //bits per pixel, either 8 for gray or 24 for LCD.
         int dstStep = bpp / 8;
         size_t size = dstWidth * dstHeight * dstStep;
-        jbyte data[size];
+        jbyte* data = (jbyte*)calloc(size, sizeof(jbyte));
+        if (data == NULL) return NULL;
 
         int x, y, sx;
         int dstOffset = 0;
@@ -723,6 +728,7 @@ JNIEXPORT jbyteArray JNICALL OS_NATIVE(CGBitmapContextGetData)
         if (result) {
             (*env)->SetByteArrayRegion(env, result, 0, size, data);
         }
+        free(data);
     }
     return result;
 }
@@ -774,13 +780,13 @@ JNIEXPORT jboolean JNICALL OS_NATIVE(CTFontGetBoundingRectForGlyphUsingTables)
     UInt32 index = arg2 & 0xFFFF;
     if (indexToLocFormat) {
         const UInt32 * loca = (const UInt32 *)CFDataGetBytePtr(tableData);
-        if (loca != NULL && length / 4 > arg2) {
+        if (loca != NULL && (index + 1) < (length / 4)) {
             offset1 = CFSwapInt32BigToHost(loca[index]);
             offset2 = CFSwapInt32BigToHost(loca[index + 1]);
         }
     } else {
         const UInt16 * loca = (const UInt16 *)CFDataGetBytePtr(tableData);
-        if (loca != NULL && length / 2 > arg2) {
+        if (loca != NULL && (index + 1) < (length / 2)) {
             offset1 = CFSwapInt16BigToHost(loca[index]) << 1;
             offset2 = CFSwapInt16BigToHost(loca[index + 1]) << 1;
         }
@@ -792,7 +798,7 @@ JNIEXPORT jboolean JNICALL OS_NATIVE(CTFontGetBoundingRectForGlyphUsingTables)
         if (tableData == NULL) return FALSE;
         length = CFDataGetLength(tableData);
         const UInt8 * ptr = CFDataGetBytePtr(tableData);
-        if (ptr != NULL && length > (offset1 + 10)) {
+        if (ptr != NULL && (offset1 + 10) < length) {
             const SInt16 * glyf = (const SInt16 *)(ptr + offset1);
             /*
              * CFSwapInt16BigToHost returns an unsigned short, need
