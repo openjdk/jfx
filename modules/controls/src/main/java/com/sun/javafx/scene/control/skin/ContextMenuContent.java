@@ -1515,7 +1515,7 @@ public class ContextMenuContent extends Region {
                     }
                     return null;
                 }
-                case ENABLED: return !item.isDisable();
+                case DISABLED: return item.isDisable();
                 case MENU:
                     createSubmenu();
                     // Accessibility might need to see the menu node before the window
