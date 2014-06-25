@@ -32,6 +32,7 @@ import javafx.scene.input.GestureEvent;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runners.Parameterized;
 
@@ -211,6 +212,7 @@ public class SwipeTest extends ParameterizedTestBase {
     }
 
     @Test
+    @Ignore("RT-37709")
     public void testSwipe() throws Exception {
         final int x = (int) Math.round(width * 0.5);
         final int y = (int) Math.round(height * 0.5);
