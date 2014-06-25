@@ -33,42 +33,42 @@ package javafx.scene.accessibility;
 public enum Role {
 
     /**
-     * Button
+     * Button.
      * Attributes: TITLE
      * Actions: FIRE
      */
     BUTTON,
 
     /**
-     * CheckBox.
+     * Check Box
      * Attributes: TITLE, SELECTED, INDETERMINATE
      * Actions: FIRE
      */
-    CHECKBOX,
+    CHECK_BOX,
 
     /**
-     * ComboBox.
+     * Combo Box.
      * Attributed:
      * Actions:
      */
-    COMBOBOX,
+    COMBO_BOX,
 
     /**
-     * ContextMenu.
+     * Context Menu.
      * Attributed:
      * Actions:
      */
     CONTEXT_MENU,
 
     /**
-     * DatePicker.
+     * Date Picker.
      * Attributed: DATE, TITLE
      * Actions:
      */
     DATE_PICKER,
 
     /**
-     * Decrement button
+     * Decrement Button.
      *
      */
     DECREMENT_BUTTON,
@@ -88,27 +88,27 @@ public enum Role {
     HEADER,
 
     /**
-     * Hyperlink
+     * Hyperlink.
      * Attributes: TITLE
      * Actions: FIRE
      */
     HYPERLINK,
 
     /**
-     * Increment button
+     * Increment Button.
      *
      */
     INCREMENT_BUTTON,
 
     /**
-     * Image
+     * Image View.
      * Attributes: TITLE
      * Actions: (none)
      */
-    IMAGE,
+    IMAGE_VIEW,
 
     /**
-     * ListView
+     * List View.
      * Attributes: ROW_AT_INDEX, ROW_COUNT, SELECTED_ROWS, MULTIPLE_SELECTION,
      *             VERTICAL_SCROLLBAR, HORIZONTAL_SCROLLBAR
      * Actions: SCROLL_TO_INDEX
@@ -116,7 +116,7 @@ public enum Role {
     LIST_VIEW,
 
     /**
-     * List Item
+     * List Item.
      * Attributes: TITLE, INDEX, SELECTED
      * Actions: SELECT, ADD_TO_SELECTION, REMOVE_FROM_SELECTION
      */
@@ -144,147 +144,147 @@ public enum Role {
     MENU_ITEM,
 
     /**
-     * Node
+     * Node.
      * Attributes: PARENT, ROLE, SCENE, BOUNDS, ENABLED, FOCUS, VISIBLE, LABELED_BY
      * Actions: (none)
      */
     NODE,
 
     /**
-     * Page in a Pagination control
+     * Page in a Pagination control.
      * Attributes: TITLE, Selected
      * Actions: SELECT
      */
-    PAGE,
+    PAGE_ITEM,
 
     /**
-     * Pagination
+     * Pagination.
      * Attributes: PAGES, SELECTED_PAGE
      * Actions: (none)
      */
     PAGINATION,
 
     /**
-     * Parent
+     * Parent.
      * Attributes: CHILDREN
      * Actions: (none)
      */
     PARENT,
 
     /**
-     * Password Field
+     * Password Field.
      * Attributes: (none)
      * Actions: (none)
      */
     PASSWORD_FIELD,
 
     /**
-     * ProgressIndicator
+     * Progress Indicator.
      * Attributes: VALUE, MAX_VALUE, MIN_VALUE, INDETERMINATE
      * Actions: (none)
      */
     PROGRESS_INDICATOR,
 
     /**
-     * RadioButton
+     * Radio Button.
      * Attributes: TITLE, SELECTED
      * Actions: FIRE
      */
     RADIO_BUTTON,
 
     /**
-     * Slider
+     * Slider.
      * Attributes: VALUE, MAX_VALUE, MIN_VALUE, ORIENTATION
      * Actions: INCREMENT, DECREMENT, SET_VALUE
      */
     SLIDER,
 
     /**
-     * Text
+     * Text.
      * Attributes: TITLE, SELECTION_START, SELECTION_SET
      * Actions: SET_TITLE
      */
     TEXT,
 
     /**
-     * Text Area
+     * Text Area.
      * Attributes: TITLE, SELECTION_START, SELECTION_SET
      * Actions: SET_TITLE
      */
     TEXT_AREA,
 
     /**
-     * Text Field
+     * Text Field.
      * Attributes: TITLE, SELECTION_START, SELECTION_SET
      * Actions: SET_TITLE
      */
     TEXT_FIELD,
 
     /**
-     * ToggleButton
+     * Toggle Button.
      * Attributes: TITLE, SELECTED
      * Action: FIRE
      */
     TOGGLE_BUTTON,
     
     /**
-     * Tooltip
+     * Tooltip.
      * Attributes: (none)
      * Action: (none)
      */
     TOOLTIP,
 
     /**
-     * ScrollBar
+     * Scroll Bar.
      * Attributes: VALUE, MAX_VALUE, MIN_VALUE, ORIENTATION
      * Actions: BLOCK_INCREMENT, INCREMENT, DECREMENT, BLOCK_DECREMENT, SET_VALUE
      */
     SCROLL_BAR,
 
     /**
-     * ScrollPane
+     * Scroll Pane.
      * Attributes: CONTENTS, HORIZONTAL_SCROLLBAR, VERTICAL_SCROLLBAR
      * Actions: (none)
      */
     SCROLL_PANE,
 
     /**
-     * SplitMenuButton
+     * Split Menu Button.
      * Attributes: TITLE, EXPANDED.
      * Actions: FIRE, EXPAND, COLLAPSE.
      */
     SPLIT_MENU_BUTTON,
 
     /**
-     * Tab
+     * Tab Item.
      * Attributes: TITLE, SELECTED
      * Actions: SELECT
      */
     TAB_ITEM,
 
     /**
-     * TabPane
+     * Tab Pane.
      * Attributes: TABS, SELECTED_TAB
      * Actions: (none)
      */
     TAB_PANE,
 
     /**
-     * Table Cell
+     * Table Cell.
      * Attributes: TITLE, ROW_INDEX, COLUMN_INDEX, SELECTED
      * Actions: SELECT, ADD_TO_SELECTION, REMOVE_FROM_SELECTION
      */
     TABLE_CELL,
 
     /**
-     * Table Column
+     * Table Column.
      * Attributes: TITLE, INDEX
      * Actions: (none)
      */
     TABLE_COLUMN,
 
     /**
-     * Table Row
+     * Table Row.
      * Attributes: TITLE, INDEX
      * Actions: (none)
      */
@@ -300,27 +300,27 @@ public enum Role {
     TABLE_VIEW,
 
     /**
-     *
+     * Thumb.
      * Actions: MOVE
      */
     THUMB,
 
     /**
-     * TitledPane
+     * Titled Pane.
      * Attributes: TITLE, EXPANDED
      * Actions: EXPAND, COLLAPSE
      */
     TITLED_PANE,
 
     /**
-     * Toolbar
+     * Tool Bar.
      * Attributes: OVERFLOW_BUTTON
      * Actions: (none)
      */
-    TOOLBAR,
+    TOOL_BAR,
 
     /**
-     * Used by TreeView
+     * Tree Item.
      * Attributes: TITLE, INDEX, SELECTED, EXPANDED, LEAF,
      *             TREE_ITEM_COUNT, TREE_ITEM_AT_INDEX, TREE_ITEM_PARENT,
      *             DISCLOSURE_LEVEL
@@ -329,23 +329,23 @@ public enum Role {
     TREE_ITEM,
 
     /**
-     * TreeTable Cell
+     * Tree Table Cell.
      * Attributes: TITLE, ROW_INDEX, COLUMN_INDEX, SELECTED
      * Actions: SELECT, ADD_TO_SELECTION, REMOVE_FROM_SELECTION
      */
     TREE_TABLE_CELL,
 
     /**
-     * Used by TreeTableView
+     * Tree Table Row.
      * Attributes: TITLE, INDEX, SELECTED, EXPANDED, LEAF,
      *             TREE_ITEM_COUNT, TREE_ITEM_AT_INDEX,TREE_ITEM_PARENT,
      *             DISCLOSURE_LEVEL
      * Actions: SELECT, ADD_TO_SELECTION, REMOVE_FROM_SELECTION, EXPAND, COLLAPSE
      */
-    TREE_TABLE_ITEM,
+    TREE_TABLE_ROW,
 
     /**
-     * Table View
+     * Tree Table View.
      * Attributes: ROW_COUNT, TREE_ITEM_AT_INDEX, COLUMN_COUNT,
      *             SELECTED_CELLS, CELL_AT_ROWCOLUMN, MULTIPLE_SELECTION,
      *             VERTICAL_SCROLLBAR, HORIZONTAL_SCROLLBAR
@@ -355,7 +355,7 @@ public enum Role {
     TREE_TABLE_VIEW,
 
     /**
-     * TreeView
+     * Tree View.
      * Attributes: ROW_COUNT, TREE_ITEM_AT_INDEX, SELECTED_ROWS, MULTIPLE_SELECTION,
      *             VERTICAL_SCROLLBAR, HORIZONTAL_SCROLLBAR
      * Actions: SCROLL_TO_INDEX

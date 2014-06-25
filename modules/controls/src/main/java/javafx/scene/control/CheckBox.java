@@ -269,7 +269,7 @@ public class CheckBox extends ButtonBase {
     /** @treatAsPrivate */
     @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
         switch (attribute) {
-            case ROLE: return Role.CHECKBOX;
+            case ROLE: return Role.CHECK_BOX;
             case SELECTED: return isSelected();
             case INDETERMINATE: return isIndeterminate();
             default: return super.accGetAttribute(attribute, parameters);

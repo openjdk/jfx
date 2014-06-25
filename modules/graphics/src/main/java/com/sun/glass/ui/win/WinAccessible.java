@@ -336,14 +336,14 @@ final class WinAccessible extends PlatformAccessible {
                 break;
             }
             case INDETERMINATE: {
-                if (getAttribute(ROLE) == Role.CHECKBOX) {
+                if (getAttribute(ROLE) == Role.CHECK_BOX) {
                     notifyToggleState();
                 }
                 break;
             }
             case SELECTED: {
                 Object role = getAttribute(ROLE); 
-                if (role == Role.CHECKBOX || role == Role.RADIO_BUTTON) {
+                if (role == Role.CHECK_BOX || role == Role.RADIO_BUTTON) {
                     notifyToggleState();
                     break;
                 }
@@ -471,9 +471,9 @@ final class WinAccessible extends PlatformAccessible {
                 case TABLE_CELL: return getContainerNode(Role.TABLE_VIEW);
                 case LIST_ITEM: return getContainerNode(Role.LIST_VIEW);
                 case TAB_ITEM: return getContainerNode(Role.TAB_PANE);
-                case PAGE: return getContainerNode(Role.PAGINATION);
+                case PAGE_ITEM: return getContainerNode(Role.PAGINATION);
                 case TREE_ITEM: return getContainerNode(Role.TREE_VIEW);
-                case TREE_TABLE_ITEM: return getContainerNode(Role.TREE_TABLE_VIEW);
+                case TREE_TABLE_ROW: return getContainerNode(Role.TREE_TABLE_VIEW);
                 case TREE_TABLE_CELL: return getContainerNode(Role.TREE_TABLE_VIEW);
                 default:
             }
@@ -495,7 +495,7 @@ final class WinAccessible extends PlatformAccessible {
             case SPLIT_MENU_BUTTON: return UIA_SplitButtonControlTypeId;
             case PAGINATION:
             case TAB_PANE: return UIA_TabControlTypeId;
-            case PAGE:
+            case PAGE_ITEM:
             case TAB_ITEM: return UIA_TabItemControlTypeId;
             case SLIDER: return UIA_SliderControlTypeId;
             case PARENT: return getView() != null ? UIA_WindowControlTypeId : UIA_PaneControlTypeId;
@@ -508,17 +508,17 @@ final class WinAccessible extends PlatformAccessible {
             case LIST_ITEM: return UIA_ListItemControlTypeId;
             case TREE_TABLE_CELL:
             case TABLE_CELL: return UIA_DataItemControlTypeId;
-            case IMAGE: return UIA_ImageControlTypeId;
+            case IMAGE_VIEW: return UIA_ImageControlTypeId;
             case RADIO_BUTTON: return UIA_RadioButtonControlTypeId;
-            case CHECKBOX: return UIA_CheckBoxControlTypeId;
-            case COMBOBOX: return UIA_ComboBoxControlTypeId;
+            case CHECK_BOX: return UIA_CheckBoxControlTypeId;
+            case COMBO_BOX: return UIA_ComboBoxControlTypeId;
             case HYPERLINK: return UIA_HyperlinkControlTypeId;
             case TREE_TABLE_VIEW:
             case TREE_VIEW: return UIA_TreeControlTypeId;
-            case TREE_TABLE_ITEM:
+            case TREE_TABLE_ROW:
             case TREE_ITEM: return UIA_TreeItemControlTypeId;
             case PROGRESS_INDICATOR: return UIA_ProgressBarControlTypeId;
-            case TOOLBAR: return UIA_ToolBarControlTypeId;
+            case TOOL_BAR: return UIA_ToolBarControlTypeId;
             case TITLED_PANE: return UIA_GroupControlTypeId;
             case SCROLL_PANE: return UIA_PaneControlTypeId;
             case SCROLL_BAR: return UIA_ScrollBarControlTypeId;
@@ -544,7 +544,7 @@ final class WinAccessible extends PlatformAccessible {
                     if (type == Role.CONTEXT_MENU) {
                         impl |= patternId == UIA_ExpandCollapsePatternId;
                     }
-                    if (type == Role.CHECKBOX || type == Role.RADIO_BUTTON) {
+                    if (type == Role.CHECK_BOX || type == Role.RADIO_BUTTON) {
                         impl |= patternId == UIA_TogglePatternId;
                     }
                 }
@@ -556,7 +556,7 @@ final class WinAccessible extends PlatformAccessible {
             case MENU_BUTTON:
                 impl = patternId == UIA_InvokePatternId;
                 break;
-            case PAGE:
+            case PAGE_ITEM:
             case TAB_ITEM:
                 impl = patternId == UIA_SelectionItemPatternId;
                 break;
@@ -600,7 +600,7 @@ final class WinAccessible extends PlatformAccessible {
                        patternId == UIA_ExpandCollapsePatternId ||
                        patternId == UIA_ScrollItemPatternId;
                 break;
-            case TREE_TABLE_ITEM:
+            case TREE_TABLE_ROW:
                 impl = patternId == UIA_SelectionItemPatternId ||
                        patternId == UIA_ExpandCollapsePatternId ||
                        patternId == UIA_GridItemPatternId ||
@@ -634,17 +634,17 @@ final class WinAccessible extends PlatformAccessible {
             case RADIO_BUTTON:
                 impl = patternId == UIA_SelectionItemPatternId;
                 break;
-            case CHECKBOX:
+            case CHECK_BOX:
                 impl = patternId == UIA_TogglePatternId;
                 break;
             case TOGGLE_BUTTON:
                 impl = patternId == UIA_TogglePatternId;
                 break;
             case TITLED_PANE:
-            case TOOLBAR:
+            case TOOL_BAR:
                 impl = patternId == UIA_ExpandCollapsePatternId;
                 break;
-            case COMBOBOX:
+            case COMBO_BOX:
                 impl = patternId == UIA_ExpandCollapsePatternId ||
                        patternId == UIA_ValuePatternId;
                 break;
@@ -711,7 +711,7 @@ final class WinAccessible extends PlatformAccessible {
                 Role role = (Role)getAttribute(ROLE);
                 if (role == null) role = Role.NODE; // to prevent NPE
                 switch (role) {
-                    case COMBOBOX:
+                    case COMBO_BOX:
                         /*
                          *  These controls use TITLE to answer get_ValueString().
                          *  Only LABELED_BY can be used to specify a name for them.
@@ -908,7 +908,7 @@ final class WinAccessible extends PlatformAccessible {
         if (isDisposed()) return 0;
         Role role = (Role)getAttribute(ROLE);
         /* special case for the tree item hierarchy, as expected by Windows */
-        boolean treeCell = role == Role.TREE_ITEM || role == Role.TREE_TABLE_ITEM;
+        boolean treeCell = role == Role.TREE_ITEM || role == Role.TREE_TABLE_ROW;
         Node node = null;
         switch (direction) {
             case NavigateDirection_Parent: {
@@ -1203,7 +1203,7 @@ final class WinAccessible extends PlatformAccessible {
                 case SCROLL_BAR:
                 case TEXT_FIELD:
                 case TEXT_AREA: return false;
-                case COMBOBOX: return Boolean.FALSE.equals(getAttribute(EDITABLE));
+                case COMBO_BOX: return Boolean.FALSE.equals(getAttribute(EDITABLE));
                 default:
             }
         }
@@ -1389,7 +1389,7 @@ final class WinAccessible extends PlatformAccessible {
                 case TABLE_ROW:
                 case TABLE_CELL: return getContainer(Role.TABLE_VIEW);
                 case LIST_ITEM: return getContainer(Role.LIST_VIEW);
-                case TREE_TABLE_ITEM:
+                case TREE_TABLE_ROW:
                 case TREE_TABLE_CELL: return getContainer(Role.TREE_TABLE_VIEW);
                 default:
             }
@@ -1403,7 +1403,7 @@ final class WinAccessible extends PlatformAccessible {
         Role role = (Role) getAttribute(ROLE);
         if (role != null) {
             switch (role) {
-                case TREE_TABLE_ITEM:
+                case TREE_TABLE_ROW:
                 case TREE_TABLE_CELL:
                 case TABLE_ROW:
                 case TABLE_CELL: result = (Integer)getAttribute(ROW_INDEX); break;
@@ -1491,7 +1491,7 @@ final class WinAccessible extends PlatformAccessible {
     void Collapse() {
         if (isDisposed()) return;
         Role role = (Role)getAttribute(ROLE);
-        if (role == Role.TOOLBAR) {
+        if (role == Role.TOOL_BAR) {
             Node button = (Node)getAttribute(OVERFLOW_BUTTON);
             if (button != null) {
                 button.getAccessible().executeAction(Action.FIRE);
@@ -1504,7 +1504,7 @@ final class WinAccessible extends PlatformAccessible {
     void Expand() {
         if (isDisposed()) return;
         Role role = (Role)getAttribute(ROLE);
-        if (role == Role.TOOLBAR) {
+        if (role == Role.TOOL_BAR) {
             Node button = (Node)getAttribute(OVERFLOW_BUTTON);
             if (button != null) {
                 button.getAccessible().executeAction(Action.FIRE);
@@ -1518,7 +1518,7 @@ final class WinAccessible extends PlatformAccessible {
         if (isDisposed()) return 0;
 
         Role role = (Role)getAttribute(ROLE);
-        if (role == Role.TOOLBAR) {
+        if (role == Role.TOOL_BAR) {
             Node button = (Node)getAttribute(OVERFLOW_BUTTON);
             if (button != null) {
                 boolean visible = Boolean.TRUE.equals(button.getAccessible().getAttribute(VISIBLE));

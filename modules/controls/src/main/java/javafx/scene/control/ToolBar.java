@@ -274,7 +274,7 @@ public class ToolBar extends Control {
     /** @treatAsPrivate */
     @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
         switch (attribute) {
-            case ROLE: return Role.TOOLBAR;
+            case ROLE: return Role.TOOL_BAR;
             case OVERFLOW_BUTTON: //Skin
             default: return super.accGetAttribute(attribute, parameters);
         }

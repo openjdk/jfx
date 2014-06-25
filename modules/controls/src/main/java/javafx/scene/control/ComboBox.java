@@ -596,7 +596,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
     @Override
     public Object accGetAttribute(Attribute attribute, Object... parameters) {
         switch(attribute) {
-            case ROLE: return Role.COMBOBOX;
+            case ROLE: return Role.COMBO_BOX;
             case TITLE:
                 //let the skin first.
                 Object title = super.accGetAttribute(attribute, parameters);

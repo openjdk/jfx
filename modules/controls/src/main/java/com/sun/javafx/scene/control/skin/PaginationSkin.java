@@ -1252,7 +1252,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
 
         @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
             switch (attribute) {
-                case ROLE: return Role.PAGE;
+                case ROLE: return Role.PAGE_ITEM;
                 case TITLE: return getText();
                 case SELECTED: return isSelected();
                 default: return super.accGetAttribute(attribute, parameters);

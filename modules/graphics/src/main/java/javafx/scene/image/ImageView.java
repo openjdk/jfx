@@ -888,7 +888,7 @@ public class ImageView extends Node {
     /** @treatAsPrivate */
     @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
         switch (attribute) {
-            case ROLE: return Role.IMAGE;
+            case ROLE: return Role.IMAGE_VIEW;
             default: return super.accGetAttribute(attribute, parameters); 
         }
     }
