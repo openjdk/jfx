@@ -282,7 +282,7 @@ final class MacAccessible extends PlatformAccessible {
                 MacAction.NSAccessibilityCancelAction,
             }
         ),
-        NSAccessibilityMenuItemRole(Role.MENU_ITEM,
+        NSAccessibilityMenuItemRole(new Role[] {Role.MENU_ITEM, Role.RADIO_MENU_ITEM, Role.CHECK_MENU_ITEM, Role.MENU},
             new MacAttribute[] {
                 MacAttribute.NSAccessibilityEnabledAttribute,
                 MacAttribute.NSAccessibilityTitleAttribute,
@@ -296,7 +296,8 @@ final class MacAccessible extends PlatformAccessible {
             new MacAction[] {
                 MacAction.NSAccessibilityPressAction,
                 MacAction.NSAccessibilityCancelAction,
-            }
+            },
+            null
         ),
         NSAccessibilityMenuButtonRole(Role.MENU_BUTTON,
             new MacAttribute[] {
@@ -819,6 +820,19 @@ final class MacAccessible extends PlatformAccessible {
         return inMenu;
     }
 
+    private boolean isMenuElement(Role role) {
+        if (role == null) return false;
+        switch (role) {
+            case MENU_BAR:
+            case CONTEXT_MENU:
+            case MENU_ITEM:
+            case RADIO_MENU_ITEM:
+            case CHECK_MENU_ITEM:
+            case MENU: return true;
+            default: return false;
+        }
+    }
+
     private Boolean inSlider;
     private boolean isInSlider() {
         /* This flag will be wrong if the Node is ever re-parented */
@@ -955,8 +969,11 @@ final class MacAccessible extends PlatformAccessible {
                     /* ListView is row-based, must remove all the cell-based attributes */
                     attrs.remove(MacAttribute.NSAccessibilitySelectedCellsAttribute);
                     break;
-                case CONTEXT_MENU:
                 case MENU_ITEM:
+                case RADIO_MENU_ITEM:
+                case CHECK_MENU_ITEM:
+                case MENU:
+                case CONTEXT_MENU:
                 case MENU_BAR:
                     /* Menu and MenuItem do have have Window and top-level UI Element*/
                     attrs.remove(MacAttribute.NSAccessibilityWindowAttribute);
@@ -1003,12 +1020,12 @@ final class MacAccessible extends PlatformAccessible {
                  * work.
                  * Note: strictly the context menu is a child of the PopWindow.
                  */
-                if (getAttribute(ROLE) == Role.MENU_ITEM) {
+                if (getAttribute(ROLE) == Role.MENU) {
                     @SuppressWarnings("unchecked")
                     ObservableList<Node> children = (ObservableList<Node>)getAttribute(CHILDREN);
                     long[] ids = getUnignoredChildren(children);
                     int count = ids.length;
-                    if (getAttribute(MENU_ITEM_TYPE) == Role.CONTEXT_MENU) {
+                    if (getAttribute(MENU) != null) {
                         count++;
                     }
                     return count;
@@ -1036,12 +1053,12 @@ final class MacAccessible extends PlatformAccessible {
             case NSAccessibilityRowsAttribute: jfxAttr = ROW_AT_INDEX; break;
             case NSAccessibilityDisclosedRowsAttribute: jfxAttr = TREE_ITEM_AT_INDEX; break;
             case NSAccessibilityChildrenAttribute: {
-                if (getAttribute(ROLE) == Role.MENU_ITEM) {
+                if (getAttribute(ROLE) == Role.MENU) {
                     long[] result = new long[maxCount];
                     int i = 0;
                     if (index == 0) {
                         Node menu = (Node)getAttribute(MENU);
-                        result[i++] = getAccessible(menu);
+                        if (menu != null) result[i++] = getAccessible(menu);
                     }
                     if (i < maxCount) {
                         @SuppressWarnings("unchecked")
@@ -1163,29 +1180,33 @@ final class MacAccessible extends PlatformAccessible {
                     break;
                 }
                 case NSAccessibilitySelectedChildrenAttribute: {
-                    /* Used for ContextMenu's*/
+                    Node focus = null;
                     if (role == Role.CONTEXT_MENU) {
+                        /* 
+                         * ContextMenu is in its separate Window. It is safe to
+                         * use FOCUS_NODE to locate the selected menu item 
+                         * within it.
+                         */
                         Scene scene = (Scene)getAttribute(SCENE);
                         if (scene != null) {
                             Accessible acc = scene.getAccessible();
                             if (acc != null) {
-                                Node focus = (Node)acc.getAttribute(FOCUS_NODE);
-                                if (focus != null && focus.getAccessible().getAttribute(ROLE) == Role.MENU_ITEM) {
-                                    long[] result = {getAccessible(focus)};
-                                    return attr.map.apply(result);
-                                } else {
-                                    return null;
-                                }
+                                focus = (Node)acc.getAttribute(FOCUS_NODE);
                             }
                         }
                     }
                     if (role == Role.MENU_BAR) {
-                        Node focus = (Node)getAttribute(FOCUS_NODE);
-                        if (focus != null && focus.getAccessible().getAttribute(ROLE) == Role.MENU_ITEM) {
+                        /*
+                         * MenuBar has special code to intercept the FOCUS_NODE
+                         * (see Scene#transientFocusContainer).
+                         */
+                        focus = (Node)getAttribute(FOCUS_NODE);
+                    }
+                    if (focus != null) {
+                        Role focusRole = (Role)focus.getAccessible().getAttribute(ROLE);
+                        if (isMenuElement(focusRole)) {
                             long[] result = {getAccessible(focus)};
                             return attr.map.apply(result);
-                        } else {
-                            return null;
                         }
                     }
                     return null;
@@ -1248,7 +1269,7 @@ final class MacAccessible extends PlatformAccessible {
         switch (attr) {
             case NSAccessibilityWindowAttribute:
             case NSAccessibilityTopLevelUIElementAttribute: {
-                if (role == Role.CONTEXT_MENU || role == Role.MENU_ITEM || role == Role.MENU_BAR) {
+                if (isMenuElement(role)) {
                     return null;
                 }
                 Scene scene = (Scene)result;
@@ -1288,7 +1309,7 @@ final class MacAccessible extends PlatformAccessible {
                     if (role == Role.CONTEXT_MENU) {
                         Node menuItem = (Node)getAttribute(MENU_FOR);
                         if (menuItem != null) {
-                            if (menuItem.getAccessible().getAttribute(ROLE) == Role.MENU_ITEM) {
+                            if (menuItem.getAccessible().getAttribute(ROLE) == Role.MENU) {
                                 result = menuItem;
                             }
                         }
@@ -1798,7 +1819,8 @@ final class MacAccessible extends PlatformAccessible {
         }
         if (isInMenu()) {
             Role role = (Role)getAttribute(ROLE);
-            return role != Role.CONTEXT_MENU && role != Role.MENU_ITEM && role != Role.MENU_BAR;
+            /* Within a ContextMenu or MenuBar ignore all nodes but menu item roles */
+            return !isMenuElement(role);
         }
         if (ignoreInnerText()) {
             return true;

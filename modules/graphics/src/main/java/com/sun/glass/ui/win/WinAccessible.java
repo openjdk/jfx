@@ -486,6 +486,9 @@ final class WinAccessible extends PlatformAccessible {
         if (role == null) return UIA_GroupControlTypeId;
         switch (role) {
             case CONTEXT_MENU: return UIA_MenuControlTypeId;
+            case RADIO_MENU_ITEM:
+            case CHECK_MENU_ITEM:
+            case MENU:
             case MENU_ITEM: return UIA_MenuItemControlTypeId;
             case BUTTON:
             case MENU_BUTTON:
@@ -539,15 +542,15 @@ final class WinAccessible extends PlatformAccessible {
         switch (role) {
             case MENU_ITEM:
                 impl = patternId == UIA_InvokePatternId;
-                if (!impl) {
-                    Object type = getAttribute(MENU_ITEM_TYPE);
-                    if (type == Role.CONTEXT_MENU) {
-                        impl |= patternId == UIA_ExpandCollapsePatternId;
-                    }
-                    if (type == Role.CHECK_BOX || type == Role.RADIO_BUTTON) {
-                        impl |= patternId == UIA_TogglePatternId;
-                    }
-                }
+                break;
+            case MENU:
+                impl = patternId == UIA_InvokePatternId ||
+                       patternId == UIA_ExpandCollapsePatternId;
+                break;
+            case RADIO_MENU_ITEM:
+            case CHECK_MENU_ITEM:
+                impl = patternId == UIA_InvokePatternId ||
+                       patternId == UIA_TogglePatternId;
                 break;
             case HYPERLINK:
             case BUTTON:

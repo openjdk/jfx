@@ -260,12 +260,6 @@ public enum Attribute {
     MENU_FOR("MenuFor", Node.class),
 
     /**
-     * Returns the Menu Item Type.
-     * Type: Role
-     */
-    MENU_ITEM_TYPE("MenuItemType", Role.class),
-
-    /**
      * Returns the mnemonic for the node.
      * Type: String
      */

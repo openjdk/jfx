@@ -47,6 +47,13 @@ public enum Role {
     CHECK_BOX,
 
     /**
+     * Check Menu Item.
+     * Attributes: TITLE, SELECTED, ACCELERATOR, MNEMONIC, DISABLED
+     * Actions: FIRE
+     */
+    CHECK_MENU_ITEM,
+
+    /**
      * Combo Box.
      * Attributed:
      * Actions:
@@ -123,6 +130,13 @@ public enum Role {
     LIST_ITEM,
 
     /**
+     * Menu.
+     * Attributes: TITLE, MENU, ACCELERATOR, MNEMONIC, DISABLED
+     * Actions: FIRE
+     */
+    MENU,
+
+    /**
      * Menu Bar.
      * Attributed:
      * Actions:
@@ -138,14 +152,14 @@ public enum Role {
 
     /**
      * Menu Item.
-     * Attributed: MENU_ITEM_TYPE, SELECTED, ACCELERATOR, TITLE
+     * Attributed: TITLE, ACCELERATOR, MNEMONIC, DISABLED
      * Actions: FIRE
      */
     MENU_ITEM,
 
     /**
      * Node.
-     * Attributes: PARENT, ROLE, SCENE, BOUNDS, ENABLED, FOCUS, VISIBLE, LABELED_BY
+     * Attributes: PARENT, ROLE, SCENE, BOUNDS, DISABLED, FOCUS, VISIBLE, LABELED_BY
      * Actions: (none)
      */
     NODE,
@@ -191,6 +205,13 @@ public enum Role {
      * Actions: FIRE
      */
     RADIO_BUTTON,
+
+    /**
+     * Radio Menu Item.
+     * Attributes: TITLE, SELECTED, ACCELERATOR, MNEMONIC, DISABLED
+     * Actions: FIRE
+     */
+    RADIO_MENU_ITEM,
 
     /**
      * Slider.

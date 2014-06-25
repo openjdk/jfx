@@ -1472,11 +1472,10 @@ public class ContextMenuContent extends Region {
         @Override
         public Object accGetAttribute(Attribute attribute, Object... parameters) {
             switch (attribute) {
-                case ROLE: return Role.MENU_ITEM;
-                case MENU_ITEM_TYPE:
-                    if (item instanceof RadioMenuItem) return Role.RADIO_BUTTON;
-                    if (item instanceof CheckMenuItem) return Role.CHECK_BOX;
-                    if (item instanceof Menu) return Role.CONTEXT_MENU;
+                case ROLE:
+                    if (item instanceof RadioMenuItem) return Role.RADIO_MENU_ITEM;
+                    if (item instanceof CheckMenuItem) return Role.CHECK_MENU_ITEM;
+                    if (item instanceof Menu) return Role.MENU;
                     return Role.MENU_ITEM;
                 case SELECTED:
                     if (item instanceof CheckMenuItem) {
