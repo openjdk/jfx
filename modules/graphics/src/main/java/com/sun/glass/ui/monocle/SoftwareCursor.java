@@ -30,7 +30,7 @@ import com.sun.glass.ui.Size;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 
-public class SoftwareCursor extends NativeCursor {
+class SoftwareCursor extends NativeCursor {
 
     private ByteBuffer cursorBuffer;
     private int renderX;
@@ -39,12 +39,12 @@ public class SoftwareCursor extends NativeCursor {
     private int hotspotY;
 
     @Override
-    public Size getBestSize() {
+    Size getBestSize() {
         return new Size(16, 16);
     }
 
     @Override
-    public void setVisibility(boolean visibility) {
+    void setVisibility(boolean visibility) {
         if (visibility != isVisible) {
             isVisible = visibility;
             MonocleWindowManager.getInstance().repaintAll();
@@ -52,13 +52,13 @@ public class SoftwareCursor extends NativeCursor {
     }
 
     @Override
-    public void setImage(byte[] cursorImage) {
+    void setImage(byte[] cursorImage) {
         cursorBuffer = ByteBuffer.allocate(cursorImage.length);
         NativeCursors.colorKeyCursor(cursorImage, cursorBuffer.asIntBuffer(), 32, 0);
     }
 
     @Override
-    public void setLocation(int x, int y) {
+    void setLocation(int x, int y) {
         int renderX = x - hotspotX;
         int renderY = y - hotspotY;
         if (renderX != this.renderX || renderY != this.renderY) {
@@ -69,24 +69,24 @@ public class SoftwareCursor extends NativeCursor {
     }
 
     @Override
-    public void setHotSpot(int hotspotX, int hotspotY) {
+    void setHotSpot(int hotspotX, int hotspotY) {
         this.hotspotX = hotspotX;
         this.hotspotY = hotspotY;
     }
 
     @Override
-    public void shutdown() {
+    void shutdown() {
     }
 
-    public int getRenderX() {
+    int getRenderX() {
         return renderX;
     }
 
-    public int getRenderY() {
+    int getRenderY() {
         return renderY;
     }
 
-    public Buffer getCursorBuffer() {
+    Buffer getCursorBuffer() {
         cursorBuffer.clear();
         return cursorBuffer;
     }

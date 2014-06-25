@@ -22,7 +22,7 @@
  * questions.
  */
 
-#include "com_sun_glass_ui_monocle_mx6_MX6AcceleratedScreen.h"
+#include "com_sun_glass_ui_monocle_MX6AcceleratedScreen.h"
 #include <EGL/egl.h>
 
 #include <fcntl.h>
@@ -32,7 +32,7 @@
 static EGLNativeDisplayType (*wr_fbGetDisplayByIndex)(int DisplayIndex);
 static EGLNativeWindowType (*wr_fbCreateWindow)(EGLNativeDisplayType Display, int X, int Y, int Width, int Height);
 
-JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_monocle_mx6_MX6AcceleratedScreen__1platformGetNativeDisplay
+JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_monocle_MX6AcceleratedScreen__1platformGetNativeDisplay
     (JNIEnv *env, jobject obj, jlong methodHandle) {
     EGLNativeDisplayType cachedDisplay = NULL;
 
@@ -43,7 +43,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_monocle_mx6_MX6AcceleratedScreen__
     return asJLong(cachedDisplay);
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_monocle_mx6_MX6AcceleratedScreen__1platformGetNativeWindow
+JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_monocle_MX6AcceleratedScreen__1platformGetNativeWindow
     (JNIEnv *env, jobject obj, jlong methodHandle, jlong nativeDisplay) {
     NativeWindowType retval;
 

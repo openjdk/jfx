@@ -23,13 +23,13 @@ package com.sun.glass.ui.monocle;/*
  * questions.
  */
 
-public class MonocleTrace {
+class MonocleTrace {
 
-    public static void traceEvent(String format, Object... args) {
+    static void traceEvent(String format, Object... args) {
         trace("traceEvent", format, args);
     }
 
-    public static void traceConfig(String format, Object... args) {
+    static void traceConfig(String format, Object... args) {
         trace("traceConfig", format, args);
     }
 

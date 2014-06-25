@@ -25,9 +25,9 @@
 
 package com.sun.glass.ui.monocle.input.devices;
 
-import com.sun.glass.ui.monocle.input.TestApplication;
-import com.sun.glass.ui.monocle.input.TestLog;
-import com.sun.glass.ui.monocle.input.UInput;
+import com.sun.glass.ui.monocle.TestApplication;
+import com.sun.glass.ui.monocle.TestLog;
+import com.sun.glass.ui.monocle.UInput;
 import org.junit.Assume;
 
 /** The touch screen used in the Freescale i.MX6Q Sabre Device Platform,

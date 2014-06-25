@@ -30,7 +30,7 @@ import com.sun.glass.ui.Application;
 import java.util.LinkedList;
 import java.util.concurrent.CountDownLatch;
 
-public class RunnableProcessor implements Runnable {
+class RunnableProcessor implements Runnable {
 
     private RunnableQueue queue = new RunnableQueue();
 
@@ -47,11 +47,11 @@ public class RunnableProcessor implements Runnable {
         runLoop();
     }
 
-    public void invokeLater(Runnable r) {
+    void invokeLater(Runnable r) {
         queue.postRunnable(r);
     }
 
-    public void invokeAndWait(final Runnable r) {
+    void invokeAndWait(final Runnable r) {
         final CountDownLatch latch = new CountDownLatch(1);
         queue.postRunnable(() -> {
             try {
@@ -125,7 +125,7 @@ public class RunnableProcessor implements Runnable {
         }
     }
 
-    public static void runLater(Runnable r) {
+    static void runLater(Runnable r) {
         NativePlatformFactory.getNativePlatform()
                 .getRunnableProcessor()
                 .invokeLater(r);

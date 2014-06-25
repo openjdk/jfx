@@ -31,7 +31,7 @@ import java.nio.IntBuffer;
 import java.nio.ShortBuffer;
 
 /** Utilities for use by native cursor implementations */
-public class NativeCursors {
+class NativeCursors {
 
     /** Convert a cursor in 32-bit BYTE_ARGB_PRE format to a 16-bit or 32-bit
      * color-keyed format
@@ -41,7 +41,7 @@ public class NativeCursors {
      * @param targetDepth the depth of the target format (16 or 32)
      * @param transparentPixel the color key used for transparent pixels
      */
-    public static void colorKeyCursor(byte[] source,
+    static void colorKeyCursor(byte[] source,
                                       Buffer dest,
                                       int targetDepth,
                                       int transparentPixel) {
@@ -71,7 +71,7 @@ public class NativeCursors {
      * @param depth the pixel depth of the cursor (16 or 32)
      * @param transparentPixel the color key used for transparent pixels
      */
-    public static void offsetCursor(Buffer sourceBuffer,
+    static void offsetCursor(Buffer sourceBuffer,
                                     Buffer destBuffer,
                                     int offsetX, int offsetY,
                                     int width, int height,

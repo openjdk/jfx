@@ -27,7 +27,6 @@ package com.sun.glass.ui.monocle;
 
 import java.security.AccessController;
 import java.security.PrivilegedAction;
-import java.util.Locale;
 
 public abstract class NativePlatformFactory {
 
@@ -49,8 +48,7 @@ public abstract class NativePlatformFactory {
                     factoryClassName = factoryName;
                 } else {
                     factoryClassName = "com.sun.glass.ui.monocle."
-                        + factoryName.toLowerCase(Locale.ROOT)
-                        + "." + factoryName + "PlatformFactory";
+                            + factoryName + "PlatformFactory";
                 }
                 if (MonocleSettings.settings.tracePlatformConfig) {
                     MonocleTrace.traceConfig("Trying platform %s with class %s",
