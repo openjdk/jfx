@@ -1253,6 +1253,7 @@ final class MacAccessible extends PlatformAccessible {
                         case SPLIT_MENU_BUTTON: result = "split button"; break;
                         case PAGE_ITEM: result = "page"; break;
                         case TAB_ITEM: result = "tab"; break;
+                        case LIST_VIEW: result = "list"; break;
                         default:
                             MacRole macRole = getRole(role);
                             MacSubrole subRole = MacSubrole.getRole(role);
