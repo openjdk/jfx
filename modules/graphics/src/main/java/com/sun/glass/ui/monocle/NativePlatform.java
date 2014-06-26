@@ -25,12 +25,10 @@
 
 package com.sun.glass.ui.monocle;
 
-import com.sun.glass.ui.monocle.input.InputDeviceRegistry;
-
 public abstract class NativePlatform {
 
     private static InputDeviceRegistry inputDeviceRegistry;
-    protected final RunnableProcessor runnableProcessor;
+    private final RunnableProcessor runnableProcessor;
     private NativeCursor cursor;
     private NativeScreen screen;
     protected AcceleratedScreen accScreen;
@@ -39,7 +37,7 @@ public abstract class NativePlatform {
         runnableProcessor = new RunnableProcessor();
     }
 
-    protected void shutdown() {
+    void shutdown() {
         runnableProcessor.shutdown();
         if (cursor != null) {
             cursor.shutdown();
@@ -49,11 +47,11 @@ public abstract class NativePlatform {
         }
     }
 
-    public RunnableProcessor getRunnableProcessor() {
+    RunnableProcessor getRunnableProcessor() {
         return runnableProcessor;
     }
 
-    public synchronized InputDeviceRegistry getInputDeviceRegistry() {
+    synchronized InputDeviceRegistry getInputDeviceRegistry() {
         if (inputDeviceRegistry == null) {
             inputDeviceRegistry = createInputDeviceRegistry();
         }
@@ -64,7 +62,7 @@ public abstract class NativePlatform {
 
     protected abstract NativeCursor createCursor();
 
-    public synchronized NativeCursor getCursor() {
+    synchronized NativeCursor getCursor() {
         if (cursor == null) {
             cursor = createCursor();
         }
@@ -73,7 +71,7 @@ public abstract class NativePlatform {
 
     protected abstract NativeScreen createScreen();
 
-    public synchronized NativeScreen getScreen() {
+    synchronized NativeScreen getScreen() {
         if (screen == null) {
             screen = createScreen();
         }

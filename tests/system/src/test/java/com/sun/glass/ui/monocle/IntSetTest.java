@@ -25,7 +25,6 @@
 
 package com.sun.glass.ui.monocle;
 
-import com.sun.glass.ui.monocle.util.IntSet;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;

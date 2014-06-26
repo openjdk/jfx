@@ -46,7 +46,7 @@ import javafx.collections.ObservableList;
 
 import javafx.event.EventType;
 import javafx.geometry.Point2D;
-//import javafx.scene.accessibility.Accessible;
+import javafx.scene.accessibility.Accessible;
 import javafx.scene.input.InputMethodEvent;
 import javafx.scene.input.InputMethodHighlight;
 import javafx.scene.input.InputMethodTextRun;
@@ -1130,11 +1130,11 @@ class GlassViewEventHandler extends View.EventHandler {
         gestures.notifyEndTouchEvent(time);
     }
 
-//    @Override
-//    public Accessible getSceneAccessible() {
-//        if (scene != null && scene.sceneListener != null) {
-//            return scene.sceneListener.getSceneAccessible();
-//        }
-//        return null;
-//    }
+    @Override
+    public Accessible getSceneAccessible() {
+        if (scene != null && scene.sceneListener != null) {
+            return scene.sceneListener.getSceneAccessible();
+        }
+        return null;
+    }
 }

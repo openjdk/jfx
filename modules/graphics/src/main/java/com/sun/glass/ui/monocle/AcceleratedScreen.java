@@ -25,14 +25,14 @@
 
 package com.sun.glass.ui.monocle;
 
-import com.sun.glass.ui.monocle.linux.LinuxSystem;
-
 public class AcceleratedScreen {
 
     private static long glesLibraryHandle;
     private static long eglLibraryHandle;
-    protected static boolean initialized = false;
-    long eglSurface, eglContext, eglDisplay;
+    private static boolean initialized = false;
+    private long eglSurface;
+    private long eglContext;
+    private long eglDisplay;
     protected static LinuxSystem ls = LinuxSystem.getLinuxSystem();
 
     protected long platformGetNativeDisplay() {
@@ -43,7 +43,7 @@ public class AcceleratedScreen {
         return 0L;
     }
 
-    public AcceleratedScreen(int[] attributes) throws GLException, UnsatisfiedLinkError {
+    AcceleratedScreen(int[] attributes) throws GLException, UnsatisfiedLinkError {
         initPlatformLibraries();
 
         int major[] = {0}, minor[]={0};
@@ -102,7 +102,7 @@ public class AcceleratedScreen {
         }
     }
 
-    protected boolean initPlatformLibraries() throws UnsatisfiedLinkError{
+    boolean initPlatformLibraries() throws UnsatisfiedLinkError{
         if (!initialized) {
             glesLibraryHandle = ls.dlopen("libGLESv2.so",
                     LinuxSystem.RTLD_LAZY | LinuxSystem.RTLD_GLOBAL);
@@ -123,7 +123,7 @@ public class AcceleratedScreen {
         return glesLibraryHandle;
     }
 
-    public long getEGLHandle() { return eglLibraryHandle; }
+    protected long getEGLHandle() { return eglLibraryHandle; }
 
     public boolean swapBuffers() {
         synchronized(NativeScreen.framebufferSwapLock) {

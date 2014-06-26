@@ -132,6 +132,15 @@ void WindowContextBase::process_focus(GdkEventFocus* event) {
     if (!event->in && WindowContextBase::sm_grab_window == this) {
         ungrab_focus();
     }
+
+    if (xim.enabled && xim.ic) {
+        if (event->in) {
+            XSetICFocus(xim.ic);
+        } else {
+            XUnsetICFocus(xim.ic);
+        }
+    }
+
     if (jwindow) {
         if (!event->in || isEnabled()) {
             mainEnv->CallVoidMethod(jwindow, jWindowNotifyFocus,
@@ -603,9 +612,11 @@ void WindowContextBase::set_background(float r, float g, float b) {
 WindowContextBase::~WindowContextBase() {
     if (xim.ic) {
         XDestroyIC(xim.ic);
+        xim.ic = NULL;
     }
     if (xim.im) {
         XCloseIM(xim.im);
+        xim.im = NULL;
     }
 
     gtk_widget_destroy(gtk_widget);

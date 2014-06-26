@@ -164,7 +164,7 @@ public class Window implements EventTarget {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    protected TKStage impl_peer;
+    protected volatile TKStage impl_peer;
 
     private TKBoundsConfigurator peerBoundsConfigurator =
             new TKBoundsConfigurator();
@@ -460,7 +460,9 @@ public class Window implements EventTarget {
             if (oldScene == newScene) {
                 return;
             }
-            Toolkit.getToolkit().checkFxUserThread();
+            if (impl_peer != null) {
+                Toolkit.getToolkit().checkFxUserThread();
+            }
             // First, detach scene peer from this window
             updatePeerScene(null);
             // Second, dispose scene peer
