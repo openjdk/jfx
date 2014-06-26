@@ -89,7 +89,7 @@ import java.util.function.Function;
  * </pre></code>
  * @since JavaFX 8.0.40
  */
-public final class StyleablePropertyFactory {
+/* public pending further review */ final class StyleablePropertyFactory {
 
     private static class Holder {
         static final StyleablePropertyFactory INSTANCE = new StyleablePropertyFactory();
