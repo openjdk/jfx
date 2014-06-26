@@ -32,4 +32,14 @@ class OMAPX11PlatformFactory extends OMAPPlatformFactory {
         return new OMAPX11Platform();
     }
 
+    @Override
+    protected int getMajorVersion() {
+        return 1;
+    }
+
+    @Override
+    protected int getMinorVersion() {
+        return 0;
+    }
+
 }

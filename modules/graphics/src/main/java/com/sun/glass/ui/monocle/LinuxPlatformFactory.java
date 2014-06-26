@@ -38,6 +38,16 @@ class LinuxPlatformFactory extends NativePlatformFactory {
     }
 
     @Override
+    protected int getMajorVersion() {
+        return 1;
+    }
+
+    @Override
+    protected int getMinorVersion() {
+        return 0;
+    }
+
+    @Override
     protected NativePlatform createNativePlatform() {
         return new LinuxPlatform();
     }

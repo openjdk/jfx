@@ -34,7 +34,13 @@ public abstract class NativePlatformFactory {
 
     protected abstract NativePlatform createNativePlatform();
 
+    protected abstract int getMajorVersion();
+
+    protected abstract int getMinorVersion();
+
     private static NativePlatform platform;
+    private static final int majorVersion = 1;
+    private static final int minorVersion = 0;
     public static synchronized NativePlatform getNativePlatform() {
         if (platform == null) {
             String platformFactoryProperty =
@@ -58,7 +64,9 @@ public abstract class NativePlatformFactory {
                     NativePlatformFactory npf = (NativePlatformFactory)
                             Class.forName(factoryClassName)
                             .newInstance();
-                    if (npf.matches()) {
+                    if (npf.matches() &&
+                        npf.getMajorVersion() == majorVersion &&
+                        npf.getMinorVersion() == minorVersion) {
                         platform = npf.createNativePlatform();
                         if (MonocleSettings.settings.tracePlatformConfig) {
                             MonocleTrace.traceConfig("Matched %s", factoryName);
