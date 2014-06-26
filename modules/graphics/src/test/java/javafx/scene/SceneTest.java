@@ -27,11 +27,13 @@ package javafx.scene;
 
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.concurrent.Task;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.TilePane;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.transform.Scale;
+import javafx.stage.PopupWindow;
 import javafx.stage.Stage;
 import com.sun.javafx.pgstub.StubScene;
 import com.sun.javafx.pgstub.StubToolkit;
@@ -45,12 +47,10 @@ import javafx.scene.input.MouseEvent;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+
+import java.util.concurrent.ExecutionException;
+
+import static org.junit.Assert.*;
 
 /**
  * Tests various aspects of Scene.
@@ -814,5 +814,19 @@ public class SceneTest {
 
         assertSame(Cursor.TEXT.getCurrentFrame(),
                    ((StubScene) scene.impl_getPeer()).getCursor());
+    }
+
+    @Test
+    public void testSceneCreatedOnDifferentThread() throws ExecutionException, InterruptedException {
+        Task<Scene> task = new Task<Scene>() {
+            @Override
+            protected Scene call() throws Exception {
+                return new Scene(new Group());
+            }
+        };
+        new Thread(task).start();
+        Scene scene = task.get();
+        assertNotNull(scene);
+        assertNotNull(scene.getRoot());
     }
 }

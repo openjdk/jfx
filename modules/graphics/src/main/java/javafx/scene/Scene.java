@@ -320,16 +320,10 @@ public class Scene implements EventTarget {
                     + "ConditionalFeature.SCENE3D");
         }
 
-        Toolkit.getToolkit().checkFxUserThread();
         init();
         setRoot(root);
         init(width, height);
         setFill(fill);
-
-        final boolean isTransparentWindowsSupported = Platform.isSupported(ConditionalFeature.TRANSPARENT_WINDOW);
-        if (! isTransparentWindowsSupported) {
-            PlatformImpl.addNoTransparencyStylesheetToScene(this);
-        }
     }
 
     static {
@@ -482,8 +476,6 @@ public class Scene implements EventTarget {
      * markDirty method in Node or when the Node's scene changes.
      */
     void addToDirtyList(Node n) {
-        Toolkit.getToolkit().checkFxUserThread();
-
         if (dirtyNodes == null || dirtyNodesSize == 0) {
             if (impl_peer != null) {
                 Toolkit.getToolkit().requestNextPulse();
@@ -668,6 +660,11 @@ public class Scene implements EventTarget {
             // This is fine, the window is not visible. impl_initPeer() will
             // be called again later, when the window is being shown.
             return;
+        }
+
+        final boolean isTransparentWindowsSupported = Platform.isSupported(ConditionalFeature.TRANSPARENT_WINDOW);
+        if (!isTransparentWindowsSupported) {
+            PlatformImpl.addNoTransparencyStylesheetToScene(this);
         }
 
         PerformanceTracker.logEvent("Scene.initPeer started");
@@ -5725,6 +5722,7 @@ public class Scene implements EventTarget {
 
 
     Dragboard startDragAndDrop(EventTarget source, TransferMode... transferModes) {
+        Toolkit.getToolkit().checkFxUserThread();
         if (dndGesture == null ||
             (dndGesture.dragDetected != DragDetectedState.PROCESSING))
         {
@@ -5740,7 +5738,7 @@ public class Scene implements EventTarget {
     }
 
     void startFullDrag(EventTarget source) {
-
+        Toolkit.getToolkit().checkFxUserThread();
         if (dndGesture.dragDetected != DragDetectedState.PROCESSING) {
             throw new IllegalStateException("Cannot start full drag " +
                     "outside of DRAG_DETECTED event handler");

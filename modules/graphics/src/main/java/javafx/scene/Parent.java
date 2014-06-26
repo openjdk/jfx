@@ -359,10 +359,6 @@ public abstract class Parent extends Node {
     }) {
         @Override
         protected void onProposedChange(final List<Node> newNodes, int[] toBeRemoved) {
-            if (Parent.this.getScene() != null) {
-                // NOTE: this will throw IllegalStateException if we are on the wrong thread
-                Toolkit.getToolkit().checkFxUserThread();
-            }
             geomChanged = false;
 
             long newLength = children.size() + newNodes.size();

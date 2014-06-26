@@ -31,6 +31,7 @@ import com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.pgstub.StubToolkit.ScreenConfiguration;
 import com.sun.javafx.test.MouseEventGenerator;
 import com.sun.javafx.tk.Toolkit;
+import javafx.concurrent.Task;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.geometry.BoundingBox;
@@ -50,6 +51,7 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.Assert.*;
@@ -718,6 +720,19 @@ public class PopupTest {
         popup.show(stage);
         assertEquals(Cursor.CLOSED_HAND, popup.getScene().getCursor());
 
+    }
+
+    @Test
+    public void testPopupCreatedOnDifferentThread() throws ExecutionException, InterruptedException {
+        Task<Popup> task = new Task<Popup>() {
+            @Override
+            protected Popup call() throws Exception {
+                return new Popup();
+            }
+        };
+        new Thread(task).start();
+        Popup popup = task.get();
+        assertNotNull(popup);
     }
 
     private static final class EventCounter implements EventHandler<Event> {
