@@ -158,9 +158,24 @@ class FTFontFile extends PrismFontFile {
         if (glyphRec == null) return;
         FT_Bitmap bitmap = glyphRec.bitmap;
         if (bitmap == null) return;
+        int pixelMode = bitmap.pixel_mode;
         int width = bitmap.width;
         int height = bitmap.rows;
         int pitch = bitmap.pitch;
+        if (pixelMode != OSFreetype.FT_PIXEL_MODE_GRAY && pixelMode != OSFreetype.FT_PIXEL_MODE_LCD) {
+            /* This procedure only requests FT_RENDER_MODE_NORMAL and FT_RENDER_MODE_LCD,
+             * and for its output is expects FT_PIXEL_MODE_GRAY and FT_PIXEL_MODE_LCD, respectively.
+             * But it is possible the requested rendering mode is not supported and a different
+             * output is returned by Freetype. For example, a FT_PIXEL_MODE_MONO can be returned
+             * if the font contains a bitmap for the given glyph code.
+             */
+            width = height = 0;
+            if (PrismFontFactory.debugFonts) {
+                System.err.println("Unexpected pixel mode: " + pixelMode +
+                                   " glyph code " + glyphCode +
+                                   " load falgs " + flags);
+            }
+        }
         byte[] buffer;
         if (width != 0 && height != 0) {
             buffer = OSFreetype.getBitmapData(face);
