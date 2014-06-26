@@ -105,15 +105,15 @@ IFACEMETHODIMP GlassTextRangeProvider::Clone(ITextRangeProvider **pRetVal)
     if (env == NULL) return E_FAIL;
     jlong ptr = env->CallLongMethod(m_jTextRangeProvider, mid_Clone);
     if (CheckAndClearException(env)) return E_FAIL;
+    GlassTextRangeProvider* gtrp = reinterpret_cast<GlassTextRangeProvider*>(ptr);
 
     /* This code is intentionally commented.
      * JavaFX returns a new ITextRangeProvider instance each time.
      * The caller holds the only reference to this object.
      */
-//    ITextRangeProvider* iUnknown = reinterpret_cast<ITextRangeProvider*>(ptr);
-//    if (iUnknown) iUnknown->AddRef();
+//    if (gtrp) gtrp->AddRef();
 
-    *pRetVal = reinterpret_cast<ITextRangeProvider*>(ptr);
+    *pRetVal = static_cast<ITextRangeProvider*>(gtrp);
     return S_OK;
 }
 
@@ -163,15 +163,15 @@ IFACEMETHODIMP GlassTextRangeProvider::FindAttribute(TEXTATTRIBUTEID attributeId
     if (env == NULL) return E_FAIL;
     jlong ptr = env->CallLongMethod(m_jTextRangeProvider, mid_FindAttribute, attributeId, jVal, backward);
     if (CheckAndClearException(env)) return E_FAIL;
+    GlassTextRangeProvider* gtrp = reinterpret_cast<GlassTextRangeProvider*>(ptr);
 
     /* This code is intentionally commented.
      * JavaFX returns a new ITextRangeProvider instance each time.
      * The caller holds the only reference to this object.
      */
-//    ITextRangeProvider* iUnknown = reinterpret_cast<ITextRangeProvider*>(ptr);
-//    if (iUnknown) iUnknown->AddRef();
+//    if (gtrp) gtrp->AddRef();
 
-    *pRetVal = reinterpret_cast<ITextRangeProvider*>(ptr);
+    *pRetVal = static_cast<ITextRangeProvider*>(gtrp);
     return S_OK;
 }
 
@@ -183,15 +183,15 @@ IFACEMETHODIMP GlassTextRangeProvider::FindText(BSTR text, BOOL backward, BOOL i
     jstring jText = env->NewString((const jchar *)text, length);
     jlong ptr = env->CallLongMethod(m_jTextRangeProvider, mid_FindText, jText, backward, ignoreCase);
     if (CheckAndClearException(env)) return E_FAIL;
+    GlassTextRangeProvider* gtrp = reinterpret_cast<GlassTextRangeProvider*>(ptr);
 
     /* This code is intentionally commented.
      * JavaFX returns a new ITextRangeProvider instance each time.
      * The caller holds the only reference to this object.
      */
-//    ITextRangeProvider* iUnknown = reinterpret_cast<ITextRangeProvider*>(ptr);
-//    if (iUnknown) iUnknown->AddRef();
+//    if (gtrp) gtrp->AddRef();
 
-    *pRetVal = reinterpret_cast<ITextRangeProvider*>(ptr);
+    *pRetVal = static_cast<ITextRangeProvider*>(gtrp);
     return S_OK;
 }
 IFACEMETHODIMP GlassTextRangeProvider::GetAttributeValue(TEXTATTRIBUTEID attributeId, VARIANT *pRetVal)
@@ -220,12 +220,12 @@ IFACEMETHODIMP GlassTextRangeProvider::GetEnclosingElement(IRawElementProviderSi
     if (env == NULL) return E_FAIL;
     jlong ptr = env->CallLongMethod(m_jTextRangeProvider, mid_GetEnclosingElement);
     if (CheckAndClearException(env)) return E_FAIL;
+    GlassAccessible* acc = reinterpret_cast<GlassAccessible*>(ptr);
 
     /* AddRef the result */
-    IUnknown* iUnknown = reinterpret_cast<IUnknown*>(ptr);
-    if (iUnknown) iUnknown->AddRef();
+    if (acc) acc->AddRef();
 
-    *pRetVal = reinterpret_cast<IRawElementProviderSimple*>(ptr);
+    *pRetVal = static_cast<IRawElementProviderSimple*>(acc);
     return S_OK;
 }
 
