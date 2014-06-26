@@ -90,7 +90,7 @@ class GetEvent {
         }
     };
 
-    static void main(String[] argv) throws Exception {
+    public static void main(String[] argv) throws Exception {
         NativePlatform platform = NativePlatformFactory.getNativePlatform();
         Udev.getInstance().addListener(udevListener);
         // Request updates for existing devices
