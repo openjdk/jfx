@@ -60,16 +60,16 @@ import java.util.function.Function;
      }
 
      // Typical JavaFX property implementation
-     public ObservableValue{@literal <}Boolean{@literal >} selectedProperty() { return (ObservableValue{@literal <}Boolean{@literal >})selected; }
+     public{@literal ObservableValue<Boolean>} selectedProperty() { return ({@literal ObservableValue<Boolean>})selected; }
      public boolean isSelected() { return selected.getValue(); }
      public void setSelected(boolean isSelected) { selected.setValue(isSelected); }
 
      // StyleableProperty implementation reduced to one line
-     private final StyleableProperty{@literal <}Boolean{@literal >} selected =
-         StyleablePropertyFactory.getInstance().createStyleableBooleanProperty(this, "selected", "-my-selected", s -{@literal >} ((MyButton) s).selected);
+     private final{@literal StyleableProperty<Boolean>} selected =
+         StyleablePropertyFactory.getInstance().createStyleableBooleanProperty(this, "selected", "-my-selected", s{@literal ->} ((MyButton) s).selected);
 
-     @Override
-     public List{@literal <}CssMetaData{@literal <}? extends Styleable, ?{@literal >}{@literal >} getControlCssMetaData() {
+    {@literal @}Override
+     public{@literal List<CssMetaData<? extends Styleable, ?>>} getControlCssMetaData() {
          return StyleablePropertyFactory.getInstance().getCssMetaData(this);
      }
 
