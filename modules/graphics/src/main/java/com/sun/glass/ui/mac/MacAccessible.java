@@ -414,15 +414,14 @@ final class MacAccessible extends PlatformAccessible {
             null,
             null
         ),
-        NSAccessibilityDisclosureTriangleRole(new Role[] {Role.DISCLOSURE_NODE, Role.TITLED_PANE},
+        NSAccessibilityDisclosureTriangleRole(Role.TITLED_PANE,
             new MacAttribute[] {
                 MacAttribute.NSAccessibilityEnabledAttribute,
                 MacAttribute.NSAccessibilityValueAttribute
             },
             new MacAction[] {
                 MacAction.NSAccessibilityPressAction
-            },
-            null
+            }
         ),
         NSAccessibilityToolbarRole(Role.TOOL_BAR,
             new MacAttribute[] {

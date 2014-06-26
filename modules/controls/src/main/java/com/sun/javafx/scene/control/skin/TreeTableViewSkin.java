@@ -365,14 +365,7 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeItem<S>, Tree
 
         // If there is no disclosure node, then add one of my own
         if (cell.getDisclosureNode() == null) {
-            final StackPane disclosureNode = new StackPane() {
-                @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-                    switch (attribute) {
-                        case ROLE: return Role.DISCLOSURE_NODE;
-                        default: return super.accGetAttribute(attribute, parameters);
-                    }
-                }
-            };
+            final StackPane disclosureNode = new StackPane();
             disclosureNode.getStyleClass().setAll("tree-disclosure-node");
             disclosureNode.setMouseTransparent(true);
 

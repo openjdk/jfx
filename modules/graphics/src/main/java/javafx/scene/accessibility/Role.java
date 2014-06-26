@@ -81,13 +81,6 @@ public enum Role {
     DECREMENT_BUTTON,
 
     /**
-     * Used by TreeView / TreeTableView to represent the arrow to the side of branches
-     * Attributes: (none)
-     * Actions: Fire
-     */
-    DISCLOSURE_NODE,
-
-    /**
      * Header.
      * Attributes: TITLE
      * Actions: (none)
