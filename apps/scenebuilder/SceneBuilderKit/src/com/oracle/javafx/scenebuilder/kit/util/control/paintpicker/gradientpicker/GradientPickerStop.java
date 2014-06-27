@@ -147,6 +147,10 @@ public class GradientPickerStop extends VBox {
 
         chip_rect.setFill(color);
         gradientPicker.setSelectedStop(this);
+        
+        stop_button.setOnAction((ActionEvent event) -> {
+            event.consume();
+        });
 
         // when we detect a width change, we know node layout is resolved so we position stop in track
         widthProperty().addListener((ChangeListener<Number>) (ov, oldValue, newValue) -> {
@@ -156,7 +160,7 @@ public class GradientPickerStop extends VBox {
             }
         });
     }
-
+    
     @FXML
     void stopAction(ActionEvent event) {
         double val = Double.valueOf(offset_textfield.getText());
