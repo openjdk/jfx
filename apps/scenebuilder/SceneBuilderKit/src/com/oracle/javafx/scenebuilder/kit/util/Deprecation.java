@@ -38,9 +38,12 @@ import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.scene.control.skin.MenuBarSkin;
 import com.sun.javafx.scene.input.PickResultChooser;
+
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.List;
+import java.util.Map;
+
 import javafx.collections.ObservableMap;
 import javafx.css.CssMetaData;
 import javafx.css.Styleable;
@@ -86,8 +89,8 @@ public class Deprecation {
     }
 
 //    // RT-21096 : Promote impl_getStyleMap / impl_setStyleMap to public API
-    public static ObservableMap<StyleableProperty<?>, List<Style>> getStyleMap(Node node) {
-        return node.impl_getStyleMap();
+    public static Map<StyleableProperty<?>, List<Style>> getStyleMap(Node node) {
+        return node.impl_findStyles(null);
     }
 
     // Used to woraround RT-34863
