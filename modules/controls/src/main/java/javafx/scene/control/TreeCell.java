@@ -662,10 +662,6 @@ public class TreeCell<T> extends IndexedCell<T> {
                 if (child == null) return null;
                 int childIndex = treeView.getRow(child);
                 return treeView.accGetAttribute(Attribute.ROW_AT_INDEX, childIndex);
-            case TITLE: {
-                Object value = treeItem == null ? null : treeItem.getValue();
-                return value == null ? "" : value.toString();
-            }
             case LEAF: return treeItem == null ? true : treeItem.isLeaf();
             case EXPANDED: return treeItem == null ? false : treeItem.isExpanded();
             case INDEX: return getIndex();

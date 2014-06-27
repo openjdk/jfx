@@ -548,20 +548,6 @@ public class ListCell<T> extends IndexedCell<T> {
     @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
         switch (attribute) {
             case ROLE: return Role.LIST_ITEM;
-            case TITLE: {
-                String text = getText();
-                /* If the data bounded to cell is a Node
-                 * the default behavior is to hide the text
-                 * and use data as the graphics. (see ListViewSkin#createDefaultCellImpl).
-                 * If the text is empty try to get graphics. 
-                 */
-                if (text == null || text.isEmpty()) {
-                    if (getGraphic() != null) {
-                        text = (String)getGraphic().accGetAttribute(Attribute.TITLE);
-                    }
-                }
-                return text;
-            }
             case INDEX: return getIndex();
             case SELECTED: return isSelected();
             default: return super.accGetAttribute(attribute, parameters);

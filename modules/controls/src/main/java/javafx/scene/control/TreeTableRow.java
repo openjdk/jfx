@@ -554,10 +554,6 @@ public class TreeTableRow<T> extends IndexedCell<T> {
                 if (child == null) return null;
                 int childIndex = treeTableView.getRow(child);
                 return treeTableView.accGetAttribute(Attribute.ROW_AT_INDEX, childIndex);
-            case TITLE: {
-                if (treeItem == null) return "";
-                return treeColumn.getCellData(treeItem);
-            }
             case ROW_INDEX: return getIndex();
             case COLUMN_INDEX: return visibleColumns.indexOf(treeColumn);
             case LEAF: return treeItem == null ? true : treeItem.isLeaf();
