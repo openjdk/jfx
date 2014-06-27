@@ -1162,6 +1162,7 @@ public class MenuBarController {
                         final File file = new File(recentItem);
                         SceneBuilderApp.getSingleton().performOpenRecent(documentWindowController, file);
                     });
+                    mi.setMnemonicParsing(false);
                     menuItems.add(mi);
                 }
             }
