@@ -230,12 +230,12 @@ class MouseInput {
                     if (dragInProgress) {
                         try {
                             view.notifyDragDrop(relX, relY, x, y,
-                                                Clipboard.ACTION_COPY_OR_MOVE);
+                                                Clipboard.ACTION_MOVE);
                         } catch (RuntimeException e) {
                             Application.reportException(e);
                         }
                         try {
-                            view.notifyDragEnd(Clipboard.ACTION_COPY_OR_MOVE);
+                            view.notifyDragEnd(Clipboard.ACTION_MOVE);
                         } catch (RuntimeException e) {
                             Application.reportException(e);
                         }
@@ -254,7 +254,7 @@ class MouseInput {
                             // first drag notification
                             try {
                                 view.notifyDragEnter(relX, relY, x, y,
-                                                     Clipboard.ACTION_COPY_OR_MOVE);
+                                                     Clipboard.ACTION_MOVE);
                             } catch (RuntimeException e) {
                                 Application.reportException(e);
                             }
@@ -262,7 +262,7 @@ class MouseInput {
                         } else if (dragView == view && dragActions.get(DRAG_ENTER)) {
                             try {
                                 view.notifyDragOver(relX, relY, x, y,
-                                                    Clipboard.ACTION_COPY_OR_MOVE);
+                                                    Clipboard.ACTION_MOVE);
                             } catch (RuntimeException e) {
                                 Application.reportException(e);
                             }
@@ -277,7 +277,7 @@ class MouseInput {
                             }
                             try {
                                 view.notifyDragEnter(relX, relY, x, y,
-                                                     Clipboard.ACTION_COPY_OR_MOVE);
+                                                     Clipboard.ACTION_MOVE);
                             } catch (RuntimeException e) {
                                 Application.reportException(e);
                             }
