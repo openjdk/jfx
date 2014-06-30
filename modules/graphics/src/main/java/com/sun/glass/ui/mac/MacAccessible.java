@@ -756,11 +756,11 @@ final class MacAccessible extends Accessible {
                          * and send a close and open event for it.
                          */
                         Node menuItemOwner = (Node)getAttribute(MENU_FOR);
-                        Accessible acc  = getAccessible(menuItemOwner);
+                        MacAccessible acc  = (MacAccessible)getAccessible(menuItemOwner);
                         if (acc != null) {
-                            Accessible menu = acc.getContainerAccessible(Role.CONTEXT_MENU);
+                            MacAccessible menu = (MacAccessible)acc.getContainerAccessible(Role.CONTEXT_MENU);
                             if (menu != null) {
-                                long ptr = ((MacAccessible)menu).getNativeAccessible();
+                                long ptr = menu.getNativeAccessible();
                                 NSAccessibilityPostNotification(ptr, MacNotification.AXMenuClosed.ptr);
                                 NSAccessibilityPostNotification(ptr, MacNotification.AXMenuOpened.ptr);
                             }

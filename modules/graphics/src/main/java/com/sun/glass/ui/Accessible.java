@@ -91,6 +91,7 @@ public abstract class Accessible {
         return eventHandler == null;
     }
 
+    @Override
     public String toString() {
          return getClass().getSimpleName() + " (" + eventHandler + ")";
     }
@@ -103,24 +104,24 @@ public abstract class Accessible {
 
     protected abstract long getNativeAccessible(); 
 
-    public Accessible getAccessible(Scene scene) {
+    protected Accessible getAccessible(Scene scene) {
         if (scene == null) return null;
         return SceneHelper.getAccessible(scene);
     }
 
-    public Accessible getAccessible(Node node) {
+    protected Accessible getAccessible(Node node) {
         if (node == null) return null;
         return NodeHelper.getAccessible(node);
     }
 
-    public long getNativeAccessible(Node node) {
+    protected long getNativeAccessible(Node node) {
         if (node == null) return 0L;
         Accessible acc = getAccessible(node);
         if (acc == null) return 0L;
         return acc.getNativeAccessible();
     }
 
-    public Accessible getContainerAccessible(Role targetRole) {
+    protected Accessible getContainerAccessible(Role targetRole) {
         Node node = (Node)getAttribute(PARENT);
         while (node != null) {
             Accessible acc = getAccessible(node);
