@@ -89,7 +89,6 @@ public class Snapshot1Test extends SnapshotCommon {
 
         Group root = new Group();
 
-        // The following should throw IllegalStateException
         tmpScene = new Scene(root);
         assertNotNull(tmpScene);
     }
