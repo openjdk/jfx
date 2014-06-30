@@ -75,7 +75,6 @@ import javafx.geometry.Orientation;
 import javafx.geometry.Point2D;
 import javafx.geometry.Point3D;
 import javafx.geometry.Rectangle2D;
-import javafx.scene.accessibility.Accessible;
 import javafx.scene.accessibility.Action;
 import javafx.scene.accessibility.Attribute;
 import javafx.scene.accessibility.Role;
@@ -112,6 +111,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.sun.glass.ui.Accessible;
+import com.sun.glass.ui.Application;
 import com.sun.javafx.Logging;
 import com.sun.javafx.TempState;
 import com.sun.javafx.Utils;
@@ -9156,8 +9157,14 @@ public abstract class Node implements EventTarget, Styleable {
                 return node.getSubScene();
             }
 
-            @Override public void setLabeledBy(Node node, Node labeledBy) {
+            @Override
+            public void setLabeledBy(Node node, Node labeledBy) {
                 node.labeledBy = labeledBy;
+            }
+
+            @Override
+            public Accessible getAccessible(Node node) {
+                return node.getAccessible();
             }
         });
     }
@@ -9207,13 +9214,7 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     Accessible accessible;
-
-    /**
-     * Experimental API - Do not use (will be removed).
-     *
-     * @treatAsPrivate
-     */
-    public final Accessible getAccessible() {
+    Accessible getAccessible() {
         if (accessible == null) {
             Scene scene = getScene();
             /* It is possible the node was reparented and getAccessible() 
@@ -9229,7 +9230,8 @@ public abstract class Node implements EventTarget, Styleable {
             }
         }
         if (accessible == null) {
-            accessible = new Accessible() {
+            accessible = Application.GetApplication().createAccessible();
+            accessible.setEventHandler(new Accessible.EventHandler() {
                 @Override public Object getAttribute(Attribute attribute, Object... parameters) {
                     return accGetAttribute(attribute, parameters);
                 }
@@ -9240,7 +9242,7 @@ public abstract class Node implements EventTarget, Styleable {
                     String klassName = Node.this.getClass().getName();
                     return klassName.substring(klassName.lastIndexOf('.')+1);
                 }
-            };
+            });
         }
         return accessible;
     }

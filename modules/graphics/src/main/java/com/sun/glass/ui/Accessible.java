@@ -27,19 +27,51 @@ package com.sun.glass.ui;
 
 import static javafx.scene.accessibility.Attribute.PARENT;
 import static javafx.scene.accessibility.Attribute.ROLE;
+import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.scene.SceneHelper;
 import javafx.scene.Node;
-import javafx.scene.accessibility.Accessible;
+import javafx.scene.Scene;
 import javafx.scene.accessibility.Action;
 import javafx.scene.accessibility.Attribute;
 import javafx.scene.accessibility.Role;
 
-public abstract class PlatformAccessible {
+public abstract class Accessible {
 
-    private Accessible accessible;
+    private EventHandler eventHandler;
     private View view;
 
-    protected PlatformAccessible(Accessible accessible) {
-        this.accessible = accessible;
+    public static class EventHandler {
+
+        /**
+         * This method is called by the AT to request the value for the given attribute.
+         *
+         * @see Attribute
+         * @param attribute the requested attribute
+         * @param parameters optional list of parameters
+         * @return the value for the requested attribute
+         */
+        public Object getAttribute(Attribute attribute, Object... parameters) {
+            return null;
+        }
+
+        /**
+         * This method is called by the AT to indicate the accessible to execute
+         * the given action.
+         *
+         * @see Action
+         * @param action the action to execute
+         * @param parameters optional list of parameters
+         */
+        public void executeAction(Action action, Object... parameters) {
+        }
+    }
+
+    public EventHandler getEventHandler() {
+        return this.eventHandler;
+    }
+
+    public void setEventHandler(EventHandler eventHandler) {
+        this.eventHandler = eventHandler;
     }
 
     public void setView(View view) {
@@ -51,16 +83,16 @@ public abstract class PlatformAccessible {
     }
 
     public void dispose() {
-        if (accessible != null) accessible = null;
+        eventHandler = null;
         view = null;
     }
 
-    protected boolean isDisposed() {
-        return accessible == null;
+    public boolean isDisposed() {
+        return eventHandler == null;
     }
 
     public String toString() {
-         return getClass().getSimpleName() + " (" + accessible + ")";
+         return getClass().getSimpleName() + " (" + eventHandler + ")";
     }
 
     protected boolean isIgnored() {
@@ -69,18 +101,26 @@ public abstract class PlatformAccessible {
         return role == Role.NODE || role == Role.PARENT;
     }
 
-    @SuppressWarnings("deprecation")
-    protected long getAccessible(Node node) {
+    protected Accessible getAccessible(Scene scene) {
+        if (scene == null) return null;
+        return SceneHelper.getAccessible(scene);
+    }
+
+    protected Accessible getAccessible(Node node) {
+        if (node == null) return null;
+        return NodeHelper.getAccessible(node);
+    }
+
+    protected long getNativeAccessible(Node node) {
         if (node == null) return 0L;
-        Accessible acc = node.getAccessible();
+        Accessible acc = getAccessible(node);
         if (acc == null) return 0L;
-        PlatformAccessible pAcc = acc.impl_getDelegate();
-        return pAcc != null ? pAcc.getNativeAccessible() : 0;
+        return acc.getNativeAccessible();
     }
 
     protected Node getContainerNode(Node node, Role targetRole) {
         while (node != null) {
-            Accessible acc = node.getAccessible();
+            Accessible acc = getAccessible(node);
             Role role = (Role)acc.getAttribute(ROLE);
             if (role == targetRole) return node;
             node = (Node)acc.getAttribute(PARENT);
@@ -92,8 +132,8 @@ public abstract class PlatformAccessible {
         return getContainerNode((Node)getAttribute(PARENT), targetRole);
     }
 
-    protected Object getAttribute(Attribute attribute, Object... parameters) {
-        Object result = accessible.getAttribute(attribute, parameters);
+    public Object getAttribute(Attribute attribute, Object... parameters) {
+        Object result = eventHandler.getAttribute(attribute, parameters);
         if (result != null) {
             Class<?> clazz = attribute.getReturnType();
             if (clazz != null) {
@@ -103,7 +143,6 @@ public abstract class PlatformAccessible {
                     String msg = "The expected return type for the " + attribute +
                                  " attribute is " + clazz.getSimpleName() +
                                  " but found " + result.getClass().getSimpleName();
-//                    throw new IllegalArgumentException(msg);
                     System.err.println(msg);
                     return null; //Fail no exception
                 }
@@ -112,10 +151,17 @@ public abstract class PlatformAccessible {
         return result;
     }
 
-    protected void executeAction(Action action, Object... parameters) {
-        accessible.executeAction(action, parameters);
+    public void executeAction(Action action, Object... parameters) {
+        eventHandler.executeAction(action, parameters);
     }
 
+    /**
+     * This method is called by Accessible to notify the AT that
+     * the value for the given attribute has changed.
+     *
+     * @see Attribute
+     * @param notification the attribute which value has changed
+     */
     public abstract void sendNotification(Attribute notification);
 
     protected abstract long getNativeAccessible(); 

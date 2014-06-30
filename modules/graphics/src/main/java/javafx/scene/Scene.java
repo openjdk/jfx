@@ -25,6 +25,8 @@
 
 package javafx.scene;
 
+import com.sun.glass.ui.Application;
+import com.sun.glass.ui.Accessible;
 import com.sun.javafx.Logging;
 import com.sun.javafx.Utils;
 import com.sun.javafx.application.PlatformImpl;
@@ -69,7 +71,6 @@ import javafx.css.CssMetaData;
 import javafx.css.StyleableObjectProperty;
 import javafx.event.*;
 import javafx.geometry.*;
-import javafx.scene.accessibility.Accessible;
 import javafx.scene.accessibility.Attribute;
 import javafx.scene.accessibility.Role;
 import javafx.scene.image.WritableImage;
@@ -397,6 +398,11 @@ public class Scene implements EventTarget {
                             if (scene != null) {
                                 scene.transientFocusContainer = node;
                             }
+                        }
+
+                        @Override
+                        public Accessible getAccessible(Scene scene) {
+                            return scene.getAccessible();
                         }
                     });
         }
@@ -6208,13 +6214,7 @@ public class Scene implements EventTarget {
     }
     
     private Accessible accessible;
-
-    /**
-     * Experimental API - Do not use (will be removed).
-     *
-     * @treatAsPrivate
-     */
-    public Accessible getAccessible() {
+    Accessible getAccessible() {
         /*
          * The accessible for the Scene should never be
          * requested when the peer is not set.
@@ -6225,7 +6225,8 @@ public class Scene implements EventTarget {
          */
         if (impl_peer == null) return null;
         if (accessible == null) {
-            accessible = new Accessible() {
+            accessible = Application.GetApplication().createAccessible();
+            accessible.setEventHandler(new Accessible.EventHandler() {
                 @Override public Object getAttribute(Attribute attribute,
                                                      Object... parameters) {
                     switch (attribute) {
@@ -6266,7 +6267,7 @@ public class Scene implements EventTarget {
                     }
                     return super.getAttribute(attribute, parameters);
                 }
-            };
+            });
         }
         return accessible;
     }

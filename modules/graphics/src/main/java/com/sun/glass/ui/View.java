@@ -31,7 +31,6 @@ import java.lang.ref.WeakReference;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.Map;
-import javafx.scene.accessibility.Accessible;
 
 public abstract class View {
 
@@ -1096,9 +1095,8 @@ public abstract class View {
         if (accessible) {
             Accessible acc = eventHandler.getSceneAccessible();
             if (acc != null) {
-                PlatformAccessible pAcc = acc.impl_getDelegate();
-                pAcc.setView(this);
-                return pAcc.getNativeAccessible();
+                acc.setView(this);
+                return acc.getNativeAccessible();
             }
         }
         return 0L;

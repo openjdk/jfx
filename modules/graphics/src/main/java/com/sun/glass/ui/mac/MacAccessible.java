@@ -37,7 +37,6 @@ import javafx.geometry.Point2D;
 import javafx.geometry.Orientation;
 import javafx.scene.Scene;
 import javafx.scene.Node;
-import javafx.scene.accessibility.Accessible;
 import javafx.scene.accessibility.Action;
 import javafx.scene.accessibility.Attribute;
 import javafx.scene.accessibility.Role;
@@ -46,7 +45,7 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.text.Font;
-import com.sun.glass.ui.PlatformAccessible;
+import com.sun.glass.ui.Accessible;
 import com.sun.glass.ui.Screen;
 import com.sun.glass.ui.View;
 import static javafx.scene.accessibility.Attribute.*;
@@ -55,7 +54,7 @@ import static javafx.scene.accessibility.Attribute.*;
  * Native Interface - Implements NSAccessibility Protocol
  *
  */
-final class MacAccessible extends PlatformAccessible {
+final class MacAccessible extends Accessible {
 
     private native static void _initIDs();
     private native static boolean _initEnum(String enumName);
@@ -643,16 +642,11 @@ final class MacAccessible extends PlatformAccessible {
     private static final int kAXMenuItemModifierControl      = (1 << 2);
     private static final int kAXMenuItemModifierNoCommand    = (1 << 3);
 
-    private MacAccessible(Accessible accessible) {
-        super(accessible);
+    MacAccessible() {
         this.peer = _createGlassAccessible();
-    }
-
-    static MacAccessible createAccessible(Accessible accessible) {
-        if (accessible == null) return null;
-        MacAccessible macAccessible = new MacAccessible(accessible);
-        if (macAccessible.peer == 0L) return null;
-        return macAccessible;
+        if (this.peer == 0L) {
+            throw new RuntimeException("could not create platform accessible");
+        }
     }
 
     @Override
@@ -698,7 +692,7 @@ final class MacAccessible extends PlatformAccessible {
                      */
                     Scene scene = (Scene)getAttribute(SCENE);
                     if (scene != null) {
-                        Accessible acc = scene.getAccessible();
+                        Accessible acc = getAccessible(scene);
                         if (acc != null) {
                             node = (Node)acc.getAttribute(FOCUS_NODE);
                         }
@@ -707,8 +701,8 @@ final class MacAccessible extends PlatformAccessible {
 
                 long id = 0L;
                 if (node != null) {
-                    Node item = (Node)node.getAccessible().getAttribute(FOCUS_ITEM);
-                    id = item != null ? getAccessible(item) : getAccessible(node);
+                    Node item = (Node)getAccessible(node).getAttribute(FOCUS_ITEM);
+                    id = item != null ? getNativeAccessible(item) : getNativeAccessible(node);
                 } else {
                     /* 
                      * No focused element. Send the notification to the scene itself.
@@ -741,7 +735,7 @@ final class MacAccessible extends PlatformAccessible {
                 Role role = (Role) getAttribute(ROLE);
                 if (role == Role.TREE_ITEM || role == Role.TREE_TABLE_ROW) {
                     Role container = role == Role.TREE_ITEM ? Role.TREE_VIEW : Role.TREE_TABLE_VIEW;
-                    long control = getAccessible(getContainerNode(container));
+                    long control = getNativeAccessible(getContainerNode(container));
                     if (control != 0) {
                         NSAccessibilityPostNotification(control, MacNotification.NSAccessibilityRowCountChangedNotification.ptr);
                     }
@@ -762,7 +756,7 @@ final class MacAccessible extends PlatformAccessible {
                          * and send a close and open event for it.
                          */
                         Node menuItemOwner = (Node)getAttribute(MENU_FOR);
-                        long menu = getAccessible(getContainerNode(menuItemOwner, Role.CONTEXT_MENU));
+                        long menu = getNativeAccessible(getContainerNode(menuItemOwner, Role.CONTEXT_MENU));
                         if (menu != 0) {
                             NSAccessibilityPostNotification(menu, MacNotification.AXMenuClosed.ptr);
                             NSAccessibilityPostNotification(menu, MacNotification.AXMenuOpened.ptr);
@@ -789,14 +783,11 @@ final class MacAccessible extends PlatformAccessible {
         return peer;
     }
 
-    @SuppressWarnings("deprecation")
     private View getRootView(Scene scene) {
         if (scene == null) return null;
-        Accessible acc = scene.getAccessible();
-        if (acc == null) return null;
-        MacAccessible macAcc = (MacAccessible)acc.impl_getDelegate();
-        if (macAcc == null || macAcc.isDisposed()) return null;
-        View view = macAcc.getView();
+        Accessible acc = getAccessible(scene);
+        if (acc == null || acc.isDisposed()) return null;
+        View view = acc.getView();
         if (view == null || view.isClosed()) return null;
         return view;
     }
@@ -804,7 +795,7 @@ final class MacAccessible extends PlatformAccessible {
     long[] getUnignoredChildren(ObservableList<Node> children) {
         if (children == null) return new long[0];
         long[] ids = children.stream()
-                             .mapToLong(n -> getAccessible(n))
+                             .mapToLong(n -> getNativeAccessible(n))
                              .filter(n -> n != 0)
                              .toArray();
         return NSAccessibilityUnignoredChildren(ids);
@@ -857,7 +848,7 @@ final class MacAccessible extends PlatformAccessible {
         if (role == Role.TEXT) {
             Node parent = (Node)getAttribute(PARENT);
             if (parent == null) return ignoreInnerText;
-            Role parentRole = (Role)parent.getAccessible().getAttribute(ROLE);
+            Role parentRole = (Role)getAccessible(parent).getAttribute(ROLE);
             if (parentRole == null) return ignoreInnerText;
             switch (parentRole) {
                 case BUTTON:
@@ -1057,7 +1048,7 @@ final class MacAccessible extends PlatformAccessible {
                     int i = 0;
                     if (index == 0) {
                         Node menu = (Node)getAttribute(MENU);
-                        if (menu != null) result[i++] = getAccessible(menu);
+                        if (menu != null) result[i++] = getNativeAccessible(menu);
                     }
                     if (i < maxCount) {
                         @SuppressWarnings("unchecked")
@@ -1083,7 +1074,7 @@ final class MacAccessible extends PlatformAccessible {
             while (i < maxCount) {
                 Node node = (Node)getAttribute(jfxAttr, index + i);
                 if (node == null) break;
-                result[i] = getAccessible(node);
+                result[i] = getNativeAccessible(node);
                 i++;
             }
             if (i == maxCount) return NSAccessibilityUnignoredChildren(result);;
@@ -1187,11 +1178,9 @@ final class MacAccessible extends PlatformAccessible {
                          * within it.
                          */
                         Scene scene = (Scene)getAttribute(SCENE);
-                        if (scene != null) {
-                            Accessible acc = scene.getAccessible();
-                            if (acc != null) {
-                                focus = (Node)acc.getAttribute(FOCUS_NODE);
-                            }
+                        Accessible acc = getAccessible(scene);
+                        if (acc != null) {
+                            focus = (Node)acc.getAttribute(FOCUS_NODE);
                         }
                     }
                     if (role == Role.MENU_BAR) {
@@ -1202,9 +1191,9 @@ final class MacAccessible extends PlatformAccessible {
                         focus = (Node)getAttribute(FOCUS_NODE);
                     }
                     if (focus != null) {
-                        Role focusRole = (Role)focus.getAccessible().getAttribute(ROLE);
+                        Role focusRole = (Role)getAccessible(focus).getAttribute(ROLE);
                         if (isMenuElement(focusRole)) {
-                            long[] result = {getAccessible(focus)};
+                            long[] result = {getNativeAccessible(focus)};
                             return attr.map.apply(result);
                         }
                     }
@@ -1309,12 +1298,12 @@ final class MacAccessible extends PlatformAccessible {
                     if (role == Role.CONTEXT_MENU) {
                         Node menuItem = (Node)getAttribute(MENU_FOR);
                         if (menuItem != null) {
-                            if (menuItem.getAccessible().getAttribute(ROLE) == Role.MENU) {
+                            if (getAccessible(menuItem).getAttribute(ROLE) == Role.MENU) {
                                 result = menuItem;
                             }
                         }
                     }
-                    result = getAccessible((Node)result);
+                    result = getNativeAccessible((Node)result);
                 } else {
                     /* Root node: return the NSView (instead of acc.getNativeAccessible()) */
                     View view = getRootView((Scene)getAttribute(SCENE));
@@ -1328,7 +1317,7 @@ final class MacAccessible extends PlatformAccessible {
                 switch (role) {
                     case TAB_PANE:
                     case PAGINATION:
-                        result = getAccessible((Node)result);
+                        result = getNativeAccessible((Node)result);
                         break;
                     case CHECK_BOX:
                     case TOGGLE_BUTTON:
@@ -1383,12 +1372,12 @@ final class MacAccessible extends PlatformAccessible {
                          */
                         Node parent = (Node)getAttribute(PARENT);
                         if (parent == null) return null;
-                        Accessible acc = parent.getAccessible();
+                        Accessible acc = getAccessible(parent);
                         if (acc.getAttribute(ROLE) == Role.TREE_TABLE_ROW) {
                             @SuppressWarnings("unchecked")
                             Stream<Node> children = ((List<Node>)acc.getAttribute(CHILDREN)).stream();
 
-                            result = children.map(n -> n.getAccessible())
+                            result = children.map(n -> getAccessible(n))
                                              .filter(a -> a.getAttribute(ROLE) == Role.TREE_TABLE_CELL)
                                              .map(a -> (String)a.getAttribute(TITLE))
                                              .filter(t -> t != null && !t.isEmpty()) //Consider reporting empty cells as "(blank)"
@@ -1516,7 +1505,7 @@ final class MacAccessible extends PlatformAccessible {
             }
             case NSAccessibilityContentsAttribute: {
                 if (result != null) {
-                    result = new long [] {getAccessible((Node)result)};
+                    result = new long [] {getNativeAccessible((Node)result)};
                 }
                 break;
             }
@@ -1532,7 +1521,7 @@ final class MacAccessible extends PlatformAccessible {
             case NSAccessibilityHeaderAttribute:
             case NSAccessibilityHorizontalScrollBarAttribute:
             case NSAccessibilityVerticalScrollBarAttribute: {
-                result = getAccessible((Node)result);
+                result = getNativeAccessible((Node)result);
                 break;
             }
             case NSAccessibilityOrientationAttribute:
@@ -1739,7 +1728,7 @@ final class MacAccessible extends PlatformAccessible {
                 break;
             }
             case NSAccessibilityCellForColumnAndRowParameterizedAttribute: {
-                result = getAccessible((Node)result);
+                result = getNativeAccessible((Node)result);
                 break;
             }
             default:
@@ -1803,9 +1792,9 @@ final class MacAccessible extends PlatformAccessible {
         Node node = (Node)getAttribute(FOCUS_NODE);
         if (node == null) return 0L;
 
-        Node item = (Node)node.getAccessible().getAttribute(FOCUS_ITEM);
-        if (item != null) return getAccessible(item);
-        return getAccessible(node);
+        Node item = (Node)getAccessible(node).getAttribute(FOCUS_ITEM);
+        if (item != null) return getNativeAccessible(item);
+        return getNativeAccessible(node);
     }
 
     boolean accessibilityIsIgnored() {
@@ -1836,7 +1825,7 @@ final class MacAccessible extends PlatformAccessible {
         Screen screen = view.getWindow().getScreen();
         y = screen.getHeight() - y;
         Node node = (Node)getAttribute(NODE_AT_POINT, new Point2D(x, y));
-        return NSAccessibilityUnignoredAncestor(getAccessible(node));
+        return NSAccessibilityUnignoredAncestor(getNativeAccessible(node));
   }
 
 }

@@ -31,6 +31,7 @@ import com.sun.glass.events.MouseEvent;
 import com.sun.glass.events.ViewEvent;
 import com.sun.glass.events.TouchEvent;
 import com.sun.glass.events.SwipeGesture;
+import com.sun.glass.ui.Accessible;
 import com.sun.glass.ui.Clipboard;
 import com.sun.glass.ui.ClipboardAssistance;
 import com.sun.glass.ui.View;
@@ -46,7 +47,6 @@ import javafx.collections.ObservableList;
 
 import javafx.event.EventType;
 import javafx.geometry.Point2D;
-import javafx.scene.accessibility.Accessible;
 import javafx.scene.input.InputMethodEvent;
 import javafx.scene.input.InputMethodHighlight;
 import javafx.scene.input.InputMethodTextRun;
