@@ -437,24 +437,19 @@ final class WinAccessible extends Accessible {
         return peer;
     }
 
-    private long getContainer(Role targetRole) {
-        Node node = getContainerNode(targetRole);
-        return node == null ? 0 : getNativeAccessible(node);
-    }
-
-    private Node getContainerNode() {
+    private Accessible getContainer() {
         if (isDisposed()) return null;
         Role role = (Role) getAttribute(ROLE);
         if (role != null) {
             switch(role) {
                 case TABLE_ROW:
-                case TABLE_CELL: return getContainerNode(Role.TABLE_VIEW);
-                case LIST_ITEM: return getContainerNode(Role.LIST_VIEW);
-                case TAB_ITEM: return getContainerNode(Role.TAB_PANE);
-                case PAGE_ITEM: return getContainerNode(Role.PAGINATION);
-                case TREE_ITEM: return getContainerNode(Role.TREE_VIEW);
-                case TREE_TABLE_ROW: return getContainerNode(Role.TREE_TABLE_VIEW);
-                case TREE_TABLE_CELL: return getContainerNode(Role.TREE_TABLE_VIEW);
+                case TABLE_CELL: return getContainerAccessible(Role.TABLE_VIEW);
+                case LIST_ITEM: return getContainerAccessible(Role.LIST_VIEW);
+                case TAB_ITEM: return getContainerAccessible(Role.TAB_PANE);
+                case PAGE_ITEM: return getContainerAccessible(Role.PAGINATION);
+                case TREE_ITEM: return getContainerAccessible(Role.TREE_VIEW);
+                case TREE_TABLE_ROW: return getContainerAccessible(Role.TREE_TABLE_VIEW);
+                case TREE_TABLE_CELL: return getContainerAccessible(Role.TREE_TABLE_VIEW);
                 default:
             }
         }
@@ -867,9 +862,7 @@ final class WinAccessible extends Accessible {
     }
 
     private long NavigateListView(WinAccessible listItemAccessible, int direction) {
-        Node list = listItemAccessible.getContainerNode();
-        if (list == null) return 0;
-        Accessible listAccessible = getAccessible(list);
+        Accessible listAccessible = listItemAccessible.getContainer();
         if (listAccessible == null) return 0;
         Integer count = (Integer)listAccessible.getAttribute(ROW_COUNT);
         if (count == null || count == 0) return 0;
@@ -900,11 +893,8 @@ final class WinAccessible extends Accessible {
                     node = (Node)getAttribute(TREE_ITEM_PARENT);
                     if (node == null) {
                         /* root tree item case*/
-                        if (role == Role.TREE_ITEM) {
-                            return getContainer(Role.TREE_VIEW);
-                        } else {
-                            return getContainer(Role.TREE_TABLE_VIEW);
-                        }
+                        WinAccessible acc = (WinAccessible)getContainer();
+                        return acc != null ? acc.getNativeAccessible() : 0L;
                     }
                 } else {
                     node = (Node)getAttribute(PARENT);
@@ -1269,8 +1259,8 @@ final class WinAccessible extends Accessible {
     }
 
     long get_SelectionContainer() {
-        Node node = getContainerNode();
-        return node == null ? 0 : getNativeAccessible(node);
+        WinAccessible acc = (WinAccessible)getContainer(); 
+        return acc != null ? acc.getNativeAccessible() : 0L;
     }
 
     /***********************************************/
@@ -1361,18 +1351,8 @@ final class WinAccessible extends Accessible {
 
     long get_ContainingGrid() {
         if (isDisposed()) return 0;
-        Role role = (Role) getAttribute(ROLE);
-        if (role != null) {
-            switch(role) {
-                case TABLE_ROW:
-                case TABLE_CELL: return getContainer(Role.TABLE_VIEW);
-                case LIST_ITEM: return getContainer(Role.LIST_VIEW);
-                case TREE_TABLE_ROW:
-                case TREE_TABLE_CELL: return getContainer(Role.TREE_TABLE_VIEW);
-                default:
-            }
-        }
-        return 0;
+        WinAccessible acc = (WinAccessible)getContainer();
+        return acc != null ? acc.getNativeAccessible() : 0L;
     }
 
     int get_Row() {
@@ -1750,9 +1730,11 @@ final class WinAccessible extends Accessible {
 
         Integer cellIndex = (Integer)getAttribute(INDEX);
         if (cellIndex == null) cellIndex = (Integer)getAttribute(ROW_INDEX);
-        Node container = getContainerNode();
-        if (cellIndex != null && container != null) {
-            getAccessible(container).executeAction(Action.SCROLL_TO_INDEX, cellIndex);
+        if (cellIndex != null) {
+            Accessible container = getContainer();
+            if (container != null) {
+                container.executeAction(Action.SCROLL_TO_INDEX, cellIndex);
+            }
         }
     }
 }

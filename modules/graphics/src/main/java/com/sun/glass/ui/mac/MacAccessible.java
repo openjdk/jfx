@@ -734,10 +734,10 @@ final class MacAccessible extends Accessible {
 
                 Role role = (Role) getAttribute(ROLE);
                 if (role == Role.TREE_ITEM || role == Role.TREE_TABLE_ROW) {
-                    Role container = role == Role.TREE_ITEM ? Role.TREE_VIEW : Role.TREE_TABLE_VIEW;
-                    long control = getNativeAccessible(getContainerNode(container));
-                    if (control != 0) {
-                        NSAccessibilityPostNotification(control, MacNotification.NSAccessibilityRowCountChangedNotification.ptr);
+                    Role containerRole = role == Role.TREE_ITEM ? Role.TREE_VIEW : Role.TREE_TABLE_VIEW;
+                    MacAccessible container = (MacAccessible)getContainerAccessible(containerRole);
+                    if (container != null) {
+                        NSAccessibilityPostNotification(container.getNativeAccessible(), MacNotification.NSAccessibilityRowCountChangedNotification.ptr);
                     }
                 }
                 break;
@@ -756,10 +756,14 @@ final class MacAccessible extends Accessible {
                          * and send a close and open event for it.
                          */
                         Node menuItemOwner = (Node)getAttribute(MENU_FOR);
-                        long menu = getNativeAccessible(getContainerNode(menuItemOwner, Role.CONTEXT_MENU));
-                        if (menu != 0) {
-                            NSAccessibilityPostNotification(menu, MacNotification.AXMenuClosed.ptr);
-                            NSAccessibilityPostNotification(menu, MacNotification.AXMenuOpened.ptr);
+                        Accessible acc  = getAccessible(menuItemOwner);
+                        if (acc != null) {
+                            Accessible menu = acc.getContainerAccessible(Role.CONTEXT_MENU);
+                            if (menu != null) {
+                                long ptr = ((MacAccessible)menu).getNativeAccessible();
+                                NSAccessibilityPostNotification(ptr, MacNotification.AXMenuClosed.ptr);
+                                NSAccessibilityPostNotification(ptr, MacNotification.AXMenuOpened.ptr);
+                            }
                         }
                     }
                 }
@@ -805,7 +809,7 @@ final class MacAccessible extends Accessible {
     private boolean isInMenu() {
         /* This flag will be wrong if the Node is ever re-parented */
         if (inMenu == null) {
-            inMenu = getContainerNode(Role.CONTEXT_MENU) != null || getContainerNode(Role.MENU_BAR) != null;
+            inMenu = getContainerAccessible(Role.CONTEXT_MENU) != null || getContainerAccessible(Role.MENU_BAR) != null;
         }
         return inMenu;
     }
@@ -827,7 +831,7 @@ final class MacAccessible extends Accessible {
     private boolean isInSlider() {
         /* This flag will be wrong if the Node is ever re-parented */
         if (inSlider == null) {
-            inSlider = getContainerNode(Role.SLIDER) != null;
+            inSlider = getContainerAccessible(Role.SLIDER) != null;
         }
         return inSlider;
     }

@@ -101,35 +101,34 @@ public abstract class Accessible {
         return role == Role.NODE || role == Role.PARENT;
     }
 
-    protected Accessible getAccessible(Scene scene) {
+    protected abstract long getNativeAccessible(); 
+
+    public Accessible getAccessible(Scene scene) {
         if (scene == null) return null;
         return SceneHelper.getAccessible(scene);
     }
 
-    protected Accessible getAccessible(Node node) {
+    public Accessible getAccessible(Node node) {
         if (node == null) return null;
         return NodeHelper.getAccessible(node);
     }
 
-    protected long getNativeAccessible(Node node) {
+    public long getNativeAccessible(Node node) {
         if (node == null) return 0L;
         Accessible acc = getAccessible(node);
         if (acc == null) return 0L;
         return acc.getNativeAccessible();
     }
 
-    protected Node getContainerNode(Node node, Role targetRole) {
+    public Accessible getContainerAccessible(Role targetRole) {
+        Node node = (Node)getAttribute(PARENT);
         while (node != null) {
             Accessible acc = getAccessible(node);
             Role role = (Role)acc.getAttribute(ROLE);
-            if (role == targetRole) return node;
+            if (role == targetRole) return acc;
             node = (Node)acc.getAttribute(PARENT);
         }
         return null;
-    }
-
-    protected Node getContainerNode(Role targetRole) {
-        return getContainerNode((Node)getAttribute(PARENT), targetRole);
     }
 
     public Object getAttribute(Attribute attribute, Object... parameters) {
@@ -164,5 +163,4 @@ public abstract class Accessible {
      */
     public abstract void sendNotification(Attribute notification);
 
-    protected abstract long getNativeAccessible(); 
 }
