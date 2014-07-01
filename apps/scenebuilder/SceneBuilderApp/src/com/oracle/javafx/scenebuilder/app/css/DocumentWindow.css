@@ -74,25 +74,6 @@
 }
 
 /*******************************************************************************
- * App SplitPane's                                                             *
- ******************************************************************************/
-
-.theme-presets .split-pane {
-    -fx-background-color: -sb-base-dark;
-    -fx-background-insets: 0;
-    -fx-padding: 0;
-}
-.theme-presets .split-pane > .split-pane-divider {
-    -fx-background-color: -sb-base-dark;
-    -fx-padding: 0 0.5 0 0;
-}
-.theme-presets .split-pane:horizontal .split-pane-divider .horizontal-grabber,
-.theme-presets .split-pane:vertical .split-pane-divider .vertical-grabber {
-    -fx-padding: 3;
-    -fx-shape: "";
-}
-
-/*******************************************************************************
  * Common UI Styling - Panel Headers (Background, search box and menu)         *
  ******************************************************************************/
 
