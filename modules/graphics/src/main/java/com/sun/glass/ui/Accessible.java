@@ -88,7 +88,7 @@ public abstract class Accessible {
     }
 
     public boolean isDisposed() {
-        return eventHandler == null;
+        return getNativeAccessible() == 0L;
     }
 
     @Override
