@@ -816,17 +816,4 @@ public class SceneTest {
                    ((StubScene) scene.impl_getPeer()).getCursor());
     }
 
-    @Test
-    public void testSceneCreatedOnDifferentThread() throws ExecutionException, InterruptedException {
-        Task<Scene> task = new Task<Scene>() {
-            @Override
-            protected Scene call() throws Exception {
-                return new Scene(new Group());
-            }
-        };
-        new Thread(task).start();
-        Scene scene = task.get();
-        assertNotNull(scene);
-        assertNotNull(scene.getRoot());
-    }
 }

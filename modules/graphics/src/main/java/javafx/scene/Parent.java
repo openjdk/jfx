@@ -64,6 +64,7 @@ import com.sun.javafx.sg.prism.NGGroup;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.javafx.scene.LayoutFlags;
+import javafx.stage.Window;
 
 /**
  * The base class for all nodes that have children in the scene graph.
@@ -359,6 +360,13 @@ public abstract class Parent extends Node {
     }) {
         @Override
         protected void onProposedChange(final List<Node> newNodes, int[] toBeRemoved) {
+            final Scene scene = getScene();
+            if (scene != null) {
+                Window w = scene.getWindow();
+                if (w != null && w.impl_getPeer() != null) {
+                    Toolkit.getToolkit().checkFxUserThread();
+                }
+            }
             geomChanged = false;
 
             long newLength = children.size() + newNodes.size();

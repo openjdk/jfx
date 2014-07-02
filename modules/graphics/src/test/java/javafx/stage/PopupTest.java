@@ -722,19 +722,6 @@ public class PopupTest {
 
     }
 
-    @Test
-    public void testPopupCreatedOnDifferentThread() throws ExecutionException, InterruptedException {
-        Task<Popup> task = new Task<Popup>() {
-            @Override
-            protected Popup call() throws Exception {
-                return new Popup();
-            }
-        };
-        new Thread(task).start();
-        Popup popup = task.get();
-        assertNotNull(popup);
-    }
-
     private static final class EventCounter implements EventHandler<Event> {
         private int counter;
 
