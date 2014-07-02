@@ -232,15 +232,54 @@ LRESULT ViewContainer::HandleViewGetAccessible(HWND hwnd, WPARAM wParam, LPARAM 
         return NULL;
     }
 
+    /* WM_GETOBJECT  is sent to request different object types,
+     * always test the type to avoid unnecessary work.
+     */
     LRESULT lr = NULL;
-    /* WM_GETOBJECT  is sent to request different object types. Make sure the
-     * request is for 'UI Automation provider' before calling getAccessible() */
     if (static_cast<long>(lParam) == static_cast<long>(UiaRootObjectId)) {
+
+        /* The client is requesting UI Automation. */
         JNIEnv* env = GetEnv();
+        if (!env) return NULL;
         jlong pProvider = env->CallLongMethod(GetView(), javaIDs.View.getAccessible);
         CheckAndClearException(env);
+
+        /* It is possible WM_GETOBJECT is sent before the toolkit is ready to
+         * create the accessible object (getAccessible returns NULL).
+         * On Windows 7, calling UiaReturnRawElementProvider() with a NULL provider
+         * returns an invalid LRESULT which stops further WM_GETOBJECT to be sent,
+         * effectively disabling accessibility for the window.
+         */
         if (pProvider) {
             lr = UiaReturnRawElementProvider(hwnd, wParam, lParam, reinterpret_cast<IRawElementProviderSimple*>(pProvider));
+        }
+    } else if (static_cast<long>(lParam) == static_cast<long>(OBJID_CLIENT)) {
+
+        /* By default JAWS does not send WM_GETOBJECT with UiaRootObjectId till
+         * a focus event is raised by UiaRaiseAutomationEvent().
+         * In some systems (i.e. touch monitors), OBJID_CLIENT are sent when
+         * no screen reader is active. Test for SPI_GETSCREENREADER and
+         * UiaClientsAreListening() to avoid initializing accessibility
+         * unnecessarily.
+         */
+        UINT screenReader = 0;
+        ::SystemParametersInfo(SPI_GETSCREENREADER, 0, &screenReader, 0);
+        if (screenReader && UiaClientsAreListening()) {
+            JNIEnv* env = GetEnv();
+            if (env) {
+
+                /* Calling getAccessible() initializes accessibility which
+                 * eventually raises the focus events required to indicate to
+                 * JAWS to use UIA for this window.
+                 *
+                 * Note: do not return the accessible object for OBJID_CLIENT,
+                 * that would create an UIA-MSAA bridge. That problem with the
+                 * bridge is that it does not respect
+                 * ProviderOptions_UseComThreading.
+                 */
+                env->CallLongMethod(GetView(), javaIDs.View.getAccessible);
+                CheckAndClearException(env);
+            }
         }
     }
     return lr;

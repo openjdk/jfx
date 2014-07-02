@@ -25,6 +25,7 @@
 
 package com.sun.javafx.scene;
 
+import com.sun.glass.ui.Accessible;
 import javafx.scene.Node;
 import javafx.scene.SubScene;
 
@@ -53,6 +54,9 @@ public class NodeHelper {
         return nodeAccessor.getSubScene(node);
     };
 
+    public static Accessible getAccessible(Node node) {
+        return nodeAccessor.getAccessible(node);
+    };
 
     public static void setNodeAccessor(final NodeAccessor newAccessor) {
         if (nodeAccessor != null) {
@@ -75,6 +79,7 @@ public class NodeHelper {
         boolean isDerivedDepthTest(Node node);
         SubScene getSubScene(Node node);
         void setLabeledBy(Node node, Node labeledBy);
+        Accessible getAccessible(Node node);
     }
 
     private static void forceInit(final Class<?> classToInit) {

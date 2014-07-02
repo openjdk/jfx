@@ -30,14 +30,14 @@ import java.nio.ByteBuffer;
 
 public interface NativeScreen {
 
-    public int getDepth();
-    public int getNativeFormat();
-    public int getWidth();
-    public int getHeight();
-    public int getDPI();
-    public long getNativeHandle();
-    public void shutdown();
-    public void uploadPixels(Buffer b,
+    int getDepth();
+    int getNativeFormat();
+    int getWidth();
+    int getHeight();
+    int getDPI();
+    long getNativeHandle();
+    void shutdown();
+    void uploadPixels(Buffer b,
                              int x, int y, int width, int height, float alpha);
 
     public void swapBuffers();

@@ -201,13 +201,17 @@
  * Common UI Styling - Split Panes                                             *
  ******************************************************************************/
 
-.theme-presets .SBKIT-inspector-panel.split-pane > .split-pane-divider {
-    -fx-background-color: transparent;
-    -fx-background-insets: -1 0 -3 0;
-    -fx-border-width: 0;
+.theme-presets .split-pane {
+    -fx-background-color: -sb-base-dark;
+    -fx-background-insets: 0;
     -fx-padding: 0;
 }
-.theme-presets .SBKIT-inspector-panel.split-pane > .split-pane-divider .split-pane-divider {
+.theme-presets .split-pane > .split-pane-divider {
+    -fx-background-color: -sb-base-dark;
+    -fx-padding: 0 0.5 0 0;
+}
+.theme-presets .split-pane:horizontal .split-pane-divider .horizontal-grabber,
+.theme-presets .split-pane:vertical .split-pane-divider .vertical-grabber {
     -fx-padding: 3;
     -fx-shape: "";
 }
@@ -713,6 +717,14 @@
 
 .theme-presets .SBKIT-inspector-panel .secondary-section-title {
     -fx-text-fill: -sb-header-text-dimmed;
+}
+
+/* Specific css for the Inspector SplitPane */
+.theme-presets.SBKIT-inspector-panel > .split-pane-divider {
+    -fx-background-color: transparent;
+    -fx-background-insets: -1 0 -3 0;
+    -fx-border-width: 0;
+    -fx-padding: 0;
 }
 
 /*******************************************************************************

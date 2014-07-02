@@ -8,10 +8,10 @@
             <source-roots>
                 <root id="src.dir"/>
                 <root id="src.resources.dir" name="Resources"/>
-                <root id="src.jsl-decora.dir" name="JSL Decora Generated Sources"/>
-                <root id="src.jsl-decora3.dir"/>
-                <root id="src.jsl-prism3.dir"/>
-                <root id="src.jsl-prism.dir" name="JSL Prism Generated Sources"/>
+                <root id="src.gen-jsl-decora.dir" name="JSL Decora Generated Sources"/>
+                <root id="src.res-jsl-decora.dir" name="JSL Decora Resources"/>
+                <root id="src.gen-jsl-prism.dir" name="JSL Prism Generated Sources"/>
+                <root id="src.res-jsl-prism.dir" name="JSL Prism Resources"/>
             </source-roots>
             <test-roots>
                 <root id="test.java.dir" name="Test Sources"/>

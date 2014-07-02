@@ -33,9 +33,9 @@
       <module fileurl="file://$PROJECT_DIR$/.idea/media.iml" filepath="$PROJECT_DIR$/.idea/media.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/rt.iml" filepath="$PROJECT_DIR$/.idea/rt.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/rt-closed.iml" filepath="$PROJECT_DIR$/.idea/rt-closed.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/rt-tests.iml" filepath="$PROJECT_DIR$/.idea/rt-tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/swing.iml" filepath="$PROJECT_DIR$/.idea/swing.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/swt.iml" filepath="$PROJECT_DIR$/.idea/swt.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/tests.iml" filepath="$PROJECT_DIR$/.idea/tests.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/web.iml" filepath="$PROJECT_DIR$/.idea/web.iml" />
     </modules>
   </component>

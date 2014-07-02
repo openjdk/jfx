@@ -36,8 +36,8 @@ import javafx.css.PseudoClass;
 import com.sun.javafx.scene.control.skin.HyperlinkSkin;
 
 import javafx.css.StyleableProperty;
-//import javafx.scene.accessibility.Attribute;
-//import javafx.scene.accessibility.Role;
+import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Role;
 
 
 /**
@@ -186,12 +186,12 @@ public class Hyperlink extends ButtonBase {
      *                                                                         *
      **************************************************************************/
 
-//    /** @treatAsPrivate */
-//    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//        switch (attribute) {
-//            case ROLE: return Role.HYPERLINK;
-//            case VISITED: return isVisited();
-//            default: return super.accGetAttribute(attribute, parameters);
-//        }
-//    }
+    /** @treatAsPrivate */
+    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case ROLE: return Role.HYPERLINK;
+            case VISITED: return isVisited();
+            default: return super.accGetAttribute(attribute, parameters);
+        }
+    }
 }

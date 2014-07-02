@@ -436,7 +436,7 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     I18N.getString("param.preferences-id.description"),
                     "preferencesID",
                     String.class,
-                    p -> IDENTIFIER.fetchFrom(p).replace('.', '/'),
+                    p -> Optional.ofNullable(IDENTIFIER.fetchFrom(p)).orElse("").replace('.', '/'),
                     (s, p) -> s
             );
 

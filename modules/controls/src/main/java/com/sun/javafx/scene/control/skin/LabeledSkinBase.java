@@ -34,7 +34,7 @@ import javafx.geometry.Pos;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
-//import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Attribute;
 import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.Control;
 import javafx.scene.control.Label;
@@ -1112,23 +1112,40 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
         }
     }
 
-//    /** @treatAsPrivate */
-//    @Override protected Object accGetAttribute(Attribute attribute, Object... parameters) {
-//        switch (attribute) {
-//            case TITLE: {
-//                if (bindings != null) {
-//                    return bindings.getText();
-//                }
-//                final Labeled labeled = getSkinnable();
-//                return labeled != null ? labeled.getText() : null;
-//            }
-//            case MNEMONIC: {
-//                if (bindings != null) {
-//                    return bindings.getMnemonic();
-//                }
-//                return null;
-//            }
-//            default: return super.accGetAttribute(attribute, parameters);
-//        }
-//    }
+    /** @treatAsPrivate */
+    @Override protected Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case TITLE: {
+                /* Use the text in the binding if available to handle mnemonics */
+                if (bindings != null) {
+                    String text = bindings.getText(); 
+                    if (text != null && !text.isEmpty()) return text;
+                }
+                /* Avoid the content in text.getText() as it can contain ellipses 
+                 * for clipping
+                 */
+                Labeled labeled = getSkinnable();
+                if (labeled != null) {
+                    String text = labeled.getText(); 
+                    if (text != null && !text.isEmpty()) return text;
+                }
+                /* Use the graphic as last resource. Note that this implementation
+                 * does not attempt to combine the label and graphics if both
+                 * are being displayed
+                 */
+                if (graphic != null) {
+                    Object result = graphic.accGetAttribute(Attribute.TITLE);
+                    if (result != null) return result;
+                }
+                return null;
+            }
+            case MNEMONIC: {
+                if (bindings != null) {
+                    return bindings.getMnemonic();
+                }
+                return null;
+            }
+            default: return super.accGetAttribute(attribute, parameters);
+        }
+    }
 }
