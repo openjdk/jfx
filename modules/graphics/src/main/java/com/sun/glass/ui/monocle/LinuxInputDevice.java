@@ -226,7 +226,23 @@ class LinuxInputDevice implements Runnable, InputDevice {
     @Override
     public boolean isTouch() {
         return "1".equals(udevManifest.get("ID_INPUT_TOUCHSCREEN"))
-                || "1".equals(udevManifest.get("ID_INPUT_TABLET"));
+                || "1".equals(udevManifest.get("ID_INPUT_TABLET"))
+                || isTouchDeclaredAsMouse();
+    }
+
+    private boolean isTouchDeclaredAsMouse() {
+        if ("1".equals(udevManifest.get("ID_INPUT_MOUSE"))) {
+            BitSet rel = capabilities.get("rel");
+            if (rel == null || (!rel.get(LinuxInput.REL_X) && !rel.get(LinuxInput.REL_Y))) {
+                BitSet abs = capabilities.get("abs");
+                if (abs != null
+                        && (abs.get(LinuxInput.ABS_X) || abs.get(LinuxInput.ABS_MT_POSITION_X))
+                        && (abs.get(LinuxInput.ABS_Y) || abs.get(LinuxInput.ABS_MT_POSITION_Y))) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     @Override
