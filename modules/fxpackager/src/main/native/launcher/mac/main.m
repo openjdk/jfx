@@ -50,6 +50,7 @@ typedef long jint;
 #define JVM_CLASSPATH_KEY "JVMAppClasspath"
 #define JVM_PREFERENCES_ID "JVMPreferencesID"
 #define JVM_LAUNCHER_DEBUG_OPTIONS_KEY "JVMLauncherDebugOptions"
+#define DEFAULT_JAVA_PREFS_DOMAIN "com.apple.java.util.prefs"
 
 #define LIBJLI_DYLIB "/Library/Internet Plug-Ins/JavaAppletPlugin.plugin/Contents/Home/lib/jli/libjli.dylib"
 
@@ -104,7 +105,7 @@ int launch(int appArgc, char *appArgv[]) {
     // Locate the JLI_Launch() function
     NSString *runtime = [infoDictionary objectForKey:@JVM_RUNTIME_KEY];
 
-    JLI_Launch_t jli_LaunchFxnPtr;
+    JLI_Launch_t jli_LaunchFxnPtr = NULL;
     if ([runtime length] != 0) { //missing key or empty value
         NSString *runtimePath = [[[NSBundle mainBundle] builtInPlugInsPath] stringByAppendingPathComponent:runtime];
         NSString *libjliPath = [runtimePath stringByAppendingPathComponent:@"Contents/Home/jre/lib/jli/libjli.dylib"];
@@ -223,6 +224,7 @@ int launch(int appArgc, char *appArgv[]) {
             }
         }
     }
+    [options release];
 
     argv[i] = NULL;
 
@@ -339,17 +341,71 @@ NSArray *getJVMOptions(NSDictionary *infoDictionary, NSString *mainBundlePath) {
     }
 
 
-    //Add user overridable jvm options, from user config if different otherwise from defaults
-    NSUserDefaults *userDefaults = [NSUserDefaults standardUserDefaults];
-    NSArray *userOverrides= [userDefaults objectForKey:@JVM_USER_OPTIONS_KEY];
+    // calculate a normalized path including the JVMUserOptions key
+    BOOL leadingSlash = [preferencesID hasPrefix: @"/"];
+    BOOL trailingSlash = [preferencesID hasSuffix: @"/"] || ([preferencesID length] == 0);
+    
+    NSString *fullPath = [NSString stringWithFormat:@"%@%@%@%@/", leadingSlash?@"":@"/",
+                          preferencesID, trailingSlash?@"":@"/", @JVM_USER_OPTIONS_KEY];
+    
+    // now pull out the parts...
+    NSString *strippedPath = [fullPath stringByTrimmingCharactersInSet: [NSCharacterSet
+                                                                         characterSetWithCharactersInString:@"/"]];
+    NSArray *pathParts = [strippedPath componentsSeparatedByString:@"/"];
+    
+    // calculate our persistent domain and the path of dictionaries to descend
+    NSString *persistentDomain;
+    NSMutableArray *dictPath = [NSMutableArray arrayWithArray: pathParts];
+    if ([pathParts count] > 2) {
+        // for 3 or more steps, the domain is first.second.third and the keys are "/first/second/third/", "fourth/", "fifth/"... etc
+        persistentDomain = [[NSString stringWithFormat: @"%@.%@.%@", [pathParts objectAtIndex: 0],
+                            [pathParts objectAtIndex: 1], [pathParts objectAtIndex: 2]] lowercaseString];
 
-    //If overrides don't exist add them - the intent is to make it easier for the user to actually modify them
-    if ([userOverrides count] == 0) {
-        [userDefaults setObject: defaultOverrides forKey:@JVM_USER_OPTIONS_KEY];
+        [dictPath replaceObjectAtIndex: 0 withObject: [NSString stringWithFormat:@"/%@/%@/%@", [pathParts objectAtIndex: 0],
+                                                       [pathParts objectAtIndex: 1], [pathParts objectAtIndex: 2]]];
+        [dictPath removeObjectAtIndex: 2];
+        [dictPath removeObjectAtIndex: 1];
+    } else {
+        // for 1 or two steps, the domain is first.second.third and the keys are "/", "first/", "second/"
+        persistentDomain = @DEFAULT_JAVA_PREFS_DOMAIN;
+        [dictPath insertObject: @"" atIndex:0];
     }
 
+    // set up the user defaults for the appropriate persistent domain
+    NSUserDefaults *userDefaults = [[NSUserDefaults alloc] init];
+    NSDictionary *userOverrides = [userDefaults persistentDomainForName: persistentDomain];
+    
+    // walk down our path parts, making dictionaries along the way if they are missing
+    NSMutableDictionary *parentNode = NULL;
+    int pathLength = [dictPath count];
+    for (int i = 0; i < pathLength; i++) {
+        NSString *nodeKey = [[dictPath objectAtIndex: i] stringByAppendingString: @"/"];
+        parentNode = userOverrides;
+        userOverrides = [parentNode objectForKey: nodeKey];
+        if (userOverrides == Nil) {
+            userOverrides = [NSMutableDictionary dictionaryWithCapacity: 2];
+            [parentNode setValue: userOverrides forKey: nodeKey];
+        }
+    }
+    
+    //If overrides don't exist add them - the intent is to make it easier for the user to actually modify them
+    if ([userOverrides count] == 0) {
+        if (parentNode == NULL) {
+            [userDefaults setPersistentDomain: defaultOverrides forName: persistentDomain];
+            userOverrides = [userDefaults persistentDomainForName: persistentDomain];
+        } else {
+            NSString *nodeKey = [[dictPath objectAtIndex: ([dictPath count] - 1)] stringByAppendingString: @"/"];
+            [parentNode setObject: defaultOverrides forKey:nodeKey];
+            userOverrides = [parentNode objectForKey: nodeKey];
+        }
+    }
+    
+    // some writes may have occured, sync
+    [userDefaults synchronize];
+    [userDefaults release];
+    
+    // now we examine the prefs node for defaulted values and substitute user options
     for (id key in defaultOverrides) {
-
         NSString *newOption;
         if ([userOverrides valueForKey: key] != nil &&
             [[userOverrides valueForKey:key] isNotEqualTo:[defaultOverrides valueForKey:key]]) {

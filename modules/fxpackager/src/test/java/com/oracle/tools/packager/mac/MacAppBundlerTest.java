@@ -37,6 +37,7 @@ import org.junit.After;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -309,4 +310,41 @@ public class MacAppBundlerTest {
         assertNotNull(result);
         assertTrue(result.exists());
     }
+
+    @Ignore // this test is noisy and only valid for by-hand validation
+    @Test
+    public void jvmUserOptionsTest() throws IOException, ConfigException, UnsupportedPlatformException {
+
+        for (String name : Arrays.asList("", "example", "com.example", "com.example.helloworld", "com.example.hello.world", "com.example.hello.world.app")) {
+
+            AbstractBundler bundler = new MacAppBundler();
+
+            Map<String, Object> bundleParams = new HashMap<>();
+
+            bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+
+            bundleParams.put(APP_NAME.getID(), "User JVM Options App - " + name);
+            bundleParams.put(MAC_CF_BUNDLE_NAME.getID(), name + ".application");
+            bundleParams.put(MAIN_CLASS.getID(), "hello.TestPackager");
+            bundleParams.put(IDENTIFIER.getID(), name);
+            bundleParams.put(PREFERENCES_ID.getID(), name.replace(".", "/"));
+            bundleParams.put(MAIN_JAR.getID(),
+                    new RelativeFileSet(fakeMainJar.getParentFile(),
+                            new HashSet<>(Arrays.asList(fakeMainJar)))
+            );
+            bundleParams.put(CLASSPATH.getID(), fakeMainJar.toString());
+            bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+            bundleParams.put(VERBOSE.getID(), true);
+            bundleParams.put(DEVELOPER_ID_APP_SIGNING_KEY.getID(), null); // force no signing
+
+            boolean valid = bundler.validate(bundleParams);
+            assertTrue(valid);
+
+            File result = bundler.execute(bundleParams, new File(workDir, "UserOpts-" + name.replace(".", "-")));
+            System.err.println("Bundle at - " + result);
+            assertNotNull(result);
+            assertTrue(result.exists());
+        }
+    }
+
 }
