@@ -2645,9 +2645,9 @@ task copySources(type: Copy) {
     def projectsToCopy = [
             project(":base"), project(":graphics"), project(":controls"),
             project(":swing"), project(":swt"), project(":fxml"),
-            project(":builders"), project(":web")]
-    from(projectsToCopy.collect({
-        ["${it.projectDir}/src/main/java"]
+            project(":builders"), project(":media"), project(":web")]
+    from(projectsToCopy.collect({ proj ->
+        files(proj.sourceSets.main.java.srcDirs)
     }))
     include "**/*.java"
     into "${buildDir}/javafx-src"
