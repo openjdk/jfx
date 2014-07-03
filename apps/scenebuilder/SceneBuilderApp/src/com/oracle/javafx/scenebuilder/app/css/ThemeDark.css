@@ -554,8 +554,14 @@
  * Content Panel - FXML 'drag items here' prompts                              *
  ******************************************************************************/
 
-.theme-presets.SBKIT-content-panel .stage-prompt {
+/* workaround for DTL-6745 / RT-37787 */
+.theme-presets.SBKIT-content-panel .stage-prompt > .text,
+.theme-presets.SBKIT-content-panel .stage-prompt-default > .text {
     -fx-font-size: 1.231em; /* 16px (base pixel size of 13px) */
+}
+
+.theme-presets.SBKIT-content-panel .stage-prompt {
+    /* -fx-font-size: 1.231em; 16px (base pixel size of 13px) */
     -fx-text-fill: derive(-sb-content-text-dimmed, 10%);
     -fx-text-alignment: center;
     -fx-alignment: center;
@@ -568,7 +574,7 @@
 }
 
 .theme-presets.SBKIT-content-panel .stage-prompt-default {
-    -fx-font-size: 1.231em; /* 16px (base pixel size of 13px) */
+    /* -fx-font-size: 1.231em; 16px (base pixel size of 13px) */
     -fx-text-fill: -sb-content-text;
     -fx-text-alignment: center;
     -fx-alignment: center;
@@ -627,7 +633,7 @@
 .theme-presets.SBKIT-content-panel .gap.hilit {
     -fx-stroke: rgba(0,0,0,0.4);
     -fx-stroke-line-cap: butt;
-//  -fx-stroke-width is setup programmatically
+    /* -fx-stroke-width is setup programmatically */
 }
 
 .theme-presets.SBKIT-content-panel .gap.empty {
@@ -1210,7 +1216,8 @@
 }
 
 .theme-presets.SBKIT-css-panel .note-label .text {
-    -fx-font-size: 0.750em;
+    /*-fx-font-size: 0.750em;*/
+    -fx-font-size: 9px; /* workaround for DTL-6745 / RT-37787 */
     -fx-fill: -sb-content-text-dimmed;
 }
 
