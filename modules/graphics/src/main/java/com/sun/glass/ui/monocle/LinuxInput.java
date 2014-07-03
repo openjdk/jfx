@@ -736,7 +736,7 @@ class LinuxInput {
      * inefficient and is for debugging use only.
      */
     static String typeToString(short type) {
-        for (Field field : LinuxInput.class.getFields()) {
+        for (Field field : LinuxInput.class.getDeclaredFields()) {
             try {
                 if (field.getName().startsWith("EV_")
                         && field.getType() == Short.TYPE
@@ -761,7 +761,7 @@ class LinuxInput {
         if (i >= 0) {
             String prefix = type.substring(i + 1);
             String altPrefix = prefix.equals("KEY") ? "BTN" : prefix;
-            for (Field field : LinuxInput.class.getFields()) {
+            for (Field field : LinuxInput.class.getDeclaredFields()) {
                 String name = field.getName();
                 try {
                     if ((name.startsWith(prefix) || name.startsWith(altPrefix))
