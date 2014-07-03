@@ -674,7 +674,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
     /**
      * Invoked when the Task is executed, the call method must be overridden and
      * implemented by subclasses. The call method actually performs the
-     * background thread logic. Only the updateProgress, updateMessage, and
+     * background thread logic. Only the updateProgress, updateMessage, updateValue and
      * updateTitle methods of Task may be called from code within this method.
      * Any other interaction with the Task from the background thread will result
      * in runtime exceptions.
