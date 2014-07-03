@@ -135,8 +135,9 @@ class FBDevScreen implements NativeScreen {
         // the ES2 pipeline then we won't need the framebuffer until shutdown time.
         if (fb == null) {
             ByteBuffer bb;
-            if (getDepth() == 4) {
-                // Only map 32-bit framebuffers
+            if (linuxFB.getDepth() == 32 && linuxFB.canDoubleBuffer()) {
+                // Only map 32-bit framebuffers with enough space for two
+                // full screens
                 mappedFB = linuxFB.getMappedBuffer();
             }
             if (mappedFB != null) {

@@ -93,6 +93,10 @@ class LinuxFrameBuffer {
         }
     }
 
+    boolean canDoubleBuffer() {
+        return state != 0;
+    }
+
     int getNativeOffset() {
         int nativeOffsetX = screenInfo.getOffsetX(screenInfo.p);
         int nativeOffsetY = screenInfo.getOffsetY(screenInfo.p);
