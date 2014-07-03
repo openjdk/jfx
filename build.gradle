@@ -3023,6 +3023,7 @@ project(":apps") {
               ant.properties['platforms.JDK_1.8.home'] = "${rootProject.ext.JDK_HOME}"
               ant.project.executeTarget("sampleAppsJar")
               ant.project.executeTarget("scenebuilderSampleAppsJar")
+              ant.project.executeTarget("scenebuilderAppJar")
             }
         }
         rootProject.appsjar.dependsOn(appsJar)
@@ -3033,6 +3034,7 @@ project(":apps") {
               ant.properties['platforms.JDK_1.8.home'] = "${rootProject.ext.JDK_HOME}"
               ant.project.executeTarget("sampleAppsClean")
               ant.project.executeTarget("scenebuilderSampleAppsClean")
+              ant.project.executeTarget("scenebuilderAppClean")
             }
         }
         rootProject.clean.dependsOn(appsClean)
