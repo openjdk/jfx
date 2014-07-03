@@ -40,7 +40,7 @@
 
 <SplitPane fx:id="inspectorRoot" dividerPositions="0.33" focusTraversable="false" orientation="VERTICAL" prefHeight="600.0" styleClass="theme-presets, SBKIT-inspector-panel" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
   <items>
-<StackPane fx:id="searchStackPane" minHeight="50.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
+<StackPane fx:id="searchStackPane" maxHeight="330.0" minHeight="100.0" prefHeight="170.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
 <children>
     <ScrollPane fitToWidth="true">
       <content>

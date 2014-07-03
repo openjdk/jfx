@@ -284,7 +284,6 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
     private SelectionState selectionState;
     private final EditorController editorController;
 
-    private double searchResultMinHeight;
     private double searchResultDividerPosition;
 
     /*
@@ -577,14 +576,12 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
         // Listen the Scene stylesheets changes
         getEditorController().sceneStyleSheetProperty().addListener((ChangeListener<ObservableList<File>>) (ov, t, t1) -> updateInspector());
         
-        accordion.getStyleClass().add("INSPECTOR_THEME"); //NOI18N
         selectionState = new SelectionState(editorController);
         viewModeChanged(null, getViewMode());
         expandedSectionChanged();
         accordion.setPrefSize(300, 700);
         buildExpandedSection();
         updateClassNameInSectionTitles();
-        searchResultMinHeight = searchStackPane.getMinHeight();
         searchResultDividerPosition = inspectorRoot.getDividerPositions()[0];
         searchPatternDidChange();
     }
@@ -624,8 +621,6 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
                     inspectorRoot.getItems().add(0, searchStackPane);
                     inspectorRoot.setDividerPositions(searchResultDividerPosition);
                 }
-                searchStackPane.setMaxHeight(Double.MAX_VALUE);
-                searchStackPane.setMinHeight(searchResultMinHeight);
             } else {
                 // Save the divider position for next search
                 searchResultDividerPosition = inspectorRoot.getDividerPositions()[0];
