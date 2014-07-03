@@ -3118,7 +3118,7 @@ public class Metadata {
             new BooleanPropertyMetadata(
                 showWeekNumbersName,
                 true, /* readWrite */
-                false, /* defaultValue */
+                true, /* defaultValue */
                 new InspectorPath("Properties", "Specific", 126));
     private final ValuePropertyMetadata side_NULL_PropertyMetadata =
             new EnumerationPropertyMetadata(
@@ -3295,13 +3295,13 @@ public class Metadata {
                 true, /* readWrite */
                 Arrays.asList("accordion"), /* defaultValue */
                 new InspectorPath("Properties", "JavaFX CSS", 1));
-    private final ValuePropertyMetadata styleClass_c33_PropertyMetadata =
+    private final ValuePropertyMetadata styleClass_c34_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("chart"), /* defaultValue */
                 new InspectorPath("Properties", "JavaFX CSS", 1));
-    private final ValuePropertyMetadata styleClass_c41_PropertyMetadata =
+    private final ValuePropertyMetadata styleClass_c42_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
@@ -3319,7 +3319,7 @@ public class Metadata {
                 true, /* readWrite */
                 Arrays.asList("button"), /* defaultValue */
                 new InspectorPath("Properties", "JavaFX CSS", 1));
-    private final ValuePropertyMetadata styleClass_c37_PropertyMetadata =
+    private final ValuePropertyMetadata styleClass_c38_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
@@ -3331,13 +3331,13 @@ public class Metadata {
                 true, /* readWrite */
                 Arrays.asList("check-box"), /* defaultValue */
                 new InspectorPath("Properties", "JavaFX CSS", 1));
-    private final ValuePropertyMetadata styleClass_c26_PropertyMetadata =
+    private final ValuePropertyMetadata styleClass_c27_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("menu-item","check-menu-item"), /* defaultValue */
                 new InspectorPath("Properties", "JavaFX CSS", 1));
-    private final ValuePropertyMetadata styleClass_c39_PropertyMetadata =
+    private final ValuePropertyMetadata styleClass_c40_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
@@ -3361,13 +3361,13 @@ public class Metadata {
                 true, /* readWrite */
                 Arrays.asList("context-menu"), /* defaultValue */
                 new InspectorPath("Properties", "JavaFX CSS", 1));
-    private final ValuePropertyMetadata styleClass_c23_PropertyMetadata =
+    private final ValuePropertyMetadata styleClass_c24_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("hyperlink"), /* defaultValue */
                 new InspectorPath("Properties", "JavaFX CSS", 1));
-    private final ValuePropertyMetadata styleClass_c25_PropertyMetadata =
+    private final ValuePropertyMetadata styleClass_c26_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
@@ -3379,11 +3379,17 @@ public class Metadata {
                 true, /* readWrite */
                 Arrays.asList("combo-box-base","date-picker"), /* defaultValue */
                 new InspectorPath("Properties", "JavaFX CSS", 1));
-    private final ValuePropertyMetadata styleClass_c20_PropertyMetadata =
+    private final ValuePropertyMetadata styleClass_c21_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("html-editor"), /* defaultValue */
+                new InspectorPath("Properties", "JavaFX CSS", 1));
+    private final ValuePropertyMetadata styleClass_c20_PropertyMetadata =
+            new StringListPropertyMetadata(
+                styleClassName,
+                true, /* readWrite */
+                Arrays.asList("image-view"), /* defaultValue */
                 new InspectorPath("Properties", "JavaFX CSS", 1));
     private final ValuePropertyMetadata styleClass_c3_PropertyMetadata =
             new StringListPropertyMetadata(
@@ -3391,13 +3397,19 @@ public class Metadata {
                 true, /* readWrite */
                 Arrays.asList("label"), /* defaultValue */
                 new InspectorPath("Properties", "JavaFX CSS", 1));
-    private final ValuePropertyMetadata styleClass_c31_PropertyMetadata =
+    private final ValuePropertyMetadata styleClass_c32_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("list-view"), /* defaultValue */
                 new InspectorPath("Properties", "JavaFX CSS", 1));
-    private final ValuePropertyMetadata styleClass_c27_PropertyMetadata =
+    private final ValuePropertyMetadata styleClass_c43_PropertyMetadata =
+            new StringListPropertyMetadata(
+                styleClassName,
+                true, /* readWrite */
+                Arrays.asList("media-view"), /* defaultValue */
+                new InspectorPath("Properties", "JavaFX CSS", 1));
+    private final ValuePropertyMetadata styleClass_c28_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
@@ -3409,13 +3421,13 @@ public class Metadata {
                 true, /* readWrite */
                 Arrays.asList("menu-bar"), /* defaultValue */
                 new InspectorPath("Properties", "JavaFX CSS", 1));
-    private final ValuePropertyMetadata styleClass_c47_PropertyMetadata =
+    private final ValuePropertyMetadata styleClass_c49_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("menu-button"), /* defaultValue */
                 new InspectorPath("Properties", "JavaFX CSS", 1));
-    private final ValuePropertyMetadata styleClass_c32_PropertyMetadata =
+    private final ValuePropertyMetadata styleClass_c33_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
@@ -3427,13 +3439,13 @@ public class Metadata {
                 true, /* readWrite */
                 Collections.emptyList(), /* defaultValue */
                 new InspectorPath("Properties", "JavaFX CSS", 1));
-    private final ValuePropertyMetadata styleClass_c35_PropertyMetadata =
+    private final ValuePropertyMetadata styleClass_c36_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("pagination"), /* defaultValue */
                 new InspectorPath("Properties", "JavaFX CSS", 1));
-    private final ValuePropertyMetadata styleClass_c48_PropertyMetadata =
+    private final ValuePropertyMetadata styleClass_c50_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
@@ -3445,7 +3457,7 @@ public class Metadata {
                 true, /* readWrite */
                 Arrays.asList("progress-bar"), /* defaultValue */
                 new InspectorPath("Properties", "JavaFX CSS", 1));
-    private final ValuePropertyMetadata styleClass_c45_PropertyMetadata =
+    private final ValuePropertyMetadata styleClass_c47_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
@@ -3457,31 +3469,31 @@ public class Metadata {
                 true, /* readWrite */
                 Arrays.asList("menu-item","radio-menu-item"), /* defaultValue */
                 new InspectorPath("Properties", "JavaFX CSS", 1));
-    private final ValuePropertyMetadata styleClass_c30_PropertyMetadata =
+    private final ValuePropertyMetadata styleClass_c31_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("scroll-bar"), /* defaultValue */
                 new InspectorPath("Properties", "JavaFX CSS", 1));
-    private final ValuePropertyMetadata styleClass_c34_PropertyMetadata =
+    private final ValuePropertyMetadata styleClass_c35_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("scroll-pane"), /* defaultValue */
                 new InspectorPath("Properties", "JavaFX CSS", 1));
-    private final ValuePropertyMetadata styleClass_c28_PropertyMetadata =
+    private final ValuePropertyMetadata styleClass_c29_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("separator"), /* defaultValue */
                 new InspectorPath("Properties", "JavaFX CSS", 1));
-    private final ValuePropertyMetadata styleClass_c22_PropertyMetadata =
+    private final ValuePropertyMetadata styleClass_c23_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("menu-item","custom-menu-item","separator-menu-item"), /* defaultValue */
                 new InspectorPath("Properties", "JavaFX CSS", 1));
-    private final ValuePropertyMetadata styleClass_c36_PropertyMetadata =
+    private final ValuePropertyMetadata styleClass_c37_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
@@ -3517,37 +3529,37 @@ public class Metadata {
                 true, /* readWrite */
                 Arrays.asList("tab-pane"), /* defaultValue */
                 new InspectorPath("Properties", "JavaFX CSS", 1));
-    private final ValuePropertyMetadata styleClass_c38_PropertyMetadata =
+    private final ValuePropertyMetadata styleClass_c39_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("table-column"), /* defaultValue */
                 new InspectorPath("Properties", "JavaFX CSS", 1));
-    private final ValuePropertyMetadata styleClass_c44_PropertyMetadata =
+    private final ValuePropertyMetadata styleClass_c46_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("table-view"), /* defaultValue */
                 new InspectorPath("Properties", "JavaFX CSS", 1));
-    private final ValuePropertyMetadata styleClass_c46_PropertyMetadata =
+    private final ValuePropertyMetadata styleClass_c48_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("text-input","text-area"), /* defaultValue */
                 new InspectorPath("Properties", "JavaFX CSS", 1));
-    private final ValuePropertyMetadata styleClass_c42_PropertyMetadata =
+    private final ValuePropertyMetadata styleClass_c44_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("text-input","text-field"), /* defaultValue */
                 new InspectorPath("Properties", "JavaFX CSS", 1));
-    private final ValuePropertyMetadata styleClass_c24_PropertyMetadata =
+    private final ValuePropertyMetadata styleClass_c25_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("titled-pane"), /* defaultValue */
                 new InspectorPath("Properties", "JavaFX CSS", 1));
-    private final ValuePropertyMetadata styleClass_c40_PropertyMetadata =
+    private final ValuePropertyMetadata styleClass_c41_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
@@ -3565,19 +3577,19 @@ public class Metadata {
                 true, /* readWrite */
                 Arrays.asList("tooltip"), /* defaultValue */
                 new InspectorPath("Properties", "JavaFX CSS", 1));
-    private final ValuePropertyMetadata styleClass_c29_PropertyMetadata =
+    private final ValuePropertyMetadata styleClass_c30_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("tree-table-view"), /* defaultValue */
                 new InspectorPath("Properties", "JavaFX CSS", 1));
-    private final ValuePropertyMetadata styleClass_c21_PropertyMetadata =
+    private final ValuePropertyMetadata styleClass_c22_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
                 Arrays.asList("tree-view"), /* defaultValue */
                 new InspectorPath("Properties", "JavaFX CSS", 1));
-    private final ValuePropertyMetadata styleClass_c43_PropertyMetadata =
+    private final ValuePropertyMetadata styleClass_c45_PropertyMetadata =
             new StringListPropertyMetadata(
                 styleClassName,
                 true, /* readWrite */
@@ -4378,13 +4390,13 @@ public class Metadata {
         ArcToMetadata.getProperties().add(y_0_PropertyMetadata);
 
         AreaChartMetadata.getProperties().add(createSymbolsPropertyMetadata);
-        AreaChartMetadata.getProperties().add(styleClass_c33_PropertyMetadata);
+        AreaChartMetadata.getProperties().add(styleClass_c34_PropertyMetadata);
 
         AxisMetadata.getProperties().add(animatedPropertyMetadata);
         AxisMetadata.getProperties().add(autoRangingPropertyMetadata);
         AxisMetadata.getProperties().add(labelPropertyMetadata);
         AxisMetadata.getProperties().add(side_NULL_PropertyMetadata);
-        AxisMetadata.getProperties().add(styleClass_c41_PropertyMetadata);
+        AxisMetadata.getProperties().add(styleClass_c42_PropertyMetadata);
         AxisMetadata.getProperties().add(tickLabelFillPropertyMetadata);
         AxisMetadata.getProperties().add(tickLabelFontPropertyMetadata);
         AxisMetadata.getProperties().add(tickLabelGapPropertyMetadata);
@@ -4411,7 +4423,7 @@ public class Metadata {
         BoxMetadata.getProperties().add(pickOnBounds_false_PropertyMetadata);
         BoxMetadata.getProperties().add(width_Double_200_PropertyMetadata);
 
-        BubbleChartMetadata.getProperties().add(styleClass_c33_PropertyMetadata);
+        BubbleChartMetadata.getProperties().add(styleClass_c34_PropertyMetadata);
 
         ButtonMetadata.getProperties().add(cancelButtonPropertyMetadata);
         ButtonMetadata.getProperties().add(defaultButtonPropertyMetadata);
@@ -4420,7 +4432,7 @@ public class Metadata {
 
         ButtonBaseMetadata.getProperties().add(focusTraversable_true_PropertyMetadata);
         ButtonBaseMetadata.getProperties().add(onActionPropertyMetadata);
-        ButtonBaseMetadata.getProperties().add(styleClass_c37_PropertyMetadata);
+        ButtonBaseMetadata.getProperties().add(styleClass_c38_PropertyMetadata);
 
         CameraMetadata.getProperties().add(farClipPropertyMetadata);
         CameraMetadata.getProperties().add(nearClipPropertyMetadata);
@@ -4436,13 +4448,13 @@ public class Metadata {
         CategoryAxisMetadata.getProperties().add(endMarginPropertyMetadata);
         CategoryAxisMetadata.getProperties().add(gapStartAndEndPropertyMetadata);
         CategoryAxisMetadata.getProperties().add(startMarginPropertyMetadata);
-        CategoryAxisMetadata.getProperties().add(styleClass_c41_PropertyMetadata);
+        CategoryAxisMetadata.getProperties().add(styleClass_c42_PropertyMetadata);
         CategoryAxisMetadata.getProperties().add(zeroPositionPropertyMetadata);
 
         ChartMetadata.getProperties().add(animatedPropertyMetadata);
         ChartMetadata.getProperties().add(legendSidePropertyMetadata);
         ChartMetadata.getProperties().add(legendVisiblePropertyMetadata);
-        ChartMetadata.getProperties().add(styleClass_c33_PropertyMetadata);
+        ChartMetadata.getProperties().add(styleClass_c34_PropertyMetadata);
         ChartMetadata.getProperties().add(titlePropertyMetadata);
         ChartMetadata.getProperties().add(titleSidePropertyMetadata);
 
@@ -4453,10 +4465,10 @@ public class Metadata {
         CheckBoxMetadata.getProperties().add(styleClass_c10_PropertyMetadata);
 
         CheckMenuItemMetadata.getProperties().add(selected_Boolean_PropertyMetadata);
-        CheckMenuItemMetadata.getProperties().add(styleClass_c26_PropertyMetadata);
+        CheckMenuItemMetadata.getProperties().add(styleClass_c27_PropertyMetadata);
 
         ChoiceBoxMetadata.getProperties().add(focusTraversable_true_PropertyMetadata);
-        ChoiceBoxMetadata.getProperties().add(styleClass_c39_PropertyMetadata);
+        ChoiceBoxMetadata.getProperties().add(styleClass_c40_PropertyMetadata);
         ChoiceBoxMetadata.getProperties().add(value_Object_PropertyMetadata);
 
         CircleMetadata.getProperties().add(centerXPropertyMetadata);
@@ -4512,7 +4524,7 @@ public class Metadata {
         ControlMetadata.getProperties().add(contextMenuPropertyMetadata);
         ControlMetadata.getProperties().add(focusTraversable_true_PropertyMetadata);
         ControlMetadata.getProperties().add(resizable_Boolean_ro_PropertyMetadata);
-        ControlMetadata.getProperties().add(styleClass_c23_PropertyMetadata);
+        ControlMetadata.getProperties().add(styleClass_c24_PropertyMetadata);
         ControlMetadata.getProperties().add(tooltipPropertyMetadata);
 
         CubicCurveMetadata.getProperties().add(controlX1PropertyMetadata);
@@ -4534,7 +4546,7 @@ public class Metadata {
 
         CustomMenuItemMetadata.getProperties().add(content_Node_NULL_PropertyMetadata);
         CustomMenuItemMetadata.getProperties().add(hideOnClick_true_PropertyMetadata);
-        CustomMenuItemMetadata.getProperties().add(styleClass_c25_PropertyMetadata);
+        CustomMenuItemMetadata.getProperties().add(styleClass_c26_PropertyMetadata);
 
         CylinderMetadata.getProperties().add(divisionsPropertyMetadata);
         CylinderMetadata.getProperties().add(height_Double_200_PropertyMetadata);
@@ -4583,12 +4595,12 @@ public class Metadata {
 
         HTMLEditorMetadata.getProperties().add(focusTraversable_true_PropertyMetadata);
         HTMLEditorMetadata.getProperties().add(htmlTextPropertyMetadata);
-        HTMLEditorMetadata.getProperties().add(styleClass_c20_PropertyMetadata);
+        HTMLEditorMetadata.getProperties().add(styleClass_c21_PropertyMetadata);
 
         HyperlinkMetadata.getProperties().add(cursor_HAND_PropertyMetadata);
         HyperlinkMetadata.getProperties().add(focusTraversable_true_PropertyMetadata);
         HyperlinkMetadata.getProperties().add(mnemonicParsing_false_PropertyMetadata);
-        HyperlinkMetadata.getProperties().add(styleClass_c23_PropertyMetadata);
+        HyperlinkMetadata.getProperties().add(styleClass_c24_PropertyMetadata);
         HyperlinkMetadata.getProperties().add(visitedPropertyMetadata);
 
         ImageViewMetadata.getProperties().add(fitHeightPropertyMetadata);
@@ -4598,6 +4610,7 @@ public class Metadata {
         ImageViewMetadata.getProperties().add(pickOnBounds_false_PropertyMetadata);
         ImageViewMetadata.getProperties().add(preserveRatio_false_PropertyMetadata);
         ImageViewMetadata.getProperties().add(smoothPropertyMetadata);
+        ImageViewMetadata.getProperties().add(styleClass_c20_PropertyMetadata);
         ImageViewMetadata.getProperties().add(viewportPropertyMetadata);
         ImageViewMetadata.getProperties().add(x_0_PropertyMetadata);
         ImageViewMetadata.getProperties().add(y_0_PropertyMetadata);
@@ -4617,7 +4630,7 @@ public class Metadata {
         LabeledMetadata.getProperties().add(labelPaddingPropertyMetadata);
         LabeledMetadata.getProperties().add(lineSpacingPropertyMetadata);
         LabeledMetadata.getProperties().add(mnemonicParsing_true_PropertyMetadata);
-        LabeledMetadata.getProperties().add(styleClass_c37_PropertyMetadata);
+        LabeledMetadata.getProperties().add(styleClass_c38_PropertyMetadata);
         LabeledMetadata.getProperties().add(textPropertyMetadata);
         LabeledMetadata.getProperties().add(textAlignmentPropertyMetadata);
         LabeledMetadata.getProperties().add(textFillPropertyMetadata);
@@ -4639,7 +4652,7 @@ public class Metadata {
         LineMetadata.getProperties().add(stroke_BLACK_PropertyMetadata);
 
         LineChartMetadata.getProperties().add(createSymbolsPropertyMetadata);
-        LineChartMetadata.getProperties().add(styleClass_c33_PropertyMetadata);
+        LineChartMetadata.getProperties().add(styleClass_c34_PropertyMetadata);
 
         LineToMetadata.getProperties().add(x_0_PropertyMetadata);
         LineToMetadata.getProperties().add(y_0_PropertyMetadata);
@@ -4653,7 +4666,7 @@ public class Metadata {
         ListViewMetadata.getProperties().add(onScrollToPropertyMetadata);
         ListViewMetadata.getProperties().add(orientation_VERTICAL_PropertyMetadata);
         ListViewMetadata.getProperties().add(placeholderPropertyMetadata);
-        ListViewMetadata.getProperties().add(styleClass_c31_PropertyMetadata);
+        ListViewMetadata.getProperties().add(styleClass_c32_PropertyMetadata);
 
         MediaViewMetadata.getProperties().add(fitHeightPropertyMetadata);
         MediaViewMetadata.getProperties().add(fitWidthPropertyMetadata);
@@ -4662,6 +4675,7 @@ public class Metadata {
         MediaViewMetadata.getProperties().add(pickOnBounds_false_PropertyMetadata);
         MediaViewMetadata.getProperties().add(preserveRatio_true_PropertyMetadata);
         MediaViewMetadata.getProperties().add(smoothPropertyMetadata);
+        MediaViewMetadata.getProperties().add(styleClass_c43_PropertyMetadata);
         MediaViewMetadata.getProperties().add(viewportPropertyMetadata);
         MediaViewMetadata.getProperties().add(x_0_PropertyMetadata);
         MediaViewMetadata.getProperties().add(y_0_PropertyMetadata);
@@ -4671,7 +4685,7 @@ public class Metadata {
         MenuMetadata.getProperties().add(onHidingPropertyMetadata);
         MenuMetadata.getProperties().add(onShowingPropertyMetadata);
         MenuMetadata.getProperties().add(onShownPropertyMetadata);
-        MenuMetadata.getProperties().add(styleClass_c27_PropertyMetadata);
+        MenuMetadata.getProperties().add(styleClass_c28_PropertyMetadata);
 
         MenuBarMetadata.getProperties().add(menusPropertyMetadata);
         MenuBarMetadata.getProperties().add(styleClass_c18_PropertyMetadata);
@@ -4679,7 +4693,7 @@ public class Metadata {
         MenuButtonMetadata.getProperties().add(focusTraversable_true_PropertyMetadata);
         MenuButtonMetadata.getProperties().add(items_MenuItem_PropertyMetadata);
         MenuButtonMetadata.getProperties().add(popupSidePropertyMetadata);
-        MenuButtonMetadata.getProperties().add(styleClass_c47_PropertyMetadata);
+        MenuButtonMetadata.getProperties().add(styleClass_c49_PropertyMetadata);
 
         MenuItemMetadata.getProperties().add(acceleratorPropertyMetadata);
         MenuItemMetadata.getProperties().add(disablePropertyMetadata);
@@ -4689,7 +4703,7 @@ public class Metadata {
         MenuItemMetadata.getProperties().add(onActionPropertyMetadata);
         MenuItemMetadata.getProperties().add(onMenuValidationPropertyMetadata);
         MenuItemMetadata.getProperties().add(stylePropertyMetadata);
-        MenuItemMetadata.getProperties().add(styleClass_c32_PropertyMetadata);
+        MenuItemMetadata.getProperties().add(styleClass_c33_PropertyMetadata);
         MenuItemMetadata.getProperties().add(textPropertyMetadata);
         MenuItemMetadata.getProperties().add(visiblePropertyMetadata);
 
@@ -4799,14 +4813,14 @@ public class Metadata {
         NodeMetadata.getProperties().add(VBox_vgrowPropertyMetadata);
 
         NumberAxisMetadata.getProperties().add(forceZeroInRangePropertyMetadata);
-        NumberAxisMetadata.getProperties().add(styleClass_c41_PropertyMetadata);
+        NumberAxisMetadata.getProperties().add(styleClass_c42_PropertyMetadata);
         NumberAxisMetadata.getProperties().add(tickUnitPropertyMetadata);
 
         PaginationMetadata.getProperties().add(currentPageIndexPropertyMetadata);
         PaginationMetadata.getProperties().add(focusTraversable_true_PropertyMetadata);
         PaginationMetadata.getProperties().add(maxPageIndicatorCountPropertyMetadata);
         PaginationMetadata.getProperties().add(pageCountPropertyMetadata);
-        PaginationMetadata.getProperties().add(styleClass_c35_PropertyMetadata);
+        PaginationMetadata.getProperties().add(styleClass_c36_PropertyMetadata);
 
         PaneMetadata.getProperties().add(childrenPropertyMetadata);
 
@@ -4816,7 +4830,7 @@ public class Metadata {
         ParentMetadata.getProperties().add(stylesheetsPropertyMetadata);
 
         PasswordFieldMetadata.getProperties().add(focusTraversable_true_PropertyMetadata);
-        PasswordFieldMetadata.getProperties().add(styleClass_c48_PropertyMetadata);
+        PasswordFieldMetadata.getProperties().add(styleClass_c50_PropertyMetadata);
 
         PathMetadata.getProperties().add(elementsPropertyMetadata);
         PathMetadata.getProperties().add(fill_NULL_PropertyMetadata);
@@ -4835,7 +4849,7 @@ public class Metadata {
         PieChartMetadata.getProperties().add(labelLineLengthPropertyMetadata);
         PieChartMetadata.getProperties().add(labelsVisiblePropertyMetadata);
         PieChartMetadata.getProperties().add(startAnglePropertyMetadata);
-        PieChartMetadata.getProperties().add(styleClass_c33_PropertyMetadata);
+        PieChartMetadata.getProperties().add(styleClass_c34_PropertyMetadata);
 
         PointLightMetadata.getProperties().add(pickOnBounds_false_PropertyMetadata);
 
@@ -4890,7 +4904,7 @@ public class Metadata {
 
         ProgressIndicatorMetadata.getProperties().add(indeterminate_Boolean_ro_PropertyMetadata);
         ProgressIndicatorMetadata.getProperties().add(progressPropertyMetadata);
-        ProgressIndicatorMetadata.getProperties().add(styleClass_c45_PropertyMetadata);
+        ProgressIndicatorMetadata.getProperties().add(styleClass_c47_PropertyMetadata);
 
         QuadCurveMetadata.getProperties().add(controlXPropertyMetadata);
         QuadCurveMetadata.getProperties().add(controlYPropertyMetadata);
@@ -4906,7 +4920,7 @@ public class Metadata {
         QuadCurveToMetadata.getProperties().add(y_0_PropertyMetadata);
 
         RadioButtonMetadata.getProperties().add(focusTraversable_true_PropertyMetadata);
-        RadioButtonMetadata.getProperties().add(styleClass_c37_PropertyMetadata);
+        RadioButtonMetadata.getProperties().add(styleClass_c38_PropertyMetadata);
 
         RadioMenuItemMetadata.getProperties().add(selected_Boolean_PropertyMetadata);
         RadioMenuItemMetadata.getProperties().add(styleClass_c7_PropertyMetadata);
@@ -4950,13 +4964,13 @@ public class Metadata {
         SVGPathMetadata.getProperties().add(fillRulePropertyMetadata);
         SVGPathMetadata.getProperties().add(pickOnBounds_false_PropertyMetadata);
 
-        ScatterChartMetadata.getProperties().add(styleClass_c33_PropertyMetadata);
+        ScatterChartMetadata.getProperties().add(styleClass_c34_PropertyMetadata);
 
         ScrollBarMetadata.getProperties().add(blockIncrementPropertyMetadata);
         ScrollBarMetadata.getProperties().add(maxPropertyMetadata);
         ScrollBarMetadata.getProperties().add(minPropertyMetadata);
         ScrollBarMetadata.getProperties().add(orientation_HORIZONTAL_PropertyMetadata);
-        ScrollBarMetadata.getProperties().add(styleClass_c30_PropertyMetadata);
+        ScrollBarMetadata.getProperties().add(styleClass_c31_PropertyMetadata);
         ScrollBarMetadata.getProperties().add(unitIncrementPropertyMetadata);
         ScrollBarMetadata.getProperties().add(value_Double_PropertyMetadata);
         ScrollBarMetadata.getProperties().add(visibleAmountPropertyMetadata);
@@ -4971,7 +4985,7 @@ public class Metadata {
         ScrollPaneMetadata.getProperties().add(pannablePropertyMetadata);
         ScrollPaneMetadata.getProperties().add(prefViewportHeightPropertyMetadata);
         ScrollPaneMetadata.getProperties().add(prefViewportWidthPropertyMetadata);
-        ScrollPaneMetadata.getProperties().add(styleClass_c34_PropertyMetadata);
+        ScrollPaneMetadata.getProperties().add(styleClass_c35_PropertyMetadata);
         ScrollPaneMetadata.getProperties().add(vbarPolicyPropertyMetadata);
         ScrollPaneMetadata.getProperties().add(viewportBoundsPropertyMetadata);
         ScrollPaneMetadata.getProperties().add(vmaxPropertyMetadata);
@@ -4980,12 +4994,12 @@ public class Metadata {
 
         SeparatorMetadata.getProperties().add(halignment_CENTER_PropertyMetadata);
         SeparatorMetadata.getProperties().add(orientation_HORIZONTAL_PropertyMetadata);
-        SeparatorMetadata.getProperties().add(styleClass_c28_PropertyMetadata);
+        SeparatorMetadata.getProperties().add(styleClass_c29_PropertyMetadata);
         SeparatorMetadata.getProperties().add(valignment_CENTER_PropertyMetadata);
 
         SeparatorMenuItemMetadata.getProperties().add(content_Node_SEPARATOR_PropertyMetadata);
         SeparatorMenuItemMetadata.getProperties().add(hideOnClick_false_PropertyMetadata);
-        SeparatorMenuItemMetadata.getProperties().add(styleClass_c22_PropertyMetadata);
+        SeparatorMenuItemMetadata.getProperties().add(styleClass_c23_PropertyMetadata);
 
         ShapeMetadata.getProperties().add(fill_BLACK_PropertyMetadata);
         ShapeMetadata.getProperties().add(pickOnBounds_false_PropertyMetadata);
@@ -5015,7 +5029,7 @@ public class Metadata {
         SliderMetadata.getProperties().add(showTickLabelsPropertyMetadata);
         SliderMetadata.getProperties().add(showTickMarksPropertyMetadata);
         SliderMetadata.getProperties().add(snapToTicksPropertyMetadata);
-        SliderMetadata.getProperties().add(styleClass_c36_PropertyMetadata);
+        SliderMetadata.getProperties().add(styleClass_c37_PropertyMetadata);
         SliderMetadata.getProperties().add(value_Double_PropertyMetadata);
 
         SphereMetadata.getProperties().add(divisionsPropertyMetadata);
@@ -5034,7 +5048,7 @@ public class Metadata {
         StackPaneMetadata.getProperties().add(contentBiasPropertyMetadata);
 
         StackedAreaChartMetadata.getProperties().add(createSymbolsPropertyMetadata);
-        StackedAreaChartMetadata.getProperties().add(styleClass_c33_PropertyMetadata);
+        StackedAreaChartMetadata.getProperties().add(styleClass_c34_PropertyMetadata);
 
         StackedBarChartMetadata.getProperties().add(categoryGapPropertyMetadata);
         StackedBarChartMetadata.getProperties().add(styleClass_c12_PropertyMetadata);
@@ -5086,7 +5100,7 @@ public class Metadata {
         TableColumnBaseMetadata.getProperties().add(sortablePropertyMetadata);
         TableColumnBaseMetadata.getProperties().add(sortNodePropertyMetadata);
         TableColumnBaseMetadata.getProperties().add(stylePropertyMetadata);
-        TableColumnBaseMetadata.getProperties().add(styleClass_c38_PropertyMetadata);
+        TableColumnBaseMetadata.getProperties().add(styleClass_c39_PropertyMetadata);
         TableColumnBaseMetadata.getProperties().add(textPropertyMetadata);
         TableColumnBaseMetadata.getProperties().add(visiblePropertyMetadata);
         TableColumnBaseMetadata.getProperties().add(width_Double_ro_PropertyMetadata);
@@ -5101,7 +5115,7 @@ public class Metadata {
         TableViewMetadata.getProperties().add(onSortPropertyMetadata);
         TableViewMetadata.getProperties().add(placeholderPropertyMetadata);
         TableViewMetadata.getProperties().add(sortOrderPropertyMetadata);
-        TableViewMetadata.getProperties().add(styleClass_c44_PropertyMetadata);
+        TableViewMetadata.getProperties().add(styleClass_c46_PropertyMetadata);
         TableViewMetadata.getProperties().add(tableMenuButtonVisiblePropertyMetadata);
 
         TextMetadata.getProperties().add(baselineOffsetPropertyMetadata);
@@ -5123,14 +5137,14 @@ public class Metadata {
         TextAreaMetadata.getProperties().add(prefRowCountPropertyMetadata);
         TextAreaMetadata.getProperties().add(scrollLeftPropertyMetadata);
         TextAreaMetadata.getProperties().add(scrollTopPropertyMetadata);
-        TextAreaMetadata.getProperties().add(styleClass_c46_PropertyMetadata);
+        TextAreaMetadata.getProperties().add(styleClass_c48_PropertyMetadata);
         TextAreaMetadata.getProperties().add(wrapTextPropertyMetadata);
 
         TextFieldMetadata.getProperties().add(alignment_CENTER_LEFT_PropertyMetadata);
         TextFieldMetadata.getProperties().add(focusTraversable_true_PropertyMetadata);
         TextFieldMetadata.getProperties().add(onActionPropertyMetadata);
         TextFieldMetadata.getProperties().add(prefColumnCount_12_PropertyMetadata);
-        TextFieldMetadata.getProperties().add(styleClass_c42_PropertyMetadata);
+        TextFieldMetadata.getProperties().add(styleClass_c44_PropertyMetadata);
 
         TextFlowMetadata.getProperties().add(baselineOffsetPropertyMetadata);
         TextFlowMetadata.getProperties().add(contentBiasPropertyMetadata);
@@ -5142,7 +5156,7 @@ public class Metadata {
         TextInputControlMetadata.getProperties().add(fontPropertyMetadata);
         TextInputControlMetadata.getProperties().add(length_Integer_ro_PropertyMetadata);
         TextInputControlMetadata.getProperties().add(promptTextPropertyMetadata);
-        TextInputControlMetadata.getProperties().add(styleClass_c46_PropertyMetadata);
+        TextInputControlMetadata.getProperties().add(styleClass_c48_PropertyMetadata);
         TextInputControlMetadata.getProperties().add(textPropertyMetadata);
 
         TilePaneMetadata.getProperties().add(alignment_TOP_LEFT_PropertyMetadata);
@@ -5161,15 +5175,16 @@ public class Metadata {
         TitledPaneMetadata.getProperties().add(animatedPropertyMetadata);
         TitledPaneMetadata.getProperties().add(collapsiblePropertyMetadata);
         TitledPaneMetadata.getProperties().add(content_Node_NULL_PropertyMetadata);
+        TitledPaneMetadata.getProperties().add(contentBiasPropertyMetadata);
         TitledPaneMetadata.getProperties().add(expandedPropertyMetadata);
         TitledPaneMetadata.getProperties().add(focusTraversable_true_PropertyMetadata);
         TitledPaneMetadata.getProperties().add(mnemonicParsing_false_PropertyMetadata);
-        TitledPaneMetadata.getProperties().add(styleClass_c24_PropertyMetadata);
+        TitledPaneMetadata.getProperties().add(styleClass_c25_PropertyMetadata);
 
         ToggleButtonMetadata.getProperties().add(alignment_CENTER_PropertyMetadata);
         ToggleButtonMetadata.getProperties().add(focusTraversable_true_PropertyMetadata);
         ToggleButtonMetadata.getProperties().add(selected_Boolean_PropertyMetadata);
-        ToggleButtonMetadata.getProperties().add(styleClass_c40_PropertyMetadata);
+        ToggleButtonMetadata.getProperties().add(styleClass_c41_PropertyMetadata);
         ToggleButtonMetadata.getProperties().add(toggleGroupPropertyMetadata);
 
         ToolBarMetadata.getProperties().add(items_Node_PropertyMetadata);
@@ -5215,7 +5230,7 @@ public class Metadata {
         TreeTableViewMetadata.getProperties().add(showRootPropertyMetadata);
         TreeTableViewMetadata.getProperties().add(sortModePropertyMetadata);
         TreeTableViewMetadata.getProperties().add(sortOrderPropertyMetadata);
-        TreeTableViewMetadata.getProperties().add(styleClass_c29_PropertyMetadata);
+        TreeTableViewMetadata.getProperties().add(styleClass_c30_PropertyMetadata);
         TreeTableViewMetadata.getProperties().add(tableMenuButtonVisiblePropertyMetadata);
         TreeTableViewMetadata.getProperties().add(treeColumnPropertyMetadata);
 
@@ -5228,7 +5243,7 @@ public class Metadata {
         TreeViewMetadata.getProperties().add(onEditStartPropertyMetadata);
         TreeViewMetadata.getProperties().add(onScrollToPropertyMetadata);
         TreeViewMetadata.getProperties().add(showRootPropertyMetadata);
-        TreeViewMetadata.getProperties().add(styleClass_c21_PropertyMetadata);
+        TreeViewMetadata.getProperties().add(styleClass_c22_PropertyMetadata);
 
         VBoxMetadata.getProperties().add(alignment_TOP_LEFT_PropertyMetadata);
         VBoxMetadata.getProperties().add(contentBiasPropertyMetadata);
@@ -5242,7 +5257,7 @@ public class Metadata {
         ValueAxisMetadata.getProperties().add(minorTickLengthPropertyMetadata);
         ValueAxisMetadata.getProperties().add(minorTickVisiblePropertyMetadata);
         ValueAxisMetadata.getProperties().add(scalePropertyMetadata);
-        ValueAxisMetadata.getProperties().add(styleClass_c41_PropertyMetadata);
+        ValueAxisMetadata.getProperties().add(styleClass_c42_PropertyMetadata);
         ValueAxisMetadata.getProperties().add(tickLabelFormatterPropertyMetadata);
         ValueAxisMetadata.getProperties().add(upperBoundPropertyMetadata);
         ValueAxisMetadata.getProperties().add(zeroPositionPropertyMetadata);
@@ -5261,7 +5276,7 @@ public class Metadata {
         WebViewMetadata.getProperties().add(prefHeight_60000_PropertyMetadata);
         WebViewMetadata.getProperties().add(prefWidth_80000_PropertyMetadata);
         WebViewMetadata.getProperties().add(resizable_Boolean_ro_PropertyMetadata);
-        WebViewMetadata.getProperties().add(styleClass_c43_PropertyMetadata);
+        WebViewMetadata.getProperties().add(styleClass_c45_PropertyMetadata);
         WebViewMetadata.getProperties().add(width_Double_ro_PropertyMetadata);
         WebViewMetadata.getProperties().add(zoomPropertyMetadata);
 
@@ -5269,7 +5284,7 @@ public class Metadata {
         XYChartMetadata.getProperties().add(alternativeRowFillVisiblePropertyMetadata);
         XYChartMetadata.getProperties().add(horizontalGridLinesVisiblePropertyMetadata);
         XYChartMetadata.getProperties().add(horizontalZeroLineVisiblePropertyMetadata);
-        XYChartMetadata.getProperties().add(styleClass_c33_PropertyMetadata);
+        XYChartMetadata.getProperties().add(styleClass_c34_PropertyMetadata);
         XYChartMetadata.getProperties().add(verticalGridLinesVisiblePropertyMetadata);
         XYChartMetadata.getProperties().add(verticalZeroLineVisiblePropertyMetadata);
         XYChartMetadata.getProperties().add(XAxisPropertyMetadata);
