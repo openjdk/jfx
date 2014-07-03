@@ -174,8 +174,6 @@ public class Scene implements EventTarget {
      *
      * @param root The root node of the scene graph
      *
-     * @throws IllegalStateException if this constructor is called on a thread
-     * other than the JavaFX Application Thread.
      * @throws NullPointerException if root is null
      */
     public Scene(@NamedArg("root") Parent root) {
@@ -205,8 +203,6 @@ public class Scene implements EventTarget {
      * @param width The width of the scene
      * @param height The height of the scene
      *
-     * @throws IllegalStateException if this constructor is called on a thread
-     * other than the JavaFX Application Thread.
      * @throws NullPointerException if root is null
      */
     public Scene(@NamedArg("root") Parent root, @NamedArg("width") double width, @NamedArg("height") double height) {
@@ -219,8 +215,6 @@ public class Scene implements EventTarget {
      * @param root The parent
      * @param fill The fill
      *
-     * @throws IllegalStateException if this constructor is called on a thread
-     * other than the JavaFX Application Thread.
      * @throws NullPointerException if root is null
      */
     public Scene(@NamedArg("root") Parent root, @NamedArg(value="fill", defaultValue="WHITE") Paint fill) {
@@ -235,8 +229,6 @@ public class Scene implements EventTarget {
      * @param height The height of the scene
      * @param fill The fill
      *
-     * @throws IllegalStateException if this constructor is called on a thread
-     * other than the JavaFX Application Thread.
      * @throws NullPointerException if root is null
      */
     public Scene(@NamedArg("root") Parent root, @NamedArg("width") double width, @NamedArg("height") double height,
@@ -258,8 +250,6 @@ public class Scene implements EventTarget {
      * {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
      * for more information.
      *
-     * @throws IllegalStateException if this constructor is called on a thread
-     * other than the JavaFX Application Thread.
      * @throws NullPointerException if root is null
      *
      * @see javafx.scene.Node#setDepthTest(DepthTest)
@@ -272,6 +262,10 @@ public class Scene implements EventTarget {
      * Constructs a scene consisting of a root, with a dimension of width and
      * height, specifies whether a depth buffer is created for this scene and
      * specifies whether scene anti-aliasing is requested.
+     * <p>
+     * A Scene can be created and modified on any thread until it is attached to a {@code Window} that is showing
+     * ({@link javafx.stage.Window#isShowing()}. This does not mean the Scene is thread-safe,
+     * so manipulation from multiple threads at the same time is illegal, may lead to unexpected results and must be avoided.
      *
      * @param root The root node of the scene graph
      * @param width The width of the scene
@@ -285,8 +279,6 @@ public class Scene implements EventTarget {
      * {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
      * for more information.
      *
-     * @throws IllegalStateException if this constructor is called on a thread
-     * other than the JavaFX Application Thread.
      * @throws NullPointerException if root is null
      *
      * @see javafx.scene.Node#setDepthTest(DepthTest)

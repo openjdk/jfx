@@ -209,8 +209,8 @@ import sun.util.logging.PlatformLogger.Level;
  * doesn't explicitly remove it.
  * <p>
  * Node objects may be constructed and modified on any thread as long they are
- * not yet attached to a {@link Scene}. An application must attach nodes to a
- * Scene, and modify nodes that are already attached to a Scene, on the JavaFX
+ * not yet attached to a {@code Scene} in a {@code Window} that is showing.
+ * An application must attach nodes to such a Scene or modify them on the JavaFX
  * Application Thread.
  *
  * <h4>String ID</h4>
