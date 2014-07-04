@@ -1700,7 +1700,7 @@ public class Metadata {
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.SIZE,
                 true, /* readWrite */
                 2.0, /* defaultValue */
-                new InspectorPath("Layout", "Size", 29));
+                new InspectorPath("Layout", "Size", 15));
     private final ValuePropertyMetadata depthTestPropertyMetadata =
             new EnumerationPropertyMetadata(
                 depthTestName,
@@ -1853,26 +1853,26 @@ public class Metadata {
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.SIZE,
                 true, /* readWrite */
                 0.0, /* defaultValue */
-                new InspectorPath("Layout", "Size", 22));
+                new InspectorPath("Layout", "Size", 14));
     private final ValuePropertyMetadata fitToHeightPropertyMetadata =
             new BooleanPropertyMetadata(
                 fitToHeightName,
                 true, /* readWrite */
                 false, /* defaultValue */
-                new InspectorPath("Layout", "Size", 20));
+                new InspectorPath("Layout", "Specific", 9));
     private final ValuePropertyMetadata fitToWidthPropertyMetadata =
             new BooleanPropertyMetadata(
                 fitToWidthName,
                 true, /* readWrite */
                 false, /* defaultValue */
-                new InspectorPath("Layout", "Size", 19));
+                new InspectorPath("Layout", "Specific", 8));
     private final ValuePropertyMetadata fitWidthPropertyMetadata =
             new DoublePropertyMetadata(
                 fitWidthName,
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.SIZE,
                 true, /* readWrite */
                 0.0, /* defaultValue */
-                new InspectorPath("Layout", "Size", 21));
+                new InspectorPath("Layout", "Size", 13));
     private final ValuePropertyMetadata fixedCellSizePropertyMetadata =
             new DoublePropertyMetadata(
                 fixedCellSizeName,
@@ -2194,13 +2194,13 @@ public class Metadata {
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.SIZE,
                 true, /* readWrite */
                 0.0, /* defaultValue */
-                new InspectorPath("Layout", "Size", 31));
+                new InspectorPath("Layout", "Size", 17));
     private final ValuePropertyMetadata length_Integer_ro_PropertyMetadata =
             new IntegerPropertyMetadata(
                 lengthName,
                 false, /* readWrite */
                 null, /* No defaultValue for R/O property */
-                new InspectorPath("Layout", "Size", 31));
+                new InspectorPath("Layout", "Size", 17));
     private final ValuePropertyMetadata lightOnPropertyMetadata =
             new BooleanPropertyMetadata(
                 lightOnName,
@@ -2791,14 +2791,14 @@ public class Metadata {
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.PERCENTAGE,
                 true, /* readWrite */
                 -1.0, /* defaultValue */
-                new InspectorPath("Layout", "Size", 33));
+                new InspectorPath("Layout", "Size", 19));
     private final ValuePropertyMetadata percentWidthPropertyMetadata =
             new DoublePropertyMetadata(
                 percentWidthName,
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.PERCENTAGE,
                 true, /* readWrite */
                 -1.0, /* defaultValue */
-                new InspectorPath("Layout", "Size", 32));
+                new InspectorPath("Layout", "Size", 18));
     private final ValuePropertyMetadata pickOnBounds_false_PropertyMetadata =
             new BooleanPropertyMetadata(
                 pickOnBoundsName,
@@ -2846,7 +2846,7 @@ public class Metadata {
                 prefColumnsName,
                 true, /* readWrite */
                 5, /* defaultValue */
-                new InspectorPath("Layout", "Size", 28));
+                new InspectorPath("Layout", "Specific", 16));
     private final ValuePropertyMetadata prefHeight_COMPUTED_PropertyMetadata =
             new DoublePropertyMetadata(
                 prefHeightName,
@@ -2872,35 +2872,35 @@ public class Metadata {
                 prefRowsName,
                 true, /* readWrite */
                 5, /* defaultValue */
-                new InspectorPath("Layout", "Size", 27));
+                new InspectorPath("Layout", "Specific", 17));
     private final ValuePropertyMetadata prefTileHeightPropertyMetadata =
             new DoublePropertyMetadata(
                 prefTileHeightName,
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.SIZE,
                 true, /* readWrite */
                 -1.0, /* defaultValue */
-                new InspectorPath("Layout", "Size", 23));
+                new InspectorPath("Layout", "Specific", 15));
     private final ValuePropertyMetadata prefTileWidthPropertyMetadata =
             new DoublePropertyMetadata(
                 prefTileWidthName,
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.SIZE,
                 true, /* readWrite */
                 -1.0, /* defaultValue */
-                new InspectorPath("Layout", "Size", 10));
+                new InspectorPath("Layout", "Specific", 14));
     private final ValuePropertyMetadata prefViewportHeightPropertyMetadata =
             new DoublePropertyMetadata(
                 prefViewportHeightName,
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.SIZE,
                 true, /* readWrite */
                 0.0, /* defaultValue */
-                new InspectorPath("Layout", "Size", 11));
+                new InspectorPath("Layout", "Specific", 7));
     private final ValuePropertyMetadata prefViewportWidthPropertyMetadata =
             new DoublePropertyMetadata(
                 prefViewportWidthName,
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.SIZE,
                 true, /* readWrite */
                 0.0, /* defaultValue */
-                new InspectorPath("Layout", "Size", 24));
+                new InspectorPath("Layout", "Specific", 6));
     private final ValuePropertyMetadata prefWidth_COMPUTED_PropertyMetadata =
             new DoublePropertyMetadata(
                 prefWidthName,
@@ -2960,28 +2960,28 @@ public class Metadata {
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.SIZE,
                 true, /* readWrite */
                 0.0, /* defaultValue */
-                new InspectorPath("Layout", "Size", 12));
+                new InspectorPath("Layout", "Size", 10));
     private final ValuePropertyMetadata radius_100_PropertyMetadata =
             new DoublePropertyMetadata(
                 radiusName,
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.SIZE,
                 true, /* readWrite */
                 1.0, /* defaultValue */
-                new InspectorPath("Layout", "Size", 12));
+                new InspectorPath("Layout", "Size", 10));
     private final ValuePropertyMetadata radiusXPropertyMetadata =
             new DoublePropertyMetadata(
                 radiusXName,
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.SIZE,
                 true, /* readWrite */
                 0.0, /* defaultValue */
-                new InspectorPath("Layout", "Size", 13));
+                new InspectorPath("Layout", "Size", 11));
     private final ValuePropertyMetadata radiusYPropertyMetadata =
             new DoublePropertyMetadata(
                 radiusYName,
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.SIZE,
                 true, /* readWrite */
                 0.0, /* defaultValue */
-                new InspectorPath("Layout", "Size", 14));
+                new InspectorPath("Layout", "Size", 12));
     private final ValuePropertyMetadata resizable_Boolean_ro_PropertyMetadata =
             new BooleanPropertyMetadata(
                 resizableName,
@@ -3199,7 +3199,7 @@ public class Metadata {
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.ANGLE,
                 true, /* readWrite */
                 0.0, /* defaultValue */
-                new InspectorPath("Layout", "Size", 30));
+                new InspectorPath("Layout", "Size", 16));
     private final ValuePropertyMetadata startMarginPropertyMetadata =
             new DoublePropertyMetadata(
                 startMarginName,
@@ -3630,28 +3630,28 @@ public class Metadata {
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.SIZE,
                 true, /* readWrite */
                 Double.MAX_VALUE, /* defaultValue */
-                new InspectorPath("Layout", "Size", 18));
+                new InspectorPath("Layout", "Specific", 13));
     private final ValuePropertyMetadata tabMaxWidthPropertyMetadata =
             new DoublePropertyMetadata(
                 tabMaxWidthName,
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.SIZE,
                 true, /* readWrite */
                 Double.MAX_VALUE, /* defaultValue */
-                new InspectorPath("Layout", "Size", 17));
+                new InspectorPath("Layout", "Specific", 12));
     private final ValuePropertyMetadata tabMinHeightPropertyMetadata =
             new DoublePropertyMetadata(
                 tabMinHeightName,
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.SIZE,
                 true, /* readWrite */
                 0.0, /* defaultValue */
-                new InspectorPath("Layout", "Size", 16));
+                new InspectorPath("Layout", "Specific", 11));
     private final ValuePropertyMetadata tabMinWidthPropertyMetadata =
             new DoublePropertyMetadata(
                 tabMinWidthName,
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.SIZE,
                 true, /* readWrite */
                 0.0, /* defaultValue */
-                new InspectorPath("Layout", "Size", 15));
+                new InspectorPath("Layout", "Specific", 10));
     private final ComponentPropertyMetadata tabsPropertyMetadata =
             new ComponentPropertyMetadata(
                 tabsName,
@@ -3767,14 +3767,14 @@ public class Metadata {
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.SIZE,
                 false, /* readWrite */
                 null, /* No defaultValue for R/O property */
-                new InspectorPath("Layout", "Size", 26));
+                new InspectorPath("Layout", "Specific", 19));
     private final ValuePropertyMetadata tileWidthPropertyMetadata =
             new DoublePropertyMetadata(
                 tileWidthName,
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.SIZE,
                 false, /* readWrite */
                 null, /* No defaultValue for R/O property */
-                new InspectorPath("Layout", "Size", 25));
+                new InspectorPath("Layout", "Specific", 18));
     private final ValuePropertyMetadata titlePropertyMetadata =
             new StringPropertyMetadata(
                 titleName,
