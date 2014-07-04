@@ -117,7 +117,7 @@ public class HierarchyTreeCell<T extends HierarchyItem> extends TreeCell<Hierarc
     private final AbstractHierarchyPanelController panelController;
 
     static final String TREE_CELL_GRAPHIC = "tree-cell-graphic";
-    static final String HIERARCHY_FIRST_CELL = "hierarchy-first-cell";
+    public static final String HIERARCHY_FIRST_CELL = "hierarchy-first-cell";
     static final String HIERARCHY_PLACE_HOLDER_LABEL = "hierarchy-place-holder-label";
     static final String HIERARCHY_READWRITE_LABEL = "hierarchy-readwrite-label";
     // Style class used for lookup
@@ -300,10 +300,10 @@ public class HierarchyTreeCell<T extends HierarchyItem> extends TreeCell<Hierarc
                     if (treeItem == null) {
                         cell = HierarchyTreeViewUtils.getTreeCell(getTreeView(), rootTreeItem);
                     } else {
-                        final HierarchyItem item1 = treeItem.getValue();
-                        assert item1 != null;
+                        final HierarchyItem item = treeItem.getValue();
+                        assert item != null;
 
-                        if (item1.isPlaceHolder()) {
+                        if (item.isPlaceHolder()) {
                             cell = HierarchyTreeCell.this;
                         } else if (accessoryDropTarget.getAccessory() == Accessory.GRAPHIC) {
                             // Check if an empty graphic TreeItem has been added
@@ -323,8 +323,7 @@ public class HierarchyTreeCell<T extends HierarchyItem> extends TreeCell<Hierarc
                         }
                     }
 
-                    final Border border1 = panelController.getBorder(BorderSide.TOP_RIGHT_BOTTOM_LEFT);
-                    cell.setBorder(border1);
+                    panelController.setBorder(cell, BorderSide.TOP_RIGHT_BOTTOM_LEFT);
                 }//
                 //==========================================================
                 // SUB COMPONENTS :
@@ -342,33 +341,30 @@ public class HierarchyTreeCell<T extends HierarchyItem> extends TreeCell<Hierarc
                     if (treeItem == null) {
                         if (rootTreeItem.isLeaf() || !rootTreeItem.isExpanded()) {
                             final TreeCell<?> rootCell = HierarchyTreeViewUtils.getTreeCell(getTreeView(), 0);
-                            final Border border2 = panelController.getBorder(BorderSide.TOP_RIGHT_BOTTOM_LEFT);
-                            rootCell.setBorder(border2);
+                            panelController.setBorder(rootCell, BorderSide.TOP_RIGHT_BOTTOM_LEFT);
                         } else {
-                            final TreeItem<?> lastTreeItem1 = panelController.getLastVisibleTreeItem(rootTreeItem);
-                            final TreeCell<?> lastCell1 = HierarchyTreeViewUtils.getTreeCell(getTreeView(), lastTreeItem1);
+                            final TreeItem<?> lastTreeItem = panelController.getLastVisibleTreeItem(rootTreeItem);
+                            final TreeCell<?> lastCell = HierarchyTreeViewUtils.getTreeCell(getTreeView(), lastTreeItem);
                             // As we are dropping below the datas, the last cell is visible
-                            assert lastCell1 != null;
-                            final Border border3 = panelController.getBorder(BorderSide.BOTTOM);
-                            lastCell1.setBorder(border3);
+                            assert lastCell != null;
+                            panelController.setBorder(lastCell, BorderSide.BOTTOM);
 
                             // Update vertical insert line
                             startTreeItem = rootTreeItem;
                             startCell = HierarchyTreeViewUtils.getTreeCell(getTreeView(), startTreeItem);
-                            stopCell = lastCell1;
+                            stopCell = lastCell;
                             updateInsertLineIndicator(startCell, stopCell);
                             panelController.addToPanelControlSkin(insertLineIndicator);
                         }
 
                     } else {
-                        final HierarchyItem item2 = treeItem.getValue();
-                        assert item2 != null;
+                        final HierarchyItem item = treeItem.getValue();
+                        assert item != null;
 
-                        if (item2.isPlaceHolder() || item2.getFxomObject() == dropTargetObject) {
+                        if (item.isPlaceHolder() || item.getFxomObject() == dropTargetObject) {
                             // The place holder item is filled with a container
                             // accepting sub components
-                            final Border border4 = panelController.getBorder(BorderSide.TOP_RIGHT_BOTTOM_LEFT);
-                            HierarchyTreeCell.this.setBorder(border4);
+                            panelController.setBorder(HierarchyTreeCell.this, BorderSide.TOP_RIGHT_BOTTOM_LEFT);
                         } else {
                             // REORDERING :
                             // To avoid visual movement of the horizontal border when
@@ -384,8 +380,7 @@ public class HierarchyTreeCell<T extends HierarchyItem> extends TreeCell<Hierarc
                                 // REORDER ABOVE gesture
                                 case TOP:
                                     if (treeItem == rootTreeItem) {
-                                        final Border border5 = panelController.getBorder(BorderSide.TOP_RIGHT_BOTTOM_LEFT);
-                                        HierarchyTreeCell.this.setBorder(border5);
+                                        panelController.setBorder(HierarchyTreeCell.this, BorderSide.TOP_RIGHT_BOTTOM_LEFT);
                                     } else {
                                         final int index = getIndex();
                                         // Retrieve the previous cell
@@ -396,8 +391,7 @@ public class HierarchyTreeCell<T extends HierarchyItem> extends TreeCell<Hierarc
                                                 = HierarchyTreeViewUtils.getTreeCell(getTreeView(), index - 1);
                                         // The previous cell is null when the item is not visible
                                         if (previousCell != null) {
-                                            final Border border6 = panelController.getBorder(BorderSide.BOTTOM);
-                                            previousCell.setBorder(border6);
+                                            panelController.setBorder(previousCell, BorderSide.BOTTOM);
                                         }
 
                                         // Update vertical insert line
@@ -412,22 +406,20 @@ public class HierarchyTreeCell<T extends HierarchyItem> extends TreeCell<Hierarc
                                 // REPARENT gesture
                                 case CENTER:
                                     if (treeItem.isLeaf() || !treeItem.isExpanded()) {
-                                        final Border border7 = panelController.getBorder(BorderSide.TOP_RIGHT_BOTTOM_LEFT);
-                                        HierarchyTreeCell.this.setBorder(border7);
+                                        panelController.setBorder(HierarchyTreeCell.this, BorderSide.TOP_RIGHT_BOTTOM_LEFT);
                                     } else {
                                         // Reparent to the treeItem as last child
-                                        final TreeItem<?> lastTreeItem2 = panelController.getLastVisibleTreeItem(treeItem);
-                                        final TreeCell<?> lastCell2 = HierarchyTreeViewUtils.getTreeCell(getTreeView(), lastTreeItem2);
+                                        final TreeItem<?> lastTreeItem = panelController.getLastVisibleTreeItem(treeItem);
+                                        final TreeCell<?> lastCell = HierarchyTreeViewUtils.getTreeCell(getTreeView(), lastTreeItem);
                                         // Last cell is null when the item is not visible
-                                        if (lastCell2 != null) {
-                                            final Border border8 = panelController.getBorder(BorderSide.BOTTOM);
-                                            lastCell2.setBorder(border8);
+                                        if (lastCell != null) {
+                                            panelController.setBorder(lastCell, BorderSide.BOTTOM);
                                         }
 
                                         // Update vertical insert line
                                         startTreeItem = getTreeItem();
                                         startCell = HierarchyTreeViewUtils.getTreeCell(getTreeView(), startTreeItem);
-                                        stopCell = lastCell2;
+                                        stopCell = lastCell;
                                         updateInsertLineIndicator(startCell, stopCell);
                                         panelController.addToPanelControlSkin(insertLineIndicator);
                                     }
@@ -437,12 +429,10 @@ public class HierarchyTreeCell<T extends HierarchyItem> extends TreeCell<Hierarc
                                 case BOTTOM:
                                     if (treeItem == rootTreeItem
                                             && (treeItem.isLeaf() || !treeItem.isExpanded())) {
-                                        final Border border9 = panelController.getBorder(BorderSide.TOP_RIGHT_BOTTOM_LEFT);
-                                        HierarchyTreeCell.this.setBorder(border9);
+                                        panelController.setBorder(HierarchyTreeCell.this, BorderSide.TOP_RIGHT_BOTTOM_LEFT);
                                     } else {
                                         // Reparent to the treeItem as first child
-                                        final Border border10 = panelController.getBorder(BorderSide.BOTTOM);
-                                        HierarchyTreeCell.this.setBorder(border10);
+                                        panelController.setBorder(HierarchyTreeCell.this, BorderSide.BOTTOM);
 
                                         // Update vertical insert line
                                         startTreeItem = panelController.lookupTreeItem(dropTarget.getTargetObject());

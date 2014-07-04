@@ -86,11 +86,12 @@ public class ES2Pipeline extends GraphicsPipeline {
         if (es2Enabled) {
             theInstance = new ES2Pipeline();
             factories = new ES2ResourceFactory[glFactory.getAdapterCount()];
+            antiAliasingSupported = glFactory.isGLExtensionSupported("GL_ARB_multisample");
         } else {
             theInstance = null;
+            antiAliasingSupported = false;
         }
 
-        antiAliasingSupported = (glFactory.isGLExtensionSupported("GL_ARB_multisample"));
     }
     private static Thread creator;
     private static final ES2Pipeline theInstance;
