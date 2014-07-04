@@ -306,6 +306,8 @@ public class Metadata {
             new ComponentClassMetadata(javafx.scene.PerspectiveCamera.class, CameraMetadata);
     private final ComponentClassMetadata PointLightMetadata = 
             new ComponentClassMetadata(javafx.scene.PointLight.class, LightBaseMetadata);
+    private final ComponentClassMetadata SubSceneMetadata = 
+            new ComponentClassMetadata(javafx.scene.SubScene.class, NodeMetadata);
     private final ComponentClassMetadata CanvasMetadata = 
             new ComponentClassMetadata(javafx.scene.canvas.Canvas.class, NodeMetadata);
     private final ComponentClassMetadata AreaChartMetadata = 
@@ -1138,6 +1140,8 @@ public class Metadata {
             new PropertyName("unitIncrement");
     private final PropertyName upperBoundName = 
             new PropertyName("upperBound");
+    private final PropertyName userAgentStylesheetName = 
+            new PropertyName("userAgentStylesheet");
     private final PropertyName valignmentName = 
             new PropertyName("valignment");
     private final PropertyName valueName = 
@@ -3853,6 +3857,12 @@ public class Metadata {
                 true, /* readWrite */
                 100.0, /* defaultValue */
                 new InspectorPath("Properties", "Specific", 99));
+    private final ValuePropertyMetadata userAgentStylesheetPropertyMetadata =
+            new StringPropertyMetadata(
+                userAgentStylesheetName,
+                true, /* readWrite */
+                "", /* defaultValue */
+                new InspectorPath("Properties", "Specific", 128));
     private final ValuePropertyMetadata valignment_NULL_PropertyMetadata =
             new EnumerationPropertyMetadata(
                 valignmentName,
@@ -4341,6 +4351,7 @@ public class Metadata {
         componentClassMap.put(StackPaneMetadata.getKlass(), StackPaneMetadata);
         componentClassMap.put(StackedAreaChartMetadata.getKlass(), StackedAreaChartMetadata);
         componentClassMap.put(StackedBarChartMetadata.getKlass(), StackedBarChartMetadata);
+        componentClassMap.put(SubSceneMetadata.getKlass(), SubSceneMetadata);
         componentClassMap.put(SwingNodeMetadata.getKlass(), SwingNodeMetadata);
         componentClassMap.put(TabMetadata.getKlass(), TabMetadata);
         componentClassMap.put(TabPaneMetadata.getKlass(), TabPaneMetadata);
@@ -5053,6 +5064,12 @@ public class Metadata {
         StackedBarChartMetadata.getProperties().add(categoryGapPropertyMetadata);
         StackedBarChartMetadata.getProperties().add(styleClass_c12_PropertyMetadata);
 
+        SubSceneMetadata.getProperties().add(fill_NULL_PropertyMetadata);
+        SubSceneMetadata.getProperties().add(height_Double_0_PropertyMetadata);
+        SubSceneMetadata.getProperties().add(pickOnBounds_false_PropertyMetadata);
+        SubSceneMetadata.getProperties().add(userAgentStylesheetPropertyMetadata);
+        SubSceneMetadata.getProperties().add(width_Double_0_PropertyMetadata);
+
         SwingNodeMetadata.getProperties().add(focusTraversable_true_PropertyMetadata);
         SwingNodeMetadata.getProperties().add(pickOnBounds_false_PropertyMetadata);
         SwingNodeMetadata.getProperties().add(resizable_Boolean_ro_PropertyMetadata);
@@ -5296,9 +5313,11 @@ public class Metadata {
         hiddenProperties.add(new PropertyName("alignWithContentOrigin"));
         hiddenProperties.add(new PropertyName("armed"));
         hiddenProperties.add(new PropertyName("anchor"));
+        hiddenProperties.add(new PropertyName("antiAliasing"));
         hiddenProperties.add(new PropertyName("border"));
         hiddenProperties.add(new PropertyName("background"));
         hiddenProperties.add(new PropertyName("caretPosition"));
+        hiddenProperties.add(new PropertyName("camera"));
         hiddenProperties.add(new PropertyName("cellFactory"));
         hiddenProperties.add(new PropertyName("cellValueFactory"));
         hiddenProperties.add(new PropertyName("characters"));
@@ -5312,6 +5331,7 @@ public class Metadata {
         hiddenProperties.add(new PropertyName("customColors"));
         hiddenProperties.add(new PropertyName("data"));
         hiddenProperties.add(new PropertyName("dayCellFactory"));
+        hiddenProperties.add(new PropertyName("depthBuffer"));
         hiddenProperties.add(new PropertyName("disabled"));
         hiddenProperties.add(new PropertyName("dividers"));
         hiddenProperties.add(new PropertyName("editingCell"));
