@@ -536,14 +536,8 @@
  * Content Panel - FXML 'drag items here' prompts                              *
  ******************************************************************************/
 
-/* workaround for DTL-6745 / RT-37787 */
-.theme-presets.SBKIT-content-panel .stage-prompt > .text,
-.theme-presets.SBKIT-content-panel .stage-prompt-default > .text {
-    -fx-font-size: 1.231em; /* 16px (base pixel size of 13px) */
-}
-
 .theme-presets.SBKIT-content-panel .stage-prompt {
-    /* -fx-font-size: 1.231em; 16px (base pixel size of 13px) */
+    -fx-font-size: 1.231em; /* 16px (base pixel size of 13px) */
     -fx-text-fill: derive(-sb-content-text, 100%);
     -fx-text-alignment: center;
     -fx-alignment: center;
@@ -556,7 +550,7 @@
 }
 
 .theme-presets.SBKIT-content-panel .stage-prompt-default {
-    /* -fx-font-size: 1.231em; 16px (base pixel size of 13px) */
+    -fx-font-size: 1.231em; /* 16px (base pixel size of 13px) */
     -fx-text-fill: -sb-content-text;
     -fx-text-alignment: center;
     -fx-alignment: center;
