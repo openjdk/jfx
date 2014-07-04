@@ -36,6 +36,7 @@ import com.oracle.javafx.scenebuilder.kit.editor.drag.DragController;
 import com.oracle.javafx.scenebuilder.kit.editor.drag.source.DocumentDragSource;
 import com.oracle.javafx.scenebuilder.kit.editor.drag.source.ExternalDragSource;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
+import static com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.treeview.HierarchyTreeCell.HIERARCHY_FIRST_CELL;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.util.AbstractFxmlPanelController;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.GridSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
@@ -124,11 +125,22 @@ public abstract class AbstractHierarchyPanelController extends AbstractFxmlPanel
     private Border rightLeftBorder;
     private Border topRightBottomLeftBorder;
     private Border topRightLeftBorder;
+    // First cell : top insets = 0 instead of -2
+    private Border firstCellBottomBorder;
+    private Border firstCellRightBottomLeftBorder;
+    private Border firstCellRightLeftBorder;
+    private Border firstCellTopRightBottomLeftBorder;
+    private Border firstCellTopRightLeftBorder;
     
-    private static final Color DEFAULT_PARENT_RING_COLOR = Color.rgb(238, 168, 47);
-    private final BorderWidths borderWidths = new BorderWidths(2);
-    private final Paint transparent = Color.TRANSPARENT;
+    private final Border transparentBorder;
+    private final Border firstCellTransparentBorder;
+    
+    private final BorderWidths cellBorderWidths = new BorderWidths(2);
+    private final Insets cellInsets = new Insets(-2, 0, -2, 0);
+    private final Insets firstCellInsets = new Insets(0, 0, -2, 0);
 
+    private static final Color DEFAULT_PARENT_RING_COLOR = Color.rgb(238, 168, 47);    
+    
     /**
      * @treatAsPrivate
      */
@@ -169,6 +181,13 @@ public abstract class AbstractHierarchyPanelController extends AbstractFxmlPanel
         super(fxmlURL, I18N.getBundle(), editorController);
         promptLabel.getStyleClass().add("hierarchy-prompt-label");
         promptLabel.setMouseTransparent(true);
+        
+        final BorderStroke bs = new BorderStroke(Color.TRANSPARENT, BorderStrokeStyle.SOLID,
+                CornerRadii.EMPTY, cellBorderWidths, cellInsets);
+        transparentBorder = new Border(bs);
+        final BorderStroke firstbs = new BorderStroke(Color.TRANSPARENT, BorderStrokeStyle.SOLID,
+                CornerRadii.EMPTY, cellBorderWidths, firstCellInsets);
+        firstCellTransparentBorder = new Border(firstbs);
     }
 
     /**
@@ -247,24 +266,27 @@ public abstract class AbstractHierarchyPanelController extends AbstractFxmlPanel
         parentRingColor = value;
         updateParentRingColor();
     }
-
-    public Border getBorder(BorderSide side) {
+    
+    public void setBorder(Cell<?> cell, BorderSide side) {
+        assert cell != null;
+        boolean isFirstCell = cell.getStyleClass() != null
+                && cell.getStyleClass().contains(HIERARCHY_FIRST_CELL);
         final Border border;
         switch (side) {
             case BOTTOM:
-                border = bottomBorder;
+                border = isFirstCell ? firstCellBottomBorder : bottomBorder;
                 break;
             case RIGHT_BOTTOM_LEFT:
-                border = rightBottomLeftBorder;
+                border = isFirstCell ? firstCellRightBottomLeftBorder : rightBottomLeftBorder;
                 break;
             case RIGHT_LEFT:
-                border = rightLeftBorder;
+                border = isFirstCell ? firstCellRightLeftBorder : rightLeftBorder;
                 break;
             case TOP_RIGHT_BOTTOM_LEFT:
-                border = topRightBottomLeftBorder;
+                border = isFirstCell ? firstCellTopRightBottomLeftBorder : topRightBottomLeftBorder;
                 break;
             case TOP_RIGHT_LEFT:
-                border = topRightLeftBorder;
+                border = isFirstCell ? firstCellTopRightLeftBorder : topRightLeftBorder;
                 break;
             default:
                 border = null;
@@ -272,9 +294,17 @@ public abstract class AbstractHierarchyPanelController extends AbstractFxmlPanel
                 break;
         }
         assert border != null;
-        return border;
+        cell.setBorder(border);
     }
-
+    
+    private void setTransparentBorder(Cell<?> cell) {
+        assert cell != null;
+        boolean isFirstCell = cell.getStyleClass() != null
+                && cell.getStyleClass().contains(HIERARCHY_FIRST_CELL);
+        final Border border = isFirstCell ? firstCellTransparentBorder : transparentBorder;
+        cell.setBorder(border);
+    }
+    
     /**
      * Returns the control used to represent the hierarchy. Either a TreeView or
      * a TreeTableView.
@@ -404,7 +434,7 @@ public abstract class AbstractHierarchyPanelController extends AbstractFxmlPanel
      */
     public void clearBorderColor(final Cell<?> cell) {
         assert cell != null;
-        cell.setBorder(Border.EMPTY);
+        setTransparentBorder(cell);
     }
 
     /**
@@ -680,34 +710,53 @@ public abstract class AbstractHierarchyPanelController extends AbstractFxmlPanel
             ((Pane) parent).getChildren().remove(promptLabel);
         }
     }
-    
+        
     protected void updateParentRingColor() {
         // Update border items used to build the hierarchy parent ring
         BorderStroke bs;
         // bottom border
-        bs = new BorderStroke(transparent, transparent, parentRingColor, transparent,
+        bs = new BorderStroke(Color.TRANSPARENT, Color.TRANSPARENT, parentRingColor, Color.TRANSPARENT,
                 BorderStrokeStyle.SOLID, BorderStrokeStyle.SOLID, BorderStrokeStyle.SOLID, BorderStrokeStyle.SOLID,
-                CornerRadii.EMPTY, borderWidths, Insets.EMPTY);
+                CornerRadii.EMPTY, cellBorderWidths, cellInsets);
         bottomBorder = new Border(bs);
+        bs = new BorderStroke(Color.TRANSPARENT, Color.TRANSPARENT, parentRingColor, Color.TRANSPARENT,
+                BorderStrokeStyle.SOLID, BorderStrokeStyle.SOLID, BorderStrokeStyle.SOLID, BorderStrokeStyle.SOLID,
+                CornerRadii.EMPTY, cellBorderWidths, firstCellInsets);
+        firstCellBottomBorder = new Border(bs);
         // right bottom and left border
-        bs = new BorderStroke(transparent, parentRingColor, parentRingColor, parentRingColor,
+        bs = new BorderStroke(Color.TRANSPARENT, parentRingColor, parentRingColor, parentRingColor,
                 BorderStrokeStyle.SOLID, BorderStrokeStyle.SOLID, BorderStrokeStyle.SOLID, BorderStrokeStyle.SOLID,
-                CornerRadii.EMPTY, borderWidths, Insets.EMPTY);
+                CornerRadii.EMPTY, cellBorderWidths, cellInsets);
         rightBottomLeftBorder = new Border(bs);
-        // right and left border
-        bs = new BorderStroke(transparent, parentRingColor, transparent, parentRingColor,
+        bs = new BorderStroke(Color.TRANSPARENT, parentRingColor, parentRingColor, parentRingColor,
                 BorderStrokeStyle.SOLID, BorderStrokeStyle.SOLID, BorderStrokeStyle.SOLID, BorderStrokeStyle.SOLID,
-                CornerRadii.EMPTY, borderWidths, Insets.EMPTY);
+                CornerRadii.EMPTY, cellBorderWidths, firstCellInsets);
+        firstCellRightBottomLeftBorder = new Border(bs);
+        // right and left border
+        bs = new BorderStroke(Color.TRANSPARENT, parentRingColor, Color.TRANSPARENT, parentRingColor,
+                BorderStrokeStyle.SOLID, BorderStrokeStyle.SOLID, BorderStrokeStyle.SOLID, BorderStrokeStyle.SOLID,
+                CornerRadii.EMPTY, cellBorderWidths, cellInsets);
         rightLeftBorder = new Border(bs);
+        bs = new BorderStroke(Color.TRANSPARENT, parentRingColor, Color.TRANSPARENT, parentRingColor,
+                BorderStrokeStyle.SOLID, BorderStrokeStyle.SOLID, BorderStrokeStyle.SOLID, BorderStrokeStyle.SOLID,
+                CornerRadii.EMPTY, cellBorderWidths, firstCellInsets);
+        firstCellRightLeftBorder = new Border(bs);
         // top right bottom and left border
         bs = new BorderStroke(parentRingColor, BorderStrokeStyle.SOLID,
-                CornerRadii.EMPTY, borderWidths);
+                CornerRadii.EMPTY, cellBorderWidths, cellInsets);
         topRightBottomLeftBorder = new Border(bs);
+        bs = new BorderStroke(parentRingColor, BorderStrokeStyle.SOLID,
+                CornerRadii.EMPTY, cellBorderWidths, firstCellInsets);
+        firstCellTopRightBottomLeftBorder = new Border(bs);
         // top right and left border
-        bs = new BorderStroke(parentRingColor, parentRingColor, transparent, parentRingColor,
+        bs = new BorderStroke(parentRingColor, parentRingColor, Color.TRANSPARENT, parentRingColor,
                 BorderStrokeStyle.SOLID, BorderStrokeStyle.SOLID, BorderStrokeStyle.SOLID, BorderStrokeStyle.SOLID,
-                CornerRadii.EMPTY, borderWidths, Insets.EMPTY);
+                CornerRadii.EMPTY, cellBorderWidths, cellInsets);
         topRightLeftBorder = new Border(bs);
+        bs = new BorderStroke(parentRingColor, parentRingColor, Color.TRANSPARENT, parentRingColor,
+                BorderStrokeStyle.SOLID, BorderStrokeStyle.SOLID, BorderStrokeStyle.SOLID, BorderStrokeStyle.SOLID,
+                CornerRadii.EMPTY, cellBorderWidths, firstCellInsets);
+        firstCellTopRightLeftBorder = new Border(bs);
         
         updateParentRing();
         updatePlaceHolder();

@@ -361,8 +361,8 @@
     -fx-text-fill: -sb-content-text;
 }
 .theme-presets.SBKIT-hierarchy-panel .hierarchy-first-cell {
-    -fx-padding: 4 0 0 1; 
-    -fx-background-insets: 4 0 0 0;
+/*    -fx-padding: 4 0 0 1; 
+    -fx-background-insets: 4 0 0 0;*/
 }
 
 /* Selected rows */
