@@ -27,6 +27,12 @@ package com.sun.glass.ui.monocle;
 
 import com.sun.glass.utils.NativeLibLoader;
 
+/**
+ * X provides access to Xlib function calls. Except where noted, each
+ * method in the X class corresponds to exactly one Xlib call taking
+ * parameters in the same order and returning the same result as the
+ * corresponding C function.
+ */
 class X {
 
     static {
@@ -66,6 +72,10 @@ class X {
 
     static final long CurrentTime = 0l;
 
+    /**
+     * XSetWindowAttributes wraps the C structure of the same name, defined in
+     * Xlib.h
+     */
     static class XSetWindowAttributes extends C.Structure {
         @Override
         native int sizeof();
@@ -74,6 +84,10 @@ class X {
         static native void setOverrideRedirect(long p, boolean override);
     }
 
+    /**
+     * XEvent wraps the C structure of the same name, defined in
+     * Xlib.h
+     */
     static class XEvent extends C.Structure {
         XEvent(long p) {
             super(p);
@@ -88,14 +102,24 @@ class X {
         static native void setWindow(long p, long window);
     }
 
+    /**
+     * XButtonEvent wraps the C structure of the same name, defined in
+     * Xlib.h
+     */
     static class XButtonEvent extends XEvent {
+        /** Creates an XButtonEvent from an existing XEvent */
         XButtonEvent(XEvent event) {
             super(event.p);
         }
         static native int getButton(long p);
     }
 
+    /**
+     * XMotionEvent wraps the C structure of the same name, defined in
+     * Xlib.h
+     */
     static class XMotionEvent extends XEvent {
+        /** Creates an XMotionEvent from an existing XEvent */
         XMotionEvent(XEvent event) {
             super(event.p);
         }
@@ -103,7 +127,12 @@ class X {
         static native int getY(long p);
     }
 
+    /**
+     * XClientMessageEvent wraps the C structure of the same name, defined in
+     * Xlib.h
+     */
     static class XClientMessageEvent extends XEvent {
+        /** Creates an XClientMessageEvent from an existing XEvent */
         XClientMessageEvent(XEvent event) {
             super(event.p);
         }
@@ -112,6 +141,9 @@ class X {
         static native void setDataLong(long p, int index, long element);
     }
 
+    /**
+     * XDisplay wraps the C structure Display.
+     */
     static class XDisplay extends C.Structure {
         XDisplay(long p) {
             super(p);
