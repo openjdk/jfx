@@ -27,6 +27,10 @@ package com.sun.glass.ui.monocle;
 
 import com.sun.glass.ui.Size;
 
+/**
+ * Provides an implementation of NativeCursor that does nothing and does not
+ * show a cursor on the screen.
+ */
 class NullCursor extends NativeCursor {
 
     @Override

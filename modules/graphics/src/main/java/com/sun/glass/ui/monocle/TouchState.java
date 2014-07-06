@@ -25,15 +25,35 @@
 
 package com.sun.glass.ui.monocle;
 
+import org.eclipse.swt.internal.cocoa.id;
+
 import java.util.Arrays;
 import java.util.Comparator;
 
+/**
+ * TouchState is a snapshot of touch points and their coordinates.
+ * TouchState is used both to store the current state of touch input and to
+ * describe changes to that state.
+ *
+ * A TouchState contains a number of Points. Each point has a unique ID,
+ * which is either assigned by a touch driver, or by JavaFX's input
+ * processing code. One touch point is defined as the primary touch point; it
+ * is this touch point's coordinates that are used to determine the
+ * coordinates of synthesized mouse events.
+ */
 class TouchState {
 
+    /** Describes a single touch point */
     static class Point {
         int id;
         int x;
         int y;
+
+        /**
+         * Copies a touch point's data to a target Point
+         *
+         * @param target the Point object to which to copy this object's data
+         */
         void copyTo(Point target) {
             target.id = id;
             target.x = x;
@@ -77,6 +97,13 @@ class TouchState {
         return window;
     }
 
+    /**
+     * Returns the nth point in the toich point list, for index n
+     *
+     * @param index The index of the point point to return. index should be less
+     *              than the value returned by getPointCount().
+     * @return A touch point.
+     */
     Point getPoint(int index) {
         return points[index];
     }
@@ -94,10 +121,12 @@ class TouchState {
         return null;
     }
 
+    /** Returns the touch point ID of the primary point. */
     int getPrimaryID() {
         return primaryID;
     }
 
+    /** Updates the primary point ID */
     void assignPrimaryID() {
         if (pointCount == 0) {
             primaryID = -1;
@@ -116,14 +145,29 @@ class TouchState {
         }
     }
 
+    /** Returns the number of touch points pressed.
+     *
+     * @return the number of touch points
+     */
     int getPointCount() {
         return pointCount;
     }
 
+    /** Removes all touch points from this state. */
     void clear() {
         pointCount = 0;
     }
 
+    /** Adds a Point to this state object.
+     *
+     * @param p the Point describing the data to add, or null if no data is
+     *          available yet for this point. p is not modified,
+     *          but its contents are copied to the object describing the new
+     *          Point.
+     * @return the Point with the data for the new touch point. The fields of
+     * this Point may be modified directly to change the data for the new
+     * touch point.
+     */
     Point addPoint(Point p) {
         if (points.length == pointCount) {
             points = Arrays.copyOf(points, points.length * 2);
@@ -137,6 +181,10 @@ class TouchState {
         return points[pointCount++];
     }
 
+    /** Removes the point with the given ID
+     *
+     * @param id The ID of the touch point which is to be removed.
+     */
     void removePointForID(int id) {
         for (int i = 0; i < pointCount; i++) {
             if (points[i].id == id) {
@@ -149,6 +197,12 @@ class TouchState {
         }
     }
 
+    /** Replaces the touch point data at the given index with the given touch
+     *    point data
+     *
+     * @param index the index at which to change the touch point data
+     * @param p the data to copy to the given index.
+     */
     void setPoint(int index, Point p) {
         if (index >= pointCount) {
             throw new IndexOutOfBoundsException();
@@ -156,6 +210,10 @@ class TouchState {
         p.copyTo(points[index]);
     }
 
+    /** Copies the contents of this state object to another.
+     *
+     * @param target The TouchState to which to copy this state's data.
+     */
     void copyTo(TouchState target) {
         target.clear();
         for (int i = 0; i < pointCount; i++) {
@@ -176,6 +234,10 @@ class TouchState {
         return sb.toString();
     }
 
+    /**
+     * Modifies the ordering touch points in this state object so that the
+     * points are sorted in increasing order of ID.
+     */
     void sortPointsByID() {
         Arrays.sort(points, 0, pointCount, pointIdComparator);
     }

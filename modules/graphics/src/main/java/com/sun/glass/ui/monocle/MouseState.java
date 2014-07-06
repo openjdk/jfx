@@ -28,6 +28,11 @@ package com.sun.glass.ui.monocle;
 import com.sun.glass.events.KeyEvent;
 import com.sun.glass.events.MouseEvent;
 
+/**
+ * MouseState is a snapshot of mouse coordinates and which buttons are pressed.
+ * MouseState is used both to store the current state of mouse input and to
+ * describe changes to that state.
+ */
 class MouseState {
 
     static final int WHEEL_NONE = 0;
@@ -73,7 +78,14 @@ class MouseState {
         buttonsPressed.removeInt(button);
     }
 
-    /** Returns the Glass window on which this event state is located . */
+    /** Returns the Glass window on which the coordinates of this state are located.
+     * @param recalculateCache true if the cached value for the target window
+     *                         should be recalculated; false if the cached
+     *                         value should be used to determine the result
+     *                         of this method.
+     * @return the MonocleWindow at the top of the stack at the coordinates
+     * described by this state object.
+     */
     MonocleWindow getWindow(boolean recalculateCache) {
         if (window == null || recalculateCache) {
             window = (MonocleWindow)
@@ -108,6 +120,10 @@ class MouseState {
         return modifiers;
     }
 
+    /** Copies the contents of this state object to another.
+     *
+     * @param target The MouseState to which to copy this state's data.
+     */
     void copyTo(MouseState target) {
         target.x = x;
         target.y = y;

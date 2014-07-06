@@ -48,10 +48,19 @@ class KeyInput {
         return instance;
     }
 
+    /** Copies the current state into the KeyState provided.
+     *
+     * @param result target into which to copy the key state
+     */
     void getState(KeyState result) {
         state.copyTo(result);
     }
 
+    /** Called from the input processor to update the key state and send
+     * key events.
+     *
+     * @param newState The updated key state
+     */
     void setState(KeyState newState) {
         if (MonocleSettings.settings.traceEvents) {
             MonocleTrace.traceEvent("Set %s", newState);

@@ -31,6 +31,10 @@ import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
+/**
+ * Provides an implementation of NativeCursor that overlays a cursor image on
+ * top of a software-rendered framebuffer.
+ */
 class SoftwareCursor extends NativeCursor {
 
     private ByteBuffer cursorBuffer;

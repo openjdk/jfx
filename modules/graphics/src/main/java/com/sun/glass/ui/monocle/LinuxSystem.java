@@ -30,11 +30,27 @@ import com.sun.glass.utils.NativeLibLoader;
 import java.nio.ByteBuffer;
 import java.security.Permission;
 
+/**
+ * LinuxSystem provides access to Linux system calls. Except where noted, each
+ * method in LinuxSystem corresponds to exactly one system call taking
+ * parameters in the same order and returning the same result as the
+ * corresponding C function.
+ *
+ * LinuxSystem is a singleton. Its instance is obtained by calling
+ * LinuxSystem.getLinuxSystem().
+ */
 class LinuxSystem {
     private static Permission permission = new RuntimePermission("loadLibrary.*");
 
     private static LinuxSystem instance = new LinuxSystem();
 
+    /**
+     * Obtains the single instance of LinuxSystem. Calling this method requires
+     * the RuntimePermission "loadLibrary.*".
+     *
+     * loadLibrary() must be called on the LinuxSystem instance before any
+     * system calls can be made using it.
+     */
     static LinuxSystem getLinuxSystem() {
         checkPermissions();
         return instance;
@@ -50,6 +66,12 @@ class LinuxSystem {
     private LinuxSystem() {
     }
 
+    /**
+     * Loads native libraries required to make system calls using LinuxSystem
+     * methods. This method must be called before any other instance methods of
+     * LinuxSystem. If this method is called multiple times, it has no effect
+     * after the first call.
+     */
     void loadLibrary() {
         NativeLibLoader.loadLibrary("glass_monocle");
     }
@@ -69,21 +91,84 @@ class LinuxSystem {
     // unistd.h
     native int close(long fd);
     native long lseek(long fd, long offset, int whence);
+
+    /**
+     * Calls the "write" function defined in unistd.h. The parameters have
+     * the same meaning as in the "write" C system call,
+     * except that a ByteBuffer with a position and limit are used for the
+     * source data. The position and limit set on the ByteBuffer are ignored;
+     * the position and limit provided as method parameters are used instead.
+     * @param fd The file descriptor to which to write
+     * @param buf The buffer from which to write
+     * @param position The index in buf of the first byte to write
+     * @param limit The index in buf up to which to write
+     * @return The number of bytes written, or -1 on failure
+     */
     native long write(long fd, ByteBuffer buf, int position, int limit);
+
+    /**
+     * Calls the "read" function defined in unistd.h. The parameters have
+     * the same meaning as in the "read" C system call,
+     * except that a ByteBuffer with a position and limit are used for the
+     * data sink. The position and limit set on the ByteBuffer are ignored;
+     * the position and limit provided as method parameters are used instead.
+     * @param fd The file descriptor from which to read
+     * @param buf The buffer to which to write
+     * @param position The index in buf to which to being reading data
+     * @param limit The index in buf up to which to read data
+     * @return The number of bytes read, or -1 on failure
+     */
     native long read(long fd, ByteBuffer buf, int position, int limit);
 
     static final int SEEK_SET = 0;
 
     // input.h
 
+    /**
+     * InputAbsInfo wraps the C structure input_absinfo, defined in
+     * linux/input.h
+     */
     static class InputAbsInfo extends C.Structure {
+        /**
+         * @return the size of the C struct input_absinfo
+         */
         @Override
         native int sizeof();
+
+        /**
+         * @param p a pointer to a C struct of type input_absinfo
+         * @return the "value" field of the structure pointed to by p
+         */
         static native int getValue(long p);
+
+        /**
+         * @param p a pointer to a C struct of type input_absinfo
+         * @return the "minimum" field of the structure pointed to by p
+         */
         static native int getMinimum(long p);
+
+        /**
+         * @param p a pointer to a C struct of type input_absinfo
+         * @return the "maximum" field of the structure pointed to by p
+         */
         static native int getMaximum(long p);
+
+        /**
+         * @param p a pointer to a C struct of type input_absinfo
+         * @return the "fuzz" field of the structure pointed to by p
+         */
         static native int getFuzz(long p);
+
+        /**
+         * @param p a pointer to a C struct of type input_absinfo
+         * @return the "flat" field of the structure pointed to by p
+         */
         static native int getFlat(long p);
+
+        /**
+         * @param p a pointer to a C struct of type input_absinfo
+         * @return the "resolution" field of the structure pointed to by p
+         */
         static native int getResolution(long p);
     }
 
@@ -100,6 +185,10 @@ class LinuxSystem {
     static final int FB_ACTIVATE_NOW = 0;
     static final int FB_ACTIVATE_VBL = 16;
 
+    /**
+     * FbVarScreenInfo wraps the C structure fb_var_screeninfo, defined in
+     * linux/fb.h
+     */
     static class FbVarScreenInfo extends C.Structure {
         FbVarScreenInfo() {
             checkPermissions();
@@ -168,6 +257,9 @@ class LinuxSystem {
     // string.h
     native long memcpy(long destAddr, long srcAddr, long length);
 
+    /** Returns a string description of the last error reported by a system call
+     * @return a String describing the error
+     */
     String getErrorMessage() {
         return strerror(errno());
     }

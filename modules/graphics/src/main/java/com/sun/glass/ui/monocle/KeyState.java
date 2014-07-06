@@ -27,33 +27,49 @@ package com.sun.glass.ui.monocle;
 
 import com.sun.glass.events.KeyEvent;
 
+/**
+ * KeyState is a snapshot of pressed keys
+ * KeyState is used both to store the current state of key input and to
+ * describe changes to that state.
+ */
 class KeyState {
 
     private IntSet keysPressed = new IntSet();
     private MonocleWindow window;
     private int modifiers;
 
+    /** Removes all pressed keys from this state object. */
     void clear() {
         keysPressed.clear();
         modifiers = 0;
     }
 
+    /** Adds a key to the set of pressed keys. */
     void pressKey(int virtualKeyCode) {
         keysPressed.addInt(virtualKeyCode);
         modifiers |= getModifier(virtualKeyCode);
     }
 
+    /** Removes a key from the set of pressed keys. */
     void releaseKey(int virtualKeyCode) {
         keysPressed.removeInt(virtualKeyCode);
         modifiers &= ~getModifier(virtualKeyCode);
     }
 
+    /** Copies the contents of this state object to another.
+     *
+     * @param target The KeyState to which to copy this state's data.
+     */
     void copyTo(KeyState target) {
         keysPressed.copyTo(target.keysPressed);
         target.window = window;
         target.modifiers = modifiers;
     }
 
+    /** Returns the set of pressed key codes
+     *
+     * @return an IntSet containing the key codes of pressed keys
+     */
     IntSet getKeysPressed() {
         return keysPressed;
     }
@@ -78,6 +94,11 @@ class KeyState {
         }
     }
 
+    /** Returns a mask of modifiers defined in KeyEvent for the keys pressed
+     * in this state.
+     *
+     * @return a mask of KeyEvent modifiers
+     */
     int getModifiers() {
         return modifiers;
     }

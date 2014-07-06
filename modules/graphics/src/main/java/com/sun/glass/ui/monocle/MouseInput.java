@@ -33,7 +33,7 @@ import java.util.BitSet;
 
 /**
  * Processes mouse input events based on changes to mouse state. Not
- * thread-safe.
+ * thread-safe and can only be used on the JavaFX application thread.
  */
 class MouseInput {
     private static MouseInput instance = new MouseInput();
@@ -58,10 +58,25 @@ class MouseInput {
         return instance;
     }
 
+    /** Retrieves the current state of mouse buttons and of the cursor.
+     *
+     * @param result a MouseState to which to copy data on the current mouse
+     *               buttons and coordinates.
+     */
     void getState(MouseState result) {
         state.copyTo(result);
     }
 
+    /**
+     * Sets a new state for mouse buttons and coordinates, generating input
+     * events where appropriate.
+     *
+     * @param newState    the new state
+     * @param synthesized true if this state change is synthesized from a change
+     *                    in touch state; false if this state change comes from
+     *                    an actual relative pointing devices or from the Glass
+     *                    robot.
+     */
     void setState(MouseState newState, boolean synthesized) {
         if (MonocleSettings.settings.traceEvents) {
             MonocleTrace.traceEvent("Set %s", newState);
