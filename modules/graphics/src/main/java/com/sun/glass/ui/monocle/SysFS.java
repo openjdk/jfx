@@ -105,7 +105,9 @@ class SysFS {
                 } catch (IOException e) {
                     System.err.println("Udev: Failed to write to " + uevent);
                     System.err.println("      Check that you have permission to access input devices");
-                    e.printStackTrace();
+                    if (!e.getMessage().contains("Permission denied")) {
+                        e.printStackTrace();
+                    }
                 }
             }
         }
