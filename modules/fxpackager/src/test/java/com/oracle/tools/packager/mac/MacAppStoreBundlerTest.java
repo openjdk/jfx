@@ -49,6 +49,8 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static com.oracle.tools.packager.StandardBundlerParam.*;
 import static com.oracle.tools.packager.mac.MacAppBundler.*;
@@ -184,9 +186,28 @@ public class MacAppStoreBundlerTest {
 
         File result = bundler.execute(bundleParams, new File(workDir, "smoke"));
         System.err.println("Bundle at - " + result);
+
+        checkFiles(result);
+    }
+
+    private void checkFiles(File result) throws IOException {
         assertNotNull(result);
         assertTrue(result.exists());
         assertTrue(result.length() > MIN_SIZE);
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        PrintStream printStream = new PrintStream(baos, true);
+        IOUtils.exec(
+                new ProcessBuilder("pkgutil", "--payload-files", result.getCanonicalPath()),
+                false, false, printStream);
+
+        String output = baos.toString();
+
+        Pattern jreInfoPListPattern = Pattern.compile("/PlugIns/[^/]+/Contents/Info\\.plist");
+        Matcher matcher = jreInfoPListPattern.matcher(output);
+        assertTrue("Insure that info.plist is packed in for embedded jre", matcher.find());
+
+        assertFalse("Insure JFX Media isn't packed in", output.contains("/libjfxmedia.dylib"));
     }
 
     @Test
@@ -251,8 +272,7 @@ public class MacAppStoreBundlerTest {
 
         File result = bundler.execute(bundleParams, new File(workDir, "everything"));
         System.err.println("Bundle at - " + result);
-        assertNotNull(result);
-        assertTrue(result.exists());
-        assertTrue(result.length() > MIN_SIZE);
+
+        checkFiles(result);
     }
 }
