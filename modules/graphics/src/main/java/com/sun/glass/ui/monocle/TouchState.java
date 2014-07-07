@@ -25,8 +25,6 @@
 
 package com.sun.glass.ui.monocle;
 
-import org.eclipse.swt.internal.cocoa.id;
-
 import java.util.Arrays;
 import java.util.Comparator;
 
