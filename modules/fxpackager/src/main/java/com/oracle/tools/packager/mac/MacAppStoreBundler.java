@@ -325,6 +325,10 @@ public class MacAppStoreBundler extends MacBaseInstallerBundler {
             //run basic validation to ensure requirements are met
 
             //run basic validation to ensure requirements are met
+
+            //we need to change the jdk/jre stripping to strip gstreamer
+            params.put(MacAppBundler.MAC_JDK_RULES.getID(), MAC_APP_STORE_JDK_RULES);
+
             //we are not interested in return code, only possible exception
             validateAppImageAndBundeler(params);
 
