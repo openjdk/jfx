@@ -42,6 +42,7 @@ public class ES2Pipeline extends GraphicsPipeline {
     public static final GLPixelFormat.Attributes
             pixelFormatAttributes = new GLPixelFormat.Attributes();
     static final boolean antiAliasingSupported;
+    static final boolean npotSupported;
     private static boolean es2Enabled;
     private static boolean isEglfb = false;
 
@@ -87,9 +88,11 @@ public class ES2Pipeline extends GraphicsPipeline {
             theInstance = new ES2Pipeline();
             factories = new ES2ResourceFactory[glFactory.getAdapterCount()];
             antiAliasingSupported = glFactory.isGLExtensionSupported("GL_ARB_multisample");
+            npotSupported = glFactory.isNPOTSupported();
         } else {
             theInstance = null;
             antiAliasingSupported = false;
+            npotSupported = false;
         }
 
     }
@@ -198,11 +201,11 @@ public class ES2Pipeline extends GraphicsPipeline {
 
     @Override
     public boolean is3DSupported() {
-        // It is okay to just returns true if we plan to support 3D on all
+        // It is okay to just returns npotSupported if we plan to support 3D on all
         // ES2 platforms that are PS 3 capable. However we are not ready to
         // support 3D on the embedded platform. Some of this platforms may be
         // PS 3 capable but have other limitations such as NPOT. 
-        return PlatformUtil.isEmbedded() ? PlatformUtil.isEmbedded3DEnabled() : true;
+        return PlatformUtil.isEmbedded() ? PlatformUtil.isEmbedded3DEnabled() : npotSupported;
     }
 
     @Override
