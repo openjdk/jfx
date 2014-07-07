@@ -30,7 +30,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
@@ -95,12 +94,7 @@ public final class KeyboardShortcutsHandler extends BasicEventDispatcher {
 
     public ObservableMap<KeyCombination, Runnable> getAccelerators() {
         if (accelerators == null) {
-            // Note: accelerators are iterated and the Runnable is executed during the iteration.
-            // Since the Runnable can manipulate the accelerator list, we need to avoid ConcurrentModificationException in that case
-            // Copying the whole list on every traversal (which is on every key press/release) would be constly, so
-            // we use ConcurrentHashMap, which has iterators with weak consitency (it may or may not contain the changes done during the iteration)
-            // instead of fail-fast behavior. This does not mean accelerators is really concurrent though, the wrapper still does not support multi-threaded access.
-            accelerators = new ObservableMapWrapper<>(new ConcurrentHashMap<>());
+            accelerators = new ObservableMapWrapper<KeyCombination, Runnable>(new HashMap<KeyCombination, Runnable>());
         }
         return accelerators;
     }
