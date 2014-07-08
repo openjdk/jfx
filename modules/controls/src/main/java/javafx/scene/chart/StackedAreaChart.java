@@ -135,14 +135,21 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
     }
 
     /**
-     * Construct a new Area Chart with the given axis and data
+     * Construct a new Area Chart with the given axis and data.
+     * <p>
+     * Note: yAxis must be a ValueAxis, otherwise {@code IllegalArgumentException} is thrown.
      *
      * @param xAxis The x axis to use
      * @param yAxis The y axis to use
      * @param data The data to use, this is the actual list used so any changes to it will be reflected in the chart
+     *
+     * @throws java.lang.IllegalArgumentException if yAxis is not a ValueAxis
      */
     public StackedAreaChart(@NamedArg("xAxis") Axis<X> xAxis, @NamedArg("yAxis") Axis<Y> yAxis, @NamedArg("data") ObservableList<Series<X,Y>> data) {
         super(xAxis,yAxis);
+        if (!(yAxis instanceof ValueAxis)) {
+            throw new IllegalArgumentException("Axis type incorrect, yAxis must be of ValueAxis type.");
+        }
         setLegend(legend);
         setData(data);
     }
@@ -530,7 +537,7 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
             // now copy actual data of the current series.
             for(Data<X, Y> item = series.begin; item != null; item = item.next) {
                 DataPointInfo<X, Y> itemInfo = new DataPointInfo<>(item, item.getXValue(),
-                        (Number)item.getYValue(), PartOf.CURRENT);
+                        item.getYValue(), PartOf.CURRENT);
                 aggregateData.add(itemInfo);
             }
             DoubleProperty seriesYAnimMultiplier = seriesYMultiplierMap.get(series);
@@ -542,7 +549,7 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
             // Sort data points from prev and current series
             sortAggregateList(aggregateData);
 
-            ValueAxis<Number> yAxis = (ValueAxis<Number>)getYAxis();
+            Axis<Y> yAxis = getYAxis();
             Axis<X> xAxis = getXAxis();
             boolean firstCurrent = false;
             boolean lastCurrent = false;
@@ -550,10 +557,11 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
             int lastCurrentIndex = findPreviousCurrent(aggregateData, aggregateData.size());
             double basePosition = yAxis.getZeroPosition();
             if (Double.isNaN(basePosition)) {
-                if (yAxis.getLowerBound() > 0) {
-                    basePosition = yAxis.getDisplayPosition(yAxis.getLowerBound());
+                ValueAxis<Number> valueYAxis = (ValueAxis<Number>) yAxis;
+                if (valueYAxis.getLowerBound() > 0) {
+                    basePosition = valueYAxis.getDisplayPosition(valueYAxis.getLowerBound());
                 } else {
-                    basePosition = yAxis.getDisplayPosition(yAxis.getUpperBound());
+                    basePosition = valueYAxis.getDisplayPosition(valueYAxis.getUpperBound());
                 }
             }
             // Iterate over the aggregate data : this process accumulates data points
@@ -576,21 +584,21 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
                             item = new Data(dataInfo.x, 0);
                             x = xAxis.getDisplayPosition(item.getCurrentX());
                             y = basePosition;
-                            addDropDown(currentSeriesData, item, item.getXValue(), (Number) item.getYValue(), x, y);
+                            addDropDown(currentSeriesData, item, item.getXValue(), item.getYValue(), x, y);
                         } 
                         // And add current point.
                         item = dataInfo.dataItem;
                         x = xAxis.getDisplayPosition(item.getCurrentX());
                         y = yAxis.getDisplayPosition(
-                                yAxis.toRealValue(yAxis.toNumericValue((Number)item.getCurrentY()) * seriesYAnimMultiplier.getValue()));
-                        addPoint(currentSeriesData, item, item.getXValue(), (Number) item.getYValue(), x, y,
+                                yAxis.toRealValue(yAxis.toNumericValue(item.getCurrentY()) * seriesYAnimMultiplier.getValue()));
+                        addPoint(currentSeriesData, item, item.getXValue(), item.getYValue(), x, y,
                                 PartOf.CURRENT, false, (firstCurrent) ? false : true);
                         if (dataIndex == lastCurrentIndex) {
                             // need to add drop down point
                             item = new Data(dataInfo.x, 0);
                             x = xAxis.getDisplayPosition(item.getCurrentX());
                             y = basePosition;
-                            addDropDown(currentSeriesData, item, item.getXValue(), (Number) item.getYValue(), x, y);
+                            addDropDown(currentSeriesData, item, item.getXValue(), item.getYValue(), x, y);
                         }
                     } else {
                         prevPoint = aggregateData.get(pIndex);
@@ -604,10 +612,10 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
                             } 
                             if (prevPoint.x.equals(dataInfo.x)) { // simply add
                                 x = xAxis.getDisplayPosition(item.getCurrentX());
-                                final double yv = yAxis.toNumericValue((Number) item.getCurrentY()) + yAxis.toNumericValue(prevPoint.y);
+                                final double yv = yAxis.toNumericValue(item.getCurrentY()) + yAxis.toNumericValue(prevPoint.y);
                                 y = yAxis.getDisplayPosition(
                                         yAxis.toRealValue(yv * seriesYAnimMultiplier.getValue()));
-                                addPoint(currentSeriesData, item, dataInfo.x, yv, x, y, PartOf.CURRENT, false,
+                                addPoint(currentSeriesData, item, dataInfo.x, yAxis.toRealValue(yv), x, y, PartOf.CURRENT, false,
                                         (firstCurrent) ? false : true);
                             }
                             if (lastCurrent) {
@@ -618,7 +626,7 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
                             nextPoint = (nIndex == -1) ? null : aggregateData.get(nIndex);
                             prevPoint = (pIndex == -1) ? null : aggregateData.get(pIndex);
                             x = xAxis.getDisplayPosition(item.getCurrentX());
-                            final double yValue = yAxis.toNumericValue((Number) item.getCurrentY());
+                            final double yValue = yAxis.toNumericValue(item.getCurrentY());
                             if (prevPoint != null && nextPoint != null) {
                                 double displayY = interpolate(prevPoint.displayX,
                                         prevPoint.displayY, nextPoint.displayX, nextPoint.displayY, x);
@@ -634,7 +642,7 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
                                 }
                                 y = yAxis.getDisplayPosition(yAxis.toRealValue((yValue + dataY) * seriesYAnimMultiplier.getValue()));
                                 // Add the current point
-                                addPoint(currentSeriesData, item, dataInfo.x, yValue + dataY, x, y, PartOf.CURRENT, false,
+                                addPoint(currentSeriesData, item, dataInfo.x, yAxis.toRealValue(yValue + dataY), x, y, PartOf.CURRENT, false,
                                         (firstCurrent) ? false : true);
                                 if (dataIndex == lastCurrentIndex) {
                                     // add drop down point
@@ -681,7 +689,7 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
                                 final double yv = yAxis.toNumericValue(dataInfo.y) + dataY;
                                 y = yAxis.getDisplayPosition(
                                         yAxis.toRealValue(yv * seriesYAnimMultiplier.getValue()));
-                                addPoint(currentSeriesData, new Data(dataInfo.x, dataY), dataInfo.x, yv, x, y, PartOf.CURRENT, true, true);
+                                addPoint(currentSeriesData, new Data(dataInfo.x, dataY), dataInfo.x, yAxis.toRealValue(yv), x, y, PartOf.CURRENT, true, true);
                             }
                         }
                     }
@@ -726,13 +734,13 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
         }  // end of out for loop
      }
 
-    private void addDropDown(ArrayList<DataPointInfo<X, Y>> currentSeriesData, Data<X, Y> item, X xValue, Number yValue, double x, double y) {
+    private void addDropDown(ArrayList<DataPointInfo<X, Y>> currentSeriesData, Data<X, Y> item, X xValue, Y yValue, double x, double y) {
         DataPointInfo<X, Y> dropDownDataPoint = new DataPointInfo<>(true);
         dropDownDataPoint.setValues(item, xValue, yValue, x, y, PartOf.CURRENT, true, false);
         currentSeriesData.add(dropDownDataPoint);
     }
 
-    private void addPoint(ArrayList<DataPointInfo<X, Y>> currentSeriesData, Data<X, Y> item, X xValue, Number yValue, double x, double y, PartOf partof,
+    private void addPoint(ArrayList<DataPointInfo<X, Y>> currentSeriesData, Data<X, Y> item, X xValue, Y yValue, double x, double y, PartOf partof,
                           boolean symbol, boolean lineTo) {
         DataPointInfo<X, Y> currentDataPoint = new DataPointInfo<>();
         currentDataPoint.setValues(item, xValue, yValue, x, y, partof, symbol, lineTo);
@@ -837,7 +845,7 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
      */
     final static class DataPointInfo<X, Y> {
         X x;
-        Number y;   
+        Y y;
         double displayX;
         double displayY;
         Data<X,Y> dataItem;
@@ -849,7 +857,7 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
         //----- Constructors --------------------
         DataPointInfo() {}
 
-        DataPointInfo(Data<X,Y> item, X x, Number y, PartOf partOf) {
+        DataPointInfo(Data<X,Y> item, X x, Y y, PartOf partOf) {
             this.dataItem = item;
             this.x = x;
             this.y = y;
@@ -860,7 +868,7 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
             this.dropDown = dropDown;
         }
         
-        void setValues(Data<X,Y> item, X x, Number y, double dx, double dy, 
+        void setValues(Data<X,Y> item, X x, Y y, double dx, double dy,
                         PartOf partOf, boolean skipSymbol, boolean lineTo) {
             this.dataItem = item;
             this.x = x;
@@ -876,7 +884,7 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
             return x;
         }
         
-        public final Number getY() {
+        public final Y getY() {
             return y;
         }
     }
