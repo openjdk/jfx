@@ -169,12 +169,12 @@ class FTFontFile extends PrismFontFile {
              * output is returned by Freetype. For example, a FT_PIXEL_MODE_MONO can be returned
              * if the font contains a bitmap for the given glyph code.
              */
-            width = height = 0;
             if (PrismFontFactory.debugFonts) {
                 System.err.println("Unexpected pixel mode: " + pixelMode +
                                    " glyph code " + glyphCode +
                                    " load falgs " + flags);
             }
+            return;
         }
         byte[] buffer;
         if (width != 0 && height != 0) {
