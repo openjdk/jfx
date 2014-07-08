@@ -71,6 +71,18 @@ jobject createJavaScreen(JNIEnv *env, NSScreen* screen)
 
         NSRect primaryFrame = [[[NSScreen screens] objectAtIndex:0] frame];
 
+        if (floor(NSAppKitVersionNumber) > 1265) // NSAppKitVersionNumber10_9
+        {
+            // On MacOS X 10.10 beta the objects returned by [NSScreen screens] are released
+            // without any notification. This means JavaFX must retain its own references to
+            // avoid crashes when using them later on.
+            // Note, this fix is deliberately allowing the objects to leak. This is the
+            // safest and least intrusive fix appropriate for a maintenance release.
+            // Screens are usually create and released when an external monitor is added
+            // or removed, therefore the memory leaked should never grow too much.
+            [screen retain];
+        }
+
         jscreen = (jobject)(*env)->NewObject(env, jScreenClass, screenInit,
                                              ptr_to_jlong(screen),
 
