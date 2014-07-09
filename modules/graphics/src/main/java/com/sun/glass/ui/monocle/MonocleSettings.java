@@ -36,8 +36,8 @@ class MonocleSettings {
     final boolean tracePlatformConfig;
 
     private MonocleSettings() {
-        traceEvents = Boolean.getBoolean("monocle.input.traceEvents");
         traceEventsVerbose = Boolean.getBoolean("monocle.input.traceEvents.verbose");
+        traceEvents = traceEventsVerbose || Boolean.getBoolean("monocle.input.traceEvents");
         tracePlatformConfig = Boolean.getBoolean("monocle.platform.traceConfig");
     }
 
