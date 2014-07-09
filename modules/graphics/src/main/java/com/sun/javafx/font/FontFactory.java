@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,6 +28,8 @@ package com.sun.javafx.font;
 import java.io.InputStream;
 
 public interface FontFactory {
+    public static final String DEFAULT_FULLNAME = "System Regular";
+
     public PGFont createFont(String name, float size);
     public PGFont createFont(String family,
                              boolean bold, boolean italic, float size);
@@ -49,6 +51,11 @@ public interface FontFactory {
     public String[] getFontFamilyNames();
     public String[] getFontFullNames();
     public String[] getFontFullNames(String family);
+
+    /*
+     * Indicates permission to load an embedded font
+     */
+    public boolean hasPermission();
 
     /**
      * Loads a font from the specified input stream.
