@@ -80,6 +80,25 @@ class GetEvent {
                     System.out.println("  5-way=" + device.is5Way());
                     System.out.println("  fullKeyboard=" + device.isFullKeyboard());
                     System.out.println("  PRODUCT=" + device.getProduct());
+                    for (short axis = 0; axis < LinuxInput.ABS_MAX; axis++) {
+                        LinuxAbsoluteInputCapabilities caps =
+                                device.getAbsoluteInputCapabilities(axis);
+                        if (caps != null) {
+                            String axisName = LinuxInput.codeToString("EV_ABS", axis);
+                            System.out.format("  ABSVAL %s %d\n",
+                                              axisName, caps.getValue());
+                            System.out.format("  ABSMIN %s %d\n",
+                                              axisName, caps.getMinimum());
+                            System.out.format("  ABSMAX %s %d\n",
+                                              axisName, caps.getMaximum());
+                            System.out.format("  ABSFUZZ %s %d\n",
+                                              axisName, caps.getFuzz());
+                            System.out.format("  ABSFLAT %s %d\n",
+                                              axisName, caps.getFlat());
+                            System.out.format("  ABSRES %s %d\n",
+                                              axisName, caps.getResolution());
+                        }
+                    }
                     devices.add(sysPath);
                 } else if (action.equals("remove")) {
                     devices.remove(devPath);
