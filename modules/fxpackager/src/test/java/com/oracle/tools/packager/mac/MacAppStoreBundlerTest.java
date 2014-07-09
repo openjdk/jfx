@@ -226,6 +226,7 @@ public class MacAppStoreBundlerTest {
         bundleParams.put(MAC_CATEGORY.getID(), "public.app-category.developer-tools");
         bundleParams.put(MAC_CF_BUNDLE_IDENTIFIER.getID(), "com.example.everything.cf-bundle-identifier");
         bundleParams.put(MAC_CF_BUNDLE_NAME.getID(), "Everything CF Bundle Name");
+        bundleParams.put(MAC_CF_BUNDLE_VERSION.getID(), "8.2.0");
         bundleParams.put(MAC_RUNTIME.getID(), System.getProperty("java.home"));
         bundleParams.put(MAIN_CLASS.getID(), "hello.TestPackager");
         bundleParams.put(MAIN_JAR.getID(), "mainApp.jar");

@@ -122,6 +122,75 @@ public class MacAppBundlerTest {
         }
     }
 
+
+    @Test
+    public void testValidateVersion() {
+        MacAppBundler b = new MacAppBundler();
+        String validVersions[] = {"1", "255", "1.0", "1.0.0", "255.255.0", "255.255.6000"};
+        String invalidVersions[] = {null, "alpha", "1.0-alpha", "0.300", "-300", "1.-1", "1.1.-1"};
+
+        for(String v: validVersions) {
+            assertTrue("Expect to be valid ["+v+"]",
+                    MacAppBundler.validCFBundleVersion(v));
+            try {
+                Map<String, Object> params = new HashMap<>();
+                params.put(BUILD_ROOT.getID(), tmpBase);
+                params.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+
+                params.put(VERSION.getID(), v);
+                b.validate(params);
+            } catch (ConfigException ce) {
+                ce.printStackTrace();
+                assertTrue("Expect to be valid via '" + VERSION.getID() + "' ["+v+"]",
+                        false);
+            } catch (UnsupportedPlatformException ignore) {
+            }
+            try {
+                Map<String, Object> params = new HashMap<>();
+                params.put(BUILD_ROOT.getID(), tmpBase);
+                params.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+
+                params.put(MAC_CF_BUNDLE_VERSION.getID(), v);
+                b.validate(params);
+            } catch (ConfigException ce) {
+                assertTrue("Expect to be valid via '" + VERSION.getID() + "' ["+v+"]",
+                        false);
+            } catch (UnsupportedPlatformException ignore) {
+            }
+        }
+
+        for(String v: invalidVersions) {
+            assertFalse("Expect to be invalid ["+v+"]",
+                    MacAppBundler.validCFBundleVersion(v));
+            try {
+                Map<String, Object> params = new HashMap<>();
+                params.put(BUILD_ROOT.getID(), tmpBase);
+                params.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+
+                params.put(VERSION.getID(), v);
+                b.validate(params);
+                assertFalse("Invalid appVersion is not the mac.CFBundleVersion", MAC_CF_BUNDLE_VERSION.fetchFrom(params).equals(VERSION.fetchFrom(params)));
+            } catch (ConfigException ce) {
+                ce.printStackTrace();
+                assertTrue("Expect to be ignored when invalid via '" + VERSION.getID() + "' ["+v+"]",
+                        false);
+            } catch (UnsupportedPlatformException ignore) {
+            }
+            try {
+                Map<String, Object> params = new HashMap<>();
+                params.put(BUILD_ROOT.getID(), tmpBase);
+                params.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+
+                params.put(MAC_CF_BUNDLE_VERSION.getID(), v);
+                b.validate(params);
+                assertTrue("Expect to be invalid via '" + VERSION.getID() + "' ["+v+"]",
+                        false);
+            } catch (ConfigException | UnsupportedPlatformException ignore) {
+            }
+        }
+    }
+
+
     /**
      * See if smoke comes out
      */
@@ -262,6 +331,7 @@ public class MacAppBundlerTest {
         bundleParams.put(MAC_CATEGORY.getID(), "public.app-category.developer-tools");
         bundleParams.put(MAC_CF_BUNDLE_IDENTIFIER.getID(), "com.example.everything.cf-bundle-identifier");
         bundleParams.put(MAC_CF_BUNDLE_NAME.getID(), "Everything CF Bundle Name");
+        bundleParams.put(MAC_CF_BUNDLE_VERSION.getID(), "8.2.0");
         bundleParams.put(MAC_RUNTIME.getID(), System.getProperty("java.home"));
         bundleParams.put(MAIN_CLASS.getID(), "hello.TestPackager");
         bundleParams.put(MAIN_JAR.getID(), "mainApp.jar");

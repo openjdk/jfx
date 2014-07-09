@@ -38,6 +38,7 @@ import com.oracle.tools.packager.RelativeFileSet;
 import com.oracle.tools.packager.UnsupportedPlatformException;
 
 import java.io.*;
+import java.math.BigInteger;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.text.MessageFormat;
@@ -137,6 +138,22 @@ public class MacAppBundler extends AbstractBundler {
                     "mac.CFBundleIdentifier",
                     String.class,
                     IDENTIFIER::fetchFrom,
+                    (s, p) -> s);
+
+    public static final BundlerParamInfo<String> MAC_CF_BUNDLE_VERSION =
+            new StandardBundlerParam<>(
+                    I18N.getString("param.cfbundle-version.name"),
+                    I18N.getString("param.cfbundle-version.description"),
+                    "mac.CFBundleVersion",
+                    String.class,
+                    p -> {
+                        String s = VERSION.fetchFrom(p);
+                        if (validCFBundleVersion(s)) {
+                            return s;
+                        } else {
+                            return "100";
+                        }
+                    },
                     (s, p) -> s);
 
     public static final BundlerParamInfo<File> CONFIG_ROOT = new StandardBundlerParam<>(
@@ -294,6 +311,55 @@ public class MacAppBundler extends AbstractBundler {
         baseResourceLoader = MacResources.class;
     }
 
+    public static boolean validCFBundleVersion(String v) {
+        // CFBundleVersion (String - iOS, OS X) specifies the build version
+        // number of the bundle, which identifies an iteration (released or
+        // unreleased) of the bundle. The build version number should be a
+        // string comprised of three non-negative, period-separated integers
+        // with the first integer being greater than zero. The string should
+        // only contain numeric (0-9) and period (.) characters. Leading zeros
+        // are truncated from each integer and will be ignored (that is,
+        // 1.02.3 is equivalent to 1.2.3). This key is not localizable.
+
+        if (v == null) {
+            return false;
+        }
+
+        String p[] = v.split("\\.");
+        if (p.length > 3 || p.length < 1) {
+            Log.verbose(I18N.getString("message.version-string-too-many-components"));
+            return false;
+        }
+
+        try {
+            BigInteger n = new BigInteger(p[0]);
+            if (BigInteger.ONE.compareTo(n) > 0) {
+                Log.verbose(I18N.getString("message.version-string-first-number-not-zero"));
+                return false;
+            }
+            if (p.length > 1) {
+                n = new BigInteger(p[1]);
+                if (BigInteger.ZERO.compareTo(n) > 0) {
+                    Log.verbose(I18N.getString("message.version-string-no-negative-numbers"));
+                    return false;
+                }
+            }
+            if (p.length > 2) {
+                n = new BigInteger(p[2]);
+                if (BigInteger.ZERO.compareTo(n) > 0) {
+                    Log.verbose(I18N.getString("message.version-string-no-negative-numbers"));
+                    return false;
+                }
+            }
+        } catch (NumberFormatException ne) {
+            Log.verbose(I18N.getString("message.version-string-numbers-only"));
+            Log.verbose(ne);
+            return false;
+        }
+
+        return true;
+    }
+
     @Override
     public boolean validate(Map<String, ? super Object> params) throws UnsupportedPlatformException, ConfigException {
         try {
@@ -334,6 +400,15 @@ public class MacAppBundler extends AbstractBundler {
         if (USE_FX_PACKAGING.fetchFrom(p)) {
             testRuntime(MAC_RUNTIME.fetchFrom(p), new String[] {"Contents/Home/jre/lib/ext/jfxrt.jar", "Contents/Home/jre/lib/jfxrt.jar"});
         }
+
+        // validate short version
+        if (!validCFBundleVersion(MAC_CF_BUNDLE_VERSION.fetchFrom(p))) {
+            throw new ConfigException(
+                    I18N.getString("error.invalid-cfbundle-version"),
+                    I18N.getString("error.invalid-cfbundle-version.advice"));
+
+        }
+
 
         return true;
     }
@@ -564,6 +639,8 @@ public class MacAppBundler extends AbstractBundler {
         }
         data.put("DEPLOY_BUNDLE_SHORT_VERSION",
                 VERSION.fetchFrom(params) != null ? VERSION.fetchFrom(params) : "1.0.0");
+        data.put("DEPLOY_BUNDLE_CFBUNDLE_VERSION",
+                MAC_CF_BUNDLE_VERSION.fetchFrom(params) != null ? MAC_CF_BUNDLE_VERSION.fetchFrom(params) : "100");
         data.put("DEPLOY_BUNDLE_CATEGORY",
                 //TODO parameters should provide set of values for IDEs
                 MAC_CATEGORY.validatedFetchFrom(params));
@@ -677,6 +754,7 @@ public class MacAppBundler extends AbstractBundler {
                 MAC_CATEGORY,
                 MAC_CF_BUNDLE_IDENTIFIER,
                 MAC_CF_BUNDLE_NAME,
+                MAC_CF_BUNDLE_VERSION,
                 MAC_RUNTIME,
                 MAIN_CLASS,
                 MAIN_JAR,
