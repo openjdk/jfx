@@ -8936,7 +8936,7 @@ public abstract class Node implements EventTarget, Styleable {
 
             Node _parent = getParent();
             while (_parent != null) {
-                if (_parent.cssFlag == CssFlags.UPDATE) {
+                if (_parent.cssFlag == CssFlags.UPDATE || _parent.cssFlag == CssFlags.REAPPLY) {
                     topMost = _parent;
                 }
                 _parent = _parent.getParent();
