@@ -672,6 +672,10 @@ final public class StyleManager {
         for(Entry<Parent,CacheContainer> entry : cacheContainerMap.entrySet()) {
 
             CacheContainer container = entry.getValue();
+            if (container == null || container.cacheMap == null || container.cacheMap.isEmpty()) {
+                continue;
+            }
+
             List<List<String>> entriesToRemove = new ArrayList<>();
 
             for (Entry<List<String>, Map<Key,Cache>> cacheMapEntry : container.cacheMap.entrySet()) {
@@ -687,11 +691,6 @@ final public class StyleManager {
                     if (cacheEntry != null) {
                         cacheEntry.clear();
                     }
-                }
-
-                if (container.cacheMap.isEmpty()) {
-                    // TODO:
-                    System.out.println("container.cacheMap.isEmpty");
                 }
             }
         }
