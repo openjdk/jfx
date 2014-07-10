@@ -739,7 +739,7 @@ final class WinAccessible extends Accessible {
                 break;
             }
             case UIA_LocalizedControlTypePropertyId: {
-                String description = (String)getAttribute(DESCRIPTION);
+                String description = (String)getAttribute(ROLE_DESCRIPTION);
                 if (description != null) {
                     variant = new WinVariant();
                     variant.vt = WinVariant.VT_BSTR;

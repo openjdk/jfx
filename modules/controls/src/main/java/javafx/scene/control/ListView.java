@@ -313,6 +313,7 @@ public class ListView<T> extends Control {
      */
     public ListView(ObservableList<T> items) {
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
+        setRole(Role.LIST_VIEW);
 
         setItems(items);
 
@@ -1085,7 +1086,6 @@ public class ListView<T> extends Control {
     /** @treatAsPrivate */
     @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
         switch (attribute) {
-            case ROLE: return Role.LIST_VIEW;
             case ROW_COUNT: return getItems().size();
             case MULTIPLE_SELECTION: {
                 MultipleSelectionModel<T> sm = getSelectionModel();

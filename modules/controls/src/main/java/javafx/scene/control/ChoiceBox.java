@@ -100,6 +100,7 @@ public class ChoiceBox<T> extends Control {
      */
     public ChoiceBox(ObservableList<T> items) {
         getStyleClass().setAll("choice-box");
+        setRole(Role.COMBO_BOX);
         setItems(items);
         setSelectionModel(new ChoiceBoxSelectionModel<T>(this));
         
@@ -418,8 +419,10 @@ public class ChoiceBox<T> extends Control {
     @Override
     public Object accGetAttribute(Attribute attribute, Object... parameters) {
         switch(attribute) {
-            case ROLE: return Role.COMBO_BOX;
             case TITLE:
+                String accText = getAccessibleText();
+                if (accText != null && !accText.isEmpty()) return accText;
+
                 //let the skin first.
                 Object title = super.accGetAttribute(attribute, parameters);
                 if (title != null) return title;

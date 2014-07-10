@@ -104,6 +104,7 @@ public class ScrollPane extends Control {
      */
     public ScrollPane() {
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
+        setRole(Role.SCROLL_PANE);
         // focusTraversable is styleable through css. Calling setFocusTraversable
         // makes it look to css like the user set the value and css will not 
         // override. Initializing focusTraversable by calling applyStyle with
@@ -740,7 +741,6 @@ public class ScrollPane extends Control {
     /** @treatAsPrivate */
     @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
         switch (attribute) {
-            case ROLE: return Role.SCROLL_PANE;
             case CONTENTS: return getContent();
             case VERTICAL_SCROLLBAR: //Skin
             case HORIZONTAL_SCROLLBAR: //Skin

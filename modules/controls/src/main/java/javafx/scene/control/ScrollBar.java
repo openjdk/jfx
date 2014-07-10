@@ -89,6 +89,7 @@ public class ScrollBar extends Control {
         setWidth(ScrollBarSkin.DEFAULT_WIDTH);
         setHeight(ScrollBarSkin.DEFAULT_LENGTH);
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
+        setRole(Role.SCROLL_BAR);
         // focusTraversable is styleable through css. Calling setFocusTraversable
         // makes it look to css like the user set the value and css will not 
         // override. Initializing focusTraversable by calling applyStyle with null
@@ -495,7 +496,6 @@ public class ScrollBar extends Control {
     /** @treatAsPrivate */
     @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
         switch (attribute) {
-            case ROLE: return Role.SCROLL_BAR;
             case VALUE: return getValue();
             case MAX_VALUE: return getMax();
             case MIN_VALUE: return getMin();

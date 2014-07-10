@@ -125,6 +125,7 @@ public class Slider extends Control {
     private void initialize() {
         //Initialize the style class to be 'slider'.
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
+        setRole(Role.SLIDER);
     }
     /**
      * The maximum value represented by this Slider. This must be a
@@ -817,7 +818,6 @@ public class Slider extends Control {
     /** @treatAsPrivate */
     @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
         switch (attribute) {
-            case ROLE: return Role.SLIDER;
             case VALUE: return getValue();
             case MAX_VALUE: return getMax();
             case MIN_VALUE: return getMin();

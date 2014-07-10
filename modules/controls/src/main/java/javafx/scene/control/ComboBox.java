@@ -227,6 +227,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
      */
     public ComboBox(ObservableList<T> items) {
         getStyleClass().add(DEFAULT_STYLE_CLASS);
+        setRole(Role.COMBO_BOX);
         setItems(items);
         setSelectionModel(new ComboBoxSelectionModel<T>(this));
         
@@ -596,8 +597,10 @@ public class ComboBox<T> extends ComboBoxBase<T> {
     @Override
     public Object accGetAttribute(Attribute attribute, Object... parameters) {
         switch(attribute) {
-            case ROLE: return Role.COMBO_BOX;
             case TITLE:
+                String accText = getAccessibleText();
+                if (accText != null && !accText.isEmpty()) return accText;
+
                 //let the skin first.
                 Object title = super.accGetAttribute(attribute, parameters);
                 if (title != null) return title;

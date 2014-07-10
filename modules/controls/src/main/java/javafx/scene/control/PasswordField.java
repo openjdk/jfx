@@ -39,6 +39,7 @@ public class PasswordField extends TextField {
      */
     public PasswordField() {
         getStyleClass().add("password-field");
+        setRole(Role.PASSWORD_FIELD);
     }
 
     /***************************************************************************
@@ -71,7 +72,6 @@ public class PasswordField extends TextField {
     /** @treatAsPrivate */
     @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
         switch (attribute) {
-            case ROLE: return Role.PASSWORD_FIELD;
             case TITLE: return null;
             default: return super.accGetAttribute(attribute, parameters);
         }

@@ -164,6 +164,7 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
     public DatePicker(LocalDate localDate) {
         setValue(localDate);
         getStyleClass().add(DEFAULT_STYLE_CLASS);
+        setRole(Role.DATE_PICKER);
         setEditable(true);
     }
 
@@ -550,9 +551,11 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
     /** @treatAsPrivate */
     @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
         switch (attribute) {
-            case ROLE: return Role.DATE_PICKER;
             case DATE: return getValue();
             case TITLE: {
+                String accText = getAccessibleText();
+                if (accText != null && !accText.isEmpty()) return accText;
+
                 LocalDate date = getValue();
                 StringConverter<LocalDate> c = getConverter();
                 if (date != null && c != null) {

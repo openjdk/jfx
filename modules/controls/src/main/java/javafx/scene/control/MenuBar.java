@@ -43,7 +43,6 @@ import com.sun.javafx.scene.control.skin.MenuBarSkin;
 
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
-import javafx.scene.accessibility.Attribute;
 import javafx.scene.accessibility.Role;
 
 /**
@@ -84,6 +83,7 @@ public class MenuBar extends Control {
 
     public MenuBar() {
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
+        setRole(Role.MENU_BAR);
         // focusTraversable is styleable through css. Calling setFocusTraversable
         // makes it look to css like the user set the value and css will not 
         // override. Initializing focusTraversable by calling applyStyle with null
@@ -228,21 +228,5 @@ public class MenuBar extends Control {
         return Boolean.FALSE;
     }
 
-
-
-    /***************************************************************************
-     *                                                                         *
-     * Accessibility handling                                                  *
-     *                                                                         *
-     **************************************************************************/
-
-    /** @treatAsPrivate */
-    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-        switch (attribute) {
-            case ROLE: return Role.MENU_BAR;
-            case FOCUS_NODE: // Skin
-            default: return super.accGetAttribute(attribute, parameters);
-        }
-    }
 }
 

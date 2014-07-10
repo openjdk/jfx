@@ -9170,13 +9170,140 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     /**
+     * The role of this {@code Node}.
+     *
+     * @defaultValue Role.NODE
+     * 
+     * @since JavaFX 8u40
+     */
+    private ObjectProperty<Role> role;
+
+    public final void setRole(Role value) {
+        if (value == null) value = Role.NODE;
+        roleProperty().set(value);
+    }
+
+    public final Role getRole() {
+        if (role == null) return Role.NODE;
+        return roleProperty().get();
+    }
+
+    public final ObjectProperty<Role> roleProperty() {
+        if (role == null) {
+            role = new SimpleObjectProperty<Role>(this, "role", Role.NODE);
+        }
+        return role;
+    }
+
+    public final void setRoleDescription(String value) {
+        roleDescriptionProperty().set(value);
+    }
+
+    public final String getRoleDescription() {
+        if (accessibilityProperties == null) return null;
+        if (accessibilityProperties.roleDescription == null) return null;
+        return roleDescriptionProperty().get();
+    }
+
+    /**
+     * The role description of this {@code Node}.
+     * A null or an empty string means that it will speak the regular
+     * role description for the node.
+     *
+     * @defaultValue null
+     * 
+     * @since JavaFX 8u40
+     */
+    public final ObjectProperty<String> roleDescriptionProperty() {
+        return getAccessibilityProperties().getRoleDescription();
+    }
+
+    public final void setAccessibleText(String value) {
+        accessibleTextProperty().set(value);
+    }
+
+    public final String getAccessibleText() {
+        if (accessibilityProperties == null) return null;
+        if (accessibilityProperties.accessibleText == null) return null;
+        return accessibleTextProperty().get();
+    }
+
+    /**
+     * The accessible help of this {@code Node}.
+     * A null or an empty string means that it will speak the regular text
+     * for the node, which is dependent on the node.
+     *
+     * @defaultValue null
+     * 
+     * @since JavaFX 8u40
+     */
+    public final ObjectProperty<String> accessibleTextProperty() {
+        return getAccessibilityProperties().getAccessibleText();
+    }
+
+    public final void setAccessibleHelp(String value) {
+        accessibleHelpProperty().set(value);
+    }
+
+    public final String getAccessibleHelp() {
+        if (accessibilityProperties == null) return null;
+        if (accessibilityProperties.accessibleHelp == null) return null;
+        return accessibleHelpProperty().get();
+    }
+
+    /**
+     * The accessible help of this {@code Node}.
+     *
+     * @defaultValue null
+     * 
+     * @since JavaFX 8u40
+     */
+    public final ObjectProperty<String> accessibleHelpProperty() {
+        return getAccessibilityProperties().getAccessibleHelp();
+    }
+
+    AccessibilityProperties accessibilityProperties;
+    private AccessibilityProperties getAccessibilityProperties() {
+        if (accessibilityProperties == null) {
+            accessibilityProperties = new AccessibilityProperties();
+        }
+        return accessibilityProperties;
+    }
+
+    private class AccessibilityProperties {
+        ObjectProperty<String> roleDescription;
+        ObjectProperty<String> getRoleDescription() {
+            if (roleDescription == null) {
+                roleDescription = new SimpleObjectProperty<String>(Node.this, "roleDescription", null);
+            }
+            return roleDescription;
+        }
+        ObjectProperty<String> accessibleText;
+        ObjectProperty<String> getAccessibleText() {
+            if (accessibleText == null) {
+                accessibleText = new SimpleObjectProperty<String>(Node.this, "accessibleText", null);
+            }
+            return accessibleText;
+        }
+        ObjectProperty<String> accessibleHelp;
+        ObjectProperty<String> getAccessibleHelp() {
+            if (accessibleHelp == null) {
+                accessibleHelp = new SimpleObjectProperty<String>(Node.this, "accessibleHelp", null);
+            }
+            return accessibleHelp;
+        }
+    }
+    /**
      * Experimental API - Do not use (will be removed).
      *
      * @treatAsPrivate
      */
     public Object accGetAttribute(Attribute attribute, Object... parameters) {
         switch (attribute) {
-            case ROLE: return Role.NODE;
+            case ROLE: return getRole();
+            case ROLE_DESCRIPTION: return getRoleDescription();
+            case TITLE: return getAccessibleText();
+            case HELP: return getAccessibleHelp();
             case PARENT: return getParent();
             case SCENE: return getScene();
             case BOUNDS: return localToScreen(getBoundsInLocal());

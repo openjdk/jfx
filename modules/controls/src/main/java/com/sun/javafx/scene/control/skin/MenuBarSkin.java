@@ -974,6 +974,7 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
         public MenuBarButton(MenuBarSkin menuBarSkin, String text, Node graphic) {
             super(text, graphic);
             this.menuBarSkin = menuBarSkin;
+            setRole(Role.MENU);
         }
 
         public MenuBarSkin getMenuBarSkin() {
@@ -993,7 +994,6 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
 
         @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
             switch (attribute) {
-                case ROLE: return Role.MENU;
                 case FOCUS_ITEM: return MenuBarButton.this;
                 case TITLE: //fall through because the super class handles mnemonics right
                 case MNEMONIC:

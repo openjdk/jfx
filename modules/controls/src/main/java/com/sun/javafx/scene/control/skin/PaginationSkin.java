@@ -734,14 +734,8 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
             controlBox = new HBox();
             controlBox.getStyleClass().add("control-box");
 
-            leftArrowButton = new Button() {
-                @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-                    switch (attribute) {
-                        case TITLE: return getString("Accessibility.title.Pagination.PreviousButton");
-                        default: return super.accGetAttribute(attribute, parameters);
-                    }
-                }
-            };
+            leftArrowButton = new Button();
+            leftArrowButton.setAccessibleText(getString("Accessibility.title.Pagination.PreviousButton"));
             minButtonSize = leftArrowButton.getFont().getSize() * 2;
             leftArrowButton.fontProperty().addListener((arg0, arg1, newFont) -> {
                 minButtonSize = newFont.getSize() * 2;
@@ -762,14 +756,8 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
             leftArrowButton.setGraphic(leftArrow);
             leftArrow.getStyleClass().add("left-arrow");
 
-            rightArrowButton = new Button() {
-                @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-                    switch (attribute) {
-                        case TITLE: return getString("Accessibility.title.Pagination.NextButton");
-                        default: return super.accGetAttribute(attribute, parameters);
-                    }
-                }
-            };
+            rightArrowButton = new Button();
+            rightArrowButton.setAccessibleText(getString("Accessibility.title.Pagination.NextButton"));
             rightArrowButton.setMinSize(minButtonSize, minButtonSize);
             rightArrowButton.prefWidthProperty().bind(rightArrowButton.minWidthProperty());
             rightArrowButton.prefHeightProperty().bind(rightArrowButton.minHeightProperty());
@@ -1211,6 +1199,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
             });
 
             prefHeightProperty().bind(minHeightProperty());
+            setRole(Role.PAGE_ITEM);
         }
 
         private void setIndicatorType() {
@@ -1252,7 +1241,6 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
 
         @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
             switch (attribute) {
-                case ROLE: return Role.PAGE_ITEM;
                 case TITLE: return getText();
                 case SELECTED: return isSelected();
                 default: return super.accGetAttribute(attribute, parameters);

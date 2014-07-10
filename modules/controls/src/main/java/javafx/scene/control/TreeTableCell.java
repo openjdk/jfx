@@ -84,6 +84,7 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
      */
     public TreeTableCell() {
         getStyleClass().addAll(DEFAULT_STYLE_CLASS);
+        setRole(Role.TREE_TABLE_CELL);
         
         updateColumnIndex();
     }
@@ -776,7 +777,6 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
     /** @treatAsPrivate */
     @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
         switch (attribute) {
-            case ROLE: return Role.TREE_TABLE_CELL;
             case ROW_INDEX: return getIndex();
             case COLUMN_INDEX: return columnIndex;
             case SELECTED: return isInCellSelectionMode() ? isSelected() : getTreeTableRow().isSelected();

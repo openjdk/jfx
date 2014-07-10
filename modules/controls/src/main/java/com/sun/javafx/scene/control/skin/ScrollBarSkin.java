@@ -97,7 +97,6 @@ public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior
             @Override
             public Object accGetAttribute(Attribute attribute, Object... parameters) {
                 switch (attribute) {
-                    case ROLE: return Role.THUMB;
                     case VALUE: return getSkinnable().getValue();
                     case MAX_VALUE: {
                         // This is required for mac-support, to convert from pixel to percent
@@ -123,19 +122,12 @@ public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior
             }
         };
         thumb.getStyleClass().setAll("thumb");
+        thumb.setRole(Role.THUMB);
 
 
         if (!IS_TOUCH_SUPPORTED) {
             
             incButton = new EndButton("increment-button", "increment-arrow") {
-                @Override
-                public Object accGetAttribute(Attribute attribute, Object... parameters) {
-                    switch (attribute) {
-                        case ROLE: return Role.INCREMENT_BUTTON;
-                        default: return super.accGetAttribute(attribute, parameters);
-                    }
-                }
-
                 @Override
                 public void accExecuteAction(Action action, Object... parameters) {
                     switch (action) {
@@ -146,6 +138,7 @@ public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior
                     }
                 }
             };
+            incButton.setRole(Role.INCREMENT_BUTTON);
             incButton.setOnMousePressed(me -> {
                 /*
                 ** if the tracklenght isn't greater than do nothing....
@@ -167,14 +160,6 @@ public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior
 
             decButton = new EndButton("decrement-button", "decrement-arrow") {
                 @Override
-                public Object accGetAttribute(Attribute attribute, Object... parameters) {
-                    switch (attribute) {
-                        case ROLE: return Role.DECREMENT_BUTTON;
-                        default: return super.accGetAttribute(attribute, parameters);
-                    }
-                }
-
-                @Override
                 public void accExecuteAction(Action action, Object... parameters) {
                     switch (action) {
                         case FIRE:
@@ -184,6 +169,7 @@ public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior
                     }
                 }
             };
+            decButton.setRole(Role.DECREMENT_BUTTON);
             decButton.setOnMousePressed(me -> {
                 /*
                 ** if the tracklenght isn't greater than do nothing....

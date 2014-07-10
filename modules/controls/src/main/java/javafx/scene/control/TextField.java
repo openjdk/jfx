@@ -42,7 +42,6 @@ import javafx.css.StyleableProperty;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Pos;
-import javafx.scene.accessibility.Attribute;
 import javafx.scene.accessibility.Role;
 
 import com.sun.javafx.binding.ExpressionHelper;
@@ -148,6 +147,7 @@ public class TextField extends TextInputControl {
     public TextField(String text) {
         super(new TextFieldContent());
         getStyleClass().add("text-field");
+        setRole(Role.TEXT_FIELD);
         setText(text);
     }
 
@@ -334,22 +334,5 @@ public class TextField extends TextInputControl {
     @Override
     public List<CssMetaData<? extends Styleable, ?>> getControlCssMetaData() {
         return getClassCssMetaData();
-    }
-
-
-    /***************************************************************************
-     *                                                                         *
-     * Accessibility handling                                                  *
-     *                                                                         *
-     **************************************************************************/
-
-    /** @treatAsPrivate */
-    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-        switch (attribute) {
-            case ROLE: return Role.TEXT_FIELD;
-            case BOUNDS_FOR_RANGE: //Skin
-            case OFFSET_AT_POINT: //Skin
-            default: return super.accGetAttribute(attribute, parameters);
-        }
     }
 }

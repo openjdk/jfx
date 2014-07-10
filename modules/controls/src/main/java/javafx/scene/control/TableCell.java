@@ -88,6 +88,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
      */
     public TableCell() {
         getStyleClass().addAll(DEFAULT_STYLE_CLASS);
+        setRole(Role.TABLE_CELL);
         
         updateColumnIndex();
     }
@@ -782,7 +783,6 @@ public class TableCell<S,T> extends IndexedCell<T> {
     /** @treatAsPrivate */
     @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
         switch (attribute) {
-            case ROLE: return Role.TABLE_CELL;
             case ROW_INDEX: return getIndex();
             case COLUMN_INDEX: return columnIndex;
             case SELECTED: return isInCellSelectionMode() ? isSelected() : getTableRow().isSelected();

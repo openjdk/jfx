@@ -82,6 +82,7 @@ public class ListCell<T> extends IndexedCell<T> {
      */
     public ListCell() {
         getStyleClass().addAll(DEFAULT_STYLE_CLASS);
+        setRole(Role.LIST_ITEM);
     }
 
 
@@ -547,7 +548,6 @@ public class ListCell<T> extends IndexedCell<T> {
     /** @treatAsPrivate */
     @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
         switch (attribute) {
-            case ROLE: return Role.LIST_ITEM;
             case INDEX: return getIndex();
             case SELECTED: return isSelected();
             default: return super.accGetAttribute(attribute, parameters);

@@ -1112,6 +1112,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
             getStyleClass().setAll(tab.getStyleClass());
             setId(tab.getId());
             setStyle(tab.getStyle());
+            setRole(Role.TAB_ITEM);
 
             this.tab = tab;
             clip = new Rectangle();
@@ -1127,14 +1128,9 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
                 @Override protected double computePrefHeight(double w) {
                     return CLOSE_BTN_SIZE;
                 }
-                @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-                    switch (attribute) {
-                        case ROLE: return Role.BUTTON;
-                        case TITLE: return getString("Accessibility.title.TabPane.CloseButton");
-                        default: return super.accGetAttribute(attribute, parameters);
-                    }
-                }
             };
+            closeBtn.setRole(Role.BUTTON);
+            closeBtn.setAccessibleText(getString("Accessibility.title.TabPane.CloseButton"));
             closeBtn.getStyleClass().setAll("tab-close-button");
             closeBtn.setOnMousePressed(new EventHandler<MouseEvent>() {
                 @Override public void handle(MouseEvent me) {
@@ -1468,7 +1464,6 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
     
         @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
             switch (attribute) {
-                case ROLE: return Role.TAB_ITEM;
                 case TITLE: return getTab().getText();
                 case SELECTED: return selectedTab == getTab();
                 default: return super.accGetAttribute(attribute, parameters);

@@ -113,6 +113,7 @@ public class Text extends Shape {
      * Creates an empty instance of Text.
      */
     public Text() {
+        setRole(Role.TEXT);
         InvalidationListener listener = observable -> checkSpan();
         parentProperty().addListener(listener);
         managedProperty().addListener(listener);
@@ -1892,8 +1893,11 @@ public class Text extends Shape {
     @Override
     public Object accGetAttribute(Attribute attribute, Object... parameters) {
         switch (attribute) {
-            case ROLE: return Role.TEXT;
-            case TITLE: return getText();
+            case TITLE: {
+                String accText = getAccessibleText();
+                if (accText != null && !accText.isEmpty()) return accText;
+                return getText();
+            }
             case FONT: return getFont();
             case CARET_OFFSET: {
                 int sel = getImpl_caretPosition();

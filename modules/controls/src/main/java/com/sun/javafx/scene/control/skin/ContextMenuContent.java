@@ -961,6 +961,9 @@ public class ContextMenuContent extends Region {
      * timeline when mouse is over up/down arrow.
      */
     class MenuBox extends VBox {
+        MenuBox() {
+            setRole(Role.CONTEXT_MENU);
+        }
 
         @Override protected void layoutChildren() {
             double yOffset = ty;
@@ -977,7 +980,6 @@ public class ContextMenuContent extends Region {
         @Override
         public Object accGetAttribute(Attribute attribute, Object... parameters) {
             switch (attribute) {
-                case ROLE: return Role.CONTEXT_MENU;
                 case VISIBLE: return contextMenu.isShowing();
                 case MENU_FOR: return contextMenu.getOwnerNode();
                 default: return super.accGetAttribute(attribute, parameters); 
@@ -1113,14 +1115,19 @@ public class ContextMenuContent extends Region {
                 pseudoProperty = ((Menu)item).showingProperty();
                 listener.registerChangeListener(pseudoProperty, "MENU_SHOWING");
                 pseudoClassStateChanged(SELECTED_PSEUDOCLASS_STATE, pseudoProperty.get());
+                setRole(Role.MENU);
             } else if (item instanceof RadioMenuItem) {
                 pseudoProperty = ((RadioMenuItem)item).selectedProperty();
                 listener.registerChangeListener(pseudoProperty, "RADIO_ITEM_SELECTED");
                 pseudoClassStateChanged(CHECKED_PSEUDOCLASS_STATE, pseudoProperty.get());
+                setRole(Role.RADIO_MENU_ITEM);
             } else if (item instanceof CheckMenuItem) {
                 pseudoProperty = ((CheckMenuItem)item).selectedProperty();
                 listener.registerChangeListener(pseudoProperty, "CHECK_ITEM_SELECTED");
                 pseudoClassStateChanged(CHECKED_PSEUDOCLASS_STATE, pseudoProperty.get());
+                setRole(Role.CHECK_MENU_ITEM);
+            } else {
+                setRole(Role.MENU_ITEM);
             }
             
             pseudoClassStateChanged(DISABLED_PSEUDOCLASS_STATE, item.disableProperty().get());
@@ -1472,11 +1479,6 @@ public class ContextMenuContent extends Region {
         @Override
         public Object accGetAttribute(Attribute attribute, Object... parameters) {
             switch (attribute) {
-                case ROLE:
-                    if (item instanceof RadioMenuItem) return Role.RADIO_MENU_ITEM;
-                    if (item instanceof CheckMenuItem) return Role.CHECK_MENU_ITEM;
-                    if (item instanceof Menu) return Role.MENU;
-                    return Role.MENU_ITEM;
                 case SELECTED:
                     if (item instanceof CheckMenuItem) {
                         return ((CheckMenuItem)item).isSelected();

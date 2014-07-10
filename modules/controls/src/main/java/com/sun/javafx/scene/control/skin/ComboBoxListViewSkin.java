@@ -778,6 +778,8 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                 return null;
             }
             case TITLE: {
+                String accText = comboBox.getAccessibleText();
+                if (accText != null && !accText.isEmpty()) return accText;
                 String title = comboBox.isEditable() ? textField.getText() : buttonCell.getText();
                 if (title == null || title.isEmpty()) {
                     title = comboBox.getPromptText();

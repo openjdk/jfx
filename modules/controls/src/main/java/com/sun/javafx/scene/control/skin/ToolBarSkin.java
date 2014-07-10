@@ -603,6 +603,8 @@ public class ToolBarSkin extends BehaviorSkinBase<ToolBar, ToolBarBehavior> {
 
         public ToolBarOverflowMenu(ObservableList<MenuItem> items) {
             getStyleClass().setAll("tool-bar-overflow-button");
+            setRole(Role.BUTTON);
+            setAccessibleText(getString("Accessibility.title.ToolBar.OverflowButton"));
             setFocusTraversable(true);
             this.menuItems = items;
             downArrow = new StackPane();
@@ -690,14 +692,6 @@ public class ToolBarSkin extends BehaviorSkinBase<ToolBar, ToolBarBehavior> {
             downArrow.resize(w, h);
             positionInArea(downArrow, x, y, w, h,
                     /*baseline ignored*/0, HPos.CENTER, VPos.CENTER);
-        }
-
-        @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-            switch (attribute) {
-                case ROLE: return Role.BUTTON;
-                case TITLE: return getString("Accessibility.title.ToolBar.OverflowButton");
-                default: return super.accGetAttribute(attribute, parameters);
-            }
         }
 
         @Override public void accExecuteAction(Action action, Object... parameters) {

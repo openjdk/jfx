@@ -106,6 +106,7 @@ public class TabPane extends Control {
      */
     public TabPane() {
         getStyleClass().setAll("tab-pane");
+        setRole(Role.TAB_PANE);
         setSelectionModel(new TabPaneSelectionModel(this));
 
         tabs.addListener((ListChangeListener<Tab>) c -> {
@@ -600,26 +601,6 @@ public class TabPane extends Control {
     private static final PseudoClass BOTTOM_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("bottom");
     private static final PseudoClass LEFT_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("left");
     private static final PseudoClass RIGHT_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("right");
-
-
-
-    /***************************************************************************
-     *                                                                         *
-     * Accessibility handling                                                  *
-     *                                                                         *
-     **************************************************************************/
-
-    /** @treatAsPrivate */
-    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-        switch (attribute) {
-            case ROLE: return Role.TAB_PANE;
-            case TABS: //Skin
-            case SELECTED_TAB: //Skin
-            default: return super.accGetAttribute(attribute, parameters);
-        }
-    }
-
-
 
     /***************************************************************************
      *                                                                         *

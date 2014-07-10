@@ -1220,6 +1220,9 @@ public abstract class TextInputControl extends Control {
     @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
         switch (attribute) {
             case TITLE: {
+                String accText = getAccessibleText();
+                if (accText != null && !accText.isEmpty()) return accText;
+
                 String text = getText();
                 if (text == null || text.isEmpty()) {
                     text = getPromptText();

@@ -87,7 +87,6 @@ public class SliderSkin extends BehaviorSkinBase<Slider, SliderBehavior> {
             @Override
             public Object accGetAttribute(Attribute attribute, Object... parameters) {
                 switch (attribute) {
-                    case ROLE: return Role.THUMB;
                     case VALUE: return getSkinnable().getValue();
                     case MAX_VALUE: {
                         // This is required for mac-support, to convert from pixel to percent
@@ -113,6 +112,7 @@ public class SliderSkin extends BehaviorSkinBase<Slider, SliderBehavior> {
             }
         };
         thumb.getStyleClass().setAll("thumb");
+        thumb.setRole(Role.THUMB);
         track = new StackPane();
         track.getStyleClass().setAll("track");
 //        horizontal = getSkinnable().isVertical();

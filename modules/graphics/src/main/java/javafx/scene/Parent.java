@@ -1286,6 +1286,7 @@ public abstract class Parent extends Node {
      */
     protected Parent() {
         layoutFlag = LayoutFlags.NEEDS_LAYOUT;
+        setRole(Role.PARENT);
     }
 
     /**
@@ -1783,7 +1784,6 @@ public abstract class Parent extends Node {
     @Override
     public Object accGetAttribute(Attribute attribute, Object... parameters) {
         switch (attribute) {
-            case ROLE: return Role.PARENT;
             case CHILDREN: return getChildrenUnmodifiable();
             default: return super.accGetAttribute(attribute, parameters);
         }

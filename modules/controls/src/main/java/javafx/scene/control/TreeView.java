@@ -321,6 +321,7 @@ public class TreeView<T> extends Control {
      */
     public TreeView(TreeItem<T> root) {
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
+        setRole(Role.TREE_VIEW);
 
         setRoot(root);
         updateExpandedItemCount(root);
@@ -1113,7 +1114,6 @@ public class TreeView<T> extends Control {
     /** @treatAsPrivate */
     @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
         switch (attribute) {
-            case ROLE: return Role.TREE_VIEW;
             case MULTIPLE_SELECTION: {
                 MultipleSelectionModel<TreeItem<T>> sm = getSelectionModel();
                 return sm != null && sm.getSelectionMode() == SelectionMode.MULTIPLE;

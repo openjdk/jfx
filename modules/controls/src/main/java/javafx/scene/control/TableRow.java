@@ -73,6 +73,7 @@ public class TableRow<T> extends IndexedCell<T> {
      */
     public TableRow() {
         getStyleClass().addAll(DEFAULT_STYLE_CLASS);
+        setRole(Role.TABLE_ROW);
     }
 
 
@@ -367,7 +368,6 @@ public class TableRow<T> extends IndexedCell<T> {
     /** @treatAsPrivate */
     @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
         switch (attribute) {
-            case ROLE: return Role.TABLE_ROW;
             case INDEX: return getIndex();
             case FOCUS_ITEM: //Skin
             case SELECTED_CELLS: //Skin

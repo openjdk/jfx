@@ -88,7 +88,8 @@ public class TitledPane extends Labeled {
      */
     public TitledPane() {
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
-        
+        setRole(Role.TITLED_PANE);
+
         // initialize pseudo-class state
         pseudoClassStateChanged(PSEUDO_CLASS_EXPANDED, true);
     }
@@ -365,8 +366,11 @@ public class TitledPane extends Labeled {
     /** @treatAsPrivate */
     @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
         switch (attribute) {
-            case ROLE: return Role.TITLED_PANE;
-            case TITLE: return getText();
+            case TITLE: {
+                String accText = getAccessibleText();
+                if (accText != null && !accText.isEmpty()) return accText;
+                return getText();
+            }
             case EXPANDED: return isExpanded();
             default: return super.accGetAttribute(attribute, parameters);
         }

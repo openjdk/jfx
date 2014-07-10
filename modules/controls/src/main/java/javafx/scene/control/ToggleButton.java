@@ -127,6 +127,7 @@ import javafx.css.StyleableProperty;
 
     private void initialize() {
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
+        setRole(Role.TOGGLE_BUTTON);
         // alignment is styleable through css. Calling setAlignment
         // makes it look to css like the user set the value and css will not 
         // override. Initializing alignment by calling set on the 
@@ -292,7 +293,6 @@ import javafx.css.StyleableProperty;
     /** @treatAsPrivate */
     @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
         switch (attribute) {
-            case ROLE: return Role.TOGGLE_BUTTON;
             case SELECTED: return isSelected();
             default: return super.accGetAttribute(attribute, parameters); 
         }

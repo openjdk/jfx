@@ -101,7 +101,7 @@ final class MacAccessible extends Accessible {
         NSAccessibilityPositionAttribute(BOUNDS, MacVariant::createNSValueForPoint),
         NSAccessibilityRoleAttribute(ROLE, MacVariant::createNSObject),
         NSAccessibilitySubroleAttribute(ROLE, MacVariant::createNSObject),
-        NSAccessibilityRoleDescriptionAttribute(DESCRIPTION, MacVariant::createNSString),
+        NSAccessibilityRoleDescriptionAttribute(ROLE_DESCRIPTION, MacVariant::createNSString),
         NSAccessibilitySizeAttribute(BOUNDS, MacVariant::createNSValueForSize),
         NSAccessibilityTabsAttribute(null, MacVariant::createNSArray),
         NSAccessibilityTitleAttribute(TITLE, MacVariant::createNSString),

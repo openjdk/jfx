@@ -100,6 +100,7 @@ public class CheckBox extends ButtonBase {
 
     private void initialize() {
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
+        setRole(Role.CHECK_BOX);
         setAlignment(Pos.CENTER_LEFT);
         setMnemonicParsing(true);     // enable mnemonic auto-parsing by default
         
@@ -269,7 +270,6 @@ public class CheckBox extends ButtonBase {
     /** @treatAsPrivate */
     @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
         switch (attribute) {
-            case ROLE: return Role.CHECK_BOX;
             case SELECTED: return isSelected();
             case INDETERMINATE: return isIndeterminate();
             default: return super.accGetAttribute(attribute, parameters);

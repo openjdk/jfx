@@ -172,6 +172,8 @@ public class TableColumnHeader extends Region {
             setId(column.getId());
             setStyle(column.getStyle());
             updateStyleClass();
+            /* Having TableColumn role parented by TableColumn causes VoiceOver to be unhappy */
+            setRole(Role.TABLE_COLUMN);
         }
     }
     
@@ -1027,8 +1029,6 @@ public class TableColumnHeader extends Region {
     @Override
     public Object accGetAttribute(Attribute attribute, Object... parameters) {
         switch (attribute) {
-            /* Having TableColumn role parented by TableColumn causes VoiceOver to be unhappy */
-            case ROLE: return column != null ? Role.TABLE_COLUMN : super.accGetAttribute(attribute, parameters);
             case INDEX: return getIndex(column);
             case TITLE: return column != null ? column.getText() : null;
             default: return super.accGetAttribute(attribute, parameters);

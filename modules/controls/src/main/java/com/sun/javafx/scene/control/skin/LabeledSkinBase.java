@@ -1116,6 +1116,10 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
     @Override protected Object accGetAttribute(Attribute attribute, Object... parameters) {
         switch (attribute) {
             case TITLE: {
+                Labeled labeled = getSkinnable();
+                String accText = labeled.getAccessibleText();
+                if (accText != null && !accText.isEmpty()) return accText;
+
                 /* Use the text in the binding if available to handle mnemonics */
                 if (bindings != null) {
                     String text = bindings.getText(); 
@@ -1124,7 +1128,6 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
                 /* Avoid the content in text.getText() as it can contain ellipses 
                  * for clipping
                  */
-                Labeled labeled = getSkinnable();
                 if (labeled != null) {
                     String text = labeled.getText(); 
                     if (text != null && !text.isEmpty()) return text;

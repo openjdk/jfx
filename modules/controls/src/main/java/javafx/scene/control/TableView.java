@@ -511,6 +511,7 @@ public class TableView<S> extends Control {
      */
     public TableView(ObservableList<S> items) {
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
+        setRole(Role.TABLE_VIEW);
 
         // we quite happily accept items to be null here
         setItems(items);
@@ -1647,7 +1648,6 @@ public class TableView<S> extends Control {
     /** @treatAsPrivate */
     @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
         switch (attribute) {
-            case ROLE: return Role.TABLE_VIEW;
             case COLUMN_COUNT: return getVisibleLeafColumns().size();
             case ROW_COUNT: return getItems().size();
             case SELECTED_CELLS: {

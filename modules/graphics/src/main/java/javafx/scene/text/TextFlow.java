@@ -160,6 +160,7 @@ public class TextFlow extends Pane {
     public TextFlow() {
         super();
         effectiveNodeOrientationProperty().addListener(observable -> checkOrientation());
+        setRole(Role.TEXT);
     }
 
     /**
@@ -557,8 +558,10 @@ public class TextFlow extends Pane {
     @Override
     public Object accGetAttribute(Attribute attribute, Object... parameters) {
         switch (attribute) {
-            case ROLE: return Role.TEXT;
             case TITLE: {
+                String accText = getAccessibleText();
+                if (accText != null && !accText.isEmpty()) return accText;
+
                 StringBuilder title = new StringBuilder();
                 for (Node node: getChildren()) {
                     Object text = node.accGetAttribute(Attribute.TITLE, parameters);

@@ -90,6 +90,7 @@ public class Hyperlink extends ButtonBase {
     private void initialize() {
         // Initialize the style class to be 'hyperlink'.
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
+        setRole(Role.HYPERLINK);
         // cursor is styleable through css. Calling setCursor
         // makes it look to css like the user set the value and css will not 
         // override. Initializing cursor by calling applyStyle with null
@@ -189,7 +190,6 @@ public class Hyperlink extends ButtonBase {
     /** @treatAsPrivate */
     @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
         switch (attribute) {
-            case ROLE: return Role.HYPERLINK;
             case VISITED: return isVisited();
             default: return super.accGetAttribute(attribute, parameters);
         }

@@ -362,6 +362,7 @@ public class TreeTableView<S> extends Control {
      */
     public TreeTableView(TreeItem<S> root) {
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
+        setRole(Role.TREE_TABLE_VIEW);
 
         setRoot(root);
         updateExpandedItemCount(root);
@@ -1905,8 +1906,6 @@ public class TreeTableView<S> extends Control {
     /** @treatAsPrivate */
     @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
         switch (attribute) {
-            case ROLE: return Role.TREE_TABLE_VIEW;
-
             case TREE_ITEM_COUNT:
             case ROW_COUNT: return getExpandedItemCount();
             case COLUMN_COUNT: return getVisibleLeafColumns().size();

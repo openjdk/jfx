@@ -96,6 +96,7 @@ public class SplitMenuButton extends MenuButton {
         }
 
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
+        setRole(Role.SPLIT_MENU_BUTTON);
         setMnemonicParsing(true);     // enable mnemonic auto-parsing by default
     }
 
@@ -143,7 +144,6 @@ public class SplitMenuButton extends MenuButton {
     /** @treatAsPrivate */
     @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
         switch (attribute) {
-            case ROLE: return Role.SPLIT_MENU_BUTTON;
             case EXPANDED: return isShowing();
             default: return super.accGetAttribute(attribute, parameters);
         }

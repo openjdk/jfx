@@ -99,6 +99,7 @@ public class ProgressIndicator extends Control {
         ((StyleableProperty<Boolean>)(WritableValue<Boolean>)focusTraversableProperty()).applyStyle(null, Boolean.FALSE);
         setProgress(progress);
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
+        setRole(Role.PROGRESS_INDICATOR);
         
         // need to initialize pseudo-class state
         final int c = Double.compare(INDETERMINATE_PROGRESS, progress);
@@ -248,7 +249,6 @@ public class ProgressIndicator extends Control {
     /** @treatAsPrivate */
     @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
         switch (attribute) {
-            case ROLE: return Role.PROGRESS_INDICATOR;
             case VALUE: return getProgress();
             case MAX_VALUE: return 1.0;
             case MIN_VALUE: return 0.0;

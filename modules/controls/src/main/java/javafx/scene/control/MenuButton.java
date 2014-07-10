@@ -34,7 +34,6 @@ import javafx.event.ActionEvent;
 import javafx.geometry.Side;
 import javafx.scene.Node;
 import javafx.scene.accessibility.Action;
-import javafx.scene.accessibility.Attribute;
 import javafx.scene.accessibility.Role;
 import com.sun.javafx.scene.control.skin.MenuButtonSkin;
 import javafx.beans.property.ReadOnlyBooleanProperty;
@@ -117,6 +116,7 @@ public class MenuButton extends ButtonBase {
             setGraphic(graphic);
         }
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
+        setRole(Role.MENU_BUTTON);
         setMnemonicParsing(true);     // enable mnemonic auto-parsing by default
         // the default value for popupSide = Side.BOTTOM therefor
         // PSEUDO_CLASS_OPENVERTICALLY should be set from the start.
@@ -267,14 +267,6 @@ public class MenuButton extends ButtonBase {
      * Accessibility handling                                                  *
      *                                                                         *
      **************************************************************************/
-
-    /** @treatAsPrivate */
-    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-        switch (attribute) {
-            case ROLE: return Role.MENU_BUTTON;
-            default: return super.accGetAttribute(attribute, parameters);
-        }
-    }
 
     /** @treatAsPrivate */
     @Override public void accExecuteAction(Action action, Object... parameters) {

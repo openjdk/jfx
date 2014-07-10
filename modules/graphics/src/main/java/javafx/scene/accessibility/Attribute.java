@@ -107,12 +107,6 @@ public enum Attribute {
     CONTENTS("Contents", Node.class),
 
     /**
-     * Returns the description for the Node.
-     * Type: String
-     */
-    DESCRIPTION("Description", String.class),
-
-    /**
      * Returns true if the Node is disabled.
      * Type: Boolean
      */
@@ -314,6 +308,12 @@ public enum Attribute {
      * Type: Role
      */
     ROLE("Role", Role.class),
+
+    /**
+     * Returns the role description for the Node.
+     * Type: String
+     */
+    ROLE_DESCRIPTION("RoleDescription", String.class),
 
     /**
      * Returns the row at the given index
