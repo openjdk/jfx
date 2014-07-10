@@ -179,7 +179,7 @@ public final class Platform {
      *
      * @since JavaFX 8u40 
      */
-    public static ReadOnlyBooleanProperty accessibilityOnProperty() {
+    /*public*/ static ReadOnlyBooleanProperty accessibilityOnProperty() {
         return PlatformImpl.accessibilityOnProperty();
     }
 }
