@@ -33,8 +33,8 @@ import javafx.beans.property.ObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
-import javafx.scene.accessibility.Attribute;
 import javafx.scene.control.ResizeFeaturesBase;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
@@ -291,7 +291,7 @@ public class TableViewSkin<T> extends TableViewSkinBase<T, T, TableView<T>, Tabl
     }
     
     @Override
-    public Object accGetAttribute(Attribute attribute, Object... parameters) {
+    public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
             case SELECTED_CELLS: {
                 List<Node> selection = new ArrayList<>();
@@ -306,7 +306,7 @@ public class TableViewSkin<T> extends TableViewSkinBase<T, T, TableView<T>, Tabl
             case CELL_AT_ROW_COLUMN: // TableViewSkinBase
             case COLUMN_AT_INDEX: // TableViewSkinBase
             case HEADER: // TableViewSkinBase
-            default: return super.accGetAttribute(attribute, parameters);
+            default: return super.queryAccessibleAttribute(attribute, parameters);
         }
     }
 

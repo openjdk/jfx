@@ -35,8 +35,8 @@ import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Orientation;
+import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
-import javafx.scene.accessibility.Role;
 import javafx.css.StyleableObjectProperty;
 import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
@@ -112,7 +112,7 @@ public class ToolBar extends Control {
 
     private void initialize() {
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
-        setRole(Role.TOOL_BAR);
+        setRole(AccessibleRole.TOOL_BAR);
         // focusTraversable is styleable through css. Calling setFocusTraversable
         // makes it look to css like the user set the value and css will not 
         // override. Initializing focusTraversable by calling set on the 

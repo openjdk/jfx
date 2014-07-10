@@ -32,8 +32,8 @@ import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
-import javafx.scene.accessibility.Action;
-import javafx.scene.accessibility.Attribute;
+import javafx.scene.AccessibleAction;
+import javafx.scene.AccessibleAttribute;
 
 /**
  * Abstract base class for ComboBox-like controls. A ComboBox typically has
@@ -208,7 +208,7 @@ public abstract class ComboBoxBase<T> extends Control {
             showing = new ReadOnlyBooleanWrapper(false) {
                 @Override protected void invalidated() {
                     pseudoClassStateChanged(PSEUDO_CLASS_SHOWING, get());
-                    accSendNotification(Attribute.EXPANDED);
+                    notifyAccessibleAttributeChanged(AccessibleAttribute.EXPANDED);
                 }
 
                 @Override
@@ -468,23 +468,23 @@ public abstract class ComboBoxBase<T> extends Control {
      *                                                                         *
      **************************************************************************/
 
-    /** @treatAsPrivate */
-    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+    @Override
+    public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
             case EXPANDED: return isShowing();
             case EDITABLE: return isEditable();
             case SELECTION_START: //skin
             case SELECTION_END: //skin
-            default: return super.accGetAttribute(attribute, parameters);
+            default: return super.queryAccessibleAttribute(attribute, parameters);
         }
     }
 
-    /** @treatAsPrivate */
-    @Override public void accExecuteAction(Action action, Object... parameters) {
+    @Override
+    public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
         switch (action) {
             case EXPAND: show(); break;
             case COLLAPSE: hide(); break;
-            default: super.accExecuteAction(action); break;
+            default: super.executeAccessibleAction(action); break;
         }
     }
 }

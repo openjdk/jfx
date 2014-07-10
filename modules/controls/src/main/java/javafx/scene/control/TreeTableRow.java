@@ -40,10 +40,10 @@ import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.ListChangeListener;
 import javafx.collections.WeakListChangeListener;
+import javafx.scene.AccessibleAction;
+import javafx.scene.AccessibleAttribute;
+import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
-import javafx.scene.accessibility.Action;
-import javafx.scene.accessibility.Attribute;
-import javafx.scene.accessibility.Role;
 import javafx.scene.control.TreeTableView.TreeTableViewFocusModel;
 import javafx.scene.control.TreeTableView.TreeTableViewSelectionModel;
 
@@ -81,7 +81,7 @@ public class TreeTableRow<T> extends IndexedCell<T> {
      */
     public TreeTableRow() {
         getStyleClass().addAll(DEFAULT_STYLE_CLASS);
-        setRole(Role.TREE_TABLE_ROW);
+        setRole(AccessibleRole.TREE_TABLE_ROW);
     }
 
 
@@ -524,8 +524,8 @@ public class TreeTableRow<T> extends IndexedCell<T> {
      *                                                                         *
      **************************************************************************/
 
-    /** @treatAsPrivate */
-    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+    @Override
+    public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         final TreeItem<T> treeItem = getTreeItem();
         final TreeTableView<T> treeTableView = getTreeTableView();
         final List<TreeTableColumn<T,?>> visibleColumns = treeTableView.getVisibleLeafColumns();
@@ -541,7 +541,7 @@ public class TreeTableRow<T> extends IndexedCell<T> {
                 TreeItem<T> parent = treeItem.getParent();
                 if (parent == null) return null;
                 int parentIndex = treeTableView.getRow(parent);
-                return treeTableView.accGetAttribute(Attribute.ROW_AT_INDEX, parentIndex);
+                return treeTableView.queryAccessibleAttribute(AccessibleAttribute.ROW_AT_INDEX, parentIndex);
             }
             case TREE_ITEM_COUNT: {
                 return treeItem == null  ? 0 : treeItem.getChildren().size();
@@ -553,7 +553,7 @@ public class TreeTableRow<T> extends IndexedCell<T> {
                 TreeItem<T> child = treeItem.getChildren().get(index);
                 if (child == null) return null;
                 int childIndex = treeTableView.getRow(child);
-                return treeTableView.accGetAttribute(Attribute.ROW_AT_INDEX, childIndex);
+                return treeTableView.queryAccessibleAttribute(AccessibleAttribute.ROW_AT_INDEX, childIndex);
             case ROW_INDEX: return getIndex();
             case COLUMN_INDEX: return visibleColumns.indexOf(treeColumn);
             case LEAF: return treeItem == null ? true : treeItem.isLeaf();
@@ -563,12 +563,12 @@ public class TreeTableRow<T> extends IndexedCell<T> {
             case DISCLOSURE_LEVEL: {
                 return treeTableView == null ? 0 : treeTableView.getTreeItemLevel(treeItem);
             }
-            default: return super.accGetAttribute(attribute, parameters);
+            default: return super.queryAccessibleAttribute(attribute, parameters);
         }
     }
 
-    /** @treatAsPrivate */
-    @Override public void accExecuteAction(Action action, Object... parameters) {
+    @Override
+    public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
         final TreeTableView<T> treeTableView = getTreeTableView();
         final TreeItem<T> treeItem = getTreeItem();
         final TreeTableView.TreeTableViewSelectionModel<T> sm = treeTableView == null ? null : treeTableView.getSelectionModel();
@@ -594,7 +594,7 @@ public class TreeTableRow<T> extends IndexedCell<T> {
                 if (sm != null) sm.clearSelection(getIndex());
                 break;
             }
-            default: super.accExecuteAction(action);
+            default: super.executeAccessibleAction(action);
         }
     }
 }

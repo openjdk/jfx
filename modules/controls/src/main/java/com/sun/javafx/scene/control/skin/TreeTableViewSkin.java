@@ -29,8 +29,6 @@ import com.sun.javafx.collections.NonIterableChange;
 import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
 
 import javafx.event.WeakEventHandler;
-import javafx.scene.accessibility.Attribute;
-import javafx.scene.accessibility.Role;
 import javafx.scene.control.*;
 
 import com.sun.javafx.scene.control.behavior.TreeTableViewBehavior;
@@ -46,6 +44,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
 import javafx.scene.control.TreeItem.TreeModificationEvent;
 import javafx.scene.input.MouseEvent;
@@ -388,7 +387,7 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeItem<S>, Tree
     }
 
     @Override
-    public Object accGetAttribute(Attribute attribute, Object... parameters) {
+    protected Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
             case ROW_AT_INDEX: {
                 final int rowIndex = (Integer)parameters[0];
@@ -410,7 +409,7 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeItem<S>, Tree
             case HEADER: // TableViewSkinBase
             case VERTICAL_SCROLLBAR: // TableViewSkinBase
             case HORIZONTAL_SCROLLBAR: // TableViewSkinBase
-            default: return super.accGetAttribute(attribute, parameters);
+            default: return super.queryAccessibleAttribute(attribute, parameters);
         }
     }
     

@@ -32,9 +32,9 @@ import javafx.geometry.NodeOrientation;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.geometry.VPos;
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
 import javafx.scene.Scene;
-import javafx.scene.accessibility.Attribute;
 import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.Control;
 import javafx.scene.control.Label;
@@ -1112,8 +1112,8 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
         }
     }
 
-    /** @treatAsPrivate */
-    @Override protected Object accGetAttribute(Attribute attribute, Object... parameters) {
+    @Override
+    protected Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
             case TITLE: {
                 Labeled labeled = getSkinnable();
@@ -1137,7 +1137,7 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
                  * are being displayed
                  */
                 if (graphic != null) {
-                    Object result = graphic.accGetAttribute(Attribute.TITLE);
+                    Object result = graphic.queryAccessibleAttribute(AccessibleAttribute.TITLE);
                     if (result != null) return result;
                 }
                 return null;
@@ -1148,7 +1148,7 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
                 }
                 return null;
             }
-            default: return super.accGetAttribute(attribute, parameters);
+            default: return super.queryAccessibleAttribute(attribute, parameters);
         }
     }
 }

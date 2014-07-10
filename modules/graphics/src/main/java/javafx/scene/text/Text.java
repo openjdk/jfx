@@ -46,8 +46,8 @@ import javafx.beans.binding.ObjectBinding;
 import javafx.beans.property.*;
 import javafx.css.*;
 import javafx.geometry.*;
-import javafx.scene.accessibility.Attribute;
-import javafx.scene.accessibility.Role;
+import javafx.scene.AccessibleAttribute;
+import javafx.scene.AccessibleRole;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.LineTo;
@@ -55,7 +55,6 @@ import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.PathElement;
 import javafx.scene.shape.Shape;
 import javafx.scene.shape.StrokeType;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -113,7 +112,7 @@ public class Text extends Shape {
      * Creates an empty instance of Text.
      */
     public Text() {
-        setRole(Role.TEXT);
+        setRole(AccessibleRole.TEXT);
         InvalidationListener listener = observable -> checkSpan();
         parentProperty().addListener(listener);
         managedProperty().addListener(listener);
@@ -398,7 +397,7 @@ public class Text extends Shape {
                     if ((value == null) && !isBound()) {
                         set("");
                     }
-                    accSendNotification(Attribute.TITLE);
+                    notifyAccessibleAttributeChanged(AccessibleAttribute.TITLE);
                 }
             };
         }
@@ -1738,7 +1737,7 @@ public class Text extends Shape {
                         @Override public String getName() { return "impl_selectionStart"; }
                         @Override protected void invalidated() {
                             impl_markDirty(DirtyBits.TEXT_SELECTION);
-                            accSendNotification(Attribute.SELECTION_START);
+                            notifyAccessibleAttributeChanged(AccessibleAttribute.SELECTION_START);
                         }
                 };
             }
@@ -1762,7 +1761,7 @@ public class Text extends Shape {
                         @Override public String getName() { return "impl_selectionEnd"; }
                         @Override protected void invalidated() {
                             impl_markDirty(DirtyBits.TEXT_SELECTION);
-                            accSendNotification(Attribute.SELECTION_END);
+                            notifyAccessibleAttributeChanged(AccessibleAttribute.SELECTION_END);
                         }
                     };
             }
@@ -1813,7 +1812,7 @@ public class Text extends Shape {
                         @Override public Object getBean() { return Text.this; }
                         @Override public String getName() { return "impl_caretPosition"; }
                         @Override protected void invalidated() {
-                            accSendNotification(Attribute.SELECTION_END);
+                            notifyAccessibleAttributeChanged(AccessibleAttribute.SELECTION_END);
                         }
                     };
             }
@@ -1889,9 +1888,8 @@ public class Text extends Shape {
         return sb.append("]").toString();
     }
 
-    /** @treatAsPrivate */
     @Override
-    public Object accGetAttribute(Attribute attribute, Object... parameters) {
+    public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
             case TITLE: {
                 String accText = getAccessibleText();
@@ -1974,7 +1972,7 @@ public class Text extends Shape {
                 }
                 return bounds;
             }
-            default: return super.accGetAttribute(attribute, parameters);
+            default: return super.queryAccessibleAttribute(attribute, parameters);
         }
     }
 }

@@ -55,10 +55,10 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.geometry.Side;
 import javafx.geometry.VPos;
+import javafx.scene.AccessibleAction;
+import javafx.scene.AccessibleAttribute;
+import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
-import javafx.scene.accessibility.Action;
-import javafx.scene.accessibility.Attribute;
-import javafx.scene.accessibility.Role;
 import javafx.scene.control.*;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.TouchEvent;
@@ -700,13 +700,14 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
         layoutInArea(navigation, x, stackPaneHeight, w, navigationHeight, 0, HPos.CENTER, VPos.CENTER);
     }
 
-    @Override protected Object accGetAttribute(Attribute attribute, Object... parameters) {
+    @Override
+    protected Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
             // Role: Pagination (specified in Pagination class)
             case FOCUS_ITEM: return navigation.indicatorButtons.getSelectedToggle();
             case SELECTED_PAGE: return navigation.indicatorButtons.getSelectedToggle();
             case PAGES: return navigation.indicatorButtons.getToggles();
-            default: return super.accGetAttribute(attribute, parameters);
+            default: return super.queryAccessibleAttribute(attribute, parameters);
         }
     }
 
@@ -842,7 +843,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
                     break;
                 }
             }
-            getSkinnable().accSendNotification(Attribute.SELECTED_PAGE);
+            getSkinnable().notifyAccessibleAttributeChanged(AccessibleAttribute.SELECTED_PAGE);
         }
 
         // Update the page index using the currentIndex and updates the page set
@@ -1199,7 +1200,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
             });
 
             prefHeightProperty().bind(minHeightProperty());
-            setRole(Role.PAGE_ITEM);
+            setRole(AccessibleRole.PAGE_ITEM);
         }
 
         private void setIndicatorType() {
@@ -1239,18 +1240,20 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
             }
         }
 
-        @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        @Override
+        public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
             switch (attribute) {
                 case TITLE: return getText();
                 case SELECTED: return isSelected();
-                default: return super.accGetAttribute(attribute, parameters);
+                default: return super.queryAccessibleAttribute(attribute, parameters);
             }
         }
 
-        @Override public void accExecuteAction(Action action, Object... parameters) {
+        @Override
+        public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
             switch (action) {
                 case SELECT: setSelected(true); break;
-                default: super.accExecuteAction(action);
+                default: super.executeAccessibleAction(action);
             }
         }
     }

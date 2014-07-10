@@ -29,15 +29,15 @@ import java.util.function.Function;
 import javafx.collections.ObservableList;
 import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
+import javafx.scene.AccessibleAction;
+import javafx.scene.AccessibleAttribute;
+import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 import javafx.scene.Scene;
-import javafx.scene.accessibility.Action;
-import javafx.scene.accessibility.Attribute;
-import javafx.scene.accessibility.Role;
 import javafx.scene.input.KeyCombination;
 import com.sun.glass.ui.Accessible;
 import com.sun.glass.ui.View;
-import static javafx.scene.accessibility.Attribute.*;
+import static javafx.scene.AccessibleAttribute.*;
 
 /*
  * This class is the Java peer for GlassAccessible.
@@ -253,7 +253,7 @@ final class WinAccessible extends Accessible {
 
 
     @Override
-    public void sendNotification(Attribute notification) {
+    public void sendNotification(AccessibleAttribute notification) {
         if (isDisposed()) return;
 
         switch (notification) {
@@ -328,14 +328,14 @@ final class WinAccessible extends Accessible {
                 break;
             }
             case INDETERMINATE: {
-                if (getAttribute(ROLE) == Role.CHECK_BOX) {
+                if (getAttribute(ROLE) == AccessibleRole.CHECK_BOX) {
                     notifyToggleState();
                 }
                 break;
             }
             case SELECTED: {
                 Object role = getAttribute(ROLE); 
-                if (role == Role.CHECK_BOX || role == Role.RADIO_BUTTON) {
+                if (role == AccessibleRole.CHECK_BOX || role == AccessibleRole.RADIO_BUTTON) {
                     notifyToggleState();
                     break;
                 }
@@ -439,17 +439,17 @@ final class WinAccessible extends Accessible {
 
     private Accessible getContainer() {
         if (isDisposed()) return null;
-        Role role = (Role) getAttribute(ROLE);
+        AccessibleRole role = (AccessibleRole) getAttribute(ROLE);
         if (role != null) {
             switch(role) {
                 case TABLE_ROW:
-                case TABLE_CELL: return getContainerAccessible(Role.TABLE_VIEW);
-                case LIST_ITEM: return getContainerAccessible(Role.LIST_VIEW);
-                case TAB_ITEM: return getContainerAccessible(Role.TAB_PANE);
-                case PAGE_ITEM: return getContainerAccessible(Role.PAGINATION);
-                case TREE_ITEM: return getContainerAccessible(Role.TREE_VIEW);
-                case TREE_TABLE_ROW: return getContainerAccessible(Role.TREE_TABLE_VIEW);
-                case TREE_TABLE_CELL: return getContainerAccessible(Role.TREE_TABLE_VIEW);
+                case TABLE_CELL: return getContainerAccessible(AccessibleRole.TABLE_VIEW);
+                case LIST_ITEM: return getContainerAccessible(AccessibleRole.LIST_VIEW);
+                case TAB_ITEM: return getContainerAccessible(AccessibleRole.TAB_PANE);
+                case PAGE_ITEM: return getContainerAccessible(AccessibleRole.PAGINATION);
+                case TREE_ITEM: return getContainerAccessible(AccessibleRole.TREE_VIEW);
+                case TREE_TABLE_ROW: return getContainerAccessible(AccessibleRole.TREE_TABLE_VIEW);
+                case TREE_TABLE_CELL: return getContainerAccessible(AccessibleRole.TREE_TABLE_VIEW);
                 default:
             }
         }
@@ -457,7 +457,7 @@ final class WinAccessible extends Accessible {
     }
 
     private int getControlType() {
-        Role role = (Role)getAttribute(ROLE);
+        AccessibleRole role = (AccessibleRole)getAttribute(ROLE);
         if (role == null) return UIA_GroupControlTypeId;
         switch (role) {
             case CONTEXT_MENU: return UIA_MenuControlTypeId;
@@ -512,7 +512,7 @@ final class WinAccessible extends Accessible {
     /***********************************************/
     long GetPatternProvider(int patternId) {
         if (isDisposed()) return 0;
-        Role role = (Role)getAttribute(ROLE);
+        AccessibleRole role = (AccessibleRole)getAttribute(ROLE);
         boolean impl = false;
         switch (role) {
             case MENU_ITEM:
@@ -686,8 +686,8 @@ final class WinAccessible extends Accessible {
             case UIA_NamePropertyId: {
                 String name;
 
-                Role role = (Role)getAttribute(ROLE);
-                if (role == null) role = Role.NODE; // to prevent NPE
+                AccessibleRole role = (AccessibleRole)getAttribute(ROLE);
+                if (role == null) role = AccessibleRole.NODE; // to prevent NPE
                 switch (role) {
                     case COMBO_BOX:
                         /*
@@ -798,10 +798,10 @@ final class WinAccessible extends Accessible {
                 break;
             }
             case UIA_IsPasswordPropertyId: {
-                Role role = (Role)getAttribute(ROLE);
+                AccessibleRole role = (AccessibleRole)getAttribute(ROLE);
                 variant = new WinVariant();
                 variant.vt = WinVariant.VT_BOOL;
-                variant.boolVal = role == Role.PASSWORD_FIELD;
+                variant.boolVal = role == AccessibleRole.PASSWORD_FIELD;
                 break;
             }
             case UIA_AutomationIdPropertyId: {
@@ -880,9 +880,9 @@ final class WinAccessible extends Accessible {
 
     long Navigate(int direction) {
         if (isDisposed()) return 0;
-        Role role = (Role)getAttribute(ROLE);
+        AccessibleRole role = (AccessibleRole)getAttribute(ROLE);
         /* special case for the tree item hierarchy, as expected by Windows */
-        boolean treeCell = role == Role.TREE_ITEM || role == Role.TREE_TABLE_ROW;
+        boolean treeCell = role == AccessibleRole.TREE_ITEM || role == AccessibleRole.TREE_TABLE_ROW;
         Node node = null;
         switch (direction) {
             case NavigateDirection_Parent: {
@@ -910,7 +910,7 @@ final class WinAccessible extends Accessible {
             }
             case NavigateDirection_NextSibling:
             case NavigateDirection_PreviousSibling: {
-                if (role == Role.LIST_ITEM) {
+                if (role == AccessibleRole.LIST_ITEM) {
                     return NavigateListView(this, direction);
                 }
 
@@ -928,7 +928,7 @@ final class WinAccessible extends Accessible {
                         if (result == null) return 0;
                         count = result;
                         getChild = index -> {
-                            return (Node)parentAccessible.getAttribute(Attribute.TREE_ITEM_AT_INDEX, index);
+                            return (Node)parentAccessible.getAttribute(AccessibleAttribute.TREE_ITEM_AT_INDEX, index);
                         };
                     } else {
                         ObservableList<Node> children = (ObservableList<Node>)parentAccessible.getAttribute(CHILDREN);
@@ -968,7 +968,7 @@ final class WinAccessible extends Accessible {
             case NavigateDirection_FirstChild:
             case NavigateDirection_LastChild: {
                 lastIndex = -1;
-                if (role == Role.TREE_VIEW || role == Role.TREE_TABLE_VIEW) {
+                if (role == AccessibleRole.TREE_VIEW || role == AccessibleRole.TREE_TABLE_VIEW) {
                     /* The TreeView only returns the root node as child */
                     lastIndex = 0;
                     node = (Node)getAttribute(ROW_AT_INDEX, 0);
@@ -985,8 +985,8 @@ final class WinAccessible extends Accessible {
                         node = children.get(lastIndex);
                     }
                     if (node != null) {
-                        role = (Role)getAccessible(node).getAttribute(ROLE);
-                        if (role == Role.LIST_ITEM) {
+                        role = (AccessibleRole)getAccessible(node).getAttribute(ROLE);
+                        if (role == AccessibleRole.LIST_ITEM) {
                             WinAccessible itemAcc = (WinAccessible)getAccessible(node);
                             return NavigateListView(itemAcc, direction);
                         }
@@ -1038,7 +1038,7 @@ final class WinAccessible extends Accessible {
     /***********************************************/
     void Invoke() {
         if (isDisposed()) return;
-        executeAction(Action.FIRE);
+        executeAction(AccessibleAction.FIRE);
     }
 
     /***********************************************/
@@ -1051,7 +1051,7 @@ final class WinAccessible extends Accessible {
          * GetSelection() is sent by ISelectionProvider and ITextProvider.
          * Check the role before processing message.
          */
-        Role role = (Role)getAttribute(ROLE);
+        AccessibleRole role = (AccessibleRole)getAttribute(ROLE);
         switch (role) {
             case TABLE_ROW:
             case TREE_TABLE_VIEW:
@@ -1116,7 +1116,7 @@ final class WinAccessible extends Accessible {
 
     boolean get_CanSelectMultiple() {
         if (isDisposed()) return false;
-        Role role = (Role)getAttribute(ROLE);
+        AccessibleRole role = (AccessibleRole)getAttribute(ROLE);
         if (role != null) {
             switch (role) {
                 case LIST_VIEW:
@@ -1141,12 +1141,12 @@ final class WinAccessible extends Accessible {
     /***********************************************/
     void SetValue(double val) {
         if (isDisposed()) return;
-        Role role = (Role)getAttribute(ROLE);
+        AccessibleRole role = (AccessibleRole)getAttribute(ROLE);
         if (role != null) {
             switch (role) {
                 case SLIDER:
                 case SCROLL_BAR:
-                    executeAction(Action.SET_VALUE, val);
+                    executeAction(AccessibleAction.SET_VALUE, val);
                     break;
                 default:
             }
@@ -1164,7 +1164,7 @@ final class WinAccessible extends Accessible {
      */
     boolean get_IsReadOnly() {
         if (isDisposed()) return false;
-        Role role = (Role)getAttribute(ROLE);
+        AccessibleRole role = (AccessibleRole)getAttribute(ROLE);
         if (role != null) {
             switch (role) {
                 case SLIDER:
@@ -1205,12 +1205,12 @@ final class WinAccessible extends Accessible {
     /***********************************************/
     void SetValueString(String val) {
         if (isDisposed()) return;
-        Role role = (Role)getAttribute(ROLE);
+        AccessibleRole role = (AccessibleRole)getAttribute(ROLE);
         if (role != null) {
             switch (role) {
                 case TEXT_FIELD:
                 case TEXT_AREA:
-                    executeAction(Action.SET_TITLE, val);
+                    executeAction(AccessibleAction.SET_TITLE, val);
                     break;
                 default:
             }
@@ -1227,7 +1227,7 @@ final class WinAccessible extends Accessible {
     /***********************************************/
     void Select() {
         if (isDisposed()) return;
-        Role role = (Role)getAttribute(ROLE);
+        AccessibleRole role = (AccessibleRole)getAttribute(ROLE);
         if (role != null) {
             switch (role) {
                 case RADIO_BUTTON:
@@ -1235,22 +1235,22 @@ final class WinAccessible extends Accessible {
                 case TOGGLE_BUTTON:
                 case INCREMENT_BUTTON:
                 case DECREMENT_BUTTON:
-                    executeAction(Action.FIRE);
+                    executeAction(AccessibleAction.FIRE);
                     break;
                 default:
-                    executeAction(Action.SELECT);
+                    executeAction(AccessibleAction.SELECT);
             }
         }
     }
 
     void AddToSelection() {
         if (isDisposed()) return;
-        executeAction(Action.ADD_TO_SELECTION);
+        executeAction(AccessibleAction.ADD_TO_SELECTION);
     }
 
     void RemoveFromSelection() {
         if (isDisposed()) return;
-        executeAction(Action.REMOVE_FROM_SELECTION);
+        executeAction(AccessibleAction.REMOVE_FROM_SELECTION);
     }
 
     boolean get_IsSelected() {
@@ -1358,7 +1358,7 @@ final class WinAccessible extends Accessible {
     int get_Row() {
         if (isDisposed()) return 0;
         Integer result = null;
-        Role role = (Role) getAttribute(ROLE);
+        AccessibleRole role = (AccessibleRole) getAttribute(ROLE);
         if (role != null) {
             switch (role) {
                 case TREE_TABLE_ROW:
@@ -1408,8 +1408,8 @@ final class WinAccessible extends Accessible {
        Node node = (Node)getAttribute(PARENT);
        while (node != null) {
            Accessible acc = getAccessible(node);
-           Role role = (Role)acc.getAttribute(ROLE);
-           if (role == Role.TABLE_VIEW || role == Role.TREE_TABLE_VIEW) {
+           AccessibleRole role = (AccessibleRole)acc.getAttribute(ROLE);
+           if (role == AccessibleRole.TABLE_VIEW || role == AccessibleRole.TREE_TABLE_VIEW) {
                table = node;
                break;
            }
@@ -1431,7 +1431,7 @@ final class WinAccessible extends Accessible {
     /***********************************************/
     void Toggle() {
         if (isDisposed()) return;
-        executeAction(Action.FIRE);
+        executeAction(AccessibleAction.FIRE);
     }
 
     int get_ToggleState() {
@@ -1448,35 +1448,35 @@ final class WinAccessible extends Accessible {
     /***********************************************/
     void Collapse() {
         if (isDisposed()) return;
-        Role role = (Role)getAttribute(ROLE);
-        if (role == Role.TOOL_BAR) {
+        AccessibleRole role = (AccessibleRole)getAttribute(ROLE);
+        if (role == AccessibleRole.TOOL_BAR) {
             Node button = (Node)getAttribute(OVERFLOW_BUTTON);
             if (button != null) {
-                getAccessible(button).executeAction(Action.FIRE);
+                getAccessible(button).executeAction(AccessibleAction.FIRE);
             }
             return;
         }
-        executeAction(Action.COLLAPSE);
+        executeAction(AccessibleAction.COLLAPSE);
     }
 
     void Expand() {
         if (isDisposed()) return;
-        Role role = (Role)getAttribute(ROLE);
-        if (role == Role.TOOL_BAR) {
+        AccessibleRole role = (AccessibleRole)getAttribute(ROLE);
+        if (role == AccessibleRole.TOOL_BAR) {
             Node button = (Node)getAttribute(OVERFLOW_BUTTON);
             if (button != null) {
-                getAccessible(button).executeAction(Action.FIRE);
+                getAccessible(button).executeAction(AccessibleAction.FIRE);
             }
             return;
         }
-        executeAction(Action.EXPAND);
+        executeAction(AccessibleAction.EXPAND);
     }
 
     int get_ExpandCollapseState() {
         if (isDisposed()) return 0;
 
-        Role role = (Role)getAttribute(ROLE);
-        if (role == Role.TOOL_BAR) {
+        AccessibleRole role = (AccessibleRole)getAttribute(ROLE);
+        if (role == AccessibleRole.TOOL_BAR) {
             Node button = (Node)getAttribute(OVERFLOW_BUTTON);
             if (button != null) {
                 boolean visible = Boolean.TRUE.equals(getAccessible(button).getAttribute(VISIBLE));
@@ -1503,7 +1503,7 @@ final class WinAccessible extends Accessible {
     /*             ITransformProvider              */
     /***********************************************/
     boolean get_CanMove() {
-        Role role = (Role)getAttribute(ROLE);
+        AccessibleRole role = (AccessibleRole)getAttribute(ROLE);
         switch (role) {
             case THUMB: return true;
             default: return false;
@@ -1519,7 +1519,7 @@ final class WinAccessible extends Accessible {
     }
 
     void Move(double x, double y) {
-        executeAction(Action.MOVE, x, y);
+        executeAction(AccessibleAction.MOVE, x, y);
     }
 
     void Resize(double width, double height) {
@@ -1540,16 +1540,16 @@ final class WinAccessible extends Accessible {
             Accessible vsba = getAccessible(vsb);
             switch (verticalAmount) {
                 case ScrollAmount_LargeIncrement:
-                    vsba.executeAction(Action.BLOCK_INCREMENT);
+                    vsba.executeAction(AccessibleAction.BLOCK_INCREMENT);
                     break;
                 case ScrollAmount_SmallIncrement:
-                    vsba.executeAction(Action.INCREMENT);
+                    vsba.executeAction(AccessibleAction.INCREMENT);
                     break;
                 case ScrollAmount_LargeDecrement:
-                    vsba.executeAction(Action.BLOCK_DECREMENT);
+                    vsba.executeAction(AccessibleAction.BLOCK_DECREMENT);
                     break;
                 case ScrollAmount_SmallDecrement:
-                    vsba.executeAction(Action.DECREMENT);
+                    vsba.executeAction(AccessibleAction.DECREMENT);
                     break;
                 default:
             }
@@ -1561,16 +1561,16 @@ final class WinAccessible extends Accessible {
             Accessible hsba = getAccessible(hsb);
             switch (horizontalAmount) {
                 case ScrollAmount_LargeIncrement:
-                    hsba.executeAction(Action.BLOCK_INCREMENT);
+                    hsba.executeAction(AccessibleAction.BLOCK_INCREMENT);
                     break;
                 case ScrollAmount_SmallIncrement:
-                    hsba.executeAction(Action.INCREMENT);
+                    hsba.executeAction(AccessibleAction.INCREMENT);
                     break;
                 case ScrollAmount_LargeDecrement:
-                    hsba.executeAction(Action.BLOCK_DECREMENT);
+                    hsba.executeAction(AccessibleAction.BLOCK_DECREMENT);
                     break;
                 case ScrollAmount_SmallDecrement:
-                    hsba.executeAction(Action.DECREMENT);
+                    hsba.executeAction(AccessibleAction.DECREMENT);
                     break;
                 default:
             }
@@ -1587,7 +1587,7 @@ final class WinAccessible extends Accessible {
             Double min = (Double)acc.getAttribute(MIN_VALUE);
             Double max = (Double)acc.getAttribute(MAX_VALUE);
             if (min != null && max != null) {
-                acc.executeAction(Action.SET_VALUE, (max-min)*(verticalPercent/100)+min);
+                acc.executeAction(AccessibleAction.SET_VALUE, (max-min)*(verticalPercent/100)+min);
             }
         }
 
@@ -1598,7 +1598,7 @@ final class WinAccessible extends Accessible {
             Double min = (Double)acc.getAttribute(MIN_VALUE);
             Double max = (Double)acc.getAttribute(MAX_VALUE);
             if (min != null && max != null) {
-                acc.executeAction(Action.SET_VALUE, (max-min)*(horizontalPercent/100)+min);
+                acc.executeAction(AccessibleAction.SET_VALUE, (max-min)*(horizontalPercent/100)+min);
             }
         }
     }
@@ -1665,7 +1665,7 @@ final class WinAccessible extends Accessible {
             return UIA_ScrollPatternNoScroll;
         }
 
-        Node vsb = (Node) getAttribute(Attribute.VERTICAL_SCROLLBAR);
+        Node vsb = (Node) getAttribute(AccessibleAttribute.VERTICAL_SCROLLBAR);
         if (vsb != null) {
             /* Windows expects a percentage between 0 and 100 */
             Accessible vsba = getAccessible(vsb);
@@ -1691,8 +1691,8 @@ final class WinAccessible extends Accessible {
         if (scrollPaneBounds == null) return 0;
         double scrollPaneHeight = scrollPaneBounds.getHeight();
 
-        Role role = (Role) getAttribute(ROLE);
-        if (role == Role.SCROLL_PANE) {
+        AccessibleRole role = (AccessibleRole) getAttribute(ROLE);
+        if (role == AccessibleRole.SCROLL_PANE) {
             Node content = (Node) getAttribute(CONTENTS);
             if (content != null) {
                 Bounds contentBounds = (Bounds)getAccessible(content).getAttribute(BOUNDS);
@@ -1733,7 +1733,7 @@ final class WinAccessible extends Accessible {
         if (cellIndex != null) {
             Accessible container = getContainer();
             if (container != null) {
-                container.executeAction(Action.SCROLL_TO_INDEX, cellIndex);
+                container.executeAction(AccessibleAction.SCROLL_TO_INDEX, cellIndex);
             }
         }
     }

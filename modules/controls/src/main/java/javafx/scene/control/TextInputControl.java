@@ -52,8 +52,8 @@ import javafx.css.StyleOrigin;
 import javafx.css.Styleable;
 import javafx.css.StyleableObjectProperty;
 import javafx.css.StyleableProperty;
-import javafx.scene.accessibility.Action;
-import javafx.scene.accessibility.Attribute;
+import javafx.scene.AccessibleAction;
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.text.Font;
@@ -899,7 +899,7 @@ public abstract class TextInputControl extends Control {
         this.caretPosition.set(Utils.clamp(0, caretPosition, getLength()));
         this.anchor.set(Utils.clamp(0, anchor, getLength()));
         this.selection.set(IndexRange.normalize(getAnchor(), getCaretPosition()));
-        accSendNotification(Attribute.SELECTION_START);
+        notifyAccessibleAttributeChanged(AccessibleAttribute.SELECTION_START);
     }
 
     /**
@@ -1064,7 +1064,7 @@ public abstract class TextInputControl extends Control {
 
         private void invalidate() {
             markInvalid();
-            accSendNotification(Attribute.TITLE);
+            notifyAccessibleAttributeChanged(AccessibleAttribute.TITLE);
         }
 
         @Override public void bind(ObservableValue<? extends String> observable) {
@@ -1216,8 +1216,8 @@ public abstract class TextInputControl extends Control {
      *                                                                         *
      **************************************************************************/
 
-    /** @treatAsPrivate */
-    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+    @Override
+    public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
             case TITLE: {
                 String accText = getAccessibleText();
@@ -1233,12 +1233,12 @@ public abstract class TextInputControl extends Control {
             case SELECTION_END: return getSelection().getEnd();
             case CARET_OFFSET: return getCaretPosition();
             case FONT: return getFont();
-            default: return super.accGetAttribute(attribute, parameters);
+            default: return super.queryAccessibleAttribute(attribute, parameters);
         }
     }
 
-    /** @treatAsPrivate */
-    @Override public void accExecuteAction(Action action, Object... parameters) {
+    @Override
+    public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
         switch (action) {
             case SET_TITLE: {
                 String value = (String) parameters[0];
@@ -1253,7 +1253,7 @@ public abstract class TextInputControl extends Control {
                 break;
             }
             case SCROLL_TO_INDEX: //Skin
-            default: super.accExecuteAction(action, parameters);
+            default: super.executeAccessibleAction(action, parameters);
         }
     }
 }

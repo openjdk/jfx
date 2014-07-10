@@ -40,8 +40,8 @@ import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.geometry.Side;
-import javafx.scene.accessibility.Attribute;
-import javafx.scene.accessibility.Role;
+import javafx.scene.AccessibleAttribute;
+import javafx.scene.AccessibleRole;
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
@@ -106,7 +106,7 @@ public class TabPane extends Control {
      */
     public TabPane() {
         getStyleClass().setAll("tab-pane");
-        setRole(Role.TAB_PANE);
+        setRole(AccessibleRole.TAB_PANE);
         setSelectionModel(new TabPaneSelectionModel(this));
 
         tabs.addListener((ListChangeListener<Tab>) c -> {
@@ -678,7 +678,7 @@ public class TabPane extends Control {
             }
 
             /* Does this get all the change events */
-            tabPane.accSendNotification(Attribute.SELECTED_TAB);
+            tabPane.notifyAccessibleAttributeChanged(AccessibleAttribute.SELECTED_TAB);
         }
 
         @Override public void select(Tab tab) {

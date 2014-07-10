@@ -56,10 +56,10 @@ import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 import javafx.event.EventHandler;
 import javafx.geometry.NodeOrientation;
+import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.accessibility.Role;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseEvent;
@@ -656,7 +656,7 @@ public class Tooltip extends PopupControl {
 
         CSSBridge() {
             super();
-            setRole(Role.TOOLTIP);
+            setRole(AccessibleRole.TOOLTIP);
         }
     }
 

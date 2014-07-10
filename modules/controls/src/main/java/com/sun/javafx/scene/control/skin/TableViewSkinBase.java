@@ -35,8 +35,8 @@ import javafx.collections.ListChangeListener;
 import javafx.collections.MapChangeListener;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
-import javafx.scene.accessibility.Attribute;
 import javafx.scene.control.*;
 
 import javafx.scene.layout.Region;
@@ -950,7 +950,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, B extends Behav
 
 
     @Override
-    public Object accGetAttribute(Attribute attribute, Object... parameters) {
+    protected Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
             case FOCUS_ITEM: {
                 TableFocusModel<S,?> fm = getFocusModel();
@@ -983,7 +983,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, B extends Behav
             }
             case VERTICAL_SCROLLBAR: return flow.getVbar();
             case HORIZONTAL_SCROLLBAR: return flow.getHbar();
-            default: return super.accGetAttribute(attribute, parameters);
+            default: return super.queryAccessibleAttribute(attribute, parameters);
         }
     }
 }

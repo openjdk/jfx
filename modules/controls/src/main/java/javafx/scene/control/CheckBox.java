@@ -32,8 +32,8 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.event.ActionEvent;
 import javafx.geometry.Pos;
 import javafx.css.PseudoClass;
-import javafx.scene.accessibility.Attribute;
-import javafx.scene.accessibility.Role;
+import javafx.scene.AccessibleAttribute;
+import javafx.scene.AccessibleRole;
 import com.sun.javafx.scene.control.skin.CheckBoxSkin;
 
 /**
@@ -100,7 +100,7 @@ public class CheckBox extends ButtonBase {
 
     private void initialize() {
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
-        setRole(Role.CHECK_BOX);
+        setRole(AccessibleRole.CHECK_BOX);
         setAlignment(Pos.CENTER_LEFT);
         setMnemonicParsing(true);     // enable mnemonic auto-parsing by default
         
@@ -132,7 +132,7 @@ public class CheckBox extends ButtonBase {
                     final boolean active = get();
                     pseudoClassStateChanged(PSEUDO_CLASS_DETERMINATE,  !active);
                     pseudoClassStateChanged(PSEUDO_CLASS_INDETERMINATE, active);
-                    accSendNotification(Attribute.INDETERMINATE);
+                    notifyAccessibleAttributeChanged(AccessibleAttribute.INDETERMINATE);
                 }
 
                 @Override
@@ -166,7 +166,7 @@ public class CheckBox extends ButtonBase {
                 @Override protected void invalidated() {
                     final Boolean v = get();
                     pseudoClassStateChanged(PSEUDO_CLASS_SELECTED, v);
-                    accSendNotification(Attribute.SELECTED);
+                    notifyAccessibleAttributeChanged(AccessibleAttribute.SELECTED);
                 }
 
                 @Override
@@ -267,12 +267,12 @@ public class CheckBox extends ButtonBase {
      *                                                                         *
      **************************************************************************/
 
-    /** @treatAsPrivate */
-    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+    @Override
+    public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
             case SELECTED: return isSelected();
             case INDETERMINATE: return isIndeterminate();
-            default: return super.accGetAttribute(attribute, parameters);
+            default: return super.queryAccessibleAttribute(attribute, parameters);
         }
     }
 }

@@ -33,8 +33,8 @@ import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.event.WeakEventHandler;
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
-import javafx.scene.accessibility.Attribute;
 import javafx.scene.control.*;
 import javafx.scene.control.TreeItem.TreeModificationEvent;
 import javafx.scene.input.MouseEvent;
@@ -475,7 +475,7 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
     }
 
     @Override
-    public Object accGetAttribute(Attribute attribute, Object... parameters) {
+    protected Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
             case FOCUS_ITEM: {
                 FocusModel<?> fm = getSkinnable().getFocusModel();
@@ -505,7 +505,7 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
             }
             case VERTICAL_SCROLLBAR: return flow.getVbar();
             case HORIZONTAL_SCROLLBAR: return flow.getHbar();
-            default: return super.accGetAttribute(attribute, parameters);
+            default: return super.queryAccessibleAttribute(attribute, parameters);
         }
     }
 }

@@ -32,6 +32,9 @@ import javafx.beans.WeakInvalidationListener;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.ListChangeListener;
+import javafx.scene.AccessibleAction;
+import javafx.scene.AccessibleAttribute;
+import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 import com.sun.javafx.scene.control.skin.TreeCellSkin;
 import javafx.collections.WeakListChangeListener;
@@ -43,9 +46,6 @@ import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WeakChangeListener;
-import javafx.scene.accessibility.Action;
-import javafx.scene.accessibility.Attribute;
-import javafx.scene.accessibility.Role;
 
 /**
  * The {@link Cell} type used with the {@link TreeView} control. In addition to 
@@ -85,7 +85,7 @@ public class TreeCell<T> extends IndexedCell<T> {
      */
     public TreeCell() {
         getStyleClass().addAll(DEFAULT_STYLE_CLASS);
-        setRole(Role.TREE_ITEM);
+        setRole(AccessibleRole.TREE_ITEM);
     }
 
 
@@ -163,7 +163,7 @@ public class TreeCell<T> extends IndexedCell<T> {
             pseudoClassStateChanged(EXPANDED_PSEUDOCLASS_STATE,   isExpanded);
             pseudoClassStateChanged(COLLAPSED_PSEUDOCLASS_STATE, !isExpanded);
             if (isExpanded != oldIsExpanded) {
-                accSendNotification(Attribute.EXPANDED);
+                notifyAccessibleAttributeChanged(AccessibleAttribute.EXPANDED);
             }
             oldIsExpanded = isExpanded;
         }
@@ -638,8 +638,8 @@ public class TreeCell<T> extends IndexedCell<T> {
      *                                                                         *
      **************************************************************************/
 
-    /** @treatAsPrivate */
-    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+    @Override
+    public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         TreeItem<T> treeItem = getTreeItem();
         TreeView<T> treeView = getTreeView();
         switch (attribute) {
@@ -649,7 +649,7 @@ public class TreeCell<T> extends IndexedCell<T> {
                 TreeItem<T> parent = treeItem.getParent();
                 if (parent == null) return null;
                 int parentIndex = treeView.getRow(parent);
-                return treeView.accGetAttribute(Attribute.ROW_AT_INDEX, parentIndex);
+                return treeView.queryAccessibleAttribute(AccessibleAttribute.ROW_AT_INDEX, parentIndex);
             }
             case TREE_ITEM_COUNT: {
                 return treeItem == null  ? 0 : treeItem.getChildren().size();
@@ -661,7 +661,7 @@ public class TreeCell<T> extends IndexedCell<T> {
                 TreeItem<T> child = treeItem.getChildren().get(index);
                 if (child == null) return null;
                 int childIndex = treeView.getRow(child);
-                return treeView.accGetAttribute(Attribute.ROW_AT_INDEX, childIndex);
+                return treeView.queryAccessibleAttribute(AccessibleAttribute.ROW_AT_INDEX, childIndex);
             case LEAF: return treeItem == null ? true : treeItem.isLeaf();
             case EXPANDED: return treeItem == null ? false : treeItem.isExpanded();
             case INDEX: return getIndex();
@@ -669,12 +669,12 @@ public class TreeCell<T> extends IndexedCell<T> {
             case DISCLOSURE_LEVEL: {
                 return treeView == null ? 0 : treeView.getTreeItemLevel(treeItem);
             }
-            default: return super.accGetAttribute(attribute, parameters);
+            default: return super.queryAccessibleAttribute(attribute, parameters);
         }
     }
 
-    /** @treatAsPrivate */
-    @Override public void accExecuteAction(Action action, Object... parameters) {
+    @Override
+    public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
         final TreeView<T> treeView = getTreeView();
         final TreeItem<T> treeItem = getTreeItem();
         final MultipleSelectionModel<TreeItem<T>> sm = treeView == null ? null : treeView.getSelectionModel();
@@ -700,7 +700,7 @@ public class TreeCell<T> extends IndexedCell<T> {
                 if (sm != null) sm.clearSelection(getIndex());
                 break;
             }
-            default: super.accExecuteAction(action);
+            default: super.executeAccessibleAction(action);
         }
     }
 }

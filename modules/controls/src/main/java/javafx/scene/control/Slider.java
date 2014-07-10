@@ -38,9 +38,9 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.WritableValue;
 import javafx.geometry.Orientation;
-import javafx.scene.accessibility.Action;
-import javafx.scene.accessibility.Attribute;
-import javafx.scene.accessibility.Role;
+import javafx.scene.AccessibleAction;
+import javafx.scene.AccessibleAttribute;
+import javafx.scene.AccessibleRole;
 import javafx.util.StringConverter;
 
 import com.sun.javafx.Utils;
@@ -125,7 +125,7 @@ public class Slider extends Control {
     private void initialize() {
         //Initialize the style class to be 'slider'.
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
-        setRole(Role.SLIDER);
+        setRole(AccessibleRole.SLIDER);
     }
     /**
      * The maximum value represented by this Slider. This must be a
@@ -148,7 +148,7 @@ public class Slider extends Control {
                         setMin(get());
                     }
                     adjustValues();
-                    accSendNotification(Attribute.MAX_VALUE);
+                    notifyAccessibleAttributeChanged(AccessibleAttribute.MAX_VALUE);
                 }
 
                 @Override
@@ -185,7 +185,7 @@ public class Slider extends Control {
                         setMax(get());
                     }
                     adjustValues();
-                    accSendNotification(Attribute.MIN_VALUE);
+                    notifyAccessibleAttributeChanged(AccessibleAttribute.MIN_VALUE);
                 }
 
                 @Override
@@ -222,7 +222,7 @@ public class Slider extends Control {
             value = new DoublePropertyBase(0) {
                 @Override protected void invalidated() {
                     adjustValues();
-                    accSendNotification(Attribute.VALUE);
+                    notifyAccessibleAttributeChanged(AccessibleAttribute.VALUE);
                 }
 
                 @Override
@@ -815,19 +815,19 @@ public class Slider extends Control {
      *                                                                         *
      **************************************************************************/
 
-    /** @treatAsPrivate */
-    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+    @Override
+    public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
             case VALUE: return getValue();
             case MAX_VALUE: return getMax();
             case MIN_VALUE: return getMin();
             case ORIENTATION: return getOrientation();
-            default: return super.accGetAttribute(attribute, parameters);
+            default: return super.queryAccessibleAttribute(attribute, parameters);
         }
     }
 
-    /** @treatAsPrivate */
-    @Override public void accExecuteAction(Action action, Object... parameters) {
+    @Override
+    public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
         switch (action) {
             case INCREMENT: increment(); break;
             case DECREMENT: decrement(); break;
@@ -836,7 +836,7 @@ public class Slider extends Control {
                 if (value != null) setValue(value);
                 break;
             }
-            default: super.accExecuteAction(action, parameters);
+            default: super.executeAccessibleAction(action, parameters);
         }
     }
 }

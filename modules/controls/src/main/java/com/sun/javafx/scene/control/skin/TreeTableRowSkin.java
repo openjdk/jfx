@@ -26,7 +26,6 @@
 package com.sun.javafx.scene.control.skin;
 
 import javafx.collections.FXCollections;
-import javafx.scene.accessibility.Attribute;
 import javafx.scene.control.Control;
 import javafx.scene.control.TableColumnBase;
 import javafx.scene.control.TreeItem;
@@ -41,6 +40,7 @@ import java.util.Collections;
 import java.util.List;
 
 import javafx.beans.property.DoubleProperty;
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.CssMetaData;
@@ -404,8 +404,7 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
 
 
     @Override
-    protected Object accGetAttribute(Attribute attribute,
-                                     Object... parameters) {
+    protected Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         final TreeTableView<T> treeTableView = getSkinnable().getTreeTableView();
         switch (attribute) {
             case SELECTED_CELLS: {
@@ -441,7 +440,7 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
                 }
                 return cellsMap.get(column);
             }
-            default: return super.accGetAttribute(attribute, parameters);
+            default: return super.queryAccessibleAttribute(attribute, parameters);
         }
     }
 }

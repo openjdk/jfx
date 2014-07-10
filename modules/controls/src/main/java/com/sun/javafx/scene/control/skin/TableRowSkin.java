@@ -30,7 +30,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javafx.beans.property.DoubleProperty;
-import javafx.scene.accessibility.Attribute;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TablePosition;
@@ -43,6 +42,7 @@ import com.sun.javafx.scene.control.behavior.TableRowBehavior;
 import javafx.beans.property.ObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
 import javafx.scene.control.Control;
 import javafx.scene.control.TableColumnBase;
@@ -130,8 +130,7 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, CellBehavi
     }
 
     @Override
-    protected Object accGetAttribute(Attribute attribute,
-                                     Object... parameters) {
+    protected Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
             case SELECTED_CELLS: {
                 // FIXME this could be optimised to iterate over cellsMap only
@@ -166,7 +165,7 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, CellBehavi
                 }
                 return cellsMap.get(column);
             }
-            default: return super.accGetAttribute(attribute, parameters);
+            default: return super.queryAccessibleAttribute(attribute, parameters);
         }
     }
 

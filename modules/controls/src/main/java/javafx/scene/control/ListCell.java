@@ -38,9 +38,9 @@ import javafx.beans.value.WeakChangeListener;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.WeakListChangeListener;
-import javafx.scene.accessibility.Action;
-import javafx.scene.accessibility.Attribute;
-import javafx.scene.accessibility.Role;
+import javafx.scene.AccessibleAction;
+import javafx.scene.AccessibleAttribute;
+import javafx.scene.AccessibleRole;
 
 import com.sun.javafx.scene.control.skin.ListCellSkin;
 
@@ -82,7 +82,7 @@ public class ListCell<T> extends IndexedCell<T> {
      */
     public ListCell() {
         getStyleClass().addAll(DEFAULT_STYLE_CLASS);
-        setRole(Role.LIST_ITEM);
+        setRole(AccessibleRole.LIST_ITEM);
     }
 
 
@@ -545,17 +545,17 @@ public class ListCell<T> extends IndexedCell<T> {
      *                                                                         *
      **************************************************************************/
 
-    /** @treatAsPrivate */
-    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+    @Override
+    public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
             case INDEX: return getIndex();
             case SELECTED: return isSelected();
-            default: return super.accGetAttribute(attribute, parameters);
+            default: return super.queryAccessibleAttribute(attribute, parameters);
         }
     }
 
-    /** @treatAsPrivate */
-    @Override public void accExecuteAction(Action action, Object... parameters) {
+    @Override
+    public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
         final ListView<T> listView = getListView();
         final MultipleSelectionModel<T> sm = listView == null ? null : listView.getSelectionModel();
         switch (action) {
@@ -571,7 +571,7 @@ public class ListCell<T> extends IndexedCell<T> {
                 if (sm != null) sm.clearSelection(getIndex());
                 break;
             }
-            default: super.accExecuteAction(action);
+            default: super.executeAccessibleAction(action);
         }
     }
 }

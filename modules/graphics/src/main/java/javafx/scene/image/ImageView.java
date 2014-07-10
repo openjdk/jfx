@@ -45,9 +45,8 @@ import javafx.css.StyleableProperty;
 import javafx.css.StyleableStringProperty;
 import javafx.geometry.NodeOrientation;
 import javafx.geometry.Rectangle2D;
+import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
-import javafx.scene.accessibility.Role;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -146,7 +145,7 @@ public class ImageView extends Node {
      */
     public ImageView() {
         getStyleClass().add(DEFAULT_STYLE_CLASS);
-        setRole(Role.IMAGE_VIEW);
+        setRole(AccessibleRole.IMAGE_VIEW);
         setNodeOrientation(NodeOrientation.LEFT_TO_RIGHT);
     }
 
@@ -174,7 +173,7 @@ public class ImageView extends Node {
      */
     public ImageView(Image image) {
         getStyleClass().add(DEFAULT_STYLE_CLASS);
-        setRole(Role.IMAGE_VIEW);
+        setRole(AccessibleRole.IMAGE_VIEW);
         setNodeOrientation(NodeOrientation.LEFT_TO_RIGHT);
         setImage(image);
     }

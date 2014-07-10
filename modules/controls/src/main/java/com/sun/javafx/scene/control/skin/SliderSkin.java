@@ -29,9 +29,9 @@ import javafx.animation.Transition;
 import javafx.geometry.Orientation;
 import javafx.geometry.Point2D;
 import javafx.geometry.Side;
-import javafx.scene.accessibility.Action;
-import javafx.scene.accessibility.Attribute;
-import javafx.scene.accessibility.Role;
+import javafx.scene.AccessibleAction;
+import javafx.scene.AccessibleAttribute;
+import javafx.scene.AccessibleRole;
 import javafx.scene.chart.NumberAxis;
 import javafx.scene.control.Slider;
 import javafx.scene.layout.StackPane;
@@ -85,19 +85,19 @@ public class SliderSkin extends BehaviorSkinBase<Slider, SliderBehavior> {
     private void initialize() {
         thumb = new StackPane() {
             @Override
-            public Object accGetAttribute(Attribute attribute, Object... parameters) {
+            public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
                 switch (attribute) {
                     case VALUE: return getSkinnable().getValue();
                     case MAX_VALUE: {
                         // This is required for mac-support, to convert from pixel to percent
                         return getSkinnable().getMax();
                     }
-                    default: return super.accGetAttribute(attribute, parameters);
+                    default: return super.queryAccessibleAttribute(attribute, parameters);
                 }
             }
 
             @Override
-            public void accExecuteAction(Action action, Object... parameters) {
+            public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
                 switch (action) {
                     case MOVE: {
                         // FIXME for now we just take the x/y values as value, rather than pixel value
@@ -107,12 +107,12 @@ public class SliderSkin extends BehaviorSkinBase<Slider, SliderBehavior> {
                         slider.setValue(slider.getValue() + value);
                         break;
                     }
-                    default: super.accExecuteAction(action, parameters);
+                    default: super.executeAccessibleAction(action, parameters);
                 }
             }
         };
         thumb.getStyleClass().setAll("thumb");
-        thumb.setRole(Role.THUMB);
+        thumb.setRole(AccessibleRole.THUMB);
         track = new StackPane();
         track.getStyleClass().setAll("track");
 //        horizontal = getSkinnable().isVertical();

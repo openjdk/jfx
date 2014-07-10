@@ -42,7 +42,7 @@ import javafx.css.StyleableProperty;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Pos;
-import javafx.scene.accessibility.Role;
+import javafx.scene.AccessibleRole;
 
 import com.sun.javafx.binding.ExpressionHelper;
 import com.sun.javafx.css.converters.EnumConverter;
@@ -147,7 +147,7 @@ public class TextField extends TextInputControl {
     public TextField(String text) {
         super(new TextFieldContent());
         getStyleClass().add("text-field");
-        setRole(Role.TEXT_FIELD);
+        setRole(AccessibleRole.TEXT_FIELD);
         setText(text);
     }
 

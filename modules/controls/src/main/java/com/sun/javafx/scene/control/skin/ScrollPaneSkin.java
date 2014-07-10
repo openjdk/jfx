@@ -41,9 +41,9 @@ import javafx.event.EventHandler;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
 import javafx.geometry.Orientation;
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.Cursor;
 import javafx.scene.Node;
-import javafx.scene.accessibility.Attribute;
 import javafx.scene.control.ScrollBar;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.ScrollPane.ScrollBarPolicy;
@@ -1190,11 +1190,12 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
         return contentPosY;
     }
 
-    @Override protected Object accGetAttribute(Attribute attribute, Object... parameters) {
+    @Override
+    protected Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
             case VERTICAL_SCROLLBAR: return vsb;
             case HORIZONTAL_SCROLLBAR: return hsb;
-            default: return super.accGetAttribute(attribute, parameters);
+            default: return super.queryAccessibleAttribute(attribute, parameters);
         }
     }
 }

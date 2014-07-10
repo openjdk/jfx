@@ -26,9 +26,9 @@
 package javafx.scene.control;
 
 import javafx.event.ActionEvent;
-import javafx.scene.accessibility.Action;
-import javafx.scene.accessibility.Attribute;
-import javafx.scene.accessibility.Role;
+import javafx.scene.AccessibleAction;
+import javafx.scene.AccessibleAttribute;
+import javafx.scene.AccessibleRole;
 import com.sun.javafx.scene.control.skin.SplitMenuButtonSkin;
 
 /**
@@ -96,7 +96,7 @@ public class SplitMenuButton extends MenuButton {
         }
 
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
-        setRole(Role.SPLIT_MENU_BUTTON);
+        setRole(AccessibleRole.SPLIT_MENU_BUTTON);
         setMnemonicParsing(true);     // enable mnemonic auto-parsing by default
     }
 
@@ -141,16 +141,16 @@ public class SplitMenuButton extends MenuButton {
      *                                                                         *
      **************************************************************************/
 
-    /** @treatAsPrivate */
-    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+    @Override
+    public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
             case EXPANDED: return isShowing();
-            default: return super.accGetAttribute(attribute, parameters);
+            default: return super.queryAccessibleAttribute(attribute, parameters);
         }
     }
 
-    /** @treatAsPrivate */
-    @Override public void accExecuteAction(Action action, Object... parameters) {
+    @Override
+    public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
         switch (action) {
             case FIRE:
                 fire();
@@ -161,7 +161,7 @@ public class SplitMenuButton extends MenuButton {
             case COLLAPSE:
                 hide();
                 break;
-            default: super.accExecuteAction(action);
+            default: super.executeAccessibleAction(action);
         }
     }
 

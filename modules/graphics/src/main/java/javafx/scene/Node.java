@@ -75,9 +75,6 @@ import javafx.geometry.Orientation;
 import javafx.geometry.Point2D;
 import javafx.geometry.Point3D;
 import javafx.geometry.Rectangle2D;
-import javafx.scene.accessibility.Action;
-import javafx.scene.accessibility.Attribute;
-import javafx.scene.accessibility.Role;
 import javafx.scene.effect.Blend;
 import javafx.scene.effect.BlendMode;
 import javafx.scene.effect.Effect;
@@ -746,7 +743,7 @@ public abstract class Node implements EventTarget, Styleable {
                     oldParent = newParent;
                     invalidateLocalToSceneTransform();
                     parentResolvedOrientationInvalidated();
-                    accSendNotification(Attribute.PARENT);
+                    notifyAccessibleAttributeChanged(AccessibleAttribute.PARENT);
                 }
 
                 @Override
@@ -7541,7 +7538,7 @@ public abstract class Node implements EventTarget, Styleable {
 
                 needsChangeEvent = true;
 
-                accSendNotification(Attribute.FOCUSED);
+                notifyAccessibleAttributeChanged(AccessibleAttribute.FOCUSED);
             }
         }
 
@@ -9176,21 +9173,21 @@ public abstract class Node implements EventTarget, Styleable {
      * 
      * @since JavaFX 8u40
      */
-    private ObjectProperty<Role> role;
+    private ObjectProperty<AccessibleRole> role;
 
-    public final void setRole(Role value) {
-        if (value == null) value = Role.NODE;
+    public final void setRole(AccessibleRole value) {
+        if (value == null) value = AccessibleRole.NODE;
         roleProperty().set(value);
     }
 
-    public final Role getRole() {
-        if (role == null) return Role.NODE;
+    public final AccessibleRole getRole() {
+        if (role == null) return AccessibleRole.NODE;
         return roleProperty().get();
     }
 
-    public final ObjectProperty<Role> roleProperty() {
+    public final ObjectProperty<AccessibleRole> roleProperty() {
         if (role == null) {
-            role = new SimpleObjectProperty<Role>(this, "role", Role.NODE);
+            role = new SimpleObjectProperty<AccessibleRole>(this, "role", AccessibleRole.NODE);
         }
         return role;
     }
@@ -9293,12 +9290,20 @@ public abstract class Node implements EventTarget, Styleable {
             return accessibleHelp;
         }
     }
+
     /**
-     * Experimental API - Do not use (will be removed).
+     * This method is called by the assistive technology to request
+     * the value for the given attribute.
      *
-     * @treatAsPrivate
+     * @param attribute the requested attribute
+     * @param parameters optional list of parameters
+     * @return the value for the requested attribute
+     *
+     * @see AccessibleAttribute
+     *
+     * @since JavaFX 8u40
      */
-    public Object accGetAttribute(Attribute attribute, Object... parameters) {
+    public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
             case ROLE: return getRole();
             case ROLE_DESCRIPTION: return getRoleDescription();
@@ -9316,19 +9321,30 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     /**
-     * Experimental API - Do not use (will be removed).
+     * This method is called by the assistive technology to request the action
+     * indicated by the given argument to be executed.
      *
-     * @treatAsPrivate
+     * @param action the action to execute
+     * @param parameters optional list of parameters
+     *
+     * @see AccessibleAction
+     *
+     * @since JavaFX 8u40
      */
-    public void accExecuteAction(Action action, Object... parameters) {
+    public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
     }
 
     /**
-     * Experimental API - Do not use (will be removed).
+     * This method is called by the application to notify the assistive
+     * technology that the value for the given attribute has changed.
      *
-     * @treatAsPrivate
+     * @param notification the attribute which value has changed
+     *
+     * @see AccessibleAttribute
+     *
+     * @since JavaFX 8u40
      */
-    public final void accSendNotification(Attribute attributes) {
+    public final void notifyAccessibleAttributeChanged(AccessibleAttribute attributes) {
         if (accessible == null) {
             Scene scene = getScene();
             if (scene != null) {
@@ -9359,11 +9375,11 @@ public abstract class Node implements EventTarget, Styleable {
         if (accessible == null) {
             accessible = Application.GetApplication().createAccessible();
             accessible.setEventHandler(new Accessible.EventHandler() {
-                @Override public Object getAttribute(Attribute attribute, Object... parameters) {
-                    return accGetAttribute(attribute, parameters);
+                @Override public Object getAttribute(AccessibleAttribute attribute, Object... parameters) {
+                    return queryAccessibleAttribute(attribute, parameters);
                 }
-                @Override public void executeAction(Action action, Object... parameters) {
-                    accExecuteAction(action, parameters);
+                @Override public void executeAction(AccessibleAction action, Object... parameters) {
+                    executeAccessibleAction(action, parameters);
                 }
                 @Override public String toString() {
                     String klassName = Node.this.getClass().getName();

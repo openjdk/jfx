@@ -43,9 +43,9 @@ import javafx.css.StyleableObjectProperty;
 import javafx.css.StyleableProperty;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
+import javafx.scene.AccessibleAttribute;
+import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
-import javafx.scene.accessibility.Attribute;
-import javafx.scene.accessibility.Role;
 
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EnumConverter;
@@ -104,7 +104,7 @@ public class ScrollPane extends Control {
      */
     public ScrollPane() {
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
-        setRole(Role.SCROLL_PANE);
+        setRole(AccessibleRole.SCROLL_PANE);
         // focusTraversable is styleable through css. Calling setFocusTraversable
         // makes it look to css like the user set the value and css will not 
         // override. Initializing focusTraversable by calling applyStyle with
@@ -738,13 +738,13 @@ public class ScrollPane extends Control {
      *                                                                         *
      **************************************************************************/
 
-    /** @treatAsPrivate */
-    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+    @Override
+    public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
             case CONTENTS: return getContent();
             case VERTICAL_SCROLLBAR: //Skin
             case HORIZONTAL_SCROLLBAR: //Skin
-            default: return super.accGetAttribute(attribute, parameters);
+            default: return super.queryAccessibleAttribute(attribute, parameters);
         }
     }
 

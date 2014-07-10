@@ -38,9 +38,9 @@ import java.lang.ref.WeakReference;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 
-import javafx.scene.accessibility.Action;
-import javafx.scene.accessibility.Attribute;
-import javafx.scene.accessibility.Role;
+import javafx.scene.AccessibleAction;
+import javafx.scene.AccessibleAttribute;
+import javafx.scene.AccessibleRole;
 import javafx.scene.control.TreeTableColumn.CellEditEvent;
 
 
@@ -84,7 +84,7 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
      */
     public TreeTableCell() {
         getStyleClass().addAll(DEFAULT_STYLE_CLASS);
-        setRole(Role.TREE_TABLE_CELL);
+        setRole(AccessibleRole.TREE_TABLE_CELL);
         
         updateColumnIndex();
     }
@@ -774,18 +774,18 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
      *                                                                         *
      **************************************************************************/
 
-    /** @treatAsPrivate */
-    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+    @Override
+    public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
             case ROW_INDEX: return getIndex();
             case COLUMN_INDEX: return columnIndex;
             case SELECTED: return isInCellSelectionMode() ? isSelected() : getTreeTableRow().isSelected();
-            default: return super.accGetAttribute(attribute, parameters);
+            default: return super.queryAccessibleAttribute(attribute, parameters);
         }
     }
 
-    /** @treatAsPrivate */
-    @Override public void accExecuteAction(Action action, Object... parameters) {
+    @Override
+    public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
         final TreeTableView<S> treeTableView = getTreeTableView();
         final TreeTableView.TreeTableViewSelectionModel<S> sm = treeTableView == null ? null : treeTableView.getSelectionModel();
 
@@ -802,7 +802,7 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
                 if (sm != null) sm.clearSelection(getIndex(), getTableColumn());
                 break;
             }
-            default: super.accExecuteAction(action);
+            default: super.executeAccessibleAction(action);
         }
     }
 }

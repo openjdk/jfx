@@ -25,15 +25,15 @@
 
 package com.sun.glass.ui;
 
-import static javafx.scene.accessibility.Attribute.PARENT;
-import static javafx.scene.accessibility.Attribute.ROLE;
+import static javafx.scene.AccessibleAttribute.PARENT;
+import static javafx.scene.AccessibleAttribute.ROLE;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.SceneHelper;
+import javafx.scene.AccessibleAction;
+import javafx.scene.AccessibleAttribute;
+import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 import javafx.scene.Scene;
-import javafx.scene.accessibility.Action;
-import javafx.scene.accessibility.Attribute;
-import javafx.scene.accessibility.Role;
 
 public abstract class Accessible {
 
@@ -41,28 +41,11 @@ public abstract class Accessible {
     private View view;
 
     public static class EventHandler {
-
-        /**
-         * This method is called by the AT to request the value for the given attribute.
-         *
-         * @see Attribute
-         * @param attribute the requested attribute
-         * @param parameters optional list of parameters
-         * @return the value for the requested attribute
-         */
-        public Object getAttribute(Attribute attribute, Object... parameters) {
+        public Object getAttribute(AccessibleAttribute attribute, Object... parameters) {
             return null;
         }
 
-        /**
-         * This method is called by the AT to indicate the accessible to execute
-         * the given action.
-         *
-         * @see Action
-         * @param action the action to execute
-         * @param parameters optional list of parameters
-         */
-        public void executeAction(Action action, Object... parameters) {
+        public void executeAction(AccessibleAction action, Object... parameters) {
         }
     }
 
@@ -97,9 +80,9 @@ public abstract class Accessible {
     }
 
     protected boolean isIgnored() {
-        Role role = (Role)getAttribute(ROLE);
+        AccessibleRole role = (AccessibleRole)getAttribute(ROLE);
         if (role == null) return true;
-        return role == Role.NODE || role == Role.PARENT;
+        return role == AccessibleRole.NODE || role == AccessibleRole.PARENT;
     }
 
     protected abstract long getNativeAccessible(); 
@@ -121,18 +104,18 @@ public abstract class Accessible {
         return acc.getNativeAccessible();
     }
 
-    protected Accessible getContainerAccessible(Role targetRole) {
+    protected Accessible getContainerAccessible(AccessibleRole targetRole) {
         Node node = (Node)getAttribute(PARENT);
         while (node != null) {
             Accessible acc = getAccessible(node);
-            Role role = (Role)acc.getAttribute(ROLE);
+            AccessibleRole role = (AccessibleRole)acc.getAttribute(ROLE);
             if (role == targetRole) return acc;
             node = (Node)acc.getAttribute(PARENT);
         }
         return null;
     }
 
-    public Object getAttribute(Attribute attribute, Object... parameters) {
+    public Object getAttribute(AccessibleAttribute attribute, Object... parameters) {
         Object result = eventHandler.getAttribute(attribute, parameters);
         if (result != null) {
             Class<?> clazz = attribute.getReturnType();
@@ -151,17 +134,10 @@ public abstract class Accessible {
         return result;
     }
 
-    public void executeAction(Action action, Object... parameters) {
+    public void executeAction(AccessibleAction action, Object... parameters) {
         eventHandler.executeAction(action, parameters);
     }
 
-    /**
-     * This method is called by Accessible to notify the AT that
-     * the value for the given attribute has changed.
-     *
-     * @see Attribute
-     * @param notification the attribute which value has changed
-     */
-    public abstract void sendNotification(Attribute notification);
+    public abstract void sendNotification(AccessibleAttribute notification);
 
 }

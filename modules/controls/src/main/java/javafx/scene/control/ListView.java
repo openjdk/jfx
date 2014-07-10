@@ -52,9 +52,6 @@ import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.geometry.Orientation;
-import javafx.scene.accessibility.Action;
-import javafx.scene.accessibility.Attribute;
-import javafx.scene.accessibility.Role;
 import javafx.scene.layout.Region;
 import javafx.util.Callback;
 import javafx.css.StyleableObjectProperty;
@@ -73,6 +70,8 @@ import javafx.css.PseudoClass;
 import javafx.beans.DefaultProperty;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
+import javafx.scene.AccessibleAttribute;
+import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 
 /**
@@ -313,7 +312,7 @@ public class ListView<T> extends Control {
      */
     public ListView(ObservableList<T> items) {
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
-        setRole(Role.LIST_VIEW);
+        setRole(AccessibleRole.LIST_VIEW);
 
         setItems(items);
 
@@ -1083,8 +1082,8 @@ public class ListView<T> extends Control {
      *                                                                         *
      **************************************************************************/
 
-    /** @treatAsPrivate */
-    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+    @Override
+    public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
             case ROW_COUNT: return getItems().size();
             case MULTIPLE_SELECTION: {
@@ -1095,7 +1094,7 @@ public class ListView<T> extends Control {
             case SELECTED_ROWS: //Skin
             case VERTICAL_SCROLLBAR: //Skin
             case HORIZONTAL_SCROLLBAR: // Skin
-            default: return super.accGetAttribute(attribute, parameters);
+            default: return super.queryAccessibleAttribute(attribute, parameters);
         }
     }
 
@@ -1420,7 +1419,7 @@ public class ListView<T> extends Control {
             if (listView.getFocusModel() == null) return;
             listView.getFocusModel().focus(row);
 
-            listView.accSendNotification(Attribute.SELECTED_ROWS);
+            listView.notifyAccessibleAttributeChanged(AccessibleAttribute.SELECTED_ROWS);
         }
 
         /** {@inheritDoc} */

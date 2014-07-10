@@ -39,9 +39,9 @@ import javafx.collections.WeakListChangeListener;
 import javafx.css.PseudoClass;
 import javafx.event.EventHandler;
 import javafx.event.EventTarget;
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
 import javafx.scene.Parent;
-import javafx.scene.accessibility.Attribute;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.ComboBoxBase;
 import javafx.scene.control.ListCell;
@@ -653,7 +653,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             int index = listView.getSelectionModel().getSelectedIndex();
             comboBox.getSelectionModel().select(index);
             updateDisplayNode();
-            comboBox.accSendNotification(Attribute.TITLE);
+            comboBox.notifyAccessibleAttributeChanged(AccessibleAttribute.TITLE);
         });
          
         comboBox.getSelectionModel().selectedItemProperty().addListener(o -> {
@@ -751,7 +751,8 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             setFocused(b);
         }
 
-        @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        @Override
+        public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
             switch (attribute) {
                 case FOCUS_ITEM: 
                     /* Internally comboBox reassign its focus the text field.
@@ -759,12 +760,13 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                      * if the focus stays with the comboBox control.
                      */
                     return getParent();
-                default: return super.accGetAttribute(attribute, parameters);
+                default: return super.queryAccessibleAttribute(attribute, parameters);
             }
         }
     }
 
-    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+    @Override
+    public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
             case FOCUS_ITEM: {
                 if (comboBox.isShowing()) {
@@ -773,7 +775,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                      * Note that this fix returns a child of the PopupWindow back to the main
                      * Stage, which doesn't seem to cause problems.
                      */
-                    return listView.accGetAttribute(attribute, parameters);
+                    return listView.queryAccessibleAttribute(attribute, parameters);
                 }
                 return null;
             }
@@ -790,7 +792,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             case SELECTION_END: return textField.getSelection().getEnd();
 
             //fall through
-            default: return super.accGetAttribute(attribute, parameters);
+            default: return super.queryAccessibleAttribute(attribute, parameters);
         }
     }
 }

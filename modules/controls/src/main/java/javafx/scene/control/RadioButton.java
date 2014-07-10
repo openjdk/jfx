@@ -31,8 +31,8 @@ import com.sun.javafx.scene.control.skin.RadioButtonSkin;
 
 import javafx.beans.value.WritableValue;
 import javafx.css.StyleableProperty;
-import javafx.scene.accessibility.Attribute;
-import javafx.scene.accessibility.Role;
+import javafx.scene.AccessibleAttribute;
+import javafx.scene.AccessibleRole;
 
 /**
  * <p>RadioButtons create a series of items where only one item can be
@@ -89,7 +89,7 @@ import javafx.scene.accessibility.Role;
 
     private void initialize() {
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
-        setRole(Role.RADIO_BUTTON);
+        setRole(AccessibleRole.RADIO_BUTTON);
         // alignment is styleable through css. Calling setAlignment
         // makes it look to css like the user set the value and css will not 
         // override. Initializing alignment by calling set on the 
@@ -146,11 +146,11 @@ import javafx.scene.accessibility.Role;
      *                                                                         *
      **************************************************************************/
 
-    /** @treatAsPrivate */
-    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+    @Override
+    public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
             case SELECTED: return isSelected();
-            default: return super.accGetAttribute(attribute, parameters);
+            default: return super.queryAccessibleAttribute(attribute, parameters);
         }
     }
 }

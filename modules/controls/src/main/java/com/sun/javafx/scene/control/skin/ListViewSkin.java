@@ -33,9 +33,9 @@ import javafx.collections.ObservableList;
 import javafx.collections.WeakListChangeListener;
 import javafx.event.EventHandler;
 import javafx.geometry.Orientation;
+import javafx.scene.AccessibleAction;
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
-import javafx.scene.accessibility.Action;
-import javafx.scene.accessibility.Attribute;
 import javafx.scene.control.FocusModel;
 import javafx.scene.control.IndexedCell;
 import javafx.scene.control.Label;
@@ -485,7 +485,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
     }
 
     @Override
-    public Object accGetAttribute(Attribute attribute, Object... parameters) {
+    protected Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
             case FOCUS_ITEM: {
                 FocusModel<?> fm = getSkinnable().getFocusModel();
@@ -522,19 +522,19 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
             }
             case VERTICAL_SCROLLBAR: return flow.getVbar();
             case HORIZONTAL_SCROLLBAR: return flow.getHbar();
-            default: return super.accGetAttribute(attribute, parameters);
+            default: return super.queryAccessibleAttribute(attribute, parameters);
         }
     }
 
     @Override
-    public void accExecuteAction(Action action, Object... parameters) {
+    protected void executeAccessibleAction(AccessibleAction action, Object... parameters) {
         switch (action) {
             case SCROLL_TO_INDEX: {
                 Integer index = (Integer)parameters[0];
                 if (index != null) flow.show(index);
                 break;
             }
-            default: super.accExecuteAction(action, parameters);
+            default: super.executeAccessibleAction(action, parameters);
         }
     }
 }

@@ -40,9 +40,9 @@ import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.geometry.VPos;
+import javafx.scene.AccessibleAttribute;
+import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
-import javafx.scene.accessibility.Attribute;
-import javafx.scene.accessibility.Role;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableColumn;
@@ -173,7 +173,7 @@ public class TableColumnHeader extends Region {
             setStyle(column.getStyle());
             updateStyleClass();
             /* Having TableColumn role parented by TableColumn causes VoiceOver to be unhappy */
-            setRole(Role.TABLE_COLUMN);
+            setRole(AccessibleRole.TABLE_COLUMN);
         }
     }
     
@@ -1027,11 +1027,11 @@ public class TableColumnHeader extends Region {
     }
 
     @Override
-    public Object accGetAttribute(Attribute attribute, Object... parameters) {
+    public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
             case INDEX: return getIndex(column);
             case TITLE: return column != null ? column.getText() : null;
-            default: return super.accGetAttribute(attribute, parameters);
+            default: return super.queryAccessibleAttribute(attribute, parameters);
         }
     }
 

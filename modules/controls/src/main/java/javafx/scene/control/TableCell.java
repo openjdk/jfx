@@ -31,9 +31,9 @@ import javafx.beans.WeakInvalidationListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
 import javafx.event.Event;
-import javafx.scene.accessibility.Action;
-import javafx.scene.accessibility.Attribute;
-import javafx.scene.accessibility.Role;
+import javafx.scene.AccessibleAction;
+import javafx.scene.AccessibleAttribute;
+import javafx.scene.AccessibleRole;
 import javafx.scene.control.TableView.TableViewFocusModel;
 
 import com.sun.javafx.scene.control.skin.TableCellSkin;
@@ -88,7 +88,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
      */
     public TableCell() {
         getStyleClass().addAll(DEFAULT_STYLE_CLASS);
-        setRole(Role.TABLE_CELL);
+        setRole(AccessibleRole.TABLE_CELL);
         
         updateColumnIndex();
     }
@@ -780,18 +780,18 @@ public class TableCell<S,T> extends IndexedCell<T> {
      *                                                                         *
      **************************************************************************/
 
-    /** @treatAsPrivate */
-    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+    @Override
+    public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
             case ROW_INDEX: return getIndex();
             case COLUMN_INDEX: return columnIndex;
             case SELECTED: return isInCellSelectionMode() ? isSelected() : getTableRow().isSelected();
-            default: return super.accGetAttribute(attribute, parameters);
+            default: return super.queryAccessibleAttribute(attribute, parameters);
         }
     }
 
-    /** @treatAsPrivate */
-    @Override public void accExecuteAction(Action action, Object... parameters) {
+    @Override
+    public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
         final TableView<S> tableView = getTableView();
         final TableSelectionModel<S> sm = tableView == null ? null : tableView.getSelectionModel();
 
@@ -808,7 +808,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
                 if (sm != null) sm.clearSelection(getIndex(), getTableColumn());
                 break;
             }
-            default: super.accExecuteAction(action);
+            default: super.executeAccessibleAction(action);
         }
     }
 }

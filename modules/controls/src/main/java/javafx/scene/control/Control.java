@@ -42,9 +42,9 @@ import javafx.beans.value.WritableValue;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.geometry.Side;
+import javafx.scene.AccessibleAction;
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
-import javafx.scene.accessibility.Action;
-import javafx.scene.accessibility.Attribute;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.layout.Region;
 import com.sun.javafx.application.PlatformImpl;
@@ -921,8 +921,8 @@ public abstract class Control extends Region implements Skinnable {
      *                                                                         *
      **************************************************************************/
 
-    /** @treatAsPrivate */
-    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+    @Override 
+    public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
             case HELP:
                 String help = getAccessibleHelp();
@@ -932,14 +932,14 @@ public abstract class Control extends Region implements Skinnable {
             default:
         }
         if (skinBase != null) {
-            Object result = skinBase.accGetAttribute(attribute, parameters);
+            Object result = skinBase.queryAccessibleAttribute(attribute, parameters);
             if (result != null) return result;
         }
-        return super.accGetAttribute(attribute, parameters);
+        return super.queryAccessibleAttribute(attribute, parameters);
     }
 
-    /** @treatAsPrivate */
-    @Override public void accExecuteAction(Action action, Object... parameters) {
+    @Override
+    public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
         switch (action) {
             case SHOW_MENU:
                 ContextMenu menu = getContextMenu();
@@ -950,8 +950,8 @@ public abstract class Control extends Region implements Skinnable {
             default:
         }
         if (skinBase != null) {
-            skinBase.accExecuteAction(action, parameters);
+            skinBase.executeAccessibleAction(action, parameters);
         }
-        super.accExecuteAction(action, parameters);
+        super.executeAccessibleAction(action, parameters);
     }
 }

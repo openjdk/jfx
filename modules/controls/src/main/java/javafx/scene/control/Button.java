@@ -28,8 +28,8 @@ package javafx.scene.control;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.BooleanPropertyBase;
 import javafx.event.ActionEvent;
+import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
-import javafx.scene.accessibility.Role;
 
 import javafx.css.PseudoClass;
 import com.sun.javafx.scene.control.skin.ButtonSkin;
@@ -95,7 +95,7 @@ public class Button extends ButtonBase {
 
     private void initialize() {
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
-        setRole(Role.BUTTON);
+        setRole(AccessibleRole.BUTTON);
         setMnemonicParsing(true);     // enable mnemonic auto-parsing by default
     }
 

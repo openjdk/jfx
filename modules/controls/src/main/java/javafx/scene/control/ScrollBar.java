@@ -41,9 +41,9 @@ import javafx.css.StyleableDoubleProperty;
 import javafx.css.StyleableObjectProperty;
 import javafx.css.StyleableProperty;
 import javafx.geometry.Orientation;
-import javafx.scene.accessibility.Action;
-import javafx.scene.accessibility.Attribute;
-import javafx.scene.accessibility.Role;
+import javafx.scene.AccessibleAction;
+import javafx.scene.AccessibleAttribute;
+import javafx.scene.AccessibleRole;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -89,7 +89,7 @@ public class ScrollBar extends Control {
         setWidth(ScrollBarSkin.DEFAULT_WIDTH);
         setHeight(ScrollBarSkin.DEFAULT_LENGTH);
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
-        setRole(Role.SCROLL_BAR);
+        setRole(AccessibleRole.SCROLL_BAR);
         // focusTraversable is styleable through css. Calling setFocusTraversable
         // makes it look to css like the user set the value and css will not 
         // override. Initializing focusTraversable by calling applyStyle with null
@@ -493,19 +493,19 @@ public class ScrollBar extends Control {
      *                                                                         *
      **************************************************************************/
 
-    /** @treatAsPrivate */
-    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+    @Override
+    public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
             case VALUE: return getValue();
             case MAX_VALUE: return getMax();
             case MIN_VALUE: return getMin();
             case ORIENTATION: return getOrientation();
-            default: return super.accGetAttribute(attribute, parameters);
+            default: return super.queryAccessibleAttribute(attribute, parameters);
         }
     }
 
-    /** @treatAsPrivate */
-    @Override public void accExecuteAction(Action action, Object... parameters) {
+    @Override
+    public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
         switch (action) {
             case INCREMENT: increment(); break;
             case DECREMENT: decrement(); break;
@@ -516,7 +516,7 @@ public class ScrollBar extends Control {
                 if (value != null) setValue(value);
                 break;
             }
-            default: super.accExecuteAction(action, parameters);
+            default: super.executeAccessibleAction(action, parameters);
         }
     }
 }

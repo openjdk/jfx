@@ -45,9 +45,9 @@ import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
 import javafx.geometry.VPos;
 import javafx.geometry.VerticalDirection;
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.Group;
 import javafx.scene.Node;
-import javafx.scene.accessibility.Attribute;
 import javafx.scene.control.IndexRange;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextArea;
@@ -1351,7 +1351,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
     }
 
     @Override
-    protected Object accGetAttribute(Attribute attribute, Object... parameters) {
+    protected Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
             case LINE_FOR_OFFSET:
             case LINE_START:
@@ -1359,8 +1359,8 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
             case BOUNDS_FOR_RANGE:
             case OFFSET_AT_POINT:
                 Text text = getTextNode();
-                return text.accGetAttribute(attribute, parameters);
-            default: return super.accGetAttribute(attribute, parameters);
+                return text.queryAccessibleAttribute(attribute, parameters);
+            default: return super.queryAccessibleAttribute(attribute, parameters);
         }
     }
 }

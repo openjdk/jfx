@@ -23,14 +23,14 @@
  * questions.
  */
 
-package javafx.scene.accessibility;
+package javafx.scene;
 
 /**
  * Experimental API - Do not use (will be removed).
  *
  * @treatAsPrivate
  */
-public enum Role {
+public enum AccessibleRole {
 
     /**
      * Button.

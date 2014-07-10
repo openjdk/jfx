@@ -29,6 +29,8 @@ import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.BooleanPropertyBase;
 import javafx.beans.value.WritableValue;
 import javafx.event.ActionEvent;
+import javafx.scene.AccessibleAttribute;
+import javafx.scene.AccessibleRole;
 import javafx.scene.Cursor;
 import javafx.scene.Node;
 import javafx.css.PseudoClass;
@@ -36,8 +38,6 @@ import javafx.css.PseudoClass;
 import com.sun.javafx.scene.control.skin.HyperlinkSkin;
 
 import javafx.css.StyleableProperty;
-import javafx.scene.accessibility.Attribute;
-import javafx.scene.accessibility.Role;
 
 
 /**
@@ -90,7 +90,7 @@ public class Hyperlink extends ButtonBase {
     private void initialize() {
         // Initialize the style class to be 'hyperlink'.
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
-        setRole(Role.HYPERLINK);
+        setRole(AccessibleRole.HYPERLINK);
         // cursor is styleable through css. Calling setCursor
         // makes it look to css like the user set the value and css will not 
         // override. Initializing cursor by calling applyStyle with null
@@ -187,11 +187,11 @@ public class Hyperlink extends ButtonBase {
      *                                                                         *
      **************************************************************************/
 
-    /** @treatAsPrivate */
-    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+    @Override
+    public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
             case VISITED: return isVisited();
-            default: return super.accGetAttribute(attribute, parameters);
+            default: return super.queryAccessibleAttribute(attribute, parameters);
         }
     }
 }

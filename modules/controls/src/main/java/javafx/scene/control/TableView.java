@@ -55,10 +55,10 @@ import javafx.css.StyleableDoubleProperty;
 import javafx.css.StyleableProperty;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
+import javafx.scene.AccessibleAction;
+import javafx.scene.AccessibleAttribute;
+import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
-import javafx.scene.accessibility.Action;
-import javafx.scene.accessibility.Attribute;
-import javafx.scene.accessibility.Role;
 import javafx.scene.layout.Region;
 import javafx.util.Callback;
 
@@ -511,7 +511,7 @@ public class TableView<S> extends Control {
      */
     public TableView(ObservableList<S> items) {
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
-        setRole(Role.TABLE_VIEW);
+        setRole(AccessibleRole.TABLE_VIEW);
 
         // we quite happily accept items to be null here
         setItems(items);
@@ -1645,32 +1645,32 @@ public class TableView<S> extends Control {
      *                                                                         *
      **************************************************************************/
 
-    /** @treatAsPrivate */
-    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+    @Override
+    public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
             case COLUMN_COUNT: return getVisibleLeafColumns().size();
             case ROW_COUNT: return getItems().size();
             case SELECTED_CELLS: {
                 // TableViewSkin returns TableRows back to TableView.
                 // TableRowSkin returns TableCells back to TableRow.
-                ObservableList<TableRow<S>> rows = (ObservableList<TableRow<S>>)super.accGetAttribute(attribute, parameters);
+                ObservableList<TableRow<S>> rows = (ObservableList<TableRow<S>>)super.queryAccessibleAttribute(attribute, parameters);
                 List<Node> selection = new ArrayList<>();
                 for (TableRow<S> row : rows) {
-                    ObservableList<Node> cells = (ObservableList<Node>)row.accGetAttribute(attribute, parameters);
+                    ObservableList<Node> cells = (ObservableList<Node>)row.queryAccessibleAttribute(attribute, parameters);
                     if (cells != null) selection.addAll(cells);
                 }
                 return FXCollections.observableArrayList(selection);
             }
             case FOCUS_ITEM: {
-                Node row = (Node)super.accGetAttribute(attribute, parameters);
+                Node row = (Node)super.queryAccessibleAttribute(attribute, parameters);
                 if (row == null) return null;
-                Node cell = (Node)row.accGetAttribute(attribute, parameters);
+                Node cell = (Node)row.queryAccessibleAttribute(attribute, parameters);
                 /* cell equals to null means the row is a placeholder node */
                 return cell != null ?  cell : row;
             }
             case CELL_AT_ROW_COLUMN: {
-                TableRow<S> row = (TableRow<S>)super.accGetAttribute(attribute, parameters);
-                return row != null ? row.accGetAttribute(attribute, parameters) : null;
+                TableRow<S> row = (TableRow<S>)super.queryAccessibleAttribute(attribute, parameters);
+                return row != null ? row.queryAccessibleAttribute(attribute, parameters) : null;
             }
             case MULTIPLE_SELECTION: {
                 MultipleSelectionModel<S> sm = getSelectionModel();
@@ -1681,19 +1681,19 @@ public class TableView<S> extends Control {
             case HEADER: //Skin
             case VERTICAL_SCROLLBAR: //Skin
             case HORIZONTAL_SCROLLBAR: // Skin
-            default: return super.accGetAttribute(attribute, parameters);
+            default: return super.queryAccessibleAttribute(attribute, parameters);
         }
     }
 
-    /** @treatAsPrivate */
-    @Override public void accExecuteAction(Action action, Object... parameters) {
+    @Override
+    public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
         switch (action) {
             case SCROLL_TO_INDEX: {
                 int index = (int) parameters[0];
                 scrollTo(index);
                 break;
             }
-            default: super.accExecuteAction(action, parameters);
+            default: super.executeAccessibleAction(action, parameters);
         }
     }
 
@@ -1933,7 +1933,7 @@ public class TableView<S> extends Control {
 
         void focus(int row, TableColumn<S,?> column) {
             focus(new TablePosition<>(getTableView(), row, column));
-            getTableView().accSendNotification(Attribute.SELECTED_CELLS);
+            getTableView().notifyAccessibleAttributeChanged(AccessibleAttribute.SELECTED_CELLS);
         }
 
         void focus(TablePosition<S,?> pos) {

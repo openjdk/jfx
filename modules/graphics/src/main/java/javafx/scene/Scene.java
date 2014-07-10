@@ -71,8 +71,6 @@ import javafx.css.CssMetaData;
 import javafx.css.StyleableObjectProperty;
 import javafx.event.*;
 import javafx.geometry.*;
-import javafx.scene.accessibility.Attribute;
-import javafx.scene.accessibility.Role;
 import javafx.scene.image.WritableImage;
 import javafx.scene.input.*;
 import javafx.scene.paint.Color;
@@ -2052,7 +2050,7 @@ public class Scene implements EventTarget {
                 }
             }
             if (accessible != null) {
-                accessible.sendNotification(Attribute.FOCUS_NODE);
+                accessible.sendNotification(AccessibleAttribute.FOCUS_NODE);
             }
         }
     };
@@ -3895,7 +3893,7 @@ public class Scene implements EventTarget {
             }
             if (windowFocused) {
                 if (accessible != null) {
-                    accessible.sendNotification(Attribute.FOCUS_NODE);
+                    accessible.sendNotification(AccessibleAttribute.FOCUS_NODE);
                 }
             }
         }
@@ -6219,7 +6217,7 @@ public class Scene implements EventTarget {
         if (accessible == null) {
             accessible = Application.GetApplication().createAccessible();
             accessible.setEventHandler(new Accessible.EventHandler() {
-                @Override public Object getAttribute(Attribute attribute,
+                @Override public Object getAttribute(AccessibleAttribute attribute,
                                                      Object... parameters) {
                     switch (attribute) {
                         case CHILDREN: {
@@ -6247,11 +6245,11 @@ public class Scene implements EventTarget {
                             }
                             return getRoot();//not sure
                         }
-                        case ROLE: return Role.PARENT;
+                        case ROLE: return AccessibleRole.PARENT;
                         case SCENE: return Scene.this;
                         case FOCUS_NODE: {
                             if (transientFocusContainer != null) {
-                                return transientFocusContainer.accGetAttribute(Attribute.FOCUS_NODE);
+                                return transientFocusContainer.queryAccessibleAttribute(AccessibleAttribute.FOCUS_NODE);
                             }
                             return getFocusOwner();
                         }

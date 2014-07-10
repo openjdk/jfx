@@ -28,10 +28,10 @@ package com.sun.javafx.scene.control.skin;
 import javafx.beans.value.ObservableValue;
 import javafx.css.Styleable;
 import javafx.geometry.*;
-import javafx.scene.accessibility.Attribute;
 import javafx.scene.control.*;
 import com.sun.javafx.scene.control.behavior.ComboBoxBaseBehavior;
 import javafx.beans.InvalidationListener;
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Region;
@@ -140,7 +140,7 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
         popup.addEventHandler(WindowEvent.WINDOW_HIDDEN, t -> {
             // Make sure the accessibility focus returns to the combo box
             // after the window closes.
-            getSkinnable().accSendNotification(Attribute.FOCUS_NODE);
+            getSkinnable().notifyAccessibleAttributeChanged(AccessibleAttribute.FOCUS_NODE);
         });
         
         // Fix for RT-21207

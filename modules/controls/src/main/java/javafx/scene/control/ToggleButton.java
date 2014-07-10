@@ -35,9 +35,9 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.WritableValue;
 import javafx.event.ActionEvent;
 import javafx.geometry.Pos;
+import javafx.scene.AccessibleAttribute;
+import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
-import javafx.scene.accessibility.Attribute;
-import javafx.scene.accessibility.Role;
 import javafx.css.PseudoClass;
 
 import com.sun.javafx.scene.control.skin.ToggleButtonSkin;
@@ -127,7 +127,7 @@ import javafx.css.StyleableProperty;
 
     private void initialize() {
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
-        setRole(Role.TOGGLE_BUTTON);
+        setRole(AccessibleRole.TOGGLE_BUTTON);
         // alignment is styleable through css. Calling setAlignment
         // makes it look to css like the user set the value and css will not 
         // override. Initializing alignment by calling set on the 
@@ -162,7 +162,7 @@ import javafx.css.StyleableProperty;
                     // Note: these changes need to be done before selectToggle/clearSelectedToggle since
                     // those operations change properties and can execute user code, possibly modifying selected property again
                     pseudoClassStateChanged(PSEUDO_CLASS_SELECTED, selected);
-                    accSendNotification(Attribute.SELECTED);
+                    notifyAccessibleAttributeChanged(AccessibleAttribute.SELECTED);
                     if (tg != null) {
                         if (selected) {
                             tg.selectToggle(ToggleButton.this);
@@ -290,11 +290,11 @@ import javafx.css.StyleableProperty;
      *                                                                         *
      **************************************************************************/
 
-    /** @treatAsPrivate */
-    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+    @Override
+    public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
             case SELECTED: return isSelected();
-            default: return super.accGetAttribute(attribute, parameters); 
+            default: return super.queryAccessibleAttribute(attribute, parameters); 
         }
     }
 }

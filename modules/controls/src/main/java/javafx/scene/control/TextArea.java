@@ -53,7 +53,7 @@ import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.skin.TextAreaSkin;
 
 import javafx.css.Styleable;
-import javafx.scene.accessibility.Role;
+import javafx.scene.AccessibleRole;
 
 /**
  * Text input component that allows a user to enter multiple lines of
@@ -452,7 +452,7 @@ public class TextArea extends TextInputControl {
         super(new TextAreaContent());
 
         getStyleClass().add("text-area");
-        setRole(Role.TEXT_AREA);
+        setRole(AccessibleRole.TEXT_AREA);
         setText(text);
     }
 
