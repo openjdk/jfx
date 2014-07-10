@@ -50,6 +50,7 @@ import java.util.TreeMap;
 
 import static com.oracle.tools.packager.StandardBundlerParam.*;
 import static com.oracle.tools.packager.mac.MacAppBundler.*;
+import static com.oracle.tools.packager.mac.MacDmgBundler.*;
 import static com.oracle.tools.packager.mac.MacBaseInstallerBundler.MAC_APP_IMAGE;
 import static org.junit.Assert.*;
 
@@ -64,6 +65,7 @@ public class MacDmgBundlerTest {
     static File hdpiIcon;
     static Set<File> appResources;
     static boolean retain = false;
+    static boolean full_tests = false;
 
     @BeforeClass
     public static void prepareApp() {
@@ -78,6 +80,7 @@ public class MacDmgBundlerTest {
         Log.setDebug(true);
 
         retain = Boolean.parseBoolean(System.getProperty("RETAIN_PACKAGER_TESTS"));
+        full_tests = Boolean.parseBoolean(System.getProperty("FULL_TEST"));
 
         workDir = new File("build/tmp/tests", "macdmg");
         hdpiIcon = new File("build/tmp/tests", "GenericAppHiDPI.icns");
@@ -133,7 +136,7 @@ public class MacDmgBundlerTest {
     @Test
     public void smokeTest() throws IOException, ConfigException, UnsupportedPlatformException {
         // only run with full tests
-        Assume.assumeTrue(Boolean.parseBoolean(System.getProperty("FULL_TEST")));
+        Assume.assumeTrue(full_tests);
 
         AbstractBundler bundler = new MacDmgBundler();
 
@@ -156,6 +159,7 @@ public class MacDmgBundlerTest {
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
         bundleParams.put(LICENSE_FILE.getID(), Arrays.asList("LICENSE", "LICENSE2"));
         bundleParams.put(VERBOSE.getID(), true);
+        bundleParams.put(SYSTEM_WIDE.getID(), false);
 
         boolean valid = bundler.validate(bundleParams);
         assertTrue(valid);
@@ -179,7 +183,7 @@ public class MacDmgBundlerTest {
     @Test
     public void minimumConfig() throws IOException, ConfigException, UnsupportedPlatformException {
         // only run with full tests
-        Assume.assumeTrue(Boolean.parseBoolean(System.getProperty("FULL_TEST")));
+        Assume.assumeTrue(full_tests);
 
         Bundler bundler = new MacDmgBundler();
 
@@ -202,7 +206,7 @@ public class MacDmgBundlerTest {
     @Test
     public void externalApp() throws IOException, ConfigException, UnsupportedPlatformException {
         // only run with full tests
-        Assume.assumeTrue(Boolean.parseBoolean(System.getProperty("FULL_TEST")));
+        Assume.assumeTrue(full_tests);
 
         // first create the external app
         Bundler appBundler = new MacAppBundler();
@@ -237,6 +241,51 @@ public class MacDmgBundlerTest {
 
         dmgBundler.validate(dmgBundleParams);
         File dmgOutput = dmgBundler.execute(dmgBundleParams, new File(workDir, "DMGExternalApp2"));
+        System.err.println(".dmg at - " + dmgOutput);
+        assertNotNull(dmgOutput);
+        assertTrue(dmgOutput.exists());
+        assertTrue(dmgOutput.length() > MIN_SIZE);
+    }
+
+    /**
+     * Create a DMG with an external app rather than a self-created one.
+     */
+    @Test
+    public void externalSimpleApp() throws IOException, ConfigException, UnsupportedPlatformException {
+        // first create the external app
+        Bundler appBundler = new MacAppBundler();
+
+        Map<String, Object> appBundleParams = new HashMap<>();
+
+        appBundleParams.put(BUILD_ROOT.getID(), tmpBase);
+
+        appBundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        appBundleParams.put(APP_NAME.getID(), "External APP DMG Test");
+        appBundleParams.put(IDENTIFIER.getID(), "com.example.dmg.external");
+        appBundleParams.put(VERBOSE.getID(), true);
+
+        appBundler.validate(appBundleParams);
+        File appOutput = appBundler.execute(appBundleParams, new File(workDir, "DMGExternalApp1"));
+        System.err.println("App at - " + appOutput);
+        assertNotNull(appOutput);
+        assertTrue(appOutput.exists());
+
+        // now create the DMG referencing this external app
+        Bundler dmgBundler = new MacDmgBundler();
+
+        Map<String, Object> dmgBundleParams = new HashMap<>();
+
+        dmgBundleParams.put(BUILD_ROOT.getID(), tmpBase);
+        dmgBundleParams.put(SIMPLE_DMG.getID(), true);
+
+        dmgBundleParams.put(MAC_APP_IMAGE.getID(), appOutput);
+        dmgBundleParams.put(APP_NAME.getID(), "External APP DMG Test");
+        dmgBundleParams.put(IDENTIFIER.getID(), "com.example.dmg.external");
+
+        dmgBundleParams.put(VERBOSE.getID(), true);
+
+        dmgBundler.validate(dmgBundleParams);
+        File dmgOutput = dmgBundler.execute(dmgBundleParams, new File(workDir, "DMGExternalApp3"));
         System.err.println(".dmg at - " + dmgOutput);
         assertNotNull(dmgOutput);
         assertTrue(dmgOutput.exists());
@@ -312,7 +361,8 @@ public class MacDmgBundlerTest {
         bundleParams.put(VERSION.getID(), "1.2.3.4");
 
         bundleParams.put(LICENSE_FILE.getID(), "LICENSE");
-        bundleParams.put(SYSTEM_WIDE.getID(), false);
+        bundleParams.put(SIMPLE_DMG.getID(), true);
+        bundleParams.put(SYSTEM_WIDE.getID(), true);
 
         // assert they are set
         for (BundlerParamInfo bi :parameters) {
@@ -342,9 +392,6 @@ public class MacDmgBundlerTest {
         // assert it validates
         boolean valid = bundler.validate(bundleParams);
         assertTrue(valid);
-
-        // only run the bundle with full tests
-        Assume.assumeTrue(Boolean.parseBoolean(System.getProperty("FULL_TEST")));
 
         File result = bundler.execute(bundleParams, new File(workDir, "everything"));
         System.err.println("Bundle at - " + result);

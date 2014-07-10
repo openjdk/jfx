@@ -1,4 +1,3 @@
-delay 5
 tell application "Finder"
   tell disk "DEPLOY_ACTUAL_VOLUME_NAME"
     open
