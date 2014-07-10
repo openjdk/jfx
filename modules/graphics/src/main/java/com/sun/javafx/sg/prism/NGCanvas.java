@@ -218,8 +218,7 @@ public class NGCanvas extends NGNode {
                     oldtex.dispose();
                 }
                 if (init_type == InitType.FILL_WHITE) {
-                    g.setPaint(Color.WHITE);
-                    g.fillRect(0, 0, tw, th);
+                    g.clear(Color.WHITE);
                 }
                 return true;
             } else {
@@ -238,18 +237,14 @@ public class NGCanvas extends NGNode {
                             savedPixelData.restore(g, tw, th);
                             g.setCompositeMode(CompositeMode.SRC_OVER);
                         } else if (init_type == InitType.FILL_WHITE) {
-                            g.setPaint(Color.WHITE);
-                            g.fillRect(0, 0, tw, th);
+                            g.clear(Color.WHITE);
                         }
                         return true;
                     }
                 }
             }
             if (init_type == InitType.CLEAR) {
-                g.setCompositeMode(CompositeMode.CLEAR);
-                g.setTransform(BaseTransform.IDENTITY_TRANSFORM);
-                g.fillRect(0, 0, tw, th);
-                g.setCompositeMode(CompositeMode.SRC_OVER);
+                g.clear();
             }
             return false;
         }
@@ -627,10 +622,9 @@ public class NGCanvas extends NGNode {
     }
 
     private void clearCanvas(int x, int y, int w, int h) {
-        cv.g.setCompositeMode(CompositeMode.SRC);
+        cv.g.setCompositeMode(CompositeMode.CLEAR);
         cv.g.setTransform(BaseTransform.IDENTITY_TRANSFORM);
-        cv.g.setPaint(Color.TRANSPARENT);
-        cv.g.fillRect(x, y, w, h);
+        cv.g.fillQuad(x, y, x+w, y+h);
         cv.g.setCompositeMode(CompositeMode.SRC_OVER);
     }
 
@@ -1199,8 +1193,7 @@ public class NGCanvas extends NGNode {
                             gr.drawEllipse(x, y, w, h);
                             break;
                         case CLEAR_RECT:
-                            gr.setPaint(Color.TRANSPARENT);
-                            gr.setCompositeMode(CompositeMode.SRC);
+                            gr.setCompositeMode(CompositeMode.CLEAR);
                             gr.fillRect(x, y, w, h);
                             gr.setCompositeMode(CompositeMode.SRC_OVER);
                             break;
