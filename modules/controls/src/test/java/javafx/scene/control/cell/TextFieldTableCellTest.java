@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -392,11 +392,7 @@ public class TextFieldTableCellTest {
 
     @Test public void test_rt_32869() {
         TableColumn tc = new TableColumn();
-        tc.setCellValueFactory(new Callback<TableColumn.CellDataFeatures<String, String>, ObservableValue<String>>() {
-                        @Override public ObservableValue<String> call(TableColumn.CellDataFeatures<String, String> param) {
-                return new ReadOnlyStringWrapper("Dummy Text");
-            }
-        });
+        tc.setCellValueFactory(param -> new ReadOnlyStringWrapper("Dummy Text"));
 
         TableView tableView = new TableView(FXCollections.observableArrayList("TEST"));
         tableView.getColumns().add(tc);
@@ -424,5 +420,7 @@ public class TextFieldTableCellTest {
         assertEquals("Dummy Text", textField.getSelectedText());
         mouse.fireMouseReleased(MouseButton.SECONDARY);
         assertEquals("Dummy Text", textField.getSelectedText());
+
+        mouse.dispose();
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -124,5 +124,5 @@ JNIEXPORT jboolean JNICALL Java_com_sun_prism_es2_WinGLDrawable_nSwapBuffers
     if (dInfo == NULL) {
         return JNI_FALSE;
     }
-    return SwapBuffers(dInfo->hdc);
+    return SwapBuffers(dInfo->hdc) ? JNI_TRUE : JNI_FALSE;
 }

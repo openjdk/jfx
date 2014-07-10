@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -45,8 +45,7 @@ import javafx.scene.image.Image;
  * Because the BorderImage is immutable, it can safely be used in any
  * cache, and can safely be reused among multiple Regions.
  * <p/>
- * When applied to a Region with a defined shape, a BorderImage is not drawn.
- * TODO Should the insets still be applied?
+ * When applied to a Region with a defined shape, a BorderImage is ignored.
  * @since JavaFX 8.0
  */
 public class BorderImage {

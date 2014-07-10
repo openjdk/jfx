@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,7 +27,6 @@ package javafx.scene.control.cell;
 
 import javafx.beans.value.ObservableValue;
 import javafx.scene.control.ProgressBar;
-import javafx.scene.control.TableColumn;
 import javafx.scene.control.TreeTableCell;
 import javafx.scene.control.TreeTableColumn;
 import javafx.util.Callback;
@@ -58,11 +57,7 @@ public class ProgressBarTreeTableCell<S> extends TreeTableCell<S, Double> {
      *      from 0.0 to 1.0.
      */
     public static <S> Callback<TreeTableColumn<S,Double>, TreeTableCell<S,Double>> forTreeTableColumn() {
-        return new Callback<TreeTableColumn<S, Double>, TreeTableCell<S, Double>>() {
-            @Override public TreeTableCell<S, Double> call(TreeTableColumn<S, Double> param) {
-                return new ProgressBarTreeTableCell<S>();
-            }
-        };
+        return param -> new ProgressBarTreeTableCell<S>();
     }
     
     
@@ -75,7 +70,7 @@ public class ProgressBarTreeTableCell<S> extends TreeTableCell<S, Double> {
     
     private final ProgressBar progressBar;
     
-    private ObservableValue observable;
+    private ObservableValue<Double> observable;
     
     
     

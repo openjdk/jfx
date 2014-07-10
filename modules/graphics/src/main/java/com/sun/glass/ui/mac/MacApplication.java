@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,30 +40,30 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.sun.javafx.scene.accessibility.Accessible;
+
 final class MacApplication extends Application implements InvokeLaterDispatcher.InvokeLaterSubmitter {
 
-    private native static void _initIDs();
+    private native static void _initIDs(boolean disableSyncRendering);
     static {
-        AccessController.doPrivileged(new PrivilegedAction<Void>() {
-            public Void run() {
-                Application.loadNativeLibrary();
-                return null;
-            }
+        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+            Application.loadNativeLibrary();
+            return null;
         });
-        _initIDs();
+        boolean disableSyncRendering = AccessController
+                .doPrivileged((PrivilegedAction<Boolean>) () ->
+                        Boolean.getBoolean("glass.disableSyncRendering"));
+        _initIDs(disableSyncRendering);
     }
+
+    native static int _getMacKey(int code);
 
     private boolean isTaskbarApplication = false;
     private final InvokeLaterDispatcher invokeLaterDispatcher;
 
     MacApplication() {
         boolean isEventThread = AccessController
-                .doPrivileged(new PrivilegedAction<Boolean>() {
-                    public Boolean run() {
-                        // Embedded in SWT, with shared event thread
-                        return Boolean.getBoolean("javafx.embed.isEventThread");
-                    }
-                });
+                .doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("javafx.embed.isEventThread"));
         if (!isEventThread) {
             invokeLaterDispatcher = new InvokeLaterDispatcher(this);
             invokeLaterDispatcher.start();
@@ -79,11 +79,9 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
     @Override
     protected void runLoop(final Runnable launchable) {
         isTaskbarApplication =
-            AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
-                public Boolean run() {
-                    String taskbarAppProp = System.getProperty("glass.taskbarApplication");
-                    return  !"false".equalsIgnoreCase(taskbarAppProp); 
-                }
+            AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
+                String taskbarAppProp = System.getProperty("glass.taskbarApplication");
+                return  !"false".equalsIgnoreCase(taskbarAppProp);
             });
         
         ClassLoader classLoader = MacApplication.class.getClassLoader();
@@ -93,10 +91,13 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
     native private void _finishTerminating();
     @Override
     protected void finishTerminating() {
-        setEventThread(null);
         _finishTerminating();
 
         super.finishTerminating();
+    }
+
+    private void notifyApplicationDidTerminate() {
+        setEventThread(null);
     }
 
     // Called from the native code
@@ -259,6 +260,10 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
         return MacTimer.getMaxPeriod_impl();
     }
 
+    @Override public PlatformAccessible createAccessible(Accessible accessible) {
+        return MacAccessible.createAccessible(accessible);
+    }
+
     @Override protected FileChooserResult staticCommonDialogs_showFileChooser(Window owner, String folder, String filename, String title, int type,
                                                      boolean multipleMode, ExtensionFilter[] extensionFilters, int defaultFilterIndex) {
         return MacCommonDialogs.showFileChooser_impl(owner, folder, filename,
@@ -327,4 +332,7 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
         }
         return baseDirectory + File.separator + name + File.separator;
     }
+
+    @Override
+    protected native int _getKeyCodeForChar(char c);
 }

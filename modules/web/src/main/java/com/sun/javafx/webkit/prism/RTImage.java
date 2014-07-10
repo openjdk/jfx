@@ -1,6 +1,28 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
  */
+
 package com.sun.javafx.webkit.prism;
 
 import com.sun.javafx.geom.transform.BaseTransform;
@@ -79,10 +101,8 @@ final class RTImage extends PrismImage implements ResourceFactoryListener {
             int h = srcy2 - srcy1;
             final IntBuffer pixels = IntBuffer.allocate(w * h);
 
-            PrismInvoker.runOnRenderThread(new Runnable() {
-                public void run() {
-                    getTexture().readPixels(pixels);
-                }
+            PrismInvoker.runOnRenderThread(() -> {
+                getTexture().readPixels(pixels);
             });
             Image img = Image.fromIntArgbPreData(pixels, w, h);
             Texture t = g.getResourceFactory().createTexture(
@@ -101,12 +121,10 @@ final class RTImage extends PrismImage implements ResourceFactoryListener {
 
     @Override
     void dispose() {
-        PrismInvoker.invokeOnRenderThread(new Runnable() {
-            public void run() {
-                if (txt != null) {
-                    txt.dispose();
-                    txt = null;
-                }
+        PrismInvoker.invokeOnRenderThread(() -> {
+            if (txt != null) {
+                txt.dispose();
+                txt = null;
             }
         });
     }
@@ -132,38 +150,36 @@ final class RTImage extends PrismImage implements ResourceFactoryListener {
             }
         }
         if (isNew || isDirty()) {
-            PrismInvoker.runOnRenderThread(new Runnable() {
-                public void run() {
-                    flushRQ();
-                    if (txt != null && pixelBuffer != null) {
-                        PixelFormat pf = txt.getPixelFormat();
-                        if (pf != PixelFormat.INT_ARGB_PRE &&
-                            pf != PixelFormat.BYTE_BGRA_PRE) {
+            PrismInvoker.runOnRenderThread(() -> {
+                flushRQ();
+                if (txt != null && pixelBuffer != null) {
+                    PixelFormat pf = txt.getPixelFormat();
+                    if (pf != PixelFormat.INT_ARGB_PRE &&
+                        pf != PixelFormat.BYTE_BGRA_PRE) {
 
-                            throw new AssertionError("Unexpected pixel format: " + pf);
-                        }
+                        throw new AssertionError("Unexpected pixel format: " + pf);
+                    }
 
-                        RTTexture t = txt;
-                        if (pixelScale != 1.0f) {
-                            // Convert [txt] to a texture the size of the image
-                            ResourceFactory f = GraphicsPipeline.getDefaultResourceFactory();
-                            t = f.createRTTexture(width, height, Texture.WrapMode.CLAMP_NOT_NEEDED);
-                            Graphics g = t.createGraphics();
-                            g.drawTexture(txt, 0, 0, width, height,
-                                    0, 0, width * pixelScale, height * pixelScale);
-                        }
-                        
-                        pixelBuffer.rewind();
-                        int[] pixels = t.getPixels();
-                        if (pixels != null) {
-                            pixelBuffer.asIntBuffer().put(pixels);
-                        } else {
-                            t.readPixels(pixelBuffer);
-                        }
+                    RTTexture t = txt;
+                    if (pixelScale != 1.0f) {
+                        // Convert [txt] to a texture the size of the image
+                        ResourceFactory f = GraphicsPipeline.getDefaultResourceFactory();
+                        t = f.createRTTexture(width, height, Texture.WrapMode.CLAMP_NOT_NEEDED);
+                        Graphics g = t.createGraphics();
+                        g.drawTexture(txt, 0, 0, width, height,
+                                0, 0, width * pixelScale, height * pixelScale);
+                    }
 
-                        if (t != txt) {
-                            t.dispose();
-                        }
+                    pixelBuffer.rewind();
+                    int[] pixels = t.getPixels();
+                    if (pixels != null) {
+                        pixelBuffer.asIntBuffer().put(pixels);
+                    } else {
+                        t.readPixels(pixelBuffer);
+                    }
+
+                    if (t != txt) {
+                        t.dispose();
                     }
                 }
             });

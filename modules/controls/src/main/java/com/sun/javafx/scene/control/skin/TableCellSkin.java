@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,13 +36,11 @@ import javafx.scene.control.TableColumn;
  */
 public class TableCellSkin<S,T> extends TableCellSkinBase<TableCell<S,T>, TableCellBehavior<S,T>> {
     
-    private final TableCell<S,T> tableCell;
     private final TableColumn<S,T> tableColumn;
     
     public TableCellSkin(TableCell<S,T> tableCell) {
         super(tableCell, new TableCellBehavior<S,T>(tableCell));
         
-        this.tableCell = tableCell;
         this.tableColumn = tableCell.getTableColumn();
         
         super.init(tableCell);

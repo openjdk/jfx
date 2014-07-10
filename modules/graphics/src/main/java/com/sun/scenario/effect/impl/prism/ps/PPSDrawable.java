@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,9 +25,7 @@
 
 package com.sun.scenario.effect.impl.prism.ps;
 
-import com.sun.glass.ui.Screen;
 import com.sun.prism.RTTexture;
-import com.sun.prism.GraphicsPipeline;
 import com.sun.prism.ResourceFactory;
 import com.sun.prism.Texture.WrapMode;
 import com.sun.prism.ps.ShaderGraphics;
@@ -46,21 +44,15 @@ public class PPSDrawable extends PrDrawable {
         return new PPSDrawable(rtt);
     }
 
-    static int getCompatibleWidth(Screen screen, int w) {
-        ResourceFactory factory =
-            GraphicsPipeline.getPipeline().getResourceFactory(screen);
+    static int getCompatibleWidth(ResourceFactory factory, int w) {
         return factory.getRTTWidth(w, WrapMode.CLAMP_TO_ZERO);
     }
 
-    static int getCompatibleHeight(Screen screen, int h) {
-        ResourceFactory factory =
-            GraphicsPipeline.getPipeline().getResourceFactory(screen);
+    static int getCompatibleHeight(ResourceFactory factory, int h) {
         return factory.getRTTHeight(h, WrapMode.CLAMP_TO_ZERO);
     }
 
-    static PPSDrawable create(Screen screen, int width, int height) {
-        ResourceFactory factory =
-            GraphicsPipeline.getPipeline().getResourceFactory(screen);
+    static PPSDrawable create(ResourceFactory factory, int width, int height) {
         // force the wrap mode to CLAMP_TO_ZERO, as that is the mode
         // required by most Decora effects (blurs, etc)
         RTTexture rtt =

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013, Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -93,10 +93,8 @@ public class BouncingBallsApp extends Application {
         final BallsPane pane = ballsscreen.getPane();
 
         Button resetButton = new Button("Reset");
-        resetButton.setOnAction(new EventHandler<ActionEvent>() {
-            public void handle(ActionEvent event) {
-                pane.resetBalls();
-            }
+        resetButton.setOnAction((ActionEvent event) -> {
+            pane.resetBalls();
         });
         VBox vb = new VBox(10);
         vb.getChildren().addAll(resetButton, ballsscreen);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -45,7 +45,6 @@ public final class JavaFXFontBuilder extends AbstractMap<String, Object> impleme
     private FontWeight  weight = null;
     private FontPosture posture = null;
     private URL         url     = null;
-
 
     @Override
     public Font build() {
@@ -126,6 +125,16 @@ public final class JavaFXFontBuilder extends AbstractMap<String, Object> impleme
             throw new IllegalArgumentException("Unknown Font property: " + key);
         }
         return null;
+    }
+
+    @Override
+    public boolean containsKey(Object key) {
+        return false; // False in this context means that the property is NOT read only
+    }
+
+    @Override
+    public Object get(Object key) {
+        return null; // In certain cases, get is also required to return null for read-write "properties"
     }
 
     @Override

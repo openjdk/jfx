@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1017,10 +1017,15 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinSystemClipboard_initIDs
     (JNIEnv *env, jclass cls)
 {
     fidPtr = env->GetFieldID(cls, "ptr", "J");
+    if (env->ExceptionCheck()) return;
     fidName = env->GetFieldID(cls, "name", "Ljava/lang/String;");
+    if (env->ExceptionCheck()) return;
     midFosSerialize = env->GetMethodID(cls, "fosSerialize", "(Ljava/lang/String;J)[B");
+    if (env->ExceptionCheck()) return;
     midContentChanged = env->GetMethodID(cls, "contentChanged", "()V");
+    if (env->ExceptionCheck()) return;
     midActionPerformed = env->GetMethodID(cls, "actionPerformed", "(I)V");
+    env->ExceptionCheck();
 }
 
 /*
@@ -1618,7 +1623,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinDnDClipboard_push
         OLE_CATCH
         env->CallVoidMethod(obj, midActionPerformed,
             getACTION(SUCCEEDED(OLE_HR) ? performedDropEffect : DROPEFFECT_NONE));
-        OLE_HRT(checkJavaException(env));
+        CheckAndClearException(env);
         GlassDropSource::SetDragButton(0);
         STRACE(_T("}DoDragDrop effect:%08x result:%08x"), performedDropEffect, OLE_HR);
     }

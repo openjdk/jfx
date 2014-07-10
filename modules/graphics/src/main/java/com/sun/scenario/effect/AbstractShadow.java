@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,7 +39,7 @@ package com.sun.scenario.effect;
  * set to something different then the radius parameter will be an average
  * of the corresponding individual dimensional radius values.
  */
-public abstract class AbstractShadow extends CoreEffect {
+public abstract class AbstractShadow extends LinearConvolveCoreEffect {
     public AbstractShadow(Effect input) {
         super(input);
     }

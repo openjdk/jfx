@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -51,8 +51,8 @@ import org.apache.tools.ant.types.DataType;
  */
 public class Preferences extends DataType {
     private boolean installRequested = false;
-    private boolean shortcutRequested = false;
-    private boolean menuRequested = false;
+    private Boolean shortcutRequested = null;
+    private Boolean menuRequested = null;
     private Boolean systemWide = null;
 
     Boolean getSystemInstall() {
@@ -80,18 +80,18 @@ public class Preferences extends DataType {
     /**
      * If true then application requests desktop shortcut to be created.
      *
-     * @ant.not-required    Default is false.
+     * @ant.not-required    Default is null.
      */
-        public void setShortcut(boolean b) {
+    public void setShortcut(Boolean b) {
         shortcutRequested = b;
     }
 
     /**
      * If true then application requests to add entry to the system Start Menu.
      *
-     * @ant.not-required    Default is false.
+     * @ant.not-required    Default is null.
      */
-    public void setMenu(boolean b) {
+    public void setMenu(Boolean b) {
         menuRequested = b;
     }
 
@@ -102,11 +102,11 @@ public class Preferences extends DataType {
         return this;
     }
 
-    boolean getMenu() {
+    Boolean getMenu() {
         return get().menuRequested;
     }
 
-    boolean getShortcut() {
+    Boolean getShortcut() {
         return get().shortcutRequested;
     }
 

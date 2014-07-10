@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -66,8 +66,8 @@ public class TreeTablePosition<S,T> extends TablePositionBase<TreeTableColumn<S,
      */
     public TreeTablePosition(@NamedArg("treeTableView") TreeTableView<S> treeTableView, @NamedArg("row") int row, @NamedArg("tableColumn") TreeTableColumn<S,T> tableColumn) {
         super(row, tableColumn);
-        this.controlRef = new WeakReference<TreeTableView<S>>(treeTableView);
-        this.treeItemRef = new WeakReference<TreeItem<S>>(treeTableView.getTreeItem(row));
+        this.controlRef = new WeakReference<>(treeTableView);
+        this.treeItemRef = new WeakReference<>(treeTableView.getTreeItem(row));
     }
     
     

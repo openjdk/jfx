@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013 Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -49,7 +49,7 @@ public class TextFieldApp extends Application {
 
     public Parent createContent() {
         TextField text = new TextField("Text");
-        text.setMaxSize(140, 20);
+        text.setMaxSize(140, TextField.USE_COMPUTED_SIZE);
         return text;
     }
 

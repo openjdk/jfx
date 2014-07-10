@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013 Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -57,10 +57,8 @@ public class SearchBox extends TextField implements ChangeListener<String>{
         setPrefHeight(30);
         clearButton.getStyleClass().setAll("search-clear-button");
         clearButton.setCursor(Cursor.DEFAULT);
-        clearButton.setOnMouseClicked(new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent t) {
-                setText("");
-            }
+        clearButton.setOnMouseClicked((MouseEvent t) -> {
+            setText("");
         });
         clearButton.setVisible(false);
         clearButton.setManaged(false);

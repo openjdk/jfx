@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -65,20 +65,17 @@ public class NativePiscesRasterizer implements ShapeRasterizer {
                                            int bounds[], byte mask[]);
 
     static {
-        AccessController.doPrivileged(new PrivilegedAction<Void>() {
-            @Override
-            public Void run() {
-                String libName = "prism_common";
+        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+            String libName = "prism_common";
 
-                if (PrismSettings.verbose) {
-                    System.out.println("Loading Prism common native library ...");
-                }
-                NativeLibLoader.loadLibrary(libName);
-                if (PrismSettings.verbose) {
-                    System.out.println("\tsucceeded.");
-                }
-                return null;
+            if (PrismSettings.verbose) {
+                System.out.println("Loading Prism common native library ...");
             }
+            NativeLibLoader.loadLibrary(libName);
+            if (PrismSettings.verbose) {
+                System.out.println("\tsucceeded.");
+            }
+            return null;
         });
         init(3, 3);
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -55,8 +55,9 @@ public class RT30650GUI extends Application {
     
     private final static int SIZE = 400;
     
-    private static int pulseCount = 100;
-    private static boolean passed;
+    // 100 pulses is not enough for the interop case, so we wait for 400 instead
+    private static int pulseCount = 400;
+    private static volatile boolean passed;
         
     public static boolean test() {
         launch(new String[]{});
@@ -86,34 +87,22 @@ public class RT30650GUI extends Application {
         stage.setTitle("RT-30650");
         stage.show();
         
-        SwingUtilities.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                JPanel panel = new JPanel();
-                panel.setBackground(Color.RED);
-                swingNode.setContent(panel);
-                
-                pulseListener = new TKPulseListener() {
-                    @Override
-                    public void pulse() {
-                        if (--pulseCount == 0) {
-                            SwingUtilities.invokeLater(new Runnable() {
-                                @Override
-                                public void run() {
-                                    passed = testColor(stage);
-                                    Platform.runLater(new Runnable() {
-                                        @Override
-                                        public void run() {
-                                            stage.close();
-                                        }
-                                    });
-                                }
-                            });
-                        }
+        SwingUtilities.invokeLater(() -> {
+            JPanel panel = new JPanel();
+            panel.setBackground(Color.RED);
+            swingNode.setContent(panel);
+            
+            Platform.runLater(() -> {
+                pulseListener = () -> {
+                    if (--pulseCount == 0) {
+                        SwingUtilities.invokeLater(() -> {
+                            passed = testColor(stage);
+                            Platform.runLater(stage::close);
+                        });
                     }
                 };
                 com.sun.javafx.tk.Toolkit.getToolkit().addSceneTkPulseListener(pulseListener);
-            }
+            });
         });        
     }
     

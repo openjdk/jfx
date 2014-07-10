@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,6 +39,8 @@ import static org.junit.Assert.*;
 
 import org.junit.Before;
 import org.junit.Test;
+
+import java.util.Arrays;
 
 /**
  * All public members of CatgoryAxis are tested here . 
@@ -254,5 +256,16 @@ public class CategoryAxisTest {
         assertSame(axis.getCategories(), list);
     }
 
+    @Test
+    public void testDisplayPositionOfValue() {
+        axis.setCategories(FXCollections.observableArrayList("A", "B", "C", "D"));
+        assertTrue(Double.isFinite(axis.getDisplayPosition("C")));
+    }
+
+    @Test
+    public void testDisplayPositionOfInvalidValue() {
+        axis.setCategories(FXCollections.observableArrayList("A", "B", "C", "D"));
+        assertTrue(Double.isNaN(axis.getDisplayPosition("E")));
+    }
     
 }

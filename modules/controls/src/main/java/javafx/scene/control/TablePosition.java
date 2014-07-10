@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -66,7 +66,9 @@ public class TablePosition<S,T> extends TablePositionBase<TableColumn<S,T>> {
      */
     public TablePosition(@NamedArg("tableView") TableView<S> tableView, @NamedArg("row") int row, @NamedArg("tableColumn") TableColumn<S,T> tableColumn) {
         super(row, tableColumn);
-        this.controlRef = new WeakReference<TableView<S>>(tableView);
+        this.controlRef = new WeakReference<>(tableView);
+        this.itemRef = new WeakReference<>(
+                row >= 0 && row < tableView.getItems().size() ? tableView.getItems().get(row) : null);
     }
     
     
@@ -78,6 +80,7 @@ public class TablePosition<S,T> extends TablePositionBase<TableColumn<S,T>> {
      **************************************************************************/
 
     private final WeakReference<TableView<S>> controlRef;
+    private final WeakReference<S> itemRef;
 
 
     /***************************************************************************
@@ -109,7 +112,15 @@ public class TablePosition<S,T> extends TablePositionBase<TableColumn<S,T>> {
         // Forcing the return type to be TableColumn<S,T>, not TableColumnBase<S,T>
         return super.getTableColumn();
     }
-    
+
+    /**
+     * Returns the item that backs the {@link #getRow()} row}, at the point
+     * in time when this TablePosition was created.
+     */
+    final S getItem() {
+        return itemRef == null ? null : itemRef.get();
+    }
+
     /**
      * Returns a string representation of this {@code TablePosition} object.
      * @return a string representation of this {@code TablePosition} object.

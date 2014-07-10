@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -325,15 +325,6 @@ static NSWindow *s_grabWindow = nil;
         screen = [[NSScreen screens] objectAtIndex: 0];
     }
     return screen;
-}
-
-#pragma mark --- Accessibility
-
-- (void)_initAccessibility
-{
-    GET_MAIN_JENV;
-    (*env)->CallVoidMethod(env, self->jWindow, jWindowNotifyInitAccessibilityPtr);
-    GLASS_CHECK_EXCEPTION(env);
 }
 
 #pragma mark --- Flip

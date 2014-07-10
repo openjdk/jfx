@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,12 +33,13 @@ import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.scenario.effect.impl.Renderer;
 import com.sun.scenario.effect.impl.state.GaussianBlurState;
+import com.sun.scenario.effect.impl.state.LinearConvolveKernel;
 
 /**
  * A blur effect using a Gaussian convolution kernel, with a configurable
  * radius.
  */
-public class GaussianBlur extends CoreEffect {
+public class GaussianBlur extends LinearConvolveCoreEffect {
 
     private GaussianBlurState state = new GaussianBlurState();
 
@@ -84,7 +85,7 @@ public class GaussianBlur extends CoreEffect {
     }
 
     @Override
-    Object getState() {
+    LinearConvolveKernel getState() {
         return state;
     }
 
@@ -160,39 +161,6 @@ public class GaussianBlur extends CoreEffect {
         Rectangle ret = new Rectangle(r);
         ret.grow(hpad, vpad);
         return ret;
-    }
-
-    @Override
-    public ImageData filterImageDatas(FilterContext fctx,
-                                      BaseTransform transform,
-                                      Rectangle outputClip,
-                                      ImageData... inputs)
-    {
-        return state.filterImageDatas(this, fctx, transform, outputClip, inputs);
-    }
-
-    @Override
-    public boolean operatesInUserSpace() {
-        return true;
-    }
-
-    @Override
-    protected Rectangle getInputClip(int inputIndex,
-                                     BaseTransform transform,
-                                     Rectangle outputClip)
-    {
-        // A blur needs as much "fringe" data from its input as it creates
-        // around its output so we use the same expansion as is used in the
-        // result bounds.
-        if (outputClip != null) {
-            int hpad = state.getPad(0);
-            int vpad = state.getPad(1);
-            if ((hpad | vpad) != 0) {
-                outputClip = new Rectangle(outputClip);
-                outputClip.grow(hpad, vpad);
-            }
-        }
-        return outputClip;
     }
 
     @Override

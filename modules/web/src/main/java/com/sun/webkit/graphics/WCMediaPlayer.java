@@ -1,6 +1,28 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
  */
+
 package com.sun.webkit.graphics;
 
 import java.util.logging.Level;
@@ -127,12 +149,9 @@ public abstract class WCMediaPlayer extends Ref {
         if (this.networkState != networkState) {
             this.networkState = networkState;
             final int _networkState = networkState;
-            Invoker.getInvoker().invokeOnEventThread(new Runnable() {
-                @Override
-                public void run() {
-                    if (nPtr != 0) {
-                        notifyNetworkStateChanged(nPtr, _networkState);
-                    }
+            Invoker.getInvoker().invokeOnEventThread(() -> {
+                if (nPtr != 0) {
+                    notifyNetworkStateChanged(nPtr, _networkState);
                 }
             });
         }
@@ -142,12 +161,9 @@ public abstract class WCMediaPlayer extends Ref {
         if (this.readyState != readyState) {
             this.readyState = readyState;
             final int _readyState = readyState;
-            Invoker.getInvoker().invokeOnEventThread(new Runnable() {
-                @Override
-                public void run() {
-                    if (nPtr != 0) {
-                        notifyReadyStateChanged(nPtr, _readyState);
-                    }
+            Invoker.getInvoker().invokeOnEventThread(() -> {
+                if (nPtr != 0) {
+                    notifyReadyStateChanged(nPtr, _readyState);
                 }
             });
         }
@@ -159,12 +175,9 @@ public abstract class WCMediaPlayer extends Ref {
         if (this.paused != paused) {
             this.paused = paused;
             final boolean _paused = paused;
-            Invoker.getInvoker().invokeOnEventThread(new Runnable() {
-                @Override
-                public void run() {
-                    if (nPtr != 0) {
-                        notifyPaused(nPtr, _paused);
-                    }
+            Invoker.getInvoker().invokeOnEventThread(() -> {
+                if (nPtr != 0) {
+                    notifyPaused(nPtr, _paused);
                 }
             });
         }
@@ -179,24 +192,18 @@ public abstract class WCMediaPlayer extends Ref {
             this.readyState = readyState;
             final boolean _seeking = seeking;
             final int _readyState = readyState;
-            Invoker.getInvoker().invokeOnEventThread(new Runnable() {
-                @Override
-                public void run() {
-                    if (nPtr != 0) {
-                        notifySeeking(nPtr, _seeking, _readyState);
-                    }
+            Invoker.getInvoker().invokeOnEventThread(() -> {
+                if (nPtr != 0) {
+                    notifySeeking(nPtr, _seeking, _readyState);
                 }
             });
         }
     }
 
     protected void notifyFinished() {
-        Invoker.getInvoker().invokeOnEventThread(new Runnable() {
-            @Override
-            public void run() {
-                if (nPtr != 0) {
-                    notifyFinished(nPtr);
-                }
+        Invoker.getInvoker().invokeOnEventThread(() -> {
+            if (nPtr != 0) {
+                notifyFinished(nPtr);
             }
         });
     }
@@ -206,24 +213,18 @@ public abstract class WCMediaPlayer extends Ref {
         final boolean _hasVideo = hasVideo;
         final boolean _hasAudio = hasAudio;
         final float _duration = duration;
-        Invoker.getInvoker().invokeOnEventThread(new Runnable() {
-            @Override
-            public void run() {
-                if (nPtr != 0) {
-                    notifyReady(nPtr, _hasVideo, _hasAudio, _duration);
-                }
+        Invoker.getInvoker().invokeOnEventThread(() -> {
+            if (nPtr != 0) {
+                notifyReady(nPtr, _hasVideo, _hasAudio, _duration);
             }
         });
     }
 
     protected void notifyDurationChanged(float newDuration) {
         final float _newDuration = newDuration;
-        Invoker.getInvoker().invokeOnEventThread(new Runnable() {
-            @Override
-            public void run() {
-                if (nPtr != 0) {
-                    notifyDurationChanged(nPtr, _newDuration);
-                }
+        Invoker.getInvoker().invokeOnEventThread(() -> {
+            if (nPtr != 0) {
+                notifyDurationChanged(nPtr, _newDuration);
             }
         });
     }
@@ -232,22 +233,16 @@ public abstract class WCMediaPlayer extends Ref {
         // notify on event thread to ensure native object is valid (nPtr != 0)
         final int _width = width;
         final int _height = height;
-        Invoker.getInvoker().invokeOnEventThread(new Runnable() {
-            @Override
-            public void run() {
-                if (nPtr != 0) {
-                    notifySizeChanged(nPtr, _width, _height);
-                }
+        Invoker.getInvoker().invokeOnEventThread(() -> {
+            if (nPtr != 0) {
+                notifySizeChanged(nPtr, _width, _height);
             }
         });
     }
 
-    private Runnable newFrameNotifier = new Runnable() {
-        @Override
-        public void run() {
-            if (nPtr != 0) {
-                notifyNewFrame(nPtr);
-            }
+    private Runnable newFrameNotifier = () -> {
+        if (nPtr != 0) {
+            notifyNewFrame(nPtr);
         }
     };
 
@@ -260,12 +255,9 @@ public abstract class WCMediaPlayer extends Ref {
         // notify on event thread to ensure native object is valid (nPtr != 0)
         final float[] _ranges = ranges;
         final int _bytesLoaded = bytesLoaded;
-        Invoker.getInvoker().invokeOnEventThread(new Runnable() {
-            @Override
-            public void run() {
-                if (nPtr != 0) {
-                    notifyBufferChanged(nPtr, _ranges, _bytesLoaded);
-                }
+        Invoker.getInvoker().invokeOnEventThread(() -> {
+            if (nPtr != 0) {
+                notifyBufferChanged(nPtr, _ranges, _bytesLoaded);
             }
         });
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -45,6 +45,9 @@ public final class Platform {
      * the caller. The Runnables are executed in the order they are posted.
      * A runnable passed into the runLater method will be
      * executed before any Runnable passed into a subsequent call to runLater.
+     * If this method is called after the JavaFX runtime has been shutdown, the
+     * call will be ignored: the Runnable will not be executed and no
+     * exception will be thrown.
      *
      * <p>
      * NOTE: applications should avoid flooding JavaFX with too many

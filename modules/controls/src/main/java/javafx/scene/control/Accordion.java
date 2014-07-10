@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,7 +31,9 @@ import javafx.collections.ObservableList;
 
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.scene.control.skin.AccordionSkin;
+
 import javafx.beans.property.ObjectPropertyBase;
+import javafx.beans.value.WritableValue;
 import javafx.css.StyleableProperty;
 
 /**
@@ -75,7 +77,7 @@ public class Accordion extends Control {
         // makes it look to css like the user set the value and css will not 
         // override. Initializing focusTraversable by calling applyStyle with null
         // StyleOrigin ensures that css will be able to override the value.
-        ((StyleableProperty)focusTraversableProperty()).applyStyle(null, Boolean.FALSE);
+        ((StyleableProperty<Boolean>)(WritableValue<Boolean>)focusTraversableProperty()).applyStyle(null, Boolean.FALSE);
     }
 
     /***************************************************************************

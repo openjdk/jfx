@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1152,6 +1152,17 @@ public class RegionTest {
         assertFalse(r.willBeRepainted());
         image.getPixelWriter().setArgb(0, 0, 100);
         assertTrue(r.willBeRepainted());
+    }
+
+    @Test public void testBorderChangeUpdatesTheInsets() {
+        Region r = new Region();
+
+        r.setBorder(new Border(new BorderStroke(Color.BLACK, BorderStrokeStyle.SOLID, null, BorderWidths.DEFAULT, new Insets(10))));
+        assertEquals(new Insets(11), r.getInsets());
+
+        r.setBorder(new Border(new BorderStroke(Color.BLACK, BorderStrokeStyle.SOLID, null, null, new Insets(20))));
+
+        assertEquals(new Insets(21), r.getInsets());
     }
 
     static final class ImageRegion extends Region {

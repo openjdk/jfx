@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -61,14 +61,12 @@ public class  SystemProperties {
     private static boolean isDebug;
 
     static {
-        AccessController.doPrivileged(new PrivilegedAction() {
-            public Object run() {
-                addProperties (sysprop_table, false);
-                addProperties (jfxprop_table, true);
-                setVersions();
-                isDebug = "true".equalsIgnoreCase(getProperty("javafx.debug"));
-                return null;
-            }
+        AccessController.doPrivileged((PrivilegedAction) () -> {
+            addProperties (sysprop_table, false);
+            addProperties (jfxprop_table, true);
+            setVersions();
+            isDebug = "true".equalsIgnoreCase(getProperty("javafx.debug"));
+            return null;
         });
     }
 

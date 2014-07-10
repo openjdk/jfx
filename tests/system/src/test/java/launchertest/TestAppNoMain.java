@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,11 +40,7 @@ public class TestAppNoMain extends Application {
 
     @Override public void start(Stage stage) throws Exception {
         startCalled = true;
-        Platform.runLater(new Runnable() {
-            @Override public void run() {
-                Platform.exit();
-            }
-        });
+        Platform.runLater(Platform::exit);
     }
 
     @Override public void stop() {
@@ -56,10 +52,8 @@ public class TestAppNoMain extends Application {
 
     static {
         try {
-            Platform.runLater(new Runnable() {
-                @Override public void run() {
-                    // do nothing
-                }
+            Platform.runLater(() -> {
+                // do nothing
             });
         } catch (IllegalStateException ex) {
             ex.printStackTrace();

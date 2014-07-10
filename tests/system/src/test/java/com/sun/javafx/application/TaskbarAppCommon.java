@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -46,16 +46,10 @@ public class TaskbarAppCommon {
 
     private void startup() {
         // Start the FX Platform
-        new Thread(new Runnable() {
-            @Override public void run() {
-                PlatformImpl.startup(new Runnable() {
-                    @Override public void run() {
-                        assertTrue(Platform.isFxApplicationThread());
-                        launchLatch.countDown();
-                    }
-                });
-            }
-        }).start();
+        new Thread(() -> PlatformImpl.startup(() -> {
+            assertTrue(Platform.isFxApplicationThread());
+            launchLatch.countDown();
+        })).start();
 
         try {
             if (!launchLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)) {

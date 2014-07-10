@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,8 +34,6 @@ import javafx.animation.ParallelTransition;
 import javafx.beans.NamedArg;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.scene.Node;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Ellipse;
@@ -109,6 +107,9 @@ public class BubbleChart<X,Y> extends XYChart<X,Y> {
                 Data<X,Y> item = iter.next();
                 double x = getXAxis().getDisplayPosition(item.getCurrentX());
                 double y = getYAxis().getDisplayPosition(item.getCurrentY());
+                if (Double.isNaN(x) || Double.isNaN(y)) {
+                    continue;
+                }
                 Node bubble = item.getNode();
                 Ellipse ellipse;
                 if (bubble != null) {
@@ -143,9 +144,9 @@ public class BubbleChart<X,Y> extends XYChart<X,Y> {
     @Override protected void dataItemAdded(Series<X,Y> series, int itemIndex, Data<X,Y> item) {
         Node bubble = createBubble(series, getData().indexOf(series), item, itemIndex);
         if (shouldAnimate()) {
+            // fade in new bubble
             bubble.setOpacity(0);
             getPlotChildren().add(bubble);
-            // fade in new bubble
             FadeTransition ft = new FadeTransition(Duration.millis(500),bubble);
             ft.setToValue(1);
             ft.play();
@@ -160,11 +161,10 @@ public class BubbleChart<X,Y> extends XYChart<X,Y> {
             // fade out old bubble
             FadeTransition ft = new FadeTransition(Duration.millis(500),bubble);
             ft.setToValue(0);
-            ft.setOnFinished(new EventHandler<ActionEvent>() {
-                @Override public void handle(ActionEvent actionEvent) {
-                    getPlotChildren().remove(bubble);
-                    removeDataItemFromDisplay(series, item);
-                }
+            ft.setOnFinished(actionEvent -> {
+                getPlotChildren().remove(bubble);
+                removeDataItemFromDisplay(series, item);
+                bubble.setOpacity(1.0);
             });
             ft.play();
         } else {
@@ -180,7 +180,7 @@ public class BubbleChart<X,Y> extends XYChart<X,Y> {
     @Override protected  void seriesAdded(Series<X,Y> series, int seriesIndex) {
         // handle any data already in series
         for (int j=0; j<series.getData().size(); j++) {
-            Data item = series.getData().get(j);
+            Data<X,Y> item = series.getData().get(j);
             Node bubble = createBubble(series, seriesIndex, item, j);
             if (shouldAnimate()) {
                 bubble.setOpacity(0);
@@ -199,20 +199,17 @@ public class BubbleChart<X,Y> extends XYChart<X,Y> {
         // remove all bubble nodes
         if (shouldAnimate()) {
             ParallelTransition pt = new ParallelTransition();
-            pt.setOnFinished(new EventHandler<ActionEvent>() {
-                public void handle(ActionEvent event) {
-                    removeSeriesFromDisplay(series);
-                }
+            pt.setOnFinished(event -> {
+                removeSeriesFromDisplay(series);
             });
             for (XYChart.Data<X,Y> d : series.getData()) {
                 final Node bubble = d.getNode();
                 // fade out old bubble
                 FadeTransition ft = new FadeTransition(Duration.millis(500),bubble);
                 ft.setToValue(0);
-                ft.setOnFinished(new EventHandler<ActionEvent>() {
-                    @Override public void handle(ActionEvent actionEvent) {
-                        getPlotChildren().remove(bubble);
-                    }
+                ft.setOnFinished(actionEvent -> {
+                    getPlotChildren().remove(bubble);
+                    bubble.setOpacity(1.0);
                 });
                 pt.getChildren().add(ft);
             }
@@ -237,7 +234,7 @@ public class BubbleChart<X,Y> extends XYChart<X,Y> {
      * @param itemIndex   The index of the data item in the series
      * @return Node used for given data item
      */
-    private Node createBubble(Series<X, Y> series, int seriesIndex, final Data item, int itemIndex) {
+    private Node createBubble(Series<X, Y> series, int seriesIndex, final Data<X,Y> item, int itemIndex) {
         Node bubble = item.getNode();
         // check if bubble has already been created
         if (bubble == null) {

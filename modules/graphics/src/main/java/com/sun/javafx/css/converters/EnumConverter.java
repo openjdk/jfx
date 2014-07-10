@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,24 +25,21 @@
 
 package com.sun.javafx.css.converters;
 
+import com.sun.javafx.Logging;
 import com.sun.javafx.css.StringStore;
 import com.sun.javafx.css.StyleConverterImpl;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
-
-import com.sun.javafx.scene.layout.region.RepeatStructConverter;
 import javafx.css.ParsedValue;
 import javafx.css.StyleConverter;
 import javafx.scene.text.Font;
+import sun.util.logging.PlatformLogger;
+import sun.util.logging.PlatformLogger.Level;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
-
-import com.sun.javafx.Logging;
-import sun.util.logging.PlatformLogger;
-import sun.util.logging.PlatformLogger.Level;
 
 public final class EnumConverter<E extends Enum<E>> extends StyleConverterImpl<String, E> {
 

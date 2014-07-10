@@ -31,11 +31,6 @@
  */
 package com.oracle.javafx.scenebuilder.kit.fxom;
 
-import com.oracle.javafx.scenebuilder.kit.fxom.sampledata.SampleDataGenerator;
-import com.oracle.javafx.scenebuilder.kit.fxom.glue.GlueDocument;
-import com.oracle.javafx.scenebuilder.kit.util.Deprecation;
-import com.oracle.javafx.scenebuilder.kit.util.URLUtils;
-import com.sun.javafx.css.StyleManager;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -46,9 +41,15 @@ import java.nio.file.Path;
 import java.util.Collections;
 import java.util.Map;
 import java.util.ResourceBundle;
+
 import javafx.beans.property.ReadOnlyIntegerProperty;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.scene.Node;
+
+import com.oracle.javafx.scenebuilder.kit.fxom.glue.GlueDocument;
+import com.oracle.javafx.scenebuilder.kit.fxom.sampledata.SampleDataGenerator;
+import com.oracle.javafx.scenebuilder.kit.util.Deprecation;
+import com.oracle.javafx.scenebuilder.kit.util.URLUtils;
 
 /**
  *
@@ -70,7 +71,7 @@ public class FXOMDocument {
     
     
     
-    public FXOMDocument(String fxmlText, URL location, ClassLoader classLoader, ResourceBundle resources) throws IOException {
+    public FXOMDocument(String fxmlText, URL location, ClassLoader classLoader, ResourceBundle resources, boolean normalize) throws IOException {
         this.glue = new GlueDocument(fxmlText);
         this.location = location;
         this.classLoader = classLoader;
@@ -78,14 +79,21 @@ public class FXOMDocument {
         if (this.glue.getRootElement() != null) {
             final FXOMLoader loader = new FXOMLoader(this);
             loader.load(fxmlText);
-            final FXOMNormalizer normalizer = new FXOMNormalizer(this);
-            normalizer.normalize();
+            if (normalize) {
+                final FXOMNormalizer normalizer = new FXOMNormalizer(this);
+                normalizer.normalize();
+            }
         } else {
             // Document is empty
             assert GlueDocument.isEmptyXmlText(fxmlText);
             // Keeps this.fxomRoot == null
             // Keeps this.sceneGraphRoot == null
         }
+    }
+    
+    
+    public FXOMDocument(String fxmlText, URL location, ClassLoader classLoader, ResourceBundle resources) throws IOException {
+        this(fxmlText, location, classLoader, resources, true /* normalize */);
     }
     
     

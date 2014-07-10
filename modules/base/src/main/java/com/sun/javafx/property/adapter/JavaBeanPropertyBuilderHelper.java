@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -114,26 +114,28 @@ public class JavaBeanPropertyBuilderHelper {
                 throw new IllegalArgumentException("Property name cannot be empty");
             }
             final String capitalizedName = ReadOnlyPropertyDescriptor.capitalizedName(propertyName);
-            if (getter == null) {
+            Method getterMethod = getter;
+            if (getterMethod == null) {
                 if ((getterName != null) && !getterName.isEmpty()) {
-                    getter = beanClass.getMethod(getterName);
+                    getterMethod = beanClass.getMethod(getterName);
                 } else {
                     try {
-                        getter = beanClass.getMethod(IS_PREFIX + capitalizedName);
+                        getterMethod = beanClass.getMethod(IS_PREFIX + capitalizedName);
                     } catch (NoSuchMethodException e) {
-                        getter = beanClass.getMethod(GET_PREFIX + capitalizedName);
+                        getterMethod = beanClass.getMethod(GET_PREFIX + capitalizedName);
                     }
                 }
             }
-            if (setter == null) {
-                final Class<?> type = getter.getReturnType();
+            Method setterMethod = setter;
+            if (setterMethod == null) {
+                final Class<?> type = getterMethod.getReturnType();
                 if ((setterName != null) && !setterName.isEmpty()) {
-                    setter = beanClass.getMethod(setterName, type);
+                    setterMethod = beanClass.getMethod(setterName, type);
                 } else {
-                    setter = beanClass.getMethod(SET_PREFIX + capitalizedName, type);
+                    setterMethod = beanClass.getMethod(SET_PREFIX + capitalizedName, type);
                 }
             }
-            descriptor = new PropertyDescriptor(propertyName, beanClass, getter, setter);
+            descriptor = new PropertyDescriptor(propertyName, beanClass, getterMethod, setterMethod);
         }
         return descriptor;
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 #import "GlassFrameBufferObject.h"
 #import "GlassMacros.h"
+#import "GlassApplication.h"
 
 #import <OpenGL/glu.h>
 
@@ -260,7 +261,9 @@
             fprintf(stderr, "ERROR: unexpected fbo is bound! Expected %d, but found %d\n", self->_fbo, framebufferCurrent);
         }
 #endif
-        
+        if (![GlassApplication syncRenderingDisabled]) {         
+            glFinish();
+        }
         GLuint framebufferToRevertTo = self->_fboToRestore;
         glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, framebufferToRevertTo);
         LOG("               restored to FBO: %d", framebufferToRevertTo);

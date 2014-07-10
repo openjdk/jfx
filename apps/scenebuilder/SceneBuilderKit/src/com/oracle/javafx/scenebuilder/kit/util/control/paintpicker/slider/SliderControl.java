@@ -32,11 +32,12 @@
 package com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.slider;
 
 import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.gradientpicker.GradientPicker;
+
 import java.io.IOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -89,13 +90,9 @@ public class SliderControl extends GridPane {
         slider_slider.setValue(initVal);
         slider_textfield.setText(Double.toString(initVal));
 
-        slider_slider.valueProperty().addListener(new ChangeListener<Number>() {
-
-            @Override
-            public void changed(ObservableValue<? extends Number> ov, Number oldValue, Number newValue) {
-                double rounded = round(newValue.doubleValue(), roundingFactor);
-                slider_textfield.setText(Double.toString(rounded));
-            }
+        slider_slider.valueProperty().addListener((ChangeListener<Number>) (ov, oldValue, newValue) -> {
+            double rounded = round(newValue.doubleValue(), roundingFactor);
+            slider_textfield.setText(Double.toString(rounded));
         });
     }
 

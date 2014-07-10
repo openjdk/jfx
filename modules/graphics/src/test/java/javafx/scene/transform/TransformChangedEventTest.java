@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -47,18 +47,8 @@ public class TransformChangedEventTest {
 
     @Test
     public void testConstructor() {
-        final EventTarget src = new EventTarget() {
-            @Override
-            public EventDispatchChain buildEventDispatchChain(EventDispatchChain tail) {
-                return null;
-            }
-        };
-        final EventTarget trg = new EventTarget() {
-            @Override
-            public EventDispatchChain buildEventDispatchChain(EventDispatchChain tail) {
-                return null;
-            }
-        };
+        final EventTarget src = tail -> null;
+        final EventTarget trg = tail -> null;
         TransformChangedEvent e = new TransformChangedEvent(src, trg);
         assertSame(TransformChangedEvent.TRANSFORM_CHANGED, e.getEventType());
         assertSame(src, e.getSource());

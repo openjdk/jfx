@@ -62,14 +62,6 @@ class TransientProperty extends TransientNode {
         this.propertyElement = propertyElement;
     }
 
-    public PropertyName getName() {
-        return name;
-    }
-
-    public GlueElement getPropertyElement() {
-        return propertyElement;
-    }
-
     public List<FXOMObject> getValues() {
         return values;
     }

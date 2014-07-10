@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -61,6 +61,7 @@ import com.sun.javafx.geom.transform.Affine2D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.GeneralTransform3D;
 import com.sun.javafx.logging.PulseLogger;
+import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.prism.BasicStroke;
 import com.sun.prism.Graphics;
@@ -628,8 +629,8 @@ public class NGRegion extends NGGroup {
                         cachedGraphics.translate(rect.x - outsetShapeBounds.getMinX(),
                                                  rect.y - outsetShapeBounds.getMinY());
                         renderBackgroundShape(cachedGraphics);
-                        if (PulseLogger.PULSE_LOGGING_ENABLED) {
-                            PulseLogger.PULSE_LOGGER.renderIncrementCounter("Rendering region shape image to cache");
+                        if (PULSE_LOGGING_ENABLED) {
+                            PulseLogger.incrementCounter("Rendering region shape image to cache");
                         }
                     }
                 }
@@ -650,8 +651,8 @@ public class NGRegion extends NGGroup {
                 final float srcY2 = srcY1 + textureHeight;
 
                 g.drawTexture(cached, dstX1, dstY1, dstX2, dstY2, srcX1, srcY1, srcX2, srcY2);
-                if (PulseLogger.PULSE_LOGGING_ENABLED) {
-                    PulseLogger.PULSE_LOGGER.renderIncrementCounter("Cached region shape image used");
+                if (PULSE_LOGGING_ENABLED) {
+                    PulseLogger.incrementCounter("Cached region shape image used");
                 }
             } else {
                 // no cache, rendering backgrounds directly to graphics
@@ -684,9 +685,9 @@ public class NGRegion extends NGGroup {
     }
 
     private void renderBackgroundShape(Graphics g) {
-        if (PulseLogger.PULSE_LOGGING_ENABLED) {
-            PulseLogger.PULSE_LOGGER.renderIncrementCounter("NGRegion renderBackgroundShape slow path");
-            PulseLogger.PULSE_LOGGER.renderMessage("Slow shape path for " + getName());
+        if (PULSE_LOGGING_ENABLED) {
+            PulseLogger.incrementCounter("NGRegion renderBackgroundShape slow path");
+            PulseLogger.addMessage("Slow shape path for " + getName());
         }
 
         // We first need to draw each background fill. We don't pay any attention
@@ -828,8 +829,8 @@ public class NGRegion extends NGGroup {
                     // Rendering backgrounds to the cache
                     renderBackgroundRectanglesDirectly(cacheGraphics, cacheWidth, cacheHeight);
 
-                    if (PulseLogger.PULSE_LOGGING_ENABLED) {
-                        PulseLogger.PULSE_LOGGER.renderIncrementCounter("Rendering region background image to cache");
+                    if (PULSE_LOGGING_ENABLED) {
+                        PulseLogger.incrementCounter("Rendering region background image to cache");
                     }
                 }
             }
@@ -1061,8 +1062,8 @@ public class NGRegion extends NGGroup {
                                 srcLeftX, srcTopY, srcRightX, srcBottomY);
         }
 
-        if (PulseLogger.PULSE_LOGGING_ENABLED) {
-            PulseLogger.PULSE_LOGGER.renderIncrementCounter("Cached region background image used");
+        if (PULSE_LOGGING_ENABLED) {
+            PulseLogger.incrementCounter("Cached region background image used");
         }
     }
 
@@ -1110,9 +1111,9 @@ public class NGRegion extends NGGroup {
                         g.fillRoundRect(l, t, w, h, arcWidth, arcHeight);
                     }
                 } else {
-                    if (PulseLogger.PULSE_LOGGING_ENABLED) {
-                        PulseLogger.PULSE_LOGGER.renderIncrementCounter("NGRegion renderBackgrounds slow path");
-                        PulseLogger.PULSE_LOGGER.renderMessage("Slow background path for " + getName());
+                    if (PULSE_LOGGING_ENABLED) {
+                        PulseLogger.incrementCounter("NGRegion renderBackgrounds slow path");
+                        PulseLogger.addMessage("Slow background path for " + getName());
                     }
                     // The edges are not uniform, so we have to render each edge independently
                     // TODO document the issue number which will give us a fast path for rendering
@@ -1508,6 +1509,19 @@ public class NGRegion extends NGGroup {
         BasicStroke bs;
         if (sb == BorderStrokeStyle.NONE) {
             throw new AssertionError("Should never have been asked to draw a border with NONE");
+        } else if (strokeWidth <= 0) {
+            // The stroke essentially disappears in this case, but some of the
+            // dashing calculations below can produce degenerate dash arrays
+            // that are problematic when the strokeWidth is 0.
+
+            // Ideally the calling code would not even be trying to perform a
+            // stroke under these conditions, but there are so many unchecked
+            // calls to createStroke() in the code that pass the result directly
+            // to a Graphics and then use it, that we need to return something
+            // valid, even if it represents a NOP.
+
+            bs = new BasicStroke((float) strokeWidth, cap, join,
+                    (float) sb.getMiterLimit());
         } else if (sb.getDashArray().size() > 0) {
             List<Double> dashArray = sb.getDashArray();
             double[] array;
@@ -1975,4 +1989,21 @@ public class NGRegion extends NGGroup {
             texture.unlock();
         }
     }
+
+    final Border getBorder() {
+        return border;
+    }
+
+    final Background getBackground() {
+        return background;
+    }
+
+    final float getWidth() {
+        return width;
+    }
+
+    final float getHeight() {
+        return height;
+    }
+
 }

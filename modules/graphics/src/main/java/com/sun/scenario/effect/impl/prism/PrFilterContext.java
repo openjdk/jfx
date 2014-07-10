@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -45,6 +45,9 @@ public class PrFilterContext extends FilterContext {
         return printerFilterContext;
     }
 
+    private PrFilterContext swinstance;
+    private boolean forceSW;
+
     private PrFilterContext(Object screen) {
         super(screen);
     }
@@ -68,5 +71,46 @@ public class PrFilterContext extends FilterContext {
             defaultScreen = Screen.getMainScreen();
         }
         return getInstance(defaultScreen);
+    }
+
+    // Calledonly from PPSRenderer while making a PPStoPSWDispMapPeer,
+    // assumes original is hw instance.
+    public PrFilterContext getSoftwareInstance() {
+        if (swinstance == null) {
+            if (forceSW) {
+                swinstance = this;
+            } else {
+                swinstance = new PrFilterContext(getReferent());
+                swinstance.forceSW = true;
+            }
+        }
+        return swinstance;
+    }
+
+    public boolean isForceSoftware() {
+        return forceSW;
+    }
+
+    /*
+     * Method copied from Boolean.hashCode(boolean) to remove dependency on
+     * 1.8 method in existing class
+     */
+    private static int hashCode(boolean value) {
+        return value ? 1231 : 1237;
+    }
+
+    @Override
+    public int hashCode() {
+        return getReferent().hashCode() ^ hashCode(forceSW);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (!(o instanceof PrFilterContext)) {
+            return false;
+        }
+        PrFilterContext pfctx = (PrFilterContext) o;
+        return (this.getReferent().equals(pfctx.getReferent()) &&
+                this.forceSW == pfctx.forceSW);
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,8 +43,8 @@ final class LensView extends View {
 
     // Constants
     private static long multiClickTime =  300;
-    private static int multiClickMaxX = 2;
-    private static int multiClickMaxY = 2;
+    private static int multiClickMaxX = LensTouchInputSupport.touchTapRadius;
+    private static int multiClickMaxY = LensTouchInputSupport.touchTapRadius;
 
     // view variables
     private int x;

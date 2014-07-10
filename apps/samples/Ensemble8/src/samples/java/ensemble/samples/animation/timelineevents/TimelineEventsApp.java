@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013 Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -102,13 +102,10 @@ public class TimelineEventsApp extends Application {
         //create a keyFrame, the keyValue is reached at time 2s
         Duration duration = Duration.seconds(2);
         //one can add a specific action when the keyframe is reached
-        EventHandler<ActionEvent> onFinished = new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent t) {
-                 stack.setTranslateX(java.lang.Math.random() * 200);
-                 //reset counter
-                 i = 0;
-            }
+        EventHandler<ActionEvent> onFinished = (ActionEvent t) -> {
+            stack.setTranslateX(java.lang.Math.random() * 200);
+            //reset counter
+            i = 0;
         };
         KeyFrame keyFrame = new KeyFrame(duration, onFinished , keyValueX, keyValueY);
         //add the keyframe to the timeline

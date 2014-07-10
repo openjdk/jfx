@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -223,11 +223,8 @@ public class MenuButtonTest {
         Button other = new Button("other");
         // Doesn't have to be done this way, but this more closely duplicates
         // the example code in the bug report.
-        other.setOnAction(new EventHandler<ActionEvent>(){
-            @Override
-            public void handle(ActionEvent t) {
-                mb.setOpacity(.5);
-            }
+        other.setOnAction(t -> {
+            mb.setOpacity(.5);
         });
         
         VBox vbox = new VBox();

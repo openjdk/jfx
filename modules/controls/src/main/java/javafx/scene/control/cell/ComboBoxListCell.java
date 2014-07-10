@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -76,6 +76,7 @@ public class ComboBoxListCell<T> extends ListCell<T> {
      * @return A {@link Callback} that will return a ListCell that is able to 
      *      work on the type of element contained within the ListView.
      */
+    @SafeVarargs
     public static <T> Callback<ListView<T>, ListCell<T>> forListView(final T... items) {
         return forListView(FXCollections.observableArrayList(items));
     }
@@ -97,6 +98,7 @@ public class ComboBoxListCell<T> extends ListCell<T> {
      * @return A {@link Callback} that will return a ListCell that is able to 
      *      work on the type of element contained within the ListView.
      */
+    @SafeVarargs
     public static <T> Callback<ListView<T>, ListCell<T>> forListView(
                 final StringConverter<T> converter, 
                 final T... items) {
@@ -143,11 +145,7 @@ public class ComboBoxListCell<T> extends ListCell<T> {
     public static <T> Callback<ListView<T>, ListCell<T>> forListView(
             final StringConverter<T> converter, 
             final ObservableList<T> items) {
-        return new Callback<ListView<T>, ListCell<T>>() {
-            @Override public ListCell<T> call(ListView<T> list) {
-                return new ComboBoxListCell<T>(converter, items);
-            }
-        };
+        return list -> new ComboBoxListCell<T>(converter, items);
     }
     
     
@@ -184,6 +182,7 @@ public class ComboBoxListCell<T> extends ListCell<T> {
      * @param items The items to show in the ComboBox popup menu when selected 
      *      by the user.
      */
+    @SafeVarargs
     public ComboBoxListCell(T... items) {
         this(FXCollections.observableArrayList(items));
     }
@@ -200,6 +199,7 @@ public class ComboBoxListCell<T> extends ListCell<T> {
      * @param items The items to show in the ComboBox popup menu when selected 
      *      by the user.
      */
+    @SafeVarargs
     public ComboBoxListCell(StringConverter<T> converter, T... items) {
         this(converter, FXCollections.observableArrayList(items));
     }

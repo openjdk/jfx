@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,6 +31,7 @@ import javafx.beans.property.ObjectPropertyBase;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.Node;
+//import javafx.scene.accessibility.Action;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 
@@ -75,7 +76,8 @@ public abstract class ButtonBase extends Labeled {
     public ButtonBase(String text, Node graphic) {
         super(text, graphic);
     }
-    
+
+
     /***************************************************************************
      *                                                                         *
      * Properties                                                              *
@@ -134,6 +136,7 @@ public abstract class ButtonBase extends Labeled {
         }
     };
 
+
     /***************************************************************************
      *                                                                         *
      * Methods                                                                 *
@@ -175,6 +178,7 @@ public abstract class ButtonBase extends Labeled {
      */
     public abstract void fire();
 
+
     /***************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
@@ -183,4 +187,20 @@ public abstract class ButtonBase extends Labeled {
 
     private static final PseudoClass ARMED_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("armed");
 
+
+    /***************************************************************************
+     *                                                                         *
+     * Accessibility handling                                                  *
+     *                                                                         *
+     **************************************************************************/
+
+//    /** @treatAsPrivate */
+//    @Override public void accExecuteAction(Action action, Object... parameters) {
+//        switch (action) {
+//            case FIRE: 
+//                fire();
+//                break;
+//            default: super.accExecuteAction(action);
+//        }
+//    }
 }

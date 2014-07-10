@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -446,11 +446,9 @@ public class ChoiceBoxTest {
         final String[] items = {"Apple", "Orange", "Banana"};
         StackPane pane = new StackPane();
         pane.getChildren().add(box);
-        Runnable runnable = new Runnable() {
-            public void run() {
-                box.setItems(FXCollections.observableArrayList(items));
-                box.getSelectionModel().setSelectedItem("Apple");
-            }
+        Runnable runnable = () -> {
+            box.setItems(FXCollections.observableArrayList(items));
+            box.getSelectionModel().setSelectedItem("Apple");
         };
         Platform.runLater(runnable); 
         startApp(pane);

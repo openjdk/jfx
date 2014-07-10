@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -55,12 +55,7 @@ class WoffDecoder extends FontFileWriter {
         writeHeader(format, numTables);
 
         /* Tables should be written in the same order as the original file */
-        Arrays.sort(woffTableDirectory, new Comparator<WoffDirectoryEntry> () {
-            @Override
-            public int compare(WoffDirectoryEntry o1, WoffDirectoryEntry o2) {
-                return o1.offset - o2.offset;
-            }
-        });
+        Arrays.sort(woffTableDirectory, (o1, o2) -> o1.offset - o2.offset);
 
         Inflater decompressor = new Inflater();
         int offset = TTCHEADERSIZE + numTables * DIRECTORYENTRYSIZE;

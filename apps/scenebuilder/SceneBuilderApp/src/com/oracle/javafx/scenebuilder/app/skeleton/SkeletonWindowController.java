@@ -38,10 +38,11 @@ import com.oracle.javafx.scenebuilder.app.skeleton.SkeletonBuffer.TEXT_TYPE;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.util.AbstractFxmlWindowController;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
+
 import java.util.HashMap;
 import java.util.Map;
+
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.CheckBox;
@@ -84,20 +85,16 @@ public class SkeletonWindowController extends AbstractFxmlWindowController {
         this.editorController = editorController;
 
         this.editorController.fxomDocumentProperty().addListener(
-                new ChangeListener<FXOMDocument>() {
-                    @Override
-                    public void changed(ObservableValue<? extends FXOMDocument> ov,
-                            FXOMDocument od, FXOMDocument nd) {
-                        assert editorController.getFxomDocument() == nd;
-                        if (od != null) {
-                            od.sceneGraphRevisionProperty().removeListener(fxomDocumentRevisionListener);
-                        }
-                        if (nd != null) {
-                            nd.sceneGraphRevisionProperty().addListener(fxomDocumentRevisionListener);
-                            update();
-                        }
-                    }
-                });
+                (ChangeListener<FXOMDocument>) (ov, od, nd) -> {
+                  assert editorController.getFxomDocument() == nd;
+                  if (od != null) {
+                od.sceneGraphRevisionProperty().removeListener(fxomDocumentRevisionListener);
+                  }
+                  if (nd != null) {
+                nd.sceneGraphRevisionProperty().addListener(fxomDocumentRevisionListener);
+                update();
+                  }
+               });
 
         if (editorController.getFxomDocument() != null) {
             editorController.getFxomDocument().sceneGraphRevisionProperty().addListener(fxomDocumentRevisionListener);
@@ -128,21 +125,9 @@ public class SkeletonWindowController extends AbstractFxmlWindowController {
         assert formatCheckBox != null;
         assert textArea != null;
 
-        commentCheckBox.selectedProperty().addListener(new ChangeListener<Boolean>() {
+        commentCheckBox.selectedProperty().addListener((ChangeListener<Boolean>) (ov, t, t1) -> update());
 
-            @Override
-            public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
-                update();
-            }
-        });
-
-        formatCheckBox.selectedProperty().addListener(new ChangeListener<Boolean>() {
-
-            @Override
-            public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
-                update();
-            }
-        });
+        formatCheckBox.selectedProperty().addListener((ChangeListener<Boolean>) (ov, t, t1) -> update());
 
         update();
     }
@@ -151,12 +136,7 @@ public class SkeletonWindowController extends AbstractFxmlWindowController {
      * Private
      */
     private final ChangeListener<Number> fxomDocumentRevisionListener
-            = new ChangeListener<Number>() {
-                @Override
-                public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
-                    update();
-                }
-            };
+            = (observable, oldValue, newValue) -> update();
 
     private void updateTitle() {
         String documentName = DocumentWindowController.makeTitle(editorController.getFxomDocument());

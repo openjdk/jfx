@@ -31,8 +31,6 @@
  */
 package com.oracle.javafx.scenebuilder.kit.util.control.effectpicker;
 
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.scene.control.Menu;
 import javafx.scene.control.RadioMenuItem;
 import javafx.scene.control.SeparatorMenuItem;
@@ -105,22 +103,14 @@ public class BlendPathItem extends EffectPathItem {
         // Add Select Input Menu
         final Menu inputMenu = new Menu("Select Input"); //NOI18N
         topMenuItem.setToggleGroup(inputToggleGroup);
-        topMenuItem.setOnAction(new EventHandler<ActionEvent>() {
-
-            @Override
-            public void handle(ActionEvent event) {
-                toggle_button.setText(getSimpleName() + " (TopInput)"); //NOI18N
-                effectPickerController.updateUI(BlendPathItem.this);
-            }
+        topMenuItem.setOnAction(event -> {
+            toggle_button.setText(getSimpleName() + " (TopInput)"); //NOI18N
+            effectPickerController.updateUI(BlendPathItem.this);
         });
         bottomMenuItem.setToggleGroup(inputToggleGroup);
-        bottomMenuItem.setOnAction(new EventHandler<ActionEvent>() {
-
-            @Override
-            public void handle(ActionEvent event) {
-                toggle_button.setText(getSimpleName() + " (BottomInput)"); //NOI18N
-                effectPickerController.updateUI(BlendPathItem.this);
-            }
+        bottomMenuItem.setOnAction(event -> {
+            toggle_button.setText(getSimpleName() + " (BottomInput)"); //NOI18N
+            effectPickerController.updateUI(BlendPathItem.this);
         });
 
         inputMenu.getItems().addAll(topMenuItem, bottomMenuItem);

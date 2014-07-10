@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -635,9 +635,9 @@ public enum KeyCode {
     DEAD_ACUTE(0x81, "Dead Acute"),
 
     /**
-     * Constant for the {@code Circumflex} key.
+     * Constant for the {@code Dead Circumflex} key.
      */
-    DEAD_CIRCUMFLEX(0x82, "Circumflex"),
+    DEAD_CIRCUMFLEX(0x82, "Dead Circumflex"),
 
     /**
      * Constant for the {@code Dead Tilde} key.

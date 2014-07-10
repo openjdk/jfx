@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -60,7 +60,7 @@ public class SeparatorSkin extends BehaviorSkinBase<Separator, BehaviorBase<Sepa
         // There is no behavior for the separator, so we just create a
         // dummy behavior base instead, since SkinBase will complain
         // about it being null.
-        super(separator, new BehaviorBase<>(separator, Collections.EMPTY_LIST));
+        super(separator, new BehaviorBase<>(separator, Collections.emptyList()));
 
         line = new Region();
         line.getStyleClass().setAll("line");

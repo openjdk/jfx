@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -686,12 +686,9 @@ public class NodeTest {
     }
 
     public static final Comparator DEFAULT_OBJ_COMPARATOR =
-            new Comparator() {
-                @Override
-                public int compare(final Object sgValue, final Object pgValue) {
-                    assertEquals(sgValue, pgValue);
-                    return 0;
-                }
+            (sgValue, pgValue) -> {
+                assertEquals(sgValue, pgValue);
+                return 0;
             };
 
     public static void testObjectPropertyPropagation(
@@ -723,14 +720,11 @@ public class NodeTest {
         testObjectPropertyPropagation(
                 node, propertyName, pgPropertyName,
                 initialValue, newValue,
-                new Comparator() {
-                    @Override
-                    public int compare(final Object sgValue,
-                                       final Object pgValue) {
-                        assertEquals(sgValue, convertor.toSg(pgValue));
-                        return 0;
-                    }
-                });
+                (sgValue, pgValue) -> {
+                    assertEquals(sgValue, convertor.toSg(pgValue));
+                    return 0;
+                }
+        );
     }
 
     public static void testObjectPropertyPropagation(

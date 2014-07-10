@@ -1,6 +1,28 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
  */
+
 package javafx.scene.web;
 
 import static javafx.concurrent.Worker.State.FAILED;
@@ -24,11 +46,7 @@ import org.w3c.dom.Text;
 public class LoadTest extends TestBase {
     
     private State getLoadState() {
-        return submit(new Callable<State>() {
-            public State call() {
-                return getEngine().getLoadWorker().getState();
-            }
-        });
+        return submit(() -> getEngine().getLoadWorker().getState());
     }
 
     @Test public void testLoadGoodUrl() {
@@ -75,7 +93,7 @@ public class LoadTest extends TestBase {
         assertNull("Title should be null", web.getTitle());
 
         // DOM access should happen on FX thread
-        submit(new Runnable() { public void run() {
+        submit(() -> {
             Document doc = web.getDocument();
             assertNotNull("Document should not be null", doc);
             Node el = // html -> body -> pre -> text
@@ -83,7 +101,7 @@ public class LoadTest extends TestBase {
             String text = ((Text)el).getNodeValue();
             assertEquals("Plain text should not be interpreted as HTML",
                     TEXT, text);
-        }});
+        });
     }
 
     @Test public void testLoadEmpty() {
@@ -100,7 +118,7 @@ public class LoadTest extends TestBase {
         assertEquals("Location", "about:blank", web.getLocation());
         assertNull("Title should be null", web.getTitle());
 
-        submit(new Runnable() { public void run() {
+        submit(() -> {
             Document doc = web.getDocument();
             assertNotNull("Document should not be null", doc);
 
@@ -125,7 +143,7 @@ public class LoadTest extends TestBase {
             assertEquals("BODY element should have tag BODY", "BODY", body.getTagName());
             assertTrue("BODY element should have no children",
                     bodyNodes == null || bodyNodes.getLength() == 0);
-        }});
+        });
     }
 
     @Test public void testLoadUrlWithEncodedSpaces() {
@@ -149,10 +167,8 @@ public class LoadTest extends TestBase {
         WebEngine webEngine = getEngine();
         
         final StringBuilder result = new StringBuilder();
-        webEngine.setOnAlert(new EventHandler<WebEvent<String>>() {
-            @Override public void handle(WebEvent<String> event) {
-                result.append("ALERT: ").append(event.getData());
-            }
+        webEngine.setOnAlert(event -> {
+            result.append("ALERT: ").append(event.getData());
         });
         
         String scriptUrl =

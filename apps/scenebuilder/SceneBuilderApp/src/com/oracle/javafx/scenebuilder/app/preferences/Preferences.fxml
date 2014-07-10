@@ -67,10 +67,10 @@
         <CustomMenuItem fx:id="parentRingMenuItem" hideOnClick="false" mnemonicParsing="false" text="Unspecified Action" />
       </items>
     </MenuButton>
-    <Label text="%prefs.hierarchy.displayoption" GridPane.columnIndex="0" GridPane.rowIndex="8" />
-    <ChoiceBox fx:id="hierarchyDisplayOption" GridPane.columnIndex="1" GridPane.rowIndex="8" />
-    <Label text="%prefs.cssanalyzer.columns.order" GridPane.columnIndex="0" GridPane.rowIndex="9" />
-    <ChoiceBox fx:id="cssAnalyzerColumnsOrder" GridPane.columnIndex="1" GridPane.rowIndex="9">
+    <Label text="%prefs.hierarchy.displayoption" GridPane.columnIndex="0" GridPane.rowIndex="9" />
+    <ChoiceBox fx:id="hierarchyDisplayOption" GridPane.columnIndex="1" GridPane.rowIndex="9" />
+    <Label text="%prefs.cssanalyzer.columns.order" GridPane.columnIndex="0" GridPane.rowIndex="10" />
+    <ChoiceBox fx:id="cssAnalyzerColumnsOrder" GridPane.columnIndex="1" GridPane.rowIndex="10">
       <items>
         <FXCollections fx:factory="observableArrayList">
           <String fx:value="Item 1" />
@@ -80,8 +80,8 @@
       </items>
     </ChoiceBox>
     <Separator prefWidth="-1.0" GridPane.columnIndex="0" GridPane.columnSpan="2" GridPane.rowIndex="2" />
-    <Separator prefWidth="-1.0" GridPane.columnIndex="0" GridPane.columnSpan="2" GridPane.rowIndex="10" />
-    <ChoiceBox fx:id="recentItemsSize" GridPane.columnIndex="1" GridPane.rowIndex="11">
+    <Separator prefWidth="-1.0" GridPane.columnIndex="0" GridPane.columnSpan="2" GridPane.rowIndex="11" />
+    <ChoiceBox fx:id="recentItemsSize" GridPane.columnIndex="1" GridPane.rowIndex="12">
       <items>
         <FXCollections fx:factory="observableArrayList">
           <String fx:value="Item 1" />
@@ -90,10 +90,14 @@
         </FXCollections>
       </items>
     </ChoiceBox>
-    <Label text="%prefs.library.displayoption" GridPane.columnIndex="0" GridPane.rowIndex="7" />
-    <ChoiceBox fx:id="libraryDisplayOption" GridPane.columnIndex="1" GridPane.rowIndex="7" />
+    <Label text="%prefs.library.displayoption" GridPane.columnIndex="0" GridPane.rowIndex="8" />
+    <ChoiceBox fx:id="libraryDisplayOption" GridPane.columnIndex="1" GridPane.rowIndex="8" />
     <Separator prefWidth="-1.0" GridPane.columnIndex="0" GridPane.columnSpan="2" GridPane.rowIndex="6" />
-    <Label text="%prefs.recent.items" GridPane.columnIndex="0" GridPane.rowIndex="11" />
+    <Label text="%prefs.recent.items" GridPane.columnIndex="0" GridPane.rowIndex="12" />
+      <Label text="%prefs.tooltheme" GridPane.rowIndex="7" />
+      <ChoiceBox fx:id="toolTheme" GridPane.columnIndex="1" GridPane.rowIndex="7" />
+      <Separator prefWidth="-1.0" GridPane.columnIndex="0" GridPane.columnSpan="2" GridPane.rowIndex="13" />
+      <Button onAction="#resetToDefaultAction" prefWidth="-1.0" text="%prefs.reset.default" GridPane.columnIndex="0" GridPane.columnSpan="2" GridPane.halignment="CENTER" GridPane.rowIndex="14" />
   </children>
   <columnConstraints>
     <ColumnConstraints halignment="RIGHT" hgrow="SOMETIMES" maxWidth="-Infinity" minWidth="-Infinity" />
@@ -103,6 +107,7 @@
     <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
   </padding>
   <rowConstraints>
+    <RowConstraints maxHeight="-Infinity" minHeight="-Infinity" prefHeight="-1.0" vgrow="NEVER" />
     <RowConstraints maxHeight="-Infinity" minHeight="-Infinity" prefHeight="-1.0" vgrow="NEVER" />
     <RowConstraints maxHeight="-Infinity" minHeight="-Infinity" prefHeight="-1.0" vgrow="NEVER" />
     <RowConstraints maxHeight="-Infinity" minHeight="-Infinity" prefHeight="-1.0" vgrow="NEVER" />

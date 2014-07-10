@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -370,13 +370,10 @@ public final class ImageTest {
                 getLastAsyncImageLoader();
 
         final InvalidationListener imageChecker =
-                new InvalidationListener() {
-                    @Override
-                    public void invalidated(final Observable observable) {
-                        assertEquals(200, image.getWidth(), 0);
-                        assertEquals(100, image.getHeight(), 0);
-                        assertNotNull(image.impl_getPlatformImage());
-                    }
+                observable -> {
+                    assertEquals(200, image.getWidth(), 0);
+                    assertEquals(100, image.getHeight(), 0);
+                    assertNotNull(image.impl_getPlatformImage());
                 };
 
         image.widthProperty().addListener(imageChecker);

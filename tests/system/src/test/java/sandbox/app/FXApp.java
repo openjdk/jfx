@@ -86,9 +86,7 @@ public class FXApp extends Application {
             stage.show();
 
             // Hide the stage after the specified amount of time
-            KeyFrame kf = new KeyFrame(Duration.millis(SHOWTIME), e -> {
-                stage.hide();
-            });
+            KeyFrame kf = new KeyFrame(Duration.millis(SHOWTIME), e -> stage.hide());
             Timeline timeline = new Timeline(kf);
             timeline.play();
         } catch (SecurityException ex) {

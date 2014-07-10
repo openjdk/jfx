@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+  Copyright (c) 2014, Oracle and/or its affiliates.
+  All rights reserved. Use is subject to license terms.
+
+  This file is available and licensed under the following license:
+
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the following conditions
+  are met:
+
+  - Redistributions of source code must retain the above copyright
+    notice, this list of conditions and the following disclaimer.
+  - Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in
+    the documentation and/or other materials provided with the distribution.
+  - Neither the name of Oracle Corporation nor the names of its
+    contributors may be used to endorse or promote products derived
+    from this software without specific prior written permission.
+
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+-->
+
+<?import java.lang.*?>
+<?import javafx.embed.swing.*?>
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<GridPane alignment="CENTER" hgap="20.0" vgap="20.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="helloswingnode.HelloSwingNodeController">
+    <columnConstraints>
+      <ColumnConstraints halignment="RIGHT" hgrow="SOMETIMES" minWidth="-Infinity" />
+      <ColumnConstraints halignment="RIGHT" hgrow="SOMETIMES" minWidth="-Infinity" />
+      <ColumnConstraints halignment="LEFT" hgrow="SOMETIMES" minWidth="-Infinity" />
+    </columnConstraints>
+    <rowConstraints>
+      <RowConstraints minHeight="25.0" valignment="CENTER" vgrow="SOMETIMES" />
+      <RowConstraints minHeight="25.0" valignment="CENTER" vgrow="SOMETIMES" />
+    </rowConstraints>
+    <children>
+      <Label fx:id="label" layoutX="131.0" layoutY="232.0" text="This is a Swing Button" GridPane.rowIndex="1" HBox.hgrow="NEVER" />
+      <SwingNode fx:id="swingNode" layoutX="387.0" layoutY="240.0" GridPane.columnIndex="2" GridPane.halignment="LEFT" GridPane.rowIndex="1" />
+      <Label layoutX="116.0" layoutY="147.0" text="This is a JavaFX Button" HBox.hgrow="NEVER" />
+      <Button fx:id="fxButton" layoutX="288.0" layoutY="142.0" onAction="#handleButtonAction" text="Disable Swing button" GridPane.columnIndex="2">
+         <tooltip>
+            <Tooltip text="Click this button to disable the Swing button." />
+         </tooltip>
+      </Button>
+      <Label text="--&gt;" GridPane.columnIndex="1" />
+      <Label text="--&gt;" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+    </children>
+    <padding>
+      <Insets bottom="50.0" left="50.0" right="50.0" top="50.0" />
+    </padding>
+</GridPane>

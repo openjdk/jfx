@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -63,9 +63,13 @@ public class NULL3DPipeline extends GraphicsPipeline {
             new HashMap<Integer, DummyResourceFactory>(1);
 
     @Override
+    public int getAdapterOrdinal(Screen screen) {
+        return Screen.getScreens().indexOf(screen);
+    }
+    
+    @Override
     public ResourceFactory getResourceFactory(Screen screen) {
-        List<Screen> screens = Screen.getScreens();
-        Integer index = new Integer(screens.indexOf(screen));
+        Integer index = new Integer(screen.getAdapterOrdinal());
         DummyResourceFactory factory = factories.get(index);
         if (factory == null) {
             factory = new DummyResourceFactory(screen);

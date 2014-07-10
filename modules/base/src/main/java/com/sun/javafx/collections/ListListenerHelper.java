@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,6 +28,7 @@ package com.sun.javafx.collections;
 import com.sun.javafx.binding.ExpressionHelperBase;
 import javafx.beans.InvalidationListener;
 import javafx.collections.ListChangeListener;
+import sun.util.logging.PlatformLogger;
 
 import java.util.Arrays;
 
@@ -121,7 +122,11 @@ public abstract class ListListenerHelper<E> extends ExpressionHelperBase {
 
         @Override
         protected void fireValueChangedEvent(ListChangeListener.Change<? extends E> change) {
+            try {
             listener.invalidated(change.getList());
+            } catch (Exception e) {
+                Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
+            }
         }
     }
 
@@ -155,7 +160,11 @@ public abstract class ListListenerHelper<E> extends ExpressionHelperBase {
 
         @Override
         protected void fireValueChangedEvent(ListChangeListener.Change<? extends E> change) {
-            listener.onChanged(change);
+            try {
+                listener.onChanged(change);
+            } catch (Exception e) {
+                Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
+            }
         }
     }
 
@@ -308,11 +317,19 @@ public abstract class ListListenerHelper<E> extends ExpressionHelperBase {
             try {
                 locked = true;
                 for (int i = 0; i < curInvalidationSize; i++) {
-                    curInvalidationList[i].invalidated(change.getList());
+                    try {
+                        curInvalidationList[i].invalidated(change.getList());
+                    } catch (Exception e) {
+                        Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
+                    }
                 }
                 for (int i = 0; i < curChangeSize; i++) {
                     change.reset();
-                    curChangeList[i].onChanged(change);
+                    try {
+                        curChangeList[i].onChanged(change);
+                    } catch (Exception e) {
+                        Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
+                    }
                 }
             } finally {
                 locked = false;

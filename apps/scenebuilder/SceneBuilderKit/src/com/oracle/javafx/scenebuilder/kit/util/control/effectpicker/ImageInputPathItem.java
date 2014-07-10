@@ -32,14 +32,11 @@
 package com.oracle.javafx.scenebuilder.kit.util.control.effectpicker;
 
 import javafx.scene.effect.Effect;
-import javafx.scene.image.Image;
 
 /**
  * Effect path item for the image input effect.
  */
 public class ImageInputPathItem extends EffectPathItem {
-
-    private Image image;
 
     public ImageInputPathItem(EffectPickerController epc, Effect effect, EffectPathItem hostPathItem) {
         super(epc, effect, hostPathItem);

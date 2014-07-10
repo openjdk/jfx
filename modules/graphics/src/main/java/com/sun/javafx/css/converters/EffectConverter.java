@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,18 +36,17 @@ import javafx.scene.effect.InnerShadow;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 
-import java.util.HashMap;
 import java.util.Map;
 
 public class EffectConverter extends StyleConverterImpl<ParsedValue[], Effect> {
 
     // lazy, thread-safe instatiation
     private static class Holder {
-        static EffectConverter EFFECT_CONVERTER =
+        static final EffectConverter EFFECT_CONVERTER =
                 new EffectConverter();
-        static DropShadowConverter DROP_SHADOW_INSTANCE =
+        static final DropShadowConverter DROP_SHADOW_INSTANCE =
                 new DropShadowConverter();
-        static InnerShadowConverter INNER_SHADOW_INSTANCE =
+        static final InnerShadowConverter INNER_SHADOW_INSTANCE =
                 new InnerShadowConverter();
     }
 

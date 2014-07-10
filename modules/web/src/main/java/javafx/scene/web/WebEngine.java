@@ -1,6 +1,28 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
  */
+
 package javafx.scene.web;
 
 import com.sun.javafx.geom.BaseBounds;
@@ -261,11 +283,7 @@ window.setMember("app", new JavaApplication());
  */
 final public class WebEngine {
     static {
-        Accessor.setPageAccessor(new Accessor.PageAccessor() {
-            @Override public WebPage getPage(WebEngine w) {
-                return w == null ? null : w.getPage();
-            }
-        });
+        Accessor.setPageAccessor(w -> w == null ? null : w.getPage());
 
         Invoker.setInvoker(new PrismInvoker());
         Renderer.setRenderer(new PrismRenderer());
@@ -677,11 +695,7 @@ final public class WebEngine {
     
     private final ObjectProperty<Callback<PopupFeatures, WebEngine>> createPopupHandler
             = new SimpleObjectProperty<Callback<PopupFeatures, WebEngine>>(this, "createPopupHandler",
-                new Callback<PopupFeatures, WebEngine>() {
-                    public WebEngine call(PopupFeatures p) {
-                        return WebEngine.this;
-                    }
-                });
+            p -> WebEngine.this);
     
     /**
      * Returns the JavaScript popup handler.
@@ -1145,15 +1159,13 @@ final public class WebEngine {
             };
 
         private static final TKPulseListener listener =
-            new TKPulseListener() {
-                public void pulse() {
+                () -> {
                     // Note, the timer event is executed right in the notifyTick(),
                     // that is during the pulse event. This makes the timer more
                     // repsonsive, though prolongs the pulse. So far it causes no
                     // problems but nevertheless it should be kept in mind.
                     Timer.getTimer().notifyTick();
-                }
-            };
+                };
 
         private static void start(){
             Toolkit.getToolkit().addSceneTkPulseListener(listener);
@@ -1528,11 +1540,9 @@ final public class WebEngine {
                 final Callback<String,Void> messageCallback =
                         webEngine.debugger.messageCallback;
                 if (messageCallback != null) {
-                    AccessController.doPrivileged(new PrivilegedAction<Void>() {
-                        @Override public Void run() {
-                            messageCallback.call(message);
-                            return null;
-                        }
+                    AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+                        messageCallback.call(message);
+                        return null;
                     }, webEngine.page.getAccessControlContext());
                     result = true;
                 }

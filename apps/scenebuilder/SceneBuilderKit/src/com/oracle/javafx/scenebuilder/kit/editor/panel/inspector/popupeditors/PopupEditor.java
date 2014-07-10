@@ -34,9 +34,10 @@ package com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.popupeditors;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.EditorUtils;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.PropertyEditor;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
+
 import java.util.Set;
+
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.fxml.FXML;
 import javafx.scene.Node;
 import javafx.scene.control.CustomMenuItem;
@@ -74,17 +75,13 @@ public abstract class PopupEditor extends PropertyEditor implements PopupEditorV
     private void initializeEditor() {
         // Lazy initialization of the editor,
         // the first time the popup is opened.
-        popupMb.showingProperty().addListener(new ChangeListener<Boolean>() {
-
-            @Override
-            public void changed(ObservableValue<? extends Boolean> ov, Boolean previousVal, Boolean newVal) {
-                if (newVal) {
-                    if (!initialized) {
-                        initializePopup();
-                        initialized = true;
-                    }
-                    setPopupContentValue(value);
+        popupMb.showingProperty().addListener((ChangeListener<Boolean>) (ov, previousVal, newVal) -> {
+            if (newVal) {
+                if (!initialized) {
+                    initializePopup();
+                    initialized = true;
                 }
+                setPopupContentValue(value);
             }
         });
     }
@@ -143,13 +140,7 @@ public abstract class PopupEditor extends PropertyEditor implements PopupEditorV
 
     @Override
     public void requestFocus() {
-        EditorUtils.doNextFrame(new Runnable() {
-
-            @Override
-            public void run() {
-                popupMb.requestFocus();
-            }
-        });
+        EditorUtils.doNextFrame(() -> popupMb.requestFocus());
     }
 
     /*

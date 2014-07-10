@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -50,30 +50,24 @@ class GlassSceneDnDEventHandler {
                                         final ClipboardAssistance dropTargetAssistant)
     {
         assert Platform.isFxApplicationThread();
-        return AccessController.doPrivileged(new PrivilegedAction<TransferMode>() {
-            @Override
-            public TransferMode run() {
-                if (scene.dropTargetListener != null) {
-                    QuantumClipboard dragboard =
-                            QuantumClipboard.getDragboardInstance(dropTargetAssistant, false);
-                    return scene.dropTargetListener.dragEnter(x, y, xAbs, yAbs,
-                            recommendedTransferMode, dragboard);
-                }
-                return null;
+        return AccessController.doPrivileged((PrivilegedAction<TransferMode>) () -> {
+            if (scene.dropTargetListener != null) {
+                QuantumClipboard dragboard =
+                        QuantumClipboard.getDragboardInstance(dropTargetAssistant, false);
+                return scene.dropTargetListener.dragEnter(x, y, xAbs, yAbs,
+                        recommendedTransferMode, dragboard);
             }
+            return null;
         }, scene.getAccessControlContext());
     }
 
     public void handleDragLeave(final ClipboardAssistance dropTargetAssistant) {
         assert Platform.isFxApplicationThread();
-        AccessController.doPrivileged(new PrivilegedAction<Void>() {
-            @Override
-            public Void run() {
-                if (scene.dropTargetListener != null) {
-                    scene.dropTargetListener.dragExit(0, 0, 0, 0);
-                }
-                return null;
+        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+            if (scene.dropTargetListener != null) {
+                scene.dropTargetListener.dragExit(0, 0, 0, 0);
             }
+            return null;
         }, scene.getAccessControlContext());
     }
 
@@ -82,15 +76,12 @@ class GlassSceneDnDEventHandler {
                                        final ClipboardAssistance dropTargetAssistant)
     {
         assert Platform.isFxApplicationThread();
-        return AccessController.doPrivileged(new PrivilegedAction<TransferMode>() {
-            @Override
-            public TransferMode run() {
-                if (scene.dropTargetListener != null) {
-                    return scene.dropTargetListener.drop(x, y, xAbs, yAbs,
-                            recommendedTransferMode);
-                }
-                return null;
+        return AccessController.doPrivileged((PrivilegedAction<TransferMode>) () -> {
+            if (scene.dropTargetListener != null) {
+                return scene.dropTargetListener.drop(x, y, xAbs, yAbs,
+                        recommendedTransferMode);
             }
+            return null;
         }, scene.getAccessControlContext());
     }
 
@@ -99,15 +90,12 @@ class GlassSceneDnDEventHandler {
                                        final ClipboardAssistance dropTargetAssistant)
     {
         assert Platform.isFxApplicationThread();
-        return AccessController.doPrivileged(new PrivilegedAction<TransferMode>() {
-            @Override
-            public TransferMode run() {
-                if (scene.dropTargetListener != null) {
-                    return scene.dropTargetListener.dragOver(x, y, xAbs, yAbs,
-                            recommendedTransferMode);
-                }
-                return null;
+        return AccessController.doPrivileged((PrivilegedAction<TransferMode>) () -> {
+            if (scene.dropTargetListener != null) {
+                return scene.dropTargetListener.dragOver(x, y, xAbs, yAbs,
+                        recommendedTransferMode);
             }
+            return null;
         }, scene.getAccessControlContext());
     }
 
@@ -121,17 +109,14 @@ class GlassSceneDnDEventHandler {
                                 final ClipboardAssistance dragSourceAssistant)
     {
         assert Platform.isFxApplicationThread();
-        AccessController.doPrivileged(new PrivilegedAction<Void>() {
-            @Override
-            public Void run() {
-                if (scene.dragGestureListener != null) {
-                    QuantumClipboard dragboard =
-                            QuantumClipboard.getDragboardInstance(dragSourceAssistant, true);
-                    scene.dragGestureListener.dragGestureRecognized(
-                            x, y, xAbs, yAbs, button, dragboard);
-                }
-                return null;
+        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+            if (scene.dragGestureListener != null) {
+                QuantumClipboard dragboard =
+                        QuantumClipboard.getDragboardInstance(dragSourceAssistant, true);
+                scene.dragGestureListener.dragGestureRecognized(
+                        x, y, xAbs, yAbs, button, dragboard);
             }
+            return null;
         }, scene.getAccessControlContext());
     }
 
@@ -142,18 +127,15 @@ class GlassSceneDnDEventHandler {
                               final ClipboardAssistance dragSourceAssistant)
     {
         assert Platform.isFxApplicationThread();
-        AccessController.doPrivileged(new PrivilegedAction<Void>() {
-            @Override
-            public Void run() {
-                try {
-                    if (scene.dragSourceListener != null) {
-                        scene.dragSourceListener.dragDropEnd(0, 0, 0, 0, performedTransferMode);
-                    }
-                } finally {
-                    QuantumClipboard.releaseCurrentDragboard();
+        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+            try {
+                if (scene.dragSourceListener != null) {
+                    scene.dragSourceListener.dragDropEnd(0, 0, 0, 0, performedTransferMode);
                 }
-                return null;
+            } finally {
+                QuantumClipboard.releaseCurrentDragboard();
             }
+            return null;
         }, scene.getAccessControlContext());
     }
 

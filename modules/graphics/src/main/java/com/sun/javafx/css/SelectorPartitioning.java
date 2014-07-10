@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -178,13 +178,13 @@ public final class SelectorPartitioning {
     }
 
     /* A Map for selectors that have an id */
-    private Map<PartitionKey, Partition> idMap = new HashMap<PartitionKey,Partition>();
+    private final Map<PartitionKey, Partition> idMap = new HashMap<PartitionKey,Partition>();
     
     /* A Map for selectors that have an element type */
-    private Map<PartitionKey, Partition> typeMap = new HashMap<PartitionKey,Partition>();
+    private final Map<PartitionKey, Partition> typeMap = new HashMap<PartitionKey,Partition>();
     
     /* A Map for selectors that have style classes */
-    private Map<PartitionKey, Partition> styleClassMap = new HashMap<PartitionKey,Partition>();
+    private final Map<PartitionKey, Partition> styleClassMap = new HashMap<PartitionKey,Partition>();
 
     /** 
      * Keep track of the order in which a selector is added to the mapping so
@@ -352,7 +352,7 @@ public final class SelectorPartitioning {
                                 if ((c & STYLECLASS_BIT) == STYLECLASS_BIT) {
                                     Set<StyleClass> key = (Set<StyleClass>)styleClassKey.key;
                                     for (Slot s : slot.referents.values()) {
-                                        if (s.selectors == null || s.selectors.isEmpty()) continue;;
+                                        if (s.selectors == null || s.selectors.isEmpty()) continue;
                                         Set<StyleClass> other = (Set<StyleClass>)s.partition.key.key;
                                         if (key.containsAll(other)) {
                                             selectors.addAll(s.selectors);
@@ -426,12 +426,7 @@ public final class SelectorPartitioning {
     }
 
     private static final Comparator<Selector> COMPARATOR =
-            new Comparator<Selector>() {
-                @Override
-                public int compare(Selector o1, Selector o2) {
-                    return o1.getOrdinal() - o2.getOrdinal();
-                }
-            };
+            (o1, o2) -> o1.getOrdinal() - o2.getOrdinal();
 
 
 }

@@ -1,6 +1,28 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
  */
+
 package javafx.scene.web;
 
 import java.io.File;
@@ -31,11 +53,9 @@ public class MiscellaneousTest extends TestBase {
 
     @Test public void testRT22458() throws Exception {
         final WebEngine webEngine = createWebEngine();
-        Platform.runLater(new Runnable() {
-            @Override public void run() {
-                webEngine.load(format("file://%d.ajax.googleapis.com/ajax",
-                                      new Random().nextInt()));
-            }
+        Platform.runLater(() -> {
+            webEngine.load(format("file://%d.ajax.googleapis.com/ajax",
+                                  new Random().nextInt()));
         });
         Thread.sleep(200);
         long startTime = System.currentTimeMillis();
@@ -61,20 +81,16 @@ public class MiscellaneousTest extends TestBase {
             }
         }
         final ArrayList<Record> records = new ArrayList<Record>();
-        ChangeListener<State> listener = new ChangeListener<State>() {
-            public void changed(ObservableValue<? extends State> ov,
-                                State oldValue, State newValue)
-            {
-                if (newValue == State.SUCCEEDED) {
-                    records.add(new Record(
-                            getEngine().getDocument(),
-                            getEngine().getLocation()));
-                }
+        ChangeListener<State> listener = (ov, oldValue, newValue) -> {
+            if (newValue == State.SUCCEEDED) {
+                records.add(new Record(
+                        getEngine().getDocument(),
+                        getEngine().getLocation()));
             }
         };
-        submit(new Runnable() { public void run() {
+        submit(() -> {
             getEngine().getLoadWorker().stateProperty().addListener(listener);
-        }});
+        });
         String location = new File("src/test/resources/html/RT30835.html")
                 .toURI().toASCIIString().replaceAll("^file:/", "file:///");
         load(location);
@@ -95,10 +111,6 @@ public class MiscellaneousTest extends TestBase {
     }
 
     private WebEngine createWebEngine() {
-        return submit(new Callable<WebEngine>() {
-            public WebEngine call() {
-                return new WebEngine();
-            }
-        });
+        return submit(() -> new WebEngine());
     }
 }

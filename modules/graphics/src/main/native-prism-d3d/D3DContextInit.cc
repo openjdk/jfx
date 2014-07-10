@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,7 +28,7 @@
 #include "D3DContext.h"
 #include "D3DPipelineManager.h"
 
-HRESULT D3DContext::InitContext() {
+HRESULT D3DContext::InitContext(bool isVsyncEnabled) {
 
     D3DDEVTYPE devType = D3DPipelineManager::GetInstance()->GetDeviceType();
 
@@ -39,6 +39,9 @@ HRESULT D3DContext::InitContext() {
     params.Windowed = TRUE;
     params.SwapEffect = D3DSWAPEFFECT_DISCARD;
     params.hDeviceWindow = GetDesktopWindow();
+    params.PresentationInterval = isVsyncEnabled ?
+        D3DPRESENT_INTERVAL_ONE :
+        D3DPRESENT_INTERVAL_IMMEDIATE;
 
     D3DCAPS9 d3dCaps;
 

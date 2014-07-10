@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013, Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -59,13 +59,11 @@ public class Ball extends Circle {
         setCache(true);
         setFill(BALL_GRADIENT);
         createTimeline();
-        setOnMousePressed(new EventHandler<MouseEvent>() {
-            public void handle(MouseEvent me) {
-                if (timeline.getStatus() != Status.RUNNING) {
-                    timeline.play();
-                } else {
-                    timeline.pause();
-                }
+        setOnMousePressed((MouseEvent me) -> {
+            if (timeline.getStatus() != Status.RUNNING) {
+                timeline.play();
+            } else {
+                timeline.pause();
             }
         });
 

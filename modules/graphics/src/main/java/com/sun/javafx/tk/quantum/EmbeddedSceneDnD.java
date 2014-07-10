@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -108,16 +108,13 @@ final class EmbeddedSceneDnD {
         final AtomicReference<T> result = new AtomicReference<>();
         final CountDownLatch l = new CountDownLatch(1);
 
-        Platform.runLater(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    result.set(r.call());
-                } catch (Exception z) {
-                    // ignore
-                } finally {
-                    l.countDown();
-                }
+        Platform.runLater(() -> {
+            try {
+                result.set(r.call());
+            } catch (Exception z) {
+                // ignore
+            } finally {
+                l.countDown();
             }
         });
 
@@ -156,13 +153,10 @@ final class EmbeddedSceneDnD {
     
     public EmbeddedSceneDTInterface createDropTarget() {
         setHostThread();
-        return executeOnFXThread(new Callable<EmbeddedSceneDTInterface>() {
-            @Override
-            public EmbeddedSceneDTInterface call() {
-                assert fxDropTarget == null;
-                fxDropTarget = new EmbeddedSceneDT(EmbeddedSceneDnD.this, dndHandler);
-                return fxDropTarget;
-            }
+        return executeOnFXThread(() -> {
+            assert fxDropTarget == null;
+            fxDropTarget = new EmbeddedSceneDT(EmbeddedSceneDnD.this, dndHandler);
+            return fxDropTarget;
         });
     }
 

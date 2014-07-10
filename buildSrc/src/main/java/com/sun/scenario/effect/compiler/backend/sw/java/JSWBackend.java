@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -63,9 +63,11 @@ public class JSWBackend extends TreeScanner {
     
     public final String getGenCode(String effectName,
                                    String peerName,
+                                   String genericsName,
                                    String interfaceName)
     {
         Map<String, Variable> vars = parser.getSymbolTable().getGlobalVariables();
+        StringBuilder genericsDecl = new StringBuilder();
         StringBuilder interfaceDecl = new StringBuilder();
         StringBuilder constants = new StringBuilder();
         StringBuilder samplers = new StringBuilder();
@@ -208,7 +210,11 @@ public class JSWBackend extends TreeScanner {
                 posIncrY.append("pos" + i + "_y += inc" + i + "_y;\n");
             }
         }
-        
+
+        if (genericsName != null) {
+            genericsDecl.append("<"+genericsName+">");
+        }
+
         if (interfaceName != null) {
             interfaceDecl.append("implements "+interfaceName);
         }
@@ -218,6 +224,7 @@ public class JSWBackend extends TreeScanner {
         StringTemplate glue = group.getInstanceOf("glue");
         glue.setAttribute("effectName", effectName);
         glue.setAttribute("peerName", peerName);
+        glue.setAttribute("genericsDecl", genericsDecl.toString());
         glue.setAttribute("interfaceDecl", interfaceDecl.toString());
         glue.setAttribute("usercode", usercode.toString());
         glue.setAttribute("samplers", samplers.toString());

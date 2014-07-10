@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -50,13 +50,10 @@ import javafx.collections.*;
  */
 public abstract class MapPropertyBase<K, V> extends MapProperty<K, V> {
 
-    private final MapChangeListener<K, V> mapChangeListener = new MapChangeListener<K, V>() {
-        @Override
-        public void onChanged(Change<? extends K, ? extends V> change) {
-            invalidateProperties();
-            invalidated();
-            fireValueChangedEvent(change);
-        }
+    private final MapChangeListener<K, V> mapChangeListener = change -> {
+        invalidateProperties();
+        invalidated();
+        fireValueChangedEvent(change);
     };
 
     private ObservableMap<K, V> value;

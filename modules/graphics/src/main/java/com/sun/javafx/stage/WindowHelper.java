@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,8 @@
 
 package com.sun.javafx.stage;
 
+import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.stage.Screen;
 import javafx.stage.Window;
 
 import java.security.AccessControlContext;
@@ -66,10 +68,18 @@ public final class WindowHelper {
         windowAccessor = newAccessor;
     }
 
+    public static WindowAccessor getWindowAccessor() {
+        return windowAccessor;
+    }
+
     public interface WindowAccessor {
         void notifyLocationChanged(Window window, double x, double y);
 
         void notifySizeChanged(Window window, double width, double height);
+
+        void notifyScreenChanged(Window window, Object from, Object to);
+
+        ReadOnlyObjectProperty<Screen> screenProperty(Window window);
 
         AccessControlContext getAccessControlContext(Window window);
     }

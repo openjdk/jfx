@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -91,12 +91,12 @@ public class TreeTableCellSkin<S,T> extends TableCellSkinBase<TreeTableCell<S,T>
         TreeItem<S> treeItem = treeTableRow.getTreeItem();
         if (treeItem == null) return leftPadding;
         
-        int nodeLevel = TreeTableView.getNodeLevel(treeItem);
+        int nodeLevel = treeTable.getTreeItemLevel(treeItem);
         if (! treeTable.isShowRoot()) nodeLevel--;
 
         double indentPerLevel = 10;
         if (treeTableRow.getSkin() instanceof TreeTableRowSkin) {
-            indentPerLevel = ((TreeTableRowSkin)treeTableRow.getSkin()).getIndentationPerLevel();
+            indentPerLevel = ((TreeTableRowSkin<?>)treeTableRow.getSkin()).getIndentationPerLevel();
         }
         leftPadding += nodeLevel * indentPerLevel;
 

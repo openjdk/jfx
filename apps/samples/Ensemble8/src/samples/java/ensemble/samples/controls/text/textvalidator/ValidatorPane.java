@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013 Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -106,15 +106,12 @@ public abstract class ValidatorPane<C extends Control> extends Region {
     }
 
     public ValidatorPane() {
-        content.addListener(new ChangeListener<Control>() {
-            @Override
-            public void changed(ObservableValue<? extends Control> ov, Control oldValue, Control newValue) {
-                if (oldValue != null) {
-                    getChildren().remove(oldValue);
-                }
-                if (newValue != null) {
-                    getChildren().add(0, newValue);
-                }
+        content.addListener((ObservableValue<? extends Control> ov, Control oldValue, Control newValue) -> {
+            if (oldValue != null) {
+                getChildren().remove(oldValue);
+            }
+            if (newValue != null) {
+                getChildren().add(0, newValue);
             }
         });
     }

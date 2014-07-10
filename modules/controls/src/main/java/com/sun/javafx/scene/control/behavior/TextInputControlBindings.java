@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -89,8 +89,9 @@ public class TextInputControlBindings {
             BINDINGS.add(new KeyBinding(KP_LEFT, KEY_PRESSED,    "LeftWord").alt());
             BINDINGS.add(new KeyBinding(RIGHT, KEY_PRESSED,      "RightWord").alt());
             BINDINGS.add(new KeyBinding(KP_RIGHT, KEY_PRESSED,   "RightWord").alt());
-            BINDINGS.add(new KeyBinding(DELETE, KEY_PRESSED,     "DeleteNextWord").shortcut());
-            BINDINGS.add(new KeyBinding(BACK_SPACE, KEY_PRESSED, "DeletePreviousWord").shortcut());
+            BINDINGS.add(new KeyBinding(DELETE, KEY_PRESSED,     "DeleteNextWord").alt());
+            BINDINGS.add(new KeyBinding(BACK_SPACE, KEY_PRESSED, "DeletePreviousWord").alt());
+            BINDINGS.add(new KeyBinding(BACK_SPACE, KEY_PRESSED, "DeleteFromLineStart").shortcut());
             BINDINGS.add(new KeyBinding(X, KEY_PRESSED,          "Cut").shortcut());
             BINDINGS.add(new KeyBinding(C, KEY_PRESSED,          "Copy").shortcut());
             BINDINGS.add(new KeyBinding(INSERT, KEY_PRESSED,     "Copy").shortcut());

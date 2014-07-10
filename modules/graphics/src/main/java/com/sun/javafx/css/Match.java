@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,9 +25,7 @@
 
 package com.sun.javafx.css;
 
-import java.util.List;
-import javafx.css.PseudoClass;
-import static javafx.geometry.NodeOrientation.*;
+import static javafx.geometry.NodeOrientation.INHERIT;
 
 
 /**
@@ -43,9 +41,7 @@ final class Match implements Comparable<Match> {
     final PseudoClassState pseudoClasses;
     final int idCount;
     final int styleClassCount;
-    
-    List<Match> descendantMatches;
-    
+
     // CSS3 spec gives weight to id count, then style class count,
     // then pseudoclass count, and finally matching types (i.e., java name count)
     final int specificity;

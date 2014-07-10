@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,11 +25,9 @@
 
 package com.sun.javafx.scene.control.skin;
 
-import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.scene.control.MenuButton;
-import javafx.stage.WindowEvent;
 
 import com.sun.javafx.scene.control.behavior.MenuButtonBehavior;
 
@@ -66,18 +64,14 @@ public class MenuButtonSkin extends MenuButtonSkinBase<MenuButton, MenuButtonBeh
                 }
         });
         // request focus on content when the popup is shown
-        popup.setOnShown(new EventHandler<WindowEvent>() {
-            @Override public void handle(WindowEvent event) {
-                ContextMenuContent cmContent = (ContextMenuContent)popup.getSkin().getNode();
-                if (cmContent != null) cmContent.requestFocus();
-            }
+        popup.setOnShown(event -> {
+            ContextMenuContent cmContent = (ContextMenuContent)popup.getSkin().getNode();
+            if (cmContent != null) cmContent.requestFocus();
         });
 
         if (menuButton.getOnAction() == null) {
-            menuButton.setOnAction(new EventHandler<ActionEvent>() {
-                @Override public void handle(ActionEvent e) {
-                    menuButton.show();
-                }
+            menuButton.setOnAction(e -> {
+                menuButton.show();
             });
         }
 

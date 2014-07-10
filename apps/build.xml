@@ -20,6 +20,14 @@
         <ant dir="toys" target="clean" inheritAll="true"/>
     </target>
 
+    <target name="scenebuilderSampleAppsJar">
+        <ant dir="scenebuilder" target="jar" inheritAll="true"/>
+    </target>
+
+    <target name="scenebuilderSampleAppsClean">
+        <ant dir="scenebuilder" target="clean" inheritAll="true"/>
+    </target>
+
 </project>
 
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 #import "common.h"
 #import "com_sun_glass_events_KeyEvent.h"
+#import "com_sun_glass_ui_mac_MacApplication.h"
 
 #import "GlassApplication.h"
 #import "GlassMacros.h"
@@ -268,6 +269,7 @@ jcharArray GetJavaKeyChars(JNIEnv *env, NSEvent *event)
     [chars getCharacters:jc range:NSMakeRange(0, [chars length])];
     jcharArray jChars = (*env)->NewCharArray(env, (jsize)[chars length]);
     (*env)->SetCharArrayRegion(env, jChars, 0, (jsize)[chars length], jc);
+    GLASS_CHECK_EXCEPTION(env);
     return jChars;
 }
 
@@ -368,14 +370,14 @@ NSString* GetStringForJavaKey(jchar jKeyCode) {
 }
 
 /*
- * Class:     com_sun_glass_events_KeyEvent
+ * Class:     com_sun_glass_ui_mac_MacApplication
  * Method:    _getKeyCodeForChar
  * Signature: (C)I
  */
-JNIEXPORT jint JNICALL Java_com_sun_glass_events_KeyEvent__1getKeyCodeForChar
-(JNIEnv * env, jclass cls, jchar c)
+JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacApplication__1getKeyCodeForChar
+(JNIEnv * env, jobject jApplication, jchar c)
 {
-    LOG("Java_com_sun_glass_events_KeyEvent__1getKeyCodeForChar");
+    LOG("Java_com_sun_glass_ui_mac_MacApplication__1getKeyCodeForChar");
 
     return [GlassApplication getKeyCodeForChar:c];
 }

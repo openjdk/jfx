@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,38 +25,16 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import javafx.scene.Node;
-import javafx.scene.control.*;
-import javafx.scene.control.TreeTableView.TreeTableViewSelectionModel;
+import javafx.collections.ObservableList;
+import javafx.scene.control.TableFocusModel;
+import javafx.scene.control.TablePositionBase;
+import javafx.scene.control.TableSelectionModel;
+import javafx.scene.control.TreeItem;
+import javafx.scene.control.TreeTableRow;
+import javafx.scene.control.TreeTableView;
 import javafx.scene.input.MouseButton;
-import javafx.scene.input.MouseEvent;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
-public class TreeTableRowBehavior<T> extends CellBehaviorBase<TreeTableRow<T>> {
-
-    /***************************************************************************
-     *                                                                         *
-     * Private fields                                                          *
-     *                                                                         *
-     **************************************************************************/
-
-    // For RT-17456: have selection occur as fast as possible with mouse input.
-    // The idea is (consistently with some native applications we've tested) to
-    // do the action as soon as you can. It takes a bit more coding but provides
-    // the best feel:
-    //  - when you click on a not-selected item, you can select immediately on press
-    //  - when you click on a selected item, you need to wait whether DragDetected or Release comes first
-    //
-    // To support touch devices, we have to slightly modify this behavior, such
-    // that selection only happens on mouse release, if only minimal dragging
-    // has occurred.
-    private boolean latePress = false;
-    private boolean wasSelected = false;
-
-
+public class TreeTableRowBehavior<T> extends TableRowBehaviorBase<TreeTableRow<T>> {
 
     /***************************************************************************
      *                                                                         *
@@ -65,7 +43,7 @@ public class TreeTableRowBehavior<T> extends CellBehaviorBase<TreeTableRow<T>> {
      **************************************************************************/
 
     public TreeTableRowBehavior(TreeTableRow<T> control) {
-        super(control, Collections.EMPTY_LIST);
+        super(control);
     }
 
     /***************************************************************************
@@ -74,163 +52,47 @@ public class TreeTableRowBehavior<T> extends CellBehaviorBase<TreeTableRow<T>> {
      *                                                                         *
      **************************************************************************/
 
-    @Override public void mousePressed(MouseEvent event) {
-        // we only care about clicks to the right of the right-most column
-        if (! isClickOutsideCellBounds(event.getX())) return;
-
-        boolean selectedBefore = getControl().isSelected();
-
-        if (getControl().isSelected()) {
-            latePress = true;
-            return;
-        }
-
-        doSelect(event);
-
-        if (IS_TOUCH_SUPPORTED && selectedBefore) {
-            wasSelected = getControl().isSelected();
-        }
+    @Override protected TableSelectionModel<TreeItem<T>> getSelectionModel() {
+        return getCellContainer().getSelectionModel();
     }
 
-    @Override public void mouseReleased(MouseEvent event) {
-        // we only care about clicks to the right of the right-most column
-        if (! isClickOutsideCellBounds(event.getX())) return;
-
-        if (latePress) {
-            latePress = false;
-            doSelect(event);
-        }
-
-        wasSelected = false;
+    @Override protected TableFocusModel<TreeItem<T>,?> getFocusModel() {
+        return getCellContainer().getFocusModel();
     }
 
-    @Override public void mouseDragged(MouseEvent event) {
-        // we only care about clicks to the right of the right-most column
-        if (! isClickOutsideCellBounds(event.getX())) return;
-
-        latePress = false;
-
-        // the mouse has now been dragged on a touch device, we should
-        // remove the selection if we just added it in the last mouse press
-        // event
-        if (IS_TOUCH_SUPPORTED && ! wasSelected && getControl().isSelected()) {
-            getControl().getTreeTableView().getSelectionModel().clearSelection(getControl().getIndex());
-        }
+    @Override protected TreeTableView<T> getCellContainer() {
+        return getControl().getTreeTableView();
     }
 
+    @Override protected TablePositionBase<?> getFocusedCell() {
+        return getCellContainer().getFocusModel().getFocusedCell();
+    }
 
+    @Override protected ObservableList getVisibleLeafColumns() {
+        return getCellContainer().getVisibleLeafColumns();
+    }
 
+    @Override protected void edit(TreeTableRow<T> cell) {
+        // no-op (for now)
+    }
 
-    /***************************************************************************
-     *                                                                         *
-     * Private implementation                                                  *
-     *                                                                         *
-     **************************************************************************/
-
-    private void doSelect(MouseEvent e) {
-        super.mouseReleased(e);
-        
-        if (e.getButton() != MouseButton.PRIMARY) return;
-        
-        TreeTableRow<T> treeTableRow = getControl();
-        TreeItem<T> treeItem = treeTableRow.getTreeItem();
-        if (treeItem == null) return;
-        
-        // if the user has clicked on the disclosure node, we do nothing other
-        // than expand/collapse the tree item (if applicable). We do not do editing!
-        Node disclosureNode = treeTableRow.getDisclosureNode();
-        if (disclosureNode != null) {
-            if (disclosureNode.getBoundsInParent().contains(e.getX(), e.getY())) {
+    @Override
+    protected void handleClicks(MouseButton button, int clickCount, boolean isAlreadySelected) {
+        // handle editing, which only occurs with the primary mouse button
+        TreeItem<T> treeItem = getControl().getTreeItem();
+        if (button == MouseButton.PRIMARY) {
+            if (clickCount == 1 && isAlreadySelected) {
+                edit(getControl());
+            } else if (clickCount == 1) {
+                // cancel editing
+                edit(null);
+            } else if (clickCount == 2 && treeItem.isLeaf()) {
+                // attempt to edit
+                edit(getControl());
+            } else if (clickCount % 2 == 0) {
+                // try to expand/collapse branch tree item
                 treeItem.setExpanded(! treeItem.isExpanded());
-                return;
             }
         }
-
-        TreeTableView<T> table = treeTableRow.getTreeTableView();
-        if (table == null) return;
-        final TreeTableViewSelectionModel<T> sm = table.getSelectionModel();
-        if (sm == null || sm.isCellSelectionEnabled()) return;
-        
-        final int index = getControl().getIndex();
-        final boolean isAlreadySelected = sm.isSelected(index);
-        int clickCount = e.getClickCount();
-        if (clickCount == 1) {
-            // get width of all visible columns (we only care about clicks to the
-            // right of the right-most column)
-            List<TreeTableColumn<T, ?>> columns = getControl().getTreeTableView().getVisibleLeafColumns();
-            double width = 0.0;
-            for (int i = 0; i < columns.size(); i++) {
-                width += columns.get(i).getWidth();
-            }
-            
-            if (e.getX() < width) return;
-            
-            // In the case of clicking to the right of the rightmost
-            // TreeTableCell, we should still support selection, so that
-            // is what we are doing here.
-            if (isAlreadySelected && e.isShortcutDown()) {
-                sm.clearSelection(index);
-            } else {
-                if (e.isShortcutDown()) {
-                    sm.select(treeTableRow.getIndex());
-                } else if (e.isShiftDown()) {
-                    // we add all rows between the current focus and
-                    // this row (inclusive) to the current selection.
-                    TablePositionBase anchor = TreeTableCellBehavior.getAnchor(table, table.getFocusModel().getFocusedCell());
-                    final int anchorRow = anchor.getRow();
-                    final boolean asc = anchorRow < index;
-
-                    // and then determine all row and columns which must be selected
-                    int minRow = Math.min(anchor.getRow(), index);
-                    int maxRow = Math.max(anchor.getRow(), index);
-
-                    // To prevent RT-32119, we make a copy of the selected indices
-                    // list first, so that we are not iterating and modifying it
-                    // concurrently.
-                    List<Integer> selectedIndices = new ArrayList<>(sm.getSelectedIndices());
-                    for (int i = 0, max = selectedIndices.size(); i < max; i++) {
-                        int selectedIndex = selectedIndices.get(i);
-                        if (selectedIndex < minRow || selectedIndex > maxRow) {
-                            sm.clearSelection(selectedIndex);
-                        }
-                    }
-
-                    if (minRow == maxRow) {
-                        // RT-32560: This prevents the anchor 'sticking' in
-                        // the wrong place when a range is selected and then
-                        // selection goes back to the anchor position.
-                        // (Refer to the video in RT-32560 for more detail).
-                        sm.select(minRow);
-                    } else {
-                        // RT-21444: We need to put the range in the correct
-                        // order or else the last selected row will not be the
-                        // last item in the selectedItems list of the selection
-                        // model,
-                        if (asc) {
-                            sm.selectRange(minRow, maxRow + 1);
-                        } else {
-                            sm.selectRange(maxRow, minRow - 1);
-                        }
-                    }
-                } else {
-                    sm.clearAndSelect(treeTableRow.getIndex());
-                }
-            }
-        }
-    }
-
-    private boolean isClickOutsideCellBounds(final double x) {
-        // get width of all visible columns (we only care about clicks to the
-        // right of the right-most column)
-        final TreeTableRow<T> tableRow = getControl();
-        final TreeTableView<T> table = tableRow.getTreeTableView();
-        if (table == null) return false;
-        List<TreeTableColumn<T, ?>> columns = table.getVisibleLeafColumns();
-        double width = 0.0;
-        for (int i = 0; i < columns.size(); i++) {
-            width += columns.get(i).getWidth();
-        }
-
-        return x > width;
     }
 }

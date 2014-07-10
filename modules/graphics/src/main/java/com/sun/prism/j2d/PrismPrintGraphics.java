@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -48,6 +48,12 @@ public final class PrismPrintGraphics
 
         PrintResourceFactory() {
             super(null);
+        }
+
+        @Override
+        J2DPrismGraphics createJ2DPrismGraphics(J2DPresentable target,
+                                                java.awt.Graphics2D g2d) {
+            return new PrismPrintGraphics(target, g2d);
         }
 
         @Override
@@ -151,5 +157,9 @@ public final class PrismPrintGraphics
 
     public PrismPrintGraphics(java.awt.Graphics2D g2d, int width, int height) {
         super(new PagePresentable(width, height), g2d);
+    }
+
+    PrismPrintGraphics(J2DPresentable target, java.awt.Graphics2D g2d) {
+        super(target, g2d);
     }
 }

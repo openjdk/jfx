@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2000, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2000, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -178,11 +178,8 @@ public final class Dragboard extends Clipboard {
     static {
         // This is used by classes in different packages to get access to
         // private and package private methods.
-        DragboardHelper.setDragboardAccessor(new DragboardHelper.DragboardAccessor() {
-            @Override
-            public void setDataAccessRestriction(Dragboard dragboard, boolean restricted) {
-                dragboard.dataAccessRestricted = restricted;
-            }
+        DragboardHelper.setDragboardAccessor((dragboard, restricted) -> {
+            dragboard.dataAccessRestricted = restricted;
         });
     }
 }

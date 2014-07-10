@@ -32,6 +32,7 @@
 package com.oracle.javafx.scenebuilder.kit.fxom;
 
 import com.oracle.javafx.scenebuilder.kit.fxom.glue.GlueElement;
+import com.oracle.javafx.scenebuilder.kit.metadata.util.PrefixedValue;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 import com.oracle.javafx.scenebuilder.kit.util.JavaLanguage;
 import com.oracle.javafx.scenebuilder.kit.util.URLUtils;
@@ -391,6 +392,16 @@ public abstract class FXOMObject extends FXOMNode {
     
     protected abstract void collectReferences(String source, List<FXOMIntrinsic> result);
 
+    public List<FXOMIntrinsic> collectIncludes(String source) {
+        final List<FXOMIntrinsic> result = new ArrayList<>();
+        
+        collectIncludes(source, result);
+        
+        return result;
+    }
+    
+    protected abstract void collectIncludes(String source, List<FXOMIntrinsic> result);
+
     public Map<String, FXOMObject> collectFxIds() {
         final Map<String, FXOMObject> result = new HashMap<>();
         
@@ -591,12 +602,63 @@ public abstract class FXOMObject extends FXOMNode {
             documentLocationWillChange(destination.getLocation());
         }
         
+        final Map<String, FXOMObject> destinationFxIds = destination.collectFxIds();
+        final Map<String, FXOMObject> importedFxIds = collectFxIds();
+        final FXOMFxIdMerger merger = new FXOMFxIdMerger(destinationFxIds.keySet(), importedFxIds.keySet());
+        for (Map.Entry<String, FXOMObject> e : importedFxIds.entrySet()) {
+            final String originalFxId = e.getKey();
+            final FXOMObject fxomObject = e.getValue();
+            assert originalFxId.equals(fxomObject.getFxId());
+            final String renamedFxId = merger.getRenamedFxId(originalFxId);
+            assert renamedFxId != null;
+            
+            if (renamedFxId.equals(originalFxId) == false) {
+                /*
+                 * Apply the renaming:
+                 * 1) the declaration 
+                 *      <Button fx:id="toto" .../>
+                 * 2) expressions that reference the fx:id
+                 *      ... labelFor="$toto" ...
+                 * 3) intrinsics that reference the fx:id
+                 *      <fx:reference source="toto"/>
+                 */
+
+                // #1
+                fxomObject.setFxId(renamedFxId);
+                // #2
+                final PrefixedValue pv = new PrefixedValue(PrefixedValue.Type.EXPRESSION, renamedFxId);
+                final String newValue = pv.toString();
+                for (FXOMPropertyT p : FXOMNodes.collectReferenceExpression(this, originalFxId)) {
+                    p.setValue(newValue);
+                }
+                // #3
+                for (FXOMObject o : FXOMNodes.serializeObjects(this)) {
+                    if (o instanceof FXOMIntrinsic) {
+                        final FXOMIntrinsic i = (FXOMIntrinsic) o;
+                        switch(i.getType()) {
+                            case FX_REFERENCE:
+                            case FX_COPY:
+                                if (i.getSource().equals(originalFxId)) {
+                                    i.setSource(renamedFxId);
+                                }
+                                break;
+                            default:
+                                // "source" does not contain an fx:id
+                                break;
+                        }
+                    }
+                }
+            }
+        }
+        
         if (parentProperty != null) {
             assert parentProperty.getFxomDocument() == getFxomDocument();
             removeFromParentProperty();
         } else if (parentCollection != null) {
             assert parentCollection.getFxomDocument() == getFxomDocument();
             removeFromParentCollection();
+        } else if (getFxomDocument().getFxomRoot() == this) {
+            getFxomDocument().setFxomRoot(null);
         }
         
         assert parentProperty == null;

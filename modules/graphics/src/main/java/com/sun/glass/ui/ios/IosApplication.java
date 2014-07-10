@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,12 +39,9 @@ public final class IosApplication extends Application {
 
     private static native void _initIDs(); // init IDs for java callbacks from native
     static {
-        AccessController.doPrivileged(new PrivilegedAction<Void>() {
-            @Override
-            public Void run() {
-                Application.loadNativeLibrary();
-                return null;
-            }
+        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+            Application.loadNativeLibrary();
+            return null;
         });
         _initIDs();
     }
@@ -282,4 +279,7 @@ public final class IosApplication extends Application {
     public boolean hasMultiTouch() {
         return true;
     }   
+
+    @Override
+    protected native int _getKeyCodeForChar(char c);
 }

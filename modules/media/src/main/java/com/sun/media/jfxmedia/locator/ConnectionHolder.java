@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,6 +39,7 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 import java.nio.channels.ReadableByteChannel;
 import java.util.Map;
+import sun.nio.ch.DirectBuffer;
 
 /**
  * Connection holders hold and maintain connection do different kinds of sources
@@ -228,6 +229,9 @@ public abstract class ConnectionHolder {
                 } finally {
                     file = null;
                 }
+            }
+            if (buffer instanceof DirectBuffer) {
+                ((DirectBuffer) buffer).cleaner().clean();
             }
         }
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013 Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -38,11 +38,9 @@ import javafx.concurrent.Task;
 
 public class SwingInteropTask extends Task<Process> {
 
-    Process proc = null;
-    ProcessListener pListener;
+    private Process proc = null;
 
-    public SwingInteropTask(ProcessListener pListener) {
-        this.pListener = pListener;
+    public SwingInteropTask() {
     }
 
     @Override
@@ -60,14 +58,16 @@ public class SwingInteropTask extends Task<Process> {
         ProcessBuilder pb = new ProcessBuilder(command);
         proc = pb.start();
         //Assuming there is little output to stdout, stderr
-        pListener.setProcess(proc);
-        int exitVal = proc.waitFor();
-        pListener.setProcess(null);
+        proc.waitFor();
 
         return proc;
     }
 
-    public Process getSwingInteropProc() {
-        return proc;
+    @Override
+    protected void cancelled() {
+        if (proc != null) {
+            proc.destroy();
+        }
     }
+
 }

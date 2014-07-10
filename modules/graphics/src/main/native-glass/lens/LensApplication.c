@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,7 +40,11 @@
 #include <signal.h>
 
 #ifdef ANDROID_SDK
+#ifdef DALVIK_VM
+  #include "dalvikInput.h"
+#else
   #include "androidInput.h"
+#endif 
 #endif 
 //********************************************************
 
@@ -68,6 +72,7 @@ static jmethodID jLensApplication_notifyWindowMove;
 static jmethodID jLensApplication_notifyWindowEvent;
 static jmethodID jLensApplication_notifyViewEvent;
 static jmethodID jLensApplication_notifyDeviceEvent;
+static jmethodID jLensApplication_notifyScreenSettingsChanged;
 static jmethodID jLensApplication_notifyMenuEvent;
 static jmethodID jLensApplication_reportException;
 
@@ -162,6 +167,11 @@ static void initIDs(JNIEnv *env) {
     jLensApplication_notifyDeviceEvent =
         (*env)->GetMethodID(env, jLensApplicationClass, "notifyDeviceEvent",
                             "(IZ)V");
+
+    jLensApplication_notifyScreenSettingsChanged =
+        (*env)->GetMethodID(env, jLensApplicationClass, "notifyScreenSettingsChanged",
+                            "()V");
+
     jLensApplication_notifyMenuEvent =
         (*env)->GetMethodID(env, jLensApplicationClass, "notifyMenuEvent",
                             "(Lcom/sun/glass/ui/lens/LensView;IIIIZ)V");
@@ -767,13 +777,24 @@ void glass_application_notifyDeviceEvent(JNIEnv *env,
 
 }
 
+void glass_application_notifyScreenSettingsChanged(JNIEnv *env) {
+    if (!pApplication) {
+        return;
+    }
+    GLASS_LOG_FINEST("JNI call notifyScreenSettinngsChanged");
+    (*env)->CallVoidMethod(env, pApplication,
+            jLensApplication_notifyScreenSettingsChanged);
+    (void)glass_application_checkReportException(env);
+}
+
+
 /*
- * Class:     com_sun_glass_events_KeyEvent
+ * Class:     com_sun_glass_ui_lens_LensApplication
  * Method:    _getKeyCodeForChar
  * Signature: (C)I
  */
-JNIEXPORT jint JNICALL Java_com_sun_glass_events_KeyEvent__1getKeyCodeForChar
-(JNIEnv *env, jclass keyeventClass, jchar c) {
+JNIEXPORT jint JNICALL Java_com_sun_glass_ui_lens_LensApplication__1getKeyCodeForChar
+(JNIEnv *env, jobject jApplication, jchar c) {
     GLASS_LOG_FINE("Java key code requested for c='%c' (0x%04x)",
                    (char) c, (int) c);
     return glass_inputEvents_getJavaKeyCodeFromJChar(c);

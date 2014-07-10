@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package javafx.scene.chart;
 
+import javafx.collections.FXCollections;
 import javafx.css.CssMetaData;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
@@ -363,5 +364,25 @@ public class ValueAxisTest {
         axis.setTickLabelFormatter(formatter);
         assertSame(axis.getTickLabelFormatter(), formatter);
     }
-    
+
+
+    @Test
+    public void testDisplayPositionOfValueInRange() {
+        axis.setLowerBound(0);
+        axis.setUpperBound(10);
+        axis.setScale(1);
+
+        assertEquals(5, axis.getDisplayPosition(5), 1e-10);
+    }
+
+    @Test
+    public void testDisplayPositionOfValueOutOfRange() {
+        axis.setLowerBound(0);
+        axis.setUpperBound(10);
+        axis.setScale(1);
+
+        assertEquals(-1, axis.getDisplayPosition(-1), 1e-10);
+        assertEquals(11, axis.getDisplayPosition(11), 1e-10);
+    }
+
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,7 +27,6 @@ package com.sun.javafx.scene.control.skin;
 
 import com.sun.javafx.scene.control.behavior.CellBehaviorBase;
 import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.beans.WeakInvalidationListener;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ReadOnlyDoubleProperty;
@@ -110,10 +109,8 @@ public abstract class TableCellSkinBase<C extends IndexedCell, B extends CellBeh
      *                                                                         *
      **************************************************************************/
 
-    private InvalidationListener columnWidthListener = new InvalidationListener() {
-        @Override public void invalidated(Observable valueModel) {
-            getSkinnable().requestLayout();
-        }
+    private InvalidationListener columnWidthListener = valueModel -> {
+        getSkinnable().requestLayout();
     };
 
     private WeakInvalidationListener weakColumnWidthListener =

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -107,12 +107,7 @@ public abstract class Camera extends Node {
     private Affine3D localToSceneTx = new Affine3D();
 
     protected Camera() {
-        InvalidationListener dirtyTransformListener = new InvalidationListener() {
-            @Override
-            public void invalidated(Observable observable) {
-                impl_markDirty(DirtyBits.NODE_CAMERA_TRANSFORM);
-            }
-        };
+        InvalidationListener dirtyTransformListener = observable -> impl_markDirty(DirtyBits.NODE_CAMERA_TRANSFORM);
 
         this.localToSceneTransformProperty().addListener(dirtyTransformListener);
         // if camera is removed from scene it needs to stop using its transforms

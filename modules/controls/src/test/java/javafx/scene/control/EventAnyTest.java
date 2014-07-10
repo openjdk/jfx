@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -82,10 +82,8 @@ public class EventAnyTest {
         Node n = (Node) target.newInstance();
         delivered = false;
 
-        n.addEventHandler(type, new EventHandler() {
-            @Override public void handle(Event event) {
-                delivered = true;
-            }
+        n.addEventHandler(type, event1 -> {
+            delivered = true;
         });
 
         Event.fireEvent(n, event);

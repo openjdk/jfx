@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+  Copyright (c) 2012, 2014, Oracle and/or its affiliates.
+  All rights reserved. Use is subject to license terms.
+
+  This file is available and licensed under the following license:
+
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the following conditions
+  are met:
+
+  - Redistributions of source code must retain the above copyright
+    notice, this list of conditions and the following disclaimer.
+  - Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in
+    the documentation and/or other materials provided with the distribution.
+  - Neither the name of Oracle Corporation nor the names of its
+    contributors may be used to endorse or promote products derived
+    from this software without specific prior written permission.
+
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+  OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+-->
+
+<?import java.lang.*?>
+<?import java.net.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.shape.*?>
+<?import javafx.scene.text.*?>
+<?import unlock.*?>
+<?scenebuilder-classpath-element ../../dist/UnlockCustom.jar?>
+
+
+<AnchorPane id="AnchorPane" fx:id="root" focusTraversable="false" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="unlock.UnlockController">
+  <children>
+    <Text layoutX="76.0" layoutY="230.0" strokeType="OUTSIDE" strokeWidth="0.0" text="Hello World">
+      <font>
+        <Font size="80.0" />
+      </font>
+    </Text>
+    <Rectangle fx:id="okleft" arcHeight="5.0" arcWidth="5.0" fill="DODGERBLUE" height="400.0" stroke="BLACK" strokeType="INSIDE" styleClass="unlock-leftright" width="300.0" AnchorPane.leftAnchor="0.0" AnchorPane.topAnchor="0.0" />
+    <Rectangle fx:id="okright" arcHeight="5.0" arcWidth="5.0" fill="DODGERBLUE" height="400.0" layoutX="300.0" stroke="BLACK" strokeType="INSIDE" styleClass="unlock-leftright" width="300.0" AnchorPane.topAnchor="0.0" />
+    <Rectangle fx:id="error" arcHeight="5.0" arcWidth="5.0" fill="#992500" height="400.0" opacity="0.0" stroke="BLACK" strokeType="INSIDE" width="600.0" AnchorPane.leftAnchor="0.0" AnchorPane.topAnchor="0.0" />
+    <Keypad fx:id="pad" layoutX="187.0" layoutY="68.0" styleClass="keypad" />
+    <Rectangle fx:id="unlocktop" arcHeight="5.0" arcWidth="5.0" fill="DODGERBLUE" height="200.0" stroke="BLACK" strokeType="INSIDE" styleClass="unlock-top" visible="true" width="600.0" AnchorPane.leftAnchor="0.0" AnchorPane.topAnchor="0.0" />
+    <Rectangle fx:id="unlockbottom" arcHeight="5.0" arcWidth="5.0" fill="DODGERBLUE" height="200.0" layoutY="200.0" stroke="BLACK" strokeType="INSIDE" styleClass="unlock-bottom" visible="true" width="600.0" AnchorPane.leftAnchor="0.0" />
+    <Button fx:id="lock" layoutX="163.0" layoutY="157.0" mnemonicParsing="false" onAction="#unlockPressed" styleClass="unlock-button" text="Click to Unlock" visible="true">
+      <graphic>
+        <ImageView id="lock" pickOnBounds="true">
+          <image>
+            <Image preserveRatio="true" smooth="true" url="@lock.png" />
+          </image>
+        </ImageView>
+      </graphic>
+    </Button>
+  </children>
+  <stylesheets>
+    <URL value="@Unlock.css" />
+  </stylesheets>
+</AnchorPane>

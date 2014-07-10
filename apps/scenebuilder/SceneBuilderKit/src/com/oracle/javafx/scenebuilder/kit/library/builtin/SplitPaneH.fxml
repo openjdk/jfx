@@ -36,7 +36,7 @@
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.paint.*?>
 
-<SplitPane dividerPositions="0.29797979797979796" focusTraversable="true" prefHeight="160.0" prefWidth="200.0" xmlns:fx="http://javafx.com/fxml">
+<SplitPane dividerPositions="0.29797979797979796" prefHeight="160.0" prefWidth="200.0" xmlns:fx="http://javafx.com/fxml">
   <items>
     <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="160.0" prefWidth="100.0" />
     <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="160.0" prefWidth="100.0" />

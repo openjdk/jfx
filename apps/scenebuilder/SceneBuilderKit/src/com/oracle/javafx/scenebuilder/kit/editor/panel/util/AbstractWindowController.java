@@ -58,12 +58,9 @@ public abstract class AbstractWindowController {
     private final boolean sizeToScene; // true by default
     private String toolStylesheet = EditorController.getBuiltinToolStylesheet();
 
-    private final EventHandler<WindowEvent> closeRequestHandler = new EventHandler<WindowEvent>() {
-        @Override
-        public void handle(WindowEvent event) {
-            onCloseRequest(event);
-            event.consume();
-        }
+    private final EventHandler<WindowEvent> closeRequestHandler = event -> {
+        onCloseRequest(event);
+        event.consume();
     };
     
     public AbstractWindowController() {

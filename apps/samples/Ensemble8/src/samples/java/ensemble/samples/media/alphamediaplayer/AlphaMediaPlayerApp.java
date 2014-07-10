@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013 Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -76,33 +76,20 @@ public class AlphaMediaPlayerApp extends Application {
         fierPlayer = new MediaPlayer(new Media(FIER_URL));
         fierPlayer.setAutoPlay(true);
 
-        arthPos.addListener(new InvalidationListener() {
-            @Override
-            public void invalidated(Observable observable) {
-                planetaryPlayerPane.setTranslate1(arthPos.doubleValue());
-            }
+        arthPos.addListener((Observable observable) -> {
+            planetaryPlayerPane.setTranslate1(arthPos.doubleValue());
         });
 
-        fierPos.addListener(new InvalidationListener() {
-            @Override
-            public void invalidated(Observable observable) {
-                planetaryPlayerPane.setTranslate2(fierPos.doubleValue());
-
-            }
+        fierPos.addListener((Observable observable) -> {
+            planetaryPlayerPane.setTranslate2(fierPos.doubleValue());
         });
 
-        arthRate.addListener(new InvalidationListener() {
-            @Override
-            public void invalidated(Observable observable) {
-                arthPlayer.setRate(arthRate.doubleValue());
-            }
+        arthRate.addListener((Observable observable) -> {
+            arthPlayer.setRate(arthRate.doubleValue());
         });
 
-        fierRate.addListener(new InvalidationListener() {
-            @Override
-            public void invalidated(Observable observable) {
-                fierPlayer.setRate(fierRate.doubleValue());
-            }
+        fierRate.addListener((Observable observable) -> {
+            fierPlayer.setRate(fierRate.doubleValue());
         });
 
         planetaryPlayerPane = new PlanetaryPlayerPane(arthPlayer, fierPlayer);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -71,12 +71,7 @@ public class XYChartDataTest {
         series.setData(list);
 
         lineChart.getData().add(series);
-        FXCollections.sort(list, new Comparator<XYChart.Data<Number, Number>>() {
-            @Override
-            public int compare(XYChart.Data<Number, Number> o1, XYChart.Data<Number, Number> o2) {
-                return Double.compare(o1.getXValue().intValue(), o2.getXValue().intValue());
-            }
-        });
+        FXCollections.sort(list, (o1, o2) -> Double.compare(o1.getXValue().intValue(), o2.getXValue().intValue()));
         ObservableList<XYChart.Data<Number, Number>> data = series.getData();
         // check sorted data 
         assertEquals(1, data.get(0).getXValue());

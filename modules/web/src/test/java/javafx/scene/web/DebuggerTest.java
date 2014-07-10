@@ -1,6 +1,28 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
  */
+
 package javafx.scene.web;
 
 import com.sun.javafx.scene.web.Debugger;
@@ -16,15 +38,13 @@ public class DebuggerTest extends TestBase {
 
     @Test
     public void testSimpleMessageExchange() {
-        submit(new Runnable() { public void run() {
+        submit(() -> {
             Debugger debugger = getEngine().impl_getDebugger();
 
             final List<String> callbackMessages = new ArrayList<String>();
-            debugger.setMessageCallback(new Callback<String,Void>() {
-                public Void call(String message) {
-                    callbackMessages.add(message);
-                    return null;
-                }
+            debugger.setMessageCallback(message -> {
+                callbackMessages.add(message);
+                return null;
             });
             debugger.setEnabled(true);
             debugger.sendMessage(q(
@@ -32,12 +52,12 @@ public class DebuggerTest extends TestBase {
             assertEquals(
                     Arrays.asList(q("{'result':{'result':true},'id':16}")),
                     callbackMessages);
-        }});
+        });
     }
 
     @Test
     public void testEnabledProperty() {
-        submit(new Runnable() { public void run() {
+        submit(() -> {
             Debugger debugger = getEngine().impl_getDebugger();
 
             assertEquals(false, debugger.isEnabled());
@@ -55,12 +75,12 @@ public class DebuggerTest extends TestBase {
             debugger.setEnabled(false);
             debugger.setEnabled(false);
             assertEquals(false, debugger.isEnabled());
-        }});
+        });
     }
 
     @Test
     public void testMessageCallbackProperty() {
-        submit(new Runnable() { public void run() {
+        submit(() -> {
             Debugger debugger = getEngine().impl_getDebugger();
             Callback<String,Void> callback = new Callback<String,Void>() {
                 public Void call(String message) {
@@ -75,30 +95,30 @@ public class DebuggerTest extends TestBase {
 
             debugger.setMessageCallback(null);
             assertEquals(null, debugger.getMessageCallback());
-        }});
+        });
     }
 
     @Test
     public void testSendMessageIllegalStateException() {
-        submit(new Runnable() { public void run() {
+        submit(() -> {
             Debugger debugger = getEngine().impl_getDebugger();
             try {
                 debugger.sendMessage("foo");
                 fail("IllegalStateException expected but not thrown");
             } catch (IllegalStateException expected) {}
-        }});
+        });
     }
 
     @Test
     public void testSendMessageNullPointerException() {
-        submit(new Runnable() { public void run() {
+        submit(() -> {
             Debugger debugger = getEngine().impl_getDebugger();
             debugger.setEnabled(true);
             try {
                 debugger.sendMessage(null);
                 fail("NullPointerException expected but not thrown");
             } catch (NullPointerException expected) {}
-        }});
+        });
     }
 
     @Test

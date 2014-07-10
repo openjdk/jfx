@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -50,13 +50,10 @@ import javafx.collections.SetChangeListener;
  */
 public abstract class SetPropertyBase<E> extends SetProperty<E> {
 
-    private final SetChangeListener<E> setChangeListener = new SetChangeListener<E>() {
-        @Override
-        public void onChanged(Change<? extends E> change) {
-            invalidateProperties();
-            invalidated();
-            fireValueChangedEvent(change);
-        }
+    private final SetChangeListener<E> setChangeListener = change -> {
+        invalidateProperties();
+        invalidated();
+        fireValueChangedEvent(change);
     };
 
     private ObservableSet<E> value;

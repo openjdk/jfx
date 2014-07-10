@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -178,10 +178,10 @@ class SwingEvents {
             mods |= MouseEvent.BUTTON1_DOWN_MASK;
         }
         if (event.isSecondaryButtonDown()) {
-            mods |= MouseEvent.BUTTON2_DOWN_MASK;
+            mods |= MouseEvent.BUTTON3_DOWN_MASK;
         }
         if (event.isMiddleButtonDown()) {
-            mods |= MouseEvent.BUTTON3_DOWN_MASK;
+            mods |= MouseEvent.BUTTON2_DOWN_MASK;
         }
         return mods;
     }
@@ -191,9 +191,9 @@ class SwingEvents {
             case PRIMARY:
                 return MouseEvent.BUTTON1;
             case SECONDARY:
-                return MouseEvent.BUTTON2;
-            case MIDDLE:
                 return MouseEvent.BUTTON3;
+            case MIDDLE:
+                return MouseEvent.BUTTON2;
         }
         return 0;
     }

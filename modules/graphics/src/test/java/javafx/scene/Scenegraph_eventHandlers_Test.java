@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -339,12 +339,7 @@ public final class Scenegraph_eventHandlers_Test {
     private static final Event TEST_EVENT = new Event(new EventType<Event>());
 
     private static final EventHandler<Event> EVENT_CONSUMING_HANDLER =
-            new EventHandler<Event>() {
-                @Override
-                public void handle(final Event event) {
-                    event.consume();
-                }
-            };
+            event -> event.consume();
 
     private static final class EventCountingHandler 
             implements EventHandler<Event> {

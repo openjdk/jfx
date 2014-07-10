@@ -1,6 +1,28 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
  */
+
 package javafx.scene.web;
 
 import javafx.beans.property.BooleanProperty;
@@ -252,22 +274,17 @@ final public class WebView extends Parent {
         page.setFontSmoothingType(DEFAULT_FONT_SMOOTHING_TYPE.ordinal());
 
         registerEventHandlers();
-        stagePulseListener = new TKPulseListener() {
-            @Override public void pulse() {
-                handleStagePulse();
-            }
+        stagePulseListener = () -> {
+            handleStagePulse();
         };
-        focusedProperty().addListener(new ChangeListener<Boolean>() {
-
-            public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
-                if (page != null) {
-                    // Traversal direction is not currently available in FX.
-                    WCFocusEvent focusEvent = new WCFocusEvent(
-                        isFocused() ? WCFocusEvent.FOCUS_GAINED
-                                : WCFocusEvent.FOCUS_LOST,
-                    WCFocusEvent.UNKNOWN);
-                    page.dispatchFocusEvent(focusEvent);
-                }
+        focusedProperty().addListener((ov, t, t1) -> {
+            if (page != null) {
+                // Traversal direction is not currently available in FX.
+                WCFocusEvent focusEvent = new WCFocusEvent(
+                    isFocused() ? WCFocusEvent.FOCUS_GAINED
+                            : WCFocusEvent.FOCUS_LOST,
+                WCFocusEvent.UNKNOWN);
+                page.dispatchFocusEvent(focusEvent);
             }
         });
         setFocusTraversable(true);
@@ -1119,14 +1136,11 @@ final public class WebView extends Parent {
 
     private void registerEventHandlers() {
         addEventHandler(KeyEvent.ANY,
-            new EventHandler<KeyEvent>() {
-                @Override public void handle(final KeyEvent event) {
+                event -> {
                     processKeyEvent(event);
-                }
-            });
+                });
         addEventHandler(MouseEvent.ANY,
-            new EventHandler<MouseEvent>() {
-                @Override public void handle(final MouseEvent event) {
+                event -> {
                     processMouseEvent(event);
                     if (event.isDragDetect() && !page.isDragConfirmed()) {
                         //postpone drag recognition:
@@ -1134,52 +1148,45 @@ final public class WebView extends Parent {
                         //or selection.
                         event.setDragDetect(false);
                     }
-                }
-            });
+                });
         addEventHandler(ScrollEvent.SCROLL,
-            new EventHandler<ScrollEvent>() {
-                @Override public void handle(final ScrollEvent event) {
+                event -> {
                     processScrollEvent(event);
-                }
-            });
+                });
         setOnInputMethodTextChanged(
-            new EventHandler<InputMethodEvent>() {
-                @Override public void handle(final InputMethodEvent event) {
+                event -> {
                     processInputMethodEvent(event);
-                }
-            });
+                });
 
         //Drop target implementation:
-        EventHandler<DragEvent> destHandler = new EventHandler <DragEvent>() {
-            @Override public void handle(DragEvent event) {
-                Dragboard db = event.getDragboard();
-                LinkedList<String> mimes = new LinkedList<String>();
-                LinkedList<String> values = new LinkedList<String>();
-                for (DataFormat df : db.getContentTypes()) {
-                    //TODO: extend to non-string serialized values.
-                    //Please, look at the native code.
-                    Object content = db.getContent(df);
-                    if (content != null) {
-                        for (String mime : df.getIdentifiers()) {
-                            mimes.add(mime);
-                            values.add(content.toString());
-                        }
+        EventHandler<DragEvent> destHandler = event -> {
+            Dragboard db = event.getDragboard();
+            LinkedList<String> mimes = new LinkedList<String>();
+            LinkedList<String> values = new LinkedList<String>();
+            for (DataFormat df : db.getContentTypes()) {
+                //TODO: extend to non-string serialized values.
+                //Please, look at the native code.
+                Object content = db.getContent(df);
+                if (content != null) {
+                    for (String mime : df.getIdentifiers()) {
+                        mimes.add(mime);
+                        values.add(content.toString());
                     }
                 }
-                if (!mimes.isEmpty()) {
-                    int wkDndEventType = getWKDndEventType(event.getEventType());
-                    int wkDndAction = page.dispatchDragOperation(
-                        wkDndEventType,
-                        mimes.toArray(new String[0]), values.toArray(new String[0]),
-                        (int)event.getX(), (int)event.getY(),
-                        (int)event.getScreenX(), (int)event.getScreenY(),
-                        getWKDndAction(db.getTransferModes().toArray(new TransferMode[0])));
+            }
+            if (!mimes.isEmpty()) {
+                int wkDndEventType = getWKDndEventType(event.getEventType());
+                int wkDndAction = page.dispatchDragOperation(
+                    wkDndEventType,
+                    mimes.toArray(new String[0]), values.toArray(new String[0]),
+                    (int)event.getX(), (int)event.getY(),
+                    (int)event.getScreenX(), (int)event.getScreenY(),
+                    getWKDndAction(db.getTransferModes().toArray(new TransferMode[0])));
 
-                    //we cannot accept nothing on drop (we skip FX exception)
-                    if ( !(wkDndEventType == WebPage.DND_DST_DROP && wkDndAction == WK_DND_ACTION_NONE) )
-                        event.acceptTransferModes(getFXDndAction(wkDndAction));
-                    event.consume();
-                }
+                //we cannot accept nothing on drop (we skip FX exception)
+                if ( !(wkDndEventType == WebPage.DND_DST_DROP && wkDndAction == WK_DND_ACTION_NONE) )
+                    event.acceptTransferModes(getFXDndAction(wkDndAction));
+                event.consume();
             }
         };
         setOnDragEntered(destHandler);
@@ -1188,24 +1195,20 @@ final public class WebView extends Parent {
         setOnDragDropped(destHandler);
 
         //Drag source implementation:
-        setOnDragDetected( new EventHandler<MouseEvent>() {
-             @Override public void handle(MouseEvent event) {
-                    if (page.isDragConfirmed()) {
-                        page.confirmStartDrag();
-                        event.consume();
-                    }
-                }
-            });
-        setOnDragDone( new EventHandler<DragEvent>() {
-            @Override public void handle(DragEvent event) {
-                    page.dispatchDragOperation(
-                        WebPage.DND_SRC_DROP,
-                        null, null,
-                        (int)event.getX(), (int)event.getY(),
-                        (int)event.getScreenX(), (int)event.getScreenY(),
-                        getWKDndAction(event.getAcceptedTransferMode()));
-                    event.consume();
-                }
+        setOnDragDetected(event -> {
+               if (page.isDragConfirmed()) {
+                   page.confirmStartDrag();
+                   event.consume();
+               }
+           });
+        setOnDragDone(event -> {
+                page.dispatchDragOperation(
+                    WebPage.DND_SRC_DROP,
+                    null, null,
+                    (int)event.getX(), (int)event.getY(),
+                    (int)event.getScreenX(), (int)event.getScreenY(),
+                    getWKDndAction(event.getAcceptedTransferMode()));
+                event.consume();
             });
 
         setInputMethodRequests(getInputMethodClient());

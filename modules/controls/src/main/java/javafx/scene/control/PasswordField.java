@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,6 +24,9 @@
  */
 
 package javafx.scene.control;
+
+//import javafx.scene.accessibility.Attribute;
+//import javafx.scene.accessibility.Role;
 
 /**
  * Text field that masks entered characters.
@@ -57,4 +60,20 @@ public class PasswordField extends TextField {
     @Override public void copy() {
         // No-op
     }
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Accessibility handling                                                  *
+     *                                                                         *
+     **************************************************************************/
+
+//    /** @treatAsPrivate */
+//    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+//        switch (attribute) {
+//            case ROLE: return Role.PASSWORD_FIELD;
+//            case TITLE: return null;
+//            default: return super.accGetAttribute(attribute, parameters);
+//        }
+//    }
 }

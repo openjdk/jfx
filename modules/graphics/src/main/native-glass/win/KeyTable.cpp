@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,7 @@
 #include "GlassApplication.h"
 
 #include "com_sun_glass_events_KeyEvent.h"
+#include "com_sun_glass_ui_win_WinApplication.h"
 
 
 struct KeyMapEntry
@@ -229,12 +230,12 @@ BOOL IsExtendedKey(UINT vkey) {
 }
 
 /*
- * Class:     com_sun_glass_events_KeyEvent
+ * Class:     Java_com_sun_glass_ui_win_WinApplication
  * Method:    _getKeyCodeForChar
  * Signature: (C)I
  */
-JNIEXPORT jint JNICALL Java_com_sun_glass_events_KeyEvent__1getKeyCodeForChar
-  (JNIEnv * env, jclass cls, jchar c)
+JNIEXPORT jint JNICALL Java_com_sun_glass_ui_win_WinApplication__1getKeyCodeForChar
+  (JNIEnv * env, jobject jApplication, jchar c)
 {
     BYTE vkey = 0xFF & ::VkKeyScanEx((TCHAR)c,
             ::GetKeyboardLayout(GlassApplication::GetMainThreadId()));

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,6 +35,7 @@ import com.sun.scenario.effect.ImageData;
 import com.sun.scenario.effect.Reflection;
 import com.sun.scenario.effect.impl.EffectPeer;
 import com.sun.scenario.effect.impl.Renderer;
+import com.sun.scenario.effect.impl.state.RenderState;
 
 public class PrReflectionPeer extends EffectPeer {
 
@@ -44,6 +45,7 @@ public class PrReflectionPeer extends EffectPeer {
 
     @Override
     public ImageData filter(Effect effect,
+                            RenderState rstate,
                             BaseTransform transform,
                             Rectangle outputClip,
                             ImageData... inputs)

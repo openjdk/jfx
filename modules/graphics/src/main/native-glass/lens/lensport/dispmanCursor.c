@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -499,7 +499,8 @@ static char * platformName = "dispman";
 extern int load_bcm_symbols();
 
 jboolean select_dispman_cursor(LensNativePort *lensPort) {
-    if (!load_bcm_symbols()) {
+    if (load_bcm_symbols() != 0) {
+        //this indicates an error on loading bcm libraries, thus we cannot use the dispman cursor impl
         return JNI_FALSE;
     }
 

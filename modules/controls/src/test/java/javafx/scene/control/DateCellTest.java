@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -200,18 +200,18 @@ public class DateCellTest {
         assertFalse(cell.isEditing());
     }
 
-    @Test public void updatingACellBeingEditedResultsInFirstACancelOfEdit() {
+    @Test public void updatingACellBeingEditedDoesNotResultInACancelOfEdit() {
         cell.updateItem(today, false);
         cell.startEdit();
         cell.updateItem(tomorrow, false);
-        assertFalse(cell.isEditing());
+        assertTrue(cell.isEditing());
     }
 
     @Test public void updatingACellBeingEditedResultsInFirstACancelOfEdit2() {
         cell.updateItem(today, false);
         cell.startEdit();
         cell.updateItem(null, true);
-        assertFalse(cell.isEditing());
+        assertTrue(cell.isEditing());
     }
 
     @Test public void startEditWhenEditableIsTrue() {

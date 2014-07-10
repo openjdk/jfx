@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -133,6 +133,23 @@ public class ListChangeBuilderTest {
 
         observer.checkAddRemove(0, observableList, Arrays.asList("b"), 1, 2);
         observer.checkAddRemove(1, observableList, Collections.EMPTY_LIST, 4, 5);
+    }
+
+    //RT-37089
+    @Test
+    public void testAddRemove_5() {
+        builder.beginChange();
+
+        list.addAll(1, Arrays.asList("x", "y"));
+        builder.nextAdd(1, 3);
+
+        list.remove(2);
+        builder.nextRemove(2, "y");
+
+        builder.endChange();
+
+        observer.check1AddRemove(observableList, Collections.EMPTY_LIST, 1, 2);
+
     }
 
     @Test
@@ -451,13 +468,8 @@ public class ListChangeBuilderTest {
     @Test
     public void testToString_Update() {
         observableList.removeListener(observer);
-        observableList.addListener(new ListChangeListener<String>() {
-
-            @Override
-            public void onChanged(ListChangeListener.Change<? extends String> change) {
-                assertNotNull(change.toString());
-            }
-            
+        observableList.addListener((ListChangeListener.Change<? extends String> change) -> {
+            assertNotNull(change.toString());
         });
         builder.beginChange();
         
@@ -469,13 +481,8 @@ public class ListChangeBuilderTest {
     @Test
     public void testToString_Add() {
         observableList.removeListener(observer);
-        observableList.addListener(new ListChangeListener<String>() {
-
-            @Override
-            public void onChanged(ListChangeListener.Change<? extends String> change) {
-                assertNotNull(change.toString());
-            }
-            
+        observableList.addListener((ListChangeListener.Change<? extends String> change) -> {
+            assertNotNull(change.toString());
         });
         builder.beginChange();
         
@@ -487,13 +494,8 @@ public class ListChangeBuilderTest {
     @Test
     public void testToString_Remove() {
         observableList.removeListener(observer);
-        observableList.addListener(new ListChangeListener<String>() {
-
-            @Override
-            public void onChanged(ListChangeListener.Change<? extends String> change) {
-                assertNotNull(change.toString());
-            }
-            
+        observableList.addListener((ListChangeListener.Change<? extends String> change) -> {
+            assertNotNull(change.toString());
         });
         builder.beginChange();
         
@@ -505,13 +507,8 @@ public class ListChangeBuilderTest {
     @Test
     public void testToString_Composed() {
         observableList.removeListener(observer);
-        observableList.addListener(new ListChangeListener<String>() {
-
-            @Override
-            public void onChanged(ListChangeListener.Change<? extends String> change) {
-                assertNotNull(change.toString());
-            }
-            
+        observableList.addListener((ListChangeListener.Change<? extends String> change) -> {
+            assertNotNull(change.toString());
         });
         builder.beginChange();
         
@@ -525,13 +522,8 @@ public class ListChangeBuilderTest {
     @Test
     public void testToString_Permutation() {
         observableList.removeListener(observer);
-        observableList.addListener(new ListChangeListener<String>() {
-
-            @Override
-            public void onChanged(ListChangeListener.Change<? extends String> change) {
-                assertNotNull(change.toString());
-            }
-            
+        observableList.addListener((ListChangeListener.Change<? extends String> change) -> {
+            assertNotNull(change.toString());
         });
         builder.beginChange();
         

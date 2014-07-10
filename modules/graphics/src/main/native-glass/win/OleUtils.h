@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -202,10 +202,22 @@ inline HRESULT checkJavaException(JNIEnv *env)
     } else {
         JLocalRef<jthrowable> ex(env, env->ExceptionOccurred());
         if(ex){
+            env->ExceptionClear();
+            jclass cls = env->FindClass("java/lang/Throwable");    
+            if (env->ExceptionCheck()) {
+                env->ExceptionDescribe();
+                env->ExceptionClear();
+                return E_JAVAEXCEPTION;
+            }
             static jmethodID s_jcidThrowable_getMessage = env->GetMethodID(
-                JLClass(env, env->FindClass("java/lang/Throwable")),
+                JLClass(env, cls),
                 "getMessage",
-                "()Ljava/lang/String;");
+                "()Ljava/lang/String;");            
+            if (env->ExceptionCheck()) {
+                env->ExceptionDescribe();
+                env->ExceptionClear();
+                return E_JAVAEXCEPTION;
+            }
             JLString jsMessage(env, (jstring)env->CallObjectMethod(
                 ex,
                 s_jcidThrowable_getMessage

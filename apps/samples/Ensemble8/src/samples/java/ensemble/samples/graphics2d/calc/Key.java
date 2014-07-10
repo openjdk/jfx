@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013, Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -96,16 +96,12 @@ public class Key extends Parent {
     }
 
     private void initListeners() {
-        setOnMouseEntered(new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent me) {
-                background.setFill(CELL_SEL_FILL);
-            }
+        setOnMouseEntered((MouseEvent me) -> {
+            background.setFill(CELL_SEL_FILL);
         });
 
-        setOnMouseExited(new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent me) {
-                background.setFill(CELL_FILL);
-            }
+        setOnMouseExited((MouseEvent me) -> {
+            background.setFill(CELL_FILL);
         });
     }
 

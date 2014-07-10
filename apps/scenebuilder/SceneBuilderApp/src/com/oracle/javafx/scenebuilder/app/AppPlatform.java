@@ -183,23 +183,13 @@ public class AppPlatform {
         @Override
         public void messageBoxDidGetMessage(MessageBoxMessage message) {
             assert Platform.isFxApplicationThread() == false;
-            Platform.runLater(new Runnable() {
-                @Override
-                public void run() {
-                    eventHandler.handleOpenFilesAction(message);
-                }
-            });
+            Platform.runLater(() -> eventHandler.handleOpenFilesAction(message));
         }
 
         @Override
         public void messageBoxDidCatchException(Exception x) {
             assert Platform.isFxApplicationThread() == false;
-            Platform.runLater(new Runnable() {
-                @Override
-                public void run() {
-                    eventHandler.handleMessageBoxFailure(x);
-                }
-            });
+            Platform.runLater(() -> eventHandler.handleMessageBoxFailure(x));
         }
         
     } 
@@ -262,13 +252,16 @@ public class AppPlatform {
              * method is called a first time with dummy parameter like this:
              * files[0] == "com.oracle.javafx.scenebuilder.app.SceneBuilderApp". //NOI18N
              * We ignore this call here.
+             * 
+             * With Eclipse on Mac, files[0] == System.getProperty("java.class.path") (!) //NOI18N
              */
             final boolean openRejected;
             if (startingFromTestBed) {
                 openRejected = true;
             } else if (openFilesCount++ == 0) {
                 openRejected = (files.length == 1) 
-                        && files[0].equals(SceneBuilderApp.class.getName()); //NOI18N
+                        && ( files[0].equals(SceneBuilderApp.class.getName()) || //NOI18N
+                             files[0].equals(System.getProperty("java.class.path"))); //NOI18N
             } else {
                 openRejected = false;
             }

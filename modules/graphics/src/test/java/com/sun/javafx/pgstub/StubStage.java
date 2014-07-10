@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,8 +34,6 @@ import com.sun.javafx.tk.FocusCause;
 import com.sun.javafx.tk.TKScene;
 import com.sun.javafx.tk.TKStage;
 import com.sun.javafx.tk.TKStageListener;
-import com.sun.javafx.accessible.providers.AccessibleProvider;
-import com.sun.javafx.accessible.providers.AccessibleStageProvider;
 
 /**
  * @author Richard Bair
@@ -179,6 +177,11 @@ public class StubStage implements TKStage {
     }
 
     @Override
+    public void setAlwaysOnTop(boolean alwaysOnTop) {
+        notificationSender.changedAlwaysOnTop(alwaysOnTop);
+    }
+
+    @Override
     public void setResizable(boolean resizable) {
         notificationSender.changedResizable(resizable);
     }
@@ -268,80 +271,6 @@ public class StubStage implements TKStage {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
-    /**
-     *
-     * Accessibility glue for native
-     *
-     */
-
-    /**
-     * Initialize Accessiblility
-     *
-     * @param ac    the Glass accessible root object.
-     */
-    @Override public void setAccessibilityInitIsComplete(Object ac) {
-        // TODO: Add code later
-    }
-
-    /**
-     * Create accessible Glass object corresponding to stage
-     *
-     * @param ac    the FX accessible root/stage node.
-     *
-     * @return the Glass AccessibleRoot object.
-     */
-    @Override
-    public Object accessibleCreateStageProvider(AccessibleStageProvider ac) {
-        // TODO: Add code later
-        return null ;
-    }
-
-    /**
-     * Create accessible native object corresponding to controls
-     *
-     * @param ac
-     * returns native Object
-     */
-    @Override public Object accessibleCreateBasicProvider(AccessibleProvider ac) {
-        // TODO: Add code later
-        return null;
-    }
-
-    /**
-     * Delete accessible native object corresponding to controls
-     *
-     * @param nativeAcc
-     * returns native Object
-     */
-    @Override public void accessibleDestroyBasicProvider(Object nativeAcc) {
-        // TODO: Add code later
-    }
-
-    /**
-     * Fire accessible event
-     *
-     * @param eventID   identifies the event.
-     */
-    @Override public void accessibleFireEvent(Object nativeAcc, int eventID) {
-        // TODO: Add code later
-    }
-
-    /** Fire accessible property change event
-     *
-     * @param propertyId    identifies the property
-     * @param oldProperty   the old value of the property
-     * @param newProperty   the new value of the property
-     */
-    @Override public void accessibleFirePropertyChange(Object nativeAcc, int propertyId, int oldProperty,
-                                             int newProperty ) {
-        // TODO: Add code later
-    }
-
-    @Override public void accessibleFirePropertyChange(Object nativeAcc, int propertyId, boolean oldProperty,
-                                             boolean newProperty ) {
-        // TODO: Add code later
-    }
-
     private interface Notification {
         void execute(TKStageListener listener);
     }
@@ -377,107 +306,63 @@ public class StubStage implements TKStage {
 
         @Override
         public void changedLocation(final float x, final float y) {
-            process(new Notification() {
-                        @Override
-                        public void execute(final TKStageListener listener) {
-                            listener.changedLocation(x, y);
-                        }
-                    });
+            process(listener1 -> listener1.changedLocation(x, y));
         }
 
         @Override
         public void changedSize(final float width, final float height) {
-            process(new Notification() {
-                        @Override
-                        public void execute(final TKStageListener listener) {
-                            listener.changedSize(width, height);
-                            if (scene != null && width != -1 && height != -1) {
-                                scene.getListener().changedSize(width, height);
-                            }
-                        }
-                    });
+            process(listener1 -> {
+                listener1.changedSize(width, height);
+                if (scene != null && width != -1 && height != -1) {
+                    scene.getListener().changedSize(width, height);
+                }
+            });
         }
 
         @Override
         public void changedFocused(final boolean focused,
                                    final FocusCause cause) {
-            process(new Notification() {
-                        @Override
-                        public void execute(final TKStageListener listener) {
-                            listener.changedFocused(focused, cause);
-                        }
-                    });
+            process(listener1 -> listener1.changedFocused(focused, cause));
         }
 
         @Override
         public void changedIconified(final boolean iconified) {
-            process(new Notification() {
-                        @Override
-                        public void execute(final TKStageListener listener) {
-                            listener.changedIconified(iconified);
-                        }
-                    });
+            process(listener1 -> listener1.changedIconified(iconified));
         }
 
         @Override
         public void changedMaximized(final boolean maximized) {
-            process(new Notification() {
-                        @Override
-                        public void execute(final TKStageListener listener) {
-                            listener.changedMaximized(maximized);
-                        }
-                    });
+            process(listener1 -> listener1.changedMaximized(maximized));
+        }
+
+        public void changedAlwaysOnTop(boolean alwaysOnTop) {
+            process(listener1 -> listener1.changedAlwaysOnTop(alwaysOnTop));
         }
 
 
         @Override
         public void changedResizable(final boolean resizable) {
-            process(new Notification() {
-                        @Override
-                        public void execute(final TKStageListener listener) {
-                            listener.changedResizable(resizable);
-                        }
-                    });
+            process(listener1 -> listener1.changedResizable(resizable));
         }
 
         @Override
         public void changedFullscreen(final boolean fs) {
-            process(new Notification() {
-                        @Override
-                        public void execute(final TKStageListener listener) {
-                            listener.changedFullscreen(fs);
-                        }
-                    });
+            process(listener1 -> listener1.changedFullscreen(fs));
         }
 
         @Override
         public void closing() {
-            process(new Notification() {
-                        @Override
-                        public void execute(final TKStageListener listener) {
-                            listener.closing();
-                        }
-                    });
+            process(listener1 -> listener1.closing());
         }
 
         @Override
         public void closed() {
-            process(new Notification() {
-                        @Override
-                        public void execute(final TKStageListener listener) {
-                            listener.closed();
-                        }
-                    });
+            process(listener1 -> listener1.closed());
         }
 
         @Override
         public void focusUngrab() {
-            process(new Notification() {
-                        @Override
-                        public void execute(final TKStageListener listener) {
-                            listener.focusUngrab();
-                        }
-                    });
+            process(listener1 -> listener1.focusUngrab());
         }
 
         private void process(final Notification notification) {
@@ -508,6 +393,11 @@ public class StubStage implements TKStage {
         * Initialize accessibility
         */
         public void initAccessibleTKStageListener() {
+            // TODO: Add code later
+        }
+
+        @Override
+        public void changedScreen(Object from, Object to) {
             // TODO: Add code later
         }
 

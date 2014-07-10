@@ -33,11 +33,12 @@ package com.oracle.javafx.scenebuilder.kit.editor.panel.util;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
+
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.scene.Parent;
 
 /**
@@ -78,35 +79,27 @@ public abstract class AbstractPanelController {
         this.editorController = c;
         startListeningToEditorSelection();
         startListeningToJobManagerRevision();
-        editorController.fxomDocumentProperty().addListener(new ChangeListener<FXOMDocument>() {
-            @Override
-            public void changed(ObservableValue<? extends FXOMDocument> ov, FXOMDocument od, FXOMDocument nd) {
-                assert editorController.getFxomDocument() == nd;
-                if (od != null) {
-                    od.sceneGraphRevisionProperty().removeListener(fxomDocumentRevisionListener);
-                    od.cssRevisionProperty().removeListener(cssRevisionListener);
-                }
-                try {
-                    fxomDocumentDidChange(od);
-                } catch(RuntimeException x) {
-                    LOG.log(Level.SEVERE, "Bug", x); //NOI18N
-                }
-                if (nd != null) {
-                    nd.sceneGraphRevisionProperty().addListener(fxomDocumentRevisionListener);
-                    nd.cssRevisionProperty().addListener(cssRevisionListener);
-                }
+        editorController.fxomDocumentProperty().addListener((ChangeListener<FXOMDocument>) (ov, od, nd) -> {
+            assert editorController.getFxomDocument() == nd;
+            if (od != null) {
+                od.sceneGraphRevisionProperty().removeListener(fxomDocumentRevisionListener);
+                od.cssRevisionProperty().removeListener(cssRevisionListener);
+            }
+            try {
+                fxomDocumentDidChange(od);
+            } catch(RuntimeException x) {
+                LOG.log(Level.SEVERE, "Bug", x); //NOI18N
+            }
+            if (nd != null) {
+                nd.sceneGraphRevisionProperty().addListener(fxomDocumentRevisionListener);
+                nd.cssRevisionProperty().addListener(cssRevisionListener);
             }
         });
         if (editorController.getFxomDocument() != null) {
             editorController.getFxomDocument().sceneGraphRevisionProperty().addListener(fxomDocumentRevisionListener);
             editorController.getFxomDocument().cssRevisionProperty().addListener(cssRevisionListener);
         }
-        editorController.toolStylesheetProperty().addListener(new ChangeListener<String>() {
-            @Override
-            public void changed(ObservableValue<? extends String> ov, String od, String nd) {
-                toolStylesheetDidChange(od);
-            }
-        });
+        editorController.toolStylesheetProperty().addListener((ChangeListener<String>) (ov, od, nd) -> toolStylesheetDidChange(od));
     }
     
     /**
@@ -206,53 +199,40 @@ public abstract class AbstractPanelController {
     }
     
     private final ChangeListener<Number> fxomDocumentRevisionListener
-            = new ChangeListener<Number>() {
-                @Override
-                public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
-                    try {
-                        sceneGraphRevisionDidChange();
-                    } catch(RuntimeException x) {
-                        LOG.log(Level.SEVERE, "Bug", x); //NOI18N
-                    }
-                }
-            };
+            = (observable, oldValue, newValue) -> {
+        try {
+            sceneGraphRevisionDidChange();
+        } catch(RuntimeException x) {
+            LOG.log(Level.SEVERE, "Bug", x); //NOI18N
+        }
+    };
     
     private final ChangeListener<Number> cssRevisionListener
-            = new ChangeListener<Number>() {
-                @Override
-                public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
-                    try {
-                        cssRevisionDidChange();
-                    } catch(RuntimeException x) {
-                        LOG.log(Level.SEVERE, "Bug", x); //NOI18N
-                    }
-                }
-            };
+            = (observable, oldValue, newValue) -> {
+        try {
+            cssRevisionDidChange();
+        } catch(RuntimeException x) {
+            LOG.log(Level.SEVERE, "Bug", x); //NOI18N
+        }
+    };
     
     private final ChangeListener<Number> jobManagerRevisionListener
-            = new ChangeListener<Number>() {
-                @Override
-                public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
-                    try {
-                        jobManagerRevisionDidChange();
-                    } catch(RuntimeException x) {
-                        LOG.log(Level.SEVERE, "Bug", x); //NOI18N
-                    }
-                }
-            };
+            = (observable, oldValue, newValue) -> {
+        try {
+            jobManagerRevisionDidChange();
+        } catch(RuntimeException x) {
+            LOG.log(Level.SEVERE, "Bug", x); //NOI18N
+        }
+    };
     
     private final ChangeListener<Number> editorSelectionListener = 
-        new ChangeListener<Number>() {
-            @Override
-            public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
-                try {
-                    assert editorController.getSelection().isValid(editorController.getFxomDocument());
-                    editorSelectionDidChange();
-                } catch(RuntimeException x) {
-                    LOG.log(Level.SEVERE, "Bug", x); //NOI18N
-                }
-            }
-        };
+        (observable, oldValue, newValue) -> {
+        try {
+            editorSelectionDidChange();
+        } catch(RuntimeException x) {
+            LOG.log(Level.SEVERE, "Bug", x); //NOI18N
+        }
+    };
     
     /**
      * Setup a listener which invokes {@link #editorSelectionDidChange} each
@@ -303,11 +283,13 @@ public abstract class AbstractPanelController {
     }
     
     
-    /*
-     * Private
+    /**
+     * Replaces oldStylesheet by the tool style sheet assigned to the editor
+     * controller. This methods {@link EditorController#getToolStylesheet}.
+     * 
+     * @param oldStylesheet null or the style sheet to be replaced
      */
-    
-    private void toolStylesheetDidChange(String oldStylesheet) {
+    protected void toolStylesheetDidChange(String oldStylesheet) {
         /*
          * Tool style sheet has changed in editor controller.
          * If the panel has been loaded, then we replace the old sheet

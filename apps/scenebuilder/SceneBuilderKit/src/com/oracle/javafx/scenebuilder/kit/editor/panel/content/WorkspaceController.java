@@ -33,12 +33,14 @@ package com.oracle.javafx.scenebuilder.kit.editor.panel.content;
 
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
+
 import java.net.URL;
 import java.util.List;
+
 import javafx.animation.FadeTransition;
+import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
 import javafx.scene.Group;
@@ -47,12 +49,9 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
-import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
-import javafx.scene.transform.Scale;
-import javafx.scene.transform.Translate;
 import javafx.util.Duration;
 
 /**
@@ -69,6 +68,7 @@ class WorkspaceController {
     private Rectangle extensionRect;
     private boolean autoResize3DContent = true;
     private double scaling = 1.0;
+    private RuntimeException layoutException;
     
     private FXOMDocument fxomDocument;
 
@@ -88,12 +88,7 @@ class WorkspaceController {
         this.extensionRect = extensionRect;
         
         // Add scene listener to panelRoot.sceneProperty()
-        this.scrollPane.sceneProperty().addListener(new ChangeListener<Scene>() {
-            @Override
-            public void changed(ObservableValue<? extends Scene> ov, Scene t, Scene t1) {
-                sceneDidChange();
-            }
-        });
+        this.scrollPane.sceneProperty().addListener((ChangeListener<Scene>) (ov, t, t1) -> sceneDidChange());
         
         // Make scalingGroup invisible.
         // We'll turn it visible once content panel is displayed in a Scene
@@ -171,11 +166,20 @@ class WorkspaceController {
     
     public void layoutContent(boolean applyCSS) {
         if (scrollPane != null) {
-            if (applyCSS) {
-                scrollPane.getContent().applyCss();
+            try {
+                if (applyCSS) {
+                    scrollPane.getContent().applyCss();
+                }
+                scrollPane.layout();
+                layoutException = null;
+            } catch(RuntimeException x) {
+                layoutException = x;
             }
-            scrollPane.layout();
         }
+    }
+
+    public RuntimeException getLayoutException() {
+        return layoutException;
     }
     
     public void beginInteraction() {
@@ -243,12 +247,10 @@ class WorkspaceController {
             // visual artifacts. After the two steps are done, we turn the 
             // visible by calling revealScalingGroup().
             
-            Platform.runLater(new Runnable() {
-                @Override public void run() {
-                    layoutContent(true /* applyCSS */);
-                    adjustWorkspace();
-                    revealScalingGroup();
-                }
+            Platform.runLater(() -> {
+                layoutContent(true /* applyCSS */);
+                adjustWorkspace();
+                revealScalingGroup();
             });
         } else {
             assert scalingGroup.isVisible();
@@ -279,18 +281,29 @@ class WorkspaceController {
                 final Node rootNode = (Node) userSceneGraph;
                 assert rootNode.getParent() == null;
                 contentGroup.getChildren().add(rootNode);
-                statusMessageText = ""; //NOI18N
-                statusStyleClass = "stage-prompt-default"; //NOI18N
+                layoutContent(true /* applyCSS */);
+                if (layoutException == null) {
+                    statusMessageText = ""; //NOI18N
+                    statusStyleClass = "stage-prompt-default"; //NOI18N
+                } else {
+                    contentGroup.getChildren().clear();
+                    statusMessageText = I18N.getString("content.label.status.cannot.display");
+                    statusStyleClass = "stage-prompt"; //NOI18N
+                }
             } else {
                 statusMessageText = I18N.getString("content.label.status.cannot.display");
                 statusStyleClass = "stage-prompt"; //NOI18N
             }
         }
+        
         backgroundPane.setText(statusMessageText);
         backgroundPane.getStyleClass().clear();
         backgroundPane.getStyleClass().add(statusStyleClass);
         
-        layoutContent(true /* applyCSS */);
+        // If layoutException != null, then this layout call is required
+        // so that backgroundPane updates its message... Strange...
+        backgroundPane.layout();
+        
         adjustWorkspace();
     }
     
@@ -306,7 +319,14 @@ class WorkspaceController {
             }
             scalingGroup.setScaleX(actualScaling);
             scalingGroup.setScaleY(actualScaling);
-            scalingGroup.setScaleZ(actualScaling);
+            
+            if (Platform.isSupported(ConditionalFeature.SCENE3D)) {
+                scalingGroup.setScaleZ(actualScaling);
+            }
+            // else {
+            //      leave scaleZ unchanged else it breaks zooming when running
+            //      with the software pipeline (see DTL-6661).
+            // }
         }
     }
     
@@ -319,7 +339,7 @@ class WorkspaceController {
         } else {
             userSceneGraph = fxomDocument.getSceneGraphRoot();
         }
-        if (userSceneGraph instanceof Node) {
+        if ((userSceneGraph instanceof Node) && (layoutException == null)) {
             final Node rootNode = (Node) userSceneGraph;
             
             final Bounds rootBounds = rootNode.getLayoutBounds();
@@ -330,18 +350,19 @@ class WorkspaceController {
                 backgroundBounds = new BoundingBox(0.0, 0.0, 0.0, 0.0);
                 extensionBounds = new BoundingBox(0.0, 0.0, 0.0, 0.0);
             } else {
+                final double scale;
                 if ((rootBounds.getDepth() > 0) && autoResize3DContent) {
                     // Content is 3D
                     final double scaleX = AUTORESIZE_SIZE / rootBounds.getWidth();
                     final double scaleY = AUTORESIZE_SIZE / rootBounds.getHeight();
                     final double scaleZ = AUTORESIZE_SIZE / rootBounds.getDepth();
-                    final double scale = Math.min(scaleX, Math.min(scaleY, scaleZ));
-                    final double tX = -rootBounds.getMinX();
-                    final double tY = -rootBounds.getMinY();
-                    final double tZ = -rootBounds.getMinZ();
-                    rootNode.getTransforms().add(new Scale(scale, scale, scale));
-                    rootNode.getTransforms().add(new Translate(tX, tY, tZ));
+                    scale = Math.min(scaleX, Math.min(scaleY, scaleZ));
+                } else {
+                    scale = 1.0;
                 }
+                contentGroup.setScaleX(scale);
+                contentGroup.setScaleY(scale);
+                contentGroup.setScaleZ(scale);
 
                 final Bounds contentBounds = rootNode.localToParent(rootBounds);
                 backgroundBounds = new BoundingBox(0.0, 0.0,

@@ -40,8 +40,8 @@ import com.oracle.javafx.scenebuilder.kit.editor.selection.GridSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
+
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
@@ -60,7 +60,7 @@ import javafx.stage.WindowEvent;
 public class ContextMenuController {
 
     private final EditorController editorController;
-    private ContextMenu contextMenu;
+    private ContextMenu contextMenu; // Initialized lazily
 
     private MenuItem cutMenuItem;
     private MenuItem copyMenuItem;
@@ -79,6 +79,7 @@ public class ContextMenuController {
     private MenuItem sendBackwardMenuItem;
     private Menu wrapInMenu;
     private MenuItem wrapInAnchorPaneMenuItem;
+    private MenuItem wrapInFlowPaneMenuItem;
     private MenuItem wrapInGridPaneMenuItem;
     private MenuItem wrapInGroupMenuItem;
     private MenuItem wrapInHBoxMenuItem;
@@ -87,6 +88,7 @@ public class ContextMenuController {
     private MenuItem wrapInSplitPaneMenuItem;
     private MenuItem wrapInStackPaneMenuItem;
     private MenuItem wrapInTabPaneMenuItem;
+    private MenuItem wrapInTilePaneMenuItem;
     private MenuItem wrapInTitledPaneMenuItem;
     private MenuItem wrapInToolBarMenuItem;
     private MenuItem wrapInVBoxMenuItem;
@@ -106,41 +108,27 @@ public class ContextMenuController {
     private MenuItem decreaseColumnSpan;
 
     private final EventHandler<Event> onShowingMenuEventHandler
-            = new EventHandler<Event>() {
-                @Override
-                public void handle(Event t) {
-                    assert t.getSource() instanceof Menu;
-                    final Menu menu = (Menu) t.getSource();
-                    handleOnShowing(menu.getItems());
-                }
-            };
+            = t -> {
+        assert t.getSource() instanceof Menu;
+        final Menu menu = (Menu) t.getSource();
+        handleOnShowing(menu.getItems());
+    };
 
     private final EventHandler<WindowEvent> onShowingContextMenuEventHandler
-            = new EventHandler<WindowEvent>() {
-                @Override
-                public void handle(WindowEvent t) {
-                    assert t.getSource() instanceof ContextMenu;
-                    final ContextMenu contextMenu = (ContextMenu) t.getSource();
-                    handleOnShowing(contextMenu.getItems());
-                }
-            };
+            = t -> {
+        assert t.getSource() instanceof ContextMenu;
+        final ContextMenu contextMenu = (ContextMenu) t.getSource();
+        handleOnShowing(contextMenu.getItems());
+    };
 
     private final EventHandler<ActionEvent> onActionEventHandler
-            = new EventHandler<ActionEvent>() {
-                @Override
-                public void handle(ActionEvent t) {
-                    assert t.getSource() instanceof MenuItem;
-                    handleOnActionMenu((MenuItem) t.getSource());
-                }
-            };
+            = t -> {
+        assert t.getSource() instanceof MenuItem;
+        handleOnActionMenu((MenuItem) t.getSource());
+    };
 
     private final ChangeListener<Number> jobManagerRevisionListener
-            = new ChangeListener<Number>() {
-                @Override
-                public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
-                    jobManagerRevisionDidChange();
-                }
-            };
+            = (observable, oldValue, newValue) -> jobManagerRevisionDidChange();
 
     public ContextMenuController(final EditorController editorController) {
         this.editorController = editorController;
@@ -149,7 +137,10 @@ public class ContextMenuController {
 
     public ContextMenu getContextMenu() {
         if (contextMenu == null) {
-            makeContextMenu();
+            // Initialization of context menu
+            contextMenu = new ContextMenu();
+            contextMenu.setConsumeAutoHidingEvents(false);
+            contextMenu.setOnShowing(onShowingContextMenuEventHandler);
         }
         return contextMenu;
     }
@@ -159,6 +150,10 @@ public class ContextMenuController {
      */
     public void updateContextMenuItems() {
 
+        // Lazely initialization of context menu items
+        if (copyMenuItem == null) {
+            initializeMenuItems();
+        }
         getContextMenu().getItems().clear();
 
         final Selection selection = editorController.getSelection();
@@ -338,9 +333,7 @@ public class ContextMenuController {
         }
     }
 
-    private void makeContextMenu() {
-        this.contextMenu = new ContextMenu();
-        this.contextMenu.setConsumeAutoHidingEvents(false);
+    private void initializeMenuItems() {
 
         copyMenuItem = new MenuItem(I18N.getString("menu.title.copy"));
         copyMenuItem.setOnAction(onActionEventHandler);
@@ -391,6 +384,9 @@ public class ContextMenuController {
         wrapInAnchorPaneMenuItem = new MenuItem("AnchorPane");
         wrapInAnchorPaneMenuItem.setOnAction(onActionEventHandler);
         wrapInAnchorPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_ANCHOR_PANE));
+        wrapInFlowPaneMenuItem = new MenuItem("FlowPane");
+        wrapInFlowPaneMenuItem.setOnAction(onActionEventHandler);
+        wrapInFlowPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_FLOW_PANE));
         wrapInGridPaneMenuItem = new MenuItem("GridPane");
         wrapInGridPaneMenuItem.setOnAction(onActionEventHandler);
         wrapInGridPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_GRID_PANE));
@@ -412,6 +408,9 @@ public class ContextMenuController {
         wrapInTabPaneMenuItem = new MenuItem("TabPane");
         wrapInTabPaneMenuItem.setOnAction(onActionEventHandler);
         wrapInTabPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_TAB_PANE));
+        wrapInTilePaneMenuItem = new MenuItem("TilePane");
+        wrapInTilePaneMenuItem.setOnAction(onActionEventHandler);
+        wrapInTilePaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_TILE_PANE));
         wrapInTitledPaneMenuItem = new MenuItem("TitledPane");
         wrapInTitledPaneMenuItem.setOnAction(onActionEventHandler);
         wrapInTitledPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_TITLED_PANE));
@@ -426,6 +425,7 @@ public class ContextMenuController {
         wrapInGroupMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_GROUP));
         wrapInMenu.getItems().setAll(
                 wrapInAnchorPaneMenuItem,
+                wrapInFlowPaneMenuItem,
                 wrapInGridPaneMenuItem,
                 wrapInGroupMenuItem,
                 wrapInHBoxMenuItem,
@@ -434,6 +434,7 @@ public class ContextMenuController {
                 wrapInSplitPaneMenuItem,
                 wrapInStackPaneMenuItem,
                 wrapInTabPaneMenuItem,
+                wrapInTilePaneMenuItem,
                 wrapInTitledPaneMenuItem,
                 wrapInToolBarMenuItem,
                 wrapInVBoxMenuItem);
@@ -479,13 +480,8 @@ public class ContextMenuController {
         decreaseColumnSpan.setOnAction(onActionEventHandler);
         decreaseColumnSpan.setUserData(new EditActionController(EditAction.DECREASE_COLUMN_SPAN));
 
-        contextMenu.setOnShowing(onShowingContextMenuEventHandler);
         wrapInMenu.setOnShowing(onShowingMenuEventHandler);
         gridPaneMenu.setOnShowing(onShowingMenuEventHandler);
-
-        for (MenuItem child : contextMenu.getItems()) {
-            child.setOnAction(onActionEventHandler);
-        }
     }
 
     class EditActionController extends MenuItemController {

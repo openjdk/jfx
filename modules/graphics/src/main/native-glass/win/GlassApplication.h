@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -69,8 +69,6 @@ public:
 
 #define WM_DO_ACTION        (WM_USER+1)
 #define WM_DO_ACTION_LATER  (WM_USER+2)
-// Accessibility (a11y) messages
-#define WM_A11Y_INIT_IS_COMPLETE (WM_USER+3)
 
 class GlassApplication : protected BaseWnd {
 public:
@@ -83,6 +81,7 @@ public:
     static void ExecActionLater(Action *action);
     void RegisterClipboardViewer(jobject clipboard);
     void UnregisterClipboardViewer();
+    static jstring GetThemeName(JNIEnv* env);
 
     inline static DWORD GetMainThreadId()
     {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -370,16 +370,12 @@ public class MenuTest {
         Menu mi2 = new Menu("Child");
         menu.getItems().add(mi2);
 
-        menu.setOnShowing(new EventHandler<Event>(){
-            @Override public void handle(Event event) {
-                showingOccured1 = true;
-            }
+        menu.setOnShowing(event -> {
+            showingOccured1 = true;
         });
-        menu.setOnShown(new EventHandler<Event>(){
-            @Override public void handle(Event event) {
-                if (showingOccured1) {
-                    shownOccured1 = true;
-                }
+        menu.setOnShown(event -> {
+            if (showingOccured1) {
+                shownOccured1 = true;
             }
         });
 
@@ -393,17 +389,13 @@ public class MenuTest {
         Menu mi2 = new Menu("Child");
         menu.getItems().add(mi2);
 
-        menu.setOnShowing(new EventHandler<Event>(){
-            @Override public void handle(Event event) {
-                if (shownOccured2) {
-                    showingOccured2 = true;
-                }
+        menu.setOnShowing(event -> {
+            if (shownOccured2) {
+                showingOccured2 = true;
             }
         });
-        menu.setOnShown(new EventHandler<Event>(){
-            @Override public void handle(Event event) {
-                shownOccured2 = true;
-            }
+        menu.setOnShown(event -> {
+            shownOccured2 = true;
         });
 
         menu.show();
@@ -512,16 +504,12 @@ public class MenuTest {
         Menu mi2 = new Menu("Child");
         menu.getItems().add(mi2);
 
-        menu.setOnHiding(new EventHandler<Event>(){
-            @Override public void handle(Event event) {
-                hidingOccured1 = true;
-            }
+        menu.setOnHiding(event -> {
+            hidingOccured1 = true;
         });
-        menu.setOnHidden(new EventHandler<Event>(){
-            @Override public void handle(Event event) {
-                if (hidingOccured1) {
-                    hiddenOccured1 = true;
-                }
+        menu.setOnHidden(event -> {
+            if (hidingOccured1) {
+                hiddenOccured1 = true;
             }
         });
 
@@ -536,17 +524,13 @@ public class MenuTest {
         Menu mi2 = new Menu("Child");
         menu.getItems().add(mi2);
 
-        menu.setOnHiding(new EventHandler<Event>(){
-            @Override public void handle(Event event) {
-                if (hiddenOccured2) {
-                    hidingOccured2 = true;
-                }
+        menu.setOnHiding(event -> {
+            if (hiddenOccured2) {
+                hidingOccured2 = true;
             }
         });
-        menu.setOnHidden(new EventHandler<Event>(){
-            @Override public void handle(Event event) {
-                hiddenOccured2 = true;
-            }
+        menu.setOnHidden(event -> {
+            hiddenOccured2 = true;
         });
 
         menu.show();

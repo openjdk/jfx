@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -112,7 +112,7 @@ final class ListChangeBuilder<E> {
         } else {
             SubChange<E> change = addRemoveChanges.get(idx);
             change.to--; // Removed one element from the previously added list
-            if (change.from == change.to && change.removed == null || change.removed.isEmpty()) {
+            if (change.from == change.to && (change.removed == null || change.removed.isEmpty())) {
                     addRemoveChanges.remove(idx);
             }
         }

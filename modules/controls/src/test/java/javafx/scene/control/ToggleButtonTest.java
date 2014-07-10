@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -179,13 +179,9 @@ public class ToggleButtonTest {
     @Test public void fireAndCheckActionEventFired() {
         final Boolean []flag = new Boolean[1];
         flag[0] = false;
-        toggle.addEventHandler(EventType.ROOT, new EventHandler<Event>() {
-
-            @Override
-            public void handle(Event event) {
-                if (event != null && event instanceof ActionEvent) {
-                    flag[0] = true;
-                }
+        toggle.addEventHandler(EventType.ROOT, event -> {
+            if (event != null && event instanceof ActionEvent) {
+                flag[0] = true;
             }
         });
         toggle.fire();

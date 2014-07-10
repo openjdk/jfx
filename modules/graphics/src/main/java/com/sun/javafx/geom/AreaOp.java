@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1998, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -178,21 +178,19 @@ public abstract class AreaOp {
         }
     }
 
-    private static Comparator YXTopComparator = new Comparator() {
-        public int compare(Object o1, Object o2) {
-            Curve c1 = ((Edge) o1).getCurve();
-            Curve c2 = ((Edge) o2).getCurve();
-            double v1, v2;
-            if ((v1 = c1.getYTop()) == (v2 = c2.getYTop())) {
-                if ((v1 = c1.getXTop()) == (v2 = c2.getXTop())) {
-                    return 0;
-                }
+    private static Comparator YXTopComparator = (o1, o2) -> {
+        Curve c1 = ((Edge) o1).getCurve();
+        Curve c2 = ((Edge) o2).getCurve();
+        double v1, v2;
+        if ((v1 = c1.getYTop()) == (v2 = c2.getYTop())) {
+            if ((v1 = c1.getXTop()) == (v2 = c2.getXTop())) {
+                return 0;
             }
-            if (v1 < v2) {
-                return -1;
-            }
-            return 1;
         }
+        if (v1 < v2) {
+            return -1;
+        }
+        return 1;
     };
 
     private Vector pruneEdges(Vector edges) {

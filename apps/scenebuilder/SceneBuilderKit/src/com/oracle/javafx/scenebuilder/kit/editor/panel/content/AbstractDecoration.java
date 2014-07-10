@@ -32,8 +32,8 @@
 package com.oracle.javafx.scenebuilder.kit.editor.panel.content;
 
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
+
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
 import javafx.scene.Group;
@@ -76,12 +76,11 @@ public abstract class AbstractDecoration<T> {
         this.sceneGraphClass = sceneGraphClass;
         this.sceneGraphObject = sceneGraphClass.cast(fxomObject.getSceneGraphObject());
         
-        this.rootNode.sceneProperty().addListener(new ChangeListener<Scene>() {
-            @Override
-            public void changed(ObservableValue<? extends Scene> ov, Scene v1, Scene v2) {
-                rootNodeSceneDidChange();
-            }
-        });
+        this.rootNode.sceneProperty().addListener((ChangeListener<Scene>) (ov, v1, v2) -> rootNodeSceneDidChange());
+        
+        // This is workaround for DTL-6628 
+        rootNode.getStyleClass().add("theme-presets"); //NOI18N
+        rootNode.getStyleClass().add("SBKIT-content-panel"); //NOI18N
     }
 
     public ContentPanelController getContentPanelController() {
@@ -220,26 +219,11 @@ public abstract class AbstractDecoration<T> {
      */
     
     private final ChangeListener<Bounds> layoutBoundsListener
-        = new ChangeListener<Bounds>() {
-            @Override
-            public void changed(ObservableValue<? extends Bounds> ov, Bounds v1, Bounds v2) {
-                layoutDecoration();
-            }
-        };
+        = (ov, v1, v2) -> layoutDecoration();
     
     private final ChangeListener<Bounds> boundsInParentListener
-        = new ChangeListener<Bounds>() {
-            @Override
-            public void changed(ObservableValue<? extends Bounds> ov, Bounds v1, Bounds v2) {
-                layoutDecoration();
-            }
-        };
+        = (ov, v1, v2) -> layoutDecoration();
     
     private final ChangeListener<Transform> localToSceneTransformListener
-        = new ChangeListener<Transform>() {
-            @Override
-            public void changed(ObservableValue<? extends Transform> ov, Transform v1, Transform v2) {
-                layoutDecoration();
-            }
-        };
+        = (ov, v1, v2) -> layoutDecoration();
 }

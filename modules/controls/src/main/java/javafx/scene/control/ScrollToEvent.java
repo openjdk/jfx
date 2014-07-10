@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -55,7 +55,6 @@ public class ScrollToEvent<T> extends Event {
     /**
      * This event occurs if the user requests scrolling a given index into view.
      */
-    @SuppressWarnings("unchecked")
     public static EventType<ScrollToEvent<Integer>> scrollToTopIndex() {
         return SCROLL_TO_TOP_INDEX;
     }
@@ -72,7 +71,7 @@ public class ScrollToEvent<T> extends Event {
         return (EventType<ScrollToEvent<T>>) SCROLL_TO_COLUMN;
     }
     private static final EventType<?> SCROLL_TO_COLUMN = 
-            new EventType(ScrollToEvent.ANY, "SCROLL_TO_COLUMN");
+            new EventType<>(ScrollToEvent.ANY, "SCROLL_TO_COLUMN");
     
     private static final long serialVersionUID = -8557345736849482516L;
     

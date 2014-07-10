@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -64,6 +64,17 @@ import com.sun.javafx.css.StyleManager;
  * <p>Note that the {@code start} method is abstract and must be overridden.
  * The {@code init} and {@code stop} methods have concrete implementations
  * that do nothing.</p>
+ *
+ * <p>Calling {@link Platform#exit} is the preferred way to explicitly terminate
+ * a JavaFX Application. Directly calling {@link System#exit} is
+ * an acceptable alternative, but doesn't allow the Application {@link #stop}
+ * method to run.
+ * </p>
+ *
+ * <p>A JavaFX Application should not attempt to use JavaFX after the
+ * FX toolkit has terminated or from a ShutdownHook, that is, after the
+ * {@link #stop} method returns or {@link System#exit} is called.
+ * </p>
  *
  * <p><b>Parameters</b></p>
  * <p>

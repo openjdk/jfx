@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -48,9 +48,7 @@ public class KeyFrameTest {
     private static final KeyValue[] NO_KEYVALUES = new KeyValue[0];
     private static final List<KeyValue> NO_KEYVALUES_COL = Arrays.asList(NO_KEYVALUES);
     private static final String NAME = "KeyFrameName";
-    private static final EventHandler<ActionEvent> ACTION = new EventHandler<ActionEvent>() {
-        @Override public void handle(ActionEvent event) {}
-    };
+    private static final EventHandler<ActionEvent> ACTION = event -> {};
 
     private final IntegerProperty TARGET = new SimpleIntegerProperty();
     private final KeyValue[] ONE_KEYVALUE = new KeyValue[] {

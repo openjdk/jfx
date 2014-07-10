@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,11 +28,13 @@ package javafx.scene.control;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+
 import javafx.beans.InvalidationListener;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.value.ChangeListener;
+import javafx.beans.value.WritableValue;
 import javafx.css.CssMetaData;
 import javafx.css.StyleableIntegerProperty;
 import javafx.css.StyleableObjectProperty;
@@ -40,10 +42,14 @@ import javafx.css.StyleableProperty;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Pos;
+//import javafx.scene.accessibility.Attribute;
+//import javafx.scene.accessibility.Role;
+
 import com.sun.javafx.binding.ExpressionHelper;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.skin.TextFieldSkin;
+
 import javafx.css.Styleable;
 
 
@@ -283,7 +289,7 @@ public class TextField extends TextInputControl {
             }
 
             @Override public StyleableProperty<Pos> getStyleableProperty(TextField n) {
-                return (StyleableProperty<Pos>)n.alignmentProperty();
+                return (StyleableProperty<Pos>)(WritableValue<Pos>)n.alignmentProperty();
             }
         };
 
@@ -298,7 +304,7 @@ public class TextField extends TextInputControl {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(TextField n) {
-                return (StyleableProperty<Number>)n.prefColumnCountProperty();
+                return (StyleableProperty<Number>)(WritableValue<Number>)n.prefColumnCountProperty();
             }
         };
 
@@ -329,4 +335,21 @@ public class TextField extends TextInputControl {
     public List<CssMetaData<? extends Styleable, ?>> getControlCssMetaData() {
         return getClassCssMetaData();
     }
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Accessibility handling                                                  *
+     *                                                                         *
+     **************************************************************************/
+
+//    /** @treatAsPrivate */
+//    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+//        switch (attribute) {
+//            case ROLE: return Role.TEXT_FIELD;
+//            case BOUNDS_FOR_RANGE: //Skin
+//            case OFFSET_AT_POINT: //Skin
+//            default: return super.accGetAttribute(attribute, parameters);
+//        }
+//    }
 }

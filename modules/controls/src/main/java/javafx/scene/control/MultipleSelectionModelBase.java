@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,8 +35,6 @@ import java.util.BitSet;
 import java.util.Collections;
 import java.util.List;
 
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.ListChangeListener.Change;
@@ -61,31 +59,40 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
      **********************************************************************/
 
     public MultipleSelectionModelBase() {
-        selectedIndexProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable valueModel) {
-                // we used to lazily retrieve the selected item, but now we just
-                // do it when the selection changes. This is hardly likely to be
-                // expensive, and we still lazily handle the multiple selection
-                // cases over in MultipleSelectionModel.
-                setSelectedItem(getModelItem(getSelectedIndex()));
-            }
+        selectedIndexProperty().addListener(valueModel -> {
+            // we used to lazily retrieve the selected item, but now we just
+            // do it when the selection changes. This is hardly likely to be
+            // expensive, and we still lazily handle the multiple selection
+            // cases over in MultipleSelectionModel.
+            setSelectedItem(getModelItem(getSelectedIndex()));
         });
         
         selectedIndices = new BitSet();
 
         selectedIndicesSeq = createListFromBitSet(selectedIndices);
         
-        final MappingChange.Map<Integer,T> map = new MappingChange.Map<Integer,T>() {
-            @Override public T map(Integer f) {
-                return getModelItem(f);
-            }
-        };
+        final MappingChange.Map<Integer,T> map = f -> getModelItem(f);
         
         selectedIndicesSeq.addListener(new ListChangeListener<Integer>() {
             @Override public void onChanged(final Change<? extends Integer> c) {
                 // when the selectedIndices ObservableList changes, we manually call
                 // the observers of the selectedItems ObservableList.
-                selectedItemsSeq.callObservers(new MappingChange<Integer,T>(c, map, selectedItemsSeq));
+
+                // Fix for a bug identified whilst fixing RT-37395:
+                // We shouldn't fire events on the selectedItems list unless
+                // the indices list has actually changed. This means that index
+                // permutation events should not be forwarded blindly through the
+                // items list, as a index permutation implies the items list is
+                // unchanged, not changed!
+                boolean hasRealChangeOccurred = false;
+                while (c.next() && ! hasRealChangeOccurred) {
+                    hasRealChangeOccurred = c.wasAdded() || c.wasRemoved();
+                }
+
+                if (hasRealChangeOccurred) {
+                    c.reset();
+                    selectedItemsSeq.callObservers(new MappingChange<Integer, T>(c, map, selectedItemsSeq));
+                }
                 c.reset();
             }
         });
@@ -153,8 +160,17 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
      *                                                                     *
      **********************************************************************/
 
-    // Fix for RT-20945
-    boolean makeAtomic = false;
+    // Fix for RT-20945 (and numerous other issues!)
+    private int atomicityCount = 0;
+    boolean isAtomic() {
+        return atomicityCount > 0;
+    }
+    void startAtomic() {
+        atomicityCount++;
+    }
+    void stopAtomic() {
+        atomicityCount = Math.max(0, --atomicityCount);
+    }
 
 
     /***********************************************************************
@@ -294,7 +310,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         // resulted in the selectedItems and selectedIndices lists never
         // reporting that they were empty.
         // makeAtomic toggle added to resolve RT-32618
-        makeAtomic = true;
+        startAtomic();
 
         // firstly we make a copy of the selection, so that we can send out
         // the correct details in the selection change event
@@ -307,7 +323,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
 
         // and select the new row
         select(row);
-        makeAtomic = false;
+        stopAtomic();
 
         // fire off a single add/remove/replace notification (rather than
         // individual remove and add notifications) - see RT-33324
@@ -341,7 +357,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         setSelectedIndex(row);
         focus(row);
 
-        if (! makeAtomic) {
+        if (! isAtomic()) {
             int changeIndex = selectedIndicesSeq.indexOf(row);
             selectedIndicesSeq.callObservers(new NonIterableChange.SimpleAddChange<Integer>(changeIndex, changeIndex+1, selectedIndicesSeq));
         }
@@ -390,7 +406,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
     }
 
     @Override public void selectIndices(int row, int... rows) {
-        if (rows == null) {
+        if (rows == null || rows.length == 0) {
             select(row);
             return;
         }
@@ -458,6 +474,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
             // we may have requested to select row 5, and the selectedIndices
             // list may therefore have the following: [1,4,5], meaning row 5
             // is in position 2 of the selectedIndices list
+            Collections.sort(actualSelectedRows);
             Change<Integer> change = createRangeChange(selectedIndicesSeq, actualSelectedRows);
             selectedIndicesSeq.callObservers(change);
         }
@@ -503,18 +520,19 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
                 
                 // starting from pos, we keep going until the value is
                 // not the next value
-                from = pos;
                 int startValue = addedItems.get(pos++);
+                from = list.indexOf(startValue);
+                to = from + 1;
                 int endValue = startValue;
                 while (pos < addedSize) {
                     int previousEndValue = endValue;
                     endValue = addedItems.get(pos++);
+                    ++to;
                     if (previousEndValue != (endValue - 1)) {
                         break;
                     }
                 }
-                to = pos;
-                
+
                 if (invalid) {
                     invalid = false;
                     return true; 
@@ -595,13 +613,15 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
             clearSelection();
         }
 
+        // we pass in (index, index) here to represent that nothing was added
+        // in this change.
         selectedIndicesSeq.callObservers(
-                new NonIterableChange.GenericAddRemoveChange<Integer>(index, index+1, 
+                new NonIterableChange.GenericAddRemoveChange<>(index, index,
                 Collections.singletonList(index), selectedIndicesSeq));
     }
 
     @Override public void clearSelection() {
-        if (! makeAtomic) {
+        if (! isAtomic()) {
             setSelectedIndex(-1);
             focus(-1);
         }
@@ -621,7 +641,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
 
             quietClearSelection();
 
-            if (! makeAtomic) {
+            if (! isAtomic()) {
                 selectedIndicesSeq.callObservers(
                         new NonIterableChange.GenericAddRemoveChange<Integer>(0, 0,
                         removed, selectedIndicesSeq));

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,66 +38,28 @@ import com.sun.scenario.effect.impl.HeapImage;
 import com.sun.scenario.effect.impl.Renderer;
 import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.scenario.effect.impl.state.AccessHelper;
-import com.sun.scenario.effect.impl.state.LinearConvolveKernel;
-import com.sun.scenario.effect.impl.state.LinearConvolveKernel.PassType;
-import com.sun.scenario.effect.impl.state.LinearConvolvePeer;
+import com.sun.scenario.effect.impl.state.LinearConvolveRenderState;
+import com.sun.scenario.effect.impl.state.LinearConvolveRenderState.PassType;
 
-public class SSELinearConvolvePeer extends SSEEffectPeer implements LinearConvolvePeer {
+public class SSELinearConvolvePeer extends SSEEffectPeer<LinearConvolveRenderState> {
 
     public SSELinearConvolvePeer(FilterContext fctx, Renderer r, String uniqueName) {
         super(fctx, r, uniqueName);
     }
 
     @Override
-    protected final Effect getEffect() {
-        return (Effect)super.getEffect();
-    }
-
-    protected LinearConvolveKernel getKernel() {
-        return (LinearConvolveKernel) AccessHelper.getState(getEffect());
-    }
-
-    public int getPow2ScaleX(LinearConvolveKernel kernel) {
-        return kernel.getPow2ScaleX();
-    }
-
-    public int getPow2ScaleY(LinearConvolveKernel kernel) {
-        return kernel.getPow2ScaleY();
-    }
-
-    @Override
-    public Rectangle getResultBounds(BaseTransform transform,
-                                     Rectangle outputClip,
-                                     ImageData... inputDatas)
-    {
-        return getKernel().getScaledResultBounds(inputDatas[0].getTransformedBounds(outputClip), getPass());
-    }
-
-    private int getCount() {
-        return getKernel().getScaledKernelSize(getPass());
-    }
-
-    private float[] getOffset() {
-        return getKernel().getVector(getInputNativeBounds(0),
-                                     getInputTransform(0),
-                                     getPass());
-    }
-
-    private FloatBuffer getWeights() {
-        return getKernel().getWeights(getPass());
-    }
-
-    @Override
     public ImageData filter(Effect effect,
+                            LinearConvolveRenderState lcrstate,
                             BaseTransform transform,
                             Rectangle outputClip,
                             ImageData... inputs)
     {
-        setEffect(effect);
-        Rectangle dstRawBounds = getResultBounds(transform, null, inputs);
-        Rectangle dstBounds = new Rectangle(dstRawBounds);
-        dstBounds.intersectWith(outputClip);
+        setRenderState(lcrstate);
+        Rectangle inputBounds = inputs[0].getTransformedBounds(null);
+        // If the non-VECTOR loops below could handle clipped output, then
+        // we would not need to call getPassResultBounds twice (RT-27406)
+        Rectangle dstRawBounds = lcrstate.getPassResultBounds(inputBounds, null);
+        Rectangle dstBounds = lcrstate.getPassResultBounds(inputBounds, outputClip);
         setDestBounds(dstBounds);
         int dstw = dstBounds.width;
         int dsth = dstBounds.height;
@@ -112,7 +74,7 @@ public class SSELinearConvolvePeer extends SSEEffectPeer implements LinearConvol
         Rectangle src0Bounds = inputs[0].getUntransformedBounds();
         BaseTransform src0Transform = inputs[0].getTransform();
         Rectangle src0NativeBounds = new Rectangle(0, 0, srcw, srch);
-        // Assert: ((FilterEffect) effect).operatesInUserSpace()...
+        // Assert: rstate.getEffectTransformSpace() == UserSpace
         setInputBounds(0, src0Bounds);
         setInputTransform(0, src0Transform);
         setInputNativeBounds(0, src0NativeBounds);
@@ -122,10 +84,10 @@ public class SSELinearConvolvePeer extends SSEEffectPeer implements LinearConvol
         int dstscan = dst.getScanlineStride();
         int[] dstPixels = dst.getPixelArray();
 
-        int count = getCount();
-        FloatBuffer weights_buf = getWeights();
+        int count = lcrstate.getPassKernelSize();
+        FloatBuffer weights_buf = lcrstate.getPassWeights();
 
-        PassType type = getKernel().getPassType(getPass());
+        PassType type = lcrstate.getPassType();
         if (!src0Transform.isIdentity() ||
             !dstBounds.contains(dstRawBounds.x, dstRawBounds.y))
         {
@@ -175,7 +137,7 @@ public class SSELinearConvolvePeer extends SSEEffectPeer implements LinearConvol
                 dyrow = (srcRect[7] - srcRect[1]) * srch / dstBounds.height;
             }
 
-            float[] offset_arr = getOffset();
+            float[] offset_arr = lcrstate.getPassVector();
             float deltax = offset_arr[0] * srcw;
             float deltay = offset_arr[1] * srch;
             float offsetx = offset_arr[2] * srcw;
@@ -202,7 +164,7 @@ public class SSELinearConvolvePeer extends SSEEffectPeer implements LinearConvol
                      float deltax, float deltay,
                      float dxcol, float dycol, float dxrow, float dyrow);
 
-    /**
+    /*
      * In the nomenclature of the argument list for this method, "row" refers
      * to the coordinate which increments once for each new stream of single
      * axis data that we are blurring in a single pass.  And "col" refers to

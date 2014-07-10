@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -198,12 +198,18 @@ static inline jboolean glass_inputEvents_isAlpha(int javaKeyCode) {
 }
 
 jboolean glass_inputEvents_checkForShift(int keyCode) {
-    if (shiftDown || (capsOn && glass_inputEvents_isAlpha(keyCode))) {
-        GLASS_LOG_FINER("Shift state is true");
-        return JNI_TRUE;
+    jboolean shifted = JNI_FALSE;
+    if (capsOn) {
+        if (glass_inputEvents_isAlpha(keyCode)) {
+            shifted = !shiftDown;
+        } else {
+            shifted = shiftDown;
+        }
+    } else {
+        shifted = shiftDown;
     }
-    GLASS_LOG_FINER("Shift state is false");
-    return JNI_FALSE;
+    GLASS_LOG_FINER("Shift state is %i", (int) shifted);
+    return shifted;
 }
 
 void glass_inputEvents_updateKeyModifiers(int key, int eventType) {

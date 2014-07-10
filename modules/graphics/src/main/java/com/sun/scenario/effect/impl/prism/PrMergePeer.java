@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,6 +34,7 @@ import com.sun.scenario.effect.impl.Renderer;
 import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.prism.Graphics;
+import com.sun.scenario.effect.impl.state.RenderState;
 
 public class PrMergePeer extends EffectPeer {
 
@@ -43,6 +44,7 @@ public class PrMergePeer extends EffectPeer {
 
     @Override
     public ImageData filter(Effect effect,
+                            RenderState rstate,
                             BaseTransform transform,
                             Rectangle outputClip,
                             ImageData... inputs)

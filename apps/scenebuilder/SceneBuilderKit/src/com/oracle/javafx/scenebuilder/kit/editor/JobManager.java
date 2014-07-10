@@ -33,6 +33,7 @@ package com.oracle.javafx.scenebuilder.kit.editor;
 
 import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import javafx.beans.property.ReadOnlyIntegerProperty;
 import javafx.beans.property.SimpleIntegerProperty;
@@ -55,6 +56,15 @@ public class JobManager {
         assert undoStackMaxSize >= 1;
         this.editorController = editorController;
         this.undoStackMaxSize = undoStackMaxSize;
+    }
+    
+    
+    public List<Job> getUndoStack() {
+        return Collections.unmodifiableList(undoStack);
+    }
+    
+    public List<Job> getRedoStack() {
+        return Collections.unmodifiableList(redoStack);
     }
     
     public void push(Job job) {

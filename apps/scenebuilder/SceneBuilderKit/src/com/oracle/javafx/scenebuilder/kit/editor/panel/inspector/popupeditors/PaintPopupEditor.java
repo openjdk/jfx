@@ -35,9 +35,10 @@ import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.ColorEncoder;
 import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.PaintPicker;
+
 import java.util.Set;
+
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.scene.Node;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.ImagePattern;
@@ -55,26 +56,20 @@ public class PaintPopupEditor extends PopupEditor {
     private final Rectangle graphic = new Rectangle(20, 10);
     private final EditorController editorController;
 
-    private final ChangeListener<Paint> paintChangeListener = new ChangeListener<Paint>() {
-        @Override
-        public void changed(ObservableValue<? extends Paint> ov, Paint oldValue, Paint newValue) {
-            // If live update, do not commit the value
-            if (paintPicker.isLiveUpdate() == true) {
-                userUpdateTransientValueProperty(newValue);
-                popupMb.setText(getPreviewString(newValue));
-            } else {
-                commitValue(newValue);
-            }
-            graphic.setFill(newValue);
+    private final ChangeListener<Paint> paintChangeListener = (ov, oldValue, newValue) -> {
+        // If live update, do not commit the value
+        if (paintPicker.isLiveUpdate() == true) {
+            userUpdateTransientValueProperty(newValue);
+            popupMb.setText(getPreviewString(newValue));
+        } else {
+            commitValue(newValue);
         }
+        graphic.setFill(newValue);
     };
 
-    private final ChangeListener<Boolean> liveUpdateListener = new ChangeListener<Boolean>() {
-        @Override
-        public void changed(ObservableValue<? extends Boolean> ov, Boolean oldValue, Boolean newValue) {
-            if (paintPicker.isLiveUpdate() == false) {
-                commitValue(paintPicker.getPaintProperty());
-            }
+    private final ChangeListener<Boolean> liveUpdateListener = (ov, oldValue, newValue) -> {
+        if (paintPicker.isLiveUpdate() == false) {
+            commitValue(paintPicker.getPaintProperty());
         }
     };
 
@@ -90,12 +85,7 @@ public class PaintPopupEditor extends PopupEditor {
     //
     @Override
     public void initializePopupContent() {
-        final PaintPicker.Delegate delegate = new PaintPicker.Delegate() {
-            @Override
-            public void handleError(String warningKey, Object... arguments) {
-                editorController.getMessageLog().logWarningMessage(warningKey, arguments);
-            }
-        };
+        final PaintPicker.Delegate delegate = (warningKey, arguments) -> editorController.getMessageLog().logWarningMessage(warningKey, arguments);
         paintPicker = new PaintPicker(delegate);
     }
 

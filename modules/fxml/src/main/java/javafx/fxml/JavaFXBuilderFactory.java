@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,7 +37,6 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.lang.reflect.Parameter;
 import java.net.URL;
 import java.util.AbstractMap;
 import java.util.ArrayList;
@@ -217,8 +216,7 @@ public final class JavaFXBuilderFactory implements BuilderFactory {
         Constructor constructors[] = ConstructorUtil.getConstructors(type);
         for (Constructor constructor : constructors) {
             Annotation[][] paramAnnotations = constructor.getParameterAnnotations();
-            Parameter[] params = constructor.getParameters();
-            for (int i = 0; i < params.length; i++) {
+            for (int i = 0; i < constructor.getParameterTypes().length; i++) {
                 for (Annotation annotation : paramAnnotations[i]) {
                     if (annotation instanceof NamedArg) {
                         return true;

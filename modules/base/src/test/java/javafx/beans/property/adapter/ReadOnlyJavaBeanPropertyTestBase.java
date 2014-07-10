@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -98,11 +98,8 @@ public abstract class ReadOnlyJavaBeanPropertyTestBase<T> {
     @Test
     public void testInvalidationListener() {
         final BooleanProperty fired = new SimpleBooleanProperty(false);
-        final InvalidationListener listener = new InvalidationListener() {
-            @Override
-            public void invalidated(Observable observable) {
-                fired.set(true);
-            }
+        final InvalidationListener listener = observable -> {
+            fired.set(true);
         };
 
         property.addListener(listener);
@@ -129,11 +126,8 @@ public abstract class ReadOnlyJavaBeanPropertyTestBase<T> {
     @Test
     public void testChangeListener() {
         final BooleanProperty fired = new SimpleBooleanProperty(false);
-        final ChangeListener<Object> listener = new ChangeListener<Object>() {
-            @Override
-            public void changed(ObservableValue<?> observable, Object oldValue, Object newValue) {
-                fired.set(true);
-            }
+        final ChangeListener<Object> listener = (observable, oldValue, newValue) -> {
+            fired.set(true);
         };
 
         property.addListener(listener);

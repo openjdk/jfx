@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -253,6 +253,11 @@ public final class Printer {
         double ptm = imgArea.getMinY();
         double prm = width - imgArea.getMaxX();
         double pbm = height - imgArea.getMaxY();
+        // fix for FP error
+        if (Math.abs(plm) < 0.01) plm = 0;
+        if (Math.abs(prm) < 0.01) prm = 0;
+        if (Math.abs(ptm) < 0.01) ptm = 0;
+        if (Math.abs(pbm) < 0.01) pbm = 0;
 
         switch (mType) {
         case DEFAULT:

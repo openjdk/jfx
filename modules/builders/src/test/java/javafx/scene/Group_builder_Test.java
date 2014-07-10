@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -45,7 +45,7 @@ public final class Group_builder_Test extends BuilderTestBase {
 
         cfg.addProperty("autoSizeChildren", false);
         cfg.addProperty("children", Node.class, Arrays.asList(new Rectangle()));
-        cfg.addProperty("impl_traversalEngine", new TraversalEngine(new Group(), true));
+//        cfg.addProperty("impl_traversalEngine", new TraversalEngine(new Group(), true));
         cfg.addProperty("stylesheets", String.class, Arrays.asList("test.css"));
 
         return Arrays.asList(new Object[] {

@@ -1,6 +1,28 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
  */
+
 package com.sun.javafx.webkit;
 
 import static com.sun.glass.ui.Clipboard.DRAG_IMAGE;
@@ -66,22 +88,16 @@ public final class UIClientImpl implements UIClient {
             final PopupFeatures pf =
                     new PopupFeatures(menu, status, toolbar, resizable);
             WebEngine popup = AccessController.doPrivileged(
-                    new PrivilegedAction<WebEngine>() {
-                        @Override public WebEngine run() {
-                            return w.getCreatePopupHandler().call(pf);
-                        }
-                    }, getAccessContext());
+                    (PrivilegedAction<WebEngine>) () -> w.getCreatePopupHandler().call(pf), getAccessContext());
             return Accessor.getPageFor(popup);
         }
         return null;
     }
 
     private void dispatchWebEvent(final EventHandler handler, final WebEvent ev) {
-        AccessController.doPrivileged(new PrivilegedAction<Void>() {
-            @Override public Void run() {
-                handler.handle(ev);
-                return null;
-            }
+        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+            handler.handle(ev);
+            return null;
         }, getAccessContext());
     }
 
@@ -148,11 +164,7 @@ public final class UIClientImpl implements UIClient {
         final WebEngine w = getWebEngine();
         if (w != null && w.getConfirmHandler() != null) {
             return AccessController.doPrivileged(
-                    new PrivilegedAction<Boolean>() {
-                        @Override public Boolean run() {
-                            return w.getConfirmHandler().call(text);
-                        }
-                    }, getAccessContext());
+                    (PrivilegedAction<Boolean>) () -> w.getConfirmHandler().call(text), getAccessContext());
         }
         return false;
     }
@@ -162,11 +174,7 @@ public final class UIClientImpl implements UIClient {
         if (w != null && w.getPromptHandler() != null) {
             final PromptData data = new PromptData(text, defaultValue);
             return AccessController.doPrivileged(
-                    new PrivilegedAction<String>() {
-                        @Override public String run() {
-                            return w.getPromptHandler().call(data);
-                        }
-                    }, getAccessContext());
+                    (PrivilegedAction<String>) () -> w.getPromptHandler().call(data), getAccessContext());
         }
         return "";
     }

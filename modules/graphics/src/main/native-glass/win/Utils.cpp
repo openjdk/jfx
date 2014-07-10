@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -56,7 +56,15 @@ jboolean CheckAndClearException(JNIEnv* env)
     env->ExceptionClear();
 
     jclass cls = env->FindClass("com/sun/glass/ui/Application");
+    if (env->ExceptionOccurred()) {
+        env->ExceptionClear();
+        return JNI_TRUE;
+    }
     env->CallStaticVoidMethod(cls, javaIDs.Application.reportExceptionMID, t);
+    if (env->ExceptionOccurred()) {
+        env->ExceptionClear();
+        return JNI_TRUE;
+    }
     env->DeleteLocalRef(cls);
 
     return JNI_TRUE;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,6 +33,7 @@ initializeFieldIds(jfieldID* dest, JNIEnv* env, jclass classHandle,
     while (fields->name != NULL) {
         *dest = (*env)->GetFieldID(env, classHandle, fields->name, 
                                    fields->signature);
+        checkAndClearException(env);
         if (*dest == NULL) {
             retVal = JNI_FALSE;
             break;
@@ -52,6 +53,7 @@ initializeStaticFieldIds(jfieldID* dest, JNIEnv* env, jclass classHandle,
     while (fields->name != NULL) {
         *dest = (*env)->GetStaticFieldID(env, classHandle, fields->name,
                                          fields->signature);
+        checkAndClearException(env);
         if (*dest == NULL) {
             retVal = JNI_FALSE;
             break;
@@ -65,12 +67,27 @@ initializeStaticFieldIds(jfieldID* dest, JNIEnv* env, jclass classHandle,
 
 void
 JNI_ThrowNew(JNIEnv* env, const char* throwable, const char* message) {
-    jclass throwableClass = (*env)->FindClass(env, throwable);
-    if (throwableClass == NULL) {
+    jclass throwableClass;
+    jint status;
+
+    throwableClass = (*env)->FindClass(env, throwable);
+    if ((*env)->ExceptionCheck(env) || throwableClass == NULL) {
         (*env)->FatalError(env, "Failed to load an exception class!");
+        return;
     }
 
-    if ((*env)->ThrowNew(env, throwableClass, message) != 0) {
+    status = (*env)->ThrowNew(env, throwableClass, message);
+    if ((*env)->ExceptionCheck(env) || status != 0) {
         (*env)->FatalError(env, "Failed to throw an exception!");
     }
 }
+
+jboolean
+checkAndClearException(JNIEnv *env) {
+    if (!(*env)->ExceptionCheck(env)) {
+        return JNI_FALSE;
+    }
+    (*env)->ExceptionClear(env);
+    return JNI_TRUE;
+}
+

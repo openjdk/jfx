@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,12 +33,7 @@ import java.security.PrivilegedAction;
 class EGLFBGLDrawable extends GLDrawable {
 
     private static final boolean transparentFramebuffer =
-            AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
-                @Override
-                public Boolean run() {
-                    return Boolean.getBoolean("com.sun.javafx.transparentFramebuffer");
-                }
-            });
+            AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("com.sun.javafx.transparentFramebuffer"));
 
     private static native long nCreateDrawable(long nativeWindow, long nativeCtxInfo);
     private static native long nGetDummyDrawable(long nativeCtxInfo);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013 Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -120,10 +120,8 @@ public class SamplePage extends StackPane implements Page {
      * @param updater a method that updates content for a given SampleInfo
      */
     void registerSampleInfoUpdater(final Callback<SampleInfo, Void> updater) {
-        sampleInfoProperty.addListener(new ChangeListener<SampleInfo>() {
-            public void changed(ObservableValue<? extends SampleInfo> ov, SampleInfo t, SampleInfo sampleInfo) {
-                updater.call(sampleInfo);
-            }
+        sampleInfoProperty.addListener((ObservableValue<? extends SampleInfo> ov, SampleInfo t, SampleInfo sampleInfo) -> {
+            updater.call(sampleInfo);
         });
         updater.call(sampleInfoProperty.get());
     }

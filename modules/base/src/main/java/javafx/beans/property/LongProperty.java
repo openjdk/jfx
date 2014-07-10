@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -62,7 +62,7 @@ public abstract class LongProperty extends ReadOnlyLongProperty implements
     @Override
     public void setValue(Number v) {
         if (v == null) {
-            Logging.getLogger().info("Attempt to set long property to null, using default value instead.", new NullPointerException());
+            Logging.getLogger().fine("Attempt to set long property to null, using default value instead.", new NullPointerException());
             set(0L);
         } else {
             set(v.longValue());
@@ -146,7 +146,7 @@ public abstract class LongProperty extends ReadOnlyLongProperty implements
         }
         return new LongPropertyBase() {
             {
-                BidirectionalBinding.bindNumber(property, this);
+                BidirectionalBinding.bindNumber(this, property);
             }
 
             @Override

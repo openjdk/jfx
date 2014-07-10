@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -489,6 +489,82 @@ public class VetoableObservableListTest {
         it.add("bar");
         it.previous();
         it.set("foobar");
+    }
+
+    @Test
+    public void testSubListCreatedOnChangeValid() {
+        final List<List<? extends String>> subLists = new ArrayList<>();
+
+        list.addListener((ListChangeListener<String>) c -> {
+            subLists.add(c.getList().subList(0, 1));
+        });
+
+        list.add("abc");
+        assertEquals(1, subLists.size());
+        subLists.get(0).size(); // Assert not throwing Exception
+        subLists.clear();
+
+        list.add(0, "abc");
+        assertEquals(1, subLists.size());
+        subLists.get(0).size(); // Assert not throwing Exception
+        subLists.clear();
+
+        list.addAll(0, Arrays.asList("abc", "bcd"));
+        assertEquals(1, subLists.size());
+        subLists.get(0).size(); // Assert not throwing Exception
+        subLists.clear();
+
+        list.addAll(Arrays.asList("abc", "bcd"));
+        assertEquals(1, subLists.size());
+        subLists.get(0).size(); // Assert not throwing Exception
+        subLists.clear();
+
+        list.remove(0);
+        assertEquals(1, subLists.size());
+        subLists.get(0).size(); // Assert not throwing Exception
+        subLists.clear();
+
+        list.remove("abc");
+        assertEquals(1, subLists.size());
+        subLists.get(0).size(); // Assert not throwing Exception
+        subLists.clear();
+
+        list.removeAll("abc");
+        assertEquals(1, subLists.size());
+        subLists.get(0).size(); // Assert not throwing Exception
+        subLists.clear();
+
+        list.retainAll("bcd");
+        assertEquals(1, subLists.size());
+        subLists.get(0).size(); // Assert not throwing Exception
+        subLists.clear();
+
+
+        list.setAll("foo", "bar", "ham", "eggs");
+        subLists.clear();
+
+        list.subList(0, 2).add("a");
+        assertEquals(1, subLists.size());
+        subLists.get(0).size(); // Assert not throwing Exception
+        subLists.clear();
+
+        list.subList(0, 2).remove(0);
+        assertEquals(1, subLists.size());
+        subLists.get(0).size(); // Assert not throwing Exception
+        subLists.clear();
+
+        Iterator<String> it = list.iterator();
+        it.next();
+        it.remove();
+        assertEquals(1, subLists.size());
+        subLists.get(0).size(); // Assert not throwing Exception
+        subLists.clear();
+
+        list.listIterator().add("abc");
+        assertEquals(1, subLists.size());
+        subLists.get(0).size(); // Assert not throwing Exception
+        subLists.clear();
+
     }
 
 }

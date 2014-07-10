@@ -101,12 +101,7 @@ public class Rectangle2DPopupEditor extends PopupEditor {
         doubleFields[2] = widthDf;
         doubleFields[3] = heightDf;
         for (DoubleField doubleField : doubleFields) {
-            EventHandler<ActionEvent> valueListener = new EventHandler<ActionEvent>() {
-                @Override
-                public void handle(ActionEvent event) {
-                    commitValue(getValue());
-                }
-            };
+            EventHandler<ActionEvent> valueListener = event -> commitValue(getValue());
             setNumericEditorBehavior(this, doubleField, valueListener, false);
         }
     }

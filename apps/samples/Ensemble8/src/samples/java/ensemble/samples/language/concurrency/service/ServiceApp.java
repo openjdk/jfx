@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013 Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -70,12 +70,9 @@ public class ServiceApp extends Application {
         vbox.setPadding(new Insets(12));
         TableView tableView = new TableView();
         Button button = new Button("Refresh");
-        button.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent t) {
-                service.restart();
-            }
-        });
+        button.setOnAction((ActionEvent t) -> {
+            service.restart();
+       });
         vbox.setPrefHeight(160);
         vbox.getChildren().addAll(tableView, button);
 

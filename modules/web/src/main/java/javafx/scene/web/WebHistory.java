@@ -1,6 +1,28 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
  */
+
 package javafx.scene.web;
 
 import com.sun.webkit.BackForwardList;
@@ -64,20 +86,17 @@ public final class WebHistory {
             this.lastVisitedDate.set(entry.getLastVisitedDate());
             this.peer = entry;
             
-            entry.addChangeListener(new WCChangeListener() {
-                @Override
-                public void stateChanged(WCChangeEvent e) {
-                    String _title = entry.getTitle();
-                    // null title is acceptable
-                    if (_title == null || !_title.equals(getTitle())) {
-                        title.set(_title);
-                    }
-                    
-                    Date _date = entry.getLastVisitedDate();
-                    // null date is not acceptable
-                    if (_date != null && !_date.equals(getLastVisitedDate())) {
-                        lastVisitedDate.set(_date);
-                    }
+            entry.addChangeListener(e -> {
+                String _title = entry.getTitle();
+                // null title is acceptable
+                if (_title == null || !_title.equals(getTitle())) {
+                    title.set(_title);
+                }
+
+                Date _date = entry.getLastVisitedDate();
+                // null date is not acceptable
+                if (_date != null && !_date.equals(getLastVisitedDate())) {
+                    lastVisitedDate.set(_date);
                 }
             });
         }
@@ -139,58 +158,55 @@ public final class WebHistory {
         
         setMaxSize(getMaxSize()); // init default
         
-        this.bfl.addChangeListener(new WCChangeListener() {
-            @Override
-            public void stateChanged(WCChangeEvent e) {
-                // 1. Size has increased
-                //    - one new entry is appended.
-                //    - currentIndex is set to the new entry.
-                if (bfl.size() > list.size()) {
-                    assert (bfl.size() == list.size() + 1);
-                    list.add(new Entry(bfl.getCurrentEntry()));
-                    
-                    WebHistory.this.setCurrentIndex(list.size() - 1);
+        this.bfl.addChangeListener(e -> {
+            // 1. Size has increased
+            //    - one new entry is appended.
+            //    - currentIndex is set to the new entry.
+            if (bfl.size() > list.size()) {
+                assert (bfl.size() == list.size() + 1);
+                list.add(new Entry(bfl.getCurrentEntry()));
+
+                WebHistory.this.setCurrentIndex(list.size() - 1);
+                return;
+            }
+
+            // 2. Size hasn't changed
+            if (bfl.size() == list.size()) {
+                if (list.size() == 0) {
+                    return; // no changes
+                }
+                assert (list.size() > 0);
+                BackForwardList.Entry last = bfl.get(list.size() - 1);
+                BackForwardList.Entry first = bfl.get(0);
+
+                // - currentIndex may change
+                if (list.get(list.size() - 1).isPeer(last)) {
+                    WebHistory.this.setCurrentIndex(bfl.getCurrentIndex());
+                    return;
+
+                // - first entry is removed.
+                // - one new entry is appended.
+                // - currentIndex is set to the new entry.
+                } else if (!list.get(0).isPeer(first)) {
+                    list.remove(0);
+                    list.add(new Entry(last));
+                    WebHistory.this.setCurrentIndex(bfl.getCurrentIndex());
                     return;
                 }
-                
-                // 2. Size hasn't changed
-                if (bfl.size() == list.size()) {
-                    if (list.size() == 0) {
-                        return; // no changes
-                    }                    
-                    assert (list.size() > 0);
-                    BackForwardList.Entry last = bfl.get(list.size() - 1);
-                    BackForwardList.Entry first = bfl.get(0);
-                    
-                    // - currentIndex may change
-                    if (list.get(list.size() - 1).isPeer(last)) {
-                        WebHistory.this.setCurrentIndex(bfl.getCurrentIndex());
-                        return;
-                    
-                    // - first entry is removed.
-                    // - one new entry is appended.
-                    // - currentIndex is set to the new entry.
-                    } else if (!list.get(0).isPeer(first)) {
-                        list.remove(0);
-                        list.add(new Entry(last));
-                        WebHistory.this.setCurrentIndex(bfl.getCurrentIndex());                        
-                        return;
-                    }
-                }
-                                
-                // 3. Size has decreased or hasn't changed (due to maxSize or navigation)
-                //    - one or more entries are popped.
-                //    - one new entry may be appended.
-                //    - currentIndex may be set to the new entry.
-                assert (bfl.size() <= list.size());                
-                list.remove(bfl.size(), list.size()); // no-op if equals
-                int lastIndex = list.size() - 1;
-                if (lastIndex >= 0 && !list.get(lastIndex).isPeer(bfl.get(lastIndex))) {
-                    list.remove(lastIndex);
-                    list.add(new Entry(bfl.get(lastIndex)));
-                }
-                WebHistory.this.setCurrentIndex(bfl.getCurrentIndex());
             }
+
+            // 3. Size has decreased or hasn't changed (due to maxSize or navigation)
+            //    - one or more entries are popped.
+            //    - one new entry may be appended.
+            //    - currentIndex may be set to the new entry.
+            assert (bfl.size() <= list.size());
+            list.remove(bfl.size(), list.size()); // no-op if equals
+            int lastIndex = list.size() - 1;
+            if (lastIndex >= 0 && !list.get(lastIndex).isPeer(bfl.get(lastIndex))) {
+                list.remove(lastIndex);
+                list.add(new Entry(bfl.get(lastIndex)));
+            }
+            WebHistory.this.setCurrentIndex(bfl.getCurrentIndex());
         });
     }
     

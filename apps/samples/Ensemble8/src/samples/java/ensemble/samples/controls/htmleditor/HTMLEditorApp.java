@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013, Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -94,12 +94,8 @@ public class HTMLEditorApp extends Application {
         scrollPane.setFitToWidth(true);
 
         Button showHTMLButton = new Button("Show the HTML below");
-        showHTMLButton.setOnAction(new EventHandler<ActionEvent>() {
-
-            @Override
-            public void handle(ActionEvent arg0) {
-                htmlLabel.setText(htmlEditor.getHtmlText());
-            }
+        showHTMLButton.setOnAction((ActionEvent arg0) -> {
+            htmlLabel.setText(htmlEditor.getHtmlText());
         });
 
         VBox vRoot = new VBox();

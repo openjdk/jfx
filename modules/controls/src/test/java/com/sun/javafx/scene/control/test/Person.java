@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,17 +24,19 @@
  */
 package com.sun.javafx.scene.control.test;
 
+import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ReadOnlyIntegerProperty;
 import javafx.beans.property.ReadOnlyIntegerWrapper;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 
 public class Person {
+    private final SimpleBooleanProperty invited;
     private final SimpleStringProperty firstName;
     private final SimpleStringProperty lastName;
     private final SimpleStringProperty email;
-//    private final SimpleIntegerProperty age;
     private final ReadOnlyIntegerWrapper age;
     
     public Person(String fName, int age) {
@@ -50,6 +52,15 @@ public class Person {
         this.lastName = new SimpleStringProperty(lName);
         this.email = new SimpleStringProperty(email);
         this.age = new ReadOnlyIntegerWrapper(age);
+        this.invited = null;
+    }
+
+    public Person(String fName, String lName, String email, boolean invited) {
+        this.firstName = new SimpleStringProperty(fName);
+        this.lastName = new SimpleStringProperty(lName);
+        this.email = new SimpleStringProperty(email);
+        this.age = null;
+        this.invited = new SimpleBooleanProperty(invited);
     }
 
     public String getFirstName() {
@@ -90,6 +101,9 @@ public class Person {
     
     public final int getAge() {return age.get();}
     public ReadOnlyIntegerProperty ageProperty() {return age.getReadOnlyProperty();}
+
+    public final boolean isInvited() { return invited.get(); }
+    public BooleanProperty invitedProperty() { return invited; }
 
     @Override public String toString() {
         return getFirstName() + " " + getLastName();

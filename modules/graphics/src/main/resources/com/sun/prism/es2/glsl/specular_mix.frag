@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,8 +32,8 @@ uniform sampler2D specularMap;
 vec4 apply_specular()
 {
     vec3 tSpec = texture2D(specularMap, oTexCoords).rgb;
-    tSpec *= specularColor.rgb;
     float sPower = specularColor.a;
     sPower *= dot(tSpec, vec3(0.299, 0.587, 0.114)); // Rec. 601 luma conversion
+    tSpec *= specularColor.rgb;
     return vec4(tSpec, sPower);
 }

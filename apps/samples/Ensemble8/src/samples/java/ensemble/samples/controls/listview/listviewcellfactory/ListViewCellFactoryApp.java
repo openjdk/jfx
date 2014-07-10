@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013 Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -65,11 +65,7 @@ public class ListViewCellFactoryApp extends Application {
 
         ));
         
-        listView.setCellFactory(new Callback<ListView<java.lang.Number>, ListCell<java.lang.Number>>() {
-            @Override public ListCell<Number> call(ListView<java.lang.Number> list) {
-                return new MoneyFormatCell();
-            }
-        });        
+        listView.setCellFactory((ListView<java.lang.Number> list) -> new MoneyFormatCell());        
         
         listView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
         return listView;

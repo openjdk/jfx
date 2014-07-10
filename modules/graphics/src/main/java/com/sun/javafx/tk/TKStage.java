@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,9 +24,6 @@
  */
 
 package com.sun.javafx.tk;
-
-import com.sun.javafx.accessible.providers.AccessibleProvider;
-import com.sun.javafx.accessible.providers.AccessibleStageProvider;
 
 import java.security.AccessControlContext;
 import javafx.scene.input.KeyCode;
@@ -105,6 +102,8 @@ public interface TKStage {
     public void setIconified(boolean iconified);
 
     public void setMaximized(boolean maximized);
+    
+    public void setAlwaysOnTop(boolean alwaysOnTop);
 
     public void setResizable(boolean resizable);
 
@@ -207,61 +206,6 @@ public interface TKStage {
     void releaseInput();
 
     public void setRTL(boolean b);
-
-    /**
-     * Accessibility methods
-     */
-    
-    /**
-     * Notify accessibility initialization completion to AT
-     * 
-     * @param ac    the FX accessible root/stage node.
-     */
-    public void setAccessibilityInitIsComplete(Object ac) ;
-
-    /**
-     * Create accessible Glass object corresponding to stage
-     * 
-     * @param ac    the FX accessible root/stage node.
-     * 
-     * @return the Glass AccessibleRoot object.
-     */
-    public Object accessibleCreateStageProvider(AccessibleStageProvider ac) ;
-
-    /**
-     * Create the Glass accessible object corresponding to controls
-     * 
-     * @param ac    the FX accessible node
-     * 
-     * @return the Glass accessible Object
-     */
-    public Object accessibleCreateBasicProvider(AccessibleProvider ac) ;
-
-    /**
-     * Delete accessible native object corresponding to controls
-     * 
-     * @param ac    the FX accessible node
-     */
-    public void accessibleDestroyBasicProvider(Object nativeAcc) ;
-
-    /**
-     * Fire accessible event
-     * 
-     * @param eventID   identifies the event.
-     */
-    public void accessibleFireEvent(Object nativeAcc, int eventID);
-    
-    /** Fire accessible property change event
-     * 
-     * @param propertyId    identifies the property
-     * @param oldProperty   the old value of the property
-     * @param newProperty   the new value of the property
-     */
-    public void accessibleFirePropertyChange(Object nativeAcc, int propertyId, int oldProperty,
-                                             int newProperty );
-    public void accessibleFirePropertyChange(Object nativeAcc, int propertyId, boolean oldProperty,
-                                             boolean newProperty );    
-
 
     public static final KeyCodeCombination defaultFullScreenExitKeycombo =
             new KeyCodeCombination(KeyCode.ESCAPE,

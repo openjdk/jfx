@@ -32,17 +32,14 @@
 package com.oracle.javafx.scenebuilder.kit.util.control.paintpicker;
 
 import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.PaintPicker.Mode;
-import static com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.PaintPicker.Mode.COLOR;
-import static com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.PaintPicker.Mode.LINEAR;
-import static com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.PaintPicker.Mode.RADIAL;
 import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.colorpicker.ColorPicker;
 import com.oracle.javafx.scenebuilder.kit.util.control.paintpicker.gradientpicker.GradientPicker;
+
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.ToggleButton;
@@ -185,13 +182,9 @@ public class PaintPickerController {
         setPaintProperty(DEFAULT_COLOR);
 
         // Resize the window so it matches the selected editor size
-        root_vbox.heightProperty().addListener(new ChangeListener<Number>() {
-
-            @Override
-            public void changed(ObservableValue<? extends Number> ov, Number t, Number t1) {
-                final Window window = root_vbox.getScene().getWindow();
-                window.sizeToScene();
-            }
+        root_vbox.heightProperty().addListener((ChangeListener<Number>) (ov, t, t1) -> {
+            final Window window = root_vbox.getScene().getWindow();
+            window.sizeToScene();
         });
         root_vbox.getChildren().add(colorPicker);
     }

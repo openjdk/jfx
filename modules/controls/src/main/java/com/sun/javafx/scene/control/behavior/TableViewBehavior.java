@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,7 +26,6 @@
 package com.sun.javafx.scene.control.behavior;
 
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WeakChangeListener;
 import javafx.collections.ObservableList;
 import javafx.scene.control.TableColumn;
@@ -48,20 +47,15 @@ public class TableViewBehavior<T> extends TableViewBehaviorBase<TableView<T>, T,
      *                                                                        *  
      *************************************************************************/
     
-    private final ChangeListener<TableViewSelectionModel<T>> selectionModelListener = 
-            new ChangeListener<TableViewSelectionModel<T>>() {
-        @Override
-        public void changed(ObservableValue<? extends TableViewSelectionModel<T>> observable, 
-                    TableViewSelectionModel<T> oldValue, 
-                    TableViewSelectionModel<T> newValue) {
-            if (oldValue != null) {
-                oldValue.getSelectedCells().removeListener(weakSelectedCellsListener);
-            }
-            if (newValue != null) {
-                newValue.getSelectedCells().addListener(weakSelectedCellsListener);
-            }
-        }
-    };
+    private final ChangeListener<TableViewSelectionModel<T>> selectionModelListener =
+            (observable, oldValue, newValue) -> {
+                if (oldValue != null) {
+                    oldValue.getSelectedCells().removeListener(weakSelectedCellsListener);
+                }
+                if (newValue != null) {
+                    newValue.getSelectedCells().addListener(weakSelectedCellsListener);
+                }
+            };
     
     private final WeakChangeListener<TableViewSelectionModel<T>> weakSelectionModelListener = 
             new WeakChangeListener<TableViewSelectionModel<T>>(selectionModelListener);

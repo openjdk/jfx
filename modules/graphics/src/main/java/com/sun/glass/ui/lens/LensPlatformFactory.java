@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,13 +31,10 @@ import com.sun.glass.ui.MenuBar;
 import com.sun.glass.ui.MenuItem;
 import com.sun.glass.ui.PlatformFactory;
 import com.sun.glass.ui.Window;
-import com.sun.glass.ui.accessible.AccessibleBaseProvider;
-import com.sun.glass.ui.accessible.AccessibleRoot;
 import com.sun.glass.ui.delegate.ClipboardDelegate;
 import com.sun.glass.ui.delegate.MenuBarDelegate;
 import com.sun.glass.ui.delegate.MenuDelegate;
 import com.sun.glass.ui.delegate.MenuItemDelegate;
-import com.sun.javafx.accessible.providers.AccessibleProvider;
 
 public final class LensPlatformFactory extends PlatformFactory {
 
@@ -61,13 +58,4 @@ public final class LensPlatformFactory extends PlatformFactory {
         return new LensClipboardDelegate();
     }
 
-    @Override
-    public AccessibleRoot createAccessibleRoot(Object node, Window window) {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public AccessibleBaseProvider createAccessibleProvider(Object node) {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013 Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -56,18 +56,12 @@ public class SearchBox extends Region {
         clearButton = new Button();
         clearButton.setVisible(false);
         getChildren().addAll(textBox, clearButton);
-        clearButton.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent actionEvent) {
-                textBox.setText("");
-                textBox.requestFocus();
-            }
+        clearButton.setOnAction((ActionEvent actionEvent) -> {
+            textBox.setText("");
+            textBox.requestFocus();
         });
-        textBox.textProperty().addListener(new ChangeListener<String>() {
-            @Override
-            public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue) {
-                clearButton.setVisible(textBox.getText().length() != 0);
-            }
+        textBox.textProperty().addListener((ObservableValue<? extends String> observable, String oldValue, String newValue) -> {
+            clearButton.setVisible(textBox.getText().length() != 0);
         });
     }
 

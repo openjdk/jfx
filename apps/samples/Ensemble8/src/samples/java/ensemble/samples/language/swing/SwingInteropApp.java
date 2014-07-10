@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013 Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -64,11 +64,8 @@ public class SwingInteropApp extends Application {
 
     public Parent createContent() {
         button.setPrefSize(180, 45);
-        button.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent t) {
-                service.restart();
-            }
+        button.setOnAction((ActionEvent t) -> {
+            service.restart();
         });
         button.disableProperty().bind(service.bp);
         return button;
@@ -76,10 +73,6 @@ public class SwingInteropApp extends Application {
 
     @Override
     public void stop() {
-        Process proc = service.procObj.getValue();
-        if (proc != null) {
-            proc.destroy();
-        }
         if (service.isRunning()) {
             service.cancel();
         }

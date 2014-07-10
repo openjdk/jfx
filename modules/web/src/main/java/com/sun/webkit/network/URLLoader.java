@@ -1,6 +1,28 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
  */
+
 package com.sun.webkit.network;
 
 import com.sun.webkit.Invoker;
@@ -101,12 +123,9 @@ final class URLLoader implements Runnable {
     @Override
     public void run() {
         // Run the loader in the page's access control context
-        AccessController.doPrivileged(new PrivilegedAction<Void>() {
-            @Override
-            public Void run() {
-                doRun();
-                return null;
-            }
+        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+            doRun();
+            return null;
         }, webPage.getAccessControlContext());
     }
 
@@ -590,12 +609,9 @@ final class URLLoader implements Runnable {
     private void didSendData(final long totalBytesSent,
                              final long totalBytesToBeSent)
     {
-        callBack(new Runnable() {
-            @Override
-            public void run() {
-                if (!canceled) {
-                    notifyDidSendData(totalBytesSent, totalBytesToBeSent);
-                }
+        callBack(() -> {
+            if (!canceled) {
+                notifyDidSendData(totalBytesSent, totalBytesToBeSent);
             }
         });
     }
@@ -628,28 +644,25 @@ final class URLLoader implements Runnable {
         final String adjustedUrl = adjustUrlForWebKit(url);
         final CountDownLatch latch =
                 asynchronous ? new CountDownLatch(1) : null;
-        callBack(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    if (!canceled) {
-                        boolean keepGoing = notifyWillSendRequest(
-                                adjustedNewUrl,
-                                newMethod,
-                                status,
-                                contentType,
-                                contentEncoding,
-                                contentLength,
-                                responseHeaders,
-                                adjustedUrl);
-                        if (!keepGoing) {
-                            fwkCancel();
-                        }
+        callBack(() -> {
+            try {
+                if (!canceled) {
+                    boolean keepGoing = notifyWillSendRequest(
+                            adjustedNewUrl,
+                            newMethod,
+                            status,
+                            contentType,
+                            contentEncoding,
+                            contentLength,
+                            responseHeaders,
+                            adjustedUrl);
+                    if (!keepGoing) {
+                        fwkCancel();
                     }
-                } finally {
-                    if (latch != null) {
-                        latch.countDown();
-                    }
+                }
+            } finally {
+                if (latch != null) {
+                    latch.countDown();
                 }
             }
         });
@@ -711,18 +724,15 @@ final class URLLoader implements Runnable {
         final long contentLength = extractContentLength(c);
         final String responseHeaders = extractHeaders(c);
         final String adjustedUrl = adjustUrlForWebKit(url);
-        callBack(new Runnable() {
-            @Override
-            public void run() {
-                if (!canceled) {
-                    notifyDidReceiveResponse(
-                            status,
-                            contentType,
-                            contentEncoding,
-                            contentLength,
-                            responseHeaders,
-                            adjustedUrl);
-                }
+        callBack(() -> {
+            if (!canceled) {
+                notifyDidReceiveResponse(
+                        status,
+                        contentType,
+                        contentEncoding,
+                        contentLength,
+                        responseHeaders,
+                        adjustedUrl);
             }
         });
     }
@@ -764,18 +774,15 @@ final class URLLoader implements Runnable {
     private void didReceiveData(final ByteBuffer byteBuffer,
                                 final ByteBufferAllocator allocator)
     {
-        callBack(new Runnable() {
-            @Override
-            public void run() {
-                if (!canceled) {
-                    notifyDidReceiveData(
-                            byteBuffer,
-                            byteBuffer.position(),
-                            byteBuffer.remaining());
-                }
-                byteBuffer.clear();
-                allocator.release(byteBuffer);
+        callBack(() -> {
+            if (!canceled) {
+                notifyDidReceiveData(
+                        byteBuffer,
+                        byteBuffer.position(),
+                        byteBuffer.remaining());
             }
+            byteBuffer.clear();
+            allocator.release(byteBuffer);
         });
     }
 
@@ -798,12 +805,9 @@ final class URLLoader implements Runnable {
     }
 
     private void didFinishLoading() {
-        callBack(new Runnable() {
-            @Override
-            public void run() {
-                if (!canceled) {
-                    notifyDidFinishLoading();
-                }
+        callBack(() -> {
+            if (!canceled) {
+                notifyDidFinishLoading();
             }
         });
     }
@@ -817,12 +821,9 @@ final class URLLoader implements Runnable {
 
     private void didFail(final int errorCode, final String message) {
         final String adjustedUrl = adjustUrlForWebKit(url);
-        callBack(new Runnable() {
-            @Override
-            public void run() {
-                if (!canceled) {
-                    notifyDidFail(errorCode, adjustedUrl, message);
-                }
+        callBack(() -> {
+            if (!canceled) {
+                notifyDidFail(errorCode, adjustedUrl, message);
             }
         });
     }

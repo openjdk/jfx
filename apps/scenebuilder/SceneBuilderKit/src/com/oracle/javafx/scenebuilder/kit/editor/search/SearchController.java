@@ -33,15 +33,13 @@ package com.oracle.javafx.scenebuilder.kit.editor.search;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.util.AbstractFxmlController;
+
 import javafx.beans.property.StringProperty;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
-import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.scene.control.TextField;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.StackPane;
 
 /**
@@ -78,36 +76,22 @@ public class SearchController extends AbstractFxmlController {
         // For SQE tests
         searchField.setId("Search Text"); //NOI18N
 
-        searchField.textProperty().addListener(new ChangeListener<String>() {
-
-            @Override
-            public void changed(ObservableValue<? extends String> ov, String oldStr, String newStr) {
-                if (newStr.isEmpty()) {
-                    searchIcon.getStyleClass().clear();
-                    searchIcon.getStyleClass().add("search-magnifying-glass"); //NOI18N
-                } else {
-                    searchIcon.getStyleClass().clear();
-                    searchIcon.getStyleClass().add("search-clear"); //NOI18N
-                }
+        searchField.textProperty().addListener((ChangeListener<String>) (ov, oldStr, newStr) -> {
+            if (newStr.isEmpty()) {
+                searchIcon.getStyleClass().clear();
+                searchIcon.getStyleClass().add("search-magnifying-glass"); //NOI18N
+            } else {
+                searchIcon.getStyleClass().clear();
+                searchIcon.getStyleClass().add("search-clear"); //NOI18N
             }
         });
         
-        searchField.addEventHandler(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
-
-            @Override
-            public void handle(KeyEvent event) {
-                if (event.getCode() == KeyCode.ESCAPE) {
-                    searchField.clear();
-                }
-            }
-        });
-        
-        searchIcon.setOnMouseClicked(new EventHandler<MouseEvent>() {
-
-            @Override
-            public void handle(MouseEvent t) {
+        searchField.addEventHandler(KeyEvent.KEY_PRESSED, event -> {
+            if (event.getCode() == KeyCode.ESCAPE) {
                 searchField.clear();
             }
         });
+        
+        searchIcon.setOnMouseClicked(t -> searchField.clear());
     }
 }

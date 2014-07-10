@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -120,17 +120,15 @@ class SceneState extends PresentableState {
      * @param uploadCount - the number of uploads (can be null)
      */
     public void uploadPixels(final Pixels pixels, final AtomicInteger uploadCount) {
-        Application.invokeLater(new Runnable() {
-            @Override public void run() {
-                if (isValid()) {
-                    SceneState.super.uploadPixels(pixels, uploadCount);
-                } else {
-                    if (uploadCount != null) {
-                        uploadCount.decrementAndGet();
-                    }
+        Application.invokeLater(() -> {
+            if (isValid()) {
+                SceneState.super.uploadPixels(pixels, uploadCount);
+            } else {
+                if (uploadCount != null) {
+                    uploadCount.decrementAndGet();
                 }
-           }
-        });
+            }
+       });
     }
 
     Color getClearColor() {

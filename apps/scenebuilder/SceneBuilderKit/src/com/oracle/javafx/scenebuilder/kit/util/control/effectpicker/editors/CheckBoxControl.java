@@ -32,13 +32,14 @@
 package com.oracle.javafx.scenebuilder.kit.util.control.effectpicker.editors;
 
 import com.oracle.javafx.scenebuilder.kit.util.control.effectpicker.EffectPickerController;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -90,15 +91,11 @@ public class CheckBoxControl extends GridPane {
 
         editor_label.setText(label);
         editor_checkbox.setSelected(initValue);
-        editor_checkbox.selectedProperty().addListener(new ChangeListener<Boolean>() {
-
-            @Override
-            public void changed(ObservableValue<? extends Boolean> ov, Boolean t, Boolean t1) {
-                // First update the model
-                setValue(t1);
-                // Then notify the controller a change occured
-                effectPickerController.incrementRevision();
-            }
+        editor_checkbox.selectedProperty().addListener((ChangeListener<Boolean>) (ov, t, t1) -> {
+            // First update the model
+            setValue(t1);
+            // Then notify the controller a change occured
+            effectPickerController.incrementRevision();
         });
 
         setValue(initValue);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,7 +28,6 @@ package com.sun.javafx.scene.control.skin;
 import java.util.Locale;
 
 import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.scene.Node;
 import javafx.scene.paint.Color;
 
@@ -48,10 +47,8 @@ class WebColorFieldSkin extends InputFieldSkin {
         // Whenever the value changes on the control, we need to update the text
         // in the TextField. The only time this is not the case is when the update
         // to the control happened as a result of an update in the text textField.
-        control.valueProperty().addListener(integerFieldValueListener = new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                updateText();
-            }
+        control.valueProperty().addListener(integerFieldValueListener = observable -> {
+            updateText();
         });
     }
 

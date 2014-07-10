@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013 Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -96,22 +96,16 @@ public class Clock extends Parent {
         // wait till start of next second then start a timeline to call refreshClocks() every second
         delayTimeline = new Timeline();
         delayTimeline.getKeyFrames().add(
-                new KeyFrame(new Duration(1000 - (System.currentTimeMillis() % 1000)), new EventHandler<ActionEvent>() {            
-            @Override public void handle(ActionEvent event) {
-                if (secondTimeline != null) {
-                    secondTimeline.stop();
-                }
-                secondTimeline = new Timeline();
-                secondTimeline.setCycleCount(Timeline.INDEFINITE);
-                secondTimeline.getKeyFrames().add(
-                        new KeyFrame(Duration.seconds(1), new EventHandler<ActionEvent>() {
-                    
-                    @Override public void handle(ActionEvent event) {
-                        refreshClocks();
+                new KeyFrame(new Duration(1000 - (System.currentTimeMillis() % 1000)), (ActionEvent event) -> {
+                    if (secondTimeline != null) {
+                        secondTimeline.stop();
                     }
-                }));
-                secondTimeline.play();
-            }
+            secondTimeline = new Timeline();
+            secondTimeline.setCycleCount(Timeline.INDEFINITE);
+            secondTimeline.getKeyFrames().add(new KeyFrame(Duration.seconds(1), (ActionEvent event1) -> {
+                refreshClocks();
+            }));
+            secondTimeline.play();
         }));
         delayTimeline.play();
     }

@@ -1,6 +1,28 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
  */
+
 package javafx.scene.web;
 
 import javafx.scene.Scene;
@@ -13,10 +35,10 @@ import static org.junit.Assert.assertEquals;
 public class CSSTest extends TestBase {
 
     private void setStyle(final String style) {
-        submit(new Runnable() { public void run() {
+        submit(() -> {
             getView().setStyle(style);
             new Scene(getView()).snapshot(null);
-        }});
+        });
     }
 
 
@@ -29,17 +51,17 @@ public class CSSTest extends TestBase {
     }
 
     @Test public void testContextMenuEnabledManual() {
-        submit(new Runnable() { public void run() {
+        submit(() -> {
             getView().setContextMenuEnabled(false);
             testContextMenuEnabled(false);
-        }});
+        });
     }
 
     @Test public void testContextMenuEnabledCSS() {
         setStyle("-fx-context-menu-enabled: false");
-        submit(new Runnable() { public void run() {
+        submit(() -> {
             testContextMenuEnabled(false);
-        }});
+        });
     }
 
 
@@ -52,20 +74,16 @@ public class CSSTest extends TestBase {
     }
 
     @Test public void testZoomManual() {
-        submit(new Runnable() {
-            public void run() {
-                getView().setZoom(3);
-                testZoom(3);
-            }
+        submit(() -> {
+            getView().setZoom(3);
+            testZoom(3);
         });
     }
 
     @Test public void testZoomCSS() {
         setStyle("-fx-zoom: .3");
-        submit(new Runnable() {
-            public void run() {
-                testZoom(0.3);
-            }
+        submit(() -> {
+            testZoom(0.3);
         });
     }
 
@@ -79,17 +97,17 @@ public class CSSTest extends TestBase {
     }
 
     @Test public void testFontSmoothingTypeManual() {
-        submit(new Runnable() { public void run() {
+        submit(() -> {
             getView().setFontSmoothingType(FontSmoothingType.GRAY);
             testFontSmoothingType(FontSmoothingType.GRAY);
-        }});
+        });
     }
 
     @Test public void testFontSmoothingTypeCSS() {
         setStyle("-fx-font-smoothing-type: gray");
-        submit(new Runnable() { public void run() {
+        submit(() -> {
             testFontSmoothingType(FontSmoothingType.GRAY);
-        }});
+        });
     }
 
 
@@ -102,17 +120,17 @@ public class CSSTest extends TestBase {
     }
 
     @Test public void testFontScaleManual() {
-        submit(new Runnable() { public void run() {
+        submit(() -> {
             getView().setFontScale(2);
             testFontScale(2);
-        }});
+        });
     }
 
     @Test public void testFontScaleCSS() {
         setStyle("-fx-font-scale: .2");
-        submit(new Runnable() { public void run() {
+        submit(() -> {
             testFontScale(0.2);
-        }});
+        });
     }
 
 
@@ -125,17 +143,17 @@ public class CSSTest extends TestBase {
     }
 
     @Test public void testMinWidthManual() {
-        submit(new Runnable() { public void run() {
+        submit(() -> {
             getView().setMinWidth(2);
             testMinWidth(2);
-        }});
+        });
     }
 
     @Test public void testMinWidthCSS() {
         setStyle("-fx-min-width: 3px");
-        submit(new Runnable() { public void run() {
+        submit(() -> {
             testMinWidth(3);
-        }});
+        });
     }
 
 
@@ -148,17 +166,17 @@ public class CSSTest extends TestBase {
     }
 
     @Test public void testMinHeightManual() {
-        submit(new Runnable() { public void run() {
+        submit(() -> {
             getView().setMinHeight(2);
             testMinHeight(2);
-        }});
+        });
     }
 
     @Test public void testMinHeightCSS() {
         setStyle("-fx-min-height: 3px");
-        submit(new Runnable() { public void run() {
+        submit(() -> {
             testMinHeight(3);
-        }});
+        });
     }
 
 
@@ -171,17 +189,17 @@ public class CSSTest extends TestBase {
     }
 
     @Test public void testPrefWidthManual() {
-        submit(new Runnable() { public void run() {
+        submit(() -> {
             getView().setPrefWidth(2);
             testPrefWidth(2);
-        }});
+        });
     }
 
     @Test public void testPrefWidthCSS() {
         setStyle("-fx-pref-width: 3px");
-        submit(new Runnable() { public void run() {
+        submit(() -> {
             testPrefWidth(3);
-        }});
+        });
     }
 
 
@@ -194,17 +212,17 @@ public class CSSTest extends TestBase {
     }
 
     @Test public void testPrefHeightManual() {
-        submit(new Runnable() { public void run() {
+        submit(() -> {
             getView().setPrefHeight(2);
             testPrefHeight(2);
-        }});
+        });
     }
 
     @Test public void testPrefHeightCSS() {
         setStyle("-fx-pref-height: 3px");
-        submit(new Runnable() { public void run() {
+        submit(() -> {
             testPrefHeight(3);
-        }});
+        });
     }
 
 
@@ -217,17 +235,17 @@ public class CSSTest extends TestBase {
     }
 
     @Test public void testMaxWidthManual() {
-        submit(new Runnable() { public void run() {
+        submit(() -> {
             getView().setMaxWidth(2);
             testMaxWidth(2);
-        }});
+        });
     }
 
     @Test public void testMaxWidthCSS() {
         setStyle("-fx-max-width: 3px");
-        submit(new Runnable() { public void run() {
+        submit(() -> {
             testMaxWidth(3);
-        }});
+        });
     }
 
 
@@ -240,16 +258,16 @@ public class CSSTest extends TestBase {
     }
 
     @Test public void testMaxHeightManual() {
-        submit(new Runnable() { public void run() {
+        submit(() -> {
             getView().setMaxHeight(2);
             testMaxHeight(2);
-        }});
+        });
     }
 
     @Test public void testMaxHeightCSS() {
         setStyle("-fx-max-height: 3px");
-        submit(new Runnable() { public void run() {
+        submit(() -> {
             testMaxHeight(3);
-        }});
+        });
     }
 }

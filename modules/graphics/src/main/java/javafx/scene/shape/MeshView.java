@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -81,17 +81,12 @@ public class MeshView extends Shape3D {
                 
                 private Mesh old = null;
                 private final ChangeListener<Boolean> meshChangeListener =
-                        new ChangeListener<Boolean>() {
-                            
-                    @Override
-                    public void changed(ObservableValue<? extends Boolean> observable,
-                            Boolean oldValue, Boolean newValue) {
-                        if (newValue) {
-                            impl_markDirty(DirtyBits.MESH_GEOM);
-                            impl_geomChanged();
-                        }
-                    }
-                };
+                        (observable, oldValue, newValue) -> {
+                            if (newValue) {
+                                impl_markDirty(DirtyBits.MESH_GEOM);
+                                impl_geomChanged();
+                            }
+                        };
                 private final WeakChangeListener<Boolean> weakMeshChangeListener =
                         new WeakChangeListener(meshChangeListener);
 

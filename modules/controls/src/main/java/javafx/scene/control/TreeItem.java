@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -225,8 +225,8 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
     public static <T> EventType<TreeModificationEvent<T>> treeNotificationEvent() {
         return (EventType<TreeModificationEvent<T>>) TREE_NOTIFICATION_EVENT;
     }
-    private static final EventType TREE_NOTIFICATION_EVENT
-            = new EventType(Event.ANY, "TreeNotificationEvent");
+    private static final EventType<?> TREE_NOTIFICATION_EVENT
+            = new EventType<>(Event.ANY, "TreeNotificationEvent");
 
     /**
      * The general EventType used when the TreeItem receives a modification that
@@ -243,8 +243,8 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
     public static <T> EventType<TreeModificationEvent<T>> expandedItemCountChangeEvent() {
         return (EventType<TreeModificationEvent<T>>) EXPANDED_ITEM_COUNT_CHANGE_EVENT;
     }
-    private static final EventType EXPANDED_ITEM_COUNT_CHANGE_EVENT
-            = new EventType(treeNotificationEvent(), "ExpandedItemCountChangeEvent");
+    private static final EventType<?> EXPANDED_ITEM_COUNT_CHANGE_EVENT
+            = new EventType<>(treeNotificationEvent(), "ExpandedItemCountChangeEvent");
 
     /**
      * An EventType used when the TreeItem receives a modification to its
@@ -257,7 +257,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
         return (EventType<TreeModificationEvent<T>>) BRANCH_EXPANDED_EVENT;
     }
     private static final EventType<?> BRANCH_EXPANDED_EVENT
-            = new EventType(expandedItemCountChangeEvent(), "BranchExpandedEvent");
+            = new EventType<>(expandedItemCountChangeEvent(), "BranchExpandedEvent");
 
     /**
      * An EventType used when the TreeItem receives a modification to its
@@ -270,7 +270,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
         return (EventType<TreeModificationEvent<T>>) BRANCH_COLLAPSED_EVENT;
     }
     private static final EventType<?> BRANCH_COLLAPSED_EVENT
-            = new EventType(expandedItemCountChangeEvent(), "BranchCollapsedEvent");
+            = new EventType<>(expandedItemCountChangeEvent(), "BranchCollapsedEvent");
 
     /**
      * An EventType used when the TreeItem receives a direct modification to its
@@ -283,7 +283,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
         return (EventType<TreeModificationEvent<T>>) CHILDREN_MODIFICATION_EVENT;
     }
     private static final EventType<?> CHILDREN_MODIFICATION_EVENT
-            = new EventType(expandedItemCountChangeEvent(), "ChildrenModificationEvent");
+            = new EventType<>(expandedItemCountChangeEvent(), "ChildrenModificationEvent");
 
     /**
      * An EventType used when the TreeItem receives a modification to its
@@ -296,7 +296,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
         return (EventType<TreeModificationEvent<T>>) VALUE_CHANGED_EVENT;
     }
     private static final EventType<?> VALUE_CHANGED_EVENT
-            = new EventType(treeNotificationEvent(), "ValueChangedEvent");
+            = new EventType<>(treeNotificationEvent(), "ValueChangedEvent");
 
     /**
      * An EventType used when the TreeItem receives a modification to its
@@ -309,7 +309,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
         return (EventType<TreeModificationEvent<T>>) GRAPHIC_CHANGED_EVENT;
     }
     private static final EventType<?> GRAPHIC_CHANGED_EVENT
-            = new EventType(treeNotificationEvent(), "GraphicChangedEvent");
+            = new EventType<>(treeNotificationEvent(), "GraphicChangedEvent");
     
     
 
@@ -362,14 +362,16 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
      * Instance Variables                                                      *
      *                                                                         *
      **************************************************************************/
-    
+
+    private boolean ignoreSortUpdate = false;
+
     private boolean expandedDescendentCountDirty = true;
 
     // The ObservableList containing all children belonging to this TreeItem.
     // It is important that interactions with this list go directly into the
     // children property, rather than via getChildren(), as this may be 
     // a very expensive call.
-    private ObservableList<TreeItem<T>> children;
+    ObservableList<TreeItem<T>> children;
 
     // Made static based on findings of RT-18344 - EventHandlerManager is an
     // expensive class and should be reused amongst classes if at all possible.
@@ -405,12 +407,10 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
      **************************************************************************/
 
     // called whenever the contents of the children sequence changes
-    private ListChangeListener<TreeItem<T>> childrenListener = new ListChangeListener<TreeItem<T>>() {
-        @Override public void onChanged(Change<? extends TreeItem<T>> c) {
-            expandedDescendentCountDirty = true;
-            while (c.next()) {
-                updateChildren(c.getAddedSubList(), c.getRemoved());
-            }
+    private ListChangeListener<TreeItem<T>> childrenListener = c -> {
+        expandedDescendentCountDirty = true;
+        while (c.next()) {
+            updateChildren(c.getAddedSubList(), c.getRemoved());
         }
     };
 
@@ -634,8 +634,15 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
         // we need to check if this TreeItem needs to have its children sorted.
         // There are two different ways that this could be possible.
         if (children.isEmpty()) return children;
-        
-        checkSortState();
+
+        // checkSortState should in almost all instances be called, but there
+        // are situations where checking the sort state will result in
+        // unwanted permutation events being fired (if a sort is applied). To
+        // avoid this (which resolves RT-37593), we set the ignoreSortUpdate
+        // to true (and of course, we're careful to set it back to false again)
+        if (!ignoreSortUpdate) {
+            checkSortState();
+        }
         
         return children;
     }
@@ -812,7 +819,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
         // if we're at the root node, we'll fire an event so that the control
         // can update its display
         if (getParent() == null) {
-            TreeModificationEvent e = new TreeModificationEvent<T>(TreeItem.childrenModificationEvent(), this);
+            TreeModificationEvent<T> e = new TreeModificationEvent<T>(TreeItem.childrenModificationEvent(), this);
             e.wasPermutated = true;
             fireEvent(e);
         }
@@ -877,17 +884,19 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
         }
         return expandedDescendentCount;
     }
-    
+
     private void updateExpandedDescendentCount(boolean reset) {
         previousExpandedDescendentCount = expandedDescendentCount;
         expandedDescendentCount = 1;
-        
+
+        ignoreSortUpdate = true;
         if (!isLeaf() && isExpanded()) {
             for (TreeItem<T> child : getChildren()) {
                 if (child == null) continue;
                 expandedDescendentCount += child.isExpanded() ? child.getExpandedDescendentCount(reset) : 1;
             }
         }
+        ignoreSortUpdate = false;
     }
 
     private void updateChildren(List<? extends TreeItem<T>> added, List<? extends TreeItem<T>> removed) {
@@ -1038,6 +1047,10 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
             this.removed = removed;
             this.wasExpanded = false;
             this.wasCollapsed = false;
+
+            this.wasPermutated = added != null && removed != null &&
+                                 added.size() == removed.size() &&
+                                 added.containsAll(removed);
         }
 
         /**

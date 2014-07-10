@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,12 +25,11 @@
 
 package com.sun.javafx.scene.control.skin;
 
+import com.sun.javafx.scene.control.behavior.ToggleButtonBehavior;
 import javafx.scene.control.RadioButton;
 import javafx.scene.layout.StackPane;
 
-import com.sun.javafx.scene.control.behavior.ButtonBehavior;
-
-public class RadioButtonSkin extends LabeledSkinBase<RadioButton, ButtonBehavior<RadioButton>> {
+public class RadioButtonSkin extends LabeledSkinBase<RadioButton, ToggleButtonBehavior<RadioButton>> {
 
     /** The radio contains the "dot", which is usually a circle */
     private StackPane radio;
@@ -43,7 +42,7 @@ public class RadioButtonSkin extends LabeledSkinBase<RadioButton, ButtonBehavior
      * functions in Pane (computeXOffset()/computeYOffset()).
      */
     public RadioButtonSkin(RadioButton radioButton) {
-        super(radioButton, new ButtonBehavior<RadioButton>(radioButton));
+        super(radioButton, new ToggleButtonBehavior<>(radioButton));
 
         radio = createRadio();        
         updateChildren();

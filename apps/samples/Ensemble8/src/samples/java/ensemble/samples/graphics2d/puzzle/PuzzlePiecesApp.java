@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013 Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -95,45 +95,41 @@ public class PuzzlePiecesApp extends Application {
         // create button box
         Button shuffleButton = new Button("Shuffle");
         shuffleButton.setStyle("-fx-font-size: 2em;");
-        shuffleButton.setOnAction(new EventHandler<ActionEvent>() {           
-            @Override public void handle(ActionEvent actionEvent) {
-                if (timeline != null) {
-                    timeline.stop();
-                }
-                timeline = new Timeline();
-                for (final Piece piece : pieces) {
-                    piece.setActive();
-                    double shuffleX = Math.random()
-                            * (desk.getWidth() - Piece.SIZE + 48f)
-                            - 24f - piece.getCorrectX();
-                    double shuffleY = Math.random()
-                            * (desk.getHeight() - Piece.SIZE + 30f)
-                            - 15f - piece.getCorrectY();
-                    timeline.getKeyFrames().add(
-                            new KeyFrame(Duration.seconds(1),
-                            new KeyValue(piece.translateXProperty(), shuffleX),
-                            new KeyValue(piece.translateYProperty(), shuffleY)));
-                }
-                timeline.playFromStart();
+        shuffleButton.setOnAction((ActionEvent actionEvent) -> {
+            if (timeline != null) {
+                timeline.stop();
             }
+            timeline = new Timeline();
+            for (final Piece piece : pieces) {
+                piece.setActive();
+                double shuffleX = Math.random()
+                        * (desk.getWidth() - Piece.SIZE + 48f)
+                        - 24f - piece.getCorrectX();
+                double shuffleY = Math.random()
+                        * (desk.getHeight() - Piece.SIZE + 30f)
+                        - 15f - piece.getCorrectY();
+                timeline.getKeyFrames().add(
+                        new KeyFrame(Duration.seconds(1),
+                                new KeyValue(piece.translateXProperty(), shuffleX),
+                                new KeyValue(piece.translateYProperty(), shuffleY)));
+            }
+            timeline.playFromStart();
         });
         Button solveButton = new Button("Solve");
         solveButton.setStyle("-fx-font-size: 2em;");
-        solveButton.setOnAction(new EventHandler<ActionEvent>() {            
-            @Override public void handle(ActionEvent actionEvent) {
-                if (timeline != null) {
-                    timeline.stop();
-                }
-                timeline = new Timeline();
-                for (final Piece piece : pieces) {
-                    piece.setInactive();
-                    timeline.getKeyFrames().add(
-                            new KeyFrame(Duration.seconds(1),
-                            new KeyValue(piece.translateXProperty(), 0),
-                            new KeyValue(piece.translateYProperty(), 0)));
-                }
-                timeline.playFromStart();
+        solveButton.setOnAction((ActionEvent actionEvent) -> {
+            if (timeline != null) {
+                timeline.stop();
             }
+            timeline = new Timeline();
+            for (final Piece piece : pieces) {
+                piece.setInactive();
+                timeline.getKeyFrames().add(
+                        new KeyFrame(Duration.seconds(1),
+                                new KeyValue(piece.translateXProperty(), 0),
+                                new KeyValue(piece.translateYProperty(), 0)));
+            }
+            timeline.playFromStart();
         });
         HBox buttonBox = new HBox(8);
         buttonBox.getChildren().addAll(shuffleButton, solveButton);

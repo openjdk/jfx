@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,10 +25,8 @@
 package fx83dfeatures;
 
 import javafx.application.Application;
-import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.Scene;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
@@ -95,11 +93,7 @@ public class ParallelNearAndFarClipTest extends Application {
 
         // Intentionally set depth buffer to false to reduce test complexity
         Scene scene = new Scene(root, WIDTH, HEIGHT, false);
-        scene.setOnMousePressed(new EventHandler<MouseEvent>() {
-            @Override public void handle(MouseEvent event) {
-                System.out.println("Clicked: " + event.getTarget());
-            }
-        });
+        scene.setOnMousePressed(event -> System.out.println("Clicked: " + event.getTarget()));
 
         return scene;
     }

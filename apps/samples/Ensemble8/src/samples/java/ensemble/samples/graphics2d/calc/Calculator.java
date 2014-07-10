@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013, Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -95,12 +95,8 @@ public class Calculator extends Parent {
     }
 
     private void addKeyListener() {
-        setOnKeyPressed(new EventHandler<KeyEvent>() {
-
-            @Override
-            public void handle(KeyEvent ke) {
-                processKeyEvent(ke);
-            }
+        setOnKeyPressed((KeyEvent ke) -> {
+            processKeyEvent(ke);
         });
         setFocusTraversable(true);
         requestFocus();
@@ -164,11 +160,8 @@ public class Calculator extends Parent {
                 final Key key = new Key(Util.KEY_CODES[i][j]);
                 key.setTranslateX(background.getX() + (Key.WIDTH + 1) * j + BORDER);
                 key.setTranslateY(background.getY() + (Key.HEIGHT + 1) * i + BORDER + TR_Y);
-                key.setOnMousePressed(new EventHandler<MouseEvent>() {
-
-                    @Override public void handle(MouseEvent me) {
-                        onKey(key);
-                    }
+                key.setOnMousePressed((MouseEvent me) -> {
+                    onKey(key);
                 });
                 keys[i * Util.KEY_CODES[0].length + j] = key;
                 

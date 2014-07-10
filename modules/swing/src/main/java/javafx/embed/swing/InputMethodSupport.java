@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -78,12 +78,11 @@ class InputMethodSupport {
 
         @Override
         public AttributedCharacterIterator getCommittedText(int beginIndex, int endIndex, AttributedCharacterIterator.Attribute[] attributes) {
-            String result;
+            String result = null;
             if (fxRequests instanceof ExtendedInputMethodRequests) {
                 result = ((ExtendedInputMethodRequests)fxRequests).getCommittedText(beginIndex, endIndex);
-            } else {
-                result = "";
             }
+            if (result == null) result = "";
             return new AttributedString(result).getIterator();
         }
 
@@ -103,7 +102,9 @@ class InputMethodSupport {
 
         @Override
         public AttributedCharacterIterator getSelectedText(AttributedCharacterIterator.Attribute[] attributes) {
-            return new AttributedString(fxRequests.getSelectedText()).getIterator();
+            String text = fxRequests.getSelectedText();
+            if (text == null) text = "";
+            return new AttributedString(text).getIterator();
         }
     }
 

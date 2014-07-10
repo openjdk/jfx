@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -57,7 +57,9 @@ static void checkXTest(JNIEnv* env) {
         checkDone = TRUE;
     }
     if (!isXTestAvailable) {
-        env->ThrowNew(env->FindClass("java/lang/UnsupportedOperationException"), "Glass Robot needs XTest extension to work");
+        jclass cls = env->FindClass("java/lang/UnsupportedOperationException");
+        if (env->ExceptionCheck()) return;
+        env->ThrowNew(cls, "Glass Robot needs XTest extension to work");
     }
 }
 

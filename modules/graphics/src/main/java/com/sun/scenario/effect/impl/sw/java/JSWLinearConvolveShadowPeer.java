@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,7 +39,7 @@ public class JSWLinearConvolveShadowPeer extends JSWLinearConvolvePeer {
     }
 
     private float[] getShadowColor() {
-        return getKernel().getShadowColorComponents(getPass());
+        return getRenderState().getPassShadowColorComponents();
     }
 
     @Override
@@ -91,7 +91,7 @@ public class JSWLinearConvolveShadowPeer extends JSWLinearConvolvePeer {
         }
     }
 
-    /**
+    /*
      * In the nomenclature of the argument list for this method, "row" refers
      * to the coordinate which increments once for each new stream of single
      * axis data that we are blurring in a single pass.  And "col" refers to

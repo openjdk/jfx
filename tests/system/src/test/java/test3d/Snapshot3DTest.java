@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -155,11 +155,7 @@ public class Snapshot3DTest extends VisualTestBase {
     @Test(timeout=5000)
     public void testSnapshot3D() {
         final AtomicBoolean scene3dSupported = new AtomicBoolean();
-        runAndWait(new Runnable() {
-            @Override public void run() {
-                scene3dSupported.set(Platform.isSupported(ConditionalFeature.SCENE3D));
-            }
-        });
+        runAndWait(() -> scene3dSupported.set(Platform.isSupported(ConditionalFeature.SCENE3D)));
         if (!scene3dSupported.get()) {
             System.out.println("*************************************************************");
             System.out.println("*      Platform isn't SCENE3D capable, skipping 3D test.    *");
@@ -167,28 +163,24 @@ public class Snapshot3DTest extends VisualTestBase {
             return;
         }
 
-        runAndWait(new Runnable() {
-            @Override public void run() {
-                testStage = getStage();
-                testStage.setTitle("Snapshot 3D Test");
+        runAndWait(() -> {
+            testStage = getStage();
+            testStage.setTitle("Snapshot 3D Test");
 
-                testScene = buildScene();
+            testScene = buildScene();
 
-                // Take snapshot
-                wImage = testScene.snapshot(null);
+            // Take snapshot
+            wImage = testScene.snapshot(null);
 
-                testStage.setScene(testScene);
-                testStage.show();
-            }
+            testStage.setScene(testScene);
+            testStage.show();
         });
         waitFirstFrame();
-        runAndWait(new Runnable() {
-            @Override public void run() {
-                // Compare the colors in the snapshot image with those rendered to the scene
-                compareColors(testScene, wImage, SAMPLE_X1, SAMPLE_Y1);
-                compareColors(testScene, wImage, SAMPLE_X2, SAMPLE_Y2);
-                compareColors(testScene, wImage, SAMPLE_X3, SAMPLE_Y3);
-            }
+        runAndWait(() -> {
+            // Compare the colors in the snapshot image with those rendered to the scene
+            compareColors(testScene, wImage, SAMPLE_X1, SAMPLE_Y1);
+            compareColors(testScene, wImage, SAMPLE_X2, SAMPLE_Y2);
+            compareColors(testScene, wImage, SAMPLE_X3, SAMPLE_Y3);
         });
     }
 

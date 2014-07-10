@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,6 +32,9 @@
 #if !defined NO_PERF_COUNTERS && !defined PERF_COUNTERS
     #define PERF_COUNTERS
 #endif
+
+//see com.sun.prism.PixelFormat enum
+#define NUM_TEXTURE_CACHE 8
 
 // allow for 256 quads to match the size of the D3DVertexBuffer's nio buffer
 
@@ -83,7 +86,7 @@ class D3DContext {
 public:
 
     HRESULT drawIndexedQuads(struct PrismSourceVertex const *pSrcFloats, BYTE const *pSrcColors, int numVerts);
-    void D3DContext::stretchRect(IDirect3DSurface9* pSrcSurface,
+    void stretchRect(IDirect3DSurface9* pSrcSurface,
                                 int srcX0, int srcY0, int srcX1, int srcY1,
                                 IDirect3DSurface9* pDstSurface,
                                 int dstX0, int dstY0, int dstX1, int dstY1);
@@ -105,14 +108,14 @@ public:
      * to initialize and test the device last time, it doesn't attempt
      * to create/init/test the device.
      */
-    static HRESULT CreateInstance(IDirect3D9 *pd3d9, IDirect3D9Ex *pd3d9Ex, UINT adapter, D3DContext **ppCtx);
+    static HRESULT CreateInstance(IDirect3D9 *pd3d9, IDirect3D9Ex *pd3d9Ex, UINT adapter, bool isVsyncEnabled, D3DContext **ppCtx);
 
     // desrtoys this instance
     /* virtual */ int release();
 
-    // creates a new D3D windowed device with swap copy effect and default
+    // creates a new D3D windowed device with swap copy effect and specified
     // present interval
-    HRESULT InitContext();
+    HRESULT InitContext(bool isVsyncEnabled);
 
     // resets existing D3D device with the current presentation parameters
     HRESULT ResetContext();
@@ -239,7 +242,7 @@ public:
     } state;
 
 private:
-     ~D3DContext();
+    ~D3DContext();
 
 
     IDirect3DVertexShader9 *pPassThroughVS;
@@ -291,6 +294,16 @@ private:
      * 3D implementation
      */
     D3DPhongShader *phongShader;
+
+    struct TextureUpdateCache {
+        IDirect3DTexture9 *texture;
+        IDirect3DSurface9 *surface;
+        int width, height;
+        IDirect3DTexture9 *getTexture(D3DFORMAT format, int width, int height, IDirect3DSurface9 **pSurface, IDirect3DDevice9 *dev);
+    } textureCache[NUM_TEXTURE_CACHE];
+
+public:
+    IDirect3DTexture9 *getTextureCache(int formatIndex, D3DFORMAT format, int width, int height, IDirect3DSurface9 **pSurface);
 };
 
 #define DEVICE_RESET           0

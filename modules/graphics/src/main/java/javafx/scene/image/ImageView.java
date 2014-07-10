@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -46,6 +46,8 @@ import javafx.css.StyleableStringProperty;
 import javafx.geometry.NodeOrientation;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
+//import javafx.scene.accessibility.Attribute;
+//import javafx.scene.accessibility.Role;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -144,6 +146,7 @@ public class ImageView extends Node {
      * Allocates a new ImageView object.
      */
     public ImageView() {
+        getStyleClass().add(DEFAULT_STYLE_CLASS);
         setNodeOrientation(NodeOrientation.LEFT_TO_RIGHT);
     }
 
@@ -170,6 +173,7 @@ public class ImageView extends Node {
      * @param image Image that this ImageView uses
      */
     public ImageView(Image image) {
+        getStyleClass().add(DEFAULT_STYLE_CLASS);
         setNodeOrientation(NodeOrientation.LEFT_TO_RIGHT);
         setImage(image);
     }
@@ -775,6 +779,8 @@ public class ImageView extends Node {
      * * Stylesheet Handling * *
      **************************************************************************/
 
+    private static final String DEFAULT_STYLE_CLASS = "image-view";
+
      /**
       * Super-lazy instantiation pattern from Bill Pugh.
       * @treatAsPrivate implementation detail
@@ -878,4 +884,12 @@ public class ImageView extends Node {
     @Override public Object impl_processMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
         return alg.processLeafNode(this, ctx);
     }
+
+//    /** @treatAsPrivate */
+//    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+//        switch (attribute) {
+//            case ROLE: return Role.IMAGE;
+//            default: return super.accGetAttribute(attribute, parameters); 
+//        }
+//    }
 }

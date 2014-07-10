@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,9 +34,11 @@ package javafx.scene.shape;
 public enum StrokeType {
 
     /**
-     * The stroke is applied by extending the boundary of the {@link Shape}
+     * The stroke is applied by extending the boundary of a closed {@link Shape}
      * node into its interior by a distance specified by the
      * {@link Shape#strokeWidthProperty strokeWidth}.
+     * Since the definition of {@code INSIDE} depends on the filled interior
+     * of the shape, this {@code StrokeType} is undefined for unclosed shapes.
      *
      * <p>
      * The image shows a shape without stroke and the same shape with a thick
@@ -48,9 +50,11 @@ public enum StrokeType {
     INSIDE,
 
     /**
-     * The stroke is applied by extending the boundary of the {@link Shape}
+     * The stroke is applied by extending the boundary of a closed {@link Shape}
      * node outside of its interior by a distance specified by the
      * {@link Shape#strokeWidthProperty strokeWidth}.
+     * Since the definition of {@code OUTSIDE} depends on the filled interior
+     * of the shape, this {@code StrokeType} is undefined for unclosed shapes.
      *
      * <p>
      * The image shows a shape without stroke and the same shape with a thick
@@ -62,9 +66,12 @@ public enum StrokeType {
     OUTSIDE,
 
     /**
-     * The stroke is applied by extending the boundary of the {@link Shape}
+     * The stroke is applied by thickening the boundary of the {@link Shape}
      * node by a distance of half of the {@link Shape#strokeWidthProperty strokeWidth}
-     * on either side (inside and outside) of the boundary.
+     * on either side of the boundary.
+     * Since the definition of {@code CENETERED} is symmetric and agnostic as
+     * to the location of any interior of a shape, it can be used for either
+     * closed or unclosed shapes.
      *
      * <p>
      * The image shows a shape without stroke and the same shape with a thick

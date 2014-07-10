@@ -32,7 +32,7 @@
 package com.oracle.javafx.scenebuilder.kit.editor.panel.content.gesture;
 
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.ContentPanelController;
-import javafx.event.EventHandler;
+
 import javafx.scene.Node;
 import javafx.scene.input.InputEvent;
 import javafx.scene.input.ZoomEvent;
@@ -66,18 +66,8 @@ public class ZoomGesture extends AbstractGesture {
         assert glassLayer.getOnZoom() == null;
         assert glassLayer.getOnZoomFinished() == null;
         
-        glassLayer.setOnZoom(new EventHandler<ZoomEvent>() {
-            @Override
-            public void handle(ZoomEvent e) {
-                updateContentPanelScaling(e);
-            }
-        });
-        glassLayer.setOnZoomFinished(new EventHandler<ZoomEvent>() {
-            @Override
-            public void handle(ZoomEvent e) {
-                performTermination();
-            }
-        });
+        glassLayer.setOnZoom(e1 -> updateContentPanelScaling(e1));
+        glassLayer.setOnZoomFinished(e1 -> performTermination());
     }
     
     

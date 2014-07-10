@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -62,12 +62,7 @@ public class TimelineClipCore {
      * Note: this comparator imposes orderings that are inconsistent with
      * equals.
      */
-    private static final Comparator<KeyFrame> KEY_FRAME_COMPARATOR = new Comparator<KeyFrame>() {
-        @Override
-        public int compare(KeyFrame kf1, KeyFrame kf2) {
-            return kf1.getTime().compareTo(kf2.getTime());
-        }
-    };
+    private static final Comparator<KeyFrame> KEY_FRAME_COMPARATOR = (kf1, kf2) -> kf1.getTime().compareTo(kf2.getTime());
 
     // The owner of this ClipCore
     Timeline timeline;

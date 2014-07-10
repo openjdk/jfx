@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -84,6 +84,7 @@ final class UploadingPainter extends ViewPainter implements Runnable {
                 if (QuantumToolkit.verbose) {
                     System.err.println("UploadingPainter: validateStageGraphics failed");
                 }
+                paintImpl(null);
                 return;
             }
             
@@ -104,6 +105,7 @@ final class UploadingPainter extends ViewPainter implements Runnable {
                 rttexture.lock();
                 if (rttexture.isSurfaceLost()) {
                     rttexture.unlock();
+                    sceneState.getScene().entireSceneNeedsRepaint();
                     needsReset = true;
                 }
             }
@@ -121,6 +123,7 @@ final class UploadingPainter extends ViewPainter implements Runnable {
                 penHeight   = viewHeight;
                 textureBits = null;
                 pixBits = null;
+                freshBackBuffer = true;
             }
             Graphics g = rttexture.createGraphics();
             if (g == null) {
@@ -130,6 +133,7 @@ final class UploadingPainter extends ViewPainter implements Runnable {
             }
             g.scale(scale, scale);
             paintImpl(g);
+            freshBackBuffer = false;
 
             int rawbits[] = rttexture.getPixels();
             
@@ -174,10 +178,9 @@ final class UploadingPainter extends ViewPainter implements Runnable {
         } finally {
             if (rttexture != null && rttexture.isLocked()) {
                 rttexture.unlock();
-            }            
-            if (valid) {
-                Disposer.cleanUp();
             }
+
+            Disposer.cleanUp();
 
             sceneState.getScene().setPainting(false);
 

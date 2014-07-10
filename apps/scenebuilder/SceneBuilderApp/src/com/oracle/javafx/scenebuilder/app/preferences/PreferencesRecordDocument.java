@@ -33,6 +33,7 @@ package com.oracle.javafx.scenebuilder.app.preferences;
 
 import com.oracle.javafx.scenebuilder.app.DocumentWindowController;
 import com.oracle.javafx.scenebuilder.app.SplitController;
+
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.BOTTOM_DIVIDER_VPOS;
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.BOTTOM_VISIBLE;
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.DOCUMENT_VISIBLE;
@@ -50,9 +51,11 @@ import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesControll
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.STAGE_WIDTH;
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.X_POS;
 import static com.oracle.javafx.scenebuilder.app.preferences.PreferencesController.Y_POS;
+
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.InspectorPanelController;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.InspectorPanelController.SectionId;
+
 import java.io.File;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -63,8 +66,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.prefs.BackingStoreException;
 import java.util.prefs.Preferences;
+
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.control.Accordion;
@@ -117,37 +120,11 @@ public class PreferencesRecordDocument {
     private final Preferences documentsRootPreferences; // preference root node for all documents records
     private final DocumentWindowController documentWindowController;
 
-    private final ChangeListener<Number> leftDividerHListener = new ChangeListener<Number>() {
-        @Override
-        public void changed(ObservableValue<? extends Number> ov, Number t, Number t1) {
-            setLeftDividerHPos(t1.doubleValue());
-        }
-    };
-    private final ChangeListener<Number> rightDividerHListener = new ChangeListener<Number>() {
-        @Override
-        public void changed(ObservableValue<? extends Number> ov, Number t, Number t1) {
-            setRightDividerHPos(t1.doubleValue());
-        }
-    };
-    private final ChangeListener<Number> bottomDividerVListener = new ChangeListener<Number>() {
-        @Override
-        public void changed(ObservableValue<? extends Number> ov, Number t, Number t1) {
-            setBottomDividerVPos(t1.doubleValue());
-        }
-    };
-    private final ChangeListener<Number> leftDividerVListener = new ChangeListener<Number>() {
-        @Override
-        public void changed(ObservableValue<? extends Number> ov, Number t, Number t1) {
-            setLeftDividerVPos(t1.doubleValue());
-        }
-    };
-    private final ChangeListener<ObservableList<File>> sceneStyleSheetsListener = new ChangeListener<ObservableList<File>>() {
-
-        @Override
-        public void changed(ObservableValue<? extends ObservableList<File>> ov, ObservableList<File> t, ObservableList<File> t1) {
-            setSceneStyleSheets(t1);
-        }
-    };
+    private final ChangeListener<Number> leftDividerHListener = (ov, t, t1) -> setLeftDividerHPos(t1.doubleValue());
+    private final ChangeListener<Number> rightDividerHListener = (ov, t, t1) -> setRightDividerHPos(t1.doubleValue());
+    private final ChangeListener<Number> bottomDividerVListener = (ov, t, t1) -> setBottomDividerVPos(t1.doubleValue());
+    private final ChangeListener<Number> leftDividerVListener = (ov, t, t1) -> setLeftDividerVPos(t1.doubleValue());
+    private final ChangeListener<ObservableList<File>> sceneStyleSheetsListener = (ov, t, t1) -> setSceneStyleSheets(t1);
 
     public PreferencesRecordDocument(Preferences documentsRootPreferences, DocumentWindowController dwc) {
         this.documentWindowController = dwc;
@@ -156,49 +133,19 @@ public class PreferencesRecordDocument {
         // Add stage X and Y listeners
         final Stage stage = documentWindowController.getStage();
         assert stage != null;
-        stage.xProperty().addListener(new ChangeListener<Number>() {
-
-            @Override
-            public void changed(ObservableValue<? extends Number> ov, Number t, Number t1) {
-                setXPos(t1.doubleValue());
-            }
-        });
-        stage.yProperty().addListener(new ChangeListener<Number>() {
-
-            @Override
-            public void changed(ObservableValue<? extends Number> ov, Number t, Number t1) {
-                setYPos(t1.doubleValue());
-            }
-        });
+        stage.xProperty().addListener((ChangeListener<Number>) (ov, t, t1) -> setXPos(t1.doubleValue()));
+        stage.yProperty().addListener((ChangeListener<Number>) (ov, t, t1) -> setYPos(t1.doubleValue()));
 
         // Add stage height and width listeners
-        stage.heightProperty().addListener(new ChangeListener<Number>() {
-
-            @Override
-            public void changed(ObservableValue<? extends Number> ov, Number t, Number t1) {
-                setStageHeight(t1.doubleValue());
-            }
-        });
-        stage.widthProperty().addListener(new ChangeListener<Number>() {
-
-            @Override
-            public void changed(ObservableValue<? extends Number> ov, Number t, Number t1) {
-                setStageWidth(t1.doubleValue());
-            }
-        });
+        stage.heightProperty().addListener((ChangeListener<Number>) (ov, t, t1) -> setStageHeight(t1.doubleValue()));
+        stage.widthProperty().addListener((ChangeListener<Number>) (ov, t, t1) -> setStageWidth(t1.doubleValue()));
 
         // Add inspector accordion expanded pane listener
         final InspectorPanelController ipc = documentWindowController.getInspectorPanelController();
         assert ipc != null;
         final Accordion accordion = ipc.getAccordion();
         assert accordion != null;
-        accordion.expandedPaneProperty().addListener(new ChangeListener<TitledPane>() {
-
-            @Override
-            public void changed(ObservableValue<? extends TitledPane> ov, TitledPane t, TitledPane t1) {
-                setInspectorSectionId(ipc.getExpandedSectionId());
-            }
-        });
+        accordion.expandedPaneProperty().addListener((ChangeListener<TitledPane>) (ov, t, t1) -> setInspectorSectionId(ipc.getExpandedSectionId()));
 
         // Add dividers position listeners
         final SplitController lhsc = documentWindowController.getLeftSplitController();

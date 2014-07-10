@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -157,11 +157,9 @@ public class PrismMediaFrameHandler implements ResourceFactoryListener {
         textures.clear();
     }
     
-    private RenderJob releaseRenderJob = new RenderJob(new Runnable() {
-            public void run() {
-                releaseData();
-            }
-        });
+    private RenderJob releaseRenderJob = new RenderJob(() -> {
+        releaseData();
+    });
 
     /**
      * Call this when you no longer need to render movie frames, for example

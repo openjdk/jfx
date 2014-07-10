@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,13 +24,9 @@
  */
 package com.sun.glass.events;
 
+import com.sun.glass.ui.Application;
+
 public class KeyEvent {
-    /***************************************************************************
-     *                                                                         *
-     * Native methods                                                          *
-     *                                                                         *
-     **************************************************************************/
-    native private static int _getKeyCodeForChar(char c);
 
     /***************************************************************************
      *                                                                         *
@@ -218,6 +214,23 @@ public class KeyEvent {
     public final static int VK_F23                = 0xF00A;
     public final static int VK_F24                = 0xF00B;
 
+    public final static int VK_DEAD_GRAVE               = 0x80;
+    public final static int VK_DEAD_ACUTE               = 0x81;
+    public final static int VK_DEAD_CIRCUMFLEX          = 0x82;
+    public final static int VK_DEAD_TILDE               = 0x83;
+    public final static int VK_DEAD_MACRON              = 0x84;
+    public final static int VK_DEAD_BREVE               = 0x85;
+    public final static int VK_DEAD_ABOVEDOT            = 0x86;
+    public final static int VK_DEAD_DIAERESIS           = 0x87;
+    public final static int VK_DEAD_ABOVERING           = 0x88;
+    public final static int VK_DEAD_DOUBLEACUTE         = 0x89;
+    public final static int VK_DEAD_CARON               = 0x8a;
+    public final static int VK_DEAD_CEDILLA             = 0x8b;
+    public final static int VK_DEAD_OGONEK              = 0x8c;
+    public final static int VK_DEAD_IOTA                = 0x8d;
+    public final static int VK_DEAD_VOICED_SOUND        = 0x8e;
+    public final static int VK_DEAD_SEMIVOICED_SOUND    = 0x8f;
+
     /***************************************************************************
      *                                                                         *
      * Static Methods                                                          *
@@ -232,7 +245,7 @@ public class KeyEvent {
      * @return integer code for the given char
      */
     public static int getKeyCodeForChar(char c) {
-        return _getKeyCodeForChar(c);
+        return Application.getKeyCodeForChar(c);
     }
 
     /**

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -66,12 +66,7 @@ public final class ReadOnlyJavaBeanDoubleProperty extends ReadOnlyDoubleProperty
         this.descriptor = descriptor;
         this.listener = descriptor.new ReadOnlyListener<Number>(bean, this);
         descriptor.addListener(listener);
-        Cleaner.create(this, new Runnable() {
-            @Override
-            public void run() {
-                ReadOnlyJavaBeanDoubleProperty.this.descriptor.removeListener(listener);
-            }
-        });
+        Cleaner.create(this, new DescriptorListenerCleaner(descriptor, listener));
     }
 
     /**
@@ -83,16 +78,14 @@ public final class ReadOnlyJavaBeanDoubleProperty extends ReadOnlyDoubleProperty
      */
     @Override
     public double get() {
-        return AccessController.doPrivileged(new PrivilegedAction<Double>() {
-            public Double run() {
-                try {
-                    return ((Number)MethodUtil.invoke(
-                        descriptor.getGetter(), getBean(), (Object[])null)).doubleValue();
-                } catch (IllegalAccessException e) {
-                    throw new UndeclaredThrowableException(e);
-                } catch (InvocationTargetException e) {
-                    throw new UndeclaredThrowableException(e);
-                }
+        return AccessController.doPrivileged((PrivilegedAction<Double>) () -> {
+            try {
+                return ((Number)MethodUtil.invoke(
+                    descriptor.getGetter(), getBean(), (Object[])null)).doubleValue();
+            } catch (IllegalAccessException e) {
+                throw new UndeclaredThrowableException(e);
+            } catch (InvocationTargetException e) {
+                throw new UndeclaredThrowableException(e);
             }
         }, acc);
     }

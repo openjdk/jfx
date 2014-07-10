@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -98,12 +98,10 @@ public class TimelineClipCoreTest {
         tmpBool = false;
         final KeyFrame newMiddle = new KeyFrame(
                 Duration.millis(500),
-                new EventHandler<ActionEvent>() {
-                    @Override
-                    public void handle(ActionEvent event) {
-                        tmpBool = true;
-                    }
-                });
+                event -> {
+                    tmpBool = true;
+                }
+        );
         timeline.getKeyFrames().set(1, newMiddle);
 
         core.playTo(6 * 1000);
@@ -189,12 +187,10 @@ public class TimelineClipCoreTest {
         tmpBool = false;
         final KeyFrame newMiddle = new KeyFrame(
                 Duration.millis(500),
-                new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent event) {
-                tmpBool = true;
-            }
-        });
+                event -> {
+                    tmpBool = true;
+                }
+        );
         timeline.getKeyFrames().set(1, newMiddle);
 
         core.jumpTo(6 * 600, false);

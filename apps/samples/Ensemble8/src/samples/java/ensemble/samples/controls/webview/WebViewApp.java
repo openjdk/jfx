@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013 Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -69,19 +69,13 @@ public class WebViewApp extends Application {
         webEngine.load(DEFAULT_URL);
 
         final TextField locationField = new TextField(DEFAULT_URL);
-        webEngine.locationProperty().addListener(new ChangeListener<String>() {
-            @Override
-            public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue) {
-                locationField.setText(newValue);
-            }
+        webEngine.locationProperty().addListener((ObservableValue<? extends String> observable, String oldValue, String newValue) -> {
+            locationField.setText(newValue);
         });
-        EventHandler<ActionEvent> goAction = new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent event) {
-                webEngine.load(locationField.getText().startsWith("http://")
-                        ? locationField.getText()
-                        : "http://" + locationField.getText());
-            }
+        EventHandler<ActionEvent> goAction = (ActionEvent event) -> {
+            webEngine.load(locationField.getText().startsWith("http://")
+                    ? locationField.getText()
+                    : "http://" + locationField.getText());
         };
         locationField.setOnAction(goAction);
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -77,10 +77,12 @@ class SwingCursors {
             case NE_RESIZE:
                 return Cursor.getPredefinedCursor(Cursor.NE_RESIZE_CURSOR);
             case N_RESIZE:
+            case V_RESIZE:
                 return Cursor.getPredefinedCursor(Cursor.N_RESIZE_CURSOR);
             case S_RESIZE:
                 return Cursor.getPredefinedCursor(Cursor.S_RESIZE_CURSOR);
             case W_RESIZE:
+            case H_RESIZE:
                 return Cursor.getPredefinedCursor(Cursor.W_RESIZE_CURSOR);
             case E_RESIZE:
 	        return Cursor.getPredefinedCursor(Cursor.E_RESIZE_CURSOR);
@@ -92,8 +94,6 @@ class SwingCursors {
                 return Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR);
             // Not implemented, use default cursor instead
             case DISAPPEAR:
-            case H_RESIZE:
-            case V_RESIZE:
                 return Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR);
             case NONE:
                 return null;

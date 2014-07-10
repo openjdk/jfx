@@ -32,14 +32,11 @@
 package com.oracle.javafx.scenebuilder.kit.util.control.effectpicker;
 
 import javafx.scene.effect.Effect;
-import javafx.scene.paint.Paint;
 
 /**
  * Effect path item for the color input effect.
  */
 public class ColorInputPathItem extends EffectPathItem {
-
-    private Paint paint;
 
     public ColorInputPathItem(EffectPickerController epc, Effect effect, EffectPathItem hostPathItem) {
         super(epc, effect, hostPathItem);

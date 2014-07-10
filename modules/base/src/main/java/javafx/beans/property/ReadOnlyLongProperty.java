@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -93,13 +93,10 @@ public abstract class ReadOnlyLongProperty extends LongExpression implements
         return property instanceof ReadOnlyLongProperty ? (ReadOnlyLongProperty) property:
            new ReadOnlyLongPropertyBase() {
             private boolean valid = true;
-            private final InvalidationListener listener = new InvalidationListener() {
-                @Override
-                public void invalidated(Observable observable) {
-                    if (valid) {
-                        valid = false;
-                        fireValueChangedEvent();
-                    }
+            private final InvalidationListener listener = observable -> {
+                if (valid) {
+                    valid = false;
+                    fireValueChangedEvent();
                 }
             };
 
@@ -140,13 +137,10 @@ public abstract class ReadOnlyLongProperty extends LongExpression implements
         return new ReadOnlyObjectPropertyBase<Long>() {
 
             private boolean valid = true;
-            private final InvalidationListener listener = new InvalidationListener() {
-                @Override
-                public void invalidated(Observable observable) {
-                    if (valid) {
-                        valid = false;
-                        fireValueChangedEvent();
-                    }
+            private final InvalidationListener listener = observable -> {
+                if (valid) {
+                    valid = false;
+                    fireValueChangedEvent();
                 }
             };
 

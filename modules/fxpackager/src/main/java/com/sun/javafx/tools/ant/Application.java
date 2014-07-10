@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -59,6 +59,7 @@ public class Application extends DataType implements Cloneable {
     String id = null;
     boolean embeddedIntoSwing = false;
     String version = null;
+    Boolean daemon = null;
 
     public void setVersion(String v) {
         version = v;
@@ -170,6 +171,15 @@ public class Application extends DataType implements Cloneable {
         preloaderClass = v;
     }
 
+    /**
+     * Is this class a daemon/service?
+     *
+     * @ant.not-required Default is false, i.e. an interactive app
+     */
+    public void setDaemon(boolean b) {
+        daemon = b;
+    }
+    
     //return instance that actually has data. Could be referenced object ...
     public Application get() {
         return isReference() ?

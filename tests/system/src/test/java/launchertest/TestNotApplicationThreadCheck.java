@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,10 +37,8 @@ public class TestNotApplicationThreadCheck {
 
     public static void main(String[] args) {
         try {
-            Platform.runLater(new Runnable() {
-                @Override public void run() {
-                    // do nothing
-                }
+            Platform.runLater(() -> {
+                // do nothing
             });
             System.exit(ERROR_TOOLKIT_IS_RUNNING);
         } catch (IllegalStateException ex) {
@@ -53,10 +51,7 @@ public class TestNotApplicationThreadCheck {
     }
 
     static {
-        System.err.println("class init: thread = " + Thread.currentThread());
-
         if (Platform.isFxApplicationThread()) {
-            System.err.println("ERROR: class init wrong thread: " + Thread.currentThread());
             System.exit(ERROR_CLASS_INIT_WRONG_THREAD);
         }
     }

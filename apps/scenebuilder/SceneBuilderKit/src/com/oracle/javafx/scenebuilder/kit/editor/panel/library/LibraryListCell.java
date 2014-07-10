@@ -32,6 +32,7 @@
 package com.oracle.javafx.scenebuilder.kit.editor.panel.library;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
+import com.oracle.javafx.scenebuilder.kit.editor.EditorPlatform;
 import com.oracle.javafx.scenebuilder.kit.editor.drag.source.LibraryDragSource;
 import com.oracle.javafx.scenebuilder.kit.editor.images.ImageUtils;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
@@ -51,6 +52,7 @@ import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.stage.Window;
 
 /**
@@ -77,44 +79,39 @@ class LibraryListCell extends ListCell<LibraryListItem> {
         classNameLabel.getStyleClass().add("library-classname-label"); //NOI18N
         qualifierLabel.getStyleClass().add("library-qualifier-label"); //NOI18N
         sectionLabel.getStyleClass().add("library-section-label"); //NOI18N
-
+        
         graphic.getChildren().add(iconImageView);
         graphic.getChildren().add(classNameLabel);
         graphic.getChildren().add(qualifierLabel);
         graphic.getChildren().add(sectionLabel);
         
-        final EventHandler<MouseEvent> mouseEventHandler = new EventHandler<MouseEvent>() {
-            @Override
-            public void handle(final MouseEvent e) {
-                handleMouseEvent(e);
-            }
-        };
+        HBox.setHgrow(sectionLabel, Priority.ALWAYS);
+        sectionLabel.setMaxWidth(Double.MAX_VALUE);
+        
+        final EventHandler<MouseEvent> mouseEventHandler = e -> handleMouseEvent(e);
         // Mouse events
         this.addEventHandler(MouseEvent.ANY, mouseEventHandler);
         
-        setOnDragDetected(new EventHandler<MouseEvent>() {
-
-            @Override
-            public void handle(MouseEvent t) {
+        setOnDragDetected(t -> {
 //                System.out.println("LibraryListCell - setOnDragDetected.handle");
-                final LibraryListItem listItem = LibraryListCell.this.getItem();
-                final FXOMDocument fxomDocument = editorController.getFxomDocument();
-                
-                if ((listItem != null) && (fxomDocument != null)) {
-                    final LibraryItem item = LibraryListCell.this.getItem().getLibItem();
-                    if (item != null) {
-                        final ListView<LibraryListItem> list = LibraryListCell.this.getListView();
-                        final Dragboard db = list.startDragAndDrop(TransferMode.COPY);
+            final LibraryListItem listItem = LibraryListCell.this.getItem();
+            final FXOMDocument fxomDocument = editorController.getFxomDocument();
+            
+            if ((listItem != null) && (fxomDocument != null)) {
+                final LibraryItem item = LibraryListCell.this.getItem().getLibItem();
+                if (item != null) {
+                    final ListView<LibraryListItem> list = LibraryListCell.this.getListView();
+                    final Dragboard db = list.startDragAndDrop(TransferMode.COPY);
 
-                        final Window ownerWindow = getScene().getWindow();
-                        final LibraryDragSource dragSource 
-                                = new LibraryDragSource(item, fxomDocument, ownerWindow);
-                        assert editorController.getDragController().getDragSource() == null;
-                        editorController.getDragController().begin(dragSource);
+                    final Window ownerWindow = getScene().getWindow();
+                    final LibraryDragSource dragSource 
+                            = new LibraryDragSource(item, fxomDocument, ownerWindow);
+                    assert editorController.getDragController().getDragSource() == null;
+                    assert dragSource.isAcceptable();
+                    editorController.getDragController().begin(dragSource);
 
-                        db.setContent(dragSource.makeClipboardContent());
-                        db.setDragView(dragSource.makeDragView());
-                    }
+                    db.setContent(dragSource.makeClipboardContent());
+                    db.setDragView(dragSource.makeDragView());
                 }
             }
         });
@@ -149,6 +146,24 @@ class LibraryListCell extends ListCell<LibraryListItem> {
         }
     }
 
+    private Cursor getOpenHandCursor() {
+        // DTL-6477
+        if (EditorPlatform.IS_WINDOWS) {
+            return ImageUtils.getOpenHandCursor();
+        } else {
+            return Cursor.OPEN_HAND;
+        }
+    }
+
+    private Cursor getClosedHandCursor() {
+        // DTL-6477
+        if (EditorPlatform.IS_WINDOWS) {
+            return ImageUtils.getClosedHandCursor();
+        } else {
+            return Cursor.CLOSED_HAND;
+        }
+    }
+    
     private void handleMouseEvent(MouseEvent me) {
         // Handle cursor
         final Scene scene = getScene();
@@ -180,19 +195,19 @@ class LibraryListCell extends ListCell<LibraryListItem> {
             if (isEmpty() || isSection) {
                 setCursor(Cursor.DEFAULT);
             } else {
-                setCursor(Cursor.OPEN_HAND);
+                setCursor(getOpenHandCursor());
             }
         } else if (me.getEventType() == MouseEvent.MOUSE_PRESSED) {
             if (isEmpty() || isSection) {
                 setCursor(Cursor.DEFAULT);
             } else {
-                setCursor(Cursor.CLOSED_HAND);
+                setCursor(getClosedHandCursor());
             }
         } else if (me.getEventType() == MouseEvent.MOUSE_RELEASED) {
             if (isEmpty() || isSection) {
                 setCursor(Cursor.DEFAULT);
             } else {
-                setCursor(Cursor.OPEN_HAND);
+                setCursor(getOpenHandCursor());
             }
         } else if (me.getEventType() == MouseEvent.MOUSE_EXITED) {
             setCursor(Cursor.DEFAULT);

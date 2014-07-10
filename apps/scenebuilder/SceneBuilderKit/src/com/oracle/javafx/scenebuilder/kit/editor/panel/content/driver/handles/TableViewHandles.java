@@ -66,7 +66,7 @@ public class TableViewHandles extends AbstractNodeHandles<Node> {
     }
     
     public TableView<?> getTableView() {
-        return (TableView) getSceneGraphObject();
+        return (TableView<?>) getSceneGraphObject();
     }
     
     /*

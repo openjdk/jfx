@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -59,15 +59,14 @@ class FontFileReader implements FontConstants {
             return false;
         }
         raFile = AccessController.doPrivileged(
-                new PrivilegedAction<RandomAccessFile>() {
-                    public RandomAccessFile run()  {
-                        try {
-                            return new RandomAccessFile(filename, "r");
-                        } catch (FileNotFoundException fnfe) {
-                            return null;
-                        }
+                (PrivilegedAction<RandomAccessFile>) () -> {
+                    try {
+                        return new RandomAccessFile(filename, "r");
+                    } catch (FileNotFoundException fnfe) {
+                        return null;
                     }
-                });
+                }
+        );
         if (raFile != null) {
             try {
                 filesize = raFile.length();

@@ -45,31 +45,47 @@ import javafx.event.EventHandler;
  * Editor for Integer properties, with pre-defined constants (handled by
  * auto-suggest popup).
  *
- * 
+ *
  */
 public class IntegerEditor extends AutoSuggestEditor {
 
     private Map<String, Object> constants;
+    private int min;
+    private int max;
 
     @SuppressWarnings("LeakingThisInConstructor")
-    public IntegerEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses, Map<String, Object> constants) {
+    public IntegerEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses,
+            Map<String, Object> constants, int minVal, int maxVal) {
         super(propMeta, selectedClasses, new ArrayList<>(constants.keySet()), AutoSuggestEditor.Type.INTEGER);
         this.constants = constants;
+        this.min = minVal;
+        this.max = maxVal;
 
-        EventHandler<ActionEvent> onActionListener = new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent event) {
-                if (isHandlingError()) {
-                    // Event received because of focus lost due to error dialog
-                    return;
-                }
-                Object value = getValue();
-                if ((value != null) && ((IntegerPropertyMetadata) getPropertyMeta()).isValidValue((Integer) value)) {
-                    userUpdateValueProperty(value);
-                    getTextField().selectAll();
+        EventHandler<ActionEvent> onActionListener = event -> {
+            if (isHandlingError()) {
+                // Event received because of focus lost due to error dialog
+                return;
+            }
+            Object value = getValue();
+            if ((value != null) && ((IntegerPropertyMetadata) getPropertyMeta()).isValidValue((Integer) value)) {
+                String constantStr = getConstant(value);
+                if (constantStr != null) {
+                    getTextField().setText(constantStr);
                 } else {
-                    handleInvalidValue(getTextField().getText());
+                    assert value instanceof Integer;
+                    int val = (Integer) value;
+                    if (val < min) {
+                        val = min;
+                    } else if (val > max) {
+                        val = max;
+                    }
+                    value = val;
+                    getTextField().setText(value.toString());
                 }
+                userUpdateValueProperty(value);
+                getTextField().selectAll();
+            } else {
+                handleInvalidValue(getTextField().getText());
             }
         };
 
@@ -104,33 +120,36 @@ public class IntegerEditor extends AutoSuggestEditor {
 
         if (value == null) {
             // We consider a null property as 0
-            // TBD: should not be defined here !
             value = 0;
         }
         assert (value instanceof Integer);
-        // Get the corresponding constant if any
-        for (Entry<String, Object> entry : constants.entrySet()) {
-            if (value.equals(entry.getValue())) {
-                value = entry.getKey();
-            }
+        String constantStr = getConstant(value);
+        if (constantStr != null) {
+            value = constantStr;
         }
         getTextField().setText(EditorUtils.valAsStr(value));
     }
 
     @Override
     public void requestFocus() {
-        EditorUtils.doNextFrame(new Runnable() {
-
-            @Override
-            public void run() {
-                getTextField().requestFocus();
-            }
-        });
+        EditorUtils.doNextFrame(() -> getTextField().requestFocus());
     }
 
     public void reset(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses,
-            Map<String, Object> constants) {
+            Map<String, Object> constants, int minVal, int maxVal) {
         super.reset(propMeta, selectedClasses, new ArrayList<>(constants.keySet()));
         this.constants = constants;
+        this.min = minVal;
+        this.max = maxVal;
+    }
+
+    private String getConstant(Object value) {
+        // Get the corresponding constant if any
+        for (Entry<String, Object> entry : constants.entrySet()) {
+            if (value.equals(entry.getValue())) {
+                return entry.getKey();
+            }
+        }
+        return null;
     }
 }

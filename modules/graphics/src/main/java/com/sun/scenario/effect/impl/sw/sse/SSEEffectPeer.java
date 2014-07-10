@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,8 +28,9 @@ package com.sun.scenario.effect.impl.sw.sse;
 import com.sun.scenario.effect.FilterContext;
 import com.sun.scenario.effect.impl.EffectPeer;
 import com.sun.scenario.effect.impl.Renderer;
+import com.sun.scenario.effect.impl.state.RenderState;
 
-public abstract class SSEEffectPeer extends EffectPeer {
+public abstract class SSEEffectPeer<T extends RenderState> extends EffectPeer<T> {
 
     protected SSEEffectPeer(FilterContext fctx, Renderer r, String uniqueName) {
         super(fctx, r, uniqueName);

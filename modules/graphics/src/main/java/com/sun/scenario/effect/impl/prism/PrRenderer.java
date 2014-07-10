@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -61,15 +61,20 @@ public abstract class PrRenderer extends Renderer {
 
     public static Renderer createRenderer(FilterContext fctx) {
         Object ref = fctx.getReferent();
-        GraphicsPipeline pipe = GraphicsPipeline.getPipeline();
-        if (pipe == null || !(ref instanceof Screen)) {
+        if (!(ref instanceof Screen)) {
             return null;
         }
-        return createRenderer(fctx, pipe.supportsShaderModel(ShaderModel.SM3));
-    }
-
-    public static PrRenderer createSoftwareRenderer(FilterContext fctx) {
-        return createRenderer(fctx, false);
+        boolean isHW;
+        if (((PrFilterContext) fctx).isForceSoftware()) {
+            isHW = false;
+        } else {
+            GraphicsPipeline pipe = GraphicsPipeline.getPipeline();
+            if (pipe == null) {
+                return null;
+            }
+            isHW = pipe.supportsShaderModel(ShaderModel.SM3);
+        }
+        return createRenderer(fctx, isHW);
     }
 
     private static PrRenderer createRenderer(FilterContext fctx, boolean isHW) {

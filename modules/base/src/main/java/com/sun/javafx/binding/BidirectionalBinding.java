@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -125,6 +125,33 @@ public abstract class BidirectionalBinding<T> implements ChangeListener<T>, Weak
         return bindNumber(property1, (Property<Number>)property2);
     }
 
+    public static BidirectionalBinding bindNumber(IntegerProperty property1, Property<Integer> property2) {
+        return bindNumberObject(property1, property2);
+    }
+
+    public static BidirectionalBinding bindNumber(LongProperty property1, Property<Long> property2) {
+        return bindNumberObject(property1, property2);
+    }
+
+    public static BidirectionalBinding bindNumber(FloatProperty property1, Property<Float> property2) {
+        return bindNumberObject(property1, property2);
+    }
+
+    public static BidirectionalBinding bindNumber(DoubleProperty property1, Property<Double> property2) {
+        return bindNumberObject(property1, property2);
+    }
+
+    private static <T extends Number> BidirectionalBinding bindNumberObject(Property<Number> property1, Property<T> property2) {
+        checkParameters(property1, property2);
+
+        final BidirectionalBinding<Number> binding = new TypedNumberBidirectionalBinding<T>(property2, property1);
+
+        property1.setValue(property2.getValue());
+        property1.addListener(binding);
+        property2.addListener(binding);
+        return binding;
+    }
+
     private static <T extends Number> BidirectionalBinding bindNumber(Property<T> property1, Property<Number> property2) {
         checkParameters(property1, property2);
         
@@ -239,11 +266,21 @@ public abstract class BidirectionalBinding<T> implements ChangeListener<T>, Weak
                             property1.set(newValue);
                         }
                     } catch (RuntimeException e) {
-                        if (property1 == sourceProperty) {
-                            property1.set(oldValue);
-                        } else {
-                            property2.set(oldValue);
-                        }
+                        try {
+                            if (property1 == sourceProperty) {
+                                property1.set(oldValue);
+                            } else {
+                                property2.set(oldValue);
+                            }
+                        } catch (Exception e2) {
+                            e2.addSuppressed(e);
+                            unbind(property1, property2);
+                            throw new RuntimeException(
+                                "Bidirectional binding failed together with an attempt"
+                                        + " to restore the source property to the previous value."
+                                        + " Removing the bidirectional binding from properties " +
+                                        property1 + " and " + property2, e2);
+                        } 
                         throw new RuntimeException(
                                 "Bidirectional binding failed, setting to the previous value", e);
                     } finally {
@@ -296,10 +333,20 @@ public abstract class BidirectionalBinding<T> implements ChangeListener<T>, Weak
                             property1.set(newValue.doubleValue());
                         }
                     } catch (RuntimeException e) {
-                        if (property1 == sourceProperty) {
-                            property1.set(oldValue.doubleValue());
-                        } else {
-                            property2.set(oldValue.doubleValue());
+                        try {
+                            if (property1 == sourceProperty) {
+                                property1.set(oldValue.doubleValue());
+                            } else {
+                                property2.set(oldValue.doubleValue());
+                            }
+                        } catch (Exception e2) {
+                            e2.addSuppressed(e);
+                            unbind(property1, property2);
+                            throw new RuntimeException(
+                                "Bidirectional binding failed together with an attempt"
+                                        + " to restore the source property to the previous value."
+                                        + " Removing the bidirectional binding from properties " +
+                                        property1 + " and " + property2, e2);
                         }
                         throw new RuntimeException(
                                         "Bidirectional binding failed, setting to the previous value", e);
@@ -353,10 +400,20 @@ public abstract class BidirectionalBinding<T> implements ChangeListener<T>, Weak
                             property1.set(newValue.floatValue());
                         }
                     } catch (RuntimeException e) {
-                        if (property1 == sourceProperty) {
-                            property1.set(oldValue.floatValue());
-                        } else {
-                            property2.set(oldValue.floatValue());
+                        try {
+                            if (property1 == sourceProperty) {
+                                property1.set(oldValue.floatValue());
+                            } else {
+                                property2.set(oldValue.floatValue());
+                            }
+                        } catch (Exception e2) {
+                            e2.addSuppressed(e);
+                            unbind(property1, property2);
+                            throw new RuntimeException(
+                                "Bidirectional binding failed together with an attempt"
+                                        + " to restore the source property to the previous value."
+                                        + " Removing the bidirectional binding from properties " +
+                                        property1 + " and " + property2, e2);
                         }
                         throw new RuntimeException(
                                 "Bidirectional binding failed, setting to the previous value", e);
@@ -410,10 +467,20 @@ public abstract class BidirectionalBinding<T> implements ChangeListener<T>, Weak
                             property1.set(newValue.intValue());
                         }
                     } catch (RuntimeException e) {
-                        if (property1 == sourceProperty) {
-                            property1.set(oldValue.intValue());
-                        } else {
-                            property2.set(oldValue.intValue());
+                        try {
+                            if (property1 == sourceProperty) {
+                                property1.set(oldValue.intValue());
+                            } else {
+                                property2.set(oldValue.intValue());
+                            }
+                        } catch (Exception e2) {
+                            e2.addSuppressed(e);
+                            unbind(property1, property2);
+                            throw new RuntimeException(
+                                "Bidirectional binding failed together with an attempt"
+                                        + " to restore the source property to the previous value."
+                                        + " Removing the bidirectional binding from properties " +
+                                        property1 + " and " + property2, e2);
                         }
                         throw new RuntimeException(
                                         "Bidirectional binding failed, setting to the previous value", e);
@@ -467,10 +534,20 @@ public abstract class BidirectionalBinding<T> implements ChangeListener<T>, Weak
                             property1.set(newValue.longValue());
                         }
                     } catch (RuntimeException e) {
-                        if (property1 == sourceProperty) {
-                            property1.set(oldValue.longValue());
-                        } else {
-                            property2.set(oldValue.longValue());
+                        try {
+                            if (property1 == sourceProperty) {
+                                property1.set(oldValue.longValue());
+                            } else {
+                                property2.set(oldValue.longValue());
+                            }
+                        } catch (Exception e2) {
+                            e2.addSuppressed(e);
+                            unbind(property1, property2);
+                            throw new RuntimeException(
+                                "Bidirectional binding failed together with an attempt"
+                                        + " to restore the source property to the previous value."
+                                        + " Removing the bidirectional binding from properties " +
+                                        property1 + " and " + property2, e2);
                         }
                         throw new RuntimeException(
                                 "Bidirectional binding failed, setting to the previous value", e);
@@ -524,10 +601,20 @@ public abstract class BidirectionalBinding<T> implements ChangeListener<T>, Weak
                             property1.setValue(newValue);
                         }
                     } catch (RuntimeException e) {
-                        if (property1 == sourceProperty) {
-                            property1.setValue(oldValue);
-                        } else {
-                            property2.setValue(oldValue);
+                        try {
+                            if (property1 == sourceProperty) {
+                                property1.setValue(oldValue);
+                            } else {
+                                property2.setValue(oldValue);
+                            }
+                        } catch (Exception e2) {
+                            e2.addSuppressed(e);
+                            unbind(property1, property2);
+                            throw new RuntimeException(
+                                "Bidirectional binding failed together with an attempt"
+                                        + " to restore the source property to the previous value."
+                                        + " Removing the bidirectional binding from properties " +
+                                        property1 + " and " + property2, e2);
                         }
                         throw new RuntimeException(
                                 "Bidirectional binding failed, setting to the previous value", e);
@@ -581,10 +668,20 @@ public abstract class BidirectionalBinding<T> implements ChangeListener<T>, Weak
                             property1.setValue((T)newValue);
                         }
                     } catch (RuntimeException e) {
-                        if (property1 == sourceProperty) {
-                            property1.setValue((T)oldValue);
-                        } else {
-                            property2.setValue(oldValue);
+                        try {
+                            if (property1 == sourceProperty) {
+                                property1.setValue((T)oldValue);
+                            } else {
+                                property2.setValue(oldValue);
+                            }
+                        } catch (Exception e2) {
+                            e2.addSuppressed(e);
+                            unbind(property1, property2);
+                            throw new RuntimeException(
+                                "Bidirectional binding failed together with an attempt"
+                                        + " to restore the source property to the previous value."
+                                        + " Removing the bidirectional binding from properties " +
+                                        property1 + " and " + property2, e2);
                         }
                         throw new RuntimeException(
                                         "Bidirectional binding failed, setting to the previous value", e);

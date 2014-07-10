@@ -1,0 +1,659 @@
+/*
+ * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+
+
+/**
+ * Gets the most recent android platform installed, relative to the given path.
+ * The path will either be ANDROID_SDK or ANDROID_NDK
+ * TODO Shouldn't we instead just ask people to point to the one they want to use?
+ *
+ * @param path The path to the Android SDK or NDK
+ * @return The name of the most recent platform
+ */
+String getLatestPlatform(String path) {
+    def max = 0
+    println("$path")
+    file(cygpath("$path/platforms")).eachFile() {file->
+        def pname = file.getName() - "android-"
+        def ptf = pname?.isInteger() ? pname.toInteger() : 0
+        if (max < ptf) {
+            max = ptf
+        }
+    }
+    if (max == 0) {
+        return null;
+    }
+    return "android-" + max
+}
+
+int compareVersions(String s1, String s2) {
+    def v1t = s1.tokenize(".")
+    def v2t = s2.tokenize(".")
+    for(int i = 0; i < v1t.size(); i++) {
+        if (i == v2t.size()) {
+            return 1
+        }
+        int n1 = v1t[i].isInteger() ? v1t[i].toInteger() : 0
+        int n2 = v2t[i].isInteger() ? v2t[i].toInteger() : 0
+        if (n1 == n2) {
+            continue
+        } else if (n1 > n2) {
+            return 1;
+        } else {
+            return -1
+        }        
+    }    
+    return (v2t.size() > v1t.size()) ? -1 : 0
+}
+
+String getLatestToolchain(String ndk, String tch) {
+    def max = "0.0"
+    def matchFile = null
+    file(cygpath("$ndk/toolchains")).eachFile() {file->        
+        def filename = file.getName()
+        if (filename.startsWith(tch)) {
+            def p = filename - "$tch-"
+            if (compareVersions(p, max) > 0) {
+                max = p
+                matchFile = file
+            }
+        }
+    }
+    return matchFile.getAbsolutePath()
+}
+
+boolean assertDir(File dir) {
+    return dir != null && dir.exists() && dir.isDirectory() && dir.canRead();
+}
+
+boolean assertDir(String dir) {
+    return assertDir(file(dir))
+}
+
+def closedDir = file("$projectDir/../rt-closed")
+
+def toolchainArchs = ["arm-linux-androideabi", "mipsel-linux-android", "x86"]
+def armArchs = ["armeabi", "armeabiv-7a"]
+
+ext.DALVIK = [:]
+DALVIK.compileSwing = false;
+DALVIK.compileSWT = false;
+DALVIK.compileFXPackager = false;
+DALVIK.compileDesignTime = false;
+DALVIK.glassPlatform = "android"
+DALVIK.armArch = armArchs[0]
+DALVIK.libDest = "lib/${DALVIK.armArch}"
+DALVIK.jfxdvklib = "jfxdvk.jar"
+DALVIK.library = { name -> return "lib${name}.so" as String }
+
+def sdk = project.hasProperty("ANDROID_SDK") ? "${ANDROID_SDK}" : null;
+def ndk = project.hasProperty("ANDROID_NDK") ? "${ANDROID_NDK}" : null;
+DALVIK.canBuild = sdk != null && ndk != null
+if (!DALVIK.canBuild) {
+    logger.error("Can't build Android. Path to SDK or NDK was not set or is invalid!")
+    return;
+}
+
+DALVIK.canBuild = assertDir(sdk) && assertDir(ndk)
+if (!DALVIK.canBuild) {
+    if (!assertDir(sdk)) {
+        logger.error("Path to ANDROID_SDK is invalid! [$sdk]")
+    }
+    if (!assertDir(ndk)) {
+        logger.error("Path to ANDROID_NDK is invalid! [$ndk]")
+    }
+    return
+}
+
+def sdk_target = project.hasProperty("ANDROID_SDK_TARGET") ?  "${ANDROID_SDK_TARGET}" : getLatestPlatform(sdk);
+if (!assertDir(file("$sdk/platforms/$sdk_target"))) {            
+    sdk_target = getLatestPlatform(sdk); 
+    logger.warn("Redefine ANDROID_SDK_TARGET to: [$sdk_target]")
+}
+
+def ndk_target = project.hasProperty("ANDROID_NDK_TARGET") ? "${ANDROID_NDK_TARGET}" : getLatestPlatform(ndk);
+if (!assertDir(file("$ndk/platforms/$ndk_target"))) {            
+    ndk_target = getLatestPlatform(ndk);
+    logger.warn("Redefine ANDROID_NDK_TARGET to: [$ndk_target]")
+}
+
+DALVIK.canBuild = sdk_target != null && ndk_target != null
+if (!DALVIK.canBuild) {
+    logger.error("Can't determine sdk or ndk target platform!")
+    return
+}
+
+def toolchainHome = project.hasProperty("ANDROID_CROSS_TOOLS_VER") ? 
+    "$ndk/toolchains/${ANDROID_CROSS_TOOLS_VER}" : getLatestToolchain(ndk, toolchainArchs[0])
+if (!assertDir(toolchainHome)) {
+    toolchainHome = getLatestToolchain(ndk, toolchainArchs[0])
+    logger.warn("Redefine toolchain to [$toolchainHome]")
+}
+
+// Look for the the Android SDK & NDK to use, as well as the compiler stuff
+def compilerHome = null
+file("$toolchainHome/prebuilt").eachDir() {subdir ->
+    compilerHome = subdir.getAbsolutePath()
+    return
+}
+
+DALVIK.canBuild = compilerHome != null
+if (!DALVIK.canBuild) {
+    logger.error("Failed to access toolchain [$toolchainHome/prebuilt/$toolsPlatform]!")
+    return
+}
+
+def freetypeDir = project.hasProperty("FREETYPE_DIR") ? "${FREETYPE_DIR}" : null
+if (!assertDir(freetypeDir)) {
+    logger.warn("FREETYPE_DIR $freetypeDir doesn't exists! Build continues without native text support.")
+    freetypeDir = null
+}
+def compileNativeText = freetypeDir != null
+
+def compiler = file("$compilerHome/bin/${toolchainArchs[0]}-gcc").getAbsolutePath()
+def linker = file("$compilerHome/bin/${toolchainArchs[0]}-g++").getAbsolutePath()
+
+// Log the settings we're building with
+logger.quiet("ANDROID_SDK: $sdk")
+logger.quiet("ANDROID_SDK_TARGET: $sdk_target")
+logger.quiet("ANDROID_NDK: $ndk")
+logger.quiet("ANDROID_NDK_TARGET: $ndk_target")
+logger.quiet("FREETYPE_DIR: $freetypeDir")
+logger.quiet("Compile native text: $compileNativeText") 
+logger.quiet("Android Compiler: $compiler")
+logger.quiet("Android Linker: $linker")
+
+//exclude from build
+project(":swing") {
+    apply plugin: 'java'
+
+    compileJava {
+        enabled = false
+    }
+}
+
+project(":fxml") {
+    apply plugin: 'java'
+
+    jar.dependsOn("retroClass");
+
+    compileJava {
+        enabled = true
+    }
+}
+
+project(":jmx") {
+    apply plugin: 'java'
+
+    compileJava {
+        enabled = false
+    }
+}
+
+
+allprojects() {
+    repositories {
+        mavenCentral()
+    }
+    configurations {
+        retroconfig
+    }
+
+    dependencies {
+        retroconfig 'net.orfjackal.retrolambda:retrolambda:1.1.4'
+    }
+    task retroClass() <<{
+            file classdirs = file ("$buildDir/classes");
+            lf = classdirs.listFiles();
+            classdirs.eachDir{t -> 
+                javaexec {
+                    inputdir = t
+                    basecp = files(lf, "modules/base/build/classes/main", "modules/graphics/build/classes/main").asPath
+                    myconfig = configurations.retroconfig;
+                    lambdaloc = myconfig.resolve().toArray()[0];
+                    classpath = configurations.retroconfig
+                    main = 'net.orfjackal.retrolambda.Main'
+                    jvmArgs = [
+                               "-Xbootclasspath:$JDK_HOME/jre/lib/rt.jar",
+                                "-Dretrolambda.inputDir=$inputdir",
+                                "-Dretrolambda.classpath=$basecp",
+                                "-Dretrolambda.bytecodeVersion=51",
+                                "-javaagent:$lambdaloc"
+                   ]
+            }
+        }
+    }
+}
+
+
+project(":base") {
+
+    apply plugin: 'java'
+
+    jar.dependsOn("retroClass");
+
+}
+
+
+project(":graphics") {
+
+    apply plugin: 'java'
+
+    sourceSets.main.java {
+        exclude "com/sun/glass/ui/swt/**"
+    }
+
+    assemble.dependsOn("retroClass");
+    task compileDalvikLibs(type: JavaCompile, group: "Build") {
+        description = "Task compiles dalvik vm based libraries."
+        options.bootClasspath = "$sdk/platforms/$sdk_target/android.jar"
+        classpath = files("build/classes/dalvik", "build/classes/main")
+        destinationDir = file("build/classes/dalvik")
+        dependencyCacheDir = file("build/dependency-cache")
+        source fileTree(dir: 'src/dalvik/java').matching { include 'javafxports/**' }
+    }
+
+    task jarDalvikLibs(type: Jar, group: "Build", dependsOn: compileDalvikLibs) {
+        description = "Creates jfxdvk.jar with all dalvik based classes."
+        archiveName = "jfxdvk.jar"
+        includeEmptyDirs = false
+        from("build/classes/dalvik")
+        include("javafxports/**/*")
+        dependsOn(compileDalvikLibs)
+    }
+    
+    jarDalvikLibs {
+        eachFile {
+                if (it.name.endsWith('.class')) {
+                    RandomAccessFile raf = new RandomAccessFile(it.file.path, "rw");
+                    raf.seek(7);
+                    raf.writeByte(0x32); //make it jdk6
+                    raf.close();
+                }
+            }
+    }
+     
+    afterEvaluate {
+        addNative(project, "activity")
+        if (compileNativeText) {
+            addNative(project, "fontNativeFreetype")
+        }
+        tasks["javahDalvikGlass"].dependsOn(compileDalvikLibs)
+        tasks["javahDalvikActivity"].dependsOn(compileDalvikLibs)
+        tasks["native"].dependsOn("nativeActivity")
+        if (compileNativeText) {
+            tasks["native"].dependsOn("nativeFontNativeFreetype")
+        }
+        tasks["javahDalvikPrismSW"].enabled = false
+        tasks["ccDalvikPrismSW"].enabled = false;
+        tasks["linkDalvikPrismSW"].enabled = false;
+        
+        sdkDalvik  {
+            dependsOn(jarDalvikLibs)
+            doLast {
+                def props = project.ext["DALVIK"]
+                copy {
+                    from(
+                         "modules/graphics/build/libs/activity/dalvik/${props.library(props.activity.lib)}"
+                    )                    
+                    into ("build/dalvik-sdk/rt/${props.libDest}")
+                }
+                copy {
+                    from ("modules/graphics/build/libs/${props.jfxdvklib}")
+                    into ("build/dalvik-sdk/rt/lib/ext")
+                }
+/*
+                copy {
+                    from ("modules/compat/build/libs/compat.jar")
+                    into ("build/dalvik-sdk/rt/lib/ext")
+                }
+*/
+                if (compileNativeText) {
+                    copy {
+                        from ("modules/graphics/build/libs/fontNativeFreetype/dalvik")
+                        into ("build/dalvik-sdk/rt/${props.libDest}")
+                    }
+                }
+            }
+        }
+    }
+}
+
+project(":controls") {
+
+    apply plugin: 'java'
+
+    assemble.dependsOn("compileControlsJavaDalvik","retroClass");
+
+    sourceSets.main.java {
+        exclude 'javafx/scene/control/Date*.java'
+        exclude 'com/sun/javafx/scene/control/skin/Date*.java'
+        exclude 'com/sun/javafx/scene/control/behavior/Date*.java'
+    }
+    task compileControlsJavaDalvik(type: JavaCompile, group: "Build", dependsOn: [":graphics:compileJava", ":controls:compileJava"]) << {
+        description = "Task compiles controls for Android"
+        classpath = files("modules/base/build/classes/main",
+            "modules/graphics/build/classes/main",
+            "modules/controls/build/classes/main"
+        )
+        destinationDir = file("modules/controls/build/classes/dalvik")
+        dependencyCacheDir = file("modules/controls/build/dependency-cache")
+        source file("modules/controls/src/android/java")
+    }
+    afterEvaluate {
+
+       task processControlsResourcesDalvik() {
+           copy {
+               from ("modules/controls/src/android/resources")
+               into ("modules/controls/build/resources/dalvik")
+           }
+        }
+
+        jfxrtDalvik {
+            from ("modules/controls/build/classes/dalvik",
+                  "modules/controls/build/resources/dalvik")
+            dependsOn(compileControlsJavaDalvik, processControlsResourcesDalvik)
+        }
+
+    }
+}        
+
+allprojects {
+    afterEvaluate {
+        sdkDalvik {
+            doLast {
+                ant.jar(update: "true", destfile: "build/dalvik-sdk/rt/lib/ext/jfxrt.jar", 
+                    basedir: "build/dalvik-sdk/rt/lib", includes: "*.properties")
+            }
+        }
+    }
+}
+
+
+DALVIK.jfxrtJarExcludes = [
+    "**/*.hlsl",
+    "com/sun/glass/ui/win",
+    "com/sun/glass/ui/accessible/win",    
+    "com/sun/prism/j2d",
+    "com/sun/prism/sw",
+    "com/sun/glass/ui/accessible/mac",
+    "com/sun/glass/ui/ios",
+    "com/sun/glass/ui/swt", // SWT glass
+    "com/oracle/dalvik",
+    "javafx/scene/media", //exclude all media for now
+    "com/sun/media",
+    "com/sun/javafx/media",
+    "com/sun/javafx/font/directwrite", //exclude non freetype font support
+    "com/sun/javafx/font/coretext",
+    "com/sun/javafx/font/freetype/Pango*",
+    "com/sun/javafx/font/freetype/OSPango*",
+    "com/sun/webkit",   //exclude all WebView for now
+    "com/sun/javafx/webkit",
+    "com/sun/javafx/scene/web",
+    "javafx/scene/web",
+    "com/sun/javafx/sg/prism/NGWeb*",
+    "javafx/print", //exclude printing
+    "com/sun/javafx/print",
+    "com/sun/javafx/tk/Print*"
+]
+
+def text = (compileNativeText) ? "native" : "t2k"
+
+DALVIK.javafxPlatformProperties = """
+javafx.platform=android
+android.glass.platform=Lens
+android.glass.lens=eglfb
+android.log.lens=FINEST
+android.prism.glDepthSize=16
+android.prism.lcdtext=false
+android.prism.debugfonts=true
+android.prism.text=$text
+android.embedded=eglfb
+android.prism.allowhidpi=false
+android.prism.maxTextureSize=2048
+android.prism.dirtyopts=true
+android.prism.vsync=false
+android.use.egl=true
+android.com.sun.javafx.isEmbedded=true
+"""
+def sysroot = "$ndk/platforms/$ndk_target/arch-arm"
+
+def ccFlags = ["--sysroot=$sysroot","-std=c99", "-DANDROID", "-c", "-nostdlib", 
+               "-DANDROID_NDK", "-DDALVIK_VM"]
+
+def ccOptFlags = ["-fpic", "-ffunction-sections", "-funwind-tables","-fstack-protector",
+                  "-Os", "-O2", "-fno-strict-aliasing", "-finline-limit=64", "-fomit-frame-pointer"]
+def ccWarnFlags = ["-Wa,--noexecstack", "-Wno-psabi"]
+def ccArchFlags = ["-mthumb", "-msoft-float", "-D__ARM_ARCH_5__", "-D__ARM_ARCH_5T__", "-D__ARM_ARCH_5E__",
+                   "-D__ARM_ARCH_5TE__", "-march=armv5te" , "-mtune=xscale"]
+def ccDebugFlags = [IS_DEBUG_NATIVE ? "-DDEBUG" : "-DNDEBUG"]
+def ccDefaultIncludeFlags = ["-I$ndk/platforms/$ndk_target/arch-arm/usr/include"]
+
+def linkFlags = ["--sysroot=$sysroot",
+                 "-Wl,--no-undefined", "-Wl,-z,noexecstack", "-lc", "-lm", "-shared",
+                 "-L$ndk/platforms/$ndk_target/arch-arm/usr/lib"]
+
+DALVIK.activity = [:]
+DALVIK.activity.javahSource = files("modules/graphics/build/classes/dalvik")
+DALVIK.activity.javahClasspath = files("modules/graphics/build/classes/dalvik", "$sdk/platforms/$sdk_target/android.jar")
+DALVIK.activity.javahInclude = ["javafxports/android/**"]
+DALVIK.activity.nativeSource = file("modules/graphics/src/dalvik/native")
+DALVIK.activity.compiler = compiler
+DALVIK.activity.linker = linker
+DALVIK.activity.lib = "activity"
+DALVIK.activity.ccFlags = [ccFlags, ccWarnFlags, ccArchFlags, ccOptFlags,
+    ccDebugFlags, ccDefaultIncludeFlags].flatten()
+DALVIK.activity.linkFlags = [linkFlags, "-landroid", "-llog"].flatten()
+
+DALVIK.webview = [:]
+DALVIK.webview.javahSource = files("modules/web/build/classes/dalvik")
+DALVIK.webview.javahClasspath = files("modules/web/build/classes/dalvik")
+DALVIK.webview.javahInclude = [
+    "com/sun/webkit/NativeWebView.class"
+]
+DALVIK.webview.nativeSource = [
+    file("modules/web/src/android/native/native_webview.c")
+]
+DALVIK.webview.compiler = compiler
+DALVIK.webview.linker = linker
+DALVIK.webview.lib = "webview"
+DALVIK.webview.ccFlags = [ccFlags, ccWarnFlags, ccArchFlags, ccOptFlags,
+    ccDebugFlags, ccDefaultIncludeFlags].flatten()
+DALVIK.webview.linkFlags = [linkFlags, "-ldl", "-llog"].flatten()
+
+DALVIK.dvkwebview = [:]
+DALVIK.dvkwebview.javahSource = files("modules/web/build/classes/dalvik")
+DALVIK.dvkwebview.javahClasspath = files("modules/web/build/classes/dalvik")
+DALVIK.dvkwebview.javahInclude = [
+    "com/sun/webkit/NativeWebView.class"
+]
+DALVIK.dvkwebview.nativeSource = [
+    file("modules/web/src/android/native/android_webview.c")
+]
+DALVIK.dvkwebview.compiler = compiler
+DALVIK.dvkwebview.linker = linker
+DALVIK.dvkwebview.lib = "android_webview"
+DALVIK.dvkwebview.ccFlags = [ccFlags, ccWarnFlags, ccArchFlags, ccOptFlags,
+    ccDebugFlags, ccDefaultIncludeFlags].flatten()
+DALVIK.dvkwebview.linkFlags = [linkFlags, "-ldl", "-llog"].flatten()
+
+DALVIK.glass = [:]
+DALVIK.glass.variants = ["eglfb", "lensport"]
+DALVIK.glass.javahSource = files("modules/graphics/build/classes/dalvik",
+ "modules/graphics/build/classes/main")
+DALVIK.glass.javahClasspath = files("modules/graphics/build/classes/main",
+ "modules/graphics/build/classes/dalvik",
+ "modules/base/build/classes/main",
+ "$sdk/platforms/$sdk_target/android.jar")
+DALVIK.glass.javahInclude = [
+    "javafxports/android/**",
+    "com/sun/glass/events/**",
+    "com/sun/glass/ui/*",
+    "com/sun/glass/ui/android/*",
+    "com/sun/glass/ui/lens/*"]
+
+DALVIK.glass.lensport = [:]
+DALVIK.glass.lensport.nativeSource = [
+    file("modules/graphics/src/main/native-glass/lens/lensport/initPlatform.c"),
+    file("modules/graphics/src/main/native-glass/lens/lensport/wrapped_functions.c")    
+]
+DALVIK.glass.lensport.compiler = compiler
+DALVIK.glass.lensport.linker = linker
+DALVIK.glass.lensport.lib = "lens_porting"
+DALVIK.glass.lensport.ccFlags = [ccFlags, ccWarnFlags, ccArchFlags, ccOptFlags,
+    ccDebugFlags, ccDefaultIncludeFlags, "-DISEGLFB", "-DLENSPORT",
+    "-I", file("modules/graphics/src/main/native-glass/lens")].flatten()
+DALVIK.glass.lensport.linkFlags = [linkFlags, "-ldl", "-llog"].flatten()
+
+DALVIK.glass.eglfb = [:]
+DALVIK.glass.eglfb.nativeSource = [
+    file("modules/graphics/src/main/native-glass/lens"),
+    file("modules/graphics/src/main/native-glass/lens/wm"),
+    file("modules/graphics/src/main/native-glass/lens/cursor/nullCursor"),
+    file("modules/graphics/src/main/native-glass/lens/dalvik")
+]
+DALVIK.glass.eglfb.compiler = compiler
+DALVIK.glass.eglfb.linker = linker
+DALVIK.glass.eglfb.lib = "glass_lens_eglfb"
+DALVIK.glass.eglfb.ccFlags = [ccFlags, ccWarnFlags, ccArchFlags, ccOptFlags,
+    ccDebugFlags, ccDefaultIncludeFlags].flatten()
+DALVIK.glass.eglfb.linkFlags = [linkFlags, "-ldl", "-landroid", "-llog"].flatten()
+
+DALVIK.prism = [:]
+DALVIK.prism.javahInclude = ["com/sun/prism/impl/**/*", "com/sun/prism/PresentableState*"]
+DALVIK.prism.nativeSource = file("modules/graphics/src/main/native-prism")
+DALVIK.prism.compiler = compiler
+DALVIK.prism.ccFlags = [ccFlags, ccWarnFlags, ccArchFlags, ccOptFlags,
+    ccDebugFlags, ccDefaultIncludeFlags].flatten()
+DALVIK.prism.linker = linker
+DALVIK.prism.linkFlags = [linkFlags].flatten()
+DALVIK.prism.lib = "prism_common"
+
+DALVIK.prismSW = [:]
+DALVIK.prismSW.javahInclude = ["com/sun/pisces/**/*"]
+DALVIK.prismSW.nativeSource = file("modules/graphics/src/main/native-prism-sw")
+DALVIK.prismSW.compiler = compiler
+DALVIK.prismSW.ccFlags = [ccFlags, ccWarnFlags, ccArchFlags, ccOptFlags,
+    ccDebugFlags, ccDefaultIncludeFlags].flatten()
+DALVIK.prismSW.linker = linker
+DALVIK.prismSW.linkFlags = [linkFlags].flatten()
+DALVIK.prismSW.lib = "prism_sw"
+
+DALVIK.decora = [:]
+DALVIK.decora.compiler = compiler
+DALVIK.decora.ccFlags = [ccFlags, ccWarnFlags, ccArchFlags, ccOptFlags,
+    ccDebugFlags, ccDefaultIncludeFlags].flatten()
+DALVIK.decora.linker = linker
+DALVIK.decora.linkFlags = [linkFlags].flatten()
+DALVIK.decora.lib = "decora_sse"
+
+DALVIK.iio = [:]
+DALVIK.iio.javahInclude = ["com/sun/javafx/iio/**/*"]
+DALVIK.iio.nativeSource = [
+    file("modules/graphics/src/main/native-iio"),
+    file("modules/graphics/src/main/native-iio/libjpeg7")]
+DALVIK.iio.compiler = compiler
+DALVIK.iio.ccFlags = [ccFlags, ccWarnFlags, ccArchFlags, ccOptFlags,
+    ccDebugFlags, ccDefaultIncludeFlags].flatten()
+DALVIK.iio.linker = linker
+DALVIK.iio.linkFlags = [linkFlags].flatten()
+DALVIK.iio.lib = "javafx_iio"
+
+DALVIK.prismES2 = [:]
+DALVIK.prismES2.variants = ["eglfb"]
+DALVIK.prismES2.javahInclude = ["com/sun/prism/es2/**/*"]
+
+DALVIK.prismES2.eglfb = [:]
+DALVIK.prismES2.eglfb.nativeSource = [
+    file("modules/graphics/src/main/native-prism-es2"),
+    file("modules/graphics/src/main/native-prism-es2/GL"),
+    file("modules/graphics/src/main/native-prism-es2/eglfb")]
+DALVIK.prismES2.eglfb.compiler = compiler
+DALVIK.prismES2.eglfb.ccFlags = [ccFlags, ccWarnFlags, ccArchFlags, ccOptFlags,
+    ccDebugFlags, ccDefaultIncludeFlags, "-DIS_EGLFB"].flatten()
+DALVIK.prismES2.eglfb.linker = linker
+DALVIK.prismES2.eglfb.linkFlags = [linkFlags, "-ldl", "-llog", "-lGLESv2", "-lEGL"].flatten()
+DALVIK.prismES2.eglfb.lib = "prism_es2_eglfb"
+
+DALVIK.font = [:]
+DALVIK.font.javahInclude = [
+        "com/sun/javafx/font/**/*",
+        "com/sun/javafx/text/**/*"]
+DALVIK.font.nativeSource = [file("$closedDir/javafx-font-native/src")]
+DALVIK.font.compiler = compiler
+DALVIK.font.ccFlags = [ccFlags, ccWarnFlags, ccArchFlags, ccOptFlags,
+    ccDebugFlags, ccDefaultIncludeFlags].flatten()
+DALVIK.font.linker = linker
+DALVIK.font.linkFlags = [linkFlags].flatten()
+DALVIK.font.lib = "javafx_font"
+
+if (BUILD_CLOSED) {
+    DALVIK.fontT2K = [:]
+    DALVIK.fontT2K.javahInclude = ["com/sun/javafx/font/t2k/**/*"]
+    DALVIK.fontT2K.nativeSource = [
+        file("$closedDir/javafx-font-t2k-native/src"),
+        file("$closedDir/javafx-font-t2k-native/src/layout"),
+        file("$closedDir/javafx-font-t2k-native/src/layoutfx")]
+    DALVIK.fontT2K.compiler = compiler
+    DALVIK.fontT2K.ccFlags = [ccFlags, "-fno-exceptions", "-fno-rtti", ccWarnFlags,
+        ccArchFlags, ccOptFlags, ccDebugFlags, ccDefaultIncludeFlags].flatten()
+    DALVIK.fontT2K.linker = linker
+    DALVIK.fontT2K.linkFlags = [linkFlags, "-lstdc++"].flatten()
+    DALVIK.fontT2K.lib = "javafx_font_t2k"
+} 
+
+if (compileNativeText) {
+    DALVIK.fontNativeFreetype = [:]
+    DALVIK.fontNativeFreetype.javahInclude = [
+        "com/sun/javafx/font/freetype/OSFreetype.class"
+    ]
+    DALVIK.fontNativeFreetype.nativeSource = [
+        file("modules/graphics/src/main/native-font/freetype.c")
+    ]
+    DALVIK.fontNativeFreetype.compiler = compiler
+    DALVIK.fontNativeFreetype.linker = linker
+    DALVIK.fontNativeFreetype.lib = "javafx_font_freetype"
+
+    ccFlags += ["-D_ENABLE_HARFBUZZ"]
+
+    DALVIK.fontNativeFreetype.ccFlags = 
+        [ccFlags, ccWarnFlags, ccArchFlags, ccOptFlags,
+        ccDebugFlags, ccDefaultIncludeFlags,
+        "-I$freetypeDir/include", "-I$freetypeDir/include/freetype2"].flatten()  
+        
+    DALVIK.fontNativeFreetype.linkFlags = 
+        [linkFlags, "-llog", 
+         "-L$freetypeDir/lib", "$freetypeDir/lib/libfreetype.a"].flatten()
+}
+
+DALVIK.media = [:]
+DALVIK.media.compiler = compiler
+DALVIK.media.linker = linker
+DALVIK.media.lib = file("$compilerHome/bin/${toolchainArchs[0]}-ar").getAbsolutePath()
+DALVIK.includeEGL = true
+DALVIK.includeGTK = true
+DALVIK.includeLens = true
+ext.IS_COMPILE_PANGO = false
+ext.IS_COMPILE_JFR = false

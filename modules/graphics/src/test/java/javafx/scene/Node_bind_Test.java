@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -61,13 +61,8 @@ public class Node_bind_Test {
          ObjectProperty<Node> v = new SimpleObjectProperty<Node>(clip1);
          rectA.clipProperty().bind(v);
          assertEquals(rectA.getClip(), clip1);
-         thrown.expect(IllegalArgumentException.class);
-         try {
-             v.set(clip2);
-         } catch (final IllegalArgumentException e) {
-             assertNotSame(rectA.getClip(), clip2);
-             throw e;
-         }
+         v.set(clip2);
+         assertNotSame(rectA.getClip(), clip2);
      }
 
      @Test public void testBackToLegalClip() {
@@ -78,13 +73,8 @@ public class Node_bind_Test {
          ObjectProperty<Node> v = new SimpleObjectProperty<Node>(clip1);
          rectA.clipProperty().bind(v);
          assertEquals(rectA.getClip(), clip1);
-         thrown.expect(IllegalArgumentException.class);
-         try {
-             v.set(clip2);
-         } catch (final IllegalArgumentException e) {
-             assertEquals(rectA.getClip(), clip1);
-             throw e;
-         }
+         v.set(clip2);
+         assertEquals(rectA.getClip(), clip1);
      }
 
      @Test public void testEffect() {

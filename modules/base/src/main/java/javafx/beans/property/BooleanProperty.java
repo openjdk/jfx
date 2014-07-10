@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -71,7 +71,7 @@ public abstract class BooleanProperty extends ReadOnlyBooleanProperty implements
     @Override
     public void setValue(Boolean v) {
         if (v == null) {
-            Logging.getLogger().info("Attempt to set boolean property to null, using default value instead.", new NullPointerException());
+            Logging.getLogger().fine("Attempt to set boolean property to null, using default value instead.", new NullPointerException());
             set(false);
         } else {
             set(v.booleanValue());
@@ -138,7 +138,7 @@ public abstract class BooleanProperty extends ReadOnlyBooleanProperty implements
         }
         return property instanceof BooleanProperty ? (BooleanProperty)property : new BooleanPropertyBase() {
             {
-                BidirectionalBinding.bind(property, this);
+                BidirectionalBinding.bind(this, property);
             }
 
             @Override

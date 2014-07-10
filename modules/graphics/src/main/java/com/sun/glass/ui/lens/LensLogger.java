@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,11 +38,7 @@ final class LensLogger {
     private static PlatformLogger initLogger() {
         PlatformLogger logger = PlatformLogger.getLogger("lens");
         String levelString = AccessController.doPrivileged(
-        new PrivilegedAction<String>() {
-            public String run() {
-                return System.getProperty("log.lens", "SEVERE").toUpperCase(Locale.ROOT);
-            }
-        });
+                (PrivilegedAction<String>) () -> System.getProperty("log.lens", "SEVERE").toUpperCase(Locale.ROOT));
         try {
             logger.setLevel(Level.valueOf(levelString));
         } catch (Exception e) {

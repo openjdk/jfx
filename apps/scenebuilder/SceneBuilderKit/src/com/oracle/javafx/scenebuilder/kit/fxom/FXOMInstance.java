@@ -50,7 +50,7 @@ import javafx.fxml.FXMLLoader;
 public class FXOMInstance extends FXOMObject {
     
     private final Map<PropertyName, FXOMProperty> properties = new TreeMap<>();
-    private final Class<?> declaredClass;
+    private Class<?> declaredClass;
     
     
     FXOMInstance(
@@ -95,8 +95,17 @@ public class FXOMInstance extends FXOMObject {
         this.declaredClass = declaredClass;
     }
     
+    public FXOMInstance(FXOMDocument fxomDocument, String tagName) {
+        super(fxomDocument, tagName);
+        this.declaredClass = null; // This is an unresolved instance
+    }
+    
     public Class<?> getDeclaredClass() {
         return declaredClass;
+    }
+
+    public void setDeclaredClass(Class<?> declaredClass) {
+        this.declaredClass = declaredClass;
     }
 
     public Map<PropertyName, FXOMProperty> getProperties() {
@@ -125,23 +134,34 @@ public class FXOMInstance extends FXOMObject {
     }
         
     
-    public static FXOMInstance newInstance(FXOMInstance source) {
+    public static FXOMInstance newInstance(FXOMInstance source, FXOMDocument targetDocument) {
         final FXOMInstance result;
         
         assert source != null;
+        assert targetDocument != null;
+        assert source.getFxomDocument() != targetDocument;
         
-        
-        result = new FXOMInstance(
-                source.getFxomDocument(),
-                source.getDeclaredClass());
+        if (source.getDeclaredClass() == null) {
+            assert source.getSceneGraphObject() == null; // source is unresolved
+            result = new FXOMInstance(
+                    targetDocument,
+                    source.getGlueElement().getTagName());
+        } else {
+            result = new FXOMInstance(
+                    targetDocument,
+                    source.getDeclaredClass());
+        }
         
         for (Map.Entry<PropertyName, FXOMProperty> e : source.getProperties().entrySet()) {
             final FXOMProperty newProperty
-                    = FXOMNodes.newProperty(e.getValue());
+                    = FXOMNodes.newProperty(e.getValue(), targetDocument);
             newProperty.addToParentInstance(-1, result);
         }
         
         result.setFxConstant(source.getFxConstant());
+        result.setFxController(source.getFxController());
+        result.setFxFactory(source.getFxFactory());
+        result.setFxId(source.getFxId());
         result.setFxValue(source.getFxValue());
         
         return result;
@@ -304,6 +324,17 @@ public class FXOMInstance extends FXOMObject {
             if (p instanceof FXOMPropertyC) {
                 for (FXOMObject v : ((FXOMPropertyC)p).getValues()) {
                     v.collectReferences(source, result);
+                }
+            }
+        }
+    }
+
+    @Override
+    protected void collectIncludes(String source, List<FXOMIntrinsic> result) {
+        for (FXOMProperty p : properties.values()) {
+            if (p instanceof FXOMPropertyC) {
+                for (FXOMObject v : ((FXOMPropertyC)p).getValues()) {
+                    v.collectIncludes(source, result);
                 }
             }
         }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,8 +35,9 @@ import com.sun.scenario.effect.Filterable;
 import com.sun.scenario.effect.ImageData;
 import com.sun.scenario.effect.impl.Renderer;
 import com.sun.scenario.effect.impl.prism.PrTexture;
+import com.sun.scenario.effect.impl.state.RenderState;
 
-public abstract class PPSOneSamplerPeer extends PPSEffectPeer {
+public abstract class PPSOneSamplerPeer<T extends RenderState> extends PPSEffectPeer<T> {
 
     private Shader shader;
 

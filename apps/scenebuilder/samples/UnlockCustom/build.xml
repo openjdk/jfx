@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- You may freely edit this file. See commented blocks below for -->
+<!-- some examples of how to customize the build. -->
+<!-- (If you delete it and reopen the project it will be recreated.) -->
+<!-- By default, only the Clean and Build commands use this build script. -->
+<project name="UnlockCustom" default="default" basedir="." xmlns:fx="javafx:com.sun.javafx.tools.ant">
+    <description>Builds, tests, and runs the project UnlockCustom.</description>
+    <import file="nbproject/build-impl.xml"/>
+    <!--
+
+    There exist several targets which are by default empty and which can be 
+    used for execution of your tasks. These targets are usually executed 
+    before and after some main targets. Those of them relevant for JavaFX project are: 
+
+      -pre-init:                 called before initialization of project properties
+      -post-init:                called after initialization of project properties
+      -pre-compile:              called before javac compilation
+      -post-compile:             called after javac compilation
+      -pre-compile-test:         called before javac compilation of JUnit tests
+      -post-compile-test:        called after javac compilation of JUnit tests
+      -pre-jfx-jar:              called before FX SDK specific <fx:jar> task
+      -post-jfx-jar:             called after FX SDK specific <fx:jar> task
+      -pre-jfx-deploy:           called before FX SDK specific <fx:deploy> task
+      -post-jfx-deploy:          called after FX SDK specific <fx:deploy> task
+      -pre-jfx-native:           called just after -pre-jfx-deploy if <fx:deploy> runs in native packaging mode
+      -post-jfx-native:          called just after -post-jfx-deploy if <fx:deploy> runs in native packaging mode
+      -post-clean:               called after cleaning build products
+
+    (Targets beginning with '-' are not intended to be called on their own.)
+
+    Example of inserting a HTML postprocessor after javaFX SDK deployment:
+
+        <target name="-post-jfx-deploy">
+            <basename property="jfx.deployment.base" file="${jfx.deployment.jar}" suffix=".jar"/>
+            <property name="jfx.deployment.html" location="${jfx.deployment.dir}${file.separator}${jfx.deployment.base}.html"/>
+            <custompostprocess>
+                <fileset dir="${jfx.deployment.html}"/>
+            </custompostprocess>
+        </target>
+
+    Example of calling an Ant task from JavaFX SDK. Note that access to JavaFX SDK Ant tasks must be
+    initialized; to ensure this is done add the dependence on -check-jfx-sdk-version target:
+
+        <target name="-post-jfx-jar" depends="-check-jfx-sdk-version">
+            <echo message="Calling jar task from JavaFX SDK"/>
+            <fx:jar ...>
+                ...
+            </fx:jar>
+        </target>
+
+    For more details about JavaFX SDK Ant tasks go to
+    http://docs.oracle.com/javafx/2/deployment/jfxpub-deployment.htm
+
+    For list of available properties check the files
+    nbproject/build-impl.xml and nbproject/jfx-impl.xml.
+
+    -->
+</project>

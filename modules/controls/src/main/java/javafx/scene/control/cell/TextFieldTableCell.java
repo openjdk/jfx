@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -84,11 +84,7 @@ public class TextFieldTableCell<S,T> extends TableCell<S,T> {
      */
     public static <S,T> Callback<TableColumn<S,T>, TableCell<S,T>> forTableColumn(
             final StringConverter<T> converter) {
-        return new Callback<TableColumn<S,T>, TableCell<S,T>>() {
-            @Override public TableCell<S,T> call(TableColumn<S,T> list) {
-                return new TextFieldTableCell<S,T>(converter);
-            }
-        };
+        return list -> new TextFieldTableCell<S,T>(converter);
     }
     
     

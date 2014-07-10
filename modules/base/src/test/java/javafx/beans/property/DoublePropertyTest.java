@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -133,10 +133,10 @@ public class DoublePropertyTest {
     
     @Test
     public void testAsObject() {
-        final DoubleProperty valueModel = new SimpleDoubleProperty();
+        final DoubleProperty valueModel = new SimpleDoubleProperty(2d);
         final ObjectProperty<Double> exp = valueModel.asObject();
 
-        assertEquals(0.0, exp.getValue(), EPSILON);
+        assertEquals(2d, exp.getValue(), EPSILON);
         valueModel.set(-4354.3);
         assertEquals(-4354.3, exp.getValue(), EPSILON);
         valueModel.set(5e11);

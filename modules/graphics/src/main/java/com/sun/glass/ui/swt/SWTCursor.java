@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle  and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -45,11 +45,7 @@ final class SWTCursor extends Cursor {
         Display display = Display.getDefault();
         ImageData data = SWTApplication.createImageData(pixels);
         cursor = new org.eclipse.swt.graphics.Cursor(display, data, x, y);
-        display.disposeExec(new Runnable() {
-            public void run () {
-                cursor.dispose();
-            }
-        });
+        display.disposeExec(() -> cursor.dispose());
         return 1L;
     }
 }

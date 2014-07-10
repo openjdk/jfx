@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -62,10 +62,19 @@ public class NodeHelper {
         nodeAccessor = newAccessor;
     }
 
+    public static NodeAccessor getNodeAccessor() {
+        if (nodeAccessor == null) {
+            throw new IllegalStateException();
+        }
+
+        return nodeAccessor;
+    }
+
     public interface NodeAccessor {
         void layoutNodeForPrinting(Node node);
         boolean isDerivedDepthTest(Node node);
         SubScene getSubScene(Node node);
+        void setLabeledBy(Node node, Node labeledBy);
     }
 
     private static void forceInit(final Class<?> classToInit) {

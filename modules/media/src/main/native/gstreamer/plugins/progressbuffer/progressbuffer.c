@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -778,7 +778,7 @@ static GstFlowReturn progress_buffer_chain(GstPad *pad, GstBuffer *data)
     gst_buffer_unref(data);
 
     // Here we can maintain some prebuffering strategy.
-    if (!element->srcpad)
+    if (result != GST_FLOW_ERROR && !element->srcpad)
         progress_buffer_create_sourcepad(element);
 
     return result;

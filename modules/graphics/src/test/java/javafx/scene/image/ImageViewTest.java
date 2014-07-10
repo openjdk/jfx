@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -88,21 +88,18 @@ public final class ImageViewTest {
                 imageView, "image", "image",
                 null,
                 TestImages.TEST_IMAGE_200x100,
-                new Comparator() {
-                    @Override
-                    public int compare(final Object sgValue,
-                                       final Object pgValue) {
-                        if (sgValue == null) {
-                            assertNull(pgValue);
-                        } else {
-                            assertSame(
-                                    ((Image) sgValue).impl_getPlatformImage(),
-                                    pgValue);
-                        }
-
-                        return 0;
+                (sgValue, pgValue) -> {
+                    if (sgValue == null) {
+                        assertNull(pgValue);
+                    } else {
+                        assertSame(
+                                ((Image) sgValue).impl_getPlatformImage(),
+                                pgValue);
                     }
-                });
+
+                    return 0;
+                }
+        );
     }
 
     @Test

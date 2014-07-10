@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,6 +31,6 @@ public class ListViewAnchorRetriever {
 
     // can only access the getAnchor method in ListCellBehavior from this package
     public static int getAnchor(ListView listView) {
-        return ListCellBehavior.getAnchor(listView);
+        return ListCellBehavior.getAnchor(listView, -1);
     }
 }

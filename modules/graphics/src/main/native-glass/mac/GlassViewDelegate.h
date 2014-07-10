@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,7 @@
 #import "GlassHostView.h"
 #import "GlassFullscreenWindow.h"
 #import "GlassDragSource.h"
+#import "GlassAccessible.h"
 
 // helper class that implements the custom GlassView functionality
 @interface GlassViewDelegate : NSObject <GlassDragSourceDelegate>
@@ -49,6 +50,7 @@
     
     BOOL                    mouseIsDown;
     BOOL                    mouseIsOver;
+    int                     mouseDownMask; // bit 0 - left, 1 - right, 2 - other button
     
     BOOL                    gestureInProgress;
     
@@ -94,5 +96,7 @@
 - (void)setFrameOrigin:(NSPoint)newOrigin;
 
 - (jobject)jView;
+
+- (GlassAccessible*)getAccessible;
 
 @end

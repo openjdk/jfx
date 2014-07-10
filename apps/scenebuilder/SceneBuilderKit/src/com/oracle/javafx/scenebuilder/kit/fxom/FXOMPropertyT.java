@@ -32,10 +32,13 @@
 package com.oracle.javafx.scenebuilder.kit.fxom;
 
 import com.oracle.javafx.scenebuilder.kit.fxom.glue.GlueElement;
+import com.oracle.javafx.scenebuilder.kit.metadata.property.value.list.StringListPropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PrefixedValue;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -133,14 +136,16 @@ public class FXOMPropertyT extends FXOMProperty {
         return valueElement;
     }
     
-    public static FXOMPropertyT newInstance(FXOMPropertyT source) {
+    public static FXOMPropertyT newInstance(FXOMPropertyT source, FXOMDocument targetDocument) {
         final FXOMPropertyT result;
         
         assert source != null;
+        assert targetDocument != null;
+        assert source.getFxomDocument() != targetDocument;
         
         
         result = new FXOMPropertyT(
-                source.getFxomDocument(),
+                targetDocument,
                 source.getName(),
                 source.getValue());
         
@@ -256,48 +261,63 @@ public class FXOMPropertyT extends FXOMProperty {
     
     @Override
     public void documentLocationWillChange(URL newLocation) {
-        final String currentValue = getValue();
         final URL currentLocation = getFxomDocument().getLocation();
         
-        final PrefixedValue pv = new PrefixedValue(currentValue);
-        if (pv.isDocumentRelativePath()) {
-            assert currentLocation != null;
+        final List<String> currentItems = StringListPropertyMetadata.splitValue(getValue());
+        final List<String> newItems = new ArrayList<>();
+        int changeCount = 0;
+        for (String currentItem : currentItems) {
+            final PrefixedValue pv = new PrefixedValue(currentItem);
+            if (pv.isDocumentRelativePath()) {
+                assert currentLocation != null;
 
-            /*
-             * currentValue is a path relative to currentLocation.
-             * We compute the absolute path and, if new location 
-             * is non null, we relativize the absolute path against
-             * newLocation.
-             */
-            final URL assetURL = pv.resolveDocumentRelativePath(currentLocation);
-            final String newValue;
-            if (newLocation == null) {
-                newValue = assetURL.toString();
+                /*
+                 * currentItem is a path relative to currentLocation.
+                 * We compute the absolute path and, if new location 
+                 * is non null, we relativize the absolute path against
+                 * newLocation.
+                 */
+                final URL assetURL = pv.resolveDocumentRelativePath(currentLocation);
+                final String newValue;
+                if (newLocation == null) {
+                    newValue = assetURL.toString();
+                } else {
+                    final PrefixedValue pv2 
+                            = PrefixedValue.makePrefixedValue(assetURL, newLocation);
+                    newValue = pv2.toString();
+                }
+                newItems.add(newValue);
+                changeCount++;
+            } else if (pv.isPlainString() && (currentLocation == null)) {
+
+                /*
+                 * currentItem is a plain string.
+                 * We check if it is an URL.
+                 * 
+                 * Since currentLocation is null and newLocation non null,
+                 * then all URLs should be converted to relative path.
+                 */
+                assert newLocation != null;
+                try {
+                    final URL assetURL = new URL(pv.getSuffix());
+                    final PrefixedValue pv2 = PrefixedValue.makePrefixedValue(assetURL, newLocation);
+                    newItems.add(pv2.toString());
+                    changeCount++;
+                } catch(MalformedURLException x) {
+                    // p.getValue() is not an URL
+                    // We keep currentItem unchanged.
+                    newItems.add(currentItem);
+                }
             } else {
-                final PrefixedValue pv2 
-                        = PrefixedValue.makePrefixedValue(assetURL, newLocation);
-                newValue = pv2.toString();
-            }
-            setValue(newValue);
-        } else if (pv.isPlainString() && (currentLocation == null)) {
-
-            /*
-             * currentValue is a plain string.
-             * We check if it is an URL.
-             * 
-             * Since currentLocation is null and newLocation non null,
-             * then all URLs should be converted to relative path.
-             */
-            assert newLocation != null;
-            try {
-                final URL assetURL = new URL(pv.getSuffix());
-                final PrefixedValue pv2 = PrefixedValue.makePrefixedValue(assetURL, newLocation);
-                setValue(pv2.toString());
-            } catch(MalformedURLException x) {
-                // p.getValue() is not an URL
-                // We keep currentValue unchanged.
+                newItems.add(currentItem);
             }
         }
+        assert currentItems.size() == newItems.size();
+        
+        if (changeCount >= 1) {
+            setValue(StringListPropertyMetadata.assembleValue(newItems));
+        }
+                
     }
     
 }

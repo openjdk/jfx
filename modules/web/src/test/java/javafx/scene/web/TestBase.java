@@ -1,6 +1,28 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
  */
+
 package javafx.scene.web;
 
 import java.io.File;
@@ -18,6 +40,7 @@ import javafx.concurrent.Worker;
 
 import com.sun.javafx.application.PlatformImpl;
 import java.util.concurrent.ExecutionException;
+import org.junit.BeforeClass;
 import org.w3c.dom.Document;
 
 public class TestBase implements ChangeListener, InvalidationListener {
@@ -27,13 +50,12 @@ public class TestBase implements ChangeListener, InvalidationListener {
 
     private static WebView view;
 
-    static {
+    @BeforeClass
+    public static void setupOnce() {
         final CountDownLatch startupLatch = new CountDownLatch(1);
 
-        PlatformImpl.startup(new Runnable() {
-            @Override public void run() {
-                startupLatch.countDown();
-            }
+        PlatformImpl.startup(() -> {
+            startupLatch.countDown();
         });
 
         try {
@@ -42,42 +64,40 @@ public class TestBase implements ChangeListener, InvalidationListener {
     }
 
     public TestBase() {
-        Platform.runLater(new Runnable() {
-            @Override public void run() {
-                view = new WebView();
-                WebEngine web = view.getEngine();
+        Platform.runLater(() -> {
+            view = new WebView();
+            WebEngine web = view.getEngine();
 
-                web.documentProperty().addListener((ChangeListener)TestBase.this);
-                web.documentProperty().addListener((InvalidationListener)TestBase.this);
-                web.titleProperty().addListener((ChangeListener)TestBase.this);
-                web.titleProperty().addListener((InvalidationListener)TestBase.this);
-                web.locationProperty().addListener((ChangeListener)TestBase.this);
-                web.locationProperty().addListener((InvalidationListener)TestBase.this);
+            web.documentProperty().addListener((ChangeListener)TestBase.this);
+            web.documentProperty().addListener((InvalidationListener)TestBase.this);
+            web.titleProperty().addListener((ChangeListener)TestBase.this);
+            web.titleProperty().addListener((InvalidationListener)TestBase.this);
+            web.locationProperty().addListener((ChangeListener)TestBase.this);
+            web.locationProperty().addListener((InvalidationListener)TestBase.this);
 
-                Worker loadTask = web.getLoadWorker();
-                loadTask.exceptionProperty().addListener((ChangeListener)TestBase.this);
-                loadTask.exceptionProperty().addListener((InvalidationListener)TestBase.this);
-                loadTask.messageProperty().addListener((ChangeListener)TestBase.this);
-                loadTask.messageProperty().addListener((InvalidationListener)TestBase.this);
-                loadTask.progressProperty().addListener((ChangeListener)TestBase.this);
-                loadTask.progressProperty().addListener((InvalidationListener)TestBase.this);
-                loadTask.runningProperty().addListener((ChangeListener)TestBase.this);
-                loadTask.runningProperty().addListener((InvalidationListener)TestBase.this);
-                loadTask.stateProperty().addListener((ChangeListener)TestBase.this);
-                loadTask.stateProperty().addListener((InvalidationListener)TestBase.this);
-                loadTask.titleProperty().addListener((ChangeListener)TestBase.this);
-                loadTask.titleProperty().addListener((InvalidationListener)TestBase.this);
-                loadTask.totalWorkProperty().addListener((ChangeListener)TestBase.this);
-                loadTask.totalWorkProperty().addListener((InvalidationListener)TestBase.this);
-                loadTask.valueProperty().addListener((ChangeListener)TestBase.this);
-                loadTask.valueProperty().addListener((InvalidationListener)TestBase.this);
-                loadTask.workDoneProperty().addListener((ChangeListener)TestBase.this);
-                loadTask.workDoneProperty().addListener((InvalidationListener)TestBase.this);
-                
-                loadTask.runningProperty().addListener(new LoadFinishedListener());
+            Worker loadTask = web.getLoadWorker();
+            loadTask.exceptionProperty().addListener((ChangeListener)TestBase.this);
+            loadTask.exceptionProperty().addListener((InvalidationListener)TestBase.this);
+            loadTask.messageProperty().addListener((ChangeListener)TestBase.this);
+            loadTask.messageProperty().addListener((InvalidationListener)TestBase.this);
+            loadTask.progressProperty().addListener((ChangeListener)TestBase.this);
+            loadTask.progressProperty().addListener((InvalidationListener)TestBase.this);
+            loadTask.runningProperty().addListener((ChangeListener)TestBase.this);
+            loadTask.runningProperty().addListener((InvalidationListener)TestBase.this);
+            loadTask.stateProperty().addListener((ChangeListener)TestBase.this);
+            loadTask.stateProperty().addListener((InvalidationListener)TestBase.this);
+            loadTask.titleProperty().addListener((ChangeListener)TestBase.this);
+            loadTask.titleProperty().addListener((InvalidationListener)TestBase.this);
+            loadTask.totalWorkProperty().addListener((ChangeListener)TestBase.this);
+            loadTask.totalWorkProperty().addListener((InvalidationListener)TestBase.this);
+            loadTask.valueProperty().addListener((ChangeListener)TestBase.this);
+            loadTask.valueProperty().addListener((InvalidationListener)TestBase.this);
+            loadTask.workDoneProperty().addListener((ChangeListener)TestBase.this);
+            loadTask.workDoneProperty().addListener((InvalidationListener)TestBase.this);
 
-                TestBase.this.notify(LOCK);
-            }
+            loadTask.runningProperty().addListener(new LoadFinishedListener());
+
+            TestBase.this.notify(LOCK);
         });
 
         wait(LOCK, INIT_TIMEOUT);
@@ -88,10 +108,8 @@ public class TestBase implements ChangeListener, InvalidationListener {
      * This method blocks until loading is finished.
      */
     protected void load(final String url) {
-        Platform.runLater(new Runnable() {
-            @Override public void run() {
-                getEngine().load(url);
-            }
+        Platform.runLater(() -> {
+            getEngine().load(url);
         });
         waitLoadFinished();
     }
@@ -101,10 +119,8 @@ public class TestBase implements ChangeListener, InvalidationListener {
      * This method blocks until loading is finished.
      */
     protected void reload() {
-        Platform.runLater(new Runnable() {
-            @Override public void run() {
-                getEngine().reload();
-            }
+        Platform.runLater(() -> {
+            getEngine().reload();
         });
         waitLoadFinished();        
     }
@@ -131,10 +147,8 @@ public class TestBase implements ChangeListener, InvalidationListener {
      * This method does not return until loading is finished.
      */
     protected void loadContent(final String content, final String contentType) {
-        Platform.runLater(new Runnable() {
-            @Override public void run() {
-                getEngine().loadContent(content, contentType);
-            }
+        Platform.runLater(() -> {
+            getEngine().loadContent(content, contentType);
         });
         waitLoadFinished();
     }
@@ -197,11 +211,7 @@ public class TestBase implements ChangeListener, InvalidationListener {
      * This method does not return until execution is complete.
      */
     protected Object executeScript(final String script) {
-        return submit(new Callable<Object>() {
-            public Object call() {
-                return getEngine().executeScript(script);
-            }
-        });
+        return submit(() -> getEngine().executeScript(script));
     }
 
     private class LoadFinishedListener implements ChangeListener<Boolean> {

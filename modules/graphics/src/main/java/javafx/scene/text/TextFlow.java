@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,8 +29,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.geometry.HPos;
@@ -39,6 +37,8 @@ import javafx.geometry.NodeOrientation;
 import javafx.geometry.Orientation;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
+//import javafx.scene.accessibility.Attribute;
+//import javafx.scene.accessibility.Role;
 import javafx.scene.layout.Pane;
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.StyleableObjectProperty;
@@ -159,11 +159,7 @@ public class TextFlow extends Pane {
      */
     public TextFlow() {
         super();
-        effectiveNodeOrientationProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable observable) {
-                checkOrientation();
-            }
-        });
+        effectiveNodeOrientationProperty().addListener(observable -> checkOrientation());
     }
 
     /**
@@ -350,6 +346,9 @@ public class TextFlow extends Pane {
                      * to run a full text analysis in the new content.
                      */
                     double baseline = node.getBaselineOffset();
+                    if (baseline == BASELINE_OFFSET_SAME_AS_HEIGHT) {
+                        baseline = node.getLayoutBounds().getHeight();
+                    }
                     double width = computeChildPrefAreaWidth(node, null);
                     double height = computeChildPrefAreaHeight(node, null);
                     spans[i] = new EmbeddedSpan(node, baseline, width, height);
@@ -554,4 +553,22 @@ public class TextFlow extends Pane {
     }
     /* end of copied code */
 
+//    /** @treatAsPrivate */
+//    @Override
+//    public Object accGetAttribute(Attribute attribute, Object... parameters) {
+//        switch (attribute) {
+//            case ROLE: return Role.TEXT;
+//            case TITLE: {
+//                StringBuilder title = new StringBuilder();
+//                for (Node node: getChildren()) {
+//                    Object text = node.accGetAttribute(Attribute.TITLE, parameters);
+//                    if (text != null) {
+//                        title.append(text.toString());
+//                    }
+//                }
+//                return title.toString();
+//            }
+//            default: return super.accGetAttribute(attribute, parameters);
+//        }
+//    }
 }

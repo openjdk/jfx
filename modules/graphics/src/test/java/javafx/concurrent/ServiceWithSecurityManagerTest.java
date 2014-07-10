@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -62,13 +62,11 @@ public class ServiceWithSecurityManagerTest extends ServiceLifecycleTest {
                     SecurityManager original = System.getSecurityManager();
                     try {
                         mainThreadGroup = new ThreadGroup(Thread.currentThread().getThreadGroup(), "FX Test Thread Group");
-                        Thread thread = new Thread(mainThreadGroup, new Runnable() {
-                            @Override public void run() {
-                                try {
-                                    s.evaluate();
-                                } catch (Throwable t) {
-                                    throwable = t;
-                                }
+                        Thread thread = new Thread(mainThreadGroup, () -> {
+                            try {
+                                s.evaluate();
+                            } catch (Throwable t) {
+                                throwable = t;
                             }
                         });
                         

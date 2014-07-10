@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -50,61 +50,38 @@ final class EmbeddedSceneDS implements EmbeddedSceneDSInterface {
     @Override
     public Set<TransferMode> getSupportedActions() {
         assert dnd.isHostThread();
-        return dnd.executeOnFXThread(new Callable<Set<TransferMode>>() {
-            @Override
-            public Set<TransferMode> call() {
-                return QuantumClipboard.clipboardActionsToTransferModes(
-                        assistant.getSupportedSourceActions());
-            }
-        });
+        return dnd.executeOnFXThread(() -> QuantumClipboard.clipboardActionsToTransferModes(
+                assistant.getSupportedSourceActions()));
     }
 
     @Override
     public Object getData(final String mimeType) {
         assert dnd.isHostThread();
-        return dnd.executeOnFXThread(new Callable<Object>() {
-            @Override
-            public Object call() {
-                return assistant.getData(mimeType);
-            }
-        });
+        return dnd.executeOnFXThread(() -> assistant.getData(mimeType));
     }
 
     @Override
     public String[] getMimeTypes() {
         assert dnd.isHostThread();
-        return dnd.executeOnFXThread(new Callable<String[]>() {
-            @Override
-            public String[] call() {
-                return assistant.getMimeTypes();
-            }
-        });
+        return dnd.executeOnFXThread(() -> assistant.getMimeTypes());
     }
 
     @Override
     public boolean isMimeTypeAvailable(final String mimeType) {
         assert dnd.isHostThread();
-        return dnd.executeOnFXThread(new Callable<Boolean>() {
-            @Override
-            public Boolean call() {
-                return Arrays.asList(assistant.getMimeTypes()).contains(mimeType);
-            }
-        });
+        return dnd.executeOnFXThread(() -> Arrays.asList(assistant.getMimeTypes()).contains(mimeType));
     }
 
     @Override
     public void dragDropEnd(final TransferMode performedAction) {
         assert dnd.isHostThread();
-        dnd.executeOnFXThread(new Callable<Void>() {
-            @Override
-            public Void call() {
-                try {
-                    dndHandler.handleDragEnd(performedAction, assistant);
-                } finally {
-                    dnd.onDragSourceReleased(EmbeddedSceneDS.this);
-                }
-                return null;
+        dnd.executeOnFXThread(() -> {
+            try {
+                dndHandler.handleDragEnd(performedAction, assistant);
+            } finally {
+                dnd.onDragSourceReleased(EmbeddedSceneDS.this);
             }
+            return null;
         });
     }
 }

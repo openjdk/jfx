@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013 Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -164,12 +164,8 @@ public class CandleStickChart extends XYChart<Number, Number> {
             // fade out old candle
             FadeTransition ft = new FadeTransition(Duration.millis(500), candle);
             ft.setToValue(0);
-            ft.setOnFinished(new EventHandler<ActionEvent>() {
-
-                @Override
-                public void handle(ActionEvent actionEvent) {
-                    getPlotChildren().remove(candle);
-                }
+            ft.setOnFinished((ActionEvent actionEvent) -> {
+                getPlotChildren().remove(candle);
             });
             ft.play();
         } else {
@@ -208,12 +204,8 @@ public class CandleStickChart extends XYChart<Number, Number> {
                 // fade out old candle
                 FadeTransition ft = new FadeTransition(Duration.millis(500), candle);
                 ft.setToValue(0);
-                ft.setOnFinished(new EventHandler<ActionEvent>() {
-
-                    @Override
-                    public void handle(ActionEvent actionEvent) {
-                        getPlotChildren().remove(candle);
-                    }
+                ft.setOnFinished((ActionEvent actionEvent) -> {
+                    getPlotChildren().remove(candle);
                 });
                 ft.play();
             } else {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,13 +25,12 @@
 
 package com.sun.javafx.scene.control.skin;
 
+import com.sun.javafx.scene.control.behavior.ToggleButtonBehavior;
 import javafx.scene.control.ToggleButton;
 
-import com.sun.javafx.scene.control.behavior.ButtonBehavior;
-
-public class ToggleButtonSkin extends LabeledSkinBase<ToggleButton, ButtonBehavior<ToggleButton>> {
+public class ToggleButtonSkin extends LabeledSkinBase<ToggleButton, ToggleButtonBehavior<ToggleButton>> {
 
     public ToggleButtonSkin(ToggleButton toggleButton) {
-        super(toggleButton, new ButtonBehavior<ToggleButton>(toggleButton));
+        super(toggleButton, new ToggleButtonBehavior<>(toggleButton));
     }
 }

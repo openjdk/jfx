@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -181,6 +181,8 @@ public class PrismTextLayout implements TextLayout {
     }
 
     public boolean setWrapWidth(float newWidth) {
+        if (Float.isInfinite(newWidth)) newWidth = 0;
+        if (Float.isNaN(newWidth)) newWidth = 0;
         float oldWidth = this.wrapWidth;
         this.wrapWidth = Math.max(0, newWidth);
 
@@ -1031,7 +1033,7 @@ public class PrismTextLayout implements TextLayout {
 
         BreakIterator boundary = null;
         if (wrapWidth > 0) {
-            if ((flags & (FLAGS_HAS_COMPLEX)) != 0) {
+            if ((flags & (FLAGS_HAS_COMPLEX | FLAGS_HAS_CJK)) != 0) {
                 boundary = BreakIterator.getLineInstance();
                 boundary.setText(new CharArrayIterator(chars));
             }
@@ -1240,6 +1242,8 @@ public class PrismTextLayout implements TextLayout {
                                 }
                             }
                         }
+                        lineX = 0;
+                        line.setAlignment(lineX);
                         line.setWidth(fullWidth);
                     }
                 }

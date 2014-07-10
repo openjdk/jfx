@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -167,14 +167,7 @@ public class FXCollectionsTest {
         observer.check1Permutation(seq, new int[] {4, 8, 0, 5, 6, 9, 7, 1, 2, 3});
         seq.setAll( "q", "w", "e", "r", "t", "y", "u", "i", "o", "p");
         observer.clear();
-        FXCollections.sort(seq, new Comparator<String>() {
-
-            @Override
-            public int compare(String o1, String o2) {
-                return o1.charAt(0) - o2.charAt(0);
-            }
-            
-        });
+        FXCollections.sort(seq, (o1, o2) -> o1.charAt(0) - o2.charAt(0));
         observer.check1Permutation(seq, new int[] {4, 8, 0, 5, 6, 9, 7, 1, 2, 3});
     }
     
@@ -198,13 +191,7 @@ public class FXCollectionsTest {
             observer.check1();
         }
         observer.clear();
-        FXCollections.sort(seq, new Comparator<String>() {
-
-            @Override
-            public int compare(String o1, String o2) {
-                return -o1.compareTo(o2);
-            }
-        });
+        FXCollections.sort(seq, (o1, o2) -> -o1.compareTo(o2));
         assertArrayEquals(new String[]{"two", "three", "one", "four", "five"}, seq.toArray(new String[0]));
         if (permutation) {
             observer.check1Permutation(seq, new int[] {4, 3, 2, 1, 0});

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -68,6 +68,12 @@ public interface TKStageListener {
      * @param maximized True if the stage's peer is now maximized
      */
     public void changedMaximized(boolean maximized);
+    
+    /**
+     * The stages peer has changed it's "always on top" flag.
+     * @param alwaysOnTop 
+     */
+    public void changedAlwaysOnTop(boolean alwaysOnTop);
 
     /**
      * The stages peer has become resizable or nonresizable
@@ -82,6 +88,14 @@ public interface TKStageListener {
      * @param fs True if the stage's peer is now full screen, false otherwise
      */
     public void changedFullscreen(boolean fs);
+
+    /**
+     * The stage's peer has moved to another screen.
+     *
+     * @param from An object that identifies the old screen (may be null)
+     * @param to An object that identifies the new screen
+     */
+    public void changedScreen(Object from, Object to);
 
     /**
      * Called if the window is closing do to something that has happened on the peer. For
@@ -104,9 +118,4 @@ public interface TKStageListener {
      * stage), or via a call to {@link TKStage#ungrabFocus}.
      */
     public void focusUngrab();
- 
-    /**
-     * Initialize accessibility
-     */
-    public void initAccessibleTKStageListener();
 }

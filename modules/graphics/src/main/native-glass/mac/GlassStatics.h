@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -56,7 +56,6 @@ extern jmethodID jWindowNotifyFocusUngrab;
 extern jmethodID jWindowNotifyFocusDisabled;
 extern jmethodID jWindowNotifyDestroy;
 extern jmethodID jWindowNotifyDelegatePtr;
-extern jmethodID jWindowNotifyInitAccessibilityPtr;
 
 extern jmethodID jViewNotifyEvent;
 extern jmethodID jViewNotifyRepaint;
@@ -72,6 +71,7 @@ extern jmethodID jViewNotifyDragOver;
 extern jmethodID jViewNotifyDragLeave;
 extern jmethodID jViewNotifyDragDrop;
 extern jmethodID jViewNotifyDragEnd;
+extern jmethodID jViewGetAccessible;
 
 extern jmethodID jScreenNotifySettingsChanged;
 
@@ -111,6 +111,9 @@ typedef struct _tagJavaIDs {
         jmethodID getScaleFactor;
         jmethodID reportException;
     } Application;
+    struct {
+        jmethodID notifyApplicationDidTerminate;
+    } MacApplication;
     struct {
         jmethodID rotateGesturePerformed;
         jmethodID scrollGesturePerformed;

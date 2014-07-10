@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,13 +25,24 @@
 
 package com.sun.javafx.scene.traversal;
 
+import javafx.geometry.NodeOrientation;
+
 public enum Direction {
     
-    UP,
-    DOWN,
-    LEFT,
-    RIGHT,
-    NEXT,
-    PREVIOUS
-    
+    UP(false),
+    DOWN(true),
+    LEFT(false),
+    RIGHT(true),
+    NEXT(true),
+    NEXT_IN_LINE(true), // Like NEXT, but does not traverse into the current parent
+    PREVIOUS(false);
+    private final boolean forward;
+
+    Direction(boolean forward) {
+        this.forward = forward;
+    }
+
+    public boolean isForward() {
+        return forward;
+    }
 }

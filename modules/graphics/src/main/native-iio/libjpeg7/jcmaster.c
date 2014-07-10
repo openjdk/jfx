@@ -320,7 +320,10 @@ validate_script (j_compress_ptr cinfo)
   int * last_bitpos_ptr;
   int last_bitpos[MAX_COMPONENTS][DCTSIZE2];
   /* -1 until that coefficient has been seen; then last Al for it */
+  MEMZERO(last_bitpos, SIZEOF(last_bitpos));
 #endif
+
+  MEMZERO(component_sent, SIZEOF(component_sent));
 
   if (cinfo->num_scans <= 0)
     ERREXIT1(cinfo, JERR_BAD_SCAN_SCRIPT, 0);

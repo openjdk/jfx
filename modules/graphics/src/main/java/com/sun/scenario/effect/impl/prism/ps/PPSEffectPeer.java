@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,8 +33,9 @@ import com.sun.scenario.effect.FilterContext;
 import com.sun.scenario.effect.ImageData;
 import com.sun.scenario.effect.impl.EffectPeer;
 import com.sun.scenario.effect.impl.Renderer;
+import com.sun.scenario.effect.impl.state.RenderState;
 
-public abstract class PPSEffectPeer extends EffectPeer {
+public abstract class PPSEffectPeer<T extends RenderState> extends EffectPeer<T> {
 
     protected PPSEffectPeer(FilterContext fctx, Renderer r, String shaderName) {
         super(fctx, r, shaderName);
@@ -42,11 +43,13 @@ public abstract class PPSEffectPeer extends EffectPeer {
 
     @Override
     public final ImageData filter(final Effect effect,
+                                  final T renderState,
                                   final BaseTransform transform,
                                   final Rectangle outputClip,
                                   final ImageData... inputs)
     {
         setEffect(effect);
+        setRenderState(renderState);
         setDestBounds(getResultBounds(transform, outputClip, inputs));
         return filterImpl(inputs);
     }

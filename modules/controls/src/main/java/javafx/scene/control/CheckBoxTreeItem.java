@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,7 +29,6 @@ import javafx.scene.control.cell.CheckBoxTreeCell;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.event.Event;
 import javafx.event.EventType;
 import javafx.scene.Node;
@@ -186,10 +185,8 @@ public class CheckBoxTreeItem<T> extends TreeItem<T> {
      * Callbacks                                                               *
      *                                                                         *
      **************************************************************************/   
-    private final ChangeListener<Boolean> stateChangeListener = new ChangeListener<Boolean>() {
-        @Override public void changed(ObservableValue<? extends Boolean> ov, Boolean oldVal, Boolean newVal) {
-            updateState();
-        }
+    private final ChangeListener<Boolean> stateChangeListener = (ov, oldVal, newVal) -> {
+        updateState();
     };
     
     

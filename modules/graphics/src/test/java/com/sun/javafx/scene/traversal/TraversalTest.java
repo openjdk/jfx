@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -78,7 +78,7 @@ public final class TraversalTest {
      * </ul>
      */
     private Node[] keypadNodes;
-    private TraversalEngine traversalEngine;
+    private SceneTraversalEngine traversalEngine;
 
     /*
      * Parameters: [fromNumber], [direction], [toNumber], [toNumberTransformed]
@@ -154,7 +154,7 @@ public final class TraversalTest {
         scene = new Scene(new Group(), 500, 500);
         stage.setScene(scene);
 
-        traversalEngine = new TraversalEngine(scene.getRoot(), true);
+        traversalEngine = new SceneTraversalEngine(scene);
 
         keypadNodes = createKeypadNodesInScene(scene, traversalEngine);
 
@@ -216,7 +216,6 @@ public final class TraversalTest {
 
                 keypad[index++] = keyNode;
                 ((Group)scene.getRoot()).getChildren().add(keyNode);
-                traversalEngine.reg(keyNode);
             }
         }
 

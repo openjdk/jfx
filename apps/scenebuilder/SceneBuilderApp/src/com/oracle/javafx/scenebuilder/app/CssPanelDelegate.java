@@ -73,19 +73,7 @@ public class CssPanelDelegate extends CssPanelController.Delegate {
         }
 
         // Need to delay the focus to the editor, so that the section is actually expanded first.
-        Platform.runLater(new Runnable() {
-            @Override
-            public void run() {
-                // Need to delay in frame +2 since the TitledPane is built in frame +1 when node selected.
-                // And positioning the scrollBar while the content is building does not work.
-                Platform.runLater(new Runnable() {
-                    @Override
-                    public void run() {
-                        inspectorController.setFocusToEditor(propMeta.getName());
-                    }
-                });
-            }
-        });
+        Platform.runLater(() -> Platform.runLater(() -> inspectorController.setFocusToEditor(propMeta.getName())));
     }
 
 }

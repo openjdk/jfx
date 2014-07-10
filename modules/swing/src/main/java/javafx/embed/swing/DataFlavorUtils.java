@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -45,11 +45,38 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 
+import java.nio.ByteBuffer;
+
 
 final class DataFlavorUtils {
 
     static String getFxMimeType(final DataFlavor flavor) {
         return flavor.getPrimaryType() + "/" + flavor.getSubType();
+    }
+
+    /**
+     * InputStream implementation backed by a ByteBuffer.
+     * It can handle byte buffers that are backed by arrays
+     * as well as operating system memory.
+     */
+    private static class ByteBufferInputStream extends InputStream {
+        private final ByteBuffer bb;
+
+        private ByteBufferInputStream(ByteBuffer bb) { this.bb = bb; }
+
+        @Override public int available() { return bb.remaining(); }
+
+        @Override public int read() throws IOException {
+            if (!bb.hasRemaining()) return -1;
+            return bb.get() & 0xFF; // Make sure the value is in [0..255]
+        }
+
+        @Override public int read(byte[] bytes, int off, int len) throws IOException {
+            if (!bb.hasRemaining()) return -1;
+            len = Math.min(len, bb.remaining());
+            bb.get(bytes, off, len);
+            return len;
+        }
     }
 
     static Object adjustFxData(final DataFlavor flavor, final Object fxData)
@@ -67,6 +94,11 @@ final class DataFlavorUtils {
                 // ...
             }
         }
+        if (fxData instanceof ByteBuffer) {
+            if (flavor.isRepresentationClassInputStream()) {
+                return new ByteBufferInputStream((ByteBuffer)fxData);
+            }
+        }
         return fxData;
     }
 
@@ -74,6 +106,10 @@ final class DataFlavorUtils {
                                   final String mimeType,
                                   final Object swingData)
     {
+        if (swingData == null) {
+            return swingData;
+        }
+
         if (flavor.isFlavorJavaFileListType()) {
             // RT-12663
             final List<File> fileList = (List<File>)swingData;
@@ -174,13 +210,20 @@ final class DataFlavorUtils {
         return obj;
     }
 
+    /**
+     * Returns a Map populated with keys corresponding to all the MIME types
+     * available in the provided Transferable object. If fetchData is true,
+     * then the data is fetched as well, otherwise all the values are set to
+     * null.
+     */
     static Map<String, Object> readAllData(final Transferable t,
-                                           final Map<String, DataFlavor> fxMimeType2DataFlavor)
+                                           final Map<String, DataFlavor> fxMimeType2DataFlavor,
+                                           final boolean fetchData)
     {
         final Map<String, Object> fxMimeType2Data = new HashMap<>();
         for (DataFlavor flavor : t.getTransferDataFlavors()) {
-            Object obj = readData(t, flavor);
-            if (obj != null) {
+            Object obj = fetchData ? readData(t, flavor) : null;
+            if (obj != null || !fetchData) {
                 String mimeType = getFxMimeType(flavor);
                 obj = adjustSwingData(flavor, mimeType, obj);
                 fxMimeType2Data.put(mimeType, obj);
@@ -189,8 +232,8 @@ final class DataFlavorUtils {
         for (Map.Entry<String, DataFlavor> e: fxMimeType2DataFlavor.entrySet()) {
             String mimeType = e.getKey();
             DataFlavor flavor = e.getValue();
-            Object obj = readData(t, flavor);
-            if (obj != null) {
+            Object obj = fetchData ? readData(t, flavor) : null;
+            if (obj != null || !fetchData) {
                 obj = adjustSwingData(flavor, mimeType, obj);
                 fxMimeType2Data.put(e.getKey(), obj);
             }

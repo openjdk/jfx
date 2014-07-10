@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,12 +29,13 @@ import com.sun.scenario.effect.impl.EffectPeer;
 import com.sun.scenario.effect.impl.Renderer;
 import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.scenario.effect.impl.state.RenderState;
 
 /**
  * Package-private base class for built-in effects, i.e., those that are
  * backed by an EffectPeer implementation.
  */
-abstract class CoreEffect extends FilterEffect {
+abstract class CoreEffect<T extends RenderState> extends FilterEffect<T> {
 
     private String peerKey;
     private int peerCount = -1;
@@ -99,9 +100,10 @@ abstract class CoreEffect extends FilterEffect {
     public ImageData filterImageDatas(FilterContext fctx,
                                       BaseTransform transform,
                                       Rectangle outputClip,
+                                      T rstate,
                                       ImageData... inputs)
     {
-        return getPeer(fctx, inputs).filter(this, transform, outputClip, inputs);
+        return getPeer(fctx, inputs).filter(this, rstate, transform, outputClip, inputs);
     }
 
     @Override

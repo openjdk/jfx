@@ -401,7 +401,7 @@ public class CssValueConverter {
 
     private static String retrieveValue(String property, Object eventValue) {
         if (eventValue instanceof ParsedValue) {
-            eventValue = convert((ParsedValue) eventValue);
+            eventValue = convert((ParsedValue<?, ?>) eventValue);
         }
 
         if (eventValue == null) {

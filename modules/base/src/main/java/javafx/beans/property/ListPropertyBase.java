@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -50,13 +50,10 @@ import javafx.collections.ObservableList;
  */
 public abstract class ListPropertyBase<E> extends ListProperty<E> {
 
-    private final ListChangeListener<E> listChangeListener = new ListChangeListener<E>() {
-        @Override
-        public void onChanged(Change<? extends E> change) {
-            invalidateProperties();
-            invalidated();
-            fireValueChangedEvent(change);
-        }
+    private final ListChangeListener<E> listChangeListener = change -> {
+        invalidateProperties();
+        invalidated();
+        fireValueChangedEvent(change);
     };
 
     private ObservableList<E> value;

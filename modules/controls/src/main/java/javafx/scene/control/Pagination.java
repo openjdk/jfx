@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,11 +33,15 @@ import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.value.ObservableValue;
+import javafx.beans.value.WritableValue;
 import javafx.css.CssMetaData;
 import javafx.css.StyleableIntegerProperty;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 import javafx.scene.Node;
+//import javafx.scene.accessibility.Attribute;
+//import javafx.scene.accessibility.Role;
 import javafx.util.Callback;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.skin.PaginationSkin;
@@ -251,6 +255,11 @@ public class Pagination extends Control {
                 }
             }
         }
+
+        @Override
+        public void bind(ObservableValue<? extends Number> rawObservable) {
+            throw new UnsupportedOperationException("currentPageIndex supports only bidirectional binding");
+        }
     };
 
     /**
@@ -270,6 +279,12 @@ public class Pagination extends Control {
      * will be the current page if the value is greater than the {@link #pageCount}
      *
      * The default is 0 for the first page.
+     * <p>
+     * Because the page indicators set the current page index, the currentPageIndex property permits only
+     * bidirectional binding.
+     * The {@link javafx.beans.property.IntegerProperty#bind(javafx.beans.value.ObservableValue) bind} method
+     * throws an UnsupportedOperationException.
+     * </p>
      */
     public final IntegerProperty currentPageIndexProperty() { return currentPageIndex; }
 
@@ -331,7 +346,7 @@ public class Pagination extends Control {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(Pagination n) {
-                return (StyleableProperty<Number>)n.maxPageIndicatorCountProperty();
+                return (StyleableProperty<Number>)(WritableValue<Number>)n.maxPageIndicatorCountProperty();
             }
         };
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
@@ -361,4 +376,20 @@ public class Pagination extends Control {
         return getClassCssMetaData();
     }
 
+
+    /***************************************************************************
+     *                                                                         *
+     * Accessibility handling                                                  *
+     *                                                                         *
+     **************************************************************************/
+
+//    /** @treatAsPrivate */
+//    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+//        switch (attribute) {
+//            case ROLE: return Role.PAGINATION;
+//            case PAGES: // Skin
+//            case SELECTED_PAGE: // Skin
+//            default: return super.accGetAttribute(attribute, parameters);
+//        }
+//    }
 }

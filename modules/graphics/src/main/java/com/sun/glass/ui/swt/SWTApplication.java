@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle  and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -175,11 +175,7 @@ public final class SWTApplication extends Application {
             runCocoaLoop(launchable);
         } else {
             // the current thread can't block as the caller is waiting on it
-            new Thread(new Runnable() {
-                @Override public void run() {
-                    runSWTEventLoop(launchable);
-                }
-            }).start();
+            new Thread(() -> runSWTEventLoop(launchable)).start();
         }
     }
 
@@ -768,6 +764,19 @@ public final class SWTApplication extends Application {
         return 0;
     }
 
+    static long getHandleCocoa(Shell control) {
+        try {
+            Field field = control.getClass().getDeclaredField("window");
+            field.setAccessible(true);
+            Object view = field.get(control);
+            Class clazz = Class.forName("org.eclipse.swt.internal.cocoa.id");
+            return getHandle(clazz, view, "id");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return 0;
+    }
+
     static void invokeLock(Control control, String name) {
         try {
             Field field = control.getClass().getField("view");
@@ -968,5 +977,10 @@ public final class SWTApplication extends Application {
 //        IntBuffer buffer = IntBuffer.wrap(pixels);
 //        return new SWTPixels(width, height, buffer);
         return null;
+    }
+
+    @Override
+    protected int _getKeyCodeForChar(char c) {
+        return KeyEvent.VK_UNDEFINED;
     }
 }

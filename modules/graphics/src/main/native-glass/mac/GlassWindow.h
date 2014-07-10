@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,8 +28,6 @@
 
 #import "GlassMenu.h"
 #import "GlassView.h"
-#import "GlassAccessibleRoot.h"
-#import "GlassAccessibleBaseProvider.h"
 
 // normal Glass window delegate
 @interface GlassWindow : NSObject <NSWindowDelegate> 
@@ -58,10 +56,6 @@
 
     NSPoint             lastReportedLocation; // which was sent to Java
     
-    NSArray             *accChildren; // NSAccessibility children
-    GlassAccessibleBaseProvider *accFocusElement ; // Focussed element
-    BOOL                isAccessibleInitComplete ;
-        
     BOOL                isClosed;   
 
     // We track whether an explicit size/location have been assigned to the window
@@ -72,7 +66,6 @@
 }
 
 - (void)setFullscreenWindow:(NSWindow *)fsWindow;
-- (void)setAccessibilityInitIsComplete:(GlassAccessibleRoot *)acc;
 
 // NSWindow overrides delegate methods
 - (void)close;
@@ -82,8 +75,6 @@
 - (BOOL)hidesOnDeactivate;
 - (BOOL)worksWhenModal;
 - (NSColor*)setBackgroundColor:(NSColor *)color;
-- (void)accessibilityPostEvent:(NSString*)event
-        focusElement:(GlassAccessibleBaseProvider*)focusElement;
 @end
 
 @interface GlassWindow_Normal : NSWindow

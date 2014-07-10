@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -59,8 +59,29 @@ jobject createJavaScreen(JNIEnv *env, NSScreen* screen)
                                                    "(JIIIIIIIIIIIF)V");
         GLASS_CHECK_EXCEPTION(env);
 
-        NSValue *resolutionValue = [[screen deviceDescription] valueForKey:NSDeviceResolution];
-        NSSize resolution = [resolutionValue sizeValue];
+        // Note that NSDeviceResolution always reports 72 DPI, so we use Core Graphics API instead
+        const CGDirectDisplayID displayID = [[[screen deviceDescription] objectForKey:@"NSScreenNumber"] intValue];
+        CGSize size = CGDisplayScreenSize(displayID);
+        CGRect rect = CGDisplayBounds(displayID);
+        const CGFloat MM_PER_INCH = 25.4f; // 1 inch == 25.4 mm
+        // Avoid division by zero, default to 72 DPI
+        if (size.width == 0) size.width = rect.size.width * MM_PER_INCH / 72.f;
+        if (size.height == 0) size.height = rect.size.height * MM_PER_INCH / 72.f;
+        NSSize resolution = {rect.size.width / (size.width / MM_PER_INCH), rect.size.height / (size.height / MM_PER_INCH)};
+
+        NSRect primaryFrame = [[[NSScreen screens] objectAtIndex:0] frame];
+
+        if (floor(NSAppKitVersionNumber) > 1265) // NSAppKitVersionNumber10_9
+        {
+            // On MacOS X 10.10 beta the objects returned by [NSScreen screens] are released
+            // without any notification. This means JavaFX must retain its own references to
+            // avoid crashes when using them later on.
+            // Note, this fix is deliberately allowing the objects to leak. This is the
+            // safest and least intrusive fix appropriate for a maintenance release.
+            // Screens are usually create and released when an external monitor is added
+            // or removed, therefore the memory leaked should never grow too much.
+            [screen retain];
+        }
 
         jscreen = (jobject)(*env)->NewObject(env, jScreenClass, screenInit,
                                              ptr_to_jlong(screen),
@@ -68,12 +89,12 @@ jobject createJavaScreen(JNIEnv *env, NSScreen* screen)
                                              (jint)NSBitsPerPixelFromDepth([screen depth]),
 
                                              (jint)[screen frame].origin.x,
-                                             (jint)[screen frame].origin.y,
+                                             (jint)(primaryFrame.size.height - [screen frame].size.height - [screen frame].origin.y),
                                              (jint)[screen frame].size.width,
                                              (jint)[screen frame].size.height,
 
                                              (jint)[screen visibleFrame].origin.x,
-                                             (jint)([screen frame].size.height - [screen visibleFrame].size.height - [screen visibleFrame].origin.y),
+                                             (jint)(primaryFrame.size.height - [screen visibleFrame].size.height - [screen visibleFrame].origin.y),
                                              (jint)[screen visibleFrame].size.width,
                                              (jint)[screen visibleFrame].size.height,
 
@@ -94,17 +115,20 @@ jobjectArray createJavaScreens(JNIEnv* env) {
 
     if (jScreenClass == NULL)
     {
-        jScreenClass = (*env)->NewGlobalRef(env, (*env)->FindClass(env, "com/sun/glass/ui/Screen"));
+        jclass jcls = (*env)->FindClass(env, "com/sun/glass/ui/Screen");
+        GLASS_CHECK_EXCEPTION(env);
+        jScreenClass = (*env)->NewGlobalRef(env, jcls);
     }
 
     jobjectArray screenArray = (*env)->NewObjectArray(env,
                                                       [screens count],
                                                       jScreenClass,
                                                       NULL);
-
+    GLASS_CHECK_EXCEPTION(env);
     for (NSUInteger index = 0; index < [screens count]; index++) {
         jobject javaScreen = createJavaScreen(env, [screens objectAtIndex:index]);
         (*env)->SetObjectArrayElement(env, screenArray, index, javaScreen);
+        GLASS_CHECK_EXCEPTION(env);
     }
 
     return screenArray;
@@ -115,9 +139,11 @@ void GlassScreenDidChangeScreenParameters(JNIEnv *env)
     if (jScreenNotifySettingsChanged == NULL) 
     {
         jScreenNotifySettingsChanged = (*env)->GetStaticMethodID(env, jScreenClass, "notifySettingsChanged", "()V");
+        GLASS_CHECK_EXCEPTION(env);
     }
     
     (*env)->CallStaticVoidMethod(env, jScreenClass, jScreenNotifySettingsChanged);
+    GLASS_CHECK_EXCEPTION(env);
 }
 
 @implementation NSScreen (FullscreenAdditions)

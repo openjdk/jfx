@@ -1,20 +1,41 @@
+/*
+ * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+
 import java.util.Set;
+
 import javafx.print.JobSettings;
 import javafx.print.Printer;
 import javafx.print.PrinterAttributes;
-
 import javafx.print.PrinterJob;
 import javafx.print.PrintColor;
 import javafx.print.PageOrientation;
 import javafx.print.PageLayout;
 import static javafx.print.PageOrientation.*;
-
 import javafx.application.Application;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.geometry.Rectangle2D;
 import javafx.geometry.VPos;
-
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -82,14 +103,11 @@ public class PrintOrientTest extends Application {
         Button print = new Button("Print");
         print.setLayoutX(80);
         print.setLayoutY(200);
-        print.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent e) {
-                createJob(PORTRAIT);
-                createJob(REVERSE_PORTRAIT);
-                createJob(LANDSCAPE);
-                createJob(REVERSE_LANDSCAPE);
-            }
+        print.setOnAction(e -> {
+            createJob(PORTRAIT);
+            createJob(REVERSE_PORTRAIT);
+            createJob(LANDSCAPE);
+            createJob(REVERSE_LANDSCAPE);
         });
         ((Group)scene.getRoot()).getChildren().add(print);
         return scene;

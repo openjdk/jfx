@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,17 +38,15 @@ public class HostUtils {
     private static boolean is64bit = false;
 
     static {
-        embedded = AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
-            @Override public Boolean run() {
-                osName = System.getProperty("os.name").toLowerCase();
-                osArch = System.getProperty("os.arch").toLowerCase();
+        embedded = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
+            osName = System.getProperty("os.name").toLowerCase();
+            osArch = System.getProperty("os.arch").toLowerCase();
 
-                is64bit =  osArch.equals("x64")
-                        || osArch.equals("x86_64")
-                        || osArch.equals("ia64");
+            is64bit =  osArch.equals("x64")
+                    || osArch.equals("x86_64")
+                    || osArch.equals("ia64");
 
-                return Boolean.getBoolean("com.sun.javafx.isEmbedded");
-            }
+            return Boolean.getBoolean("com.sun.javafx.isEmbedded");
         });
     }
 

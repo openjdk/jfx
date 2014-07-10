@@ -42,10 +42,10 @@ import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
 import com.oracle.javafx.scenebuilder.kit.editor.util.ContextMenuController;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMIntrinsic;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask.Accessory;
+
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -54,12 +54,12 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
-import javafx.event.EventHandler;
 import javafx.event.EventTarget;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
@@ -101,20 +101,6 @@ public abstract class AbstractHierarchyPanelController extends AbstractFxmlPanel
         BOTTOM, RIGHT_BOTTOM_LEFT, RIGHT_LEFT, TOP_RIGHT_BOTTOM_LEFT, TOP_RIGHT_LEFT
     }
 
-    // Style classes used for the TreeCell graphic part
-    /**
-     * @treatAsPrivate
-     */
-    public static final String TREE_CELL_GRAPHIC = "tree-cell-graphic";
-    /**
-     * @treatAsPrivate
-     */
-    public static final String HIERARCHY_READONLY_LABEL = "hierarchy-readonly-label";
-    /**
-     * @treatAsPrivate
-     */
-    public static final String HIERARCHY_READWRITE_LABEL = "hierarchy-readwrite-label";
-
     private final HierarchyDNDController dndController = new HierarchyDNDController(this);
     private final HierarchyAnimationScheduler animationScheduler = new HierarchyAnimationScheduler();
     private final ObjectProperty<DisplayOption> displayOptionProperty
@@ -146,12 +132,7 @@ public abstract class AbstractHierarchyPanelController extends AbstractFxmlPanel
     /**
      * @treatAsPrivate
      */
-    protected final ListChangeListener<TreeItem<HierarchyItem>> treeItemSelectionListener = new ListChangeListener<TreeItem<HierarchyItem>>() {
-        @Override
-        public void onChanged(ListChangeListener.Change<? extends TreeItem<HierarchyItem>> change) {
-            treeItemSelectionDidChange();
-        }
-    };
+    protected final ListChangeListener<TreeItem<HierarchyItem>> treeItemSelectionListener = change -> treeItemSelectionDidChange();
 
     /**
      * Used to define the type of information displayed in the hierarchy.
@@ -433,7 +414,7 @@ public abstract class AbstractHierarchyPanelController extends AbstractFxmlPanel
     public void addToPanelControlSkin(final Node node) {
         final Skin<?> skin = getPanelControl().getSkin();
         assert skin instanceof SkinBase;
-        final SkinBase<?> skinbase = (SkinBase) skin;
+        final SkinBase<?> skinbase = (SkinBase<?>) skin;
         skinbase.getChildren().add(node);
     }
 
@@ -444,7 +425,7 @@ public abstract class AbstractHierarchyPanelController extends AbstractFxmlPanel
     public void removeFromPanelControlSkin(final Node node) {
         final Skin<?> skin = getPanelControl().getSkin();
         assert skin instanceof SkinBase;
-        final SkinBase<?> skinbase = (SkinBase) skin;
+        final SkinBase<?> skinbase = (SkinBase<?>) skin;
         skinbase.getChildren().remove(node);
     }
 
@@ -495,7 +476,7 @@ public abstract class AbstractHierarchyPanelController extends AbstractFxmlPanel
      */
     @Override
     protected void cssRevisionDidChange() {
-        // Ignored
+        sceneGraphRevisionDidChange();
     }
 
     private void updateTreeItemsExpandedMap(TreeItem<HierarchyItem> treeItem) {
@@ -815,7 +796,12 @@ public abstract class AbstractHierarchyPanelController extends AbstractFxmlPanel
     private List<TreeItem<HierarchyItem>> lookupTreeItem(List<FXOMObject> fxomObjects) {
         final List<TreeItem<HierarchyItem>> result = new ArrayList<>();
         for (FXOMObject fxomObject : fxomObjects) {
-            result.add(lookupTreeItem(fxomObject));
+            final TreeItem<HierarchyItem> treeItem = lookupTreeItem(fxomObject);
+            // TreeItem may be null when selecting a GridPane column/row 
+            // constraint in content panel
+            if (treeItem != null) {
+                result.add(treeItem);
+            }
         }
         return result;
     }
@@ -956,62 +942,22 @@ public abstract class AbstractHierarchyPanelController extends AbstractFxmlPanel
         //----------------------------------------------------------------------
         // DRAG_DONE event received when drag gesture 
         // started from the hierarchy panel ends
-        getPanelControl().setOnDragDone(new EventHandler<DragEvent>() {
-            @Override
-            public void handle(DragEvent event) {
-                handleOnDragDone(event);
-            }
-        });
-        getPanelControl().setOnDragDropped(new EventHandler<DragEvent>() {
-            @Override
-            public void handle(DragEvent event) {
-                handleOnDragDropped(event);
-            }
-        });
-        getPanelControl().setOnDragEntered(new EventHandler<DragEvent>() {
-            @Override
-            public void handle(DragEvent event) {
-                handleOnDragEntered(event);
-            }
-        });
-        getPanelControl().setOnDragExited(new EventHandler<DragEvent>() {
-            @Override
-            public void handle(DragEvent event) {
-                handleOnDragExited(event);
-            }
-        });
-        getPanelControl().setOnDragOver(new EventHandler<DragEvent>() {
-            @Override
-            public void handle(DragEvent event) {
-                handleOnDragOver(event);
-            }
-        });
+        getPanelControl().setOnDragDone(event -> handleOnDragDone(event));
+        getPanelControl().setOnDragDropped(event -> handleOnDragDropped(event));
+        getPanelControl().setOnDragEntered(event -> handleOnDragEntered(event));
+        getPanelControl().setOnDragExited(event -> handleOnDragExited(event));
+        getPanelControl().setOnDragOver(event -> handleOnDragOver(event));
 
         // Key events
         //----------------------------------------------------------------------
-        getPanelControl().setOnKeyPressed(new EventHandler<KeyEvent>() {
-            @Override
-            public void handle(KeyEvent event) {
-                handleOnKeyPressed(event);
-            }
-        });
+        getPanelControl().setOnKeyPressed(event -> handleOnKeyPressed(event));
 
         // Mouse events
         //----------------------------------------------------------------------
         // DRAG_DETECTED event received when drag gesture 
         // starts from the hierarchy panel
-        getPanelControl().setOnDragDetected(new EventHandler<MouseEvent>() {
-            @Override
-            public void handle(MouseEvent event) {
-                handleOnDragDetected(event);
-            }
-        });
-        getPanelControl().setOnMousePressed(new EventHandler<MouseEvent>() {
-            @Override
-            public void handle(MouseEvent event) {
-                handleOnMousePressed(event);
-            }
-        });
+        getPanelControl().setOnDragDetected(event -> handleOnDragDetected(event));
+        getPanelControl().setOnMousePressed(event -> handleOnMousePressed(event));
 
         // Setup the context menu
         final ContextMenuController contextMenuController
@@ -1043,13 +989,6 @@ public abstract class AbstractHierarchyPanelController extends AbstractFxmlPanel
                         return;
                     }
                 }
-                // Abort dragging FXML include
-                for (FXOMObject fxomObject : osg.getItems()) {
-                    if (fxomObject instanceof FXOMIntrinsic) {
-                        return;
-                    }
-                }
-
                 // Retrieve the hit object
                 final Cell<?> cell = lookupCell(event.getTarget());
                 final Object item = cell.getItem();
@@ -1061,13 +1000,15 @@ public abstract class AbstractHierarchyPanelController extends AbstractFxmlPanel
                 final Window ownerWindow = getPanelRoot().getScene().getWindow();
                 final DocumentDragSource dragSource = new DocumentDragSource(
                         osg.getSortedItems(), hitObject, ownerWindow);
-                // Start drag and drop
-                final Dragboard db = getPanelControl().startDragAndDrop(TransferMode.MOVE);
-                db.setContent(dragSource.makeClipboardContent());
-                db.setDragView(dragSource.makeDragView());
-                // DragController.begin
-                assert getEditorController().getDragController().getDragSource() == null;
-                getEditorController().getDragController().begin(dragSource);
+                if (dragSource.isAcceptable()) {
+                    // Start drag and drop
+                    final Dragboard db = getPanelControl().startDragAndDrop(TransferMode.COPY_OR_MOVE);
+                    db.setContent(dragSource.makeClipboardContent());
+                    db.setDragView(dragSource.makeDragView());
+                    // DragController.begin
+                    assert getEditorController().getDragController().getDragSource() == null;
+                    getEditorController().getDragController().begin(dragSource);
+                }
 
             } else {
                 // Emergency code : a new type of AbstractSelectionGroup
@@ -1123,6 +1064,7 @@ public abstract class AbstractHierarchyPanelController extends AbstractFxmlPanel
             final Window ownerWindow = getPanelRoot().getScene().getWindow();
             final ExternalDragSource dragSource = new ExternalDragSource(
                     event.getDragboard(), fxomDocument, ownerWindow);
+            assert dragSource.isAcceptable();
             dragController.begin(dragSource);
             shouldEndOnExit = true;
         }
@@ -1229,6 +1171,9 @@ public abstract class AbstractHierarchyPanelController extends AbstractFxmlPanel
                         }
                     }
                 }
+                break;
+                
+            default:
                 break;
         }
     }

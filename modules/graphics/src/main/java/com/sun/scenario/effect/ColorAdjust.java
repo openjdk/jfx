@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,12 +27,13 @@ package com.sun.scenario.effect;
 
 import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.scenario.effect.impl.state.RenderState;
 
 /**
  * An effect that allows for per-pixel adjustments of hue, saturation,
  * brightness, and contrast.
  */
-public class ColorAdjust extends CoreEffect {
+public class ColorAdjust extends CoreEffect<RenderState> {
 
     private float hue;
     private float saturation;
@@ -209,14 +210,13 @@ public class ColorAdjust extends CoreEffect {
     }
 
     @Override
-    protected Rectangle getInputClip(int inputIndex,
-                                     BaseTransform transform,
-                                     Rectangle outputClip)
+    public RenderState getRenderState(FilterContext fctx,
+                                      BaseTransform transform,
+                                      Rectangle outputClip,
+                                      Object renderHelper,
+                                      Effect defaultInput)
     {
-        // Trivially, this effect simply modifies the colors of the pixels
-        // of the input on a 1:1 basis so the input clip is the same as the
-        // output clip.
-        return outputClip;
+        return RenderState.RenderSpaceRenderState;
     }
 
     @Override

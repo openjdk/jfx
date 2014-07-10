@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -47,11 +47,7 @@ public class CheckBoxListCellTest {
     
     @Before public void setup() {
         booleanProperty = new SimpleBooleanProperty(false);
-        callback = new Callback<Object, ObservableValue<Boolean>>() {
-            public ObservableValue<Boolean> call(Object param) {
-                return booleanProperty;
-            }
-        };
+        callback = param -> booleanProperty;
         converter = new StringConverter<Object>() {
             @Override public String toString(Object object) {
                 return null;

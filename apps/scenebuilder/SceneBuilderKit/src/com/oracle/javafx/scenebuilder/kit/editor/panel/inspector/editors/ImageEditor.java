@@ -32,7 +32,6 @@
 package com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors;
 
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
-import static com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.PropertyEditor.handleIndeterminate;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignImage;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PrefixedValue;
@@ -82,31 +81,28 @@ public class ImageEditor extends PropertyEditor {
         this.fxmlFileLocation = fxmlFileLocation;
         root = EditorUtils.loadFxml("ImageEditor.fxml", this); //NOI18N
 
-        EventHandler<ActionEvent> valueListener = new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent event) {
-                Image imageObj;
-                String prefixedValue = null;
-                URL url;
-                try {
-                    String suffix = imagePathTf.getText();
-                    if (suffix == null || suffix.isEmpty()) {
-                        image = null;
-                        switchType(PrefixedValue.Type.PLAIN_STRING);
-                        userUpdateValueProperty(image);
-                        return;
-                    }
-                    prefixedValue = new PrefixedValue(type, suffix).toString();
-                    url = EditorUtils.getUrl(suffix, type, ImageEditor.this.fxmlFileLocation);
-                    imageObj = new Image(url != null ? url.toExternalForm() : null);
-                } catch (NullPointerException | IllegalArgumentException ex) {
-                    // Always happen for classpath relative, or if the url cannot be resolved.
-                    // In this case we cannot resolve the reference, so we use a dummy image.
-                    imageObj = new Image(DesignImage.getVoidImageUrl().toExternalForm());
+        EventHandler<ActionEvent> valueListener = event -> {
+            Image imageObj;
+            String prefixedValue = null;
+            URL url;
+            try {
+                String suffix = imagePathTf.getText();
+                if (suffix == null || suffix.isEmpty()) {
+                    image = null;
+                    switchType(PrefixedValue.Type.PLAIN_STRING);
+                    userUpdateValueProperty(image);
+                    return;
                 }
-                image = new DesignImage(imageObj, prefixedValue);
-                userUpdateValueProperty(image);
+                prefixedValue = new PrefixedValue(type, suffix).toString();
+                url = EditorUtils.getUrl(suffix, type, ImageEditor.this.fxmlFileLocation);
+                imageObj = new Image(url != null ? url.toExternalForm() : null);
+            } catch (NullPointerException | IllegalArgumentException ex) {
+                // Always happen for classpath relative, or if the url cannot be resolved.
+                // In this case we cannot resolve the reference, so we use a dummy image.
+                imageObj = new Image(DesignImage.getVoidImageUrl().toExternalForm());
             }
+            image = new DesignImage(imageObj, prefixedValue);
+            userUpdateValueProperty(image);
         };
         initialize(valueListener);
     }
@@ -115,24 +111,9 @@ public class ImageEditor extends PropertyEditor {
     private void initialize(EventHandler<ActionEvent> valueListener) {
         setTextEditorBehavior(this, imagePathTf, valueListener);
 
-        documentRelativeMenuItem.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent e) {
-                switchType(PrefixedValue.Type.DOCUMENT_RELATIVE_PATH);
-            }
-        });
-        classPathRelativeMenuItem.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent e) {
-                switchType(PrefixedValue.Type.CLASSLOADER_RELATIVE_PATH);
-            }
-        });
-        absoluteMenuItem.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent e) {
-                switchType(PrefixedValue.Type.PLAIN_STRING);
-            }
-        });
+        documentRelativeMenuItem.setOnAction(e -> switchType(PrefixedValue.Type.DOCUMENT_RELATIVE_PATH));
+        classPathRelativeMenuItem.setOnAction(e -> switchType(PrefixedValue.Type.CLASSLOADER_RELATIVE_PATH));
+        absoluteMenuItem.setOnAction(e -> switchType(PrefixedValue.Type.PLAIN_STRING));
         getMenu().getItems().addAll(documentRelativeMenuItem, classPathRelativeMenuItem, absoluteMenuItem);
         removeLabel();
         updateMenuItems();
@@ -295,12 +276,6 @@ public class ImageEditor extends PropertyEditor {
 
     @Override
     public void requestFocus() {
-        EditorUtils.doNextFrame(new Runnable() {
-
-            @Override
-            public void run() {
-                imagePathTf.requestFocus();
-            }
-        });
+        EditorUtils.doNextFrame(() -> imagePathTf.requestFocus());
     }
 }

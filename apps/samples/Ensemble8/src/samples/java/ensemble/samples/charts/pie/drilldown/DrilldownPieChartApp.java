@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013 Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -79,16 +79,13 @@ public class DrilldownPieChartApp extends Application {
     }
 
     private void setDrilldownData(final PieChart pie, PieChart.Data data, final String labelPrefix) {
-        data.getNode().setOnMouseClicked(new EventHandler<MouseEvent>() {
-            
-            @Override public void handle(MouseEvent t) {
-                pie.setData(FXCollections.observableArrayList(
-                        new PieChart.Data(labelPrefix + "-1", 7),
-                        new PieChart.Data(labelPrefix + "-2", 2),
-                        new PieChart.Data(labelPrefix + "-3", 5),
-                        new PieChart.Data(labelPrefix + "-4", 3),
-                        new PieChart.Data(labelPrefix + "-5", 2)));
-            }
+        data.getNode().setOnMouseClicked((MouseEvent t) -> {
+            pie.setData(FXCollections.observableArrayList(
+                    new PieChart.Data(labelPrefix + "-1", 7),
+                    new PieChart.Data(labelPrefix + "-2", 2),
+                    new PieChart.Data(labelPrefix + "-3", 5),
+                    new PieChart.Data(labelPrefix + "-4", 3),
+                    new PieChart.Data(labelPrefix + "-5", 2)));
         });
     }
     

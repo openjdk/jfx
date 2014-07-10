@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,47 +37,27 @@ import static launchertest.Constants.*;
 public class TestAppNoMainThreadCheck extends Application {
 
     public TestAppNoMainThreadCheck() {
-        System.err.println("constructor: thread = " + Thread.currentThread());
-
         if (!Platform.isFxApplicationThread()) {
-            System.err.println("ERROR: constructor called from wrong thread: "
-                    + Thread.currentThread());
             System.exit(ERROR_CONSTRUCTOR_WRONG_THREAD);
         }
     }
 
     @Override public void init() {
-        System.err.println("init: thread = " + Thread.currentThread());
-
         if (Platform.isFxApplicationThread()) {
-            System.err.println("ERROR: init called from wrong thread: "
-                    + Thread.currentThread());
             System.exit(ERROR_INIT_WRONG_THREAD);
         }
     }
 
     @Override public void start(Stage stage) throws Exception {
-        System.err.println("start: thread = " + Thread.currentThread());
-
         if (!Platform.isFxApplicationThread()) {
-            System.err.println("ERROR: start called from wrong thread: "
-                    + Thread.currentThread());
             System.exit(ERROR_START_WRONG_THREAD);
         }
 
-        Platform.runLater(new Runnable() {
-            @Override public void run() {
-                Platform.exit();
-            }
-        });
+        Platform.runLater(Platform::exit);
     }
 
     @Override public void stop() {
-        System.err.println("stop: thread = " + Thread.currentThread());
-
         if (!Platform.isFxApplicationThread()) {
-            System.err.println("ERROR: stop called from wrong thread: "
-                    + Thread.currentThread());
             System.exit(ERROR_STOP_WRONG_THREAD);
         }
 
@@ -85,19 +65,14 @@ public class TestAppNoMainThreadCheck extends Application {
     }
 
     static {
-        System.err.println("class init: thread = " + Thread.currentThread());
-
         if (!Platform.isFxApplicationThread()) {
-            System.err.println("ERROR: class init wrong thread: " + Thread.currentThread());
             Thread.dumpStack();
             System.exit(ERROR_CLASS_INIT_WRONG_THREAD);
         }
 
         try {
-            Platform.runLater(new Runnable() {
-                @Override public void run() {
-                    // do nothing
-                }
+            Platform.runLater(() -> {
+                // do nothing
             });
         } catch (IllegalStateException ex) {
             ex.printStackTrace();

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -48,17 +48,15 @@ public class ImagePool {
     static long pixelsAccessed;
 
     static {
-        AccessController.doPrivileged(new PrivilegedAction() {
-            public Object run() {
-                if (System.getProperty("decora.showstats") != null) {
-                    Runtime.getRuntime().addShutdownHook(new Thread() {
-                        @Override public void run() {
-                            printStats();
-                        }
-                    });
-                }
-                return null;
+        AccessController.doPrivileged((PrivilegedAction) () -> {
+            if (System.getProperty("decora.showstats") != null) {
+                Runtime.getRuntime().addShutdownHook(new Thread() {
+                    @Override public void run() {
+                        printStats();
+                    }
+                });
             }
+            return null;
         });
     }
 

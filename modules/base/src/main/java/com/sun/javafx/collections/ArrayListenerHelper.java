@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,7 @@ import java.util.Arrays;
 import javafx.beans.InvalidationListener;
 import javafx.collections.ArrayChangeListener;
 import javafx.collections.ObservableArray;
+import sun.util.logging.PlatformLogger;
 
 /**
  */
@@ -126,7 +127,11 @@ public abstract class ArrayListenerHelper<T extends ObservableArray<T>> extends 
 
         @Override
         protected void fireValueChangedEvent(boolean sizeChanged, int from, int to) {
-            listener.invalidated(observable);
+            try {
+                listener.invalidated(observable);
+            } catch (Exception e) {
+                Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
+            }
         }
     }
 
@@ -161,7 +166,11 @@ public abstract class ArrayListenerHelper<T extends ObservableArray<T>> extends 
 
         @Override
         protected void fireValueChangedEvent(boolean sizeChanged, int from, int to) {
-            listener.onChanged(observable, sizeChanged, from, to);
+            try {
+                listener.onChanged(observable, sizeChanged, from, to);
+            } catch (Exception e) {
+                Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
+            }
         }
     }
 
@@ -317,10 +326,18 @@ public abstract class ArrayListenerHelper<T extends ObservableArray<T>> extends 
             try {
                 locked = true;
                 for (int i = 0; i < curInvalidationSize; i++) {
-                    curInvalidationList[i].invalidated(observable);
+                    try {
+                        curInvalidationList[i].invalidated(observable);
+                    } catch (Exception e) {
+                        Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
+                    }
                 }
                 for (int i = 0; i < curChangeSize; i++) {
-                    curChangeList[i].onChanged(observable, sizeChanged, from, to);
+                    try {
+                        curChangeList[i].onChanged(observable, sizeChanged, from, to);
+                    } catch (Exception e) {
+                        Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
+                    }
                 }
             } finally {
                 locked = false;

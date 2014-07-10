@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,6 @@
 
 package com.sun.javafx.scene.control.skin;
 
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.scene.control.IndexedCell;
 import javafx.scene.control.ScrollBar;
 
@@ -47,14 +45,12 @@ public class VirtualScrollBar extends ScrollBar {
     public VirtualScrollBar(final VirtualFlow flow) {
         this.flow = flow;
         
-        super.valueProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable valueModel) {
-                if (isVirtual()/* && oldValue != newValue*/) {
-                    if (adjusting) {
-                        // no-op
-                    } else {
-                        flow.setPosition(getValue());
-                    }
+        super.valueProperty().addListener(valueModel -> {
+            if (isVirtual()/* && oldValue != newValue*/) {
+                if (adjusting) {
+                    // no-op
+                } else {
+                    flow.setPosition(getValue());
                 }
             }
         });

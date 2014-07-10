@@ -35,6 +35,7 @@ import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -94,6 +95,10 @@ public class BatchJob extends Job {
         this.subJobs.add(0, subJob);
     }
 
+    public List<Job> getSubJobs() {
+        return Collections.unmodifiableList(subJobs);
+    }
+    
     /*
      * Job
      */

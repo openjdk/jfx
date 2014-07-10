@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -48,15 +48,12 @@ public class TaskSimpleTest {
         task = new SimpleTask();
 
         // Checks that the running property is always correct.
-        task.runningProperty().addListener(new ChangeListener<Boolean>() {
-            @Override
-            public void changed(ObservableValue<? extends Boolean> o, Boolean oldValue, Boolean newValue) {
-                Worker.State s = task.getState();
-                if (newValue) {
-                    assertTrue(s == Worker.State.SCHEDULED || s == Worker.State.RUNNING);
-                } else {
-                    assertTrue(s != Worker.State.SCHEDULED && s != Worker.State.RUNNING);
-                }
+        task.runningProperty().addListener((o, oldValue, newValue) -> {
+            Worker.State s = task.getState();
+            if (newValue) {
+                assertTrue(s == Worker.State.SCHEDULED || s == Worker.State.RUNNING);
+            } else {
+                assertTrue(s != Worker.State.SCHEDULED && s != Worker.State.RUNNING);
             }
         });
     }
@@ -119,11 +116,8 @@ public class TaskSimpleTest {
 
     @Test public void afterRunningStatesShouldHaveBeen_SCHEDULED_RUNNING_SUCCEEDED() {
         final List<Worker.State> states = new ArrayList<Worker.State>();
-        task.stateProperty().addListener(new ChangeListener<Worker.State>() {
-            @Override
-            public void changed(ObservableValue<? extends Worker.State> observable, Worker.State oldValue, Worker.State newValue) {
-                states.add(newValue);
-            }
+        task.stateProperty().addListener((observable, oldValue, newValue) -> {
+            states.add(newValue);
         });
 
         task.run();

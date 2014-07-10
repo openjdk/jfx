@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -84,8 +84,7 @@ class FontFileWriter implements FontConstants {
         pos = 0;
         writtenBytes = 0;
         file = AccessController.doPrivileged(
-            new PrivilegedExceptionAction<File>() {
-                public File run() throws IOException {
+                (PrivilegedExceptionAction<File>) () -> {
                     try {
                         return Files.createTempFile("+JXF", ".tmp").toFile();
                     } catch (IOException e) {
@@ -93,17 +92,12 @@ class FontFileWriter implements FontConstants {
                         throw new IOException("Unable to create temporary file");
                     }
                 }
-            }
         );
         if (tracker != null) {
             tracker.add(file);
         }
         raFile = AccessController.doPrivileged(
-            new PrivilegedExceptionAction<RandomAccessFile>() {
-                public RandomAccessFile run() throws IOException {
-                    return new RandomAccessFile(file, "rw");
-                }
-            }
+                (PrivilegedExceptionAction<RandomAccessFile>) () -> new RandomAccessFile(file, "rw")
         );
         if (tracker != null) {
             tracker.set(file, raFile);
@@ -140,12 +134,10 @@ class FontFileWriter implements FontConstants {
             }
             try {
                 AccessController.doPrivileged(
-                    new PrivilegedExceptionAction<Void>() {
-                        public Void run() {
+                        (PrivilegedExceptionAction<Void>) () -> {
                             file.delete();
                             return null;
                         }
-                    }
                 );
                 if (PrismFontFactory.debugFonts) {
                     System.err.println("Temp file delete: " + file.getPath());
@@ -354,17 +346,14 @@ class FontFileWriter implements FontConstants {
                 if (t == null) {
                     // Add a shutdown hook to remove the temp file.
                     java.security.AccessController.doPrivileged(
-                        new java.security.PrivilegedAction() {
-                            public Object run() {
-                                t = new Thread(new Runnable() {
-                                        public void run() {
-                                            runHooks();
-                                        }
-                                    });
+                            (java.security.PrivilegedAction) () -> {
+                                t = new Thread(() -> {
+                                    runHooks();
+                                });
                                 Runtime.getRuntime().addShutdownHook(t);
                                 return null;
                             }
-                        });
+                    );
                 }
             }
 

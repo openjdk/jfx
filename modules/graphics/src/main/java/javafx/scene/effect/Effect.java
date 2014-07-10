@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -271,7 +271,8 @@ public abstract class Effect {
     }
 
     // utility method used in calculation of bounds in BoxBlur and DropShadow effects
-    static int getKernelSize(int ksize, int iterations) {
+    static int getKernelSize(float fsize, int iterations) {
+        int ksize = (int) Math.ceil(fsize);
         if (ksize < 1) ksize = 1;
         ksize = (ksize-1) * iterations + 1;
         ksize |= 1;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -68,7 +68,7 @@ class TreeUtil {
         
         int idx = itemIndex - 1;
 
-        TreeItem child;
+        TreeItem<T> child;
         for (int i = 0, max = children.size(); i < max; i++) {
             child = children.get(i);
             if (idx == 0) return child;
@@ -108,7 +108,7 @@ class TreeUtil {
         List<TreeItem<T>> siblings;
         
         while (!i.equals(root) && p != null) {
-            siblings = p.getChildren();
+            siblings = p.children;
             
             // work up each sibling, from the current item
             int itemIndex = siblings.indexOf(i);

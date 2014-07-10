@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,6 @@
 
 package com.sun.javafx.scene.control.skin;
 
-import javafx.event.EventHandler;
 import javafx.scene.control.Control;
 import javafx.scene.control.IndexedCell;
 import javafx.scene.control.ScrollToEvent;
@@ -47,18 +46,16 @@ public abstract class VirtualContainerBase<C extends Control, B extends Behavior
         super(control, behavior);
         flow = createVirtualFlow();
         
-        control.addEventHandler(ScrollToEvent.scrollToTopIndex(), new EventHandler<ScrollToEvent<Integer>>() {
-            @Override public void handle(ScrollToEvent<Integer> event) {
-                // Fix for RT-24630: The row count in VirtualFlow was incorrect
-                // (normally zero), so the scrollTo call was misbehaving.
-                if (rowCountDirty) {
-                    // update row count before we do a scroll
-                    updateRowCount();
-                    rowCountDirty = false;
-                }
-                flow.scrollTo(event.getScrollTarget());
+        control.addEventHandler(ScrollToEvent.scrollToTopIndex(), event -> {
+            // Fix for RT-24630: The row count in VirtualFlow was incorrect
+            // (normally zero), so the scrollTo call was misbehaving.
+            if (rowCountDirty) {
+                // update row count before we do a scroll
+                updateRowCount();
+                rowCountDirty = false;
             }
-        });        
+            flow.scrollTo(event.getScrollTarget());
+        });
     }
 
     /**

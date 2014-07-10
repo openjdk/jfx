@@ -77,9 +77,9 @@
             <isset property="JFX_CORE_ONLY"/>
         </condition>
     </target>
-    
+
     <!-- COPY SAMPLE SRC TO BUILD DIR -->
-    <target name="-pre-compile">
+    <target name="-pre-compile" depends="-copy-cssref">
         <echo>Copying all sample source files to build dir</echo>
          <copy todir="${build.classes.dir}">
             <fileset dir="${basedir}/src/samples/java">
@@ -87,9 +87,17 @@
                 <include name="**/*.js"/> <!-- include javascript files -->
             </fileset>
         </copy>
+    </target>
+
+    <property name="javafx.scene.doc-files.dir" location="${basedir}/../../../modules/graphics/src/main/docs/javafx/scene/doc-files"/>
+    <condition property="javafx.scene.doc-files.exists">
+        <available file="${javafx.scene.doc-files.dir}" type="dir"/>
+    </condition>
+
+    <target name="-copy-cssref" if="javafx.scene.doc-files.exists">
     	<mkdir dir="${build.cssref.dir}"/>
     	<copy todir="${build.cssref.dir}">
-    		<fileset dir="${basedir}/../../../modules/graphics/src/main/docs/javafx/scene/doc-files">
+    		<fileset dir="${javafx.scene.doc-files.dir}">
     			<include name="cssref.html"/>
     			<include name="cssexample1.png"/>
     			<include name="cssexample2.png"/>
@@ -102,7 +110,7 @@
     		replace="http://www.oracle.com/technetwork/java/javase/terms/license/oraclebsd-1603217.txt"
     		byline="true"/>
     </target>
-    
+
     <!-- DON'T INCLUDE COMPILE TIME CODE IN APP JAR -->
     <target name="-pre-jar">
         <delete dir="${build.classes.dir}/ensemble/compiletime"/>

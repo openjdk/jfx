@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -207,19 +207,11 @@ class PrismCompositeFontResource implements CompositeFontResource {
             return false;
         }
         final PrismCompositeFontResource other = (PrismCompositeFontResource)obj;
-
-        return primaryResource.getFullName().equals(other.getFullName());
+        return primaryResource.equals(other.primaryResource);
     }
 
-    private int hash;
     @Override
     public int hashCode() {
-        if (hash != 0) {
-            return hash;
-        }
-        else {
-            hash = primaryResource.getFullName().hashCode();
-            return hash;
-        }
+        return primaryResource.hashCode();
     }
 }

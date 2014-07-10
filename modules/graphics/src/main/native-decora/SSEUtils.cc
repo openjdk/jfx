@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,7 +35,8 @@ Java_com_sun_scenario_effect_impl_sw_sse_SSERendererDelegate_isSupported
     (JNIEnv *env, jclass klass)
 {
 #ifdef WIN32 /* WIN32 */
-    return ::IsProcessorFeaturePresent(PF_XMMI64_INSTRUCTIONS_AVAILABLE);
+    return ::IsProcessorFeaturePresent(PF_XMMI64_INSTRUCTIONS_AVAILABLE) ?
+        JNI_TRUE : JNI_FALSE;
 #else
     /* No reports of any other platform generating SSE2 instructions */
     return JNI_TRUE;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,7 +39,7 @@ import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
  * implements {@code ObservableValue} allowing to use it in another binding.
  * With that one can assemble very complex bindings from simple bindings.
  * <p>
- * All bindings in the JavaFX 2.0 runtime are calculated lazily. That means, if
+ * All bindings in the JavaFX runtime are calculated lazily. That means, if
  * a dependency changes, the result of a binding is not immediately
  * recalculated, but it is marked as invalid. Next time the value of an invalid
  * binding is requested, it is recalculated.

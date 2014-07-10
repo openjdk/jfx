@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -839,7 +839,7 @@ public class J2DPrinter implements PrinterImpl {
             MediaPrintableArea[] mpa = (MediaPrintableArea[])service.
                 getSupportedAttributeValues(MediaPrintableArea.class,
                                             null, pras);
-            if (mpa != null && mpa.length > 0) {
+            if (mpa != null && mpa.length > 0 && mpa[0] != null) {
                 int MPA_INCH = MediaPrintableArea.INCH;
                 area = new Rectangle2D(mpa[0].getX(MPA_INCH),
                                        mpa[0].getY(MPA_INCH),

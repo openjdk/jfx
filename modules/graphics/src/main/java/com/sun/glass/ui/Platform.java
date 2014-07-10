@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,11 +43,7 @@ final class Platform {
 
             // Provide for a runtime override, allowing EGL for example
             String userPlatform =
-                AccessController.doPrivileged(new PrivilegedAction<String>() {
-                    public String run() {
-                        return System.getProperty("glass.platform");
-                    }
-                });
+                AccessController.doPrivileged((PrivilegedAction<String>) () -> System.getProperty("glass.platform"));
 
             if (userPlatform != null) {
                 if (userPlatform.equals("macosx"))

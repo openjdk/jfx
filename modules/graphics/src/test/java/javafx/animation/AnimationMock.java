@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -61,11 +61,8 @@ public class AnimationMock extends Animation {
         setRate(rate);
         setCycleCount(cycleCount);
         setAutoReverse(autoReverse);
-        super.setOnFinished(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent event) {
-                finishFlag = true;
-            }
+        super.setOnFinished(event -> {
+            finishFlag = true;
         });
     }
     

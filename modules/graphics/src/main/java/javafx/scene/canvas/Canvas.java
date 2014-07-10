@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -114,6 +114,7 @@ public class Canvas extends Node {
 
     GrowableDataBuffer getBuffer() {
         impl_markDirty(DirtyBits.NODE_CONTENTS);
+        impl_markDirty(DirtyBits.NODE_FORCE_SYNC);
         if (current == null) {
             int vsize = max(recentvalsizes, DEFAULT_VAL_BUF_SIZE);
             int osize = max(recentobjsizes, DEFAULT_OBJ_BUF_SIZE);
@@ -161,19 +162,14 @@ public class Canvas extends Node {
                 public void invalidated() {
                     impl_markDirty(DirtyBits.NODE_GEOMETRY);
                     impl_geomChanged();
+                    if (theContext != null) {
+                        theContext.updateDimensions();
+                    }
                 }
 
                 @Override
                 public Object getBean() {
                     return Canvas.this;
-                }
-
-                @Override
-                public void set(double newValue) {
-                    super.set(newValue);
-                    if (theContext != null) {
-                        theContext.updateDimensions();
-                    }
                 }
 
                 @Override
@@ -209,19 +205,14 @@ public class Canvas extends Node {
                 public void invalidated() {
                     impl_markDirty(DirtyBits.NODE_GEOMETRY);
                     impl_geomChanged();
+                    if (theContext != null) {
+                        theContext.updateDimensions();
+                    }
                 }
 
                 @Override
                 public Object getBean() {
                     return Canvas.this;
-                }
-
-                @Override
-                public void set(double newValue) {
-                    super.set(newValue);
-                    if (theContext != null) {
-                        theContext.updateDimensions();
-                    }
                 }
 
                 @Override

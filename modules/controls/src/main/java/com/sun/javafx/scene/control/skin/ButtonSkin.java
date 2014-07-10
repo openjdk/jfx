@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -97,21 +97,17 @@ public class ButtonSkin extends LabeledSkinBase<Button, ButtonBehavior<Button>> 
         }
     }
 
-    Runnable defaultButtonRunnable = new Runnable() {
-            public void run() {
-                if (getSkinnable().getScene() != null && getSkinnable().impl_isTreeVisible() && !getSkinnable().isDisabled()) {
-                    getSkinnable().fire();
-                }
-            }
-        };
+    Runnable defaultButtonRunnable = () -> {
+        if (getSkinnable().getScene() != null && getSkinnable().impl_isTreeVisible() && !getSkinnable().isDisabled()) {
+            getSkinnable().fire();
+        }
+    };
 
-    Runnable cancelButtonRunnable = new Runnable() {
-            public void run() {
-                if (getSkinnable().getScene() != null && getSkinnable().impl_isTreeVisible() && !getSkinnable().isDisabled()) {
-                    getSkinnable().fire();
-                }
-            }
-        };
+    Runnable cancelButtonRunnable = () -> {
+        if (getSkinnable().getScene() != null && getSkinnable().impl_isTreeVisible() && !getSkinnable().isDisabled()) {
+            getSkinnable().fire();
+        }
+    };
 
     private KeyCodeCombination defaultAcceleratorKeyCodeCombination;
     

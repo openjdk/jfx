@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,10 +24,6 @@
  */
 
 package javafx.scene.control;
-
-/*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
- */
 
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
@@ -146,9 +142,7 @@ public class ColorPickerTest {
     }
      
     @Test public void ensureCanSetOnAction() {
-        EventHandler<ActionEvent> onAction = new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent t) { }
-        };
+        EventHandler<ActionEvent> onAction = t -> { };
         colorPicker.setOnAction(onAction);
         assertEquals(onAction, colorPicker.getOnAction());
     }
@@ -199,6 +193,7 @@ public class ColorPickerTest {
         Hyperlink hyperlink = ColorPickerPaletteRetriever.getCustomColorLink(colorPalette);
         MouseEventFirer mouse = new MouseEventFirer(hyperlink);
         mouse.fireMousePressAndRelease();
+        mouse.dispose();
 
         Stage dialog = ColorPickerPaletteRetriever.getCustomColorDialog(colorPalette);
         assertNotNull(dialog);

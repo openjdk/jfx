@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013 Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -68,31 +68,27 @@ public class LiveScatterChartApp extends Application {
         // create animation
         Timeline timeline1 = new Timeline();
         timeline1.getKeyFrames().add(
-            new KeyFrame(Duration.millis(20), new EventHandler<ActionEvent>() {
-                @Override public void handle(ActionEvent actionEvent) {
-                    series.getData().add(new XYChart.Data<Number, Number>(
-                            nextX,
-                            Math.sin(Math.toRadians(nextX)) * 100
-                    ));
-                    nextX += 10;
-                }
-            })
+            new KeyFrame(Duration.millis(20), (ActionEvent actionEvent) -> {
+                series.getData().add(new XYChart.Data<Number, Number>(
+                        nextX,
+                        Math.sin(Math.toRadians(nextX)) * 100
+                ));
+                nextX += 10;
+        })
         );
         timeline1.setCycleCount(200);
         Timeline timeline2 = new Timeline();
         timeline2.getKeyFrames().add(
-                new KeyFrame(Duration.millis(50), new EventHandler<ActionEvent>() {
-                    @Override public void handle(ActionEvent actionEvent) {
-                        series.getData().add(new XYChart.Data<Number, Number>(
-                                nextX,
-                                Math.sin(Math.toRadians(nextX)) * 100
-                        ));
-                        if (series.getData().size() > 54) {
-                            series.getData().remove(0);
-                        }
-                        nextX += 10;
+                new KeyFrame(Duration.millis(50), (ActionEvent actionEvent) -> {
+                    series.getData().add(new XYChart.Data<Number, Number>(
+                            nextX,
+                            Math.sin(Math.toRadians(nextX)) * 100
+                    ));
+                    if (series.getData().size() > 54) {
+                        series.getData().remove(0);
                     }
-                })
+                    nextX += 10;
+        })
         );
         timeline2.setCycleCount(Animation.INDEFINITE);
         animation = new SequentialTransition();

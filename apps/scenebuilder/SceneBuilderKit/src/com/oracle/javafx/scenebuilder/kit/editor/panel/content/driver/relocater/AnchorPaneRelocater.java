@@ -76,6 +76,7 @@ public class AnchorPaneRelocater extends AbstractRelocater<AnchorPane> {
         } else {
             if (originalLeftAnchor != null) {
                 propertyNames.add(leftAnchorName);
+                propertyNames.add(layoutXName);
             }
             if (originalRightAnchor != null) {
                 propertyNames.add(rightAnchorName);
@@ -86,6 +87,7 @@ public class AnchorPaneRelocater extends AbstractRelocater<AnchorPane> {
         } else {
             if (originalTopAnchor != null) {
                 propertyNames.add(topAnchorName);
+                propertyNames.add(layoutYName);
             }
             if (originalBottomAnchor != null) {
                 propertyNames.add(bottomAnchorName);
@@ -182,6 +184,7 @@ public class AnchorPaneRelocater extends AbstractRelocater<AnchorPane> {
         } else {
             if (Objects.equals(AnchorPane.getLeftAnchor(sceneGraphObject), originalLeftAnchor) == false) {
                 result.put(leftAnchorName, AnchorPane.getLeftAnchor(sceneGraphObject));
+                result.put(layoutXName, sceneGraphObject.getLayoutX());
             }
             if (Objects.equals(AnchorPane.getRightAnchor(sceneGraphObject), originalRightAnchor) == false) {
                 result.put(rightAnchorName, AnchorPane.getRightAnchor(sceneGraphObject));
@@ -194,6 +197,7 @@ public class AnchorPaneRelocater extends AbstractRelocater<AnchorPane> {
         } else {
             if (Objects.equals(AnchorPane.getTopAnchor(sceneGraphObject), originalTopAnchor) == false) {
                 result.put(topAnchorName, AnchorPane.getTopAnchor(sceneGraphObject));
+                result.put(layoutYName, sceneGraphObject.getLayoutY());
             }
             if (Objects.equals(AnchorPane.getBottomAnchor(sceneGraphObject), originalBottomAnchor) == false) {
                 result.put(bottomAnchorName, AnchorPane.getBottomAnchor(sceneGraphObject));
@@ -205,10 +209,10 @@ public class AnchorPaneRelocater extends AbstractRelocater<AnchorPane> {
     
     
     /*
-     * Private
+     * Public (static)
      */
     
-    private static double computeLeftAnchor(Bounds parentBounds, Bounds childBounds, double targetLayoutX) {
+    public static double computeLeftAnchor(Bounds parentBounds, Bounds childBounds, double targetLayoutX) {
         /*
          *       o parent origin
          *                               
@@ -239,7 +243,7 @@ public class AnchorPaneRelocater extends AbstractRelocater<AnchorPane> {
         return x1 - x0;
     }
     
-    private static double computeRightAnchor(Bounds parentBounds, Bounds childBounds, double targetLayoutX) {
+    public static double computeRightAnchor(Bounds parentBounds, Bounds childBounds, double targetLayoutX) {
         /*
          *       o parent origin
          *                               
@@ -270,13 +274,13 @@ public class AnchorPaneRelocater extends AbstractRelocater<AnchorPane> {
         return x1 - x0;
     }
     
-    private static double computeTopAnchor(Bounds parentBounds, Bounds childBounds, double targetLayoutY) {
+    public static double computeTopAnchor(Bounds parentBounds, Bounds childBounds, double targetLayoutY) {
         final double y0 = parentBounds.getMinY();
         final double y1 = parentBounds.getMinY() + targetLayoutY + childBounds.getMinY();
         return y1 - y0;
     }
     
-    private static double computeBottomAnchor(Bounds parentBounds, Bounds childBounds, double targetLayoutY) {
+    public static double computeBottomAnchor(Bounds parentBounds, Bounds childBounds, double targetLayoutY) {
         final double y0 = parentBounds.getMinY() + targetLayoutY + childBounds.getMaxY();
         final double y1 = parentBounds.getMaxY();
         return y1 - y0;

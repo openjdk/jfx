@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -49,6 +49,11 @@ class J2DResourceFactory extends BaseResourceFactory
 
     J2DResourceFactory(Screen screen) {
         this.screen = screen;
+    }
+
+    J2DPrismGraphics createJ2DPrismGraphics(J2DPresentable target,
+                                            java.awt.Graphics2D g2d) {
+        return new J2DPrismGraphics(target, g2d);
     }
 
     public TextureResourcePool getTextureResourcePool() {

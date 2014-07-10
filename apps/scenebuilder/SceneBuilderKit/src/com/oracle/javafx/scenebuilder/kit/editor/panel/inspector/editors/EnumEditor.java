@@ -33,9 +33,10 @@ package com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors;
 
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.EnumerationPropertyMetadata;
+
 import java.util.Set;
+
 import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.scene.Node;
 import javafx.scene.control.ChoiceBox;
 
@@ -53,12 +54,9 @@ public class EnumEditor extends PropertyEditor {
         choiceBox = new ChoiceBox<>();
         choiceBox.disableProperty().bind(disableProperty());
         EditorUtils.makeWidthStretchable(choiceBox);
-        choiceBox.getSelectionModel().selectedItemProperty().addListener(new InvalidationListener() {
-            @Override
-            public void invalidated(Observable o) {
-                if (!isUpdateFromModel()) {
-                    userUpdateValueProperty(getValue());
-                }
+        choiceBox.getSelectionModel().selectedItemProperty().addListener((InvalidationListener) o -> {
+            if (!isUpdateFromModel()) {
+                userUpdateValueProperty(getValue());
             }
         });
         initialize();
@@ -120,13 +118,7 @@ public class EnumEditor extends PropertyEditor {
 
     @Override
     public void requestFocus() {
-        EditorUtils.doNextFrame(new Runnable() {
-
-            @Override
-            public void run() {
-                choiceBox.requestFocus();
-            }
-        });
+        EditorUtils.doNextFrame(() -> choiceBox.requestFocus());
     }
 
 }

@@ -50,11 +50,12 @@ import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask.Accessory;
 import com.oracle.javafx.scenebuilder.kit.util.MathUtils;
+
 import java.util.HashSet;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javafx.event.EventHandler;
+
 import javafx.event.EventType;
 import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
@@ -114,55 +115,35 @@ public class DragGesture extends AbstractGesture {
         assert glassLayer.getOnDragDone()== null;
         assert glassLayer.getOnKeyPressed()== null;
         
-        glassLayer.setOnDragEntered(new EventHandler<DragEvent>() {
-            @Override
-            public void handle(DragEvent e) {
-                lastDragEvent = e;
-                dragEnteredGlassLayer();
-            }
+        glassLayer.setOnDragEntered(e1 -> {
+            lastDragEvent = e1;
+            dragEnteredGlassLayer();
         });
-        glassLayer.setOnDragOver(new EventHandler<DragEvent>() {
-            @Override
-            public void handle(DragEvent e) {
-                lastDragEvent = e;
-                dragOverGlassLayer();
-            }
+        glassLayer.setOnDragOver(e1 -> {
+            lastDragEvent = e1;
+            dragOverGlassLayer();
         });
-        glassLayer.setOnDragExited(new EventHandler<DragEvent>() {
-            @Override
-            public void handle(DragEvent e) {
-                lastDragEvent = e;
-                dragExitedGlassLayer();
-            }
+        glassLayer.setOnDragExited(e1 -> {
+            lastDragEvent = e1;
+            dragExitedGlassLayer();
         });
-        glassLayer.setOnDragDropped(new EventHandler<DragEvent>() {
-            @Override
-            public void handle(DragEvent e) {
-                lastDragEvent = e;
-                dragDroppedOnGlassLayer();
-                e.consume();
-                // On Linux, "drag over" is randomly called before "drag done".
-                // It's unclear whether it's an FX bug or feature.
-                // To make things unambiguous, we clear the "drag over" callback.
-                // See DTL-5956.
-                glassLayer.setOnDragOver(null);
-            }
+        glassLayer.setOnDragDropped(e1 -> {
+            lastDragEvent = e1;
+            dragDroppedOnGlassLayer();
+            e1.consume();
+            // On Linux, "drag over" is randomly called before "drag done".
+            // It's unclear whether it's an FX bug or feature.
+            // To make things unambiguous, we clear the "drag over" callback.
+            // See DTL-5956.
+            glassLayer.setOnDragOver(null);
         });
-        glassLayer.setOnDragDone(new EventHandler<DragEvent>() {
-            @Override
-            public void handle(DragEvent e) {
-                lastDragEvent = e;
-                dragDoneOnGlassLayer();
-                e.getDragboard().clear();
-                e.consume();
-            }
+        glassLayer.setOnDragDone(e1 -> {
+            lastDragEvent = e1;
+            dragDoneOnGlassLayer();
+            e1.getDragboard().clear();
+            e1.consume();
         });
-        glassLayer.setOnKeyPressed(new EventHandler<KeyEvent>() {
-            @Override
-            public void handle(KeyEvent e) {
-                handleKeyPressed(e);
-            }
-        });
+        glassLayer.setOnKeyPressed(e1 -> handleKeyPressed(e1));
         
         this.dragEnteredEvent = (DragEvent) e;
         this.lastDragEvent = this.dragEnteredEvent;
@@ -191,6 +172,7 @@ public class DragGesture extends AbstractGesture {
                     = contentPanelController.getPanelRoot().getScene().getWindow();
             final ExternalDragSource dragSource = new ExternalDragSource(
                     lastDragEvent.getDragboard(), fxomDocument, ownerWindow);
+            assert dragSource.isAcceptable();
             dragController.begin(dragSource);
             shouldInvokeEnd = true;
         }
@@ -244,6 +226,7 @@ public class DragGesture extends AbstractGesture {
     private void dragOverEmptyDocument() {
         dragController.setDropTarget(new RootDropTarget());
         lastDragEvent.acceptTransferModes(dragController.getAcceptedTransferModes());
+        updateShadow(lastDragEvent.getSceneX(), lastDragEvent.getSceneY());
     }
     
     private void dragOverHitObject(FXOMObject hitObject) {
@@ -402,6 +385,7 @@ public class DragGesture extends AbstractGesture {
     private void dragDroppedOnGlassLayer() {    
         lastDragEvent.setDropCompleted(true);
         dragController.commit();
+        contentPanelController.getGlassLayer().requestFocus();
     }
     
     private void dragDoneOnGlassLayer() {
