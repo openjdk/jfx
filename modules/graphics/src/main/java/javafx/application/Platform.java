@@ -25,6 +25,7 @@
 
 package javafx.application;
 
+import javafx.beans.property.ReadOnlyBooleanProperty;
 import com.sun.javafx.application.PlatformImpl;
 
 /**
@@ -164,5 +165,21 @@ public final class Platform {
      */
     public static boolean isSupported(ConditionalFeature feature) {
         return PlatformImpl.isSupported(feature);
+    }
+
+    /**
+     * Indicates whether or not accessibility is running.
+     * This property is typically set to true the first time an
+     * assistive technology, such as a screen reader, requests 
+     * information about any JavaFX window or its children. 
+     *
+     * <p>This method may be called from any thread.</p>
+     *
+     * @return the read-only boolean property indicating if accessibility is running
+     *
+     * @since JavaFX 8u40 
+     */
+    public static ReadOnlyBooleanProperty accessibilityOnProperty() {
+        return PlatformImpl.accessibilityOnProperty();
     }
 }

@@ -45,7 +45,8 @@ import javafx.application.ConditionalFeature;
 import com.sun.javafx.tk.TKListener;
 import com.sun.javafx.tk.TKStage;
 import com.sun.javafx.tk.Toolkit;
-import javafx.application.Platform;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.scene.Scene;
 
 import java.security.AccessController;
@@ -84,6 +85,7 @@ public class PlatformImpl {
     private static Boolean hasMultiTouch;
     private static Boolean hasPointer;
     private static boolean isThreadMerged = false;
+    private static BooleanProperty accessibilityOn = new SimpleBooleanProperty();
 
     /**
      * Set a flag indicating whether this application should show up in the
@@ -452,6 +454,10 @@ public class PlatformImpl {
             toolkitListener = null;
             platformExitLatch.countDown();
         }
+    }
+
+    public static BooleanProperty accessibilityOnProperty() {
+        return accessibilityOn;
     }
 
     public static void exit() {
