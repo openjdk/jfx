@@ -52,8 +52,8 @@ import javafx.css.StyleOrigin;
 import javafx.css.Styleable;
 import javafx.css.StyleableObjectProperty;
 import javafx.css.StyleableProperty;
-//import javafx.scene.accessibility.Action;
-//import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Action;
+import javafx.scene.accessibility.Attribute;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.text.Font;
@@ -899,7 +899,7 @@ public abstract class TextInputControl extends Control {
         this.caretPosition.set(Utils.clamp(0, caretPosition, getLength()));
         this.anchor.set(Utils.clamp(0, anchor, getLength()));
         this.selection.set(IndexRange.normalize(getAnchor(), getCaretPosition()));
-//        accSendNotification(Attribute.SELECTION_START);
+        accSendNotification(Attribute.SELECTION_START);
     }
 
     /**
@@ -1064,7 +1064,7 @@ public abstract class TextInputControl extends Control {
 
         private void invalidate() {
             markInvalid();
-//            accSendNotification(Attribute.TITLE);
+            accSendNotification(Attribute.TITLE);
         }
 
         @Override public void bind(ObservableValue<? extends String> observable) {
@@ -1216,41 +1216,41 @@ public abstract class TextInputControl extends Control {
      *                                                                         *
      **************************************************************************/
 
-//    /** @treatAsPrivate */
-//    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//        switch (attribute) {
-//            case TITLE: {
-//                String text = getText();
-//                if (text == null || text.isEmpty()) {
-//                    text = getPromptText();
-//                }
-//                return text;
-//            }
-//            case SELECTION_START: return getSelection().getStart();
-//            case SELECTION_END: return getSelection().getEnd();
-//            case CARET_OFFSET: return getCaretPosition();
-//            case FONT: return getFont();
-//            default: return super.accGetAttribute(attribute, parameters);
-//        }
-//    }
-//
-//    /** @treatAsPrivate */
-//    @Override public void accExecuteAction(Action action, Object... parameters) {
-//        switch (action) {
-//            case SET_TITLE: {
-//                String value = (String) parameters[0];
-//                if (value != null) setText(value);
-//            }
-//            case SELECT: {
-//                Integer start = (Integer) parameters[0];
-//                Integer end = (Integer) parameters[1];
-//                if (start != null && end != null) {
-//                    selectRange(start,  end);
-//                }
-//                break;
-//            }
-//            case SCROLL_TO_INDEX: //Skin
-//            default: super.accExecuteAction(action, parameters);
-//        }
-//    }
+    /** @treatAsPrivate */
+    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case TITLE: {
+                String text = getText();
+                if (text == null || text.isEmpty()) {
+                    text = getPromptText();
+                }
+                return text;
+            }
+            case SELECTION_START: return getSelection().getStart();
+            case SELECTION_END: return getSelection().getEnd();
+            case CARET_OFFSET: return getCaretPosition();
+            case FONT: return getFont();
+            default: return super.accGetAttribute(attribute, parameters);
+        }
+    }
+
+    /** @treatAsPrivate */
+    @Override public void accExecuteAction(Action action, Object... parameters) {
+        switch (action) {
+            case SET_TITLE: {
+                String value = (String) parameters[0];
+                if (value != null) setText(value);
+            }
+            case SELECT: {
+                Integer start = (Integer) parameters[0];
+                Integer end = (Integer) parameters[1];
+                if (start != null && end != null) {
+                    selectRange(start,  end);
+                }
+                break;
+            }
+            case SCROLL_TO_INDEX: //Skin
+            default: super.accExecuteAction(action, parameters);
+        }
+    }
 }

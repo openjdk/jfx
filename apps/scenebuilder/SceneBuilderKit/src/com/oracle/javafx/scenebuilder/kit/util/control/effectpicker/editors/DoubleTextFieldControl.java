@@ -51,6 +51,7 @@ import java.net.URL;
 
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.value.ChangeListener;
+import javafx.event.ActionEvent;
 
 public class DoubleTextFieldControl extends GridPane {
 
@@ -85,6 +86,9 @@ public class DoubleTextFieldControl extends GridPane {
                 // Then notify the controller a change occured
                 effectPickerController.incrementRevision();
             }
+        });
+        editor_textfield.setOnAction((ActionEvent event) -> {
+            event.consume();
         });
     }
 

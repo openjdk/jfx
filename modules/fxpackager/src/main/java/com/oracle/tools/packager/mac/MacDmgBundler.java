@@ -298,11 +298,13 @@ public class MacDmgBundler extends MacBaseInstallerBundler {
         protoDMG.getParentFile().mkdirs();
         finalDMG.getParentFile().mkdirs();
 
+        String hdiUtilVerbosityFlag = Log.isDebug() ? "-verbose" : "-quiet";
+
         //create temp image
         ProcessBuilder pb = new ProcessBuilder(
                 hdiutil,
                 "create",
-                "-quiet",
+                hdiUtilVerbosityFlag,
                 "-srcfolder", srcFolder.getAbsolutePath(),
                 "-volname", APP_NAME.fetchFrom(p),
                 "-ov", protoDMG.getAbsolutePath(),
@@ -314,7 +316,7 @@ public class MacDmgBundler extends MacBaseInstallerBundler {
                 hdiutil,
                 "attach",
                 protoDMG.getAbsolutePath(),
-                "-quiet",
+                hdiUtilVerbosityFlag,
                 "-mountroot", imagesRoot.getAbsolutePath());
         IOUtils.exec(pb, VERBOSE.fetchFrom(p));
 
@@ -364,7 +366,7 @@ public class MacDmgBundler extends MacBaseInstallerBundler {
         pb = new ProcessBuilder(
                 hdiutil,
                 "detach",
-                "-quiet",
+                hdiUtilVerbosityFlag,
                 mountedRoot.getAbsolutePath());
         IOUtils.exec(pb, VERBOSE.fetchFrom(p));
 
@@ -373,7 +375,7 @@ public class MacDmgBundler extends MacBaseInstallerBundler {
                 hdiutil,
                 "convert",
                 protoDMG.getAbsolutePath(),
-                "-quiet",
+                hdiUtilVerbosityFlag,
                 "-format", "UDZO",
                 "-o", finalDMG.getAbsolutePath());
         IOUtils.exec(pb, VERBOSE.fetchFrom(p));

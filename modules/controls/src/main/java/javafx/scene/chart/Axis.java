@@ -378,6 +378,9 @@ public abstract class Axis<T> extends Region {
      */
     private DoubleProperty tickLabelRotation = new DoublePropertyBase(0) {
         @Override protected void invalidated() {
+            if (isAutoRanging()) {
+                invalidateRange(); // NumberAxis and CategoryAxis use this property in autorange
+            }
             requestAxisLayout();
         }
 

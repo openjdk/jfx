@@ -284,7 +284,7 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
     private SelectionState selectionState;
     private final EditorController editorController;
 
-    private double searchResultMinHeight;
+    private double searchResultDividerPosition;
 
     /*
      * Public
@@ -576,14 +576,13 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
         // Listen the Scene stylesheets changes
         getEditorController().sceneStyleSheetProperty().addListener((ChangeListener<ObservableList<File>>) (ov, t, t1) -> updateInspector());
         
-        accordion.getStyleClass().add("INSPECTOR_THEME"); //NOI18N
         selectionState = new SelectionState(editorController);
         viewModeChanged(null, getViewMode());
         expandedSectionChanged();
         accordion.setPrefSize(300, 700);
         buildExpandedSection();
         updateClassNameInSectionTitles();
-        searchResultMinHeight = searchStackPane.getMinHeight();
+        searchResultDividerPosition = inspectorRoot.getDividerPositions()[0];
         searchPatternDidChange();
     }
 
@@ -618,11 +617,16 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
         if (isInspectorLoaded()) {
             // Collapse/Expand the search result panel
             if (hasSearchPattern()) {
-                searchStackPane.setMaxHeight(Double.MAX_VALUE);
-                searchStackPane.setMinHeight(searchResultMinHeight);
+                if (!inspectorRoot.getItems().contains(searchStackPane)) {
+                    inspectorRoot.getItems().add(0, searchStackPane);
+                    inspectorRoot.setDividerPositions(searchResultDividerPosition);
+                }
             } else {
-                searchStackPane.setMaxHeight(0);
-                searchStackPane.setMinHeight(0);
+                // Save the divider position for next search
+                searchResultDividerPosition = inspectorRoot.getDividerPositions()[0];
+                if (inspectorRoot.getItems().contains(searchStackPane)) {
+                    inspectorRoot.getItems().remove(searchStackPane);
+                }
             }
 
             buildFlatContent(searchContent);

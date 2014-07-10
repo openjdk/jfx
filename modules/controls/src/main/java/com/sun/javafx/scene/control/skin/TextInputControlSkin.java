@@ -48,7 +48,7 @@ import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
 import javafx.scene.Scene;
-//import javafx.scene.accessibility.Action;
+import javafx.scene.accessibility.Action;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.IndexRange;
 import javafx.scene.control.MenuItem;
@@ -842,20 +842,20 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
         return getClassCssMetaData();
     }
 
-//    /** @treatAsPrivate */
-//    protected void accExecuteAction(Action action, Object... parameters) {
-//        switch (action) {
-//            case SCROLL_TO_INDEX: {
-//                Integer start = (Integer)parameters[0];
-//                Integer end = (Integer)parameters[1];
-//                if (start != null && end != null) {
-//                    scrollCharacterToVisible(end);
-//                    scrollCharacterToVisible(start);
-//                    scrollCharacterToVisible(end);
-//                }
-//                break;
-//            } 
-//            default: super.accExecuteAction(action, parameters);
-//        }
-//    }
+    /** @treatAsPrivate */
+    protected void accExecuteAction(Action action, Object... parameters) {
+        switch (action) {
+            case SCROLL_TO_INDEX: {
+                Integer start = (Integer)parameters[0];
+                Integer end = (Integer)parameters[1];
+                if (start != null && end != null) {
+                    scrollCharacterToVisible(end);
+                    scrollCharacterToVisible(start);
+                    scrollCharacterToVisible(end);
+                }
+                break;
+            } 
+            default: super.accExecuteAction(action, parameters);
+        }
+    }
 }

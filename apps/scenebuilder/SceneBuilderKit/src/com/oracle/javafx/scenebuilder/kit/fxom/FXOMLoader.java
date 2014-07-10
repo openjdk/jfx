@@ -204,14 +204,20 @@ class FXOMLoader implements LoadListener {
 
     @Override
     public void beginUnknownStaticPropertyElement(String string) {
+        currentTransientNode = new TransientIgnored(currentTransientNode);
+        glueCursor.moveToNextElement();
     }
 
     @Override
     public void beginScriptElement() {
+        currentTransientNode = new TransientIgnored(currentTransientNode);
+        glueCursor.moveToNextElement();
     }
 
     @Override
     public void beginDefineElement() {
+        currentTransientNode = new TransientIgnored(currentTransientNode);
+        glueCursor.moveToNextElement();
     }
 
     @Override
@@ -275,6 +281,9 @@ class FXOMLoader implements LoadListener {
             } else if (currentParent instanceof TransientObject) {
                 final TransientObject parentInstance = (TransientObject) currentParent;
                 parentInstance.getCollectedItems().add(currentFxomObject);
+            } else if (currentParent instanceof TransientIgnored) {
+                // currentObject is an object inside an fx:define section
+                // Nothing to do for now
             } else {
                 assert currentParent == null;
                 document.updateRoots(currentFxomObject, currentFxomObject.getSceneGraphObject());
@@ -291,6 +300,9 @@ class FXOMLoader implements LoadListener {
             } else if (currentParent instanceof TransientObject) {
                 final TransientObject parentInstance = (TransientObject) currentParent;
                 parentInstance.getCollectedItems().add(currentFxomIntrinsic);
+            } else if (currentParent instanceof TransientIgnored) {
+                // currentObject is an object inside an fx:define section
+                // Nothing to do for now
             } else {
                 assert currentParent == null;
                 document.updateRoots(currentFxomIntrinsic, currentFxomIntrinsic.getSceneGraphObject());
@@ -303,6 +315,9 @@ class FXOMLoader implements LoadListener {
             final TransientObject parentObject = (TransientObject) currentParent;
             parentObject.getProperties().add(currentFxomProperty);
             // We ignore sceneGraphObject
+        } else {
+                assert currentTransientNode instanceof TransientIgnored;
+                // Nothing to do in this case
         }
         
         currentTransientNode = currentTransientNode.getParentNode();

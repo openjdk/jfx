@@ -162,8 +162,7 @@ public class CssPanelController extends AbstractFxmlPanelController {
     private View currentView = View.TABLE;
 
     private String searchPattern;
-    private static final Image lookups = new Image(
-            CssPanelController.class.getResource("images/css-lookup-icon.png").toExternalForm()); //NOI18N
+    private static Image lookups = null;
 
     private static final String NO_MATCHING_RULES = I18N.getString("csspanel.no.matching.rule");
 
@@ -2025,6 +2024,15 @@ public class CssPanelController extends AbstractFxmlPanelController {
         String l = CssValueConverter.toCssString(style.getCssProperty(), style.getCssRule(), style.getParsedValue());
         return new Label(l);
     }
+    
+    private static Image getLookupImage() {
+        if (lookups == null) {
+            lookups = new Image(
+                CssPanelController.class.getResource("images/css-lookup-icon.png").toExternalForm()); //NOI18N
+        }
+        
+        return lookups;
+    }
 
     private static Node createLookupUI(
             final CssProperty item, final PropertyState ps, final CssStyle style,
@@ -2035,7 +2043,7 @@ public class CssPanelController extends AbstractFxmlPanelController {
         final HBox hbox = new HBox();
         hbox.setMaxWidth(Region.USE_PREF_SIZE);
         ImageView imgView = new ImageView();
-        imgView.setImage(lookups);
+        imgView.setImage(getLookupImage());
         hbox.getChildren().addAll(n, imgView);
         MenuButton lookupMb = new MenuButton();
         lookupMb.setGraphic(hbox);

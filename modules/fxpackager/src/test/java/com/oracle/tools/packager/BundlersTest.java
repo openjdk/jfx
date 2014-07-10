@@ -122,11 +122,18 @@ public class BundlersTest {
     }
     
     boolean assertMetadata(Bundler bundler, BundlerParamInfo<?> bpi, String checkDescription, Function<BundlerParamInfo, Boolean> check) {
-        if (!check.apply(bpi)) {
+        try {
+            if (!check.apply(bpi)) {
+                System.err.println("Bundler '" + bundler.getID() + "' parameter '" + bpi.getID() + "' failed metadata check: " + checkDescription);
+                return false;
+            } else {
+                return true;
+            }
+        } catch (RuntimeException re) {
             System.err.println("Bundler '" + bundler.getID() + "' parameter '" + bpi.getID() + "' failed metadata check: " + checkDescription);
+            System.err.println("Exception was thrown");
+            re.printStackTrace(System.err);
             return false;
-        } else {
-            return true;
         }
     }
     
@@ -143,6 +150,8 @@ public class BundlersTest {
                 metadataValid &= assertMetadata(bundler, bpi, "ID is not null", param -> param.getID() != null);
                 metadataValid &= assertMetadata(bundler, bpi, "Description is not null", param -> param.getDescription() != null);
                 metadataValid &= assertMetadata(bundler, bpi, "ValueType is not null", param -> param.getValueType() != null);
+                // the second option is a nonsense comparison to execute the lambda if not null, to fish for exceptions
+                metadataValid &= assertMetadata(bundler, bpi, "DefaultValueFunction if not null behaves with empty map", param -> param.getDefaultValueFunction() == null || param.getDefaultValueFunction().apply(new HashMap()) != this );
             }
         }
 

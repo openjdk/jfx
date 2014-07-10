@@ -25,6 +25,7 @@
 
 package com.sun.javafx.scene;
 
+import com.sun.glass.ui.Accessible;
 import javafx.scene.Camera;
 import javafx.scene.Node;
 import javafx.scene.Parent;
@@ -60,6 +61,10 @@ public final class SceneHelper {
         return sceneAccessor.createPopupScene(root);
     }
 
+    public static Accessible getAccessible(Scene scene) {
+        return sceneAccessor.getAccessible(scene);
+    }
+
     public static void setSceneAccessor(final SceneAccessor newAccessor) {
         if (sceneAccessor != null) {
             throw new IllegalStateException();
@@ -83,6 +88,8 @@ public final class SceneHelper {
         Scene createPopupScene(Parent root);
 
         void setTransientFocusContainer(Scene scene, Node node);
+
+        Accessible getAccessible(Scene scene);
     }
 
     private static void forceInit(final Class<?> classToInit) {

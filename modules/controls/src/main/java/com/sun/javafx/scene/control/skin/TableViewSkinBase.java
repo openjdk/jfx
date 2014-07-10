@@ -36,7 +36,7 @@ import javafx.collections.MapChangeListener;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
-//import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Attribute;
 import javafx.scene.control.*;
 
 import javafx.scene.layout.Region;
@@ -949,41 +949,41 @@ public abstract class TableViewSkinBase<M, S, C extends Control, B extends Behav
     }
 
 
-//    @Override
-//    public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//        switch (attribute) {
-//            case FOCUS_ITEM: {
-//                TableFocusModel<S,?> fm = getFocusModel();
-//                int focusedIndex = fm.getFocusedIndex();
-//                if (focusedIndex == -1) {
-//                    if (placeholderRegion != null && placeholderRegion.isVisible()) {
-//                        return placeholderRegion.getChildren().get(0);
-//                    }
-//                    if (getItemCount() > 0) {
-//                        focusedIndex = 0;
-//                    } else {
-//                        return null;
-//                    }
-//                }
-//                return flow.getPrivateCell(focusedIndex);
-//            }
-//            case CELL_AT_ROW_COLUMN: {
-//                int rowIndex = (Integer)parameters[0];
-//                return flow.getPrivateCell(rowIndex);
-//            }
-//            case COLUMN_AT_INDEX: {
-//                int index = (Integer)parameters[0];
-//                TableColumnBase column = getVisibleLeafColumn(index);
-//                return getTableHeaderRow().getColumnHeaderFor(column);
-//            }
-//            case HEADER: {
-//                /* Not sure how this is used by Accessibility, but without this VoiceOver will not
-//                 * look for column headers */
-//                return getTableHeaderRow();
-//            }
-//            case VERTICAL_SCROLLBAR: return flow.getVbar();
-//            case HORIZONTAL_SCROLLBAR: return flow.getHbar();
-//            default: return super.accGetAttribute(attribute, parameters);
-//        }
-//    }
+    @Override
+    public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case FOCUS_ITEM: {
+                TableFocusModel<S,?> fm = getFocusModel();
+                int focusedIndex = fm.getFocusedIndex();
+                if (focusedIndex == -1) {
+                    if (placeholderRegion != null && placeholderRegion.isVisible()) {
+                        return placeholderRegion.getChildren().get(0);
+                    }
+                    if (getItemCount() > 0) {
+                        focusedIndex = 0;
+                    } else {
+                        return null;
+                    }
+                }
+                return flow.getPrivateCell(focusedIndex);
+            }
+            case CELL_AT_ROW_COLUMN: {
+                int rowIndex = (Integer)parameters[0];
+                return flow.getPrivateCell(rowIndex);
+            }
+            case COLUMN_AT_INDEX: {
+                int index = (Integer)parameters[0];
+                TableColumnBase column = getVisibleLeafColumn(index);
+                return getTableHeaderRow().getColumnHeaderFor(column);
+            }
+            case HEADER: {
+                /* Not sure how this is used by Accessibility, but without this VoiceOver will not
+                 * look for column headers */
+                return getTableHeaderRow();
+            }
+            case VERTICAL_SCROLLBAR: return flow.getVbar();
+            case HORIZONTAL_SCROLLBAR: return flow.getHbar();
+            default: return super.accGetAttribute(attribute, parameters);
+        }
+    }
 }

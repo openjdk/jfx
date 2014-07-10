@@ -498,15 +498,27 @@ public class PreferencesRecordDocument {
         }
 
         // Window position
-        final double xpos = documentPreferences.getDouble(X_POS, DEFAULT_X_POS);
+        double xpos = documentPreferences.getDouble(X_POS, DEFAULT_X_POS);
+        if (xpos < 0) {
+            xpos = DEFAULT_X_POS;
+        }
         setXPos(xpos);
-        final double ypos = documentPreferences.getDouble(Y_POS, DEFAULT_Y_POS);
+        double ypos = documentPreferences.getDouble(Y_POS, DEFAULT_Y_POS);
+        if (ypos < 0) {
+            ypos = DEFAULT_Y_POS;
+        }
         setYPos(ypos);
 
         // Window size
-        final double h = documentPreferences.getDouble(STAGE_HEIGHT, DEFAULT_STAGE_HEIGHT);
+        double h = documentPreferences.getDouble(STAGE_HEIGHT, DEFAULT_STAGE_HEIGHT);
+        if (h < 0) {
+            h = DEFAULT_STAGE_HEIGHT;
+        }
         setStageHeight(h);
-        final double w = documentPreferences.getDouble(STAGE_WIDTH, DEFAULT_STAGE_WIDTH);
+        double w = documentPreferences.getDouble(STAGE_WIDTH, DEFAULT_STAGE_WIDTH);
+        if (w < 0) {
+            w = DEFAULT_STAGE_WIDTH;
+        }
         setStageWidth(w);
 
         // Panel visibility

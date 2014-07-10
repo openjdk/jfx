@@ -245,6 +245,7 @@ public class Stage extends Window {
      * Specify the scene to be used on this stage.
      */
     @Override final public void setScene(Scene value) {
+        Toolkit.getToolkit().checkFxUserThread();
         super.setScene(value);
     }
 

@@ -31,6 +31,7 @@
   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 -->
+
 <?import java.lang.*?>
 <?import java.net.*?>
 <?import javafx.geometry.*?>
@@ -40,7 +41,7 @@
 <?import javafx.scene.shape.*?>
 <?import javafx.scene.text.*?>
 
-<ScrollPane fx:id="scrollPane" fitToHeight="true" fitToWidth="true" hvalue="0.5" minWidth="300.0" prefHeight="500.0" prefWidth="700.0" styleClass="edge-to-edge, theme-presets, SBKIT-content-panel" vvalue="0.5" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/2.2">
+<ScrollPane fx:id="scrollPane" fitToHeight="true" fitToWidth="true" hvalue="0.5" minWidth="300.0" prefHeight="500.0" prefWidth="700.0" styleClass="edge-to-edge, theme-presets, SBKIT-content-panel" vvalue="0.5" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
   <content>
     <StackPane fx:id="workspacePane" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="-Infinity" minWidth="-Infinity" style="">
       <children>
@@ -49,11 +50,7 @@
             <Group fx:id="scalingGroup" layoutX="-30.0" layoutY="-50.0">
               <children>
                 <Rectangle fx:id="extensionRect" arcHeight="5.0" arcWidth="5.0" fill="#ffc0cb00" height="200.0" layoutX="0.0" layoutY="0.0" mouseTransparent="false" stroke="TRANSPARENT" strokeType="INSIDE" width="200.0" />
-                <Label fx:id="backgroundPane" alignment="CENTER" layoutX="0.0" layoutY="0.0" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="-1.0" prefWidth="-1.0" style="" styleClass="stage-prompt" text="Label" textAlignment="CENTER" textFill="#9f9f9f" wrapText="true">
-                  <font>
-                    <Font size="16.0" />
-                  </font>
-                </Label>
+                <Label fx:id="backgroundPane" alignment="CENTER" layoutX="0.0" layoutY="0.0" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="-1.0" prefWidth="-1.0" style="" styleClass="stage-prompt" text="Label" textAlignment="CENTER" textFill="#9f9f9f" wrapText="true" />
                 <Group fx:id="contentGroup" layoutX="0.0" layoutY="0.0">
                   <children>
                     <Ellipse fill="DODGERBLUE" layoutX="0.0" layoutY="0.0" radiusX="140.0" radiusY="100.0" stroke="BLACK" strokeType="INSIDE" />

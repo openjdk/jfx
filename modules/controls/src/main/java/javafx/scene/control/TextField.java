@@ -42,8 +42,8 @@ import javafx.css.StyleableProperty;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Pos;
-//import javafx.scene.accessibility.Attribute;
-//import javafx.scene.accessibility.Role;
+import javafx.scene.accessibility.Attribute;
+import javafx.scene.accessibility.Role;
 
 import com.sun.javafx.binding.ExpressionHelper;
 import com.sun.javafx.css.converters.EnumConverter;
@@ -343,13 +343,13 @@ public class TextField extends TextInputControl {
      *                                                                         *
      **************************************************************************/
 
-//    /** @treatAsPrivate */
-//    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//        switch (attribute) {
-//            case ROLE: return Role.TEXT_FIELD;
-//            case BOUNDS_FOR_RANGE: //Skin
-//            case OFFSET_AT_POINT: //Skin
-//            default: return super.accGetAttribute(attribute, parameters);
-//        }
-//    }
+    /** @treatAsPrivate */
+    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
+        switch (attribute) {
+            case ROLE: return Role.TEXT_FIELD;
+            case BOUNDS_FOR_RANGE: //Skin
+            case OFFSET_AT_POINT: //Skin
+            default: return super.accGetAttribute(attribute, parameters);
+        }
+    }
 }

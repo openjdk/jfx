@@ -464,7 +464,19 @@ public class CssInternal {
         node.applyCss();
 
         Map<StyleableProperty, List<Style>> ret = new HashMap<>();
-        ret.putAll(Deprecation.getStyleMap(node));
+//        ret.putAll(Deprecation.getStyleMap(node));
+
+        Map<StyleableProperty<?>, List<Style>> map = Deprecation.getStyleMap(node);
+        if (map != null && !map.isEmpty()) {
+            for (Map.Entry<StyleableProperty<?>, List<Style>> entry : map.entrySet()) {
+                StyleableProperty<?> key = entry.getKey();
+                List<Style> value = entry.getValue();
+                if (((javafx.beans.property.Property<?>) key).getBean() == node) {
+                    ret.put(key, value);
+                }
+            }
+        }
+
         // Attached map may impact css performance, so remove it.
         detachMapToNode(node);
         // DEBUG

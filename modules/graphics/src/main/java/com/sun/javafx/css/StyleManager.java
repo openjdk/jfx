@@ -1368,13 +1368,15 @@ final public class StyleManager {
 
         StyleConverterImpl.clearCache();
 
+        List<Parent> parents = new ArrayList<>();
         for (Parent root : cacheContainerMap.keySet()) {
             if (root == null) {
                 continue;
             }
-            root.impl_reapplyCSS();
+            parents.add(root);
         }
 
+        for (Parent root : parents) root.impl_reapplyCSS();
     }
 
     private List<StylesheetContainer> processStylesheets(List<String> stylesheets, Parent parent) {

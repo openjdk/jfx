@@ -28,18 +28,63 @@ package com.sun.glass.ui.monocle;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 
+/** NativeScreen provides access to a device's screen */
 public interface NativeScreen {
 
-    public int getDepth();
-    public int getNativeFormat();
-    public int getWidth();
-    public int getHeight();
-    public int getDPI();
-    public long getNativeHandle();
-    public void shutdown();
-    public void uploadPixels(Buffer b,
+    /**
+     * Returns the bit depth of the screen/
+     */
+    int getDepth();
+
+    /**
+     * Returns the native format of the screen, as a constant from the Pixels
+     * class.
+     */
+    int getNativeFormat();
+
+    /**
+     * Returns the pixel width of the screen.
+     */
+    int getWidth();
+
+    /**
+     * Returns the pixel height of the screen.
+     */
+    int getHeight();
+
+    /**
+     * Returns the number of pixels per inch in the screen.
+     */
+    int getDPI();
+
+    /**
+     * Returns a native handle for the screen. The handle is platform-specific.
+     */
+    long getNativeHandle();
+
+    /**
+     * Called during JavaFX shutdown to release the screen. Called only once.
+     */
+    void shutdown();
+
+    /** Uploads a pixel buffer to the screen. Called on the JavaFX application thread.
+     *
+     * @param b Pixel data, in BYTE_BGRA_PRE format. The byte stride of the
+     *          data is equal to width * 4.
+     * @param x The X offset of the pixel data on the screen
+     * @param y The Y offset of the pixel data on the screen
+     * @param width The pixel width of the data
+     * @param height The pixel height of the data
+     * @param alpha The alpha level to use to compose the data over existing
+     *              pixels
+     */
+    void uploadPixels(Buffer b,
                              int x, int y, int width, int height, float alpha);
 
+    /**
+     * Called on the JavaFX application thread when pixel data for all windows
+     * has been uploaded.
+     */
     public void swapBuffers();
 
     /**
@@ -49,7 +94,7 @@ public interface NativeScreen {
     public ByteBuffer getScreenCapture();
 
     /**
-     * An Object to lock against when rendering
+     * An Object to lock against when swapping screen buffers.
      */
     public static final Object framebufferSwapLock = new Object();
 

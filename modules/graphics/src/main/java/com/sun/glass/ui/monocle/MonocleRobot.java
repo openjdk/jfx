@@ -28,18 +28,13 @@ package com.sun.glass.ui.monocle;
 import com.sun.glass.events.MouseEvent;
 import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.Robot;
-import com.sun.glass.ui.monocle.input.KeyInput;
-import com.sun.glass.ui.monocle.input.KeyState;
-import com.sun.glass.ui.monocle.input.MouseInput;
-import com.sun.glass.ui.monocle.input.MouseState;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import javafx.application.Platform;
 
+import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.nio.ShortBuffer;
 
-public class MonocleRobot extends Robot {
+class MonocleRobot extends Robot {
     @Override
     protected void _create() {
     }
