@@ -46,7 +46,7 @@ public class SceneUtils {
             final Point2D projection = CameraHelper.project(
                     SubSceneHelper.getEffectiveCamera(subScene), point);
             // transform to scene/outer-subScene coords
-            point = subScene.localToScene(projection.getX(), projection.getY(), 0.0);
+            point = n.localToScene(projection.getX(), projection.getY(), 0.0);
             n = NodeHelper.getSubScene(n);
         }
 

@@ -289,7 +289,7 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
         
         // When we click else where in the scene - menu selection should be cleared.
         mouseEventHandler = t -> {
-            if (!container.localToScene(container.getLayoutBounds()).contains(t.getX(), t.getY())) {
+            if (!container.localToScreen(container.getLayoutBounds()).contains(t.getScreenX(), t.getScreenY())) {
                 unSelectMenus();
             }
         };
