@@ -32,6 +32,7 @@
 package com.oracle.javafx.scenebuilder.app;
 
 import com.oracle.javafx.scenebuilder.app.i18n.I18N;
+import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorPlatform;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.util.dialog.ErrorDialog;
 
@@ -78,14 +79,11 @@ class ResourceController {
         FileChooser fileChooser = new FileChooser();
         fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter(I18N.getString("resource.filechooser.filter.msg"),
                 "*.properties")); //NOI18N
-        final File nextInitialDirectory = SceneBuilderApp.getSingleton().getNextInitialDirectory();
-        if (nextInitialDirectory != null) {
-            fileChooser.setInitialDirectory(nextInitialDirectory);
-        }
+        fileChooser.setInitialDirectory(EditorController.getNextInitialDirectory());
         File newResourceFile = fileChooser.showOpenDialog(documentWindowController.getStage());
         // Keep track of the user choice for next time
         if (newResourceFile != null) {
-            SceneBuilderApp.getSingleton().updateNextInitialDirectory(newResourceFile);
+            EditorController.updateNextInitialDirectory(newResourceFile);
         }
 
         setResourceFile(newResourceFile);

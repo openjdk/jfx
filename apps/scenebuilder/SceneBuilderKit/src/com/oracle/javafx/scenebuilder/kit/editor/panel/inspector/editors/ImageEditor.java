@@ -31,15 +31,12 @@
  */
 package com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors;
 
-import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
-import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
-import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignImage;
-import com.oracle.javafx.scenebuilder.kit.metadata.util.PrefixedValue;
 import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.Set;
+
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
@@ -51,6 +48,12 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
 import javafx.stage.FileChooser;
+
+import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
+import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
+import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
+import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignImage;
+import com.oracle.javafx.scenebuilder.kit.metadata.util.PrefixedValue;
 
 /**
  * Image property editor (handle the url path).
@@ -244,10 +247,13 @@ public class ImageEditor extends PropertyEditor {
                 new FileChooser.ExtensionFilter(
                         I18N.getString("inspector.select.image"),
                         Arrays.asList(extensions)));
+        fileChooser.setInitialDirectory(EditorController.getNextInitialDirectory());
         File file = fileChooser.showOpenDialog(imagePathTf.getScene().getWindow());
         if ((file == null)) {
             return;
         }
+        // Keep track of the user choice for next time
+        EditorController.updateNextInitialDirectory(file);
         URL url;
         try {
             url = file.toURI().toURL();

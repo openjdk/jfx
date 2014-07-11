@@ -96,6 +96,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -268,6 +269,7 @@ public class EditorController {
     private Callback<Void, Boolean> requestTextEditingSessionEnd;
     
     private static String builtinToolStylesheet;
+    private static File nextInitialDirectory = new File(System.getProperty("user.home"));
     
     
     /**
@@ -275,6 +277,16 @@ public class EditorController {
      */
     public EditorController() {
         jobManager.revisionProperty().addListener((ChangeListener<Number>) (ov, t, t1) -> jobManagerRevisionDidChange());
+        fxmlLocationProperty().addListener(new ChangeListener<URL>() {
+
+            @Override
+            public void changed(ObservableValue<? extends URL> observable, URL oldValue, URL newValue) {
+                if (newValue != null) {
+                    EditorController.updateNextInitialDirectory(new File(newValue.getPath()));
+                }
+            }
+
+        });
     }
 
     /**
@@ -2296,10 +2308,35 @@ public class EditorController {
     
     
     /**
+     * Returns the last directory selected from the file chooser.
+     * 
+     * @return the last selected directory (never null).
+     */
+    public static File getNextInitialDirectory() {
+        return nextInitialDirectory;
+    }
+
+    /**
+     * @treatAsPrivate
+     * 
+     * Updates the initial directory used by the file chooser.
+     * 
+     * @param chosenFile the selected file from which the initial directory is set.
+     */
+    public static void updateNextInitialDirectory(File chosenFile) {
+        assert chosenFile != null;
+
+        final Path chosenFolder = chosenFile.toPath().getParent();
+        if (chosenFolder != null) {
+            nextInitialDirectory = chosenFolder.toFile();
+        }
+    }
+
+    /**
      * @treatAsPrivate
      * 
      * @return true if the current FXOM document represents a 3D layout, false
-     * otherwise.
+     *         otherwise.
      */
     public boolean is3D() {
         boolean res = false;

@@ -32,6 +32,7 @@
 package com.oracle.javafx.scenebuilder.app;
 
 import com.oracle.javafx.scenebuilder.app.i18n.I18N;
+import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorPlatform;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.util.dialog.ErrorDialog;
 
@@ -65,16 +66,13 @@ public class SceneStyleSheetMenuController {
         FileChooser fileChooser = new FileChooser();
         fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter(I18N.getString("scenestylesheet.filechooser.filter.msg"),
                 "*.css", "*.bss")); //NOI18N
-        final File nextInitialDirectory = SceneBuilderApp.getSingleton().getNextInitialDirectory();
-        if (nextInitialDirectory != null) {
-            fileChooser.setInitialDirectory(nextInitialDirectory);
-        }
+        fileChooser.setInitialDirectory(EditorController.getNextInitialDirectory());
         List<File> selectedFiles = fileChooser.showOpenMultipleDialog(documentWindowController.getStage());
         
         if (selectedFiles != null) {
             assert selectedFiles.isEmpty() == false;
             // Keep track of the user choice for next time
-            SceneBuilderApp.getSingleton().updateNextInitialDirectory(selectedFiles.get(0));
+            EditorController.updateNextInitialDirectory(selectedFiles.get(0));
             for (File f : selectedFiles) {
                 if (!knownFiles.contains(f)) {
                     knownFiles.add(f);

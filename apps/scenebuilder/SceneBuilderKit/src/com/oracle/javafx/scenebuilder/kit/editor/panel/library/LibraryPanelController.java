@@ -876,7 +876,13 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
         FileChooser fileChooser = new FileChooser();
         fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter(I18N.getString("lib.filechooser.filter.msg"),
                 "*.fxml", "*.jar")); //NOI18N
-        return fileChooser.showOpenMultipleDialog(null);
+        fileChooser.setInitialDirectory(EditorController.getNextInitialDirectory());
+        List<File> selectedFiles = fileChooser.showOpenMultipleDialog(null);
+        if (!selectedFiles.isEmpty()) {
+            // Keep track of the user choice for next time
+            EditorController.updateNextInitialDirectory(selectedFiles.get(0));
+        }
+        return selectedFiles;
     }
 
     private void userLibraryUpdateRejected() {
