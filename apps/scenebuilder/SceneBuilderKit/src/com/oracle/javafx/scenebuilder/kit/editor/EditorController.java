@@ -269,7 +269,7 @@ public class EditorController {
     private Callback<Void, Boolean> requestTextEditingSessionEnd;
     
     private static String builtinToolStylesheet;
-    private static File nextInitialDirectory = new File(System.getProperty("user.home"));
+    private static File nextInitialDirectory = new File(System.getProperty("user.home")); //NOI18N
     
     
     /**
