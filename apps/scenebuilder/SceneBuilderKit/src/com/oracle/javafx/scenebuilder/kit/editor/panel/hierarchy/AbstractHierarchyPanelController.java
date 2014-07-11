@@ -114,7 +114,7 @@ public abstract class AbstractHierarchyPanelController extends AbstractFxmlPanel
     private Paint parentRingColor;
     private final Map<FXOMObject, Boolean> treeItemsExpandedMapProperty = new HashMap<>();
     private boolean shouldEndOnExit;
-    protected final Label promptLabel = new Label();
+    private Label promptLabel;
 
     // When DND few pixels of the top or bottom of the Hierarchy 
     // the user can cause it to auto-scroll until the desired target node
@@ -179,8 +179,6 @@ public abstract class AbstractHierarchyPanelController extends AbstractFxmlPanel
      */
     public AbstractHierarchyPanelController(URL fxmlURL, EditorController editorController) {
         super(fxmlURL, I18N.getBundle(), editorController);
-        promptLabel.getStyleClass().add("hierarchy-prompt-label");
-        promptLabel.setMouseTransparent(true);
         
         final BorderStroke bs = new BorderStroke(Color.TRANSPARENT, BorderStrokeStyle.SOLID,
                 CornerRadii.EMPTY, cellBorderWidths, cellInsets);
@@ -190,6 +188,15 @@ public abstract class AbstractHierarchyPanelController extends AbstractFxmlPanel
         firstCellTransparentBorder = new Border(firstbs);
     }
 
+    private Label getPromptLabel() {
+        if (promptLabel == null) {
+            promptLabel = new Label();
+            promptLabel.getStyleClass().add("hierarchy-prompt-label");
+            promptLabel.setMouseTransparent(true);
+        }
+        return promptLabel;
+    }
+    
     /**
      * Returns the root TreeItem.
      *
@@ -690,24 +697,25 @@ public abstract class AbstractHierarchyPanelController extends AbstractFxmlPanel
         final Pane pane = (Pane) parent;
         final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
 
+        final Label label = getPromptLabel();
         if (fxomDocument == null || fxomDocument.getFxomRoot() == null) {
             rootTreeItem = null;
             // Add place holder to the parent
             if (fxomDocument == null) {
-                promptLabel.setText(I18N.getString("contant.label.status.fxomdocument.null"));
+                label.setText(I18N.getString("contant.label.status.fxomdocument.null"));
             } else {
-                promptLabel.setText(I18N.getString("content.label.status.invitation"));
+                label.setText(I18N.getString("content.label.status.invitation"));
             }
-            if (pane.getChildren().contains(promptLabel) == false) {
+            if (pane.getChildren().contains(label) == false) {
                 // This may occur when closing en empty document
                 // => we switch from null FXOM root to null FXOM document
-                pane.getChildren().add(promptLabel);
+                pane.getChildren().add(label);
             }
         } else {
             rootTreeItem = makeTreeItem(fxomDocument.getFxomRoot());
             rootTreeItem.setExpanded(true);
             // Remove place holder from the parent
-            ((Pane) parent).getChildren().remove(promptLabel);
+            ((Pane) parent).getChildren().remove(label);
         }
     }
         
