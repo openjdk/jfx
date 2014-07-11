@@ -92,22 +92,24 @@ public class ScreenAndWindowTest extends TestBase {
     @Test public void test() throws InterruptedException {
         submit(new Runnable() { public void run() {
             Node view = getView();
-            Screen screen = Utils.getScreen(view);
-            Rectangle2D screenSize = screen.getBounds();
-            Rectangle2D availSize = screen.getVisualBounds();
 
             // test WebView not added to a Scene
-            checkProperties(screenSize, availSize, -1, -1);
+            checkWindowProperties(-1, -1);
 
             // add WebView to a Scene with no Window
             Scene scene = new Scene(new Group(view));
-            checkProperties(screenSize, availSize, -1, -1);
+            checkWindowProperties(-1, -1);
 
             // add Scene to a 0x0 Window
             Stage stage = new Stage();
             stage.setScene(scene);
             stage.setWidth(0);
             stage.setHeight(0);
+
+            Screen screen = Utils.getScreen(view);
+            Rectangle2D screenSize = screen.getBounds();
+            Rectangle2D availSize = screen.getVisualBounds();
+
             checkProperties(screenSize, availSize, 0, 0);
 
             // resize the Window
