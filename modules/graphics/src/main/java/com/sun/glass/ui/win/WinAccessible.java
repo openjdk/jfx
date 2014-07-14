@@ -441,7 +441,7 @@ final class WinAccessible extends Accessible {
         if (isDisposed()) return null;
         AccessibleRole role = (AccessibleRole) getAttribute(ROLE);
         if (role != null) {
-            switch(role) {
+            switch (role) {
                 case TABLE_ROW:
                 case TABLE_CELL: return getContainerAccessible(AccessibleRole.TABLE_VIEW);
                 case LIST_ITEM: return getContainerAccessible(AccessibleRole.LIST_VIEW);
@@ -1404,19 +1404,10 @@ final class WinAccessible extends Accessible {
         if (isDisposed()) return null;
        Integer columnIndex = (Integer)getAttribute(COLUMN_INDEX);
        if (columnIndex == null) return null;
-       Node table = null;
-       Node node = (Node)getAttribute(PARENT);
-       while (node != null) {
-           Accessible acc = getAccessible(node);
-           AccessibleRole role = (AccessibleRole)acc.getAttribute(ROLE);
-           if (role == AccessibleRole.TABLE_VIEW || role == AccessibleRole.TREE_TABLE_VIEW) {
-               table = node;
-               break;
-           }
-           node = (Node)acc.getAttribute(PARENT);
-       }
-       if (table == null) return null;
-       Node column = (Node)getAccessible(table).getAttribute(COLUMN_AT_INDEX, columnIndex);
+       Accessible acc = getContainer();
+       if (acc == null) return null;
+       Node column = (Node)acc.getAttribute(COLUMN_AT_INDEX, columnIndex);
+       if (column == null) return null;
        return new long[] {getNativeAccessible(column)};
     }
 
