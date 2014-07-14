@@ -37,6 +37,7 @@
 #include <memory.h>
 #include <direct.h>
 #include <process.h>
+#include <string>
 
 #include "jni.h"
 
@@ -63,6 +64,8 @@
       - Reuse code between windows/linux launchers and borrow more code from
         java.exe launcher implementation.
 */
+
+using namespace std;
 
 //TODO:
 //  Ideally we should be detecting max path length in runtime and reporting error
@@ -309,28 +312,17 @@ static int countNumberOfSystemArguments(int argCount, LPTSTR *szArgList) {
  *         pattern with the replaceWith string
  */
 TCHAR *replaceStr(TCHAR *str, TCHAR *pattern, TCHAR *replaceWith) {
-    TCHAR buffer[MAX_PATH*2] = {0};
-    TCHAR *p;
+    wstring target = str;
+    wstring lpattern = pattern;
 
-    //Return orig if str is not in orig.
-    if(!(p = wcsstr(str, pattern))) {
-        return wcsdup(str);
+    size_t location = target.find(pattern);
+
+    if (location != wstring::npos) {
+        wstring lreplaceWith = replaceWith;
+        target.replace(location, lpattern.length(), lreplaceWith);
     }
 
-    int loc = p-str;
-    if (loc >= sizeof(buffer)) {
-        return wcsdup(str);
-    }
-
-    wcsncpy(buffer, str, loc); // Copy characters from 'str' start to 'orig' st$
-    buffer[loc] = 0x0000;
-
-    int remaingBufferSize = sizeof(buffer) - loc;
-    int len = _snwprintf(buffer+(loc), remaingBufferSize, _T("%s%s"), replaceWith, p + wcslen(pattern));
-    if(len > remaingBufferSize ) {
-        return wcsdup(str);
-    }
-    return wcsdup(buffer);
+    return wcsdup(target.c_str());
 }
 
 
@@ -402,7 +394,7 @@ char* convertToDupedChar(TCHAR* source) {
     return strdup(argvalueASCII);
 }
 
-/* 
+/*
  * Concatenate the JVMUserArg into a single string
  */
 char* JVMUserArg_toString(TCHAR* basedir, JVMUserArg arg, int freeMemory) {
@@ -477,11 +469,11 @@ TCHAR* convertWinRegToJava(TCHAR* key) {
         ch = key[index];
         if (ch == '/') {
             if ((index + 1) < len &&
-                (key[index+1] >= 'A' && key[index+1] <= 'Z')) { 
+                (key[index+1] >= 'A' && key[index+1] <= 'Z')) {
                     *windowsName = key[index+1];
                     index++;
             }
-            else if ((index + 1) < len && (key[index+1] == '/')) { 
+            else if ((index + 1) < len && (key[index+1] == '/')) {
                 *windowsName = '\\';
                 index++;
             }
@@ -514,7 +506,7 @@ LONG createRegKey(TCHAR* appid, HKEY *hKey) {
     wcscat(buf, p);
     LONG success = RegOpenKeyEx(HKEY_CURRENT_USER, buf, 0, KEY_READ | KEY_WRITE, hKey);
     if (success == ERROR_FILE_NOT_FOUND) {
-        success = RegCreateKeyEx(HKEY_CURRENT_USER, buf, 0L, NULL, REG_OPTION_NON_VOLATILE, 
+        success = RegCreateKeyEx(HKEY_CURRENT_USER, buf, 0L, NULL, REG_OPTION_NON_VOLATILE,
             KEY_QUERY_VALUE | KEY_SET_VALUE , NULL, hKey, NULL);
     }
     return success;
@@ -543,7 +535,7 @@ void getJvmUserArg(TCHAR* appid, JVMUserArg *arg) {
             else if (success == ERROR_FILE_NOT_FOUND) {
                 TCHAR *regValueName = convertKeyToWinReg(arg->value);
                 if (regValueName != NULL) {
-                    success = RegSetValueEx(hKey, regOptionName, NULL, 
+                    success = RegSetValueEx(hKey, regOptionName, NULL,
                         REG_SZ, (LPBYTE) regValueName, (wcslen(regValueName)+1)*sizeof(TCHAR));
                     free(regValueName);
                 }
@@ -730,7 +722,7 @@ bool startJVM(TCHAR* basedir, TCHAR* appFolder, TCHAR* jar, int argCount, LPTSTR
         }
     } while (found && idx < MAX_OPTIONS);
 
-	cnt = addUserOptions(basedir, options, cnt);
+    cnt = addUserOptions(basedir, options, cnt);
 
     jvmArgs.version = 0x00010002;
     jvmArgs.options = options;
