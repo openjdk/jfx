@@ -85,7 +85,7 @@ public class PlatformImpl {
     private static Boolean hasMultiTouch;
     private static Boolean hasPointer;
     private static boolean isThreadMerged = false;
-    private static BooleanProperty accessibilityOn = new SimpleBooleanProperty();
+    private static BooleanProperty accessibilityActive = new SimpleBooleanProperty();
 
     /**
      * Set a flag indicating whether this application should show up in the
@@ -456,8 +456,8 @@ public class PlatformImpl {
         }
     }
 
-    public static BooleanProperty accessibilityOnProperty() {
-        return accessibilityOn;
+    public static BooleanProperty accessibilityActiveProperty() {
+        return accessibilityActive;
     }
 
     public static void exit() {

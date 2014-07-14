@@ -6258,7 +6258,7 @@ public class Scene implements EventTarget {
                     return super.getAttribute(attribute, parameters);
                 }
             });
-            PlatformImpl.accessibilityOnProperty().set(true);
+            PlatformImpl.accessibilityActiveProperty().set(true);
         }
         return accessible;
     }
