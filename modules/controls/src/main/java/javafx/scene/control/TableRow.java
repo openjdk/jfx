@@ -375,26 +375,4 @@ public class TableRow<T> extends IndexedCell<T> {
             default: return super.queryAccessibleAttribute(attribute, parameters);
         }
     }
-
-    @Override
-    public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
-        final TableView<T> tableView = getTableView();
-        final MultipleSelectionModel<T> sm = tableView == null ? null : tableView.getSelectionModel();
-
-        switch (action) {
-            case SELECT: {
-                if (sm != null) sm.clearAndSelect(getIndex());
-                break;
-            }
-            case ADD_TO_SELECTION: {
-                if (sm != null) sm.select(getIndex());
-                break;
-            }
-            case REMOVE_FROM_SELECTION: {
-                if (sm != null) sm.clearSelection(getIndex());
-                break;
-            }
-            default: super.executeAccessibleAction(action);
-        }
-    }
 }
