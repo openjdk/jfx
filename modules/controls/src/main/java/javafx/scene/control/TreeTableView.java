@@ -1947,19 +1947,6 @@ public class TreeTableView<S> extends Control {
         }
     }
 
-    @Override
-    public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
-        switch (action) {
-            case SCROLL_TO_INDEX: {
-                int index = (int) parameters[0];
-                scrollTo(index);
-                break;
-            }
-            default: super.executeAccessibleAction(action, parameters);
-        }
-    }
-
-
     /***************************************************************************
      *                                                                         *
      * Support Classes                                                         *

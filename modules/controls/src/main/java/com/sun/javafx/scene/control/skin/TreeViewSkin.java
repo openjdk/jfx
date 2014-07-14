@@ -33,6 +33,7 @@ import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.event.WeakEventHandler;
+import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
 import javafx.scene.control.*;
@@ -506,6 +507,18 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
             case VERTICAL_SCROLLBAR: return flow.getVbar();
             case HORIZONTAL_SCROLLBAR: return flow.getHbar();
             default: return super.queryAccessibleAttribute(attribute, parameters);
+        }
+    }
+
+    @Override
+    protected void executeAccessibleAction(AccessibleAction action, Object... parameters) {
+        switch (action) {
+            case SCROLL_TO_INDEX: {
+                Integer index = (Integer)parameters[0];
+                if (index != null) flow.show(index);
+                break;
+            }
+            default: super.executeAccessibleAction(action, parameters);
         }
     }
 }
