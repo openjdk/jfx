@@ -31,6 +31,7 @@
  */
 package com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors;
 
+import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorPlatform;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
@@ -252,10 +253,13 @@ public class StylesheetEditor extends InlineListEditor {
                 new FileChooser.ExtensionFilter(
                         I18N.getString("inspector.select.css.filter"),
                         Arrays.asList(extensions)));
+        fileChooser.setInitialDirectory(EditorController.getNextInitialDirectory());
         File file = fileChooser.showOpenDialog(root.getScene().getWindow());
         if ((file == null)) {
             return;
         }
+        // Keep track of the user choice for next time
+        EditorController.updateNextInitialDirectory(file);
         URL url;
         try {
             url = file.toURI().toURL();

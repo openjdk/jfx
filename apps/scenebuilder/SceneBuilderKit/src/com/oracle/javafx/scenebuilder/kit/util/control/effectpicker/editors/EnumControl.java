@@ -40,6 +40,8 @@ import java.net.URL;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
+import javafx.event.ActionEvent;
+import javafx.event.Event;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -100,5 +102,9 @@ public class EnumControl<T> extends GridPane {
         });
         
         setValue(initValue);
+        
+        editor_choicebox.addEventHandler(ActionEvent.ACTION, (Event event) -> {
+            event.consume();
+        });
     }
 }

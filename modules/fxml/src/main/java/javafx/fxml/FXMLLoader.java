@@ -997,6 +997,10 @@ public class FXMLLoader {
                 value = (builderFactory == null) ? null : builderFactory.getBuilder(type);
 
                 if (value == null) {
+                    value = DEFAULT_BUILDER_FACTORY.getBuilder(type);
+                }
+
+                if (value == null) {
                     try {
                         value = ReflectUtil.newInstance(type);
                     } catch (InstantiationException exception) {
@@ -1299,6 +1303,10 @@ public class FXMLLoader {
             if (root == null) {
                 if (staticLoad) {
                     value = (builderFactory == null) ? null : builderFactory.getBuilder(type);
+
+                    if (value == null) {
+                        value = DEFAULT_BUILDER_FACTORY.getBuilder(type);
+                    }
 
                     if (value == null) {
                         try {
@@ -1800,6 +1808,8 @@ public class FXMLLoader {
 
     private static final Pattern extraneousWhitespacePattern = Pattern.compile("\\s+");
 
+    private static BuilderFactory DEFAULT_BUILDER_FACTORY = new JavaFXBuilderFactory();
+
     /**
      * The character set used when character set is not explicitly specified
      */
@@ -2051,7 +2061,7 @@ public class FXMLLoader {
      * @since JavaFX 2.1
      */
     public FXMLLoader(URL location, ResourceBundle resources) {
-        this(location, resources, new JavaFXBuilderFactory());
+        this(location, resources, null);
     }
 
     /**
@@ -3115,7 +3125,7 @@ public class FXMLLoader {
 
     private static <T> T loadImpl(URL location, ResourceBundle resources,
                                   Class<?> callerClass) throws IOException {
-        return loadImpl(location, resources,  new JavaFXBuilderFactory(),
+        return loadImpl(location, resources,  null,
                         callerClass);
     }
 

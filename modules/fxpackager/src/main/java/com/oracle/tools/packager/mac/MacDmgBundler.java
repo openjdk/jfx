@@ -29,6 +29,7 @@ import com.oracle.tools.packager.IOUtils;
 import sun.misc.BASE64Encoder;
 
 import java.io.*;
+import java.nio.file.Files;
 import java.text.MessageFormat;
 import java.util.*;
 
@@ -44,9 +45,17 @@ public class MacDmgBundler extends MacBaseInstallerBundler {
     static final String TEMPLATE_BUNDLE_ICON = "GenericApp.icns";
 
     //existing SQE tests look for "license" string in the filenames
-    // when they look for unathorized license files in the build artifacts
+    // when they look for unauthorized license files in the build artifacts
     // Use different name to make them happy
     static final String DEFAULT_LICENSE_PLIST="lic_template.plist";
+
+    public static final BundlerParamInfo<Boolean> SIMPLE_DMG = new StandardBundlerParam<>(
+            I18N.getString("param.simple-dmg.name"),
+            I18N.getString("param.simple-dmg.description"),
+            "mac.dmg.simple",
+            Boolean.class,
+            params -> Boolean.FALSE,
+            (s, p) -> Boolean.parseBoolean(s));
 
     public MacDmgBundler() {
         super();
@@ -298,11 +307,13 @@ public class MacDmgBundler extends MacBaseInstallerBundler {
         protoDMG.getParentFile().mkdirs();
         finalDMG.getParentFile().mkdirs();
 
+        String hdiUtilVerbosityFlag = Log.isDebug() ? "-verbose" : "-quiet";
+
         //create temp image
         ProcessBuilder pb = new ProcessBuilder(
                 hdiutil,
                 "create",
-                "-quiet",
+                hdiUtilVerbosityFlag,
                 "-srcfolder", srcFolder.getAbsolutePath(),
                 "-volname", APP_NAME.fetchFrom(p),
                 "-ov", protoDMG.getAbsolutePath(),
@@ -314,26 +325,39 @@ public class MacDmgBundler extends MacBaseInstallerBundler {
                 hdiutil,
                 "attach",
                 protoDMG.getAbsolutePath(),
-                "-quiet",
+                hdiUtilVerbosityFlag,
                 "-mountroot", imagesRoot.getAbsolutePath());
         IOUtils.exec(pb, VERBOSE.fetchFrom(p));
 
         File mountedRoot = new File(imagesRoot.getAbsolutePath(), APP_NAME.fetchFrom(p));
-
-        //background image
-        File bgdir = new File(mountedRoot, ".background");
-        bgdir.mkdirs();
-        IOUtils.copyFile(getConfig_VolumeBackground(p),
-                new File(bgdir, "background.png"));
 
         //volume icon
         File volumeIconFile = new File(mountedRoot, ".VolumeIcon.icns");
         IOUtils.copyFile(getConfig_VolumeIcon(p),
                 volumeIconFile);
 
-        pb = new ProcessBuilder("osascript",
-                getConfig_VolumeScript(p).getAbsolutePath());
-        IOUtils.exec(pb, VERBOSE.fetchFrom(p));
+        boolean simple = SIMPLE_DMG.fetchFrom(p);
+
+        if (simple) {
+            boolean systemWide = SYSTEM_WIDE.fetchFrom(p) == null || SYSTEM_WIDE.fetchFrom(p);
+
+            if (systemWide) {
+                Files.createSymbolicLink(new File(mountedRoot, "Applications").toPath(), new File("/Applications").toPath());
+            }
+            // I don't think there is a way to link to the current user's desktop,
+            // without resorting to applescript, which is what this bug is explicitly
+            // avoiding, so simple dmg that is not system wide is just the application, no target folder
+        } else {
+            //background image
+            File bgdir = new File(mountedRoot, ".background");
+            bgdir.mkdirs();
+            IOUtils.copyFile(getConfig_VolumeBackground(p),
+                    new File(bgdir, "background.png"));
+
+            pb = new ProcessBuilder("osascript",
+                    getConfig_VolumeScript(p).getAbsolutePath());
+            IOUtils.exec(pb, VERBOSE.fetchFrom(p));
+        }
 
         //Indicate that we want a custom icon
         //NB: attributes of the root directory are ignored when creating the volume
@@ -364,7 +388,7 @@ public class MacDmgBundler extends MacBaseInstallerBundler {
         pb = new ProcessBuilder(
                 hdiutil,
                 "detach",
-                "-quiet",
+                hdiUtilVerbosityFlag,
                 mountedRoot.getAbsolutePath());
         IOUtils.exec(pb, VERBOSE.fetchFrom(p));
 
@@ -373,7 +397,7 @@ public class MacDmgBundler extends MacBaseInstallerBundler {
                 hdiutil,
                 "convert",
                 protoDMG.getAbsolutePath(),
-                "-quiet",
+                hdiUtilVerbosityFlag,
                 "-format", "UDZO",
                 "-o", finalDMG.getAbsolutePath());
         IOUtils.exec(pb, VERBOSE.fetchFrom(p));
@@ -450,6 +474,7 @@ public class MacDmgBundler extends MacBaseInstallerBundler {
         results.addAll(MacAppBundler.getAppBundleParameters());
         results.addAll(Arrays.asList(
                 LICENSE_FILE,
+                SIMPLE_DMG,
                 SYSTEM_WIDE
         ));
 

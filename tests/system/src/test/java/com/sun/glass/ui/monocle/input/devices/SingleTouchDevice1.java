@@ -25,7 +25,7 @@
 
 package com.sun.glass.ui.monocle.input.devices;
 
-import com.sun.glass.ui.monocle.input.UInput;
+import com.sun.glass.ui.monocle.UInput;
 
 /**
  * SingleTouchDevice1 sends ABS_X and ABS_Y events. It uses BTN_TOUCH to notify

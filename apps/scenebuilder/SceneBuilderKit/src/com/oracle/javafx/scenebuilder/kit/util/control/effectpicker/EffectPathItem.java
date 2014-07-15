@@ -181,6 +181,7 @@ public abstract class EffectPathItem extends HBox {
     @FXML
     void selectEffect(ActionEvent event) {
         effectPickerController.selectEffectPathItem(this);
+        event.consume();
     }
 
     private void initialize() {

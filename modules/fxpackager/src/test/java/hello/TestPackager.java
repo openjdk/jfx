@@ -55,7 +55,8 @@ public class TestPackager {
             for (String key: keys) {
                 System.out.println("key:" + key);
             }
-            jvmOptions.putLong("lastRunMs", System.currentTimeMillis());
+            jvmOptions.putLong("-DlastRunMs=", System.currentTimeMillis());
+            jvmOptions.put("-Xmx", "192m");
             node.flush();
         } catch (Exception ex) {
             Logger.getLogger(TestPackager.class.getName()).log(Level.WARNING, null, ex);

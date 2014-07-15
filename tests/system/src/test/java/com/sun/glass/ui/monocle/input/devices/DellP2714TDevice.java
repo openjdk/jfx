@@ -25,8 +25,8 @@
 
 package com.sun.glass.ui.monocle.input.devices;
 
-import com.sun.glass.ui.monocle.input.TestApplication;
-import com.sun.glass.ui.monocle.input.UInput;
+import com.sun.glass.ui.monocle.TestApplication;
+import com.sun.glass.ui.monocle.UInput;
 import org.junit.Assume;
 
 import java.util.HashMap;

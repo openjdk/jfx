@@ -75,6 +75,33 @@ public abstract class Cursor {
 
     /**
      * Shows or hides the cursor.
+     * <p>
+     * If the cursor is currently hidden with a previous call to {@code
+     * setVisible(false)}, setting a new cursor shape (e.g. by means of calling
+     * {@code Window.setCursor()}) does not automatically display the cursor on
+     * the screen until the client code calls {@code setVisible(true)} to show
+     * the cursor again.
+     * <p>
+     * If the mouse cursor is located over a non-Glass window at the time of
+     * calling this method, the call may or may not affect the native cursor's
+     * visibility. This behavior is platform-dependent.
+     * <p>
+     * When the mouse pointer is moved over a non-Glass window, depending on
+     * the native platform behavior, the cursor may or may not become visible
+     * on the screen, even if it was previously hidden by calling {@code
+     * setVisible(false)}. After this occurs, on some platforms the cursor may
+     * even remain visible permanently. For example, Mac OS X makes the cursor
+     * visible unconditionally when the mouse is moved over the Dock or Menu
+     * Bar areas. There's no way to detect that the native cursor became
+     * visible, however, from Glass perspective it is still considered hidden,
+     * and thus, when the mouse cursor is needed again, the app should call
+     * {@code setVisible(true)} in order to continue to operate properly.
+     * <p>
+     * Calling this method multiple times with the same argument may not have
+     * any effect. For example, if the cursor was hidden and the native OS
+     * restored its visibility, calling {@code setVisible(false)} again may not
+     * hide the cursor. If the app needs to ultimately hide the cursor, it
+     * should first show the cursor again, and then proceed with hiding it.
      */
     public static void setVisible(boolean visible) {
         Application.checkEventThread();

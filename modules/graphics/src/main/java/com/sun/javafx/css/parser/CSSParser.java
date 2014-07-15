@@ -321,7 +321,7 @@ final public class CSSParser {
 
             currentToken = nextToken(lex);
             CSSParser.Term term = this.expr(lex);
-            value = valueFor(property, term);
+            value = valueFor(property, term, lex);
         } catch (IOException ioe) {
         } catch (ParseException e) {
             if (LOGGER.isLoggable(Level.WARNING)) {
@@ -689,7 +689,7 @@ final public class CSSParser {
     //
     ////////////////////////////////////////////////////////////////////////////
 
-    ParsedValueImpl valueFor(String property, Term root) throws ParseException {
+    ParsedValueImpl valueFor(String property, Term root, CSSLexer lexer) throws ParseException {
         final String prop = property.toLowerCase(Locale.ROOT);
         properties.put(prop, prop);
         if (root == null || root.token == null) {
@@ -751,10 +751,10 @@ final public class CSSParser {
         } else if ("-fx-border-image-width".equals(prop)) {
              return parseBorderImageWidthLayers(root);
         } else if ("-fx-padding".equals(prop)) {
-            ParsedValueImpl<?,Size>[] sides = parseSizeSeries(root);
+            ParsedValueImpl<?,Size>[] sides = parseSize1to4(root);
             return new ParsedValueImpl<ParsedValue[],Insets>(sides, InsetsConverter.getInstance());
         } else if ("-fx-label-padding".equals(prop)) {
-            ParsedValueImpl<?,Size>[] sides = parseSizeSeries(root);
+            ParsedValueImpl<?,Size>[] sides = parseSize1to4(root);
             return new ParsedValueImpl<ParsedValue[],Insets>(sides, InsetsConverter.getInstance());
         } else if (prop.endsWith("font-family")) {
             return parseFontFamily(root);
@@ -845,8 +845,13 @@ final public class CSSParser {
         case CSSLexer.GRAD:
         case CSSLexer.RAD:
         case CSSLexer.TURN:
-            ParsedValueImpl sizeValue = new ParsedValueImpl<Size,Number>(size(token), null);
-            value = new ParsedValueImpl<ParsedValue<?,Size>, Number>(sizeValue, SizeConverter.getInstance());
+            if (root.nextInSeries == null) {
+                ParsedValueImpl sizeValue = new ParsedValueImpl<Size,Number>(size(token), null);
+                value = new ParsedValueImpl<ParsedValue<?,Size>, Number>(sizeValue, SizeConverter.getInstance());
+            } else {
+                ParsedValueImpl<Size,Size>[] sizeValue = parseSizeSeries(root);
+                value = new ParsedValueImpl<ParsedValue[],Number[]>(sizeValue, SizeConverter.SequenceConverter.getInstance());
+            }
             break;
         case CSSLexer.STRING:
         case CSSLexer.IDENT:
@@ -2311,7 +2316,7 @@ final public class CSSParser {
 
     // An size or a series of four size values
     // <size> | <size> <size> <size> <size>
-    private ParsedValueImpl<?,Size>[] parseSizeSeries(final Term root)
+    private ParsedValueImpl<?,Size>[] parseSize1to4(final Term root)
             throws ParseException {
 
         Term temp = root;
@@ -2342,7 +2347,7 @@ final public class CSSParser {
         ParsedValueImpl<ParsedValue[],Insets>[] layers = new ParsedValueImpl[nLayers];
 
         while(temp != null) {
-            ParsedValueImpl<?,Size>[] sides = parseSizeSeries(temp);
+            ParsedValueImpl<?,Size>[] sides = parseSize1to4(temp);
             layers[layer++] = new ParsedValueImpl<ParsedValue[],Insets>(sides, InsetsConverter.getInstance());
             while(temp.nextInSeries != null) {
                 temp = temp.nextInSeries;
@@ -2362,7 +2367,7 @@ final public class CSSParser {
         ParsedValueImpl<ParsedValue[],Insets> layer = null;
 
         while(temp != null) {
-            ParsedValueImpl<?,Size>[] sides = parseSizeSeries(temp);
+            ParsedValueImpl<?,Size>[] sides = parseSize1to4(temp);
             layer = new ParsedValueImpl<ParsedValue[],Insets>(sides, InsetsConverter.getInstance());
             while(temp.nextInSeries != null) {
                 temp = temp.nextInSeries;
@@ -2383,7 +2388,7 @@ final public class CSSParser {
         ParsedValueImpl<ParsedValue[],Margins>[] layers = new ParsedValueImpl[nLayers];
 
         while(temp != null) {
-            ParsedValueImpl<?,Size>[] sides = parseSizeSeries(temp);
+            ParsedValueImpl<?,Size>[] sides = parseSize1to4(temp);
             layers[layer++] = new ParsedValueImpl<ParsedValue[],Margins>(sides, Margins.Converter.getInstance());
             while(temp.nextInSeries != null) {
                 temp = temp.nextInSeries;
@@ -2394,6 +2399,44 @@ final public class CSSParser {
         return new ParsedValueImpl<ParsedValue<ParsedValue[],Margins>[], Margins[]>(layers, Margins.SequenceConverter.getInstance());
     }
 
+    // <size> | <size> <size> <size> <size>
+    private ParsedValueImpl<Size, Size>[] parseSizeSeries(Term root)
+            throws ParseException {
+
+        if (root.token == null) error(root, "Parse error");
+
+        List<ParsedValueImpl<Size,Size>> sizes = new ArrayList<>();
+
+        Term term = root;
+        while(term != null) {
+            Token token = term.token;
+            final int ttype = token.getType();
+            switch (ttype) {
+                case CSSLexer.NUMBER:
+                case CSSLexer.PERCENTAGE:
+                case CSSLexer.EMS:
+                case CSSLexer.EXS:
+                case CSSLexer.PX:
+                case CSSLexer.CM:
+                case CSSLexer.MM:
+                case CSSLexer.IN:
+                case CSSLexer.PT:
+                case CSSLexer.PC:
+                case CSSLexer.DEG:
+                case CSSLexer.GRAD:
+                case CSSLexer.RAD:
+                case CSSLexer.TURN:
+                    ParsedValueImpl sizeValue = new ParsedValueImpl<Size, Size>(size(token), null);
+                    sizes.add(sizeValue);
+                    break;
+                default:
+                    error (root, "expected series of <size>");
+            }
+            term = term.nextInSeries;
+        }
+        return sizes.toArray(new ParsedValueImpl[sizes.size()]);
+
+    }
 
     // http://www.w3.org/TR/css3-background/#the-border-radius
     // <size>{1,4} [ '/' <size>{1,4}]? [',' <size>{1,4} [ '/' <size>{1,4}]?]?
@@ -4449,7 +4492,7 @@ final public class CSSParser {
         Term root = expr(lexer);
         ParsedValueImpl value = null;
         try {
-            value = (root != null) ? valueFor(property, root) : null;
+            value = (root != null) ? valueFor(property, root, lexer) : null;
         } catch (ParseException re) {
                 Token badToken = re.tok;
                 final int line = badToken != null ? badToken.getLine() : -1;
