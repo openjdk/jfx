@@ -985,11 +985,13 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
     private void updatePrefViewportWidth() {
         int columnCount = getSkinnable().getPrefColumnCount();
         scrollPane.setPrefViewportWidth(columnCount * characterWidth + contentView.snappedLeftInset() + contentView.snappedRightInset());
+        scrollPane.setMinViewportWidth(characterWidth + contentView.snappedLeftInset() + contentView.snappedRightInset());
     }
 
     private void updatePrefViewportHeight() {
         int rowCount = getSkinnable().getPrefRowCount();
         scrollPane.setPrefViewportHeight(rowCount * lineHeight + contentView.snappedTopInset() + contentView.snappedBottomInset());
+        scrollPane.setMinViewportHeight(lineHeight + contentView.snappedTopInset() + contentView.snappedBottomInset());
     }
 
     private void updateFontMetrics() {

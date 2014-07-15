@@ -513,6 +513,55 @@ public class ScrollPane extends Control {
         return prefViewportHeight;
     }
 
+
+    /**
+     * Specify the minimum width of the ScrollPane Viewport.
+     * This is the width that will be available to the content node.
+     *
+     * @since JavaFX 8u40
+     * @see #prefViewportWidthProperty()
+     */
+    private DoubleProperty minViewportWidth;
+
+    public final void setMinViewportWidth(double value) {
+        minViewportWidthProperty().set(value);
+    }
+
+    public final double getMinViewportWidth() {
+        return minViewportWidth == null ? 0.0F : minViewportWidth.get();
+    }
+
+    public final DoubleProperty minViewportWidthProperty() {
+        if (minViewportWidth == null) {
+            minViewportWidth = new SimpleDoubleProperty(this, "minViewportWidth");
+        }
+        return minViewportWidth;
+    }
+
+    /**
+     * Specify the minimum height of the ScrollPane Viewport.
+     * This is the height that will be available to the content node.
+     *
+     * @since JavaFX 8u40
+     * @see #prefViewportHeightProperty()
+     */
+    private DoubleProperty minViewportHeight;
+
+    public final void setMinViewportHeight(double value) {
+        minViewportHeightProperty().set(value);
+    }
+
+    public final double getMinViewportHeight() {
+        return minViewportHeight == null ? 0.0F : minViewportHeight.get();
+    }
+
+    public final DoubleProperty minViewportHeightProperty() {
+        if (minViewportHeight == null) {
+            minViewportHeight = new SimpleDoubleProperty(this, "minViewportHeight");
+        }
+        return minViewportHeight;
+    }
+
     /**
      * The actual Bounds of the ScrollPane Viewport.
      * This is the Bounds of the content node.

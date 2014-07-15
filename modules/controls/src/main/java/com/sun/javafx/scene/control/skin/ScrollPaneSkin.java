@@ -710,11 +710,7 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
     @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         final ScrollPane sp = getSkinnable();
 
-        double vsbWidth =
-                ((sp.getVbarPolicy() == ScrollBarPolicy.ALWAYS) ||
-                 (sp.getVbarPolicy() == ScrollBarPolicy.AS_NEEDED && sp.getPrefViewportWidth() > 0))
-                ? vsb.prefWidth(ScrollBar.USE_COMPUTED_SIZE)
-                : 0;
+        double vsbWidth = computeVsbSizeHint(sp);
         double minWidth = vsbWidth + snappedLeftInset() + snappedRightInset();
 
         if (sp.getPrefViewportWidth() > 0) {
@@ -731,11 +727,7 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
     @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         final ScrollPane sp = getSkinnable();
 
-        double hsbHeight =
-                ((sp.getHbarPolicy() == ScrollBarPolicy.ALWAYS) ||
-                 (sp.getHbarPolicy() == ScrollBarPolicy.AS_NEEDED && sp.getPrefViewportHeight() > 0))
-                ? hsb.prefHeight(ScrollBar.USE_COMPUTED_SIZE)
-                : 0;
+        double hsbHeight = computeHsbSizeHint(sp);
         double minHeight = hsbHeight + snappedTopInset() + snappedBottomInset();
 
         if (sp.getPrefViewportHeight() > 0) {
@@ -750,13 +742,53 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
     }
 
     @Override protected double computeMinWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
-        double w = corner.minWidth(-1);
-        return (w > 0) ? (3 * w) : (DEFAULT_MIN_SIZE);
+        final ScrollPane sp = getSkinnable();
+
+        double vsbWidth = computeVsbSizeHint(sp);
+        double minWidth = vsbWidth + snappedLeftInset() + snappedRightInset();
+
+        if (sp.getMinViewportWidth() > 0) {
+            return (sp.getMinViewportWidth() + minWidth);
+        } else {
+            double w = corner.minWidth(-1);
+            return (w > 0) ? (3 * w) : (DEFAULT_MIN_SIZE);
+        }
+
     }
 
     @Override protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
-        double h = corner.minHeight(-1);
-        return (h > 0) ? (3 * h) : (DEFAULT_MIN_SIZE);
+        final ScrollPane sp = getSkinnable();
+
+        double hsbHeight = computeHsbSizeHint(sp);
+        double minHeight = hsbHeight + snappedTopInset() + snappedBottomInset();
+
+        if (sp.getMinViewportHeight() > 0) {
+            return (sp.getMinViewportHeight() + minHeight);
+        } else {
+            double h = corner.minHeight(-1);
+            return (h > 0) ? (3 * h) : (DEFAULT_MIN_SIZE);
+        }
+    }
+
+    /**
+     * Computes the size that should be reserved for horizontal scrollbar in size hints (min/pref height)
+     */
+    private double computeHsbSizeHint(ScrollPane sp) {
+        return ((sp.getHbarPolicy() == ScrollBarPolicy.ALWAYS) ||
+                (sp.getHbarPolicy() == ScrollBarPolicy.AS_NEEDED && (sp.getPrefViewportHeight() > 0 || sp.getMinViewportHeight() > 0)))
+                ? hsb.prefHeight(ScrollBar.USE_COMPUTED_SIZE)
+                : 0;
+    }
+
+    /**
+     * Computes the size that should be reserved for vertical scrollbar in size hints (min/pref width)
+     */
+    private double computeVsbSizeHint(ScrollPane sp) {
+        return ((sp.getVbarPolicy() == ScrollBarPolicy.ALWAYS) ||
+                (sp.getVbarPolicy() == ScrollBarPolicy.AS_NEEDED && (sp.getPrefViewportWidth() > 0
+                        || sp.getMinViewportWidth() > 0)))
+                ? vsb.prefWidth(ScrollBar.USE_COMPUTED_SIZE)
+                : 0;
     }
 
     @Override protected void layoutChildren(final double x, final double y,
