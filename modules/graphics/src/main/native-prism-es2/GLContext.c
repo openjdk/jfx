@@ -132,9 +132,6 @@ void initState(ContextInfo *ctxInfo) {
     ctxInfo->state.depthWritesEnabled = JNI_FALSE;
     glDepthMask(ctxInfo->state.depthWritesEnabled);
     glDisable(GL_DEPTH_TEST);
-#ifndef IS_EGL
-    glDisable(GL_ALPHA_TEST);
-#endif
 
     if (ctxInfo->state.scissorEnabled) {
         ctxInfo->state.scissorEnabled = JNI_FALSE;
@@ -1241,19 +1238,10 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nSetDepthTest
         glDepthFunc(GL_LEQUAL);
         glDepthMask(GL_TRUE);
         ctxInfo->state.depthWritesEnabled = JNI_TRUE;
-#ifndef IS_EGL /* RT-25058 */
-        glEnable(GL_ALPHA_TEST);
-#ifndef ANDROID_NDK
-        glAlphaFunc(GL_NOTEQUAL, 0.0);
-#endif
-#endif
     } else {
         glDisable(GL_DEPTH_TEST);
         glDepthMask(GL_FALSE);
         ctxInfo->state.depthWritesEnabled = JNI_FALSE;
-#ifndef IS_EGL
-        glDisable(GL_ALPHA_TEST);
-#endif
     }
 }
 
