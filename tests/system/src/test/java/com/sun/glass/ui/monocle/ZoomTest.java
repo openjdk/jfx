@@ -27,10 +27,7 @@ package com.sun.glass.ui.monocle;
 
 import com.sun.glass.ui.monocle.input.devices.TestTouchDevice;
 import com.sun.glass.ui.monocle.input.devices.TestTouchDevices;
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.*;
 import org.junit.runners.Parameterized;
 
 import java.util.Collection;
@@ -57,6 +54,7 @@ public class ZoomTest extends ParameterizedTestBase {
      * drag upper finger up in order move but not enough for zooming,
      * drag again to zoom in (make it twice bigger)
      */
+    @Ignore("RT-37942")
     @Test
     public void testZoomInSmallStepBigStep() throws Exception {
         int x1 = (int) Math.round(width / 2);
@@ -152,6 +150,7 @@ public class ZoomTest extends ParameterizedTestBase {
     /**
      * Touch down two fingers, zoom in (make it twice bigger)
      */
+    @Ignore("RT-37942")
     @Test
     public void testZoomIn() throws Exception {
         int x1 = (int) Math.round(width / 2);
@@ -231,6 +230,7 @@ public class ZoomTest extends ParameterizedTestBase {
     /**
      * Touch down two fingers, zoom out (make it quarter of original size)
      */
+    @Ignore("RT-37942")
     @Test
     public void testZoomOut() throws Exception {
         int x1 = (int) Math.round(width / 2);
@@ -331,6 +331,7 @@ public class ZoomTest extends ParameterizedTestBase {
      * drag upper finger down in order move but not enough for zooming,
      * drag again to zoom out (quarter of original size)
      */
+    @Ignore("RT-37942")
     @Test
     public void testZoomOutSmallStepBigStep() throws Exception {
         int x1 = (int) Math.round(width / 2);
