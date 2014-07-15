@@ -123,6 +123,7 @@ class TouchInput {
             MouseInputSynthesizer.getInstance().setState(newState);
         }
         newState.copyTo(state);
+        newState.clearWindow();
     }
 
     private void dispatchPoint(Window window, View view, int state,

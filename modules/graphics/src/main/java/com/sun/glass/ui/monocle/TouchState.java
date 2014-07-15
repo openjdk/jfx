@@ -156,6 +156,11 @@ class TouchState {
         pointCount = 0;
     }
 
+    /** Clears the cached window. */
+    void clearWindow() {
+        window = null;
+    }
+
     /** Adds a Point to this state object.
      *
      * @param p the Point describing the data to add, or null if no data is
