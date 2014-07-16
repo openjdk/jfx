@@ -65,8 +65,6 @@ public class RotateTest extends ParameterizedTestBase {
 
     @Before
     public void init() {
-        Assume.assumeTrue(!PlatformUtil.isMac());
-        Assume.assumeTrue(!PlatformUtil.isWindows());
         //Rotate tests should be run only on platforms that support current feature
         Assume.assumeTrue(Boolean.getBoolean("com.sun.javafx.gestures.rotate"));
         centerX = (int) Math.round(width * 0.5);

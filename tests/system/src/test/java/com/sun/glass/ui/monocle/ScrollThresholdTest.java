@@ -57,8 +57,6 @@ public class ScrollThresholdTest extends ScrollTestBase {
         super.init();
         Assume.assumeTrue(device.getTapRadius() < getScrollThreshold());
         delta = getScrollThreshold() - 1;
-        Assume.assumeTrue(!PlatformUtil.isMac());
-        Assume.assumeTrue(!PlatformUtil.isWindows());
     }
 
     /**
