@@ -448,7 +448,7 @@ final class WinAccessible extends Accessible {
                 case TAB_ITEM: return getContainerAccessible(AccessibleRole.TAB_PANE);
                 case PAGE_ITEM: return getContainerAccessible(AccessibleRole.PAGINATION);
                 case TREE_ITEM: return getContainerAccessible(AccessibleRole.TREE_VIEW);
-                case TREE_TABLE_ROW: return getContainerAccessible(AccessibleRole.TREE_TABLE_VIEW);
+                case TREE_TABLE_ROW:
                 case TREE_TABLE_CELL: return getContainerAccessible(AccessibleRole.TREE_TABLE_VIEW);
                 default:
             }
@@ -481,6 +481,7 @@ final class WinAccessible extends Accessible {
             case TEXT_FIELD:
             case PASSWORD_FIELD:
             case TEXT_AREA: return UIA_EditControlTypeId;
+            case TREE_TABLE_VIEW:
             case TABLE_VIEW: return UIA_TableControlTypeId;
             case LIST_VIEW: return UIA_ListControlTypeId;
             case LIST_ITEM: return UIA_ListItemControlTypeId;
@@ -491,9 +492,7 @@ final class WinAccessible extends Accessible {
             case CHECK_BOX: return UIA_CheckBoxControlTypeId;
             case COMBO_BOX: return UIA_ComboBoxControlTypeId;
             case HYPERLINK: return UIA_HyperlinkControlTypeId;
-            case TREE_TABLE_VIEW:
             case TREE_VIEW: return UIA_TreeControlTypeId;
-            case TREE_TABLE_ROW:
             case TREE_ITEM: return UIA_TreeItemControlTypeId;
             case PROGRESS_INDICATOR: return UIA_ProgressBarControlTypeId;
             case TOOL_BAR: return UIA_ToolBarControlTypeId;
@@ -578,14 +577,6 @@ final class WinAccessible extends Accessible {
                        patternId == UIA_ExpandCollapsePatternId ||
                        patternId == UIA_ScrollItemPatternId;
                 break;
-            case TREE_TABLE_ROW:
-                impl = patternId == UIA_SelectionItemPatternId ||
-                       patternId == UIA_ExpandCollapsePatternId ||
-                       patternId == UIA_GridItemPatternId ||
-                       patternId == UIA_TableItemPatternId ||
-                       patternId == UIA_ScrollItemPatternId;
-                break;
-
             /* 
              * MSDN doc is confusing if text elements should implement
              * UIA_ValuePatternId. The article 'Text and TextRange Control
@@ -882,7 +873,7 @@ final class WinAccessible extends Accessible {
         if (isDisposed()) return 0;
         AccessibleRole role = (AccessibleRole)getAttribute(ROLE);
         /* special case for the tree item hierarchy, as expected by Windows */
-        boolean treeCell = role == AccessibleRole.TREE_ITEM || role == AccessibleRole.TREE_TABLE_ROW;
+        boolean treeCell = role == AccessibleRole.TREE_ITEM;
         Node node = null;
         switch (direction) {
             case NavigateDirection_Parent: {
@@ -968,7 +959,7 @@ final class WinAccessible extends Accessible {
             case NavigateDirection_FirstChild:
             case NavigateDirection_LastChild: {
                 lastIndex = -1;
-                if (role == AccessibleRole.TREE_VIEW || role == AccessibleRole.TREE_TABLE_VIEW) {
+                if (role == AccessibleRole.TREE_VIEW) {
                     /* The TreeView only returns the root node as child */
                     lastIndex = 0;
                     node = (Node)getAttribute(ROW_AT_INDEX, 0);
@@ -1053,7 +1044,6 @@ final class WinAccessible extends Accessible {
          */
         AccessibleRole role = (AccessibleRole)getAttribute(ROLE);
         switch (role) {
-            case TABLE_ROW:
             case TREE_TABLE_VIEW:
             case TABLE_VIEW: {
                 ObservableList<Node> selection = (ObservableList<Node>)getAttribute(SELECTED_CELLS);
@@ -1361,11 +1351,11 @@ final class WinAccessible extends Accessible {
         AccessibleRole role = (AccessibleRole) getAttribute(ROLE);
         if (role != null) {
             switch (role) {
-                case TREE_TABLE_ROW:
-                case TREE_TABLE_CELL:
                 case TABLE_ROW:
-                case TABLE_CELL: result = (Integer)getAttribute(ROW_INDEX); break;
+                case TREE_TABLE_ROW:
                 case LIST_ITEM: result = (Integer)getAttribute(INDEX); break;
+                case TREE_TABLE_CELL:
+                case TABLE_CELL: result = (Integer)getAttribute(ROW_INDEX); break;
                 default:
             }
         }
