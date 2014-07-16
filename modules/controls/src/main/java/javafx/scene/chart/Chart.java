@@ -32,6 +32,7 @@ import java.util.List;
 import com.sun.javafx.scene.control.skin.Utils;
 import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
+import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
@@ -267,6 +268,7 @@ public abstract class Chart extends Region {
      */
     public Chart() {
         titleLabel.setAlignment(Pos.CENTER);
+        titleLabel.focusTraversableProperty().bind(Platform.accessibilityActiveProperty());
         getChildren().addAll(titleLabel, chartContent);
         getStyleClass().add("chart");
         titleLabel.getStyleClass().add("chart-title");

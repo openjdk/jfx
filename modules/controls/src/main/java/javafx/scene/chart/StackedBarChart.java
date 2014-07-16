@@ -28,11 +28,13 @@ package javafx.scene.chart;
 
 import java.util.*;
 import javafx.animation.*;
+import javafx.application.Platform;
 import javafx.beans.NamedArg;
 import javafx.beans.property.DoubleProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Orientation;
+import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 import javafx.scene.layout.StackPane;
 import javafx.util.Duration;
@@ -515,6 +517,9 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
         Node bar = item.getNode();
         if (bar == null) {
             bar = new StackPane();
+            bar.setRole(AccessibleRole.TEXT);
+            bar.setRoleDescription("Bar");
+            bar.focusTraversableProperty().bind(Platform.accessibilityActiveProperty());
             item.setNode(bar);
         }
         String defaultColorStyleClass = seriesDefaultColorMap.get(series);
