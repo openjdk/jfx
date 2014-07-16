@@ -2916,9 +2916,6 @@ public class TreeTableView<S> extends Control {
         private void updateSelectedIndex(int row) {
             setSelectedIndex(row);
             setSelectedItem(getModelItem(row));
-
-            /* Does this get all the change events ? */
-            getTreeTableView().notifyAccessibleAttributeChanged(AccessibleAttribute.SELECTED_CELLS);
         }
         
         @Override public void focus(int row) {
@@ -2933,6 +2930,7 @@ public class TreeTableView<S> extends Control {
             if (getTreeTableView().getFocusModel() == null) return;
 
             getTreeTableView().getFocusModel().focus(pos.getRow(), pos.getTableColumn());
+            getTreeTableView().notifyAccessibleAttributeChanged(AccessibleAttribute.SELECTED_CELLS);
         }
 
         @Override public int getFocusedIndex() {
