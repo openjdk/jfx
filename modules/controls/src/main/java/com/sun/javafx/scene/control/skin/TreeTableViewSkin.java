@@ -402,7 +402,6 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeItem<S>, Tree
                 }
                 return FXCollections.observableArrayList(selection);
             }
-
             case FOCUS_ITEM: // TableViewSkinBase
             case CELL_AT_ROW_COLUMN: // TableViewSkinBase
             case COLUMN_AT_INDEX: // TableViewSkinBase

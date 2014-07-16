@@ -351,18 +351,16 @@ public enum AccessibleRole {
 
     /**
      * Tree Table Row.
-     * Attributes: TITLE, INDEX, SELECTED, EXPANDED, LEAF,
-     *             TREE_ITEM_COUNT, TREE_ITEM_AT_INDEX,TREE_ITEM_PARENT,
-     *             DISCLOSURE_LEVEL
-     * Actions: SELECT, ADD_TO_SELECTION, REMOVE_FROM_SELECTION, EXPAND, COLLAPSE
+     * Attributes: INDEX, EXPANDED, LEAF, DISCLOSURE_LEVEL
+     *             TREE_ITEM_COUNT, TREE_ITEM_AT_INDEX,TREE_ITEM_PARENT
+     * Actions: EXPAND, COLLAPSE
      */
     TREE_TABLE_ROW,
 
     /**
      * Tree Table View.
-     * Attributes: ROW_COUNT, TREE_ITEM_AT_INDEX, COLUMN_COUNT,
-     *             SELECTED_CELLS, CELL_AT_ROWCOLUMN, MULTIPLE_SELECTION,
-     *             VERTICAL_SCROLLBAR, HORIZONTAL_SCROLLBAR
+     * Attributes: ROW_COUNT, COLUMN_COUNT, SELECTED_CELLS, CELL_AT_ROWCOLUMN, MULTIPLE_SELECTION,
+     *             VERTICAL_SCROLLBAR, HORIZONTAL_SCROLLBAR, ROW_AT_INDEX
      * Attributes for header support: COLUMN_AT_INDEX, HEADER
      * Actions: SCROLL_TO_INDEX
      */

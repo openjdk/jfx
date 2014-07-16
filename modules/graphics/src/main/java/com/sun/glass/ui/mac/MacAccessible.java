@@ -29,7 +29,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Function;
-import java.util.stream.Stream;
 import javafx.collections.ObservableList;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
@@ -307,7 +306,7 @@ final class MacAccessible extends Accessible {
                 MacAction.NSAccessibilityPressAction,
             }
         ),
-        NSAccessibilityStaticTextRole(new AccessibleRole[] {AccessibleRole.TEXT, AccessibleRole.TREE_TABLE_CELL},
+        NSAccessibilityStaticTextRole(new AccessibleRole[] {AccessibleRole.TEXT},
             null, null, null
         ),
         NSAccessibilityTextFieldRole(new AccessibleRole[] {AccessibleRole.TEXT_FIELD, AccessibleRole.PASSWORD_FIELD},
@@ -385,7 +384,7 @@ final class MacAccessible extends Accessible {
             },
             null
         ),
-        NSAccessibilityCellRole(new AccessibleRole[] {AccessibleRole.TABLE_CELL},
+        NSAccessibilityCellRole(new AccessibleRole[] {AccessibleRole.TABLE_CELL, AccessibleRole.TREE_TABLE_CELL},
             new MacAttribute[] {
                 MacAttribute.NSAccessibilityColumnIndexRangeAttribute,
                 MacAttribute.NSAccessibilityEnabledAttribute,
@@ -409,9 +408,12 @@ final class MacAccessible extends Accessible {
                 MacAttribute.NSAccessibilityHeaderAttribute,
                 MacAttribute.NSAccessibilityRowsAttribute,
                 MacAttribute.NSAccessibilitySelectedRowsAttribute,
+                MacAttribute.NSAccessibilitySelectedCellsAttribute,
             },
             null,
-            null
+            new MacAttribute[] {
+                MacAttribute.NSAccessibilityCellForColumnAndRowParameterizedAttribute,
+            }
         ),
         NSAccessibilityDisclosureTriangleRole(AccessibleRole.TITLED_PANE,
             new MacAttribute[] {
@@ -959,8 +961,8 @@ final class MacAccessible extends Accessible {
 
             switch (role) {
                 case LIST_VIEW:
-                case TREE_TABLE_VIEW:
-                    /* ListView is row-based, must remove all the cell-based attributes */
+                case TREE_VIEW:
+                    /* Row-based control, must remove all the cell-based attributes */
                     attrs.remove(MacAttribute.NSAccessibilitySelectedCellsAttribute);
                     break;
                 case MENU_ITEM:
@@ -1367,29 +1369,6 @@ final class MacAccessible extends Accessible {
                     case TEXT:
                     case TEXT_FIELD:
                     case TEXT_AREA:
-                    case TREE_TABLE_ROW: return null;
-                    case TREE_TABLE_CELL: {
-                        /*
-                         * When clicking on a TreeTableRow, only a single cell is selected
-                         * by VoiceOver to be read out. Here we add the text for the other
-                         * cells in the row, so that all cells are read out.
-                         */
-                        Node parent = (Node)getAttribute(PARENT);
-                        if (parent == null) return null;
-                        Accessible acc = getAccessible(parent);
-                        if (acc.getAttribute(ROLE) == AccessibleRole.TREE_TABLE_ROW) {
-                            @SuppressWarnings("unchecked")
-                            Stream<Node> children = ((List<Node>)acc.getAttribute(CHILDREN)).stream();
-
-                            result = children.map(n -> getAccessible(n))
-                                             .filter(a -> a.getAttribute(ROLE) == AccessibleRole.TREE_TABLE_CELL)
-                                             .map(a -> (String)a.getAttribute(TITLE))
-                                             .filter(t -> t != null && !t.isEmpty()) //Consider reporting empty cells as "(blank)"
-                                             .reduce((s1, s2) -> s1 + " " + s2)
-                                             .orElse("");
-                        }
-                        break;
-                    }
                     default:
                 }
                 break;
@@ -1602,8 +1581,8 @@ final class MacAccessible extends Accessible {
             }
             switch (role) {
                 case LIST_VIEW:
-                case TREE_TABLE_VIEW:
-                    /* ListView is row-based, must remove all the cell-based attributes */
+                case TREE_VIEW:
+                    /* Row-based control, must remove all the cell-based attributes */
                     attrs.remove(MacAttribute.NSAccessibilityCellForColumnAndRowParameterizedAttribute);
                     break;
                 case TEXT:

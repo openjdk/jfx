@@ -1906,7 +1906,6 @@ public class TreeTableView<S> extends Control {
     @Override
     public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
-            case TREE_ITEM_COUNT:
             case ROW_COUNT: return getExpandedItemCount();
             case COLUMN_COUNT: return getVisibleLeafColumns().size();
 
@@ -1938,7 +1937,6 @@ public class TreeTableView<S> extends Control {
                 TreeTableViewSelectionModel<S> sm = getSelectionModel();
                 return sm != null && sm.getSelectionMode() == SelectionMode.MULTIPLE;
             }
-            case COLUMN_INDEX: //Skin
             case HEADER: //Skin
             case ROW_AT_INDEX: //Skin
             case VERTICAL_SCROLLBAR: //Skin

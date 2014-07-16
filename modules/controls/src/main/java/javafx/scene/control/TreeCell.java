@@ -654,7 +654,7 @@ public class TreeCell<T> extends IndexedCell<T> {
             case TREE_ITEM_COUNT: {
                 return treeItem == null  ? 0 : treeItem.getChildren().size();
             }
-            case TREE_ITEM_AT_INDEX:
+            case TREE_ITEM_AT_INDEX: {
                 if (treeItem == null) return null;
                 int index = (Integer)parameters[0];
                 if (index >= treeItem.getChildren().size()) return null;
@@ -662,6 +662,7 @@ public class TreeCell<T> extends IndexedCell<T> {
                 if (child == null) return null;
                 int childIndex = treeView.getRow(child);
                 return treeView.queryAccessibleAttribute(AccessibleAttribute.ROW_AT_INDEX, childIndex);
+            }
             case LEAF: return treeItem == null ? true : treeItem.isLeaf();
             case EXPANDED: return treeItem == null ? false : treeItem.isExpanded();
             case INDEX: return getIndex();

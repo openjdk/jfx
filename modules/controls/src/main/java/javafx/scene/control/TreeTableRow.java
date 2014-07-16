@@ -114,11 +114,16 @@ public class TreeTableRow<T> extends IndexedCell<T> {
             }
         }
     };
-    
+
+    private boolean oldExpanded;
     private final InvalidationListener treeItemExpandedInvalidationListener = o -> {
         final boolean expanded = ((BooleanProperty)o).get();
         pseudoClassStateChanged(EXPANDED_PSEUDOCLASS_STATE,   expanded);
         pseudoClassStateChanged(COLLAPSED_PSEUDOCLASS_STATE, !expanded);
+        if (expanded != oldExpanded) {
+            notifyAccessibleAttributeChanged(AccessibleAttribute.EXPANDED);
+        }
+        oldExpanded = expanded;
     };
     
     private final WeakListChangeListener<Integer> weakSelectedListener = 
@@ -154,6 +159,7 @@ public class TreeTableRow<T> extends IndexedCell<T> {
                 oldValue = get(); 
                 
                 if (oldValue != null) {
+                    oldExpanded = oldValue.isExpanded();
                     oldValue.expandedProperty().addListener(weakTreeItemExpandedInvalidationListener);
                     // fake an invalidation to ensure updated pseudo-class state
                     weakTreeItemExpandedInvalidationListener.invalidated(oldValue.expandedProperty());            
@@ -528,12 +534,6 @@ public class TreeTableRow<T> extends IndexedCell<T> {
     public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         final TreeItem<T> treeItem = getTreeItem();
         final TreeTableView<T> treeTableView = getTreeTableView();
-        final List<TreeTableColumn<T,?>> visibleColumns = treeTableView.getVisibleLeafColumns();
-
-        TreeTableColumn<T,?> treeColumn = treeTableView.getTreeColumn();
-        treeColumn = treeColumn != null ? treeColumn :
-                    !visibleColumns.isEmpty() ? visibleColumns.get(0) :
-                    null;
 
         switch (attribute) {
             case TREE_ITEM_PARENT: {
@@ -546,7 +546,7 @@ public class TreeTableRow<T> extends IndexedCell<T> {
             case TREE_ITEM_COUNT: {
                 return treeItem == null  ? 0 : treeItem.getChildren().size();
             }
-            case TREE_ITEM_AT_INDEX:
+            case TREE_ITEM_AT_INDEX: {
                 if (treeItem == null) return null;
                 int index = (Integer)parameters[0];
                 if (index >= treeItem.getChildren().size()) return null;
@@ -554,12 +554,10 @@ public class TreeTableRow<T> extends IndexedCell<T> {
                 if (child == null) return null;
                 int childIndex = treeTableView.getRow(child);
                 return treeTableView.queryAccessibleAttribute(AccessibleAttribute.ROW_AT_INDEX, childIndex);
-            case ROW_INDEX: return getIndex();
-            case COLUMN_INDEX: return visibleColumns.indexOf(treeColumn);
+            }
             case LEAF: return treeItem == null ? true : treeItem.isLeaf();
             case EXPANDED: return treeItem == null ? false : treeItem.isExpanded();
             case INDEX: return getIndex();
-            case SELECTED: return isSelected();
             case DISCLOSURE_LEVEL: {
                 return treeTableView == null ? 0 : treeTableView.getTreeItemLevel(treeItem);
             }
@@ -569,10 +567,7 @@ public class TreeTableRow<T> extends IndexedCell<T> {
 
     @Override
     public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
-        final TreeTableView<T> treeTableView = getTreeTableView();
         final TreeItem<T> treeItem = getTreeItem();
-        final TreeTableView.TreeTableViewSelectionModel<T> sm = treeTableView == null ? null : treeTableView.getSelectionModel();
-
         switch (action) {
             case EXPAND: {
                 if (treeItem != null) treeItem.setExpanded(true);
@@ -580,18 +575,6 @@ public class TreeTableRow<T> extends IndexedCell<T> {
             }
             case COLLAPSE: {
                 if (treeItem != null) treeItem.setExpanded(false);
-                break;
-            }
-            case SELECT: {
-                if (sm != null) sm.clearAndSelect(getIndex());
-                break;
-            }
-            case ADD_TO_SELECTION: {
-                if (sm != null) sm.select(getIndex());
-                break;
-            }
-            case REMOVE_FROM_SELECTION: {
-                if (sm != null) sm.clearSelection(getIndex());
                 break;
             }
             default: super.executeAccessibleAction(action);
