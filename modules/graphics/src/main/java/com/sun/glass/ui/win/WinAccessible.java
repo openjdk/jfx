@@ -1189,9 +1189,9 @@ final class WinAccessible extends Accessible {
         if (role != null) {
             switch (role) {
                 case SLIDER:
-                case SCROLL_BAR:
+                case SCROLL_BAR: return false;
                 case TEXT_FIELD:
-                case TEXT_AREA: return false;
+                case TEXT_AREA:
                 case COMBO_BOX: return Boolean.FALSE.equals(getAttribute(EDITABLE));
                 default:
             }

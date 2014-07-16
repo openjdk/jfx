@@ -1229,6 +1229,7 @@ public abstract class TextInputControl extends Control {
                 }
                 return text;
             }
+            case EDITABLE: return isEditable();
             case SELECTION_START: return getSelection().getStart();
             case SELECTION_END: return getSelection().getEnd();
             case CARET_OFFSET: return getCaretPosition();

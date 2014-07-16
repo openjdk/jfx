@@ -49,9 +49,11 @@ public class HelloText extends Application {
 
 
         TextField tf = new TextField("Hello Accessiblity");
+        TextField tf2 = new TextField("james");
+        tf2.setEditable(false);
         TextArea ta = new TextArea("TextArea can many lines.\nLine1.\nLine2 is longer.\nLine 3 is not.");
 
-        Scene scene = new Scene(new VBox(text, tf, ta), 300, 300);
+        Scene scene = new Scene(new VBox(text, tf, tf2, ta), 300, 300);
 //        scene.addEventFilter(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
 //            @Override
 //            public void handle(KeyEvent event) {
