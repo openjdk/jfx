@@ -516,7 +516,8 @@ is being used to size a border should also be in pixels.
 .table-row-cell:selected:disabled,
 .tree-table-row-cell:selected:disabled,
 .table-cell:selected:disabled,
-.tree-table-cell:selected:disabled {
+.tree-table-cell:selected:disabled,
+.spinner:disabled {
     -fx-opacity: 0.4;
 }
 
@@ -3177,11 +3178,21 @@ is being used to size a border should also be in pixels.
     -fx-background-radius: 2 0 0 2;
 }
 
+.spinner:focused > .text-field,
+.spinner:contains-focus > .text-field {
+    -fx-background-color:
+        -fx-control-inner-background,
+        -fx-faint-focus-color,
+        linear-gradient(from 0px 0px to 0px 5px, derive(-fx-control-inner-background, -9%), -fx-control-inner-background);
+    -fx-background-insets: 1 0 1 1, 1 0 1 1, 3 2 3 3;
+    -fx-background-radius: 2 0 0 2, 1 0 0 1, 0;
+}
+
 .spinner .increment-arrow-button {
     -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color;
     /* Change the two 0's here to -1 to get rid of the horizontal line */
     -fx-background-insets: 0 0 -1 0, 1 1 0 1, 2 2 1 2;
-    -fx-background-radius: 0 3 0 0;
+    -fx-background-radius: 0 3 0 0, 0 2 0 0, 0 1 0 0;
 
     -fx-padding: 0.333335em 0.666667em 0.333335em 0.666667em; /* 5 8 3 8 */
     -fx-text-fill: -fx-text-base-color;
@@ -3191,8 +3202,8 @@ is being used to size a border should also be in pixels.
 
 .spinner .decrement-arrow-button {
     -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color;
-    -fx-background-insets: 0, 0 1 1 1, 1 2 2 2;
-    -fx-background-radius: 0 0 3 0;
+    -fx-background-insets: 0, 1 1 1 1, 1 2 2 2;
+    -fx-background-radius: 0 0 3 0, 0 0 2 0, 0 0 1 0;
 
     -fx-padding: 0.333335em 0.666667em 0.333335em 0.666667em; /* 3 8 5 8 */
     -fx-text-fill: -fx-text-base-color;
@@ -3232,14 +3243,9 @@ is being used to size a border should also be in pixels.
 }
 
 /* Spinner - STYLE_CLASS_ARROWS_ON_RIGHT_HORIZONTAL */
-.spinner.arrows-on-right-horizontal > .text-field {
-    -fx-background-color: -fx-control-inner-background;
-    -fx-background-insets: 1 0 1 1;
-    -fx-background-radius: 2 0 0 2
-}
 
 .spinner.arrows-on-right-horizontal .increment-arrow-button {
-    -fx-background-radius: 0 3 3 0;
+    -fx-background-radius: 0 3 3 0, 0 2 2 0, 0 1 1 0;
     -fx-background-insets: 0 0 0 -1, 1 1 1 0, 2 2 2 1;
 }
 
@@ -3254,13 +3260,24 @@ is being used to size a border should also be in pixels.
     -fx-background-insets: 1 1 1 0;
     -fx-background-radius: 0 2 2 0;
 }
+.spinner.arrows-on-left-vertical:focused > .text-field,
+.spinner.arrows-on-left-vertical:contains-focus > .text-field,
+.spinner.arrows-on-left-horizontal:focused > .text-field,
+.spinner.arrows-on-left-horizontal:contains-focus > .text-field {
+    -fx-background-color:
+        -fx-control-inner-background,
+        -fx-faint-focus-color,
+        linear-gradient(from 0px 0px to 0px 5px, derive(-fx-control-inner-background, -9%), -fx-control-inner-background);
+    -fx-background-insets: 1 1 1 0, 1 1 1 0, 3 3 3 2;
+    -fx-background-radius: 0 2 2 0, 0 1 1 0, 0;
+}
 
 .spinner.arrows-on-left-vertical .increment-arrow-button {
-    -fx-background-radius: 3 0 0 0;
+    -fx-background-radius: 3 0 0 0, 2 0 0 0, 1 0 0 0;
 }
 
 .spinner.arrows-on-left-vertical .decrement-arrow-button {
-    -fx-background-radius: 0 0 0 3;
+    -fx-background-radius: 0 0 0 3, 0 0 0 2, 0 0 0 1;
 }
 
 /* Spinner - STYLE_CLASS_ARROWS_ON_LEFT_HORIZONTAL */
@@ -3286,26 +3303,34 @@ is being used to size a border should also be in pixels.
     -fx-background-insets: 0 1 0 1;
     -fx-background-radius: 0;
 }
+.spinner.split-arrows-vertical:focused > .text-field,
+.spinner.split-arrows-vertical:contains-focus > .text-field {
+    -fx-background-color:
+        -fx-control-inner-background,
+        -fx-faint-focus-color,
+        linear-gradient(from 0px 0px to 0px 5px, derive(-fx-control-inner-background, -9%), -fx-control-inner-background);
+    -fx-background-insets: 0 1 0 1, 0 1 0 1, 2 3 2 3;
+}
 
 .spinner.split-arrows-vertical .increment-arrow-button {
     -fx-background-insets: 0, 1, 2;
-    -fx-background-radius: 3 3 0 0;
+    -fx-background-radius: 3 3 0 0, 2 2 0 0, 1 1 0 0;
 }
 
 .spinner.split-arrows-horizontal .decrement-arrow-button {
     -fx-background-insets: 0, 1, 2;
-    -fx-background-radius: 3 0 0 3;
+    -fx-background-radius: 3 0 0 3, 2 0 0 2, 1 0 0 1;
 }
 
 .spinner.split-arrows-vertical .decrement-arrow-button {
     -fx-background-insets: 0, 1, 2;
-    -fx-background-radius: 0 0 3 3;
+    -fx-background-radius: 0 0 3 3, 0 0 2 2, 0 0 1 1;
 }
 
 /* Spinner - STYLE_CLASS_SPLIT_ARROWS_HORIZONTAL */
 .spinner.split-arrows-horizontal .increment-arrow-button {
     -fx-background-insets: 0, 1, 2;
-    -fx-background-radius: 0 3 3 0;
+    -fx-background-radius: 0 3 3 0, 0 2 2 0, 0 1 1 0;
 }
 
 .spinner.split-arrows-horizontal .increment-arrow-button {
