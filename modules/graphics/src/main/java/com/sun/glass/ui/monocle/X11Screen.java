@@ -42,7 +42,9 @@ class X11Screen implements NativeScreen {
     private long display;
 
     X11Screen(boolean showCursor) {
+        X.XInitThreads();
         display = X.XOpenDisplay(null);
+        X.XLockDisplay(display);
         if (display == 0l) {
             throw new NullPointerException("Cannot open X11 display");
         }
@@ -94,6 +96,7 @@ class X11Screen implements NativeScreen {
                         + geometry + "'");
             }
         }
+
         if (fullScreen) {
             X.XSetWindowAttributes.setOverrideRedirect(attrs.p, true);
             cwMask |= X.CWOverrideRedirect;
@@ -138,6 +141,7 @@ class X11Screen implements NativeScreen {
         int[] heightA = new int[1];
         int[] depthA = new int[1];
         X.XGetGeometry(display, window, null, null, null, widthA, heightA, null, depthA);
+        X.XUnlockDisplay(display);
         width = widthA[0];
         height = heightA[0];
         depth = depthA[0];

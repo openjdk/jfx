@@ -28,6 +28,24 @@
 #include <X11/Xlibint.h>
 #include "Monocle.h"
 
+JNIEXPORT void JNICALL
+ Java_com_sun_glass_ui_monocle_X_XInitThreads
+ (JNIEnv *UNUSED(env), jclass UNUSED(xClass)) {
+    XInitThreads();
+ }
+
+JNIEXPORT void JNICALL
+ Java_com_sun_glass_ui_monocle_X_XLockDisplay
+ (JNIEnv *UNUSED(env), jclass UNUSED(xClass), jlong display) {
+    XLockDisplay((Display *) asPtr(display));
+ }
+
+JNIEXPORT void JNICALL
+ Java_com_sun_glass_ui_monocle_X_XUnlockDisplay
+ (JNIEnv *UNUSED(env), jclass UNUSED(xClass), jlong display) {
+    XUnlockDisplay((Display *) asPtr(display));
+ }
+
 JNIEXPORT jlong JNICALL
  Java_com_sun_glass_ui_monocle_X_XOpenDisplay
  (JNIEnv *env, jclass UNUSED(xClass), jstring displayName) {
@@ -214,6 +232,80 @@ JNIEXPORT void JNICALL
                   (Time) time);
 }
 
+JNIEXPORT void JNICALL
+ Java_com_sun_glass_ui_monocle_X_XWarpPointer
+ (JNIEnv *UNUSED(env), jclass UNUSED(xClass),
+        jlong display, jlong src_window, jlong dst_window,
+        jint src_x, jint src_y, jint src_width, jint src_height,
+        jint dst_x, jint dst_y) {
+    XWarpPointer((Display *) asPtr(display), (Window) src_window,
+                 (Window) dst_window, src_x, src_y, src_width, src_height,
+                 dst_x, dst_y);
+}
+
+JNIEXPORT void JNICALL
+ Java_com_sun_glass_ui_monocle_X_XFlush
+ (JNIEnv *UNUSED(env), jclass UNUSED(xClass), jlong display) {
+      XFlush((Display *) asPtr(display));
+}
+
+JNIEXPORT void JNICALL
+ Java_com_sun_glass_ui_monocle_X_XQueryPointer
+ (JNIEnv *UNUSED(env), jclass UNUSED(xClass),
+        jlong display, jlong window, jintArray position) {
+    Window root, child;
+    int rootX, rootY, winX, winY;
+    unsigned int mask;
+    XQueryPointer((Display *) asPtr(display), (Window) window,
+                  &root, &child,&rootX, &rootY, &winX, &winY, &mask);
+    (*env)->SetIntArrayRegion(env, position, 0, 1, &winX);
+    (*env)->SetIntArrayRegion(env, position, 1, 1, &winY);
+}
+
+
+JNIEXPORT jlong JNICALL
+ Java_com_sun_glass_ui_monocle_X_XCreateBitmapFromData
+ (JNIEnv *UNUSED(env), jclass UNUSED(xClass),
+        jlong display, jlong drawable, jobject buf, jint width, jint height) {
+    void *data = (*env)->GetDirectBufferAddress(env, buf);
+    return asJLong(XCreateBitmapFromData((Display *) asPtr(display),
+                                (Window) drawable, data, 1, 1));
+}
+
+JNIEXPORT jlong JNICALL
+ Java_com_sun_glass_ui_monocle_X_XCreatePixmapCursor
+ (JNIEnv *UNUSED(env), jclass UNUSED(xClass),
+        jlong display, jlong source, jlong mask, jlong fg, jlong bg,
+        jint x, jint y) {
+    XColor black;
+    black.red = black.green = black.blue = 0;
+    return asJLong(XCreatePixmapCursor ((Display *) asPtr(display),
+                   source, mask, &black, &black, 0, 0));
+}
+
+
+JNIEXPORT void JNICALL
+ Java_com_sun_glass_ui_monocle_X_XDefineCursor
+ (JNIEnv *UNUSED(env), jclass UNUSED(xClass),
+        jlong display, jlong window, jlong cursor) {
+    XDefineCursor((Display *) asPtr(display), (Window) window, (Cursor) cursor);
+}
+
+JNIEXPORT void JNICALL
+ Java_com_sun_glass_ui_monocle_X_XUndefineCursor
+ (JNIEnv *UNUSED(env), jclass UNUSED(xClass),
+        jlong display, jlong window) {
+    XUndefineCursor((Display *) asPtr(display), (Window) window);
+}
+
+
+JNIEXPORT void JNICALL
+ Java_com_sun_glass_ui_monocle_X_XFreePixmap
+ (JNIEnv *UNUSED(env), jclass UNUSED(xClass), jlong display, jlong pixmap) {
+    XFreePixmap((Display *) asPtr(display), pixmap);
+ }
+
+
 JNIEXPORT jlong JNICALL
  Java_com_sun_glass_ui_monocle_X_00024XEvent_getWindow
  (JNIEnv *UNUSED(env), jclass UNUSED(eClass), jlong eventL) {
@@ -282,4 +374,31 @@ JNIEXPORT jint JNICALL
  Java_com_sun_glass_ui_monocle_X_00024XDisplay_sizeof
  (JNIEnv *UNUSED(env), jclass UNUSED(clazz)) {
     return (jint) sizeof(struct _XDisplay);
+}
+
+JNIEXPORT void JNICALL
+ Java_com_sun_glass_ui_monocle_X_00024XColor_setRed
+ (JNIEnv *UNUSED(env), jclass UNUSED(eClass), jlong colorL, jint red) {
+    XColor *color = (XColor *) asPtr(colorL);
+    color->red = (unsigned short) red;
+}
+
+JNIEXPORT void JNICALL
+ Java_com_sun_glass_ui_monocle_X_00024XColor_setGreen
+ (JNIEnv *UNUSED(env), jclass UNUSED(eClass), jlong colorL, jint green) {
+    XColor *color = (XColor *) asPtr(colorL);
+    color->green = (unsigned short) green;
+}
+
+JNIEXPORT void JNICALL
+ Java_com_sun_glass_ui_monocle_X_00024XColor_setBlue
+ (JNIEnv *UNUSED(env), jclass UNUSED(eClass), jlong colorL, jint blue) {
+    XColor *color = (XColor *) asPtr(colorL);
+    color->blue = (unsigned short) blue;
+}
+
+JNIEXPORT jint JNICALL
+ Java_com_sun_glass_ui_monocle_X_00024XColor_sizeof
+ (JNIEnv *UNUSED(env), jclass UNUSED(clazz)) {
+    return (jint) sizeof(XColor);
 }

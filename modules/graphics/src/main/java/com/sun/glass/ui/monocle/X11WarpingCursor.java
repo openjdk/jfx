@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,48 +25,28 @@
 
 package com.sun.glass.ui.monocle;
 
-import java.security.AccessController;
-import java.security.PrivilegedAction;
+public class X11WarpingCursor extends X11Cursor {
 
-class X11Platform extends NativePlatform {
-
-    private final boolean x11Input;
-
-    X11Platform() {
-        LinuxSystem.getLinuxSystem().loadLibrary();
-        x11Input = AccessController.doPrivileged((PrivilegedAction<Boolean>)
-                () -> Boolean.getBoolean("x11.input"));
-    }
+    private int nextX, nextY;
 
     @Override
-    protected InputDeviceRegistry createInputDeviceRegistry() {
-        if (x11Input) {
-            return new X11InputDeviceRegistry();
-        } else {
-            return new LinuxInputDeviceRegistry(false);
+    void setLocation(int x, int y) {
+        if (x != nextX || y != nextY) {
+            nextX = x;
+            nextY = y;
+            MonocleWindowManager.getInstance().repaintAll();
         }
     }
 
-    @Override
-    protected NativeCursor createCursor() {
-        if (x11Input) {
-            return new X11Cursor();
-        } else {
-            return new X11WarpingCursor();
+    void warp() {
+        if (isVisible) {
+            int[] position = new int[2];
+            X.XQueryPointer(xdisplay, xwindow, position);
+            if (position[0] != nextX || position[1] != nextY) {
+                X.XWarpPointer(xdisplay, 0l, 0l, 0, 0, 0, 0,
+                               nextX - position[0],
+                               nextY - position[1]);
+            }
         }
-    }
-
-    @Override
-    protected NativeScreen createScreen() {
-        return new X11Screen(x11Input);
-    }
-
-    @Override
-    public synchronized AcceleratedScreen getAcceleratedScreen(
-            int[] attributes) throws GLException {
-        if (accScreen == null) {
-            accScreen = new X11AcceleratedScreen(attributes);
-        }
-        return accScreen;
     }
 }

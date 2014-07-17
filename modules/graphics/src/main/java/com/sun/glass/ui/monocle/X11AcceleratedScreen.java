@@ -67,4 +67,15 @@ class X11AcceleratedScreen extends AcceleratedScreen {
                 .getScreen().getNativeHandle();
     }
 
+    @Override
+    public boolean swapBuffers() {
+        X.XLockDisplay(nativeDisplay.p);
+        super.swapBuffers();
+        NativeCursor cursor = NativePlatformFactory.getNativePlatform().getCursor();
+        if (cursor instanceof X11WarpingCursor) {
+            ((X11WarpingCursor) cursor).warp();
+        }
+        X.XUnlockDisplay(nativeDisplay.p);
+        return true;
+    }
 }

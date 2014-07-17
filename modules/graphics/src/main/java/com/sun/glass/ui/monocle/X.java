@@ -26,6 +26,7 @@
 package com.sun.glass.ui.monocle;
 
 import com.sun.glass.utils.NativeLibLoader;
+import java.nio.ByteBuffer;
 
 /**
  * X provides access to Xlib function calls. Except where noted, each
@@ -151,6 +152,20 @@ class X {
         native int sizeof();
     }
 
+    /**
+     * XColor wraps the C structure XColor.
+     */
+    static class XColor extends C.Structure {
+        native void setRed(long p, int red);
+        native void setGreen(long p, int green);
+        native void setBlue(long p, int blue);
+        @Override
+        native int sizeof();
+    }
+
+    static native void XInitThreads();
+    static native void XLockDisplay(long display);
+    static native void XUnlockDisplay(long display);
     static native long XOpenDisplay(String displayName);
     static native long DefaultScreenOfDisplay(long display);
     static native long RootWindowOfScreen(long screen);
@@ -179,5 +194,18 @@ class X {
                                      long pointerMode,
                                      long keyboardMode,
                                      long time);
+    static native void XWarpPointer(long display, long src_window,
+                                    long dst_window, int src_x, int src_y,
+                                    int src_width, int src_height,
+                                    int dest_x, int dest_y);
+    static native void XFlush(long display);
+    static native void XQueryPointer(long display, long window, int[] position);
+    static native long XCreateBitmapFromData(long display, long drawable,
+                                            ByteBuffer data, int width, int height);
+    static native long XCreatePixmapCursor(long display, long source, long mask,
+                                           long fg, long bg, int x, int y);
+    static native void XFreePixmap(long display, long pixmap);
+    static native void XDefineCursor(long display, long window, long cursor);
+    static native void XUndefineCursor(long display, long window);
 
 }
