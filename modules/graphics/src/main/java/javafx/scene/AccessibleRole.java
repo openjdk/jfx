@@ -306,9 +306,9 @@ public enum AccessibleRole {
 
     /**
      * Table View
-     * Attributes: ROW_COUNT, COLUMN_COUNT, SELECTED_CELLS, CELL_AT_ROWCOLUMN, MULTIPLE_SELECTION,
-     *             VERTICAL_SCROLLBAR, HORIZONTAL_SCROLLBAR
-     * Attributes for header support: COLUMN_AT_INDEX, HEADER
+     * Attributes: ROW_COUNT, ROW_AT_INDEX, COLUMN_COUNT, COLUMN_AT_INDEX
+     *             SELECTED_CELLS, CELL_AT_ROWCOLUMN, HEADER,
+     *             MULTIPLE_SELECTION, VERTICAL_SCROLLBAR, HORIZONTAL_SCROLLBAR
      * Actions: SCROLL_TO_INDEX
      */
     TABLE_VIEW,
@@ -335,9 +335,8 @@ public enum AccessibleRole {
 
     /**
      * Tree Item.
-     * Attributes: TITLE, INDEX, SELECTED, EXPANDED, LEAF,
-     *             TREE_ITEM_COUNT, TREE_ITEM_AT_INDEX, TREE_ITEM_PARENT,
-     *             DISCLOSURE_LEVEL
+     * Attributes: TITLE, SELECTED, INDEX, EXPANDED, LEAF, DISCLOSURE_LEVEL,
+     *             TREE_ITEM_COUNT, TREE_ITEM_AT_INDEX, TREE_ITEM_PARENT
      * Actions: SELECT, ADD_TO_SELECTION, REMOVE_FROM_SELECTION, EXPAND, COLLAPSE
      */
     TREE_ITEM,
@@ -352,24 +351,24 @@ public enum AccessibleRole {
     /**
      * Tree Table Row.
      * Attributes: INDEX, EXPANDED, LEAF, DISCLOSURE_LEVEL
-     *             TREE_ITEM_COUNT, TREE_ITEM_AT_INDEX,TREE_ITEM_PARENT
+     *             TREE_ITEM_COUNT, TREE_ITEM_AT_INDEX, TREE_ITEM_PARENT
      * Actions: EXPAND, COLLAPSE
      */
     TREE_TABLE_ROW,
 
     /**
      * Tree Table View.
-     * Attributes: ROW_COUNT, COLUMN_COUNT, SELECTED_CELLS, CELL_AT_ROWCOLUMN, MULTIPLE_SELECTION,
-     *             VERTICAL_SCROLLBAR, HORIZONTAL_SCROLLBAR, ROW_AT_INDEX
-     * Attributes for header support: COLUMN_AT_INDEX, HEADER
+     * Attributes: ROW_COUNT, ROW_AT_INDEX, COLUMN_COUNT, COLUMN_AT_INDEX,
+     *             SELECTED_CELLS, CELL_AT_ROWCOLUMN, HEADER,
+     *             MULTIPLE_SELECTION, VERTICAL_SCROLLBAR, HORIZONTAL_SCROLLBAR
      * Actions: SCROLL_TO_INDEX
      */
     TREE_TABLE_VIEW,
 
     /**
      * Tree View.
-     * Attributes: ROW_COUNT, TREE_ITEM_AT_INDEX, SELECTED_ROWS, MULTIPLE_SELECTION,
-     *             VERTICAL_SCROLLBAR, HORIZONTAL_SCROLLBAR
+     * Attributes: ROW_COUNT, ROW_AT_INDEX, SELECTED_ROWS,
+     *             MULTIPLE_SELECTION, VERTICAL_SCROLLBAR, HORIZONTAL_SCROLLBAR
      * Actions: SCROLL_TO_INDEX
      */
     TREE_VIEW,
