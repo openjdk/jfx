@@ -43,7 +43,6 @@ import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask.Acce
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import javafx.scene.layout.AnchorPane;
 
 /**
@@ -56,7 +55,7 @@ public abstract class AbstractWrapInContentJob extends AbstractWrapInJob {
     }
 
     @Override
-    protected List<Job> wrapInJobs(final Set<FXOMObject> children) {
+    protected List<Job> wrapInJobs(final List<FXOMObject> children) {
 
         final List<Job> jobs = new ArrayList<>();
 

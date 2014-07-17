@@ -37,7 +37,6 @@ import com.oracle.javafx.scenebuilder.kit.editor.job.JobUtils;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 import javafx.geometry.Bounds;
 import javafx.scene.control.ScrollPane;
 
@@ -52,12 +51,12 @@ public class WrapInScrollPaneJob extends AbstractWrapInContentJob {
     }
 
     @Override
-    protected List<Job> modifyChildrenJobs(final Set<FXOMObject> children) {
+    protected List<Job> modifyChildrenJobs(final List<FXOMObject> children) {
         return Collections.emptyList();
     }
 
     @Override
-    protected void modifyContainer(final Set<FXOMObject> children) {
+    protected void modifyContainer(final List<FXOMObject> children) {
         final Bounds unionOfBounds = WrapJobUtils.getUnionOfBounds(children);
         JobUtils.setPrefViewportHeight(newContainer, ScrollPane.class, unionOfBounds.getHeight());
         JobUtils.setPrefViewportWidth(newContainer, ScrollPane.class, unionOfBounds.getWidth());
