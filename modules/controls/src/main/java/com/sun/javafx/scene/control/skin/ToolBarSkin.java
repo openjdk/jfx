@@ -44,11 +44,11 @@ import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.geometry.Side;
 import javafx.geometry.VPos;
+import javafx.scene.AccessibleAction;
+import javafx.scene.AccessibleAttribute;
+import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 import javafx.scene.Parent;
-//import javafx.scene.accessibility.Action;
-//import javafx.scene.accessibility.Attribute;
-//import javafx.scene.accessibility.Role;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.CustomMenuItem;
@@ -603,6 +603,8 @@ public class ToolBarSkin extends BehaviorSkinBase<ToolBar, ToolBarBehavior> {
 
         public ToolBarOverflowMenu(ObservableList<MenuItem> items) {
             getStyleClass().setAll("tool-bar-overflow-button");
+            setRole(AccessibleRole.BUTTON);
+            setAccessibleText(getString("Accessibility.title.ToolBar.OverflowButton"));
             setFocusTraversable(true);
             this.menuItems = items;
             downArrow = new StackPane();
@@ -692,20 +694,13 @@ public class ToolBarSkin extends BehaviorSkinBase<ToolBar, ToolBarBehavior> {
                     /*baseline ignored*/0, HPos.CENTER, VPos.CENTER);
         }
 
-//        @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//            switch (attribute) {
-//                case ROLE: return Role.BUTTON;
-//                case TITLE: return getString("Accessibility.title.ToolBar.OverflowButton");
-//                default: return super.accGetAttribute(attribute, parameters);
-//            }
-//        }
-//
-//        @Override public void accExecuteAction(Action action, Object... parameters) {
-//            switch (action) {
-//                case FIRE: fire(); break;
-//                default: super.accExecuteAction(action); break;
-//            }
-//        }
+        @Override
+        public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
+            switch (action) {
+                case FIRE: fire(); break;
+                default: super.executeAccessibleAction(action); break;
+            }
+        }
     }
 
     /***************************************************************************
@@ -792,19 +787,21 @@ public class ToolBarSkin extends BehaviorSkinBase<ToolBar, ToolBarBehavior> {
         return getClassCssMetaData();
     }
 
-//    @Override protected Object accGetAttribute(Attribute attribute, Object... parameters) {
-//        switch (attribute) {
-//            case OVERFLOW_BUTTON: return overflowMenu;
-//            default: return super.accGetAttribute(attribute, parameters);
-//        }
-//    }
-//
-//    @Override protected void accExecuteAction(Action action, Object... parameters) {
-//        switch (action) {
-//            case SHOW_MENU: 
-//                overflowMenu.fire();
-//                break;
-//            default: super.accExecuteAction(action, parameters);
-//        }
-//    }
+    @Override
+    protected Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
+        switch (attribute) {
+            case OVERFLOW_BUTTON: return overflowMenu;
+            default: return super.queryAccessibleAttribute(attribute, parameters);
+        }
+    }
+
+    @Override
+    protected void executeAccessibleAction(AccessibleAction action, Object... parameters) {
+        switch (action) {
+            case SHOW_MENU: 
+                overflowMenu.fire();
+                break;
+            default: super.executeAccessibleAction(action, parameters);
+        }
+    }
 }

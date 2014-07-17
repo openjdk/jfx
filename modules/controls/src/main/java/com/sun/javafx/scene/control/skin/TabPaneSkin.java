@@ -26,7 +26,6 @@
 package com.sun.javafx.scene.control.skin;
 
 import com.sun.javafx.Utils;
-
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
@@ -53,9 +52,9 @@ import javafx.geometry.HPos;
 import javafx.geometry.Pos;
 import javafx.geometry.Side;
 import javafx.geometry.VPos;
+import javafx.scene.AccessibleAttribute;
+import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
-//import javafx.scene.accessibility.Attribute;
-//import javafx.scene.accessibility.Role;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
@@ -1112,6 +1111,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
             getStyleClass().setAll(tab.getStyleClass());
             setId(tab.getId());
             setStyle(tab.getStyle());
+            setRole(AccessibleRole.TAB_ITEM);
 
             this.tab = tab;
             clip = new Rectangle();
@@ -1127,14 +1127,9 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
                 @Override protected double computePrefHeight(double w) {
                     return CLOSE_BTN_SIZE;
                 }
-//                @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//                    switch (attribute) {
-//                        case ROLE: return Role.BUTTON;
-//                        case TITLE: return getString("Accessibility.title.TabPane.CloseButton");
-//                        default: return super.accGetAttribute(attribute, parameters);
-//                    }
-//                }
             };
+            closeBtn.setRole(AccessibleRole.BUTTON);
+            closeBtn.setAccessibleText(getString("Accessibility.title.TabPane.CloseButton"));
             closeBtn.getStyleClass().setAll("tab-close-button");
             closeBtn.setOnMousePressed(new EventHandler<MouseEvent>() {
                 @Override public void handle(MouseEvent me) {
@@ -1466,14 +1461,14 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
             clip.setHeight(value);
         }
     
-//        @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//            switch (attribute) {
-//                case ROLE: return Role.TAB_ITEM;
-//                case TITLE: return getTab().getText();
-//                case SELECTED: return selectedTab == getTab();
-//                default: return super.accGetAttribute(attribute, parameters);
-//            }
-//        }
+        @Override
+        public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
+            switch (attribute) {
+                case TITLE: return getTab().getText();
+                case SELECTED: return selectedTab == getTab();
+                default: return super.queryAccessibleAttribute(attribute, parameters);
+            }
+        }
     } /* End TabHeaderSkin */
 
     private static final PseudoClass SELECTED_PSEUDOCLASS_STATE =
@@ -1772,13 +1767,13 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
         }
     }
 
-//    @Override
-//    public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//        switch (attribute) {
-//            case FOCUS_ITEM: return tabHeaderArea.getTabHeaderSkin(selectedTab);
-//            case SELECTED_TAB: return tabHeaderArea.getTabHeaderSkin(selectedTab);
-//            case TABS: return tabHeaderArea.headersRegion.getChildren();
-//            default: return super.accGetAttribute(attribute, parameters);
-//        }
-//    }
+    @Override
+    public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
+        switch (attribute) {
+            case FOCUS_ITEM: return tabHeaderArea.getTabHeaderSkin(selectedTab);
+            case SELECTED_TAB: return tabHeaderArea.getTabHeaderSkin(selectedTab);
+            case TABS: return tabHeaderArea.headersRegion.getChildren();
+            default: return super.queryAccessibleAttribute(attribute, parameters);
+        }
+    }
 }

@@ -46,7 +46,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import javafx.geometry.Bounds;
 import javafx.scene.Node;
 import javafx.scene.layout.ColumnConstraints;
@@ -71,7 +70,7 @@ public class WrapInGridPaneJob extends AbstractWrapInSubComponentJob {
     }
 
     @Override
-    protected List<Job> modifyChildrenJobs(final Set<FXOMObject> children) {
+    protected List<Job> modifyChildrenJobs(final List<FXOMObject> children) {
 
         final List<Job> jobs = new ArrayList<>();
         // When wrapping the root node, indices are not yet initialized
@@ -100,7 +99,7 @@ public class WrapInGridPaneJob extends AbstractWrapInSubComponentJob {
     }
 
     @Override
-    protected void modifyContainer(final Set<FXOMObject> children) {
+    protected void modifyContainer(final List<FXOMObject> children) {
 
         final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
 
@@ -157,7 +156,7 @@ public class WrapInGridPaneJob extends AbstractWrapInSubComponentJob {
      * @return the greater index.
      */
     private int computeIndexByCourse(
-            final Set<FXOMObject> fxomObjects,
+            final List<FXOMObject> fxomObjects,
             final GridCourse course,
             final Map<FXOMObject, int[]> indices) {
 
@@ -193,7 +192,7 @@ public class WrapInGridPaneJob extends AbstractWrapInSubComponentJob {
     }
 
     private void computeSizes(
-            final Set<FXOMObject> fxomObjects,
+            final List<FXOMObject> fxomObjects,
             final Map<FXOMObject, int[]> indices,
             double[] columnWidth, double[] rowHeight) {
 

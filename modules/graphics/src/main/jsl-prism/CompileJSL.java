@@ -238,19 +238,20 @@ public class CompileJSL {
         return new ShaderInfo(paintName, paintSource, paintTime, inputParams);
     }
 
-    private static void compileColorPaint(JSLCInfo jslcinfo, ShaderInfo maskInfo)
+    private static void compileColorPaint(JSLCInfo jslcinfo, ShaderInfo maskInfo, boolean alphaTest)
         throws Exception
     {
         ShaderInfo colorInfo = getPaintInfo(jslcinfo, "Color");
         String outputName = maskInfo.getName() + "_Color";
-        ShaderInfo fullSource = getFullSource(outputName, maskInfo, colorInfo);
+        ShaderInfo fullSource = getFullSource(outputName, maskInfo, colorInfo, alphaTest);
         compileShader(jslcinfo, fullSource);
     }
 
     private static void compileGradientPaint(JSLCInfo jslcinfo,
                                              ShaderInfo maskInfo,
                                              PaintType paintType,
-                                             CycleType cycleType)
+                                             CycleType cycleType,
+                                             boolean alphaTest)
         throws Exception
     {
         String paintName = paintType.getName() + "Gradient";
@@ -266,62 +267,63 @@ public class CompileJSL {
             maskInfo.getName() + "_" +
             paintName + "_" +
             cycleType.toString();
-        ShaderInfo fullSource = getFullSource(outputName, maskInfo, gradInfo);
+        ShaderInfo fullSource = getFullSource(outputName, maskInfo, gradInfo, alphaTest);
         compileShader(jslcinfo, fullSource);
     }
 
     private static void compileAlphaGradientPaint(JSLCInfo jslcinfo,
                                                   ShaderInfo maskInfo,
-                                                  PaintType paintType)
+                                                  PaintType paintType,
+                                                  boolean alphaTest)
         throws Exception
     {
         String paintName = paintType.getName() + "Gradient";
         ShaderInfo paintInfo = getPaintInfo(jslcinfo, "AlphaTexture" + paintName, InputParam.TEXCOORD1);
         String outputName = maskInfo.getName() + "_" + paintName;
-        ShaderInfo fullSource = getFullSource(outputName, maskInfo, paintInfo);
+        ShaderInfo fullSource = getFullSource(outputName, maskInfo, paintInfo, alphaTest);
         compileShader(jslcinfo, fullSource);
     }
 
-    private static void compilePatternPaint(JSLCInfo jslcinfo, ShaderInfo maskInfo)
+    private static void compilePatternPaint(JSLCInfo jslcinfo, ShaderInfo maskInfo, boolean alphaTest)
         throws Exception
     {
         String paintName = "ImagePattern";
         ShaderInfo paintInfo = getPaintInfo(jslcinfo, paintName, InputParam.WINCOORD);
         String outputName = maskInfo.getName() + "_" + paintName;
-        ShaderInfo fullSource = getFullSource(outputName, maskInfo, paintInfo);
+        ShaderInfo fullSource = getFullSource(outputName, maskInfo, paintInfo, alphaTest);
         compileShader(jslcinfo, fullSource);
     }
 
-    private static void compileAlphaPatternPaint(JSLCInfo jslcinfo, ShaderInfo maskInfo)
+    private static void compileAlphaPatternPaint(JSLCInfo jslcinfo, ShaderInfo maskInfo, boolean alphaTest)
         throws Exception
     {
         String paintName = "ImagePattern";
         ShaderInfo paintInfo = getPaintInfo(jslcinfo, "AlphaTexture" + paintName, InputParam.TEXCOORD1);
         String outputName = maskInfo.getName() + "_" + paintName;
-        ShaderInfo fullSource = getFullSource(outputName, maskInfo, paintInfo);
+        ShaderInfo fullSource = getFullSource(outputName, maskInfo, paintInfo, alphaTest);
         compileShader(jslcinfo, fullSource);
     }
 
-    private static void compileSolidTexture(JSLCInfo jslcinfo, String suffix)
+    private static void compileSolidTexture(JSLCInfo jslcinfo, String suffix, boolean alphaTest)
         throws Exception
     {
         ShaderInfo maskInfo = getMaskInfo(jslcinfo, MaskType.SOLID);
         ShaderInfo paintInfo = getPaintInfo(jslcinfo, "Texture" + suffix, InputParam.TEXCOORD0);
-        ShaderInfo fullSource = getFullSource("Solid_Texture" + suffix, maskInfo, paintInfo);
+        ShaderInfo fullSource = getFullSource("Solid_Texture" + suffix, maskInfo, paintInfo, alphaTest);
         compileShader(jslcinfo, fullSource);
     }
 
-    private static void compileMaskTexture(JSLCInfo jslcinfo, String suffix)
+    private static void compileMaskTexture(JSLCInfo jslcinfo, String suffix, boolean alphaTest)
         throws Exception
     {
         ShaderInfo maskInfo = getMaskInfo(jslcinfo, MaskType.SOLID);
         ShaderInfo paintInfo = getPaintInfo(jslcinfo, "MaskTexture" + suffix,
                                             InputParam.TEXCOORD0, InputParam.TEXCOORD1);
-        ShaderInfo fullSource = getFullSource("Mask_Texture" + suffix, maskInfo, paintInfo);
+        ShaderInfo fullSource = getFullSource("Mask_Texture" + suffix, maskInfo, paintInfo, alphaTest);
         compileShader(jslcinfo, fullSource);
     }
 
-    private static void compileLCDShader(JSLCInfo jslcinfo, String suffix)
+    private static void compileLCDShader(JSLCInfo jslcinfo, String suffix, boolean alphaTest)
         throws Exception
     {
         ShaderInfo maskInfo = getMaskInfo(jslcinfo, MaskType.SOLID);
@@ -329,7 +331,7 @@ public class CompileJSL {
                                             InputParam.TEXCOORD0,
                                             InputParam.TEXCOORD1,
                                             InputParam.VERTEXCOLOR);
-        ShaderInfo fullSource = getFullSource("Solid_Texture" + suffix, maskInfo, paintInfo);
+        ShaderInfo fullSource = getFullSource("Solid_Texture" + suffix, maskInfo, paintInfo, alphaTest);
         compileShader(jslcinfo, fullSource);
     }
 
@@ -349,7 +351,8 @@ public class CompileJSL {
 
     private static ShaderInfo getFullSource(String outputName,
                                             ShaderInfo maskInfo,
-                                            ShaderInfo paintInfo)
+                                            ShaderInfo paintInfo,
+                                            boolean alphaTest)
         throws Exception
     {
         String maskSource;
@@ -389,8 +392,12 @@ public class CompileJSL {
             "%s\n%s\n" +
             "void main()\n" +
             "{\n" +
-            "    color = %s %s " + vertexColor + ";\n" +
-            "}\n";
+            "    color = %s %s " + vertexColor + ";\n";
+        if (alphaTest) {
+            mainTemplate += "    if (color.a == 0.0) discard;\n";
+            outputName += "_AlphaTest";
+        }
+        mainTemplate += "}\n";
         String fullSource =
             String.format(mainTemplate,
                           maskSource, paintSource,
@@ -463,35 +470,39 @@ public class CompileJSL {
         nameMap.put(JSLC.OUT_ES2, "prism-es2/build/gensrc/{pkg}/es2/glsl/{name}.frag");
         jslcinfo.parseAllArgs(args);
 
-        // create all the computational Mask+Paint combinations
-        for (MaskType maskType : MaskType.values()) {
-            ShaderInfo maskInfo = getMaskInfo(jslcinfo, maskType);
-            compileColorPaint(jslcinfo, maskInfo);
-            compilePatternPaint(jslcinfo, maskInfo);
-            for (PaintType paintType : PaintType.values()) {
-                for (CycleType cycleType : CycleType.values()) {
-                    compileGradientPaint(jslcinfo, maskInfo, paintType, cycleType);
+        boolean alphaTest = false;
+        for (int i = 0; i < 2; i++) {
+            alphaTest = (i == 0) ? false : true;
+            // create all the computational Mask+Paint combinations
+            for (MaskType maskType : MaskType.values()) {
+                ShaderInfo maskInfo = getMaskInfo(jslcinfo, maskType);
+                compileColorPaint(jslcinfo, maskInfo, alphaTest);
+                compilePatternPaint(jslcinfo, maskInfo, alphaTest);
+                for (PaintType paintType : PaintType.values()) {
+                    for (CycleType cycleType : CycleType.values()) {
+                        compileGradientPaint(jslcinfo, maskInfo, paintType, cycleType, alphaTest);
+                    }
                 }
             }
-        }
 
-        // create all the new style AlphaTexture+Paint combinations
-        for (AlphaMaskType maskType : AlphaMaskType.values()) {
-            ShaderInfo maskInfo = getMaskInfo(jslcinfo, maskType);
-            compileColorPaint(jslcinfo, maskInfo);
-            compileAlphaPatternPaint(jslcinfo, maskInfo);
-            for (PaintType paintType : PaintType.values()) {
-                compileAlphaGradientPaint(jslcinfo, maskInfo, paintType);
+            // create all the new style AlphaTexture+Paint combinations
+            for (AlphaMaskType maskType : AlphaMaskType.values()) {
+                ShaderInfo maskInfo = getMaskInfo(jslcinfo, maskType);
+                compileColorPaint(jslcinfo, maskInfo, alphaTest);
+                compileAlphaPatternPaint(jslcinfo, maskInfo, alphaTest);
+                for (PaintType paintType : PaintType.values()) {
+                    compileAlphaGradientPaint(jslcinfo, maskInfo, paintType, alphaTest);
+                }
             }
-        }
 
-        // create the basic Solid+Texture* shaders
-        compileSolidTexture(jslcinfo, "RGB");
-        compileMaskTexture(jslcinfo, "RGB");
-        compileMaskTexture(jslcinfo, "Super");
-        compileSolidTexture(jslcinfo, "YV12");
-        compileSolidTexture(jslcinfo, "FirstPassLCD");
-        compileLCDShader(jslcinfo, "SecondPassLCD");
+            // create the basic Solid+Texture* shaders
+            compileSolidTexture(jslcinfo, "RGB", alphaTest);
+            compileMaskTexture(jslcinfo, "RGB", alphaTest);
+            compileMaskTexture(jslcinfo, "Super", alphaTest);
+            compileSolidTexture(jslcinfo, "YV12", alphaTest);
+            compileSolidTexture(jslcinfo, "FirstPassLCD", alphaTest);
+            compileLCDShader(jslcinfo, "SecondPassLCD", alphaTest);
+        }
     }
 }
 

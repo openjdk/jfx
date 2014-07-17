@@ -25,7 +25,6 @@
 
 package com.oracle.tools.packager.windows;
 
-import com.oracle.tools.packager.BundlerParamInfo;
 import com.oracle.tools.packager.RelativeFileSet;
 
 import org.junit.After;
@@ -43,7 +42,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -154,7 +152,6 @@ public class WinServiceBundlerTest {
         Assume.assumeNotNull(WinExeBundler.TOOL_INNO_SETUP_COMPILER_EXECUTABLE.fetchFrom(new HashMap<>()));
 
         Bundler bundler = new WinExeBundler();
-        Collection<BundlerParamInfo<?>> parameters = bundler.getBundleParameters();
 
         Map<String, Object> bundleParams = new HashMap<>();
 
@@ -171,7 +168,6 @@ public class WinServiceBundlerTest {
 
         bundleParams.put(DESCRIPTION.getID(), "Does a random heart beat every 30 seconds or so to a log file in tmp");
         bundleParams.put(LICENSE_FILE.getID(), "LICENSE");
-        bundleParams.put(LICENSE_TYPE.getID(), "GPL v2 + CLASSPATH");
         bundleParams.put(VENDOR.getID(), "OpenJDK");
 
         bundleParams.put(BUILD_ROOT.getID(), tmpBase);
@@ -195,7 +191,6 @@ public class WinServiceBundlerTest {
         Assume.assumeNotNull(WinMsiBundler.TOOL_CANDLE_EXECUTABLE.fetchFrom(new HashMap<>()));
 
         Bundler bundler = new WinMsiBundler();
-        Collection<BundlerParamInfo<?>> parameters = bundler.getBundleParameters();
 
         Map<String, Object> bundleParams = new HashMap<>();
 

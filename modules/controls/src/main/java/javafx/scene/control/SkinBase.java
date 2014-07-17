@@ -35,9 +35,9 @@ import javafx.event.EventHandler;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.VPos;
+import javafx.scene.AccessibleAction;
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
-//import javafx.scene.accessibility.Action;
-//import javafx.scene.accessibility.Attribute;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Region;
 
@@ -761,14 +761,14 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      *                                                                         *
      **************************************************************************/
 
-//    /** @treatAsPrivate */
-//    protected Object accGetAttribute(Attribute attribute, Object... parameters) {
-//        return null;
-//    }
-//
-//    /** @treatAsPrivate */
-//    protected void accExecuteAction(Action action, Object... parameters) {
-//    }
+    /** @see Node#queryAccessibleAttribute */
+    protected Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
+        return null;
+    }
+
+    /** @see Node#executeAccessibleAction */
+    protected void executeAccessibleAction(AccessibleAction action, Object... parameters) {
+    }
 
     /***************************************************************************
      *                                                                         *

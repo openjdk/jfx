@@ -121,12 +121,29 @@ public abstract class BaseShaderContext extends BaseContext {
         MaskType.values().length << 4;
     // TODO: need to dispose these when the context is disposed... (RT-27379)
     private final Shader[] stockShaders = new Shader[NUM_STOCK_SHADER_SLOTS];
-    private Shader textureRGBShader;
-    private Shader textureMaskRGBShader;
-    private Shader textureYV12Shader;
-    private Shader textureFirstLCDShader;
-    private Shader textureSecondLCDShader;
-    private Shader superShader;
+    // stockShaders with alpha test
+    private final Shader[] stockATShaders = new Shader[NUM_STOCK_SHADER_SLOTS];
+
+    public enum SpecialShaderType {
+        TEXTURE_RGB          ("Solid_TextureRGB"),
+        TEXTURE_MASK_RGB     ("Mask_TextureRGB"),
+        TEXTURE_YV12         ("Solid_TextureYV12"),
+        TEXTURE_First_LCD    ("Solid_TextureFirstPassLCD"),
+        TEXTURE_SECOND_LCD   ("Solid_TextureSecondPassLCD"),
+        SUPER                ("Mask_TextureSuper");
+         
+        private String name;
+        private SpecialShaderType(String name) {
+            this.name = name;
+        }
+        public String getName() {
+            return name;
+        }
+    }
+    private final Shader[] specialShaders = new Shader[SpecialShaderType.values().length];
+    // specialShaders with alpha test
+    private final Shader[] specialATShaders = new Shader[SpecialShaderType.values().length];
+    
     private Shader externalShader;
 
     private RTTexture lcdBuffer;
@@ -147,7 +164,7 @@ public abstract class BaseShaderContext extends BaseContext {
             externalShader = null;
         }
         // the rest of the shaders will be re-validated as they are used
-    }
+   }
 
     public static class State {
         private Shader lastShader;
@@ -203,9 +220,10 @@ public abstract class BaseShaderContext extends BaseContext {
         return (maskType.ordinal() << 4) | (paintType << 2) | (paintOption << 0);
     }
 
-    private Shader getPaintShader(MaskType maskType, Paint paint) {
+    private Shader getPaintShader(boolean alphaTest, MaskType maskType, Paint paint) {
         int index = getStockShaderIndex(maskType, paint);
-        Shader shader = stockShaders[index];
+        Shader shaders[] = alphaTest ? stockATShaders : stockShaders;
+        Shader shader = shaders[index];
         if (shader != null && !shader.isValid()) {
             shader.dispose();
             shader = null;
@@ -224,7 +242,10 @@ public abstract class BaseShaderContext extends BaseContext {
                     shaderName += "_REPEAT";
                 }
             }
-            shader = stockShaders[index] = factory.createStockShader(shaderName);
+            if (alphaTest) {
+                shaderName += "_AlphaTest";
+            }
+            shader = shaders[index] = factory.createStockShader(shaderName);
         }
         return shader;
     }
@@ -265,74 +286,29 @@ public abstract class BaseShaderContext extends BaseContext {
         }
     }
 
-    private Shader getTextureRGBShader() {
-        if (textureRGBShader != null && !textureRGBShader.isValid()) {
-            textureRGBShader.dispose();
-            textureRGBShader = null;
+    private Shader getSpecialShader(BaseGraphics g, SpecialShaderType sst) {
+        // We do alpha test if depth test is enabled
+        boolean alphaTest = g.isDepthTest() && g.isDepthBuffer();
+        Shader shaders[] = alphaTest ? specialATShaders : specialShaders;
+        Shader shader = shaders[sst.ordinal()];
+        if (shader != null && !shader.isValid()) {
+            shader.dispose();
+            shader = null;
         }
-        if (textureRGBShader == null) {
-            textureRGBShader = factory.createStockShader("Solid_TextureRGB");
+        if (shader == null) {
+            String shaderName = sst.getName();
+            if (alphaTest) {
+                shaderName += "_AlphaTest";
+            }
+            shaders[sst.ordinal()] = shader = factory.createStockShader(shaderName);
         }
-        return textureRGBShader;
+        return shader;
     }
 
-    private Shader getTextureMaskRGBShader() {
-        if (textureMaskRGBShader != null && !textureMaskRGBShader.isValid()) {
-            textureMaskRGBShader.dispose();
-            textureMaskRGBShader = null;
-        }
-        if (textureMaskRGBShader == null) {
-            textureMaskRGBShader = factory.createStockShader("Mask_TextureRGB");
-        }
-        return textureMaskRGBShader;
-    }
-
-    private Shader getTextureYV12Shader() {
-        if (textureYV12Shader != null && !textureYV12Shader.isValid()) {
-            textureYV12Shader.dispose();
-            textureYV12Shader = null;
-        }
-        if (textureYV12Shader == null) {
-            textureYV12Shader = factory.createStockShader("Solid_TextureYV12");
-        }
-        return textureYV12Shader;
-    }
-
-    private Shader getTextureFirstPassLCDShader() {
-        if (textureFirstLCDShader != null && !textureFirstLCDShader.isValid()) {
-            textureFirstLCDShader.dispose();
-            textureFirstLCDShader = null;
-        }
-        if (textureFirstLCDShader == null) {
-            textureFirstLCDShader = factory.createStockShader("Solid_TextureFirstPassLCD");
-        }
-        return textureFirstLCDShader;
-    }
-
-    private Shader getTextureSecondPassLCDShader() {
-        if (textureSecondLCDShader != null && !textureSecondLCDShader.isValid()) {
-            textureSecondLCDShader.dispose();
-            textureSecondLCDShader = null;
-        }
-        if (textureSecondLCDShader == null) {
-            textureSecondLCDShader = factory.createStockShader("Solid_TextureSecondPassLCD");
-        }
-        return textureSecondLCDShader;
-    }
-
-    private Shader getSuperShader() {
-        if (superShader != null && !superShader.isValid()) {
-            superShader.dispose();
-            superShader = null;
-        }
-        if (superShader == null) {
-            superShader = factory.createStockShader("Mask_TextureSuper");
-        }
-        return superShader;
-    }
-
+    @Override
     public boolean isSuperShaderEnabled() {
-        return state.lastShader == superShader;
+        return state.lastShader == specialATShaders[SpecialShaderType.SUPER.ordinal()]
+                || state.lastShader == specialShaders[SpecialShaderType.SUPER.ordinal()];
     }
 
     private void updatePerVertexColor(Paint paint, float extraAlpha) {
@@ -464,7 +440,7 @@ public abstract class BaseShaderContext extends BaseContext {
                 // Enabling the super shader to be used to render text.
                 // The texture pointed by tex0 is the region cache texture
                 // and it does not affect text rendering
-                shader = getSuperShader();
+                shader = getSpecialShader(g, SpecialShaderType.SUPER);
                 tex0 = factory.getRegionTexture();
                 tex1 = maskTex;
             } else {
@@ -484,7 +460,8 @@ public abstract class BaseShaderContext extends BaseContext {
                     tex0 = paintTex;
                     tex1 = null;
                 }
-                shader = getPaintShader(maskType, paint);
+                // We do alpha test if depth test is enabled
+                shader = getPaintShader(g.isDepthTest() && g.isDepthBuffer(), maskType, paint);
             }
             checkState(g, xform, shader, tex0, tex1);
             updatePaintShader(g, shader, maskType, paint, bx, by, bw, bh);
@@ -511,8 +488,8 @@ public abstract class BaseShaderContext extends BaseContext {
                                 Texture tex0, Texture tex1, boolean firstPass,
                                 Paint fillColor)
     {
-        Shader shader = firstPass ? getTextureFirstPassLCDShader() :
-                                    getTextureSecondPassLCDShader();
+        Shader shader = firstPass ? getSpecialShader(g, SpecialShaderType.TEXTURE_First_LCD) :
+                                    getSpecialShader(g, SpecialShaderType.TEXTURE_SECOND_LCD);
 
         checkState(g, xform, shader, tex0, tex1);
         updatePerVertexColor(fillColor, g.getExtraAlpha());
@@ -531,7 +508,7 @@ public abstract class BaseShaderContext extends BaseContext {
             }
 
             if (externalShader == null) {
-                shader = getTextureYV12Shader();
+                shader = getSpecialShader(g, SpecialShaderType.TEXTURE_YV12);
             } else {
                 shader = externalShader;
             }
@@ -565,10 +542,10 @@ public abstract class BaseShaderContext extends BaseContext {
                     // The shader was designed to render many Regions (from the Region
                     // texture cache) and text (from the glyph cache texture) without
                     // changing the state in the context.
-                    shader = getSuperShader();
+                    shader = getSpecialShader(g, SpecialShaderType.SUPER);
                     tex1 = factory.getGlyphTexture();
                 } else {
-                    shader = getTextureRGBShader();
+                    shader = getSpecialShader(g, SpecialShaderType.TEXTURE_RGB);
                 }
                 break;
             case MULTI_YCbCr_420: // Must use multitexture method
@@ -595,7 +572,7 @@ public abstract class BaseShaderContext extends BaseContext {
             case BYTE_RGB:
             case BYTE_GRAY:
             case BYTE_APPLE_422: // uses GL_RGBA as internal format
-                shader = getTextureMaskRGBShader();
+                shader = getSpecialShader(g, SpecialShaderType.TEXTURE_MASK_RGB);
                 break;
             case MULTI_YCbCr_420: // Must use multitexture method
             case BYTE_ALPHA:

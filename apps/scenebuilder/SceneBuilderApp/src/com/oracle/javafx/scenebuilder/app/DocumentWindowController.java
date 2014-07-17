@@ -1475,12 +1475,7 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
                 = new ExtensionFilter(I18N.getString("file.filter.label.fxml"),
                         "*.fxml"); //NOI18N
         fileChooser.getExtensionFilters().add(f);
-            
-        final File nextInitialDirectory 
-                = SceneBuilderApp.getSingleton().getNextInitialDirectory();
-        if (nextInitialDirectory != null) {
-            fileChooser.setInitialDirectory(nextInitialDirectory);
-        }
+        fileChooser.setInitialDirectory(EditorController.getNextInitialDirectory());
 
         File fxmlFile = fileChooser.showOpenDialog(getStage());
         if (fxmlFile != null) {
@@ -1491,7 +1486,7 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
             }
 
             // Keep track of the user choice for next time
-            SceneBuilderApp.getSingleton().updateNextInitialDirectory(fxmlFile);
+            EditorController.updateNextInitialDirectory(fxmlFile);
 
             this.getEditorController().performImportFxml(fxmlFile);
         }
@@ -1518,17 +1513,13 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         fileChooser.getExtensionFilters().add(audioFilter);
         fileChooser.getExtensionFilters().add(videoFilter);
 
-        final File nextInitialDirectory 
-                = SceneBuilderApp.getSingleton().getNextInitialDirectory();
-        if (nextInitialDirectory != null) {
-            fileChooser.setInitialDirectory(nextInitialDirectory);
-        }
+        fileChooser.setInitialDirectory(EditorController.getNextInitialDirectory());
 
         File mediaFile = fileChooser.showOpenDialog(getStage());
         if (mediaFile != null) {
             
             // Keep track of the user choice for next time
-            SceneBuilderApp.getSingleton().updateNextInitialDirectory(mediaFile);
+            EditorController.updateNextInitialDirectory(mediaFile);
 
             this.getEditorController().performImportMedia(mediaFile);
         }
@@ -1591,12 +1582,7 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
                 = new ExtensionFilter(I18N.getString("file.filter.label.fxml"),
                         "*.fxml"); //NOI18N
         fileChooser.getExtensionFilters().add(f);
-
-        final File nextInitialDirectory 
-                = SceneBuilderApp.getSingleton().getNextInitialDirectory();
-        if (nextInitialDirectory != null) {
-            fileChooser.setInitialDirectory(nextInitialDirectory);
-        }
+        fileChooser.setInitialDirectory(EditorController.getNextInitialDirectory());
 
         File fxmlFile = fileChooser.showOpenDialog(getStage());
         if (fxmlFile != null) {
@@ -1607,7 +1593,7 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
             }
 
             // Keep track of the user choice for next time
-            SceneBuilderApp.getSingleton().updateNextInitialDirectory(fxmlFile);
+            EditorController.updateNextInitialDirectory(fxmlFile);
 
             this.getEditorController().performIncludeFxml(fxmlFile);
         }
@@ -1819,12 +1805,7 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
                     = new FileChooser.ExtensionFilter(I18N.getString("file.filter.label.fxml"),
                             "*.fxml"); //NOI18N
             fileChooser.getExtensionFilters().add(f);
-            
-            final File nextInitialDirectory 
-                    = SceneBuilderApp.getSingleton().getNextInitialDirectory();
-            if (nextInitialDirectory != null) {
-                fileChooser.setInitialDirectory(nextInitialDirectory);
-            }
+            fileChooser.setInitialDirectory(EditorController.getNextInitialDirectory());
 
             File fxmlFile = fileChooser.showSaveDialog(getStage());
             if (fxmlFile == null) {
@@ -1915,7 +1896,7 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
                     result = performSaveAction();
                     
                     // Keep track of the user choice for next time
-                    SceneBuilderApp.getSingleton().updateNextInitialDirectory(fxmlFile);
+                    EditorController.updateNextInitialDirectory(fxmlFile);
 
                     // Update recent items with just saved file
                     final PreferencesController pc = PreferencesController.getSingleton();

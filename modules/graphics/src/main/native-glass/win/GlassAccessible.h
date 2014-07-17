@@ -175,7 +175,7 @@ private:
     virtual ~GlassAccessible();
 
     /* Call the method specified by 'mid', AddRef the returning ptr (expects result to be IUnkonwn) */
-    virtual HRESULT callLongMethod(jmethodID mid, IUnknown **pRetVal, ...);
+    virtual HRESULT callLongMethod(jmethodID mid, GlassAccessible **pRetVal, ...);
 
     /* Call the method specified by 'mid' and converts the returning jarray to a SAFEARRAY */
     virtual HRESULT callArrayMethod(jmethodID mid, VARTYPE vt, SAFEARRAY **pRetVal);

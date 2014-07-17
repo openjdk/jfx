@@ -88,17 +88,17 @@ public final class FilteredList<E> extends TransformationList<E, E>{
      * Elements not matching the predicate will be filtered-out.
      */
     private final ObjectProperty<Predicate<? super E>> predicate =
-            new ObjectPropertyBase<Predicate<? super E>>(ALWAYS_TRUE) {
+            new ObjectPropertyBase<Predicate<? super E>>() {
 
         @Override
         protected void invalidated() {
             if (get() == null) {
                 if (isBound()) {
                     unbind();
-                    set(ALWAYS_TRUE);
-                    throw new IllegalArgumentException("Predicate cannot be null.");
-
                 }
+                set(ALWAYS_TRUE);
+                throw new IllegalArgumentException("Predicate cannot be null.");
+
             }
             refilter();
         }

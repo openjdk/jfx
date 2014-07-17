@@ -52,9 +52,7 @@ import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask.Accessory;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
 import javafx.scene.Node;
@@ -67,7 +65,7 @@ public class UnwrapJob extends Job {
     private BatchJob batchJob;
     private AbstractSelectionGroup selectionSnapshot;
     private FXOMInstance oldContainer, newContainer;
-    private Set<FXOMObject> oldContainerChildren;
+    private List<FXOMObject> oldContainerChildren;
 
     public UnwrapJob(EditorController editorController) {
         super(editorController);
@@ -183,7 +181,7 @@ public class UnwrapJob extends Job {
         if (newContainer != null) {
 
             // Retrieve the new container property name in use
-            final Set<FXOMObject> newContainerChildren = new HashSet<>();
+            final List<FXOMObject> newContainerChildren = new ArrayList<>();
             newContainerChildren.add(oldContainer);
             final PropertyName newContainerPropertyName
                     = WrapJobUtils.getContainerPropertyName(newContainer, newContainerChildren);
@@ -253,7 +251,7 @@ public class UnwrapJob extends Job {
     protected List<Job> addChildrenToPropertyJobs(
             final FXOMPropertyC containerProperty,
             final int start,
-            final Set<FXOMObject> children) {
+            final List<FXOMObject> children) {
 
         final List<Job> jobs = new ArrayList<>();
         int index = start;
@@ -271,7 +269,7 @@ public class UnwrapJob extends Job {
 
     protected List<Job> removeChildrenFromPropertyJobs(
             final FXOMPropertyC containerProperty,
-            final Set<FXOMObject> children) {
+            final List<FXOMObject> children) {
 
         final List<Job> jobs = new ArrayList<>();
         for (FXOMObject child : children) {
@@ -290,7 +288,7 @@ public class UnwrapJob extends Job {
      * @param children The children.
      * @return
      */
-    protected List<Job> modifyChildrenLayoutJobs(final Set<FXOMObject> children) {
+    protected List<Job> modifyChildrenLayoutJobs(final List<FXOMObject> children) {
 
         final List<Job> jobs = new ArrayList<>();
 
@@ -315,9 +313,9 @@ public class UnwrapJob extends Job {
         return jobs;
     }
 
-    private Set<FXOMObject> getChildren(final FXOMObject container) {
+    private List<FXOMObject> getChildren(final FXOMObject container) {
         final DesignHierarchyMask mask = new DesignHierarchyMask(container);
-        final Set<FXOMObject> result = new HashSet<>();
+        final List<FXOMObject> result = new ArrayList<>();
         if (mask.isAcceptingSubComponent()) {
             for (int i = 0, count = mask.getSubComponentCount(); i < count; i++) {
                 final FXOMObject child = mask.getSubComponentAtIndex(i);

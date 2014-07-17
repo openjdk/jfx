@@ -37,6 +37,7 @@ import org.junit.After;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -120,6 +121,75 @@ public class MacAppBundlerTest {
             System.err.println("Could not clean up " + tmpBase.toString());
         }
     }
+
+
+    @Test
+    public void testValidateVersion() {
+        MacAppBundler b = new MacAppBundler();
+        String validVersions[] = {"1", "255", "1.0", "1.0.0", "255.255.0", "255.255.6000"};
+        String invalidVersions[] = {null, "alpha", "1.0-alpha", "0.300", "-300", "1.-1", "1.1.-1"};
+
+        for(String v: validVersions) {
+            assertTrue("Expect to be valid ["+v+"]",
+                    MacAppBundler.validCFBundleVersion(v));
+            try {
+                Map<String, Object> params = new HashMap<>();
+                params.put(BUILD_ROOT.getID(), tmpBase);
+                params.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+
+                params.put(VERSION.getID(), v);
+                b.validate(params);
+            } catch (ConfigException ce) {
+                ce.printStackTrace();
+                assertTrue("Expect to be valid via '" + VERSION.getID() + "' ["+v+"]",
+                        false);
+            } catch (UnsupportedPlatformException ignore) {
+            }
+            try {
+                Map<String, Object> params = new HashMap<>();
+                params.put(BUILD_ROOT.getID(), tmpBase);
+                params.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+
+                params.put(MAC_CF_BUNDLE_VERSION.getID(), v);
+                b.validate(params);
+            } catch (ConfigException ce) {
+                assertTrue("Expect to be valid via '" + VERSION.getID() + "' ["+v+"]",
+                        false);
+            } catch (UnsupportedPlatformException ignore) {
+            }
+        }
+
+        for(String v: invalidVersions) {
+            assertFalse("Expect to be invalid ["+v+"]",
+                    MacAppBundler.validCFBundleVersion(v));
+            try {
+                Map<String, Object> params = new HashMap<>();
+                params.put(BUILD_ROOT.getID(), tmpBase);
+                params.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+
+                params.put(VERSION.getID(), v);
+                b.validate(params);
+                assertFalse("Invalid appVersion is not the mac.CFBundleVersion", MAC_CF_BUNDLE_VERSION.fetchFrom(params).equals(VERSION.fetchFrom(params)));
+            } catch (ConfigException ce) {
+                ce.printStackTrace();
+                assertTrue("Expect to be ignored when invalid via '" + VERSION.getID() + "' ["+v+"]",
+                        false);
+            } catch (UnsupportedPlatformException ignore) {
+            }
+            try {
+                Map<String, Object> params = new HashMap<>();
+                params.put(BUILD_ROOT.getID(), tmpBase);
+                params.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+
+                params.put(MAC_CF_BUNDLE_VERSION.getID(), v);
+                b.validate(params);
+                assertTrue("Expect to be invalid via '" + VERSION.getID() + "' ["+v+"]",
+                        false);
+            } catch (ConfigException | UnsupportedPlatformException ignore) {
+            }
+        }
+    }
+
 
     /**
      * See if smoke comes out
@@ -261,11 +331,12 @@ public class MacAppBundlerTest {
         bundleParams.put(MAC_CATEGORY.getID(), "public.app-category.developer-tools");
         bundleParams.put(MAC_CF_BUNDLE_IDENTIFIER.getID(), "com.example.everything.cf-bundle-identifier");
         bundleParams.put(MAC_CF_BUNDLE_NAME.getID(), "Everything CF Bundle Name");
+        bundleParams.put(MAC_CF_BUNDLE_VERSION.getID(), "8.2.0");
         bundleParams.put(MAC_RUNTIME.getID(), System.getProperty("java.home"));
         bundleParams.put(MAIN_CLASS.getID(), "hello.TestPackager");
         bundleParams.put(MAIN_JAR.getID(), "mainApp.jar");
         bundleParams.put(CLASSPATH.getID(), "mainApp.jar");
-        bundleParams.put(PREFERENCES_ID.getID(), "everything.preferences.id");
+        bundleParams.put(PREFERENCES_ID.getID(), "everything/preferences/id");
         bundleParams.put(USER_JVM_OPTIONS.getID(), "-Xmx=256M\n");
         bundleParams.put(VERSION.getID(), "1.2.3.4");
 
@@ -309,4 +380,41 @@ public class MacAppBundlerTest {
         assertNotNull(result);
         assertTrue(result.exists());
     }
+
+    @Ignore // this test is noisy and only valid for by-hand validation
+    @Test
+    public void jvmUserOptionsTest() throws IOException, ConfigException, UnsupportedPlatformException {
+
+        for (String name : Arrays.asList("", "example", "com.example", "com.example.helloworld", "com.example.hello.world", "com.example.hello.world.app")) {
+
+            AbstractBundler bundler = new MacAppBundler();
+
+            Map<String, Object> bundleParams = new HashMap<>();
+
+            bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+
+            bundleParams.put(APP_NAME.getID(), "User JVM Options App - " + name);
+            bundleParams.put(MAC_CF_BUNDLE_NAME.getID(), name + ".application");
+            bundleParams.put(MAIN_CLASS.getID(), "hello.TestPackager");
+            bundleParams.put(IDENTIFIER.getID(), name);
+            bundleParams.put(PREFERENCES_ID.getID(), name.replace(".", "/"));
+            bundleParams.put(MAIN_JAR.getID(),
+                    new RelativeFileSet(fakeMainJar.getParentFile(),
+                            new HashSet<>(Arrays.asList(fakeMainJar)))
+            );
+            bundleParams.put(CLASSPATH.getID(), fakeMainJar.toString());
+            bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+            bundleParams.put(VERBOSE.getID(), true);
+            bundleParams.put(DEVELOPER_ID_APP_SIGNING_KEY.getID(), null); // force no signing
+
+            boolean valid = bundler.validate(bundleParams);
+            assertTrue(valid);
+
+            File result = bundler.execute(bundleParams, new File(workDir, "UserOpts-" + name.replace(".", "-")));
+            System.err.println("Bundle at - " + result);
+            assertNotNull(result);
+            assertTrue(result.exists());
+        }
+    }
+
 }

@@ -33,8 +33,9 @@ import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.event.WeakEventHandler;
+import javafx.scene.AccessibleAction;
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
-//import javafx.scene.accessibility.Attribute;
 import javafx.scene.control.*;
 import javafx.scene.control.TreeItem.TreeModificationEvent;
 import javafx.scene.input.MouseEvent;
@@ -474,38 +475,50 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
         return newSelectionIndex;
     }
 
-//    @Override
-//    public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//        switch (attribute) {
-//            case FOCUS_ITEM: {
-//                FocusModel<?> fm = getSkinnable().getFocusModel();
-//                int focusedIndex = fm.getFocusedIndex();
-//                if (focusedIndex == -1) {
-//                    if (getItemCount() > 0) {
-//                        focusedIndex = 0;
-//                    } else {
-//                        return null;
-//                    }
-//                }
-//                return flow.getPrivateCell(focusedIndex);
-//            }
-//            case ROW_AT_INDEX: {
-//                final int rowIndex = (Integer)parameters[0];
-//                return rowIndex < 0 ? null : flow.getPrivateCell(rowIndex);
-//            }
-//            case SELECTED_ROWS: {
-//                MultipleSelectionModel<TreeItem<T>> sm = getSkinnable().getSelectionModel();
-//                ObservableList<Integer> indices = sm.getSelectedIndices();
-//                List<Node> selection = new ArrayList<>(indices.size());
-//                for (int i : indices) {
-//                    TreeCell<T> row = flow.getPrivateCell(i);
-//                    if (row != null) selection.add(row);
-//                }
-//                return FXCollections.observableArrayList(selection);
-//            }
-//            case VERTICAL_SCROLLBAR: return flow.getVbar();
-//            case HORIZONTAL_SCROLLBAR: return flow.getHbar();
-//            default: return super.accGetAttribute(attribute, parameters);
-//        }
-//    }
+    @Override
+    protected Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
+        switch (attribute) {
+            case FOCUS_ITEM: {
+                FocusModel<?> fm = getSkinnable().getFocusModel();
+                int focusedIndex = fm.getFocusedIndex();
+                if (focusedIndex == -1) {
+                    if (getItemCount() > 0) {
+                        focusedIndex = 0;
+                    } else {
+                        return null;
+                    }
+                }
+                return flow.getPrivateCell(focusedIndex);
+            }
+            case ROW_AT_INDEX: {
+                final int rowIndex = (Integer)parameters[0];
+                return rowIndex < 0 ? null : flow.getPrivateCell(rowIndex);
+            }
+            case SELECTED_ROWS: {
+                MultipleSelectionModel<TreeItem<T>> sm = getSkinnable().getSelectionModel();
+                ObservableList<Integer> indices = sm.getSelectedIndices();
+                List<Node> selection = new ArrayList<>(indices.size());
+                for (int i : indices) {
+                    TreeCell<T> row = flow.getPrivateCell(i);
+                    if (row != null) selection.add(row);
+                }
+                return FXCollections.observableArrayList(selection);
+            }
+            case VERTICAL_SCROLLBAR: return flow.getVbar();
+            case HORIZONTAL_SCROLLBAR: return flow.getHbar();
+            default: return super.queryAccessibleAttribute(attribute, parameters);
+        }
+    }
+
+    @Override
+    protected void executeAccessibleAction(AccessibleAction action, Object... parameters) {
+        switch (action) {
+            case SCROLL_TO_INDEX: {
+                Integer index = (Integer)parameters[0];
+                if (index != null) flow.show(index);
+                break;
+            }
+            default: super.executeAccessibleAction(action, parameters);
+        }
+    }
 }

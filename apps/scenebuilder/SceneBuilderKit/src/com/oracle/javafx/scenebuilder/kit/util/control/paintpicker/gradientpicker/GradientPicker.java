@@ -55,6 +55,10 @@ import java.util.logging.Logger;
 
 import javafx.beans.value.ChangeListener;
 import javafx.collections.FXCollections;
+import javafx.event.ActionEvent;
+import javafx.event.Event;
+import javafx.event.EventHandler;
+import javafx.event.EventType;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ChoiceBox;
 
@@ -261,6 +265,9 @@ public class GradientPicker extends VBox {
             // Update model
             paintPicker.setPaintProperty(value);
         });
+        proportional_checkbox.setOnAction((ActionEvent event) -> {
+            event.consume();
+        });
 
         cycleMethod_choicebox.setItems(FXCollections.observableArrayList(CycleMethod.values()));
         cycleMethod_choicebox.getSelectionModel().selectFirst();
@@ -271,6 +278,9 @@ public class GradientPicker extends VBox {
             preview_rect.setFill(value);
             // Update model
             paintPicker.setPaintProperty(value);
+        });
+        cycleMethod_choicebox.addEventHandler(ActionEvent.ACTION, (Event event) -> {
+            event.consume();
         });
 
         final ChangeListener<Number> onValueChange = (ov, oldValue, newValue) -> {
@@ -308,7 +318,7 @@ public class GradientPicker extends VBox {
         focusAngleRotator.pressedProperty().addListener(liveUpdateListener);
         slider_container.pressedProperty().addListener(liveUpdateListener);
     }
-
+    
     @FXML
     void sliderPressed(MouseEvent event) {
         double percentH = ((100.0 / track_pane.getWidth()) * event.getX()) / 100;

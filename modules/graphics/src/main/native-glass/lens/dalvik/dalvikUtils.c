@@ -63,7 +63,8 @@ int to_jfx_key_action(int action) {
 }
 
 int to_linux_keycode(int androidKeyCode) {
-    for (int i = 0; i < sizeof (keyMap); ++i) {
+    int keySize = sizeof(keyMap)/sizeof(keyMap[0]);
+    for (int i = 0; i < keySize; ++i) {
         if (keyMap[i].androidKC == androidKeyCode) {
             return keyMap[i].linuxKC;
         }

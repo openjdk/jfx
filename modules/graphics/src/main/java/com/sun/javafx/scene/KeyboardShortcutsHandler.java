@@ -25,19 +25,20 @@
 
 package com.sun.javafx.scene;
 
+import java.util.AbstractMap;
+import java.util.AbstractSet;
 import java.util.ArrayList;
+import java.util.ConcurrentModificationException;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
 import javafx.event.Event;
 import javafx.scene.Node;
-import javafx.scene.Scene;
 import javafx.scene.input.KeyCombination;
-import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.Mnemonic;
 
@@ -47,14 +48,9 @@ import com.sun.javafx.collections.ObservableMapWrapper;
 import com.sun.javafx.event.BasicEventDispatcher;
 import com.sun.javafx.scene.traversal.Direction;
 
-import static javafx.scene.input.KeyCode.DOWN;
-import static javafx.scene.input.KeyCode.LEFT;
-import static javafx.scene.input.KeyCode.RIGHT;
-import static javafx.scene.input.KeyCode.TAB;
-import static javafx.scene.input.KeyCode.UP;
-
 public final class KeyboardShortcutsHandler extends BasicEventDispatcher {
     private ObservableMap<KeyCombination, Runnable> accelerators;
+    private CopyOnWriteMap<KeyCombination, Runnable> acceleratorsBackingMap;
     private ObservableMap<KeyCombination, ObservableList<Mnemonic>> mnemonics;
 
     public void addMnemonic(Mnemonic m) {
@@ -94,7 +90,8 @@ public final class KeyboardShortcutsHandler extends BasicEventDispatcher {
 
     public ObservableMap<KeyCombination, Runnable> getAccelerators() {
         if (accelerators == null) {
-            accelerators = new ObservableMapWrapper<KeyCombination, Runnable>(new HashMap<KeyCombination, Runnable>());
+            acceleratorsBackingMap = new CopyOnWriteMap<>();
+            accelerators = new ObservableMapWrapper<>(acceleratorsBackingMap);
         }
         return accelerators;
     }
@@ -333,22 +330,27 @@ public final class KeyboardShortcutsHandler extends BasicEventDispatcher {
     }
 
     private void processAccelerators(KeyEvent event) {
-        if (accelerators != null) {
-            for (Map.Entry<KeyCombination, Runnable>
-                     accelerator: accelerators.entrySet()) {
-                
-                if (accelerator.getKey().match(event)) {
-                    Runnable acceleratorRunnable = accelerator.getValue();
-                    if (acceleratorRunnable != null) {
+        if (acceleratorsBackingMap != null) {
+            acceleratorsBackingMap.lock();
+            try {
+                for (Map.Entry<KeyCombination, Runnable>
+                        accelerator : acceleratorsBackingMap.backingMap.entrySet()) {
+
+                    if (accelerator.getKey().match(event)) {
+                        Runnable acceleratorRunnable = accelerator.getValue();
+                        if (acceleratorRunnable != null) {
                         /*
                         ** for accelerators there can only be one target
                         ** and we don't care whether it's visible or reachable....
                         ** we just run the Runnable.......
                         */
-                        acceleratorRunnable.run();
-                        event.consume();
+                            acceleratorRunnable.run();
+                            event.consume();
+                        }
                     }
                 }
+            } finally {
+                acceleratorsBackingMap.unlock();
             }
         }
     }
@@ -394,6 +396,83 @@ public final class KeyboardShortcutsHandler extends BasicEventDispatcher {
                     }
                 }
             }
+        }
+    }
+
+    private static class CopyOnWriteMap<K, V> extends AbstractMap<K, V> {
+
+        private Map<K, V> backingMap = new HashMap<>();
+        private boolean lock;
+
+        public void lock() {
+            lock = true;
+        }
+
+        public void unlock() {
+            lock = false;
+        }
+
+        @Override
+        public V put(K key, V value) {
+            if (lock) {
+                backingMap = new HashMap<>(backingMap);
+                lock = false;
+            }
+            return backingMap.put(key, value);
+        }
+
+        @Override
+        public Set<Entry<K, V>> entrySet() {
+            return new AbstractSet<Entry<K, V>>() {
+                @Override
+                public Iterator<Entry<K, V>> iterator() {
+                    return new Iterator<Entry<K, V>>() {
+
+                        private Iterator<Entry<K, V>> backingIt = backingMap.entrySet().iterator();
+                        private Map<K, V> backingMapAtCreation = backingMap;
+                        private Entry<K, V> lastNext = null;
+
+                        @Override
+                        public boolean hasNext() {
+                            checkCoMod();
+                            return backingIt.hasNext();
+                        }
+
+                        private void checkCoMod() {
+                            if (backingMap != backingMapAtCreation) {
+                                throw new ConcurrentModificationException();
+                            }
+                        }
+
+                        @Override
+                        public Entry<K, V> next() {
+                            checkCoMod();
+                            return lastNext = backingIt.next();
+                        }
+
+                        @Override
+                        public void remove() {
+                            checkCoMod();
+                            if (lastNext == null) {
+                                throw new IllegalStateException();
+                            }
+                            if (lock) {
+                                backingMap = new HashMap<>(backingMap);
+                                backingIt = backingMap.entrySet().iterator();
+                                while (!lastNext.equals(backingIt.next()));
+                                lock = false;
+                            }
+                            backingIt.remove();
+                            lastNext = null;
+                        }
+                    };
+                }
+
+                @Override
+                public int size() {
+                    return backingMap.size();
+                }
+            };
         }
     }
 }

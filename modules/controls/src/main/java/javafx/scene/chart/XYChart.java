@@ -34,6 +34,7 @@ import java.util.List;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
+import javafx.beans.binding.StringBinding;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
@@ -1352,7 +1353,21 @@ public abstract class XYChart<X,Y> extends Chart {
          * appropriately, for example on a Line or Scatter chart this node will be positioned centered on the data
          * values position. For a bar chart this is positioned and resized as the bar for this data item.
          */
-        private ObjectProperty<Node> node = new SimpleObjectProperty<Node>(this, "node");
+        private ObjectProperty<Node> node = new SimpleObjectProperty<Node>(this, "node") {
+            protected void invalidated() {
+                Node node = get();
+                if (node != null) {
+                    node.accessibleTextProperty().unbind();
+                    node.accessibleTextProperty().bind(new StringBinding() {
+                        {bind(currentXProperty(), currentYProperty());}
+                        @Override protected String computeValue() {
+                            String seriesName = series != null ? series.getName() : "";
+                            return seriesName + " X Axis is " + getCurrentX() + " Y Axis is " + getCurrentY();
+                        }
+                    });
+                }
+            };
+        };
         public final Node getNode() { return node.get(); }
         public final void setNode(Node value) { node.set(value); }
         public final ObjectProperty<Node> nodeProperty() { return node; }

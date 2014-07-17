@@ -137,6 +137,18 @@ public class FilteredListTest {
         assertEquals(Arrays.asList(createPerson("AA")), filtered);
     }
 
+    @Test(expected = IllegalArgumentException.class)
+    public void testNullPredicate() {
+        filteredList.setPredicate(null);
+    }
+
+    @Test
+    public void testSingleArgConstructor() {
+        filteredList = new FilteredList<>(list);
+        assertEquals(list.size(), filteredList.size());
+        assertEquals(list, filteredList);
+    }
+
     private Person createPerson(String name) {
         Person p =  new Person();
         p.name.set(name);

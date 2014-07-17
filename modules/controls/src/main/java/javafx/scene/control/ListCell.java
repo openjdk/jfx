@@ -38,9 +38,9 @@ import javafx.beans.value.WeakChangeListener;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.WeakListChangeListener;
-//import javafx.scene.accessibility.Action;
-//import javafx.scene.accessibility.Attribute;
-//import javafx.scene.accessibility.Role;
+import javafx.scene.AccessibleAction;
+import javafx.scene.AccessibleAttribute;
+import javafx.scene.AccessibleRole;
 
 import com.sun.javafx.scene.control.skin.ListCellSkin;
 
@@ -82,6 +82,7 @@ public class ListCell<T> extends IndexedCell<T> {
      */
     public ListCell() {
         getStyleClass().addAll(DEFAULT_STYLE_CLASS);
+        setRole(AccessibleRole.LIST_ITEM);
     }
 
 
@@ -544,49 +545,34 @@ public class ListCell<T> extends IndexedCell<T> {
      *                                                                         *
      **************************************************************************/
 
-//    /** @treatAsPrivate */
-//    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//        switch (attribute) {
-//            case ROLE: return Role.LIST_ITEM;
-//            case TITLE: {
-//                String text = getText();
-//                /* If the data bounded to cell is a Node
-//                 * the default behavior is to hide the text
-//                 * and use data as the graphics. (see ListViewSkin#createDefaultCellImpl).
-//                 * If the text is empty try to get graphics. 
-//                 */
-//                if (text == null || text.isEmpty()) {
-//                    if (getGraphic() != null) {
-//                        text = (String)getGraphic().accGetAttribute(Attribute.TITLE);
-//                    }
-//                }
-//                return text;
-//            }
-//            case INDEX: return getIndex();
-//            case SELECTED: return isSelected();
-//            default: return super.accGetAttribute(attribute, parameters);
-//        }
-//    }
-//
-//    /** @treatAsPrivate */
-//    @Override public void accExecuteAction(Action action, Object... parameters) {
-//        final ListView<T> listView = getListView();
-//        final MultipleSelectionModel<T> sm = listView == null ? null : listView.getSelectionModel();
-//        switch (action) {
-//            case SELECT: {
-//                if (sm != null) sm.clearAndSelect(getIndex());
-//                break;
-//            }
-//            case ADD_TO_SELECTION: {
-//                if (sm != null) sm.select(getIndex());
-//                break;
-//            }
-//            case REMOVE_FROM_SELECTION: {
-//                if (sm != null) sm.clearSelection(getIndex());
-//                break;
-//            }
-//            default: super.accExecuteAction(action);
-//        }
-//    }
+    @Override
+    public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
+        switch (attribute) {
+            case INDEX: return getIndex();
+            case SELECTED: return isSelected();
+            default: return super.queryAccessibleAttribute(attribute, parameters);
+        }
+    }
+
+    @Override
+    public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
+        final ListView<T> listView = getListView();
+        final MultipleSelectionModel<T> sm = listView == null ? null : listView.getSelectionModel();
+        switch (action) {
+            case SELECT: {
+                if (sm != null) sm.clearAndSelect(getIndex());
+                break;
+            }
+            case ADD_TO_SELECTION: {
+                if (sm != null) sm.select(getIndex());
+                break;
+            }
+            case REMOVE_FROM_SELECTION: {
+                if (sm != null) sm.clearSelection(getIndex());
+                break;
+            }
+            default: super.executeAccessibleAction(action);
+        }
+    }
 }
 

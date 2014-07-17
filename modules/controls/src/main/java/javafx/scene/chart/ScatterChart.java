@@ -27,9 +27,11 @@ package javafx.scene.chart;
 
 import javafx.animation.FadeTransition;
 import javafx.animation.ParallelTransition;
+import javafx.application.Platform;
 import javafx.beans.NamedArg;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 import javafx.scene.layout.StackPane;
 import javafx.util.Duration;
@@ -80,6 +82,9 @@ public class ScatterChart<X,Y> extends XYChart<X,Y> {
         // check if symbol has already been created
         if (symbol == null) {
             symbol = new StackPane();
+            symbol.setRole(AccessibleRole.TEXT);
+            symbol.setRoleDescription("Point");
+            symbol.focusTraversableProperty().bind(Platform.accessibilityActiveProperty());
             item.setNode(symbol);
         }
         // set symbol styles

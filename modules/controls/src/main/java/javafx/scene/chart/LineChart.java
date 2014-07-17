@@ -36,6 +36,7 @@ import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
 import javafx.animation.Animation;
+import javafx.application.Platform;
 import javafx.beans.NamedArg;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
@@ -43,6 +44,7 @@ import javafx.beans.property.SimpleDoubleProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
+import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.LineTo;
@@ -535,6 +537,9 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
         // check if symbol has already been created
         if (symbol == null && getCreateSymbols()) {
             symbol = new StackPane();
+            symbol.setRole(AccessibleRole.TEXT);
+            symbol.setRoleDescription("Point");
+            symbol.focusTraversableProperty().bind(Platform.accessibilityActiveProperty());
             item.setNode(symbol);
         }
         // set symbol styles

@@ -41,7 +41,6 @@ import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Set;
 
 /**
  * Main class used for the wrap jobs using the new container SUB COMPONENT property.
@@ -53,7 +52,7 @@ public abstract class AbstractWrapInSubComponentJob extends AbstractWrapInJob {
     }
 
     @Override
-    protected List<Job> wrapInJobs(final Set<FXOMObject> children) {
+    protected List<Job> wrapInJobs(final List<FXOMObject> children) {
 
         final List<Job> jobs = new ArrayList<>();
 
@@ -90,7 +89,7 @@ public abstract class AbstractWrapInSubComponentJob extends AbstractWrapInJob {
         return jobs;
     }
     
-    protected Collection<FXOMObject> sortChildren(Set<FXOMObject> children) {
+    protected Collection<FXOMObject> sortChildren(List<FXOMObject> children) {
         return children;
     }
 }

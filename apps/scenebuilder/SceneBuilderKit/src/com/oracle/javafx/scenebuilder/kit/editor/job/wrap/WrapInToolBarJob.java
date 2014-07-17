@@ -39,7 +39,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 import javafx.geometry.Orientation;
 import javafx.scene.control.ToolBar;
 
@@ -54,16 +53,16 @@ public class WrapInToolBarJob extends AbstractWrapInSubComponentJob {
     }
 
     @Override
-    protected List<Job> modifyChildrenJobs(final Set<FXOMObject> children) {
+    protected List<Job> modifyChildrenJobs(final List<FXOMObject> children) {
         return Collections.emptyList();
     }
 
     @Override
-    protected void modifyContainer(final Set<FXOMObject> children) {
+    protected void modifyContainer(final List<FXOMObject> children) {
     }
 
     @Override
-    protected Collection<FXOMObject> sortChildren(Set<FXOMObject> children) {
+    protected Collection<FXOMObject> sortChildren(List<FXOMObject> children) {
         final List<FXOMObject> sorted = new ArrayList<>(children);
         Collections.sort(sorted, UnidimensionalComparator.of(Orientation.HORIZONTAL));
         return sorted;

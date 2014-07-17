@@ -55,10 +55,10 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.geometry.Side;
 import javafx.geometry.VPos;
+import javafx.scene.AccessibleAction;
+import javafx.scene.AccessibleAttribute;
+import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
-//import javafx.scene.accessibility.Action;
-//import javafx.scene.accessibility.Attribute;
-//import javafx.scene.accessibility.Role;
 import javafx.scene.control.*;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.TouchEvent;
@@ -700,15 +700,16 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
         layoutInArea(navigation, x, stackPaneHeight, w, navigationHeight, 0, HPos.CENTER, VPos.CENTER);
     }
 
-//    @Override protected Object accGetAttribute(Attribute attribute, Object... parameters) {
-//        switch (attribute) {
-//            // Role: Pagination (specified in Pagination class)
-//            case FOCUS_ITEM: return navigation.indicatorButtons.getSelectedToggle();
-//            case SELECTED_PAGE: return navigation.indicatorButtons.getSelectedToggle();
-//            case PAGES: return navigation.indicatorButtons.getToggles();
-//            default: return super.accGetAttribute(attribute, parameters);
-//        }
-//    }
+    @Override
+    protected Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
+        switch (attribute) {
+            // Role: Pagination (specified in Pagination class)
+            case FOCUS_ITEM: return navigation.indicatorButtons.getSelectedToggle();
+            case SELECTED_PAGE: return navigation.indicatorButtons.getSelectedToggle();
+            case PAGES: return navigation.indicatorButtons.getToggles();
+            default: return super.queryAccessibleAttribute(attribute, parameters);
+        }
+    }
 
     class NavigationControl extends StackPane {
 
@@ -734,14 +735,8 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
             controlBox = new HBox();
             controlBox.getStyleClass().add("control-box");
 
-            leftArrowButton = new Button() {
-//                @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//                    switch (attribute) {
-//                        case TITLE: return getString("Accessibility.title.Pagination.PreviousButton");
-//                        default: return super.accGetAttribute(attribute, parameters);
-//                    }
-//                }
-            };
+            leftArrowButton = new Button();
+            leftArrowButton.setAccessibleText(getString("Accessibility.title.Pagination.PreviousButton"));
             minButtonSize = leftArrowButton.getFont().getSize() * 2;
             leftArrowButton.fontProperty().addListener((arg0, arg1, newFont) -> {
                 minButtonSize = newFont.getSize() * 2;
@@ -762,14 +757,8 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
             leftArrowButton.setGraphic(leftArrow);
             leftArrow.getStyleClass().add("left-arrow");
 
-            rightArrowButton = new Button() {
-//                @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//                    switch (attribute) {
-//                        case TITLE: return getString("Accessibility.title.Pagination.NextButton");
-//                        default: return super.accGetAttribute(attribute, parameters);
-//                    }
-//                }
-            };
+            rightArrowButton = new Button();
+            rightArrowButton.setAccessibleText(getString("Accessibility.title.Pagination.NextButton"));
             rightArrowButton.setMinSize(minButtonSize, minButtonSize);
             rightArrowButton.prefWidthProperty().bind(rightArrowButton.minWidthProperty());
             rightArrowButton.prefHeightProperty().bind(rightArrowButton.minHeightProperty());
@@ -854,7 +843,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
                     break;
                 }
             }
-//            getSkinnable().accSendNotification(Attribute.SELECTED_PAGE);
+            getSkinnable().notifyAccessibleAttributeChanged(AccessibleAttribute.SELECTED_PAGE);
         }
 
         // Update the page index using the currentIndex and updates the page set
@@ -1211,6 +1200,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
             });
 
             prefHeightProperty().bind(minHeightProperty());
+            setRole(AccessibleRole.PAGE_ITEM);
         }
 
         private void setIndicatorType() {
@@ -1250,21 +1240,22 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
             }
         }
 
-//        @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//            switch (attribute) {
-//                case ROLE: return Role.PAGE;
-//                case TITLE: return getText();
-//                case SELECTED: return isSelected();
-//                default: return super.accGetAttribute(attribute, parameters);
-//            }
-//        }
-//
-//        @Override public void accExecuteAction(Action action, Object... parameters) {
-//            switch (action) {
-//                case SELECT: setSelected(true); break;
-//                default: super.accExecuteAction(action);
-//            }
-//        }
+        @Override
+        public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
+            switch (attribute) {
+                case TITLE: return getText();
+                case SELECTED: return isSelected();
+                default: return super.queryAccessibleAttribute(attribute, parameters);
+            }
+        }
+
+        @Override
+        public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
+            switch (action) {
+                case SELECT: setSelected(true); break;
+                default: super.executeAccessibleAction(action);
+            }
+        }
     }
 
     /***************************************************************************

@@ -55,7 +55,7 @@ import javafx.stage.Stage;
  * @playground fierPos (name="Fier Position", min=-100, max=100)
  * @playground arthRate (name="Arth Rate", min=0.1, max=1)
  * @playground fierRate (name="Fier Rate", min=0.1, max=1)
- * @conditionalFeatures WEB
+ * @conditionalFeatures WEB, MEDIA
  */
 public class AlphaMediaPlayerApp extends Application {
 

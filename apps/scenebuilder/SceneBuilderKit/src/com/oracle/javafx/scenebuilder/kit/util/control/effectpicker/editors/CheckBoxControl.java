@@ -40,6 +40,7 @@ import java.net.URL;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.value.ChangeListener;
+import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -96,6 +97,9 @@ public class CheckBoxControl extends GridPane {
             setValue(t1);
             // Then notify the controller a change occured
             effectPickerController.incrementRevision();
+        });
+        editor_checkbox.setOnAction((ActionEvent event) -> {
+            event.consume();
         });
 
         setValue(initValue);

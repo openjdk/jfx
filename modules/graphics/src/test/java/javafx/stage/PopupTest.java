@@ -31,6 +31,7 @@ import com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.pgstub.StubToolkit.ScreenConfiguration;
 import com.sun.javafx.test.MouseEventGenerator;
 import com.sun.javafx.tk.Toolkit;
+import javafx.concurrent.Task;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.geometry.BoundingBox;
@@ -50,6 +51,7 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.Assert.*;

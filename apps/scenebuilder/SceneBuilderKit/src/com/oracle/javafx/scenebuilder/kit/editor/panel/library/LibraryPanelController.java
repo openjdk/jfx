@@ -120,7 +120,7 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
     Label noSearchResults;
     @FXML ListView<LibraryListItem> libSearchList;
     
-    @FXML ListView<LibraryListItem> libList = new ListView<>();
+    @FXML ListView<LibraryListItem> libList = null;
     
     @FXML StackPane libPane;
 
@@ -239,6 +239,52 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
         setUserLibraryPathString();
     }
 
+    private void displayModeDidChange(DISPLAY_MODE displayMode) {
+        if (libAccordion != null) {
+            switch (displayMode) {
+                case SECTIONS:
+                    libAccordion.setVisible(true);
+                    libAccordion.setManaged(true);
+                    noSearchResults.setVisible(false);
+                    noSearchResults.setManaged(false);
+                    libSearchList.setVisible(false);
+                    libSearchList.setManaged(false);
+                    getLibList().setVisible(false);
+                    getLibList().setManaged(false);
+                    break;
+                case SEARCH:
+                    libAccordion.setVisible(false);
+                    libAccordion.setManaged(false);
+                    if (libSearchList.getItems().isEmpty()) {
+                        noSearchResults.setVisible(true);
+                        noSearchResults.setManaged(true);
+                        libSearchList.setVisible(false);
+                        libSearchList.setManaged(false);
+                    } else {
+                        noSearchResults.setVisible(false);
+                        noSearchResults.setManaged(false);
+                        libSearchList.setVisible(true);
+                        libSearchList.setManaged(true);
+                    }
+                    getLibList().setVisible(false);
+                    getLibList().setManaged(false);
+                    break;
+                case LIST:
+                    libAccordion.setVisible(false);
+                    libAccordion.setManaged(false);
+                    noSearchResults.setVisible(false);
+                    noSearchResults.setManaged(false);
+                    libSearchList.setVisible(false);
+                    libSearchList.setManaged(false);
+                    getLibList().setVisible(true);
+                    getLibList().setManaged(true);
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+
     /*
      * Private
      */
@@ -275,48 +321,7 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
     
     public void setDisplayMode(DISPLAY_MODE displayMode) {
         this.currentDisplayMode = displayMode;
-        
-        switch (displayMode) {
-            case SECTIONS:
-                libAccordion.setVisible(true);
-                libAccordion.setManaged(true);
-                noSearchResults.setVisible(false);
-                noSearchResults.setManaged(false);
-                libSearchList.setVisible(false);
-                libSearchList.setManaged(false);
-                libList.setVisible(false);
-                libList.setManaged(false);
-                break;
-            case SEARCH:
-                libAccordion.setVisible(false);
-                libAccordion.setManaged(false);
-                if (libSearchList.getItems().isEmpty()) {
-                    noSearchResults.setVisible(true);
-                    noSearchResults.setManaged(true);
-                    libSearchList.setVisible(false);
-                    libSearchList.setManaged(false);
-                } else {
-                    noSearchResults.setVisible(false);
-                    noSearchResults.setManaged(false);
-                    libSearchList.setVisible(true);
-                    libSearchList.setManaged(true);
-                }
-                libList.setVisible(false);
-                libList.setManaged(false);
-                break;
-            case LIST:
-                libAccordion.setVisible(false);
-                libAccordion.setManaged(false);
-                noSearchResults.setVisible(false);
-                noSearchResults.setManaged(false);
-                libSearchList.setVisible(false);
-                libSearchList.setManaged(false);
-                libList.setVisible(true);
-                libList.setManaged(true);
-                break;
-            default:
-                break;
-        }
+        displayModeDidChange(displayMode);
     }
     
     public DISPLAY_MODE getDisplayMode() {
@@ -405,7 +410,7 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
         List<TitledPane> panes = libAccordion.getPanes();
         
         searchData.clear();
-        libList.getItems().clear();
+        getLibList().getItems().clear();
         
         if (getEditorController().getLibrary().getItems().size() > 0) {
             // Construct a sorted set of all lib section names.
@@ -440,9 +445,9 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
 
                 searchData.addAll(libData.get(sectionName));
 
-                libList.getItems().add(new LibraryListItem(sectionName));
+                getLibList().getItems().add(new LibraryListItem(sectionName));
                 for (LibraryItem item : libData.get(sectionName)) {
-                    libList.getItems().add(new LibraryListItem(item));
+                    getLibList().getItems().add(new LibraryListItem(item));
                 }
             }
 
@@ -454,12 +459,12 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
                 libSearchList.setCellFactory(cb);
             }
 
-            if (libList.getCellFactory() == null) {
-                libList.setCellFactory(cb);
+            if (getLibList().getCellFactory() == null) {
+                getLibList().setCellFactory(cb);
             }
 
             libSearchList.addEventHandler(KeyEvent.KEY_RELEASED, keyEventHandler);
-            libList.addEventHandler(KeyEvent.KEY_RELEASED, keyEventHandler);
+            getLibList().addEventHandler(KeyEvent.KEY_RELEASED, keyEventHandler);
         }
     }
     
@@ -871,7 +876,13 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
         FileChooser fileChooser = new FileChooser();
         fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter(I18N.getString("lib.filechooser.filter.msg"),
                 "*.fxml", "*.jar")); //NOI18N
-        return fileChooser.showOpenMultipleDialog(null);
+        fileChooser.setInitialDirectory(EditorController.getNextInitialDirectory());
+        List<File> selectedFiles = fileChooser.showOpenMultipleDialog(null);
+        if (!selectedFiles.isEmpty()) {
+            // Keep track of the user choice for next time
+            EditorController.updateNextInitialDirectory(selectedFiles.get(0));
+        }
+        return selectedFiles;
     }
 
     private void userLibraryUpdateRejected() {
@@ -1025,5 +1036,13 @@ public class LibraryPanelController extends AbstractFxmlPanelController {
             userLibraryPathString = ((UserLibrary) getEditorController().getLibrary()).getPath();
             assert userLibraryPathString != null;
         }
+    }
+    
+    private ListView<LibraryListItem> getLibList() {
+        if (libList == null) {
+            libList = new ListView<>();
+        }
+        
+        return libList;
     }
 }
