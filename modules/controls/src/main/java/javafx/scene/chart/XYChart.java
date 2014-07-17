@@ -1356,13 +1356,16 @@ public abstract class XYChart<X,Y> extends Chart {
         private ObjectProperty<Node> node = new SimpleObjectProperty<Node>(this, "node") {
             protected void invalidated() {
                 Node node = get();
-                node.accessibleTextProperty().unbind();
-                node.accessibleTextProperty().bind(new StringBinding() {
-                    {bind(currentXProperty(), currentYProperty());} 
-                    @Override protected String computeValue() {
-                        return series.getName() + " X Axis is " + getCurrentX() + " Y Axis is " + getCurrentY();
-                    }
-                });
+                if (node != null) {
+                    node.accessibleTextProperty().unbind();
+                    node.accessibleTextProperty().bind(new StringBinding() {
+                        {bind(currentXProperty(), currentYProperty());}
+                        @Override protected String computeValue() {
+                            String seriesName = series != null ? series.getName() : "";
+                            return seriesName + " X Axis is " + getCurrentX() + " Y Axis is " + getCurrentY();
+                        }
+                    });
+                }
             };
         };
         public final Node getNode() { return node.get(); }
