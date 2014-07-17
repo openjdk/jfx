@@ -87,6 +87,11 @@
 #include "com_sun_webkit_event_WCKeyEvent.h"
 #include "com_sun_webkit_event_WCMouseEvent.h"
 
+#if ENABLE(NOTIFICATIONS) || ENABLE(LEGACY_NOTIFICATIONS)
+#include "NotificationController.h"
+#include "NotificationClientJava.h"
+#endif
+
 namespace WebCore {
 
 WebPage::WebPage(PassOwnPtr<Page> page)
@@ -96,6 +101,11 @@ WebPage::WebPage(PassOwnPtr<Page> page)
     , m_syncLayers(false)
 #endif
 {
+#if ENABLE(NOTIFICATIONS) || ENABLE(LEGACY_NOTIFICATIONS)
+    if(!NotificationController::clientFrom(m_page.get())) {
+        provideNotification(m_page.get(), NotificationClientJava::instance());
+    }
+#endif
 }
 
 WebPage::~WebPage()
