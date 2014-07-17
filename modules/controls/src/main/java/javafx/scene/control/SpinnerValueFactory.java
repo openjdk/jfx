@@ -50,6 +50,9 @@ import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.text.ParseException;
 import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.FormatStyle;
 import java.time.temporal.ChronoUnit;
 import java.time.temporal.Temporal;
 import java.time.temporal.TemporalUnit;
@@ -1088,6 +1091,258 @@ public abstract class SpinnerValueFactory<T> {
                 // we need to wrap around
                 newValue = getMin();
             }
+
+            setValue(newValue);
+        }
+    }
+
+
+
+
+
+    /**
+     * A {@link javafx.scene.control.SpinnerValueFactory} implementation designed to iterate through
+     * {@link java.time.LocalTime} values.
+     *
+     * <p>Note that the default {@link #converterProperty() converter} is implemented
+     * simply as shown below, which may be adequate in many cases, but it is important
+     * for users to ensure that this suits their needs (and adjust when necessary):
+     *
+     * <pre>
+     * setConverter(new StringConverter&lt;LocalTime&gt;() {
+     *     &#064;Override public String toString(LocalTime object) {
+     *         if (object == null) {
+     *             return "";
+     *         }
+     *         return object.toString();
+     *     }
+     *
+     *     &#064;Override public LocalTime fromString(String string) {
+     *         return LocalTime.parse(string);
+     *     }
+     * });</pre>
+     */
+    public static class LocalTimeSpinnerValueFactory extends SpinnerValueFactory<LocalTime> {
+
+        /**
+         * Creates a new instance of the LocalTimepinnerValueFactory, using the
+         * value returned by calling {@code LocalTime#now()} as the initial value,
+         * and using a stepping amount of one day.
+         */
+        public LocalTimeSpinnerValueFactory() {
+            this(LocalTime.now());
+        }
+
+        /**
+         * Creates a new instance of the LocalTimeSpinnerValueFactory, using the
+         * provided initial value, and a stepping amount of one hour.
+         *
+         * @param initialValue The value of the Spinner when first instantiated.
+         */
+        public LocalTimeSpinnerValueFactory(@NamedArg("initialValue") LocalTime initialValue) {
+            this(LocalTime.MIN, LocalTime.MAX, initialValue);
+        }
+
+        /**
+         * Creates a new instance of the LocalTimeSpinnerValueFactory, using the
+         * provided initial value, and a stepping amount of one hour.
+         *
+         * @param min The minimum allowed double value for the Spinner.
+         * @param max The maximum allowed double value for the Spinner.
+         * @param initialValue The value of the Spinner when first instantiated.
+         */
+        public LocalTimeSpinnerValueFactory(@NamedArg("min") LocalTime min,
+                                            @NamedArg("min") LocalTime max,
+                                            @NamedArg("initialValue") LocalTime initialValue) {
+            this(min, max, initialValue, 1, ChronoUnit.HOURS);
+        }
+
+        /**
+         * Creates a new instance of the LocalTimeSpinnerValueFactory, using the
+         * provided min, max, and initial values, as well as the amount to step
+         * by and {@link java.time.temporal.TemporalUnit}.
+         *
+         * <p>To better understand, here are a few examples:
+         *
+         * <ul>
+         *     <li><strong>To step by one hour from the current time: </strong> {@code new LocalTimeSpinnerValueFactory(LocalTime.MIN, LocalTime.MAX, LocalTime.now(), 1, ChronoUnit.HOURS)}</li>
+         *     <li><strong>To step by one minute from the current time: </strong> {@code new LocalTimeSpinnerValueFactory(LocalTime.MIN, LocalTime.MAX, LocalTime.now(), 1, ChronoUnit.MINUTES)}</li>
+         * </ul>
+         *
+         * @param min The minimum allowed double value for the Spinner.
+         * @param max The maximum allowed double value for the Spinner.
+         * @param initialValue The value of the Spinner when first instantiated.
+         * @param amountToStepBy The amount to increment or decrement by, per step.
+         * @param temporalUnit The size of each step (e.g. day, week, month, year, etc)
+         */
+        public LocalTimeSpinnerValueFactory(@NamedArg("min") LocalTime min,
+                                            @NamedArg("min") LocalTime max,
+                                            @NamedArg("initialValue") LocalTime initialValue,
+                                            @NamedArg("amountToStepBy") long amountToStepBy,
+                                            @NamedArg("temporalUnit") TemporalUnit temporalUnit) {
+            setMin(min);
+            setMax(max);
+            setAmountToStepBy(amountToStepBy);
+            setTemporalUnit(temporalUnit);
+            setConverter(new StringConverter<LocalTime>() {
+                private DateTimeFormatter dtf = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT);
+
+                @Override public String toString(LocalTime localTime) {
+                    if (localTime == null) {
+                        return "";
+                    }
+                    return localTime.format(dtf);
+                }
+
+                @Override public LocalTime fromString(String string) {
+                    return LocalTime.parse(string);
+                }
+            });
+
+            valueProperty().addListener((o, oldValue, newValue) -> {
+                // when the value is set, we need to react to ensure it is a
+                // valid value (and if not, blow up appropriately)
+                if (getMin() != null && newValue.isBefore(getMin())) {
+                    setValue(getMin());
+                } else if (getMax() != null && newValue.isAfter(getMax())) {
+                    setValue(getMax());
+                }
+            });
+            setValue(initialValue != null ? initialValue : LocalTime.now());
+        }
+
+
+
+        /***********************************************************************
+         *                                                                     *
+         * Properties                                                          *
+         *                                                                     *
+         **********************************************************************/
+
+        // --- min
+        private ObjectProperty<LocalTime> min = new SimpleObjectProperty<LocalTime>(this, "min") {
+            @Override protected void invalidated() {
+                LocalTime currentValue = LocalTimeSpinnerValueFactory.this.getValue();
+                if (currentValue == null) {
+                    return;
+                }
+
+                final LocalTime newMin = get();
+                if (newMin.isAfter(getMax())) {
+                    setMin(getMax());
+                    return;
+                }
+
+                if (currentValue.isBefore(newMin)) {
+                    LocalTimeSpinnerValueFactory.this.setValue(newMin);
+                }
+            }
+        };
+
+        public final void setMin(LocalTime value) {
+            min.set(value);
+        }
+        public final LocalTime getMin() {
+            return min.get();
+        }
+        /**
+         * Sets the minimum allowable value for this value factory
+         */
+        public final ObjectProperty<LocalTime> minProperty() {
+            return min;
+        }
+
+        // --- max
+        private ObjectProperty<LocalTime> max = new SimpleObjectProperty<LocalTime>(this, "max") {
+            @Override protected void invalidated() {
+                LocalTime currentValue = LocalTimeSpinnerValueFactory.this.getValue();
+                if (currentValue == null) {
+                    return;
+                }
+
+                final LocalTime newMax = get();
+                if (newMax.isBefore(getMin())) {
+                    setMax(getMin());
+                    return;
+                }
+
+                if (currentValue.isAfter(newMax)) {
+                    LocalTimeSpinnerValueFactory.this.setValue(newMax);
+                }
+            }
+        };
+
+        public final void setMax(LocalTime value) {
+            max.set(value);
+        }
+        public final LocalTime getMax() {
+            return max.get();
+        }
+        /**
+         * Sets the maximum allowable value for this value factory
+         */
+        public final ObjectProperty<LocalTime> maxProperty() {
+            return max;
+        }
+
+        // --- temporalUnit
+        private ObjectProperty<TemporalUnit> temporalUnit = new SimpleObjectProperty<>(this, "temporalUnit");
+        public final void setTemporalUnit(TemporalUnit value) {
+            temporalUnit.set(value);
+        }
+        public final TemporalUnit getTemporalUnit() {
+            return temporalUnit.get();
+        }
+        /**
+         * The size of each step (e.g. day, week, month, year, etc).
+         */
+        public final ObjectProperty<TemporalUnit> temporalUnitProperty() {
+            return temporalUnit;
+        }
+
+        // --- amountToStepBy
+        private LongProperty amountToStepBy = new SimpleLongProperty(this, "amountToStepBy");
+        public final void setAmountToStepBy(long value) {
+            amountToStepBy.set(value);
+        }
+        public final long getAmountToStepBy() {
+            return amountToStepBy.get();
+        }
+        /**
+         * Sets the amount to increment or decrement by, per step.
+         */
+        public final LongProperty amountToStepByProperty() {
+            return amountToStepBy;
+        }
+
+
+
+        /***********************************************************************
+         *                                                                     *
+         * Overridden methods                                                  *
+         *                                                                     *
+         **********************************************************************/
+
+        /** {@inheritDoc} */
+        @Override public void decrement(int steps) {
+            final LocalTime currentValue = getValue();
+            final LocalTime min = getMin();
+            LocalTime newValue = currentValue.minus(getAmountToStepBy() * steps, getTemporalUnit());
+
+            newValue = !isWrapAround() && newValue.isAfter(currentValue) ?
+                            (min == null ? LocalTime.MIN : min) : newValue;
+
+            setValue(newValue);
+        }
+
+        /** {@inheritDoc} */
+        @Override public void increment(int steps) {
+            final LocalTime currentValue = getValue();
+            final LocalTime max = getMax();
+            LocalTime newValue = currentValue.plus(getAmountToStepBy() * steps, getTemporalUnit());
+
+            newValue = !isWrapAround() && newValue.isBefore(currentValue) ?
+                            (max == null ? LocalTime.MAX : max) : newValue;
 
             setValue(newValue);
         }

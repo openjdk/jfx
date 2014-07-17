@@ -38,6 +38,8 @@ import javafx.scene.control.SpinnerValueFactory;
 import javafx.scene.layout.GridPane;
 import javafx.stage.Stage;
 
+import java.util.Locale;
+
 public class HelloSpinner extends Application {
 
     public static void main(String[] args) {
@@ -55,7 +57,7 @@ public class HelloSpinner extends Application {
 
         // this lets us switch between the spinner value factories
         ComboBox<String> spinnerValueFactoryOptions =
-                new ComboBox<>(FXCollections.observableArrayList("Integer", "Double", "List<String>", "Calendar"));
+                new ComboBox<>(FXCollections.observableArrayList("Integer", "Double", "List<String>", "LocalDate", "LocalTime"));
         spinnerValueFactoryOptions.getSelectionModel().selectedItemProperty().addListener((o, oldValue, newValue) -> {
             switch (newValue) {
                 case "Integer": {
@@ -69,8 +71,13 @@ public class HelloSpinner extends Application {
                     break;
                 }
 
-                case "Calendar": {
+                case "LocalDate": {
                     spinner.setValueFactory(new SpinnerValueFactory.LocalDateSpinnerValueFactory());
+                    break;
+                }
+
+                case "LocalTime": {
+                    spinner.setValueFactory(new SpinnerValueFactory.LocalTimeSpinnerValueFactory());
                     break;
                 }
 

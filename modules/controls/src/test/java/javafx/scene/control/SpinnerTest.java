@@ -34,6 +34,7 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.temporal.ChronoUnit;
 
 import static javafx.scene.control.SpinnerValueFactory.*;
@@ -59,6 +60,10 @@ public class SpinnerTest {
     private Spinner<LocalDate> localDateSpinner;
     private LocalDateSpinnerValueFactory localDateValueFactory;
 
+    // --- LocalTime spinner
+    private Spinner<LocalTime> localTimeSpinner;
+    private LocalTimeSpinnerValueFactory localTimeValueFactory;
+
     // used in tests for counting events, reset to zero in setup()
     private int eventCount;
 
@@ -80,6 +85,9 @@ public class SpinnerTest {
         // minimum is today minus 10 days, maximum is today plus 10 days
         localDateSpinner = new Spinner<>(nowPlusDays(-10), nowPlusDays(10), LocalDate.now(), 1, ChronoUnit.DAYS);
         localDateValueFactory = (LocalDateSpinnerValueFactory) localDateSpinner.getValueFactory();
+
+        localTimeSpinner = new Spinner<>(LocalTime.MIN, LocalTime.MAX, LocalTime.now(), 1, ChronoUnit.HOURS);
+        localTimeValueFactory = (LocalTimeSpinnerValueFactory) localTimeSpinner.getValueFactory();
     }
 
 
@@ -109,10 +117,6 @@ public class SpinnerTest {
     @Test public void createDefaultSpinner_editableIsFalse() {
         assertFalse(spinner.isEditable());
     }
-
-//    @Test public void createDefaultSpinner_wrapAroundIsFalse() {
-//        assertFalse(spinner.isWrapAround());
-//    }
 
     @Ignore("Waiting for StageLoader")
     @Test public void createDefaultSpinner_defaultSkinIsInstalled() {
@@ -1059,5 +1063,196 @@ public class SpinnerTest {
         assertEquals(nowPlusDays(10), localDateValueFactory.getMax());
         localDateValueFactory.setValue(nowPlusDays(-50));
         assertEquals(nowPlusDays(-10), localDateSpinner.getValue());
+    }
+
+
+
+    /***************************************************************************
+     *                                                                         *
+     * LocalTimeSpinnerValueFactory tests                                      *
+     *                                                                         *
+     **************************************************************************/
+
+    private LocalTime nowPlusHours(int hours) {
+        return LocalTime.now().plus(hours, ChronoUnit.HOURS);
+    }
+
+    private void assertTimeEquals(LocalTime expected, LocalTime actual) {
+        // just compare hours, minutes and seconds
+        assertEquals(expected.truncatedTo(ChronoUnit.MINUTES), actual.truncatedTo(ChronoUnit.MINUTES));
+    }
+
+    @Test public void localTimeSpinner_testIncrement_oneStep() {
+        localTimeValueFactory.increment(1);
+        assertTimeEquals(nowPlusHours(1), localTimeValueFactory.getValue());
+    }
+
+    @Test public void localTimeSpinner_testIncrement_twoSteps() {
+        localTimeValueFactory.increment(2);
+        assertTimeEquals(nowPlusHours(2), localTimeValueFactory.getValue());
+    }
+
+    @Test public void localTimeSpinner_testIncrement_manyCalls() {
+        for (int i = 0; i < 100; i++) {
+            localTimeValueFactory.increment(1);
+        }
+        assertTimeEquals(LocalTime.MAX, localTimeValueFactory.getValue());
+    }
+
+    @Test public void localTimeSpinner_testIncrement_bigStepPastMaximum() {
+        localTimeValueFactory.increment(1000);
+        assertTimeEquals(LocalTime.MAX, localTimeValueFactory.getValue());
+    }
+
+    @Test public void localTimeSpinner_testDecrement_oneStep() {
+        localTimeValueFactory.decrement(1);
+        assertTimeEquals(nowPlusHours(-1), localTimeValueFactory.getValue());
+    }
+
+    @Test public void localTimeSpinner_testDecrement_twoSteps() {
+        localTimeValueFactory.decrement(2);
+        assertTimeEquals(nowPlusHours(-2), localTimeValueFactory.getValue());
+    }
+
+    @Test public void localTimeSpinner_testDecrement_manyCalls() {
+        for (int i = 0; i < 100; i++) {
+            localTimeValueFactory.decrement(1);
+        }
+        assertTimeEquals(LocalTime.MIN, localTimeValueFactory.getValue());
+    }
+
+    @Test public void localTimeSpinner_testDecrement_bigStepPastMinimum() {
+        localTimeValueFactory.decrement(1000);
+        assertTimeEquals(LocalTime.MIN, localTimeValueFactory.getValue());
+    }
+
+    @Test public void localTimeSpinner_testWrapAround_increment_oneStep() {
+        localTimeValueFactory.setWrapAround(true);
+
+        LocalTime six_pm = LocalTime.of(18,32);
+        localTimeValueFactory.setValue(six_pm);
+        localTimeValueFactory.increment(1); // 19:32
+        localTimeValueFactory.increment(1); // 20:32
+        localTimeValueFactory.increment(1); // 21:32
+        localTimeValueFactory.increment(1); // 22:32
+        localTimeValueFactory.increment(1); // 23:32
+        localTimeValueFactory.increment(1); // 00:32
+        localTimeValueFactory.increment(1); // 01:32
+        assertTimeEquals(LocalTime.of(01,32), localTimeValueFactory.getValue());
+    }
+
+    @Test public void localTimeSpinner_testWrapAround_increment_twoSteps() {
+        localTimeValueFactory.setWrapAround(true);
+
+        LocalTime six_pm = LocalTime.of(18,32);
+        localTimeValueFactory.setValue(six_pm);
+        localTimeValueFactory.increment(2); // 20:32
+        localTimeValueFactory.increment(2); // 22:32
+        localTimeValueFactory.increment(2); // 00:32
+        localTimeValueFactory.increment(2); // 02:32
+        assertTimeEquals(LocalTime.of(02,32), localTimeValueFactory.getValue());
+    }
+
+    @Test public void localTimeSpinner_testWrapAround_decrement_oneStep() {
+        localTimeValueFactory.setWrapAround(true);
+
+        LocalTime six_am = LocalTime.of(06,32);
+        localTimeValueFactory.setValue(six_am);
+        localTimeValueFactory.decrement(1); // 05:32
+        localTimeValueFactory.decrement(1); // 04:32
+        localTimeValueFactory.decrement(1); // 03:32
+        localTimeValueFactory.decrement(1); // 02:32
+        localTimeValueFactory.decrement(1); // 01:32
+        localTimeValueFactory.decrement(1); // 00:32
+        localTimeValueFactory.decrement(1); // 23:32
+        assertTimeEquals(LocalTime.of(23,32), localTimeValueFactory.getValue());
+    }
+
+    @Test public void localTimeSpinner_testWrapAround_decrement_twoSteps() {
+        localTimeValueFactory.setWrapAround(true);
+
+        LocalTime six_am = LocalTime.of(06,32);
+        localTimeValueFactory.setValue(six_am);
+        localTimeValueFactory.decrement(2); // 04:32
+        localTimeValueFactory.decrement(2); // 02:32
+        localTimeValueFactory.decrement(2); // 00:32
+        localTimeValueFactory.decrement(2); // 22:32
+        assertTimeEquals(LocalTime.of(22,32), localTimeValueFactory.getValue());
+    }
+
+    @Test public void localTimeSpinner_assertDefaultConverterIsNonNull() {
+        assertNotNull(localTimeValueFactory.getConverter());
+    }
+
+//    @Test public void localTimeSpinner_testToString_valueInRange() {
+//        assertTimeEquals("13:04:00", localTimeValueFactory.getConverter().toString(LocalTime.of(13,04,00)));
+//    }
+//
+//    @Test public void localTimeSpinner_testFromString_valueInRange() {
+//        assertTimeEquals(LocalTime.of(13,04,00), localTimeValueFactory.getConverter().fromString("13:04:00"));
+//    }
+//
+//    @Test public void localTimeSpinner_testFromString_valueOutOfRange() {
+//        assertTimeEquals(LocalTime.of(2024, 6, 27), localTimeValueFactory.getConverter().fromString("2024-06-27"));
+//    }
+
+    @Test public void localTimeSpinner_testSetMin_doesNotChangeSpinnerValueWhenMinIsLessThanCurrentValue() {
+        LocalTime newValue = LocalTime.now();
+        localTimeValueFactory.setValue(newValue);
+        assertTimeEquals(newValue, localTimeSpinner.getValue());
+        localTimeValueFactory.setMin(nowPlusHours(-3));
+        assertTimeEquals(newValue, localTimeSpinner.getValue());
+    }
+
+    @Test public void localTimeSpinner_testSetMin_changesSpinnerValueWhenMinIsGreaterThanCurrentValue() {
+        LocalTime newValue = LocalTime.now();
+        localTimeValueFactory.setValue(newValue);
+        assertTimeEquals(newValue, localTimeSpinner.getValue());
+
+        LocalTime twoDaysFromNow = nowPlusHours(2);
+        localTimeValueFactory.setMin(twoDaysFromNow);
+        assertTimeEquals(twoDaysFromNow, localTimeSpinner.getValue());
+    }
+
+    @Test public void localTimeSpinner_testSetMin_ensureThatMinCanEqualMax() {
+        assertTimeEquals(LocalTime.MIN, localTimeValueFactory.getMin());
+        assertTimeEquals(LocalTime.MAX, localTimeValueFactory.getMax());
+        localTimeValueFactory.setMin(LocalTime.MAX);
+        assertTimeEquals(LocalTime.MAX, localTimeValueFactory.getMin());
+    }
+
+    @Test public void localTimeSpinner_testSetMax_doesNotChangeSpinnerValueWhenMaxIsGreaterThanCurrentValue() {
+        LocalTime newValue = LocalTime.now();
+        localTimeValueFactory.setValue(newValue);
+        assertTimeEquals(newValue, localTimeSpinner.getValue());
+        localTimeValueFactory.setMax(nowPlusHours(2));
+        assertTimeEquals(newValue, localTimeSpinner.getValue());
+    }
+
+    @Test public void localTimeSpinner_testSetMax_changesSpinnerValueWhenMaxIsLessThanCurrentValue() {
+        LocalTime newValue = nowPlusHours(4);
+        localTimeValueFactory.setValue(newValue);
+        assertTimeEquals(newValue, localTimeSpinner.getValue());
+
+        LocalTime twoDays = nowPlusHours(2);
+        localTimeValueFactory.setMax(twoDays);
+        assertTimeEquals(twoDays, localTimeSpinner.getValue());
+    }
+
+    @Test public void localTimeSpinner_testSetMax_ensureThatMaxCanNotGoLessThanMin() {
+        localTimeValueFactory.setMin(nowPlusHours(5));
+        assertTimeEquals(nowPlusHours(5), localTimeValueFactory.getMin());
+        assertTimeEquals(LocalTime.MAX, localTimeValueFactory.getMax());
+        localTimeValueFactory.setMax(nowPlusHours(2));
+        assertTimeEquals(nowPlusHours(5), localTimeValueFactory.getMin());
+    }
+
+    @Test public void localTimeSpinner_testSetMax_ensureThatMaxCanEqualMin() {
+        LocalTime twoDays = nowPlusHours(2);
+        localTimeValueFactory.setMin(twoDays);
+        assertTimeEquals(twoDays, localTimeValueFactory.getMin());
+        assertTimeEquals(LocalTime.MAX, localTimeValueFactory.getMax());
+        localTimeValueFactory.setMax(twoDays);
+        assertTimeEquals(twoDays, localTimeValueFactory.getMin());
     }
 }

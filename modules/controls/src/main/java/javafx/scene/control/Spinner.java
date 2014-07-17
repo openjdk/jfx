@@ -39,6 +39,7 @@ import javafx.util.StringConverter;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.temporal.TemporalUnit;
 
 /**
@@ -279,6 +280,50 @@ public class Spinner<T> extends Control {
                    @NamedArg("temporalUnit") TemporalUnit temporalUnit) {
         // This only works if the Spinner is of type LocalDate
         this((SpinnerValueFactory<T>)new SpinnerValueFactory.LocalDateSpinnerValueFactory(min, max, initialValue, amountToStepBy, temporalUnit));
+    }
+
+    /**
+     * Creates a Spinner instance with the
+     * {@link #valueFactoryProperty() value factory} set to be an instance
+     * of {@link SpinnerValueFactory.LocalTimeSpinnerValueFactory}. Note that
+     * if this constructor is called, the only valid generic type for the
+     * Spinner instance is LocalTime, i.e. Spinner&lt;LocalTime&gt;.
+     *
+     * @param min The minimum allowed LocalTime value for the Spinner.
+     * @param max The maximum allowed LocalTime value for the Spinner.
+     * @param initialValue The value of the Spinner when first instantiated, must
+     *                     be within the bounds of the min and max arguments, or
+     *                     else the min value will be used.
+     */
+    public Spinner(@NamedArg("min") LocalTime min,
+                   @NamedArg("max") LocalTime max,
+                   @NamedArg("initialValue") LocalTime initialValue) {
+        // This only works if the Spinner is of type LocalTime
+        this((SpinnerValueFactory<T>)new SpinnerValueFactory.LocalTimeSpinnerValueFactory(min, max, initialValue));
+    }
+
+    /**
+     * Creates a Spinner instance with the
+     * {@link #valueFactoryProperty() value factory} set to be an instance
+     * of {@link SpinnerValueFactory.LocalTimeSpinnerValueFactory}. Note that
+     * if this constructor is called, the only valid generic type for the
+     * Spinner instance is LocalTime, i.e. Spinner&lt;LocalTime&gt;.
+     *
+     * @param min The minimum allowed LocalTime value for the Spinner.
+     * @param max The maximum allowed LocalTime value for the Spinner.
+     * @param initialValue The value of the Spinner when first instantiated, must
+     *                     be within the bounds of the min and max arguments, or
+     *                     else the min value will be used.
+     * @param amountToStepBy The amount to increment or decrement by, per step.
+     * @param temporalUnit The size of each step (e.g. hour, minute, second, etc).
+     */
+    public Spinner(@NamedArg("min") LocalTime min,
+                   @NamedArg("max") LocalTime max,
+                   @NamedArg("initialValue") LocalTime initialValue,
+                   @NamedArg("amountToStepBy") long amountToStepBy,
+                   @NamedArg("temporalUnit") TemporalUnit temporalUnit) {
+        // This only works if the Spinner is of type LocalTime
+        this((SpinnerValueFactory<T>)new SpinnerValueFactory.LocalTimeSpinnerValueFactory(min, max, initialValue, amountToStepBy, temporalUnit));
     }
 
     /**
