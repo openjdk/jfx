@@ -1705,6 +1705,8 @@ void FrameSelection::focusedOrActiveStateChanged()
 {
     bool activeAndFocused = isFocusedAndActive();
 
+    m_frame->document()->updateStyleIfNeeded();
+
     // Because RenderObject::selectionBackgroundColor() and
     // RenderObject::selectionForegroundColor() check if the frame is active,
     // we have to update places those colors were painted.
@@ -1722,7 +1724,7 @@ void FrameSelection::focusedOrActiveStateChanged()
     // Because StyleResolver::checkOneSelector() and
     // RenderTheme::isFocused() check if the frame is active, we have to
     // update style and theme state that depended on those.
-    if (Node* node = m_frame->document()->focusedNode()) {
+    if (Node* node = m_frame->document()->focusedElement()) {
         node->setNeedsStyleRecalc();
         if (RenderObject* renderer = node->renderer())
             if (renderer && renderer->style()->hasAppearance())
@@ -1935,6 +1937,10 @@ bool FrameSelection::shouldDeleteSelection(const VisibleSelection& selection) co
 
 FloatRect FrameSelection::bounds(bool clipToVisibleContent) const
 {
+    if (!m_frame->document())
+        return LayoutRect();
+
+    m_frame->document()->updateStyleIfNeeded();
     RenderView* root = m_frame->contentRenderer();
     FrameView* view = m_frame->view();
     if (!root || !view)

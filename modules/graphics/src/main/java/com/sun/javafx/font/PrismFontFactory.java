@@ -1566,8 +1566,7 @@ public abstract class PrismFontFactory implements FontFactory {
     }
 
     private synchronized PrismFontFile loadEmbeddedFont(String name, String path,
-                                                        boolean register,
-                                                        boolean copy,
+                                                        boolean register, boolean copy,
                                                         boolean tracked) {
 
         ++numEmbeddedFonts;
