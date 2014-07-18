@@ -39,6 +39,7 @@ import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
 import com.sun.javafx.scene.control.infrastructure.StageLoader;
 import com.sun.javafx.scene.control.skin.*;
+import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.binding.ObjectBinding;
 import javafx.beans.property.*;
@@ -3716,5 +3717,96 @@ public class TableViewTest {
         table.getSelectionModel().select(0);
         assertEquals(1, rt_37538_count);
         sl.dispose();
+    }
+
+    @Ignore("Fix not yet developed for TableView")
+    @Test public void test_rt_35395_testCell_fixedCellSize() {
+        test_rt_35395(true, true);
+    }
+
+    @Ignore("Fix not yet developed for TableView")
+    @Test public void test_rt_35395_testCell_notFixedCellSize() {
+        test_rt_35395(true, false);
+    }
+
+    @Ignore("Fix not yet developed for TableView")
+    @Test public void test_rt_35395_testRow_fixedCellSize() {
+        test_rt_35395(false, true);
+    }
+
+    @Ignore("Fix not yet developed for TableView")
+    @Test public void test_rt_35395_testRow_notFixedCellSize() {
+        test_rt_35395(false, false);
+    }
+
+    private int rt_35395_counter;
+    private void test_rt_35395(boolean testCell, boolean useFixedCellSize) {
+        rt_35395_counter = 0;
+
+        ObservableList<String> items = FXCollections.observableArrayList();
+        for (int i = 0; i < 20; ++i) {
+            items.addAll("red", "green", "blue", "purple");
+        }
+
+        TableView<String> tableView = new TableView<>(items);
+        if (useFixedCellSize) {
+            tableView.setFixedCellSize(24);
+        }
+        tableView.setRowFactory(tv -> new TableRow<String>() {
+            @Override protected void updateItem(String color, boolean empty) {
+                rt_35395_counter += testCell ? 0 : 1;
+                super.updateItem(color, empty);
+            }
+        });
+
+        TableColumn<String,String> column = new TableColumn<>("Column");
+        column.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue()));
+        column.setCellFactory(tv -> new TableCell<String,String>() {
+            @Override protected void updateItem(String color, boolean empty) {
+                rt_35395_counter += testCell ? 1 : 0;
+                super.updateItem(color, empty);
+                setText(null);
+                if (empty) {
+                    setGraphic(null);
+                } else {
+                    Rectangle rect = new Rectangle(16, 16);
+                    rect.setStyle("-fx-fill: " + color);
+                    setGraphic(rect);
+                }
+            }
+        });
+        tableView.getColumns().addAll(column);
+
+        StageLoader sl = new StageLoader(tableView);
+
+        Platform.runLater(() -> {
+            rt_35395_counter = 0;
+            items.set(10, "yellow");
+            Platform.runLater(() -> {
+                Toolkit.getToolkit().firePulse();
+                assertEquals(1, rt_35395_counter);
+                rt_35395_counter = 0;
+                items.set(30, "yellow");
+                Platform.runLater(() -> {
+                    Toolkit.getToolkit().firePulse();
+                    assertEquals(0, rt_35395_counter);
+                    rt_35395_counter = 0;
+                    tableView.scrollTo(5);
+                    Platform.runLater(() -> {
+                        Toolkit.getToolkit().firePulse();
+                        assertEquals(5, rt_35395_counter);
+                        rt_35395_counter = 0;
+                        tableView.scrollTo(55);
+                        Platform.runLater(() -> {
+                            Toolkit.getToolkit().firePulse();
+
+                            int expected = useFixedCellSize ? 17 : 53;
+                            assertEquals(expected, rt_35395_counter);
+                            sl.dispose();
+                        });
+                    });
+                });
+            });
+        });
     }
 }

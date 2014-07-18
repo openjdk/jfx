@@ -146,7 +146,26 @@ public class ListCell<T> extends IndexedCell<T> {
      * it impacts the index of this ListCell, then we must update the item.
      */
     private final ListChangeListener<T> itemsListener = c -> {
-        updateItem(-1);
+        boolean doUpdate = false;
+        while (c.next()) {
+            // RT-35395: We only update the item in this cell if the current cell
+            // index is within the range of the change and certain changes to the
+            // list have occurred.
+            final int currentIndex = getIndex();
+            final ListView<T> lv = getListView();
+            final List<T> items = lv == null ? null : lv.getItems();
+            final int itemCount = items == null ? 0 : items.size();
+
+            final boolean indexAfterChangeFromIndex = currentIndex >= c.getFrom();
+            final boolean indexBeforeChangeToIndex = currentIndex < c.getTo() || currentIndex == itemCount;
+            final boolean indexInRange = indexAfterChangeFromIndex && indexBeforeChangeToIndex;
+
+            doUpdate = indexInRange || (indexAfterChangeFromIndex && !c.wasReplaced() && (c.wasRemoved() || c.wasAdded()));
+        }
+
+        if (doUpdate) {
+            updateItem(-1);
+        }
     };
 
     /**

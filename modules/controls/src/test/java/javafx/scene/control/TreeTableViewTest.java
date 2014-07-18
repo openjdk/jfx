@@ -41,6 +41,7 @@ import com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
 import com.sun.javafx.scene.control.skin.TreeTableCellSkin;
 import com.sun.javafx.scene.control.test.Data;
 
+import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.binding.ObjectBinding;
@@ -3808,5 +3809,95 @@ public class TreeTableViewTest {
         // final location of the 'one' tree item, after sorting and expanding 'two'
         assertEquals(one, sm.getSelectedItem());
         assertTrue(debug(), sm.isSelected(4));
+    }
+
+    @Test public void test_rt_35395_testCell_fixedCellSize() {
+        test_rt_35395(true, true);
+    }
+
+    @Test public void test_rt_35395_testCell_notFixedCellSize() {
+        test_rt_35395(true, false);
+    }
+
+    @Ignore("Fix not yet developed for TreeTableView")
+    @Test public void test_rt_35395_testRow_fixedCellSize() {
+        test_rt_35395(false, true);
+    }
+
+    @Ignore("Fix not yet developed for TreeTableView")
+    @Test public void test_rt_35395_testRow_notFixedCellSize() {
+        test_rt_35395(false, false);
+    }
+
+    private int rt_35395_counter;
+    private void test_rt_35395(boolean testCell, boolean useFixedCellSize) {
+        rt_35395_counter = 0;
+
+        TreeItem<String> root = new TreeItem<>("green");
+        root.setExpanded(true);
+        for (int i = 0; i < 20; i++) {
+            root.getChildren().addAll(new TreeItem<>("red"), new TreeItem<>("green"), new TreeItem<>("blue"), new TreeItem<>("purple"));
+        }
+
+        TreeTableView<String> treeTableView = new TreeTableView<>(root);
+        if (useFixedCellSize) {
+            treeTableView.setFixedCellSize(24);
+        }
+        treeTableView.setRowFactory(tv -> new TreeTableRow<String>() {
+            @Override protected void updateItem(String color, boolean empty) {
+                rt_35395_counter += testCell ? 0 : 1;
+                super.updateItem(color, empty);
+            }
+        });
+
+        TreeTableColumn<String,String> column = new TreeTableColumn<>("Column");
+        column.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue().getValue()));
+        column.setCellFactory(tv -> new TreeTableCell<String,String>() {
+            @Override protected void updateItem(String color, boolean empty) {
+                rt_35395_counter += testCell ? 1 : 0;
+                super.updateItem(color, empty);
+                setText(null);
+                if (empty) {
+                    setGraphic(null);
+                } else {
+                    Rectangle rect = new Rectangle(16, 16);
+                    rect.setStyle("-fx-fill: " + color);
+                    setGraphic(rect);
+                }
+            }
+        });
+        treeTableView.getColumns().addAll(column);
+
+        StageLoader sl = new StageLoader(treeTableView);
+
+        Platform.runLater(() -> {
+            rt_35395_counter = 0;
+            root.getChildren().set(10, new TreeItem<>("yellow"));
+            Platform.runLater(() -> {
+                Toolkit.getToolkit().firePulse();
+                assertEquals(1, rt_35395_counter);
+                rt_35395_counter = 0;
+                root.getChildren().set(30, new TreeItem<>("yellow"));
+                Platform.runLater(() -> {
+                    Toolkit.getToolkit().firePulse();
+                    assertEquals(0, rt_35395_counter);
+                    rt_35395_counter = 0;
+                    treeTableView.scrollTo(5);
+                    Platform.runLater(() -> {
+                        Toolkit.getToolkit().firePulse();
+                        assertEquals(5, rt_35395_counter);
+                        rt_35395_counter = 0;
+                        treeTableView.scrollTo(55);
+                        Platform.runLater(() -> {
+                            Toolkit.getToolkit().firePulse();
+
+                            int expected = useFixedCellSize ? 17 : 59;
+                            assertEquals(expected, rt_35395_counter);
+                            sl.dispose();
+                        });
+                    });
+                });
+            });
+        });
     }
 }
