@@ -117,7 +117,7 @@ static void videodecoder_base_init(gpointer gclass)
 
     gst_element_class_set_details_simple(element_class,
                 "Videodecoder",
-        "Codec/Decoder/Video",
+                "Codec/Decoder/Video",
                 "Decode video stream",
                 "Oracle Corporation");
 
@@ -135,7 +135,6 @@ static gboolean             videodecoder_sink_event(GstPad *pad, GstEvent *event
 static GstFlowReturn        videodecoder_chain(GstPad *pad, GstBuffer *buf);
 
 static void                 videodecoder_init_state(VideoDecoder *decoder);
-static void                 videodecoder_close_decoder(VideoDecoder *decoder);
 static void                 videodecoder_state_reset(VideoDecoder *decoder);
 
 static void videodecoder_class_init(VideoDecoderClass *klass)
@@ -189,7 +188,7 @@ videodecoder_change_state(GstElement* element, GstStateChange transition)
     switch (transition)
     {
         case GST_STATE_CHANGE_PAUSED_TO_READY:
-            videodecoder_close_decoder(decoder);
+            basedecoder_close_decoder(BASEDECODER(decoder));
             break;
         default:
             break;
@@ -249,8 +248,6 @@ static gboolean videodecoder_sink_event(GstPad *pad, GstEvent *event)
  ***********************************************************************************/
 static void videodecoder_init_state(VideoDecoder *decoder)
 {
-    decoder->yuv_frame = NULL;
-
     decoder->width = decoder->height = 0;
     decoder->u_offset = 0;
     decoder->v_offset = 0;
@@ -258,45 +255,7 @@ static void videodecoder_init_state(VideoDecoder *decoder)
     decoder->frame_size = 0;
     decoder->discont = FALSE;
 
-#if ! LIBAVCODEC_NEW
-    decoder->packet = NULL;
-    decoder->packet_size = 0;
-#endif // LIBAVCODEC_NEW
-
     basedecoder_init_state(BASEDECODER(decoder));
-}
-
-static gboolean videodecoder_open_decoder(VideoDecoder *decoder)
-{
-    if (!basedecoder_open_decoder(BASEDECODER(decoder), CODEC_ID_H264))
-        return FALSE;
-
-    decoder->yuv_frame = avcodec_alloc_frame();
-    if (!decoder->yuv_frame)
-        return FALSE; // Can't create frame
-
-    return TRUE;
-}
-
-static void videodecoder_close_decoder(VideoDecoder *decoder)
-{
-    if (decoder->yuv_frame)
-    {
-        av_free(decoder->yuv_frame);
-        decoder->yuv_frame = NULL;
-    }
-
-#if ! LIBAVCODEC_NEW
-    if (decoder->packet)
-    {
-        av_free(decoder->packet);
-
-        decoder->packet = NULL;
-        decoder->packet_size = 0;
-    }
-#endif
-
-    basedecoder_close_decoder(BASEDECODER(decoder));
 }
 
 static gboolean videodecoder_configure(VideoDecoder *decoder, GstCaps *sink_caps)
@@ -311,7 +270,11 @@ static gboolean videodecoder_configure(VideoDecoder *decoder, GstCaps *sink_caps
     // Pass stencil context to init against if there is one.
     basedecoder_set_codec_data(base, s);
 
-    base->is_initialized = videodecoder_open_decoder(decoder);
+#if NEW_CODEC_ID
+    base->is_initialized = basedecoder_open_decoder(BASEDECODER(decoder), AV_CODEC_ID_H264);
+#else
+    base->is_initialized = basedecoder_open_decoder(BASEDECODER(decoder), CODEC_ID_H264);
+#endif    
     return base->is_initialized;
 }
 
@@ -334,19 +297,19 @@ static gboolean videodecoder_configure_sourcepad(VideoDecoder *decoder)
 
         decoder->discont = (GST_PAD_CAPS(base->srcpad) != NULL);
 
-        decoder->u_offset = decoder->yuv_frame->linesize[0] * decoder->height;
-        decoder->uv_blocksize = decoder->yuv_frame->linesize[1] * decoder->height / 2;
+        decoder->u_offset = base->frame->linesize[0] * decoder->height;
+        decoder->uv_blocksize = base->frame->linesize[1] * decoder->height / 2;
 
         decoder->v_offset = decoder->u_offset + decoder->uv_blocksize;
-        decoder->frame_size = (decoder->yuv_frame->linesize[0] + decoder->yuv_frame->linesize[1]) * decoder->height;
+        decoder->frame_size = (base->frame->linesize[0] + base->frame->linesize[1]) * decoder->height;
 
         GstCaps *src_caps = gst_caps_new_simple("video/x-raw-yuv",
                                                 "format", GST_TYPE_FOURCC, GST_STR_FOURCC("YV12"),
                                                 "width", G_TYPE_INT, decoder->width,
                                                 "height", G_TYPE_INT, decoder->height,
-                                                "stride-y", G_TYPE_INT, decoder->yuv_frame->linesize[0],
-                                                "stride-u", G_TYPE_INT, decoder->yuv_frame->linesize[1],
-                                                "stride-v", G_TYPE_INT, decoder->yuv_frame->linesize[2],
+                                                "stride-y", G_TYPE_INT, base->frame->linesize[0],
+                                                "stride-u", G_TYPE_INT, base->frame->linesize[1],
+                                                "stride-v", G_TYPE_INT, base->frame->linesize[2],
                                                 "offset-y", G_TYPE_INT, 0,
                                                 "offset-u", G_TYPE_INT, decoder->u_offset,
                                                 "offset-v", G_TYPE_INT, decoder->v_offset,
@@ -389,7 +352,6 @@ static GstFlowReturn videodecoder_chain(GstPad *pad, GstBuffer *buf)
         goto _exit;
     }
 
-#if LIBAVCODEC_NEW
     if (!base->is_hls)
     {
         if (av_new_packet(&decoder->packet, GST_BUFFER_SIZE(buf)) == 0)
@@ -399,7 +361,7 @@ static GstFlowReturn videodecoder_chain(GstPad *pad, GstBuffer *buf)
                 base->context->reordered_opaque = GST_BUFFER_TIMESTAMP(buf);
             else
                 base->context->reordered_opaque = AV_NOPTS_VALUE;
-            num_dec = avcodec_decode_video2(base->context, decoder->yuv_frame, &decoder->frame_finished, &decoder->packet);
+            num_dec = avcodec_decode_video2(base->context, base->frame, &decoder->frame_finished, &decoder->packet);
             av_free_packet(&decoder->packet);
         }
         else
@@ -418,43 +380,8 @@ static GstFlowReturn videodecoder_chain(GstPad *pad, GstBuffer *buf)
         else
             base->context->reordered_opaque = AV_NOPTS_VALUE;
 
-        num_dec = avcodec_decode_video2(base->context, decoder->yuv_frame, &decoder->frame_finished, &decoder->packet);
+        num_dec = avcodec_decode_video2(base->context, base->frame, &decoder->frame_finished, &decoder->packet);
     }
-
-#else // ! LIBAVCODEC_NEW
-    if (!base->is_hls)
-    {
-        if (decoder->packet_size < GST_BUFFER_SIZE(buf))
-        {
-            decoder->packet = av_realloc(decoder->packet, GST_BUFFER_SIZE(buf));
-            decoder->packet_size = decoder->packet ? GST_BUFFER_SIZE(buf) : 0;
-        }
-
-        if (decoder->packet)
-        {
-            memcpy(decoder->packet, GST_BUFFER_DATA(buf), GST_BUFFER_SIZE(buf));
-            if (GST_BUFFER_TIMESTAMP_IS_VALID(buf))
-                base->context->reordered_opaque = GST_BUFFER_TIMESTAMP(buf);
-            else
-                base->context->reordered_opaque = AV_NOPTS_VALUE;
-            num_dec = avcodec_decode_video(base->context, decoder->yuv_frame, &decoder->frame_finished, decoder->packet, GST_BUFFER_SIZE(buf));
-        }
-        else
-        {
-            result = GST_FLOW_ERROR;
-            goto _exit;
-        }
-    }
-    else
-    {
-        if (GST_BUFFER_TIMESTAMP_IS_VALID(buf))
-            base->context->reordered_opaque = GST_BUFFER_TIMESTAMP(buf);
-        else
-            base->context->reordered_opaque = AV_NOPTS_VALUE;
-        num_dec = avcodec_decode_video(base->context, decoder->yuv_frame, &decoder->frame_finished, GST_BUFFER_DATA(buf), GST_BUFFER_SIZE(buf));
-    }
-
-#endif // LIBAVCODEC_NEW
 
     if (num_dec < 0)
     {
@@ -486,17 +413,17 @@ static GstFlowReturn videodecoder_chain(GstPad *pad, GstBuffer *buf)
             }
             else
             {
-                if (decoder->yuv_frame->reordered_opaque != AV_NOPTS_VALUE)
+                if (base->frame->reordered_opaque != AV_NOPTS_VALUE)
                 {
-                    GST_BUFFER_TIMESTAMP(outbuf) = decoder->yuv_frame->reordered_opaque;
+                    GST_BUFFER_TIMESTAMP(outbuf) = base->frame->reordered_opaque;
                     GST_BUFFER_DURATION(outbuf) = GST_BUFFER_DURATION(buf); // Duration for video usually same
                 }
                 GST_BUFFER_SIZE(outbuf) = decoder->frame_size;
 
                 // Copy image by parts from different arrays.
-                memcpy(GST_BUFFER_DATA(outbuf),                     decoder->yuv_frame->data[0], decoder->u_offset);
-                memcpy(GST_BUFFER_DATA(outbuf) + decoder->u_offset, decoder->yuv_frame->data[1], decoder->uv_blocksize);
-                memcpy(GST_BUFFER_DATA(outbuf) + decoder->v_offset, decoder->yuv_frame->data[2], decoder->uv_blocksize);
+                memcpy(GST_BUFFER_DATA(outbuf),                     base->frame->data[0], decoder->u_offset);
+                memcpy(GST_BUFFER_DATA(outbuf) + decoder->u_offset, base->frame->data[1], decoder->uv_blocksize);
+                memcpy(GST_BUFFER_DATA(outbuf) + decoder->v_offset, base->frame->data[2], decoder->uv_blocksize);
 
                 GST_BUFFER_OFFSET_END(outbuf) = GST_BUFFER_OFFSET_NONE;
 

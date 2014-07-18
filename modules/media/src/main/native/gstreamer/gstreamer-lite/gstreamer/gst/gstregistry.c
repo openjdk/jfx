@@ -162,7 +162,7 @@ extern HMODULE _priv_gst_dll_handle;
 #include <link.h>
 #include <dlfcn.h>
 
-static const int AVCODEC_EXPLICIT_VERSIONS[] = { 53 };
+static const int AVCODEC_EXPLICIT_VERSIONS[] = { 53, 54, 55 };
 
 typedef unsigned (*avcodec_version_proto)();
 
@@ -1150,6 +1150,7 @@ gst_registry_scan_plugin_file (GstRegistryScanContext * context,
   return changed;
 }
 
+#ifndef GSTREAMER_LITE
 static gboolean
 is_blacklisted_hidden_directory (const gchar * dirent)
 {
@@ -1168,6 +1169,7 @@ is_blacklisted_hidden_directory (const gchar * dirent)
 
   return FALSE;
 }
+#endif
 
 static gboolean
 gst_registry_scan_path_level (GstRegistryScanContext * context,
@@ -1249,7 +1251,7 @@ gst_registry_scan_path_level (GstRegistryScanContext * context,
   {
       filename_partial = g_build_filename (path, gstlite_plugins_list[gstlite_plugins_list_index], NULL);
 #ifdef LINUX
-      if (g_str_has_suffix(filename_partial, "libavplugin") != NULL) // Check libavc version and load correspondent module.
+      if (g_str_has_suffix(filename_partial, "libavplugin")) // Check libav version and load correspondent module.
       {
           int vi;
           for (vi = 0, avcHandle = NULL; 

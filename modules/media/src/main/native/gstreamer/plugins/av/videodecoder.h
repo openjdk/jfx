@@ -58,14 +58,8 @@ struct _VideoDecoder {
     int         u_offset;
     int         v_offset;
     int         uv_blocksize;
-    AVFrame     *yuv_frame;
 
-#if LIBAVCODEC_NEW
     AVPacket       packet;
-#else // ! LIBAVCODEC_NEW
-    uint8_t        *packet;
-    int            packet_size;
-#endif // LIBAVCODEC_NEW
 };
 
 struct _VideoDecoderClass
