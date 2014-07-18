@@ -49,12 +49,15 @@ import java.math.BigDecimal;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.text.ParseException;
+import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
 import java.time.temporal.ChronoUnit;
 import java.time.temporal.Temporal;
+import java.time.temporal.TemporalField;
 import java.time.temporal.TemporalUnit;
 import java.util.List;
 
@@ -1327,24 +1330,34 @@ public abstract class SpinnerValueFactory<T> {
         @Override public void decrement(int steps) {
             final LocalTime currentValue = getValue();
             final LocalTime min = getMin();
-            LocalTime newValue = currentValue.minus(getAmountToStepBy() * steps, getTemporalUnit());
 
-            newValue = !isWrapAround() && newValue.isAfter(currentValue) ?
-                            (min == null ? LocalTime.MIN : min) : newValue;
+            final Duration duration = Duration.of(getAmountToStepBy() * steps, getTemporalUnit());
 
-            setValue(newValue);
+            final long durationInSeconds = duration.toMinutes() * 60;
+            final long currentValueInSeconds = currentValue.toSecondOfDay();
+
+            if (! isWrapAround() && durationInSeconds > currentValueInSeconds) {
+                setValue(min == null ? LocalTime.MIN : min);
+            } else {
+                setValue(currentValue.minus(duration));
+            }
         }
 
         /** {@inheritDoc} */
         @Override public void increment(int steps) {
             final LocalTime currentValue = getValue();
             final LocalTime max = getMax();
-            LocalTime newValue = currentValue.plus(getAmountToStepBy() * steps, getTemporalUnit());
 
-            newValue = !isWrapAround() && newValue.isBefore(currentValue) ?
-                            (max == null ? LocalTime.MAX : max) : newValue;
+            final Duration duration = Duration.of(getAmountToStepBy() * steps, getTemporalUnit());
 
-            setValue(newValue);
+            final long durationInSeconds = duration.toMinutes() * 60;
+            final long currentValueInSeconds = currentValue.toSecondOfDay();
+
+            if (! isWrapAround() && durationInSeconds > (LocalTime.MAX.toSecondOfDay() - currentValueInSeconds)) {
+                setValue(max == null ? LocalTime.MAX : max);
+            } else {
+                setValue(currentValue.plus(duration));
+            }
         }
     }
 }

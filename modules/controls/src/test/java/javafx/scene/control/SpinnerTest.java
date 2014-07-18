@@ -1100,7 +1100,7 @@ public class SpinnerTest {
     }
 
     @Test public void localTimeSpinner_testIncrement_bigStepPastMaximum() {
-        localTimeValueFactory.increment(1000);
+        localTimeValueFactory.increment(100000);
         assertTimeEquals(LocalTime.MAX, localTimeValueFactory.getValue());
     }
 
@@ -1122,7 +1122,7 @@ public class SpinnerTest {
     }
 
     @Test public void localTimeSpinner_testDecrement_bigStepPastMinimum() {
-        localTimeValueFactory.decrement(1000);
+        localTimeValueFactory.decrement(100000);
         assertTimeEquals(LocalTime.MIN, localTimeValueFactory.getValue());
     }
 
