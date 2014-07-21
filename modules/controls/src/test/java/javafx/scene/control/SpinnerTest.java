@@ -1184,18 +1184,7 @@ public class SpinnerTest {
         assertNotNull(localTimeValueFactory.getConverter());
     }
 
-//    @Test public void localTimeSpinner_testToString_valueInRange() {
-//        assertTimeEquals("13:04:00", localTimeValueFactory.getConverter().toString(LocalTime.of(13,04,00)));
-//    }
-//
-//    @Test public void localTimeSpinner_testFromString_valueInRange() {
-//        assertTimeEquals(LocalTime.of(13,04,00), localTimeValueFactory.getConverter().fromString("13:04:00"));
-//    }
-//
-//    @Test public void localTimeSpinner_testFromString_valueOutOfRange() {
-//        assertTimeEquals(LocalTime.of(2024, 6, 27), localTimeValueFactory.getConverter().fromString("2024-06-27"));
-//    }
-
+    @Ignore("Not safe when run early in the morning - needs refining when time permits")
     @Test public void localTimeSpinner_testSetMin_doesNotChangeSpinnerValueWhenMinIsLessThanCurrentValue() {
         LocalTime newValue = LocalTime.now();
         localTimeValueFactory.setValue(newValue);
@@ -1204,6 +1193,7 @@ public class SpinnerTest {
         assertTimeEquals(newValue, localTimeSpinner.getValue());
     }
 
+    @Ignore("Not safe when late at night - needs refining when time permits")
     @Test public void localTimeSpinner_testSetMin_changesSpinnerValueWhenMinIsGreaterThanCurrentValue() {
         LocalTime newValue = LocalTime.now();
         localTimeValueFactory.setValue(newValue);
