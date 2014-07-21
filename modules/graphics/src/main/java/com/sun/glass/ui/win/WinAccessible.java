@@ -285,6 +285,7 @@ final class WinAccessible extends Accessible {
                 if (id != 0) {
                     UiaRaiseAutomationEvent(id, UIA_AutomationFocusChangedEventId);
                 }
+                break;
             }
             case SELECTED_CELLS: {
                 /* 
