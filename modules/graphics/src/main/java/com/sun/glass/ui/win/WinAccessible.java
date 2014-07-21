@@ -692,7 +692,7 @@ final class WinAccessible extends Accessible {
                 String name;
 
                 AccessibleRole role = (AccessibleRole)getAttribute(ROLE);
-                if (role == null) role = AccessibleRole.NODE; // to prevent NPE
+                if (role == null) role = AccessibleRole.NODE;
                 switch (role) {
                     case COMBO_BOX:
                         /*
@@ -745,6 +745,15 @@ final class WinAccessible extends Accessible {
             }
             case UIA_LocalizedControlTypePropertyId: {
                 String description = (String)getAttribute(ROLE_DESCRIPTION);
+                if (description == null) {
+                    AccessibleRole role = (AccessibleRole)getAttribute(ROLE);
+                    if (role == null) role = AccessibleRole.NODE;
+                    switch (role) {
+                        case TITLED_PANE: description = "title pane"; break;
+                        case PAGE_ITEM: description = "page"; break;
+                        default:
+                    }
+                }
                 if (description != null) {
                     variant = new WinVariant();
                     variant.vt = WinVariant.VT_BSTR;

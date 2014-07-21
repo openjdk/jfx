@@ -703,7 +703,6 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
     @Override
     protected Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
-            // Role: Pagination (specified in Pagination class)
             case FOCUS_ITEM: return navigation.indicatorButtons.getSelectedToggle();
             case PAGES: return navigation.indicatorButtons.getToggles();
             default: return super.queryAccessibleAttribute(attribute, parameters);
