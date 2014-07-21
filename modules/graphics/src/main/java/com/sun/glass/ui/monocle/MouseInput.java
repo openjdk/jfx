@@ -215,6 +215,7 @@ class MouseInput {
 
                 });
             }
+            newState.setWheel(MouseState.WHEEL_NONE);
         }
         newState.copyTo(state);
     }
