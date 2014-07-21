@@ -791,8 +791,6 @@ public class ScrollPane extends Control {
     public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
             case CONTENTS: return getContent();
-            case VERTICAL_SCROLLBAR: //Skin
-            case HORIZONTAL_SCROLLBAR: //Skin
             default: return super.queryAccessibleAttribute(attribute, parameters);
         }
     }

@@ -473,8 +473,6 @@ public abstract class ComboBoxBase<T> extends Control {
         switch (attribute) {
             case EXPANDED: return isShowing();
             case EDITABLE: return isEditable();
-            case SELECTION_START: //skin
-            case SELECTION_END: //skin
             default: return super.queryAccessibleAttribute(attribute, parameters);
         }
     }

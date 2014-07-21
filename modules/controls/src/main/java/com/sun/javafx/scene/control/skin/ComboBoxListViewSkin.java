@@ -790,8 +790,6 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             }
             case SELECTION_START: return textField.getSelection().getStart();
             case SELECTION_END: return textField.getSelection().getEnd();
-
-            //fall through
             default: return super.queryAccessibleAttribute(attribute, parameters);
         }
     }

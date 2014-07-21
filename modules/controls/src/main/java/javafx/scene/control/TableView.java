@@ -1676,11 +1676,6 @@ public class TableView<S> extends Control {
                 MultipleSelectionModel<S> sm = getSelectionModel();
                 return sm != null && sm.getSelectionMode() == SelectionMode.MULTIPLE;
             }
-            case COLUMN_AT_INDEX: //Skin
-            case COLUMN_INDEX: //Skin
-            case HEADER: //Skin
-            case VERTICAL_SCROLLBAR: //Skin
-            case HORIZONTAL_SCROLLBAR: // Skin
             default: return super.queryAccessibleAttribute(attribute, parameters);
         }
     }

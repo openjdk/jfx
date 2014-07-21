@@ -369,9 +369,6 @@ public class TableRow<T> extends IndexedCell<T> {
     public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
             case INDEX: return getIndex();
-            case FOCUS_ITEM: //Skin
-            case SELECTED_CELLS: //Skin
-            case CELL_AT_ROW_COLUMN: //Skin
             default: return super.queryAccessibleAttribute(attribute, parameters);
         }
     }

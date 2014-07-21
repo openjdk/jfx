@@ -996,8 +996,6 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
         public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
             switch (attribute) {
                 case FOCUS_ITEM: return MenuBarButton.this;
-                case TITLE: //fall through because the super class handles mnemonics right
-                case MNEMONIC:
                 default: return super.queryAccessibleAttribute(attribute, parameters);
             }
         }

@@ -1090,10 +1090,6 @@ public class ListView<T> extends Control {
                 MultipleSelectionModel<T> sm = getSelectionModel();
                 return sm != null && sm.getSelectionMode() == SelectionMode.MULTIPLE;
             }
-            case ROW_AT_INDEX: //Skin
-            case SELECTED_ROWS: //Skin
-            case VERTICAL_SCROLLBAR: //Skin
-            case HORIZONTAL_SCROLLBAR: // Skin
             default: return super.queryAccessibleAttribute(attribute, parameters);
         }
     }
