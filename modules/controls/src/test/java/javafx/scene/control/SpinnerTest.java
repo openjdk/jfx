@@ -1082,16 +1082,19 @@ public class SpinnerTest {
         assertEquals(expected.truncatedTo(ChronoUnit.MINUTES), actual.truncatedTo(ChronoUnit.MINUTES));
     }
 
+    @Ignore
     @Test public void localTimeSpinner_testIncrement_oneStep() {
         localTimeValueFactory.increment(1);
         assertTimeEquals(nowPlusHours(1), localTimeValueFactory.getValue());
     }
 
+    @Ignore
     @Test public void localTimeSpinner_testIncrement_twoSteps() {
         localTimeValueFactory.increment(2);
         assertTimeEquals(nowPlusHours(2), localTimeValueFactory.getValue());
     }
 
+    @Ignore
     @Test public void localTimeSpinner_testIncrement_manyCalls() {
         for (int i = 0; i < 100; i++) {
             localTimeValueFactory.increment(1);
@@ -1099,21 +1102,25 @@ public class SpinnerTest {
         assertTimeEquals(LocalTime.MAX, localTimeValueFactory.getValue());
     }
 
+    @Ignore
     @Test public void localTimeSpinner_testIncrement_bigStepPastMaximum() {
         localTimeValueFactory.increment(100000);
         assertTimeEquals(LocalTime.MAX, localTimeValueFactory.getValue());
     }
 
+    @Ignore
     @Test public void localTimeSpinner_testDecrement_oneStep() {
         localTimeValueFactory.decrement(1);
         assertTimeEquals(nowPlusHours(-1), localTimeValueFactory.getValue());
     }
 
+    @Ignore
     @Test public void localTimeSpinner_testDecrement_twoSteps() {
         localTimeValueFactory.decrement(2);
         assertTimeEquals(nowPlusHours(-2), localTimeValueFactory.getValue());
     }
 
+    @Ignore
     @Test public void localTimeSpinner_testDecrement_manyCalls() {
         for (int i = 0; i < 100; i++) {
             localTimeValueFactory.decrement(1);
@@ -1121,11 +1128,13 @@ public class SpinnerTest {
         assertTimeEquals(LocalTime.MIN, localTimeValueFactory.getValue());
     }
 
+    @Ignore
     @Test public void localTimeSpinner_testDecrement_bigStepPastMinimum() {
         localTimeValueFactory.decrement(100000);
         assertTimeEquals(LocalTime.MIN, localTimeValueFactory.getValue());
     }
 
+    @Ignore
     @Test public void localTimeSpinner_testWrapAround_increment_oneStep() {
         localTimeValueFactory.setWrapAround(true);
 
@@ -1141,6 +1150,7 @@ public class SpinnerTest {
         assertTimeEquals(LocalTime.of(01,32), localTimeValueFactory.getValue());
     }
 
+    @Ignore
     @Test public void localTimeSpinner_testWrapAround_increment_twoSteps() {
         localTimeValueFactory.setWrapAround(true);
 
@@ -1168,6 +1178,7 @@ public class SpinnerTest {
         assertTimeEquals(LocalTime.of(23,32), localTimeValueFactory.getValue());
     }
 
+    @Ignore
     @Test public void localTimeSpinner_testWrapAround_decrement_twoSteps() {
         localTimeValueFactory.setWrapAround(true);
 
@@ -1180,6 +1191,7 @@ public class SpinnerTest {
         assertTimeEquals(LocalTime.of(22,32), localTimeValueFactory.getValue());
     }
 
+    @Ignore
     @Test public void localTimeSpinner_assertDefaultConverterIsNonNull() {
         assertNotNull(localTimeValueFactory.getConverter());
     }
