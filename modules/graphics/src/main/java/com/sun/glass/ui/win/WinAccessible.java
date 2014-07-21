@@ -279,29 +279,12 @@ final class WinAccessible extends Accessible {
                     }
                 }
                 break;
-            case SELECTED_PAGE: {
-                /* 
-                 * Use the notification in the parent to poke the children.
-                 * Note: FOCUS_NODE does not see this case because as for as the scene graph
-                 * is concerned the focus is still on the parent. I.e Pagination.
-                 */
-                Node node = (Node)getAttribute(SELECTED_PAGE);
-                if (node != null) {
-                    UiaRaiseAutomationEvent(getNativeAccessible(node), UIA_AutomationFocusChangedEventId);
+            case FOCUS_ITEM: {
+                Node node = (Node)getAttribute(FOCUS_ITEM);
+                long id = getNativeAccessible(node);
+                if (id != 0) {
+                    UiaRaiseAutomationEvent(id, UIA_AutomationFocusChangedEventId);
                 }
-                break;
-            }
-            case SELECTED_TAB: {
-                /* 
-                 * Use the notification in the parent to poke the children.
-                 * Note: FOCUS_NODE does not see this case because as for as the scene graph
-                 * is concerned the focus is still on the parent. I.e TabPane.
-                 */
-                Node node = (Node)getAttribute(SELECTED_TAB);
-                if (node != null) {
-                    UiaRaiseAutomationEvent(getNativeAccessible(node), UIA_AutomationFocusChangedEventId);
-                }
-                break;
             }
             case SELECTED_CELLS: {
                 /* 
@@ -1092,15 +1075,9 @@ final class WinAccessible extends Accessible {
                 }
                 break;
             }
+            case TAB_PANE:
             case PAGINATION: {
-                Node node = (Node)getAttribute(SELECTED_PAGE);
-                if (node != null) {
-                    return new long[] {getNativeAccessible(node)};
-                }
-                break;
-            }
-            case TAB_PANE: {
-                Node node = (Node)getAttribute(SELECTED_TAB);
+                Node node = (Node)getAttribute(FOCUS_ITEM);
                 if (node != null) {
                     return new long[] {getNativeAccessible(node)};
                 }

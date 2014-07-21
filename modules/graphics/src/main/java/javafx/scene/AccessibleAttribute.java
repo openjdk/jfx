@@ -350,22 +350,10 @@ public enum AccessibleAttribute {
     SELECTED_CELLS("SelectedCells", ObservableList.class),
 
     /**
-     * Returns the selected pagination page item.
-     * Type: Node
-     */
-    SELECTED_PAGE("SelectedPage", Node.class),
-
-    /**
      * Returns the list of selected rows
      * Type: ObservableList&lt;Node&gt;
      */
     SELECTED_ROWS("SelectedRows", ObservableList.class),
-
-    /**
-     * Returns the selected tab item.
-     * Type: Node
-     */
-    SELECTED_TAB("SelectedTab", Node.class),
 
     /**
      * Returns the selection end for the node.

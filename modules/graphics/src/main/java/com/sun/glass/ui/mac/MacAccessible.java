@@ -669,14 +669,13 @@ final class MacAccessible extends Accessible {
 
         MacNotification macNotification = null;
         switch (notification) {
-            case SELECTED_TAB:
-            case SELECTED_PAGE: {
-                View view = getRootView((Scene)getAttribute(SCENE));
-                if (view != null) {
-                    long id = view.getNativeView();
+            case FOCUS_ITEM: {
+                Node node = (Node)getAttribute(FOCUS_ITEM);
+                long id = getNativeAccessible(node);
+                if (id != 0) {
                     NSAccessibilityPostNotification(id, MacNotification.NSAccessibilityFocusedUIElementChangedNotification.ptr);
                 }
-                return;
+                break;
             }
             case SELECTED_ROWS:
                 macNotification = MacNotification.NSAccessibilitySelectedRowsChangedNotification;
@@ -1121,11 +1120,8 @@ final class MacAccessible extends Accessible {
                 case NSAccessibilityValueAttribute: {
                     switch (role) {
                         case TAB_PANE:
-                            jfxAttr = SELECTED_TAB;
-                            map = MacVariant::createNSObject;
-                            break;
                         case PAGINATION:
-                            jfxAttr = SELECTED_PAGE;
+                            jfxAttr = FOCUS_ITEM;
                             map = MacVariant::createNSObject;
                             break;
                         case PAGE_ITEM:

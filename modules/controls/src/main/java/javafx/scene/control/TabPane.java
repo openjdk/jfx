@@ -678,7 +678,7 @@ public class TabPane extends Control {
             }
 
             /* Does this get all the change events */
-            tabPane.notifyAccessibleAttributeChanged(AccessibleAttribute.SELECTED_TAB);
+            tabPane.notifyAccessibleAttributeChanged(AccessibleAttribute.FOCUS_ITEM);
         }
 
         @Override public void select(Tab tab) {

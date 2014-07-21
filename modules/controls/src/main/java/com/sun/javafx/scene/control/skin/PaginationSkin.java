@@ -705,7 +705,6 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
         switch (attribute) {
             // Role: Pagination (specified in Pagination class)
             case FOCUS_ITEM: return navigation.indicatorButtons.getSelectedToggle();
-            case SELECTED_PAGE: return navigation.indicatorButtons.getSelectedToggle();
             case PAGES: return navigation.indicatorButtons.getToggles();
             default: return super.queryAccessibleAttribute(attribute, parameters);
         }
@@ -843,7 +842,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
                     break;
                 }
             }
-            getSkinnable().notifyAccessibleAttributeChanged(AccessibleAttribute.SELECTED_PAGE);
+            getSkinnable().notifyAccessibleAttributeChanged(AccessibleAttribute.FOCUS_ITEM);
         }
 
         // Update the page index using the currentIndex and updates the page set
