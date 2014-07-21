@@ -9332,6 +9332,14 @@ public abstract class Node implements EventTarget, Styleable {
      * @since JavaFX 8u40
      */
     public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
+        switch (action) {
+            case REQUEST_FOCUS:
+                if (isFocusTraversable()) {
+                    requestFocus();
+                }
+                break;
+            default:
+        }
     }
 
     /**

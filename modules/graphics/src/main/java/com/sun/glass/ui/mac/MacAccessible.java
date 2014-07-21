@@ -1532,6 +1532,13 @@ final class MacAccessible extends Accessible {
         MacAttribute attr = MacAttribute.getAttribute(attribute);
         if (attr != null) {
             switch (attr) {
+                case NSAccessibilityFocusedAttribute: {
+                    MacVariant variant = idToMacVariant(value, MacVariant.NSNumber_Boolean);
+                    if (variant != null && variant.int1 != 0) {
+                        executeAction(AccessibleAction.REQUEST_FOCUS);
+                    }
+                    break;
+                }
                 case NSAccessibilityExpandedAttribute:
                     if (getAttribute(ROLE) == AccessibleRole.COMBO_BOX) {
                         executeAction(AccessibleAction.EXPAND);

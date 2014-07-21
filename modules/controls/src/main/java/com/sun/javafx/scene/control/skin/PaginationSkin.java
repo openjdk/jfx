@@ -1252,7 +1252,9 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
         @Override
         public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
             switch (action) {
-                case SELECT: setSelected(true); break;
+                case REQUEST_FOCUS:
+                    getSkinnable().setCurrentPageIndex(pageNumber);
+                    break;
                 default: super.executeAccessibleAction(action);
             }
         }

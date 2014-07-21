@@ -159,8 +159,8 @@ public enum AccessibleRole {
 
     /**
      * Page in a Pagination control.
-     * Attributes: TITLE, Selected
-     * Actions: SELECT
+     * Attributes: TITLE, SELECTED
+     * Actions: (none)
      */
     PAGE_ITEM,
 
@@ -272,7 +272,7 @@ public enum AccessibleRole {
     /**
      * Tab Item.
      * Attributes: TITLE, SELECTED
-     * Actions: SELECT
+     * Actions: (none)
      */
     TAB_ITEM,
 

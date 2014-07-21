@@ -1022,6 +1022,7 @@ final class WinAccessible extends Accessible {
 
     void SetFocus() {
         if (isDisposed()) return;
+        executeAction(AccessibleAction.REQUEST_FOCUS);
     }
 
     /***********************************************/
@@ -1251,6 +1252,10 @@ final class WinAccessible extends Accessible {
         AccessibleRole role = (AccessibleRole)getAttribute(ROLE);
         if (role != null) {
             switch (role) {
+                case PAGE_ITEM:
+                case TAB_ITEM:
+                    executeAction(AccessibleAction.REQUEST_FOCUS);
+                    break;
                 case RADIO_BUTTON:
                 case BUTTON:
                 case TOGGLE_BUTTON:

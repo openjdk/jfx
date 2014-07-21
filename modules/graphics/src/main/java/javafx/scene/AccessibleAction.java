@@ -79,6 +79,8 @@ public enum AccessibleAction {
      */
     REMOVE_FROM_SELECTION,
 
+    REQUEST_FOCUS,
+
     /**
      * Requests that the given integer index is shown, if possible, by the
      * container (e.g. ListView).

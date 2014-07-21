@@ -52,6 +52,7 @@ import javafx.geometry.HPos;
 import javafx.geometry.Pos;
 import javafx.geometry.Side;
 import javafx.geometry.VPos;
+import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
@@ -1469,6 +1470,17 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
                 default: return super.queryAccessibleAttribute(attribute, parameters);
             }
         }
+
+        @Override
+        public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
+            switch (action) {
+                case REQUEST_FOCUS:
+                    getSkinnable().getSelectionModel().select(getTab());
+                    break;
+                default: super.executeAccessibleAction(action, parameters);
+            }
+        }
+
     } /* End TabHeaderSkin */
 
     private static final PseudoClass SELECTED_PSEUDOCLASS_STATE =
