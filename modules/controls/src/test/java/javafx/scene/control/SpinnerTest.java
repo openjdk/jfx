@@ -1211,6 +1211,7 @@ public class SpinnerTest {
         assertTimeEquals(LocalTime.MAX, localTimeValueFactory.getMin());
     }
 
+    @Ignore
     @Test public void localTimeSpinner_testSetMax_doesNotChangeSpinnerValueWhenMaxIsGreaterThanCurrentValue() {
         LocalTime newValue = LocalTime.now();
         localTimeValueFactory.setValue(newValue);
@@ -1219,6 +1220,7 @@ public class SpinnerTest {
         assertTimeEquals(newValue, localTimeSpinner.getValue());
     }
 
+    @Ignore
     @Test public void localTimeSpinner_testSetMax_changesSpinnerValueWhenMaxIsLessThanCurrentValue() {
         LocalTime newValue = nowPlusHours(4);
         localTimeValueFactory.setValue(newValue);
@@ -1229,6 +1231,7 @@ public class SpinnerTest {
         assertTimeEquals(twoDays, localTimeSpinner.getValue());
     }
 
+    @Ignore
     @Test public void localTimeSpinner_testSetMax_ensureThatMaxCanNotGoLessThanMin() {
         localTimeValueFactory.setMin(nowPlusHours(5));
         assertTimeEquals(nowPlusHours(5), localTimeValueFactory.getMin());
@@ -1237,6 +1240,7 @@ public class SpinnerTest {
         assertTimeEquals(nowPlusHours(5), localTimeValueFactory.getMin());
     }
 
+    @Ignore
     @Test public void localTimeSpinner_testSetMax_ensureThatMaxCanEqualMin() {
         LocalTime twoDays = nowPlusHours(2);
         localTimeValueFactory.setMin(twoDays);
