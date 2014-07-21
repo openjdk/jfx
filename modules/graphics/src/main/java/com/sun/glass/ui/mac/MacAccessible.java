@@ -1365,6 +1365,7 @@ final class MacAccessible extends Accessible {
                     case TEXT:
                     case TEXT_FIELD:
                     case TEXT_AREA:
+                        return null;
                     default:
                 }
                 break;
