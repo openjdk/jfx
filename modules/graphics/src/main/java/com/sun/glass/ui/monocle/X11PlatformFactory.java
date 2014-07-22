@@ -28,6 +28,9 @@ package com.sun.glass.ui.monocle;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 
+/** Implementation of NativePlatformFactory for X11 platform
+ *
+ */
 class X11PlatformFactory extends NativePlatformFactory {
 
     @Override

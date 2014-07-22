@@ -27,6 +27,10 @@ package com.sun.glass.ui.monocle;
 
 import com.sun.glass.events.MouseEvent;
 
+/** InputDeviceRegistry used when the system property Dx11.input=true is set,
+ * indicating that we would like to receive input events through Xlib instead
+ * of directly from Linux input devices.
+ */
 class X11InputDeviceRegistry extends InputDeviceRegistry {
 
     private MouseState state;
@@ -58,6 +62,7 @@ class X11InputDeviceRegistry extends InputDeviceRegistry {
                 return false;
             }
         };
+        // Start the thread to listen to the X11 event queue
         Thread x11InputThread = new Thread(() -> {
             NativePlatform platform =
                     NativePlatformFactory.getNativePlatform();
@@ -84,6 +89,11 @@ class X11InputDeviceRegistry extends InputDeviceRegistry {
         x11InputThread.start();
     }
 
+    /** Dispatch the X Event to the appropriate processor.  All processors run
+     * via invokeLater
+     * @param event
+     * @param runnableProcessor
+     */
     private void processXEvent(X.XEvent event,
                                RunnableProcessor runnableProcessor) {
         switch (X.XEvent.getType(event.p)) {
@@ -158,6 +168,10 @@ class X11InputDeviceRegistry extends InputDeviceRegistry {
         }
     }
 
+    /** Convenience method to convert X11 button codes to glass button codes
+     *
+     * @param button
+     */
     private static int buttonToGlassButton(int button) {
         switch (button) {
             case X.Button1: return MouseEvent.BUTTON_LEFT;

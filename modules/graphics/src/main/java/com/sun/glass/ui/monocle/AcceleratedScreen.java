@@ -25,6 +25,9 @@
 
 package com.sun.glass.ui.monocle;
 
+/** AcceleratedScreen provides methods necessary to instantiate and intitialize
+ * a hardware-accelerated screen for rendering.
+ */
 public class AcceleratedScreen {
 
     private static long glesLibraryHandle;
@@ -35,14 +38,28 @@ public class AcceleratedScreen {
     private long eglDisplay;
     protected static LinuxSystem ls = LinuxSystem.getLinuxSystem();
 
+    /** Returns a platform-specific native display handle suitable for use with
+     * eglGetDisplay.
+     */
     protected long platformGetNativeDisplay() {
         return 0L;
     }
 
+    /** Returns a platform-specific native window handle suitable for use with
+     * eglCreateWindowSurface.
+     */
     protected long platformGetNativeWindow() {
         return 0L;
     }
 
+    /**
+     * Perform basic egl intialization - open the display, create the drawing
+     * surface, and create a GL context to that drawing surface.
+     * @param attributes - attributes to be used for filtering the EGL
+     *                   configurations to choose from
+     * @throws GLException
+     * @throws UnsatisfiedLinkError
+     */
     AcceleratedScreen(int[] attributes) throws GLException, UnsatisfiedLinkError {
         initPlatformLibraries();
 
@@ -94,6 +111,10 @@ public class AcceleratedScreen {
         }
     }
 
+    /** Make the EGL drawing surface current or not
+     *
+     * @param flag
+     */
     public void enableRendering(boolean flag) {
         if (flag) {
             EGL.eglMakeCurrent(eglDisplay, eglSurface, eglSurface, eglContext);
@@ -102,6 +123,11 @@ public class AcceleratedScreen {
         }
     }
 
+    /** Load any native libraries needed to instantiate and initialize the
+     * native drawing surface and rendering context
+     * @return success or failure
+     * @throws UnsatisfiedLinkError
+     */
     boolean initPlatformLibraries() throws UnsatisfiedLinkError{
         if (!initialized) {
             glesLibraryHandle = ls.dlopen("libGLESv2.so",
@@ -119,12 +145,22 @@ public class AcceleratedScreen {
         return true;
     }
 
+    /** Return the GL library handle - for use in looking up native symbols
+     *
+     */
     public long getGLHandle() {
         return glesLibraryHandle;
     }
 
+    /** Return the EGL library handle - for use in looking up native symbols
+     *
+     */
     protected long getEGLHandle() { return eglLibraryHandle; }
 
+    /** Copy the contents of the GL backbuffer to the screen
+     *
+     * @return success or failure
+     */
     public boolean swapBuffers() {
         synchronized(NativeScreen.framebufferSwapLock) {
             EGL.eglSwapBuffers(eglDisplay, eglSurface);

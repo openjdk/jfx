@@ -32,6 +32,9 @@ import java.nio.ByteBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 
+/** Native screen implementation for the X11 platform
+ *
+ */
 class X11Screen implements NativeScreen {
 
     private int depth;
@@ -41,7 +44,14 @@ class X11Screen implements NativeScreen {
     private long nativeHandle;
     private long display;
 
+    /** Create the screen.  If showCursor is true, set the corresponding X11
+     * window attribute.
+     * @param showCursor
+     */
     X11Screen(boolean showCursor) {
+        // Since we will be accessing X from multiple threads, we need to call
+        // XInitThreads before we do anything else.  Then, lock the X display
+        // until we are done doing our setup
         X.XInitThreads();
         display = X.XOpenDisplay(null);
         X.XLockDisplay(display);
