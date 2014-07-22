@@ -687,6 +687,16 @@ public class TreeCell<T> extends IndexedCell<T> {
                 if (treeItem != null) treeItem.setExpanded(false);
                 break;
             }
+            case REQUEST_FOCUS: {
+                TreeView<T> treeView = getTreeView();
+                if (treeView != null) {
+                    FocusModel<TreeItem<T>> fm = treeView.getFocusModel();
+                    if (fm != null) {
+                        fm.focus(getIndex());
+                    }
+                }
+                break;
+            }
             default: super.executeAccessibleAction(action);
         }
     }

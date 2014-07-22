@@ -572,5 +572,22 @@ public class ListCell<T> extends IndexedCell<T> {
             default: return super.queryAccessibleAttribute(attribute, parameters);
         }
     }
+
+    @Override
+    public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
+        switch (action) {
+            case REQUEST_FOCUS: {
+                ListView<T> listView = getListView();
+                if (listView != null) {
+                    FocusModel<T> fm = listView.getFocusModel();
+                    if (fm != null) {
+                        fm.focus(getIndex());
+                    }
+                }
+                break;
+            }
+            default: super.executeAccessibleAction(action, parameters);
+        }
+    }
 }
 

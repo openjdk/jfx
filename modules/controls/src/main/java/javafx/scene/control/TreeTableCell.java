@@ -42,6 +42,7 @@ import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.AccessibleRole;
 import javafx.scene.control.TreeTableColumn.CellEditEvent;
+import javafx.scene.control.TreeTableView.TreeTableViewFocusModel;
 
 
 /**
@@ -781,6 +782,23 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
             case COLUMN_INDEX: return columnIndex;
             case SELECTED: return isInCellSelectionMode() ? isSelected() : getTreeTableRow().isSelected();
             default: return super.queryAccessibleAttribute(attribute, parameters);
+        }
+    }
+
+    @Override
+    public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
+        switch (action) {
+            case REQUEST_FOCUS: {
+                TreeTableView<S> treeTableView = getTreeTableView();
+                if (treeTableView != null) {
+                    TreeTableViewFocusModel<S> fm = treeTableView.getFocusModel();
+                    if (fm != null) {
+                        fm.focus(getIndex(), getTableColumn());
+                    }
+                }
+                break;
+            }
+            default: super.executeAccessibleAction(action, parameters);
         }
     }
 }

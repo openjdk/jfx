@@ -790,4 +790,20 @@ public class TableCell<S,T> extends IndexedCell<T> {
         }
     }
 
+    @Override
+    public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
+        switch (action) {
+            case REQUEST_FOCUS: {
+                TableView<S> tableView = getTableView();
+                if (tableView != null) {
+                    TableViewFocusModel<S> fm = tableView.getFocusModel();
+                    if (fm != null) {
+                        fm.focus(getIndex(), getTableColumn());
+                    }
+                }
+                break;
+            }
+            default: super.executeAccessibleAction(action, parameters);
+        }
+    }
 }
