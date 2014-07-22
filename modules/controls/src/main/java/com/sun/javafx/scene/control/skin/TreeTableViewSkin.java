@@ -393,7 +393,7 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeItem<S>, Tree
                 final int rowIndex = (Integer)parameters[0];
                 return rowIndex < 0 ? null : flow.getPrivateCell(rowIndex);
             }
-            case SELECTED_CELLS: {
+            case SELECTED_ITEMS: {
                 List<Node> selection = new ArrayList<>();
                 TreeTableView.TreeTableViewSelectionModel<S> sm = getSkinnable().getSelectionModel();
                 for (TreeTablePosition<S,?> pos : sm.getSelectedCells()) {

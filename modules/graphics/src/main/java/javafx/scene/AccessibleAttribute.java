@@ -344,16 +344,10 @@ public enum AccessibleAttribute {
     SELECTED("Selected", Boolean.class),
 
     /**
-     * Returns the list of selected cells
+     * Returns the list of selected items
      * Type: ObservableList&lt;Node&gt;
      */
-    SELECTED_CELLS("SelectedCells", ObservableList.class),
-
-    /**
-     * Returns the list of selected rows
-     * Type: ObservableList&lt;Node&gt;
-     */
-    SELECTED_ROWS("SelectedRows", ObservableList.class),
+    SELECTED_ITEMS("SelectedItems", ObservableList.class),
 
     /**
      * Returns the selection end for the node.

@@ -150,10 +150,10 @@ final class MacAccessible extends Accessible {
         NSAccessibilityColumnsAttribute(null, null), //virtual only
         NSAccessibilityRowsAttribute(null, null), //virtual only
         NSAccessibilityHeaderAttribute(HEADER, MacVariant::createNSObject),
-        NSAccessibilitySelectedRowsAttribute(SELECTED_ROWS, MacVariant::createNSArray),
+        NSAccessibilitySelectedRowsAttribute(SELECTED_ITEMS, MacVariant::createNSArray),
         NSAccessibilityRowCountAttribute(ROW_COUNT, MacVariant::createNSNumberForInt),
         NSAccessibilityColumnCountAttribute(COLUMN_COUNT, MacVariant::createNSNumberForInt),
-        NSAccessibilitySelectedCellsAttribute(SELECTED_CELLS, MacVariant::createNSArray),
+        NSAccessibilitySelectedCellsAttribute(SELECTED_ITEMS, MacVariant::createNSArray),
         NSAccessibilityRowIndexRangeAttribute(ROW_INDEX, MacVariant::createNSValueForRange),
         NSAccessibilityColumnIndexRangeAttribute(COLUMN_INDEX, MacVariant::createNSValueForRange),
 
@@ -670,19 +670,23 @@ final class MacAccessible extends Accessible {
         MacNotification macNotification = null;
         switch (notification) {
             case FOCUS_ITEM: {
-                Node node = (Node)getAttribute(FOCUS_ITEM);
-                long id = getNativeAccessible(node);
-                if (id != 0) {
-                    NSAccessibilityPostNotification(id, MacNotification.NSAccessibilityFocusedUIElementChangedNotification.ptr);
+                AccessibleRole role = (AccessibleRole) getAttribute(ROLE);
+                if (role == AccessibleRole.TABLE_VIEW || role == AccessibleRole.TREE_TABLE_VIEW) {
+                    /* Cell based controls */
+                    macNotification = MacNotification.NSAccessibilitySelectedCellsChangedNotification;
+                } else if (role == AccessibleRole.LIST_VIEW || role == AccessibleRole.TREE_VIEW) {
+                    /* Row based controls */
+                    macNotification = MacNotification.NSAccessibilitySelectedRowsChangedNotification;
+                } else {
+                    /* TabPane and Pagination */
+                    Node node = (Node)getAttribute(FOCUS_ITEM);
+                    long id = getNativeAccessible(node);
+                    if (id != 0) {
+                        NSAccessibilityPostNotification(id, MacNotification.NSAccessibilityFocusedUIElementChangedNotification.ptr);
+                    }
                 }
                 break;
             }
-            case SELECTED_ROWS:
-                macNotification = MacNotification.NSAccessibilitySelectedRowsChangedNotification;
-                break;
-            case SELECTED_CELLS:
-                macNotification = MacNotification.NSAccessibilitySelectedCellsChangedNotification;
-                break;
             case FOCUS_NODE: {
                 Node node = (Node)getAttribute(FOCUS_NODE);
                 View view = getView();

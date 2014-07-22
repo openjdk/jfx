@@ -132,7 +132,7 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, CellBehavi
     @Override
     protected Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
-            case SELECTED_CELLS: {
+            case SELECTED_ITEMS: {
                 // FIXME this could be optimised to iterate over cellsMap only
                 // (selectedCells could be big, cellsMap is much smaller)
                 List<Node> selection = new ArrayList<>();

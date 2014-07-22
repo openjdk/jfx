@@ -407,7 +407,7 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
     protected Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         final TreeTableView<T> treeTableView = getSkinnable().getTreeTableView();
         switch (attribute) {
-            case SELECTED_CELLS: {
+            case SELECTED_ITEMS: {
                 // FIXME this could be optimised to iterate over cellsMap only
                 // (selectedCells could be big, cellsMap is much smaller)
                 List<Node> selection = new ArrayList<>();

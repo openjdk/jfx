@@ -510,7 +510,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
                 }
                 return null;
             }
-            case SELECTED_ROWS: {
+            case SELECTED_ITEMS: {
                 MultipleSelectionModel<T> sm = getSkinnable().getSelectionModel();
                 ObservableList<Integer> indices = sm.getSelectedIndices();
                 List<Node> selection = new ArrayList<>(indices.size());

@@ -287,30 +287,6 @@ final class WinAccessible extends Accessible {
                 }
                 break;
             }
-            case SELECTED_CELLS: {
-                /* 
-                 * Use the notification in the parent to poke the children.
-                 * Note: FOCUS_NODE does not see this case because as for as the scene graph
-                 * is concerned the focus is still on the parent. I.e TableView, ListView.
-                 */
-                ObservableList<Node> selection = (ObservableList<Node>)getAttribute(SELECTED_CELLS);
-                if (selection != null) {
-                    selection.stream().forEach(n -> UiaRaiseAutomationEvent(getNativeAccessible(n), UIA_AutomationFocusChangedEventId));
-                }
-                break;
-            }
-            case SELECTED_ROWS: {
-                /* 
-                 * Use the notification in the parent to poke the children.
-                 * Note: FOCUS_NODE does not see this case because as for as the scene graph
-                 * is concerned the focus is still on the parent. I.e TableView, ListView.
-                 */
-                ObservableList<Node> selection = (ObservableList<Node>)getAttribute(SELECTED_ROWS);
-                if (selection != null) {
-                    selection.stream().forEach(n -> UiaRaiseAutomationEvent(getNativeAccessible(n), UIA_AutomationFocusChangedEventId));
-                }
-                break;
-            }
             case INDETERMINATE: {
                 if (getAttribute(ROLE) == AccessibleRole.CHECK_BOX) {
                     notifyToggleState();
@@ -1070,16 +1046,11 @@ final class WinAccessible extends Accessible {
         AccessibleRole role = (AccessibleRole)getAttribute(ROLE);
         switch (role) {
             case TREE_TABLE_VIEW:
-            case TABLE_VIEW: {
-                ObservableList<Node> selection = (ObservableList<Node>)getAttribute(SELECTED_CELLS);
-                if (selection != null) {
-                    return selection.stream().mapToLong(n -> getNativeAccessible(n)).toArray();
-                }
-                break;
-            }
+            case TABLE_VIEW:
             case TREE_VIEW:
             case LIST_VIEW: {
-                ObservableList<Node> selection = (ObservableList<Node>)getAttribute(SELECTED_ROWS);
+                @SuppressWarnings("unchecked")
+                ObservableList<Node> selection = (ObservableList<Node>)getAttribute(SELECTED_ITEMS);
                 if (selection != null) {
                     return selection.stream().mapToLong(n -> getNativeAccessible(n)).toArray();
                 }

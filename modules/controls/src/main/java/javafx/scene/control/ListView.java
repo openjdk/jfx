@@ -1415,7 +1415,7 @@ public class ListView<T> extends Control {
             if (listView.getFocusModel() == null) return;
             listView.getFocusModel().focus(row);
 
-            listView.notifyAccessibleAttributeChanged(AccessibleAttribute.SELECTED_ROWS);
+            listView.notifyAccessibleAttributeChanged(AccessibleAttribute.FOCUS_ITEM);
         }
 
         /** {@inheritDoc} */

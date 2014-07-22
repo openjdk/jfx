@@ -293,7 +293,7 @@ public class TableViewSkin<T> extends TableViewSkinBase<T, T, TableView<T>, Tabl
     @Override
     public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
-            case SELECTED_CELLS: {
+            case SELECTED_ITEMS: {
                 List<Node> selection = new ArrayList<>();
                 TableViewSelectionModel<T> sm = getSkinnable().getSelectionModel();
                 for (TablePosition pos : sm.getSelectedCells()) {

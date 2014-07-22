@@ -494,7 +494,7 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
                 final int rowIndex = (Integer)parameters[0];
                 return rowIndex < 0 ? null : flow.getPrivateCell(rowIndex);
             }
-            case SELECTED_ROWS: {
+            case SELECTED_ITEMS: {
                 MultipleSelectionModel<TreeItem<T>> sm = getSkinnable().getSelectionModel();
                 ObservableList<Integer> indices = sm.getSelectedIndices();
                 List<Node> selection = new ArrayList<>(indices.size());

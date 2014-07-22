@@ -1650,7 +1650,7 @@ public class TableView<S> extends Control {
         switch (attribute) {
             case COLUMN_COUNT: return getVisibleLeafColumns().size();
             case ROW_COUNT: return getItems().size();
-            case SELECTED_CELLS: {
+            case SELECTED_ITEMS: {
                 // TableViewSkin returns TableRows back to TableView.
                 // TableRowSkin returns TableCells back to TableRow.
                 ObservableList<TableRow<S>> rows = (ObservableList<TableRow<S>>)super.queryAccessibleAttribute(attribute, parameters);
@@ -1915,7 +1915,7 @@ public class TableView<S> extends Control {
 
         void focus(int row, TableColumn<S,?> column) {
             focus(new TablePosition<>(getTableView(), row, column));
-            getTableView().notifyAccessibleAttributeChanged(AccessibleAttribute.SELECTED_CELLS);
+            getTableView().notifyAccessibleAttributeChanged(AccessibleAttribute.FOCUS_ITEM);
         }
 
         void focus(TablePosition<S,?> pos) {

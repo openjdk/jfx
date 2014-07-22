@@ -1429,7 +1429,7 @@ public class TreeView<T> extends Control {
             }
 
             // FIXME this is not the correct location for fire selection events (and does not take into account multiple selection)
-            treeView.notifyAccessibleAttributeChanged(AccessibleAttribute.SELECTED_ROWS);
+            treeView.notifyAccessibleAttributeChanged(AccessibleAttribute.FOCUS_ITEM);
         }
 
         /** {@inheritDoc} */

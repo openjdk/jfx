@@ -1913,7 +1913,7 @@ public class TreeTableView<S> extends Control {
              * TreeTableViewSkin returns TreeTableRows back to TreeTableView.
              * TreeTableRowSkin returns TreeTableCells back to TreeTableRow.
              */
-            case SELECTED_CELLS: {
+            case SELECTED_ITEMS: {
                 ObservableList<TreeTableRow<S>> rows = (ObservableList<TreeTableRow<S>>)super.queryAccessibleAttribute(attribute, parameters);
                 List<Node> selection = new ArrayList<>();
                 for (TreeTableRow<S> row : rows) {
@@ -2926,7 +2926,7 @@ public class TreeTableView<S> extends Control {
             if (getTreeTableView().getFocusModel() == null) return;
 
             getTreeTableView().getFocusModel().focus(pos.getRow(), pos.getTableColumn());
-            getTreeTableView().notifyAccessibleAttributeChanged(AccessibleAttribute.SELECTED_CELLS);
+            getTreeTableView().notifyAccessibleAttributeChanged(AccessibleAttribute.FOCUS_ITEM);
         }
 
         @Override public int getFocusedIndex() {
