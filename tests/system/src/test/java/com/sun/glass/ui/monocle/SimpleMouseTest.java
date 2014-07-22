@@ -117,6 +117,39 @@ public class SimpleMouseTest {
     }
 
     @Test
+    public void testWheelSequence() throws Exception {
+        TestApplication.getStage().getScene().setOnScroll(
+                (e) -> TestLog.format("Scroll: %.0g",
+                                      Math.signum(e.getDeltaY())));
+        ui.processLine("EV_REL REL_WHEEL 1");
+        ui.processLine("EV_SYN");
+        ui.processLine("EV_REL REL_WHEEL 1");
+        ui.processLine("EV_SYN");
+        ui.processLine("EV_REL REL_WHEEL 1");
+        ui.processLine("EV_SYN");
+        new TestRunnable() {
+            @Override
+            public void test() {
+                Assert.assertEquals(3, TestLog.countLogContaining("Scroll: 1"));
+            }
+        }.invokeAndWaitUntilSuccess(3000l);
+        TestLog.reset();
+
+        ui.processLine("EV_REL REL_WHEEL -1");
+        ui.processLine("EV_SYN");
+        ui.processLine("EV_REL REL_WHEEL -1");
+        ui.processLine("EV_SYN");
+        ui.processLine("EV_REL REL_WHEEL -1");
+        ui.processLine("EV_SYN");
+        new TestRunnable() {
+            @Override
+            public void test() {
+                Assert.assertEquals(3, TestLog.countLogContaining("Scroll: -1"));
+            }
+        }.invokeAndWaitUntilSuccess(3000l);
+    }
+
+    @Test
     public void testClickLeft() throws Exception {
         ui.processLine("EV_KEY BTN_LEFT 1");
         ui.processLine("EV_SYN SYN_REPORT 0");
