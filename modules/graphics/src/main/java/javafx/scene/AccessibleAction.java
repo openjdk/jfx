@@ -71,14 +71,27 @@ public enum AccessibleAction {
     REQUEST_FOCUS,
 
     /**
-     * Requests that the given integer index is shown, if possible, by the
-     * container (e.g. ListView).
-     * Parameter: Integer
+     * Requests the view to show an item, scrolling if required.
+     * Parameter: Node
      */
-    SCROLL_TO_INDEX,
+    SHOW_ITEM,
 
+    /**
+     * Requests the view to show the given text range, scrolling if required.
+     * Parameter: Integer (start offset), Integer (end offset)
+     */
+    SHOW_TEXT_RANGE,
+
+    /**
+     * Sets the selected items.
+     * Parameter: ObservableList&lt;Node&gt;
+     */
     SET_SELECTED_ITEMS,
 
+    /**
+     * Sets the text selection.
+     * Parameter: Integer (start offset), Integer (end offset)
+     */
     SET_TEXT_SELECTION,
 
     /**

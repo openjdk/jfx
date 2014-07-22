@@ -529,9 +529,13 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
     @Override
     protected void executeAccessibleAction(AccessibleAction action, Object... parameters) {
         switch (action) {
-            case SCROLL_TO_INDEX: {
-                Integer index = (Integer)parameters[0];
-                if (index != null) flow.show(index);
+            case SHOW_ITEM: {
+                Node item = (Node)parameters[0];
+                if (item instanceof ListCell) {
+                    @SuppressWarnings("unchecked")
+                    ListCell<T> cell = (ListCell<T>)item;
+                    flow.show(cell.getIndex());
+                }
                 break;
             }
             case SET_SELECTED_ITEMS: {

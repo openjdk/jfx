@@ -987,16 +987,4 @@ public abstract class TableViewSkinBase<M, S, C extends Control, B extends Behav
         }
     }
 
-    @Override
-    protected void executeAccessibleAction(AccessibleAction action, Object... parameters) {
-        switch (action) {
-            case SCROLL_TO_INDEX: {
-                Integer index = (Integer)parameters[0];
-                if (index != null) flow.show(index);
-                break;
-            }
-            default: super.executeAccessibleAction(action, parameters);
-        }
-    }
-
 }

@@ -310,6 +310,15 @@ public class TableViewSkin<T> extends TableViewSkinBase<T, T, TableView<T>, Tabl
     @Override
     protected void executeAccessibleAction(AccessibleAction action, Object... parameters) {
         switch (action) {
+            case SHOW_ITEM: {
+                Node item = (Node)parameters[0];
+                if (item instanceof TableCell) {
+                    @SuppressWarnings("unchecked")
+                    TableCell<T, ?> cell = (TableCell<T, ?>)item;
+                    flow.show(cell.getIndex());
+                }
+                break;
+            }
             case SET_SELECTED_ITEMS: {
                 @SuppressWarnings("unchecked")
                 ObservableList<Node> items = (ObservableList<Node>)parameters[0];

@@ -592,7 +592,7 @@ class WinTextRangeProvider {
     }
 
     void ScrollIntoView(boolean alignToTop) {
-        accessible.executeAction(AccessibleAction.SCROLL_TO_INDEX, start, end);
+        accessible.executeAction(AccessibleAction.SHOW_TEXT_RANGE, start, end);
     }
 
     long[] GetChildren() {

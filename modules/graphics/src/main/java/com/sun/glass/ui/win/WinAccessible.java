@@ -1770,14 +1770,33 @@ final class WinAccessible extends Accessible {
     /***********************************************/
     void ScrollIntoView() {
         if (isDisposed()) return;
-
-        Integer cellIndex = (Integer)getAttribute(INDEX);
-        if (cellIndex == null) cellIndex = (Integer)getAttribute(ROW_INDEX);
-        if (cellIndex != null) {
-            Accessible container = getContainer();
-            if (container != null) {
-                container.executeAction(AccessibleAction.SCROLL_TO_INDEX, cellIndex);
+        AccessibleRole role = (AccessibleRole)getAttribute(ROLE);
+        if (role == null) return;
+        Accessible container = getContainer();
+        if (container == null) return;
+        Node item = null;
+        switch (role) {
+            case LIST_ITEM:
+            case TREE_ITEM: {
+                Integer index = (Integer)getAttribute(INDEX);
+                if (index != null) {
+                    item = (Node)container.getAttribute(ROW_AT_INDEX, index);
+                }
+                break;
             }
+            case TABLE_CELL:
+            case TREE_TABLE_CELL: {
+                Integer rowIndex = (Integer)getAttribute(ROW_INDEX);
+                Integer columnIndex = (Integer)getAttribute(COLUMN_INDEX);
+                if (rowIndex != null && columnIndex != null) {
+                    item = (Node)container.getAttribute(CELL_AT_ROW_COLUMN, rowIndex, columnIndex);
+                }
+                break;
+            }
+            default:
+        }
+        if (item != null) {
+            container.executeAction(AccessibleAction.SHOW_ITEM, item);
         }
     }
 }

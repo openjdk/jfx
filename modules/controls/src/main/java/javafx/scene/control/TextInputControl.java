@@ -1253,7 +1253,6 @@ public abstract class TextInputControl extends Control {
                 }
                 break;
             }
-            case SCROLL_TO_INDEX: //Skin
             default: super.executeAccessibleAction(action, parameters);
         }
     }

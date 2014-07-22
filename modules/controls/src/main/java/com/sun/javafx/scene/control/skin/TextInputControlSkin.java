@@ -844,7 +844,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
 
     protected void executeAccessibleAction(AccessibleAction action, Object... parameters) {
         switch (action) {
-            case SCROLL_TO_INDEX: {
+            case SHOW_TEXT_RANGE: {
                 Integer start = (Integer)parameters[0];
                 Integer end = (Integer)parameters[1];
                 if (start != null && end != null) {

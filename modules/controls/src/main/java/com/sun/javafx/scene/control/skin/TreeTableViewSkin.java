@@ -416,6 +416,15 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeItem<S>, Tree
     @Override
     protected void executeAccessibleAction(AccessibleAction action, Object... parameters) {
         switch (action) {
+            case SHOW_ITEM: {
+                Node item = (Node)parameters[0];
+                if (item instanceof TreeTableCell) {
+                    @SuppressWarnings("unchecked")
+                    TreeTableCell<S, ?> cell = (TreeTableCell<S, ?>)item;
+                    flow.show(cell.getIndex());
+                }
+                break;
+            }
             case SET_SELECTED_ITEMS: {
                 @SuppressWarnings("unchecked")
                 ObservableList<Node> items = (ObservableList<Node>)parameters[0];
