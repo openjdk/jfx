@@ -1245,7 +1245,7 @@ public abstract class TextInputControl extends Control {
                 String value = (String) parameters[0];
                 if (value != null) setText(value);
             }
-            case SELECT: {
+            case SET_TEXT_SELECTION: {
                 Integer start = (Integer) parameters[0];
                 Integer end = (Integer) parameters[1];
                 if (start != null && end != null) {

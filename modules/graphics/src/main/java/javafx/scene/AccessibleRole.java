@@ -109,16 +109,16 @@ public enum AccessibleRole {
 
     /**
      * List View.
-     * Attributes: ROW_AT_INDEX, ROW_COUNT, SELECTED_ROWS, MULTIPLE_SELECTION,
+     * Attributes: ROW_AT_INDEX, ROW_COUNT, SELECTED_ITEMS, MULTIPLE_SELECTION,
      *             VERTICAL_SCROLLBAR, HORIZONTAL_SCROLLBAR
-     * Actions: SCROLL_TO_INDEX
+     * Actions: SCROLL_TO_INDEX, SET_SELECTED_ITEMS
      */
     LIST_VIEW,
 
     /**
      * List Item.
      * Attributes: TITLE, INDEX, SELECTED
-     * Actions: SELECT, ADD_TO_SELECTION, REMOVE_FROM_SELECTION
+     * Actions: (none)
      */
     LIST_ITEM,
 
@@ -223,14 +223,14 @@ public enum AccessibleRole {
     /**
      * Text Area.
      * Attributes: TITLE, SELECTION_START, SELECTION_SET
-     * Actions: SET_TITLE
+     * Actions: SET_TITLE, SET_TEXT_SELECTION
      */
     TEXT_AREA,
 
     /**
      * Text Field.
      * Attributes: TITLE, SELECTION_START, SELECTION_SET
-     * Actions: SET_TITLE
+     * Actions: SET_TITLE, SET_TEXT_SELECTION
      */
     TEXT_FIELD,
 
@@ -286,7 +286,7 @@ public enum AccessibleRole {
     /**
      * Table Cell.
      * Attributes: TITLE, ROW_INDEX, COLUMN_INDEX, SELECTED
-     * Actions: SELECT, ADD_TO_SELECTION, REMOVE_FROM_SELECTION
+     * Actions: (none)
      */
     TABLE_CELL,
 
@@ -307,9 +307,9 @@ public enum AccessibleRole {
     /**
      * Table View
      * Attributes: ROW_COUNT, ROW_AT_INDEX, COLUMN_COUNT, COLUMN_AT_INDEX
-     *             SELECTED_CELLS, CELL_AT_ROWCOLUMN, HEADER,
+     *             SELECTED_ITEMS, CELL_AT_ROWCOLUMN, HEADER,
      *             MULTIPLE_SELECTION, VERTICAL_SCROLLBAR, HORIZONTAL_SCROLLBAR
-     * Actions: SCROLL_TO_INDEX
+     * Actions: SCROLL_TO_INDEX, SET_SELECTED_ITEMS
      */
     TABLE_VIEW,
 
@@ -337,14 +337,14 @@ public enum AccessibleRole {
      * Tree Item.
      * Attributes: TITLE, SELECTED, INDEX, EXPANDED, LEAF, DISCLOSURE_LEVEL,
      *             TREE_ITEM_COUNT, TREE_ITEM_AT_INDEX, TREE_ITEM_PARENT
-     * Actions: SELECT, ADD_TO_SELECTION, REMOVE_FROM_SELECTION, EXPAND, COLLAPSE
+     * Actions: EXPAND, COLLAPSE
      */
     TREE_ITEM,
 
     /**
      * Tree Table Cell.
      * Attributes: TITLE, ROW_INDEX, COLUMN_INDEX, SELECTED
-     * Actions: SELECT, ADD_TO_SELECTION, REMOVE_FROM_SELECTION
+     * Actions: (none)
      */
     TREE_TABLE_CELL,
 
@@ -359,17 +359,17 @@ public enum AccessibleRole {
     /**
      * Tree Table View.
      * Attributes: ROW_COUNT, ROW_AT_INDEX, COLUMN_COUNT, COLUMN_AT_INDEX,
-     *             SELECTED_CELLS, CELL_AT_ROWCOLUMN, HEADER,
+     *             SELECTED_ITEMS, CELL_AT_ROWCOLUMN, HEADER,
      *             MULTIPLE_SELECTION, VERTICAL_SCROLLBAR, HORIZONTAL_SCROLLBAR
-     * Actions: SCROLL_TO_INDEX
+     * Actions: SCROLL_TO_INDEX, SET_SELECTED_ITEMS
      */
     TREE_TABLE_VIEW,
 
     /**
      * Tree View.
-     * Attributes: ROW_COUNT, ROW_AT_INDEX, SELECTED_ROWS,
+     * Attributes: ROW_COUNT, ROW_AT_INDEX, SELECTED_ITEMS,
      *             MULTIPLE_SELECTION, VERTICAL_SCROLLBAR, HORIZONTAL_SCROLLBAR
-     * Actions: SCROLL_TO_INDEX
+     * Actions: SCROLL_TO_INDEX, SET_SELECTED_ITEMS
      */
     TREE_VIEW,
 }

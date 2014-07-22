@@ -26,6 +26,7 @@
 package com.sun.glass.ui.win;
 
 import java.util.function.Function;
+import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
@@ -489,6 +490,48 @@ final class WinAccessible extends Accessible {
         if (treeTableView == null) return null;
         Node treeTableRow = (Node)treeTableView.getAttribute(ROW_AT_INDEX, rowIndex);
         return getAccessible(treeTableRow);
+    }
+
+    private void changeSelection(boolean add, boolean clear) {
+        AccessibleRole role = (AccessibleRole)getAttribute(ROLE);
+        if (role == null) return;
+        Accessible container = getContainer();
+        if (container == null) return;
+        Node item = null;
+        switch (role) {
+            case LIST_ITEM:
+            case TREE_ITEM: {
+                Integer index = (Integer)getAttribute(INDEX);
+                if (index != null) {
+                    item = (Node)container.getAttribute(ROW_AT_INDEX, index);
+                }
+                break;
+            }
+            case TABLE_CELL:
+            case TREE_TABLE_CELL: {
+                Integer rowIndex = (Integer)getAttribute(ROW_INDEX);
+                Integer columnIndex = (Integer)getAttribute(COLUMN_INDEX);
+                if (rowIndex != null && columnIndex != null) {
+                    item = (Node)container.getAttribute(CELL_AT_ROW_COLUMN, rowIndex, columnIndex);
+                }
+                break;
+            }
+            default:
+        }
+        if (item != null) {
+            ObservableList<Node> newItems = FXCollections.observableArrayList();
+            if (!clear) {
+                @SuppressWarnings("unchecked")
+                ObservableList<Node> items = (ObservableList<Node>)container.getAttribute(SELECTED_ITEMS);
+                newItems.addAll(items);
+            }
+            if (add) {
+                newItems.add(item);
+            } else {
+                newItems.remove(item);
+            }
+            container.executeAction(AccessibleAction.SET_SELECTED_ITEMS, newItems);
+        }
     }
 
     /***********************************************/
@@ -1221,20 +1264,25 @@ final class WinAccessible extends Accessible {
                 case DECREMENT_BUTTON:
                     executeAction(AccessibleAction.FIRE);
                     break;
+                case LIST_ITEM:
+                case TREE_ITEM:
+                case TABLE_CELL:
+                case TREE_TABLE_CELL:
+                    changeSelection(true, true);
+                    break;
                 default:
-                    executeAction(AccessibleAction.SELECT);
             }
         }
     }
 
     void AddToSelection() {
         if (isDisposed()) return;
-        executeAction(AccessibleAction.ADD_TO_SELECTION);
+        changeSelection(true, false);
     }
 
     void RemoveFromSelection() {
         if (isDisposed()) return;
-        executeAction(AccessibleAction.REMOVE_FROM_SELECTION);
+        changeSelection(false, false);
     }
 
     boolean get_IsSelected() {

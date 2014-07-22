@@ -518,6 +518,24 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
                 if (index != null) flow.show(index);
                 break;
             }
+            case SET_SELECTED_ITEMS: {
+                @SuppressWarnings("unchecked")
+                ObservableList<Node> items = (ObservableList<Node>)parameters[0];
+                if (items != null) {
+                    MultipleSelectionModel<TreeItem<T>> sm = getSkinnable().getSelectionModel();
+                    if (sm != null) {
+                        sm.clearSelection();
+                        for (Node item : items) {
+                            if (item instanceof TreeCell) {
+                                @SuppressWarnings("unchecked")
+                                TreeCell<T> cell = (TreeCell<T>)item;
+                                sm.select(cell.getIndex());
+                            }
+                        }
+                    }
+                }
+                break;
+            }
             default: super.executeAccessibleAction(action, parameters);
         }
     }

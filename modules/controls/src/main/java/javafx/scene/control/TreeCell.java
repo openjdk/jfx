@@ -676,29 +676,15 @@ public class TreeCell<T> extends IndexedCell<T> {
 
     @Override
     public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
-        final TreeView<T> treeView = getTreeView();
-        final TreeItem<T> treeItem = getTreeItem();
-        final MultipleSelectionModel<TreeItem<T>> sm = treeView == null ? null : treeView.getSelectionModel();
-
         switch (action) {
             case EXPAND: {
+                TreeItem<T> treeItem = getTreeItem();
                 if (treeItem != null) treeItem.setExpanded(true);
                 break;
             }
             case COLLAPSE: {
+                TreeItem<T> treeItem = getTreeItem();
                 if (treeItem != null) treeItem.setExpanded(false);
-                break;
-            }
-            case SELECT: {
-                if (sm != null) sm.clearAndSelect(getIndex());
-                break;
-            }
-            case ADD_TO_SELECTION: {
-                if (sm != null) sm.select(getIndex());
-                break;
-            }
-            case REMOVE_FROM_SELECTION: {
-                if (sm != null) sm.clearSelection(getIndex());
                 break;
             }
             default: super.executeAccessibleAction(action);

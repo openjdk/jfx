@@ -578,7 +578,7 @@ class WinTextRangeProvider {
     }
 
     void Select() {
-        accessible.executeAction(AccessibleAction.SELECT, start, end);
+        accessible.executeAction(AccessibleAction.SET_TEXT_SELECTION, start, end);
     }
 
     void AddToSelection() {

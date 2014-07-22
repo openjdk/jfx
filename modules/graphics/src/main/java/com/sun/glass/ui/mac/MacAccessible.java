@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Function;
+import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
@@ -1545,17 +1546,48 @@ final class MacAccessible extends Accessible {
                         executeAction(AccessibleAction.EXPAND);
                     }
                     break;
-                case NSAccessibilitySelectedCellsAttribute:
-                case NSAccessibilitySelectedRowsAttribute: {
+                case NSAccessibilitySelectedCellsAttribute: {
+                    /* Table and TreeTable */
                     MacVariant variant = idToMacVariant(value, MacVariant.NSArray_id);
                     if (variant != null && variant.longArray != null && variant.longArray.length > 0) {
                         long[] ids = variant.longArray;
+                        ObservableList<Node> items = FXCollections.observableArrayList();
                         for (long id : ids) {
                             MacAccessible acc = GlassAccessibleToMacAccessible(id);
                             if (acc != null) {
-                                acc.executeAction(AccessibleAction.SELECT);
+                                Integer rowIndex = (Integer)acc.getAttribute(ROW_INDEX);
+                                Integer columnIndex = (Integer)acc.getAttribute(COLUMN_INDEX);
+                                if (rowIndex != null && columnIndex != null) {
+                                    Node cell = (Node)getAttribute(CELL_AT_ROW_COLUMN, rowIndex, columnIndex);
+                                    if (cell != null) {
+                                        items.add(cell);
+                                    }
+                                }
                             }
                         }
+                        executeAction(AccessibleAction.SET_SELECTED_ITEMS, items);
+                    }
+                    break;
+                }
+                case NSAccessibilitySelectedRowsAttribute: {
+                    /* List and Tree */
+                    MacVariant variant = idToMacVariant(value, MacVariant.NSArray_id);
+                    if (variant != null && variant.longArray != null && variant.longArray.length > 0) {
+                        long[] ids = variant.longArray;
+                        ObservableList<Node> items = FXCollections.observableArrayList();
+                        for (long id : ids) {
+                            MacAccessible acc = GlassAccessibleToMacAccessible(id);
+                            if (acc != null) {
+                                Integer index = (Integer)acc.getAttribute(INDEX);
+                                if (index != null) {
+                                    Node cell = (Node)getAttribute(ROW_AT_INDEX, index);
+                                    if (cell != null) {
+                                        items.add(cell);
+                                    }
+                                }
+                            }
+                        }
+                        executeAction(AccessibleAction.SET_SELECTED_ITEMS, items);
                     }
                     break;
                 }
@@ -1564,7 +1596,7 @@ final class MacAccessible extends Accessible {
                     if (variant != null) {
                         int start = variant.int1; /* range.location */
                         int end = variant.int1 + variant.int2; /* range.location + range.length */
-                        executeAction(AccessibleAction.SELECT, start, end);
+                        executeAction(AccessibleAction.SET_TEXT_SELECTION, start, end);
                     }
                     break;
                 }

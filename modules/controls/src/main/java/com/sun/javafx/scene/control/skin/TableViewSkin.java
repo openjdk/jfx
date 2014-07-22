@@ -33,6 +33,7 @@ import javafx.beans.property.ObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
+import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
 import javafx.scene.control.ResizeFeaturesBase;
@@ -303,6 +304,31 @@ public class TableViewSkin<T> extends TableViewSkinBase<T, T, TableView<T>, Tabl
                 return FXCollections.observableArrayList(selection);
             }
             default: return super.queryAccessibleAttribute(attribute, parameters);
+        }
+    }
+
+    @Override
+    protected void executeAccessibleAction(AccessibleAction action, Object... parameters) {
+        switch (action) {
+            case SET_SELECTED_ITEMS: {
+                @SuppressWarnings("unchecked")
+                ObservableList<Node> items = (ObservableList<Node>)parameters[0];
+                if (items != null) {
+                    TableSelectionModel<T> sm = getSkinnable().getSelectionModel();
+                    if (sm != null) {
+                        sm.clearSelection();
+                        for (Node item : items) {
+                            if (item instanceof TableCell) {
+                                @SuppressWarnings("unchecked")
+                                TableCell<T, ?> cell = (TableCell<T, ?>)item;
+                                sm.select(cell.getIndex(), cell.getTableColumn());
+                            }
+                        }
+                    }
+                }
+                break;
+            }
+            default: super.executeAccessibleAction(action, parameters);
         }
     }
 

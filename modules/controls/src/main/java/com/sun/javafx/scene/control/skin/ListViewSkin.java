@@ -534,6 +534,24 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
                 if (index != null) flow.show(index);
                 break;
             }
+            case SET_SELECTED_ITEMS: {
+                @SuppressWarnings("unchecked")
+                ObservableList<Node> items = (ObservableList<Node>)parameters[0];
+                if (items != null) {
+                    MultipleSelectionModel<T> sm = getSkinnable().getSelectionModel();
+                    if (sm != null) {
+                        sm.clearSelection();
+                        for (Node item : items) {
+                            if (item instanceof ListCell) {
+                                @SuppressWarnings("unchecked")
+                                ListCell<T> cell = (ListCell<T>)item;
+                                sm.select(cell.getIndex());
+                            }
+                        }
+                    }
+                }
+                break;
+            }
             default: super.executeAccessibleAction(action, parameters);
         }
     }

@@ -783,26 +783,4 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
             default: return super.queryAccessibleAttribute(attribute, parameters);
         }
     }
-
-    @Override
-    public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
-        final TreeTableView<S> treeTableView = getTreeTableView();
-        final TreeTableView.TreeTableViewSelectionModel<S> sm = treeTableView == null ? null : treeTableView.getSelectionModel();
-
-        switch (action) {
-            case SELECT: {
-                if (sm != null) sm.clearAndSelect(getIndex(), getTableColumn());
-                break;
-            }
-            case ADD_TO_SELECTION: {
-                if (sm != null) sm.select(getIndex(), getTableColumn());
-                break;
-            }
-            case REMOVE_FROM_SELECTION: {
-                if (sm != null) sm.clearSelection(getIndex(), getTableColumn());
-                break;
-            }
-            default: super.executeAccessibleAction(action);
-        }
-    }
 }

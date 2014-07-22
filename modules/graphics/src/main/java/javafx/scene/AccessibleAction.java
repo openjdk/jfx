@@ -33,12 +33,6 @@ package javafx.scene;
 public enum AccessibleAction {
 
     /**
-     * Selects the node whilst retaining all other selection in the container
-     * (assuming that the container supports multiple selection).
-     */
-    ADD_TO_SELECTION,
-
-    /**
      * Decrements the node (if it support BLOCK_DECREMENT) by its larger block decrement
      * value. A smaller decrement can be performed by using {@link #DECREMENT}.
      */
@@ -74,11 +68,6 @@ public enum AccessibleAction {
      */
     MOVE,
 
-    /**
-     * Deselects the node whilst retaining all other selection in the container.
-     */
-    REMOVE_FROM_SELECTION,
-
     REQUEST_FOCUS,
 
     /**
@@ -88,10 +77,9 @@ public enum AccessibleAction {
      */
     SCROLL_TO_INDEX,
 
-    /**
-     * Selects the node, clearing out all other selection in the container.
-     */
-    SELECT,
+    SET_SELECTED_ITEMS,
+
+    SET_TEXT_SELECTION,
 
     /**
      * Sets the tile for a node.

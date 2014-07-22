@@ -567,13 +567,14 @@ public class TreeTableRow<T> extends IndexedCell<T> {
 
     @Override
     public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
-        final TreeItem<T> treeItem = getTreeItem();
         switch (action) {
             case EXPAND: {
+                TreeItem<T> treeItem = getTreeItem();
                 if (treeItem != null) treeItem.setExpanded(true);
                 break;
             }
             case COLLAPSE: {
+                TreeItem<T> treeItem = getTreeItem();
                 if (treeItem != null) treeItem.setExpanded(false);
                 break;
             }
