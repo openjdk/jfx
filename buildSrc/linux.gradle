@@ -128,7 +128,6 @@ setupTools("linux_freetype_tools",
 )
 
 def compiler = IS_COMPILE_PARFAIT ? "parfait-gcc" : "gcc";
-def cc_compiler = IS_COMPILE_PARFAIT ? "parfait-cc" : "cc";
 def linker = IS_COMPILE_PARFAIT ? "parfait-g++" : "g++";
 
 LINUX.glass = [:]
@@ -153,7 +152,7 @@ LINUX.decora.lib = "decora_sse"
 LINUX.prism = [:]
 LINUX.prism.javahInclude = ["com/sun/prism/impl/**/*", "com/sun/prism/PresentableState*"]
 LINUX.prism.nativeSource = file("modules/graphics/src/main/native-prism")
-LINUX.prism.compiler = cc_compiler
+LINUX.prism.compiler = compiler
 LINUX.prism.ccFlags = [ccFlags, "-DINLINE=inline"].flatten()
 LINUX.prism.linker = linker
 LINUX.prism.linkFlags = [linkFlags].flatten()
@@ -162,7 +161,7 @@ LINUX.prism.lib = "prism_common"
 LINUX.prismSW = [:]
 LINUX.prismSW.javahInclude = ["com/sun/pisces/**/*"]
 LINUX.prismSW.nativeSource = file("modules/graphics/src/main/native-prism-sw")
-LINUX.prismSW.compiler = cc_compiler
+LINUX.prismSW.compiler = compiler
 LINUX.prismSW.ccFlags = [ccFlags, "-DINLINE=inline"].flatten()
 LINUX.prismSW.linker = linker
 LINUX.prismSW.linkFlags = [linkFlags].flatten()
