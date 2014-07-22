@@ -55,7 +55,6 @@ import javafx.css.StyleableDoubleProperty;
 import javafx.css.StyleableProperty;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
-import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
@@ -1653,9 +1652,11 @@ public class TableView<S> extends Control {
             case SELECTED_ITEMS: {
                 // TableViewSkin returns TableRows back to TableView.
                 // TableRowSkin returns TableCells back to TableRow.
+                @SuppressWarnings("unchecked")
                 ObservableList<TableRow<S>> rows = (ObservableList<TableRow<S>>)super.queryAccessibleAttribute(attribute, parameters);
                 List<Node> selection = new ArrayList<>();
                 for (TableRow<S> row : rows) {
+                    @SuppressWarnings("unchecked")
                     ObservableList<Node> cells = (ObservableList<Node>)row.queryAccessibleAttribute(attribute, parameters);
                     if (cells != null) selection.addAll(cells);
                 }
@@ -1669,6 +1670,7 @@ public class TableView<S> extends Control {
                 return cell != null ?  cell : row;
             }
             case CELL_AT_ROW_COLUMN: {
+                @SuppressWarnings("unchecked")
                 TableRow<S> row = (TableRow<S>)super.queryAccessibleAttribute(attribute, parameters);
                 return row != null ? row.queryAccessibleAttribute(attribute, parameters) : null;
             }

@@ -74,7 +74,6 @@ import javafx.collections.WeakListChangeListener;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
-import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
@@ -1914,9 +1913,11 @@ public class TreeTableView<S> extends Control {
              * TreeTableRowSkin returns TreeTableCells back to TreeTableRow.
              */
             case SELECTED_ITEMS: {
+                @SuppressWarnings("unchecked")
                 ObservableList<TreeTableRow<S>> rows = (ObservableList<TreeTableRow<S>>)super.queryAccessibleAttribute(attribute, parameters);
                 List<Node> selection = new ArrayList<>();
                 for (TreeTableRow<S> row : rows) {
+                    @SuppressWarnings("unchecked")
                     ObservableList<Node> cells = (ObservableList<Node>)row.queryAccessibleAttribute(attribute, parameters);
                     if (cells != null) selection.addAll(cells);
                 }
@@ -1930,6 +1931,7 @@ public class TreeTableView<S> extends Control {
                 return cell != null ?  cell : row;
             }
             case CELL_AT_ROW_COLUMN: {
+                @SuppressWarnings("unchecked")
                 TreeTableRow<S> row = (TreeTableRow<S>)super.queryAccessibleAttribute(attribute, parameters);
                 return row != null ? row.queryAccessibleAttribute(attribute, parameters) : null;
             }

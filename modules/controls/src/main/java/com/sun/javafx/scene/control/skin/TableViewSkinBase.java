@@ -973,7 +973,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, B extends Behav
             }
             case COLUMN_AT_INDEX: {
                 int index = (Integer)parameters[0];
-                TableColumnBase column = getVisibleLeafColumn(index);
+                TableColumnBase<S,?> column = getVisibleLeafColumn(index);
                 return getTableHeaderRow().getColumnHeaderFor(column);
             }
             case HEADER: {

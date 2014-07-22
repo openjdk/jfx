@@ -137,14 +137,14 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, CellBehavi
                 // (selectedCells could be big, cellsMap is much smaller)
                 List<Node> selection = new ArrayList<>();
                 int index = getSkinnable().getIndex();
-                for (TablePosition pos : tableView.getSelectionModel().getSelectedCells()) {
+                for (TablePosition<T,?> pos : tableView.getSelectionModel().getSelectedCells()) {
                     if (pos.getRow() == index) {
-                        TableColumn column = pos.getTableColumn();
+                        TableColumn<T,?> column = pos.getTableColumn();
                         if (column == null) {
                             /* This is the row-based case */
                             column = tableView.getVisibleLeafColumn(0);
                         }
-                        TableCell cell = cellsMap.get(column);
+                        TableCell<T,?> cell = cellsMap.get(column);
                         if (cell != null) selection.add(cell);
                     }
                     return FXCollections.observableArrayList(selection);
@@ -152,13 +152,13 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, CellBehavi
             }
             case CELL_AT_ROW_COLUMN: {
                 int colIndex = (Integer)parameters[1];
-                TableColumn column = tableView.getVisibleLeafColumn(colIndex);
+                TableColumn<T,?> column = tableView.getVisibleLeafColumn(colIndex);
                 return cellsMap.get(column);
             }
             case FOCUS_ITEM: {
                 TableViewFocusModel<T> fm = tableView.getFocusModel();
-                TablePosition focusedCell = fm.getFocusedCell();
-                TableColumn column = focusedCell.getTableColumn();
+                TablePosition<T,?> focusedCell = fm.getFocusedCell();
+                TableColumn<T,?> column = focusedCell.getTableColumn();
                 if (column == null) {
                     /* This is the row-based case */
                     column = tableView.getVisibleLeafColumn(0);

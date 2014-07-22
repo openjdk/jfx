@@ -296,7 +296,7 @@ public class TableViewSkin<T> extends TableViewSkinBase<T, T, TableView<T>, Tabl
             case SELECTED_ITEMS: {
                 List<Node> selection = new ArrayList<>();
                 TableViewSelectionModel<T> sm = getSkinnable().getSelectionModel();
-                for (TablePosition pos : sm.getSelectedCells()) {
+                for (TablePosition<T,?> pos : sm.getSelectedCells()) {
                     TableRow<T> row = flow.getPrivateCell(pos.getRow());
                     if (row != null) selection.add(row);
                 }
