@@ -1232,6 +1232,17 @@ final class MacAccessible extends Accessible {
                      */
                     result = 1;
                     break;
+                case NSAccessibilityColumnIndexRangeAttribute:
+                    if (role == AccessibleRole.TABLE_COLUMN) {
+                        /*
+                         * Mac 10.10 sends AXColumnIndexRange instead of AXIndex for
+                         * AXColumns. This is undocumented but without it the column
+                         * header name is not read.
+                         */
+                        result = getAttribute(INDEX);
+                        if (result != null) break;
+                    }
+                    return null;
                 case AXMenuItemCmdModifiers:
                     return attr.map.apply(kAXMenuItemModifierNoCommand);
                 case NSAccessibilityRoleDescriptionAttribute: {
