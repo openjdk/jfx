@@ -975,4 +975,37 @@ public class SequentialTransitionPlayTest {
 
     }
 
+    @Test
+    public void testJumpToDelay() {
+        child1X.setDelay(Duration.seconds(2));
+        st.getChildren().addAll(child1X);
+
+        st.jumpTo(Duration.seconds(2).subtract(TickCalculation.toDuration(100)));
+        st.play();
+
+        assertEquals(Status.RUNNING, st.getStatus());
+        assertEquals(Status.STOPPED, child1X.getStatus());
+
+        amt.pulse(); amt.pulse();
+
+        assertEquals(Math.round(TICK_MILLIS), xProperty.get(), 1e-10);
+    }
+
+    @Test
+    public void testJumpToSecondDelay() {
+        child1Y.setDelay(Duration.seconds(2));
+        st.getChildren().addAll(child1X, child1Y);
+
+        st.jumpTo(Duration.seconds(62).subtract(TickCalculation.toDuration(100)));
+        st.play();
+
+        assertEquals(Status.RUNNING, st.getStatus());
+        assertEquals(Status.STOPPED, child1X.getStatus());
+        assertEquals(Status.STOPPED, child1Y.getStatus());
+
+        amt.pulse(); amt.pulse();
+
+        assertEquals(Math.round(TICK_MILLIS), yProperty.get(), 1e-10);
+    }
+
 }
