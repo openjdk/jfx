@@ -35,6 +35,9 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.MapChangeListener;
 import javafx.collections.ObservableList;
+import javafx.scene.AccessibleAction;
+import javafx.scene.AccessibleAttribute;
+import javafx.scene.AccessibleRole;
 import javafx.util.StringConverter;
 
 import java.math.BigDecimal;
@@ -125,6 +128,7 @@ public class Spinner<T> extends Control {
      */
     public Spinner() {
         getStyleClass().add(DEFAULT_STYLE_CLASS);
+        setRole(AccessibleRole.SPINNER);
 
         getEditor().setOnAction(action -> {
             String text = getEditor().getText();
@@ -570,6 +574,7 @@ public class Spinner<T> extends Control {
             }
         }
 
+        notifyAccessibleAttributeChanged(AccessibleAttribute.TITLE);
         if (text == null) {
             if (value == null) {
                 getEditor().clear();
@@ -621,4 +626,42 @@ public class Spinner<T> extends Control {
         }
         return value;
     }
+
+    /***************************************************************************
+     *                                                                         *
+     * Accessibility handling                                                  *
+     *                                                                         *
+     **************************************************************************/
+
+    @Override
+    public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
+        switch (attribute) {
+            case TITLE: {
+                T value = getValue();
+                SpinnerValueFactory<T> factory = getValueFactory();
+                if (factory != null) {
+                    StringConverter<T> converter = factory.getConverter();
+                    if (converter != null) {
+                        return converter.toString(value);
+                    }
+                }
+                return value != null ? value.toString() : "";
+            }
+            default: return super.queryAccessibleAttribute(attribute, parameters);
+        }
+    }
+
+    @Override
+    public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
+        switch (action) {
+            case INCREMENT:
+                increment();
+                break;
+            case DECREMENT:
+                decrement();
+                break;
+            default: super.executeAccessibleAction(action);
+        }
+    }
+
 }

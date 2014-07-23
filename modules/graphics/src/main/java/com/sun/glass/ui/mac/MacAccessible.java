@@ -209,6 +209,16 @@ final class MacAccessible extends Accessible {
             new MacAction[] {MacAction.NSAccessibilityPressAction},
             null
         ),
+        NSAccessibilityIncrementorRole(AccessibleRole.SPINNER,
+            new MacAttribute[] {
+                MacAttribute.NSAccessibilityEnabledAttribute,
+                MacAttribute.NSAccessibilityTitleAttribute,
+            },
+            new MacAction[] {
+                MacAction.NSAccessibilityIncrementAction,
+                MacAction.NSAccessibilityDecrementAction,
+            }
+        ),
         /* AXJFXTOOLTIP is a custom name used to ignore the tooltip window. See GlassWindow.m for details. */
         AXJFXTOOLTIP(AccessibleRole.TOOLTIP, null, null),
         NSAccessibilityImageRole(AccessibleRole.IMAGE_VIEW, null, null),
@@ -775,6 +785,9 @@ final class MacAccessible extends Accessible {
                 }
                 break;
             }
+            case TITLE:
+                macNotification = MacNotification.NSAccessibilityTitleChangedNotification;
+                break;
             case PARENT:
                 ignoreInnerText = null;
                 break;

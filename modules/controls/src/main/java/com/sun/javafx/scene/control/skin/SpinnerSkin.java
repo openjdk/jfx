@@ -29,6 +29,8 @@ import javafx.collections.ListChangeListener;
 import javafx.css.PseudoClass;
 import javafx.geometry.HPos;
 import javafx.geometry.VPos;
+import javafx.scene.AccessibleAction;
+import javafx.scene.AccessibleRole;
 import javafx.scene.control.Spinner;
 import javafx.scene.control.TextField;
 import javafx.scene.input.KeyEvent;
@@ -74,7 +76,15 @@ public class SpinnerSkin<T> extends BehaviorSkinBase<Spinner<T>, SpinnerBehavior
         incrementArrow.setMaxHeight(Region.USE_PREF_SIZE);
         incrementArrow.setMouseTransparent(true);
 
-        incrementArrowButton = new StackPane();
+        incrementArrowButton = new StackPane() {
+            public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
+                switch (action) {
+                    case FIRE: getSkinnable().increment();
+                    default: super.executeAccessibleAction(action, parameters);
+                }
+            }
+        };
+        incrementArrowButton.setRole(AccessibleRole.INCREMENT_BUTTON);
         incrementArrowButton.setFocusTraversable(false);
         incrementArrowButton.getStyleClass().setAll("increment-arrow-button");
         incrementArrowButton.getChildren().add(incrementArrow);
@@ -91,7 +101,15 @@ public class SpinnerSkin<T> extends BehaviorSkinBase<Spinner<T>, SpinnerBehavior
         decrementArrow.setMaxHeight(Region.USE_PREF_SIZE);
         decrementArrow.setMouseTransparent(true);
 
-        decrementArrowButton = new StackPane();
+        decrementArrowButton = new StackPane() {
+            public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
+                switch (action) {
+                    case FIRE: getSkinnable().decrement();
+                    default: super.executeAccessibleAction(action, parameters);
+                }
+            }
+        };
+        decrementArrowButton.setRole(AccessibleRole.DECREMENT_BUTTON);
         decrementArrowButton.setFocusTraversable(false);
         decrementArrowButton.getStyleClass().setAll("decrement-arrow-button");
         decrementArrowButton.getChildren().add(decrementArrow);

@@ -214,6 +214,13 @@ public enum AccessibleRole {
     SLIDER,
 
     /**
+     * Spinner.
+     * Attributes: TITLE
+     * Actions: INCREMENT, DECREMENT
+     */
+    SPINNER,
+
+    /**
      * Text.
      * Attributes: TITLE, SELECTION_START, SELECTION_SET
      * Actions: SET_TITLE

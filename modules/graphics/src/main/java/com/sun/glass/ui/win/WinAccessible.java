@@ -133,6 +133,7 @@ final class WinAccessible extends Accessible {
     private static final int UIA_RadioButtonControlTypeId        = 50013;
     private static final int UIA_ScrollBarControlTypeId          = 50014;
     private static final int UIA_SliderControlTypeId             = 50015;
+    private static final int UIA_SpinnerControlTypeId            = 50016;
     private static final int UIA_TabControlTypeId                = 50018;
     private static final int UIA_TabItemControlTypeId            = 50019;
     private static final int UIA_TextControlTypeId               = 50020;
@@ -346,14 +347,18 @@ final class WinAccessible extends Accessible {
             case TITLE:
                 String value = (String)getAttribute(TITLE);
                 if (value != null) {
-                    /* Combo and Text both implement IValueProvider */
                     WinVariant vo = new WinVariant();
                     vo.vt = WinVariant.VT_BSTR;
                     vo.bstrVal = "";
                     WinVariant vn = new WinVariant();
                     vn.vt = WinVariant.VT_BSTR;
                     vn.bstrVal = value;
-                    UiaRaiseAutomationPropertyChangedEvent(peer, UIA_ValueValuePropertyId, vo, vn);
+                    if (getAttribute(ROLE) == AccessibleRole.SPINNER) {
+                        UiaRaiseAutomationPropertyChangedEvent(peer, UIA_NamePropertyId, vo, vn);
+                    } else {
+                        /* Combo and Text both implement IValueProvider */
+                        UiaRaiseAutomationPropertyChangedEvent(peer, UIA_ValueValuePropertyId, vo, vn);
+                    }
                 }
 
                 if (selectionRange != null || documentRange != null) {
@@ -475,6 +480,7 @@ final class WinAccessible extends Accessible {
             case THUMB: return UIA_ThumbControlTypeId;
             case MENU_BAR: return UIA_MenuBarControlTypeId;
             case DATE_PICKER: return UIA_PaneControlTypeId;
+            case SPINNER: return UIA_SpinnerControlTypeId;
             default: return 0;
         }
     }
@@ -721,6 +727,18 @@ final class WinAccessible extends Accessible {
                          */
                         name = null;
                         break;
+                    case DECREMENT_BUTTON:
+                    case INCREMENT_BUTTON: {
+                        name = (String)getAttribute(TITLE);
+                        if (name == null || name.length() == 0) {
+                            if (role == AccessibleRole.INCREMENT_BUTTON) {
+                                name = "increment";
+                            } else {
+                                name = "decrement";
+                            }
+                        }
+                        break;
+                    }
                     case TEXT_FIELD:
                     case TEXT_AREA:
                         /*
