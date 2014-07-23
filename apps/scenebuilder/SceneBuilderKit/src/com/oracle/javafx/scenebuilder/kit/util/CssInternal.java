@@ -31,6 +31,29 @@
  */
 package com.oracle.javafx.scenebuilder.kit.util;
 
+import java.io.File;
+import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
+
+import javafx.beans.property.ReadOnlyProperty;
+import javafx.collections.FXCollections;
+import javafx.css.CssMetaData;
+import javafx.css.StyleOrigin;
+import javafx.css.Styleable;
+import javafx.css.StyleableProperty;
+import javafx.scene.Node;
+import javafx.scene.Parent;
+
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorPlatform;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorPlatform.Theme;
@@ -43,26 +66,6 @@ import com.sun.javafx.css.SimpleSelector;
 import com.sun.javafx.css.Style;
 import com.sun.javafx.css.Stylesheet;
 import com.sun.javafx.css.parser.CSSParser;
-import java.io.File;
-import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
-import javafx.beans.property.ReadOnlyProperty;
-import javafx.collections.FXCollections;
-import javafx.css.CssMetaData;
-import javafx.css.StyleOrigin;
-import javafx.css.Styleable;
-import javafx.css.StyleableProperty;
-import javafx.scene.Node;
-import javafx.scene.Parent;
 
 /**
  *
@@ -168,7 +171,7 @@ public class CssInternal {
     }
 
     public static Map<String, String> getStyleClassesMap(EditorController editorController, Set<FXOMInstance> instances) {
-        Map<String, String> classesMap = new HashMap<>();
+        Map<String, String> classesMap = new TreeMap<>();
         Object fxRoot = null;
         for (FXOMInstance instance : instances) {
             if (fxRoot == null) {
