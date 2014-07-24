@@ -487,6 +487,17 @@ public abstract class TableRowSkinBase<T,
     }
 
     protected void updateCells(boolean resetChildren) {
+        // To avoid a potential memory leak (when the TableColumns in the
+        // TableView are created/inserted/removed/deleted, we have a 'refresh
+        // counter' that when we reach 0 will delete all cells in this row
+        // and recreate all of them.
+        if (resetChildren) {
+            if (fullRefreshCounter == 0) {
+                recreateCells();
+            }
+            fullRefreshCounter--;
+        }
+
         // if clear isn't called first, we can run into situations where the
         // cells aren't updated properly.
         final boolean cellsEmpty = cells.isEmpty();
@@ -638,14 +649,6 @@ public abstract class TableRowSkinBase<T,
     }
 
     private void recreateCells() {
-        // This function is smart in the sense that we don't recreate all
-        // TableCell instances every time this function is called. Instead we
-        // only create TableCells for TableColumns we haven't already encountered.
-        // To avoid a potential memory leak (when the TableColumns in the
-        // TableView are created/inserted/removed/deleted, we have a 'refresh
-        // counter' that when we reach 0 will delete all cells in this row
-        // and recreate all of them.
-
         if (cellsMap != null) {
             Collection<R> cells = cellsMap.values();
             Iterator<R> cellsIter = cells.iterator();
@@ -660,13 +663,11 @@ public abstract class TableRowSkinBase<T,
 
         ObservableList<? extends TableColumnBase/*<T,?>*/> columns = getVisibleLeafColumns();
 
-        if (columns.size() != columnCount || fullRefreshCounter == 0 || cellsMap == null) {
-            cellsMap = new WeakHashMap<TableColumnBase, R>(columns.size());
-            fullRefreshCounter = DEFAULT_FULL_REFRESH_COUNTER;
-            getChildren().clear();
-        }
+        cellsMap = new WeakHashMap<TableColumnBase, R>(columns.size());
+        fullRefreshCounter = DEFAULT_FULL_REFRESH_COUNTER;
+        getChildren().clear();
+
         columnCount = columns.size();
-        fullRefreshCounter--;
 
         for (TableColumnBase col : columns) {
             if (cellsMap.containsKey(col)) {
