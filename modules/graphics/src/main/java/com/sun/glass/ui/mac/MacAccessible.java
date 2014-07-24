@@ -1116,8 +1116,17 @@ final class MacAccessible extends Accessible {
             case NSAccessibilitySelectedAttribute:
             case NSAccessibilitySelectedRowsAttribute:
             case NSAccessibilitySelectedCellsAttribute:
-            case NSAccessibilitySelectedTextRangeAttribute:
                 return true;
+            case NSAccessibilityValueAttribute:
+            case NSAccessibilitySelectedTextRangeAttribute: {
+                AccessibleRole role = (AccessibleRole)getAttribute(ROLE);
+                if (role == AccessibleRole.TEXT_FIELD || role == AccessibleRole.TEXT_AREA) {
+                    if (Boolean.TRUE.equals(getAttribute(EDITABLE))) {
+                        return true;
+                    }
+                }
+                break;
+            }
             default:
         }
         return false;
