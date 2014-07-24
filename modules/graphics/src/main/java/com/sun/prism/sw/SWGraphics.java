@@ -63,6 +63,10 @@ import com.sun.prism.paint.Paint;
 
 final class SWGraphics implements ReadbackGraphics {
 
+    private static final BasicStroke DEFAULT_STROKE =
+        new BasicStroke(1.0f, BasicStroke.CAP_SQUARE, BasicStroke.JOIN_MITER, 10.0f);
+    private static final Paint DEFAULT_PAINT = Color.WHITE;
+
     private final PiscesRenderer pr;
     private final SWContext context;
     private final SWRTTexture target;
@@ -78,8 +82,8 @@ final class SWGraphics implements ReadbackGraphics {
 
     private int clipRectIndex;
 
-    private Paint paint;
-    private BasicStroke stroke;
+    private Paint paint = DEFAULT_PAINT;
+    private BasicStroke stroke = DEFAULT_STROKE;
 
     private Ellipse2D ellipse2d;
     private Line2D line2d;
