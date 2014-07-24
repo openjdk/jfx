@@ -31,6 +31,7 @@ package com.sun.glass.ui.monocle;
 public class X11WarpingCursor extends X11Cursor {
 
     private int nextX, nextY;
+    private static X xLib = X.getX();
 
     /** Update the next coordinates for the cursor.  The actual move will occur
      * on the next buffer swap
@@ -53,9 +54,9 @@ public class X11WarpingCursor extends X11Cursor {
     void warp() {
         if (isVisible) {
             int[] position = new int[2];
-            X.XQueryPointer(xdisplay, xwindow, position);
+            xLib.XQueryPointer(xdisplay, xwindow, position);
             if (position[0] != nextX || position[1] != nextY) {
-                X.XWarpPointer(xdisplay, 0l, 0l, 0, 0, 0, 0,
+                xLib.XWarpPointer(xdisplay, 0l, 0l, 0, 0, 0, 0,
                                nextX - position[0],
                                nextY - position[1]);
             }

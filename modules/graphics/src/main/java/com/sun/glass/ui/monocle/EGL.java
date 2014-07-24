@@ -26,6 +26,7 @@
 package com.sun.glass.ui.monocle;
 
 import java.lang.reflect.Field;
+import java.security.Permission;
 import java.util.Formatter;
 
 /** Java wrapper for the EGL API */
@@ -147,26 +148,49 @@ class EGL {
     static final int EGL_READ = 0x305A;
     static final int EGL_CORE_NATIVE_ENGINE = 0x305B;
 
-    static native void loadFunctions(long dlHandle);
+    private static Permission permission = new RuntimePermission("loadLibrary.*");
 
-    static native boolean eglBindAPI(int api);
+    private static EGL instance = new EGL();
 
-    static native boolean eglChooseConfig(
+    private EGL() {}
+
+    /**
+     * Obtains the single instance of EGL. Calling this method requires
+     * the RuntimePermission "loadLibrary.*".
+     *
+     */
+    static EGL getEGL() {
+        checkPermissions();
+        return instance;
+    }
+
+    private static void checkPermissions() {
+        SecurityManager security = System.getSecurityManager();
+        if (security != null) {
+            security.checkPermission(permission);
+        }
+    }
+
+    native void loadFunctions(long dlHandle);
+
+    native boolean eglBindAPI(int api);
+
+    native boolean eglChooseConfig(
             long eglDisplay,
             int[] attribs,
             long[] eglConfigs,
             int configSize,
             int[] configCount);
 
-    static native long eglContextFromConfig(long eglDisplay, long eglConfig);
+    native long eglContextFromConfig(long eglDisplay, long eglConfig);
 
-    static native long eglCreateContext(
+    native long eglCreateContext(
             long eglDisplay,
             long eglConfig,
             long shareContext,
             int[] attribs);
 
-    static long eglCreateWindowSurface(long eglDisplay,
+    long eglCreateWindowSurface(long eglDisplay,
                                               long eglConfig,
                                               long nativeWindow,
                                               int[] attribs) {
@@ -178,38 +202,38 @@ class EGL {
         return eglWindowSurface;
     }
 
-    static native long _eglCreateWindowSurface(
+    native long _eglCreateWindowSurface(
             long eglDisplay,
             long eglConfig,
             long nativeWindow,
             int[] attribs);
 
-    static native boolean eglDestroyContext(long eglDisplay, long eglContext);
+    native boolean eglDestroyContext(long eglDisplay, long eglContext);
 
-    static native boolean eglGetConfigAttrib(
+    native boolean eglGetConfigAttrib(
             long eglDisplay,
             long eglConfig,
             int attrib,
             int[] value);
 
-    static native long eglGetDisplay(long nativeDisplay);
+    native long eglGetDisplay(long nativeDisplay);
 
-    static native int eglGetError();
+    native int eglGetError();
 
-    static native boolean eglInitialize(long eglDisplay, int[] major,
+    native boolean eglInitialize(long eglDisplay, int[] major,
                                         int[] minor);
 
-    static native boolean eglMakeCurrent(
+    native boolean eglMakeCurrent(
             long eglDisplay,
             long eglDrawSurface,
             long eglReadSurface,
             long eglContext);
 
-    static native String eglQueryString(long eglDisplay, int name);
+    native String eglQueryString(long eglDisplay, int name);
 
-    static native String eglQueryVersion(long eglDisplay, int versionType);
+    native String eglQueryVersion(long eglDisplay, int versionType);
 
-    static native boolean eglSwapBuffers(long eglDisplay, long eglSurface);
+    native boolean eglSwapBuffers(long eglDisplay, long eglSurface);
 
     /** Convert an EGL error code such as EGL_BAD_CONTEXT to a string
      * representation.
@@ -218,7 +242,7 @@ class EGL {
      * matched to an EGL error, a string representation of the error code's
      * value is returned.
      */
-    static String eglErrorToString(int errorCode) {
+    String eglErrorToString(int errorCode) {
         if (errorCode >= 0x3000 && errorCode < 0x3020) {
             for (Field field : EGL.class.getFields()) {
                 try {

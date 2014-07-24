@@ -43,6 +43,7 @@ class X11Screen implements NativeScreen {
     private int height;
     private long nativeHandle;
     private long display;
+    private static X xLib = X.getX();
 
     /** Create the screen.  If showCursor is true, set the corresponding X11
      * window attribute.
@@ -52,13 +53,13 @@ class X11Screen implements NativeScreen {
         // Since we will be accessing X from multiple threads, we need to call
         // XInitThreads before we do anything else.  Then, lock the X display
         // until we are done doing our setup
-        X.XInitThreads();
-        display = X.XOpenDisplay(null);
-        X.XLockDisplay(display);
+        xLib.XInitThreads();
+        display = xLib.XOpenDisplay(null);
+        xLib.XLockDisplay(display);
         if (display == 0l) {
             throw new NullPointerException("Cannot open X11 display");
         }
-        long screen = X.DefaultScreenOfDisplay(display);
+        long screen = xLib.DefaultScreenOfDisplay(display);
         X.XSetWindowAttributes attrs = new X.XSetWindowAttributes();
         attrs.setEventMask(attrs.p,
                            X.ButtonPressMask | X.ButtonReleaseMask
@@ -70,10 +71,12 @@ class X11Screen implements NativeScreen {
         }
         int x = 0;
         int y = 0;
-        int w = X.WidthOfScreen(screen);
-        int h = X.HeightOfScreen(screen);
+        int w = xLib.WidthOfScreen(screen);
+        int h = xLib.HeightOfScreen(screen);
         boolean fullScreen = true;
-        String geometry = AccessController.doPrivileged((PrivilegedAction<String>) () -> System.getProperty("x11.geometry"));
+        String geometry =
+                AccessController.doPrivileged((PrivilegedAction<String>) () ->
+                        System.getProperty("x11.geometry"));
         if (geometry != null) {
             try {
                 String size;
@@ -111,9 +114,9 @@ class X11Screen implements NativeScreen {
             X.XSetWindowAttributes.setOverrideRedirect(attrs.p, true);
             cwMask |= X.CWOverrideRedirect;
         }
-        long window = X.XCreateWindow(
+        long window = xLib.XCreateWindow(
                 display,
-                X.RootWindowOfScreen(screen),
+                xLib.RootWindowOfScreen(screen),
                 x, y, w, h,
                 0, // border width
                 X.CopyFromParent, // depth
@@ -121,37 +124,39 @@ class X11Screen implements NativeScreen {
                 X.CopyFromParent, // visual
                 cwMask,
                 attrs.p);
-        X.XMapWindow(display, window);
+        xLib.XMapWindow(display, window);
         if (fullScreen) {
             X.XClientMessageEvent event = new X.XClientMessageEvent(
                     new X.XEvent());
             X.XEvent.setWindow(event.p, window);
             X.XClientMessageEvent.setMessageType(event.p,
-                                                 X.XInternAtom(display,
-                                                               "_NET_WM_STATE",
-                                                               false)
+                    xLib.XInternAtom(display,
+                            "_NET_WM_STATE",
+                            false)
             );
             X.XClientMessageEvent.setFormat(event.p, 32);
             X.XClientMessageEvent.setDataLong(event.p, 0, X._NET_WM_STATE_ADD);
             X.XClientMessageEvent.setDataLong(event.p, 1,
-                                              X.XInternAtom(display,
-                                                            "_NET_WM_STATE_FULLSCREEN",
-                                                            false)
+                    xLib.XInternAtom(display,
+                            "_NET_WM_STATE_FULLSCREEN",
+                            false)
             );
             X.XClientMessageEvent.setDataLong(event.p, 2, 0);
-            X.XSendEvent(display, X.RootWindowOfScreen(screen), false,
+            xLib.XSendEvent(display, xLib.RootWindowOfScreen(screen),
+                         false,
                          X.SubstructureRedirectMask | X.SubstructureNotifyMask,
                          event.p);
-            X.XGrabKeyboard(display, window, true,
+            xLib.XGrabKeyboard(display, window, true,
                             X.GrabModeAsync, X.GrabModeAsync, X.CurrentTime);
         }
-        X.XStoreName(display, window, "JavaFX framebuffer container");
-        X.XSync(display, false);
+        xLib.XStoreName(display, window, "JavaFX framebuffer container");
+        xLib.XSync(display, false);
         int[] widthA = new int[1];
         int[] heightA = new int[1];
         int[] depthA = new int[1];
-        X.XGetGeometry(display, window, null, null, null, widthA, heightA, null, depthA);
-        X.XUnlockDisplay(display);
+        xLib.XGetGeometry(display, window, null, null, null, widthA,
+                               heightA, null, depthA);
+        xLib.XUnlockDisplay(display);
         width = widthA[0];
         height = heightA[0];
         depth = depthA[0];

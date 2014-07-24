@@ -37,6 +37,7 @@ public class AcceleratedScreen {
     private long eglContext;
     private long eglDisplay;
     protected static LinuxSystem ls = LinuxSystem.getLinuxSystem();
+    private EGL egl;
 
     /** Returns a platform-specific native display handle suitable for use with
      * eglGetDisplay.
@@ -61,6 +62,7 @@ public class AcceleratedScreen {
      * @throws UnsatisfiedLinkError
      */
     AcceleratedScreen(int[] attributes) throws GLException, UnsatisfiedLinkError {
+        egl = EGL.getEGL();
         initPlatformLibraries();
 
         int major[] = {0}, minor[]={0};
@@ -75,39 +77,45 @@ public class AcceleratedScreen {
         }
 
         eglDisplay =
-                EGL.eglGetDisplay(nativeDisplay);
+                egl.eglGetDisplay(nativeDisplay);
         if (eglDisplay == EGL.EGL_NO_DISPLAY) {
-            throw new GLException(EGL.eglGetError(), "Could not get EGL display");
+            throw new GLException(egl.eglGetError(),
+                                 "Could not get EGL display");
         }
 
-        if (!EGL.eglInitialize(eglDisplay, major, minor)) {
-            throw new GLException(EGL.eglGetError(), "Error initializing EGL");
+        if (!egl.eglInitialize(eglDisplay, major, minor)) {
+            throw new GLException(egl.eglGetError(),
+                                  "Error initializing EGL");
         }
 
-        if (!EGL.eglBindAPI(EGL.EGL_OPENGL_ES_API)) {
-            throw new GLException(EGL.eglGetError(), "Error binding OPENGL API");
+        if (!egl.eglBindAPI(EGL.EGL_OPENGL_ES_API)) {
+            throw new GLException(egl.eglGetError(),
+                                  "Error binding OPENGL API");
         }
 
         long eglConfigs[] = {0};
         int configCount[] = {0};
 
-        if (!EGL.eglChooseConfig(eglDisplay, attributes, eglConfigs,
-                                 1, configCount)) {
-            throw new GLException(EGL.eglGetError(), "Error choosing EGL config");
+        if (!egl.eglChooseConfig(eglDisplay, attributes, eglConfigs,
+                                         1, configCount)) {
+            throw new GLException(egl.eglGetError(),
+                                  "Error choosing EGL config");
         }
 
         eglSurface =
-                EGL.eglCreateWindowSurface(eglDisplay, eglConfigs[0],
-                        nativeWindow, null);
+                egl.eglCreateWindowSurface(eglDisplay, eglConfigs[0],
+                                                   nativeWindow, null);
         if (eglSurface == EGL.EGL_NO_SURFACE) {
-            throw new GLException(EGL.eglGetError(), "Could not get EGL surface");
+            throw new GLException(egl.eglGetError(),
+                                  "Could not get EGL surface");
         }
 
         int emptyAttrArray [] = {};
-        eglContext = EGL.eglCreateContext(eglDisplay, eglConfigs[0],
+        eglContext = egl.eglCreateContext(eglDisplay, eglConfigs[0],
                 0, emptyAttrArray);
         if (eglContext == EGL.EGL_NO_CONTEXT) {
-            throw new GLException(EGL.eglGetError(), "Could not get EGL context");
+            throw new GLException(egl.eglGetError(),
+                                  "Could not get EGL context");
         }
     }
 
@@ -117,9 +125,10 @@ public class AcceleratedScreen {
      */
     public void enableRendering(boolean flag) {
         if (flag) {
-            EGL.eglMakeCurrent(eglDisplay, eglSurface, eglSurface, eglContext);
+            egl.eglMakeCurrent(eglDisplay, eglSurface, eglSurface,
+                                       eglContext);
         } else {
-            EGL.eglMakeCurrent(eglDisplay, 0, 0, eglContext);
+            egl.eglMakeCurrent(eglDisplay, 0, 0, eglContext);
         }
     }
 
@@ -163,7 +172,7 @@ public class AcceleratedScreen {
      */
     public boolean swapBuffers() {
         synchronized(NativeScreen.framebufferSwapLock) {
-            EGL.eglSwapBuffers(eglDisplay, eglSurface);
+            egl.eglSwapBuffers(eglDisplay, eglSurface);
         }
         return true;
     }

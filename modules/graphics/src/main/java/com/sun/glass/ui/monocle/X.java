@@ -27,6 +27,7 @@ package com.sun.glass.ui.monocle;
 
 import com.sun.glass.utils.NativeLibLoader;
 import java.nio.ByteBuffer;
+import java.security.Permission;
 
 /**
  * X provides access to Xlib function calls. Except where noted, each
@@ -38,6 +39,27 @@ class X {
 
     static {
         NativeLibLoader.loadLibrary("glass_monocle_x11");
+    }
+
+    private static Permission permission = new RuntimePermission("loadLibrary.*");
+
+    private static X instance = new X();
+
+    /**
+     * Obtains the single instance of X. Calling this method requires
+     * the RuntimePermission "loadLibrary.*".
+     *
+     */
+    static X getX() {
+        checkPermissions();
+        return instance;
+    }
+
+    private static void checkPermissions() {
+        SecurityManager security = System.getSecurityManager();
+        if (security != null) {
+            security.checkPermission(permission);
+        }
     }
 
     static final long None = 0l;
@@ -163,49 +185,50 @@ class X {
         native int sizeof();
     }
 
-    static native void XInitThreads();
-    static native void XLockDisplay(long display);
-    static native void XUnlockDisplay(long display);
-    static native long XOpenDisplay(String displayName);
-    static native long DefaultScreenOfDisplay(long display);
-    static native long RootWindowOfScreen(long screen);
-    static native int WidthOfScreen(long screen);
-    static native int HeightOfScreen(long screen);
-    static native long XCreateWindow(
+    private X() {}
+    native void XInitThreads();
+    native void XLockDisplay(long display);
+    native void XUnlockDisplay(long display);
+    native long XOpenDisplay(String displayName);
+    native long DefaultScreenOfDisplay(long display);
+    native long RootWindowOfScreen(long screen);
+    native int WidthOfScreen(long screen);
+    native int HeightOfScreen(long screen);
+    native long XCreateWindow(
             long display, long parent,
             int x, int y, int width, int height,
             int borderWidth, int depth, int windowClass,
             long visual, long valueMask,
             long attributes);
-    static native void XMapWindow(long display, long window);
-    static native void XStoreName(long display, long window, String name);
-    static native void XSync(long display, boolean flush);
-    static native void XGetGeometry(long display, long window,
+    native void XMapWindow(long display, long window);
+    native void XStoreName(long display, long window, String name);
+    native void XSync(long display, boolean flush);
+    native void XGetGeometry(long display, long window,
                                     long[] root,
                                     int[] x, int[] y,
                                     int[] width, int[] height,
                                     int[] borderWidth, int[] depth);
-    static native void XNextEvent(long display, long xevent);
-    static native long XInternAtom(long display, String atomName, boolean onlyIfExists);
-    static native void XSendEvent(long display, long window, boolean propagate,
+    native void XNextEvent(long display, long xevent);
+    native long XInternAtom(long display, String atomName, boolean onlyIfExists);
+    native void XSendEvent(long display, long window, boolean propagate,
                                   long mask, long event);
-    static native void XGrabKeyboard(long display, long window,
+    native void XGrabKeyboard(long display, long window,
                                      boolean ownerEvents,
                                      long pointerMode,
                                      long keyboardMode,
                                      long time);
-    static native void XWarpPointer(long display, long src_window,
+    native void XWarpPointer(long display, long src_window,
                                     long dst_window, int src_x, int src_y,
                                     int src_width, int src_height,
                                     int dest_x, int dest_y);
-    static native void XFlush(long display);
-    static native void XQueryPointer(long display, long window, int[] position);
-    static native long XCreateBitmapFromData(long display, long drawable,
+    native void XFlush(long display);
+    native void XQueryPointer(long display, long window, int[] position);
+    native long XCreateBitmapFromData(long display, long drawable,
                                             ByteBuffer data, int width, int height);
-    static native long XCreatePixmapCursor(long display, long source, long mask,
+    native long XCreatePixmapCursor(long display, long source, long mask,
                                            long fg, long bg, int x, int y);
-    static native void XFreePixmap(long display, long pixmap);
-    static native void XDefineCursor(long display, long window, long cursor);
-    static native void XUndefineCursor(long display, long window);
+    native void XFreePixmap(long display, long pixmap);
+    native void XDefineCursor(long display, long window, long cursor);
+    native void XUndefineCursor(long display, long window);
 
 }

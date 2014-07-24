@@ -34,6 +34,7 @@ import com.sun.glass.events.MouseEvent;
 class X11InputDeviceRegistry extends InputDeviceRegistry {
 
     private MouseState state;
+    private static X xLib = X.getX();
 
     X11InputDeviceRegistry() {
         InputDevice device = new InputDevice() {
@@ -77,7 +78,7 @@ class X11InputDeviceRegistry extends InputDeviceRegistry {
             state = new MouseState();
             X.XEvent event = new X.XEvent();
             while (true) {
-                X.XNextEvent(display, event.p);
+                xLib.XNextEvent(display, event.p);
                 if (X.XEvent.getWindow(event.p) != window) {
                     continue;
                 }

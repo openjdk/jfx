@@ -45,6 +45,7 @@ public class X11Cursor extends NativeCursor {
     private ByteBuffer transparentCursorBuffer;
     private long transparentCursor;
     private long pixmap;
+    private static X xLib = X.getX();
 
     X11Cursor() {
         xdisplay =
@@ -54,15 +55,15 @@ public class X11Cursor extends NativeCursor {
          * we need the cursor to appear to be hidden
          */
         transparentCursorBuffer = ByteBuffer.allocateDirect(4);
-        pixmap = X.XCreateBitmapFromData(xdisplay, xwindow,
+        pixmap = xLib.XCreateBitmapFromData(xdisplay, xwindow,
                 transparentCursorBuffer, 1, 1);
         X.XColor black = new X.XColor();
         black.setRed(black.p, 0);
         black.setGreen(black.p, 0);
         black.setBlue(black.p, 0);
-        transparentCursor = X.XCreatePixmapCursor(xdisplay, pixmap,
+        transparentCursor = xLib.XCreatePixmapCursor(xdisplay, pixmap,
                 pixmap, black.p, black.p, 0, 0);
-        X.XFreePixmap(xdisplay, pixmap);
+        xLib.XFreePixmap(xdisplay, pixmap);
     }
 
     @Override
@@ -78,11 +79,11 @@ public class X11Cursor extends NativeCursor {
     void setVisibility(boolean visibility) {
         if (isVisible && !visibility) {
             // make the X cursor invisible
-            X.XDefineCursor(xdisplay, xwindow, transparentCursor);
+            xLib.XDefineCursor(xdisplay, xwindow, transparentCursor);
             MonocleWindowManager.getInstance().repaintAll();
         } else if (!isVisible && visibility) {
             // make the cursor visible
-            X.XUndefineCursor(xdisplay, xwindow);
+            xLib.XUndefineCursor(xdisplay, xwindow);
             MonocleWindowManager.getInstance().repaintAll();
         }
         isVisible = visibility;

@@ -32,6 +32,7 @@ import java.security.PrivilegedAction;
  *
  */
 class X11AcceleratedScreen extends AcceleratedScreen {
+    private static X xLib = X.getX();
     private X.XDisplay nativeDisplay;
 
     X11AcceleratedScreen(int[] attributes) throws GLException {
@@ -55,7 +56,7 @@ class X11AcceleratedScreen extends AcceleratedScreen {
                             (PrivilegedAction<Boolean>) () ->
                                     Boolean.getBoolean(
                                             "monocle.maliSignedStruct"));
-            X.XDisplay display = new X.XDisplay(X.XOpenDisplay(null));
+            X.XDisplay display = new X.XDisplay(xLib.XOpenDisplay(null));
             if (doMaliWorkaround) {
                 long address = 0x7000000;
                 nativeDisplay = new X.XDisplay(
@@ -84,13 +85,13 @@ class X11AcceleratedScreen extends AcceleratedScreen {
         /* Since we are accessing X from multiple threads, we need to lock the
          * display before we swap and potentially move the cursor.
          */
-        X.XLockDisplay(nativeDisplay.p);
+        xLib.XLockDisplay(nativeDisplay.p);
         super.swapBuffers();
         NativeCursor cursor = NativePlatformFactory.getNativePlatform().getCursor();
         if (cursor instanceof X11WarpingCursor) {
             ((X11WarpingCursor) cursor).warp();
         }
-        X.XUnlockDisplay(nativeDisplay.p);
+        xLib.XUnlockDisplay(nativeDisplay.p);
         return true;
     }
 }
