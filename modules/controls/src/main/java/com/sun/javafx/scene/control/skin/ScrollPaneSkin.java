@@ -184,7 +184,7 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
             */
             double oldHeight = oldBounds.getHeight();
             double newHeight = newBounds.getHeight();
-            if (oldHeight != newHeight) {
+            if (oldHeight > 0 && oldHeight != newHeight) {
                 double oldPositionY = (snapPosition(snappedTopInset() - posY / (vsb.getMax() - vsb.getMin()) * (oldHeight - contentHeight)));
                 double newPositionY = (snapPosition(snappedTopInset() - posY / (vsb.getMax() - vsb.getMin()) * (newHeight - contentHeight)));
                 
@@ -208,7 +208,7 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
             */
             double oldWidth = oldBounds.getWidth();
             double newWidth = newBounds.getWidth();
-            if (oldWidth != newWidth) {
+            if (oldWidth > 0 && oldWidth != newWidth) {
                 double oldPositionX = (snapPosition(snappedLeftInset() - posX / (hsb.getMax() - hsb.getMin()) * (oldWidth - contentWidth)));
                 double newPositionX = (snapPosition(snappedLeftInset() - posX / (hsb.getMax() - hsb.getMin()) * (newWidth - contentWidth)));
 
