@@ -720,10 +720,13 @@ final class WinAccessible extends Accessible {
                 AccessibleRole role = (AccessibleRole)getAttribute(ROLE);
                 if (role == null) role = AccessibleRole.NODE;
                 switch (role) {
+                    case TEXT_FIELD:
+                    case TEXT_AREA:
                     case COMBO_BOX:
                         /*
-                         *  These controls use TITLE to answer get_ValueString().
-                         *  Only LABELED_BY can be used to specify a name for them.
+                         *  IValueProvider controls use UIA_NamePropertyId to
+                         *  return the LABELED_BY and get_ValueString() to
+                         *  return the TITLE.
                          */
                         name = null;
                         break;
@@ -739,15 +742,6 @@ final class WinAccessible extends Accessible {
                         }
                         break;
                     }
-                    case TEXT_FIELD:
-                    case TEXT_AREA:
-                        /*
-                         * Note that this results in ignoring the LabeledBy for text
-                         * controls because they return their text as the TITLE.
-                         * However, otherwise they don't work, i.e. Narrator won't read
-                         * the text. Or we should implement more advanced patterns
-                         * available on Windows 8 to support text controls properly.
-                         */
                     default:
                         name = (String)getAttribute(TITLE);
                 }
