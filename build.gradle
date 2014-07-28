@@ -2150,15 +2150,26 @@ project(":media") {
                 def buildAVPlugin = task( "buildAVPlugin", dependsOn: [buildPlugins]) {
                     enabled = IS_COMPILE_MEDIA
 
-                    if (!project.ext.properties.containsKey("LIBAV"))
-                        project.ext.LIBAV = "";
-
                     doLast {
-                        // Building fxavcodec plugin (libav plugin)
-                        exec {
-                            commandLine ("make", "${makeJobsFlag}", "-C", "${nativeSrcDir}/gstreamer/projects/linux/avplugin")
-                            args("CC=${mediaProperties.compiler}", "OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}", 
-                                     "BASE_NAME=avplugin", "LIBAV_DIR=${project.ext.LIBAV}")
+                        if (project.ext.properties.containsKey("libav")) {
+                            project.ext.libav.versions.each { version ->
+                                def libavDir = "${project.ext.libav.basedir}-${version}"
+                                File dir = file(libavDir)
+                                if (dir.exists()) {
+                                    exec {
+                                        commandLine ("make", "${makeJobsFlag}", "-C", "${nativeSrcDir}/gstreamer/projects/linux/avplugin")
+                                        args("CC=${mediaProperties.compiler}", "OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}", 
+                                             "BASE_NAME=avplugin", "VERSION=${version}", "LIBAV_DIR=${libavDir}")
+                                    }
+                                }
+                            }
+                        } else {
+                            // Building fxavcodec plugin (libav plugin)
+                            exec {
+                                commandLine ("make", "${makeJobsFlag}", "-C", "${nativeSrcDir}/gstreamer/projects/linux/avplugin")
+                                args("CC=${mediaProperties.compiler}", "OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}", 
+                                     "BASE_NAME=avplugin")
+                            }
                         }
                     }
                 }
@@ -2877,13 +2888,16 @@ compileTargets { t ->
                     [ "fxplugins", "gstreamer-lite", "jfxmedia" ].each { name ->
                         from ("modules/media/build/native/${t.name}/${mediaBuildType}/${library(name)}") }
                     
-                    if (t.name == "linux") from ("modules/media/build/native/${t.name}/${mediaBuildType}/${library("avplugin")}")
-                    else from ("modules/media/build/native/${t.name}/${mediaBuildType}/${library("glib-lite")}")                        
+                    if (t.name == "linux") {
+                        from("modules/media/build/native/${t.name}/${mediaBuildType}") { include "libavplugin*.so" }
+                    } else from ("modules/media/build/native/${t.name}/${mediaBuildType}/${library("glib-lite")}")                        
                 } else {
                     [ "fxplugins", "gstreamer-lite", "jfxmedia" ].each { name ->
                         from ("$LIBRARY_STUB/${library(name)}") }
 
-                    if (t.name == "linux") from ("$LIBRARY_STUB/${library("avplugin")}")
+                    if (t.name == "linux") {
+                        from(LIBRARY_STUB) { include "libavplugin*.so" }
+                    }
                     else from ("$LIBRARY_STUB/${library("glib-lite")}")
                 }
                 

@@ -1253,10 +1253,9 @@ gst_registry_scan_path_level (GstRegistryScanContext * context,
 #ifdef LINUX
       if (g_str_has_suffix(filename_partial, "libavplugin")) // Check libav version and load correspondent module.
       {
-          int vi;
-          for (vi = 0, avcHandle = NULL; 
-               vi < (sizeof(AVCODEC_EXPLICIT_VERSIONS)/sizeof(AVCODEC_EXPLICIT_VERSIONS[0])) && !avcHandle; 
-               vi++)
+          int vi = (sizeof(AVCODEC_EXPLICIT_VERSIONS)/sizeof(AVCODEC_EXPLICIT_VERSIONS[0]));
+          
+          while(!avcHandle && --vi >= 0)
           {
               int version = AVCODEC_EXPLICIT_VERSIONS[vi];
               gchar* libname = g_strdup_printf("libavcodec.so.%d", version);
@@ -1265,7 +1264,18 @@ gst_registry_scan_path_level (GstRegistryScanContext * context,
           }
               
           if (avcHandle)
+          {
+              dlclose(avcHandle);
+              avcHandle = NULL;
+
+              // Try simple name first. OpenJDK build may contain the latest bits.
               filename = g_strdup_printf("%s%s", filename_partial, GST_EXTRA_MODULE_SUFFIX);
+              if (g_stat (filename, &file_status) < 0) // Not available, create a versioned filename
+              { 
+                  g_free(filename);
+                  filename = g_strdup_printf("%s-%d%s", filename_partial, AVCODEC_EXPLICIT_VERSIONS[vi], GST_EXTRA_MODULE_SUFFIX);
+              }
+          }
           else
           {
               g_free(filename_partial);
@@ -1358,13 +1368,6 @@ gst_registry_scan_path_level (GstRegistryScanContext * context,
           file_status.st_size, file_status.st_mtime);
     }
 
-#ifdef LINUX
-    if (avcHandle)
-    {
-        dlclose(avcHandle);
-        avcHandle = NULL;
-    }
-#endif // LINUX
     g_free (filename);
   }
 
