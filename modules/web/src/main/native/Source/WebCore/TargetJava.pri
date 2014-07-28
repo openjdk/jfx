@@ -233,6 +233,7 @@ HEADERS += \
     platform/java/IDNJava.h \
     platform/java/InspectorClientJava.h \
     platform/java/JavaEnv.h \
+    platform/java/NotificationClientJava.h \
     platform/java/PlatformStrategiesJava.h \
     platform/java/RenderThemeJava.h \
     platform/java/ScrollbarThemeJava.h \

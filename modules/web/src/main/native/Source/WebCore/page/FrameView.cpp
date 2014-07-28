@@ -2562,21 +2562,6 @@ bool FrameView::shouldUpdate(bool immediateRequested) const
     return true;
 }
 
-void FrameView::scheduleEvent(PassRefPtr<Event> event, PassRefPtr<Node> eventTarget)
-{
-    m_actionScheduler->scheduleEvent(event, eventTarget);
-}
-
-void FrameView::pauseScheduledEvents()
-{
-    m_actionScheduler->pause();
-}
-
-void FrameView::resumeScheduledEvents()
-{
-    m_actionScheduler->resume();
-}
-
 void FrameView::scrollToAnchor()
 {
     RefPtr<Node> anchorNode = m_maintainScrollPositionAnchor;
@@ -2941,9 +2926,11 @@ void FrameView::updateOverflowStatus(bool horizontalOverflow, bool verticalOverf
         m_horizontalOverflow = horizontalOverflow;
         m_verticalOverflow = verticalOverflow;
         
-        m_actionScheduler->scheduleEvent(OverflowEvent::create(horizontalOverflowChanged, horizontalOverflow,
-            verticalOverflowChanged, verticalOverflow),
-            m_viewportRenderer->node());
+        RefPtr<OverflowEvent> overflowEvent = OverflowEvent::create(horizontalOverflowChanged, horizontalOverflow,
+            verticalOverflowChanged, verticalOverflow);
+        overflowEvent->setTarget(m_viewportRenderer->node());
+
+        m_frame->document()->enqueueOverflowEvent(overflowEvent.release());
     }
     
 }
