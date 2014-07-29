@@ -37,6 +37,8 @@ import org.junit.Test;
 import static javafx.collections.MockSetObserver.Call.*;
 import static javafx.collections.MockSetObserver.Tuple.*;
 import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -181,6 +183,40 @@ public class ObservableSetTest {
         observableSet.remove(null);
         assertEquals(3, observableSet.size());
         observer.assertRemoved(tup((String)null));
+    }
+
+
+    @Test
+    public void testObserverCanRemoveObservers() {
+        final SetChangeListener<String> listObserver = change -> {
+            change.getSet().removeListener(observer);
+        };
+        observableSet.addListener(listObserver);
+        observableSet.add("x");
+        observer.clear();
+        observableSet.add("y");
+        observer.check0();
+        observableSet.removeListener(listObserver);
+
+
+        final StringSetChangeListener listener = new StringSetChangeListener();
+        observableSet.addListener(listener);
+        observableSet.add("z");
+        assertEquals(listener.counter, 1);
+        observableSet.add("zz");
+        assertEquals(listener.counter, 1);
+    }
+
+
+    private static class StringSetChangeListener implements SetChangeListener<String> {
+
+        private int counter;
+
+        @Override
+        public void onChanged(final Change<? extends String> change) {
+            change.getSet().removeListener(this);
+            ++counter;
+        }
     }
     
     @Test

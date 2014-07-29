@@ -404,6 +404,7 @@ public abstract class SetExpressionHelper<E> extends ExpressionHelperBase {
                             if (numMoved > 0) {
                                 System.arraycopy(oldListeners, index+1, invalidationListeners, index, numMoved);
                             }
+                            invalidationSize--;
                             if (!locked) {
                                 invalidationListeners[--invalidationSize] = null; // Let gc do its work
                             }
