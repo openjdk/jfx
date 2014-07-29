@@ -403,6 +403,10 @@ JNIEXPORT jobject JNICALL Java_com_sun_webkit_dom_JSObject_callImpl
     JSObjectRef object;
     JSContextRef ctx;
     RefPtr<JSC::Bindings::RootObject> rootObject(checkJSPeer(peer, peer_type, object, ctx));
+    if (!rootObject || !ctx) {
+        env->ThrowNew(getJSExceptionClass(env), "Invalid function reference");
+        return NULL;
+    }
 
     JSStringRef name = WebCore::asJSStringRef(env, methodName);
     JSValueRef member = JSObjectGetProperty(ctx, object, name, NULL);
