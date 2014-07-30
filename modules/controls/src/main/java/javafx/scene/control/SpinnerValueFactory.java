@@ -870,7 +870,7 @@ public abstract class SpinnerValueFactory<T> {
      *     }
      * });</pre>
      */
-    static class LocalDateSpinnerValueFactory extends SpinnerValueFactory<LocalDate> {
+    public static class LocalDateSpinnerValueFactory extends SpinnerValueFactory<LocalDate> {
 
         /**
          * Creates a new instance of the LocalDateSpinnerValueFactory, using the
@@ -1125,7 +1125,7 @@ public abstract class SpinnerValueFactory<T> {
      *     }
      * });</pre>
      */
-    static class LocalTimeSpinnerValueFactory extends SpinnerValueFactory<LocalTime> {
+    public static class LocalTimeSpinnerValueFactory extends SpinnerValueFactory<LocalTime> {
 
         /**
          * Creates a new instance of the LocalTimepinnerValueFactory, using the
