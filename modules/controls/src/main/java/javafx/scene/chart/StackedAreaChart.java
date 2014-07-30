@@ -235,14 +235,9 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
             if (itemIndex > 0 && itemIndex < series.getDataSize()) {
                 animate = true;
                 int index=0;
-                Data<X,Y> d;
 
-                for (d = series.begin; d != null && index != itemIndex - 1; d = d.next) {
-                    index++;
-                }
-
-                Data<X,Y> p1 = d;
-                Data<X,Y> p2 = d.next.next;
+                Data<X,Y> p1 = series.getItem(itemIndex - 1);
+                Data<X,Y> p2 = series.getItem(itemIndex + 1);
 
                 if (p2 == null) {
                     return;
@@ -537,7 +532,8 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
             }
             currentSeriesData.clear();
             // now copy actual data of the current series.
-            for(Data<X, Y> item = series.begin; item != null; item = item.next) {
+            for (Iterator<Data<X, Y>> it = getDisplayedDataIterator(series); it.hasNext(); ) {
+                Data<X, Y> item = it.next();
                 DataPointInfo<X, Y> itemInfo = new DataPointInfo<>(item, item.getXValue(),
                         item.getYValue(), PartOf.CURRENT);
                 aggregateData.add(itemInfo);

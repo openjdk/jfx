@@ -25,10 +25,7 @@
 
 package javafx.scene.chart;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import javafx.animation.FadeTransition;
 import javafx.animation.Interpolator;
@@ -57,7 +54,6 @@ import javafx.util.Duration;
 import com.sun.javafx.charts.Legend;
 import com.sun.javafx.charts.Legend.LegendItem;
 import com.sun.javafx.css.converters.BooleanConverter;
-import java.util.Collections;
 import javafx.beans.property.BooleanProperty;
 import javafx.css.CssMetaData;
 import javafx.css.Styleable;
@@ -262,10 +258,8 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
             final int dataListSize = series.getData().size();
             if (itemIndex > 0 && itemIndex < dataSize -1) {
                 animate = true;
-                int index=0; Data<X,Y> d;
-                for (d = series.begin; d != null && index != itemIndex - 1; d=d.next) index++;
-                Data<X,Y> p1 = d;
-                Data<X,Y> p2 = (d.next).next;
+                Data<X,Y> p1 = series.getItem(itemIndex - 1);
+                Data<X,Y> p2 = series.getItem(itemIndex + 1);
                 double x1 = getXAxis().toNumericValue(p1.getXValue());
                 double y1 = getYAxis().toNumericValue(p1.getYValue());
                 double x3 = getXAxis().toNumericValue(p2.getXValue());
@@ -466,7 +460,8 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
             seriesLine.clear();
             fillPath.clear();
             constructedPath.clear();
-            for (Data<X, Y> item = series.begin; item != null; item = item.next) {
+            for (Iterator<Data<X, Y>> it = getDisplayedDataIterator(series); it.hasNext(); ) {
+                Data<X, Y> item = it.next();
                 double x = getXAxis().getDisplayPosition(item.getCurrentX());
                 double y = getYAxis().getDisplayPosition(
                         getYAxis().toRealValue(getYAxis().toNumericValue(item.getCurrentY()) * seriesYAnimMultiplier.getValue()));

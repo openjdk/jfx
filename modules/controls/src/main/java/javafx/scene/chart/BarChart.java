@@ -25,11 +25,7 @@
 
 package javafx.scene.chart;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.ArrayList;
-import java.util.Collections;
+import java.util.*;
 
 import javafx.scene.AccessibleRole;
 import javafx.animation.Animation;
@@ -345,7 +341,8 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
         int catIndex = 0;
         for (String category : categoryAxis.getCategories()) {
             int index = 0;
-            for (Series<X,Y> series = begin; series != null; series = series.next) {
+            for (Iterator<Series<X, Y>> sit = getDisplayedSeriesIterator(); sit.hasNext(); ) {
+                Series<X, Y> series = sit.next();
                 final Data<X,Y> item = getDataItem(series, index, catIndex, category);
                 if (item != null) {
                     final Node bar = item.getNode();
