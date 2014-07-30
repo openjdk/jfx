@@ -1574,6 +1574,17 @@ final class MacAccessible extends Accessible {
                     }
                     break;
                 }
+                case NSAccessibilityDisclosingAttribute: {
+                    MacVariant variant = idToMacVariant(value, MacVariant.NSNumber_Boolean);
+                    if (variant != null) {
+                        if (variant.int1 != 0) {
+                            executeAction(AccessibleAction.EXPAND);
+                        } else {
+                            executeAction(AccessibleAction.COLLAPSE);
+                        }
+                    }
+                    break;
+                }
                 case NSAccessibilityExpandedAttribute:
                     if (getAttribute(ROLE) == AccessibleRole.COMBO_BOX) {
                         executeAction(AccessibleAction.EXPAND);
