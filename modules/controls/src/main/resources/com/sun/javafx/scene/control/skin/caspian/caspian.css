@@ -4124,7 +4124,6 @@ to the top and bottom -fx-padding values of the parent toolbar. */
 .spinner.arrows-on-left-horizontal .increment-arrow-button {
     -fx-background-insets: 0 0 1 0, 1 1 2 0, 2 2 3 1;
     -fx-background-radius: 0, 0, 0;
-    -fx-padding: 4 8 4 7;
     -fx-padding: 0.333em 0.666em 0.333em 0.583em; /* 4 8 4 7 */
 }
 .spinner.arrows-on-left-horizontal .decrement-arrow-button {
