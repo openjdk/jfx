@@ -1746,7 +1746,9 @@ is being used to size a border should also be in pixels.
 }
 .combo-box-base:editable > .text-field,
 .date-picker > .text-field {
-    -fx-background-color: -fx-control-inner-background;
+    -fx-background-color:
+        linear-gradient(to bottom, derive(-fx-text-box-border, -10%), -fx-text-box-border),
+        linear-gradient(from 0px 0px to 0px 5px, derive(-fx-control-inner-background, -9%), -fx-control-inner-background);
     -fx-background-insets: 1 0 1 1;
     -fx-background-radius: 2 0 0 2;
 }
