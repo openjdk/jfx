@@ -71,15 +71,15 @@ public class HelloSpinner extends Application {
                     break;
                 }
 
-                case "LocalDate": {
-                    spinner.setValueFactory(new SpinnerValueFactory.LocalDateSpinnerValueFactory());
-                    break;
-                }
-
-                case "LocalTime": {
-                    spinner.setValueFactory(new SpinnerValueFactory.LocalTimeSpinnerValueFactory());
-                    break;
-                }
+//                case "LocalDate": {
+//                    spinner.setValueFactory(new SpinnerValueFactory.LocalDateSpinnerValueFactory());
+//                    break;
+//                }
+//
+//                case "LocalTime": {
+//                    spinner.setValueFactory(new SpinnerValueFactory.LocalTimeSpinnerValueFactory());
+//                    break;
+//                }
 
                 case "Double": {
                     spinner.setValueFactory(new SpinnerValueFactory.DoubleSpinnerValueFactory(0.0, 1.0, 0.5, 0.05));
