@@ -1190,6 +1190,7 @@ final class WinAccessible extends Accessible {
 
     double get_Value() {
         if (isDisposed()) return 0;
+        if (Boolean.TRUE.equals(getAttribute(INDETERMINATE))) return 0;
         Double value = (Double)getAttribute(VALUE);
         return value != null ? value : 0;
     }
@@ -1202,8 +1203,8 @@ final class WinAccessible extends Accessible {
         AccessibleRole role = (AccessibleRole)getAttribute(ROLE);
         if (role != null) {
             switch (role) {
-                case SLIDER:
-                case SCROLL_BAR: return false;
+                case SLIDER: return false;
+                case SCROLL_BAR: return true;
                 case TEXT_FIELD:
                 case TEXT_AREA:
                 case COMBO_BOX: return Boolean.FALSE.equals(getAttribute(EDITABLE));
