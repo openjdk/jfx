@@ -54,7 +54,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Set;
 import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
 import javafx.scene.Node;
@@ -192,7 +191,7 @@ public abstract class AbstractWrapInJob extends Job {
         oldContainer = (FXOMInstance) osg.getAncestor();
 
         // Retrieve the children to be wrapped
-        final Set<FXOMObject> children = osg.getItems();
+        final List<FXOMObject> children = osg.getSortedItems();
 
         // Create the new container
         newContainer = makeContainerInstance();
@@ -299,7 +298,7 @@ public abstract class AbstractWrapInJob extends Job {
         return jobs;
     }
 
-    protected List<Job> deleteChildrenJobs(final Set<FXOMObject> children) {
+    protected List<Job> deleteChildrenJobs(final List<FXOMObject> children) {
 
         final List<Job> jobs = new ArrayList<>();
         for (FXOMObject child : children) {
@@ -318,7 +317,7 @@ public abstract class AbstractWrapInJob extends Job {
      * @param children
      * @return
      */
-    protected abstract List<Job> wrapInJobs(final Set<FXOMObject> children);
+    protected abstract List<Job> wrapInJobs(final List<FXOMObject> children);
 
     /**
      * Used to modify the children before adding them to this container.
@@ -326,7 +325,7 @@ public abstract class AbstractWrapInJob extends Job {
      * @param children The children to be modified.
      * @return A list of jobs.
      */
-    protected abstract List<Job> modifyChildrenJobs(final Set<FXOMObject> children);
+    protected abstract List<Job> modifyChildrenJobs(final List<FXOMObject> children);
 
     /**
      * Used to modify this container before adding it to the specified container.
@@ -337,7 +336,7 @@ public abstract class AbstractWrapInJob extends Job {
      *
      * @param children The children of this container.
      */
-    protected abstract void modifyContainer(final Set<FXOMObject> children);
+    protected abstract void modifyContainer(final List<FXOMObject> children);
 
     /**
      * Used to modify the children layout properties.
@@ -345,7 +344,7 @@ public abstract class AbstractWrapInJob extends Job {
      * @param children The children.
      * @return
      */
-    protected List<Job> modifyChildrenLayoutJobs(final Set<FXOMObject> children) {
+    protected List<Job> modifyChildrenLayoutJobs(final List<FXOMObject> children) {
 
         final List<Job> jobs = new ArrayList<>();
         final Bounds unionOfBounds = WrapJobUtils.getUnionOfBounds(children);
@@ -374,7 +373,7 @@ public abstract class AbstractWrapInJob extends Job {
      *
      * @param children The children.
      */
-    protected void modifyContainerLayout(final Set<FXOMObject> children) {
+    protected void modifyContainerLayout(final List<FXOMObject> children) {
 
         final Bounds unionOfBounds = WrapJobUtils.getUnionOfBounds(children);
         JobUtils.setLayoutX(newContainer, Node.class, unionOfBounds.getMinX());
@@ -405,7 +404,7 @@ public abstract class AbstractWrapInJob extends Job {
      * @param fxomObjects
      * @return
      */
-    private int getIndex(final FXOMInstance container, final Set<FXOMObject> fxomObjects) {
+    private int getIndex(final FXOMInstance container, final List<FXOMObject> fxomObjects) {
         final DesignHierarchyMask mask = new DesignHierarchyMask(container);
         if (mask.isAcceptingSubComponent() == false) {
             return -1;

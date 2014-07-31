@@ -24,6 +24,11 @@
  */
 
 #include "decoder.h"
+#include <libavutil/mem.h>
+
+#if NEW_ALLOC_FRAME
+#include <libavutil/frame.h>
+#endif
 
 /***********************************************************************************
  * Static AVCodec library lock. One for all instances. Necessary for avcodec_open
@@ -79,6 +84,7 @@ void basedecoder_init_state(BaseDecoder *decoder)
     decoder->codec_data = NULL;
     decoder->codec_data_size = 0;
 
+    decoder->frame = NULL;
     decoder->context = NULL;
     decoder->codec = NULL;
 
@@ -87,9 +93,17 @@ void basedecoder_init_state(BaseDecoder *decoder)
     decoder->is_hls = FALSE;
 }
 
-gboolean basedecoder_open_decoder(BaseDecoder *decoder, enum CodecID id)
+gboolean basedecoder_open_decoder(BaseDecoder *decoder, CodecIDType id)
 {
     gboolean result = TRUE;
+
+#if NEW_ALLOC_FRAME
+    decoder->frame = av_frame_alloc();
+#else
+    decoder->frame = avcodec_alloc_frame();
+#endif
+    if (!decoder->frame)
+        return FALSE; // Can't create frame
 
     g_static_mutex_lock(&avlib_lock);
 
@@ -97,22 +111,14 @@ gboolean basedecoder_open_decoder(BaseDecoder *decoder, enum CodecID id)
     result = (decoder->codec != NULL);
     if (result)
     {
-#if LIBAVCODEC_NEW
         decoder->context = avcodec_alloc_context3(decoder->codec);
-#else
-        decoder->context = avcodec_alloc_context();
-#endif
         result = (decoder->context != NULL);
 
         if (result)
         {
             basedecoder_init_context(decoder);
 
-#if LIBAVCODEC_NEW
             int ret = avcodec_open2(decoder->context, decoder->codec, NULL);
-#else
-            int ret = avcodec_open(decoder->context, decoder->codec);
-#endif
             if (ret < 0) // Can't open codec
             {
                 av_free(decoder->context);
@@ -160,10 +166,7 @@ void basedecoder_set_codec_data(BaseDecoder *decoder, GstStructure *s)
 void basedecoder_flush(BaseDecoder *decoder)
 {
     if (decoder->context)
-    {
         avcodec_flush_buffers(decoder->context);
-        avcodec_default_free_buffers(decoder->context);
-    }
 }
 
 void basedecoder_close_decoder(BaseDecoder *decoder)
@@ -179,5 +182,15 @@ void basedecoder_close_decoder(BaseDecoder *decoder)
     {
         g_free(decoder->codec_data);
         decoder->codec_data = NULL;
+    }
+
+    if (decoder->frame)
+    {
+#if NEW_ALLOC_FRAME
+        av_frame_free(&decoder->frame);
+#else
+        av_free(decoder->frame);
+        decoder->frame = NULL;
+#endif
     }
 }

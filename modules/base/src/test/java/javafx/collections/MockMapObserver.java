@@ -47,6 +47,10 @@ public class MockMapObserver<K, V> implements MapChangeListener<K, V> {
         calls.clear();
     }
 
+    public void check0() {
+        assertEquals(0, calls.size());
+    }
+
     public void assertAdded(Tuple<K, V> tuple) {
         assertAdded(0, tuple);
     }

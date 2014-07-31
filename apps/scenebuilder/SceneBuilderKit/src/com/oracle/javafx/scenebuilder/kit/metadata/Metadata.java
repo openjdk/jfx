@@ -306,6 +306,8 @@ public class Metadata {
             new ComponentClassMetadata(javafx.scene.PerspectiveCamera.class, CameraMetadata);
     private final ComponentClassMetadata PointLightMetadata = 
             new ComponentClassMetadata(javafx.scene.PointLight.class, LightBaseMetadata);
+    private final ComponentClassMetadata SubSceneMetadata = 
+            new ComponentClassMetadata(javafx.scene.SubScene.class, NodeMetadata);
     private final ComponentClassMetadata CanvasMetadata = 
             new ComponentClassMetadata(javafx.scene.canvas.Canvas.class, NodeMetadata);
     private final ComponentClassMetadata AreaChartMetadata = 
@@ -1138,6 +1140,8 @@ public class Metadata {
             new PropertyName("unitIncrement");
     private final PropertyName upperBoundName = 
             new PropertyName("upperBound");
+    private final PropertyName userAgentStylesheetName = 
+            new PropertyName("userAgentStylesheet");
     private final PropertyName valignmentName = 
             new PropertyName("valignment");
     private final PropertyName valueName = 
@@ -1290,13 +1294,13 @@ public class Metadata {
                 alternativeColumnFillVisibleName,
                 true, /* readWrite */
                 false, /* defaultValue */
-                new InspectorPath("Properties", "Specific", 88));
+                new InspectorPath("Properties", "Specific", 86));
     private final ValuePropertyMetadata alternativeRowFillVisiblePropertyMetadata =
             new BooleanPropertyMetadata(
                 alternativeRowFillVisibleName,
                 true, /* readWrite */
                 true, /* defaultValue */
-                new InspectorPath("Properties", "Specific", 95));
+                new InspectorPath("Properties", "Specific", 92));
     private final ValuePropertyMetadata anchorLocationPropertyMetadata =
             new EnumerationPropertyMetadata(
                 anchorLocationName,
@@ -1374,7 +1378,7 @@ public class Metadata {
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.SIZE,
                 true, /* readWrite */
                 4.0, /* defaultValue */
-                new InspectorPath("Properties", "Specific", 76));
+                new InspectorPath("Properties", "Specific", 75));
     private final ValuePropertyMetadata baselineOffsetPropertyMetadata =
             new DoublePropertyMetadata(
                 baselineOffsetName,
@@ -1456,21 +1460,21 @@ public class Metadata {
                 categoriesName,
                 true, /* readWrite */
                 Collections.emptyList(), /* defaultValue */
-                new InspectorPath("Properties", "Specific", 77));
+                new InspectorPath("Properties", "Specific", 76));
     private final ValuePropertyMetadata categoryGapPropertyMetadata =
             new DoublePropertyMetadata(
                 categoryGapName,
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.SIZE,
                 true, /* readWrite */
                 10.0, /* defaultValue */
-                new InspectorPath("Properties", "Specific", 78));
+                new InspectorPath("Properties", "Specific", 77));
     private final ValuePropertyMetadata categorySpacingPropertyMetadata =
             new DoublePropertyMetadata(
                 categorySpacingName,
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.SIZE,
                 false, /* readWrite */
                 null, /* No defaultValue for R/O property */
-                new InspectorPath("Properties", "Specific", 79));
+                new InspectorPath("Properties", "Specific", 78));
     private final ComponentPropertyMetadata centerPropertyMetadata =
             new ComponentPropertyMetadata(
                 centerName,
@@ -1511,7 +1515,7 @@ public class Metadata {
                 clockwiseName,
                 true, /* readWrite */
                 true, /* defaultValue */
-                new InspectorPath("Properties", "Specific", 89));
+                new InspectorPath("Properties", "Specific", 87));
     private final ValuePropertyMetadata closablePropertyMetadata =
             new BooleanPropertyMetadata(
                 closableName,
@@ -1658,7 +1662,7 @@ public class Metadata {
                 createSymbolsName,
                 true, /* readWrite */
                 true, /* defaultValue */
-                new InspectorPath("Properties", "Specific", 80));
+                new InspectorPath("Properties", "Specific", 79));
     private final ValuePropertyMetadata cullFacePropertyMetadata =
             new EnumerationPropertyMetadata(
                 cullFaceName,
@@ -1696,7 +1700,7 @@ public class Metadata {
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.SIZE,
                 true, /* readWrite */
                 2.0, /* defaultValue */
-                new InspectorPath("Layout", "Size", 29));
+                new InspectorPath("Layout", "Size", 15));
     private final ValuePropertyMetadata depthTestPropertyMetadata =
             new EnumerationPropertyMetadata(
                 depthTestName,
@@ -1771,7 +1775,7 @@ public class Metadata {
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.SIZE,
                 true, /* readWrite */
                 5.0, /* defaultValue */
-                new InspectorPath("Properties", "Specific", 96));
+                new InspectorPath("Properties", "Specific", 93));
     private final ValuePropertyMetadata endXPropertyMetadata =
             new DoublePropertyMetadata(
                 endXName,
@@ -1849,26 +1853,26 @@ public class Metadata {
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.SIZE,
                 true, /* readWrite */
                 0.0, /* defaultValue */
-                new InspectorPath("Layout", "Size", 22));
+                new InspectorPath("Layout", "Size", 14));
     private final ValuePropertyMetadata fitToHeightPropertyMetadata =
             new BooleanPropertyMetadata(
                 fitToHeightName,
                 true, /* readWrite */
                 false, /* defaultValue */
-                new InspectorPath("Layout", "Size", 20));
+                new InspectorPath("Layout", "Specific", 9));
     private final ValuePropertyMetadata fitToWidthPropertyMetadata =
             new BooleanPropertyMetadata(
                 fitToWidthName,
                 true, /* readWrite */
                 false, /* defaultValue */
-                new InspectorPath("Layout", "Size", 19));
+                new InspectorPath("Layout", "Specific", 8));
     private final ValuePropertyMetadata fitWidthPropertyMetadata =
             new DoublePropertyMetadata(
                 fitWidthName,
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.SIZE,
                 true, /* readWrite */
                 0.0, /* defaultValue */
-                new InspectorPath("Layout", "Size", 21));
+                new InspectorPath("Layout", "Size", 13));
     private final ValuePropertyMetadata fixedCellSizePropertyMetadata =
             new DoublePropertyMetadata(
                 fixedCellSizeName,
@@ -1932,7 +1936,7 @@ public class Metadata {
                 gapStartAndEndName,
                 true, /* readWrite */
                 true, /* defaultValue */
-                new InspectorPath("Properties", "Specific", 101));
+                new InspectorPath("Properties", "Specific", 97));
     private final ComponentPropertyMetadata graphicPropertyMetadata =
             new ComponentPropertyMetadata(
                 graphicName,
@@ -2031,26 +2035,26 @@ public class Metadata {
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.COORDINATE,
                 true, /* readWrite */
                 1.0, /* defaultValue */
-                new InspectorPath("Properties", "Specific", 90));
+                new InspectorPath("Properties", "Specific", 106));
     private final ValuePropertyMetadata hminPropertyMetadata =
             new DoublePropertyMetadata(
                 hminName,
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.COORDINATE,
                 true, /* readWrite */
                 0.0, /* defaultValue */
-                new InspectorPath("Properties", "Specific", 81));
+                new InspectorPath("Properties", "Specific", 102));
     private final ValuePropertyMetadata horizontalGridLinesVisiblePropertyMetadata =
             new BooleanPropertyMetadata(
                 horizontalGridLinesVisibleName,
                 true, /* readWrite */
                 true, /* defaultValue */
-                new InspectorPath("Properties", "Specific", 102));
+                new InspectorPath("Properties", "Specific", 98));
     private final ValuePropertyMetadata horizontalZeroLineVisiblePropertyMetadata =
             new BooleanPropertyMetadata(
                 horizontalZeroLineVisibleName,
                 true, /* readWrite */
                 true, /* defaultValue */
-                new InspectorPath("Properties", "Specific", 107));
+                new InspectorPath("Properties", "Specific", 108));
     private final ValuePropertyMetadata htmlTextPropertyMetadata =
             new StringPropertyMetadata(
                 htmlTextName,
@@ -2063,7 +2067,7 @@ public class Metadata {
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.COORDINATE,
                 true, /* readWrite */
                 0.0, /* defaultValue */
-                new InspectorPath("Properties", "Specific", 72));
+                new InspectorPath("Properties", "Specific", 104));
     private final ValuePropertyMetadata idPropertyMetadata =
             new StringPropertyMetadata(
                 idName,
@@ -2127,7 +2131,7 @@ public class Metadata {
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.SIZE,
                 true, /* readWrite */
                 20.0, /* defaultValue */
-                new InspectorPath("Properties", "Specific", 108));
+                new InspectorPath("Properties", "Specific", 109));
     private final ValuePropertyMetadata labelPaddingPropertyMetadata =
             new InsetsPropertyMetadata(
                 labelPaddingName,
@@ -2139,7 +2143,7 @@ public class Metadata {
                 labelsVisibleName,
                 true, /* readWrite */
                 true, /* defaultValue */
-                new InspectorPath("Properties", "Specific", 103));
+                new InspectorPath("Properties", "Specific", 99));
     private final ValuePropertyMetadata largeArcFlagPropertyMetadata =
             new BooleanPropertyMetadata(
                 largeArcFlagName,
@@ -2177,7 +2181,7 @@ public class Metadata {
                 javafx.geometry.Side.class,
                 true, /* readWrite */
                 javafx.geometry.Side.BOTTOM, /* defaultValue */
-                new InspectorPath("Properties", "Specific", 73));
+                new InspectorPath("Properties", "Specific", 72));
     private final ValuePropertyMetadata legendVisiblePropertyMetadata =
             new BooleanPropertyMetadata(
                 legendVisibleName,
@@ -2190,13 +2194,13 @@ public class Metadata {
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.SIZE,
                 true, /* readWrite */
                 0.0, /* defaultValue */
-                new InspectorPath("Layout", "Size", 31));
+                new InspectorPath("Layout", "Size", 17));
     private final ValuePropertyMetadata length_Integer_ro_PropertyMetadata =
             new IntegerPropertyMetadata(
                 lengthName,
                 false, /* readWrite */
                 null, /* No defaultValue for R/O property */
-                new InspectorPath("Layout", "Size", 31));
+                new InspectorPath("Layout", "Size", 17));
     private final ValuePropertyMetadata lightOnPropertyMetadata =
             new BooleanPropertyMetadata(
                 lightOnName,
@@ -2216,14 +2220,14 @@ public class Metadata {
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.COORDINATE,
                 true, /* readWrite */
                 0.0, /* defaultValue */
-                new InspectorPath("Properties", "Specific", 91));
+                new InspectorPath("Properties", "Specific", 88));
     private final ValuePropertyMetadata majorTickUnitPropertyMetadata =
             new DoublePropertyMetadata(
                 majorTickUnitName,
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.SIZE,
                 true, /* readWrite */
                 25.0, /* defaultValue */
-                new InspectorPath("Properties", "Specific", 92));
+                new InspectorPath("Properties", "Specific", 89));
     private final ValuePropertyMetadata materialPropertyMetadata =
             new MaterialPropertyMetadata(
                 materialName,
@@ -2315,13 +2319,13 @@ public class Metadata {
                 minorTickCountName,
                 true, /* readWrite */
                 3, /* defaultValue */
-                new InspectorPath("Properties", "Specific", 97));
+                new InspectorPath("Properties", "Specific", 94));
     private final ValuePropertyMetadata minorTickCount_5_PropertyMetadata =
             new IntegerPropertyMetadata(
                 minorTickCountName,
                 true, /* readWrite */
                 5, /* defaultValue */
-                new InspectorPath("Properties", "Specific", 97));
+                new InspectorPath("Properties", "Specific", 94));
     private final ValuePropertyMetadata minorTickLengthPropertyMetadata =
             new DoublePropertyMetadata(
                 minorTickLengthName,
@@ -2787,14 +2791,14 @@ public class Metadata {
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.PERCENTAGE,
                 true, /* readWrite */
                 -1.0, /* defaultValue */
-                new InspectorPath("Layout", "Size", 33));
+                new InspectorPath("Layout", "Size", 19));
     private final ValuePropertyMetadata percentWidthPropertyMetadata =
             new DoublePropertyMetadata(
                 percentWidthName,
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.PERCENTAGE,
                 true, /* readWrite */
                 -1.0, /* defaultValue */
-                new InspectorPath("Layout", "Size", 32));
+                new InspectorPath("Layout", "Size", 18));
     private final ValuePropertyMetadata pickOnBounds_false_PropertyMetadata =
             new BooleanPropertyMetadata(
                 pickOnBoundsName,
@@ -2842,7 +2846,7 @@ public class Metadata {
                 prefColumnsName,
                 true, /* readWrite */
                 5, /* defaultValue */
-                new InspectorPath("Layout", "Size", 28));
+                new InspectorPath("Layout", "Specific", 16));
     private final ValuePropertyMetadata prefHeight_COMPUTED_PropertyMetadata =
             new DoublePropertyMetadata(
                 prefHeightName,
@@ -2868,35 +2872,35 @@ public class Metadata {
                 prefRowsName,
                 true, /* readWrite */
                 5, /* defaultValue */
-                new InspectorPath("Layout", "Size", 27));
+                new InspectorPath("Layout", "Specific", 17));
     private final ValuePropertyMetadata prefTileHeightPropertyMetadata =
             new DoublePropertyMetadata(
                 prefTileHeightName,
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.SIZE,
                 true, /* readWrite */
                 -1.0, /* defaultValue */
-                new InspectorPath("Layout", "Size", 23));
+                new InspectorPath("Layout", "Specific", 15));
     private final ValuePropertyMetadata prefTileWidthPropertyMetadata =
             new DoublePropertyMetadata(
                 prefTileWidthName,
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.SIZE,
                 true, /* readWrite */
                 -1.0, /* defaultValue */
-                new InspectorPath("Layout", "Size", 10));
+                new InspectorPath("Layout", "Specific", 14));
     private final ValuePropertyMetadata prefViewportHeightPropertyMetadata =
             new DoublePropertyMetadata(
                 prefViewportHeightName,
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.SIZE,
                 true, /* readWrite */
                 0.0, /* defaultValue */
-                new InspectorPath("Layout", "Size", 11));
+                new InspectorPath("Layout", "Specific", 7));
     private final ValuePropertyMetadata prefViewportWidthPropertyMetadata =
             new DoublePropertyMetadata(
                 prefViewportWidthName,
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.SIZE,
                 true, /* readWrite */
                 0.0, /* defaultValue */
-                new InspectorPath("Layout", "Size", 24));
+                new InspectorPath("Layout", "Specific", 6));
     private final ValuePropertyMetadata prefWidth_COMPUTED_PropertyMetadata =
             new DoublePropertyMetadata(
                 prefWidthName,
@@ -2924,7 +2928,7 @@ public class Metadata {
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.SIZE,
                 true, /* readWrite */
                 400.0, /* defaultValue */
-                new InspectorPath("Properties", "Specific", 74));
+                new InspectorPath("Properties", "Specific", 73));
     private final ValuePropertyMetadata preserveRatio_false_PropertyMetadata =
             new BooleanPropertyMetadata(
                 preserveRatioName,
@@ -2956,28 +2960,28 @@ public class Metadata {
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.SIZE,
                 true, /* readWrite */
                 0.0, /* defaultValue */
-                new InspectorPath("Layout", "Size", 12));
+                new InspectorPath("Layout", "Size", 10));
     private final ValuePropertyMetadata radius_100_PropertyMetadata =
             new DoublePropertyMetadata(
                 radiusName,
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.SIZE,
                 true, /* readWrite */
                 1.0, /* defaultValue */
-                new InspectorPath("Layout", "Size", 12));
+                new InspectorPath("Layout", "Size", 10));
     private final ValuePropertyMetadata radiusXPropertyMetadata =
             new DoublePropertyMetadata(
                 radiusXName,
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.SIZE,
                 true, /* readWrite */
                 0.0, /* defaultValue */
-                new InspectorPath("Layout", "Size", 13));
+                new InspectorPath("Layout", "Size", 11));
     private final ValuePropertyMetadata radiusYPropertyMetadata =
             new DoublePropertyMetadata(
                 radiusYName,
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.SIZE,
                 true, /* readWrite */
                 0.0, /* defaultValue */
-                new InspectorPath("Layout", "Size", 14));
+                new InspectorPath("Layout", "Size", 12));
     private final ValuePropertyMetadata resizable_Boolean_ro_PropertyMetadata =
             new BooleanPropertyMetadata(
                 resizableName,
@@ -3032,7 +3036,7 @@ public class Metadata {
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.SIZE,
                 false, /* readWrite */
                 null, /* No defaultValue for R/O property */
-                new InspectorPath("Properties", "Specific", 82));
+                new InspectorPath("Properties", "Specific", 80));
     private final ValuePropertyMetadata scaleShapePropertyMetadata =
             new BooleanPropertyMetadata(
                 scaleShapeName,
@@ -3107,13 +3111,13 @@ public class Metadata {
                 showTickLabelsName,
                 true, /* readWrite */
                 false, /* defaultValue */
-                new InspectorPath("Properties", "Specific", 83));
+                new InspectorPath("Properties", "Specific", 81));
     private final ValuePropertyMetadata showTickMarksPropertyMetadata =
             new BooleanPropertyMetadata(
                 showTickMarksName,
                 true, /* readWrite */
                 false, /* defaultValue */
-                new InspectorPath("Properties", "Specific", 75));
+                new InspectorPath("Properties", "Specific", 74));
     private final ValuePropertyMetadata showWeekNumbersPropertyMetadata =
             new BooleanPropertyMetadata(
                 showWeekNumbersName,
@@ -3151,7 +3155,7 @@ public class Metadata {
                 snapToTicksName,
                 true, /* readWrite */
                 false, /* defaultValue */
-                new InspectorPath("Properties", "Specific", 104));
+                new InspectorPath("Properties", "Specific", 100));
     private final ValuePropertyMetadata sortablePropertyMetadata =
             new BooleanPropertyMetadata(
                 sortableName,
@@ -3195,14 +3199,14 @@ public class Metadata {
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.ANGLE,
                 true, /* readWrite */
                 0.0, /* defaultValue */
-                new InspectorPath("Layout", "Size", 30));
+                new InspectorPath("Layout", "Size", 16));
     private final ValuePropertyMetadata startMarginPropertyMetadata =
             new DoublePropertyMetadata(
                 startMarginName,
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.SIZE,
                 true, /* readWrite */
                 5.0, /* defaultValue */
-                new InspectorPath("Properties", "Specific", 93));
+                new InspectorPath("Properties", "Specific", 90));
     private final ValuePropertyMetadata startXPropertyMetadata =
             new DoublePropertyMetadata(
                 startXName,
@@ -3614,28 +3618,28 @@ public class Metadata {
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.SIZE,
                 true, /* readWrite */
                 Double.MAX_VALUE, /* defaultValue */
-                new InspectorPath("Layout", "Size", 18));
+                new InspectorPath("Layout", "Specific", 13));
     private final ValuePropertyMetadata tabMaxWidthPropertyMetadata =
             new DoublePropertyMetadata(
                 tabMaxWidthName,
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.SIZE,
                 true, /* readWrite */
                 Double.MAX_VALUE, /* defaultValue */
-                new InspectorPath("Layout", "Size", 17));
+                new InspectorPath("Layout", "Specific", 12));
     private final ValuePropertyMetadata tabMinHeightPropertyMetadata =
             new DoublePropertyMetadata(
                 tabMinHeightName,
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.SIZE,
                 true, /* readWrite */
                 0.0, /* defaultValue */
-                new InspectorPath("Layout", "Size", 16));
+                new InspectorPath("Layout", "Specific", 11));
     private final ValuePropertyMetadata tabMinWidthPropertyMetadata =
             new DoublePropertyMetadata(
                 tabMinWidthName,
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.SIZE,
                 true, /* readWrite */
                 0.0, /* defaultValue */
-                new InspectorPath("Layout", "Size", 15));
+                new InspectorPath("Layout", "Specific", 10));
     private final ComponentPropertyMetadata tabsPropertyMetadata =
             new ComponentPropertyMetadata(
                 tabsName,
@@ -3679,39 +3683,39 @@ public class Metadata {
                 tickLabelFillName,
                 true, /* readWrite */
                 javafx.scene.paint.Color.BLACK, /* defaultValue */
-                new InspectorPath("Properties", "Specific", 98));
+                new InspectorPath("Properties", "Specific", 95));
     private final ValuePropertyMetadata tickLabelFontPropertyMetadata =
             new FontPropertyMetadata(
                 tickLabelFontName,
                 true, /* readWrite */
                 javafx.scene.text.Font.font("System",8.0), /* defaultValue */
-                new InspectorPath("Properties", "Specific", 94));
+                new InspectorPath("Properties", "Specific", 91));
     private final ValuePropertyMetadata tickLabelFormatterPropertyMetadata =
             new StringConverterPropertyMetadata(
                 tickLabelFormatterName,
                 true, /* readWrite */
                 null, /* defaultValue */
-                new InspectorPath("Properties", "Specific", 86));
+                new InspectorPath("Properties", "Specific", 84));
     private final ValuePropertyMetadata tickLabelGapPropertyMetadata =
             new DoublePropertyMetadata(
                 tickLabelGapName,
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.SIZE,
                 true, /* readWrite */
                 3.0, /* defaultValue */
-                new InspectorPath("Properties", "Specific", 105));
+                new InspectorPath("Properties", "Specific", 101));
     private final ValuePropertyMetadata tickLabelRotationPropertyMetadata =
             new DoublePropertyMetadata(
                 tickLabelRotationName,
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.ANGLE,
                 true, /* readWrite */
                 0.0, /* defaultValue */
-                new InspectorPath("Properties", "Specific", 109));
+                new InspectorPath("Properties", "Specific", 110));
     private final ValuePropertyMetadata tickLabelsVisiblePropertyMetadata =
             new BooleanPropertyMetadata(
                 tickLabelsVisibleName,
                 true, /* readWrite */
                 true, /* defaultValue */
-                new InspectorPath("Properties", "Specific", 85));
+                new InspectorPath("Properties", "Specific", 83));
     private final ValuePropertyMetadata tickLengthPropertyMetadata =
             new DoublePropertyMetadata(
                 tickLengthName,
@@ -3724,7 +3728,7 @@ public class Metadata {
                 tickMarksName,
                 true, /* readWrite */
                 Collections.emptyList(), /* defaultValue */
-                new InspectorPath("Properties", "Specific", 84));
+                new InspectorPath("Properties", "Specific", 82));
     private final ValuePropertyMetadata tickMarkVisiblePropertyMetadata =
             new BooleanPropertyMetadata(
                 tickMarkVisibleName,
@@ -3751,14 +3755,14 @@ public class Metadata {
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.SIZE,
                 false, /* readWrite */
                 null, /* No defaultValue for R/O property */
-                new InspectorPath("Layout", "Size", 26));
+                new InspectorPath("Layout", "Specific", 19));
     private final ValuePropertyMetadata tileWidthPropertyMetadata =
             new DoublePropertyMetadata(
                 tileWidthName,
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.SIZE,
                 false, /* readWrite */
                 null, /* No defaultValue for R/O property */
-                new InspectorPath("Layout", "Size", 25));
+                new InspectorPath("Layout", "Specific", 18));
     private final ValuePropertyMetadata titlePropertyMetadata =
             new StringPropertyMetadata(
                 titleName,
@@ -3840,7 +3844,7 @@ public class Metadata {
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.COORDINATE,
                 true, /* readWrite */
                 100.0, /* defaultValue */
-                new InspectorPath("Properties", "Specific", 99));
+                new InspectorPath("Properties", "Specific", 96));
     private final ValuePropertyMetadata valignment_NULL_PropertyMetadata =
             new EnumerationPropertyMetadata(
                 valignmentName,
@@ -3937,7 +3941,7 @@ public class Metadata {
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.SIZE,
                 true, /* readWrite */
                 15.0, /* defaultValue */
-                new InspectorPath("Properties", "Specific", 87));
+                new InspectorPath("Properties", "Specific", 85));
     private final ValuePropertyMetadata visibleRowCountPropertyMetadata =
             new IntegerPropertyMetadata(
                 visibleRowCountName,
@@ -3956,21 +3960,21 @@ public class Metadata {
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.COORDINATE,
                 true, /* readWrite */
                 1.0, /* defaultValue */
-                new InspectorPath("Properties", "Specific", 110));
+                new InspectorPath("Properties", "Specific", 107));
     private final ValuePropertyMetadata vminPropertyMetadata =
             new DoublePropertyMetadata(
                 vminName,
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.COORDINATE,
                 true, /* readWrite */
                 0.0, /* defaultValue */
-                new InspectorPath("Properties", "Specific", 106));
+                new InspectorPath("Properties", "Specific", 103));
     private final ValuePropertyMetadata vvaluePropertyMetadata =
             new DoublePropertyMetadata(
                 vvalueName,
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.COORDINATE,
                 true, /* readWrite */
                 0.0, /* defaultValue */
-                new InspectorPath("Properties", "Specific", 100));
+                new InspectorPath("Properties", "Specific", 105));
     private final ValuePropertyMetadata width_Double_200_PropertyMetadata =
             new DoublePropertyMetadata(
                 widthName,
@@ -4329,6 +4333,7 @@ public class Metadata {
         componentClassMap.put(StackPaneMetadata.getKlass(), StackPaneMetadata);
         componentClassMap.put(StackedAreaChartMetadata.getKlass(), StackedAreaChartMetadata);
         componentClassMap.put(StackedBarChartMetadata.getKlass(), StackedBarChartMetadata);
+        componentClassMap.put(SubSceneMetadata.getKlass(), SubSceneMetadata);
         componentClassMap.put(SwingNodeMetadata.getKlass(), SwingNodeMetadata);
         componentClassMap.put(TabMetadata.getKlass(), TabMetadata);
         componentClassMap.put(TabPaneMetadata.getKlass(), TabPaneMetadata);
@@ -5039,6 +5044,11 @@ public class Metadata {
         StackedBarChartMetadata.getProperties().add(categoryGapPropertyMetadata);
         StackedBarChartMetadata.getProperties().add(styleClass_c12_PropertyMetadata);
 
+        SubSceneMetadata.getProperties().add(fill_NULL_PropertyMetadata);
+        SubSceneMetadata.getProperties().add(height_Double_0_PropertyMetadata);
+        SubSceneMetadata.getProperties().add(pickOnBounds_false_PropertyMetadata);
+        SubSceneMetadata.getProperties().add(width_Double_0_PropertyMetadata);
+
         SwingNodeMetadata.getProperties().add(focusTraversable_true_PropertyMetadata);
         SwingNodeMetadata.getProperties().add(pickOnBounds_false_PropertyMetadata);
         SwingNodeMetadata.getProperties().add(resizable_Boolean_ro_PropertyMetadata);
@@ -5281,9 +5291,11 @@ public class Metadata {
         hiddenProperties.add(new PropertyName("alignWithContentOrigin"));
         hiddenProperties.add(new PropertyName("armed"));
         hiddenProperties.add(new PropertyName("anchor"));
+        hiddenProperties.add(new PropertyName("antiAliasing"));
         hiddenProperties.add(new PropertyName("border"));
         hiddenProperties.add(new PropertyName("background"));
         hiddenProperties.add(new PropertyName("caretPosition"));
+        hiddenProperties.add(new PropertyName("camera"));
         hiddenProperties.add(new PropertyName("cellFactory"));
         hiddenProperties.add(new PropertyName("cellValueFactory"));
         hiddenProperties.add(new PropertyName("characters"));
@@ -5297,6 +5309,7 @@ public class Metadata {
         hiddenProperties.add(new PropertyName("customColors"));
         hiddenProperties.add(new PropertyName("data"));
         hiddenProperties.add(new PropertyName("dayCellFactory"));
+        hiddenProperties.add(new PropertyName("depthBuffer"));
         hiddenProperties.add(new PropertyName("disabled"));
         hiddenProperties.add(new PropertyName("dividers"));
         hiddenProperties.add(new PropertyName("editingCell"));

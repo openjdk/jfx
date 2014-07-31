@@ -125,7 +125,6 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
     private final AboutWindowController aboutWindowController
             = new AboutWindowController();
     private UserLibrary userLibrary;
-    private File nextInitialDirectory;
     private ToolTheme toolTheme = ToolTheme.DEFAULT;
     
 
@@ -330,19 +329,6 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
         }
     }
 
-    public void updateNextInitialDirectory(File chosenFile) {
-        assert chosenFile != null;
-
-        final Path chosenFolder = chosenFile.toPath().getParent();
-        if (chosenFolder != null) {
-            nextInitialDirectory = chosenFolder.toFile();
-        }
-    }
-
-    public File getNextInitialDirectory() {
-        return nextInitialDirectory;
-    }
-    
     public static synchronized String getDarkToolStylesheet() {
         if (darkToolStylesheet == null) {
             final URL url = SceneBuilderApp.class.getResource("css/ThemeDark.css"); //NOI18N
@@ -502,13 +488,11 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
 
         fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter(I18N.getString("file.filter.label.fxml"),
                 "*.fxml")); //NOI18N
-        if (nextInitialDirectory != null) {
-            fileChooser.setInitialDirectory(nextInitialDirectory);
-        }
+        fileChooser.setInitialDirectory(EditorController.getNextInitialDirectory());
         final List<File> fxmlFiles = fileChooser.showOpenMultipleDialog(null);
         if (fxmlFiles != null) {
             assert fxmlFiles.isEmpty() == false;
-            updateNextInitialDirectory(fxmlFiles.get(0));
+            EditorController.updateNextInitialDirectory(fxmlFiles.get(0));
             performOpenFiles(fxmlFiles, fromWindow);
         }
     }

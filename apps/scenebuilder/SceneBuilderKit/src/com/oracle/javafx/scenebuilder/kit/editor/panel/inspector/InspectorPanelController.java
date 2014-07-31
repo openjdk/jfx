@@ -284,7 +284,7 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
     private SelectionState selectionState;
     private final EditorController editorController;
 
-    private double searchResultMinHeight;
+    private double searchResultDividerPosition;
 
     /*
      * Public
@@ -576,14 +576,13 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
         // Listen the Scene stylesheets changes
         getEditorController().sceneStyleSheetProperty().addListener((ChangeListener<ObservableList<File>>) (ov, t, t1) -> updateInspector());
         
-        accordion.getStyleClass().add("INSPECTOR_THEME"); //NOI18N
         selectionState = new SelectionState(editorController);
         viewModeChanged(null, getViewMode());
         expandedSectionChanged();
         accordion.setPrefSize(300, 700);
         buildExpandedSection();
         updateClassNameInSectionTitles();
-        searchResultMinHeight = searchStackPane.getMinHeight();
+        searchResultDividerPosition = inspectorRoot.getDividerPositions()[0];
         searchPatternDidChange();
     }
 
@@ -618,11 +617,16 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
         if (isInspectorLoaded()) {
             // Collapse/Expand the search result panel
             if (hasSearchPattern()) {
-                searchStackPane.setMaxHeight(Double.MAX_VALUE);
-                searchStackPane.setMinHeight(searchResultMinHeight);
+                if (!inspectorRoot.getItems().contains(searchStackPane)) {
+                    inspectorRoot.getItems().add(0, searchStackPane);
+                    inspectorRoot.setDividerPositions(searchResultDividerPosition);
+                }
             } else {
-                searchStackPane.setMaxHeight(0);
-                searchStackPane.setMinHeight(0);
+                // Save the divider position for next search
+                searchResultDividerPosition = inspectorRoot.getDividerPositions()[0];
+                if (inspectorRoot.getItems().contains(searchStackPane)) {
+                    inspectorRoot.getItems().remove(searchStackPane);
+                }
             }
 
             buildFlatContent(searchContent);
@@ -1357,13 +1361,13 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
             // Double editors
             DoublePropertyMetadata doublePropMeta = (DoublePropertyMetadata) propMeta;
             DoubleKind kind = doublePropMeta.getKind();
-            if ((kind == DoubleKind.COORDINATE)
+            if ((kind == DoubleKind.OPACITY) || (kind == DoubleKind.PROGRESS) || isBoundedByProperties(propMeta)) {
+                propertyEditor = makePropertyEditor(BoundedDoubleEditor.class, propMeta);
+            } else if ((kind == DoubleKind.COORDINATE)
                     || (kind == DoubleKind.USE_COMPUTED_SIZE) || (kind == DoubleKind.USE_PREF_SIZE)
                     || (kind == DoubleKind.NULLABLE_COORDINATE)) {
                 // We may have constants to add
                 propertyEditor = makePropertyEditor(DoubleEditor.class, propMeta);
-            } else if ((kind == DoubleKind.OPACITY) || (kind == DoubleKind.PROGRESS)) {
-                propertyEditor = makePropertyEditor(BoundedDoubleEditor.class, propMeta);
             } else if (kind == DoubleKind.ANGLE) {
                 propertyEditor = makePropertyEditor(RotateEditor.class, propMeta);
             } else {
@@ -1750,9 +1754,9 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
             assert propMeta instanceof DoublePropertyMetadata;
             DoublePropertyMetadata doublePropMeta = (DoublePropertyMetadata) propMeta;
             if (propertyEditor != null) {
-                ((BoundedDoubleEditor) propertyEditor).reset(propMeta, selectedClasses, getConstants(doublePropMeta));
+                ((BoundedDoubleEditor) propertyEditor).reset(propMeta, selectedClasses, getSelectedInstances(), getConstants(doublePropMeta));
             } else {
-                propertyEditor = new BoundedDoubleEditor(propMeta, selectedClasses, getConstants(doublePropMeta));
+                propertyEditor = new BoundedDoubleEditor(propMeta, selectedClasses, getSelectedInstances(), getConstants(doublePropMeta));
             }
         } else if (editorClass == RotateEditor.class) {
             if (propertyEditor != null) {
@@ -2042,6 +2046,15 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
         return selectionState.getCommonParentClass();
     }
 
+    private boolean isBoundedByProperties(ValuePropertyMetadata propMeta) {
+        // Only ScrollPane.hValue and ScrollPane.vValue for now
+        if (propMeta.getName().toString().equals(Editor.hValuePropName) 
+                || propMeta.getName().toString().equals(Editor.vValuePropName)) {
+            return true;
+        }
+        return false;
+    }
+    
     /*
      *   This class represents the selection state: 
      *   - the selected instances, 

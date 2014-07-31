@@ -34,6 +34,8 @@ import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
+import javafx.application.Platform;
+import javafx.beans.binding.StringBinding;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
@@ -50,6 +52,7 @@ import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Side;
+import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 import javafx.scene.layout.Region;
 import javafx.scene.shape.Arc;
@@ -943,6 +946,15 @@ public class PieChart extends Chart {
             setName(name);
             setPieValue(value);
             textNode.getStyleClass().addAll("text", "chart-pie-label");
+            textNode.setRole(AccessibleRole.TEXT);
+            textNode.setRoleDescription("slice");
+            textNode.focusTraversableProperty().bind(Platform.accessibilityActiveProperty());
+            textNode.accessibleTextProperty().bind( new StringBinding() {
+                {bind(nameProperty(), currentPieValueProperty());} 
+                @Override protected String computeValue() {
+                    return getName() + " represents " + getCurrentPieValue() + " percent";
+                }
+            });
         }
 
         // -------------- PUBLIC METHODS ----------------------------------------------

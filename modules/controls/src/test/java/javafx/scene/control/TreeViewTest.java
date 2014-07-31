@@ -38,6 +38,7 @@ import com.sun.javafx.tk.Toolkit;
 
 import java.util.*;
 
+import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import static com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
@@ -2035,5 +2036,77 @@ public class TreeViewTest {
         tree.getSelectionModel().select(0);
         assertEquals(1, rt_37538_count);
         sl.dispose();
+    }
+
+    @Ignore("Fix not yet developed for TreeView")
+    @Test public void test_rt_35395_fixedCellSize() {
+        test_rt_35395(true);
+    }
+
+    @Ignore("Fix not yet developed for TreeView")
+    @Test public void test_rt_35395_notFixedCellSize() {
+        test_rt_35395(false);
+    }
+
+    private int rt_35395_counter;
+    private void test_rt_35395(boolean useFixedCellSize) {
+        rt_35395_counter = 0;
+
+        TreeItem<String> root = new TreeItem<>("green");
+        root.setExpanded(true);
+        for (int i = 0; i < 20; i++) {
+            root.getChildren().addAll(new TreeItem<>("red"), new TreeItem<>("green"), new TreeItem<>("blue"), new TreeItem<>("purple"));
+        }
+
+        TreeView<String> treeView = new TreeView<>(root);
+        if (useFixedCellSize) {
+            treeView.setFixedCellSize(24);
+        }
+        treeView.setCellFactory(tv -> new TreeCell<String>() {
+            @Override protected void updateItem(String color, boolean empty) {
+                rt_35395_counter += 1;
+                super.updateItem(color, empty);
+                setText(null);
+                if(empty) {
+                    setGraphic(null);
+                } else {
+                    Rectangle rect = new Rectangle(16, 16);
+                    rect.setStyle("-fx-fill: " + color);
+                    setGraphic(rect);
+                }
+            }
+        });
+
+        StageLoader sl = new StageLoader(treeView);
+
+        Platform.runLater(() -> {
+            rt_35395_counter = 0;
+            root.getChildren().set(10, new TreeItem<>("yellow"));
+            Platform.runLater(() -> {
+                Toolkit.getToolkit().firePulse();
+                assertEquals(1, rt_35395_counter);
+                rt_35395_counter = 0;
+                root.getChildren().set(30, new TreeItem<>("yellow"));
+                Platform.runLater(() -> {
+                    Toolkit.getToolkit().firePulse();
+                    assertEquals(0, rt_35395_counter);
+                    rt_35395_counter = 0;
+                    treeView.scrollTo(5);
+                    Platform.runLater(() -> {
+                        Toolkit.getToolkit().firePulse();
+                        assertEquals(5, rt_35395_counter);
+                        rt_35395_counter = 0;
+                        treeView.scrollTo(55);
+                        Platform.runLater(() -> {
+                            Toolkit.getToolkit().firePulse();
+
+                            int expected = useFixedCellSize ? 17 : 53;
+                            assertEquals(expected, rt_35395_counter);
+                            sl.dispose();
+                        });
+                    });
+                });
+            });
+        });
     }
 }

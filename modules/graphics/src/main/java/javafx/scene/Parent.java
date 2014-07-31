@@ -35,8 +35,6 @@ import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
-//import javafx.scene.accessibility.Attribute;
-//import javafx.scene.accessibility.Role;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -64,6 +62,7 @@ import com.sun.javafx.sg.prism.NGGroup;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.javafx.scene.LayoutFlags;
+import javafx.stage.Window;
 
 /**
  * The base class for all nodes that have children in the scene graph.
@@ -359,9 +358,12 @@ public abstract class Parent extends Node {
     }) {
         @Override
         protected void onProposedChange(final List<Node> newNodes, int[] toBeRemoved) {
-            if (Parent.this.getScene() != null) {
-                // NOTE: this will throw IllegalStateException if we are on the wrong thread
-                Toolkit.getToolkit().checkFxUserThread();
+            final Scene scene = getScene();
+            if (scene != null) {
+                Window w = scene.getWindow();
+                if (w != null && w.impl_getPeer() != null) {
+                    Toolkit.getToolkit().checkFxUserThread();
+                }
             }
             geomChanged = false;
 
@@ -542,7 +544,8 @@ public abstract class Parent extends Node {
      * restored. An {@link IllegalArgumentException} is thrown in this case.
      *
      * <p>
-     * If this {@link Parent} node is attached to a {@link Scene}, then its
+     * If this {@link Parent} node is attached to a {@link Scene} attached to a {@link Window}
+     * that is showning ({@link javafx.stage.Window#isShowing()}), then its
      * list of children must only be modified on the JavaFX Application Thread.
      * An {@link IllegalStateException} is thrown if this restriction is
      * violated.
@@ -1281,6 +1284,7 @@ public abstract class Parent extends Node {
      */
     protected Parent() {
         layoutFlag = LayoutFlags.NEEDS_LAYOUT;
+        setRole(AccessibleRole.PARENT);
     }
 
     /**
@@ -1774,22 +1778,20 @@ public abstract class Parent extends Node {
         return alg.processContainerNode(this, ctx);
     }
 
-//    /** @treatAsPrivate */
-//    @Override
-//    public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//        switch (attribute) {
-//            case ROLE: return Role.PARENT;
-//            case CHILDREN: return getChildrenUnmodifiable();
-//            default: return super.accGetAttribute(attribute, parameters);
-//        }
-//    }
-//
-//    void releaseAccessible() {
-//        for (int i=0, max=children.size(); i<max; i++) {
-//            final Node node = children.get(i);
-//            node.releaseAccessible();
-//        }
-//        super.releaseAccessible();
-//    }
+    @Override
+    public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
+        switch (attribute) {
+            case CHILDREN: return getChildrenUnmodifiable();
+            default: return super.queryAccessibleAttribute(attribute, parameters);
+        }
+    }
+
+    void releaseAccessible() {
+        for (int i=0, max=children.size(); i<max; i++) {
+            final Node node = children.get(i);
+            node.releaseAccessible();
+        }
+        super.releaseAccessible();
+    }
 
 }

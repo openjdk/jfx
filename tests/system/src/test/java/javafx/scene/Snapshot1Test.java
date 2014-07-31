@@ -81,16 +81,16 @@ public class Snapshot1Test extends SnapshotCommon {
 
     // ========================== TEST CASES ==========================
 
-    // Verify that we cannot construct a Scene on a thread other than
+    // Verify that we can construct a Scene on a thread other than
     // the FX Application thread
-    @Test (expected=IllegalStateException.class)
+    @Test
     public void testConstructSceneWrongThread() {
         assertFalse(Platform.isFxApplicationThread());
 
         Group root = new Group();
 
-        // The following should throw IllegalStateException
         tmpScene = new Scene(root);
+        assertNotNull(tmpScene);
     }
 
     // Verify that we can construct a graph of nodes on a thread other than

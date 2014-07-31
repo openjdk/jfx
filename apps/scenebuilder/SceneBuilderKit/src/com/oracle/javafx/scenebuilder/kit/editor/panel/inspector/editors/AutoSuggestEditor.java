@@ -34,6 +34,7 @@ package com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -117,7 +118,7 @@ public abstract class AutoSuggestEditor extends PropertyEditor {
     }
 
     private void preInit(List<String> suggestedList) {
-        this.suggestedList = suggestedList;
+        setSuggestedList(suggestedList);
         if (type == Type.ALPHA) {
             root = EditorUtils.loadFxml("StringAutoSuggestEditor.fxml", this); //NOI18N
             assert textField != null;
@@ -202,13 +203,18 @@ public abstract class AutoSuggestEditor extends PropertyEditor {
     }
 
     protected void resetSuggestedList(List<String> suggestedList) {
-        this.suggestedList = suggestedList;
+        setSuggestedList(suggestedList);
         updateMenuButtonIfNeeded();
         entryField.setPromptText(null);
     }
     
     protected List<String> getSuggestedList() {
         return suggestedList;
+    }
+    
+    private void setSuggestedList(List<String> suggestedList) {
+        Collections.sort(suggestedList);
+        this.suggestedList = suggestedList;
     }
 
     protected Parent getRoot() {

@@ -56,7 +56,15 @@ public class HelloSimpleTreeTableView extends Application {
         TreeItem<Item> root = new TreeItem<>(new Item("Root"));
         root.setExpanded(true);
         for (int i=0; i<128; i++) {
-            root.getChildren().add(new TreeItem(new Item("Item " + i)));
+            TreeItem<Item> item = new TreeItem<>(new Item("Child node " + i));
+            root.getChildren().add(item);
+            if ((i % 3) == 0) {
+                for (int j = 0; j < 5; j++) {
+                    TreeItem<Item> sitem = new TreeItem<>(new Item("sub item " + i + " " + j));
+                    item.getChildren().add(sitem);
+                }
+                if ((i % 2) == 0) item.setExpanded(true);
+            }
         }
         tableView.setRoot(root);
         TreeTableColumn<Item, String> column1 = new TreeTableColumn<>("Name");

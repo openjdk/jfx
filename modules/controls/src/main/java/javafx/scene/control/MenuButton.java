@@ -32,10 +32,9 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.geometry.Side;
+import javafx.scene.AccessibleAction;
+import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
-//import javafx.scene.accessibility.Action;
-//import javafx.scene.accessibility.Attribute;
-//import javafx.scene.accessibility.Role;
 import com.sun.javafx.scene.control.skin.MenuButtonSkin;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
@@ -117,6 +116,7 @@ public class MenuButton extends ButtonBase {
             setGraphic(graphic);
         }
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
+        setRole(AccessibleRole.MENU_BUTTON);
         setMnemonicParsing(true);     // enable mnemonic auto-parsing by default
         // the default value for popupSide = Side.BOTTOM therefor
         // PSEUDO_CLASS_OPENVERTICALLY should be set from the start.
@@ -268,25 +268,17 @@ public class MenuButton extends ButtonBase {
      *                                                                         *
      **************************************************************************/
 
-//    /** @treatAsPrivate */
-//    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//        switch (attribute) {
-//            case ROLE: return Role.MENU_BUTTON;
-//            default: return super.accGetAttribute(attribute, parameters);
-//        }
-//    }
-//
-//    /** @treatAsPrivate */
-//    @Override public void accExecuteAction(Action action, Object... parameters) {
-//        switch (action) {
-//            case FIRE:
-//                if (isShowing()) {
-//                    hide();
-//                } else {
-//                    show();
-//                }
-//                break;
-//            default: super.accExecuteAction(action);
-//        }
-//    }
+    @Override
+    public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
+        switch (action) {
+            case FIRE:
+                if (isShowing()) {
+                    hide();
+                } else {
+                    show();
+                }
+                break;
+            default: super.executeAccessibleAction(action);
+        }
+    }
 }

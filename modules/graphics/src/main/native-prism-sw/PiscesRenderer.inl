@@ -168,21 +168,21 @@ renderer_setClip(Renderer* rdr, jint minX, jint minY, jint width, jint height) {
 
 static INLINE void
 renderer_setColor(Renderer* rdr, jint red, jint green, jint blue, jint alpha) {
-    if ((rdr->_cred != red) ||
-        (rdr->_cgreen != green) ||
-        (rdr->_cblue != blue) ||
-        (rdr->_calpha != alpha))
+    if ((rdr->_ured != red) ||
+        (rdr->_ugreen != green) ||
+        (rdr->_ublue != blue) ||
+        (rdr->_ualpha != alpha))
     {
         rdr->_rendererState |= INVALID_INTERNAL_COLOR;
-        if (rdr->_calpha != alpha) {
+        if (rdr->_ualpha != alpha) {
             rdr->_rendererState |= INVALID_COLOR_ALPHA_MAP |
                                    INVALID_PAINT_ALPHA_MAP;
         }
         
-        rdr->_cred = red;
-        rdr->_cgreen = green;
-        rdr->_cblue = blue;
-        rdr->_calpha = alpha;
+        rdr->_ured = red;
+        rdr->_ugreen = green;
+        rdr->_ublue = blue;
+        rdr->_ualpha = alpha;
     }
 
     setPaintMode(rdr, PAINT_FLAT_COLOR);
@@ -477,6 +477,11 @@ updateInternalColor(Renderer* rdr) {
         rdr->_cgreen = 0;
         rdr->_cblue = 0;
         rdr->_calpha = 0;
+    } else {
+        rdr->_cred = rdr->_ured;
+        rdr->_cgreen = rdr->_ugreen;
+        rdr->_cblue = rdr->_ublue;
+        rdr->_calpha = rdr->_ualpha;
     }
     rdr->_rendererState &= ~INVALID_INTERNAL_COLOR;
 }
@@ -622,6 +627,8 @@ updateCompositeDependedRoutines(Renderer* rdr) {
         case COMPOSITE_CLEAR:
             rdr->_bl = rdr->_bl_Clear;
             rdr->_bl_PT = rdr->_bl_PT_Clear;
+            rdr->_el = rdr->_el_Source;
+            rdr->_el_PT = rdr->_el_Source;
             break;
         default:
             // unsupported!

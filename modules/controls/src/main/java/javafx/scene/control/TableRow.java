@@ -28,9 +28,9 @@ package javafx.scene.control;
 import javafx.beans.InvalidationListener;
 import javafx.beans.WeakInvalidationListener;
 import javafx.collections.ListChangeListener;
-//import javafx.scene.accessibility.Action;
-//import javafx.scene.accessibility.Attribute;
-//import javafx.scene.accessibility.Role;
+import javafx.scene.AccessibleAction;
+import javafx.scene.AccessibleAttribute;
+import javafx.scene.AccessibleRole;
 import javafx.scene.control.TableView.TableViewFocusModel;
 
 import javafx.collections.WeakListChangeListener;
@@ -73,6 +73,7 @@ public class TableRow<T> extends IndexedCell<T> {
      */
     public TableRow() {
         getStyleClass().addAll(DEFAULT_STYLE_CLASS);
+        setRole(AccessibleRole.TABLE_ROW);
     }
 
 
@@ -364,37 +365,11 @@ public class TableRow<T> extends IndexedCell<T> {
      *                                                                         *
      **************************************************************************/
 
-//    /** @treatAsPrivate */
-//    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//        switch (attribute) {
-//            case ROLE: return Role.TABLE_ROW;
-//            case INDEX: return getIndex();
-//            case FOCUS_ITEM: //Skin
-//            case SELECTED_CELLS: //Skin
-//            case CELL_AT_ROW_COLUMN: //Skin
-//            default: return super.accGetAttribute(attribute, parameters);
-//        }
-//    }
-//
-//    /** @treatAsPrivate */
-//    @Override public void accExecuteAction(Action action, Object... parameters) {
-//        final TableView<T> tableView = getTableView();
-//        final MultipleSelectionModel<T> sm = tableView == null ? null : tableView.getSelectionModel();
-//
-//        switch (action) {
-//            case SELECT: {
-//                if (sm != null) sm.clearAndSelect(getIndex());
-//                break;
-//            }
-//            case ADD_TO_SELECTION: {
-//                if (sm != null) sm.select(getIndex());
-//                break;
-//            }
-//            case REMOVE_FROM_SELECTION: {
-//                if (sm != null) sm.clearSelection(getIndex());
-//                break;
-//            }
-//            default: super.accExecuteAction(action);
-//        }
-//    }
+    @Override
+    public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
+        switch (attribute) {
+            case INDEX: return getIndex();
+            default: return super.queryAccessibleAttribute(attribute, parameters);
+        }
+    }
 }

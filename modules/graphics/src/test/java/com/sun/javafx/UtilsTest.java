@@ -29,6 +29,15 @@ import static org.junit.Assert.assertEquals;
 
 import java.util.Arrays;
 
+import javafx.geometry.HPos;
+import javafx.geometry.Point2D;
+import javafx.geometry.VPos;
+import javafx.scene.Group;
+import javafx.scene.Scene;
+import javafx.scene.SubScene;
+import javafx.scene.layout.VBox;
+import javafx.scene.shape.Rectangle;
+import javafx.stage.Stage;
 import org.junit.Test;
 
 public class UtilsTest {
@@ -132,5 +141,42 @@ public class UtilsTest {
         /*String*/ s = "\\this\\is\\a\\umm\\windows\\path";
         /*String*/ r = Utils.convertUnicode(s);
         //assertEquals("\\this\\is\\a\\umm\\windows\\path", r);
+    }
+
+    @Test
+    public void testPointRelativeTo() {
+        VBox root = new VBox();
+        final Rectangle rectangle = new Rectangle(50, 50, 100, 100);
+        root.getChildren().add(rectangle);
+        Scene scene = new Scene(root,800,600);
+        Stage stage = new Stage();
+        stage.setX(0);
+        stage.setY(0);
+        stage.setScene(scene);
+        final Point2D res = Utils.pointRelativeTo(rectangle, 0, 0, HPos.CENTER, VPos.CENTER, 0, 0, false);
+        assertEquals(50, res.getX(), 1e-1);
+        assertEquals(50, res.getY(), 1e-1);
+
+    }
+
+    @Test
+    public void testPointRelativeTo_InSubScene() {
+        Group root = new Group();
+        Scene scene = new Scene(root,800,600);
+        VBox subRoot = new VBox();
+        SubScene subScene = new SubScene(subRoot, 100, 100);
+        subScene.setLayoutX(20);
+        subScene.setLayoutY(20);
+        root.getChildren().addAll(subScene);
+        final Rectangle rectangle = new Rectangle(50, 50, 100, 100);
+        subRoot.getChildren().add(rectangle);
+        Stage stage = new Stage();
+        stage.setX(0);
+        stage.setY(0);
+        stage.setScene(scene);
+        final Point2D res = Utils.pointRelativeTo(rectangle, 0, 0, HPos.CENTER, VPos.CENTER, 0, 0, false);
+        assertEquals(70, res.getX(), 1e-1);
+        assertEquals(70, res.getY(), 1e-1);
+
     }
 }

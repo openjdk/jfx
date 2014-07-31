@@ -38,10 +38,10 @@ import javafx.event.EventHandler;
 import javafx.event.WeakEventHandler;
 import javafx.geometry.Bounds;
 import javafx.geometry.NodeOrientation;
+import javafx.scene.AccessibleAttribute;
+import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 import javafx.scene.Scene;
-//import javafx.scene.accessibility.Attribute;
-//import javafx.scene.accessibility.Role;
 import javafx.scene.control.CustomMenuItem;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
@@ -289,7 +289,7 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
         
         // When we click else where in the scene - menu selection should be cleared.
         mouseEventHandler = t -> {
-            if (!container.localToScene(container.getLayoutBounds()).contains(t.getX(), t.getY())) {
+            if (!container.localToScreen(container.getLayoutBounds()).contains(t.getScreenX(), t.getScreenY())) {
                 unSelectMenus();
             }
         };
@@ -870,7 +870,7 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
             SceneHelper.getSceneAccessor().setTransientFocusContainer(getSkinnable().getScene(), null);
 
             /* Return the a11y focus to a control in the scene. */
-//            getSkinnable().accSendNotification(Attribute.FOCUS_NODE);
+            getSkinnable().notifyAccessibleAttributeChanged(AccessibleAttribute.FOCUS_NODE);
         }
         focusedMenuIndex = -1;
     }
@@ -974,6 +974,7 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
         public MenuBarButton(MenuBarSkin menuBarSkin, String text, Node graphic) {
             super(text, graphic);
             this.menuBarSkin = menuBarSkin;
+            setRole(AccessibleRole.MENU);
         }
 
         public MenuBarSkin getMenuBarSkin() {
@@ -988,19 +989,16 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
             setHover(true);
 
             /* Transfer the a11y focus to an item in the menu bar. */
-//            menuBarSkin.getSkinnable().accSendNotification(Attribute.FOCUS_NODE);
+            menuBarSkin.getSkinnable().notifyAccessibleAttributeChanged(AccessibleAttribute.FOCUS_NODE);
         }
 
-//        @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//            switch (attribute) {
-//                case ROLE: return Role.MENU_ITEM;
-//                case MENU_ITEM_TYPE: return Role.CONTEXT_MENU;
-//                case FOCUS_ITEM: return MenuBarButton.this;
-//                case TITLE: //fall through because the super class handles mnemonics right
-//                case MNEMONIC:
-//                default: return super.accGetAttribute(attribute, parameters);
-//            }
-//        }
+        @Override
+        public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
+            switch (attribute) {
+                case FOCUS_ITEM: return MenuBarButton.this;
+                default: return super.queryAccessibleAttribute(attribute, parameters);
+            }
+        }
     }
 
     /***************************************************************************
@@ -1064,11 +1062,11 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
      *                                                                         *
      **************************************************************************/
 
-//    /** @treatAsPrivate */
-//    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//        switch (attribute) {
-//            case FOCUS_NODE: return openMenuButton;
-//            default: return super.accGetAttribute(attribute, parameters);
-//        }
-//    }
+    @Override
+    protected Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
+        switch (attribute) {
+            case FOCUS_NODE: return openMenuButton;
+            default: return super.queryAccessibleAttribute(attribute, parameters);
+        }
+    }
 }

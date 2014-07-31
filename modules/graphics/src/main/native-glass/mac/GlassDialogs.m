@@ -470,7 +470,7 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacCommonDialogs__1showFileO
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
-        NSOpenPanel *panel = [GlassOpenPanel openPanel];
+        NSOpenPanel *panel = [GlassApplication isSandboxed] ? [NSOpenPanel openPanel] : [GlassOpenPanel openPanel];
         [panel setAllowsMultipleSelection:(jMultipleMode==JNI_TRUE)];
         [panel setTitle:[GlassHelper nsStringWithJavaString:jTitle withEnv:env]];
         NSString *folder = [GlassHelper nsStringWithJavaString:jFolder withEnv:env];
@@ -545,7 +545,7 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacCommonDialogs__1showFileS
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
-        NSSavePanel *panel = [GlassSavePanel savePanel];
+        NSSavePanel *panel = [GlassApplication isSandboxed] ? [NSSavePanel savePanel] : [GlassSavePanel savePanel];
         [panel setTitle:[GlassHelper nsStringWithJavaString:jTitle withEnv:env]];
         NSString *folder = [GlassHelper nsStringWithJavaString:jFolder withEnv:env];
         if ([folder length] > 0)
@@ -616,7 +616,7 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacCommonDialogs__1showFolde
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
     {
-        NSOpenPanel *panel = [GlassOpenPanel openPanel];
+        NSOpenPanel *panel = [GlassApplication isSandboxed] ? [NSOpenPanel openPanel] : [GlassOpenPanel openPanel];
         [panel setTitle:[GlassHelper nsStringWithJavaString:jTitle withEnv:env]];
         NSString *folder = [GlassHelper nsStringWithJavaString:jFolder withEnv:env];
         if ([folder length] > 0)

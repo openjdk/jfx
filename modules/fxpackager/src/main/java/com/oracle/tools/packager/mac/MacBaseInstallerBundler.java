@@ -33,10 +33,8 @@ import com.oracle.tools.packager.ConfigException;
 import com.oracle.tools.packager.IOUtils;
 import com.oracle.tools.packager.UnsupportedPlatformException;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermission;
@@ -51,8 +49,6 @@ import java.util.ResourceBundle;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import static com.oracle.tools.packager.StandardBundlerParam.*;
 
@@ -78,7 +74,11 @@ public abstract class MacBaseInstallerBundler extends AbstractBundler {
             params -> {
                 File imageDir = IMAGES_ROOT.fetchFrom(params);
                 if (!imageDir.exists()) imageDir.mkdirs();
-                return new File(imageDir, getID()+ ".image");
+                try {
+                    return Files.createTempDirectory(imageDir.toPath(), "image-").toFile();
+                } catch (IOException e) {
+                    return new File(imageDir, getID()+ ".image");
+                }
             },
             (s, p) -> new File(s));
 
@@ -301,12 +301,7 @@ public abstract class MacBaseInstallerBundler extends AbstractBundler {
             //noinspection ThrowableResultOfMethodCallIgnored
             if (toThrow.get() != null) return;
 
-            try (ByteArrayOutputStream baos = new ByteArrayOutputStream(); PrintStream ps = new PrintStream(baos)) {
-                ProcessBuilder pb = new ProcessBuilder("/usr/libexec/PlistBuddy",
-                        "-c", "Print :CFBundleIdentifier", path.resolve("Contents/Info.plist").toString());
-                IOUtils.exec(pb, VERBOSE.fetchFrom(params), false, ps);
-                String bundleID = baos.toString();
-
+            try {
                 List<String> args = new ArrayList<>();
                 args.addAll(Arrays.asList("codesign",
                         "-s", signingIdentity, // sign with this key
@@ -319,7 +314,7 @@ public abstract class MacBaseInstallerBundler extends AbstractBundler {
                     args.add(signingIdentity); // sign with this key
                 }
                 args.add(path.toString());
-                pb = new ProcessBuilder(args);
+                ProcessBuilder pb = new ProcessBuilder(args);
                 IOUtils.exec(pb, VERBOSE.fetchFrom(params));
             } catch (IOException e) {
                 toThrow.set(e);

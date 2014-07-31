@@ -96,6 +96,13 @@ public class RotatorControl extends GridPane {
 
         assert rotator_label != null;
         rotator_label.setText(text);
+        
+        rotator_dial.setOnAction((ActionEvent event) -> {
+            event.consume();
+        });
+        rotator_handle.setOnAction((ActionEvent event) -> {
+            event.consume();
+        });
     }
 
     @FXML
@@ -104,6 +111,7 @@ public class RotatorControl extends GridPane {
         double rounded = round(value, roundingFactor);
         rotate(rounded);
         rotator_textfield.selectAll();
+        event.consume();
     }
 
     @FXML

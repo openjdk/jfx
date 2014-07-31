@@ -43,7 +43,7 @@ import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadat
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask.Accessory;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
-import java.util.Set;
+import java.util.List;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
 import javafx.scene.Node;
@@ -187,7 +187,7 @@ public class WrapJobUtils {
      * @return
      */
     static PropertyName getContainerPropertyName(
-            final FXOMInstance container, final Set<FXOMObject> children) {
+            final FXOMInstance container, final List<FXOMObject> children) {
         final DesignHierarchyMask mask = new DesignHierarchyMask(container);
         final PropertyName result;
 
@@ -234,7 +234,7 @@ public class WrapJobUtils {
         return result;
     }
 
-    static Bounds getUnionOfBounds(final Set<FXOMObject> fxomObjects) {
+    static Bounds getUnionOfBounds(final List<FXOMObject> fxomObjects) {
         assert fxomObjects != null && fxomObjects.isEmpty() == false;
         Bounds result = null;
         for (FXOMObject fxomObject : fxomObjects) {

@@ -40,6 +40,7 @@ import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.geom.PathIterator;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.Rectangle;
+import com.sun.javafx.geom.RoundRectangle2D;
 import com.sun.javafx.geom.Shape;
 import com.sun.javafx.geom.transform.Affine2D;
 import com.sun.javafx.geom.transform.BaseTransform;
@@ -52,6 +53,7 @@ import com.sun.prism.CompositeMode;
 import com.sun.prism.Graphics;
 import com.sun.prism.GraphicsPipeline;
 import com.sun.prism.Image;
+import com.sun.prism.MaskTextureGraphics;
 import com.sun.prism.PrinterGraphics;
 import com.sun.prism.RTTexture;
 import com.sun.prism.ResourceFactory;
@@ -217,8 +219,7 @@ public class NGCanvas extends NGNode {
                     oldtex.dispose();
                 }
                 if (init_type == InitType.FILL_WHITE) {
-                    g.setPaint(Color.WHITE);
-                    g.fillRect(0, 0, tw, th);
+                    g.clear(Color.WHITE);
                 }
                 return true;
             } else {
@@ -237,18 +238,14 @@ public class NGCanvas extends NGNode {
                             savedPixelData.restore(g, tw, th);
                             g.setCompositeMode(CompositeMode.SRC_OVER);
                         } else if (init_type == InitType.FILL_WHITE) {
-                            g.setPaint(Color.WHITE);
-                            g.fillRect(0, 0, tw, th);
+                            g.clear(Color.WHITE);
                         }
                         return true;
                     }
                 }
             }
             if (init_type == InitType.CLEAR) {
-                g.setCompositeMode(CompositeMode.CLEAR);
-                g.setTransform(BaseTransform.IDENTITY_TRANSFORM);
-                g.fillRect(0, 0, tw, th);
-                g.setCompositeMode(CompositeMode.SRC_OVER);
+                g.clear();
             }
             return false;
         }
@@ -330,6 +327,9 @@ public class NGCanvas extends NGNode {
     private Affine2D inverseTransform;
     private boolean inversedirty;
     private LinkedList<Path2D> clipStack;
+    private int clipsRendered;
+    private boolean clipIsRect;
+    private Rectangle clipRect;
     private Effect effect;
     private int arctype;
 
@@ -368,6 +368,7 @@ public class NGCanvas extends NGNode {
         baseline = VPos.BASELINE.ordinal();
         transform.setToScale(highestPixelScale, highestPixelScale);
         clipStack.clear();
+        resetClip(false);
     }
 
     static final Affine2D TEMP_PATH_TX = new Affine2D();
@@ -622,23 +623,75 @@ public class NGCanvas extends NGNode {
     }
 
     private void clearCanvas(int x, int y, int w, int h) {
-        cv.g.setCompositeMode(CompositeMode.SRC);
+        cv.g.setCompositeMode(CompositeMode.CLEAR);
         cv.g.setTransform(BaseTransform.IDENTITY_TRANSFORM);
-        cv.g.setPaint(Color.TRANSPARENT);
-        cv.g.fillRect(x, y, w, h);
+        cv.g.fillQuad(x, y, x+w, y+h);
         cv.g.setCompositeMode(CompositeMode.SRC_OVER);
     }
 
-    private void initClip() {
-        if (clip.validate(cv.g, tw, th)) {
-            clip.tex.contentsUseful();
-            for (Path2D clippath : clipStack) {
-                renderClip(clippath);
-            }
-        }
+    private void resetClip(boolean andDispose) {
+        if (andDispose) clip.dispose();
+        clipsRendered = 0;
+        clipIsRect = true;
+        clipRect = null;
     }
 
-    private void renderClip(Path2D clippath) {
+    private static final float CLIPRECT_TOLERANCE = 1.0f / 256.0f;
+    private static final Rectangle TEMP_RECT = new Rectangle();
+    private boolean initClip() {
+        boolean clipValidated;
+        if (clipIsRect) {
+            clipValidated = false;
+        } else {
+            clipValidated = true;
+            if (clip.validate(cv.g, tw, th)) {
+                clip.tex.contentsUseful();
+                // Reset, but do not dispose - we just validated (and cleared) it...
+                resetClip(false);
+            }
+        }
+        int clipSize = clipStack.size();
+        while (clipsRendered < clipSize) {
+            Path2D clippath = clipStack.get(clipsRendered++);
+            if (clipIsRect) {
+                if (clippath.checkAndGetIntRect(TEMP_RECT, CLIPRECT_TOLERANCE)) {
+                    if (clipRect == null) {
+                        clipRect = new Rectangle(TEMP_RECT);
+                    } else {
+                        clipRect.intersectWith(TEMP_RECT);
+                    }
+                    continue;
+                }
+                clipIsRect = false;
+                if (!clipValidated) {
+                    clipValidated = true;
+                    if (clip.validate(cv.g, tw, th)) {
+                        clip.tex.contentsUseful();
+                        // No need to reset, this is our first fill.
+                    }
+                }
+                if (clipRect != null) {
+                    renderClip(new RoundRectangle2D(clipRect.x, clipRect.y,
+                                                    clipRect.width, clipRect.height,
+                                                    0, 0));
+                }
+            }
+            shapebounds(clippath, TEMP_RECTBOUNDS, BaseTransform.IDENTITY_TRANSFORM);
+            TEMP_RECT.setBounds(TEMP_RECTBOUNDS);
+            if (clipRect == null) {
+                clipRect = new Rectangle(TEMP_RECT);
+            } else {
+                clipRect.intersectWith(TEMP_RECT);
+            }
+            renderClip(clippath);
+        }
+        if (clipValidated && clipIsRect) {
+            clip.tex.unlock();
+        }
+        return !clipIsRect;
+    }
+
+    private void renderClip(Shape clippath) {
         temp.validate(cv.g, tw, th);
         temp.g.setPaint(Color.WHITE);
         temp.g.setTransform(BaseTransform.IDENTITY_TRANSFORM);
@@ -794,15 +847,12 @@ public class NGCanvas extends NGNode {
                         TEMP_TX.setToScale(highestPixelScale, highestPixelScale);
                         clippath.transform(TEMP_TX);
                     }
-                    initClip();
-                    renderClip(clippath);
-                    clip.tex.unlock();
                     clipStack.addLast(clippath);
                     break;
                 }
                 case POP_CLIP:
                     // Let it be recreated when next needed
-                    clip.dispose();
+                    resetClip(true);
                     clipStack.removeLast();
                     break;
                 case ARC_TYPE:
@@ -969,20 +1019,17 @@ public class NGCanvas extends NGNode {
                 {
                     RenderBuf dest;
                     boolean tempvalidated;
-                    boolean clipvalidated;
-                    if (!clipStack.isEmpty()) {
-                        initClip();
-                        clipvalidated = true;
+                    boolean clipvalidated = initClip();
+                    if (clipvalidated) {
                         temp.validate(cv.g, tw, th);
                         tempvalidated = true;
                         dest = temp;
                     } else if (blendmode != Blend.Mode.SRC_OVER) {
-                        clipvalidated = false;
                         temp.validate(cv.g, tw, th);
                         tempvalidated = true;
                         dest = temp;
                     } else {
-                        clipvalidated = tempvalidated = false;
+                        tempvalidated = false;
                         dest = cv;
                     }
                     if (effect != null) {
@@ -998,7 +1045,7 @@ public class NGCanvas extends NGNode {
                         // having to update the hardware blend equations.
                         Rectangle resultBounds =
                             applyEffectOnAintoC(ri, effect,
-                                                transform, null,
+                                                transform, clipRect,
                                                 CompositeMode.SRC_OVER, dest);
                         if (dest != cv) {
                             TEMP_RECTBOUNDS.setBounds(resultBounds.x, resultBounds.y,
@@ -1009,13 +1056,15 @@ public class NGCanvas extends NGNode {
                         Graphics g = dest.g;
                         g.setExtraAlpha(globalAlpha);
                         g.setTransform(transform);
+                        g.setClipRect(clipRect);
                         // If we are not rendering directly to the canvas then
                         // we need to save the bounds for the later stages.
                         RectBounds optSaveBounds =
                             (dest != cv) ? TEMP_RECTBOUNDS : null;
                         handleRenderOp(token, buf, g, optSaveBounds);
+                        g.setClipRect(null);
                     }
-                    if (!clipStack.isEmpty()) {
+                    if (clipvalidated) {
                         CompositeMode compmode;
                         if (blendmode == Blend.Mode.SRC_OVER) {
                             // For the SRC_OVER case we can point the clip
@@ -1033,14 +1082,33 @@ public class NGCanvas extends NGNode {
                             // assert: dest == temp;
                             compmode = CompositeMode.SRC;
                         }
-                        blendAthruBintoC(temp, Mode.SRC_IN, clip,
-                                         TEMP_RECTBOUNDS, compmode, dest);
+                        if (clipRect != null) {
+                            TEMP_RECTBOUNDS.intersectWith(clipRect);
+                        }
+                        if (!TEMP_RECTBOUNDS.isEmpty()) {
+                            if (dest == cv && cv.g instanceof MaskTextureGraphics) {
+                                MaskTextureGraphics mtg = (MaskTextureGraphics) cv.g;
+                                int dx = (int) Math.floor(TEMP_RECTBOUNDS.getMinX());
+                                int dy = (int) Math.floor(TEMP_RECTBOUNDS.getMinY());
+                                int dw = (int) Math.ceil(TEMP_RECTBOUNDS.getMaxX()) - dx;
+                                int dh = (int) Math.ceil(TEMP_RECTBOUNDS.getMaxY()) - dy;
+                                mtg.drawPixelsMasked(temp.tex, clip.tex,
+                                                     dx, dy, dw, dh,
+                                                     dx, dy, dx, dy);
+                            } else {
+                                blendAthruBintoC(temp, Mode.SRC_IN, clip,
+                                                 TEMP_RECTBOUNDS, compmode, dest);
+                            }
+                        }
                     }
                     if (blendmode != Blend.Mode.SRC_OVER) {
                         // We always use SRC mode here because the results of
                         // the blend operation are final and must replace
                         // the associated pixel in the canvas with no further
                         // blending math.
+                        if (clipRect != null) {
+                            TEMP_RECTBOUNDS.intersectWith(clipRect);
+                        }
                         blendAthruBintoC(temp, blendmode, cv,
                                          TEMP_RECTBOUNDS, CompositeMode.SRC, cv);
                     }
@@ -1147,8 +1215,7 @@ public class NGCanvas extends NGNode {
                             gr.drawEllipse(x, y, w, h);
                             break;
                         case CLEAR_RECT:
-                            gr.setPaint(Color.TRANSPARENT);
-                            gr.setCompositeMode(CompositeMode.SRC);
+                            gr.setCompositeMode(CompositeMode.CLEAR);
                             gr.fillRect(x, y, w, h);
                             gr.setCompositeMode(CompositeMode.SRC_OVER);
                             break;

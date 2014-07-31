@@ -44,7 +44,6 @@ import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.layout.AnchorPane;
@@ -60,7 +59,7 @@ public class WrapInTabPaneJob extends AbstractWrapInJob {
     }
 
     @Override
-    protected List<Job> wrapInJobs(final Set<FXOMObject> children) {
+    protected List<Job> wrapInJobs(final List<FXOMObject> children) {
 
         final List<Job> jobs = new ArrayList<>();
 
@@ -177,11 +176,11 @@ public class WrapInTabPaneJob extends AbstractWrapInJob {
     }
 
     @Override
-    protected List<Job> modifyChildrenJobs(final Set<FXOMObject> children) {
+    protected List<Job> modifyChildrenJobs(final List<FXOMObject> children) {
         return Collections.emptyList();
     }
 
     @Override
-    protected void modifyContainer(final Set<FXOMObject> children) {
+    protected void modifyContainer(final List<FXOMObject> children) {
     }
 }

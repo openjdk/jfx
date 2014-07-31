@@ -29,8 +29,6 @@ import com.sun.glass.ui.monocle.GLException;
 import com.sun.glass.ui.monocle.NativePlatformFactory;
 import com.sun.prism.es2.GLPixelFormat.Attributes;
 import java.util.HashMap;
-import com.sun.glass.ui.monocle.EGL;
-import com.sun.glass.ui.monocle.NativeScreen;
 import com.sun.glass.ui.monocle.AcceleratedScreen;
 import com.sun.prism.impl.PrismSettings;
 

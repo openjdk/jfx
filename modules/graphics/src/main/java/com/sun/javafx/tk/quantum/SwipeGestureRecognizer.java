@@ -44,9 +44,6 @@ class SwipeGestureRecognizer implements GestureRecognizer {
     // Traveling this distance against the swipe direction at its end cancels it
     private static final double BACKWARD_DISTANCE_THRASHOLD = 5; // pixel
 
-    // Trajectory tracking period
-    static final long TIME_STEP = 100000000; // nanosec
-
     private SwipeRecognitionState state = SwipeRecognitionState.IDLE;
     MultiTouchTracker tracker = new MultiTouchTracker();
     private ViewScene scene;
@@ -323,7 +320,7 @@ class SwipeGestureRecognizer implements GestureRecognizer {
     }
 
     private static class TouchPointTracker {
-        long time, beginTime, endTime;
+        long beginTime, endTime;
         double beginX, beginY, endX, endY;
         double beginAbsX, beginAbsY, endAbsX, endAbsY;
         double lengthX, lengthY;
@@ -342,7 +339,7 @@ class SwipeGestureRecognizer implements GestureRecognizer {
         }
 
         public void end(long nanos, double x, double y, double absX, double absY) {
-            progress(nanos, x, y);
+            progress(nanos, absX, absY);
             endX = x;
             endY = y;
             endAbsX = absX;
@@ -351,34 +348,31 @@ class SwipeGestureRecognizer implements GestureRecognizer {
         }
 
         public void progress(long nanos, double x, double y) {
-            if (nanos > time + TIME_STEP) {
-                final double deltaX = x - lastX;
-                final double deltaY = y - lastY;
+			final double deltaX = x - lastX;
+			final double deltaY = y - lastY;
 
-                time = nanos;
-                lengthX += Math.abs(deltaX);
-                lengthY += Math.abs(deltaY);
-                lastX = x;
-                lastY = y;
+			lengthX += Math.abs(deltaX);
+			lengthY += Math.abs(deltaY);
+			lastX = x;
+			lastY = y;
 
-                final double devX = Math.abs(x - beginAbsX);
-                if (devX > maxDeviationX) { maxDeviationX = devX; }
+			final double devX = Math.abs(x - beginAbsX);
+			if (devX > maxDeviationX) { maxDeviationX = devX; }
 
-                final double devY = Math.abs(y - beginAbsY);
-                if (devY > maxDeviationY) { maxDeviationY = devY; }
+			final double devY = Math.abs(y - beginAbsY);
+			if (devY > maxDeviationY) { maxDeviationY = devY; }
 
-                if (Math.signum(deltaX) == Math.signum(lastXMovement)) {
-                    lastXMovement += deltaX;
-                } else {
-                    lastXMovement = deltaX;
-                }
+			if (Math.signum(deltaX) == Math.signum(lastXMovement)) {
+				lastXMovement += deltaX;
+			} else {
+				lastXMovement = deltaX;
+			}
 
-                if (Math.signum(deltaY) == Math.signum(lastYMovement)) {
-                    lastYMovement += deltaY;
-                } else {
-                    lastYMovement = deltaY;
-                }
-            }
+			if (Math.signum(deltaY) == Math.signum(lastYMovement)) {
+				lastYMovement += deltaY;
+			} else {
+				lastYMovement = deltaY;
+			}
         }
 
         public double getDistanceX() {

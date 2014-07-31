@@ -36,6 +36,7 @@ import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
 import javafx.animation.Animation;
+import javafx.application.Platform;
 import javafx.beans.NamedArg;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
@@ -43,6 +44,7 @@ import javafx.beans.property.SimpleDoubleProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
+import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.LineTo;
@@ -264,10 +266,8 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
             boolean animate = false;
             if (itemIndex > 0 && itemIndex < series.getDataSize()) {
                 animate = true;
-                int index=0; Data<X,Y> d;
-                for (d = series.begin; d != null && index != itemIndex - 1; d=d.next) index++;
-                Data<X,Y> p1 = d;
-                Data<X,Y> p2 = (d.next).next;
+                Data<X,Y> p1 = series.getItem(itemIndex - 1);
+                Data<X,Y> p2 = series.getItem(itemIndex + 1);
                 if (p1 != null && p2 != null) {
                     double x1 = getXAxis().toNumericValue(p1.getXValue());
                     double y1 = getYAxis().toNumericValue(p1.getYValue());
@@ -448,7 +448,8 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
                 final ObservableList<PathElement> seriesLine = ((Path)series.getNode()).getElements();
                 seriesLine.clear();
                 constructedPath.clear();
-                for (Data<X,Y> item = series.begin; item != null; item = item.next) {
+                for (Iterator<Data<X, Y>> it = getDisplayedDataIterator(series); it.hasNext(); ) {
+                    Data<X, Y> item = it.next();
                     double x = getXAxis().getDisplayPosition(item.getCurrentX());
                     double y = getYAxis().getDisplayPosition(
                             getYAxis().toRealValue(getYAxis().toNumericValue(item.getCurrentY()) * seriesYAnimMultiplier.getValue()));
@@ -535,6 +536,9 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
         // check if symbol has already been created
         if (symbol == null && getCreateSymbols()) {
             symbol = new StackPane();
+            symbol.setRole(AccessibleRole.TEXT);
+            symbol.setRoleDescription("Point");
+            symbol.focusTraversableProperty().bind(Platform.accessibilityActiveProperty());
             item.setNode(symbol);
         }
         // set symbol styles

@@ -49,7 +49,7 @@ typedef struct
     GstClockTime      offset_time;
 
     int               stream_index;
-    enum CodecID      codec_id;
+    CodecIDType       codec_id;
 } Stream;
 
 typedef enum
@@ -533,16 +533,16 @@ static void mpegts_demuxer_check_streams(MpegTSDemuxer *demuxer)
     {
         switch (demuxer->context->streams[i]->codec->codec_type)
         {
-#if LIBAVCODEC_NEW
             case AVMEDIA_TYPE_VIDEO:
-#else
-            case CODEC_TYPE_VIDEO:
-#endif // LIBAVCODEC_NEW
 
                 if (demuxer->video.stream_index < 0)
                 {
                     AVStream *stream = demuxer->context->streams[i];
+#if NEW_CODEC_ID
+                    if (stream->codec->codec_id == AV_CODEC_ID_H264)
+#else
                     if (stream->codec->codec_id == CODEC_ID_H264)
+#endif
                     {
                         demuxer->video.stream_index = i;
                         demuxer->video.codec_id = stream->codec->codec_id;
@@ -565,15 +565,15 @@ static void mpegts_demuxer_check_streams(MpegTSDemuxer *demuxer)
                 }
                 break;
 
-#if LIBAVCODEC_NEW
             case AVMEDIA_TYPE_AUDIO:
-#else
-            case CODEC_TYPE_AUDIO:
-#endif // LIBAVCODEC_NEW
                 if (demuxer->audio.stream_index < 0)
                 {
                     AVStream *stream = demuxer->context->streams[i];
+#if NEW_CODEC_ID
+                    if (stream->codec->codec_id == AV_CODEC_ID_AAC)
+#else
                     if (stream->codec->codec_id == CODEC_ID_AAC)
+#endif
                     {
                         demuxer->audio.stream_index = i;
                         demuxer->audio.codec_id = stream->codec->codec_id;
@@ -875,20 +875,6 @@ static ParseAction mpegts_demuxer_read_frame(MpegTSDemuxer *demuxer)
             result = PA_STOP;
             break;
 
-#if !LIBAVCODEC_NEW
-        case AVERROR_IO: // Workaround for older version. It returns AVERROR_IO at the end.
-#ifdef DEBUG_OUTPUT
-            g_print("MpegTS process: AVERROR_IO %s\n", demuxer->is_eos ? "generating EOS" : "send error");
-#endif
-            if (demuxer->is_eos)
-                mpegts_demuxer_push_to_sources(demuxer, gst_event_new_eos());
-            else
-                post_error(demuxer, "LibAV stream parse error", ret, GST_STREAM_ERROR_DEMUX);
-
-            result = PA_STOP;
-            break;
-#endif //!LIBAVCODEC_NEW
-
         default:
             post_error(demuxer, "LibAV stream parse error", ret, GST_STREAM_ERROR_DEMUX);
             result = PA_STOP;
@@ -938,7 +924,6 @@ static gpointer mpegts_demuxer_process_input(gpointer data)
                     return NULL;
                 }
 
-#if LIBAVCODEC_NEW
                 AVIOContext *io_context = avio_alloc_context(io_buffer,            // buffer
                                                              BUFFER_SIZE,          // buffer size
                                                              0,                    // read only
@@ -946,15 +931,6 @@ static gpointer mpegts_demuxer_process_input(gpointer data)
                                                              mpegts_demuxer_read_packet, // read callback
                                                              NULL,                 // write callback
                                                              mpegts_demuxer_seek); // seek callback
-#else
-                ByteIOContext *io_context = av_alloc_put_byte(io_buffer,          // buffer
-                                                              BUFFER_SIZE,        // buffer size
-                                                              0,                  // read only
-                                                              demuxer,            // opaque reference
-                                                              mpegts_demuxer_read_packet, // read callback
-                                                              NULL,               // write callback
-                                                              mpegts_demuxer_seek); // seek callback
-#endif // LIBAVCODEC_NEW
 
                 if (!io_context)
                 {
@@ -970,20 +946,12 @@ static gpointer mpegts_demuxer_process_input(gpointer data)
 
                 AVInputFormat* iformat = av_find_input_format("mpegts");
 
-#if LIBAVCODEC_NEW
                 action = get_init_action(demuxer, avformat_open_input(&demuxer->context, "", iformat, NULL));
-#else
-                action = get_init_action(demuxer, av_open_input_stream(&demuxer->context, io_context, "", iformat, NULL));
-#endif
 
                 if (action != PA_READ_FRAME)
                     break;
 
-#if LIBAVCODEC_NEW
                 action = get_init_action(demuxer, avformat_find_stream_info(demuxer->context, NULL));
-#else
-                action = get_init_action(demuxer, av_find_stream_info(demuxer->context));
-#endif
 
                 g_mutex_lock(demuxer->lock);
                 gint available = gst_adapter_available(demuxer->sink_adapter);
@@ -1013,11 +981,7 @@ static gpointer mpegts_demuxer_process_input(gpointer data)
             {
                 av_free(demuxer->context->pb->buffer);
                 av_free(demuxer->context->pb);
-#if LIBAVCODEC_NEW
                 avformat_free_context(demuxer->context);
-#else
-                av_free(demuxer->context);
-#endif
                 demuxer->context = NULL;
             }
             break;
@@ -1078,14 +1042,7 @@ static int mpegts_demuxer_read_packet(void *opaque, uint8_t *buffer, int size)
         }
     }
     else
-    {
-#if LIBAVCODEC_NEW
         result = AVERROR_EXIT;
-#else
-        result = AVERROR_IO;
-#endif // LIBAVCODEC_NEW
-
-    }
 
     g_mutex_unlock(demuxer->lock);
 
@@ -1268,11 +1225,7 @@ static void mpegts_demuxer_close(MpegTSDemuxer *demuxer)
     {
         av_free(demuxer->context->pb->buffer);
         av_free(demuxer->context->pb);
-#if LIBAVCODEC_NEW
         avformat_free_context(demuxer->context);
-#else
-        av_free(demuxer->context);
-#endif
         demuxer->context = NULL;
     }
 
