@@ -113,7 +113,7 @@ public class StyleablePropertyFactory_createMethod_Test {
         }
 
         assertEquals(styleable.getProp().getCssMetaData().getInitialValue(null), styleable.getProp().getValue());
-        assertEquals(Boolean.valueOf(inherits), styleable.getProp().getCssMetaData().isInherits());
+        assertEquals(styleable.getProp().getCssMetaData().toString(), Boolean.valueOf(inherits), styleable.getProp().getCssMetaData().isInherits());
 
         List<CssMetaData<? extends Styleable,?>> list = styleable.getCssMetaData();
         assert list != null;
@@ -191,7 +191,7 @@ public class StyleablePropertyFactory_createMethod_Test {
         final MyStyleable<?> other = new MyStyleable();
         other.setProp(data.createMethodName);
 
-        check(styleable, other, data.converter, false);
+        check(styleable, other, data.converter, data.converter == StyleConverter.getFontConverter());
 
         // one
         final MyStyleable<?> styleable1 = new MyStyleable1();
@@ -200,7 +200,7 @@ public class StyleablePropertyFactory_createMethod_Test {
         final MyStyleable<?> other1 = new MyStyleable1();
         other1.setProp(data.createMethodName, data.initialValue);
 
-        check(styleable1, other1, data.converter, false);
+        check(styleable1, other1, data.converter, data.converter == StyleConverter.getFontConverter());
 
         assertNotSame(styleable.getProp().getCssMetaData(), styleable1.getProp().getCssMetaData());
 

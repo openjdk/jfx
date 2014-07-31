@@ -1431,7 +1431,22 @@ final class CssStyleHelper {
                     }
                 }
 
-                if (resolved.getConverter() != null)
+                final StyleConverter cssMetaDataConverter = cssMetaData.getConverter();
+                // RT-37727 - handling of properties that are insets is wonky. If the property is -fx-inset, then
+                // there isn't an issue because the converter assigns the InsetsConverter to the ParsedValueImpl.
+                // But -my-insets will parse as an array of numbers and the parser will assign the Size sequence
+                // converter to it. So, if the CssMetaData says it uses InsetsConverter, use the InsetsConverter
+                // and not the parser assigned converter.
+                if (cssMetaDataConverter == StyleConverter.getInsetsConverter()) {
+                    if (resolved.getValue() instanceof ParsedValue) {
+                        // If you give the parser "-my-insets: 5;" you end up with a ParsedValueImpl<ParsedValue<?,Size>, Number>
+                        // and not a ParsedValueImpl<ParsedValue[], Number[]> so here we wrap the value into an array
+                        // to make the InsetsConverter happy.
+                        resolved = new ParsedValueImpl(new ParsedValue[] {(ParsedValue)resolved.getValue()}, null, false);
+                    }
+                    val = cssMetaDataConverter.convert(resolved, fontForFontRelativeSizes);
+                }
+                else if (resolved.getConverter() != null)
                     val = resolved.convert(fontForFontRelativeSizes);
                 else
                     val = cssMetaData.getConverter().convert(resolved, fontForFontRelativeSizes);

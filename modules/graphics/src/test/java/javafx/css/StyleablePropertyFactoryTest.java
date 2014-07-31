@@ -86,8 +86,10 @@ public class StyleablePropertyFactoryTest {
                 },
                 {new Data("myPos", "-my-pos: bottom-right;", Pos.BOTTOM_RIGHT)},
                 {new Data("myFont", "-my-font: 18 system;", Font.font("system", 18))},
-// Pending RT-37727
-//                {new Data("myInsets", "-my-insets: 1 2 3 4;", new Insets(1,2,3,4))},
+                {new Data("myInsets", "-my-insets: 1 2 3 4;", new Insets(1,2,3,4))},
+                {new Data("myInsets", "-my-insets: 5;", new Insets(5,5,5,5))},
+                {new Data("myInsets", "-my-insets: 7 8;", new Insets(7,8,7,8))},
+                {new Data("myInsets", "-my-insets: 9 10 11;", new Insets(9,10,11,10))},
                 {new Data("myPaint", "-my-paint: linear-gradient(from 0% 0% to 100% 100%, red 0%, black 100%);",
                         new LinearGradient(0,0,1,1,true, CycleMethod.NO_CYCLE,new Stop[] { new Stop(0,Color.RED), new Stop(1,Color.BLACK) }))
                 },
