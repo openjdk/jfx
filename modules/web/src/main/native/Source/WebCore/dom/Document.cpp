@@ -1802,7 +1802,6 @@ void Document::recalcStyle(StyleChange change)
     
     RefPtr<FrameView> frameView = view();
     if (frameView) {
-        frameView->pauseScheduledEvents();
         frameView->beginDeferredRepaints();
     }
 
@@ -1849,7 +1848,6 @@ void Document::recalcStyle(StyleChange change)
             m_styleSheetCollection->resetCSSFeatureFlags();
 
     if (frameView) {
-        frameView->resumeScheduledEvents();
         frameView->endDeferredRepaints();
     }
     }
@@ -3683,6 +3681,11 @@ void Document::enqueueWindowEvent(PassRefPtr<Event> event)
 void Document::enqueueDocumentEvent(PassRefPtr<Event> event)
 {
     event->setTarget(this);
+    m_eventQueue->enqueueEvent(event);
+}
+
+void Document::enqueueOverflowEvent(PassRefPtr<Event> event)
+{
     m_eventQueue->enqueueEvent(event);
 }
 

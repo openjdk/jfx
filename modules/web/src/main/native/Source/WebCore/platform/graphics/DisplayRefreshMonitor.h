@@ -44,6 +44,7 @@ typedef struct __CVDisplayLink *CVDisplayLinkRef;
 
 namespace WebCore {
 
+class DisplayAnimationClient;
 class DisplayRefreshMonitor;
 class DisplayRefreshMonitorManager;
 
@@ -116,7 +117,7 @@ public:
     }
     
 private:
-    DisplayRefreshMonitor(PlatformDisplayID);
+    explicit DisplayRefreshMonitor(PlatformDisplayID);
 
     void displayDidRefresh();
     static void handleDisplayRefreshedNotificationOnMainThread(void* data);
@@ -129,8 +130,9 @@ private:
     PlatformDisplayID m_displayID;
     Mutex m_mutex;
     
-    typedef HashSet<DisplayRefreshMonitorClient*> DisplayRefreshMonitorClientSet;
-    DisplayRefreshMonitorClientSet m_clients;
+    HashSet<DisplayRefreshMonitorClient*> m_clients;
+    HashSet<DisplayRefreshMonitorClient*>* m_clientsToBeNotified; 
+    
 #if PLATFORM(BLACKBERRY)
 public:
     void displayLinkFired();
@@ -171,7 +173,14 @@ private:
     DisplayRefreshMonitor* ensureMonitorForClient(DisplayRefreshMonitorClient*);
 
     // We know nothing about the values of PlatformDisplayIDs, so use UnsignedWithZeroKeyHashTraits.
-    typedef HashMap<uint64_t, RefPtr<DisplayRefreshMonitor>, WTF::IntHash<uint64_t>, WTF::UnsignedWithZeroKeyHashTraits<uint64_t> > DisplayRefreshMonitorMap;
+    // FIXME: Since we know nothing about these values, this is not sufficient. 
+
+    // Even with UnsignedWithZeroKeyHashTraits, there are still two special values used for empty and deleted hash table slots. 
+    typedef HashMap<uint64_t,
+                    RefPtr<DisplayRefreshMonitor>,
+                    WTF::IntHash<uint64_t>,
+                    WTF::UnsignedWithZeroKeyHashTraits<uint64_t>>
+            DisplayRefreshMonitorMap;
     DisplayRefreshMonitorMap m_monitors;
 };
 

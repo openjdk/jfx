@@ -111,7 +111,7 @@ void HTMLImageElement::collectStyleForPresentationAttribute(const QualifiedName&
 void HTMLImageElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
 {
     if (name == altAttr) {
-        if (renderer() && renderer()->isImage())
+        if (renderer() && renderer()->isRenderImage())
             toRenderImage(renderer())->updateAltText();
     } else if (name == srcAttr)
         m_imageLoader.updateFromElementIgnoringPreviousError();
@@ -176,7 +176,7 @@ void HTMLImageElement::attach()
 {
     HTMLElement::attach();
 
-    if (renderer() && renderer()->isImage() && !m_imageLoader.hasPendingBeforeLoadEvent()) {
+    if (renderer() && renderer()->isRenderImage() && !m_imageLoader.hasPendingBeforeLoadEvent()) {
         RenderImage* renderImage = toRenderImage(renderer());
         RenderImageResource* renderImageResource = renderImage->imageResource();
         if (renderImageResource->hasImage())
@@ -203,12 +203,16 @@ Node::InsertionNotificationRequest HTMLImageElement::insertedInto(ContainerNode*
         }
     }
 
+    // Insert needs to complete first, before we start updating the loader. Loader dispatches events which could result
+    // in callbacks back to this node.
+    Node::InsertionNotificationRequest insertNotificationRequest = HTMLElement::insertedInto(insertionPoint);
+
     // If we have been inserted from a renderer-less document,
     // our loader may have not fetched the image, so do it now.
     if (insertionPoint->inDocument() && !m_imageLoader.image())
         m_imageLoader.updateFromElement();
 
-    return HTMLElement::insertedInto(insertionPoint);
+    return insertNotificationRequest;
 }
 
 void HTMLImageElement::removedFrom(ContainerNode* insertionPoint)

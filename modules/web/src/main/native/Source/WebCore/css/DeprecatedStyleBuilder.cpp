@@ -1218,6 +1218,7 @@ public:
             return;
 
         CSSPrimitiveValue* primitiveValue = static_cast<CSSPrimitiveValue*>(value);
+        ASSERT(primitiveValue->isValueID());
 
         if (primitiveValue->getIdent() != CSSValueWebkitMatchParent)
             styleResolver->style()->setTextAlign(*primitiveValue);

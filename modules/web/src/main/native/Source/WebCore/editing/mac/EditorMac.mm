@@ -276,11 +276,15 @@ void Editor::readSelectionFromPasteboard(const String& pasteboardName)
 
 String Editor::stringSelectionForPasteboard()
 {
+    if (!canCopy())
+        return "";
     return Pasteboard::getStringSelection(m_frame, DefaultSelectedTextType);
 }
 
 PassRefPtr<SharedBuffer> Editor::dataSelectionForPasteboard(const String& pasteboardType)
 {
+    if (!canCopy())
+        return 0;
     return Pasteboard::getDataSelection(m_frame, pasteboardType);
 }
 

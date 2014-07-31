@@ -38,6 +38,9 @@
 
 namespace WebCore {
 
+class DocumentFragment;
+class TemplateContentDocumentFragment;
+
 class HTMLTemplateElement FINAL : public HTMLElement {
 public:
     static PassRefPtr<HTMLTemplateElement> create(const QualifiedName&, Document*);
@@ -51,7 +54,7 @@ private:
 
     HTMLTemplateElement(const QualifiedName&, Document*);
 
-    mutable RefPtr<DocumentFragment> m_content;
+    mutable RefPtr<TemplateContentDocumentFragment> m_content;
 };
 
 const HTMLTemplateElement* toHTMLTemplateElement(const Node*);

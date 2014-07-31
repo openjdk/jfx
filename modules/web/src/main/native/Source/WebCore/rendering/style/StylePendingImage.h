@@ -48,13 +48,15 @@ public:
     virtual WrappedImagePtr data() const { return static_cast<CSSImageValue*>(m_value); }
 
     virtual PassRefPtr<CSSValue> cssValue() const { return m_value; }
-    CSSImageValue* cssImageValue() const { return m_value->isImageValue() ? static_cast<CSSImageValue*>(m_value) : 0; }
-    CSSImageGeneratorValue* cssImageGeneratorValue() const { return m_value->isImageGeneratorValue() ? static_cast<CSSImageGeneratorValue*>(m_value) : 0; }
-    CSSCursorImageValue* cssCursorImageValue() const { return m_value->isCursorImageValue() ? static_cast<CSSCursorImageValue*>(m_value) : 0; }
+    CSSImageValue* cssImageValue() const { return m_value && m_value->isImageValue() ? static_cast<CSSImageValue*>(m_value) : 0; }
+    CSSImageGeneratorValue* cssImageGeneratorValue() const { return m_value && m_value->isImageGeneratorValue() ? static_cast<CSSImageGeneratorValue*>(m_value) : 0; }
+    CSSCursorImageValue* cssCursorImageValue() const { return m_value && m_value->isCursorImageValue() ? static_cast<CSSCursorImageValue*>(m_value) : 0; }
 #if ENABLE(CSS_IMAGE_SET)
-    CSSImageSetValue* cssImageSetValue() const { return m_value->isImageSetValue() ? static_cast<CSSImageSetValue*>(m_value) : 0; }
+    CSSImageSetValue* cssImageSetValue() const { return m_value && m_value->isImageSetValue() ? static_cast<CSSImageSetValue*>(m_value) : 0; }
 #endif
     
+    void detachFromCSSValue() { m_value = 0; }    
+
     virtual LayoutSize imageSize(const RenderObject*, float /*multiplier*/) const OVERRIDE { return LayoutSize(); }
     virtual bool imageHasRelativeWidth() const { return false; }
     virtual bool imageHasRelativeHeight() const { return false; }
@@ -69,7 +71,7 @@ public:
         return 0;
     }
     virtual bool knownToBeOpaque(const RenderObject*) const { return false; }
-    
+
 private:
     StylePendingImage(CSSValue* value)
         : m_value(value)

@@ -51,6 +51,8 @@ inline HTMLTemplateElement::HTMLTemplateElement(const QualifiedName& tagName, Do
 
 HTMLTemplateElement::~HTMLTemplateElement()
 {
+    if (m_content)
+        m_content->clearHost();
 }
 
 PassRefPtr<HTMLTemplateElement> HTMLTemplateElement::create(const QualifiedName& tagName, Document* document)
