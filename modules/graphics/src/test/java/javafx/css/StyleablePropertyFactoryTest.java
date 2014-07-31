@@ -115,7 +115,7 @@ public class StyleablePropertyFactoryTest {
         public MyStyleable() {
         }
 
-        private static final StyleablePropertyFactory fac = StyleablePropertyFactory.getInstance();
+        private static final StyleablePropertyFactory fac = new StyleablePropertyFactory<>(null);
 
         public ObservableValue<Boolean> myBooleanProperty () { return (ObservableValue<Boolean>) myBoolean; }
         public Boolean getMyBoolean() { return myBoolean.getValue(); }
@@ -179,7 +179,7 @@ public class StyleablePropertyFactoryTest {
 
         @Override
         public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
-            return StyleablePropertyFactory.getInstance().getCssMetaData(this);
+            return fac.getCssMetaData();
         }
     }
 }

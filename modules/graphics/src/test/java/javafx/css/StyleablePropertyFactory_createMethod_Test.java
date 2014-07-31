@@ -57,7 +57,10 @@ import static org.junit.runners.Parameterized.Parameters;
 public class StyleablePropertyFactory_createMethod_Test {
 
     @Before public void setup() {
-        StyleablePropertyFactory.clearDataForTesting();
+        MyStyleable.styleablePropertyFactory.clearDataForTesting();
+        MyStyleable1.styleablePropertyFactory.clearDataForTesting();
+        MyStyleable2.styleablePropertyFactory.clearDataForTesting();
+        MyStyleableEnum.styleablePropertyFactory.clearDataForTesting();
     }
 
     private static class Data<T> {
@@ -108,6 +111,7 @@ public class StyleablePropertyFactory_createMethod_Test {
         } else {
             assertSame(converter, styleable.getProp().getCssMetaData().getConverter());
         }
+
         assertEquals(styleable.getProp().getCssMetaData().getInitialValue(null), styleable.getProp().getValue());
         assertEquals(Boolean.valueOf(inherits), styleable.getProp().getCssMetaData().isInherits());
 
@@ -216,9 +220,11 @@ public class StyleablePropertyFactory_createMethod_Test {
     private static class MyStyleable<T> implements Styleable {
 
         MyStyleable() {
-
         }
 
+        static final StyleablePropertyFactory<MyStyleable> styleablePropertyFactory = new StyleablePropertyFactory<>(null);
+        protected StyleablePropertyFactory<? extends MyStyleable> getFactory() { return MyStyleable.styleablePropertyFactory; }
+        
         protected StyleableProperty<T> prop = null;
         StyleableProperty<T> getProp() { return prop; }
 
@@ -227,7 +233,7 @@ public class StyleablePropertyFactory_createMethod_Test {
         void setProp(String createMethodName) {
             try {
                 Method createMethod = StyleablePropertyFactory.class.getMethod(createMethodName, Styleable.class, String.class, String.class, Function.class);
-                prop = (StyleableProperty<T>) createMethod.invoke(StyleablePropertyFactory.getInstance(), this, "prop", "-my-prop", function);
+                prop = (StyleableProperty<T>) createMethod.invoke(getFactory(), this, "prop", "-my-prop", function);
             } catch (Exception e) {
                 e.printStackTrace();
                 fail(e.getMessage());
@@ -241,10 +247,13 @@ public class StyleablePropertyFactory_createMethod_Test {
                     case "createStyleablePaintProperty": c = Paint.class; break;
                     case "createStyleableNumberProperty": c = Number.class; break;
                     case "createStyleableEffectProperty": c = Effect.class; break;
-                    default: c = initialValue.getClass(); break;
+                    default:
+                        if (initialValue instanceof Boolean) c = boolean.class;
+                        else c = initialValue.getClass();
+                        break;
                 }
                 Method createMethod = StyleablePropertyFactory.class.getMethod(createMethodName, Styleable.class, String.class, String.class, Function.class, c);
-                prop = (StyleableProperty<T>)createMethod.invoke(StyleablePropertyFactory.getInstance(), this, "prop", "-my-prop", function, initialValue);
+                prop = (StyleableProperty<T>)createMethod.invoke(getFactory(), this, "prop", "-my-prop", function, initialValue);
             } catch (Exception e) {
                 e.printStackTrace();
                 fail(e.toString());
@@ -258,10 +267,13 @@ public class StyleablePropertyFactory_createMethod_Test {
                     case "createStyleablePaintProperty": c = Paint.class; break;
                     case "createStyleableNumberProperty": c = Number.class; break;
                     case "createStyleableEffectProperty": c = Effect.class; break;
-                    default: c = initialValue.getClass(); break;
+                    default:
+                        if (initialValue instanceof Boolean) c = boolean.class;
+                        else c = initialValue.getClass();
+                        break;
                 }
                 Method createMethod = StyleablePropertyFactory.class.getMethod(createMethodName, Styleable.class, String.class, String.class, Function.class, c, boolean.class);
-                prop = (StyleableProperty<T>)createMethod.invoke(StyleablePropertyFactory.getInstance(), this, "prop", "-my-prop", function, initialValue, inherits);
+                prop = (StyleableProperty<T>)createMethod.invoke(getFactory(), this, "prop", "-my-prop", function, initialValue, inherits);
             } catch (Exception e) {
                 fail(e.getMessage());
             }
@@ -300,57 +312,27 @@ public class StyleablePropertyFactory_createMethod_Test {
 
         @Override
         public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
-            return StyleablePropertyFactory.getInstance().getCssMetaData(this);
+            return getFactory().getCssMetaData();
         }
     }
 
     private static class MyStyleable1<T> extends MyStyleable<T> {
         MyStyleable1() { super(); }
+        static final StyleablePropertyFactory<MyStyleable1> styleablePropertyFactory = new StyleablePropertyFactory<>(null);
+        protected StyleablePropertyFactory<? extends MyStyleable> getFactory() { return MyStyleable1.styleablePropertyFactory; }
+
     }
 
     private static class MyStyleable2<T> extends MyStyleable<T> {
         MyStyleable2() { super(); }
+        static final StyleablePropertyFactory<MyStyleable2> styleablePropertyFactory = new StyleablePropertyFactory<>(null);
+        protected StyleablePropertyFactory<? extends MyStyleable> getFactory() { return MyStyleable2.styleablePropertyFactory; }
+
     }
 
     private static class MyStyleableEnum<T extends Enum<T>> extends MyStyleable<T> {
-        void setProp(String createMethodName, Class<? extends Enum> c) {
-            try {
-                Method createMethod = StyleablePropertyFactory.class.getMethod(createMethodName, Styleable.class, String.class, String.class, Function.class, c);
-                prop = (StyleableProperty<T>)createMethod.invoke(StyleablePropertyFactory.getInstance(), this, "prop", "-my-prop", function, c);
-            } catch (Exception e) {
-                e.printStackTrace();
-                fail(e.getMessage());
-            }
-        }
-
-
-        void setProp(String createMethodName, Class<? extends Enum> c, Object initialValue) {
-            try {
-                Method createMethod = StyleablePropertyFactory.class.getMethod(createMethodName, Styleable.class, String.class, String.class, Function.class, c, c);
-                prop = (StyleableProperty<T>)createMethod.invoke(StyleablePropertyFactory.getInstance(), this, "prop", "-my-prop", function, c, initialValue);
-            } catch (Exception e) {
-                fail(e.getMessage());
-            }
-        }
-
-        void setProp(String createMethodName, Class<? extends Enum> c, Object initialValue, boolean inherit) {
-            try {
-                Method createMethod = StyleablePropertyFactory.class.getMethod(createMethodName, Styleable.class, String.class, String.class, Function.class, c, c, boolean.class);
-                prop = (StyleableProperty<T>)createMethod.invoke(StyleablePropertyFactory.getInstance(), this, "prop", "-my-prop", function, c, initialValue, inherit);
-            } catch (Exception e) {
-                fail(e.getMessage());
-            }
-        }
-
+        MyStyleableEnum() { super(); }
+        static final StyleablePropertyFactory<MyStyleableEnum> styleablePropertyFactory = new StyleablePropertyFactory<>(null);
+        protected StyleablePropertyFactory<? extends MyStyleable> getFactory() { return MyStyleableEnum.styleablePropertyFactory; }
     }
-
-    private static class MyStyleableEnum1<T extends Enum<T>> extends MyStyleableEnum<T> {
-        MyStyleableEnum1() { super(); }
-    }
-
-    private static class MyStyleableEnum2<T extends Enum<T>> extends MyStyleableEnum<T> {
-        MyStyleableEnum2() { super(); }
-    }
-
-
 }
