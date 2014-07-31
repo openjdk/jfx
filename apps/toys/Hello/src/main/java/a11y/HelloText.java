@@ -50,7 +50,7 @@ public class HelloText extends Application {
         text.setFont(Font.font(50));
 
         Label l1 = new Label("name");
-        TextField tf1 = new TextField("Hello Accessiblity");
+        TextField tf1 = new TextField("Hello JavaFX Accessiblity");
         l1.setLabelFor(tf1);
         HBox box1 = new HBox(10, l1, tf1);
 
@@ -60,7 +60,8 @@ public class HelloText extends Application {
         l2.setLabelFor(tf2);
         HBox box2 = new HBox(10, l2, tf2);
 
-        TextArea ta = new TextArea("TextArea can many lines.\nLine1.\nLine2 is longer.\nLine 3 is not.");
+        TextArea ta = new TextArea("TextArea can many lines.\nLine1.\nLine2 is longer very long very long and can wrap. This is sentence belongs to the paragraph.\nLine 3 is not.");
+        ta.setWrapText(true);
 
         Scene scene = new Scene(new VBox(text, box1, box2, ta), 300, 300);
 //        scene.addEventFilter(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
