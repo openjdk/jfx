@@ -39,6 +39,8 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -978,6 +980,48 @@ public class StyleManagerTest {
         assertFalse(StyleManager.cacheContainerMap.containsKey(root));
         assertTrue(StyleManager.cacheContainerMap.containsKey(scene.getRoot()));
 
+    }
+
+    @Test
+    public void test_setUserAgentStylesheets() {
+
+        List<String> uaStylesheets = new ArrayList<>();
+        Collections.addAll(uaStylesheets, "/com/sun/javafx/css/ua0.css", "/com/sun/javafx/css/ua1.css");
+
+        final StyleManager sm = StyleManager.getInstance();
+        sm.setUserAgentStylesheets(uaStylesheets);
+
+        assertEquals(2, sm.platformUserAgentStylesheetContainers.size());
+        assertEquals("/com/sun/javafx/css/ua0.css", sm.platformUserAgentStylesheetContainers.get(0).fname);
+        assertEquals("/com/sun/javafx/css/ua1.css", sm.platformUserAgentStylesheetContainers.get(1).fname);
+    }
+
+    @Test
+    public void test_setUserAgentStylesheets_overwrites_existing() {
+
+        List<String> uaStylesheets = new ArrayList<>();
+        Collections.addAll(uaStylesheets, "/com/sun/javafx/css/ua0.css");
+
+        final StyleManager sm = StyleManager.getInstance();
+
+        // 1 - overwrite default user agent stylesheet
+        sm.platformUserAgentStylesheetContainers.clear();;
+        sm.setDefaultUserAgentStylesheet("/com/sun/javafx/css/ua1.css");
+        assertEquals(1, sm.platformUserAgentStylesheetContainers.size());
+        assertEquals("/com/sun/javafx/css/ua1.css", sm.platformUserAgentStylesheetContainers.get(0).fname);
+
+        sm.setUserAgentStylesheets(uaStylesheets);
+        assertEquals(1, sm.platformUserAgentStylesheetContainers.size());
+        assertEquals("/com/sun/javafx/css/ua0.css", sm.platformUserAgentStylesheetContainers.get(0).fname);
+
+        // 2 - overwrite other user-agent stylesheets
+        sm.platformUserAgentStylesheetContainers.clear();;
+        sm.addUserAgentStylesheet("/com/sun/javafx/css/ua1.css");
+        assertEquals(1, sm.platformUserAgentStylesheetContainers.size());
+
+        sm.setUserAgentStylesheets(uaStylesheets);
+        assertEquals(1, sm.platformUserAgentStylesheetContainers.size());
+        assertEquals("/com/sun/javafx/css/ua0.css", sm.platformUserAgentStylesheetContainers.get(0).fname);
     }
 
 }

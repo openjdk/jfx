@@ -857,15 +857,15 @@ final public class StyleManager {
         if (fname == null || fname.isEmpty()) return new byte[0];
 
         try {
-            URL url = getURL(fname);
+            final URL url = getURL(fname);
 
             // We only care about stylesheets from file: URLs.
             if (url != null && "file".equals(url.getProtocol())) {
 
-                try (InputStream stream = url.openStream()) {
-
-                    // not looking for security, just a checksum. MD5 should be faster than SHA
-                    final DigestInputStream dis = new DigestInputStream(stream, MessageDigest.getInstance("MD5"));
+                // not looking for security, just a checksum. MD5 should be faster than SHA
+                try (final InputStream stream = url.openStream();
+                    final DigestInputStream dis = new DigestInputStream(stream, MessageDigest.getInstance("MD5")); ) {
+                    dis.getMessageDigest().reset();
                     while (dis.read() != -1) { /* empty loop body is intentional */ }
                     return dis.getMessageDigest().digest();
                 }
@@ -1121,6 +1121,66 @@ final public class StyleManager {
     //
     ////////////////////////////////////////////////////////////////////////////
 
+
+    /**
+     * Set a bunch of user agent stylesheets all at once. The order of the stylesheets in the list
+     * is the order of their styles in the cascade. Passing null, an empty list, or a list full of empty
+     * strings does nothing.
+     *
+     * @param urls The list of stylesheet URLs as Strings.
+     */
+    public void setUserAgentStylesheets(List<String> urls) {
+
+        if (urls == null || urls.size() == 0) return;
+
+        // Avoid resetting user agent stylesheets if they haven't changed.
+        if (urls.size() == platformUserAgentStylesheetContainers.size()) {
+            boolean isSame = true;
+            for (int n=0, nMax=urls.size(); n < nMax && isSame; n++) {
+
+                final String url = urls.get(n);
+                final String fname = (url != null) ? url.trim() : null;
+
+                if (fname == null || fname.isEmpty()) break;
+
+                StylesheetContainer container = platformUserAgentStylesheetContainers.get(n);
+                // assignment in this conditional is intentional!
+                if(isSame = fname.equals(container.fname)) {
+                    byte[] checksum = calculateCheckSum(fname);
+                    isSame = Arrays.equals(checksum, container.checksum);
+                }
+            }
+            if (isSame) return;
+        }
+
+        boolean modified = false;
+
+        for (int n=0, nMax=urls.size(); n < nMax; n++) {
+
+            final String url = urls.get(n);
+            final String fname = (url != null) ? url.trim() : null;
+
+            if (fname == null || fname.isEmpty()) continue;
+
+            if (!modified) {
+                // we have at least one non null or non-empty url
+                platformUserAgentStylesheetContainers.clear();
+                modified = true;
+            }
+
+            if (n==0) {
+                _setDefaultUserAgentStylesheet(fname);
+            } else {
+                _addUserAgentStylesheet(fname);
+            }
+        }
+
+        if (modified) {
+            userAgentStylesheetsChanged();
+        }
+
+    }
+
     /**
      * Add a user agent stylesheet, possibly overriding styles in the default
      * user agent stylesheet.
@@ -1140,37 +1200,40 @@ final public class StyleManager {
     // For RT-20643
     public void addUserAgentStylesheet(Scene scene, String url) {
 
-        if (url == null ) {
-            throw new IllegalArgumentException("null arg url");
-        }
-
-        final String fname = url.trim();
-        if (fname.isEmpty()) {
+        final String fname = (url != null) ? url.trim() : null;
+        if (fname == null || fname.isEmpty()) {
             return;
-        }
-
-        // if we already have this stylesheet, bail
-        for (int n=0, nMax= platformUserAgentStylesheetContainers.size(); n < nMax; n++) {
-            StylesheetContainer container = platformUserAgentStylesheetContainers.get(n);
-            if (fname.equals(container.fname)) {
-                return;
-            }
         }
 
         // RT-20643
         CssError.setCurrentScene(scene);
 
-        final Stylesheet ua_stylesheet = loadStylesheet(fname);
-        platformUserAgentStylesheetContainers.add(new StylesheetContainer(fname, ua_stylesheet));
-
-        if (ua_stylesheet != null) {
-            ua_stylesheet.setOrigin(StyleOrigin.USER_AGENT);
+        if (_addUserAgentStylesheet(fname)) {
+            userAgentStylesheetsChanged();
         }
-        userAgentStylesheetsChanged();
 
         // RT-20643
         CssError.setCurrentScene(null);
+    }
 
+    // fname is assumed to be non null and non empty
+    private boolean _addUserAgentStylesheet(String fname) {
+
+        // if we already have this stylesheet, bail
+        for (int n=0, nMax= platformUserAgentStylesheetContainers.size(); n < nMax; n++) {
+            StylesheetContainer container = platformUserAgentStylesheetContainers.get(n);
+            if (fname.equals(container.fname)) {
+                return false;
+            }
+        }
+
+        final Stylesheet ua_stylesheet = loadStylesheet(fname);
+
+        if (ua_stylesheet == null) return false;
+
+        ua_stylesheet.setOrigin(StyleOrigin.USER_AGENT);
+        platformUserAgentStylesheetContainers.add(new StylesheetContainer(fname, ua_stylesheet));
+        return true;
     }
 
     /**
@@ -1231,8 +1294,22 @@ final public class StyleManager {
 
         final String fname = (url != null) ? url.trim() : null;
         if (fname == null || fname.isEmpty()) {
-            throw new IllegalArgumentException("null arg url");
+            return;
         }
+        // RT-20643
+
+        CssError.setCurrentScene(scene);
+
+        if(_setDefaultUserAgentStylesheet(fname)) {
+            userAgentStylesheetsChanged();
+        }
+
+        // RT-20643
+        CssError.setCurrentScene(null);
+    }
+
+    // fname is expected to be non null and non empty
+    private boolean _setDefaultUserAgentStylesheet(String fname) {
 
         // if we already have this stylesheet, make sure it is the first element
         for (int n=0, nMax= platformUserAgentStylesheetContainers.size(); n < nMax; n++) {
@@ -1246,46 +1323,41 @@ final public class StyleManager {
                         platformUserAgentStylesheetContainers.add(0, container);
                     }
                 }
-                return;
+                // return true only if platformUserAgentStylesheetContainers was modified
+                return n > 0;
             }
         }
 
-        // RT-20643
-        CssError.setCurrentScene(scene);
-
         final Stylesheet ua_stylesheet = loadStylesheet(fname);
+
+        if (ua_stylesheet == null) return false;
+
+        ua_stylesheet.setOrigin(StyleOrigin.USER_AGENT);
         final StylesheetContainer sc = new StylesheetContainer(fname, ua_stylesheet);
+
         if (platformUserAgentStylesheetContainers.size() == 0) {
             platformUserAgentStylesheetContainers.add(sc);
-        } else if (hasDefaultUserAgentStylesheet) {
+        }
+        else if (hasDefaultUserAgentStylesheet) {
             platformUserAgentStylesheetContainers.set(0,sc);
-        } else {
+        }
+        else {
             platformUserAgentStylesheetContainers.add(0,sc);
         }
         hasDefaultUserAgentStylesheet = true;
 
-        if (ua_stylesheet != null) {
-            ua_stylesheet.setOrigin(StyleOrigin.USER_AGENT);
-        }
-        userAgentStylesheetsChanged();
-
-        // RT-20643
-        CssError.setCurrentScene(null);
-
+        return true;
     }
-    
+
     /**
      * Removes the specified stylesheet from the application default user agent
      * stylesheet list.
      * @param url  The file URL, either relative or absolute, as a String.
      */
     public void removeUserAgentStylesheet(String url) {
-        if (url == null ) {
-            throw new IllegalArgumentException("null arg url");
-        }
- 
-        final String fname = url.trim();
-        if (fname.isEmpty()) {
+
+        final String fname = (url != null) ? url.trim() : null;
+        if (fname == null || fname.isEmpty()) {
             return;
         }
  
@@ -1314,9 +1386,8 @@ final public class StyleManager {
      * the platform
      */
     public void setDefaultUserAgentStylesheet(Stylesheet ua_stylesheet) {
-
         if (ua_stylesheet == null ) {
-            throw new IllegalArgumentException("null arg ua_stylesheet");
+            return;
         }
 
         // null url is ok, just means that it is a stylesheet not loaded from a file
@@ -1352,8 +1423,6 @@ final public class StyleManager {
         ua_stylesheet.setOrigin(StyleOrigin.USER_AGENT);
         userAgentStylesheetsChanged();
 
-        // RT-20643
-        CssError.setCurrentScene(null);
     }
 
     /*
