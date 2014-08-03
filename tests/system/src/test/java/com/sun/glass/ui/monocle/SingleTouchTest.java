@@ -71,8 +71,8 @@ public class SingleTouchTest extends ParameterizedTestBase {
         // Check that the touch event has one touch point.
         Assert.assertEquals("Expected only one touch point", 0,
                             TestLog.getLog().stream()
-                            .filter(s -> s.startsWith("Touch point count"))
-                            .filter(s -> !s.startsWith("Touch point count: 1")).count());
+                            .filter(s -> s.startsWith("Touch points count"))
+                            .filter(s -> !s.startsWith("Touch points count: [1]")).count());
     }
 
     /**
@@ -104,8 +104,8 @@ public class SingleTouchTest extends ParameterizedTestBase {
         // Check that the touch event has one touch point.
         Assert.assertEquals("Expected only one touch point", 0,
                             TestLog.getLog().stream()
-                            .filter(s -> s.startsWith("Touch point count"))
-                            .filter(s -> !s.startsWith("Touch point count: 1")).count());
+                            .filter(s -> s.startsWith("Touch points count"))
+                            .filter(s -> !s.startsWith("Touch points count: [1]")).count());
     }
 
     /**
@@ -136,8 +136,8 @@ public class SingleTouchTest extends ParameterizedTestBase {
         // Check that the touch event has one touch point.
         Assert.assertEquals("Expected only one touch point", 0,
                             TestLog.getLog().stream()
-                            .filter(s -> s.startsWith("Touch point count"))
-                            .filter(s -> !s.startsWith("Touch point count: 1")).count());
+                            .filter(s -> s.startsWith("Touch points count"))
+                            .filter(s -> !s.startsWith("Touch points count: [1]")).count());
     }
 
     /**
@@ -167,8 +167,8 @@ public class SingleTouchTest extends ParameterizedTestBase {
         // Check that the touch event has one touch point.
         Assert.assertEquals("Expected only one touch point", 0,
                             TestLog.getLog().stream()
-                            .filter(s -> s.startsWith("Touch point count"))
-                            .filter(s -> !s.startsWith("Touch point count: 1")).count());
+                            .filter(s -> s.startsWith("Touch points count"))
+                            .filter(s -> !s.startsWith("Touch points count: [1]")).count());
     }
 
     /**
@@ -198,8 +198,8 @@ public class SingleTouchTest extends ParameterizedTestBase {
         // Check that the touch event has one touch point.
         Assert.assertEquals("Expected only one touch point", 0,
                             TestLog.getLog().stream()
-                            .filter(s -> s.startsWith("Touch point count"))
-                            .filter(s -> !s.startsWith("Touch point count: 1")).count());
+                            .filter(s -> s.startsWith("Touch points count"))
+                            .filter(s -> !s.startsWith("Touch points count: [1]")).count());
     }
 
     /**
@@ -231,8 +231,8 @@ public class SingleTouchTest extends ParameterizedTestBase {
         // Check that the touch event has one touch point.
         Assert.assertEquals("Expected only one touch point", 0,
                             TestLog.getLog().stream()
-                            .filter(s -> s.startsWith("Touch point count"))
-                            .filter(s -> !s.startsWith("Touch point count: 1")).count());
+                            .filter(s -> s.startsWith("Touch points count"))
+                            .filter(s -> !s.startsWith("Touch points count: [1]")).count());
     }
 	
     /**
