@@ -129,8 +129,8 @@ class TouchInput {
     private void dispatchPoint(Window window, View view, int state,
                                int id, int x, int y) {
         touches.notifyNextTouchEvent(view, state, id,
-                                     x, y,
-                                     x - window.getX(), y - window.getY());
+                                     x - window.getX(), y - window.getY(),
+                                     x, y);
     }
 
     private void postPoints(Window window, View view,
