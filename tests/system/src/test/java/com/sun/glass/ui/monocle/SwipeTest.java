@@ -50,8 +50,8 @@ public class SwipeTest extends ParameterizedTestBase {
     }
 
     private static final SwipeTestCase[] TEST_CASES = {
-        new SwipeTestCase(200.0, Math.PI * 0.5, 10l, 100.0, 0.0, 200.0, "SWIPE_RIGHT"),
-        new SwipeTestCase(200.0, Math.PI * 0.5, 50l, 100.0, 0.0, 200.0, "SWIPE_RIGHT"),
+        new SwipeTestCase(200.0, Math.PI * 0.5, 10l, 1000.0, 0.0, 200.0, "SWIPE_RIGHT"),
+        new SwipeTestCase(200.0, Math.PI * 0.5, 50l, 1000.0, 0.0, 200.0, "SWIPE_RIGHT"),
 
         new SwipeTestCase(200.0, Math.PI * 0.4, 200l, 100.0, 0.0, 200.0, "SWIPE_RIGHT"),
         new SwipeTestCase(200.0, Math.PI * 0.5, 200l, 100.0, 0.0, 200.0, "SWIPE_RIGHT"),
@@ -193,7 +193,7 @@ public class SwipeTest extends ParameterizedTestBase {
                     do {
                         x += deltaX;
                         double y = amplitude * Math.sin(
-                                x / (Math.PI * 2.0 * wavelength));
+                                (x * Math.PI * 2.0) / wavelength);
                         double phi = Math.atan2(x, y);
                         double h = Math.sqrt(x * x + y * y);
                         double rotatedX = h * Math.cos(theta - phi);
