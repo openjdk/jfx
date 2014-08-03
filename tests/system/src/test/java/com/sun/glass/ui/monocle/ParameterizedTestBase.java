@@ -42,6 +42,7 @@ import org.junit.runners.model.FrameworkMethod;
 public abstract class ParameterizedTestBase {
 
     protected final TestTouchDevice device;
+    protected final Rectangle2D stageBounds;
     private Throwable exception;
     protected double width;
     protected double height;
@@ -63,13 +64,18 @@ public abstract class ParameterizedTestBase {
     @Rule public TestName name = new TestName();
 
 
-    public ParameterizedTestBase(TestTouchDevice device) {
+    public ParameterizedTestBase(TestTouchDevice device, Rectangle2D stageBounds) {
         this.device = device;
+        this.stageBounds = stageBounds;
+    }
+
+    public ParameterizedTestBase(TestTouchDevice device) {
+        this(device, null);
     }
 
     @Before
     public void createDevice() throws Exception {
-        TestApplication.showFullScreenScene();
+        TestApplication.showScene(stageBounds);
         TestLog.log("Starting " + name.getMethodName() + "[" + device + "]");
         Rectangle2D r = TestApplication.getScreenBounds();
         width = r.getWidth();

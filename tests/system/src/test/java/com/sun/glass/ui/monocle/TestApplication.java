@@ -116,28 +116,36 @@ public class TestApplication extends Application {
         return root;
     }
 
-    public static void showFullScreenScene() throws Exception {
+    public static void showScene(Rectangle2D bounds) throws Exception {
         TestApplication.getStage();
         frameWait(2);
         new TestRunnable() {
             @Override
             public void test() throws Exception {
-                Rectangle2D bounds = Screen.getPrimary().getVisualBounds();
-                stage.setX(0.0);
-                stage.setY(0.0);
-                stage.setWidth(bounds.getWidth());
-                stage.setHeight(bounds.getHeight());
-                Rectangle r = new Rectangle(bounds.getWidth(), bounds.getHeight());
+                Rectangle2D stageBounds = bounds;
+                if (stageBounds == null) {
+                    Rectangle2D screenBounds = Screen.getPrimary().getVisualBounds();
+                    stageBounds = new Rectangle2D(0, 0, screenBounds.getWidth(), screenBounds.getHeight());
+                }
+                stage.setX(stageBounds.getMinX());
+                stage.setY(stageBounds.getMinY());
+                stage.setWidth(stageBounds.getWidth());
+                stage.setHeight(stageBounds.getHeight());
+                Rectangle r = new Rectangle(stageBounds.getWidth(), stageBounds.getHeight());
                 r.setFill(Color.BLUE);
                 root = new Group();
                 root.getChildren().add(r);
-                Scene scene = new Scene(root, bounds.getWidth(), bounds.getHeight());
+                Scene scene = new Scene(root, stageBounds.getWidth(), stageBounds.getHeight());
                 stage.setScene(scene);
                 stage.show();
                 stage.requestFocus();
             }
         }.invokeAndWait();
         frameWait(2);
+    }
+
+    public static void showFullScreenScene() throws Exception {
+        showScene(null);
     }
 
     public static void showInMiddleOfScreen() throws Exception {
