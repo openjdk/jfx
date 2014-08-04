@@ -50,9 +50,11 @@ import javafx.css.Styleable;
 import com.sun.javafx.event.EventHandlerManager;
 
 import java.lang.ref.WeakReference;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Set;
 
 import javafx.beans.DefaultProperty;
 import javafx.beans.InvalidationListener;
@@ -791,6 +793,42 @@ public class Tab implements EventTarget, Styleable {
     protected <E extends Event> void setEventHandler(EventType<E> eventType, EventHandler<E> eventHandler) {
         eventHandlerManager.setEventHandler(eventType, eventHandler);
     }
+
+    /*
+     * See Node#lookup(String)
+     */
+    Node lookup(String selector) {
+        if (selector == null) return null;
+        Node n = null;
+        if (getContent() != null) {
+            n = getContent().lookup(selector);
+        }
+        if (n == null && getGraphic() != null) {
+            n = getGraphic().lookup(selector);
+        }
+        return n;
+    }
+
+    /*
+     * See Node#lookupAll(String)
+     */
+    List<Node> lookupAll(String selector) {
+        final List<Node> results = new ArrayList<>();
+        if (getContent() != null) {
+            Set set = getContent().lookupAll(selector);
+            if (!set.isEmpty()) {
+                results.addAll(set);
+            }
+        }
+        if (getGraphic() != null) {
+            Set set = getGraphic().lookupAll(selector);
+            if (!set.isEmpty()) {
+                results.addAll(set);
+            }
+        }
+        return results;
+    }
+
 
     /** {@inheritDoc} */
     @Override public boolean equals(Object o) {

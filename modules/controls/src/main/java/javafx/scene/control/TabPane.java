@@ -27,8 +27,12 @@ package javafx.scene.control;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
+import com.sun.javafx.collections.UnmodifiableListSet;
+import com.sun.javafx.css.Selector;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
@@ -52,6 +56,7 @@ import com.sun.javafx.scene.control.skin.TabPaneSkin;
 import javafx.beans.DefaultProperty;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
+import javafx.scene.Node;
 
 /**
  * <p>A control that allows switching between a group of {@link Tab Tabs}.  Only one tab
@@ -499,6 +504,34 @@ public class TabPane extends Control {
     @Override protected Skin<?> createDefaultSkin() {
         return new TabPaneSkin(this);
     }
+
+    /** {@inheritDoc} */
+    @Override public Node lookup(String selector) {
+        Node n = super.lookup(selector);
+        if (n == null) {
+            for(Tab tab : tabs) {
+                n = tab.lookup(selector);
+                if (n != null) break;
+            }
+        }
+        return n;
+    }
+
+    /** {@inheritDoc} */
+    public Set<Node> lookupAll(String selector) {
+
+        if (selector == null) return null;
+
+        final List<Node> results = new ArrayList<>();
+
+        results.addAll(super.lookupAll(selector));
+        for(Tab tab : tabs) {
+            results.addAll(tab.lookupAll(selector));
+        }
+
+        return new UnmodifiableListSet<Node>(results);
+    }
+
 
     /***************************************************************************
      *                                                                         *
