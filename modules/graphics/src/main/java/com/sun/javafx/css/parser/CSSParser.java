@@ -866,6 +866,10 @@ final public class CSSParser {
             } else if ("radial".equals(text) && (root.nextInSeries) != null) {
                 // if nextInSeries is null, then assume this is _not_ an old-style radial gradient
                 value = radialGradient(root);
+            } else if ("infinity".equals(text)) {
+                Size size = new Size(Double.MAX_VALUE, SizeUnits.PX);
+                ParsedValueImpl sizeValue = new ParsedValueImpl<Size,Number>(size, null);
+                value = new ParsedValueImpl<ParsedValue<?,Size>,Number>(sizeValue, SizeConverter.getInstance());
             } else if ("true".equals(text)) {
                 // TODO: handling of boolean is really bogus
                 value = new ParsedValueImpl<String,Boolean>("true",BooleanConverter.getInstance());
