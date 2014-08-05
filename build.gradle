@@ -2887,10 +2887,14 @@ compileTargets { t ->
                 if (IS_COMPILE_MEDIA) {
                     [ "fxplugins", "gstreamer-lite", "jfxmedia" ].each { name ->
                         from ("modules/media/build/native/${t.name}/${mediaBuildType}/${library(name)}") }
-                    
-                    if (t.name == "linux") {
+
+                    if (t.name == "mac") {
+                        // OSX media natives
+                        [ "jfxmedia_qtkit", "glib-lite" ].each { name ->
+                            from ("modules/media/build/native/${t.name}/${mediaBuildType}/${library(name)}") }
+                    } else if (t.name == "linux") {
                         from("modules/media/build/native/${t.name}/${mediaBuildType}") { include "libavplugin*.so" }
-                    } else from ("modules/media/build/native/${t.name}/${mediaBuildType}/${library("glib-lite")}")                        
+                    } else from ("modules/media/build/native/${t.name}/${mediaBuildType}/${library("glib-lite")}")
                 } else {
                     [ "fxplugins", "gstreamer-lite", "jfxmedia" ].each { name ->
                         from ("$LIBRARY_STUB/${library(name)}") }

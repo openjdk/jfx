@@ -1,10 +1,10 @@
 #
-# MacOs jfxmedia makefile
+# Mac OS X jfxmedia makefile
 #
 
+# OUTPUT_DIR, BUILD_TYPE and BASE_NAME are passed on the command line or from the 
+# parent make process
 BUILD_DIR = $(OUTPUT_DIR)/$(BUILD_TYPE)
-TARGET_DIRS = $(BUILD_DIR)
-
 SRCBASE_DIR = ../..
 OBJBASE_DIR = $(BUILD_DIR)/obj/jfxmedia
 
@@ -12,31 +12,25 @@ BASE_DIR = ../../..
 GSTREAMER_LITE_DIR = $(BASE_DIR)/gstreamer/gstreamer-lite
 GLIB_LITE_DIR = $(BASE_DIR)/gstreamer/3rd_party/glib/glib-2.28.8
 
-DIRLIST = MediaManagement    \
-          Locator 	     \
-          PipelineManagement \
-          jni                \
-          Utils 	     \
-          Utils/posix 	     \
-          platform/gstreamer \
-          platform/osx       \
-          Projects/utils
-
 TARGET_NAME = lib$(BASE_NAME).dylib
 TARGET = $(BUILD_DIR)/$(TARGET_NAME)
 
+# separate library for QTKit based platform
+QTK_NAME = lib$(BASE_NAME)_qtkit.dylib
+QTK_LIB = $(BUILD_DIR)/$(QTK_NAME)
+
+# Set up base search path for source and headers
+VPATH = $(SRCBASE_DIR):$(GENERATED_HEADERS_DIR):$(JAVA_HOME)/include:$(JAVA_HOME)/include/darwin
+
+# ------------------------------------------------------------------
+# Base compile/link flags
+
 CFLAGS = -arch x86_64 \
-	 -fPIC                     \
-	 -Werror=implicit-function-declaration \
+         -pipe \
+         -fPIC                     \
+         -Werror=implicit-function-declaration \
          -DTARGET_OS_MAC=1         \
          -D_GNU_SOURCE             \
-         -DGST_REMOVE_DEPRECATED   \
-         -DGST_DISABLE_GST_DEBUG   \
-         -DGST_DISABLE_LOADSAVE    \
-         -DGST_DISABLE_XML         \
-         -DHAVE_CONFIG_H           \
-         -DJFXMEDIA_JNI_EXPORTS    \
-         -DGSTREAMER_LITE          \
          -msse2                    \
          -mmacosx-version-min=10.7
 
@@ -46,28 +40,51 @@ else
     CFLAGS += -O0 -g -Wall
 endif
 
-BASE_INCLUDES = -I$(JAVA_HOME)/include \
-		-I$(JAVA_HOME)/include/darwin \
-		-I$(SRCBASE_DIR) \
-		-I$(SRCBASE_DIR)/jni \
-		-I$(GENERATED_HEADERS_DIR)
 
-INCLUDES = $(BASE_INCLUDES) \
+INCLUDES = -I$(JAVA_HOME)/include \
+           -I$(JAVA_HOME)/include/darwin \
+           -I$(SRCBASE_DIR) \
+           -I$(SRCBASE_DIR)/jni \
+           -I$(GENERATED_HEADERS_DIR)
+
+
+LDFLAGS = -mmacosx-version-min=10.7 \
+          -arch x86_64 \
+          -L$(BUILD_DIR) \
+          -lobjc \
+          -framework Cocoa \
+          -framework CoreVideo
+
+# ------------------------------------------------------------------
+# jfxmedia compile/link flags
+
+JFXMEDIA_CFLAGS = $(CFLAGS) \
+         -DGST_REMOVE_DEPRECATED   \
+         -DGST_DISABLE_GST_DEBUG   \
+         -DGST_DISABLE_LOADSAVE    \
+         -DGST_DISABLE_XML         \
+         -DGSTREAMER_LITE          \
+         -DJFXMEDIA_JNI_EXPORTS    \
+         -DHAVE_CONFIG_H           \
+
+JFXMEDIA_INCLUDES = $(INCLUDES) \
            -I$(GLIB_LITE_DIR)/ \
            -I$(GLIB_LITE_DIR)/glib \
            -I$(GLIB_LITE_DIR)/gmodule \
            -I$(GLIB_LITE_DIR)/build/osx \
-	   -I$(GSTREAMER_LITE_DIR)/gstreamer \
+           -I$(GSTREAMER_LITE_DIR)/gstreamer \
            -I$(GSTREAMER_LITE_DIR)/gst-plugins-base/gst-libs \
-	   -I$(GSTREAMER_LITE_DIR)/gstreamer/libs
+           -I$(GSTREAMER_LITE_DIR)/gstreamer/libs
 
-LDFLAGS = -mmacosx-version-min=10.7 -arch x86_64 \
-	  -L$(BUILD_DIR) -Wl,-install_name,@rpath/$(TARGET_NAME) \
-          -lgstreamer-lite -lglib-lite -lobjc \
-          -framework CoreVideo -framework CoreAudio -framework QTKit \
-          -framework Cocoa -framework Carbon -framework CoreServices -framework JavaVM
+JFXMEDIA_LDFLAGS = $(LDFLAGS) \
+          -Wl,-install_name,@rpath/$(TARGET_NAME) \
+          -lgstreamer-lite \
+          -lglib-lite
 
-CPP_SOURCES =                                                  \
+# ------------------------------------------------------------------
+# jfxmedia sources/objects
+
+JFXMEDIA_SOURCES =                                             \
               MediaManagement/Media.cpp                        \
               MediaManagement/MediaManager.cpp                 \
               Locator/Locator.cpp                              \
@@ -103,50 +120,71 @@ CPP_SOURCES =                                                  \
               platform/gstreamer/GstEqualizerBand.cpp          \
               platform/gstreamer/GstMedia.cpp                  \
               platform/gstreamer/GstMediaPlayer.cpp            \
-
-C_SOURCES =   Utils/ColorConverter.c
-
-OBJCMM_SOURCES =                                               \
-              platform/osx/OSXPlatform.mm                      \
-              platform/osx/OSXMediaPlayer.mm                   \
-              platform/osx/QTKMediaPlayer.mm                   \
-              platform/osx/CVVideoFrame.mm
-
-OBJCM_SOURCES =                                                \
+              Utils/ColorConverter.c                           \
               Utils/JObjectPeers.m                             \
               Utils/JavaUtils.m                                \
-              Utils/MTObjectProxy.m
+              Utils/MTObjectProxy.m                            \
+              platform/osx/OSXPlatform.mm                      \
+              platform/osx/OSXMediaPlayer.mm                   \
+              platform/osx/CVVideoFrame.mm
 
-OBJ_DIRS = $(addprefix $(OBJBASE_DIR)/,$(DIRLIST))
-OBJECTS  = $(patsubst %.cpp,$(OBJBASE_DIR)/%.o,$(CPP_SOURCES)) \
-           $(patsubst %.c,$(OBJBASE_DIR)/%.o,$(C_SOURCES)) \
-           $(patsubst %.mm,$(OBJBASE_DIR)/%.o,$(OBJCMM_SOURCES)) \
-           $(patsubst %.m,$(OBJBASE_DIR)/%.o,$(OBJCM_SOURCES))
+JFXMEDIA_OBJECTS = \
+    $(patsubst %.c, $(OBJBASE_DIR)/%.o, $(filter %.c, $(JFXMEDIA_SOURCES))) \
+    $(patsubst %.m, $(OBJBASE_DIR)/%.o, $(filter %.m, $(JFXMEDIA_SOURCES))) \
+    $(patsubst %.cpp, $(OBJBASE_DIR)/%.o, $(filter %.cpp, $(JFXMEDIA_SOURCES))) \
+    $(patsubst %.mm, $(OBJBASE_DIR)/%.o, $(filter %.mm, $(JFXMEDIA_SOURCES)))
+
+# ------------------------------------------------------------------
+# Rules
 
 .PHONY: default
+default: $(TARGET) $(QTK_LIB)
 
-default: $(TARGET)
 
-$(OBJBASE_DIR)/%.o: $(SRCBASE_DIR)/%.cpp
-	$(CC) $(CFLAGS) $(INCLUDES) -x c++ -c $< -o $@
+# ------------------------------------------------------------------
+# jfxmedia rules
 
-$(OBJBASE_DIR)/%.o: $(SRCBASE_DIR)/%.c
-	$(CC) $(CFLAGS) $(INCLUDES) -x c -c $< -o $@
+# auto-dependencies
+-include $(JFXMEDIA_OBJECTS:.o=.d)
 
-$(OBJBASE_DIR)/%.o: $(SRCBASE_DIR)/%.mm
-	$(CC) $(CFLAGS) $(INCLUDES) -x objective-c++ -c $< -o $@
+$(OBJBASE_DIR)/%.o: %.cpp
+	@mkdir -p $(dir $@)
+	$(CC) $(JFXMEDIA_CFLAGS) $(JFXMEDIA_INCLUDES) -MD -MF $(OBJBASE_DIR)/$*.d -x c++ -c $< -o $@
 
-$(OBJBASE_DIR)/%.o: $(SRCBASE_DIR)/%.m
-	$(CC) $(CFLAGS) $(INCLUDES) -x objective-c -c $< -o $@
+$(OBJBASE_DIR)/%.o: %.c
+	@mkdir -p $(dir $@)
+	$(CC) $(JFXMEDIA_CFLAGS) $(JFXMEDIA_INCLUDES) -MD -MF $(OBJBASE_DIR)/$*.d -x c -c $< -o $@
 
-$(OBJECTS): | $(OBJ_DIRS) $(TARGET_DIRS)
+$(OBJBASE_DIR)/%.o: %.mm
+	@mkdir -p $(dir $@)
+	$(CC) $(JFXMEDIA_CFLAGS) $(JFXMEDIA_INCLUDES) -MD -MF $(OBJBASE_DIR)/$*.d -x objective-c++ -c $< -o $@
 
-$(OBJ_DIRS):
-	mkdir -p $(OBJ_DIRS)
+$(OBJBASE_DIR)/%.o: %.m
+	@mkdir -p $(dir $@)
+	$(CC) $(JFXMEDIA_CFLAGS) $(JFXMEDIA_INCLUDES) -MD -MF $(OBJBASE_DIR)/$*.d -x objective-c -c $< -o $@
 
-$(TARGET_DIRS):
-	mkdir -p $(TARGET_DIRS)
+$(TARGET): $(JFXMEDIA_OBJECTS)
+	@mkdir -p $(dir $@)
+	$(LINK) -dynamiclib $(JFXMEDIA_LDFLAGS) $(JFXMEDIA_OBJECTS) -o $@
 
-$(TARGET): $(OBJECTS)
-	$(LINK) -dynamiclib $(OBJECTS) $(LDFLAGS) -o $@
 
+# ------------------------------------------------------------------
+# QTKit platform lib rules
+
+QTK_OBJBASE = $(OBJBASE_DIR)/qtk
+QTK_LDFLAGS = $(LDFLAGS) \
+          -Wl,-install_name,@rpath/$(QTK_NAME) \
+          -framework QTKit
+
+QTK_SOURCES = platform/osx/QTKMediaPlayer.mm
+QTK_OBJECTS = $(patsubst %.mm,$(QTK_OBJBASE)/%.o,$(QTK_SOURCES))
+
+-include $(QTK_OBJECTS:.o=.d)
+
+$(QTK_OBJBASE)/%.o: %.mm
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) $(INCLUDES) -MD -MF $(QTK_OBJBASE)/$*.d -x objective-c++ -c $< -o $@
+
+$(QTK_LIB): $(TARGET) $(QTK_OBJECTS)
+	@mkdir -p $(dir $@)
+	$(LINK)  $(QTK_LDFLAGS) -dynamiclib $(QTK_OBJECTS) -l$(BASE_NAME) -o $@

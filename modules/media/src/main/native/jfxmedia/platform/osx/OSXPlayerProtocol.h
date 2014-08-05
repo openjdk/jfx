@@ -50,6 +50,8 @@
 @property (nonatomic,assign) float volume;
 @property (nonatomic,assign) float balance;
 
+- (id) initWithURL:(NSURL *)source eventHandler:(CJavaPlayerEventDispatcher*)hdlr;
+
 - (void) play;
 - (void) pause;
 - (void) stop;

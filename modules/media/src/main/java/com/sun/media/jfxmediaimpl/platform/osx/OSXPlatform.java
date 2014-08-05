@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,12 +25,15 @@
 
 package com.sun.media.jfxmediaimpl.platform.osx;
 
+import com.sun.glass.utils.NativeLibLoader;
 import com.sun.media.jfxmedia.Media;
 import com.sun.media.jfxmedia.MediaPlayer;
 import com.sun.media.jfxmedia.locator.Locator;
 import com.sun.media.jfxmedia.logging.Logger;
 import com.sun.media.jfxmediaimpl.HostUtils;
 import com.sun.media.jfxmediaimpl.platform.Platform;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 
 /**
  * Mac OS X Platform implementation.
@@ -48,7 +51,30 @@ public final class OSXPlatform extends Platform {
     };
 
     private static final class OSXPlatformInitializer {
-        private static final OSXPlatform globalInstance = new OSXPlatform();
+        private static final OSXPlatform globalInstance;
+        static {
+            // Platform is only available if we can load it's native lib
+            // Do this early so we can report the correct content types
+            boolean isLoaded = false;
+            try {
+                isLoaded = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
+                    try {
+                        NativeLibLoader.loadLibrary("jfxmedia_qtkit");
+                    } catch (UnsatisfiedLinkError ule) {
+                        // non-fatal condition, keep quiet about it
+                        return Boolean.FALSE;
+                    }
+                    return Boolean.TRUE;
+                });
+            } catch (Exception e) {
+                // Ignore
+            }
+            if (isLoaded) {
+                globalInstance = new OSXPlatform();
+            } else {
+                globalInstance = null;
+            }
+        }
     }
 
     public static Platform getPlatformInstance() {
@@ -57,9 +83,6 @@ public final class OSXPlatform extends Platform {
 
     private OSXPlatform() {
     }
-
-    @Override
-    public void preloadPlatform() {}
 
     /**
      * @return false if the platform cannot be loaded
@@ -70,13 +93,14 @@ public final class OSXPlatform extends Platform {
             return false;
         }
 
+        // ULE should not happen here, but just in case
         try {
             osxPlatformInit();
         } catch (UnsatisfiedLinkError ule) {
             if (Logger.canLog(Logger.DEBUG)) {
                 Logger.logMsg(Logger.DEBUG, "Unable to load OSX platform.");
             }
-//            MediaUtils.nativeError(OSXPlatform.class, MediaError.ERROR_MANAGER_ENGINEINIT_FAIL);
+//                MediaUtils.nativeError(OSXPlatform.class, MediaError.ERROR_MANAGER_ENGINEINIT_FAIL);
             return false;
         }
         return true;

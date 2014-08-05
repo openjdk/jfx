@@ -65,9 +65,6 @@ public final class IOSPlatform extends Platform {
     private IOSPlatform() {
     }
 
-    @Override
-    public void preloadPlatform() {}
-
     /**
      * @return false if the platform cannot be loaded
      */

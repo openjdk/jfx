@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,15 +40,6 @@ public abstract class Platform {
     public static Platform getPlatformInstance() {
         throw new UnsupportedOperationException("Invalid platform class.");
     }
-
-    /*
-     * Loading stages
-     * preloadPlatform gives the platform a chance to load or check dependencies
-     * before the main jfxmedia library is loaded. Then loadPlatform is called
-     * after jfxmedia library is loaded in case the platform has further
-     * dependencies.
-     */
-    public void preloadPlatform() {}
 
     /**
      * @return false if the platform cannot be loaded
