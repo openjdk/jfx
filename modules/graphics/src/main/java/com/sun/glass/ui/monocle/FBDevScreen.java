@@ -36,8 +36,11 @@ import java.nio.channels.FileChannel;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.nio.IntBuffer;
+import java.nio.ShortBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.function.IntConsumer;
 
 class FBDevScreen implements NativeScreen {
 
@@ -152,6 +155,16 @@ class FBDevScreen implements NativeScreen {
         return fb;
     }
 
+    private void forEachPixelOffset(IntConsumer c) {
+        int h = getHeight();
+        int w = getWidth();
+        for (int i = 0; i < h; ++i) {
+            for (int j = 0; j < w; ++j) {
+                c.accept(i * w + j);   
+            }
+        }                 
+    }
+
     @Override
     public synchronized void shutdown() {
         getFramebuffer().clearBufferContents();
@@ -220,16 +233,34 @@ class FBDevScreen implements NativeScreen {
         }
     }
 
+
     @Override
     public synchronized ByteBuffer getScreenCapture() {
-        ByteBuffer buffer = getFramebuffer().getBuffer();
-        int start = linuxFB.getNativeOffset();
-        int len = getWidth() * getHeight() * (getDepth() >>> 3);
-        buffer.position(start);
-        buffer.limit(start + len);
-        ByteBuffer ret = buffer.asReadOnlyBuffer();
-        // this is critical, as order is lost
-        ret.order(buffer.order());
+        ByteBuffer ret = null;
+        ByteBuffer bb = linuxFB.getMappedBuffer();
+        if (bb != null) {               
+            bb.position(linuxFB.getNativeOffset());
+            bb.order(ByteOrder.nativeOrder());
+            ret = ByteBuffer.allocate(getHeight() * getWidth() * 4);
+            IntBuffer dst = ret.asIntBuffer();
+            if (getDepth() == 32) {
+                IntBuffer src = bb.asIntBuffer();
+                forEachPixelOffset(offset -> dst.put(src.get(offset))); 
+            } else {
+                ShortBuffer src = bb.asShortBuffer();
+                forEachPixelOffset(offset -> {
+                    short p = src.get(offset);
+                    int pi = 0xFF000000 |
+                             ((p & 0xF800) << 8) |
+                             ((p & 0x7E0) << 5) |
+                             ((p & 0x1F) << 3);
+                    dst.put(pi); 
+                    }); 
+            }
+
+            linuxFB.releaseMappedBuffer(bb);
+        }
         return ret;
     }
+
 }
