@@ -88,6 +88,7 @@ ARMV7HF.includeNull3d = true
 ARMV7HF.includeEGL = true
 ARMV7HF.includeSwing = false
 ARMV7HF.includeSWT = false
+ARMV7HF.includeGTK = true
 
 ARMV7HF.javafxPlatformDefault="monocle"
 
@@ -125,7 +126,7 @@ if (imxHeader.exists()) {
 def extraLFlags = [
         "-I", "-L",
         linkFlags,
-        "-L$sdk/lib/arm-linux/gnueabihf",
+        "-L$sdk/lib/arm-linux-gnueabihf",
         "-L$sdk/usr/lib",
         "-L$sdk/usr/lib/arm-linux-gnueabihf",
         "-L$sdk/opt/vc/lib"].flatten()
@@ -138,13 +139,17 @@ def monocleCFlags = [
 def monocleLFlags = [extraLFlags, "-ldl", "-lm"].flatten()
 
 def fontCFlags = [extraCFlags].flatten()
-def fontLFlags = [extraLFlags].flatten()
+def fontLFlags = [extraLFlags, "-ldl"].flatten()
 
-def iioCFlags = [extraCFlags].flatten()
+def iioCFlags = [extraCFlags, 
+         "-Wno-main" // suppress warnings about using main as a variable, 3rd party code
+         ].flatten()
 def iioLFlags = [extraLFlags].flatten()
 
 def es2EglfbCFlags = [extraCFlags, "-DIS_EGLFB", "-DLINUX"].flatten()
 def es2EglfbLFlags = [extraLFlags].flatten()
+def es2MonocleCFlags = [extraCFlags, "-DIS_EGLFB", "-DLINUX"].flatten()
+def es2MonocleLFlags = [extraLFlags].flatten()
 
 def es2X11CFlags = [extraCFlags, "-DUSE_XSHM", "-DDEBUG", "-DIS_EGLX11", "-DLINUX"].flatten()
 def es2X11LFlags = [extraLFlags, "-lX11", "-lXext", "-lXdmcp", "-lXau"].flatten()
@@ -179,6 +184,10 @@ setupTools("armv7hf_tools",
         propFile << "libs=" << results.toString().trim();
     },
     { properties ->
+        if (properties.getProperty("cflags") == null || properties.getProperty("libs") == null ) {
+            fail("pkg-config failed for tools")
+             throw new GradleException("FAIL: pkg-config failed for tools")
+        }
         gtkCFlags.addAll(properties.getProperty("cflags").split(" "))
         gtkLFlags.addAll(properties.getProperty("libs").split(" "))
     }
@@ -370,6 +379,9 @@ ARMV7HF.glass.lensport.lib = "lens_porting"
 
 ARMV7HF.glass.monocle = [:]
 ARMV7HF.glass.monocle.nativeSource = [
+        file("modules/graphics/src/main/native-glass/monocle"),
+        file("modules/graphics/src/main/native-glass/monocle/dispman"),
+        file("modules/graphics/src/main/native-glass/monocle/mx6"),
         file("modules/graphics/src/main/native-glass/monocle/linux"),
         file("modules/graphics/src/main/native-glass/monocle/util") ]
 ARMV7HF.glass.monocle.compiler = compiler
@@ -493,7 +505,7 @@ ARMV7HF.iio.linkFlags = iioLFlags
 ARMV7HF.iio.lib = "javafx_iio"
 
 ARMV7HF.prismES2 = [:]
-ARMV7HF.prismES2.variants = ["eglfb"]
+ARMV7HF.prismES2.variants = ["eglfb", "monocle"]
 ARMV7HF.prismES2.javahInclude = ["com/sun/prism/es2/**/*"]
 
 ARMV7HF.prismES2.eglfb = [:]
@@ -505,8 +517,20 @@ ARMV7HF.prismES2.eglfb.nativeSource = [
 ARMV7HF.prismES2.eglfb.compiler = compiler
 ARMV7HF.prismES2.eglfb.ccFlags = [ es2EglfbCFlags, "-I", ARMV7HF.glass.lensport.nativeSource ].flatten()
 ARMV7HF.prismES2.eglfb.linker = linker
-ARMV7HF.prismES2.eglfb.linkFlags = es2EglfbLFlags
+ARMV7HF.prismES2.eglfb.linkFlags = [ es2EglfbLFlags, "-dl" ] .flatten()
 ARMV7HF.prismES2.eglfb.lib = "prism_es2_eglfb"
+
+ARMV7HF.prismES2.monocle= [:]
+ARMV7HF.prismES2.monocle.nativeSource = [
+    file("modules/graphics/src/main/native-prism-es2"),
+    file("modules/graphics/src/main/native-prism-es2/GL"),
+    file("modules/graphics/src/main/native-prism-es2/monocle")
+]
+ARMV7HF.prismES2.monocle.compiler = compiler
+ARMV7HF.prismES2.monocle.ccFlags = [ es2EglfbCFlags, "-I", ARMV7HF.glass.lensport.nativeSource ].flatten()
+ARMV7HF.prismES2.monocle.linker = linker
+ARMV7HF.prismES2.monocle.linkFlags =[  es2EglfbLFlags, "-ldl" ].flatten()
+ARMV7HF.prismES2.monocle.lib = "prism_es2_monocle"
 
 ARMV7HF.prismES2.eglx11 = [:]
 ARMV7HF.prismES2.eglx11.nativeSource = [
@@ -549,7 +573,7 @@ ARMV7HF.fontFreetype.nativeSource = ["src/main/native-font/freetype.c"]
 ARMV7HF.fontFreetype.compiler = compiler
 ARMV7HF.fontFreetype.ccFlags = ["-DJFXFONT_PLUS", ccFlags, fontCFlags, freetypeCCFlags].flatten()
 ARMV7HF.fontFreetype.linker = linker
-ARMV7HF.fontFreetype.linkFlags = [linkFlags, fontLFlags, freetypeLinkFlags].flatten()
+ARMV7HF.fontFreetype.linkFlags = [linkFlags, fontLFlags, freetypeLinkFlags, "-ldl"].flatten()
 ARMV7HF.fontFreetype.lib = "javafx_font_freetype"
 
 ARMV7HF.fontPango = [:]

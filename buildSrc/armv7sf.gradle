@@ -78,6 +78,7 @@ ARMV7SF.includeNull3d = true
 ARMV7SF.includeEGL = true
 ARMV7SF.includeSwing = false
 ARMV7SF.includeSWT = false
+ARMV7SF.includeGTK = true
 
 ARMV7SF.javafxPlatformDefault="monocle"
 
@@ -562,7 +563,6 @@ ARMV7SF.fontT2K.linker = linker
 ARMV7SF.fontT2K.linkFlags = fontLFlags
 ARMV7SF.fontT2K.lib = "javafx_font_t2k"
 
-ARMV7SF.disablefontFreetype = true // Need to fix the imports
 ARMV7SF.fontFreetype = [:]
 ARMV7SF.fontFreetype.javahInclude = ["com/sun/javafx/font/freetype/OSFreetype.class"]
 ARMV7SF.fontFreetype.nativeSource = ["src/main/native-font/freetype.c"]
@@ -572,7 +572,6 @@ ARMV7SF.fontFreetype.linker = linker
 ARMV7SF.fontFreetype.linkFlags = [linkFlags, fontLFlags, freetypeLinkFlags].flatten()
 ARMV7SF.fontFreetype.lib = "javafx_font_freetype"
 
-ARMV7SF.disablefontPango = true
 ARMV7SF.fontPango = [:]
 ARMV7SF.fontPango.javahInclude = ["com/sun/javafx/font/freetype/OSPango.class"]
 ARMV7SF.fontPango.nativeSource = ["src/main/native-font/pango.c"]

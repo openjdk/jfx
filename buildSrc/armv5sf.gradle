@@ -78,6 +78,7 @@ ARMV5SF.includeNull3d = true
 ARMV5SF.includeEGL = true
 ARMV5SF.includeSwing = false
 ARMV5SF.includeSWT = false
+ARMV5SF.includeGTK = true
 
 ARMV5SF.javafxPlatformDefault="monocle"
 
@@ -344,7 +345,6 @@ if (ARMV5SF.includeLens) {
     ARMV5SF.glass.variants.addAll("eglfb", "directfb", "fb", "lensport" );
     ARMV5SF.glass.javahInclude.addAll("com/sun/glass/ui/lens/*");
     ARMV5SF.javafxPlatformProperties = ARMV5SF.javafxPlatformProperties + lensPlatformAdditions
-
 }
 if (ARMV5SF.includeMonocle) { 
     ARMV5SF.glass.variants.addAll("monocle", "monocle_x11");
@@ -563,7 +563,6 @@ ARMV5SF.fontT2K.linker = linker
 ARMV5SF.fontT2K.linkFlags = fontLFlags
 ARMV5SF.fontT2K.lib = "javafx_font_t2k"
 
-ARMV5SF.disablefontFreetype = true // Need to fix the imports
 ARMV5SF.fontFreetype = [:]
 ARMV5SF.fontFreetype.javahInclude = ["com/sun/javafx/font/freetype/OSFreetype.class"]
 ARMV5SF.fontFreetype.nativeSource = ["src/main/native-font/freetype.c"]
@@ -573,7 +572,6 @@ ARMV5SF.fontFreetype.linker = linker
 ARMV5SF.fontFreetype.linkFlags = [linkFlags, fontLFlags, freetypeLinkFlags].flatten()
 ARMV5SF.fontFreetype.lib = "javafx_font_freetype"
 
-ARMV5SF.disablefontPango = true
 ARMV5SF.fontPango = [:]
 ARMV5SF.fontPango.javahInclude = ["com/sun/javafx/font/freetype/OSPango.class"]
 ARMV5SF.fontPango.nativeSource = ["src/main/native-font/pango.c"]
