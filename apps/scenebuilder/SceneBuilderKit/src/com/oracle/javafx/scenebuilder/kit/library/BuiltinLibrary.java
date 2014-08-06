@@ -179,6 +179,7 @@ public class BuiltinLibrary extends Library {
                 "SliderH", "Slider-h", HORIZONTAL_QUALIFIER); //NOI18N
         addCustomizedItem(javafx.scene.control.Slider.class, TAG_CONTROLS,
                 "SliderV", "Slider-v", VERTICAL_QUALIFIER); //NOI18N
+        addDefaultItem(javafx.scene.control.Spinner.class, TAG_CONTROLS, FX8_QUALIFIER);
         addCustomizedItem(javafx.scene.control.SplitMenuButton.class, TAG_CONTROLS);
         addCustomizedItem(javafx.scene.control.TableColumn.class, TAG_CONTROLS);
         addCustomizedItem(javafx.scene.control.TableView.class, TAG_CONTROLS);
