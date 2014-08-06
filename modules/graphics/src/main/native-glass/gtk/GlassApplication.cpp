@@ -67,6 +67,17 @@ extern "C" {
 
 /*
  * Class:     com_sun_glass_ui_gtk_GtkApplication
+ * Method:    _isDisplayValid
+ * Signature: ()Z
+ */
+JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1isDisplayValid
+  (JNIEnv * env, jclass clazz)
+{
+    return is_display_valid();
+}
+
+/*
+ * Class:     com_sun_glass_ui_gtk_GtkApplication
  * Method:    _init
  * Signature: ()V
  */
