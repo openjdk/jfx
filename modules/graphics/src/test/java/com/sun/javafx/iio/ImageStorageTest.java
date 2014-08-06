@@ -29,10 +29,9 @@ import static org.junit.Assert.assertNotNull;
 import org.junit.Test;
 
 public class ImageStorageTest {
-    static final String PATH = "file:src/test/resources/com/sun/javafx/iio/";
     @Test
     public void createImageFromNoExtensionURL() throws ImageStorageException {
-        assertNotNull(ImageStorage.loadAll(PATH+"testpngnoextension",
-                                           null, 0, 0, true, 2.0f, true));
+        String path = this.getClass().getResource("testpngnoextension").toString();
+        assertNotNull(ImageStorage.loadAll(path, null, 0, 0, true, 2.0f, true));
     }
 }
