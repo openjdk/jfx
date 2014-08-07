@@ -189,6 +189,7 @@ class TransientObject extends TransientNode {
         final GlueElement propertyElement
                 = new GlueElement(glueElement.getDocument(), 
                         defaultName.toString(),  glueElement);
+        propertyElement.setSynthetic(true);
         propertyElement.addBefore(collectedItems.get(0).getGlueElement());
         
         for (FXOMObject item : collectedItems) {
