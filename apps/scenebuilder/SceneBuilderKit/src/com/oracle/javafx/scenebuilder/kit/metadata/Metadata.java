@@ -792,6 +792,10 @@ public class Metadata {
             new PropertyName("minorTickLength");
     private final PropertyName minorTickVisibleName = 
             new PropertyName("minorTickVisible");
+    private final PropertyName minViewportHeightName = 
+            new PropertyName("minViewportHeight");
+    private final PropertyName minViewportWidthName = 
+            new PropertyName("minViewportWidth");
     private final PropertyName minWidthName = 
             new PropertyName("minWidth");
     private final PropertyName mnemonicParsingName = 
@@ -2361,6 +2365,20 @@ public class Metadata {
                 true, /* readWrite */
                 true, /* defaultValue */
                 new InspectorPath("Properties", "Specific", 117));
+    private final ValuePropertyMetadata minViewportHeightPropertyMetadata =
+            new DoublePropertyMetadata(
+                minViewportHeightName,
+                com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.SIZE,
+                true, /* readWrite */
+                0.0, /* defaultValue */
+                new InspectorPath("Layout", "Specific", 6));
+    private final ValuePropertyMetadata minViewportWidthPropertyMetadata =
+            new DoublePropertyMetadata(
+                minViewportWidthName,
+                com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.SIZE,
+                true, /* readWrite */
+                0.0, /* defaultValue */
+                new InspectorPath("Layout", "Specific", 7));
     private final ValuePropertyMetadata minWidth_COMPUTED_PropertyMetadata =
             new DoublePropertyMetadata(
                 minWidthName,
@@ -5290,6 +5308,8 @@ public class Metadata {
         ScrollPaneMetadata.getProperties().add(hmaxPropertyMetadata);
         ScrollPaneMetadata.getProperties().add(hminPropertyMetadata);
         ScrollPaneMetadata.getProperties().add(hvaluePropertyMetadata);
+        ScrollPaneMetadata.getProperties().add(minViewportHeightPropertyMetadata);
+        ScrollPaneMetadata.getProperties().add(minViewportWidthPropertyMetadata);
         ScrollPaneMetadata.getProperties().add(pannablePropertyMetadata);
         ScrollPaneMetadata.getProperties().add(prefViewportHeightPropertyMetadata);
         ScrollPaneMetadata.getProperties().add(prefViewportWidthPropertyMetadata);
@@ -5799,8 +5819,6 @@ public class Metadata {
 
 
     // The following properties are uncertified:
-    //     minViewportHeight
-    //     minViewportWidth
     //     valueFactory
 
 }
