@@ -297,7 +297,7 @@ final class WinAccessible extends Accessible {
             }
             case SELECTED: {
                 Object role = getAttribute(ROLE); 
-                if (role == AccessibleRole.CHECK_BOX || role == AccessibleRole.RADIO_BUTTON) {
+                if (role == AccessibleRole.CHECK_BOX || role == AccessibleRole.TOGGLE_BUTTON) {
                     notifyToggleState();
                     break;
                 }
