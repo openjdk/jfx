@@ -3053,12 +3053,12 @@ public class Metadata {
                 true, /* readWrite */
                 javafx.scene.AccessibleRole.BUTTON, /* defaultValue */
                 new InspectorPath("Properties", "Accessibility", 2));
-    private final ValuePropertyMetadata role_RADIO_BUTTON_PropertyMetadata =
+    private final ValuePropertyMetadata role_TOGGLE_BUTTON_PropertyMetadata =
             new EnumerationPropertyMetadata(
                 roleName,
                 javafx.scene.AccessibleRole.class,
                 true, /* readWrite */
-                javafx.scene.AccessibleRole.RADIO_BUTTON, /* defaultValue */
+                javafx.scene.AccessibleRole.TOGGLE_BUTTON, /* defaultValue */
                 new InspectorPath("Properties", "Accessibility", 2));
     private final ValuePropertyMetadata role_CHECK_BOX_PropertyMetadata =
             new EnumerationPropertyMetadata(
@@ -3151,6 +3151,13 @@ public class Metadata {
                 true, /* readWrite */
                 javafx.scene.AccessibleRole.PROGRESS_INDICATOR, /* defaultValue */
                 new InspectorPath("Properties", "Accessibility", 2));
+    private final ValuePropertyMetadata role_RADIO_BUTTON_PropertyMetadata =
+            new EnumerationPropertyMetadata(
+                roleName,
+                javafx.scene.AccessibleRole.class,
+                true, /* readWrite */
+                javafx.scene.AccessibleRole.RADIO_BUTTON, /* defaultValue */
+                new InspectorPath("Properties", "Accessibility", 2));
     private final ValuePropertyMetadata role_SCROLL_BAR_PropertyMetadata =
             new EnumerationPropertyMetadata(
                 roleName,
@@ -3220,13 +3227,6 @@ public class Metadata {
                 javafx.scene.AccessibleRole.class,
                 true, /* readWrite */
                 javafx.scene.AccessibleRole.TITLED_PANE, /* defaultValue */
-                new InspectorPath("Properties", "Accessibility", 2));
-    private final ValuePropertyMetadata role_TOGGLE_BUTTON_PropertyMetadata =
-            new EnumerationPropertyMetadata(
-                roleName,
-                javafx.scene.AccessibleRole.class,
-                true, /* readWrite */
-                javafx.scene.AccessibleRole.TOGGLE_BUTTON, /* defaultValue */
                 new InspectorPath("Properties", "Accessibility", 2));
     private final ValuePropertyMetadata role_TOOL_BAR_PropertyMetadata =
             new EnumerationPropertyMetadata(
@@ -5741,6 +5741,7 @@ public class Metadata {
         hiddenProperties.add(new PropertyName("userData"));
         hiddenProperties.add(new PropertyName("useSystemMenuBar"));
         hiddenProperties.add(new PropertyName("valueChanging"));
+        hiddenProperties.add(new PropertyName("valueFactory"));
         hiddenProperties.add(new PropertyName("visibleLeafColumns"));
 
         // Populates parentRelatedProperties
@@ -5818,8 +5819,7 @@ public class Metadata {
     //     javafx.scene.control.TableView -> items : Property items has no section/subsection assigned
 
 
-    // The following properties are uncertified:
-    //     valueFactory
+    // No uncertified properties have been found
 
 }
 
