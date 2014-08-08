@@ -115,7 +115,7 @@ public class InsetsEditor extends PropertyEditor {
                 handleInvalidValue(val);
                 return null;
             }
-            values[index] = new Double(val);
+            values[index] = Double.valueOf(val);
             index++;
         }
         return new Insets(values[0], values[1], values[2], values[3]);

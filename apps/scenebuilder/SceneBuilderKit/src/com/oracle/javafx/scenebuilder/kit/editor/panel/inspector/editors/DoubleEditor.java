@@ -79,7 +79,7 @@ public class DoubleEditor extends AutoSuggestEditor {
         if (val.isEmpty()) {
             val = "0"; //NOI18N
             getTextField().setText(val);
-            return new Double(val);
+            return Double.valueOf(val);
         }
         Object constantValue = constants.get(val.toUpperCase(Locale.ROOT));
         if (constantValue != null) {

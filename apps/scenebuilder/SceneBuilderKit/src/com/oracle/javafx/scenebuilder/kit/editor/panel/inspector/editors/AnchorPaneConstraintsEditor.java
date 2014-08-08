@@ -289,7 +289,7 @@ public class AnchorPaneConstraintsEditor extends PropertiesEditor {
             if (valStr == null || valStr.isEmpty()) {
                 return null;
             }
-            return new Double(valStr);
+            return Double.valueOf(valStr);
         }
 
         @Override

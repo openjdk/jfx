@@ -80,7 +80,7 @@ public class DividerPositionsEditor extends PropertyEditor {
                     return null;
                 }
             }
-            values[index] = new Double(val);
+            values[index] = Double.valueOf(val);
             index++;
         }
         return Arrays.asList(values);

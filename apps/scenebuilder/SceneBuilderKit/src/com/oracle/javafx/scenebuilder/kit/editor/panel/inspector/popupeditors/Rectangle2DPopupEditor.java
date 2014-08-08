@@ -82,7 +82,7 @@ public class Rectangle2DPopupEditor extends PopupEditor {
                     return null;
                 }
             }
-            values[index] = new Double(val);
+            values[index] = Double.valueOf(val);
             index++;
         }
         rectangle2D = new Rectangle2D(values[0], values[1], values[2], values[3]);

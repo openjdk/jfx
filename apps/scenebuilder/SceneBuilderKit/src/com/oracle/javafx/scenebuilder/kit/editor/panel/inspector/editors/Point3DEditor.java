@@ -98,7 +98,7 @@ public class Point3DEditor extends PropertyEditor {
                     return null;
                 }
             }
-            values[index] = new Double(val);
+            values[index] = Double.valueOf(val);
             index++;
         }
         return new Point3D(values[0], values[1], values[2]);
