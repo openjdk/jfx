@@ -2025,7 +2025,7 @@ public class CssPanelController extends AbstractFxmlPanelController {
         return new Label(l);
     }
     
-    private static Image getLookupImage() {
+    private static synchronized Image getLookupImage() {
         if (lookups == null) {
             lookups = new Image(
                 CssPanelController.class.getResource("images/css-lookup-icon.png").toExternalForm()); //NOI18N
