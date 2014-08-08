@@ -82,7 +82,7 @@ ARMV7HF.compileDesignTime = false;
 ARMV7HF.compileWebnodeNative = false;
 ARMV7HF.compileMediaNative = false;
 
-ARMV7HF.includeLens = true
+ARMV7HF.includeLens = false
 ARMV7HF.includeMonocle = true
 ARMV7HF.includeNull3d = true
 ARMV7HF.includeEGL = true

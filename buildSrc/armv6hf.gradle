@@ -80,7 +80,7 @@ ARMV6HF.compileSWT = false;
 ARMV6HF.compileFXPackager = false;
 ARMV6HF.compileDesignTime = false;
 
-ARMV6HF.includeLens = true
+ARMV6HF.includeLens = false
 ARMV6HF.includeMonocle = true
 ARMV6HF.includeNull3d = true
 ARMV6HF.includeEGL = true

@@ -72,7 +72,7 @@ ARMV5SF.compileDesignTime = false;
 ARMV5SF.compileWebnodeNative = false;
 ARMV5SF.compileMediaNative = false;
 
-ARMV5SF.includeLens = true
+ARMV5SF.includeLens = false
 ARMV5SF.includeMonocle = true
 ARMV5SF.includeNull3d = true
 ARMV5SF.includeEGL = true

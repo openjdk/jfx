@@ -74,7 +74,7 @@ X86EGL.compileDesignTime = false;
 X86EGL.compileWebnodeNative = false;
 X86EGL.compileMediaNative = false;
 
-X86EGL.includeLens = true
+X86EGL.includeLens = false
 X86EGL.includeMonocle = true
 X86EGL.includeNull3d = true
 X86EGL.includeEGL = true
