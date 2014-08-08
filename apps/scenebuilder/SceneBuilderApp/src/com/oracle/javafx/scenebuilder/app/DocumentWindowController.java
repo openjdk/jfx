@@ -1894,6 +1894,10 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
 
                     // Now performs a regular save action
                     result = performSaveAction();
+                    if (result.equals(ActionStatus.DONE)) {
+                        messageBarController.setDocumentDirty(false);
+                        saveJob = getEditorController().getJobManager().getCurrentJob();
+                    }
                     
                     // Keep track of the user choice for next time
                     EditorController.updateNextInitialDirectory(fxmlFile);
