@@ -1775,28 +1775,30 @@ public class MenuBarController {
         @Override
         public boolean canPerform() {
             boolean res = documentWindowController != null;
-            final EditorPlatform.Theme currentTheme
-                    = documentWindowController.getEditorController().getTheme();
-            // CASPIAN_HIGH_CONTRAST can be selected only if another CASPIAN
-            // theme is active.
-            // MODENA_HIGH_CONTRAST_<*> can be selected only if another MODENA
-            // theme is active.
-            if (theme == EditorPlatform.Theme.CASPIAN_HIGH_CONTRAST
-                    && EditorPlatform.isModena(currentTheme)) {
-                res = false;
-                caspianHighContrastThemeMenuItem.setSelected(false);
-            } else if (theme == EditorPlatform.Theme.MODENA_HIGH_CONTRAST_BLACK_ON_WHITE
-                    && EditorPlatform.isCaspian(currentTheme)) {
-                res = false;
-                modenaHighContrastBlackonwhiteThemeMenuItem.setSelected(false);
-            } else if (theme == EditorPlatform.Theme.MODENA_HIGH_CONTRAST_WHITE_ON_BLACK
-                    && EditorPlatform.isCaspian(currentTheme)) {
-                res = false;
-                modenaHighContrastWhiteonblackThemeMenuItem.setSelected(false);
-            } else if (theme == EditorPlatform.Theme.MODENA_HIGH_CONTRAST_YELLOW_ON_BLACK
-                    && EditorPlatform.isCaspian(currentTheme)) {
-                res = false;
-                modenaHighContrastYellowonblackThemeMenuItem.setSelected(false);
+            if (res) {
+                final EditorPlatform.Theme currentTheme
+                        = documentWindowController.getEditorController().getTheme();
+                // CASPIAN_HIGH_CONTRAST can be selected only if another CASPIAN
+                // theme is active.
+                // MODENA_HIGH_CONTRAST_<*> can be selected only if another MODENA
+                // theme is active.
+                if (theme == EditorPlatform.Theme.CASPIAN_HIGH_CONTRAST
+                        && EditorPlatform.isModena(currentTheme)) {
+                    res = false;
+                    caspianHighContrastThemeMenuItem.setSelected(false);
+                } else if (theme == EditorPlatform.Theme.MODENA_HIGH_CONTRAST_BLACK_ON_WHITE
+                        && EditorPlatform.isCaspian(currentTheme)) {
+                    res = false;
+                    modenaHighContrastBlackonwhiteThemeMenuItem.setSelected(false);
+                } else if (theme == EditorPlatform.Theme.MODENA_HIGH_CONTRAST_WHITE_ON_BLACK
+                        && EditorPlatform.isCaspian(currentTheme)) {
+                    res = false;
+                    modenaHighContrastWhiteonblackThemeMenuItem.setSelected(false);
+                } else if (theme == EditorPlatform.Theme.MODENA_HIGH_CONTRAST_YELLOW_ON_BLACK
+                        && EditorPlatform.isCaspian(currentTheme)) {
+                    res = false;
+                    modenaHighContrastYellowonblackThemeMenuItem.setSelected(false);
+                }
             }
             
             return res;
