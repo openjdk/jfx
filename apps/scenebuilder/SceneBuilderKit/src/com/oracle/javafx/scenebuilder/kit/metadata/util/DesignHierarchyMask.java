@@ -282,7 +282,7 @@ public class DesignHierarchyMask {
     public String getSingleLineDescription() {
         String result = getDescription();
         if (result != null && containsLineFeed(result)) {
-            result = result.substring(0, result.indexOf("\n")) + "..."; //NOI18N
+            result = result.substring(0, result.indexOf('\n')) + "..."; //NOI18N
         }
         return result;
     }

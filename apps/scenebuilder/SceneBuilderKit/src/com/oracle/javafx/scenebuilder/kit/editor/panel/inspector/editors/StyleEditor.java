@@ -355,7 +355,7 @@ public class StyleEditor extends InlineListEditor {
                 style = style.substring(0, style.length() - 1);
             }
             // split in property and value
-            int dotIndex = style.indexOf(":");
+            int dotIndex = style.indexOf(':');
             String propertyStr;
             String valueStr = ""; //NOI18N
             if (dotIndex != -1) {

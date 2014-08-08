@@ -266,7 +266,7 @@ class LibraryListCell extends ListCell<LibraryListItem> {
         if (!input.contains(" ")) { //NOI18N
             return input;
         } else {
-            return input.substring(0, input.lastIndexOf(" ")); //NOI18N
+            return input.substring(0, input.lastIndexOf(' ')); //NOI18N
         }
     }
     
@@ -274,7 +274,7 @@ class LibraryListCell extends ListCell<LibraryListItem> {
         if (!input.contains(" ")) { //NOI18N
             return ""; //NOI18N
         } else {
-            return input.substring(input.indexOf(" "), input.length()); //NOI18N
+            return input.substring(input.indexOf(' '), input.length()); //NOI18N
         }
     }
 }

@@ -104,7 +104,7 @@ class SkeletonBuffer {
             if (controller != null && !controller.isEmpty()
                     && controller.contains(".") && !controller.contains("$")) { //NOI18N
                 packageLine.append("package "); //NOI18N
-                packageLine.append(controller.substring(0, controller.indexOf("."))); //NOI18N
+                packageLine.append(controller.substring(0, controller.indexOf('.'))); //NOI18N
                 packageLine.append(";\n\n"); //NOI18N
             }
         }
