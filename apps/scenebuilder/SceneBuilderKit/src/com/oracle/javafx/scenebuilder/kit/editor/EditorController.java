@@ -277,16 +277,6 @@ public class EditorController {
      */
     public EditorController() {
         jobManager.revisionProperty().addListener((ChangeListener<Number>) (ov, t, t1) -> jobManagerRevisionDidChange());
-        fxmlLocationProperty().addListener(new ChangeListener<URL>() {
-
-            @Override
-            public void changed(ObservableValue<? extends URL> observable, URL oldValue, URL newValue) {
-                if (newValue != null) {
-                    EditorController.updateNextInitialDirectory(new File(newValue.getPath()));
-                }
-            }
-
-        });
     }
 
     /**
@@ -434,6 +424,10 @@ public class EditorController {
         if (getFxomDocument() != null) {
             getFxomDocument().setLocation(fxmlLocation);
             clearUndoRedo(); // Because FXOMDocument.setLocation() mutates the document
+        }
+        if (fxmlLocation != null) {
+            final File newInitialDirectory = new File(fxmlLocation.getPath());
+            EditorController.updateNextInitialDirectory(newInitialDirectory);
         }
     }
     
