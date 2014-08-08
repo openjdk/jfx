@@ -98,7 +98,7 @@ public class IntegerEditor extends AutoSuggestEditor {
         if (val.isEmpty()) {
             val = "0"; //NOI18N
             getTextField().setText(val);
-            return new Integer(val);
+            return Integer.valueOf(val);
         }
         Object constantValue = constants.get(val.toUpperCase(Locale.ROOT));
         if (constantValue != null) {
