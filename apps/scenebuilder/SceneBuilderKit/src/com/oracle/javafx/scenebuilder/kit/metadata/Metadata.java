@@ -2371,14 +2371,14 @@ public class Metadata {
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.SIZE,
                 true, /* readWrite */
                 0.0, /* defaultValue */
-                new InspectorPath("Layout", "Specific", 6));
+                new InspectorPath("Layout", "Specific", 7));
     private final ValuePropertyMetadata minViewportWidthPropertyMetadata =
             new DoublePropertyMetadata(
                 minViewportWidthName,
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.SIZE,
                 true, /* readWrite */
                 0.0, /* defaultValue */
-                new InspectorPath("Layout", "Specific", 7));
+                new InspectorPath("Layout", "Specific", 6));
     private final ValuePropertyMetadata minWidth_COMPUTED_PropertyMetadata =
             new DoublePropertyMetadata(
                 minWidthName,
