@@ -208,6 +208,25 @@ public class FXOMCollection extends FXOMObject {
     }
 
     @Override
+    public FXOMNode lookupFirstReference(String fxId, FXOMObject scope) {
+        FXOMNode result;
+        
+        if (this == scope) {
+            result = null;
+        } else {
+            result = null;
+            for (FXOMObject i : items) {
+                result = i.lookupFirstReference(fxId, scope);
+                if (result != null) {
+                    break;
+                }
+            }
+        }
+        
+        return result;
+    }
+
+    @Override
     protected void collectIncludes(String source, List<FXOMIntrinsic> result) {
         for (FXOMObject i : items) {
             i.collectIncludes(source, result);
