@@ -133,7 +133,6 @@ public abstract class XYChart<X,Y> extends Chart {
 
             for (Series<X,Y> s : c.getRemoved()) {
                 s.setToRemove = true;
-                s.setChart(null);
                 seriesRemoved(s);
                 int idx = seriesColorMap.remove(s);
                 colorBits.clear(idx);
@@ -901,6 +900,7 @@ public abstract class XYChart<X,Y> extends Chart {
      */
     protected final void removeSeriesFromDisplay(Series<X, Y> series) {
         if (series != null) series.setToRemove = false;
+        series.setChart(null);
         displayedSeries.remove(series);
     }
 
@@ -1407,45 +1407,59 @@ public abstract class XYChart<X,Y> extends Chart {
                 ObservableList<? extends Data<X, Y>> data = c.getList();
                 final XYChart<X, Y> chart = getChart();
                 while (c.next()) {
-                    // RT-25187 Probably a sort happened, just reorder the pointers and return.
-                    if (c.wasPermutated()) {
-                        displayedData.sort((o1, o2) -> data.indexOf(o2) - data.indexOf(o1));
-                        return;
-                    }
-
-                    Set<Data<X, Y>> dupCheck = new HashSet<>(displayedData);
-                    dupCheck.removeAll(c.getRemoved());
-                    for (Data<X, Y> d : c.getAddedSubList()) {
-                        if (!dupCheck.add(d)) {
-                            throw new IllegalArgumentException("Duplicate data added");
+                    if (chart != null) {
+                        // RT-25187 Probably a sort happened, just reorder the pointers and return.
+                        if (c.wasPermutated()) {
+                            displayedData.sort((o1, o2) -> data.indexOf(o2) - data.indexOf(o1));
+                            return;
                         }
-                    }
 
-                    // update data items reference to series
-                    for (Data<X,Y> item : c.getRemoved()) {
-                        item.setToRemove = true;
-                    }
-
-                    if (c.getAddedSize() > 0) {
-                        for (Data<X, Y> itemPtr : c.getAddedSubList()) {
-                            if (itemPtr.setToRemove) {
-                                if (chart != null) chart.dataBeingRemovedIsAdded(itemPtr, Series.this);
-                                itemPtr.setToRemove = false;
+                        Set<Data<X, Y>> dupCheck = new HashSet<>(displayedData);
+                        dupCheck.removeAll(c.getRemoved());
+                        for (Data<X, Y> d : c.getAddedSubList()) {
+                            if (!dupCheck.add(d)) {
+                                throw new IllegalArgumentException("Duplicate data added");
                             }
                         }
 
-                        for (Data<X, Y> d: c.getAddedSubList()) {
+                        // update data items reference to series
+                        for (Data<X, Y> item : c.getRemoved()) {
+                            item.setToRemove = true;
+                        }
+
+                        if (c.getAddedSize() > 0) {
+                            for (Data<X, Y> itemPtr : c.getAddedSubList()) {
+                                if (itemPtr.setToRemove) {
+                                    if (chart != null) chart.dataBeingRemovedIsAdded(itemPtr, Series.this);
+                                    itemPtr.setToRemove = false;
+                                }
+                            }
+
+                            for (Data<X, Y> d : c.getAddedSubList()) {
+                                d.setSeries(Series.this);
+                            }
+                            if (c.getFrom() == 0) {
+                                displayedData.addAll(0, c.getAddedSubList());
+                            } else {
+                                displayedData.addAll(displayedData.indexOf(data.get(c.getFrom() - 1)) + 1, c.getAddedSubList());
+                            }
+                        }
+                        // inform chart
+                        chart.dataItemsChanged(Series.this,
+                                (List<Data<X, Y>>) c.getRemoved(), c.getFrom(), c.getTo(), c.wasPermutated());
+                    } else {
+                        Set<Data<X, Y>> dupCheck = new HashSet<>();
+                        for (Data<X, Y> d : data) {
+                            if (!dupCheck.add(d)) {
+                                throw new IllegalArgumentException("Duplicate data added");
+                            }
+                        }
+
+                        for (Data<X, Y> d : c.getAddedSubList()) {
                             d.setSeries(Series.this);
                         }
-                        if (c.getFrom() == 0) {
-                            displayedData.addAll(0, c.getAddedSubList());
-                        } else {
-                            displayedData.addAll(displayedData.indexOf(data.get(c.getFrom() - 1)) + 1, c.getAddedSubList());
-                        }
+
                     }
-                    // inform chart
-                    if(chart!=null) chart.dataItemsChanged(Series.this,
-                            (List<Data<X,Y>>)c.getRemoved(), c.getFrom(), c.getTo(), c.wasPermutated());
                 }
             }
         };
@@ -1453,7 +1467,16 @@ public abstract class XYChart<X,Y> extends Chart {
         // -------------- PUBLIC PROPERTIES ----------------------------------------
 
         /** Reference to the chart this series belongs to */
-        private final ReadOnlyObjectWrapper<XYChart<X,Y>> chart = new ReadOnlyObjectWrapper<XYChart<X,Y>>(this, "chart");
+        private final ReadOnlyObjectWrapper<XYChart<X,Y>> chart = new ReadOnlyObjectWrapper<XYChart<X,Y>>(this, "chart") {
+            @Override
+            protected void invalidated() {
+                if (get() == null) {
+                    displayedData.clear();
+                } else {
+                    displayedData.addAll(getData());
+                }
+            }
+        };
         public final XYChart<X,Y> getChart() { return chart.get(); }
         private void setChart(XYChart<X,Y> value) { chart.set(value); }
         public final ReadOnlyObjectProperty<XYChart<X,Y>> chartProperty() { return chart.getReadOnlyProperty(); }

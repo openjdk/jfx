@@ -80,4 +80,67 @@ public class XYChartDataTest {
         assertEquals(4, data.get(3).getXValue());
         
     }
+
+    @Test
+    public void testSeriesAddDelete() {
+        XYChart.Series<String, Number> series = new XYChart.Series<String, Number>();
+        Number value1 = new Integer(5);
+        Number value2 = new Integer(6);
+        XYChart.Data<String, Number> point1 = new XYChart.Data<String, Number>("Something", value1);
+        XYChart.Data<String, Number> point2 = new XYChart.Data<String, Number>("Something", value2);
+        series.getData().add(point1);
+        series.getData().add(point2);
+        assertEquals(0, series.getDataSize());
+
+        XYChart<String, Number> chart = new StringNumberXYChart();
+
+        chart.setData(FXCollections.singletonObservableList(series));
+
+        assertEquals(2, series.getDataSize());
+
+        series.getData().clear();
+
+        assertEquals(0, series.getDataSize());
+
+        series.getData().add(point1);
+
+        assertEquals(1, series.getDataSize());
+
+        chart.setData(null);
+
+        assertEquals(0, series.getDataSize());
+
+    }
+
+    private static class StringNumberXYChart extends XYChart<String, Number> {
+        public StringNumberXYChart() {
+            super(new CategoryAxis(), new NumberAxis());
+        }
+
+        @Override
+        protected void dataItemAdded(Series<String, Number> series, int itemIndex, Data<String, Number> item) {
+        }
+
+        @Override
+        protected void dataItemRemoved(Data<String, Number> item, Series<String, Number> series) {
+            removeDataItemFromDisplay(series, item);
+        }
+
+        @Override
+        protected void dataItemChanged(Data<String, Number> item) {
+        }
+
+        @Override
+        protected void seriesAdded(Series<String, Number> series, int seriesIndex) {
+        }
+
+        @Override
+        protected void seriesRemoved(Series<String, Number> series) {
+            removeSeriesFromDisplay(series);
+        }
+
+        @Override
+        protected void layoutPlotChildren() {
+        }
+    }
 }
