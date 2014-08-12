@@ -244,6 +244,35 @@ public class FXCollectionsTest {
     }
 
     @Test
+    public void unmodifiableObservableMapTest_KeepsOrder() {
+        final ObservableMap<Integer, Integer> map = FXCollections.observableMap(new TreeMap<>());
+        ObservableMap<Integer, Integer> om = FXCollections.unmodifiableObservableMap(map);
+        map.put(0, 0);
+        map.put(1, 1);
+        map.put(2, 2);
+        map.put(3, 3);
+        map.put(4, 4);
+        map.put(5, 5);
+        map.put(6, 6);
+
+        map.put(-1, -1);
+        map.put(-2, -2);
+        map.put(-3, -3);
+        map.put(-4, -4);
+        map.put(-5, -5);
+        map.put(-6, -6);
+
+        final Iterator<Integer> v = om.values().iterator();
+        final Iterator<Integer> k = om.keySet().iterator();
+        final Iterator<Map.Entry<Integer, Integer>> e = om.entrySet().iterator();
+        for (int c = -6; c < 7; ++c) {
+            assertEquals(c, v.next().intValue());
+            assertEquals(c, k.next().intValue());
+            assertEquals(c, e.next().getKey().intValue());
+        }
+    }
+
+    @Test
     public void emptyObservableSetTest() {
         ObservableSet set = FXCollections.emptyObservableSet();
         assertEquals(0, set.size());

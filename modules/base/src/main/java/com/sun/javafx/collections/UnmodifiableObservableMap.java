@@ -49,6 +49,10 @@ public class UnmodifiableObservableMap<K, V> extends AbstractMap<K, V>
     private final ObservableMap<K, V> backingMap;
     private final MapChangeListener<K, V> listener;
 
+    private Set<K> keyset;
+    private Collection<V> values;
+    private Set<Entry<K, V>> entryset;
+
     public UnmodifiableObservableMap(ObservableMap<K, V> map) {
         this.backingMap = map;
         listener = c -> {
@@ -108,22 +112,25 @@ public class UnmodifiableObservableMap<K, V> extends AbstractMap<K, V>
 
     @Override @ReturnsUnmodifiableCollection
     public Set<K> keySet() {
-        return Collections.unmodifiableSet(backingMap.keySet());
+        if (keyset == null) {
+            keyset = Collections.unmodifiableSet(backingMap.keySet());
+        }
+        return keyset;
     }
 
     @Override @ReturnsUnmodifiableCollection
     public Collection<V> values() {
-        return Collections.unmodifiableCollection(backingMap.values());
+        if (values == null) {
+            values = Collections.unmodifiableCollection(backingMap.values());
+        }
+        return values;
     }
 
     @Override @ReturnsUnmodifiableCollection
     public Set<Entry<K,V>> entrySet() {
-        // Convert the base entrySet to a SimpleImmutableEntry set
-        Set<Entry<K,V>> baseEntries = backingMap.entrySet();
-        Set<Entry<K,V>> unmodifiableEntries = new HashSet<Entry<K,V>>();
-        for (Entry<K,V> entry : baseEntries) {
-            unmodifiableEntries.add(new AbstractMap.SimpleImmutableEntry<K, V>(entry.getKey(), entry.getValue()));
+        if (entryset == null) {
+            entryset = Collections.unmodifiableMap(backingMap).entrySet();
         }
-        return Collections.unmodifiableSet(unmodifiableEntries);
+        return entryset;
     }
 }
