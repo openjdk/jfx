@@ -35,6 +35,8 @@ import java.lang.reflect.Method;
 import java.nio.IntBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.Set;
+import java.util.HashSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javafx.application.Platform;
 import javafx.scene.image.Image;
@@ -222,6 +224,37 @@ public class SwingFXUtils {
         } else {
             SwingUtilities.invokeLater(r);
         }
+    }
+
+    private static final Set<Object> eventLoopKeys = new HashSet<>();
+
+    /**
+     * The runnable is responsible for leaving the nested event loop.
+     */
+    static void runOnEDTAndWait(Object nestedLoopKey, Runnable r) {
+        Toolkit.getToolkit().checkFxUserThread();
+
+        if (SwingUtilities.isEventDispatchThread()) {
+            r.run();
+        } else {
+            eventLoopKeys.add(nestedLoopKey);
+            SwingUtilities.invokeLater(r);
+            Toolkit.getToolkit().enterNestedEventLoop(nestedLoopKey);
+        }
+    }
+
+    static void leaveFXNestedLoop(Object nestedLoopKey) {
+        if (!eventLoopKeys.contains(nestedLoopKey)) return;
+
+        if (Platform.isFxApplicationThread()) {
+            Toolkit.getToolkit().exitNestedEventLoop(nestedLoopKey, null);
+        } else {
+            Platform.runLater(() -> {
+                Toolkit.getToolkit().exitNestedEventLoop(nestedLoopKey, null);
+            });
+        }
+
+        eventLoopKeys.remove(nestedLoopKey);
     }
 
     private static class FwSecondaryLoop implements SecondaryLoop {
