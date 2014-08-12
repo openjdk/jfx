@@ -25,11 +25,16 @@
 
 package javafx.scene.control;
 
+import java.util.HashMap;
 import java.util.List;
+
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.collections.ListChangeListener.Change;
+import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.collections.ObservableMap;
+
 import com.sun.javafx.collections.VetoableListDecorator;
 import com.sun.javafx.collections.TrackableObservableList;
 
@@ -174,5 +179,61 @@ public class ToggleGroup {
              }
         }
         selectedToggle.set(null);
+    }
+    
+    /*************************************************************************
+    *                                                                        *
+    *                                                                        *
+    *                                                                        *
+    *************************************************************************/
+
+    private static final Object USER_DATA_KEY = new Object();
+    // A map containing a set of properties for this scene
+    private ObservableMap<Object, Object> properties;
+
+    /**
+      * Returns an observable map of properties on this node for use primarily
+      * by application developers.
+      *
+      * @return an observable map of properties on this node for use primarily
+      * by application developers
+      */
+     public final ObservableMap<Object, Object> getProperties() {
+        if (properties == null) {
+            properties = FXCollections.observableMap(new HashMap<Object, Object>());
+        }
+        return properties;
+    }
+
+    /**
+     * Tests if ToggleGroup has properties.
+     * @return true if node has properties.
+     */
+     public boolean hasProperties() {
+        return properties != null && !properties.isEmpty();
+    }
+
+    /**
+     * Convenience method for setting a single Object property that can be
+     * retrieved at a later date. This is functionally equivalent to calling
+     * the getProperties().put(Object key, Object value) method. This can later
+     * be retrieved by calling {@link ToggleGroup#getUserData()}.
+     *
+     * @param value The value to be stored - this can later be retrieved by calling
+     *          {@link ToggleGroup#getUserData()}.
+     */
+    public void setUserData(Object value) {
+        getProperties().put(USER_DATA_KEY, value);
+    }
+
+    /**
+     * Returns a previously set Object property, or null if no such property
+     * has been set using the {@link ToggleGroup#setUserData(java.lang.Object)} method.
+     *
+     * @return The Object that was previously set, or null if no property
+     *          has been set or if null was set.
+     */
+    public Object getUserData() {
+        return getProperties().get(USER_DATA_KEY);
     }
 }

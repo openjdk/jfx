@@ -55,6 +55,7 @@ import com.sun.javafx.sg.prism.NGCamera;
 import com.sun.javafx.sg.prism.NGLightBase;
 import com.sun.javafx.tk.*;
 import com.sun.prism.impl.PrismSettings;
+
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.ConditionalFeature;
@@ -90,6 +91,7 @@ import java.security.PrivilegedAction;
 import java.util.*;
 
 import com.sun.javafx.logging.PulseLogger;
+
 import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
 
 /**
@@ -6007,6 +6009,62 @@ public class Scene implements EventTarget {
             node = n;
             scene = s;
         }
+    }
+    
+    /*************************************************************************
+    *                                                                        *
+    *                                                                        *
+    *                                                                        *
+    *************************************************************************/
+
+    private static final Object USER_DATA_KEY = new Object();
+    // A map containing a set of properties for this scene
+    private ObservableMap<Object, Object> properties;
+
+    /**
+      * Returns an observable map of properties on this node for use primarily
+      * by application developers.
+      *
+      * @return an observable map of properties on this node for use primarily
+      * by application developers
+      */
+     public final ObservableMap<Object, Object> getProperties() {
+        if (properties == null) {
+            properties = FXCollections.observableMap(new HashMap<Object, Object>());
+        }
+        return properties;
+    }
+
+    /**
+     * Tests if Scene has properties.
+     * @return true if node has properties.
+     */
+     public boolean hasProperties() {
+        return properties != null && !properties.isEmpty();
+    }
+
+    /**
+     * Convenience method for setting a single Object property that can be
+     * retrieved at a later date. This is functionally equivalent to calling
+     * the getProperties().put(Object key, Object value) method. This can later
+     * be retrieved by calling {@link Scene#getUserData()}.
+     *
+     * @param value The value to be stored - this can later be retrieved by calling
+     *          {@link Scene#getUserData()}.
+     */
+    public void setUserData(Object value) {
+        getProperties().put(USER_DATA_KEY, value);
+    }
+
+    /**
+     * Returns a previously set Object property, or null if no such property
+     * has been set using the {@link Scene#setUserData(java.lang.Object)} method.
+     *
+     * @return The Object that was previously set, or null if no property
+     *          has been set or if null was set.
+     */
+    public Object getUserData() {
+        return getProperties().get(USER_DATA_KEY);
     }
 
     /***************************************************************************
