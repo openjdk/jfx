@@ -1783,7 +1783,12 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
     public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
             case FOCUS_ITEM: return tabHeaderArea.getTabHeaderSkin(selectedTab);
-            case TABS: return tabHeaderArea.headersRegion.getChildren();
+            case ITEM_COUNT: return tabHeaderArea.headersRegion.getChildren().size();
+            case ITEM_AT_INDEX: {
+                Integer index = (Integer)parameters[0];
+                if (index == null) return null;
+                return tabHeaderArea.headersRegion.getChildren().get(index);
+            }
             default: return super.queryAccessibleAttribute(attribute, parameters);
         }
     }

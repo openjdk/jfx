@@ -109,7 +109,7 @@ public enum AccessibleRole {
 
     /**
      * List View.
-     * Attributes: ROW_AT_INDEX, ROW_COUNT, SELECTED_ITEMS, MULTIPLE_SELECTION,
+     * Attributes: ITEM_AT_INDEX, ITEM_COUNT, SELECTED_ITEMS, MULTIPLE_SELECTION,
      *             VERTICAL_SCROLLBAR, HORIZONTAL_SCROLLBAR
      * Actions: SCROLL_TO_INDEX, SET_SELECTED_ITEMS
      */
@@ -166,7 +166,7 @@ public enum AccessibleRole {
 
     /**
      * Pagination.
-     * Attributes: PAGES, SELECTED_PAGE
+     * Attributes: ITEM_AT_INDEX, ITEM_COUNT
      * Actions: (none)
      */
     PAGINATION,
@@ -285,7 +285,7 @@ public enum AccessibleRole {
 
     /**
      * Tab Pane.
-     * Attributes: TABS, SELECTED_TAB
+     * Attributes: ITEM_AT_INDEX, ITEM_COUNT
      * Actions: (none)
      */
     TAB_PANE,

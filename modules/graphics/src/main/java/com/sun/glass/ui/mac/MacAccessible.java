@@ -103,7 +103,7 @@ final class MacAccessible extends Accessible {
         NSAccessibilitySubroleAttribute(ROLE, MacVariant::createNSObject),
         NSAccessibilityRoleDescriptionAttribute(ROLE_DESCRIPTION, MacVariant::createNSString),
         NSAccessibilitySizeAttribute(BOUNDS, MacVariant::createNSValueForSize),
-        NSAccessibilityTabsAttribute(null, MacVariant::createNSArray),
+        NSAccessibilityTabsAttribute(ITEM_COUNT, MacVariant::createNSArray),
         NSAccessibilityTitleAttribute(TITLE, MacVariant::createNSString),
         NSAccessibilityTopLevelUIElementAttribute(SCENE, MacVariant::createNSObject),
         NSAccessibilityWindowAttribute(SCENE, MacVariant::createNSObject),
@@ -1013,7 +1013,13 @@ final class MacAccessible extends Accessible {
         }
         switch (attr) {
             case NSAccessibilityRowsAttribute: {
-                Integer count = (Integer)getAttribute(ROW_COUNT);
+                AccessibleAttribute jfxAttr;
+                if (getAttribute(ROLE) == AccessibleRole.LIST_VIEW) {
+                    jfxAttr = AccessibleAttribute.ITEM_COUNT;
+                } else {
+                    jfxAttr = AccessibleAttribute.ROW_COUNT;
+                }
+                Integer count = (Integer)getAttribute(jfxAttr);
                 return count != null ? count : 0;
             }
             case NSAccessibilityColumnsAttribute: {
@@ -1063,7 +1069,14 @@ final class MacAccessible extends Accessible {
         AccessibleAttribute jfxAttr = null;
         switch (attr) {
             case NSAccessibilityColumnsAttribute: jfxAttr = COLUMN_AT_INDEX; break;
-            case NSAccessibilityRowsAttribute: jfxAttr = ROW_AT_INDEX; break;
+            case NSAccessibilityRowsAttribute: {
+                if (getAttribute(ROLE) == AccessibleRole.LIST_VIEW) {
+                    jfxAttr = AccessibleAttribute.ITEM_AT_INDEX;
+                } else {
+                    jfxAttr = AccessibleAttribute.ROW_AT_INDEX;
+                }
+                break;
+            }
             case NSAccessibilityDisclosedRowsAttribute: jfxAttr = TREE_ITEM_AT_INDEX; break;
             case NSAccessibilityChildrenAttribute: {
                 if (getAttribute(ROLE) == AccessibleRole.MENU) {
@@ -1190,14 +1203,6 @@ final class MacAccessible extends Accessible {
                     }
                     break;
                 }
-                case NSAccessibilityTabsAttribute: {
-                    switch (role) {
-                        case TAB_PANE: jfxAttr = TABS; break;
-                        case PAGINATION: jfxAttr = PAGES; break;
-                        default:
-                    }
-                    break;
-                }
                 case NSAccessibilitySelectedChildrenAttribute: {
                     Node focus = null;
                     if (role == AccessibleRole.CONTEXT_MENU) {
@@ -1321,9 +1326,18 @@ final class MacAccessible extends Accessible {
                 result = Boolean.FALSE.equals(result);
                 break;
             }
+            case NSAccessibilityTabsAttribute: {
+                Integer count = (Integer)result;
+                long[] tabs = new long[count];
+                for (int i = 0; i < count; i++) {
+                    Node child = (Node)getAttribute(ITEM_AT_INDEX, i);
+                    tabs[i] = getNativeAccessible(child);
+                }
+                result = NSAccessibilityUnignoredChildren(tabs);
+                break;
+            }
             case NSAccessibilitySelectedCellsAttribute:
             case NSAccessibilitySelectedRowsAttribute:
-            case NSAccessibilityTabsAttribute:
             case NSAccessibilityVisibleChildrenAttribute:
             case NSAccessibilityChildrenAttribute: {
                 @SuppressWarnings("unchecked")

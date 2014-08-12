@@ -188,6 +188,19 @@ public enum AccessibleAttribute {
     INDETERMINATE("Indeterminate", Boolean.class),
 
     /**
+     * Returns the item at the given index
+     * Parameter: Integer
+     * Type: Node
+     */
+    ITEM_AT_INDEX("ItemAtIndex", Node.class),
+
+    /**
+     * Returns the item count
+     * Type: Integer
+     */
+    ITEM_COUNT("ItemCount", Integer.class),
+
+    /**
      * Returns the index of a row or column
      * Type: Integer
      */
@@ -289,12 +302,6 @@ public enum AccessibleAttribute {
     OVERFLOW_BUTTON("Overflow Button", Node.class),
 
     /**
-     * Returns the pages for the Node.
-     * Type: ObservableList&lt;Node&gt;
-     */
-    PAGES("Pages", ObservableList.class),
-
-    /**
      * Returns the parent for the Node.
      * Type: Parent
      */
@@ -360,12 +367,6 @@ public enum AccessibleAttribute {
      * Type: Integer
      */
     SELECTION_START("SelectionStart", Integer.class),
-
-    /**
-     * Returns the tabs for the Node.
-     * Type: ObservableList&lt;Node&gt;
-     */
-    TABS("Tabs", ObservableList.class),
 
     /**
      * Returns the title for the Node.
