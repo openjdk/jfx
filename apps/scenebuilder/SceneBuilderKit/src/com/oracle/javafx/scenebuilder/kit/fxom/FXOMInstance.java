@@ -378,7 +378,7 @@ public class FXOMInstance extends FXOMObject {
             for (FXOMProperty p : properties.values()) {
                 if (p instanceof FXOMPropertyT) {
                     final FXOMPropertyT pt = (FXOMPropertyT) p;
-                    if (pt.getValue().startsWith("#")) {
+                    if (pt.getName().getName().startsWith("on") && pt.getValue().startsWith("#")) {
                         result.add(pt);
                     }
                 }
