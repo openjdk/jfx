@@ -32,11 +32,7 @@ import java.time.DateTimeException;
 import java.time.chrono.Chronology;
 import java.time.chrono.ChronoLocalDate;
 import java.time.chrono.IsoChronology;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeFormatterBuilder;
-import java.time.format.DecimalStyle;
 import java.time.format.FormatStyle;
-import java.time.temporal.TemporalAccessor;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -58,6 +54,7 @@ import javafx.scene.AccessibleAttribute;
 import javafx.scene.AccessibleRole;
 import javafx.util.Callback;
 import javafx.util.StringConverter;
+import javafx.util.converter.LocalDateStringConverter;
 
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.scene.control.skin.DatePickerSkin;
@@ -136,6 +133,7 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
 
             if (validateDate(chrono, date)) {
                 lastValidChronology = chrono;
+                defaultConverter = new LocalDateStringConverter(FormatStyle.SHORT, null, chrono);
             } else {
                 System.err.println("Restoring value to " + lastValidChronology);
                 setChronology(lastValidChronology);
@@ -304,7 +302,7 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
      * versa.
      *
      * <p>If not set by the application, the DatePicker skin class will
-     * set a converter based on a {@link java.time.DateTimeFormatter}
+     * set a converter based on a {@link java.time.format.DateTimeFormatter}
      * for the current {@link java.util.Locale} and
      * {@link #chronologyProperty() chronology}. This formatter is
      * then used to parse and display the current date value.
@@ -402,64 +400,9 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
         }
     }
 
-    private StringConverter<LocalDate> defaultConverter = new StringConverter<LocalDate>() {
-        @Override public String toString(LocalDate value) {
-            if (value != null) {
-                Locale locale = Locale.getDefault(Locale.Category.FORMAT);
-                Chronology chrono = getChronology();
-                ChronoLocalDate cDate;
-                try {
-                    cDate = chrono.date(value);
-                } catch (DateTimeException ex) {
-                    System.err.println(ex);
-                    chrono = IsoChronology.INSTANCE;
-                    cDate = value;
-                }
-                DateTimeFormatter dateFormatter =
-                    DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT)
-                                     .withLocale(locale)
-                                     .withChronology(chrono)
-                                     .withDecimalStyle(DecimalStyle.of(locale));
-
-                String pattern =
-                    DateTimeFormatterBuilder.getLocalizedDateTimePattern(FormatStyle.SHORT,
-                                                                         null, chrono, locale);
-
-                if (pattern.contains("yy") && !pattern.contains("yyy")) {
-                    // Modify pattern to show four-digit year, including leading zeros.
-                    String newPattern = pattern.replace("yy", "yyyy");
-                    //System.err.println("Fixing pattern ("+forParsing+"): "+pattern+" -> "+newPattern);
-                    dateFormatter = DateTimeFormatter.ofPattern(newPattern)
-                                                     .withDecimalStyle(DecimalStyle.of(locale));
-                }
-
-                return dateFormatter.format(cDate);
-            } else {
-                return "";
-            }
-        }
-
-        @Override public LocalDate fromString(String text) {
-            if (text != null && !text.isEmpty()) {
-                Locale locale = Locale.getDefault(Locale.Category.FORMAT);
-                Chronology chrono = getChronology();
-
-                String pattern =
-                    DateTimeFormatterBuilder.getLocalizedDateTimePattern(FormatStyle.SHORT,
-                                                                         null, chrono, locale);
-                DateTimeFormatter df =
-                    new DateTimeFormatterBuilder().parseLenient()
-                                                  .appendPattern(pattern)
-                                                  .toFormatter()
-                                                  .withChronology(chrono)
-                                                  .withDecimalStyle(DecimalStyle.of(locale));
-                TemporalAccessor temporal = df.parse(text);
-                ChronoLocalDate cDate = chrono.date(temporal);
-                return LocalDate.from(cDate);
-            }
-            return null;
-        }
-    };
+    // Create a symmetric (format/parse) converter with the default locale.
+    private StringConverter<LocalDate> defaultConverter =
+                new LocalDateStringConverter(FormatStyle.SHORT, null, getChronology());
 
 
     // --- Editor
