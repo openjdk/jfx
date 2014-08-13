@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,10 +26,10 @@
 package javafx.util.converter;
 
 import java.text.DateFormat;
-import java.text.DecimalFormat;
-import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collection;
 import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
@@ -37,14 +37,15 @@ import static org.junit.Assert.*;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 /**
  */
+@RunWith(Parameterized.class)
 public class TimeStringConverterTest {
-    private TimeStringConverter converter;
-    
-    private static final Date VALID_TIME;
-    private static final String VALID_TIME_STRING = "12:34:56 PM";
+    private static final Date VALID_TIME_WITH_SECONDS;
+    private static final Date VALID_TIME_WITHOUT_SECONDS;
     
     static {
         Calendar c = Calendar.getInstance();
@@ -53,52 +54,77 @@ public class TimeStringConverterTest {
         c.set(Calendar.HOUR_OF_DAY, 12);
         c.set(Calendar.MINUTE, 34);
         c.set(Calendar.SECOND, 56);
-        VALID_TIME = c.getTime();
+        VALID_TIME_WITH_SECONDS = c.getTime();
+        c.set(Calendar.SECOND, 0);
+        VALID_TIME_WITHOUT_SECONDS = c.getTime();
+    }
+    
+    @Parameterized.Parameters public static Collection implementations() {
+        return Arrays.asList(new Object[][] {
+            { new TimeStringConverter(),
+              Locale.getDefault(Locale.Category.FORMAT), DateFormat.DEFAULT,
+              VALID_TIME_WITH_SECONDS, null, null },
+
+            { new TimeStringConverter(DateFormat.SHORT),
+              Locale.getDefault(Locale.Category.FORMAT), DateFormat.SHORT,
+              VALID_TIME_WITHOUT_SECONDS, null, null },
+
+            { new TimeStringConverter(Locale.UK),
+              Locale.UK, DateFormat.DEFAULT,
+              VALID_TIME_WITH_SECONDS, null, null },
+
+            { new TimeStringConverter(Locale.UK, DateFormat.SHORT),
+              Locale.UK, DateFormat.SHORT,
+              VALID_TIME_WITHOUT_SECONDS, null, null },
+
+            { new TimeStringConverter("HH mm ss"),
+              Locale.getDefault(Locale.Category.FORMAT), DateFormat.DEFAULT,
+              VALID_TIME_WITH_SECONDS, "HH mm ss", null },
+
+            { new TimeStringConverter(DateFormat.getTimeInstance(DateFormat.FULL)),
+              Locale.getDefault(Locale.Category.FORMAT), DateFormat.DEFAULT,
+              VALID_TIME_WITH_SECONDS, null, DateFormat.getTimeInstance(DateFormat.FULL) },
+        });
+    }
+
+    private TimeStringConverter converter;
+    private Locale locale;
+    private int timeStyle;
+    private String pattern;
+    private DateFormat dateFormat;
+    private Date validDate;
+    private DateFormat validFormatter;
+
+    public TimeStringConverterTest(TimeStringConverter converter, Locale locale, int timeStyle, Date validDate, String pattern, DateFormat dateFormat) {
+        this.converter = converter;
+        this.locale = locale;
+        this.timeStyle = timeStyle;
+        this.validDate = validDate;
+        this.pattern = pattern;
+        this.dateFormat = dateFormat;
+
+        if (dateFormat != null) {
+            validFormatter = dateFormat;
+        } else if (pattern != null) {
+            validFormatter = new SimpleDateFormat(pattern);
+        } else {
+            validFormatter = DateFormat.getTimeInstance(timeStyle, locale);
+        }
     }
     
     @Before public void setup() {
         TimeZone.setDefault(TimeZone.getTimeZone("GMT"));
-        converter = new TimeStringConverter();
     }
     
     /*********************************************************************
      * Test constructors
      ********************************************************************/ 
     
-    @Test public void testDefaultConstructor() {
-        TimeStringConverter c = new TimeStringConverter();
-        assertEquals(Locale.getDefault(), c.locale);
-        assertNull(c.pattern);
-        assertNull(c.dateFormat);
-    }
-    
-    @Test public void testConstructor_locale() {
-        TimeStringConverter c = new TimeStringConverter(Locale.CANADA);
-        assertEquals(Locale.CANADA, c.locale);
-        assertNull(c.pattern);
-        assertNull(c.dateFormat);
-    }
-    
-    @Test public void testConstructor_pattern() {
-        TimeStringConverter c = new TimeStringConverter("HH:mm:ss");
-        assertEquals(Locale.getDefault(), c.locale);
-        assertEquals("HH:mm:ss", c.pattern);
-        assertNull(c.dateFormat);
-    }
-    
-    @Test public void testConstructor_locale_pattern() {
-        TimeStringConverter c = new TimeStringConverter(Locale.CANADA, "HH:mm:ss");
-        assertEquals(Locale.CANADA, c.locale);
-        assertEquals("HH:mm:ss", c.pattern);
-        assertNull(c.dateFormat);
-    }
-    
-    @Test public void testConstructor_numberFormat() {
-        DateFormat format = DateFormat.getTimeInstance();
-        TimeStringConverter c = new TimeStringConverter(format);
-        assertNull(c.locale);
-        assertNull(c.pattern);
-        assertEquals(format, c.dateFormat);
+    @Test public void testConstructor() {
+        assertEquals(locale, converter.locale);
+        assertEquals(timeStyle, converter.timeStyle);
+        assertEquals(pattern, converter.pattern);
+        assertEquals(dateFormat, converter.dateFormat);
     }
     
     
@@ -111,14 +137,8 @@ public class TimeStringConverterTest {
     }
     
     @Test public void getDateFormat_nonNullPattern() {
-        converter = new TimeStringConverter("yyyy");
+        converter = new TimeStringConverter("HH");
         assertTrue(converter.getDateFormat() instanceof SimpleDateFormat);
-    }
-    
-    @Test public void getDateFormat_nonNullNumberFormat() {
-        DateFormat format = DateFormat.getTimeInstance();
-        converter = new TimeStringConverter(format);
-        assertEquals(format, converter.getDateFormat());
     }
     
     
@@ -127,17 +147,21 @@ public class TimeStringConverterTest {
      ********************************************************************/    
     
     @Test public void fromString_testValidInput() {
-        Locale.setDefault(Locale.US);
-        assertEquals(VALID_TIME, converter.fromString(VALID_TIME_STRING));
+        String input = validFormatter.format(validDate);
+        assertEquals("Input = "+input, validDate, converter.fromString(input));
     }
     
     @Test public void fromString_testValidInputWithWhiteSpace() {
-        Locale.setDefault(Locale.US);
-        assertEquals(VALID_TIME, converter.fromString("      " + VALID_TIME_STRING + "      "));
+        String input = validFormatter.format(validDate);
+        assertEquals("Input = "+input, validDate, converter.fromString("      " + input + "      "));
     }
     
-    @Test public void toString_validInput() {
-        Locale.setDefault(Locale.US);
-        assertEquals(VALID_TIME_STRING, converter.toString(VALID_TIME));
+    @Test(expected=RuntimeException.class)
+    public void fromString_testInvalidInput() {
+        converter.fromString("abcdefg");
     }
+    
+    @Test public void toString_validOutput() {
+        assertEquals(validFormatter.format(validDate), converter.toString(validDate));
+    }    
 }
