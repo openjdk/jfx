@@ -27,6 +27,7 @@ package javafx.embed.swing;
 
 import java.awt.AlphaComposite;
 import java.awt.AWTEvent;
+import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Graphics;
@@ -730,6 +731,30 @@ public class JFXPanel extends JComponent {
                 }
             });
         }
+        if (event instanceof MouseEvent) {
+            // Synthesize FOCUS_UNGRAB if user clicks the AWT top-level window
+            // that contains the JFXPanel.
+            if (event.getID() == MouseEvent.MOUSE_PRESSED && event.getSource() instanceof Component) {
+                final Window jfxPanelWindow = SwingUtilities.getWindowAncestor(JFXPanel.this);
+                final Component source = (Component)event.getSource();
+                final Window eventWindow = source instanceof Window ? (Window)source : SwingUtilities.getWindowAncestor(source);
+
+                if (jfxPanelWindow == eventWindow) {
+                    SwingFXUtils.runOnFxThread(() -> {
+                        if (JFXPanel.this.stagePeer != null) {
+                            // No need to check if grab is active or not.
+                            // NoAutoHide popups don't request the grab and
+                            // ignore the Ungrab event anyway.
+                            // AutoHide popups actually should be hidden when
+                            // user clicks some non-FX content, even if for
+                            // some reason they didn't install the grab when
+                            // they were shown.
+                            JFXPanel.this.stagePeer.focusUngrab();
+                        }
+                    });
+                }
+            }
+        }
     };
 
     /**
@@ -744,7 +769,7 @@ public class JFXPanel extends JComponent {
         registerFinishListener();
         AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             JFXPanel.this.getToolkit().addAWTEventListener(ungrabListener,
-                SunToolkit.GRAB_EVENT_MASK);
+                SunToolkit.GRAB_EVENT_MASK | AWTEvent.MOUSE_EVENT_MASK);
             return null;
         });
         updateComponentSize(); // see RT-23603
