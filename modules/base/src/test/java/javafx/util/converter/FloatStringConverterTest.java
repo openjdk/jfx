@@ -43,10 +43,6 @@ public class FloatStringConverterTest {
         assertEquals((Float)10.3521f, converter.fromString("10.3521"));
     }
 
-    @Test(expected = IllegalArgumentException.class) public void fromString_testPartiallyValidStringInput() {
-        converter.fromString("10.3521abc");
-    }
-    
     @Test public void fromString_testValidStringInputWithWhiteSpace() {
         assertEquals((Float)10.3521f, converter.fromString("      10.3521     "));
     }
