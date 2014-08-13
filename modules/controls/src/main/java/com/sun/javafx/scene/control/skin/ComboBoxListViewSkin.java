@@ -653,7 +653,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             int index = listView.getSelectionModel().getSelectedIndex();
             comboBox.getSelectionModel().select(index);
             updateDisplayNode();
-            comboBox.notifyAccessibleAttributeChanged(AccessibleAttribute.TITLE);
+            comboBox.notifyAccessibleAttributeChanged(AccessibleAttribute.TEXT);
         });
          
         comboBox.getSelectionModel().selectedItemProperty().addListener(o -> {
@@ -779,7 +779,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                 }
                 return null;
             }
-            case TITLE: {
+            case TEXT: {
                 String accText = comboBox.getAccessibleText();
                 if (accText != null && !accText.isEmpty()) return accText;
                 String title = comboBox.isEditable() ? textField.getText() : buttonCell.getText();

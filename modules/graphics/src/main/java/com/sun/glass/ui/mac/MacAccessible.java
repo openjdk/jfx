@@ -104,7 +104,7 @@ final class MacAccessible extends Accessible {
         NSAccessibilityRoleDescriptionAttribute(ROLE_DESCRIPTION, MacVariant::createNSString),
         NSAccessibilitySizeAttribute(BOUNDS, MacVariant::createNSValueForSize),
         NSAccessibilityTabsAttribute(ITEM_COUNT, MacVariant::createNSArray),
-        NSAccessibilityTitleAttribute(TITLE, MacVariant::createNSString),
+        NSAccessibilityTitleAttribute(TEXT, MacVariant::createNSString),
         NSAccessibilityTopLevelUIElementAttribute(SCENE, MacVariant::createNSObject),
         NSAccessibilityWindowAttribute(SCENE, MacVariant::createNSObject),
         NSAccessibilityTitleUIElementAttribute(LABELED_BY, MacVariant::createNSObject),
@@ -124,12 +124,12 @@ final class MacAccessible extends Accessible {
         NSAccessibilitySelectedChildrenAttribute(null, MacVariant::createNSArray),
 
         // NSAccessibilityStaticText
-        NSAccessibilityNumberOfCharactersAttribute(TITLE, MacVariant::createNSNumberForInt),
+        NSAccessibilityNumberOfCharactersAttribute(TEXT, MacVariant::createNSNumberForInt),
         NSAccessibilitySelectedTextAttribute(SELECTION_START, MacVariant::createNSString),
         NSAccessibilitySelectedTextRangeAttribute(SELECTION_START, MacVariant::createNSValueForRange),
         NSAccessibilitySelectedTextRangesAttribute(null, null), //TODO Array of ranges
         NSAccessibilityInsertionPointLineNumberAttribute(CARET_OFFSET, MacVariant::createNSNumberForInt),
-        NSAccessibilityVisibleCharacterRangeAttribute(TITLE, MacVariant::createNSValueForRange),
+        NSAccessibilityVisibleCharacterRangeAttribute(TEXT, MacVariant::createNSValueForRange),
 
         // NSAccessibilityScrollAreaRole
         NSAccessibilityContentsAttribute(CONTENTS, MacVariant::createNSArray),
@@ -160,9 +160,9 @@ final class MacAccessible extends Accessible {
 
         // Parameterized Attributes
         NSAccessibilityLineForIndexParameterizedAttribute(LINE_FOR_OFFSET, MacVariant::createNSNumberForInt, MacVariant.NSNumber_Int),
-        NSAccessibilityStringForRangeParameterizedAttribute(TITLE, MacVariant::createNSString, MacVariant.NSValue_range),
+        NSAccessibilityStringForRangeParameterizedAttribute(TEXT, MacVariant::createNSString, MacVariant.NSValue_range),
         NSAccessibilityRangeForLineParameterizedAttribute(LINE_START, MacVariant::createNSValueForRange, MacVariant.NSNumber_Int),
-        NSAccessibilityAttributedStringForRangeParameterizedAttribute(TITLE, MacVariant::createNSAttributedString, MacVariant.NSValue_range),
+        NSAccessibilityAttributedStringForRangeParameterizedAttribute(TEXT, MacVariant::createNSAttributedString, MacVariant.NSValue_range),
         NSAccessibilityCellForColumnAndRowParameterizedAttribute(CELL_AT_ROW_COLUMN, MacVariant::createNSObject, MacVariant.NSArray_int),
         NSAccessibilityRangeForPositionParameterizedAttribute(OFFSET_AT_POINT, MacVariant::createNSValueForRange, MacVariant.NSValue_point),
         NSAccessibilityBoundsForRangeParameterizedAttribute(BOUNDS_FOR_RANGE, MacVariant::createNSValueForRectangle, MacVariant.NSValue_range),
@@ -785,7 +785,7 @@ final class MacAccessible extends Accessible {
                 }
                 break;
             }
-            case TITLE:
+            case TEXT:
                 macNotification = MacNotification.NSAccessibilityTitleChangedNotification;
                 break;
             case PARENT:
@@ -1181,7 +1181,7 @@ final class MacAccessible extends Accessible {
                         case TEXT_FIELD:
                         case TEXT_AREA:
                         case COMBO_BOX:
-                            jfxAttr = TITLE;
+                            jfxAttr = TEXT;
                             map = MacVariant::createNSString;
                             break;
                         case CHECK_BOX:
@@ -1502,7 +1502,7 @@ final class MacAccessible extends Accessible {
                     end = (Integer)getAttribute(SELECTION_END);
                 }
                 if (start < 0 || end < 0 || start > end) return null;
-                String string = (String)getAttribute(TITLE);
+                String string = (String)getAttribute(TEXT);
                 if (string == null) return null;
                 if (end > string.length()) return null;
                 result = string.substring(start, end);
@@ -1514,7 +1514,7 @@ final class MacAccessible extends Accessible {
                     end = (Integer)getAttribute(SELECTION_END);
                 }
                 if (start < 0 || end < 0 || start > end) return null;
-                String string = (String)getAttribute(TITLE);
+                String string = (String)getAttribute(TEXT);
                 if (string == null) return null;
                 if (end > string.length()) return null;
                 result = new int[] {start, end - start};
@@ -1732,7 +1732,7 @@ final class MacAccessible extends Accessible {
                     }
                 } else {
                     /* Combo and TextField */
-                    String text = (String)getAttribute(TITLE);
+                    String text = (String)getAttribute(TEXT);
                     result = new int[] {0, text != null ? text.length() : 0};
                 }
                 break;

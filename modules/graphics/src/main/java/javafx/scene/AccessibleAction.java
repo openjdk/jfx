@@ -89,10 +89,10 @@ public enum AccessibleAction {
     SET_TEXT_SELECTION,
 
     /**
-     * Sets the tile for a node.
+     * Sets the text for a node.
      * Parameter: String
      */
-    SET_TITLE,
+    SET_TEXT,
 
     /**
      * Sets the value for a node.

@@ -369,7 +369,7 @@ public enum AccessibleAttribute {
     SUBMENU("Submenu", Node.class),
 
     /**
-     * Returns the title for the Node.
+     * Returns the text for the Node.
      * E.g.
      * <ul>
      * <li>ComboBox returns a string representation of its
@@ -378,7 +378,7 @@ public enum AccessibleAttribute {
      * </ul>
      * Type: String
      */
-    TITLE("Title", String.class),
+    TEXT("Text", String.class),
 
     /**
      * Returns a tree item (Role.TREE_ITEM or Role.TREE_TABLE_ITEM) at the given

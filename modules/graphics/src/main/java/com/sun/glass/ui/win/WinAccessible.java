@@ -344,8 +344,8 @@ final class WinAccessible extends Accessible {
                     }
                 }
                 break;
-            case TITLE:
-                String value = (String)getAttribute(TITLE);
+            case TEXT:
+                String value = (String)getAttribute(TEXT);
                 if (value != null) {
                     WinVariant vo = new WinVariant();
                     vo.vt = WinVariant.VT_BSTR;
@@ -729,7 +729,7 @@ final class WinAccessible extends Accessible {
                         break;
                     case DECREMENT_BUTTON:
                     case INCREMENT_BUTTON: {
-                        name = (String)getAttribute(TITLE);
+                        name = (String)getAttribute(TEXT);
                         if (name == null || name.length() == 0) {
                             if (role == AccessibleRole.INCREMENT_BUTTON) {
                                 name = "increment";
@@ -740,13 +740,13 @@ final class WinAccessible extends Accessible {
                         break;
                     }
                     default:
-                        name = (String)getAttribute(TITLE);
+                        name = (String)getAttribute(TEXT);
                 }
 
                 if (name == null || name.length() == 0) {
                     Node label = (Node)getAttribute(LABELED_BY);
                     if (label != null) {
-                        name = (String)getAccessible(label).getAttribute(TITLE);
+                        name = (String)getAccessible(label).getAttribute(TEXT);
                     }
                 }
                 if (name == null || name.length() == 0) {
@@ -1128,7 +1128,7 @@ final class WinAccessible extends Accessible {
                     if (start >= 0) {
                         end = (Integer)getAttribute(SELECTION_END);
                         if (end >= start) {
-                            String string = (String)getAttribute(TITLE);
+                            String string = (String)getAttribute(TEXT);
                             length = string.length();
                         }
                     }
@@ -1243,7 +1243,7 @@ final class WinAccessible extends Accessible {
             switch (role) {
                 case TEXT_FIELD:
                 case TEXT_AREA:
-                    executeAction(AccessibleAction.SET_TITLE, val);
+                    executeAction(AccessibleAction.SET_TEXT, val);
                     break;
                 default:
             }
@@ -1252,7 +1252,7 @@ final class WinAccessible extends Accessible {
 
     String get_ValueString() {
         if (isDisposed()) return null;
-        return (String)getAttribute(TITLE);
+        return (String)getAttribute(TEXT);
     }
 
     /***********************************************/
@@ -1335,7 +1335,7 @@ final class WinAccessible extends Accessible {
             documentRange = new WinTextRangeProvider(this);
         }
         if (!documentRangeValid) {
-            String text = (String)getAttribute(TITLE);
+            String text = (String)getAttribute(TEXT);
             documentRange.setRange(0, text.length());
             documentRangeValid = true;
         }

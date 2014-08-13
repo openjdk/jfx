@@ -495,7 +495,7 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
     public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
             case DATE: return getValue();
-            case TITLE: {
+            case TEXT: {
                 String accText = getAccessibleText();
                 if (accText != null && !accText.isEmpty()) return accText;
 

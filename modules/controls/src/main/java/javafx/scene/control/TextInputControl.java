@@ -1064,7 +1064,7 @@ public abstract class TextInputControl extends Control {
 
         private void invalidate() {
             markInvalid();
-            notifyAccessibleAttributeChanged(AccessibleAttribute.TITLE);
+            notifyAccessibleAttributeChanged(AccessibleAttribute.TEXT);
         }
 
         @Override public void bind(ObservableValue<? extends String> observable) {
@@ -1219,7 +1219,7 @@ public abstract class TextInputControl extends Control {
     @Override
     public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
-            case TITLE: {
+            case TEXT: {
                 String accText = getAccessibleText();
                 if (accText != null && !accText.isEmpty()) return accText;
 
@@ -1241,7 +1241,7 @@ public abstract class TextInputControl extends Control {
     @Override
     public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
         switch (action) {
-            case SET_TITLE: {
+            case SET_TEXT: {
                 String value = (String) parameters[0];
                 if (value != null) setText(value);
             }

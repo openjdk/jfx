@@ -6285,7 +6285,7 @@ public class Scene implements EventTarget {
                             }
                             break;
                         }
-                        case TITLE: {
+                        case TEXT: {
                             Window w = getWindow();
                             if (w instanceof Stage) {
                                 return ((Stage)w).getTitle();

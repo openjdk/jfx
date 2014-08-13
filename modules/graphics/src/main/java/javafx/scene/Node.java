@@ -9307,7 +9307,7 @@ public abstract class Node implements EventTarget, Styleable {
         switch (attribute) {
             case ROLE: return getRole();
             case ROLE_DESCRIPTION: return getRoleDescription();
-            case TITLE: return getAccessibleText();
+            case TEXT: return getAccessibleText();
             case HELP: return getAccessibleHelp();
             case PARENT: return getParent();
             case SCENE: return getScene();

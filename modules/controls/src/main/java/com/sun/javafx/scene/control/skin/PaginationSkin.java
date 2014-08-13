@@ -1246,7 +1246,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
         @Override
         public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
             switch (attribute) {
-                case TITLE: return getText();
+                case TEXT: return getText();
                 case SELECTED: return isSelected();
                 default: return super.queryAccessibleAttribute(attribute, parameters);
             }

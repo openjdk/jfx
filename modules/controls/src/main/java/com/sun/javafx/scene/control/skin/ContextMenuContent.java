@@ -1488,21 +1488,21 @@ public class ContextMenuContent extends Region {
                     }
                     return false;
                 case ACCELERATOR: return item.getAccelerator();
-                case TITLE: {
+                case TEXT: {
                     String title = "";
                     if (graphic != null) {
-                        String t = (String)graphic.queryAccessibleAttribute(AccessibleAttribute.TITLE);
+                        String t = (String)graphic.queryAccessibleAttribute(AccessibleAttribute.TEXT);
                         if (t != null) title += t;
                     }                  
                     final Label label = getLabel();
                     if (label != null) {
-                        String t = (String)label.queryAccessibleAttribute(AccessibleAttribute.TITLE);
+                        String t = (String)label.queryAccessibleAttribute(AccessibleAttribute.TEXT);
                         if (t != null) title += t;
                     }
                     if (item instanceof CustomMenuItem) {
                         Node content = ((CustomMenuItem) item).getContent();
                         if (content != null) {
-                            String t = (String)content.queryAccessibleAttribute(AccessibleAttribute.TITLE);
+                            String t = (String)content.queryAccessibleAttribute(AccessibleAttribute.TEXT);
                             if (t != null) title += t;
                         }
                     }

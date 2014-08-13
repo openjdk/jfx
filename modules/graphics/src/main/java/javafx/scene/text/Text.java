@@ -397,7 +397,7 @@ public class Text extends Shape {
                     if ((value == null) && !isBound()) {
                         set("");
                     }
-                    notifyAccessibleAttributeChanged(AccessibleAttribute.TITLE);
+                    notifyAccessibleAttributeChanged(AccessibleAttribute.TEXT);
                 }
             };
         }
@@ -1891,7 +1891,7 @@ public class Text extends Shape {
     @Override
     public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
-            case TITLE: {
+            case TEXT: {
                 String accText = getAccessibleText();
                 if (accText != null && !accText.isEmpty()) return accText;
                 return getText();

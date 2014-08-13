@@ -281,7 +281,7 @@ public class ChoiceBox<T> extends Control {
             if (sm != null) {
                 sm.select(super.getValue());
             }
-            notifyAccessibleAttributeChanged(AccessibleAttribute.TITLE);
+            notifyAccessibleAttributeChanged(AccessibleAttribute.TEXT);
         }
     };
     public final void setValue(T value) { valueProperty().set(value); }
@@ -418,7 +418,7 @@ public class ChoiceBox<T> extends Control {
     @Override
     public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch(attribute) {
-            case TITLE:
+            case TEXT:
                 String accText = getAccessibleText();
                 if (accText != null && !accText.isEmpty()) return accText;
 

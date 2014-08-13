@@ -1465,7 +1465,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
         @Override
         public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
             switch (attribute) {
-                case TITLE: return getTab().getText();
+                case TEXT: return getTab().getText();
                 case SELECTED: return selectedTab == getTab();
                 default: return super.queryAccessibleAttribute(attribute, parameters);
             }

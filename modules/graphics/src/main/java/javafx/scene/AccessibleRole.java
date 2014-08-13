@@ -34,21 +34,21 @@ public enum AccessibleRole {
 
     /**
      * Button.
-     * Attributes: TITLE
+     * Attributes: TEXT
      * Actions: FIRE
      */
     BUTTON,
 
     /**
      * Check Box
-     * Attributes: TITLE, SELECTED, INDETERMINATE
+     * Attributes: TEXT, SELECTED, INDETERMINATE
      * Actions: FIRE
      */
     CHECK_BOX,
 
     /**
      * Check Menu Item.
-     * Attributes: TITLE, ACCELERATOR, MNEMONIC, DISABLED, SELECTED
+     * Attributes: TEXT, ACCELERATOR, MNEMONIC, DISABLED, SELECTED
      * Actions: FIRE
      */
     CHECK_MENU_ITEM,
@@ -69,7 +69,7 @@ public enum AccessibleRole {
 
     /**
      * Date Picker.
-     * Attributed: DATE, TITLE
+     * Attributed: DATE, TEXT
      * Actions:
      */
     DATE_PICKER,
@@ -82,14 +82,14 @@ public enum AccessibleRole {
 
     /**
      * Header.
-     * Attributes: TITLE
+     * Attributes: TEXT
      * Actions: (none)
      */
     HEADER,
 
     /**
      * Hyperlink.
-     * Attributes: TITLE
+     * Attributes: TEXT
      * Actions: FIRE
      */
     HYPERLINK,
@@ -102,7 +102,7 @@ public enum AccessibleRole {
 
     /**
      * Image View.
-     * Attributes: TITLE
+     * Attributes: TEXT
      * Actions: (none)
      */
     IMAGE_VIEW,
@@ -117,14 +117,14 @@ public enum AccessibleRole {
 
     /**
      * List Item.
-     * Attributes: TITLE, INDEX, SELECTED
+     * Attributes: TEXT, INDEX, SELECTED
      * Actions: (none)
      */
     LIST_ITEM,
 
     /**
      * Menu.
-     * Attributes: TITLE, ACCELERATOR, MNEMONIC, DISABLED, SUBMENU
+     * Attributes: TEXT, ACCELERATOR, MNEMONIC, DISABLED, SUBMENU
      * Actions: FIRE
      */
     MENU,
@@ -138,14 +138,14 @@ public enum AccessibleRole {
 
     /**
      * Menu Button.
-     * Attributed: TITLE.
+     * Attributed: TEXT.
      * Actions: FIRE.
      */
     MENU_BUTTON,
 
     /**
      * Menu Item.
-     * Attributed: TITLE, ACCELERATOR, MNEMONIC, DISABLED
+     * Attributed: TEXT, ACCELERATOR, MNEMONIC, DISABLED
      * Actions: FIRE
      */
     MENU_ITEM,
@@ -159,7 +159,7 @@ public enum AccessibleRole {
 
     /**
      * Page in a Pagination control.
-     * Attributes: TITLE, SELECTED
+     * Attributes: TEXT, SELECTED
      * Actions: (none)
      */
     PAGE_ITEM,
@@ -194,14 +194,14 @@ public enum AccessibleRole {
 
     /**
      * Radio Button.
-     * Attributes: TITLE, SELECTED
+     * Attributes: TEXT, SELECTED
      * Actions: FIRE
      */
     RADIO_BUTTON,
 
     /**
      * Radio Menu Item.
-     * Attributes: TITLE, ACCELERATOR, MNEMONIC, DISABLED, SELECTED
+     * Attributes: TEXT, ACCELERATOR, MNEMONIC, DISABLED, SELECTED
      * Actions: FIRE
      */
     RADIO_MENU_ITEM,
@@ -215,35 +215,35 @@ public enum AccessibleRole {
 
     /**
      * Spinner.
-     * Attributes: TITLE
+     * Attributes: TEXT
      * Actions: INCREMENT, DECREMENT
      */
     SPINNER,
 
     /**
      * Text.
-     * Attributes: TITLE, SELECTION_START, SELECTION_SET
-     * Actions: SET_TITLE
+     * Attributes: TEXT, SELECTION_START, SELECTION_SET
+     * Actions: SET_TEXT
      */
     TEXT,
 
     /**
      * Text Area.
-     * Attributes: TITLE, SELECTION_START, SELECTION_SET
-     * Actions: SET_TITLE, SET_TEXT_SELECTION
+     * Attributes: TEXT, SELECTION_START, SELECTION_SET
+     * Actions: SET_TEXT, SET_TEXT_SELECTION
      */
     TEXT_AREA,
 
     /**
      * Text Field.
-     * Attributes: TITLE, SELECTION_START, SELECTION_SET
-     * Actions: SET_TITLE, SET_TEXT_SELECTION
+     * Attributes: TEXT, SELECTION_START, SELECTION_SET
+     * Actions: SET_TEXT, SET_TEXT_SELECTION
      */
     TEXT_FIELD,
 
     /**
      * Toggle Button.
-     * Attributes: TITLE, SELECTED
+     * Attributes: TEXT, SELECTED
      * Action: FIRE
      */
     TOGGLE_BUTTON,
@@ -271,14 +271,14 @@ public enum AccessibleRole {
 
     /**
      * Split Menu Button.
-     * Attributes: TITLE, EXPANDED.
+     * Attributes: TEXT, EXPANDED.
      * Actions: FIRE, EXPAND, COLLAPSE.
      */
     SPLIT_MENU_BUTTON,
 
     /**
      * Tab Item.
-     * Attributes: TITLE, SELECTED
+     * Attributes: TEXT, SELECTED
      * Actions: (none)
      */
     TAB_ITEM,
@@ -292,21 +292,21 @@ public enum AccessibleRole {
 
     /**
      * Table Cell.
-     * Attributes: TITLE, ROW_INDEX, COLUMN_INDEX, SELECTED
+     * Attributes: TEXT, ROW_INDEX, COLUMN_INDEX, SELECTED
      * Actions: (none)
      */
     TABLE_CELL,
 
     /**
      * Table Column.
-     * Attributes: TITLE, INDEX
+     * Attributes: TEXT, INDEX
      * Actions: (none)
      */
     TABLE_COLUMN,
 
     /**
      * Table Row.
-     * Attributes: TITLE, INDEX
+     * Attributes: TEXT, INDEX
      * Actions: (none)
      */
     TABLE_ROW,
@@ -329,7 +329,7 @@ public enum AccessibleRole {
 
     /**
      * Titled Pane.
-     * Attributes: TITLE, EXPANDED
+     * Attributes: TEXT, EXPANDED
      * Actions: EXPAND, COLLAPSE
      */
     TITLED_PANE,
@@ -343,7 +343,7 @@ public enum AccessibleRole {
 
     /**
      * Tree Item.
-     * Attributes: TITLE, SELECTED, INDEX, EXPANDED, LEAF, DISCLOSURE_LEVEL,
+     * Attributes: TEXT, SELECTED, INDEX, EXPANDED, LEAF, DISCLOSURE_LEVEL,
      *             TREE_ITEM_COUNT, TREE_ITEM_AT_INDEX, TREE_ITEM_PARENT
      * Actions: EXPAND, COLLAPSE
      */
@@ -351,7 +351,7 @@ public enum AccessibleRole {
 
     /**
      * Tree Table Cell.
-     * Attributes: TITLE, ROW_INDEX, COLUMN_INDEX, SELECTED
+     * Attributes: TEXT, ROW_INDEX, COLUMN_INDEX, SELECTED
      * Actions: (none)
      */
     TREE_TABLE_CELL,

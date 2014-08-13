@@ -72,7 +72,7 @@ public class PasswordField extends TextField {
     @Override
     public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
-            case TITLE: return null;
+            case TEXT: return null;
             default: return super.queryAccessibleAttribute(attribute, parameters);
         }
     }
