@@ -771,7 +771,7 @@ final class MacAccessible extends Accessible {
                          * The work around is to look for a previous menu
                          * and send a close and open event for it.
                          */
-                        Node menuItemOwner = (Node)getAttribute(MENU_FOR);
+                        Node menuItemOwner = (Node)getAttribute(PARENT_MENU);
                         MacAccessible acc  = (MacAccessible)getAccessible(menuItemOwner);
                         if (acc != null) {
                             MacAccessible menu = (MacAccessible)acc.getContainerAccessible(AccessibleRole.CONTEXT_MENU);
@@ -1044,7 +1044,7 @@ final class MacAccessible extends Accessible {
                     ObservableList<Node> children = (ObservableList<Node>)getAttribute(CHILDREN);
                     long[] ids = getUnignoredChildren(children);
                     int count = ids.length;
-                    if (getAttribute(MENU) != null) {
+                    if (getAttribute(SUBMENU) != null) {
                         count++;
                     }
                     return count;
@@ -1083,7 +1083,7 @@ final class MacAccessible extends Accessible {
                     long[] result = new long[maxCount];
                     int i = 0;
                     if (index == 0) {
-                        Node menu = (Node)getAttribute(MENU);
+                        Node menu = (Node)getAttribute(SUBMENU);
                         if (menu != null) result[i++] = getNativeAccessible(menu);
                     }
                     if (i < maxCount) {
@@ -1350,7 +1350,7 @@ final class MacAccessible extends Accessible {
                     result = getView().getWindow().getNativeWindow();
                 } else if (result != null) {
                     if (role == AccessibleRole.CONTEXT_MENU) {
-                        Node menuItem = (Node)getAttribute(MENU_FOR);
+                        Node menuItem = (Node)getAttribute(PARENT_MENU);
                         if (menuItem != null) {
                             if (getAccessible(menuItem).getAttribute(ROLE) == AccessibleRole.MENU) {
                                 result = menuItem;

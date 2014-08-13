@@ -252,18 +252,6 @@ public enum AccessibleAttribute {
     MAX_VALUE("MaxValue", Double.class),
 
     /**
-     * Returns the Menu.
-     * Type: Node
-     */
-    MENU("Menu", Node.class),
-
-    /**
-     * Returns the owner Menu.
-     * Type: Node
-     */
-    MENU_FOR("MenuFor", Node.class),
-
-    /**
      * Returns the mnemonic for the node.
      * Type: String
      */
@@ -306,6 +294,12 @@ public enum AccessibleAttribute {
      * Type: Parent
      */
     PARENT("Parent", Parent.class),
+
+    /**
+     * Returns the owner Menu.
+     * Type: Node
+     */
+    PARENT_MENU("MenuFor", Node.class),
 
     /**
      * Returns the role for the Node.
@@ -367,6 +361,12 @@ public enum AccessibleAttribute {
      * Type: Integer
      */
     SELECTION_START("SelectionStart", Integer.class),
+
+    /**
+     * Returns the Menu.
+     * Type: Node
+     */
+    SUBMENU("Menu", Node.class),
 
     /**
      * Returns the title for the Node.

@@ -981,7 +981,7 @@ public class ContextMenuContent extends Region {
         public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
             switch (attribute) {
                 case VISIBLE: return contextMenu.isShowing();
-                case MENU_FOR: return contextMenu.getOwnerNode();
+                case PARENT_MENU: return contextMenu.getOwnerNode();
                 default: return super.queryAccessibleAttribute(attribute, parameters); 
             }
         }
@@ -1517,7 +1517,7 @@ public class ContextMenuContent extends Region {
                     return null;
                 }
                 case DISABLED: return item.isDisable();
-                case MENU:
+                case SUBMENU:
                     createSubmenu();
                     // Accessibility might need to see the menu node before the window
                     // is visible (i.e. before the skin is applied).
