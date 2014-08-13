@@ -29,7 +29,6 @@ import com.oracle.tools.packager.IOUtils;
 import sun.misc.BASE64Encoder;
 
 import java.io.*;
-import java.nio.file.Files;
 import java.text.MessageFormat;
 import java.util.*;
 
@@ -336,18 +335,7 @@ public class MacDmgBundler extends MacBaseInstallerBundler {
         IOUtils.copyFile(getConfig_VolumeIcon(p),
                 volumeIconFile);
 
-        boolean simple = SIMPLE_DMG.fetchFrom(p);
-
-        if (simple) {
-            boolean systemWide = SYSTEM_WIDE.fetchFrom(p) == null || SYSTEM_WIDE.fetchFrom(p);
-
-            if (systemWide) {
-                Files.createSymbolicLink(new File(mountedRoot, "Applications").toPath(), new File("/Applications").toPath());
-            }
-            // I don't think there is a way to link to the current user's desktop,
-            // without resorting to applescript, which is what this bug is explicitly
-            // avoiding, so simple dmg that is not system wide is just the application, no target folder
-        } else {
+        if (SIMPLE_DMG.fetchFrom(p)) {
             //background image
             File bgdir = new File(mountedRoot, ".background");
             bgdir.mkdirs();
