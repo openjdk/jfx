@@ -662,9 +662,6 @@ final class WinAccessible extends Accessible {
             case PROGRESS_INDICATOR:
                 impl = patternId == UIA_RangeValuePatternId;
                 break;
-            case THUMB:
-                impl = patternId == UIA_TransformPatternId;
-                break;
             default:
         }
         return impl ? getNativeAccessible() : 0L;
@@ -1559,11 +1556,7 @@ final class WinAccessible extends Accessible {
     /*             ITransformProvider              */
     /***********************************************/
     boolean get_CanMove() {
-        AccessibleRole role = (AccessibleRole)getAttribute(ROLE);
-        switch (role) {
-            case THUMB: return true;
-            default: return false;
-        }
+        return false;
     }
 
     boolean get_CanResize() {
@@ -1575,7 +1568,6 @@ final class WinAccessible extends Accessible {
     }
 
     void Move(double x, double y) {
-        executeAction(AccessibleAction.MOVE, x, y);
     }
 
     void Resize(double width, double height) {

@@ -322,7 +322,8 @@ public enum AccessibleRole {
 
     /**
      * Thumb.
-     * Actions: MOVE
+     * Attributes: VALUE
+     * Actions: (none)
      */
     THUMB,
 

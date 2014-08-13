@@ -62,12 +62,6 @@ public enum AccessibleAction {
      */
     INCREMENT,
 
-    /**
-     * Moves the node (if it supports MOVE) by the provided x and y coordinates.
-     * Parameter: Double, Double
-     */
-    MOVE,
-
     REQUEST_FOCUS,
 
     /**
