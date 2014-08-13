@@ -151,11 +151,13 @@ public class DateTimeStringConverterTest {
      * Test toString / fromString methods
      ********************************************************************/    
    
+    @Ignore
     @Test public void fromString_testValidInput() {
         String input = validFormatter.format(validDate);
         assertEquals("Input = "+input, validDate, converter.fromString(input));
     }
     
+    @Ignore
     @Test public void fromString_testValidInputWithWhiteSpace() {
         String input = validFormatter.format(validDate);
         assertEquals("Input = "+input, validDate, converter.fromString("      " + input + "      "));
@@ -166,6 +168,7 @@ public class DateTimeStringConverterTest {
         converter.fromString("abcdefg");
     }
     
+    @Ignore
     @Test public void toString_validOutput() {
         assertEquals(validFormatter.format(validDate), converter.toString(validDate));
     }    
