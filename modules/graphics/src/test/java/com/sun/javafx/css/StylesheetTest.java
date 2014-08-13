@@ -363,7 +363,7 @@ public class StylesheetTest {
     }
 
 
-    @Test public void testRT_31316_with_complex_scenegraph() {
+    @Ignore @Test public void testRT_31316_with_complex_scenegraph() {
 
         try {
 
