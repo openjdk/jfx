@@ -48,7 +48,7 @@ public enum AccessibleRole {
 
     /**
      * Check Menu Item.
-     * Attributes: TITLE, SELECTED, ACCELERATOR, MNEMONIC, DISABLED
+     * Attributes: TITLE, ACCELERATOR, MNEMONIC, DISABLED, SELECTED
      * Actions: FIRE
      */
     CHECK_MENU_ITEM,
@@ -62,8 +62,8 @@ public enum AccessibleRole {
 
     /**
      * Context Menu.
-     * Attributed:
-     * Actions:
+     * Attributed: PARENT_MENU, VISIBLE
+     * Actions: (none)
      */
     CONTEXT_MENU,
 
@@ -124,7 +124,7 @@ public enum AccessibleRole {
 
     /**
      * Menu.
-     * Attributes: TITLE, MENU, ACCELERATOR, MNEMONIC, DISABLED
+     * Attributes: TITLE, ACCELERATOR, MNEMONIC, DISABLED, SUBMENU
      * Actions: FIRE
      */
     MENU,
@@ -201,7 +201,7 @@ public enum AccessibleRole {
 
     /**
      * Radio Menu Item.
-     * Attributes: TITLE, SELECTED, ACCELERATOR, MNEMONIC, DISABLED
+     * Attributes: TITLE, ACCELERATOR, MNEMONIC, DISABLED, SELECTED
      * Actions: FIRE
      */
     RADIO_MENU_ITEM,

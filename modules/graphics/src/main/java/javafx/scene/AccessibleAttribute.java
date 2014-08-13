@@ -296,10 +296,10 @@ public enum AccessibleAttribute {
     PARENT("Parent", Parent.class),
 
     /**
-     * Returns the owner Menu.
+     * Returns the parent menu.
      * Type: Node
      */
-    PARENT_MENU("MenuFor", Node.class),
+    PARENT_MENU("ParentMenu", Node.class),
 
     /**
      * Returns the role for the Node.
@@ -363,10 +363,10 @@ public enum AccessibleAttribute {
     SELECTION_START("SelectionStart", Integer.class),
 
     /**
-     * Returns the Menu.
+     * Returns the sub menu.
      * Type: Node
      */
-    SUBMENU("Menu", Node.class),
+    SUBMENU("Submenu", Node.class),
 
     /**
      * Returns the title for the Node.
