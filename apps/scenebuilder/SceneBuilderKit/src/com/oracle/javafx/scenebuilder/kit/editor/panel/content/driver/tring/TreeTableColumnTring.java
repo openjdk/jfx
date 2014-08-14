@@ -74,18 +74,6 @@ public class TreeTableColumnTring extends AbstractGenericTring<Object> {
     }
 
     @Override
-    public Point2D sceneGraphObjectToScene(double x, double y) {
-        final TreeTableView<?> tv = getTreeTableColumn().getTreeTableView();
-        return tv.localToScene(x, y);
-    }
-
-    @Override
-    public Point2D sceneToSceneGraphObject(double x, double y) {
-        final TreeTableView<?> tv = getTreeTableColumn().getTreeTableView();
-        return tv.sceneToLocal(x, y);
-    }
-
-    @Override
     protected void startListeningToSceneGraphObject() {
         final TreeTableView<?> tableView = getTreeTableColumn().getTreeTableView();
         startListeningToLayoutBounds(tableView);

@@ -86,16 +86,6 @@ public class HitNodeChrome extends AbstractDecoration<Object> {
     }
 
     @Override
-    public Point2D sceneGraphObjectToScene(double x, double y) {
-        return closestNode.localToScene(x, y);
-    }
-
-    @Override
-    public Point2D sceneToSceneGraphObject(double x, double y) {
-        return closestNode.sceneToLocal(x, y);
-    }
-
-    @Override
     protected void startListeningToSceneGraphObject() {
         startListeningToLayoutBounds(closestNode);
         startListeningToLocalToSceneTransform(closestNode);

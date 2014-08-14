@@ -117,20 +117,6 @@ public class TableColumnHandles extends AbstractResilientHandles<Object> {
     }
 
     @Override
-    public Point2D sceneGraphObjectToScene(double x, double y) {
-        assert isReady();
-        assert tableView != null;
-        return tableView.localToScene(x, y);
-    }
-
-    @Override
-    public Point2D sceneToSceneGraphObject(double x, double y) {
-        assert isReady();
-        assert tableView != null;
-        return tableView.sceneToLocal(x, y);
-    }
-
-    @Override
     protected void startListeningToSceneGraphObject() {
         assert isReady();
         assert tableView != null;
