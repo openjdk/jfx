@@ -705,7 +705,7 @@ final public class CSSParser {
                 return new ParsedValueImpl<String,String>("null", null);
             }
         }
-        if ("-fx-fill".equals(prop)) {
+        if ("-fx-fill".equals(property)) {
              ParsedValueImpl pv = parse(root);
             if (pv.getConverter() == StyleConverter.getUrlConverter()) {
                 // ImagePatternConverter expects array of ParsedValue where element 0 is the URL
@@ -714,7 +714,7 @@ final public class CSSParser {
             }
             return pv;
         }
-        else if ("-fx-background-color".equals(prop)) {
+        else if ("-fx-background-color".equals(property)) {
             return parsePaintLayers(root);
         } else if ("-fx-background-image".equals(prop)) {
             return parseURILayers(root);
@@ -878,9 +878,9 @@ final public class CSSParser {
                 value = new ParsedValueImpl<String,Boolean>("false",BooleanConverter.getInstance());
             } else {
                 // if the property value is another property, then it needs to be looked up.
-                boolean needsLookup = isIdent && properties.containsKey(text);
-                if (needsLookup || ((value = colorValueOfString(text)) == null )) {
-                    value = new ParsedValueImpl<String,String>(text, null, needsLookup);
+                boolean needsLookup = isIdent && properties.containsKey(str);
+                if (needsLookup || ((value = colorValueOfString(str)) == null )) {
+                    value = new ParsedValueImpl<String,String>(str, null, isIdent || needsLookup);
                 }
             }
             break;
