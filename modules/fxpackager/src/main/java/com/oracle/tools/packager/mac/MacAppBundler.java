@@ -175,7 +175,7 @@ public class MacAppBundler extends AbstractBundler {
             URL.class,
             params -> MacResources.class.getResource(EXECUTABLE_NAME),
             (s, p) -> {
-                try {
+               try {
                     return new URL(s);
                 } catch (MalformedURLException e) {
                     Log.info(e.toString());
@@ -191,54 +191,12 @@ public class MacAppBundler extends AbstractBundler {
             params -> TEMPLATE_BUNDLE_ICON,
             (s, p) -> s);
 
-    //Subsetting of JRE is restricted.
-    //JRE README defines what is allowed to strip:
-    //   ﻿http://www.oracle.com/technetwork/java/javase/jre-7-readme-430162.html //TODO update when 8 goes GA
-    //
-    public static final BundlerParamInfo<Rule[]> MAC_JDK_RULES = new StandardBundlerParam<>(
+    public static final BundlerParamInfo<Rule[]> MAC_RULES = new StandardBundlerParam<>(
             "",
             "",
-            ".mac-jdk.runtime.rules",
+            ".mac.runtime.rules",
             Rule[].class,
-            params -> new Rule[]{
-                    Rule.suffixNeg("macos/libjli.dylib"),
-                    Rule.suffixNeg("resources"),
-                    Rule.suffixNeg("home/bin"),
-                    Rule.suffixNeg("home/db"),
-                    Rule.suffixNeg("home/demo"),
-                    Rule.suffixNeg("home/include"),
-                    Rule.suffixNeg("home/lib"),
-                    Rule.suffixNeg("home/man"),
-                    Rule.suffixNeg("home/release"),
-                    Rule.suffixNeg("home/sample"),
-                    Rule.suffixNeg("home/src.zip"),
-                    //"home/rt" is not part of the official builds
-                    // but we may be creating this symlink to make older NB projects
-                    // happy. Make sure to not include it into final artifact
-                    Rule.suffixNeg("home/rt"),
-                    Rule.suffixNeg("jre/bin"),
-                    Rule.suffixNeg("jre/bin/rmiregistry"),
-                    Rule.suffixNeg("jre/bin/tnameserv"),
-                    Rule.suffixNeg("jre/bin/keytool"),
-                    Rule.suffixNeg("jre/bin/klist"),
-                    Rule.suffixNeg("jre/bin/ktab"),
-                    Rule.suffixNeg("jre/bin/policytool"),
-                    Rule.suffixNeg("jre/bin/orbd"),
-                    Rule.suffixNeg("jre/bin/servertool"),
-                    Rule.suffixNeg("jre/bin/javaws"),
-                    Rule.suffixNeg("jre/bin/java"),
-                    //Rule.suffixNeg("jre/lib/ext"), //need some of jars there for https to work
-                    Rule.suffixNeg("jre/lib/nibs"),
-                    //keep core deploy APIs but strip plugin dll
-                    //Rule.suffixNeg("jre/lib/deploy"),
-                    //Rule.suffixNeg("jre/lib/deploy.jar"),
-                    //Rule.suffixNeg("jre/lib/javaws.jar"),
-                    //Rule.suffixNeg("jre/lib/libdeploy.dylib"),
-                    //Rule.suffixNeg("jre/lib/plugin.jar"),
-                    Rule.suffixNeg("jre/lib/libnpjp2.dylib"),
-                    Rule.suffixNeg("jre/lib/security/javaws.policy"),
-                    Rule.substrNeg("Contents/Info.plist")
-            },
+            MacAppBundler::createMacRuntimeRules,
             (s, p) -> null
     );
 
@@ -291,19 +249,18 @@ public class MacAppBundler extends AbstractBundler {
             (s, p) -> new File(s));
 
     public static RelativeFileSet extractMacRuntime(String base, Map<String, ? super Object> params) {
+        String realBase;
         if (base.isEmpty()) {
             return null;
         } else if (base.endsWith("/Home")) {
-            throw new IllegalArgumentException(I18N.getString("message.no-mac-jre-support"));
+            realBase = new File(base).getParentFile().getParentFile().toString();
         } else if (base.endsWith("/Home/jre")) {
-            File baseDir = new File(base).getParentFile().getParentFile().getParentFile();
-            return JreUtils.extractJreAsRelativeFileSet(baseDir.toString(),
-                    MAC_JDK_RULES.fetchFrom(params));
+            realBase = new File(base).getParentFile().getParentFile().getParentFile().toString();
         } else {
-            // for now presume we are pointed to the top of a JDK
-            return JreUtils.extractJreAsRelativeFileSet(base,
-                    MAC_JDK_RULES.fetchFrom(params));
+            realBase = base;
         }
+        return JreUtils.extractJreAsRelativeFileSet(realBase,
+                MAC_RULES.fetchFrom(params));
     }
 
     public MacAppBundler() {
@@ -526,10 +483,6 @@ public class MacAppBundler extends AbstractBundler {
         return rootDirectory;
     }
 
-    public String getAppName(Map<String, ? super Object> params) {
-        return APP_NAME.fetchFrom(params) + ".app";
-    }
-
     public void cleanupConfigFiles(Map<String, ? super Object> params) {
         //Since building the app can be bypassed, make sure configRoot was set
         if (CONFIG_ROOT.fetchFrom(params) != null) {
@@ -541,7 +494,6 @@ public class MacAppBundler extends AbstractBundler {
             }
         }
     }
-
 
     private void copyClassPathEntries(File javaDirectory, Map<String, ? super Object> params) throws IOException {
         RelativeFileSet classPath = APP_RESOURCES.fetchFrom(params);
@@ -711,6 +663,138 @@ public class MacAppBundler extends AbstractBundler {
             out.write(OS_TYPE_CODE + signature);
             out.flush();
         }
+    }
+
+    public static Rule[] createMacRuntimeRules(Map<String, ? super Object> params) {
+        //Subsetting of JRE is restricted.
+        //JRE README defines what is allowed to strip:
+        //   ﻿http://www.oracle.com/technetwork/java/javase/jre-8-readme-2095710.html
+        //
+
+        List<Rule> rules = new ArrayList<>();
+
+        File baseDir;
+
+        if (params.containsKey(MAC_RUNTIME.getID())) {
+            Object o = params.get(MAC_RUNTIME.getID());
+            if (o instanceof RelativeFileSet) {
+
+                baseDir = ((RelativeFileSet)o).getBaseDirectory();
+            } else {
+                baseDir = new File(o.toString());
+            }
+        } else {
+            baseDir = new File(System.getProperty("java.home"));
+        }
+
+        // we accept either pointing at the directories typically installed at:
+        // /Libraries/Java/JavaVirtualMachine/jdk1.8.0_40/
+        //   * .
+        //   * Contents/Home
+        //   * Contents/Home/jre
+        // /Library/Internet\ Plug-Ins/JavaAppletPlugin.plugin/
+        //   * .
+        //   * /Contents/Home
+        // version may change, and if we don't detect any Contents/Home or Contents/Home/jre we will
+        // presume we are at a root.
+
+        if (!baseDir.exists()) {
+            throw new RuntimeException(I18N.getString("error.non-existent-runtime"),
+                new ConfigException(I18N.getString("error.non-existent-runtime"),
+                    I18N.getString("error.non-existent-runtime.advice")));
+        }
+
+        boolean isJRE;
+        boolean isJDK;
+
+        try {
+            String path = baseDir.getCanonicalPath();
+            if (path.endsWith("/Contents/Home/jre")) {
+                baseDir = baseDir.getParentFile().getParentFile().getParentFile();
+            } else if (path.endsWith("/Contents/Home")) {
+                baseDir = baseDir.getParentFile().getParentFile();
+            }
+
+            isJRE = new File(baseDir, "Contents/Home/lib/jli/libjli.dylib").exists();
+            isJDK = new File(baseDir, "Contents/Home/jre/lib/jli/libjli.dylib").exists();
+
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        if (!(isJRE || isJDK)) {
+            throw new RuntimeException(I18N.getString("error.cannot-detect-runtime-in-directory"),
+                    new ConfigException(I18N.getString("error.cannot-detect-runtime-in-directory"),
+                            I18N.getString("error.cannot-detect-runtime-in-directory.advice")));
+        }
+
+        // fist, strip the link to the DLL for the plugin
+        if (isJDK) {
+            rules.add(Rule.suffixNeg("/macos/libjli.dylib"));
+        }
+        if (isJRE) {
+            rules.add(Rule.suffixNeg("/macos/javaappletplugin"));
+        }
+
+        // strip out command line tools
+        rules.add(Rule.suffixNeg("home/bin"));
+        if (isJDK) {
+            rules.add(Rule.suffixNeg("home/jre/bin"));
+        }
+
+        // strip out JRE stuff
+        if (isJRE) {
+            // update helper
+            rules.add(Rule.suffixNeg("resources"));
+            // interfacebuilder files
+            rules.add(Rule.suffixNeg("lib/nibs"));
+            // browser integration
+            rules.add(Rule.suffixNeg("lib/libnpjp2.dylib"));
+            // java webstart
+            rules.add(Rule.suffixNeg("lib/security/javaws.policy"));
+            rules.add(Rule.suffixNeg("lib/shortcuts"));
+
+            // general deploy libraries
+            rules.add(Rule.suffixNeg("lib/deploy"));
+            rules.add(Rule.suffixNeg("lib/deploy.jar"));
+            rules.add(Rule.suffixNeg("lib/javaws.jar"));
+            rules.add(Rule.suffixNeg("lib/libdeploy.dylib"));
+            rules.add(Rule.suffixNeg("lib/plugin.jar"));
+        }
+
+        // strip out man pages
+        rules.add(Rule.suffixNeg("home/man"));
+
+        // this is the build hashes, strip or keep?
+        //rules.add(Rule.suffixNeg("home/release"));
+
+        // strip out JDK stuff like JavaDB, JNI Headers, etc
+        if (isJDK) {
+            rules.add(Rule.suffixNeg("home/db"));
+            rules.add(Rule.suffixNeg("home/demo"));
+            rules.add(Rule.suffixNeg("home/include"));
+            rules.add(Rule.suffixNeg("home/lib"));
+            rules.add(Rule.suffixNeg("home/sample"));
+            rules.add(Rule.suffixNeg("home/src.zip"));
+            rules.add(Rule.suffixNeg("home/javafx-src.zip"));
+        }
+
+        //"home/rt" is not part of the official builds
+        // but we may be creating this symlink to make older NB projects
+        // happy. Make sure to not include it into final artifact
+        rules.add(Rule.suffixNeg("home/rt"));
+
+        //rules.add(Rule.suffixNeg("jre/lib/ext")); //need some of jars there for https to work
+
+        // strip out flight recorder
+        rules.add(Rule.suffixNeg("lib/jfr.jar"));
+
+        // for now the JRE breaks things.  Should be fixed soonish.
+        if (isJRE) {
+            throw new IllegalArgumentException(I18N.getString("message.no-mac-jre-support"));
+        }
+
+        return rules.toArray(new Rule[rules.size()]);
     }
 
     //////////////////////////////////////////////////////////////////////////////////

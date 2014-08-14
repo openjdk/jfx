@@ -27,6 +27,7 @@ package com.oracle.tools.packager.mac;
 
 import com.oracle.tools.packager.BundlerParamInfo;
 import com.oracle.tools.packager.JreUtils;
+import com.oracle.tools.packager.RelativeFileSet;
 import com.oracle.tools.packager.StandardBundlerParam;
 import com.oracle.tools.packager.Log;
 import com.oracle.tools.packager.ConfigException;
@@ -37,14 +38,14 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.text.MessageFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.ResourceBundle;
 
-import static com.oracle.tools.packager.JreUtils.Rule.suffix;
-import static com.oracle.tools.packager.JreUtils.Rule.suffixNeg;
 import static com.oracle.tools.packager.StandardBundlerParam.*;
 
 public class MacAppStoreBundler extends MacBaseInstallerBundler {
@@ -55,56 +56,6 @@ public class MacAppStoreBundler extends MacBaseInstallerBundler {
     private static final String TEMPLATE_BUNDLE_ICON_HIDPI = "GenericAppHiDPI.icns";
     private final static String DEFAULT_ENTITLEMENTS = "MacAppStore.entitlements";
     private final static String DEFAULT_INHERIT_ENTITLEMENTS = "MacAppStore_Inherit.entitlements";
-
-    //Subsetting of JRE is restricted.
-    //JRE README defines what is allowed to strip:
-    //   ﻿http://www.oracle.com/technetwork/java/javase/jre-7-readme-430162.html //TODO update when 8 goes GA
-    //
-    public static final JreUtils.Rule[] MAC_APP_STORE_JDK_RULES =  new JreUtils.Rule[]{
-            suffixNeg("macos/libjli.dylib"),
-            suffixNeg("resources"),
-            suffixNeg("home/bin"),
-            suffixNeg("home/db"),
-            suffixNeg("home/demo"),
-            suffixNeg("home/include"),
-            suffixNeg("home/lib"),
-            suffixNeg("home/man"),
-            suffixNeg("home/release"),
-            suffixNeg("home/sample"),
-            suffixNeg("home/src.zip"),
-            //"home/rt" is not part of the official builds
-            // but we may be creating this symlink to make older NB projects
-            // happy. Make sure to not include it into final artifact
-            suffixNeg("home/rt"),
-            suffixNeg("jre/bin"),
-            suffixNeg("bin/rmiregistry"),
-            suffixNeg("bin/tnameserv"),
-            suffixNeg("bin/keytool"),
-            suffixNeg("bin/klist"),
-            suffixNeg("bin/ktab"),
-            suffixNeg("bin/policytool"),
-            suffixNeg("bin/orbd"),
-            suffixNeg("bin/servertool"),
-            suffixNeg("bin/javaws"),
-            suffixNeg("bin/java"),
-            //Rule.suffixNeg("jre/lib/ext"), //need some of jars there for https to work
-            suffixNeg("jre/lib/nibs"),
-            //keep core deploy APIs but strip plugin dll
-            //Rule.suffixNeg("jre/lib/deploy"),
-            //Rule.suffixNeg("jre/lib/deploy.jar"),
-            //Rule.suffixNeg("jre/lib/javaws.jar"),
-            //Rule.suffixNeg("jre/lib/libdeploy.dylib"),
-            //Rule.suffixNeg("jre/lib/plugin.jar"),
-            suffixNeg("lib/libnpjp2.dylib"),
-            suffixNeg("lib/security/javaws.policy"),
-
-            // jfxmedia uses QuickTime, which is not allowed as of OSX 10.9
-            suffixNeg("lib/libjfxmedia.dylib"),
-
-            // the plist is needed for signing
-            suffix("Info.plist"),
-
-    };
 
     public static final BundlerParamInfo<String> MAC_APP_STORE_APP_SIGNING_KEY = new StandardBundlerParam<>(
             I18N.getString("param.signing-key-app.name"),
@@ -166,7 +117,7 @@ public class MacAppStoreBundler extends MacBaseInstallerBundler {
         p.put(MacAppBundler.DEFAULT_ICNS_ICON.getID(), TEMPLATE_BUNDLE_ICON_HIDPI);
 
         // next we need to change the jdk/jre stripping to strip gstreamer
-        p.put(MacAppBundler.MAC_JDK_RULES.getID(), MAC_APP_STORE_JDK_RULES);
+        p.put(MacAppBundler.MAC_RULES.getID(), createMacAppStoreRuntimeRules(p));
 
         // now we create the app
         File appImageDir = APP_IMAGE_BUILD_ROOT.fetchFrom(p);
@@ -273,6 +224,77 @@ public class MacAppStoreBundler extends MacBaseInstallerBundler {
         return MacAppBundler.MAC_BUNDLER_PREFIX+ APP_NAME.fetchFrom(params) +"_Inherit.entitlements";
     }
 
+
+    public static JreUtils.Rule[] createMacAppStoreRuntimeRules(Map<String, ? super Object> params) {
+        //Subsetting of JRE is restricted.
+        //JRE README defines what is allowed to strip:
+        //   ﻿http://www.oracle.com/technetwork/java/javase/jre-8-readme-2095710.html
+        //
+
+        List<JreUtils.Rule> rules = new ArrayList<>();
+
+        rules.addAll(Arrays.asList(MacAppBundler.createMacRuntimeRules(params)));
+
+        File baseDir;
+
+        if (params.containsKey(MacAppBundler.MAC_RUNTIME.getID())) {
+            Object o = params.get(MacAppBundler.MAC_RUNTIME.getID());
+            if (o instanceof RelativeFileSet) {
+
+                baseDir = ((RelativeFileSet) o).getBaseDirectory();
+            } else {
+                baseDir = new File(o.toString());
+            }
+        } else {
+            baseDir = new File(System.getProperty("java.home"));
+        }
+
+        // we accept either pointing at the directories typically installed at:
+        // /Libraries/Java/JavaVirtualMachine/jdk1.8.0_40/
+        //   * .
+        //   * Contents/Home
+        //   * Contents/Home/jre
+        // /Library/Internet\ Plug-Ins/JavaAppletPlugin.plugin/
+        //   * .
+        //   * /Contents/Home
+        // version may change, and if we don't detect any Contents/Home or Contents/Home/jre we will
+        // presume we are at a root.
+
+
+        try {
+            String path = baseDir.getCanonicalPath();
+            if (path.endsWith("/Contents/Home/jre")) {
+                baseDir = baseDir.getParentFile().getParentFile().getParentFile();
+            } else if (path.endsWith("/Contents/Home")) {
+                baseDir = baseDir.getParentFile().getParentFile();
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        if (!baseDir.exists()) {
+            throw new RuntimeException(I18N.getString("error.non-existent-runtime"),
+                    new ConfigException(I18N.getString("error.non-existent-runtime"),
+                            I18N.getString("error.non-existent-runtime.advice")));
+        }
+
+        File f = new File(baseDir, "Contents/Home/jre/lib/libjfxmedia_qtkit.dylib");
+        while (f != null) {
+            System.out.println(f);
+            System.out.println(f.exists());
+            f = f.getParentFile();
+        }
+
+        if (new File(baseDir, "Contents/Home/lib/libjfxmedia_qtkit.dylib").exists()
+            || new File(baseDir, "Contents/Home/jre/lib/libjfxmedia_qtkit.dylib").exists())
+        {
+            rules.add(JreUtils.Rule.suffixNeg("/lib/libjfxmedia_qtkit.dylib"));
+        } else {
+            rules.add(JreUtils.Rule.suffixNeg("/lib/libjfxmedia.dylib"));
+        }
+        return rules.toArray(new JreUtils.Rule[rules.size()]);
+    }
+
     //////////////////////////////////////////////////////////////////////////////////
     // Implement Bundler
     //////////////////////////////////////////////////////////////////////////////////
@@ -326,8 +348,8 @@ public class MacAppStoreBundler extends MacBaseInstallerBundler {
 
             //run basic validation to ensure requirements are met
 
-            //we need to change the jdk/jre stripping to strip gstreamer
-            params.put(MacAppBundler.MAC_JDK_RULES.getID(), MAC_APP_STORE_JDK_RULES);
+            //we need to change the jdk/jre stripping to strip qtkit code
+            params.put(MacAppBundler.MAC_RULES.getID(), createMacAppStoreRuntimeRules(params));
 
             //we are not interested in return code, only possible exception
             validateAppImageAndBundeler(params);

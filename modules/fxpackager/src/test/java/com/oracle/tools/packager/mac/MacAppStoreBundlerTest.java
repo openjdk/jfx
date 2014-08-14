@@ -59,7 +59,7 @@ import static org.junit.Assert.*;
 
 public class MacAppStoreBundlerTest {
 
-    static final int MIN_SIZE=0x100000; // 1MiB
+    static final int MIN_SIZE = 0x100000; // 1MiB
 
     static File tmpBase;
     static File workDir;
@@ -207,7 +207,7 @@ public class MacAppStoreBundlerTest {
         Matcher matcher = jreInfoPListPattern.matcher(output);
         assertTrue("Insure that info.plist is packed in for embedded jre", matcher.find());
 
-        assertFalse("Insure JFX Media isn't packed in", output.contains("/libjfxmedia.dylib"));
+        assertFalse("Insure JFX Media isn't packed in", output.contains("/libjfxmedia_qtkit.dylib"));
     }
 
     @Test
@@ -239,14 +239,14 @@ public class MacAppStoreBundlerTest {
         bundleParams.put(MAC_APP_STORE_ENTITLEMENTS.getID(), null);
         bundleParams.put(MAC_APP_STORE_PKG_SIGNING_KEY.getID(), "3rd Party Mac Developer Installer");
 
-                // assert they are set
-        for (BundlerParamInfo bi :parameters) {
+        // assert they are set
+        for (BundlerParamInfo bi : parameters) {
             assertNotNull("Bundle args Contains " + bi.getID(), bundleParams.containsKey(bi.getID()));
         }
 
         // and only those are set
         bundleParamLoop:
-        for (String s :bundleParams.keySet()) {
+        for (String s : bundleParams.keySet()) {
             for (BundlerParamInfo<?> bpi : parameters) {
                 if (s.equals(bpi.getID())) {
                     continue bundleParamLoop;
@@ -256,7 +256,7 @@ public class MacAppStoreBundlerTest {
         }
 
         // assert they resolve
-        for (BundlerParamInfo bi :parameters) {
+        for (BundlerParamInfo bi : parameters) {
             bi.fetchFrom(bundleParams);
         }
 
@@ -272,6 +272,46 @@ public class MacAppStoreBundlerTest {
         Assume.assumeTrue(Boolean.parseBoolean(System.getProperty("FULL_TEST")));
 
         File result = bundler.execute(bundleParams, new File(workDir, "everything"));
+        System.err.println("Bundle at - " + result);
+
+        checkFiles(result);
+    }
+
+    /**
+     * User a JRE instead of a JDK
+     */
+    @Test
+    public void testJRE() throws IOException, ConfigException, UnsupportedPlatformException {
+
+        Assume.assumeTrue(new File("/Library/Internet Plug-Ins/JavaAppletPlugin.plugin/").isDirectory());
+
+        AbstractBundler bundler = new MacAppStoreBundler();
+
+        assertNotNull(bundler.getName());
+        assertNotNull(bundler.getID());
+        assertNotNull(bundler.getDescription());
+
+        Map<String, Object> bundleParams = new HashMap<>();
+
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+
+        bundleParams.put(APP_NAME.getID(), "Smoke Test");
+        bundleParams.put(MAIN_CLASS.getID(), "hello.TestPackager");
+        bundleParams.put(PREFERENCES_ID.getID(), "the/really/long/preferences/id");
+        bundleParams.put(MAIN_JAR.getID(),
+                new RelativeFileSet(fakeMainJar.getParentFile(),
+                        new HashSet<>(Arrays.asList(fakeMainJar)))
+        );
+        bundleParams.put(CLASSPATH.getID(), fakeMainJar.toString());
+        bundleParams.put(IDENTIFIER.getID(), "com.example.javapacakger.hello.TestPackager");
+        bundleParams.put(MacAppBundler.MAC_CATEGORY.getID(), "public.app-category.developer-tools");
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        bundleParams.put(VERBOSE.getID(), true);
+
+        boolean valid = bundler.validate(bundleParams);
+        assertTrue(valid);
+
+        File result = bundler.execute(bundleParams, new File(workDir, "jre"));
         System.err.println("Bundle at - " + result);
 
         checkFiles(result);
