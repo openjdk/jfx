@@ -666,6 +666,12 @@ public class MacAppBundler extends AbstractBundler {
     }
 
     public static Rule[] createMacRuntimeRules(Map<String, ? super Object> params) {
+        if (!System.getProperty("os.name").toLowerCase().contains("os x")) {
+            // we will never get a sensible answer unless we are running on OSX,
+            // so quit now and return null indicating 'no sensible value'
+            return null;
+        }
+
         //Subsetting of JRE is restricted.
         //JRE README defines what is allowed to strip:
         //   ﻿http://www.oracle.com/technetwork/java/javase/jre-8-readme-2095710.html
