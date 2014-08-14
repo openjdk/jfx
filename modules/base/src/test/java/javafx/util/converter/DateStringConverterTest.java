@@ -48,8 +48,8 @@ public class DateStringConverterTest {
     private static final Date VALID_DATE;
 
     static {
+        TimeZone.setDefault(TimeZone.getTimeZone("GMT"));
         Calendar c = Calendar.getInstance();
-        c.setTimeZone(TimeZone.getTimeZone("GMT"));
         c.set(Calendar.YEAR, 1985);
         c.set(Calendar.MONTH, Calendar.JANUARY);
         c.set(Calendar.DAY_OF_MONTH, 12);
@@ -114,7 +114,6 @@ public class DateStringConverterTest {
     }
     
     @Before public void setup() {
-        TimeZone.setDefault(TimeZone.getTimeZone("GMT"));
     }
     
     /*********************************************************************
@@ -146,13 +145,11 @@ public class DateStringConverterTest {
      * Test toString / fromString methods
      ********************************************************************/    
     
-    @Ignore
     @Test public void fromString_testValidInput() {
         String input = validFormatter.format(validDate);
         assertEquals("Input = "+input, validDate, converter.fromString(input));
     }
     
-    @Ignore
     @Test public void fromString_testValidInputWithWhiteSpace() {
         String input = validFormatter.format(validDate);
         assertEquals("Input = "+input, validDate, converter.fromString("      " + input + "      "));
@@ -163,7 +160,6 @@ public class DateStringConverterTest {
         converter.fromString("abcdefg");
     }
     
-    @Ignore
     @Test public void toString_validOutput() {
         assertEquals(validFormatter.format(validDate), converter.toString(validDate));
     }    

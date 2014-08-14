@@ -48,8 +48,8 @@ public class TimeStringConverterTest {
     private static final Date VALID_TIME_WITHOUT_SECONDS;
     
     static {
+        TimeZone.setDefault(TimeZone.getTimeZone("GMT"));
         Calendar c = Calendar.getInstance();
-        c.setTimeZone(TimeZone.getTimeZone("GMT"));
         c.clear();
         c.set(Calendar.HOUR_OF_DAY, 12);
         c.set(Calendar.MINUTE, 34);
@@ -113,7 +113,6 @@ public class TimeStringConverterTest {
     }
     
     @Before public void setup() {
-        TimeZone.setDefault(TimeZone.getTimeZone("GMT"));
     }
     
     /*********************************************************************
