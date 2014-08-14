@@ -147,11 +147,6 @@ public enum AccessibleRole {
     DECREMENT_BUTTON,
 
     /**
-     * Header. - NOT USED
-     */
-    HEADER,
-
-    /**
      * Hyperlink role.
      * </p>
      * <ul>

@@ -201,7 +201,7 @@ final class MacAccessible extends Accessible {
     static enum MacRole {
         NSAccessibilityUnknownRole(AccessibleRole.NODE, null, null),
         NSAccessibilityGroupRole(AccessibleRole.PARENT, null, null),
-        NSAccessibilityButtonRole(new AccessibleRole[] {AccessibleRole.BUTTON, AccessibleRole.INCREMENT_BUTTON, AccessibleRole.DECREMENT_BUTTON, AccessibleRole.HEADER, AccessibleRole.SPLIT_MENU_BUTTON},
+        NSAccessibilityButtonRole(new AccessibleRole[] {AccessibleRole.BUTTON, AccessibleRole.INCREMENT_BUTTON, AccessibleRole.DECREMENT_BUTTON, AccessibleRole.SPLIT_MENU_BUTTON},
             new MacAttribute[] {
                 MacAttribute.NSAccessibilityEnabledAttribute,
                 MacAttribute.NSAccessibilityTitleAttribute,
@@ -482,7 +482,6 @@ final class MacAccessible extends Accessible {
 
     static enum MacSubrole {
         NSAccessibilityTableRowSubrole(AccessibleRole.LIST_ITEM, AccessibleRole.TABLE_ROW),
-        NSAccessibilitySortButtonSubrole(AccessibleRole.HEADER),
         NSAccessibilitySecureTextFieldSubrole(AccessibleRole.PASSWORD_FIELD),
         NSAccessibilityOutlineRowSubrole(new AccessibleRole[] { AccessibleRole.TREE_ITEM, AccessibleRole.TREE_TABLE_ROW },
             new MacAttribute[] {
