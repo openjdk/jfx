@@ -347,6 +347,13 @@ public class TextInputControlTest {
         assertEquals(4, textInput.getCaretPosition());
     }
 
+    @Test
+    public void caretAndAnchorPositionAfterSettingText() {
+        textInput.setText("The quick brown fox");
+        assertEquals(19, textInput.getCaretPosition());
+        assertEquals(19, textInput.getAnchor());
+    }
+
     /******************************************************
      * Test for length                                    *
      *****************************************************/
@@ -644,6 +651,7 @@ public class TextInputControlTest {
 
     @Test public void pasteWithEmptySelection() {
         textInput.setText("quick brown fox");
+        textInput.selectRange(0,0);
         copy("The ");
         textInput.paste();
         assertEquals(4, textInput.getAnchor());
@@ -1544,6 +1552,7 @@ public class TextInputControlTest {
 
     @Test public void forwardMovesForwardWhenNotAtEnd() {
         textInput.setText("The quick brown fox");
+        textInput.selectRange(0, 0);
         textInput.forward();
         assertEquals(1, textInput.getCaretPosition());
         assertEquals(1, textInput.getAnchor());
@@ -1588,6 +1597,7 @@ public class TextInputControlTest {
 
     @Test public void backwardDoesNothingWhenAtStart() {
         textInput.setText("The quick brown fox");
+        textInput.selectRange(0, 0);
         textInput.backward();
         assertEquals(0, textInput.getCaretPosition());
         assertEquals(0, textInput.getAnchor());
@@ -1724,6 +1734,7 @@ public class TextInputControlTest {
 
     @Test public void extendSelectionWithOutOfRangePos() {
         textInput.setText("The quick brown fox");
+        textInput.selectRange(0, 0);
         textInput.extendSelection(1000);
         assertEquals(19, textInput.getCaretPosition());
         assertEquals(0, textInput.getAnchor());

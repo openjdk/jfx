@@ -717,8 +717,8 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
             } else {
                 items.setAll(copyMI, separatorMI, selectAllMI);
             }
-            undoMI.setDisable(!getBehavior().canUndo());
-            redoMI.setDisable(!getBehavior().canRedo());
+            undoMI.setDisable(!getSkinnable().isUndoable());
+            redoMI.setDisable(!getSkinnable().isRedoable());
             cutMI.setDisable(maskText || !hasSelection);
             copyMI.setDisable(maskText || !hasSelection);
             pasteMI.setDisable(!Clipboard.getSystemClipboard().hasString());
