@@ -88,6 +88,7 @@ import javafx.scene.input.InputMethodRequests;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseDragEvent;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.input.PickResult;
 import javafx.scene.input.RotateEvent;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.input.SwipeEvent;
@@ -9338,6 +9339,16 @@ public abstract class Node implements EventTarget, Styleable {
                     requestFocus();
                 }
                 break;
+            case SHOW_MENU: {
+                Bounds b = getBoundsInLocal();
+                Point2D pt = localToScreen(b.getMaxX(), b.getMaxY());
+                ContextMenuEvent event =
+                    new ContextMenuEvent(ContextMenuEvent.CONTEXT_MENU_REQUESTED,
+                    b.getMaxX(), b.getMaxY(), pt.getX(), pt.getY(),
+                    false, new PickResult(this, b.getMaxX(), b.getMaxY()));
+                Event.fireEvent(this, event);
+                break;
+            }
             default:
         }
     }
