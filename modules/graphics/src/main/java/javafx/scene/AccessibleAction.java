@@ -148,7 +148,6 @@ public enum AccessibleAction {
 
     /**
      * Requests the view to sets its selection to the given items.
-     * Parameter: ObservableList&lt;Node&gt;
      * <p>Used by ListView, TreeView, etc </p>
      * 
      * Parameters:
