@@ -9168,9 +9168,13 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     /**
-     * The role of this {@code Node}.
+     * The accessible role for this {@code Node}.
+     * <p>
+     * The screen reader uses the role of a node to determine the
+     * attributes and actions that are supported.
      *
-     * @defaultValue Role.NODE
+     * @defaultValue {@link AccessibleRole#NODE}
+     * @see AccessibleRole
      * 
      * @since JavaFX 8u40
      */
@@ -9186,16 +9190,6 @@ public abstract class Node implements EventTarget, Styleable {
         return roleProperty().get();
     }
     
-    /**
-     * The accessible role for this {@code Node}.
-     * <p>
-     * The screen reader uses the role of a node to determine the
-     * attributes and actions that are supported.
-     *
-     * @defaultValue {@link AccessibleRole.NODE}
-     * 
-     * @since JavaFX 8u40
-     */
     public final ObjectProperty<AccessibleRole> roleProperty() {
         if (role == null) {
             role = new SimpleObjectProperty<AccessibleRole>(this, "role", AccessibleRole.NODE);
@@ -9318,6 +9312,12 @@ public abstract class Node implements EventTarget, Styleable {
     /**
      * This method is called by the assistive technology to request
      * the value for an attribute.
+     * <p>
+     * This method is commonly overridden by subclasses to implement
+     * attributes that are required for a specific role.<br>
+     * If a particular attribute is not handled, the super class implementation
+     * must be called.
+     * </p>
      *
      * @param attribute the requested attribute
      * @param parameters optional list of parameters
@@ -9347,7 +9347,13 @@ public abstract class Node implements EventTarget, Styleable {
     /**
      * This method is called by the assistive technology to request the action
      * indicated by the argument should be executed.
-     *
+     * <p>
+     * This method is commonly overridden by subclasses to implement
+     * action that are required for a specific role.<br>
+     * If a particular action is not handled, the super class implementation
+     * must be called.
+     * </p>
+     * 
      * @param action the action to execute
      * @param parameters optional list of parameters
      *
