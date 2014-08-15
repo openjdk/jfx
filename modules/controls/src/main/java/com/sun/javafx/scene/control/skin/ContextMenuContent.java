@@ -1536,7 +1536,11 @@ public class ContextMenuContent extends Region {
                 case SHOW_MENU:{
                     if (item instanceof Menu) {
                         final Menu menuItem = (Menu) item;
-                        menuItem.hide();
+                        if (menuItem.isShowing()) {
+                            menuItem.hide();
+                        } else {
+                            menuItem.show();
+                        }
                     }
                     break;
                 }
