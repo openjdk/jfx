@@ -704,7 +704,12 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
     protected Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
             case FOCUS_ITEM: return navigation.indicatorButtons.getSelectedToggle();
-            case PAGES: return navigation.indicatorButtons.getToggles();
+            case ITEM_COUNT: return navigation.indicatorButtons.getToggles().size();
+            case ITEM_AT_INDEX: {
+                Integer index = (Integer)parameters[0];
+                if (index == null) return null;
+                return navigation.indicatorButtons.getToggles().get(index);
+            }
             default: return super.queryAccessibleAttribute(attribute, parameters);
         }
     }
@@ -1241,7 +1246,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
         @Override
         public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
             switch (attribute) {
-                case TITLE: return getText();
+                case TEXT: return getText();
                 case SELECTED: return isSelected();
                 default: return super.queryAccessibleAttribute(attribute, parameters);
             }

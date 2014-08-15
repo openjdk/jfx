@@ -145,7 +145,7 @@ class WinTextRangeProvider {
     }
 
     void ExpandToEnclosingUnit(int unit) {
-        String text = (String)getAttribute(TITLE);
+        String text = (String)getAttribute(TEXT);
         if (text == null) return;
         int length = text.length();
         if (length == 0) return;
@@ -231,7 +231,7 @@ class WinTextRangeProvider {
 
     long FindText(String text, boolean backward, boolean ignoreCase) {
         if (text == null) return 0;
-        String documentText = (String)getAttribute(TITLE);
+        String documentText = (String)getAttribute(TEXT);
         if (documentText == null) return 0;
         String rangeText = documentText.substring(start, end);
         if (ignoreCase) {
@@ -304,7 +304,7 @@ class WinTextRangeProvider {
     }
 
     double[] GetBoundingRectangles() {
-        String text = (String)getAttribute(TITLE);
+        String text = (String)getAttribute(TEXT);
         if (text == null) return null;
         int length = text.length();
 
@@ -341,7 +341,7 @@ class WinTextRangeProvider {
     }
 
     String GetText(int maxLength) {
-        String text = (String)getAttribute(TITLE);
+        String text = (String)getAttribute(TEXT);
         if (text == null) return null;
         int endOffset = maxLength != -1 ? Math.min(end, start + maxLength) : end;
 //        System.out.println("+GetText [" + text.substring(start, endOffset)+"]");
@@ -350,7 +350,7 @@ class WinTextRangeProvider {
 
     int Move(int unit, final int requestedCount) {
         if (requestedCount == 0) return 0;
-        String text = (String)getAttribute(TITLE);
+        String text = (String)getAttribute(TEXT);
         if (text == null) return 0;
         int length = text.length();
         if (length == 0) return 0;
@@ -454,7 +454,7 @@ class WinTextRangeProvider {
 
     int MoveEndpointByUnit(int endpoint, int unit, final int requestedCount) {
         if (requestedCount == 0) return 0;
-        String text = (String)getAttribute(TITLE);
+        String text = (String)getAttribute(TEXT);
         if (text == null) return 0;
         int length = text.length();
 
@@ -558,7 +558,7 @@ class WinTextRangeProvider {
     }
 
     void MoveEndpointByRange(int endpoint, WinTextRangeProvider targetRange, int targetEndpoint) {
-        String text = (String)getAttribute(TITLE);
+        String text = (String)getAttribute(TEXT);
         if (text == null) return;
         int length = text.length();
 

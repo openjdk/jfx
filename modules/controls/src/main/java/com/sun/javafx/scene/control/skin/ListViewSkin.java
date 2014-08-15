@@ -502,7 +502,8 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
                 }
                 return flow.getPrivateCell(focusedIndex);
             }
-            case ROW_AT_INDEX: {
+            case ITEM_COUNT: return getItemCount();
+            case ITEM_AT_INDEX: {
                 Integer rowIndex = (Integer)parameters[0];
                 if (rowIndex == null) return null;
                 if (0 <= rowIndex && rowIndex < getItemCount()) {

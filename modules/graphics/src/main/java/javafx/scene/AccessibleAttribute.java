@@ -26,6 +26,7 @@
 package javafx.scene;
 
 import java.time.LocalDate;
+
 import javafx.collections.ObservableList;
 import javafx.geometry.Bounds;
 import javafx.geometry.Orientation;
@@ -33,414 +34,763 @@ import javafx.scene.input.KeyCombination;
 import javafx.scene.text.Font;
 
 /**
- * Experimental API - Do not use (will be removed).
- *
- * @treatAsPrivate
+ * This enum describes the attributes that an assistive technology
+ * such as a screen reader can request from the scene graph.
+ * 
+ * The {@link AccessibleRole} dictates the set of attributes that
+ * the screen reader will request for a particular control.  For
+ * example, a slider is expected to return a double that represents
+ * the current value.
+ * <p>
+ * Attributes may have any number of parameters, depending on the particular attribute.</p>
+ * <p>
+ * When the value of an attribute is changed by a node, it must notify the assistive technology
+ * using {@link Node#notifyAccessibleAttributeChanged(AccessibleAttribute)}.  This will allow
+ * the screen reader to inform the user that a value has changed.  The most common form of
+ * notification is focus change.
+ * </p>
+ * 
+ * @see Node#queryAccessibleAttribute(AccessibleAttribute, Object...)
+ * @see Node#notifyAccessibleAttributeChanged(AccessibleAttribute)
+ * @see AccessibleRole
+ * @see AccessibleAttribute#ROLE
+ * 
+ * @since JavaFX 8u40
  */
 public enum AccessibleAttribute {
 
     /**
-     * Returns the accelerator for the Node.
-     * Type: KeyCombination
+     * Returns the accelerator for the node.</p>
+     * <ul>
+     * <li>Used by: Menu, MenuItem, RadioMenuItem, and others </li>
+     * <li>Needs notify: no </li>
+     * <li>Return Type: {@link KeyCombination} </li>
+     * <li>Parameters: <ul></ul></li>
+     * </ul>
      */
-    ACCELERATOR("Accelerator", KeyCombination.class),
+    ACCELERATOR(KeyCombination.class),
 
     /**
-     * Returns the bounds for the Node.
-     * Type: Bounds
+     * Returns the bounds for the node.</p>
+     * <ul>
+     * <li>Used by: Node </li>
+     * <li>Needs notify: no </li>
+     * <li>Return Type: {@link Bounds} </li>
+     * <li>Parameters: <ul></ul></li>
+     * </ul>
      */
-    BOUNDS("Bounds", Bounds.class),
+    BOUNDS(Bounds.class),
 
     /**
-     * Returns the array of bounding rectangles for the given char range.
-     * Parameter: Integer range start
-     * Parameter: Integer range length
-     * Type: Bounds[]
+     * Returns the array of bounding rectangles for the given character range.</p>
+     * <ul>
+     * <li>Used by: TextField and TextArea </li>
+     * <li>Needs notify: no </li>
+     * <li>Return Type: {@link Bounds}[] </li>
+     * <li>Parameters: 
+     *   <ul>
+     *    <li>{@link Integer} the start offset </li>
+     *    <li>{@link Integer} the end offset </li>
+     *   </ul>
+     * </li>
+     * </ul>
      */
-    BOUNDS_FOR_RANGE("BoundsForRange", Bounds[].class),
+    BOUNDS_FOR_RANGE(Bounds[].class),
 
     /**
-     * Returns the caret offset for the node.
-     * Type: Integer
+     * Returns the caret offset for the node.</p>
+     * <ul>
+     * <li>Used by: TextField and TextArea </li>
+     * <li>Needs notify: no </li>
+     * <li>Return Type: {@link Integer} </li>
+     * <li>Parameters: <ul></ul></li>
+     * </ul>
      */
-    CARET_OFFSET("CaretOffset", Integer.class),
+    CARET_OFFSET(Integer.class),
 
     /**
-     * Returns the children for the Node.
-     * Type: ObservableList&lt;Node&gt;
+     * Returns the children for the node.</p>
+     * <ul>
+     * <li>Used by: Parent </li>
+     * <li>Needs notify: no </li>
+     * <li>Return Type: {@link javafx.collections.ObservableList}&lt;{@link Node}&gt; </li>
+     * <li>Parameters: <ul></ul></li>
+     * </ul>
      */
-    CHILDREN("Children", ObservableList.class),
+    CHILDREN(ObservableList.class),
 
     /**
-     * Returns the column at the given index
-     * Parameter: Integer
-     * Type: Node
+     * Returns the column at the given index.</p>
+     * <ul>
+     * <li>Used by: TableView and TreeTableView </li>
+     * <li>Needs notify: no </li>
+     * <li>Return Type: {@link Node} </li>
+     * <li>Parameters:
+     *   <ul>
+     *    <li>{@link Integer} the index </li>
+     *   </ul>
+     * </li>
+     * </ul>
      */
-    COLUMN_AT_INDEX("ColumnAtIndex", Node.class),
+    COLUMN_AT_INDEX(Node.class),
 
     /**
-     * Returns the cell at the given row and column indices
-     * Parameter: Integer, Integer
-     * Type: Node
+     * Returns the cell at the given row and column indices.</p>
+     * <ul>
+     * <li>Used by: TableView and TreeTableView </li>
+     * <li>Needs notify: no </li>
+     * <li>Return Type: {@link Node} </li>
+     * <li>Parameters:
+     *   <ul>
+     *    <li>{@link Integer} the row index </li>
+     *    <li>{@link Integer} the column index </li>
+     *   </ul>
+     * </li>
+     * </ul>
      */
-    CELL_AT_ROW_COLUMN("CellAtRowColumn", Node.class),
+    CELL_AT_ROW_COLUMN(Node.class),
 
     /**
-     * Returns the column count
-     * Type: Integer
+     * Returns the column count for the node.</p>
+     * <ul>
+     * <li>Used by: TableView and TreeTableView </li>
+     * <li>Needs notify: no </li>
+     * <li>Return Type: {@link Integer} </li>
+     * <li>Parameters: <ul></ul></li>
+     * </ul>
      */
-    COLUMN_COUNT("ColumnCount", Integer.class),
+    COLUMN_COUNT(Integer.class),
 
     /**
-     * Returns the column index of a cell
-     * Type: Integer
+     * Returns the column index for the node.</p>
+     * <ul>
+     * <li>Used by: TableCell and TreeTableCell </li>
+     * <li>Needs notify: no </li>
+     * <li>Return Type: {@link Integer} </li>
+     * <li>Parameters: <ul></ul></li>
+     * </ul>
      */
-    COLUMN_INDEX("ColumnIndex", Integer.class),
+    COLUMN_INDEX(Integer.class),
 
     /**
-     * Returns the contents of a scroll pane
-     * Type: Node
+     * Returns the contents of the node.</p>
+     * <ul>
+     * <li>Used by: ScrollPane </li>
+     * <li>Needs notify: no </li>
+     * <li>Return Type: {@link Node} </li>
+     * <li>Parameters: <ul></ul></li>
+     * </ul>
      */
-    CONTENTS("Contents", Node.class),
+    CONTENTS(Node.class),
 
     /**
-     * Returns true if the Node is disabled.
-     * Type: Boolean
+     * Returns true if the node is disabled, otherwise false.</p>
+     * <ul>
+     * <li>Used by: Node </li>
+     * <li>Needs notify: no </li>
+     * <li>Return Type: {@link Boolean} </li>
+     * <li>Parameters: <ul></ul></li>
+     * </ul>
      */
-    DISABLED("Disabled", Boolean.class),
+    DISABLED(Boolean.class),
 
     /**
-     * Depth of a row in a disclosure hierarchy.
-     * Type: Integer
+     * Returns the depth of a row in the disclosure hierarchy.</p>
+     * <ul>
+     * <li>Used by: TreeItem and TreeTableRow </li>
+     * <li>Needs notify: no </li>
+     * <li>Return Type: {@link Integer} </li>
+     * <li>Parameters: <ul></ul></li>
+     * </ul>
      */
-    DISCLOSURE_LEVEL("DisclosureLevel", Integer.class),
+    DISCLOSURE_LEVEL(Integer.class),
 
     /**
-     * Returns the local date for the node.
-     * Type: LocalDate
+     * Returns the local date for the node.</p>
+     * <ul>
+     * <li>Used by: DatePicker </li>
+     * <li>Needs notify: no </li>
+     * <li>Return Type: {@link LocalDate} </li>
+     * <li>Parameters: <ul></ul></li>
+     * </ul>
      */
-    DATE("Date", LocalDate.class),
+    DATE(LocalDate.class),
 
     /**
-     * Returns true if the node is editable.
-     * Type: Boolean
+     * Returns true if the node is editable, otherwise false.</p>
+     * <ul>
+     * <li>Used by: TextField, ComboBox, and others </li>
+     * <li>Needs notify: no </li>
+     * <li>Return Type: {@link Boolean} </li>
+     * <li>Parameters: <ul></ul></li>
+     * </ul>
      */
-    EDITABLE("Editable", Boolean.class),
+    EDITABLE(Boolean.class),
 
     /**
-     * Indicates if a popup is expanded.
-     * Type: Boolean
+     * Returns true if the node is expanded, otherwise false.</p>
+     * <ul>
+     * <li>Used by: TreeItem, TitledPane, and others </li>
+     * <li>Needs notify: yes </li>
+     * <li>Return Type: {@link Boolean} </li>
+     * <li>Parameters: <ul></ul></li>
+     * </ul>
      */
-    EXPANDED("Expanded", Boolean.class),
+    EXPANDED(Boolean.class),
 
     /**
      * Returns the focus item.
+     * <p>
+     * Used for controls such as TabPane, TableView, ListView
+     * where the assistive technology focus is different from the
+     * normal focus node.  For example, a table control will have focus,
+     * while a cell inside the table might have the screen reader focus.
+     * </p>
+     * <ul>
+     * <li>Used by: ListView, TabPane, and others </li>
+     * <li>Needs notify: yes </li>
+     * <li>Return Type: {@link Node} </li>
+     * <li>Parameters: <ul></ul></li>
+     * </ul>
+     */
+    FOCUS_ITEM(Node.class),
+
+    /**
+     * Returns the focus node.
      * Type: Node
-     *
-     * Used for controls with items such TabPaneView, TableView, ListView, etc.
-     * It returns the exact Node within the control that has the focus.
+     * <p>
+     * When this attribute is requested from the Scene, the default implementation
+     * returns {@link Scene#focusOwnerProperty()}.
+     * </p>
+     * <ul>
+     * <li>Used by: Scene </li>
+     * <li>Needs notify: yes </li>
+     * <li>Return Type: {@link Node} </li>
+     * <li>Parameters: <ul></ul></li>
+     * </ul>
      */
-    FOCUS_ITEM("FocusItem", Node.class),
+    FOCUS_NODE(Node.class),
 
     /**
-     * Returns the focus Node.
-     * Type: Node
-     *
-     * This attribute is requested to the Scene, where it maps to {@link Scene#focusOwnerProperty()}
-     * The Scene can delegate the request to its current transient focus container.
+     * Returns true if the node is focused, otherwise false.</p>
+     * <ul>
+     * <li>Used by: Node </li>
+     * <li>Needs notify: no </li>
+     * <li>Return Type: {@link Boolean} </li>
+     * <li>Parameters: <ul></ul></li>
+     * </ul>
      */
-    FOCUS_NODE("FocusNode", Node.class),
+    FOCUSED(Boolean.class),
 
     /**
-     * Returns true if the Node is focused.
-     * Type: Boolean
+     * Returns the font for the node.</p>
+     * <ul>
+     * <li>Used by: TextField and TextArea </li>
+     * <li>Needs notify: no </li>
+     * <li>Return Type: {@link Font} </li>
+     * <li>Parameters: <ul></ul></li>
+     * </ul>
      */
-    FOCUSED("Focused", Boolean.class),
+    FONT(Font.class),
 
     /**
-     * Returns the font for the node
-     * Type: Font
+     * Returns the header for the node.</p>
+     * <ul>
+     * <li>Used by: TableView and TreeTableView </li>
+     * <li>Needs notify: no </li>
+     * <li>Return Type: {@link Node} </li>
+     * <li>Parameters: <ul></ul></li>
+     * </ul>
      */
-    FONT("Font", Font.class),
+    HEADER(Node.class),
 
     /**
-     * Returns the header for the node
-     * Type: Node
+     * Returns the help text for the node.</p>
+     * <ul>
+     * <li>Used by: Node </li>
+     * <li>Needs notify: no </li>
+     * <li>Return Type: {@link String} </li>
+     * <li>Parameters: <ul></ul></li>
+     * </ul>
      */
-    HEADER("Header", Node.class),
+    HELP(String.class),
 
     /**
-     * Returns the help for the Node.
-     * Type: String
+     * Returns the horizontal scroll bar for the node.</p>
+     * <ul>
+     * <li>Used by: ListView, ScrollPane, and others </li>
+     * <li>Needs notify: no </li>
+     * <li>Return Type: {@link Node} </li>
+     * <li>Parameters: <ul></ul></li>
+     * </ul>
      */
-    HELP("Help", String.class),
+    HORIZONTAL_SCROLLBAR(Node.class),
 
     /**
-     * Returns the horizontal scroll bar of a scroll pane
-     * Type: Node
+     * Returns true of the node is indeterminaite, otherwise false.</p>
+     * <ul>
+     * <li>Used by: CheckBox and ProgressIndicator </li>
+     * <li>Needs notify: yes </li>
+     * <li>Return Type: {@link Boolean} </li>
+     * <li>Parameters: <ul></ul></li>
+     * </ul>
      */
-    HORIZONTAL_SCROLLBAR("HorizontalScrollBar", Node.class),
+    INDETERMINATE(Boolean.class),
 
     /**
-     * Returns the indeterminate state for the node.
-     * Type: Boolean
+     * Returns the item at the given index.</p>
+     * <ul>
+     * <li>Used by: TabPane, ListView, and others </li>
+     * <li>Needs notify: no </li>
+     * <li>Return Type: {@link Node} </li>
+     * <li>Parameters:
+     *   <ul>
+     *   <li> {@link Integer} the index </li>
+     *   </ul>
+     * </li>
+     * </ul>
      */
-    INDETERMINATE("Indeterminate", Boolean.class),
+    ITEM_AT_INDEX(Node.class),
 
     /**
-     * Returns the index of a row or column
-     * Type: Integer
+     * Returns the item count for the node.</p>
+     * <ul>
+     * <li>Used by: TabPane, ListView, and others </li>
+     * <li>Needs notify: no </li>
+     * <li>Return Type: {@link Integer} </li>
+     * <li>Parameters: <ul></ul></li>
+     * </ul>
      */
-    INDEX("Index", Integer.class),
+    ITEM_COUNT(Integer.class),
 
     /**
-     * Returns a Node that is a label for this control, or null.
-     * Type: Node
+     * Returns the index for the node.</p>
+     * <ul>
+     * <li>Used by: ListItem, TableRow, and others </li>
+     * <li>Needs notify: no </li>
+     * <li>Return Type: {@link Integer} </li>
+     * <li>Parameters: <ul></ul></li>
+     * </ul>
      */
-    LABELED_BY("LabeledBy", Node.class),
+    INDEX(Integer.class),
 
     /**
-     * Indicates whether a TreeItem is a leaf element or not.
-     * Type: Boolean
+     * Returns the node that is the label for this node.
+     * <p>When {@link javafx.scene.control.Label#labelFor} is set,
+     * the default implementation of {@code LABELED_BY} uses this
+     * relationship to return the appropriate node to the screen
+     * reader.</p>
+     * <ul>
+     * <li>Used by: Node </li>
+     * <li>Needs notify: no </li>
+     * <li>Return Type: {@link Node} </li>
+     * <li>Parameters: <ul></ul></li>
+     * </ul>
      */
-    LEAF("Leaf", Boolean.class),
+    LABELED_BY(Node.class),
 
     /**
-     * Returns the line start of the given line index.
-     * Parameter: Integer - line index
-     * Type: Integer
+     * Returns true if the node is a leaf element, otherwise false.</p>
+     * <ul>
+     * <li>Used by: TreeItem and TreeTableRow </li>
+     * <li>Needs notify: no </li>
+     * <li>Return Type: {@link Boolean} </li>
+     * <li>Parameters: <ul></ul></li>
+     * </ul>
      */
-    LINE_END("LineEnd", Integer.class),
+    LEAF(Boolean.class),
 
     /**
-     * Returns the line index of the given character offset.
-     * Parameter: Integer - character offset.
-     * Type: Integer
+     * Returns the line end offset of the given line index.</p>
+     * <ul>
+     * <li>Used by: TextArea </li>
+     * <li>Needs notify: no </li>
+     * <li>Return Type: {@link Integer} </li>
+     * <li>Parameters:
+     *   <ul>
+     *   <li> {@link Integer} the line index </li>
+     *   </ul>
+     * </li>
+     * </ul>
      */
-    LINE_FOR_OFFSET("LineOffset", Integer.class),
+    LINE_END(Integer.class),
 
     /**
-     * Returns the line end of the given line index.
-     * Parameter: Integer - line index
-     * Type: Integer
+     * Returns the line index of the given character offset.</p>
+     * <ul>
+     * <li>Used by: TextArea </li>
+     * <li>Needs notify: no </li>
+     * <li>Return Type: {@link Integer} </li>
+     * <li>Parameters:
+     *   <ul>
+     *   <li> {@link Integer} the character offset </li>
+     *   </ul>
+     * </li>
+     * </ul>
      */
-    LINE_START("LineStart", Integer.class),
+    LINE_FOR_OFFSET(Integer.class),
 
     /**
-     * Returns the min value for the node.
-     * Type: Double
+     * Returns the line start offset of the given line index.</p>
+     * <ul>
+     * <li>Used by: TextArea </li>
+     * <li>Needs notify: no </li>
+     * <li>Return Type: {@link Integer} </li>
+     * <li>Parameters:
+     *   <ul>
+     *   <li> {@link Integer} the line index </li>
+     *   </ul>
+     * </li>
+     * </ul>
      */
-    MIN_VALUE("MinValue", Double.class),
+    LINE_START(Integer.class),
 
     /**
-     * Returns the max value for the node.
-     * Type: Double
+     * Returns the minimum value for the node.</p>
+     * <ul>
+     * <li>Used by: Slider, ScrollBar, and others </li>
+     * <li>Needs notify: no </li>
+     * <li>Return Type: {@link Double} </li>
+     * <li>Parameters: <ul></ul></li>
+     * </ul>
      */
-    MAX_VALUE("MaxValue", Double.class),
+    MIN_VALUE(Double.class),
 
     /**
-     * Returns the Menu.
-     * Type: Node
+     * Returns the maximum value for the node.</p>
+     * <ul>
+     * <li>Used by: Slider, ScrollBar, and others </li>
+     * <li>Needs notify: no </li>
+     * <li>Return Type: {@link Double} </li>
+     * <li>Parameters: <ul></ul></li>
+     * </ul>
      */
-    MENU("Menu", Node.class),
+    MAX_VALUE(Double.class),
 
     /**
-     * Returns the owner Menu.
-     * Type: Node
+     * Returns the mnemonic for the node.</p>
+     * <ul>
+     * <li>Used by: Menu, MenuItem, CheckMenuItem, and others </li>
+     * <li>Needs notify: no </li>
+     * <li>Return Type: {@link String} </li>
+     * <li>Parameters: <ul></ul></li>
+     * </ul>
      */
-    MENU_FOR("MenuFor", Node.class),
+    MNEMONIC(String.class),
 
     /**
-     * Returns the mnemonic for the node.
-     * Type: String
+     * Returns true if the node allows for multiple selection, otherwise false.</p>
+     * <ul>
+     * <li>Used by: ListView, TableView, and others </li>
+     * <li>Needs notify: no </li>
+     * <li>Return Type: {@link Boolean} </li>
+     * <li>Parameters: <ul></ul></li>
+     * </ul>
      */
-    MNEMONIC("Mnemonic", String.class),
+    MULTIPLE_SELECTION(Boolean.class),
 
     /**
-     * Returns whether the control allows for multiple selection.
-     * Type: Boolean
+     * Returns the node at the given location.</p>
+     * <ul>
+     * <li>Used by: Scene </li>
+     * <li>Needs notify: no </li>
+     * <li>Return Type: {@link Node} </li>
+     * <li>Parameters:
+     *   <ul>
+     *   <li> {@link javafx.geometry.Point2D} the point location </li>
+     *   </ul>
+     * </li>
+     * </ul>
      */
-    MULTIPLE_SELECTION("MultipleSelection", Boolean.class),
+    NODE_AT_POINT(Node.class),
 
     /**
-     * Returns the Node at the given point location.
-     * Type: Node
-     * Parameters: Point2D
+     * Returns the character offset at the given location.</p>
+     * <ul>
+     * <li>Used by: TextField and TextArea </li>
+     * <li>Needs notify: no </li>
+     * <li>Return Type: {@link Integer} </li>
+     * <li>Parameters:
+     *   <ul>
+     *   <li> {@link javafx.geometry.Point2D} the point location </li>
+     *   </ul>
+     * </li>
+     * </ul>
      */
-    NODE_AT_POINT("NodeAtPoint", Node.class),
+    OFFSET_AT_POINT(Integer.class),
 
     /**
-     * Returns the char offset at the given point location.
-     * Type: Integer
-     * Parameters: Point2D
+     * Returns the orientation of the node.</p>
+     * <ul>
+     * <li>Used by: ScrolBar and Slider </li>
+     * <li>Needs notify: no </li>
+     * <li>Return Type: {@link javafx.geometry.Orientation} </li>
+     * <li>Parameters: <ul></ul></li>
+     * </ul>
      */
-    OFFSET_AT_POINT("OffsetAtPoint", Integer.class),
+    ORIENTATION(Orientation.class),
 
     /**
-     * Returns the orientation of a node
-     * Type: Orientation
+     * Return the overflow button for the node.</p>
+     * <ul>
+     * <li>Used by: Toolbar </li>
+     * <li>Needs notify: no </li>
+     * <li>Return Type: {@link Node} </li>
+     * <li>Parameters: <ul></ul></li>
+     * </ul>
      */
-    ORIENTATION("Orientation", Orientation.class),
+    OVERFLOW_BUTTON(Node.class),
 
     /**
-     * Return the overflow button for the Node.
-     * Type: Node
+     * Returns the parent for the node.</p>
+     * <ul>
+     * <li>Used by: Node </li>
+     * <li>Needs notify: yes </li>
+     * <li>Return Type: {@link Parent} </li>
+     * <li>Parameters: <ul></ul></li>
+     * </ul>
      */
-    OVERFLOW_BUTTON("Overflow Button", Node.class),
+    PARENT(Parent.class),
 
     /**
-     * Returns the pages for the Node.
-     * Type: ObservableList&lt;Node&gt;
+     * Returns the parent menu for the node.</p>
+     * <ul>
+     * <li>Used by: ContextMenu </li>
+     * <li>Needs notify: no </li>
+     * <li>Return Type: {@link Node} </li>
+     * <li>Parameters: <ul></ul></li>
+     * </ul>
      */
-    PAGES("Pages", ObservableList.class),
+    PARENT_MENU(Node.class),
 
     /**
-     * Returns the parent for the Node.
-     * Type: Parent
+     * Returns the role for the node.</p>
+     * <ul>
+     * <li>Used by: Node </li>
+     * <li>Needs notify: no </li>
+     * <li>Return Type: {@link AccessibleRole} </li>
+     * <li>Parameters: <ul></ul></li>
+     * </ul>
      */
-    PARENT("Parent", Parent.class),
+    ROLE(AccessibleRole.class),
 
     /**
-     * Returns the role for the Node.
-     * Type: Role
+     * Returns the role description for the node.</p>
+     * <ul>
+     * <li>Used by: Node </li>
+     * <li>Needs notify: no </li>
+     * <li>Return Type: {@link String} </li>
+     * <li>Parameters: <ul></ul></li>
+     * </ul>
      */
-    ROLE("Role", AccessibleRole.class),
+    ROLE_DESCRIPTION(String.class),
 
     /**
-     * Returns the role description for the Node.
-     * Type: String
+     * Returns the row at the given index.</p>
+     * <ul>
+     * <li>Used by: TableView, TreeView, and TreeTableView </li>
+     * <li>Needs notify: no </li>
+     * <li>Return Type: {@link Node} </li>
+     * <li>Parameters:
+     *   <ul>
+     *   <li> {@link Integer} the row index </li>
+     *   </ul>
+     * </li>
+     * </ul>
      */
-    ROLE_DESCRIPTION("RoleDescription", String.class),
+    ROW_AT_INDEX(Node.class),
 
     /**
-     * Returns the row at the given index
-     * Parameter: Integer
-     * Type: Node
+     * Returns the row count for the node.</p>
+     * <ul>
+     * <li>Used by: TableView, TreeView, and TreeTableView </li>
+     * <li>Needs notify: no </li>
+     * <li>Return Type: {@link Integer} </li>
+     * <li>Parameters: <ul></ul></li>
+     * </ul>
      */
-    ROW_AT_INDEX("RowAtIndex", Node.class),
+    ROW_COUNT(Integer.class),
 
     /**
-     * Returns the row count
-     * Type: Integer
+     * Returns the row index of the node.</p>
+     * <ul>
+     * <li>Used by: TableCell, TreeItem, and TreeTableCell </li>
+     * <li>Needs notify: no </li>
+     * <li>Return Type: {@link Integer} </li>
+     * <li>Parameters: <ul></ul></li>
+     * </ul>
      */
-    ROW_COUNT("RowCount", Integer.class),
+    ROW_INDEX(Integer.class),
 
     /**
-     * Returns the row index of a cell
-     * Type: Integer
+     * Returns the scene for the node.</p>
+     * <ul>
+     * <li>Used by: Node </li>
+     * <li>Needs notify: no </li>
+     * <li>Return Type: {@link Scene} </li>
+     * <li>Parameters: <ul></ul></li>
+     * </ul>
      */
-    ROW_INDEX("RowIndex", Integer.class),
+    SCENE(Scene.class),
 
     /**
-     * Returns the scene for the Node.
-     * Type: Scene
+     * Returns true if the node is selected, otherwise false.</p>
+     * <ul>
+     * <li>Used by: CheckBox, TreeItem, and others </li>
+     * <li>Needs notify: no </li>
+     * <li>Return Type: {@link Boolean} </li>
+     * <li>Parameters: <ul></ul></li>
+     * </ul>
      */
-    SCENE("Scene", Scene.class),
+    SELECTED(Boolean.class),
 
     /**
-     * Returns if the item is selected (in a radio group for example)
-     * Type: Boolean
+     * Returns the list of selected items for the node.</p>
+     * <ul>
+     * <li>Used by: ListView, TableView, and others </li>
+     * <li>Needs notify: no </li>
+     * <li>Return Type: {@link javafx.collections.ObservableList}&lt;{@link Node}&gt; </li>
+     * <li>Parameters: <ul></ul></li>
+     * </ul>
      */
-    SELECTED("Selected", Boolean.class),
+    SELECTED_ITEMS(ObservableList.class),
 
     /**
-     * Returns the list of selected items
-     * Type: ObservableList&lt;Node&gt;
+     * Returns the text selection end offset for the node.</p>
+     * <ul>
+     * <li>Used by: TextField and TextArea </li>
+     * <li>Needs notify: yes </li>
+     * <li>Return Type: {@link Integer} </li>
+     * <li>Parameters: <ul></ul></li>
+     * </ul>
      */
-    SELECTED_ITEMS("SelectedItems", ObservableList.class),
+    SELECTION_END(Integer.class),
 
     /**
-     * Returns the selection end for the node.
-     * Type: Integer
+     * Returns the text selection start offset for the node.</p>
+     * <ul>
+     * <li>Used by: TextField and TextArea </li>
+     * <li>Needs notify: yes </li>
+     * <li>Return Type: {@link Integer} </li>
+     * <li>Parameters: <ul></ul></li>
+     * </ul>
      */
-    SELECTION_END("SelectionEnd", Integer.class),
+    SELECTION_START(Integer.class),
 
     /**
-     * Returns the selection start for the node.
-     * Type: Integer
+     * Returns the sub menu for the node.</p>
+     * <ul>
+     * <li>Used by: Menu </li>
+     * <li>Needs notify: no </li>
+     * <li>Return Type: {@link Node} </li>
+     * <li>Parameters: <ul></ul></li>
+     * </ul>
      */
-    SELECTION_START("SelectionStart", Integer.class),
+    SUBMENU(Node.class),
 
     /**
-     * Returns the tabs for the Node.
-     * Type: ObservableList&lt;Node&gt;
-     */
-    TABS("Tabs", ObservableList.class),
-
-    /**
-     * Returns the title for the Node.
+     * Returns the text for the node.
      * E.g.
      * <ul>
-     * <li>ComboBox returns a string representation of its
-     * currently selected item.
-     * <li>TextField returns the text currently entered into it.
+     * <li>ComboBox returns a string representation of the current selected item.
+     * <li>TextField returns the contents of the text field.
      * </ul>
-     * Type: String
+     * </p>
+     * <ul>
+     * <li>Used by: Node </li>
+     * <li>Needs notify: yes </li>
+     * <li>Return Type: {@link String} </li>
+     * <li>Parameters: <ul></ul></li>
+     * </ul>
      */
-    TITLE("Title", String.class),
+    TEXT(String.class),
 
     /**
-     * Returns a tree item (Role.TREE_ITEM or Role.TREE_TABLE_ITEM) at the given
-     * index, relative to the tree item that this is called on. If this is called
-     * on a container (e.g. TreeView or TreeTableView), it will be called on the
-     * root tree item.
-     * Parameter: Integer
-     * Type: Node
+     * Returns a tree item at the given index, relative to its TREE_ITEM_PARENT.</p>
+     * <ul>
+     * <li>Used by: TreeItem and TreeTableRow </li>
+     * <li>Needs notify: no </li>
+     * <li>Return Type: {@link Node} </li>
+     * <li>Parameters:
+     *   <ul>
+     *   <li> {@link Integer} the index </li>
+     *   </ul>
+     * </li>
+     * </ul>
      */
-    TREE_ITEM_AT_INDEX("TreeItemAtIndex", Node.class),
+    TREE_ITEM_AT_INDEX(Node.class),
 
     /**
-     * Returns the number of tree items that are expanded descendants of the current
-     * tree item. If requested on a container (e.g. TreeView or TreeTableView),
-     * this will return the count from the root tree item.
-     * Type: Node
+     * Returns the tree item count for the node, relative to its TREE_ITEM_PARENT.</p>
+     * <ul>
+     * <li>Used by: TreeItem and TreeTableRow </li>
+     * <li>Needs notify: no </li>
+     * <li>Return Type: {@link Integer} </li>
+     * <li>Parameters: <ul></ul></li>
+     * </ul>
      */
-    TREE_ITEM_COUNT("TreeItemCount", Integer.class),
+    TREE_ITEM_COUNT(Integer.class),
 
     /**
-     * Returns the parent of a Role.TREE_ITEM (as another Role.TREE_ITEM, or if
-     * there is no parent (e.g. it is the root node)), then return the parent
-     * node whatever it is (most probably Role.TREE_VIEW or Role.TREE_TABLE_VIEW)
-     * Type: Node
+     * Returns the parent item for the item, or null if the item is the root.</p>
+     * <ul>
+     * <li>Used by: TreeItem and TreeTableRow </li>
+     * <li>Needs notify: no </li>
+     * <li>Return Type: {@link Node} </li>
+     * <li>Parameters: <ul></ul></li>
+     * </ul>
      */
-    TREE_ITEM_PARENT("TreeItemParent", Node.class),
+    TREE_ITEM_PARENT(Node.class),
 
     /**
-     * Returns the value for the node.
-     * Type: Double
+     * Returns the value for the node.</p>
+     * <ul>
+     * <li>Used by: Slider, ScrollBar, Thumb, and others </li>
+     * <li>Needs notify: yes </li>
+     * <li>Return Type: {@link Double} </li>
+     * <li>Parameters: <ul></ul></li>
+     * </ul>
      */
-    VALUE("Value", Double.class),
+    VALUE(Double.class),
 
     /**
-     * Returns the vertical scroll bar of a scroll pane
-     * Type: Node
+     * Returns the vertical scroll bar for the node.</p>
+     * <ul>
+     * <li>Used by: ListView, ScrollPane, and others </li>
+     * <li>Needs notify: no </li>
+     * <li>Return Type: {@link Node} </li>
+     * <li>Parameters: <ul></ul></li>
+     * </ul>
      */
-    VERTICAL_SCROLLBAR("VerticalScrollBar", Node.class),
+    VERTICAL_SCROLLBAR(Node.class),
 
     /**
-     * Returns if the visibility for the node.
-     * Type: Boolean
+     * Returns true if node is visible, otherwise false.</p>
+     * <ul>
+     * <li>Used by: Node and ContextMenu </li>
+     * <li>Needs notify: yes </li>
+     * <li>Return Type: {@link Boolean} </li>
+     * <li>Parameters: <ul></ul></li>
+     * </ul>
      */
-    VISIBLE("VISIBLE", Boolean.class),
+    VISIBLE(Boolean.class),
 
     /**
-     * Indicates whether a Hyperlink has been visited or not.
-     * This is an undocumented Mac-only attribute.
-     * Type: Boolean
+     * Returns true if the node has been visited, otherwise false.</p>
+     * <ul>
+     * <li>Used by: Hyperlink </li>
+     * <li>Needs notify: no </li>
+     * <li>Return Type: {@link Boolean} </li>
+     * <li>Parameters: <ul></ul></li>
+     * </ul>
      */
-    VISITED("Visited", Boolean.class),
+    VISITED(Boolean.class),
     ;
 
-    private String name;
     private Class<?> returnClass;
 
-    AccessibleAttribute(String name, Class<?> returnClass) {
-        this.name = name;
+    AccessibleAttribute(Class<?> returnClass) {
         this.returnClass = returnClass;
-    }
-
-    public String getName() {
-        return name;
     }
 
     public Class<?> getReturnType() {

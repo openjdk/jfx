@@ -1085,7 +1085,6 @@ public class ListView<T> extends Control {
     @Override
     public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
-            case ROW_COUNT: return getItems().size();
             case MULTIPLE_SELECTION: {
                 MultipleSelectionModel<T> sm = getSelectionModel();
                 return sm != null && sm.getSelectionMode() == SelectionMode.MULTIPLE;

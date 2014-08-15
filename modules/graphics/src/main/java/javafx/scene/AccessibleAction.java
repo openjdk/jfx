@@ -26,88 +26,198 @@
 package javafx.scene;
 
 /**
- * Experimental API - Do not use (will be removed).
+ * This enum describes the actions that an assistive technology
+ * such as a screen reader can request from the scene graph.
+ * 
+ * The {@link AccessibleRole} dictates the set of actions that
+ * the screen reader will request for a particular control. For
+ * example, a push button normally fires an event to indicate
+ * that it was pressed in response to the FIRE action.
+ * <p>
+ * An action may have any number of parameters, depending on the particular action.
+ * </p>
  *
- * @treatAsPrivate
+ * @see Node#executeAccessibleAction(AccessibleAction, Object...)
+ * @see AccessibleRole
+ * @see AccessibleAttribute#ROLE
+ * 
+ * @since JavaFX 8u40
  */
 public enum AccessibleAction {
 
     /**
-     * Decrements the node (if it support BLOCK_DECREMENT) by its larger block decrement
-     * value. A smaller decrement can be performed by using {@link #DECREMENT}.
+     * Request that the node be decremented by a large value.
+     * A smaller decrement is requested using {@link #DECREMENT}.
+     * <p>Used by Slider, ScrollBar, and others </p>
+     * 
+     * Parameters:
+     * <ul>
+     * </ul>
      */
     BLOCK_DECREMENT,
 
     /**
-     * Increments the node (if it support BLOCK_INCREMENT) by its larger block increment
-     * value. A smaller increment can be performed by using {@link #INCREMENT}.
+     * Request that the node be incremented by a large value.
+     * A smaller increment is requested using {@link #INCREMENT}.
+     * <p>Used by Slider, ScrollBar, and others </p>
+     * 
+     * Parameters:
+     * <ul>
+     * </ul>
      */
     BLOCK_INCREMENT,
 
+    /**
+     * Request that the node should become collapsed.
+     * <p>Used by TreeItem, TitledPane, and others </p>
+     * 
+     * Parameters:
+     * <ul>
+     * </ul>
+     */
     COLLAPSE,
 
     /**
-     * Decrements the node (if it support DECREMENT) by its smaller unit decrement
-     * value. A larger decrement can be performed by using {@link #BLOCK_DECREMENT}.
+     * Request that the node be decremented by a small value.
+     * A larger decrement is requested using {@link #BLOCK_DECREMENT}.
+     * <p>Used by Slider, ScrollBar, and others </p>
+     * 
+     * Parameters:
+     * <ul>
+     * </ul>
      */
     DECREMENT,
 
+    /**
+     * Request that the node should become expanded.
+     * <p>Used by TreeItem, TitledPane, and others </p>
+     * 
+     * Parameters:
+     * <ul>
+     * </ul>
+     */
     EXPAND,
 
+    /**
+     * Fires the primary action for the node. For example, a push
+     * button will normally send an action event to notify listeners
+     * that is has been activated.
+     * *
+     * <p>Used by Button, Hyperlink, and others </p>
+     * 
+     * Parameters:
+     * <ul>
+     * </ul>
+     */
     FIRE,
 
     /**
-     * Increments the node (if it support INCREMENT) by its smaller unit increment
-     * value. A larger increment can be performed by using {@link #BLOCK_INCREMENT}.
+     * Request that the node be incremented by a small value.
+     * A larger increment is requested using {@link #BLOCK_INCREMENT}.
+     * <p>Used by Slider, ScrollBar, and others </p>
+     * 
+     * Parameters:
+     * <ul>
+     * </ul>
      */
     INCREMENT,
 
     /**
-     * Moves the node (if it supports MOVE) by the provided x and y coordinates.
-     * Parameter: Double, Double
+     * Request that the node take focus.  By default, a node will 
+     * request focus using  {@link javafx.scene.Node#requestFocus()}.
+     * Both JavaFX and the assisteve technology have the concept of
+     * a focus node and most of the time, they are the same.
+     * In some cases, a control might want the JavaFX focus to remain
+     * on the parent, while the assistive technology focus is on the child.
+     * For example, a table may respond to this request by setting focus
+     * to a cell inside the table before allowing the default to run.
+     * 
+     * <p>Used by Node, TabItem, TableCell and others </p>
+     * 
+     * Parameters:
+     * <ul>
+     * </ul>
      */
-    MOVE,
-
     REQUEST_FOCUS,
 
     /**
-     * Requests the view to show an item, scrolling if required.
-     * Parameter: Node
+     * Request the node to show an item, scrolling if required.
+     * <p>Used by ListView, TreeView, and others </p>
+     * 
+     * Parameters:
+     * <ul>
+     * <li> {@link Node} the item to show </li>
+     * </ul>
      */
     SHOW_ITEM,
 
     /**
-     * Requests the view to show the given text range, scrolling if required.
-     * Parameter: Integer (start offset), Integer (end offset)
+     * Request the node to show a text range, scrolling if required.
+     * <p>Used by TextField and TextArea. </p>
+     * 
+     * Parameters:
+     * <ul>
+     * <li> {@link java.lang.Integer} the start offset </li>
+     * <li> {@link java.lang.Integer} the end offset </li>
+     * </ul>
      */
     SHOW_TEXT_RANGE,
 
     /**
-     * Sets the selected items.
-     * Parameter: ObservableList&lt;Node&gt;
+     * Request the node to set the selection to a list of items.
+     * <p>Used by ListView, TreeView, and others </p>
+     * 
+     * Parameters:
+     * <ul>
+     * <li> {@link javafx.collections.ObservableList}&lt;{@link Node}&gt; the items to select </li>
+     * </ul>
      */
     SET_SELECTED_ITEMS,
 
     /**
-     * Sets the text selection.
-     * Parameter: Integer (start offset), Integer (end offset)
+     * Request the node to set the selection to range of text.
+     * <p>Used by TextField and TextArea. </p>
+     * 
+     * Parameters:
+     * <ul>
+     * <li> {@link java.lang.Integer} the start offset </li>
+     * <li> {@link java.lang.Integer} the end offset </li>
+     * </ul>
      */
     SET_TEXT_SELECTION,
 
     /**
-     * Sets the tile for a node.
-     * Parameter: String
+     * Request the node to set the current text.
+     * <p>Used by TextField and TextArea. </p>
+     * 
+     * Parameters:
+     * <ul>
+     * <li> {@link String} the new text</li>
+     * </ul>
      */
-    SET_TITLE,
+    SET_TEXT,
 
     /**
-     * Sets the value for a node.
-     * Parameter: Double
+     * Request the node to set the current value.
+     * <p>Used by Slider, Scrollbars, and others </p>
+     * 
+     * Parameters:
+     * <ul>
+     * <li> {@link java.lang.Double} the new value </li>
+     * </ul>
      */
     SET_VALUE,
 
     /**
-     * Request the receiver to show its menu.
+     * Request the node to show a menu.  If the node is a control,
+     * then the context menu for the control is shown.  If the node
+     * is a menu, then the submenu for the menu is shown.
+     * 
+     * <p>Used by Node, Menu</p>
+     * 
+     * Parameters:
+     * <ul>
+     * </ul>
      */
     SHOW_MENU,
 }

@@ -152,8 +152,6 @@ public abstract class AbstractDecoration<T> {
     
     public abstract Bounds getSceneGraphObjectBounds();
     public abstract Transform getSceneGraphToSceneTransform();
-    public abstract Point2D sceneGraphObjectToScene(double x, double y);
-    public abstract Point2D sceneToSceneGraphObject(double x, double y);
     protected abstract void startListeningToSceneGraphObject();
     protected abstract void stopListeningToSceneGraphObject();
     protected abstract void layoutDecoration();
@@ -164,7 +162,8 @@ public abstract class AbstractDecoration<T> {
      */
     
     public Point2D sceneGraphObjectToDecoration(double x, double y) {
-        return getRootNode().sceneToLocal(sceneGraphObjectToScene(x, y));
+        final Transform t = getSceneGraphToSceneTransform();
+        return getRootNode().sceneToLocal(t.transform(x, y));
     }
             
     protected void startListeningToLayoutBounds(Node node) {

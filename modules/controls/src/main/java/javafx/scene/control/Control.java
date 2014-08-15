@@ -940,15 +940,6 @@ public abstract class Control extends Region implements Skinnable {
 
     @Override
     public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
-        switch (action) {
-            case SHOW_MENU:
-                ContextMenu menu = getContextMenu();
-                if (menu != null) {
-                    menu.show(this, Side.RIGHT, 0, 0);
-                }
-                break;
-            default:
-        }
         if (skinBase != null) {
             skinBase.executeAccessibleAction(action, parameters);
         }

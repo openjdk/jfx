@@ -554,13 +554,13 @@ public class TextFlow extends Pane {
     @Override
     public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
-            case TITLE: {
+            case TEXT: {
                 String accText = getAccessibleText();
                 if (accText != null && !accText.isEmpty()) return accText;
 
                 StringBuilder title = new StringBuilder();
                 for (Node node: getChildren()) {
-                    Object text = node.queryAccessibleAttribute(AccessibleAttribute.TITLE, parameters);
+                    Object text = node.queryAccessibleAttribute(AccessibleAttribute.TEXT, parameters);
                     if (text != null) {
                         title.append(text.toString());
                     }

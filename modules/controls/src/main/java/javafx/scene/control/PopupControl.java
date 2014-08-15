@@ -39,10 +39,10 @@ import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableSet;
-import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.layout.Pane;
 import javafx.stage.PopupWindow;
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.css.CssError;
@@ -1108,7 +1108,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
      *
      * @since JavaFX 2.1
      */
-    protected class CSSBridge extends Group {
+    protected class CSSBridge extends Pane {
 
         private final PopupControl popupControl = PopupControl.this;
 

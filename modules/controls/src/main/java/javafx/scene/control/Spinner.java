@@ -574,7 +574,7 @@ public class Spinner<T> extends Control {
             }
         }
 
-        notifyAccessibleAttributeChanged(AccessibleAttribute.TITLE);
+        notifyAccessibleAttributeChanged(AccessibleAttribute.TEXT);
         if (text == null) {
             if (value == null) {
                 getEditor().clear();
@@ -636,7 +636,7 @@ public class Spinner<T> extends Control {
     @Override
     public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
-            case TITLE: {
+            case TEXT: {
                 T value = getValue();
                 SpinnerValueFactory<T> factory = getValueFactory();
                 if (factory != null) {

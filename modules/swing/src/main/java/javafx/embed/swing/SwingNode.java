@@ -47,6 +47,13 @@ import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.EventQueue;
 import java.awt.Toolkit;
+import java.awt.dnd.DragGestureEvent;
+import java.awt.dnd.DragGestureListener;
+import java.awt.dnd.DragGestureRecognizer;
+import java.awt.dnd.DragSource;
+import java.awt.dnd.DropTarget;
+import java.awt.dnd.InvalidDnDOperationException;
+import java.awt.dnd.peer.DragSourceContextPeer;
 import java.awt.event.InputEvent;
 import java.awt.event.MouseWheelEvent;
 import java.awt.event.WindowEvent;
@@ -132,6 +139,7 @@ public class SwingNode extends Node {
 
     private volatile JComponent content;
     private volatile JLightweightFrame lwFrame;
+    final JLightweightFrame getLightweightFrame() { return lwFrame; }
 
     private volatile NGExternalNode peer;
 
@@ -636,6 +644,8 @@ public class SwingNode extends Node {
 
     private class SwingNodeContent implements LightweightContent {
         private JComponent comp;
+        private volatile FXDnD dnd;
+
         public SwingNodeContent(JComponent comp) {
             this.comp = comp;
         }
@@ -654,9 +664,11 @@ public class SwingNode extends Node {
 
         // Note: we skip @Override annotation and implement both pre-hiDPI and post-hiDPI versions
         // of the method for compatibility.
+        //@Override
         public void imageBufferReset(int[] data, int x, int y, int width, int height, int linestride) {
             imageBufferReset(data, x, y, width, height, linestride, 1);
         }
+        //@Override
         public void imageBufferReset(int[] data, int x, int y, int width, int height, int linestride, int scale) {
             SwingNode.this.setImageBuffer(data, x, y, width, height, linestride, scale);
         }
@@ -714,10 +726,49 @@ public class SwingNode extends Node {
             });
         }
 
+        //@Override
         public void setCursor(Cursor cursor) {
             SwingFXUtils.runOnFxThread(() -> {
                 SwingNode.this.setCursor(SwingCursors.embedCursorToCursor(cursor));
             });
+        }
+
+        private void initDnD() {
+            // This is a part of AWT API, so the method may be invoked on any thread
+            synchronized (SwingNodeContent.this) {
+                if (this.dnd == null) {
+                    this.dnd = new FXDnD(SwingNode.this);
+                }
+            }
+        }
+
+        //@Override
+        public synchronized <T extends DragGestureRecognizer> T createDragGestureRecognizer(
+                Class<T> abstractRecognizerClass,
+                DragSource ds, Component c, int srcActions,
+                DragGestureListener dgl)
+        {
+            initDnD();
+            return dnd.createDragGestureRecognizer(abstractRecognizerClass, ds, c, srcActions, dgl);
+        }
+
+        //@Override
+        public DragSourceContextPeer createDragSourceContextPeer(DragGestureEvent dge) throws InvalidDnDOperationException
+        {
+            initDnD();
+            return dnd.createDragSourceContextPeer(dge);
+        }
+
+        //@Override
+        public void addDropTarget(DropTarget dt) {
+            initDnD();
+            dnd.addDropTarget(dt);
+        }
+
+        //@Override
+        public void removeDropTarget(DropTarget dt) {
+            initDnD();
+            dnd.removeDropTarget(dt);
         }
     }
 

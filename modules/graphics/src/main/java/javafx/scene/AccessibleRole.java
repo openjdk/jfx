@@ -26,357 +26,836 @@
 package javafx.scene;
 
 /**
- * Experimental API - Do not use (will be removed).
+ * This enum describes the accessible role for a {@link Node}. 
+ * 
+ * The role is used by assistive technologies such as screen readers
+ * to decide the set of actions and attributes for a node.  For example,
+ * when the screen reader needs the current value of a slider, it
+ * will request it using the value attribute.  When the screen reader
+ * changes the value of the slider, it will use an action to set
+ * the current value of the slider.  The slider must respond
+ * appropriately to both these requests.
  *
- * @treatAsPrivate
+ * @see Node#setRole(AccessibleRole)
+ * @see Node#getRole()
+ * @see AccessibleAttribute#ROLE
+ * @see Node#queryAccessibleAttribute(AccessibleAttribute, Object...)
+ * @see Node#executeAccessibleAction(AccessibleAction, Object...)
+ * 
+ * @since JavaFX 8u40
  */
 public enum AccessibleRole {
 
     /**
-     * Button.
-     * Attributes: TITLE
-     * Actions: FIRE
+     * Button role.
+     * </p>
+     * Attributes:
+     * <ul>
+     * <li> {@link AccessibleAttribute#TEXT} </li>
+     * </ul>
+     * Actions:
+     * <ul>
+     * <li> {@link AccessibleAction#FIRE} </li>
+     * </ul>
      */
     BUTTON,
 
     /**
-     * Check Box
-     * Attributes: TITLE, SELECTED, INDETERMINATE
-     * Actions: FIRE
+     * Check Box role.
+     * </p>
+     * Attributes:
+     * <ul>
+     * <li> {@link AccessibleAttribute#TEXT} </li>
+     * <li> {@link AccessibleAttribute#SELECTED} </li>
+     * <li> {@link AccessibleAttribute#INDETERMINATE} </li>
+     * </ul>
+     * Actions:
+     * <ul>
+     * <li> {@link AccessibleAction#FIRE} </li>
+     * </ul>
      */
     CHECK_BOX,
 
     /**
-     * Check Menu Item.
-     * Attributes: TITLE, SELECTED, ACCELERATOR, MNEMONIC, DISABLED
-     * Actions: FIRE
+     * Check Menu Item role.
+     * </p>
+     * Attributes:
+     * <ul>
+     * <li> {@link AccessibleAttribute#TEXT} </li>
+     * <li> {@link AccessibleAttribute#ACCELERATOR} </li>
+     * <li> {@link AccessibleAttribute#MNEMONIC} </li>
+     * <li> {@link AccessibleAttribute#DISABLED} </li>
+     * <li> {@link AccessibleAttribute#SELECTED} </li>
+     * </ul>
+     * Actions:
+     * <ul>
+     * <li> {@link AccessibleAction#FIRE} </li>
+     * </ul>
      */
     CHECK_MENU_ITEM,
 
     /**
-     * Combo Box.
-     * Attributed:
+     * Combo Box role.
+     * </p>
+     * Attributes:
+     * <ul>
+     * <li> {@link AccessibleAttribute#TEXT} </li>
+     * <li> {@link AccessibleAttribute#EXPANDED} </li>
+     * <li> {@link AccessibleAttribute#EDITABLE} </li>
+     * </ul>
      * Actions:
+     * <ul>
+     * <li> {@link AccessibleAction#EXPAND} </li>
+     * <li> {@link AccessibleAction#COLLAPSE} </li>
+     * </ul>
      */
     COMBO_BOX,
 
     /**
-     * Context Menu.
-     * Attributed:
+     * Context Menu role.
+     * </p>
+     * Attributes:
+     * <ul>
+     * <li> {@link AccessibleAttribute#PARENT_MENU} </li>
+     * <li> {@link AccessibleAttribute#VISIBLE} </li>
+     * </ul>
      * Actions:
+     * <ul>
+     * </ul>
      */
     CONTEXT_MENU,
 
     /**
-     * Date Picker.
-     * Attributed: DATE, TITLE
+     * Date Picker role.
+     * </p>
+     * Attributes:
+     * <ul>
+     * <li> {@link AccessibleAttribute#TEXT} </li>
+     * <li> {@link AccessibleAttribute#DATE} </li>
+     * </ul>
      * Actions:
+     * <ul>
+     * </ul>
      */
     DATE_PICKER,
 
     /**
-     * Decrement Button.
-     *
+     * Decrement Button role.
+     * </p>
+     * Attributes:
+     * <ul>
+     * <li> {@link AccessibleAttribute#TEXT} </li>
+     * </ul>
+     * Actions:
+     * <ul>
+     * <li> {@link AccessibleAction#FIRE} </li>
+     * </ul>
      */
     DECREMENT_BUTTON,
 
     /**
-     * Header.
-     * Attributes: TITLE
-     * Actions: (none)
-     */
-    HEADER,
-
-    /**
-     * Hyperlink.
-     * Attributes: TITLE
-     * Actions: FIRE
+     * Hyperlink role.
+     * </p>
+     * <ul>
+     * <li> {@link AccessibleAttribute#TEXT} </li>
+     * <li> {@link AccessibleAttribute#VISITED} </li>
+     * </ul>
+     * Actions:
+     * <ul>
+     * <li> {@link AccessibleAction#FIRE} </li>
+     * </ul>
      */
     HYPERLINK,
 
     /**
-     * Increment Button.
-     *
+     * Increment Button role.
+     * </p>
+     * Attributes:
+     * <ul>
+     * <li> {@link AccessibleAttribute#TEXT} </li>
+     * </ul>
+     * Actions:
+     * <ul>
+     * <li> {@link AccessibleAction#FIRE} </li>
+     * </ul>
      */
     INCREMENT_BUTTON,
 
     /**
-     * Image View.
-     * Attributes: TITLE
-     * Actions: (none)
+     * Image View role.
+     * </p>
+     * Attributes:
+     * <ul>
+     * </ul>
+     * Actions:
+     * <ul>
+     * </ul>
+     * <p>
+     * It is strongly recommended that a text description of the image be provided
+     * for each {@link ImageView}.  This can be done by setting either
+     * {@link Node#accessibleTextProperty()} for the {@link ImageView}
+     * or by using {@link AccessibleAttribute#LABELED_BY}. 
+     * </p> 
      */
     IMAGE_VIEW,
 
     /**
-     * List View.
-     * Attributes: ROW_AT_INDEX, ROW_COUNT, SELECTED_ITEMS, MULTIPLE_SELECTION,
-     *             VERTICAL_SCROLLBAR, HORIZONTAL_SCROLLBAR
-     * Actions: SCROLL_TO_INDEX, SET_SELECTED_ITEMS
+     * List View role.
+     * </p>
+     * Attributes:
+     * <ul>
+     * <li> {@link AccessibleAttribute#ITEM_AT_INDEX} </li>
+     * <li> {@link AccessibleAttribute#ITEM_COUNT} </li>
+     * <li> {@link AccessibleAttribute#SELECTED_ITEMS} </li>
+     * <li> {@link AccessibleAttribute#MULTIPLE_SELECTION} </li>
+     * <li> {@link AccessibleAttribute#VERTICAL_SCROLLBAR} </li>
+     * <li> {@link AccessibleAttribute#HORIZONTAL_SCROLLBAR} </li>
+     * <li> {@link AccessibleAttribute#FOCUS_ITEM} </li>
+     * </ul>
+     * Actions:
+     * <ul>
+     * <li> {@link AccessibleAction#SHOW_ITEM} </li>
+     * <li> {@link AccessibleAction#SET_SELECTED_ITEMS} </li>
+     * </ul>
      */
     LIST_VIEW,
 
     /**
-     * List Item.
-     * Attributes: TITLE, INDEX, SELECTED
-     * Actions: (none)
+     * List Item role.
+     * </p>
+     * Attributes:
+     * <ul>
+     * <li> {@link AccessibleAttribute#TEXT} </li>
+     * <li> {@link AccessibleAttribute#INDEX} </li>
+     * <li> {@link AccessibleAttribute#SELECTED} </li>
+     * </ul>
+     * Actions:
+     * <ul>
+     * <li> {@link AccessibleAction#REQUEST_FOCUS} </li>
+     * </ul>
      */
     LIST_ITEM,
 
     /**
-     * Menu.
-     * Attributes: TITLE, MENU, ACCELERATOR, MNEMONIC, DISABLED
-     * Actions: FIRE
+     * Menu role.
+     * </p>
+     * Attributes:
+     * <ul>
+     * <li> {@link AccessibleAttribute#TEXT} </li>
+     * <li> {@link AccessibleAttribute#ACCELERATOR} </li>
+     * <li> {@link AccessibleAttribute#MNEMONIC} </li>
+     * <li> {@link AccessibleAttribute#DISABLED} </li>
+     * <li> {@link AccessibleAttribute#SUBMENU} </li>
+     * </ul>
+     * Actions:
+     * <ul>
+     * <li> {@link AccessibleAction#FIRE} </li>
+     * </ul>
      */
     MENU,
 
     /**
-     * Menu Bar.
-     * Attributed:
+     * Menu Bar role.
+     * </p>
+     * Attributes:
+     * <ul>
+     * </ul>
      * Actions:
+     * <ul>
+     * </ul>
      */
     MENU_BAR,
 
     /**
-     * Menu Button.
-     * Attributed: TITLE.
-     * Actions: FIRE.
+     * Menu Button role.
+     * </p>
+     * Attributes:
+     * <ul>
+     * <li> {@link AccessibleAttribute#TEXT} </li>
+     * </ul>
+     * Actions:
+     * <ul>
+     * <li> {@link AccessibleAction#FIRE} </li>
+     * </ul>
      */
     MENU_BUTTON,
 
     /**
-     * Menu Item.
-     * Attributed: TITLE, ACCELERATOR, MNEMONIC, DISABLED
-     * Actions: FIRE
+     * Menu Item role.
+     * </p>
+     * Attributes:
+     * <ul>
+     * <li> {@link AccessibleAttribute#TEXT} </li>
+     * <li> {@link AccessibleAttribute#ACCELERATOR} </li>
+     * <li> {@link AccessibleAttribute#MNEMONIC} </li>
+     * <li> {@link AccessibleAttribute#DISABLED} </li>
+     * </ul>
+     * Actions:
+     * <ul>
+     * <li> {@link AccessibleAction#FIRE} </li>
+     * </ul>
      */
     MENU_ITEM,
 
     /**
-     * Node.
-     * Attributes: PARENT, ROLE, SCENE, BOUNDS, DISABLED, FOCUS, VISIBLE, LABELED_BY
-     * Actions: (none)
+     * Node role.
+     * </p>
+     * Attributes:
+     * <ul>
+     * <li> {@link AccessibleAttribute#ROLE} </li>
+     * <li> {@link AccessibleAttribute#PARENT} </li>
+     * <li> {@link AccessibleAttribute#SCENE} </li>
+     * <li> {@link AccessibleAttribute#BOUNDS} </li>
+     * <li> {@link AccessibleAttribute#DISABLED} </li>
+     * <li> {@link AccessibleAttribute#FOCUSED} </li>
+     * <li> {@link AccessibleAttribute#VISIBLE} </li>
+     * </ul>
+     * Actions:
+     * <ul>
+     * <li> {@link AccessibleAction#REQUEST_FOCUS} </li>
+     * </ul>
+     * Optional Attributes:
+     * <ul>
+     * <li> {@link AccessibleAttribute#TEXT} </li>
+     * <li> {@link AccessibleAttribute#LABELED_BY} </li>
+     * <li> {@link AccessibleAttribute#ROLE_DESCRIPTION} </li>
+     * <li> {@link AccessibleAttribute#HELP} </li>
+     * </ul>
+     * Optional Actions:
+     * <ul>
+     * <li> {@link AccessibleAction#SHOW_MENU} </li>
+     * </ul>
      */
     NODE,
 
     /**
-     * Page in a Pagination control.
-     * Attributes: TITLE, SELECTED
-     * Actions: (none)
+     * Page role.
+     * </p>
+     * Attributes:
+     * <ul>
+     * <li> {@link AccessibleAttribute#TEXT} </li>
+     * <li> {@link AccessibleAttribute#SELECTED} </li>
+     * </ul>
+     * Actions:
+     * <ul>
+     * <li> {@link AccessibleAction#REQUEST_FOCUS} </li>
+     * </ul>
      */
     PAGE_ITEM,
 
     /**
-     * Pagination.
-     * Attributes: PAGES, SELECTED_PAGE
-     * Actions: (none)
+     * Pagination role.
+     * </p>
+     * Attributes:
+     * <ul>
+     * <li> {@link AccessibleAttribute#ITEM_AT_INDEX} </li>
+     * <li> {@link AccessibleAttribute#ITEM_COUNT} </li>
+     * <li> {@link AccessibleAttribute#FOCUS_ITEM} </li>
+     * </ul>
+     * Actions:
+     * <ul>
+     * </ul>
      */
     PAGINATION,
 
     /**
-     * Parent.
-     * Attributes: CHILDREN
-     * Actions: (none)
+     * Parent role.
+     * </p>
+     * Attributes:
+     * <ul>
+     * <li> {@link AccessibleAttribute#CHILDREN} </li>
+     * </ul>
+     * Actions:
+     * <ul>
+     * </ul>
      */
     PARENT,
 
     /**
-     * Password Field.
-     * Attributes: (none)
-     * Actions: (none)
+     * Password Field role.
+     * </p>
+     * Attributes:
+     * <ul>
+     * <li> {@link AccessibleAttribute#TEXT} - must return null or empty string </li>
+     * </ul>
+     * Actions:
+     * <ul>
+     * </ul>
      */
     PASSWORD_FIELD,
 
     /**
-     * Progress Indicator.
-     * Attributes: VALUE, MAX_VALUE, MIN_VALUE, INDETERMINATE
-     * Actions: (none)
+     * Progress Indicator role.
+     * </p>
+     * Attributes:
+     * <ul>
+     * <li> {@link AccessibleAttribute#VALUE} </li>
+     * <li> {@link AccessibleAttribute#MIN_VALUE} </li>
+     * <li> {@link AccessibleAttribute#MAX_VALUE} </li>
+     * <li> {@link AccessibleAttribute#INDETERMINATE} </li>
+     * </ul>
+     * Actions:
+     * <ul>
+     * </ul>
      */
     PROGRESS_INDICATOR,
 
     /**
-     * Radio Button.
-     * Attributes: TITLE, SELECTED
-     * Actions: FIRE
+     * Radio Button role.
+     * </p>
+     * Attributes:
+     * <ul>
+     * <li> {@link AccessibleAttribute#TEXT} </li>
+     * <li> {@link AccessibleAttribute#SELECTED} </li>
+     * </ul>
+     * Actions:
+     * <ul>
+     * <li> {@link AccessibleAction#FIRE} </li>
+     * </ul>
      */
     RADIO_BUTTON,
 
     /**
-     * Radio Menu Item.
-     * Attributes: TITLE, SELECTED, ACCELERATOR, MNEMONIC, DISABLED
-     * Actions: FIRE
+     * Radio Menu Item role.
+     * </p>
+     * Attributes:
+     * <ul>
+     * <li> {@link AccessibleAttribute#TEXT} </li>
+     * <li> {@link AccessibleAttribute#ACCELERATOR} </li>
+     * <li> {@link AccessibleAttribute#MNEMONIC} </li>
+     * <li> {@link AccessibleAttribute#DISABLED} </li>
+     * <li> {@link AccessibleAttribute#SELECTED} </li>
+     * </ul>
+     * Actions:
+     * <ul>
+     * <li> {@link AccessibleAction#FIRE} </li>
+     * </ul>
      */
     RADIO_MENU_ITEM,
 
     /**
-     * Slider.
-     * Attributes: VALUE, MAX_VALUE, MIN_VALUE, ORIENTATION
-     * Actions: INCREMENT, DECREMENT, SET_VALUE
+     * Slider role.
+     * </p>
+     * Attributes:
+     * <ul>
+     * <li> {@link AccessibleAttribute#VALUE} </li>
+     * <li> {@link AccessibleAttribute#MIN_VALUE} </li>
+     * <li> {@link AccessibleAttribute#MAX_VALUE} </li>
+     * <li> {@link AccessibleAttribute#ORIENTATION} </li>
+     * </ul>
+     * Actions:
+     * <ul>
+     * <li> {@link AccessibleAction#INCREMENT} </li>
+     * <li> {@link AccessibleAction#DECREMENT} </li>
+     * <li> {@link AccessibleAction#SET_VALUE} </li>
+     * </ul>
      */
     SLIDER,
 
     /**
-     * Spinner.
-     * Attributes: TITLE
-     * Actions: INCREMENT, DECREMENT
+     * Spinner role.
+     * </p>
+     * Attributes:
+     * <ul>
+     * <li> {@link AccessibleAttribute#TEXT} </li>
+     * </ul>
+     * Actions:
+     * <ul>
+     * <li> {@link AccessibleAction#INCREMENT} </li>
+     * <li> {@link AccessibleAction#DECREMENT} </li>
+     * </ul>
      */
     SPINNER,
 
     /**
-     * Text.
-     * Attributes: TITLE, SELECTION_START, SELECTION_SET
-     * Actions: SET_TITLE
+     * Text role.
+     * </p>
+     * Attributes:
+     * <ul>
+     * <li> {@link AccessibleAttribute#TEXT} </li>
+     * <li> {@link AccessibleAttribute#FONT} </li>
+     * </ul>
+     * Actions:
+     * <ul>
+     * <li> {@link AccessibleAction#SET_TEXT} </li>
+     * </ul>
      */
     TEXT,
 
     /**
-     * Text Area.
-     * Attributes: TITLE, SELECTION_START, SELECTION_SET
-     * Actions: SET_TITLE, SET_TEXT_SELECTION
+     * Text Area role.
+     * </p>
+     * Attributes:
+     * <ul>
+     * <li> {@link AccessibleAttribute#TEXT} </li>
+     * <li> {@link AccessibleAttribute#FONT} </li>
+     * <li> {@link AccessibleAttribute#EDITABLE} </li>
+     * <li> {@link AccessibleAttribute#SELECTION_START} </li>
+     * <li> {@link AccessibleAttribute#SELECTION_END} </li>
+     * <li> {@link AccessibleAttribute#CARET_OFFSET} </li>
+     * <li> {@link AccessibleAttribute#OFFSET_AT_POINT} </li>
+     * <li> {@link AccessibleAttribute#LINE_START} </li>
+     * <li> {@link AccessibleAttribute#LINE_END} </li>
+     * <li> {@link AccessibleAttribute#LINE_FOR_OFFSET} </li>
+     * <li> {@link AccessibleAttribute#BOUNDS_FOR_RANGE} </li>
+     * </ul>
+     * Actions:
+     * <ul>
+     * <li> {@link AccessibleAction#SET_TEXT} </li>
+     * <li> {@link AccessibleAction#SET_TEXT_SELECTION} </li>
+     * </ul>
      */
     TEXT_AREA,
 
     /**
-     * Text Field.
-     * Attributes: TITLE, SELECTION_START, SELECTION_SET
-     * Actions: SET_TITLE, SET_TEXT_SELECTION
+     * Text Field role.
+     * </p>
+     * Attributes:
+     * <ul>
+     * <li> {@link AccessibleAttribute#TEXT} </li>
+     * <li> {@link AccessibleAttribute#FONT} </li>
+     * <li> {@link AccessibleAttribute#EDITABLE} </li>
+     * <li> {@link AccessibleAttribute#SELECTION_START} </li>
+     * <li> {@link AccessibleAttribute#SELECTION_END} </li>
+     * <li> {@link AccessibleAttribute#CARET_OFFSET} </li>
+     * <li> {@link AccessibleAttribute#OFFSET_AT_POINT} </li>
+     * <li> {@link AccessibleAttribute#BOUNDS_FOR_RANGE} </li>
+     * </ul>
+     * Actions:
+     * <ul>
+     * <li> {@link AccessibleAction#SET_TEXT} </li>
+     * <li> {@link AccessibleAction#SET_TEXT_SELECTION} </li>
+     * </ul>
      */
     TEXT_FIELD,
 
     /**
-     * Toggle Button.
-     * Attributes: TITLE, SELECTED
-     * Action: FIRE
+     * Toggle Button role.
+     * </p>
+     * Attributes:
+     * <ul>
+     * <li> {@link AccessibleAttribute#TEXT} </li>
+     * <li> {@link AccessibleAttribute#SELECTED} </li>
+     * </ul>
+     * Actions:
+     * <ul>
+     * <li> {@link AccessibleAction#FIRE} </li>
+     * </ul>
      */
     TOGGLE_BUTTON,
     
     /**
-     * Tooltip.
-     * Attributes: (none)
-     * Action: (none)
+     * Tooltip role.
+     * </p>
+     * Attributes:
+     * <ul>
+     * </ul>
+     * Actions:
+     * <ul>
+     * </ul>
      */
     TOOLTIP,
 
     /**
-     * Scroll Bar.
-     * Attributes: VALUE, MAX_VALUE, MIN_VALUE, ORIENTATION
-     * Actions: BLOCK_INCREMENT, INCREMENT, DECREMENT, BLOCK_DECREMENT, SET_VALUE
+     * Scroll Bar role.
+     * </p>
+     * Attributes:
+     * <ul>
+     * <li> {@link AccessibleAttribute#VALUE} </li>
+     * <li> {@link AccessibleAttribute#MAX_VALUE} </li>
+     * <li> {@link AccessibleAttribute#MIN_VALUE} </li>
+     * <li> {@link AccessibleAttribute#ORIENTATION} </li>
+     * </ul>
+     * Actions:
+     * <ul>
+     * <li> {@link AccessibleAction#INCREMENT} </li>
+     * <li> {@link AccessibleAction#DECREMENT} </li>
+     * <li> {@link AccessibleAction#BLOCK_INCREMENT} </li>
+     * <li> {@link AccessibleAction#BLOCK_DECREMENT} </li>
+     * <li> {@link AccessibleAction#SET_VALUE} </li>
+     * </ul>
      */
     SCROLL_BAR,
 
     /**
-     * Scroll Pane.
-     * Attributes: CONTENTS, HORIZONTAL_SCROLLBAR, VERTICAL_SCROLLBAR
-     * Actions: (none)
+     * Scroll Pane role.
+     * </p>
+     * Attributes:
+     * <ul>
+     * <li> {@link AccessibleAttribute#CONTENTS} </li>
+     * <li> {@link AccessibleAttribute#HORIZONTAL_SCROLLBAR} </li>
+     * <li> {@link AccessibleAttribute#VERTICAL_SCROLLBAR} </li>
+     * </ul>
+     * Actions:
+     * <ul>
+     * </ul>
      */
     SCROLL_PANE,
 
     /**
-     * Split Menu Button.
-     * Attributes: TITLE, EXPANDED.
-     * Actions: FIRE, EXPAND, COLLAPSE.
+     * Split Menu Button role.
+     * </p>
+     * Attributes:
+     * <ul>
+     * <li> {@link AccessibleAttribute#TEXT} </li>
+     * <li> {@link AccessibleAttribute#EXPANDED} </li>
+     * </ul>
+     * Actions:
+     * <ul>
+     * <li> {@link AccessibleAction#FIRE} </li>
+     * <li> {@link AccessibleAction#EXPAND} </li>
+     * <li> {@link AccessibleAction#COLLAPSE} </li>
+     * </ul>
      */
     SPLIT_MENU_BUTTON,
 
     /**
-     * Tab Item.
-     * Attributes: TITLE, SELECTED
-     * Actions: (none)
+     * Tab Item role.
+     * </p>
+     * Attributes:
+     * <ul>
+     * <li> {@link AccessibleAttribute#TEXT} </li>
+     * <li> {@link AccessibleAttribute#SELECTED} </li>
+     * </ul>
+     * Actions:
+     * <ul>
+     * <li> {@link AccessibleAction#REQUEST_FOCUS} </li>
+     * </ul>
      */
     TAB_ITEM,
 
     /**
-     * Tab Pane.
-     * Attributes: TABS, SELECTED_TAB
-     * Actions: (none)
+     * Tab Pane role.
+     * </p>
+     * Attributes:
+     * <ul>
+     * <li> {@link AccessibleAttribute#ITEM_AT_INDEX} </li>
+     * <li> {@link AccessibleAttribute#ITEM_COUNT} </li>
+     * <li> {@link AccessibleAttribute#FOCUS_ITEM} </li>
+     * </ul>
+     * Actions:
+     * <ul>
+     * </ul>
      */
     TAB_PANE,
 
     /**
-     * Table Cell.
-     * Attributes: TITLE, ROW_INDEX, COLUMN_INDEX, SELECTED
-     * Actions: (none)
+     * Table Cell role.
+     * </p>
+     * Attributes:
+     * <ul>
+     * <li> {@link AccessibleAttribute#TEXT} </li>
+     * <li> {@link AccessibleAttribute#ROW_INDEX} </li>
+     * <li> {@link AccessibleAttribute#COLUMN_INDEX} </li>
+     * <li> {@link AccessibleAttribute#SELECTED} </li>
+     * </ul>
+     * Actions:
+     * <ul>
+     * <li> {@link AccessibleAction#REQUEST_FOCUS} </li>
+     * </ul>
      */
     TABLE_CELL,
 
     /**
-     * Table Column.
-     * Attributes: TITLE, INDEX
-     * Actions: (none)
+     * Table Column role.
+     * </p>
+     * Attributes:
+     * <ul>
+     * <li> {@link AccessibleAttribute#TEXT} </li>
+     * <li> {@link AccessibleAttribute#INDEX} </li>
+     * </ul>
+     * Actions:
+     * <ul>
+     * </ul>
      */
     TABLE_COLUMN,
 
     /**
-     * Table Row.
-     * Attributes: TITLE, INDEX
-     * Actions: (none)
+     * Table Row role.
+     * </p>
+     * Attributes:
+     * <ul>
+     * <li> {@link AccessibleAttribute#TEXT} </li>
+     * <li> {@link AccessibleAttribute#INDEX} </li>
+     * </ul>
+     * Actions:
+     * <ul>
+     * </ul>
      */
     TABLE_ROW,
 
     /**
-     * Table View
-     * Attributes: ROW_COUNT, ROW_AT_INDEX, COLUMN_COUNT, COLUMN_AT_INDEX
-     *             SELECTED_ITEMS, CELL_AT_ROWCOLUMN, HEADER,
-     *             MULTIPLE_SELECTION, VERTICAL_SCROLLBAR, HORIZONTAL_SCROLLBAR
-     * Actions: SCROLL_TO_INDEX, SET_SELECTED_ITEMS
+     * Table View role.
+     * </p>
+     * Attributes:
+     * <ul>
+     * <li> {@link AccessibleAttribute#ROW_COUNT} </li>
+     * <li> {@link AccessibleAttribute#ROW_AT_INDEX} </li>
+     * <li> {@link AccessibleAttribute#COLUMN_COUNT} </li>
+     * <li> {@link AccessibleAttribute#COLUMN_AT_INDEX} </li>
+     * <li> {@link AccessibleAttribute#SELECTED_ITEMS} </li>
+     * <li> {@link AccessibleAttribute#CELL_AT_ROW_COLUMN} </li>
+     * <li> {@link AccessibleAttribute#HEADER} </li>
+     * <li> {@link AccessibleAttribute#MULTIPLE_SELECTION} </li>
+     * <li> {@link AccessibleAttribute#VERTICAL_SCROLLBAR} </li>
+     * <li> {@link AccessibleAttribute#HORIZONTAL_SCROLLBAR} </li>
+     * <li> {@link AccessibleAttribute#FOCUS_ITEM} </li>
+     * </ul>
+     * Actions:
+     * <ul>
+     * <li> {@link AccessibleAction#SHOW_ITEM} </li>
+     * <li> {@link AccessibleAction#SET_SELECTED_ITEMS} </li>
+     * </ul>
      */
     TABLE_VIEW,
 
     /**
-     * Thumb.
-     * Actions: MOVE
+     * Thumb role.
+     * </p>
+     * Attributes:
+     * <ul>
+     * <li> {@link AccessibleAttribute#VALUE} </li>
+     * </ul>
+     * Actions:
+     * <ul>
+     * </ul>
      */
     THUMB,
 
     /**
-     * Titled Pane.
-     * Attributes: TITLE, EXPANDED
-     * Actions: EXPAND, COLLAPSE
+     * Titled Pane role.
+     * </p>
+     * Attributes:
+     * <ul>
+     * <li> {@link AccessibleAttribute#TEXT} </li>
+     * <li> {@link AccessibleAttribute#EXPANDED} </li>
+     * </ul>
+     * Actions:
+     * <ul>
+     * <li> {@link AccessibleAction#EXPAND} </li>
+     * <li> {@link AccessibleAction#COLLAPSE} </li>
+     * </ul>
      */
     TITLED_PANE,
 
     /**
-     * Tool Bar.
-     * Attributes: OVERFLOW_BUTTON
-     * Actions: (none)
+     * Tool Bar role.
+     * </p>
+     * Attributes:
+     * <ul>
+     * <li> {@link AccessibleAttribute#OVERFLOW_BUTTON} </li>
+     * </ul>
+     * Actions:
+     * <ul>
+     * </ul>
      */
     TOOL_BAR,
 
     /**
-     * Tree Item.
-     * Attributes: TITLE, SELECTED, INDEX, EXPANDED, LEAF, DISCLOSURE_LEVEL,
-     *             TREE_ITEM_COUNT, TREE_ITEM_AT_INDEX, TREE_ITEM_PARENT
-     * Actions: EXPAND, COLLAPSE
+     * Tree Item role.
+     * </p>
+     * Attributes:
+     * <ul>
+     * <li> {@link AccessibleAttribute#TEXT} </li>
+     * <li> {@link AccessibleAttribute#INDEX} </li>
+     * <li> {@link AccessibleAttribute#SELECTED} </li>
+     * <li> {@link AccessibleAttribute#EXPANDED} </li>
+     * <li> {@link AccessibleAttribute#LEAF} </li>
+     * <li> {@link AccessibleAttribute#DISCLOSURE_LEVEL} </li>
+     * <li> {@link AccessibleAttribute#TREE_ITEM_COUNT} </li>
+     * <li> {@link AccessibleAttribute#TREE_ITEM_AT_INDEX} </li>
+     * <li> {@link AccessibleAttribute#TREE_ITEM_PARENT} </li>
+     * </ul>
+     * Actions:
+     * <ul>
+     * <li> {@link AccessibleAction#EXPAND} </li>
+     * <li> {@link AccessibleAction#COLLAPSE} </li>
+     * <li> {@link AccessibleAction#REQUEST_FOCUS} </li>
+     * </ul>
      */
     TREE_ITEM,
 
     /**
-     * Tree Table Cell.
-     * Attributes: TITLE, ROW_INDEX, COLUMN_INDEX, SELECTED
-     * Actions: (none)
+     * Tree Table Cell role.
+     * </p>
+     * Attributes:
+     * <ul>
+     * <li> {@link AccessibleAttribute#TEXT} </li>
+     * <li> {@link AccessibleAttribute#SELECTED} </li>
+     * <li> {@link AccessibleAttribute#ROW_INDEX} </li>
+     * <li> {@link AccessibleAttribute#COLUMN_INDEX} </li>
+     * </ul>
+     * Actions:
+     * <ul>
+     * <li> {@link AccessibleAction#REQUEST_FOCUS} </li>
+     * </ul>
      */
     TREE_TABLE_CELL,
 
     /**
-     * Tree Table Row.
-     * Attributes: INDEX, EXPANDED, LEAF, DISCLOSURE_LEVEL
-     *             TREE_ITEM_COUNT, TREE_ITEM_AT_INDEX, TREE_ITEM_PARENT
-     * Actions: EXPAND, COLLAPSE
+     * Tree Table Row role.
+     * </p>
+     * Attributes:
+     * <ul>
+     * <li> {@link AccessibleAttribute#INDEX} </li>
+     * <li> {@link AccessibleAttribute#EXPANDED} </li>
+     * <li> {@link AccessibleAttribute#LEAF} </li>
+     * <li> {@link AccessibleAttribute#DISCLOSURE_LEVEL} </li>
+     * <li> {@link AccessibleAttribute#TREE_ITEM_COUNT} </li>
+     * <li> {@link AccessibleAttribute#TREE_ITEM_AT_INDEX} </li>
+     * <li> {@link AccessibleAttribute#TREE_ITEM_PARENT} </li>
+     * </ul>
+     * Actions:
+     * <ul>
+     * <li> {@link AccessibleAction#EXPAND} </li>
+     * <li> {@link AccessibleAction#COLLAPSE} </li>
+     * </ul>
      */
     TREE_TABLE_ROW,
 
     /**
-     * Tree Table View.
-     * Attributes: ROW_COUNT, ROW_AT_INDEX, COLUMN_COUNT, COLUMN_AT_INDEX,
-     *             SELECTED_ITEMS, CELL_AT_ROWCOLUMN, HEADER,
-     *             MULTIPLE_SELECTION, VERTICAL_SCROLLBAR, HORIZONTAL_SCROLLBAR
-     * Actions: SCROLL_TO_INDEX, SET_SELECTED_ITEMS
+     * Tree Table View role.
+     * </p>
+     * Attributes:
+     * <ul>
+     * <li> {@link AccessibleAttribute#ROW_COUNT} </li>
+     * <li> {@link AccessibleAttribute#ROW_AT_INDEX} </li>
+     * <li> {@link AccessibleAttribute#COLUMN_COUNT} </li>
+     * <li> {@link AccessibleAttribute#COLUMN_AT_INDEX} </li>
+     * <li> {@link AccessibleAttribute#SELECTED_ITEMS} </li>
+     * <li> {@link AccessibleAttribute#CELL_AT_ROW_COLUMN} </li>
+     * <li> {@link AccessibleAttribute#HEADER} </li>
+     * <li> {@link AccessibleAttribute#MULTIPLE_SELECTION} </li>
+     * <li> {@link AccessibleAttribute#VERTICAL_SCROLLBAR} </li>
+     * <li> {@link AccessibleAttribute#HORIZONTAL_SCROLLBAR} </li>
+     * <li> {@link AccessibleAttribute#FOCUS_ITEM} </li>
+     * </ul>
+     * Actions:
+     * <ul>
+     * <li> {@link AccessibleAction#SHOW_ITEM} </li>
+     * <li> {@link AccessibleAction#SET_SELECTED_ITEMS} </li>
+     * </ul>
      */
     TREE_TABLE_VIEW,
 
     /**
-     * Tree View.
-     * Attributes: ROW_COUNT, ROW_AT_INDEX, SELECTED_ITEMS,
-     *             MULTIPLE_SELECTION, VERTICAL_SCROLLBAR, HORIZONTAL_SCROLLBAR
-     * Actions: SCROLL_TO_INDEX, SET_SELECTED_ITEMS
+     * Tree View role.
+     * </p>
+     * Attributes:
+     * <ul>
+     * <li> {@link AccessibleAttribute#ROW_COUNT} </li>
+     * <li> {@link AccessibleAttribute#ROW_AT_INDEX} </li>
+     * <li> {@link AccessibleAttribute#SELECTED_ITEMS} </li>
+     * <li> {@link AccessibleAttribute#MULTIPLE_SELECTION} </li>
+     * <li> {@link AccessibleAttribute#VERTICAL_SCROLLBAR} </li>
+     * <li> {@link AccessibleAttribute#HORIZONTAL_SCROLLBAR} </li>
+     * <li> {@link AccessibleAttribute#FOCUS_ITEM} </li>
+     * </ul>
+     * Actions:
+     * <ul>
+     * <li> {@link AccessibleAction#SHOW_ITEM} </li>
+     * <li> {@link AccessibleAction#SET_SELECTED_ITEMS} </li>
+     * </ul>
      */
     TREE_VIEW,
 }

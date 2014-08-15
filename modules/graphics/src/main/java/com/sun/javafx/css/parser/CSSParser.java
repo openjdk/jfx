@@ -705,7 +705,7 @@ final public class CSSParser {
                 return new ParsedValueImpl<String,String>("null", null);
             }
         }
-        if ("-fx-fill".equals(property)) {
+        if ("-fx-fill".equals(prop)) {
              ParsedValueImpl pv = parse(root);
             if (pv.getConverter() == StyleConverter.getUrlConverter()) {
                 // ImagePatternConverter expects array of ParsedValue where element 0 is the URL
@@ -714,7 +714,7 @@ final public class CSSParser {
             }
             return pv;
         }
-        else if ("-fx-background-color".equals(property)) {
+        else if ("-fx-background-color".equals(prop)) {
             return parsePaintLayers(root);
         } else if ("-fx-background-image".equals(prop)) {
             return parseURILayers(root);
@@ -878,9 +878,12 @@ final public class CSSParser {
                 value = new ParsedValueImpl<String,Boolean>("false",BooleanConverter.getInstance());
             } else {
                 // if the property value is another property, then it needs to be looked up.
-                boolean needsLookup = isIdent && properties.containsKey(str);
+                boolean needsLookup = isIdent && properties.containsKey(text);
                 if (needsLookup || ((value = colorValueOfString(str)) == null )) {
-                    value = new ParsedValueImpl<String,String>(str, null, isIdent || needsLookup);
+                    // If the value is a lookup, make sure to use the lower-case text so it matches the property
+                    // in the Declaration. If the value is not a lookup, then use str since the value might
+                    // be a string which could have some case sensitive meaning
+                    value = new ParsedValueImpl<String,String>(needsLookup ? text : str, null, needsLookup);
                 }
             }
             break;
@@ -4516,7 +4519,7 @@ final public class CSSParser {
         if (important) currentToken = nextToken(lexer);
 
         Declaration decl = (value != null)
-                ? new Declaration(property, value, important) : null;
+                ? new Declaration(property.toLowerCase(Locale.ROOT), value, important) : null;
         return decl;
     }
 

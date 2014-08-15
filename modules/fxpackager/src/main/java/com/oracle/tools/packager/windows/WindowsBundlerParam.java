@@ -109,7 +109,7 @@ public class WindowsBundlerParam<T> extends StandardBundlerParam<T> {
 
     //Subsetting of JRE is restricted.
     //JRE README defines what is allowed to strip:
-    //   ﻿http://www.oracle.com/technetwork/java/javase/jre-7-readme-430162.html //TODO update when 8 goes GA
+    //   http://www.oracle.com/technetwork/java/javase/jre-8-readme-2095710.html
     public static final BundlerParamInfo<JreUtils.Rule[]> WIN_JRE_RULES = new StandardBundlerParam<>(
             "",
             "",

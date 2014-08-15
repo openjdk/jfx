@@ -74,18 +74,6 @@ public class TableColumnTring extends AbstractGenericTring<Object> {
     }
 
     @Override
-    public Point2D sceneGraphObjectToScene(double x, double y) {
-        final TableView<?> tv = getTableColumn().getTableView();
-        return tv.localToScene(x, y);
-    }
-
-    @Override
-    public Point2D sceneToSceneGraphObject(double x, double y) {
-        final TableView<?> tv = getTableColumn().getTableView();
-        return tv.sceneToLocal(x, y);
-    }
-
-    @Override
     protected void startListeningToSceneGraphObject() {
         final TableView<?> tableView = getTableColumn().getTableView();
         startListeningToLayoutBounds(tableView);

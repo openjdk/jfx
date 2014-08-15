@@ -417,4 +417,29 @@ public class MacAppBundlerTest {
         }
     }
 
+
+    /**
+     * User a JRE instead of a JDK
+     */
+    @Test
+    public void testJRE() throws IOException, ConfigException, UnsupportedPlatformException {
+        Assume.assumeTrue(new File("/Library/Internet Plug-Ins/JavaAppletPlugin.plugin/").isDirectory());
+
+        Bundler bundler = new MacAppBundler();
+
+        Map<String, Object> bundleParams = new HashMap<>();
+
+        // not part of the typical setup, for testing
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        bundleParams.put(MAC_RUNTIME.getID(), System.getProperty("/Library/Internet Plug-Ins/JavaAppletPlugin.plugin/"));
+
+        File output = bundler.execute(bundleParams, new File(workDir, "JRETest"));
+        System.err.println("Bundle at - " + output);
+        assertNotNull(output);
+        assertTrue(output.exists());
+    }
+
+
 }

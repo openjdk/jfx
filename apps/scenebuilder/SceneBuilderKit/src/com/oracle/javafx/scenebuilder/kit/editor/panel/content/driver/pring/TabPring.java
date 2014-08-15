@@ -114,18 +114,6 @@ public class TabPring extends AbstractPring<Tab> {
     }
 
     @Override
-    public Point2D sceneGraphObjectToScene(double x, double y) {
-        final TabPane tabPane = getSceneGraphObject().getTabPane();
-        return tabPane.localToScene(x, y);
-    }
-
-    @Override
-    public Point2D sceneToSceneGraphObject(double x, double y) {
-        final TabPane tabPane = getSceneGraphObject().getTabPane();
-        return tabPane.sceneToLocal(x, y);
-    }
-
-    @Override
     protected void startListeningToSceneGraphObject() {
         assert tabNode == null;
         

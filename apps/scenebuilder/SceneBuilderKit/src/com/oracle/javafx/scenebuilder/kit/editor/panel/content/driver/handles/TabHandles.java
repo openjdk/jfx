@@ -111,22 +111,6 @@ public class TabHandles extends AbstractResilientHandles<Tab> {
     }
 
     @Override
-    public Point2D sceneGraphObjectToScene(double x, double y) {
-        assert isReady();
-        assert tabPane != null;
-        
-        return tabPane.localToScene(x, y);
-    }
-
-    @Override
-    public Point2D sceneToSceneGraphObject(double x, double y) {
-        assert isReady();
-        assert tabPane != null;
-        
-        return tabPane.sceneToLocal(x, y);
-    }
-
-    @Override
     protected void startListeningToSceneGraphObject() {
         assert isReady();
         assert tabPane != null;

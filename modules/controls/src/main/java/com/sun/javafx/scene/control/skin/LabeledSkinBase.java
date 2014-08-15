@@ -1115,7 +1115,7 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
     @Override
     protected Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
-            case TITLE: {
+            case TEXT: {
                 Labeled labeled = getSkinnable();
                 String accText = labeled.getAccessibleText();
                 if (accText != null && !accText.isEmpty()) return accText;
@@ -1137,7 +1137,7 @@ public abstract class LabeledSkinBase<C extends Labeled, B extends BehaviorBase<
                  * are being displayed
                  */
                 if (graphic != null) {
-                    Object result = graphic.queryAccessibleAttribute(AccessibleAttribute.TITLE);
+                    Object result = graphic.queryAccessibleAttribute(AccessibleAttribute.TEXT);
                     if (result != null) return result;
                 }
                 return null;

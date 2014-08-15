@@ -69,16 +69,6 @@ public abstract class AbstractNodeTring<T extends Node> extends AbstractGenericT
     }
 
     @Override
-    public Point2D sceneGraphObjectToScene(double x, double y) {
-        return getSceneGraphObject().localToScene(x, y);
-    }
-
-    @Override
-    public Point2D sceneToSceneGraphObject(double x, double y) {
-        return getSceneGraphObject().sceneToLocal(x, y);
-    }
-
-    @Override
     protected void startListeningToSceneGraphObject() {
         startListeningToLayoutBounds(getSceneGraphObject());
         startListeningToLocalToSceneTransform(getSceneGraphObject());

@@ -366,7 +366,7 @@ public class TitledPane extends Labeled {
     @Override
     public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
-            case TITLE: {
+            case TEXT: {
                 String accText = getAccessibleText();
                 if (accText != null && !accText.isEmpty()) return accText;
                 return getText();

@@ -88,26 +88,7 @@ public class SliderSkin extends BehaviorSkinBase<Slider, SliderBehavior> {
             public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
                 switch (attribute) {
                     case VALUE: return getSkinnable().getValue();
-                    case MAX_VALUE: {
-                        // This is required for mac-support, to convert from pixel to percent
-                        return getSkinnable().getMax();
-                    }
                     default: return super.queryAccessibleAttribute(attribute, parameters);
-                }
-            }
-
-            @Override
-            public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
-                switch (action) {
-                    case MOVE: {
-                        // FIXME for now we just take the x/y values as value, rather than pixel value
-                        final Slider slider = getSkinnable();
-                        final Orientation o = slider.getOrientation();
-                        double value = (double) (o == Orientation.VERTICAL ? parameters[1] : parameters[0]);
-                        slider.setValue(slider.getValue() + value);
-                        break;
-                    }
-                    default: super.executeAccessibleAction(action, parameters);
                 }
             }
         };

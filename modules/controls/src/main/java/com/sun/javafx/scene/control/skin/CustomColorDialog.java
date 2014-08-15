@@ -81,12 +81,19 @@ public class CustomColorDialog extends HBox {
         setHgrow(controlsPane, Priority.ALWAYS);
         
         customScene = new Scene(this);
+        final Scene ownerScene = owner.getScene();
+        if (ownerScene != null) {
+            if (ownerScene.getUserAgentStylesheet() != null) {
+                customScene.setUserAgentStylesheet(ownerScene.getUserAgentStylesheet());
+            }
+            customScene.getStylesheets().addAll(ownerScene.getStylesheets());
+        }
         getChildren().addAll(colorRectPane, controlsPane);
         
         dialog.setScene(customScene);
         dialog.addEventHandler(KeyEvent.ANY, keyEventListener);
     }
-    
+
     private final EventHandler<KeyEvent> keyEventListener = e -> {
         switch (e.getCode()) {
             case ESCAPE :

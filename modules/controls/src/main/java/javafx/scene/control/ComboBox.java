@@ -596,7 +596,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
     @Override
     public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch(attribute) {
-            case TITLE:
+            case TEXT:
                 String accText = getAccessibleText();
                 if (accText != null && !accText.isEmpty()) return accText;
 

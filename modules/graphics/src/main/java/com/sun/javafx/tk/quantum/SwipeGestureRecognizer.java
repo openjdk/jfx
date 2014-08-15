@@ -36,6 +36,11 @@ import javafx.event.EventType;
 import javafx.scene.input.SwipeEvent;
 
 class SwipeGestureRecognizer implements GestureRecognizer {
+
+    private static final double TANGENT_30_DEGREES = 0.577;
+
+    private static final double TANGENT_45_DEGREES = 1;
+
     private static final boolean VERBOSE = false;
 
     // Swipes must be longer than that
@@ -108,14 +113,18 @@ class SwipeGestureRecognizer implements GestureRecognizer {
             return null;
         }
 
-        if (absSecondaryDistance > absPrimaryDistance * 0.839 /* tan(2Pi/9) */) {
-            // too diagonal - in range of 10 degrees
+        if (absSecondaryDistance > absPrimaryDistance * TANGENT_30_DEGREES) {
+            // too diagonal - in range of 60 degrees
             return null;
         }
 
-        if (maxSecondaryDeviation > absPrimaryLength / (tracker.getDuration() / 100.0)) {
-            // too imprecise for the performed speed (the slower movement, 
-            // the higher precision requred)
+        if (maxSecondaryDeviation > absPrimaryDistance * TANGENT_45_DEGREES) {
+            // maximum deviation on the secondary axis, is too big
+            return null;
+        }
+
+        int swipeMaxDuration = Integer.getInteger("com.sun.javafx.gestures.swipe.maxduration", 300);
+        if (tracker.getDuration() > swipeMaxDuration) {
             return null;
         }
 

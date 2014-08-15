@@ -88,6 +88,7 @@ import javafx.scene.input.InputMethodRequests;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseDragEvent;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.input.PickResult;
 import javafx.scene.input.RotateEvent;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.input.SwipeEvent;
@@ -8597,11 +8598,14 @@ public abstract class Node implements EventTarget, Styleable {
     /**
      * Find CSS styles that were used to style this Node in its current pseudo-class state. The map will contain the styles from this node and,
      * if the node is a Parent, its children. The node corresponding to an entry in the Map can be obtained by casting a StyleableProperty key to a
-     * javafx.beans.property.Property and calling getBean(). The List<Style> contains only those styles used to style the property and will contain
+     * javafx.beans.property.Property and calling getBean(). The List contains only those styles used to style the property and will contain
      * styles used to resolve lookup values.
      *
      * @param styleMap A Map to be populated with the styles. If null, a new Map will be allocated.
      * @return The Map populated with matching styles.
+     *
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated // SB-dependency: RT-21096 has been filed to track this
     public Map<StyleableProperty<?>,List<Style>> impl_findStyles(Map<StyleableProperty<?>,List<Style>> styleMap) {
@@ -9167,9 +9171,13 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     /**
-     * The role of this {@code Node}.
+     * The accessible role for this {@code Node}.
+     * <p>
+     * The screen reader uses the role of a node to determine the
+     * attributes and actions that are supported.
      *
-     * @defaultValue Role.NODE
+     * @defaultValue {@link AccessibleRole#NODE}
+     * @see AccessibleRole
      * 
      * @since JavaFX 8u40
      */
@@ -9184,7 +9192,7 @@ public abstract class Node implements EventTarget, Styleable {
         if (role == null) return AccessibleRole.NODE;
         return roleProperty().get();
     }
-
+    
     public final ObjectProperty<AccessibleRole> roleProperty() {
         if (role == null) {
             role = new SimpleObjectProperty<AccessibleRole>(this, "role", AccessibleRole.NODE);
@@ -9204,8 +9212,13 @@ public abstract class Node implements EventTarget, Styleable {
 
     /**
      * The role description of this {@code Node}.
-     * A null or an empty string means that it will speak the regular
-     * role description for the node.
+     * <p>
+     * Noramlly, when a role is provided for a node, the screen reader
+     * speaks the role as well as the contents of the node.  When this
+     * value is set, it is possbile to override the default.  This is
+     * useful because the set of roles is predefined.  For example,
+     * it is possible to set the role of a node to be a button, but
+     * have the role description be arbitrary text.
      *
      * @defaultValue null
      * 
@@ -9226,9 +9239,13 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     /**
-     * The accessible help of this {@code Node}.
-     * A null or an empty string means that it will speak the regular text
-     * for the node, which is dependent on the node.
+     * The accessible text for this {@code Node}.
+     * <p>
+     * This property is used to set the text that the screen
+     * reader will speak.  If a node normally speaks text,
+     * that text is overriden.  For example, a button
+     * usually speaks using the text in the control but will
+     * no longer do this when this value is set.
      *
      * @defaultValue null
      * 
@@ -9249,7 +9266,11 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     /**
-     * The accessible help of this {@code Node}.
+     * The accessible help text for this {@code Node}.
+     * <p>
+     * The help text provides a more detailed description of the
+     * accessible text for a node.  By default, if the node has
+     * a tool tip, this text is used.
      *
      * @defaultValue null
      * 
@@ -9293,7 +9314,13 @@ public abstract class Node implements EventTarget, Styleable {
 
     /**
      * This method is called by the assistive technology to request
-     * the value for the given attribute.
+     * the value for an attribute.
+     * <p>
+     * This method is commonly overridden by subclasses to implement
+     * attributes that are required for a specific role.<br>
+     * If a particular attribute is not handled, the super class implementation
+     * must be called.
+     * </p>
      *
      * @param attribute the requested attribute
      * @param parameters optional list of parameters
@@ -9307,7 +9334,7 @@ public abstract class Node implements EventTarget, Styleable {
         switch (attribute) {
             case ROLE: return getRole();
             case ROLE_DESCRIPTION: return getRoleDescription();
-            case TITLE: return getAccessibleText();
+            case TEXT: return getAccessibleText();
             case HELP: return getAccessibleHelp();
             case PARENT: return getParent();
             case SCENE: return getScene();
@@ -9322,8 +9349,14 @@ public abstract class Node implements EventTarget, Styleable {
 
     /**
      * This method is called by the assistive technology to request the action
-     * indicated by the given argument to be executed.
-     *
+     * indicated by the argument should be executed.
+     * <p>
+     * This method is commonly overridden by subclasses to implement
+     * action that are required for a specific role.<br>
+     * If a particular action is not handled, the super class implementation
+     * must be called.
+     * </p>
+     * 
      * @param action the action to execute
      * @param parameters optional list of parameters
      *
@@ -9338,15 +9371,25 @@ public abstract class Node implements EventTarget, Styleable {
                     requestFocus();
                 }
                 break;
+            case SHOW_MENU: {
+                Bounds b = getBoundsInLocal();
+                Point2D pt = localToScreen(b.getMaxX(), b.getMaxY());
+                ContextMenuEvent event =
+                    new ContextMenuEvent(ContextMenuEvent.CONTEXT_MENU_REQUESTED,
+                    b.getMaxX(), b.getMaxY(), pt.getX(), pt.getY(),
+                    false, new PickResult(this, b.getMaxX(), b.getMaxY()));
+                Event.fireEvent(this, event);
+                break;
+            }
             default:
         }
     }
 
     /**
      * This method is called by the application to notify the assistive
-     * technology that the value for the given attribute has changed.
+     * technology that the value for an attribute has changed.
      *
-     * @param notification the attribute which value has changed
+     * @param notification the attribute whose value has changed
      *
      * @see AccessibleAttribute
      *

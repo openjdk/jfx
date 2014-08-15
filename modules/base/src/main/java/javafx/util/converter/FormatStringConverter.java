@@ -51,27 +51,28 @@ public class FormatStringConverter<T> extends StringConverter<T> {
 
     /** {@inheritDoc} */
     @Override public T fromString(String value) {
-        try {
-            // If the specified value is null or zero-length, return null
-            if (value == null) {
-                return null;
-            }
-
-            value = value.trim();
-
-            if (value.length() < 1) {
-                return null;
-            }
-
-            // Create and configure the parser to be used
-            Format _format = getFormat();
-
-            // Perform the requested parsing, and attempt to conver the output
-            // back to T
-            return (T) _format.parseObject(value);
-        } catch (ParseException ex) {
-            throw new RuntimeException(ex);
+        // If the specified value is null or zero-length, return null
+        if (value == null) {
+            return null;
         }
+
+        value = value.trim();
+
+        if (value.length() < 1) {
+            return null;
+        }
+
+        // Create and configure the parser to be used
+        Format _format = getFormat();
+
+        // Perform the requested parsing, and attempt to conver the output
+        // back to T
+        final ParsePosition pos = new ParsePosition(0);
+        T result = (T) _format.parseObject(value, pos);
+        if (pos.getIndex() != value.length()) {
+            throw new RuntimeException("Parsed string not according to the format");
+        }
+        return result;
     }
 
     /** {@inheritDoc} */

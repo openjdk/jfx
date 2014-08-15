@@ -1030,7 +1030,7 @@ public class TableColumnHeader extends Region {
     public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
             case INDEX: return getIndex(column);
-            case TITLE: return column != null ? column.getText() : null;
+            case TEXT: return column != null ? column.getText() : null;
             default: return super.queryAccessibleAttribute(attribute, parameters);
         }
     }

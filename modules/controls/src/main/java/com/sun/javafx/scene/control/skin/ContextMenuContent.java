@@ -981,7 +981,7 @@ public class ContextMenuContent extends Region {
         public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
             switch (attribute) {
                 case VISIBLE: return contextMenu.isShowing();
-                case MENU_FOR: return contextMenu.getOwnerNode();
+                case PARENT_MENU: return contextMenu.getOwnerNode();
                 default: return super.queryAccessibleAttribute(attribute, parameters); 
             }
         }
@@ -1488,21 +1488,21 @@ public class ContextMenuContent extends Region {
                     }
                     return false;
                 case ACCELERATOR: return item.getAccelerator();
-                case TITLE: {
+                case TEXT: {
                     String title = "";
                     if (graphic != null) {
-                        String t = (String)graphic.queryAccessibleAttribute(AccessibleAttribute.TITLE);
+                        String t = (String)graphic.queryAccessibleAttribute(AccessibleAttribute.TEXT);
                         if (t != null) title += t;
                     }                  
                     final Label label = getLabel();
                     if (label != null) {
-                        String t = (String)label.queryAccessibleAttribute(AccessibleAttribute.TITLE);
+                        String t = (String)label.queryAccessibleAttribute(AccessibleAttribute.TEXT);
                         if (t != null) title += t;
                     }
                     if (item instanceof CustomMenuItem) {
                         Node content = ((CustomMenuItem) item).getContent();
                         if (content != null) {
-                            String t = (String)content.queryAccessibleAttribute(AccessibleAttribute.TITLE);
+                            String t = (String)content.queryAccessibleAttribute(AccessibleAttribute.TEXT);
                             if (t != null) title += t;
                         }
                     }
@@ -1517,7 +1517,7 @@ public class ContextMenuContent extends Region {
                     return null;
                 }
                 case DISABLED: return item.isDisable();
-                case MENU:
+                case SUBMENU:
                     createSubmenu();
                     // Accessibility might need to see the menu node before the window
                     // is visible (i.e. before the skin is applied).
@@ -1536,7 +1536,11 @@ public class ContextMenuContent extends Region {
                 case SHOW_MENU:{
                     if (item instanceof Menu) {
                         final Menu menuItem = (Menu) item;
-                        menuItem.hide();
+                        if (menuItem.isShowing()) {
+                            menuItem.hide();
+                        } else {
+                            menuItem.show();
+                        }
                     }
                     break;
                 }

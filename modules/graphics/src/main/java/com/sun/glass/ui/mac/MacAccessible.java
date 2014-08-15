@@ -103,8 +103,8 @@ final class MacAccessible extends Accessible {
         NSAccessibilitySubroleAttribute(ROLE, MacVariant::createNSObject),
         NSAccessibilityRoleDescriptionAttribute(ROLE_DESCRIPTION, MacVariant::createNSString),
         NSAccessibilitySizeAttribute(BOUNDS, MacVariant::createNSValueForSize),
-        NSAccessibilityTabsAttribute(null, MacVariant::createNSArray),
-        NSAccessibilityTitleAttribute(TITLE, MacVariant::createNSString),
+        NSAccessibilityTabsAttribute(ITEM_COUNT, MacVariant::createNSArray),
+        NSAccessibilityTitleAttribute(TEXT, MacVariant::createNSString),
         NSAccessibilityTopLevelUIElementAttribute(SCENE, MacVariant::createNSObject),
         NSAccessibilityWindowAttribute(SCENE, MacVariant::createNSObject),
         NSAccessibilityTitleUIElementAttribute(LABELED_BY, MacVariant::createNSObject),
@@ -124,12 +124,12 @@ final class MacAccessible extends Accessible {
         NSAccessibilitySelectedChildrenAttribute(null, MacVariant::createNSArray),
 
         // NSAccessibilityStaticText
-        NSAccessibilityNumberOfCharactersAttribute(TITLE, MacVariant::createNSNumberForInt),
+        NSAccessibilityNumberOfCharactersAttribute(TEXT, MacVariant::createNSNumberForInt),
         NSAccessibilitySelectedTextAttribute(SELECTION_START, MacVariant::createNSString),
         NSAccessibilitySelectedTextRangeAttribute(SELECTION_START, MacVariant::createNSValueForRange),
         NSAccessibilitySelectedTextRangesAttribute(null, null), //TODO Array of ranges
         NSAccessibilityInsertionPointLineNumberAttribute(CARET_OFFSET, MacVariant::createNSNumberForInt),
-        NSAccessibilityVisibleCharacterRangeAttribute(TITLE, MacVariant::createNSValueForRange),
+        NSAccessibilityVisibleCharacterRangeAttribute(TEXT, MacVariant::createNSValueForRange),
 
         // NSAccessibilityScrollAreaRole
         NSAccessibilityContentsAttribute(CONTENTS, MacVariant::createNSArray),
@@ -160,9 +160,9 @@ final class MacAccessible extends Accessible {
 
         // Parameterized Attributes
         NSAccessibilityLineForIndexParameterizedAttribute(LINE_FOR_OFFSET, MacVariant::createNSNumberForInt, MacVariant.NSNumber_Int),
-        NSAccessibilityStringForRangeParameterizedAttribute(TITLE, MacVariant::createNSString, MacVariant.NSValue_range),
+        NSAccessibilityStringForRangeParameterizedAttribute(TEXT, MacVariant::createNSString, MacVariant.NSValue_range),
         NSAccessibilityRangeForLineParameterizedAttribute(LINE_START, MacVariant::createNSValueForRange, MacVariant.NSNumber_Int),
-        NSAccessibilityAttributedStringForRangeParameterizedAttribute(TITLE, MacVariant::createNSAttributedString, MacVariant.NSValue_range),
+        NSAccessibilityAttributedStringForRangeParameterizedAttribute(TEXT, MacVariant::createNSAttributedString, MacVariant.NSValue_range),
         NSAccessibilityCellForColumnAndRowParameterizedAttribute(CELL_AT_ROW_COLUMN, MacVariant::createNSObject, MacVariant.NSArray_int),
         NSAccessibilityRangeForPositionParameterizedAttribute(OFFSET_AT_POINT, MacVariant::createNSValueForRange, MacVariant.NSValue_point),
         NSAccessibilityBoundsForRangeParameterizedAttribute(BOUNDS_FOR_RANGE, MacVariant::createNSValueForRectangle, MacVariant.NSValue_range),
@@ -201,7 +201,7 @@ final class MacAccessible extends Accessible {
     static enum MacRole {
         NSAccessibilityUnknownRole(AccessibleRole.NODE, null, null),
         NSAccessibilityGroupRole(AccessibleRole.PARENT, null, null),
-        NSAccessibilityButtonRole(new AccessibleRole[] {AccessibleRole.BUTTON, AccessibleRole.INCREMENT_BUTTON, AccessibleRole.DECREMENT_BUTTON, AccessibleRole.HEADER, AccessibleRole.SPLIT_MENU_BUTTON},
+        NSAccessibilityButtonRole(new AccessibleRole[] {AccessibleRole.BUTTON, AccessibleRole.INCREMENT_BUTTON, AccessibleRole.DECREMENT_BUTTON, AccessibleRole.SPLIT_MENU_BUTTON},
             new MacAttribute[] {
                 MacAttribute.NSAccessibilityEnabledAttribute,
                 MacAttribute.NSAccessibilityTitleAttribute,
@@ -482,7 +482,6 @@ final class MacAccessible extends Accessible {
 
     static enum MacSubrole {
         NSAccessibilityTableRowSubrole(AccessibleRole.LIST_ITEM, AccessibleRole.TABLE_ROW),
-        NSAccessibilitySortButtonSubrole(AccessibleRole.HEADER),
         NSAccessibilitySecureTextFieldSubrole(AccessibleRole.PASSWORD_FIELD),
         NSAccessibilityOutlineRowSubrole(new AccessibleRole[] { AccessibleRole.TREE_ITEM, AccessibleRole.TREE_TABLE_ROW },
             new MacAttribute[] {
@@ -771,7 +770,7 @@ final class MacAccessible extends Accessible {
                          * The work around is to look for a previous menu
                          * and send a close and open event for it.
                          */
-                        Node menuItemOwner = (Node)getAttribute(MENU_FOR);
+                        Node menuItemOwner = (Node)getAttribute(PARENT_MENU);
                         MacAccessible acc  = (MacAccessible)getAccessible(menuItemOwner);
                         if (acc != null) {
                             MacAccessible menu = (MacAccessible)acc.getContainerAccessible(AccessibleRole.CONTEXT_MENU);
@@ -785,7 +784,7 @@ final class MacAccessible extends Accessible {
                 }
                 break;
             }
-            case TITLE:
+            case TEXT:
                 macNotification = MacNotification.NSAccessibilityTitleChangedNotification;
                 break;
             case PARENT:
@@ -1013,7 +1012,13 @@ final class MacAccessible extends Accessible {
         }
         switch (attr) {
             case NSAccessibilityRowsAttribute: {
-                Integer count = (Integer)getAttribute(ROW_COUNT);
+                AccessibleAttribute jfxAttr;
+                if (getAttribute(ROLE) == AccessibleRole.LIST_VIEW) {
+                    jfxAttr = AccessibleAttribute.ITEM_COUNT;
+                } else {
+                    jfxAttr = AccessibleAttribute.ROW_COUNT;
+                }
+                Integer count = (Integer)getAttribute(jfxAttr);
                 return count != null ? count : 0;
             }
             case NSAccessibilityColumnsAttribute: {
@@ -1038,7 +1043,7 @@ final class MacAccessible extends Accessible {
                     ObservableList<Node> children = (ObservableList<Node>)getAttribute(CHILDREN);
                     long[] ids = getUnignoredChildren(children);
                     int count = ids.length;
-                    if (getAttribute(MENU) != null) {
+                    if (getAttribute(SUBMENU) != null) {
                         count++;
                     }
                     return count;
@@ -1063,14 +1068,21 @@ final class MacAccessible extends Accessible {
         AccessibleAttribute jfxAttr = null;
         switch (attr) {
             case NSAccessibilityColumnsAttribute: jfxAttr = COLUMN_AT_INDEX; break;
-            case NSAccessibilityRowsAttribute: jfxAttr = ROW_AT_INDEX; break;
+            case NSAccessibilityRowsAttribute: {
+                if (getAttribute(ROLE) == AccessibleRole.LIST_VIEW) {
+                    jfxAttr = AccessibleAttribute.ITEM_AT_INDEX;
+                } else {
+                    jfxAttr = AccessibleAttribute.ROW_AT_INDEX;
+                }
+                break;
+            }
             case NSAccessibilityDisclosedRowsAttribute: jfxAttr = TREE_ITEM_AT_INDEX; break;
             case NSAccessibilityChildrenAttribute: {
                 if (getAttribute(ROLE) == AccessibleRole.MENU) {
                     long[] result = new long[maxCount];
                     int i = 0;
                     if (index == 0) {
-                        Node menu = (Node)getAttribute(MENU);
+                        Node menu = (Node)getAttribute(SUBMENU);
                         if (menu != null) result[i++] = getNativeAccessible(menu);
                     }
                     if (i < maxCount) {
@@ -1168,7 +1180,7 @@ final class MacAccessible extends Accessible {
                         case TEXT_FIELD:
                         case TEXT_AREA:
                         case COMBO_BOX:
-                            jfxAttr = TITLE;
+                            jfxAttr = TEXT;
                             map = MacVariant::createNSString;
                             break;
                         case CHECK_BOX:
@@ -1187,14 +1199,6 @@ final class MacAccessible extends Accessible {
                         default:
                             /* VoiceOver can ask NSAccessibilityValueAttribute in unexpected cases, AXColumn for example. */
                             return null;
-                    }
-                    break;
-                }
-                case NSAccessibilityTabsAttribute: {
-                    switch (role) {
-                        case TAB_PANE: jfxAttr = TABS; break;
-                        case PAGINATION: jfxAttr = PAGES; break;
-                        default:
                     }
                     break;
                 }
@@ -1321,9 +1325,18 @@ final class MacAccessible extends Accessible {
                 result = Boolean.FALSE.equals(result);
                 break;
             }
+            case NSAccessibilityTabsAttribute: {
+                Integer count = (Integer)result;
+                long[] tabs = new long[count];
+                for (int i = 0; i < count; i++) {
+                    Node child = (Node)getAttribute(ITEM_AT_INDEX, i);
+                    tabs[i] = getNativeAccessible(child);
+                }
+                result = NSAccessibilityUnignoredChildren(tabs);
+                break;
+            }
             case NSAccessibilitySelectedCellsAttribute:
             case NSAccessibilitySelectedRowsAttribute:
-            case NSAccessibilityTabsAttribute:
             case NSAccessibilityVisibleChildrenAttribute:
             case NSAccessibilityChildrenAttribute: {
                 @SuppressWarnings("unchecked")
@@ -1336,7 +1349,7 @@ final class MacAccessible extends Accessible {
                     result = getView().getWindow().getNativeWindow();
                 } else if (result != null) {
                     if (role == AccessibleRole.CONTEXT_MENU) {
-                        Node menuItem = (Node)getAttribute(MENU_FOR);
+                        Node menuItem = (Node)getAttribute(PARENT_MENU);
                         if (menuItem != null) {
                             if (getAccessible(menuItem).getAttribute(ROLE) == AccessibleRole.MENU) {
                                 result = menuItem;
@@ -1488,7 +1501,7 @@ final class MacAccessible extends Accessible {
                     end = (Integer)getAttribute(SELECTION_END);
                 }
                 if (start < 0 || end < 0 || start > end) return null;
-                String string = (String)getAttribute(TITLE);
+                String string = (String)getAttribute(TEXT);
                 if (string == null) return null;
                 if (end > string.length()) return null;
                 result = string.substring(start, end);
@@ -1500,7 +1513,7 @@ final class MacAccessible extends Accessible {
                     end = (Integer)getAttribute(SELECTION_END);
                 }
                 if (start < 0 || end < 0 || start > end) return null;
-                String string = (String)getAttribute(TITLE);
+                String string = (String)getAttribute(TEXT);
                 if (string == null) return null;
                 if (end > string.length()) return null;
                 result = new int[] {start, end - start};
@@ -1718,7 +1731,7 @@ final class MacAccessible extends Accessible {
                     }
                 } else {
                     /* Combo and TextField */
-                    String text = (String)getAttribute(TITLE);
+                    String text = (String)getAttribute(TEXT);
                     result = new int[] {0, text != null ? text.length() : 0};
                 }
                 break;

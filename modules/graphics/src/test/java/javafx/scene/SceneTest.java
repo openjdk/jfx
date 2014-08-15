@@ -35,21 +35,26 @@ import javafx.scene.shape.Rectangle;
 import javafx.scene.transform.Scale;
 import javafx.stage.PopupWindow;
 import javafx.stage.Stage;
+
 import com.sun.javafx.pgstub.StubScene;
 import com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.sg.prism.NGCamera;
 import com.sun.javafx.test.MouseEventGenerator;
 import com.sun.javafx.tk.Toolkit;
+
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.scene.input.MouseEvent;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.util.concurrent.ExecutionException;
 
+import static junit.framework.Assert.assertEquals;
+import static junit.framework.Assert.assertNotNull;
 import static org.junit.Assert.*;
 
 /**
@@ -816,4 +821,28 @@ public class SceneTest {
                    ((StubScene) scene.impl_getPeer()).getCursor());
     }
 
+    @Test public void testProperties() {
+        final Scene scene = new Scene(new Group(), 300, 200);
+        
+        javafx.collections.ObservableMap<Object, Object> properties = scene.getProperties();
+
+        /* If we ask for it, we should get it.
+         */
+        assertNotNull(properties);
+
+        /* What we put in, we should get out.
+         */
+        properties.put("MyKey", "MyValue");
+        assertEquals("MyValue", properties.get("MyKey"));
+
+        /* If we ask for it again, we should get the same thing.
+         */
+        javafx.collections.ObservableMap<Object, Object> properties2 = scene.getProperties();
+        assertEquals(properties2, properties);
+
+        /* What we put in to the other one, we should get out of this one because
+         * they should be the same thing.
+         */
+        assertEquals("MyValue", properties2.get("MyKey"));
+    }
 }
