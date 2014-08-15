@@ -9185,7 +9185,17 @@ public abstract class Node implements EventTarget, Styleable {
         if (role == null) return AccessibleRole.NODE;
         return roleProperty().get();
     }
-
+    
+    /**
+     * The accessible role for this {@code Node}.
+     * <p>
+     * The screen reader uses the role of a node to determine the
+     * attributes and actions that are supported.
+     *
+     * @defaultValue {@link AccessibleRole.NODE}
+     * 
+     * @since JavaFX 8u40
+     */
     public final ObjectProperty<AccessibleRole> roleProperty() {
         if (role == null) {
             role = new SimpleObjectProperty<AccessibleRole>(this, "role", AccessibleRole.NODE);
@@ -9205,8 +9215,13 @@ public abstract class Node implements EventTarget, Styleable {
 
     /**
      * The role description of this {@code Node}.
-     * A null or an empty string means that it will speak the regular
-     * role description for the node.
+     * <p>
+     * Noramlly, when a role is provided for a node, the screen reader
+     * speaks the role as well as the contents of the node.  When this
+     * value is set, it is possbile to override the default.  This is
+     * useful because the set of roles is predefined.  For example,
+     * it is possible to set the role of a node to be a button, but
+     * have the role description be arbitrary text.
      *
      * @defaultValue null
      * 
@@ -9227,9 +9242,13 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     /**
-     * The accessible help of this {@code Node}.
-     * A null or an empty string means that it will speak the regular text
-     * for the node, which is dependent on the node.
+     * The accessible text for this {@code Node}.
+     * <p>
+     * This property is used to set the text that the screen
+     * reader will speak.  If a node normally speaks text,
+     * that text is overriden.  For example, a button
+     * usually speaks using the text in the control but will
+     * no longer do this when this value is set.
      *
      * @defaultValue null
      * 
@@ -9250,7 +9269,11 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     /**
-     * The accessible help of this {@code Node}.
+     * The accessible help text for this {@code Node}.
+     * <p>
+     * The help text provides a more detailed description of the
+     * accessible text for a node.  By default, if the node has
+     * a tool tip, this text is used.
      *
      * @defaultValue null
      * 
@@ -9294,7 +9317,7 @@ public abstract class Node implements EventTarget, Styleable {
 
     /**
      * This method is called by the assistive technology to request
-     * the value for the given attribute.
+     * the value for an attribute.
      *
      * @param attribute the requested attribute
      * @param parameters optional list of parameters
@@ -9323,7 +9346,7 @@ public abstract class Node implements EventTarget, Styleable {
 
     /**
      * This method is called by the assistive technology to request the action
-     * indicated by the given argument to be executed.
+     * indicated by the argument should be executed.
      *
      * @param action the action to execute
      * @param parameters optional list of parameters
@@ -9355,9 +9378,9 @@ public abstract class Node implements EventTarget, Styleable {
 
     /**
      * This method is called by the application to notify the assistive
-     * technology that the value for the given attribute has changed.
+     * technology that the value for an attribute has changed.
      *
-     * @param notification the attribute which value has changed
+     * @param notification the attribute whose value has changed
      *
      * @see AccessibleAttribute
      *
