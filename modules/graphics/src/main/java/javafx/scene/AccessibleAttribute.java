@@ -26,6 +26,7 @@
 package javafx.scene;
 
 import java.time.LocalDate;
+
 import javafx.collections.ObservableList;
 import javafx.geometry.Bounds;
 import javafx.geometry.Orientation;
@@ -33,13 +34,20 @@ import javafx.scene.input.KeyCombination;
 import javafx.scene.text.Font;
 
 /**
- * The {@code AccessibleAttribute} enum defines the attributes assistive technology,
- * such as screen readers, can request nodes in the scene graph.<br>
- * The attributes each node must support depends on its {@link AccessibleRole}.
- * <p>Attributes can be augmented by parameters or not.</p>
- * <p>The node is responsible by
- *  notifying the assistive technology using {@link Node#notifyAccessibleAttributeChanged(AccessibleAttribute)}
- *  when the value of some attributes changes.
+ * This enum describes the attributes that an assistive technology
+ * such as a screen reader can request from the scene graph.
+ * 
+ * The {@link AccessibleRole} dictates the set of attributes that
+ * the screen reader will request for a particular control.  For
+ * example, a slider is expected to return a double that represents
+ * the current value.
+ * <p>
+ * Attributes may have any number of parameters, depending on the particular attribute.</p>
+ * <p>
+ * When the value of an attribute is changed by a node, it must notify the assistive technology
+ * using {@link Node#notifyAccessibleAttributeChanged(AccessibleAttribute)}.  This will allow
+ * the screen reader to inform the user that a value has changed.  The most common form of
+ * notification is focus change.
  * </p>
  * 
  * @see Node#queryAccessibleAttribute(AccessibleAttribute, Object...)
@@ -176,7 +184,7 @@ public enum AccessibleAttribute {
     CONTENTS(Node.class),
 
     /**
-     * Returns if the node is disabled.</p>
+     * Returns true if the node is disabled, otherwise false.</p>
      * <ul>
      * <li>Used by: Node </li>
      * <li>Needs notify: no </li>
@@ -187,7 +195,7 @@ public enum AccessibleAttribute {
     DISABLED(Boolean.class),
 
     /**
-     * Returns the depth of a row in a disclosure hierarchy.</p>
+     * Returns the depth of a row in the disclosure hierarchy.</p>
      * <ul>
      * <li>Used by: TreeItem and TreeTableRow </li>
      * <li>Needs notify: no </li>
@@ -209,7 +217,7 @@ public enum AccessibleAttribute {
     DATE(LocalDate.class),
 
     /**
-     * Returns if the node is editable.</p>
+     * Returns true if the node is editable, otherwise false.</p>
      * <ul>
      * <li>Used by: TextField, ComboBox, etc </li>
      * <li>Needs notify: no </li>
@@ -220,7 +228,7 @@ public enum AccessibleAttribute {
     EDITABLE(Boolean.class),
 
     /**
-     * Returns if the node is expanded.</p>
+     * Returns true if the node is expanded, otherwise false.</p>
      * <ul>
      * <li>Used by: TreeItem, TitledPane, etc </li>
      * <li>Needs notify: yes </li>
@@ -233,8 +241,10 @@ public enum AccessibleAttribute {
     /**
      * Returns the focus item.
      * <p>
-     * Used for controls with items such TabPane, TableView, ListView, etc.
-     * It returns the exact Node within the control that has the focus.
+     * Used for controls such TabPane, TableView, ListView
+     * where the assistive technology focus is different from the
+     * normal focus node.  For example, a table control will have focus,
+     * while a cell inside the table might have the screen reader focus.
      * </p>
      * <ul>
      * <li>Used by: ListView, TabPane, etc </li>
@@ -249,7 +259,8 @@ public enum AccessibleAttribute {
      * Returns the focus node.
      * Type: Node
      * <p>
-     * This attribute is requested to the Scene, where it maps to {@link Scene#focusOwnerProperty()}.
+     * When this attribute is requested from the Scene, the default implementation
+     * returns {@link Scene#focusOwnerProperty()}.
      * </p>
      * <ul>
      * <li>Used by: Scene </li>
@@ -261,7 +272,7 @@ public enum AccessibleAttribute {
     FOCUS_NODE(Node.class),
 
     /**
-     * Returns if the node is focused.</p>
+     * Returns true if the node is focused, otherwise false.</p>
      * <ul>
      * <li>Used by: Node </li>
      * <li>Needs notify: no </li>
@@ -294,7 +305,7 @@ public enum AccessibleAttribute {
     HEADER(Node.class),
 
     /**
-     * Returns the help for the node.</p>
+     * Returns the help text for the node.</p>
      * <ul>
      * <li>Used by: Node </li>
      * <li>Needs notify: no </li>
@@ -305,7 +316,7 @@ public enum AccessibleAttribute {
     HELP(String.class),
 
     /**
-     * Returns the horizontal scroll bar of the node.</p>
+     * Returns the horizontal scroll bar for the node.</p>
      * <ul>
      * <li>Used by: ListView, ScrollPane, etc </li>
      * <li>Needs notify: no </li>
@@ -316,7 +327,7 @@ public enum AccessibleAttribute {
     HORIZONTAL_SCROLLBAR(Node.class),
 
     /**
-     * Returns the indeterminate state for the node.</p>
+     * Returns true of the node is indeterminaite, otherwise false.</p>
      * <ul>
      * <li>Used by: CheckBox and ProgressIndicator </li>
      * <li>Needs notify: yes </li>
@@ -364,9 +375,11 @@ public enum AccessibleAttribute {
     INDEX(Integer.class),
 
     /**
-     * Returns the node that is a label for this node.
-     * <p>When {@link javafx.scene.control.Label#labelFor} is set
-     * it provides its content to {@code LABELED_BY}.</p>
+     * Returns the node that is the label for this node.
+     * <p>When {@link javafx.scene.control.Label#labelFor} is set,
+     * the default implementation of {@code LABELED_BY} uses this
+     * relationship to return the appropriate node to the screen
+     * reader.</p>
      * <ul>
      * <li>Used by: Node </li>
      * <li>Needs notify: no </li>
@@ -377,7 +390,7 @@ public enum AccessibleAttribute {
     LABELED_BY(Node.class),
 
     /**
-     * Returns if the node is a leaf element.</p>
+     * Returns true if the node is a leaf element, otherwise false.</p>
      * <ul>
      * <li>Used by: TreeItem and TreeTableRow </li>
      * <li>Needs notify: no </li>
@@ -466,7 +479,7 @@ public enum AccessibleAttribute {
     MNEMONIC(String.class),
 
     /**
-     * Returns if the node allows for multiple selection.</p>
+     * Returns true if the node allows for multiple selection, otherwise false.</p>
      * <ul>
      * <li>Used by: ListView, TableView, etc </li>
      * <li>Needs notify: no </li>
@@ -477,7 +490,7 @@ public enum AccessibleAttribute {
     MULTIPLE_SELECTION(Boolean.class),
 
     /**
-     * Returns the node at the given point location.</p>
+     * Returns the node at the given location.</p>
      * <ul>
      * <li>Used by: Scene </li>
      * <li>Needs notify: no </li>
@@ -492,7 +505,7 @@ public enum AccessibleAttribute {
     NODE_AT_POINT(Node.class),
 
     /**
-     * Returns the character offset at the given point location.</p>
+     * Returns the character offset at the given location.</p>
      * <ul>
      * <li>Used by: TextField and TextArea </li>
      * <li>Needs notify: no </li>
@@ -621,7 +634,7 @@ public enum AccessibleAttribute {
     SCENE(Scene.class),
 
     /**
-     * Returns if the node is selected.</p>
+     * Returns true if the node is selected, otherwise false.</p>
      * <ul>
      * <li>Used by: CheckBox, TreeItem, etc </li>
      * <li>Needs notify: no </li>
@@ -679,9 +692,8 @@ public enum AccessibleAttribute {
      * Returns the text for the node.
      * E.g.
      * <ul>
-     * <li>ComboBox returns a string representation of its
-     * currently selected item.
-     * <li>TextField returns the text currently entered into it.
+     * <li>ComboBox returns a string representation of the current selected item.
+     * <li>TextField returns the contents of the text field.
      * </ul>
      * </p>
      * <ul>
@@ -753,7 +765,7 @@ public enum AccessibleAttribute {
     VERTICAL_SCROLLBAR(Node.class),
 
     /**
-     * Returns if the visibility for the node.</p>
+     * Returns true if node is visible, otherwise false.</p>
      * <ul>
      * <li>Used by: Node and ContextMenu </li>
      * <li>Needs notify: yes </li>
@@ -764,7 +776,7 @@ public enum AccessibleAttribute {
     VISIBLE(Boolean.class),
 
     /**
-     * Returns if the node has been visited.</p>
+     * Returns true if the node has been visited, otherwise false.</p>
      * <ul>
      * <li>Used by: Hyperlink </li>
      * <li>Needs notify: no </li>

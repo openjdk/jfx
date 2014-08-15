@@ -26,10 +26,16 @@
 package javafx.scene;
 
 /**
- * The {@code AccessibleAction} enum defines the actions assistive technology,
- * such as screen readers, can request nodes in the scene graph.<br>
- * The actions each node must support depends on its {@link AccessibleRole}.
- * <p>Action can be augmented by parameters or not.</p>
+ * This enum describes the actions that an assistive technology
+ * such as a screen reader can request from the scene graph.
+ * 
+ * The {@link AccessibleRole} dictates the set of actions that
+ * the screen reader will request for a particular control. For
+ * example, a push button normally fires an event to indicate
+ * that it was pressed in response to the FIRE action.
+ * <p>
+ * An action may have any number of parameters, depending on the particular action.
+ * </p>
  *
  * @see Node#executeAccessibleAction(AccessibleAction, Object...)
  * @see AccessibleRole
@@ -40,9 +46,9 @@ package javafx.scene;
 public enum AccessibleAction {
 
     /**
-     * Decrements the node by its larger block decrement value.
-     * A smaller decrement can be performed by using {@link #DECREMENT}.
-     * <p>Used by Slider, ScrollBar, etc </p>
+     * Request that the node be decremented by a large value.
+     * A smaller decrement is requested using {@link #DECREMENT}.
+     * <p>Used by Slider, ScrollBar, and others </p>
      * 
      * Parameters:
      * <ul>
@@ -51,9 +57,9 @@ public enum AccessibleAction {
     BLOCK_DECREMENT,
 
     /**
-     * Increments the node by its larger block increment value. 
-     * A smaller increment can be performed by using {@link #INCREMENT}.
-     * <p>Used by Slider, ScrollBar, etc </p>
+     * Request that the node be incremented by a large value.
+     * A smaller increment is requested using {@link #INCREMENT}.
+     * <p>Used by Slider, ScrollBar, and others </p>
      * 
      * Parameters:
      * <ul>
@@ -62,8 +68,8 @@ public enum AccessibleAction {
     BLOCK_INCREMENT,
 
     /**
-     * Request the node to collapse itself.
-     * <p>Used by TreeItem, TitledPane, etc </p>
+     * Request that the node should become collapsed.
+     * <p>Used by TreeItem, TitledPane, and others </p>
      * 
      * Parameters:
      * <ul>
@@ -72,9 +78,9 @@ public enum AccessibleAction {
     COLLAPSE,
 
     /**
-     * Decrements the node by its smaller unit decrement value.
-     * A larger decrement can be performed by using {@link #BLOCK_DECREMENT}.
-     * <p>Used by Slider, ScrollBar, etc </p>
+     * Request that the node be decremented by a small value.
+     * A larger decrement is requested using {@link #BLOCK_DECREMENT}.
+     * <p>Used by Slider, ScrollBar, and others </p>
      * 
      * Parameters:
      * <ul>
@@ -83,8 +89,8 @@ public enum AccessibleAction {
     DECREMENT,
 
     /**
-     * Request the node to expand itself.
-     * <p>Used by TreeItem, TitledPane, etc </p>
+     * Request that the node should become expanded.
+     * <p>Used by TreeItem, TitledPane, and others </p>
      * 
      * Parameters:
      * <ul>
@@ -93,8 +99,11 @@ public enum AccessibleAction {
     EXPAND,
 
     /**
-     * Fire the node.
-     * <p>Used by Button, Hyperlink, etc </p>
+     * Fires the primary action for the node. For example, a push
+     * button will normally send an action event to notify listeners
+     * that is has been activated.
+     * *
+     * <p>Used by Button, Hyperlink, and others </p>
      * 
      * Parameters:
      * <ul>
@@ -103,9 +112,9 @@ public enum AccessibleAction {
     FIRE,
 
     /**
-     * Increments the node by its smaller unit increment value.
-     * A larger increment can be performed by using {@link #BLOCK_INCREMENT}.
-     * <p>Used by Slider, ScrollBar, etc </p>
+     * Request that the node be incremented by a small value.
+     * A larger increment is requested using {@link #BLOCK_INCREMENT}.
+     * <p>Used by Slider, ScrollBar, and others </p>
      * 
      * Parameters:
      * <ul>
@@ -114,8 +123,16 @@ public enum AccessibleAction {
     INCREMENT,
 
     /**
-     * Indicate the node to request focus.
-     * <p>Used by Node, TabItem, etc </p>
+     * Request that the node take focus.  By default, a node will 
+     * request focus using  {@link javafx.scene.Node#requestFocus()}.
+     * Both JavaFX and the assisteve technology have the concept of
+     * a focus node and most of the time, they are the same.
+     * In some cases, a control might want the JavaFX focus to remain
+     * on the parent, while the assistive technology focus is on the child.
+     * For example, a table may respond to this request by setting focus
+     * to a cell inside the table before allowing the default to run.
+     * 
+     * <p>Used by Node, TabItem, TableCell and others </p>
      * 
      * Parameters:
      * <ul>
@@ -124,8 +141,8 @@ public enum AccessibleAction {
     REQUEST_FOCUS,
 
     /**
-     * Requests the view to show an item, scrolling if required.
-     * <p>Used by ListView, TreeView, etc </p>
+     * Request the node to show an item, scrolling if required.
+     * <p>Used by ListView, TreeView, and others </p>
      * 
      * Parameters:
      * <ul>
@@ -135,7 +152,7 @@ public enum AccessibleAction {
     SHOW_ITEM,
 
     /**
-     * Requests the view to show the given text range, scrolling if required.
+     * Request the node to show a text range, scrolling if required.
      * <p>Used by TextField and TextArea. </p>
      * 
      * Parameters:
@@ -147,8 +164,8 @@ public enum AccessibleAction {
     SHOW_TEXT_RANGE,
 
     /**
-     * Requests the view to sets its selection to the given items.
-     * <p>Used by ListView, TreeView, etc </p>
+     * Request the node to set the selection to a list of items.
+     * <p>Used by ListView, TreeView, and others </p>
      * 
      * Parameters:
      * <ul>
@@ -158,7 +175,7 @@ public enum AccessibleAction {
     SET_SELECTED_ITEMS,
 
     /**
-     * Sets the text selection for a node.
+     * Request the node to set the selection to range of text.
      * <p>Used by TextField and TextArea. </p>
      * 
      * Parameters:
@@ -170,7 +187,7 @@ public enum AccessibleAction {
     SET_TEXT_SELECTION,
 
     /**
-     * Sets the text for a node.
+     * Request the node to set the current text.
      * <p>Used by TextField and TextArea. </p>
      * 
      * Parameters:
@@ -181,8 +198,8 @@ public enum AccessibleAction {
     SET_TEXT,
 
     /**
-     * Sets the value for a node.
-     * <p>Used by Slider, Scrollbars, etc </p>
+     * Request the node to set the current value.
+     * <p>Used by Slider, Scrollbars, and others </p>
      * 
      * Parameters:
      * <ul>
@@ -192,8 +209,11 @@ public enum AccessibleAction {
     SET_VALUE,
 
     /**
-     * Request the receiver to show its menu.
-     * <p>Used by Node. </p>
+     * Request the node to show a menu.  If the node is a control,
+     * then the context menu for the control is shown.  If the node
+     * is a menu, then the submenu for the menu is shown.
+     * 
+     * <p>Used by Node, Menu</p>
      * 
      * Parameters:
      * <ul>

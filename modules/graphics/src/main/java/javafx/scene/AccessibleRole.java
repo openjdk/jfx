@@ -26,14 +26,21 @@
 package javafx.scene;
 
 /**
- * The {@code AccessibleRole} enum is used to specify the accessibility
- * role for a {@link Node}. Depending on the role, the node is expected
- * to respond to a set of {@link AccessibleAttribute} and
- * {@link AccessibleAction}. 
+ * This enum describes the accessible role for a {@link Node}. 
+ * 
+ * The role is used by assistive technologies such as screen readers
+ * to decide the set of actions and attributes for a node.  For example,
+ * when the screen reader needs the current value of a slider, it
+ * will request it using the value attribute.  When the screen reader
+ * changes the value of the slider, it will use an action to set
+ * the current value of the slider.  The slider must respond
+ * appropriately to both these requests.
  *
  * @see Node#setRole(AccessibleRole)
  * @see Node#getRole()
  * @see AccessibleAttribute#ROLE
+ * @see Node#queryAccessibleAttribute(AccessibleAttribute, Object...)
+ * @see Node#executeAccessibleAction(AccessibleAction, Object...)
  * 
  * @since JavaFX 8u40
  */
@@ -184,9 +191,10 @@ public enum AccessibleRole {
      * <ul>
      * </ul>
      * <p>
-     * It is recommended to provide a textual description to any image
-     * by means of setting either {@link Node#accessibleTextProperty()} or
-     * using {@link AccessibleAttribute#LABELED_BY}.
+     * It is strongly recommended that a text description of the image be provided
+     * for each {@link ImageView}.  This can be done by setting either
+     * {@link Node#accessibleTextProperty()} for the {@link ImageView}
+     * or by using {@link AccessibleAttribute#LABELED_BY}. 
      * </p> 
      */
     IMAGE_VIEW,
