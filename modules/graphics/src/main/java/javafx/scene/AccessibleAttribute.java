@@ -62,7 +62,7 @@ public enum AccessibleAttribute {
     /**
      * Returns the accelerator for the node.</p>
      * <ul>
-     * <li>Used by: Menu, MenuItem, RadioMenuItem, etc. </li>
+     * <li>Used by: Menu, MenuItem, RadioMenuItem, and others </li>
      * <li>Needs notify: no </li>
      * <li>Return Type: {@link KeyCombination} </li>
      * <li>Parameters: <ul></ul></li>
@@ -219,7 +219,7 @@ public enum AccessibleAttribute {
     /**
      * Returns true if the node is editable, otherwise false.</p>
      * <ul>
-     * <li>Used by: TextField, ComboBox, etc </li>
+     * <li>Used by: TextField, ComboBox, and others </li>
      * <li>Needs notify: no </li>
      * <li>Return Type: {@link Boolean} </li>
      * <li>Parameters: <ul></ul></li>
@@ -230,7 +230,7 @@ public enum AccessibleAttribute {
     /**
      * Returns true if the node is expanded, otherwise false.</p>
      * <ul>
-     * <li>Used by: TreeItem, TitledPane, etc </li>
+     * <li>Used by: TreeItem, TitledPane, and others </li>
      * <li>Needs notify: yes </li>
      * <li>Return Type: {@link Boolean} </li>
      * <li>Parameters: <ul></ul></li>
@@ -241,13 +241,13 @@ public enum AccessibleAttribute {
     /**
      * Returns the focus item.
      * <p>
-     * Used for controls such TabPane, TableView, ListView
+     * Used for controls such as TabPane, TableView, ListView
      * where the assistive technology focus is different from the
      * normal focus node.  For example, a table control will have focus,
      * while a cell inside the table might have the screen reader focus.
      * </p>
      * <ul>
-     * <li>Used by: ListView, TabPane, etc </li>
+     * <li>Used by: ListView, TabPane, and others </li>
      * <li>Needs notify: yes </li>
      * <li>Return Type: {@link Node} </li>
      * <li>Parameters: <ul></ul></li>
@@ -318,7 +318,7 @@ public enum AccessibleAttribute {
     /**
      * Returns the horizontal scroll bar for the node.</p>
      * <ul>
-     * <li>Used by: ListView, ScrollPane, etc </li>
+     * <li>Used by: ListView, ScrollPane, and others </li>
      * <li>Needs notify: no </li>
      * <li>Return Type: {@link Node} </li>
      * <li>Parameters: <ul></ul></li>
@@ -340,7 +340,7 @@ public enum AccessibleAttribute {
     /**
      * Returns the item at the given index.</p>
      * <ul>
-     * <li>Used by: TabPane, ListView, etc </li>
+     * <li>Used by: TabPane, ListView, and others </li>
      * <li>Needs notify: no </li>
      * <li>Return Type: {@link Node} </li>
      * <li>Parameters:
@@ -355,7 +355,7 @@ public enum AccessibleAttribute {
     /**
      * Returns the item count for the node.</p>
      * <ul>
-     * <li>Used by: TabPane, ListView, etc </li>
+     * <li>Used by: TabPane, ListView, and others </li>
      * <li>Needs notify: no </li>
      * <li>Return Type: {@link Integer} </li>
      * <li>Parameters: <ul></ul></li>
@@ -366,7 +366,7 @@ public enum AccessibleAttribute {
     /**
      * Returns the index for the node.</p>
      * <ul>
-     * <li>Used by: ListItem, TableRow, etc </li>
+     * <li>Used by: ListItem, TableRow, and others </li>
      * <li>Needs notify: no </li>
      * <li>Return Type: {@link Integer} </li>
      * <li>Parameters: <ul></ul></li>
@@ -448,7 +448,7 @@ public enum AccessibleAttribute {
     /**
      * Returns the minimum value for the node.</p>
      * <ul>
-     * <li>Used by: Slider, ScrollBar, etc </li>
+     * <li>Used by: Slider, ScrollBar, and others </li>
      * <li>Needs notify: no </li>
      * <li>Return Type: {@link Double} </li>
      * <li>Parameters: <ul></ul></li>
@@ -459,7 +459,7 @@ public enum AccessibleAttribute {
     /**
      * Returns the maximum value for the node.</p>
      * <ul>
-     * <li>Used by: Slider, ScrollBar, etc </li>
+     * <li>Used by: Slider, ScrollBar, and others </li>
      * <li>Needs notify: no </li>
      * <li>Return Type: {@link Double} </li>
      * <li>Parameters: <ul></ul></li>
@@ -470,7 +470,7 @@ public enum AccessibleAttribute {
     /**
      * Returns the mnemonic for the node.</p>
      * <ul>
-     * <li>Used by: Menu, MenuItem, CheckMenuItem, etc </li>
+     * <li>Used by: Menu, MenuItem, CheckMenuItem, and others </li>
      * <li>Needs notify: no </li>
      * <li>Return Type: {@link String} </li>
      * <li>Parameters: <ul></ul></li>
@@ -481,7 +481,7 @@ public enum AccessibleAttribute {
     /**
      * Returns true if the node allows for multiple selection, otherwise false.</p>
      * <ul>
-     * <li>Used by: ListView, TableView, etc </li>
+     * <li>Used by: ListView, TableView, and others </li>
      * <li>Needs notify: no </li>
      * <li>Return Type: {@link Boolean} </li>
      * <li>Parameters: <ul></ul></li>
@@ -636,7 +636,7 @@ public enum AccessibleAttribute {
     /**
      * Returns true if the node is selected, otherwise false.</p>
      * <ul>
-     * <li>Used by: CheckBox, TreeItem, etc </li>
+     * <li>Used by: CheckBox, TreeItem, and others </li>
      * <li>Needs notify: no </li>
      * <li>Return Type: {@link Boolean} </li>
      * <li>Parameters: <ul></ul></li>
@@ -647,7 +647,7 @@ public enum AccessibleAttribute {
     /**
      * Returns the list of selected items for the node.</p>
      * <ul>
-     * <li>Used by: ListView, TableView, etc </li>
+     * <li>Used by: ListView, TableView, and others </li>
      * <li>Needs notify: no </li>
      * <li>Return Type: {@link javafx.collections.ObservableList}&lt;{@link Node}&gt; </li>
      * <li>Parameters: <ul></ul></li>
@@ -745,7 +745,7 @@ public enum AccessibleAttribute {
     /**
      * Returns the value for the node.</p>
      * <ul>
-     * <li>Used by: Slider, ScrollBar, Thumb, etc </li>
+     * <li>Used by: Slider, ScrollBar, Thumb, and others </li>
      * <li>Needs notify: yes </li>
      * <li>Return Type: {@link Double} </li>
      * <li>Parameters: <ul></ul></li>
@@ -756,7 +756,7 @@ public enum AccessibleAttribute {
     /**
      * Returns the vertical scroll bar for the node.</p>
      * <ul>
-     * <li>Used by: ListView, ScrollPane, etc </li>
+     * <li>Used by: ListView, ScrollPane, and others </li>
      * <li>Needs notify: no </li>
      * <li>Return Type: {@link Node} </li>
      * <li>Parameters: <ul></ul></li>
