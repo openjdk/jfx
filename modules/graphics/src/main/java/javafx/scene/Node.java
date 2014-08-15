@@ -8598,11 +8598,14 @@ public abstract class Node implements EventTarget, Styleable {
     /**
      * Find CSS styles that were used to style this Node in its current pseudo-class state. The map will contain the styles from this node and,
      * if the node is a Parent, its children. The node corresponding to an entry in the Map can be obtained by casting a StyleableProperty key to a
-     * javafx.beans.property.Property and calling getBean(). The List<Style> contains only those styles used to style the property and will contain
+     * javafx.beans.property.Property and calling getBean(). The List contains only those styles used to style the property and will contain
      * styles used to resolve lookup values.
      *
      * @param styleMap A Map to be populated with the styles. If null, a new Map will be allocated.
      * @return The Map populated with matching styles.
+     *
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated // SB-dependency: RT-21096 has been filed to track this
     public Map<StyleableProperty<?>,List<Style>> impl_findStyles(Map<StyleableProperty<?>,List<Style>> styleMap) {
