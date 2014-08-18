@@ -40,7 +40,11 @@ import javafx.application.Platform;
 import javafx.beans.NamedArg;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ObjectPropertyBase;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleDoubleProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
@@ -127,6 +131,34 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
     public final boolean getCreateSymbols() { return createSymbols.getValue(); }
     public final void setCreateSymbols(boolean value) { createSymbols.setValue(value); }
     public final BooleanProperty createSymbolsProperty() { return createSymbols; }
+
+
+    /**
+     * Indicates whether the data passed to LineChart should be sorted by natural order of one of the axes.
+     * If this is set to {@link SortingPolicy#NONE}, the order in {@link #dataProperty()} will be used.
+     *
+     * @since JavaFX 8u40
+     * @see SortingPolicy
+     * @defaultValue SortingPolicy#X_AXIS
+     */
+    private ObjectProperty<SortingPolicy> axisSortingPolicy = new ObjectPropertyBase<SortingPolicy>(SortingPolicy.X_AXIS) {
+        @Override protected void invalidated() {
+            requestChartLayout();
+        }
+
+        public Object getBean() {
+            return LineChart.this;
+        }
+
+        public String getName() {
+            return "axisSortingPolicy";
+        }
+
+    };
+
+    public final SortingPolicy getAxisSortingPolicy() { return axisSortingPolicy.getValue(); }
+    public final void setAxisSortingPolicy(SortingPolicy value) { axisSortingPolicy.setValue(value); }
+    public final ObjectProperty<SortingPolicy> axisSortingPolicyProperty() { return axisSortingPolicy; }
 
     // -------------- CONSTRUCTORS ----------------------------------------------
 
@@ -465,7 +497,14 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
                         symbol.resizeRelocate(x-(w/2), y-(h/2),w,h);
                     }
                 }
-                Collections.sort(constructedPath, (e1, e2) -> Double.compare(e1.getX(), e2.getX()));
+                switch (getAxisSortingPolicy()) {
+                    case X_AXIS:
+                        Collections.sort(constructedPath, (e1, e2) -> Double.compare(e1.getX(), e2.getX()));
+                        break;
+                    case Y_AXIS:
+                        Collections.sort(constructedPath, (e1, e2) -> Double.compare(e1.getY(), e2.getY()));
+                        break;
+                }
 
                 if (!constructedPath.isEmpty()) {
                     LineTo first = constructedPath.get(0);
@@ -614,4 +653,22 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
         return getClassCssMetaData();
     }
 
+    /**
+     * This enum defines a policy for {@link LineChart#axisSortingPolicyProperty()}.
+     * @since JavaFX 8u40
+     */
+    public static enum SortingPolicy {
+        /**
+         * The data should be left in the order defined by the list in {@link javafx.scene.chart.LineChart#dataProperty()}.
+         */
+        NONE,
+        /**
+         * The data is ordered by x axis.
+         */
+        X_AXIS,
+        /**
+         * The data is ordered by y axis.
+         */
+        Y_AXIS
+    }
 }
