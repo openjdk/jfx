@@ -138,7 +138,9 @@ class HeavyweightDialog extends FXDialog {
             if (dialogPane != null) {
 
                 List<ButtonType> buttons = dialogPane.getButtonTypes();
-                if (buttons.size() != 1) {
+                if (buttons.size() == 1) {
+                    denyClose = false;
+                } else {
                     // look for cancel button type
                     for (ButtonType button : buttons) {
                         if (button == null) continue;
