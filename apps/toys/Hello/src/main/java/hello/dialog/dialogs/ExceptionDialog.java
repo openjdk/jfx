@@ -45,7 +45,7 @@ public class ExceptionDialog extends Dialog<ButtonType> {
         final DialogPane dialogPane = getDialogPane();
         
         setTitle("Exception Details");
-        dialogPane.setGraphic(new ImageView(new Image(AccordionSkin.class.getResource("modena/hello.dialog-error.png").toExternalForm())));
+        dialogPane.setGraphic(new ImageView(new Image(AccordionSkin.class.getResource("modena/dialog-error.png").toExternalForm())));
         dialogPane.getButtonTypes().addAll(ButtonType.OK);
         dialogPane.setContentText(exception == null? "":  exception.getMessage());
         dialogPane.setExpandableContent(buildExceptionDetails(exception));
