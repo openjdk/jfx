@@ -883,7 +883,9 @@ final public class CSSParser {
                     // If the value is a lookup, make sure to use the lower-case text so it matches the property
                     // in the Declaration. If the value is not a lookup, then use str since the value might
                     // be a string which could have some case sensitive meaning
-                    value = new ParsedValueImpl<String,String>(needsLookup ? text : str, null, needsLookup);
+                    //
+                    // TODO: isIdent is needed here because of RT-38345. This effectively undoes RT-38201
+                    value = new ParsedValueImpl<String,String>(needsLookup ? text : str, null, isIdent || needsLookup);
                 }
             }
             break;
