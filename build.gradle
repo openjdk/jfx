@@ -443,6 +443,32 @@ if (hasProperty("CROSS_TOOLS_DIR")) {
 }
 ext.CROSS_TOOLS_DIR = file(crossToolsDir)
 
+// Specifies whether to run tests with the present jfxrt.jar instead of compiling the new one
+defineProperty("BUILD_SDK_FOR_TEST", "true")
+ext.DO_BUILD_SDK_FOR_TEST = Boolean.parseBoolean(BUILD_SDK_FOR_TEST)
+
+// Specifies the location to point at SDK build when DO_BUILD_SDK_FOR_TEST set to false
+// Used to get location of jfxrt.jar, ant-javafx.jar and javafx-mx.jar
+defineProperty("TEST_SDK", JDK_HOME)
+ext.TEST_SDK_DIR = file(TEST_SDK)
+
+def rtDir = new File(TEST_SDK_DIR, "rt")
+if (!rtDir.directory) {
+    rtDir = new File(TEST_SDK_DIR, "jre")
+}
+ext.jfxrtJarFromSdk = new File(rtDir, "lib/ext/jfxrt.jar").absolutePath
+if (!DO_BUILD_SDK_FOR_TEST && !file(jfxrtJarFromSdk).exists()) {
+    fail ("BUILD_SDK_FOR_TEST is set to false, but there\'s no jfxrt.jar at the expected paths in TEST_SDK($TEST_SDK_DIR)\n"
+            + "TEST_SDK should point at either JavaFX SDK location or JDK location\n"
+            + "Please, set the correct TEST_SDK")
+}
+
+// These tasks would be disabled when running with DO_BUILD_SDK_FOR_TEST=false as they're unneeded for running tests
+def disabledTasks = DO_BUILD_SDK_FOR_TEST ? [] : ["compileJava", "processResources", "classes", // all projects
+         "generateDecoraShaders", "generatePrismShaders",
+         "compilePrismCompilers", "compilePrismJavaShaders", "compileDecoraCompilers", // :graphics
+         "processDecoraShaders", "processPrismShaders"]
+
 /**
  * Fetch/Check that external tools are present for the build. This method
  * will conditionally download the packages from project defined ivy repositories
@@ -1138,6 +1164,7 @@ allprojects {
     // Compile and run tests against the jfxrt.jar in the built sdk of the host machine
     def sdkDir = "${rootProject.buildDir}/sdk"
     def jfxrtJar = "$sdkDir/rt/lib/ext/jfxrt.jar"
+    def testJfxrtJar = DO_BUILD_SDK_FOR_TEST ? jfxrtJar : jfxrtJarFromSdk
 
     // At the moment the ASM library shipped with Gradle that is used to
     // discover the different test classes fails on Java 8, so in order
@@ -1155,7 +1182,7 @@ allprojects {
         if (BUILD_CLOSED && DO_JCOV) {
             addJCov(project, test)
         }
-        classpath = files("$jfxrtJar") + classpath
+        classpath = files(testJfxrtJar) + classpath
         if (IS_HEADLESS_TEST) {
             systemProperty 'glass.platform', 'Monocle'
             systemProperty 'monocle.platform', 'Headless'
@@ -1167,7 +1194,7 @@ allprojects {
     }
 
     compileTestJava {
-        classpath = files("$jfxrtJar") + classpath
+        classpath = files(testJfxrtJar) + classpath
     }
 
     // Exclude any non-public-API classes from having javadoc generated. This block is used
@@ -1677,6 +1704,14 @@ project(":designTime") {
     dependencies {
         compile project(":graphics")
     }
+    // impossible to run tests on designTime when not compiling SDK and designTime subproject
+    // need to disable test and compileTestJava tasks and remove their dependencies
+    if (!DO_BUILD_SDK_FOR_TEST) {
+        [test, compileTestJava].each {
+            it.dependsOn = []
+            it.enabled = false
+        }
+    }
 }
 
 project(":jmx") {
@@ -1689,6 +1724,13 @@ project(":jmx") {
 
     // Tests are disabled until RT-33926 can be fixed
     test.enabled = false
+
+    if (!DO_BUILD_SDK_FOR_TEST) {
+       def javafxMxJar = new File(TEST_SDK_DIR, "lib/javafx-mx.jar")
+       [test, compileTestJava].each {
+           it.classpath = files(javafxMxJar) + it.classpath
+       }
+    }
 }
 
 // This project is for system tests that need to run with a full SDK.
@@ -1948,7 +1990,7 @@ project(":fxpackager") {
 
         destinationDir project.file("build/tmp/tests/appResources")
         archiveName "mainApp.jar"
-        
+
         manifest {
             attributes(
                     "Main-Class": "hello.TestPackager",
@@ -1972,7 +2014,14 @@ project(":fxpackager") {
             }
         }
     }
-    
+
+    if (!DO_BUILD_SDK_FOR_TEST) {
+        def antJavafxJar = new File(TEST_SDK_DIR, "lib/ant-javafx.jar")
+        [compileTestJava, test].each {
+            it.classpath = files(antJavafxJar) + it.classpath
+        }
+    }
+
     test {
         dependsOn packagerFakeJar
         systemProperty "RETAIN_PACKAGER_TESTS", RETAIN_PACKAGER_TESTS
@@ -2489,6 +2538,9 @@ allprojects {
         compile.options.warnings = IS_LINT
         compile.options.useDepend = IS_USE_DEPEND
         compile.options.compilerArgs = ["-Djava.ext.dirs=", "-XDignore.symbol.file", "-encoding", "UTF-8"]
+        if (!DO_BUILD_SDK_FOR_TEST) {
+            compile.classpath = files(jfxrtJarFromSdk) + compile.classpath
+        }
 
         // Add in the -Xlint options
         if (IS_LINT) {
@@ -2496,6 +2548,11 @@ allprojects {
                 compile.options.compilerArgs += "-Xlint:$s"
             }
         }
+    }
+
+    // Some tasks should be disabled not to compile SDK, when running only the tests
+    disabledTasks.each {
+        project.getTasksByName(it, false)*.enabled = false
     }
 }
 
@@ -2566,16 +2623,20 @@ task javadoc(type: Javadoc) {
 }
 
 task jfxrt() {
-    rootProject.getTasksByName("compileTestJava", true).each { t ->
-        if (t.enabled) t.dependsOn(jfxrt)
+    if (DO_BUILD_SDK_FOR_TEST) {
+        rootProject.getTasksByName("compileTestJava", true).each { t ->
+            if (t.enabled) t.dependsOn(jfxrt)
+        }
     }
 }
 
 task sdk() {
     dependsOn(checkJfxrtJar)
 
-    rootProject.getTasksByName("test", true).each { t ->
-        if (t.enabled) t.dependsOn(sdk)
+    if (DO_BUILD_SDK_FOR_TEST) {
+        rootProject.getTasksByName("test", true).each { t ->
+            if (t.enabled) t.dependsOn(sdk)
+        }
     }
 }
 
