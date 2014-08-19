@@ -144,6 +144,18 @@ public class SpinnerSkin<T> extends BehaviorSkinBase<Spinner<T>, SpinnerBehavior
             }
         });
 
+        // This event filter is to enable keyboard events being delivered to the
+        // spinner when the user has mouse clicked into the TextField area of the
+        // Spinner control. Without this the up/down/left/right arrow keys don't
+        // work when you click inside the TextField area (but they do in the case
+        // of tabbing in).
+        textField.addEventFilter(KeyEvent.ANY, ke -> {
+            if (! spinner.isEditable()) {
+                spinner.fireEvent(ke.copyFor(spinner, spinner));
+                ke.consume();
+            }
+        });
+
         textField.focusedProperty().addListener((ov, t, hasFocus) -> {
             // Fix for RT-29885
             spinner.getProperties().put("FOCUSED", hasFocus);
