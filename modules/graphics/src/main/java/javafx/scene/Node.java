@@ -518,6 +518,13 @@ public abstract class Node implements EventTarget, Styleable {
 
     // Happens before we hold the sync lock
     void updateBounds() {
+        // Note: the clip must be handled before the visibility is checked. This is because the visiblity might be
+        // changing in the clip and it is going to be synchronized, so it needs to recompute the bounds.
+        Node n = getClip();
+        if (n != null) {
+            n.updateBounds();
+        }
+
         // See impl_syncPeer()
         if (!treeVisible && !impl_isDirty(DirtyBits.NODE_VISIBLE)) {
             return;
@@ -535,10 +542,6 @@ public abstract class Node implements EventTarget, Styleable {
                     BaseTransform.IDENTITY_TRANSFORM);
         }
 
-        Node n = getClip();
-        if (n != null) {
-            n.updateBounds();
-        }
     }
 
     /**
