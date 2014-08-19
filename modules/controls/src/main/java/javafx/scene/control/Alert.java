@@ -25,6 +25,9 @@
 package javafx.scene.control;
 
 import java.lang.ref.WeakReference;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 
 import com.sun.javafx.scene.control.skin.AccordionSkin;
@@ -176,14 +179,9 @@ public class Alert extends Dialog<ButtonType> {
     private boolean installingDefaults = false;
     private boolean hasCustomButtons = false;
     private boolean hasCustomTitle = false;
-    private boolean hasCustomGraphic = false;
     private boolean hasCustomHeaderText = false;
     
-    private final InvalidationListener graphicListener = o -> { 
-        if (!installingDefaults) hasCustomGraphic = true; 
-    };
-    
-    private final InvalidationListener headerTextListener = o -> { 
+    private final InvalidationListener headerTextListener = o -> {
         if (!installingDefaults) hasCustomHeaderText = true; 
     };
     
@@ -245,8 +243,10 @@ public class Alert extends Dialog<ButtonType> {
                  @NamedArg("contentText") String contentText,
                  ButtonType... buttons) {
         super();
+
         final DialogPane dialogPane = getDialogPane();
         dialogPane.setContentText(contentText);
+        getDialogPane().getStyleClass().add("alert");
         
         dialogPaneRef = new WeakReference<>(dialogPane);
         
@@ -284,10 +284,13 @@ public class Alert extends Dialog<ButtonType> {
      */
     // --- alertType
     private final ObjectProperty<AlertType> alertType = new SimpleObjectProperty<AlertType>(null) {
+        final String[] styleClasses = new String[] { "information", "warning", "error", "confirmation" };
+
         protected void invalidated() {
             String newTitle = "";
             String newHeader = "";
-            Node newGraphic = null;
+//            Node newGraphic = null;
+            String styleClass = "";
             ButtonType[] newButtons = new ButtonType[] { ButtonType.OK };
             switch (getAlertType()) {
                 case NONE: {
@@ -297,33 +300,25 @@ public class Alert extends Dialog<ButtonType> {
                 case INFORMATION: {
                     newTitle = ControlResources.getString("Dialog.info.title");
                     newHeader = ControlResources.getString("Dialog.info.header");
-
-                    // TODO extract out to CSS
-                    newGraphic = new ImageView(new Image(AccordionSkin.class.getResource("modena/dialog-information.png").toExternalForm()));
+                    styleClass = "information";
                     break;
                 }
                 case WARNING: {
                     newTitle = ControlResources.getString("Dialog.warning.title");
                     newHeader = ControlResources.getString("Dialog.warning.header");
-
-                    // TODO extract out to CSS
-                    newGraphic = new ImageView(new Image(AccordionSkin.class.getResource("modena/dialog-warning.png").toExternalForm()));
+                    styleClass = "warning";
                     break;
                 }
                 case ERROR: {
                     newTitle = ControlResources.getString("Dialog.error.title");
                     newHeader = ControlResources.getString("Dialog.error.header");
-
-                    // TODO extract out to CSS
-                    newGraphic = new ImageView(new Image(AccordionSkin.class.getResource("modena/dialog-error.png").toExternalForm()));
+                    styleClass = "error";
                     break;
                 }      
                 case CONFIRMATION: {
                     newTitle = ControlResources.getString("Dialog.confirm.title");
                     newHeader = ControlResources.getString("Dialog.confirm.header");
-
-                    // TODO extract out to CSS
-                    newGraphic = new ImageView(new Image(AccordionSkin.class.getResource("modena/dialog-confirm.png").toExternalForm()));
+                    styleClass = "confirmation";
                     newButtons = new ButtonType[] { ButtonType.OK, ButtonType.CANCEL };
                     break;
                 } 
@@ -332,8 +327,20 @@ public class Alert extends Dialog<ButtonType> {
             installingDefaults = true;
             if (!hasCustomTitle) setTitle(newTitle);
             if (!hasCustomHeaderText) setHeaderText(newHeader);
-            if (!hasCustomGraphic) setGraphic(newGraphic);
             if (!hasCustomButtons) getButtonTypes().setAll(newButtons);
+
+            // update the style class based on the alert type. We use this to
+            // specify the default graphic to use (i.e. via CSS).
+            DialogPane dialogPane = getDialogPane();
+            if (dialogPane != null) {
+                List<String> toRemove = new ArrayList<>(Arrays.asList(styleClasses));
+                toRemove.remove(styleClass);
+                dialogPane.getStyleClass().removeAll(toRemove);
+                if (! dialogPane.getStyleClass().contains(styleClass)) {
+                    dialogPane.getStyleClass().add(styleClass);
+                }
+            }
+
             installingDefaults = false;
         }
     };
@@ -381,7 +388,6 @@ public class Alert extends Dialog<ButtonType> {
         DialogPane oldPane = dialogPaneRef.get();
         
         if (oldPane != null) {
-            oldPane.graphicProperty().removeListener(graphicListener);
             oldPane.headerTextProperty().removeListener(headerTextListener);
             oldPane.getButtonTypes().removeListener(buttonsListener);
         }
@@ -393,7 +399,6 @@ public class Alert extends Dialog<ButtonType> {
         
         DialogPane newPane = getDialogPane();
         if (newPane != null) {
-            newPane.graphicProperty().addListener(graphicListener);
             newPane.headerTextProperty().addListener(headerTextListener);
             newPane.getButtonTypes().addListener(buttonsListener);
         }

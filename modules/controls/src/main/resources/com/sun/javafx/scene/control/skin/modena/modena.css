@@ -3397,3 +3397,21 @@ is being used to size a border should also be in pixels.
 .dialog > .dialog-pane > .button-bar > .container > .details-button:hover {
     -fx-underline: true;
 }
+
+.alert.confirmation.dialog-pane,
+.text-input-dialog.dialog-pane,
+.choice-dialog.dialog-pane {
+    -fx-graphic: url("dialog-confirm.png");
+}
+
+.alert.information.dialog-pane {
+    -fx-graphic: url("dialog-information.png");
+}
+
+.alert.error.dialog-pane {
+    -fx-graphic: url("dialog-error.png");
+}
+
+.alert.warning.dialog-pane {
+    -fx-graphic: url("dialog-warning.png");
+}

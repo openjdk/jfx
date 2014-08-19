@@ -1053,8 +1053,7 @@ public class DialogPane extends Pane {
         
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
         static {
-            final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(Control.getClassCssMetaData());
+            final List<CssMetaData<? extends Styleable, ?>> styleables = new ArrayList<>(Region.getClassCssMetaData());
             Collections.addAll(styleables,
                 GRAPHIC
             );
@@ -1068,5 +1067,10 @@ public class DialogPane extends Pane {
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;
+    }
+
+    /** {@inheritDoc} */
+    @Override public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
+        return getClassCssMetaData();
     }
 }

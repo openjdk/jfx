@@ -101,9 +101,7 @@ public class TextInputDialog extends Dialog<String> {
         
         setTitle(ControlResources.getString("Dialog.confirm.title"));
         dialogPane.setHeaderText(ControlResources.getString("Dialog.confirm.header"));
-
-        // TODO extract out to CSS
-        dialogPane.setGraphic(new ImageView(new Image(AccordionSkin.class.getResource("modena/dialog-confirm.png").toExternalForm())));
+        dialogPane.getStyleClass().add("text-input-dialog");
         dialogPane.getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
         
         updateGrid();
