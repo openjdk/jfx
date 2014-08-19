@@ -109,7 +109,8 @@ public class Utils {
         } else {
             layout.setBoundsType(0);
         }
-        return layout.getBounds().getHeight();
+        // RT-37092: Use the line bounds specifically, to include font leading.
+        return layout.getLines()[0].getBounds().getHeight();
     }
 
     static double computeTextWidth(Font font, String text, double wrappingWidth) {
