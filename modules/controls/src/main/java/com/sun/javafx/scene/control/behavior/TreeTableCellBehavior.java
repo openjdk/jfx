@@ -93,7 +93,7 @@ public class TreeTableCellBehavior<S,T> extends TableCellBehaviorBase<TreeItem<S
 
     /** @{@inheritDoc} */
     @Override protected int getVisibleLeafIndex(TableColumnBase tc) {
-        return getCellContainer().getVisibleLeafIndex(null);
+        return getCellContainer().getVisibleLeafIndex((TreeTableColumn)tc);
     }
 
     /** @{@inheritDoc} */
