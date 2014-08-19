@@ -1105,8 +1105,7 @@
 }
 
 .theme-presets.SBKIT-css-panel .note-label .text {
-    /*-fx-font-size: 0.750em;*/
-    -fx-font-size: 9px; /* workaround for DTL-6745 / RT-37787 */
+    -fx-font-size: 0.750em;
     -fx-fill: -sb-content-text-dimmed;
 }
 
