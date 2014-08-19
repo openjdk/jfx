@@ -55,7 +55,7 @@ public abstract class AbstractWrapInContentJob extends AbstractWrapInJob {
     }
 
     @Override
-    protected List<Job> wrapInJobs(final List<FXOMObject> children) {
+    protected List<Job> wrapChildrenJobs(final List<FXOMObject> children) {
 
         final List<Job> jobs = new ArrayList<>();
 
@@ -73,12 +73,12 @@ public abstract class AbstractWrapInContentJob extends AbstractWrapInJob {
         //------------------------------------------------------------------
         // The selection is multiple :
         // - we set the new container CONTENT property to a new AnchorPane sub container
-        // - we update the children bounds and add them to the new AnchorPane sub container
+        // - we add the children to the new AnchorPane sub container
         //------------------------------------------------------------------
         if (children.size() > 1) {
 
             // Create the AnchorPane sub container
-            final FXOMInstance subContainer = makeContainerInstance(AnchorPane.class);
+            final FXOMInstance subContainer = makeNewContainerInstance(AnchorPane.class);
             final DesignHierarchyMask subContainerMask
                     = new DesignHierarchyMask(subContainer);
 
@@ -97,16 +97,11 @@ public abstract class AbstractWrapInContentJob extends AbstractWrapInJob {
                     getEditorController());
             jobs.add(addValueJob);
 
-            // Update children bounds before adding them to the sub container
-            assert subContainerMask.isFreeChildPositioning();
-            final List<Job> modifyChildrenLayoutJobs
-                    = modifyChildrenLayoutJobs(children);
-            jobs.addAll(modifyChildrenLayoutJobs);
+            // Update children before adding them to the sub container
+            jobs.addAll(modifyChildrenJobs(subContainer, children));
 
             // Add the children to the sub container
-            final List<Job> addChildrenJobs
-                    = addChildrenToPropertyJobs(subContainerProperty, children);
-            jobs.addAll(addChildrenJobs);
+            jobs.addAll(addChildrenJobs(subContainerProperty, children));
 
             // Add the sub container property to the sub container instance
             assert subContainerProperty.getParentInstance() == null;
@@ -122,13 +117,10 @@ public abstract class AbstractWrapInContentJob extends AbstractWrapInJob {
         //------------------------------------------------------------------
         else {
             // Update children before adding them to the new container
-            final List<Job> modifyChildrenJobs = modifyChildrenJobs(children);
-            jobs.addAll(modifyChildrenJobs);
+            jobs.addAll(modifyChildrenJobs(newContainer, children));
 
             // Add the children to the new container
-            final List<Job> addChildrenJobs
-                    = addChildrenToPropertyJobs(newContainerProperty, children);
-            jobs.addAll(addChildrenJobs);
+            jobs.addAll(addChildrenJobs(newContainerProperty, children));
         }
 
         // Add the new container property to the new container instance

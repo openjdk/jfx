@@ -32,10 +32,8 @@
 package com.oracle.javafx.scenebuilder.kit.editor.job.wrap;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
-import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
 import com.oracle.javafx.scenebuilder.kit.editor.job.JobUtils;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
-import java.util.Collections;
 import java.util.List;
 import javafx.geometry.Bounds;
 import javafx.scene.control.ScrollPane;
@@ -51,12 +49,9 @@ public class WrapInScrollPaneJob extends AbstractWrapInContentJob {
     }
 
     @Override
-    protected List<Job> modifyChildrenJobs(final List<FXOMObject> children) {
-        return Collections.emptyList();
-    }
+    protected void modifyNewContainer(final List<FXOMObject> children) {
+        super.modifyNewContainer(children);
 
-    @Override
-    protected void modifyContainer(final List<FXOMObject> children) {
         final Bounds unionOfBounds = WrapJobUtils.getUnionOfBounds(children);
         JobUtils.setPrefViewportHeight(newContainer, ScrollPane.class, unionOfBounds.getHeight());
         JobUtils.setPrefViewportWidth(newContainer, ScrollPane.class, unionOfBounds.getWidth());

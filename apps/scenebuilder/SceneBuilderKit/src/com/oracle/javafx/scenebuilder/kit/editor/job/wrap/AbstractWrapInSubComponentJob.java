@@ -43,7 +43,8 @@ import java.util.Collection;
 import java.util.List;
 
 /**
- * Main class used for the wrap jobs using the new container SUB COMPONENT property.
+ * Main class used for the wrap jobs using the new container SUB COMPONENT
+ * property.
  */
 public abstract class AbstractWrapInSubComponentJob extends AbstractWrapInJob {
 
@@ -52,7 +53,7 @@ public abstract class AbstractWrapInSubComponentJob extends AbstractWrapInJob {
     }
 
     @Override
-    protected List<Job> wrapInJobs(final List<FXOMObject> children) {
+    protected List<Job> wrapChildrenJobs(final List<FXOMObject> children) {
 
         final List<Job> jobs = new ArrayList<>();
 
@@ -68,15 +69,12 @@ public abstract class AbstractWrapInSubComponentJob extends AbstractWrapInJob {
                 newContainer.getFxomDocument(), newContainerPropertyName);
 
         // Update children before adding them to the new container
-        final List<Job> modifyChildrenJobs = modifyChildrenJobs(children);
-        jobs.addAll(modifyChildrenJobs);
+        jobs.addAll(modifyChildrenJobs(newContainer, children));
 
         // Sort the children before adding them to their new container
         final Collection<FXOMObject> sorted = sortChildren(children);
         // Add the children to the new container
-        final List<Job> addChildrenJobs
-                = addChildrenToPropertyJobs(newContainerProperty, sorted);
-        jobs.addAll(addChildrenJobs);
+        jobs.addAll(addChildrenJobs(newContainerProperty, sorted));
 
         // Add the new container property to the new container instance
         assert newContainerProperty.getParentInstance() == null;
@@ -88,7 +86,7 @@ public abstract class AbstractWrapInSubComponentJob extends AbstractWrapInJob {
 
         return jobs;
     }
-    
+
     protected Collection<FXOMObject> sortChildren(List<FXOMObject> children) {
         return children;
     }

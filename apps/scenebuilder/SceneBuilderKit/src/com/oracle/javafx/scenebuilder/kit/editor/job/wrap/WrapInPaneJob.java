@@ -32,9 +32,6 @@
 package com.oracle.javafx.scenebuilder.kit.editor.job.wrap;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
-import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
-import java.util.List;
 import javafx.scene.layout.Pane;
 
 /**
@@ -45,17 +42,5 @@ public class WrapInPaneJob extends AbstractWrapInSubComponentJob {
     public WrapInPaneJob(EditorController editorController) {
         super(editorController);
         newContainerClass = Pane.class;
-    }
-
-    @Override
-    protected List<Job> modifyChildrenJobs(final List<FXOMObject> children) {
-
-        // We can position the children in the Pane container
-        // => we update the children layout properties
-        return modifyChildrenLayoutJobs(children);
-    }
-
-    @Override
-    protected void modifyContainer(final List<FXOMObject> children) {
     }
 }

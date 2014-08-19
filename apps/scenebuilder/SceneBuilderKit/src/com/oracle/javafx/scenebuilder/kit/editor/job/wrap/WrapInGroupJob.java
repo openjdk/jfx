@@ -32,10 +32,6 @@
 package com.oracle.javafx.scenebuilder.kit.editor.job.wrap;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
-import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
-import java.util.Collections;
-import java.util.List;
 import javafx.scene.Group;
 
 /**
@@ -46,20 +42,5 @@ public class WrapInGroupJob extends AbstractWrapInSubComponentJob {
     public WrapInGroupJob(EditorController editorController) {
         super(editorController);
         newContainerClass = Group.class;
-    }
-
-    /**
-     * Used to modify the children before adding them to this container.
-     *
-     * @param children The children to be modified.
-     * @return
-     */
-    @Override
-    protected List<Job> modifyChildrenJobs(final List<FXOMObject> children) {
-        return Collections.emptyList();
-    }
-
-    @Override
-    protected void modifyContainer(final List<FXOMObject> children) {
     }
 }

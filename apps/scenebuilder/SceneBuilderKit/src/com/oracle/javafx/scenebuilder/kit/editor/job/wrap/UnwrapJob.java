@@ -170,13 +170,13 @@ public class UnwrapJob extends Job {
 
         // Remove the children from the old container property
         final List<Job> removeChildrenJobs
-                = removeChildrenFromPropertyJobs(oldContainerProperty, oldContainerChildren);
+                = removeChildrenJobs(oldContainerProperty, oldContainerChildren);
         batchJob.addSubJobs(removeChildrenJobs);
 
         //------------------------------------------------------------------
         // If the target object is NOT the FXOM root :
-        // - we update the new container bounds and add it to the current container
-        // - we update the children bounds and remove them from the current container
+        // - we update the new container bounds and add it to the old container
+        // - we update the children bounds and remove them from the old container
         //------------------------------------------------------------------
         if (newContainer != null) {
 
@@ -196,14 +196,14 @@ public class UnwrapJob extends Job {
                     = new DesignHierarchyMask(newContainer);
             if (newContainerMask.isFreeChildPositioning()) {
                 final List<Job> modifyChildrenLayoutJobs
-                        = modifyChildrenLayoutJobs(oldContainerChildren);
+                        = modifyChildrenJobs(oldContainerChildren);
                 batchJob.addSubJobs(modifyChildrenLayoutJobs);
             }
 
             // Add the children to the new container
             int index = oldContainer.getIndexInParentProperty();
             final List<Job> addChildrenJobs
-                    = addChildrenToPropertyJobs(newContainerProperty, index, oldContainerChildren);
+                    = addChildrenJobs(newContainerProperty, index, oldContainerChildren);
             batchJob.addSubJobs(addChildrenJobs);
 
             // Remove the old container from the new container property
@@ -248,7 +248,7 @@ public class UnwrapJob extends Job {
         }
     }
 
-    protected List<Job> addChildrenToPropertyJobs(
+    protected List<Job> addChildrenJobs(
             final FXOMPropertyC containerProperty,
             final int start,
             final List<FXOMObject> children) {
@@ -267,7 +267,7 @@ public class UnwrapJob extends Job {
         return jobs;
     }
 
-    protected List<Job> removeChildrenFromPropertyJobs(
+    protected List<Job> removeChildrenJobs(
             final FXOMPropertyC containerProperty,
             final List<FXOMObject> children) {
 
@@ -283,12 +283,12 @@ public class UnwrapJob extends Job {
     }
 
     /**
-     * Used to modify the children layout properties.
+     * Used to modify the specified children.
      *
      * @param children The children.
-     * @return
+     * @return A list of jobs.
      */
-    protected List<Job> modifyChildrenLayoutJobs(final List<FXOMObject> children) {
+    protected List<Job> modifyChildrenJobs(final List<FXOMObject> children) {
 
         final List<Job> jobs = new ArrayList<>();
 
