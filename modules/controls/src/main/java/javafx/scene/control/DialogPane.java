@@ -58,6 +58,7 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.Pane;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 
 import com.sun.javafx.css.StyleManager;
@@ -134,25 +135,18 @@ public class DialogPane extends Pane {
      * Static fields
      * 
      **************************************************************************/
-    
+
     /**
      * Creates a Label node that works well within a Dialog.
      * @param text The text to display
      */
     static Label createContentLabel(String text) {
         Label label = new Label(text);
-//        label.setAlignment(Pos.TOP_LEFT);
-//        label.setTextAlignment(TextAlignment.LEFT);
         label.setMaxWidth(Double.MAX_VALUE);
         label.setMaxHeight(Double.MAX_VALUE);
         label.getStyleClass().add("content");
         label.setWrapText(true);
-        
-        // FIXME we don't want to restrict the width, but for now this works ok
-        // label.setPrefWidth(MAIN_TEXT_WIDTH);
-//        label.setPrefWidth(360);
-        
-        
+        label.setPrefWidth(360);
         return label;
     }
     
@@ -829,7 +823,7 @@ public class DialogPane extends Pane {
             y += headerPrefHeight;
         }
         
-        content.resizeRelocate(x, y, w - graphicPrefWidth - rightPadding, contentAreaHeight);
+        content.resizeRelocate(x, y, w - graphicPrefWidth, contentAreaHeight);
         y += contentAreaHeight;
         
         if (expandableContent != null) {
@@ -847,7 +841,7 @@ public class DialogPane extends Pane {
         double headerPrefWidth = hasHeader() ? getActualHeader().prefWidth(height) : 0;
         double contentPrefWidth = getActualContent().prefWidth(height);
         double buttonBarPrefWidth = buttonBar == null ? 0 : buttonBar.prefWidth(height);
-        double graphicPrefWidth = graphicContainer.prefWidth(height);
+        double graphicPrefWidth = getActualGraphic().prefWidth(height);
         
         double expandableContentPrefWidth = 0;
         final Node expandableContent = getExpandableContent();
@@ -855,18 +849,28 @@ public class DialogPane extends Pane {
             expandableContentPrefWidth = expandableContent.prefWidth(height);
         }
         
-        return snappedLeftInset() + 
+        double prefWidth = snappedLeftInset() +
                (hasHeader() ? 0 : graphicPrefWidth) +
                Math.max(Math.max(headerPrefWidth, expandableContentPrefWidth), Math.max(contentPrefWidth, buttonBarPrefWidth)) +
                snappedRightInset();
+
+        return prefWidth;
     }
 
     /** {@inheritDoc} */
     @Override protected double computePrefHeight(double width) {
-        double headerPrefHeight = hasHeader() ? getActualHeader().prefHeight(width) : 0;
-        double contentPrefHeight = getActualContent().prefHeight(width);
+        final boolean hasHeader = hasHeader();
+
+        double headerPrefHeight = hasHeader ? getActualHeader().prefHeight(width) : 0;
         double buttonBarPrefHeight = buttonBar == null ? 0 : buttonBar.prefHeight(width);
-        double graphicPrefHeight = graphicContainer.prefHeight(width);
+
+        Node graphic = getActualGraphic();
+        double graphicPrefWidth = graphic.prefWidth(-1);
+        double graphicPrefHeight = graphic.prefHeight(width);
+
+        double contentAvailableWidth = width == Region.USE_COMPUTED_SIZE ? Region.USE_COMPUTED_SIZE :
+                                       hasHeader ? width : (width - graphicPrefWidth);
+        double contentPrefHeight = getActualContent().prefHeight(contentAvailableWidth);
         
         double expandableContentPrefHeight = 0;
         final Node expandableContent = getExpandableContent();
@@ -874,12 +878,14 @@ public class DialogPane extends Pane {
             expandableContentPrefHeight = expandableContent.prefHeight(width);
         }
         
-        return snappedTopInset() + 
+        double prefHeight = snappedTopInset() +
                headerPrefHeight + 
                Math.max(graphicPrefHeight, contentPrefHeight) + 
                expandableContentPrefHeight + 
                buttonBarPrefHeight + 
                snappedBottomInset();
+
+        return prefHeight;
     }
     
     
@@ -932,7 +938,7 @@ public class DialogPane extends Pane {
     }
     
     private Node getActualGraphic() {
-        return graphicContainer;
+        return headerTextPanel;
     }
     
     private void updateHeaderArea() {
@@ -945,7 +951,10 @@ public class DialogPane extends Pane {
         } else {
             // recreate the headerTextNode and add it to the children list.
             headerTextPanel.setMaxWidth(Double.MAX_VALUE);
-            headerTextPanel.getStyleClass().add("header-panel"); //$NON-NLS-1$
+
+            if (! headerTextPanel.getStyleClass().contains("header-panel")) { //$NON-NLS-1$
+                headerTextPanel.getStyleClass().add("header-panel"); //$NON-NLS-1$
+            }
     
             // on left of header is the text
             Label headerLabel = new Label(getHeaderText());
@@ -957,7 +966,11 @@ public class DialogPane extends Pane {
     
             // on the right of the header is a graphic, if one is specified
             graphicContainer.getChildren().clear();
-            graphicContainer.getStyleClass().add("graphic-container"); //$NON-NLS-1$
+
+            if (! graphicContainer.getStyleClass().contains("graphic-container")) { //$NON-NLS-1$)
+                graphicContainer.getStyleClass().add("graphic-container"); //$NON-NLS-1$
+            }
+
             final Node graphic = getGraphic();
             if (graphic != null) {
                 graphicContainer.getChildren().add(graphic);

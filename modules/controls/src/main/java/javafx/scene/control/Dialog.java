@@ -238,7 +238,6 @@ public class Dialog<R> implements EventTarget {
         this.dialog = new HeavyweightDialog(this);
         setDialogPane(new DialogPane());
         initModality(Modality.APPLICATION_MODAL);
-        setResizable(true);
     }
     
     
