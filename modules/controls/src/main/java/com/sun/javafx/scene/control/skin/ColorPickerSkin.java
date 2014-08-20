@@ -187,6 +187,7 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
         // create displayNode
         displayNode = new Label();
         displayNode.getStyleClass().add("color-picker-label");
+        displayNode.setManaged(false);
 
         // label graphic
         pickerColorBox = new PickerColorBox();
@@ -204,6 +205,21 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
     }
 
 
+    @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
+        if (!colorLabelVisible.get()) {
+            return super.computePrefWidth(height, topInset, rightInset, bottomInset, leftInset);
+        }
+        String displayNodeText = displayNode.getText();
+        double width = 0;
+        for (String name : colorNameMap.values()) {
+            displayNode.setText(name);
+            width = Math.max(width, super.computePrefWidth(height, topInset, rightInset, bottomInset, leftInset));
+        }
+        displayNode.setText(formatHexString(Color.BLACK)); // #000000
+        width = Math.max(width, super.computePrefWidth(height, topInset, rightInset, bottomInset, leftInset));
+        displayNode.setText(displayNodeText);
+        return width;
+    }
 
     private void updateComboBoxMode() {
         List<String> styleClass = getSkinnable().getStyleClass();
