@@ -740,7 +740,9 @@ if (!project.hasProperty("jdkRuntimeVersion")) throw new Exception("Unable to de
 
 
 // Verify that CONF is something useful
-if (CONF != "Release" && CONF != "Debug") logger.warn("Unknown configuration CONF='$CONF'. Treating as 'Release'")
+if (CONF != "Release" && CONF != "Debug" && CONF != "DebugNative") {
+    logger.warn("Unknown configuration CONF='$CONF'. Treating as 'Release'")
+}
 
 // If the number of compile threads is less than 1 then we have a problem!
 if (Integer.parseInt(NUM_COMPILE_THREADS.toString()) < 1) {
@@ -799,6 +801,7 @@ logger.quiet("jdk.runtime.version: ${jdkRuntimeVersion}")
 logger.quiet("jdk version: ${jdkVersion}")
 logger.quiet("jdk build number: ${jdkBuildNumber}")
 logger.quiet("minimum java build number: ${jfxBuildJdkBuildnumMin}")
+logger.quiet("CONF: $CONF")
 logger.quiet("NUM_COMPILE_THREADS: $NUM_COMPILE_THREADS")
 logger.quiet("COMPILE_TARGETS: $COMPILE_TARGETS")
 logger.quiet("COMPILE_FLAGS_FILES: $COMPILE_FLAGS_FILES")
