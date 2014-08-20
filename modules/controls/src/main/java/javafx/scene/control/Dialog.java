@@ -217,11 +217,6 @@ public class Dialog<R> implements EventTarget {
     private final FXDialog dialog;
 
     private boolean isClosing;
-    
-    // used to indicate upwards from FXDialog implementations into Dialog whether
-    // the dialog was closed normally (i.e. via buttons) or abnormally (i.e. via
-    // the top-right cancel button, alt-f4, etc).
-    boolean closeWasNormal;
 
     
     
@@ -309,41 +304,50 @@ public class Dialog<R> implements EventTarget {
         if (isClosing) return;
         isClosing = true;
 
-        // This code is called just before close, and ONLY in cases where the 
+        final R result = getResult();
+
+        // if the result is null and we do not have permission to close the
+        // dialog, then we cancel the close request before any events are
+        // even fired
+        if (result == null && ! dialog.requestPermissionToClose(this)) {
+            isClosing = false;
+            return;
+        }
+
+        // This code is called just before close, and ONLY in cases where the
         // dialog was closed abnormally (as represented by closeWasNormal).
-        // In these cases, and where the dialog had a cancel button, we call 
+        // In these cases, and where the dialog had a cancel button, we call
         // into the result converter to see what to do. This is used primarily
         // to handle the requirement that the X button has the same result as
         // clicking the cancel button.
-        if (! closeWasNormal) {
-            R result = getResult();
-            if (result == null) {
-                ButtonType cancelButton = null;
-                for (ButtonType button : getDialogPane().getButtonTypes()) {
-                    if (button.getButtonData() == ButtonData.CANCEL_CLOSE) {
-                        cancelButton = button;
-                        break;
-                    }
+        // TODO we used to discern between normal and abnormal closures of the
+        // stage, but this was not resilient enough. For now, we no longer check
+        // in the code below whether the close was normal or not, but depending
+        // on how things work out, this may need to change
+        if (result == null) {
+            ButtonType cancelButton = null;
+            for (ButtonType button : getDialogPane().getButtonTypes()) {
+                if (button.getButtonData() == ButtonData.CANCEL_CLOSE) {
+                    cancelButton = button;
+                    break;
                 }
-
-                impl_setResultAndClose(cancelButton, false);
             }
-            
-            closeWasNormal = true;
+
+            impl_setResultAndClose(cancelButton, false);
         }
-        
+
         // start normal closing process
         Event.fireEvent(this, new DialogEvent(this, DialogEvent.DIALOG_HIDING));
-        
+
         DialogEvent closeRequestEvent = new DialogEvent(this, DialogEvent.DIALOG_CLOSE_REQUEST);
         Event.fireEvent(this, closeRequestEvent);
         if (closeRequestEvent.isConsumed()) {
             isClosing = false;
             return;
         }
-        
-        dialog.close(true);
-        
+
+        dialog.close();
+
         Event.fireEvent(this, new DialogEvent(this, DialogEvent.DIALOG_HIDDEN));
 
         isClosing = false;

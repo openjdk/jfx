@@ -24,18 +24,15 @@
  */
 package javafx.scene.control;
 
-import java.util.List;
-
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.StringProperty;
-import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import javafx.scene.Scene;
-import javafx.scene.control.ButtonBar.ButtonData;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.StackPane;
-import javafx.scene.paint.Color;
 import javafx.stage.Modality;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
@@ -122,42 +119,20 @@ class HeavyweightDialog extends FXDialog {
         stage.setResizable(false);
         
         stage.setOnCloseRequest(windowEvent -> {
-            // We only allow the dialog to be closed abnormally (i.e. via the X button)
-            // when there is a cancel button in the dialog, or when there is only
-            // one button in the dialog. In all other cases, we disable the ability
-            // (as best we can) to close a dialog abnormally.
-            boolean denyClose = true;
-
-            // if the close was normal, we don't need to call close ourselves,
-            // so just return
-            if (dialog.closeWasNormal) return;
-
-            // if we are here, the close was abnormal, so we must call close to
-            // clean up, if we don't consume the event to cancel closing...
-            DialogPane dialogPane = dialog.getDialogPane();
-            if (dialogPane != null) {
-
-                List<ButtonType> buttons = dialogPane.getButtonTypes();
-                if (buttons.size() == 1) {
-                    denyClose = false;
-                } else {
-                    // look for cancel button type
-                    for (ButtonType button : buttons) {
-                        if (button == null) continue;
-                        ButtonData type = button.getButtonData();
-                        if (type == ButtonData.CANCEL_CLOSE) {
-                            denyClose = false;
-                            break;
-                        }
-                    }
-                }
-            }
-            
-            // if we are here, we consume the event to prevent closing the dialog
-            if (denyClose) {
-                windowEvent.consume();
+            if (requestPermissionToClose(dialog)) {
+                dialog.close();
             } else {
-                close(false);
+                // if we are here, we consume the event to prevent closing the dialog
+                windowEvent.consume();
+            }
+        });
+
+        stage.addEventHandler(KeyEvent.KEY_RELEASED, keyEvent -> {
+            if (keyEvent.getCode() == KeyCode.ESCAPE) {
+                if (requestPermissionToClose(dialog)) {
+                    dialog.close();
+                    keyEvent.consume();
+                }
             }
         });
 
@@ -165,7 +140,6 @@ class HeavyweightDialog extends FXDialog {
         sceneRoot.getStyleClass().setAll("dialog");
         
         scene = new Scene(sceneRoot);
-//        scene.setFill(Color.TRANSPARENT);
         stage.setScene(scene);
     }
 
@@ -222,24 +196,12 @@ class HeavyweightDialog extends FXDialog {
         stage.showAndWait();
     }
 
-    boolean isClosing = false;
-    @Override public void close(boolean closeWasNormal) {
-        if (isClosing) return;
-        
-        isClosing = true;
-        dialog.closeWasNormal = closeWasNormal;
-        
-        // enabling this code has the effect of firing the Dialog.onHiding and onHidden events twice
-        if (dialog.isShowing()) {
-            dialog.close();
-        }
-        
+    @Override public void close() {
         if (stage.isShowing()) {
             stage.hide();
         }
-        isClosing = false;
     }
-    
+
     @Override public ReadOnlyBooleanProperty showingProperty() {
         return stage.showingProperty();
     }
