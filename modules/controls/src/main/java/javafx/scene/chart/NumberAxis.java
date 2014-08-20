@@ -392,7 +392,7 @@ public final class NumberAxis extends ValueAxis<Number> {
             } else {
                 final StringBuilder formatterB = new StringBuilder("0.");
                 final boolean ratioHasFrac = Math.rint(ratio) != ratio;
-                for (int i = 0, n = (ratioHasFrac ? exp + 1 : exp); i < n; ++i) {
+                for (int i = 0, n = (ratioHasFrac ? Math.abs(exp) + 1 : Math.abs(exp)); i < n; ++i) {
                     formatterB.append("0");
                 }
                 formatter = formatterB.toString();
