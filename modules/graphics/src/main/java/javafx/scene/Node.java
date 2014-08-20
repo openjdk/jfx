@@ -100,6 +100,7 @@ import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Transform;
 import javafx.stage.Window;
 import javafx.util.Callback;
+import java.security.AccessControlContext;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -9429,6 +9430,23 @@ public abstract class Node implements EventTarget, Styleable {
         if (accessible == null) {
             accessible = Application.GetApplication().createAccessible();
             accessible.setEventHandler(new Accessible.EventHandler() {
+                @SuppressWarnings("deprecation")
+                @Override public AccessControlContext getAccessControlContext() {
+                    Scene scene = getScene();
+                    if (scene == null) throw new RuntimeException("Accessbility requested for node not on a scene");
+                    if (scene.impl_getPeer() != null) {
+                        return scene.impl_getPeer().getAccessControlContext();
+                    } else {
+                        /* In some rare cases the accessible for a Node is needed
+                         * before its scene is made visible. For example, the screen reader
+                         * might ask a Menu for its ContextMenu before the ContextMenu
+                         * is made visible. That is a problem because the Window for the
+                         * ContextMenu is only created immediately before the first time
+                         * it is shown.
+                         */
+                        return scene.acc;
+                    }
+                }
                 @Override public Object getAttribute(AccessibleAttribute attribute, Object... parameters) {
                     return queryAccessibleAttribute(attribute, parameters);
                 }
