@@ -2131,10 +2131,11 @@ project(":media") {
                     } else {
                         args ("CC=${mediaProperties.compiler}", "LINK=${mediaProperties.linker}", "LIB=${mediaProperties.lib}")
 
-                        if (t.name.startsWith("arm"))
+                        if (t.name.startsWith("arm")) {
                             args("EXTRA_CFLAGS=${mediaProperties.extra_cflags}", "EXTRA_LDFLAGS=${mediaProperties.extra_ldflags}")
-                        else
+                        } else {
                             args("HOST_COMPILE=1")
+                        }
                     }
                 }
             }
@@ -2163,11 +2164,13 @@ project(":media") {
             def buildPlugins = task("build${t.capital}Plugins", dependsOn: buildGStreamer) {
                 enabled = IS_COMPILE_MEDIA
 
-                if (!project.ext.properties.containsKey("ON2_SRCDIR"))
+                if (!project.ext.properties.containsKey("ON2_SRCDIR")) {
                     project.ext.ON2_SRCDIR = "";
+                }
 
-                if (!project.ext.properties.containsKey("ON2_LIB"))
+                if (!project.ext.properties.containsKey("ON2_LIB")) {
                     project.ext.ON2_LIB = "";
+                }
 
                 doLast {
                     exec {
@@ -2179,8 +2182,7 @@ project(":media") {
                             Map winEnv = new HashMap(WINDOWS_NATIVE_COMPILE_ENVIRONMENT)
 
                             String sdkDir = System.getenv("BASECLASSES_SDK_DIR");
-                            if (sdkDir == null)
-                            {
+                            if (sdkDir == null) {
                                 sdkDir = "C:/Program Files/Microsoft SDKs/Windows/v7.1" // Default value
                                 winEnv["BASECLASSES_SDK_DIR"] = sdkDir
                             }
@@ -2293,8 +2295,9 @@ project(":media") {
         exclude("headergen/**")
 
         dependsOn compileJava
-        if (IS_COMPILE_MEDIA)
+        if (IS_COMPILE_MEDIA) {
             dependsOn buildNativeTargets
+        }
     }
 }
 
