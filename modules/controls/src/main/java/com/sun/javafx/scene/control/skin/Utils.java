@@ -59,7 +59,6 @@ import javafx.scene.text.TextBoundsType;
 import com.sun.javafx.scene.control.behavior.TextBinding;
 import com.sun.javafx.scene.text.HitInfo;
 import com.sun.javafx.scene.text.TextLayout;
-import com.sun.javafx.scene.text.TextLine;
 import com.sun.javafx.tk.Toolkit;
 import javafx.util.Callback;
 
@@ -111,13 +110,8 @@ public class Utils {
             layout.setBoundsType(0);
         }
 
-        TextLine[] textLines = layout.getLines();
-        if (textLines != null && textLines.length > 0) {
-            // RT-37092: Use the line bounds specifically, to include font leading.
-            return textLines[0].getBounds().getHeight();
-        } else {
-            return layout.getBounds().getHeight();
-        }
+        // RT-37092: Use the line bounds specifically, to include font leading.
+        return layout.getLines()[0].getBounds().getHeight();
     }
 
     static double computeTextWidth(Font font, String text, double wrappingWidth) {
