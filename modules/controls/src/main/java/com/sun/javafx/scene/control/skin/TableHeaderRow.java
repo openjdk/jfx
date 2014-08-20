@@ -255,7 +255,7 @@ public class TableHeaderRow extends StackPane {
     };
     
     private final InvalidationListener columnTextListener = observable -> {
-        TableColumn<?,?> column = (TableColumn<?,?>) ((StringProperty)observable).getBean();
+        TableColumnBase<?,?> column = (TableColumnBase<?,?>) ((StringProperty)observable).getBean();
         CheckMenuItem menuItem = columnMenuItems.get(column);
         if (menuItem != null) {
             menuItem.setText(getText(column.getText(), column));
