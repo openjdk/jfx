@@ -96,6 +96,7 @@ import java.util.List;
  * @see SpinnerValueFactory.DoubleSpinnerValueFactory
  * @see SpinnerValueFactory.ListSpinnerValueFactory
  * @see SpinnerValueFactory.LocalDateSpinnerValueFactory
+ * @since JavaFX 8u40
  */
 public abstract class SpinnerValueFactory<T> {
 
@@ -225,6 +226,7 @@ public abstract class SpinnerValueFactory<T> {
      * });</pre>
      *
      * @param <T> The type of the elements in the {@link java.util.List}.
+     * @since JavaFX 8u40
      */
     public static class ListSpinnerValueFactory<T> extends SpinnerValueFactory<T> {
 
@@ -411,6 +413,8 @@ public abstract class SpinnerValueFactory<T> {
      *
      * <p>Note that the default {@link #converterProperty() converter} is implemented
      * as an {@link javafx.util.converter.IntegerStringConverter} instance.
+     *
+     * @since JavaFX 8u40
      */
     public static class IntegerSpinnerValueFactory extends SpinnerValueFactory<Integer> {
 
@@ -640,6 +644,8 @@ public abstract class SpinnerValueFactory<T> {
      *         }
      *     }
      * });</pre>
+     *
+     * @since JavaFX 8u40
      */
     public static class DoubleSpinnerValueFactory extends SpinnerValueFactory<Double> {
 
