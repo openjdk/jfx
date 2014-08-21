@@ -44,13 +44,15 @@ import java.util.List;
  */
 public abstract class InlineDocumentJob extends CompositeJob2 {
 
+    private List<Job> subJobs;
+
     public InlineDocumentJob(EditorController editorController) {
         super(editorController);
     }
 
     @Override
     public final List<Job> getSubJobs() {
-        return Collections.unmodifiableList(subJobs);
+        return subJobs;
     }
 
     @Override
@@ -58,7 +60,7 @@ public abstract class InlineDocumentJob extends CompositeJob2 {
         final FXOMDocument fxomDocument
                 = getEditorController().getFxomDocument();
         fxomDocument.beginUpdate();
-        subJobs = makeAndExecuteSubJobs();
+        subJobs = Collections.unmodifiableList(makeAndExecuteSubJobs());
         fxomDocument.endUpdate();
     }
 

@@ -45,12 +45,19 @@ import java.util.List;
  */
 public abstract class BatchSelectionJob extends CompositeJob2 {
 
-    protected AbstractSelectionGroup oldSelectionGroup;
-    protected AbstractSelectionGroup newSelectionGroup;
+    private List<Job> subJobs;
+    private AbstractSelectionGroup oldSelectionGroup;
+    private AbstractSelectionGroup newSelectionGroup;
 
     public BatchSelectionJob(EditorController editorController) {
         super(editorController);
     }
+
+    protected final AbstractSelectionGroup getOldSelectionGroup() {
+        return oldSelectionGroup;
+    }
+    
+    protected abstract AbstractSelectionGroup getNewSelectionGroup();
 
     @Override
     public final List<Job> getSubJobs() {
@@ -119,7 +126,4 @@ public abstract class BatchSelectionJob extends CompositeJob2 {
     }
 
     protected abstract List<Job> makeSubJobs();
-
-    protected abstract AbstractSelectionGroup getNewSelectionGroup();
-
 }

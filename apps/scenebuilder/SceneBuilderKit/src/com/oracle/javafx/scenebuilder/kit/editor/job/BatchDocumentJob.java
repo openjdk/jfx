@@ -44,6 +44,8 @@ import java.util.List;
  */
 public abstract class BatchDocumentJob extends CompositeJob2 {
 
+    private List<Job> subJobs;
+
     public BatchDocumentJob(EditorController editorController) {
         super(editorController);
     }
@@ -51,9 +53,8 @@ public abstract class BatchDocumentJob extends CompositeJob2 {
     @Override
     public final List<Job> getSubJobs() {
         if (subJobs == null) {
-            subJobs = makeSubJobs();
+            subJobs = Collections.unmodifiableList(makeSubJobs());
             assert subJobs != null;
-            subJobs = Collections.unmodifiableList(subJobs);
         }
         return subJobs;
     }

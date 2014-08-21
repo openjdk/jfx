@@ -39,8 +39,7 @@ import java.util.List;
  */
 public abstract class CompositeJob2 extends Job {
 
-    protected List<Job> subJobs;
-    protected String description;
+    private String description;
 
     public CompositeJob2(EditorController editorController) {
         super(editorController);

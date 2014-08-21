@@ -123,7 +123,7 @@ public class UseComputedSizesSelectionJob extends BatchSelectionJob {
     @Override
     protected AbstractSelectionGroup getNewSelectionGroup() {
         // Selection unchanged
-        return oldSelectionGroup;
+        return getOldSelectionGroup();
     }
 
     private String makeMultipleSelectionDescription() {
