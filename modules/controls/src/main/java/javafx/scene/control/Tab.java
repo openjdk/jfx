@@ -97,7 +97,19 @@ public class Tab implements EventTarget, Styleable {
      * @param text The title of the tab.
      */
     public Tab(String text) {
+        this(text, null);
+    }
+
+    /**
+     * Creates a tab with a text title and the specified content node.
+     *
+     * @param text The title of the tab.
+     * @param content The content of the tab.
+     * @since JavaFX 8u40
+     */
+    public Tab(String text, Node content) {
         setText(text);
+        setContent(content);
         styleClass.addAll(DEFAULT_STYLE_CLASS);
     }
     
