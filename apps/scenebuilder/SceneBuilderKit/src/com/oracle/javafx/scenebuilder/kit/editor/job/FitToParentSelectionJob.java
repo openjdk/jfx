@@ -32,10 +32,10 @@
 package com.oracle.javafx.scenebuilder.kit.editor.job;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
+import com.oracle.javafx.scenebuilder.kit.editor.selection.AbstractSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.GridSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import java.util.ArrayList;
@@ -46,70 +46,16 @@ import java.util.Set;
 /**
  *
  */
-public class FitToParentSelectionJob extends Job {
-
-    private final List<FitToParentObjectJob> subJobs = new ArrayList<>();
-    private String description; // Final but constructed lazily
+public class FitToParentSelectionJob extends BatchSelectionJob {
 
     public FitToParentSelectionJob(EditorController editorController) {
         super(editorController);
-        buildSubJobs();
-    }
-
-    /*
-     * Job
-     */
-    @Override
-    public boolean isExecutable() {
-        return subJobs.isEmpty() == false;
     }
 
     @Override
-    public void execute() {
-        final FXOMDocument fxomDocument
-                = getEditorController().getFxomDocument();
-        fxomDocument.beginUpdate();
-        for (FitToParentObjectJob subJob : subJobs) {
-            subJob.execute();
-        }
-        fxomDocument.endUpdate();
-    }
+    protected List<Job> makeSubJobs() {
 
-    @Override
-    public void undo() {
-        final FXOMDocument fxomDocument
-                = getEditorController().getFxomDocument();
-        fxomDocument.beginUpdate();
-        for (int i = subJobs.size() - 1; i >= 0; i--) {
-            subJobs.get(i).undo();
-        }
-        fxomDocument.endUpdate();
-    }
-
-    @Override
-    public void redo() {
-        final FXOMDocument fxomDocument
-                = getEditorController().getFxomDocument();
-        fxomDocument.beginUpdate();
-        for (FitToParentObjectJob subJob : subJobs) {
-            subJob.redo();
-        }
-        fxomDocument.endUpdate();
-    }
-
-    @Override
-    public String getDescription() {
-        if (description == null) {
-            buildDescription();
-        }
-
-        return description;
-    }
-
-    /*
-     * Private
-     */
-    private void buildSubJobs() {
+        final List<Job> result = new ArrayList<>();
 
         final Set<FXOMInstance> candidates = new HashSet<>();
         final Selection selection = getEditorController().getSelection();
@@ -132,34 +78,44 @@ public class FitToParentSelectionJob extends Job {
             final FitToParentObjectJob subJob
                     = new FitToParentObjectJob(candidate, getEditorController());
             if (subJob.isExecutable()) {
-                subJobs.add(subJob);
+                result.add(subJob);
             } else {
                 // Should we do best effort here ?
                 // Do not clear subJobs list but keep only executable ones
-                subJobs.clear(); // -> isExecutable() will return false
+                result.clear(); // -> isExecutable() will return false
                 break;
             }
         }
+        return result;
     }
 
-    private void buildDescription() {
-        switch (subJobs.size()) {
+    @Override
+    protected String makeDescription() {
+        final String result;
+        switch (getSubJobs().size()) {
             case 0:
-                description = "Unexecutable Fit To Parent"; // NO18N
+                result = "Unexecutable Fit To Parent"; // NO18N
                 break;
             case 1:
-                description = subJobs.get(0).getDescription();
+                result = getSubJobs().get(0).getDescription();
                 break;
             default:
-                description = makeMultipleSelectionDescription();
+                result = makeMultipleSelectionDescription();
                 break;
         }
+        return result;
+    }
+
+    @Override
+    protected AbstractSelectionGroup getNewSelectionGroup() {
+        // Selection unchanged
+        return oldSelectionGroup;
     }
 
     private String makeMultipleSelectionDescription() {
         final StringBuilder result = new StringBuilder();
         result.append("Fit To Parent ");
-        result.append(subJobs.size());
+        result.append(getSubJobs().size());
         result.append(" Objects");
         return result.toString();
     }
