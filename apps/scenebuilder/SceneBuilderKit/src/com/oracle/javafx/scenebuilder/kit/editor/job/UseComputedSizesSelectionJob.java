@@ -32,10 +32,10 @@
 package com.oracle.javafx.scenebuilder.kit.editor.job;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
+import com.oracle.javafx.scenebuilder.kit.editor.selection.AbstractSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.GridSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
@@ -47,70 +47,16 @@ import java.util.Set;
 /**
  *
  */
-public class UseComputedSizesSelectionJob extends Job {
-
-    private final List<UseComputedSizesObjectJob> subJobs = new ArrayList<>();
-    private String description; // Final but constructed lazily
+public class UseComputedSizesSelectionJob extends BatchSelectionJob {
 
     public UseComputedSizesSelectionJob(EditorController editorController) {
         super(editorController);
-        buildSubJobs();
-    }
-
-    /*
-     * Job
-     */
-    @Override
-    public boolean isExecutable() {
-        return subJobs.isEmpty() == false;
     }
 
     @Override
-    public void execute() {
-        final FXOMDocument fxomDocument
-                = getEditorController().getFxomDocument();
-        fxomDocument.beginUpdate();
-        for (UseComputedSizesObjectJob subJob : subJobs) {
-            subJob.execute();
-        }
-        fxomDocument.endUpdate();
-    }
+    protected List<Job> makeSubJobs() {
 
-    @Override
-    public void undo() {
-        final FXOMDocument fxomDocument
-                = getEditorController().getFxomDocument();
-        fxomDocument.beginUpdate();
-        for (int i = subJobs.size() - 1; i >= 0; i--) {
-            subJobs.get(i).undo();
-        }
-        fxomDocument.endUpdate();
-    }
-
-    @Override
-    public void redo() {
-        final FXOMDocument fxomDocument
-                = getEditorController().getFxomDocument();
-        fxomDocument.beginUpdate();
-        for (UseComputedSizesObjectJob subJob : subJobs) {
-            subJob.redo();
-        }
-        fxomDocument.endUpdate();
-    }
-
-    @Override
-    public String getDescription() {
-        if (description == null) {
-            buildDescription();
-        }
-
-        return description;
-    }
-
-    /*
-     * Private
-     */
-    private void buildSubJobs() {
+        final List<Job> result = new ArrayList<>();
 
         final Set<FXOMInstance> candidates = new HashSet<>();
         final Selection selection = getEditorController().getSelection();
@@ -136,7 +82,7 @@ public class UseComputedSizesSelectionJob extends Job {
                         break;
                     default:
                         assert false;
-                        return;
+                        return result;
                 }
                 assert constraints instanceof FXOMInstance;
                 candidates.add((FXOMInstance) constraints);
@@ -150,29 +96,40 @@ public class UseComputedSizesSelectionJob extends Job {
             final UseComputedSizesObjectJob subJob
                     = new UseComputedSizesObjectJob(candidate, getEditorController());
             if (subJob.isExecutable()) {
-                subJobs.add(subJob);
+                result.add(subJob);
             }
         }
+
+        return result;
     }
 
-    private void buildDescription() {
-        switch (subJobs.size()) {
+    @Override
+    protected String makeDescription() {
+        final String result;
+        switch (getSubJobs().size()) {
             case 0:
-                description = "Unexecutable Use Computed Sizes"; // NO18N
+                result = "Unexecutable Use Computed Sizes"; // NO18N
                 break;
             case 1:
-                description = subJobs.get(0).getDescription();
+                result = getSubJobs().get(0).getDescription();
                 break;
             default:
-                description = makeMultipleSelectionDescription();
+                result = makeMultipleSelectionDescription();
                 break;
         }
+        return result;
+    }
+
+    @Override
+    protected AbstractSelectionGroup getNewSelectionGroup() {
+        // Selection unchanged
+        return oldSelectionGroup;
     }
 
     private String makeMultipleSelectionDescription() {
         final StringBuilder result = new StringBuilder();
         result.append("Use Computed Sizes on ");
-        result.append(subJobs.size());
+        result.append(getSubJobs().size());
         result.append(" Objects");
         return result.toString();
     }
