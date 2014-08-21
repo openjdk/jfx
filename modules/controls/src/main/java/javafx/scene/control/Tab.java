@@ -842,49 +842,6 @@ public class Tab implements EventTarget, Styleable {
     }
 
 
-    /** {@inheritDoc} */
-    @Override public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-
-        Tab tab = (Tab) o;
-
-        Node thisContent = getContent();
-        Node otherContent = tab.getContent();
-        if (thisContent != null ? !thisContent.equals(otherContent) : otherContent != null)
-            return false;
-
-        Node thisGraphic = getGraphic();
-        Node otherGraphic = tab.getGraphic();
-        if (thisGraphic != null ? !thisGraphic.equals(otherGraphic) : otherGraphic != null)
-            return false;
-
-        if (isSelected() != tab.isSelected())
-            return false;
-
-        TabPane thisTabPane = getTabPane();
-        TabPane otherTabPane = tab.getTabPane();
-        if (thisTabPane != null ? !thisTabPane.equals(otherTabPane) : otherTabPane != null)
-            return false;
-
-        String thisText = getText();
-        String otherText = tab.getText();
-        if (thisText != null ? !thisText.equals(otherText) : otherText != null)
-            return false;
-
-        return true;
-    }
-
-    /** {@inheritDoc} */
-    @Override public int hashCode() {
-        int result = isSelected() ? 1 : 0;
-        result = 31 * result + (getTabPane() != null ? getTabPane().hashCode() : 0);
-        result = 31 * result + (getText() != null ? getText().hashCode() : 0);
-        result = 31 * result + (getGraphic() != null ? getGraphic().hashCode() : 0);
-        result = 31 * result + (getContent() != null ? getContent().hashCode() : 0);
-        return result;
-    }
-
     /***************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *

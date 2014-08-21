@@ -70,6 +70,12 @@ import com.sun.javafx.scene.control.skin.TabPaneSkin;
 import com.sun.javafx.scene.input.KeyCodeMap;
 import com.sun.javafx.tk.Toolkit;
 
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+
 public class TabPaneTest {
     private TabPane tabPane;//Empty string
     private Toolkit tk;
@@ -978,5 +984,43 @@ public class TabPaneTest {
 
         disabled.setDisable(false);
         assertFalse(btn.isDisabled());
+    }
+
+    @Test public void test_rt_38382_noAddToTabPane() {
+        test_rt_38382(false);
+    }
+
+    @Test public void test_rt_38382_addToTabPane() {
+        test_rt_38382(true);
+    }
+
+    public void test_rt_38382(boolean addToTabPane) {
+        final List<String> names = Arrays.asList(
+                "Biomass",
+                "Exploitable Population Biomass",
+                "MSY",
+                "Yield",
+                "Recruitment",
+                "Catch",
+                "Effort");
+        final Map<Tab, List<String>> fooMap = new HashMap<>();
+        final List<Tab> tabList = new LinkedList<>();
+        for (String name : names) {
+            final Tab tab = new Tab();
+            tab.setText(name);
+            fooMap.put(tab, new LinkedList<>());
+            tabList.add(tab);
+        }
+        TabPane tabPane = new TabPane();
+
+        if (addToTabPane) {
+            tabPane.getTabs().setAll(tabList);
+        }
+
+        fooMap.entrySet().forEach(entry -> {
+            final Tab tab = entry.getKey();
+            assertTrue(tabList.contains(tab));
+            assertTrue(fooMap.containsKey(tab));
+        });
     }
 }
