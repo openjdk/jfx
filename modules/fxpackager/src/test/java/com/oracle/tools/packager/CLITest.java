@@ -71,6 +71,12 @@ public class CLITest {
 
     @Test
     public void smokeParams() throws Exception {
+
+        String packagerJdkRoot = System.getenv("PACKAGER_JDK_ROOT");
+        String runtime = packagerJdkRoot == null
+                ? System.getProperty("java.home")
+                : packagerJdkRoot;
+
         com.sun.javafx.tools.packager.Main.main("-deploy",
                 "-verbose", // verbose is required or test will call System.exit() on failures and break the build
                 "-srcfiles", fakeMainJar.getCanonicalPath(),
@@ -82,7 +88,7 @@ public class CLITest {
                 "-BOptionThatWillNeverExist=true",
                 "-BdesktopHint=false",
                 "-BshortcutHint=true",
-                "-Bruntime=" + System.getProperty("java.home"));
+                "-Bruntime=" + runtime);
     }
 
     @Test

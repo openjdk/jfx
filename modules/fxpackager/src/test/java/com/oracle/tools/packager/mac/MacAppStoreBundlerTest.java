@@ -66,6 +66,8 @@ public class MacAppStoreBundlerTest {
     static File appResourcesDir;
     static File fakeMainJar;
     static File hdpiIcon;
+    static File runtimeJdk;
+    static File runtimeJre;
     static Set<File> appResources;
     static boolean retain = false;
 
@@ -74,9 +76,15 @@ public class MacAppStoreBundlerTest {
         // only run on mac
         Assume.assumeTrue(System.getProperty("os.name").toLowerCase().contains("os x"));
 
+        String packagerJdkRoot = System.getenv("PACKAGER_JDK_ROOT");
+        runtimeJdk = packagerJdkRoot == null ? null : new File(packagerJdkRoot);
+
+        String packagerJreRoot = System.getenv("PACKAGER_JRE_ROOT");
+        runtimeJre = packagerJreRoot == null ? null : new File(packagerJreRoot);
+
         // and only if we have the correct JRE settings
         String jre = System.getProperty("java.home").toLowerCase();
-        Assume.assumeTrue(jre.endsWith("/contents/home/jre") || jre.endsWith("/contents/home/jre"));
+        Assume.assumeTrue(packagerJdkRoot != null || jre.endsWith("/contents/home/jre") || jre.endsWith("/contents/home/jre"));
 
         // make sure we have a default signing key
         String signingKeyName = MacAppStoreBundler.MAC_APP_STORE_APP_SIGNING_KEY.fetchFrom(new TreeMap<>());
@@ -181,6 +189,10 @@ public class MacAppStoreBundlerTest {
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
         bundleParams.put(VERBOSE.getID(), true);
 
+        if (runtimeJdk != null) {
+            bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
+        }
+
         boolean valid = bundler.validate(bundleParams);
         assertTrue(valid);
 
@@ -227,7 +239,7 @@ public class MacAppStoreBundlerTest {
         bundleParams.put(MAC_CF_BUNDLE_IDENTIFIER.getID(), "com.example.everything.cf-bundle-identifier");
         bundleParams.put(MAC_CF_BUNDLE_NAME.getID(), "Everything CF Bundle Name");
         bundleParams.put(MAC_CF_BUNDLE_VERSION.getID(), "8.2.0");
-        bundleParams.put(MAC_RUNTIME.getID(), System.getProperty("java.home"));
+        bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk == null ? System.getProperty("java.home") : runtimeJdk);
         bundleParams.put(MAIN_CLASS.getID(), "hello.TestPackager");
         bundleParams.put(MAIN_JAR.getID(), "mainApp.jar");
         bundleParams.put(CLASSPATH.getID(), "mainApp.jar");
@@ -280,10 +292,11 @@ public class MacAppStoreBundlerTest {
     /**
      * User a JRE instead of a JDK
      */
-    @Test
+    @Test(expected = ConfigException.class)
     public void testJRE() throws IOException, ConfigException, UnsupportedPlatformException {
 
-        Assume.assumeTrue(new File("/Library/Internet Plug-Ins/JavaAppletPlugin.plugin/").isDirectory());
+        File jre = runtimeJre == null ? new File("/Library/Internet Plug-Ins/JavaAppletPlugin.plugin/") : runtimeJre;
+        Assume.assumeTrue(jre.isDirectory());
 
         AbstractBundler bundler = new MacAppStoreBundler();
 
@@ -307,6 +320,7 @@ public class MacAppStoreBundlerTest {
         bundleParams.put(MacAppBundler.MAC_CATEGORY.getID(), "public.app-category.developer-tools");
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
         bundleParams.put(VERBOSE.getID(), true);
+        bundleParams.put(MAC_RUNTIME.getID(), jre);
 
         boolean valid = bundler.validate(bundleParams);
         assertTrue(valid);

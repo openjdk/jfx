@@ -63,6 +63,7 @@ public class MacDmgBundlerTest {
     static File appResourcesDir;
     static File fakeMainJar;
     static File hdpiIcon;
+    static File runtimeJdk;
     static Set<File> appResources;
     static boolean retain = false;
     static boolean full_tests = false;
@@ -72,9 +73,12 @@ public class MacDmgBundlerTest {
         // only run on mac
         Assume.assumeTrue(System.getProperty("os.name").toLowerCase().contains("os x"));
 
+        String packagerJdkRoot = System.getenv("PACKAGER_JDK_ROOT");
+        runtimeJdk = packagerJdkRoot == null ? null : new File(packagerJdkRoot);
+
         // and only if we have the correct JRE settings
         String jre = System.getProperty("java.home").toLowerCase();
-        Assume.assumeTrue(jre.endsWith("/contents/home/jre") || jre.endsWith("/contents/home/jre"));
+        Assume.assumeTrue(packagerJdkRoot != null || jre.endsWith("/contents/home/jre") || jre.endsWith("/contents/home/jre"));
 
         Log.setLogger(new Log.Logger(true));
         Log.setDebug(true);
@@ -161,6 +165,10 @@ public class MacDmgBundlerTest {
         bundleParams.put(VERBOSE.getID(), true);
         bundleParams.put(SYSTEM_WIDE.getID(), false);
 
+        if (runtimeJdk != null) {
+            bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
+        }
+
         boolean valid = bundler.validate(bundleParams);
         assertTrue(valid);
 
@@ -193,6 +201,13 @@ public class MacDmgBundlerTest {
 
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
 
+        if (runtimeJdk != null) {
+            bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
+        }
+
+        boolean valid = bundler.validate(bundleParams);
+        assertTrue(valid);
+
         File output = bundler.execute(bundleParams, new File(workDir, "BareMinimum"));
         System.err.println("Bundle at - " + output);
         assertNotNull(output);
@@ -220,7 +235,13 @@ public class MacDmgBundlerTest {
         appBundleParams.put(IDENTIFIER.getID(), "com.example.dmg.external");
         appBundleParams.put(VERBOSE.getID(), true);
 
-        appBundler.validate(appBundleParams);
+        if (runtimeJdk != null) {
+            appBundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
+        }
+
+        boolean valid = appBundler.validate(appBundleParams);
+        assertTrue(valid);
+
         File appOutput = appBundler.execute(appBundleParams, new File(workDir, "DMGExternalApp1"));
         System.err.println("App at - " + appOutput);
         assertNotNull(appOutput);
@@ -239,7 +260,13 @@ public class MacDmgBundlerTest {
 
         dmgBundleParams.put(VERBOSE.getID(), true);
 
-        dmgBundler.validate(dmgBundleParams);
+        if (runtimeJdk != null) {
+            dmgBundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
+        }
+
+        valid = dmgBundler.validate(dmgBundleParams);
+        assertTrue(valid);
+
         File dmgOutput = dmgBundler.execute(dmgBundleParams, new File(workDir, "DMGExternalApp2"));
         System.err.println(".dmg at - " + dmgOutput);
         assertNotNull(dmgOutput);
@@ -264,7 +291,13 @@ public class MacDmgBundlerTest {
         appBundleParams.put(IDENTIFIER.getID(), "com.example.dmg.external");
         appBundleParams.put(VERBOSE.getID(), true);
 
-        appBundler.validate(appBundleParams);
+        if (runtimeJdk != null) {
+            appBundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
+        }
+
+        boolean valid = appBundler.validate(appBundleParams);
+        assertTrue(valid);
+
         File appOutput = appBundler.execute(appBundleParams, new File(workDir, "DMGExternalApp1"));
         System.err.println("App at - " + appOutput);
         assertNotNull(appOutput);
@@ -284,7 +317,13 @@ public class MacDmgBundlerTest {
 
         dmgBundleParams.put(VERBOSE.getID(), true);
 
-        dmgBundler.validate(dmgBundleParams);
+        if (runtimeJdk != null) {
+            dmgBundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
+        }
+
+        valid = dmgBundler.validate(dmgBundleParams);
+        assertTrue(valid);
+
         File dmgOutput = dmgBundler.execute(dmgBundleParams, new File(workDir, "DMGExternalApp3"));
         System.err.println(".dmg at - " + dmgOutput);
         assertNotNull(dmgOutput);

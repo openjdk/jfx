@@ -46,6 +46,8 @@ import org.junit.Assume;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import static com.oracle.tools.packager.mac.MacAppBundler.MAC_RUNTIME;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -54,6 +56,7 @@ public class MacDaemonBundlerTest {
 
     static File tmpBase;
     static File workDir;
+    static File runtimeJdk;
     static boolean retain = false;
 
     @BeforeClass
@@ -61,9 +64,12 @@ public class MacDaemonBundlerTest {
         // only run on mac
         Assume.assumeTrue(System.getProperty("os.name").toLowerCase().contains("os x"));
 
+        String packagerJdkRoot = System.getenv("PACKAGER_JDK_ROOT");
+        runtimeJdk = packagerJdkRoot == null ? null : new File(packagerJdkRoot);
+
         // and only if we have the correct JRE settings
         String jre = System.getProperty("java.home").toLowerCase();
-        Assume.assumeTrue(jre.endsWith("/contents/home/jre") || jre.endsWith("/contents/home/jre"));
+        Assume.assumeTrue(packagerJdkRoot != null || jre.endsWith("/contents/home/jre") || jre.endsWith("/contents/home/jre"));
 
         Log.setLogger(new Log.Logger(true));
 
@@ -128,6 +134,10 @@ public class MacDaemonBundlerTest {
         bundleParams.put(APP_NAME.getID(), "Smoke Test App");
         bundleParams.put(IDENTIFIER.getID(), "smoke.app");        
         bundleParams.put(VERBOSE.getID(), true);
+
+        if (runtimeJdk != null) {
+            bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
+        }
 
         boolean valid = bundler.validate(bundleParams);
         assertTrue(valid);

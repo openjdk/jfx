@@ -47,6 +47,7 @@ import java.util.Map;
 import java.util.ResourceBundle;
 
 import static com.oracle.tools.packager.StandardBundlerParam.*;
+import static com.oracle.tools.packager.mac.MacAppBundler.*;
 
 public class MacAppStoreBundler extends MacBaseInstallerBundler {
 
@@ -114,10 +115,10 @@ public class MacAppStoreBundler extends MacBaseInstallerBundler {
 
         // first, load in some overrides
         // icns needs @2 versions, so load in the @2 default
-        p.put(MacAppBundler.DEFAULT_ICNS_ICON.getID(), TEMPLATE_BUNDLE_ICON_HIDPI);
+        p.put(DEFAULT_ICNS_ICON.getID(), TEMPLATE_BUNDLE_ICON_HIDPI);
 
         // next we need to change the jdk/jre stripping to strip gstreamer
-        p.put(MacAppBundler.MAC_RULES.getID(), createMacAppStoreRuntimeRules(p));
+        p.put(MAC_RULES.getID(), createMacAppStoreRuntimeRules(p));
 
         // now we create the app
         File appImageDir = APP_IMAGE_BUILD_ROOT.fetchFrom(p);
@@ -125,13 +126,13 @@ public class MacAppStoreBundler extends MacBaseInstallerBundler {
             appImageDir.mkdirs();
 
             // first, make sure we don't use the local signing key
-            p.put(MacAppBundler.DEVELOPER_ID_APP_SIGNING_KEY.getID(), null);
+            p.put(DEVELOPER_ID_APP_SIGNING_KEY.getID(), null);
             File appLocation = prepareAppBundle(p);
 
             prepareEntitlements(p);
 
             String signingIdentity = MAC_APP_STORE_APP_SIGNING_KEY.fetchFrom(p);
-            String identifierPrefix = MacAppBundler.BUNDLE_ID_SIGNING_PREFIX.fetchFrom(p);
+            String identifierPrefix = BUNDLE_ID_SIGNING_PREFIX.fetchFrom(p);
             String entitlementsFile = getConfig_Entitlements(p).toString();
             String inheritEntitlements = getConfig_Inherit_Entitlements(p).toString();
 
@@ -217,11 +218,11 @@ public class MacAppStoreBundler extends MacBaseInstallerBundler {
     }
 
     private String getEntitlementsFileName(Map<String, ? super Object> params) {
-        return MacAppBundler.MAC_BUNDLER_PREFIX+ APP_NAME.fetchFrom(params) +".entitlements";
+        return MAC_BUNDLER_PREFIX+ APP_NAME.fetchFrom(params) +".entitlements";
     }
 
     private String getInheritEntitlementsFileName(Map<String, ? super Object> params) {
-        return MacAppBundler.MAC_BUNDLER_PREFIX+ APP_NAME.fetchFrom(params) +"_Inherit.entitlements";
+        return MAC_BUNDLER_PREFIX+ APP_NAME.fetchFrom(params) +"_Inherit.entitlements";
     }
 
 
@@ -233,12 +234,12 @@ public class MacAppStoreBundler extends MacBaseInstallerBundler {
 
         List<JreUtils.Rule> rules = new ArrayList<>();
 
-        rules.addAll(Arrays.asList(MacAppBundler.createMacRuntimeRules(params)));
+        rules.addAll(Arrays.asList(createMacRuntimeRules(params)));
 
         File baseDir;
 
-        if (params.containsKey(MacAppBundler.MAC_RUNTIME.getID())) {
-            Object o = params.get(MacAppBundler.MAC_RUNTIME.getID());
+        if (params.containsKey(MAC_RUNTIME.getID())) {
+            Object o = params.get(MAC_RUNTIME.getID());
             if (o instanceof RelativeFileSet) {
 
                 baseDir = ((RelativeFileSet) o).getBaseDirectory();
@@ -317,7 +318,7 @@ public class MacAppStoreBundler extends MacBaseInstallerBundler {
     @Override
     public Collection<BundlerParamInfo<?>> getBundleParameters() {
         Collection<BundlerParamInfo<?>> results = new LinkedHashSet<>();
-        results.addAll(MacAppBundler.getAppBundleParameters());
+        results.addAll(getAppBundleParameters());
         results.addAll(getPKGBundleParameters());
         return results;
     }
@@ -325,8 +326,8 @@ public class MacAppStoreBundler extends MacBaseInstallerBundler {
     public Collection<BundlerParamInfo<?>> getPKGBundleParameters() {
         Collection<BundlerParamInfo<?>> results = new LinkedHashSet<>();
 
-        results.addAll(MacAppBundler.getAppBundleParameters());
-        results.remove(MacAppBundler.DEVELOPER_ID_APP_SIGNING_KEY);
+        results.addAll(getAppBundleParameters());
+        results.remove(DEVELOPER_ID_APP_SIGNING_KEY);
         results.addAll(Arrays.asList(
                 MAC_APP_STORE_APP_SIGNING_KEY,
                 MAC_APP_STORE_ENTITLEMENTS,
@@ -339,17 +340,24 @@ public class MacAppStoreBundler extends MacBaseInstallerBundler {
     @Override
     public boolean validate(Map<String, ? super Object> params) throws UnsupportedPlatformException, ConfigException {
         try {
-            if (params == null) throw new ConfigException(
-                    I18N.getString("error.parameters-null"),
-                    I18N.getString("error.parameters-null.advice"));
+            if (params == null) {
+                throw new ConfigException(
+                        I18N.getString("error.parameters-null"),
+                        I18N.getString("error.parameters-null.advice"));
+            }
 
             // hdiutil is always available so there's no need to test for availability.
             //run basic validation to ensure requirements are met
 
-            //run basic validation to ensure requirements are met
+            // Mac App Store apps cannot use the system runtime
+            if (params.containsKey(MAC_RUNTIME.getID()) && params.get(MAC_RUNTIME.getID()) == null) {
+                throw new ConfigException(
+                        I18N.getString("error.no-system-runtime"),
+                        I18N.getString("error.no-system-runtime.advice"));
+            }
 
             //we need to change the jdk/jre stripping to strip qtkit code
-            params.put(MacAppBundler.MAC_RULES.getID(), createMacAppStoreRuntimeRules(params));
+            params.put(MAC_RULES.getID(), createMacAppStoreRuntimeRules(params));
 
             //we are not interested in return code, only possible exception
             validateAppImageAndBundeler(params);

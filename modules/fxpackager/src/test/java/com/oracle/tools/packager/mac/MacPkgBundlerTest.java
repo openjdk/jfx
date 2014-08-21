@@ -64,6 +64,7 @@ public class MacPkgBundlerTest {
     static File appResourcesDir;
     static File fakeMainJar;
     static File hdpiIcon;
+    static File runtimeJdk;
     static Set<File> appResources;
     static boolean retain = false;
 
@@ -72,9 +73,12 @@ public class MacPkgBundlerTest {
         // only run on mac
         Assume.assumeTrue(System.getProperty("os.name").toLowerCase().contains("os x"));
 
+        String packagerJdkRoot = System.getenv("PACKAGER_JDK_ROOT");
+        runtimeJdk = packagerJdkRoot == null ? null : new File(packagerJdkRoot);
+
         // and only if we have the correct JRE settings
         String jre = System.getProperty("java.home").toLowerCase();
-        Assume.assumeTrue(jre.endsWith("/contents/home/jre") || jre.endsWith("/contents/home/jre"));
+        Assume.assumeTrue(packagerJdkRoot != null || jre.endsWith("/contents/home/jre") || jre.endsWith("/contents/home/jre"));
 
         Log.setLogger(new Log.Logger(true));
 
@@ -158,6 +162,10 @@ public class MacPkgBundlerTest {
         bundleParams.put(DEVELOPER_ID_APP_SIGNING_KEY.getID(), null); // force no signing
         bundleParams.put(DEVELOPER_ID_INSTALLER_SIGNING_KEY.getID(), null); // force no signing
 
+        if (runtimeJdk != null) {
+            bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
+        }
+
         boolean valid = bundler.validate(bundleParams);
         assertTrue(valid);
 
@@ -189,6 +197,10 @@ public class MacPkgBundlerTest {
         bundleParams.put(PREFERENCES_ID.getID(), "the/really/long/preferences/id");
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
         bundleParams.put(VERBOSE.getID(), true);
+
+        if (runtimeJdk != null) {
+            bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
+        }
 
         boolean valid = bundler.validate(bundleParams);
         assertTrue(valid);
@@ -226,6 +238,13 @@ public class MacPkgBundlerTest {
 
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
 
+        if (runtimeJdk != null) {
+            bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
+        }
+
+        boolean valid = bundler.validate(bundleParams);
+        assertTrue(valid);
+
         File output = bundler.execute(bundleParams, new File(workDir, "BareMinimum"));
         System.err.println("Bundle at - " + output);
         assertNotNull(output);
@@ -253,7 +272,13 @@ public class MacPkgBundlerTest {
         appBundleParams.put(IDENTIFIER.getID(), "com.example.pkg.external");
         appBundleParams.put(VERBOSE.getID(), true);
 
-        appBundler.validate(appBundleParams);
+        if (runtimeJdk != null) {
+            appBundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
+        }
+
+        boolean valid = appBundler.validate(appBundleParams);
+        assertTrue(valid);
+
         File appOutput = appBundler.execute(appBundleParams, new File(workDir, "PKGExternalApp1"));
         System.err.println("App at - " + appOutput);
         assertNotNull(appOutput);
@@ -272,7 +297,13 @@ public class MacPkgBundlerTest {
 
         pkgBundleParams.put(VERBOSE.getID(), true);
 
-        pkgBundler.validate(pkgBundleParams);
+        if (runtimeJdk != null) {
+            pkgBundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
+        }
+
+        valid = pkgBundler.validate(pkgBundleParams);
+        assertTrue(valid);
+
         File pkgOutput = pkgBundler.execute(pkgBundleParams, new File(workDir, "PKGExternalApp2"));
         System.err.println(".pkg at - " + pkgOutput);
         assertNotNull(pkgOutput);
