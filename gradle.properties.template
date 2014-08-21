@@ -61,6 +61,22 @@
 
 #BUILD_SRC_ZIP = true
 
+# Specifies whether to build SDK for running unit tests
+# By default, it is set to true and the tests are running of the fresh-built SDK
+# If set to false, this flag removes main sources complication tasks and building
+# the whole SDK and jfxrt.jar and jars from TEST_SDK are used
+# Setting TEST_SDK is recommended
+
+#BUILD_SDK_FOR_TEST = false
+
+# Specifies SDK for running tests with when BUILD_SDK_FOR_TEST is set to false
+# By default, it is set to JDK_HOME
+# Developer builds are preferred, in other case systemTests would fail to compile and run
+# jfxrt.jar should be located at $TEST_SDK/rt/lib/ext/jfxrt.jar or $TEST_SDK/jre/lib/ext/jfxrt.jar
+# ant-javafx.jar and javafx-mx.jar should be located at $TEST_SDK/lib/
+
+#TEST_SDK = /path/to/sdk
+
 # Specifies whether to do a full test run or a "smoke test" run. By default we
 # do a smoke test run which excludes all tests that show a window or play media.
 # Certain long running tests might also be excluded when this is not set.

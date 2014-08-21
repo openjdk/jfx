@@ -81,9 +81,27 @@ public class MenuBar extends Control {
      *                                                                         *
      **************************************************************************/
 
+    /**
+     * Creates a new empty MenuBar.
+     */
     public MenuBar() {
+        this((Menu[])null);
+    }
+
+    /**
+     * Creates a new MenuBar populated with the given menus.
+     *
+     * @param menus The menus to place inside the MenuBar
+     * @since JavaFX 8u40
+     */
+    public MenuBar(Menu... menus) {
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
         setRole(AccessibleRole.MENU_BAR);
+
+        if (menus != null) {
+            getMenus().addAll(menus);
+        }
+
         // focusTraversable is styleable through css. Calling setFocusTraversable
         // makes it look to css like the user set the value and css will not 
         // override. Initializing focusTraversable by calling applyStyle with null

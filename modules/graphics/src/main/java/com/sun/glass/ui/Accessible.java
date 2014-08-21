@@ -27,6 +27,9 @@ package com.sun.glass.ui;
 
 import static javafx.scene.AccessibleAttribute.PARENT;
 import static javafx.scene.AccessibleAttribute.ROLE;
+import java.security.AccessControlContext;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.SceneHelper;
 import javafx.scene.AccessibleAction;
@@ -40,13 +43,15 @@ public abstract class Accessible {
     private EventHandler eventHandler;
     private View view;
 
-    public static class EventHandler {
+    public static abstract class EventHandler {
         public Object getAttribute(AccessibleAttribute attribute, Object... parameters) {
             return null;
         }
 
         public void executeAction(AccessibleAction action, Object... parameters) {
         }
+
+        public abstract AccessControlContext getAccessControlContext();
     }
 
     public EventHandler getEventHandler() {
@@ -115,27 +120,60 @@ public abstract class Accessible {
         return null;
     }
 
-    public Object getAttribute(AccessibleAttribute attribute, Object... parameters) {
-        Object result = eventHandler.getAttribute(attribute, parameters);
-        if (result != null) {
-            Class<?> clazz = attribute.getReturnType();
-            if (clazz != null) {
-                try {
-                    clazz.cast(result);
-                } catch (Exception e) {
-                    String msg = "The expected return type for the " + attribute +
-                                 " attribute is " + clazz.getSimpleName() +
-                                 " but found " + result.getClass().getSimpleName();
-                    System.err.println(msg);
-                    return null; //Fail no exception
-                }
-            }
+    final AccessControlContext getAccessControlContext() {
+        AccessControlContext acc = eventHandler.getAccessControlContext();
+        if (acc == null) {
+            throw new RuntimeException("Could not get AccessControlContext for " + this);
         }
-        return result;
+        return acc;
     }
 
+    private class GetAttribute implements PrivilegedAction<Object> {
+        AccessibleAttribute attribute;
+        Object[] parameters;
+        @Override public Object run() {
+            Object result = eventHandler.getAttribute(attribute, parameters);
+            if (result != null) {
+                Class<?> clazz = attribute.getReturnType();
+                if (clazz != null) {
+                    try {
+                        clazz.cast(result);
+                    } catch (Exception e) {
+                        String msg = "The expected return type for the " + attribute +
+                                     " attribute is " + clazz.getSimpleName() +
+                                     " but found " + result.getClass().getSimpleName();
+                        System.err.println(msg);
+                        return null; //Fail no exception
+                    }
+                }
+            }
+            return result;
+        }
+    }
+
+    private GetAttribute getAttribute = new GetAttribute();
+
+    public Object getAttribute(AccessibleAttribute attribute, Object... parameters) {
+        getAttribute.attribute = attribute;
+        getAttribute.parameters = parameters;
+        return AccessController.doPrivileged(getAttribute, getAccessControlContext());
+    }
+
+    private class ExecuteAction implements PrivilegedAction<Void> {
+        AccessibleAction action;
+        Object[] parameters;
+        @Override public Void run() {
+            eventHandler.executeAction(action, parameters);
+            return null;
+        }
+    }
+
+    private ExecuteAction executeAction = new ExecuteAction();
+
     public void executeAction(AccessibleAction action, Object... parameters) {
-        eventHandler.executeAction(action, parameters);
+        executeAction.action = action;
+        executeAction.parameters = parameters;
+        AccessController.doPrivileged(executeAction, getAccessControlContext());
     }
 
     public abstract void sendNotification(AccessibleAttribute notification);

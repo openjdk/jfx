@@ -400,7 +400,7 @@ public class Wizard {
         
         public WizardPane() {
             // TODO extract to CSS
-            setGraphic(new ImageView(new Image(AccordionSkin.class.getResource("modena/hello.dialog-confirm.png").toExternalForm())));
+            setGraphic(new ImageView(new Image(AccordionSkin.class.getResource("modena/dialog-confirm.png").toExternalForm())));
         }
 
         // TODO we want to change this to an event-based API eventually

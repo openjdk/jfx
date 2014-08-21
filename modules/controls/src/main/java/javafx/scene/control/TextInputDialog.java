@@ -28,6 +28,7 @@ import com.sun.javafx.scene.control.skin.AccordionSkin;
 import com.sun.javafx.scene.control.skin.resources.ControlResources;
 import javafx.application.Platform;
 import javafx.beans.NamedArg;
+import javafx.geometry.Pos;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
@@ -94,14 +95,13 @@ public class TextInputDialog extends Dialog<String> {
         this.grid = new GridPane();
         this.grid.setHgap(10);
         this.grid.setMaxWidth(Double.MAX_VALUE);
+        this.grid.setAlignment(Pos.CENTER_LEFT);
         
         dialogPane.contentTextProperty().addListener(o -> updateGrid());
         
         setTitle(ControlResources.getString("Dialog.confirm.title"));
         dialogPane.setHeaderText(ControlResources.getString("Dialog.confirm.header"));
-
-        // TODO extract out to CSS
-        dialogPane.setGraphic(new ImageView(new Image(AccordionSkin.class.getResource("modena/dialog-confirm.png").toExternalForm())));
+        dialogPane.getStyleClass().add("text-input-dialog");
         dialogPane.getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
         
         updateGrid();

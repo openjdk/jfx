@@ -335,7 +335,7 @@ public class MacDmgBundler extends MacBaseInstallerBundler {
         IOUtils.copyFile(getConfig_VolumeIcon(p),
                 volumeIconFile);
 
-        if (SIMPLE_DMG.fetchFrom(p)) {
+        if (!SIMPLE_DMG.fetchFrom(p)) {
             //background image
             File bgdir = new File(mountedRoot, ".background");
             bgdir.mkdirs();

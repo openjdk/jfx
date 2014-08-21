@@ -98,7 +98,7 @@ public class CommandLinksDialog extends Dialog<ButtonType> {
         setTitle(ControlResources.getString("Dialog.info.title"));
 
         // FIXME extract to CSS
-        dialogPane.setGraphic(new ImageView(new Image(AccordionSkin.class.getResource("modena/hello.dialog-information.png").toExternalForm())));
+        dialogPane.setGraphic(new ImageView(new Image(AccordionSkin.class.getResource("modena/dialog-information.png").toExternalForm())));
         dialogPane.getButtonTypes().addAll(links);
         
         dialogPane.contentProperty().addListener(o -> updateGrid());

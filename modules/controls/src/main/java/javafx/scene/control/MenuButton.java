@@ -92,7 +92,7 @@ public class MenuButton extends ButtonBase {
 
     /**
      * Creates a new empty menu button with the given text to display on the
-     * menu. Use {@link #setGraphic(Node)} and {@link #getItems()} to set the
+     * button. Use {@link #setGraphic(Node)} and {@link #getItems()} to set the
      * content.
      * 
      * @param text the text to display on the menu button
@@ -103,18 +103,36 @@ public class MenuButton extends ButtonBase {
 
     /**
      * Creates a new empty menu button with the given text and graphic to
-     * display on the menu. Use {@link #getItems()} to set the content.
+     * display on the button. Use {@link #getItems()} to set the content.
      * 
      * @param text the text to display on the menu button
      * @param graphic the graphic to display on the menu button
      */
     public MenuButton(String text, Node graphic) {
+        this(text, graphic, (MenuItem[])null);
+    }
+
+    /**
+     * Creates a new menu button with the given text and graphic to
+     * display on the button, and inserts the given items
+     * into the {@link #getItems() items} list.
+     *
+     * @param text the text to display on the menu button
+     * @param graphic the graphic to display on the menu button
+     * @param items The items to display in the popup menu.
+     * @since JavaFX 8u40
+     */
+    public MenuButton(String text, Node graphic, MenuItem... items) {
         if (text != null) {
             setText(text);
         }
         if (graphic != null) {
             setGraphic(graphic);
         }
+        if (items != null) {
+            getItems().addAll(items);
+        }
+
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
         setRole(AccessibleRole.MENU_BUTTON);
         setMnemonicParsing(true);     // enable mnemonic auto-parsing by default

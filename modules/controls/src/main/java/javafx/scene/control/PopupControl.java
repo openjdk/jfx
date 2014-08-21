@@ -1152,6 +1152,11 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
             return PopupControl.this.getCssMetaData();
         }
 
+        /**
+         * @treatAsPrivate implementation detail
+         * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+         */
+        @Deprecated
         @Override public List<String> impl_getAllParentStylesheets() {
             Styleable styleable = getStyleableParent();
             if (styleable instanceof Parent) {

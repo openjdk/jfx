@@ -45,6 +45,7 @@ import javafx.collections.ObservableList;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.control.cell.TreeItemPropertyValueFactory;
 import javafx.scene.input.KeyCode;
 
@@ -692,5 +693,84 @@ public class TreeTableViewMouseInputTest {
         assertFalse(tableView.isFocused());
 
         sl.dispose();
+    }
+
+    @Test public void test_rt_38306_selectFirstRow() {
+        test_rt_38306(false);
+    }
+
+    @Test public void test_rt_38306_selectFirstTwoRows() {
+        test_rt_38306(true);
+    }
+
+    private void test_rt_38306(boolean selectTwoRows) {
+        TreeItem<Person> root = new TreeItem<>();
+        root.getChildren().addAll(
+                new TreeItem<>(new Person("Jacob", "Smith", "jacob.smith@example.com")),
+                new TreeItem<>(new Person("Isabella", "Johnson", "isabella.johnson@example.com")),
+                new TreeItem<>(new Person("Ethan", "Williams", "ethan.williams@example.com")),
+                new TreeItem<>(new Person("Emma", "Jones", "emma.jones@example.com")),
+                new TreeItem<>(new Person("Michael", "Brown", "michael.brown@example.com"))
+        );
+
+        TreeTableView<Person> table = new TreeTableView<>();
+        table.setRoot(root);
+        root.setExpanded(true);
+        table.setShowRoot(false);
+
+        TreeTableView.TreeTableViewSelectionModel sm = table.getSelectionModel();
+        sm.setCellSelectionEnabled(true);
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        TreeTableColumn firstNameCol = new TreeTableColumn("First Name");
+        firstNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("firstName"));
+
+        TreeTableColumn lastNameCol = new TreeTableColumn("Last Name");
+        lastNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("lastName"));
+
+        TreeTableColumn emailCol = new TreeTableColumn("Email");
+        emailCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("email"));
+
+        table.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
+
+        sm.select(0, firstNameCol);
+
+        assertTrue(sm.isSelected(0, firstNameCol));
+        assertEquals(1, sm.getSelectedCells().size());
+
+        TreeTableCell cell_0_1 = (TreeTableCell) VirtualFlowTestUtils.getCell(table, 0, 1);
+        TreeTableCell cell_0_2 = (TreeTableCell) VirtualFlowTestUtils.getCell(table, 0, 2);
+        TreeTableCell cell_0_3 = (TreeTableCell) VirtualFlowTestUtils.getCell(table, 0, 3);
+
+        TreeTableCell cell_1_1 = (TreeTableCell) VirtualFlowTestUtils.getCell(table, 1, 1);
+        TreeTableCell cell_1_2 = (TreeTableCell) VirtualFlowTestUtils.getCell(table, 1, 2);
+        TreeTableCell cell_1_3 = (TreeTableCell) VirtualFlowTestUtils.getCell(table, 1, 3);
+
+        MouseEventFirer mouse = selectTwoRows ?
+                new MouseEventFirer(cell_1_3) : new MouseEventFirer(cell_0_3);
+
+        mouse.fireMousePressAndRelease(KeyModifier.SHIFT);
+
+        assertTrue(sm.isSelected(0, firstNameCol));
+        assertTrue(sm.isSelected(0, lastNameCol));
+        assertTrue(sm.isSelected(0, emailCol));
+
+        if (selectTwoRows) {
+            assertTrue(sm.isSelected(1, firstNameCol));
+            assertTrue(sm.isSelected(1, lastNameCol));
+            assertTrue(sm.isSelected(1, emailCol));
+        }
+
+        assertEquals(selectTwoRows ? 6 : 3, sm.getSelectedCells().size());
+
+        assertTrue(cell_0_1.isSelected());
+        assertTrue(cell_0_2.isSelected());
+        assertTrue(cell_0_3.isSelected());
+
+        if (selectTwoRows) {
+            assertTrue(cell_1_1.isSelected());
+            assertTrue(cell_1_2.isSelected());
+            assertTrue(cell_1_3.isSelected());
+        }
     }
 }

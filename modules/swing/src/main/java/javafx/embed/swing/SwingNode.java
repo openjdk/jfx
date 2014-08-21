@@ -427,6 +427,11 @@ public class SwingNode extends Node {
         return minHeight;
     }
 
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
     @Override
     protected boolean impl_computeContains(double localX, double localY) {
         return true;
@@ -500,6 +505,11 @@ public class SwingNode extends Node {
         WindowHelper.getWindowAccessor().screenProperty(window).removeListener(screenListener);
     }
 
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
     @Override
     protected NGNode impl_createPeer() {
         peer = new NGExternalNode();
@@ -535,6 +545,11 @@ public class SwingNode extends Node {
         return peer;
     }
 
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
     @Override
     public void impl_updatePeer() {
         super.impl_updatePeer();
@@ -630,6 +645,11 @@ public class SwingNode extends Node {
         });        
     }
 
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
     @Override
     public BaseBounds impl_computeGeomBounds(BaseBounds bounds, BaseTransform tx) {
         bounds.deriveWithNewBounds(0, 0, 0, (float)width, (float)height, 0);
@@ -637,6 +657,11 @@ public class SwingNode extends Node {
         return bounds;
     }
 
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
     @Override
     public Object impl_processMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
         return alg.processLeafNode(this, ctx);

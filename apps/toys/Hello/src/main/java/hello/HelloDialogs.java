@@ -35,7 +35,6 @@ import hello.dialog.fxml.FXMLSampleDialog;
 import hello.dialog.wizard.LinearWizardFlow;
 import hello.dialog.wizard.Wizard;
 import hello.dialog.wizard.Wizard.WizardPane;
-import hello.HelloAccordion;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
@@ -77,32 +76,13 @@ public class HelloDialogs extends Application {
     private final ComboBox<StageStyle> styleCombobox = new ComboBox<>();
     private final ComboBox<Modality> modalityCombobox = new ComboBox<Modality>();
     private final CheckBox cbUseBlocking = new CheckBox();
-    private final CheckBox cbUseLightweightDialog = new CheckBox();
+    private final CheckBox cbCloseDialogAutomatically = new CheckBox();
     private final CheckBox cbShowMasthead = new CheckBox();
     private final CheckBox cbSetOwner = new CheckBox();
     private final CheckBox cbCustomGraphic = new CheckBox();
     
-    private static final String WINDOWS = "Windows";
-    private static final String MAC_OS = "Mac OS";
-    private static final String LINUX = "Linux";
-
     private Stage stage;
 
-    private ToggleButton createToggle(final String caption) {
-        final ToggleButton btn = new ToggleButton(caption);
-        btn.selectedProperty().addListener((o, oldValue, newValue) -> {
-//          ActionDialog.setMacOS(MAC_OS.equals(caption));
-//          ActionDialog.setWindows(WINDOWS.equals(caption));
-//          ActionDialog.setLinux(LINUX.equals(caption));
-            System.out.println("HelloDialog.createToggle(...).new ChangeListener() {...}.changed()");
-        });
-        return btn;
-    }
-
-    private boolean includeOwner() {
-        return cbSetOwner.isSelected() || cbUseLightweightDialog.isSelected();
-    }
-    
     @Override public void start(Stage stage) throws Exception {
         this.stage = stage;
         // VBox vbox = new VBox(10);
@@ -142,7 +122,25 @@ public class HelloDialogs extends Application {
                 showDialog(dlg);
             }
         });
-        grid.add(new HBox(10, Hyperlink2), 1, row);
+
+        final Button Hyperlink2a = new Button("2 x Buttons (no cancel)");
+        Hyperlink2a.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent e) {
+                Alert dlg = createAlert(AlertType.INFORMATION);
+                dlg.setTitle("Custom title");
+                String optionalMasthead = "Wouldn't this be nice?";
+                dlg.getDialogPane().setContentText("A collection of pre-built JavaFX dialogs?\nSeems like a great idea to me...");
+                configureSampleDialog(dlg, optionalMasthead);
+                dlg.getButtonTypes().add(ButtonType.NEXT);
+
+//              dlg.setOnCloseRequest(evt -> evt.consume());
+
+                showDialog(dlg);
+            }
+        });
+
+        grid.add(new HBox(10, Hyperlink2, Hyperlink2a), 1, row);
 
         row++;
 
@@ -156,21 +154,18 @@ public class HelloDialogs extends Application {
         cbShowCancel.setSelected(true);
 
         final Button Hyperlink3 = new Button("Show");
-        Hyperlink3.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent e) {
-                Alert dlg = createAlert(AlertType.CONFIRMATION);
-                dlg.setTitle("You do want dialogs right?");
-                String optionalMasthead = "Just Checkin'";
-                dlg.getDialogPane().setContentText("I was a bit worried that you might not want them, so I wanted to double check.");
-                
-                if (!cbShowCancel.isSelected()) {
-                    dlg.getDialogPane().getButtonTypes().remove(ButtonType.CANCEL);
-                }
-                
-                configureSampleDialog(dlg, optionalMasthead);
-                showDialog(dlg);
+        Hyperlink3.setOnAction(e -> {
+            Alert dlg = createAlert(AlertType.CONFIRMATION);
+            dlg.setTitle("You do want dialogs right?");
+            String optionalMasthead = "Just Checkin'";
+            dlg.getDialogPane().setContentText("I was a bit worried that you might not want them, so I wanted to double check.");
+
+            if (!cbShowCancel.isSelected()) {
+                dlg.getDialogPane().getButtonTypes().remove(ButtonType.CANCEL);
             }
+
+            configureSampleDialog(dlg, optionalMasthead);
+            showDialog(dlg);
         });
         grid.add(new HBox(10, Hyperlink3, cbShowCancel), 1, row);
 
@@ -183,16 +178,13 @@ public class HelloDialogs extends Application {
         grid.add(createLabel("Warning Dialog: "), 0, row);
 
         final Button Hyperlink6a = new Button("Show");
-        Hyperlink6a.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent e) {
-                Alert dlg = createAlert(AlertType.WARNING);
-                dlg.setTitle("I'm warning you!");
-                String optionalMasthead = "This is a warning";
-                dlg.getDialogPane().setContentText("I'm glad I didn't need to use this...");
-                configureSampleDialog(dlg, optionalMasthead);
-                showDialog(dlg);
-            }
+        Hyperlink6a.setOnAction(e -> {
+            Alert dlg = createAlert(AlertType.WARNING);
+            dlg.setTitle("I'm warning you!");
+            String optionalMasthead = "This is a warning";
+            dlg.getDialogPane().setContentText("I'm glad I didn't need to use this...");
+            configureSampleDialog(dlg, optionalMasthead);
+            showDialog(dlg);
         });
         grid.add(new HBox(10, Hyperlink6a), 1, row);
 
@@ -205,16 +197,13 @@ public class HelloDialogs extends Application {
         grid.add(createLabel("Error Dialog: "), 0, row);
 
         final Button Hyperlink7a = new Button("Show");
-        Hyperlink7a.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent e) {
-                Alert dlg = createAlert(AlertType.ERROR);
-                dlg.setTitle("It looks like you're making a bad decision");
-                String optionalMasthead = "Exception Encountered";
-                dlg.getDialogPane().setContentText("Better change your mind - this is really your last chance! (Even longer text that should probably wrap)");
-                configureSampleDialog(dlg, optionalMasthead);
-                showDialog(dlg);
-            }
+        Hyperlink7a.setOnAction(e -> {
+            Alert dlg = createAlert(AlertType.ERROR);
+            dlg.setTitle("It looks like you're making a bad decision");
+            String optionalMasthead = "Exception Encountered";
+            dlg.getDialogPane().setContentText("Better change your mind - this is really your last chance! (Even longer text that should probably wrap)");
+            configureSampleDialog(dlg, optionalMasthead);
+            showDialog(dlg);
         });
         grid.add(new HBox(10, Hyperlink7a), 1, row);
 
@@ -227,41 +216,16 @@ public class HelloDialogs extends Application {
         grid.add(createLabel("'Exception' Dialog: "), 0, row);
 
         final Button Hyperlink5a = new Button("Show");
-        Hyperlink5a.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent e) {
-                ExceptionDialog dlg = new ExceptionDialog(new RuntimeException("Exception text"));
-//              Alert dlg = createSampleDialog();
-                dlg.setTitle("It looks like you're making a bad decision"); 
-                String optionalMasthead = "Exception Encountered";
-                dlg.getDialogPane().setContentText("This is the content to show to the user - but it'll be a good idea to see what the exception text says...");
-                configureSampleDialog(dlg, optionalMasthead);
-                showDialog(dlg);
-            }
+        Hyperlink5a.setOnAction(e -> {
+            ExceptionDialog dlg = new ExceptionDialog(new RuntimeException("Exception text"));
+            dlg.setTitle("It looks like you're making a bad decision");
+            String optionalMasthead = "Exception Encountered";
+            dlg.getDialogPane().setContentText("This is the content to show to the user - but it'll be a good idea to see what the exception text says...");
+            configureSampleDialog(dlg, optionalMasthead);
+            showDialog(dlg);
         });
 
-        final Button Hyperlink5b = new Button("Open in new window");
-        Hyperlink5b.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent e) {
-                System.out.println("not yet ported");
-//              Action response = configureSampleDialog(
-//                      Dialogs.create()
-//                              .message(
-//                                      "Better change your mind - this is really your last chance!")
-//                              .title("It looks like you're making a bad decision")
-//                              .masthead(
-//                                      isMastheadVisible() ? "Exception Encountered"
-//                                              : null))
-//                      .showExceptionInNewWindow(
-//                              new RuntimeException(
-//                                      "Pending Bad Decision Exception"));
-//
-//              System.out.println("response: " + response);
-            }
-        });
-
-        grid.add(new HBox(10, Hyperlink5a, Hyperlink5b), 1, row);
+        grid.add(new HBox(10, Hyperlink5a), 1, row);
         row++;
 
         // *******************************************************************
@@ -271,90 +235,47 @@ public class HelloDialogs extends Application {
         grid.add(createLabel("Input Dialog: "), 0, row);
 
         final Button Hyperlink8 = new Button("TextField");
-        Hyperlink8.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent e) {
-                TextInputDialog dlg = new TextInputDialog("");
-                dlg.setTitle("Name Check"); 
-                String optionalMasthead = "Please type in your name";
-                dlg.getDialogPane().setContentText("What is your name?");
-                configureSampleDialog(dlg, optionalMasthead);
-                
-                if (cbUseBlocking.isSelected()) {
-                    dlg.showAndWait().ifPresent(result -> System.out.println("Result is: " + result));
-                } else {
-                    dlg.show();
-                    dlg.resultProperty().addListener(o -> System.out.println("Result is: " + dlg.getResult()));
-                    System.out.println("This println is _after_ the show method - we're non-blocking!");
-                }
-            }
+        Hyperlink8.setOnAction(e -> {
+            TextInputDialog dlg = new TextInputDialog("");
+            dlg.setTitle("Name Check");
+            String optionalMasthead = "Please type in your name";
+            dlg.getDialogPane().setContentText("What is your name?");
+            configureSampleDialog(dlg, optionalMasthead);
+            showDialog(dlg);
         });
 
         final Button Hyperlink9 = new Button("Initial Value Set");
-        Hyperlink9.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent e) {
-                TextInputDialog dlg = new TextInputDialog("Jonathan");
-//              Alert dlg = createSampleDialog();
-                dlg.setTitle("Name Guess"); 
-                String optionalMasthead = "Name Guess";
-                dlg.getDialogPane().setContentText("Pick a name?");
-                configureSampleDialog(dlg, optionalMasthead);
-
-                if (cbUseBlocking.isSelected()) {
-                    dlg.showAndWait().ifPresent(result -> System.out.println("Result is: " + result));
-                } else {
-                    dlg.show();
-                    dlg.resultProperty().addListener(o -> System.out.println("Result is: " + dlg.getResult()));
-                    System.out.println("This println is _after_ the show method - we're non-blocking!");
-                }
-            }
+        Hyperlink9.setOnAction(e -> {
+            TextInputDialog dlg = new TextInputDialog("Jonathan");
+            dlg.setTitle("Name Guess");
+            String optionalMasthead = "Name Guess";
+            dlg.getDialogPane().setContentText("Pick a name?");
+            configureSampleDialog(dlg, optionalMasthead);
+            showDialog(dlg);
         });
 
         final Button Hyperlink10 = new Button("Set Choices (< 10)");
-        Hyperlink10.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent e) {
-                ChoiceDialog<String> dlg = new ChoiceDialog<String>("Jonathan", 
-                                                                    "Matthew", "Jonathan", "Ian", "Sue", "Hannah");
-//              Alert dlg = createSampleDialog();
-                dlg.setTitle("Name Guess"); 
-                String optionalMasthead = "Name Guess";
-                dlg.getDialogPane().setContentText("Pick a name?");             
-                configureSampleDialog(dlg, optionalMasthead);
-
-                if (cbUseBlocking.isSelected()) {
-                    dlg.showAndWait().ifPresent(result -> System.out.println("Result is: " + result));
-                } else {
-                    dlg.show();
-                    dlg.resultProperty().addListener(o -> System.out.println("Result is: " + dlg.getResult()));
-                    System.out.println("This println is _after_ the show method - we're non-blocking!");
-                }
-            }
+        Hyperlink10.setOnAction(e -> {
+            ChoiceDialog<String> dlg = new ChoiceDialog<String>("Jonathan",
+                                                                "Matthew", "Jonathan", "Ian", "Sue", "Hannah");
+            dlg.setTitle("Name Guess");
+            String optionalMasthead = "Name Guess";
+            dlg.getDialogPane().setContentText("Pick a name?");
+            configureSampleDialog(dlg, optionalMasthead);
+            showDialog(dlg);
         });
 
         final Button Hyperlink11 = new Button("Set Choices (>= 10)");
-        Hyperlink11.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent e) {
-                ChoiceDialog<String> dlg = new ChoiceDialog<String>("Jonathan", 
-                                                                    "Matthew", "Jonathan", "Ian", "Sue",
-                                                                    "Hannah", "Julia", "Denise", "Stephan",
-                                                                    "Sarah", "Ron", "Ingrid");
-//              Alert dlg = createSampleDialog();
-                dlg.setTitle("Name Guess"); 
-                String optionalMasthead = "Name Guess";
-                dlg.getDialogPane().setContentText("Pick a name?");             
-                configureSampleDialog(dlg, optionalMasthead);
-
-                if (cbUseBlocking.isSelected()) {
-                    dlg.showAndWait().ifPresent(result -> System.out.println("Result is: " + result));
-                } else {
-                    dlg.show();
-                    dlg.resultProperty().addListener(o -> System.out.println("Result is: " + dlg.getResult()));
-                    System.out.println("This println is _after_ the show method - we're non-blocking!");
-                }
-            }
+        Hyperlink11.setOnAction(e -> {
+            ChoiceDialog<String> dlg = new ChoiceDialog<String>("Jonathan",
+                                                                "Matthew", "Jonathan", "Ian", "Sue",
+                                                                "Hannah", "Julia", "Denise", "Stephan",
+                                                                "Sarah", "Ron", "Ingrid");
+            dlg.setTitle("Name Guess");
+            String optionalMasthead = "Name Guess";
+            dlg.getDialogPane().setContentText("Pick a name?");
+            configureSampleDialog(dlg, optionalMasthead);
+            showDialog(dlg);
         });
 
         grid.add(
@@ -368,101 +289,28 @@ public class HelloDialogs extends Application {
 
         grid.add(createLabel("Other pre-built dialogs: "), 0, row);
         final Button Hyperlink12 = new Button("Command Links");
-        Hyperlink12.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent e) {
-                List<ButtonType> links = Arrays
-                        .asList(buildCommandLink("Add a network that is in the range of this computer", false),
-                                buildCommandLink("Manually create a network profile", true),
-                                buildCommandLink("Create an ad hoc network", false));
-                
-                CommandLinksDialog dlg = new CommandLinksDialog(links);
-//              Alert dlg = createSampleDialog();
-                dlg.setTitle("Manually connect to wireless network"); 
-                String optionalMasthead = "Manually connect to wireless network";
-                dlg.getDialogPane().setContentText("How do you want to add a network?");             
-                configureSampleDialog(dlg, optionalMasthead);
+        Hyperlink12.setOnAction(e -> {
+            List<ButtonType> links = Arrays
+                    .asList(buildCommandLink("Add a network that is in the range of this computer", false),
+                            buildCommandLink("Manually create a network profile", true),
+                            buildCommandLink("Create an ad hoc network", false));
 
-                if (cbUseBlocking.isSelected()) {
-                    dlg.showAndWait().ifPresent(result -> System.out.println("Result is: " + result));
-                } else {
-                    dlg.show();
-                    dlg.resultProperty().addListener(o -> System.out.println("Result is: " + dlg.getResult()));
-                    System.out.println("This println is _after_ the show method - we're non-blocking!");
-                }
-            }
+            CommandLinksDialog dlg = new CommandLinksDialog(links);
+            dlg.setTitle("Manually connect to wireless network");
+            String optionalMasthead = "Manually connect to wireless network";
+            dlg.getDialogPane().setContentText("How do you want to add a network?");
+            configureSampleDialog(dlg, optionalMasthead);
+            showDialog(dlg);
         });
 
         final Button Hyperlink12a = new Button("Font Chooser");
-        Hyperlink12a.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent e) {
-                FontSelectorDialog dlg = new FontSelectorDialog(null);
-//              Alert dlg = createSampleDialog();
-                configureSampleDialog(dlg, "");
-                
-                if (cbUseBlocking.isSelected()) {
-                    dlg.showAndWait().ifPresent(result -> System.out.println("Result is: " + result));
-                } else {
-                    dlg.show();
-                    dlg.resultProperty().addListener(o -> System.out.println("Result is: " + dlg.getResult()));
-                    System.out.println("This println is _after_ the show method - we're non-blocking!");
-                }
-            }
+        Hyperlink12a.setOnAction(e -> {
+            FontSelectorDialog dlg = new FontSelectorDialog(null);
+            configureSampleDialog(dlg, "");
+            showDialog(dlg);
         });
-//
-//      final Button Hyperlink12b = new Button("Progress");
-//      Hyperlink12b.setOnAction(new EventHandler<ActionEvent>() {
-//          @Override
-//          public void handle(ActionEvent e) {
-//              Task<Object> worker = new Task<Object>() {
-//                  @Override
-//                  protected Object call() throws Exception {
-//                      for (int i = 0; i < 100; i++) {
-//                          updateProgress(i, 99);
-//                          updateMessage("progress: " + i);
-//                          System.out.println("progress: " + i);
-//                          Thread.sleep(100);
-//                      }
-//                      return null;
-//                  }
-//              };
-//
-//              configureSampleDialog(
-//                      Dialogs.create()
-//                              .title("Progress")
-//                              .masthead(
-//                                      isMastheadVisible() ? "Please wait whilst the install completes..."
-//                                              : null)
-//                              .message("Now Loading...")).showWorkerProgress(
-//                      worker);
-//
-//              Thread th = new Thread(worker);
-//              th.setDaemon(true);
-//              th.start();
-//          }
-//      });
-//      
-//      final Button Hyperlink12c = new Button("Login");
-//      Hyperlink12c.setOnAction(new EventHandler<ActionEvent>() {
-//          @Override
-//          public void handle(ActionEvent e) {
-//              Optional<Pair<String,String>> response = 
-//                      configureSampleDialog(
-//                      Dialogs.create()
-//                          .masthead(isMastheadVisible() ? "Login to ControlsFX" : null))
-//                          .showLogin(new Pair<String,String>("user", "password"), info -> {
-//                              if ( !"controlsfx".equalsIgnoreCase(info.getKey())) {
-//                                  throw new RuntimeException("Service is not available... try again later!"); 
-//                              };
-//                              return null;
-//                          }
-//                       );
-//
-//              System.out.println("User info: " + response);
-//          }
-//      });
-//
-        grid.add(new HBox(10, Hyperlink12, Hyperlink12a/*, Hyperlink12b, Hyperlink12c*/), 1, row);
+
+        grid.add(new HBox(10, Hyperlink12, Hyperlink12a), 1, row);
         row++;
 
         // *******************************************************************
@@ -490,9 +338,8 @@ public class HelloDialogs extends Application {
                 dlg.setResultConverter(buttonType -> buttonType == loginButtonType ? 
                         "[" + txUserName.getText() + "/" + txPassword.getText() + "]" : 
                          null);
-                dlg.initOwner(includeOwner() ? stage : null);
+                dlg.initOwner(cbSetOwner.isSelected() ? stage : null);
                 dlg.setTitle("Login Dialog");
-//                dlg.getStyleClass().addAll(getDialogStyle());
                 dlg.initModality(modalityCombobox.getValue());
                 
                 if (cbShowMasthead.isSelected()) {
@@ -567,7 +414,6 @@ public class HelloDialogs extends Application {
 
     private Alert createAlert(AlertType type) {
         Window owner = cbSetOwner.isSelected() ? stage : null;
-//      boolean lightweight = cbUseLightweightDialog.isSelected();
         Alert dlg = new Alert(type, "");
         dlg.initModality(modalityCombobox.getValue());
         dlg.initOwner(owner);
@@ -584,7 +430,19 @@ public class HelloDialogs extends Application {
         dlg.initStyle(styleCombobox.getValue());
     }
     
-    private void showDialog(Dialog<ButtonType> dlg) {
+    private void showDialog(Dialog<?> dlg) {
+        if (cbCloseDialogAutomatically.isSelected()) {
+            new Thread(() -> {
+                try {
+                    Thread.sleep(2000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                System.out.println("Attempting to close dialog now...");
+                Platform.runLater(() -> dlg.close());
+            }).start();
+        }
+
         if (cbUseBlocking.isSelected()) {
             dlg.showAndWait().ifPresent(result -> System.out.println("Result is " + result));
         } else {
@@ -602,18 +460,6 @@ public class HelloDialogs extends Application {
 
         int row = 0;
 
-//      // locale
-//      List<Locale> locales = Translations.getAllTranslationLocales();
-//      grid.add(createLabel("Locale: ", "property"), 0, row);
-//      final ComboBox<Locale> localeCombobox = new ComboBox<Locale>();
-//      localeCombobox.getItems().addAll(locales);
-//      localeCombobox.valueProperty().addListener((ov, oldValue, newValue) -> Localization.setLocale(newValue));
-//      grid.add(localeCombobox, 1, row);
-//      row++;
-//      
-//      // set the locale to english by default
-//      Translations.getTranslation("en").ifPresent(t -> localeCombobox.setValue(t.getLocale()));
-        
         // stage style
         grid.add(createLabel("Style: ", "property"), 0, row);
         styleCombobox.getItems().setAll(StageStyle.values());
@@ -628,29 +474,15 @@ public class HelloDialogs extends Application {
         grid.add(modalityCombobox, 1, row);
         row++;
         
-        
-        // operating system button order
-        grid.add(createLabel("Operating system button order: ", "property"), 0,
-                row);
-        final ToggleButton windowsBtn = createToggle(WINDOWS);
-        final ToggleButton macBtn = createToggle(MAC_OS);
-        final ToggleButton linuxBtn = createToggle(LINUX);
-        windowsBtn.selectedProperty().set(true);
-        ToggleGroup group = new ToggleGroup();
-        group.getToggles().addAll(windowsBtn, macBtn, linuxBtn);
-        HBox operatingSystem = new HBox(windowsBtn, macBtn, linuxBtn);
-        grid.add(operatingSystem, 1, row);
-        row++;
-
-//      // use lightweight dialogs
-//      grid.add(createLabel("Lightweight dialogs: ", "property"), 0, row);
-//      grid.add(cbUseLightweightDialog, 1, row);
-//      row++;
-        
         // use blocking
         cbUseBlocking.setSelected(true);
         grid.add(createLabel("Use blocking: ", "property"), 0, row);
         grid.add(cbUseBlocking, 1, row);
+        row++;
+
+        // close dialog automatically
+        grid.add(createLabel("Close dialog after 2000ms: ", "property"), 0, row);
+        grid.add(cbCloseDialogAutomatically, 1, row);
         row++;
 
         // show masthead
@@ -659,7 +491,7 @@ public class HelloDialogs extends Application {
         row++;
 
         // set owner
-        grid.add(createLabel("Set hello.dialog owner: ", "property"), 0, row);
+        grid.add(createLabel("Set dialog owner: ", "property"), 0, row);
         grid.add(cbSetOwner, 1, row);
         row++;
         
@@ -674,12 +506,6 @@ public class HelloDialogs extends Application {
     private ButtonType buildCommandLink(String text, boolean isDefault) {
         return new ButtonType(text, isDefault ? ButtonData.OK_DONE : ButtonData.OTHER);
     }
-
-    
-//    private String getDialogStyle() {
-//        SelectionModel<String> sm = styleCombobox.getSelectionModel();
-//        return sm.getSelectedItem() == null ? "cross-platform" : sm.getSelectedItem().toLowerCase();
-//    }
 
     public static void main(String[] args) {
         Application.launch(args);
@@ -818,8 +644,6 @@ public class HelloDialogs extends Application {
             }
             
         };
-        
-        
         
         //wizard.setFlow( new LinearWizardFlow( page1, page2, page3));
         wizard.setFlow( branchingFlow);

@@ -133,7 +133,9 @@ public class BundlersTest {
             System.err.println("Bundler '" + bundler.getID() + "' parameter '" + bpi.getID() + "' failed metadata check: " + checkDescription);
             System.err.println("Exception was thrown");
             re.printStackTrace(System.err);
-            return false;
+
+            // throwing a wrapped ConfigException is an acceptable failure
+            return re.getCause() instanceof ConfigException;
         }
     }
     

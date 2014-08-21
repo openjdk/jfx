@@ -27,20 +27,19 @@ package javafx.scene.control;
 
 import java.util.List;
 
+import com.sun.javafx.scene.control.test.Person;
 import com.sun.javafx.tk.Toolkit;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
+import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
+import javafx.collections.ObservableList;
 import javafx.scene.Scene;
-import javafx.scene.layout.StackPane;
+import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.VBox;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import com.sun.javafx.scene.control.behavior.TableViewAnchorRetriever;
-import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import com.sun.javafx.scene.control.infrastructure.KeyModifier;
 import com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
 import com.sun.javafx.scene.control.infrastructure.StageLoader;
@@ -75,7 +74,9 @@ public class TableViewMouseInputTest {
     }
     
     @After public void tearDown() {
-        tableView.getSkin().dispose();
+        if (tableView.getSkin() != null) {
+            tableView.getSkin().dispose();
+        }
     }
     
     /***************************************************************************
@@ -509,5 +510,81 @@ public class TableViewMouseInputTest {
         assertFalse(tableView.isFocused());
 
         sl.dispose();
+    }
+
+    @Test public void test_rt_38306_selectFirstRow() {
+        test_rt_38306(false);
+    }
+
+    @Test public void test_rt_38306_selectFirstTwoRows() {
+        test_rt_38306(true);
+    }
+
+    private void test_rt_38306(boolean selectTwoRows) {
+        final ObservableList<Person> data =
+                FXCollections.observableArrayList(
+                        new Person("Jacob", "Smith", "jacob.smith@example.com"),
+                        new Person("Isabella", "Johnson", "isabella.johnson@example.com"),
+                        new Person("Ethan", "Williams", "ethan.williams@example.com"),
+                        new Person("Emma", "Jones", "emma.jones@example.com"),
+                        new Person("Michael", "Brown", "michael.brown@example.com"));
+
+        TableView<Person> table = new TableView<>();
+        table.setItems(data);
+
+        TableView.TableViewSelectionModel sm = table.getSelectionModel();
+        sm.setCellSelectionEnabled(true);
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        TableColumn firstNameCol = new TableColumn("First Name");
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
+
+        TableColumn lastNameCol = new TableColumn("Last Name");
+        lastNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("lastName"));
+
+        TableColumn emailCol = new TableColumn("Email");
+        emailCol.setCellValueFactory(new PropertyValueFactory<Person, String>("email"));
+
+        table.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
+
+        sm.select(0, firstNameCol);
+
+        assertTrue(sm.isSelected(0, firstNameCol));
+        assertEquals(1, sm.getSelectedCells().size());
+
+        TableCell cell_0_1 = (TableCell) VirtualFlowTestUtils.getCell(table, 0, 1);
+        TableCell cell_0_2 = (TableCell) VirtualFlowTestUtils.getCell(table, 0, 2);
+        TableCell cell_0_3 = (TableCell) VirtualFlowTestUtils.getCell(table, 0, 3);
+
+        TableCell cell_1_1 = (TableCell) VirtualFlowTestUtils.getCell(table, 1, 1);
+        TableCell cell_1_2 = (TableCell) VirtualFlowTestUtils.getCell(table, 1, 2);
+        TableCell cell_1_3 = (TableCell) VirtualFlowTestUtils.getCell(table, 1, 3);
+
+        MouseEventFirer mouse = selectTwoRows ?
+                new MouseEventFirer(cell_1_3) : new MouseEventFirer(cell_0_3);
+
+        mouse.fireMousePressAndRelease(KeyModifier.SHIFT);
+
+        assertTrue(sm.isSelected(0, firstNameCol));
+        assertTrue(sm.isSelected(0, lastNameCol));
+        assertTrue(sm.isSelected(0, emailCol));
+
+        if (selectTwoRows) {
+            assertTrue(sm.isSelected(1, firstNameCol));
+            assertTrue(sm.isSelected(1, lastNameCol));
+            assertTrue(sm.isSelected(1, emailCol));
+        }
+
+        assertEquals(selectTwoRows ? 6 : 3, sm.getSelectedCells().size());
+
+        assertTrue(cell_0_1.isSelected());
+        assertTrue(cell_0_2.isSelected());
+        assertTrue(cell_0_3.isSelected());
+
+        if (selectTwoRows) {
+            assertTrue(cell_1_1.isSelected());
+            assertTrue(cell_1_2.isSelected());
+            assertTrue(cell_1_3.isSelected());
+        }
     }
 }

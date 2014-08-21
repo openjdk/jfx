@@ -245,5 +245,16 @@ public class Quat4f {
     this.z *= s;
     this.w *= s;
   }
+
+    /**
+     * Returns a <code>String</code> that represents the value of this
+     * <code>Quat4f</code>.
+     *
+     * @return a string representation of this <code>Quat4f</code>.
+     */
+    @Override
+    public String toString() {
+        return "Quat4f[" + x + ", " + y + ", " + z + ", " + w + "]";
+    }
 }
 

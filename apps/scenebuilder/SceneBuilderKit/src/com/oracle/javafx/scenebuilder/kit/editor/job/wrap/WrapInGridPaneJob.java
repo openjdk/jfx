@@ -70,14 +70,9 @@ public class WrapInGridPaneJob extends AbstractWrapInSubComponentJob {
     }
 
     @Override
-    protected List<Job> modifyChildrenJobs(final List<FXOMObject> children) {
+    protected List<Job> modifyChildrenJobs(final FXOMInstance container, final List<FXOMObject> children) {
+        final List<Job> jobs = super.modifyChildrenJobs(container, children);
 
-        final List<Job> jobs = new ArrayList<>();
-        // When wrapping the root node, indices are not yet initialized
-        // (modifyContainer method not called)
-        if (indices.isEmpty()) {
-            modifyContainer(children);
-        }
         for (FXOMObject child : children) {
             int[] childIndices = indices.get(child);
 
@@ -99,7 +94,8 @@ public class WrapInGridPaneJob extends AbstractWrapInSubComponentJob {
     }
 
     @Override
-    protected void modifyContainer(final List<FXOMObject> children) {
+    protected void modifyNewContainer(final List<FXOMObject> children) {
+        super.modifyNewContainer(children);
 
         final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
 
@@ -140,14 +136,13 @@ public class WrapInGridPaneJob extends AbstractWrapInSubComponentJob {
     }
 
     /**
-     * This method computes either the ROW index or COLUMN index of each element,
-     * by running through a would-be grid according to a given course.
+     * This method computes either the ROW index or COLUMN index of each
+     * element, by running through a would-be grid according to a given course.
      * For instance, when course==ROW_BY_ROW, this method first order the
-     * elements row by row, and then sets their ROW index inside the indices map.
-     * When course==COL_BY_COL, this method orders the
-     * elements column by column, and then sets their COLUMN index inside the
-     * indices map.
-     * Note that this method leaves the original elements and children list
+     * elements row by row, and then sets their ROW index inside the indices
+     * map. When course==COL_BY_COL, this method orders the elements column by
+     * column, and then sets their COLUMN index inside the indices map. Note
+     * that this method leaves the original elements and children list
      * unchanged. All it does is populating the indices map.
      *
      * @param fxomObjects The children of the would-be grid.

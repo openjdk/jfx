@@ -32,10 +32,6 @@
 package com.oracle.javafx.scenebuilder.kit.editor.job.wrap;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
-import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
-import java.util.Collections;
-import java.util.List;
 import javafx.scene.layout.TilePane;
 
 /**
@@ -46,14 +42,5 @@ public class WrapInTilePaneJob extends AbstractWrapInSubComponentJob {
     public WrapInTilePaneJob(EditorController editorController) {
         super(editorController);
         newContainerClass = TilePane.class;
-    }
-
-    @Override
-    protected List<Job> modifyChildrenJobs(final List<FXOMObject> children) {
-        return Collections.emptyList();
-    }
-
-    @Override
-    protected void modifyContainer(final List<FXOMObject> children) {
     }
 }

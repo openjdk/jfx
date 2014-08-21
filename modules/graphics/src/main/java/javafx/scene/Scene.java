@@ -152,7 +152,7 @@ public class Scene implements EventTarget {
 
     private int dirtyBits;
 
-    private final AccessControlContext acc = AccessController.getContext();
+    final AccessControlContext acc = AccessController.getContext();
 
     private Camera defaultCamera;
 
@@ -6275,6 +6275,10 @@ public class Scene implements EventTarget {
         if (accessible == null) {
             accessible = Application.GetApplication().createAccessible();
             accessible.setEventHandler(new Accessible.EventHandler() {
+                @Override public AccessControlContext getAccessControlContext() {
+                    return impl_getPeer().getAccessControlContext();
+                }
+
                 @Override public Object getAttribute(AccessibleAttribute attribute,
                                                      Object... parameters) {
                     switch (attribute) {

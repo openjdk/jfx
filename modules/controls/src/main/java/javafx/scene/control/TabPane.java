@@ -110,11 +110,21 @@ public class TabPane extends Control {
      * Constructs a new TabPane.
      */
     public TabPane() {
+        this((Tab[])null);
+    }
+
+    /**
+     * Constructs a new TabPane with the given tabs set to show.
+     *
+     * @param tabs The {@link Tab tabs} to display inside the TabPane.
+     * @since JavaFX 8u40
+     */
+    public TabPane(Tab... tabs) {
         getStyleClass().setAll("tab-pane");
         setRole(AccessibleRole.TAB_PANE);
         setSelectionModel(new TabPaneSelectionModel(this));
 
-        tabs.addListener((ListChangeListener<Tab>) c -> {
+        this.tabs.addListener((ListChangeListener<Tab>) c -> {
             while (c.next()) {
                 for (Tab tab : c.getRemoved()) {
                     if (tab != null && !getTabs().contains(tab)) {
@@ -129,6 +139,10 @@ public class TabPane extends Control {
                 }
             }
         });
+
+        if (tabs != null) {
+            getTabs().addAll(tabs);
+        }
         
         // initialize pseudo-class state
         Side edge = getSide();

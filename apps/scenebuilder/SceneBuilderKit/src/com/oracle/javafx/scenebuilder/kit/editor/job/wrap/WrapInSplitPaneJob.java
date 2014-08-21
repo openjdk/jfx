@@ -58,12 +58,8 @@ public class WrapInSplitPaneJob extends AbstractWrapInSubComponentJob {
     }
 
     @Override
-    protected List<Job> modifyChildrenJobs(final List<FXOMObject> children) {
-        return Collections.emptyList();
-    }
-
-    @Override
-    protected void modifyContainer(final List<FXOMObject> children) {
+    protected void modifyNewContainer(final List<FXOMObject> children) {
+        super.modifyNewContainer(children);
 
         // Update the SplitPane orientation depending on its children positionning
         final Orientation orientation = getOrientation(children);

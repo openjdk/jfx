@@ -32,7 +32,6 @@
 package com.oracle.javafx.scenebuilder.kit.editor.job;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMPropertyC;
 import com.oracle.javafx.scenebuilder.kit.metadata.Metadata;
@@ -56,13 +55,11 @@ import javafx.scene.transform.Transform;
 /**
  *
  */
-public class FitToParentObjectJob extends Job {
+public class FitToParentObjectJob extends BatchDocumentJob {
 
     private final FXOMInstance fxomInstance;
     private final FXOMPropertyC parentProperty;
     private final FXOMInstance parentInstance;
-    private final List<BatchModifyObjectJob> subJobs = new ArrayList<>();
-    private String description; // final but initialized lazily
 
     private enum Sizing {
 
@@ -81,88 +78,35 @@ public class FitToParentObjectJob extends Job {
         this.fxomInstance = fxomInstance;
         this.parentProperty = fxomInstance.getParentProperty();
         this.parentInstance = (parentProperty == null) ? null : parentProperty.getParentInstance();
-
-        buildSubJobs();
-    }
-
-    /*
-     * Job
-     */
-    @Override
-    public boolean isExecutable() {
-        return subJobs.isEmpty() == false;
     }
 
     @Override
-    public void execute() {
-        final FXOMDocument fxomDocument
-                = getEditorController().getFxomDocument();
-        fxomDocument.beginUpdate();
-        for (BatchModifyObjectJob subJob : subJobs) {
-            subJob.execute();
-        }
-        fxomDocument.endUpdate();
-    }
+    protected List<Job> makeSubJobs() {
 
-    @Override
-    public void undo() {
-        final FXOMDocument fxomDocument
-                = getEditorController().getFxomDocument();
-        fxomDocument.beginUpdate();
-        for (int i = subJobs.size() - 1; i >= 0; i--) {
-            subJobs.get(i).undo();
-        }
-        fxomDocument.endUpdate();
-    }
-
-    @Override
-    public void redo() {
-        final FXOMDocument fxomDocument
-                = getEditorController().getFxomDocument();
-        fxomDocument.beginUpdate();
-        for (BatchModifyObjectJob subJob : subJobs) {
-            subJob.redo();
-        }
-        fxomDocument.endUpdate();
-    }
-
-    @Override
-    public String getDescription() {
-        if (description == null) {
-            final StringBuilder sb = new StringBuilder();
-            sb.append("Fit to Parent ");
-            final Object sceneGraphObject = fxomInstance.getSceneGraphObject();
-            assert sceneGraphObject != null;
-            sb.append(sceneGraphObject.getClass().getSimpleName());
-            description = sb.toString();
-        }
-        return description;
-    }
-
-    private void buildSubJobs() {
+        final List<Job> result = new ArrayList<>();
 
         // Object cannot be root
         if (parentProperty == null) {
-            return; // subJobs is empty => isExecutable will return false
+            return result; // subJobs is empty => isExecutable will return false
         }
         // Object must be a node
         final Object childObject = fxomInstance.getSceneGraphObject();
         if ((childObject instanceof Node) == false) {
-            return; // subJobs is empty => isExecutable will return false
+            return result; // subJobs is empty => isExecutable will return false
         }
         // Preview version : Node must be resizable (as in SB 1.1)
         // TODO : if the object is not resizable, 
         // update its bounds but do not anchor it.
         final Node childNode = (Node) childObject;
         if (childNode.isResizable() == false) {
-            return; // subJobs is empty => isExecutable will return false
+            return result; // subJobs is empty => isExecutable will return false
         }
         // Preview version : Parent node must be an AnchorPane (as in SB 1.1)
         // TODO : if the object container is a Pane, 
         // update its bounds but do not anchor it.
         final Object parentObject = parentInstance.getSceneGraphObject();
         if ((parentObject instanceof AnchorPane) == false) {
-            return; // subJobs is empty => isExecutable will return false
+            return result; // subJobs is empty => isExecutable will return false
         }
 
         final AnchorPane parentNode = (AnchorPane) parentObject;
@@ -190,53 +134,64 @@ public class FitToParentObjectJob extends Job {
 
         // Modify pref size jobs
         //----------------------------------------------------------------------
-        final BatchModifyObjectJob prefWidthJob = modifyJob("prefWidth", prefWidthValue);
+        final Job prefWidthJob = modifyJob("prefWidth", prefWidthValue);
         if (prefWidthJob.isExecutable()) { // Update if new value differs from old one
-            subJobs.add(prefWidthJob);
+            result.add(prefWidthJob);
         }
-        final BatchModifyObjectJob prefHeightJob = modifyJob("prefHeight", prefHeightValue);
+        final Job prefHeightJob = modifyJob("prefHeight", prefHeightValue);
         if (prefHeightJob.isExecutable()) { // Update if new value differs from old one
-            subJobs.add(prefHeightJob);
+            result.add(prefHeightJob);
         }
 
         // Modify Anchors Jobs
         //----------------------------------------------------------------------
-        final BatchModifyObjectJob leftAnchorJob = modifyAnchorJob(Anchor.LEFT, leftAnchorValue);
+        final Job leftAnchorJob = modifyAnchorJob(Anchor.LEFT, leftAnchorValue);
         if (leftAnchorJob.isExecutable()) { // Update if new value differs from old one
-            subJobs.add(leftAnchorJob);
+            result.add(leftAnchorJob);
         }
-        final BatchModifyObjectJob topAnchorJob = modifyAnchorJob(Anchor.TOP, topAnchorValue);
+        final Job topAnchorJob = modifyAnchorJob(Anchor.TOP, topAnchorValue);
         if (topAnchorJob.isExecutable()) { // Update if new value differs from old one
-            subJobs.add(topAnchorJob);
+            result.add(topAnchorJob);
         }
         if (isResizableX) {
-            final BatchModifyObjectJob rightAnchorJob = modifyAnchorJob(Anchor.RIGHT, 0.0);
+            final Job rightAnchorJob = modifyAnchorJob(Anchor.RIGHT, 0.0);
             if (rightAnchorJob.isExecutable()) { // Update if new value differs from old one
-                subJobs.add(rightAnchorJob);
+                result.add(rightAnchorJob);
             }
         }
         if (isResizableY) {
-            final BatchModifyObjectJob bottomAnchorJob = modifyAnchorJob(Anchor.BOTTOM, 0.0);
+            final Job bottomAnchorJob = modifyAnchorJob(Anchor.BOTTOM, 0.0);
             if (bottomAnchorJob.isExecutable()) { // Update if new value differs from old one
-                subJobs.add(bottomAnchorJob);
+                result.add(bottomAnchorJob);
             }
         }
+        return result;
+    }
+    
+    @Override
+    protected String makeDescription() {
+        final StringBuilder sb = new StringBuilder();
+        sb.append("Fit to Parent ");
+        final Object sceneGraphObject = fxomInstance.getSceneGraphObject();
+        assert sceneGraphObject != null;
+        sb.append(sceneGraphObject.getClass().getSimpleName());
+        return sb.toString();
     }
 
-    private BatchModifyObjectJob modifyJob(final Class<?> clazz, final String name, double value) {
+    private Job modifyJob(final Class<?> clazz, final String name, double value) {
         final PropertyName pn = new PropertyName(name, clazz);
         final ValuePropertyMetadata vpm
                 = Metadata.getMetadata().queryValueProperty(fxomInstance, pn);
-        final BatchModifyObjectJob subJob = new BatchModifyObjectJob(
+        final ModifyObjectJob subJob = new ModifyObjectJob(
                 fxomInstance, vpm, value, getEditorController());
         return subJob;
     }
 
-    private BatchModifyObjectJob modifyJob(final String name, double value) {
+    private Job modifyJob(final String name, double value) {
         return modifyJob(null, name, value);
     }
 
-    private BatchModifyObjectJob modifyAnchorJob(final Anchor anchor, double value) {
+    private Job modifyAnchorJob(final Anchor anchor, double value) {
         final String name = anchor.name().toLowerCase(Locale.ROOT) + "Anchor";
         return modifyJob(AnchorPane.class, name, value);
     }

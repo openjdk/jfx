@@ -79,7 +79,7 @@ public class FontSelectorDialog extends Dialog<Font> {
         dialogPane.setHeaderText("Select font");
 
         // FIXME extract to CSS
-        dialogPane.setGraphic(new ImageView(new Image(AccordionSkin.class.getResource("modena/hello.dialog-confirm.png").toExternalForm())));
+        dialogPane.setGraphic(new ImageView(new Image(AccordionSkin.class.getResource("modena/dialog-confirm.png").toExternalForm())));
         dialogPane.getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
         dialogPane.setContent(fontPanel);
     }

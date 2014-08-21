@@ -33,7 +33,6 @@ package com.oracle.javafx.scenebuilder.kit.editor.job.wrap;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.job.BatchJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.DeleteObjectJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
 import com.oracle.javafx.scenebuilder.kit.editor.job.JobUtils;
 import com.oracle.javafx.scenebuilder.kit.editor.job.ModifyFxControllerJob;
@@ -41,6 +40,7 @@ import com.oracle.javafx.scenebuilder.kit.editor.job.ModifyObjectJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.SetDocumentRootJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.ToggleFxRootJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.v2.AddPropertyValueJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.v2.RemovePropertyValueJob;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.AbstractSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
@@ -58,7 +58,6 @@ import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
 import javafx.scene.Node;
 import javafx.scene.Parent;
-import javafx.scene.layout.Region;
 
 /**
  * Main class used for the wrap jobs.
@@ -187,43 +186,36 @@ public abstract class AbstractWrapInJob extends Job {
         assert asg instanceof ObjectSelectionGroup; // Because of (1)
         final ObjectSelectionGroup osg = (ObjectSelectionGroup) asg;
 
-        // Retrieve the current container
+        // Retrieve the old container
         oldContainer = (FXOMInstance) osg.getAncestor();
 
         // Retrieve the children to be wrapped
         final List<FXOMObject> children = osg.getSortedItems();
 
         // Create the new container
-        newContainer = makeContainerInstance();
+        newContainer = makeNewContainerInstance();
+        // Update the new container
+        modifyNewContainer(children);
 
         //==================================================================
-        // STEP #1 UPDATE THE NEW CONTAINER
+        // STEP #1
         //==================================================================
         // If the target object is NOT the FXOM root :
-        // - we update the new container bounds and add it to the current container
-        // - we remove the children from the current container
+        // - we add the new container to the old container
+        // - we remove the children from the old container
         //------------------------------------------------------------------
         if (oldContainer != null) {
 
-            // Retrieve the current container property name in use
+            // Retrieve the old container property name in use
             final PropertyName oldContainerPropertyName
                     = WrapJobUtils.getContainerPropertyName(oldContainer, children);
-            // Retrieve the current container property (already defined and not null)
+            // Retrieve the old container property (already defined and not null)
             final FXOMPropertyC oldContainerProperty
                     = (FXOMPropertyC) oldContainer.getProperties().get(oldContainerPropertyName);
             assert oldContainerProperty != null
                     && oldContainerProperty.getParentInstance() != null;
 
-            // Update the new container before adding it to the old container
-            final DesignHierarchyMask oldContainerMask
-                    = new DesignHierarchyMask(oldContainer);
-            if (oldContainerMask.isFreeChildPositioning()
-                    && Region.class.isAssignableFrom(newContainer.getDeclaredClass())) { // Do not include Group new container
-                modifyContainerLayout(children);
-            }
-            modifyContainer(children);
-
-            // Add the new container to the current container
+            // Add the new container to the old container
             final int newContainerIndex = getIndex(oldContainer, children);
             final Job newContainerAddValueJob = new AddPropertyValueJob(
                     newContainer,
@@ -231,9 +223,9 @@ public abstract class AbstractWrapInJob extends Job {
                     newContainerIndex, getEditorController());
             batchJob.addSubJob(newContainerAddValueJob);
 
-            // Remove children from the current container
-            final List<Job> deleteChildrenJobs = deleteChildrenJobs(children);
-            batchJob.addSubJobs(deleteChildrenJobs);
+            // Remove children from the old container
+            final List<Job> removeChildrenJobs = removeChildrenJobs(oldContainerProperty, children);
+            batchJob.addSubJobs(removeChildrenJobs);
         } //
         //------------------------------------------------------------------
         // If the target object is the FXOM root :
@@ -272,15 +264,24 @@ public abstract class AbstractWrapInJob extends Job {
         }
 
         //==================================================================
-        // STEP #2 UPDATE THE NEW CONTAINER CHILDREN
+        // STEP #2
         //==================================================================
         // This step depends on the new container property 
         // (either either the SUB COMPONENT or the CONTENT property)
         //------------------------------------------------------------------
-        batchJob.addSubJobs(wrapInJobs(children));
+        batchJob.addSubJobs(wrapChildrenJobs(children));
     }
 
-    protected List<Job> addChildrenToPropertyJobs(
+    /**
+     * Used to wrap the specified children in the new container. May use either
+     * the SUB COMPONENT or the CONTENT property.
+     *
+     * @param children The children to be wrapped.
+     * @return A list of jobs.
+     */
+    protected abstract List<Job> wrapChildrenJobs(final List<FXOMObject> children);
+
+    protected List<Job> addChildrenJobs(
             final FXOMPropertyC containerProperty,
             final Collection<FXOMObject> children) {
 
@@ -298,91 +299,89 @@ public abstract class AbstractWrapInJob extends Job {
         return jobs;
     }
 
-    protected List<Job> deleteChildrenJobs(final List<FXOMObject> children) {
+    protected List<Job> removeChildrenJobs(
+            final FXOMPropertyC containerProperty,
+            final List<FXOMObject> children) {
 
         final List<Job> jobs = new ArrayList<>();
         for (FXOMObject child : children) {
             assert child instanceof FXOMInstance;
-            final Job deleteObjectJob = new DeleteObjectJob(
-                    child, getEditorController());
-            jobs.add(deleteObjectJob);
+            final Job removeValueJob = new RemovePropertyValueJob(
+                    child,
+                    getEditorController());
+            jobs.add(removeValueJob);
         }
         return jobs;
     }
 
     /**
-     * Used to wrap the children in the new container.
-     * May use either the SUB COMPONENT or the CONTENT property.
+     * Used to modify the specified children.
      *
-     * @param children
-     * @return
-     */
-    protected abstract List<Job> wrapInJobs(final List<FXOMObject> children);
-
-    /**
-     * Used to modify the children before adding them to this container.
-     *
+     * @param container
      * @param children The children to be modified.
      * @return A list of jobs.
      */
-    protected abstract List<Job> modifyChildrenJobs(final List<FXOMObject> children);
-
-    /**
-     * Used to modify this container before adding it to the specified container.
-     *
-     * Note that unlike the modifyChildrenJobs method, we must not use any job
-     * here but directly set the properties.
-     * Indeed, the new container is not yet part of the model.
-     *
-     * @param children The children of this container.
-     */
-    protected abstract void modifyContainer(final List<FXOMObject> children);
-
-    /**
-     * Used to modify the children layout properties.
-     *
-     * @param children The children.
-     * @return
-     */
-    protected List<Job> modifyChildrenLayoutJobs(final List<FXOMObject> children) {
+    protected List<Job> modifyChildrenJobs(final FXOMInstance container, final List<FXOMObject> children) {
 
         final List<Job> jobs = new ArrayList<>();
-        final Bounds unionOfBounds = WrapJobUtils.getUnionOfBounds(children);
+        final DesignHierarchyMask newContainerMask = new DesignHierarchyMask(container);
 
-        for (FXOMObject child : children) {
-            assert child.getSceneGraphObject() instanceof Node;
-            final Node childNode = (Node) child.getSceneGraphObject();
-            final Bounds childBounds = childNode.getLayoutBounds();
+        if (newContainerMask.isFreeChildPositioning()) {
+            final Bounds unionOfBounds = WrapJobUtils.getUnionOfBounds(children);
 
-            final Point2D point = childNode.localToParent(
-                    childBounds.getMinX(), childBounds.getMinY());
-            double layoutX = point.getX() - unionOfBounds.getMinX();
-            double layoutY = point.getY() - unionOfBounds.getMinY();
-            final ModifyObjectJob modifyLayoutX = WrapJobUtils.modifyObjectJob(
-                    (FXOMInstance) child, "layoutX", layoutX, getEditorController());
-            jobs.add(modifyLayoutX);
-            final ModifyObjectJob modifyLayoutY = WrapJobUtils.modifyObjectJob(
-                    (FXOMInstance) child, "layoutY", layoutY, getEditorController());
-            jobs.add(modifyLayoutY);
+            for (FXOMObject child : children) {
+                assert child.getSceneGraphObject() instanceof Node;
+                final Node childNode = (Node) child.getSceneGraphObject();
+                final Bounds childBounds = childNode.getLayoutBounds();
+
+                final Point2D point = childNode.localToParent(
+                        childBounds.getMinX(), childBounds.getMinY());
+                double layoutX = point.getX() - unionOfBounds.getMinX();
+                double layoutY = point.getY() - unionOfBounds.getMinY();
+                final ModifyObjectJob modifyLayoutX = WrapJobUtils.modifyObjectJob(
+                        (FXOMInstance) child, "layoutX", layoutX, getEditorController());
+                jobs.add(modifyLayoutX);
+                final ModifyObjectJob modifyLayoutY = WrapJobUtils.modifyObjectJob(
+                        (FXOMInstance) child, "layoutY", layoutY, getEditorController());
+                jobs.add(modifyLayoutY);
+            }
+        } else {
+            for (FXOMObject child : children) {
+                assert child.getSceneGraphObject() instanceof Node;
+
+                final ModifyObjectJob modifyLayoutX = WrapJobUtils.modifyObjectJob(
+                        (FXOMInstance) child, "layoutX", 0.0, getEditorController());
+                jobs.add(modifyLayoutX);
+                final ModifyObjectJob modifyLayoutY = WrapJobUtils.modifyObjectJob(
+                        (FXOMInstance) child, "layoutY", 0.0, getEditorController());
+                jobs.add(modifyLayoutY);
+            }
         }
         return jobs;
     }
 
     /**
-     * Used to modify the container layout properties.
+     * Used to modify the new container.
+     *
+     * Note that unlike the modifyChildrenJobs method, we do not use any job
+     * here but directly set the properties.
      *
      * @param children The children.
      */
-    protected void modifyContainerLayout(final List<FXOMObject> children) {
-
-        final Bounds unionOfBounds = WrapJobUtils.getUnionOfBounds(children);
-        JobUtils.setLayoutX(newContainer, Node.class, unionOfBounds.getMinX());
-        JobUtils.setLayoutY(newContainer, Node.class, unionOfBounds.getMinY());
+    protected void modifyNewContainer(final List<FXOMObject> children) {
+        if (oldContainer != null) {
+            final DesignHierarchyMask oldContainerMask = new DesignHierarchyMask(oldContainer);
+            if (oldContainerMask.isFreeChildPositioning()) {
+                final Bounds unionOfBounds = WrapJobUtils.getUnionOfBounds(children);
+                JobUtils.setLayoutX(newContainer, Node.class, unionOfBounds.getMinX());
+                JobUtils.setLayoutY(newContainer, Node.class, unionOfBounds.getMinY());
 //            JobUtils.setMinHeight(newContainer, Region.class, unionOfBounds.getHeight());
 //            JobUtils.setMinWidth(newContainer, Region.class, unionOfBounds.getMinY());
+            }
+        }
     }
 
-    protected FXOMInstance makeContainerInstance(final Class<?> containerClass) {
+    protected FXOMInstance makeNewContainerInstance(final Class<?> containerClass) {
         // Create new container instance
         final FXOMDocument newDocument = new FXOMDocument();
         final FXOMInstance result = new FXOMInstance(newDocument, containerClass);
@@ -392,13 +391,13 @@ public abstract class AbstractWrapInJob extends Job {
         return result;
     }
 
-    private FXOMInstance makeContainerInstance() {
-        return makeContainerInstance(newContainerClass);
+    private FXOMInstance makeNewContainerInstance() {
+        return AbstractWrapInJob.this.makeNewContainerInstance(newContainerClass);
     }
 
     /**
-     * Returns the index to be used in order to add the new container
-     * to the current container.
+     * Returns the index to be used in order to add the new container to the old
+     * container.
      *
      * @param container
      * @param fxomObjects

@@ -32,7 +32,6 @@
 package com.oracle.javafx.scenebuilder.kit.editor.job.wrap;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
-import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
 import com.oracle.javafx.scenebuilder.kit.editor.job.wrap.FXOMObjectCourseComparator.UnidimensionalComparator;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import java.util.ArrayList;
@@ -50,15 +49,6 @@ public class WrapInToolBarJob extends AbstractWrapInSubComponentJob {
     public WrapInToolBarJob(EditorController editorController) {
         super(editorController);
         newContainerClass = ToolBar.class;
-    }
-
-    @Override
-    protected List<Job> modifyChildrenJobs(final List<FXOMObject> children) {
-        return Collections.emptyList();
-    }
-
-    @Override
-    protected void modifyContainer(final List<FXOMObject> children) {
     }
 
     @Override

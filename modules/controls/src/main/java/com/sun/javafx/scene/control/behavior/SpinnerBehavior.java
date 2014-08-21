@@ -32,7 +32,11 @@ import javafx.scene.control.Spinner;
 import javafx.scene.control.SpinnerValueFactory;
 import javafx.util.Duration;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
+
+import static javafx.scene.input.KeyCode.*;
 
 public class SpinnerBehavior<T> extends BehaviorBase<Spinner<T>> {
 
@@ -62,9 +66,67 @@ public class SpinnerBehavior<T> extends BehaviorBase<Spinner<T>> {
     };
 
 
+
+    /***************************************************************************
+     *                                                                         *
+     * Constructors                                                            *
+     *                                                                         *
+     **************************************************************************/
+
     public SpinnerBehavior(Spinner<T> spinner) {
-        super(spinner, Collections.emptyList());
+        super(spinner, SPINNER_BINDINGS);
     }
+
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Key event handling                                                      *
+     *                                                                         *
+     **************************************************************************/
+
+    /**
+     * Indicates that a keyboard key has been pressed which represents the
+     * event (this could be space bar for example). As long as keyDown is true,
+     * we are also armed, and will ignore mouse events related to arming.
+     * Note this is made package private solely for the sake of testing.
+     */
+    private boolean keyDown;
+
+    protected static final List<KeyBinding> SPINNER_BINDINGS = new ArrayList<KeyBinding>();
+    static {
+        SPINNER_BINDINGS.add(new KeyBinding(UP, "increment-up"));
+        SPINNER_BINDINGS.add(new KeyBinding(RIGHT, "increment-right"));
+        SPINNER_BINDINGS.add(new KeyBinding(LEFT, "decrement-left"));
+        SPINNER_BINDINGS.add(new KeyBinding(DOWN, "decrement-down"));
+    }
+
+    @Override protected void callAction(String name) {
+        boolean vertical = arrowsAreVertical();
+
+        switch (name) {
+            case "increment-up": {
+                if (vertical) increment(1); else traverseUp(); break;
+            }
+            case "increment-right": {
+                if (! vertical) increment(1); else traverseRight(); break;
+            }
+            case "decrement-down": {
+                if (vertical) decrement(1); else traverseDown(); break;
+            }
+            case "decrement-left": {
+                if (! vertical) decrement(1); else traverseLeft(); break;
+            }
+            default: super.callAction(name); break;
+        }
+    }
+
+
+    /***************************************************************************
+     *                                                                         *
+     * API                                                                     *
+     *                                                                         *
+     **************************************************************************/
 
     public void increment(int steps) {
         getControl().increment(steps);
@@ -93,5 +155,21 @@ public class SpinnerBehavior<T> extends BehaviorBase<Spinner<T>> {
         if (timeline != null) {
             timeline.stop();
         }
+    }
+
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Implementation                                                          *
+     *                                                                         *
+     **************************************************************************/
+
+    private boolean arrowsAreVertical() {
+        final List<String> styleClass = getControl().getStyleClass();
+
+        return ! (styleClass.contains(Spinner.STYLE_CLASS_ARROWS_ON_LEFT_HORIZONTAL)  ||
+                  styleClass.contains(Spinner.STYLE_CLASS_ARROWS_ON_RIGHT_HORIZONTAL) ||
+                  styleClass.contains(Spinner.STYLE_CLASS_SPLIT_ARROWS_HORIZONTAL));
     }
 }

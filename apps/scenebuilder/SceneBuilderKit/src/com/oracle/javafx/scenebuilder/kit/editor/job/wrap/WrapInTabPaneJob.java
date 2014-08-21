@@ -42,7 +42,6 @@ import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask.Accessory;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
@@ -59,7 +58,7 @@ public class WrapInTabPaneJob extends AbstractWrapInJob {
     }
 
     @Override
-    protected List<Job> wrapInJobs(final List<FXOMObject> children) {
+    protected List<Job> wrapChildrenJobs(final List<FXOMObject> children) {
 
         final List<Job> jobs = new ArrayList<>();
 
@@ -75,7 +74,7 @@ public class WrapInTabPaneJob extends AbstractWrapInJob {
                 newContainer.getFxomDocument(), newContainerPropertyName);
 
         // Create the Tab sub container
-        final FXOMInstance tabContainer = makeContainerInstance(Tab.class);
+        final FXOMInstance tabContainer = makeNewContainerInstance(Tab.class);
         final DesignHierarchyMask tabContainerMask
                 = new DesignHierarchyMask(tabContainer);
         assert tabContainerMask.isAcceptingAccessory(Accessory.CONTENT);
@@ -98,12 +97,12 @@ public class WrapInTabPaneJob extends AbstractWrapInJob {
         //------------------------------------------------------------------
         // The selection is multiple :
         // - we set the tab container CONTENT property to a new AnchorPane sub container
-        // - we update the children bounds and add them to the new AnchorPane sub container
+        // - we add the children to the new AnchorPane sub container
         //------------------------------------------------------------------
         if (children.size() > 1) {
 
             // Create the AnchorPane sub container
-            final FXOMInstance subContainer = makeContainerInstance(AnchorPane.class);
+            final FXOMInstance subContainer = makeNewContainerInstance(AnchorPane.class);
             final DesignHierarchyMask subContainerMask
                     = new DesignHierarchyMask(subContainer);
 
@@ -122,15 +121,12 @@ public class WrapInTabPaneJob extends AbstractWrapInJob {
                     getEditorController());
             jobs.add(addValueJob);
 
-            // Update children bounds before adding them to the sub container
-            assert subContainerMask.isFreeChildPositioning();
-            final List<Job> modifyChildrenLayoutJobs
-                    = modifyChildrenLayoutJobs(children);
-            jobs.addAll(modifyChildrenLayoutJobs);
+            // Update children before adding them to the sub container
+            jobs.addAll(modifyChildrenJobs(subContainer, children));
 
             // Add the children to the sub container
             final List<Job> addChildrenJobs
-                    = addChildrenToPropertyJobs(subContainerProperty, children);
+                    = addChildrenJobs(subContainerProperty, children);
             jobs.addAll(addChildrenJobs);
 
             // Add the sub container property to the sub container instance
@@ -147,12 +143,11 @@ public class WrapInTabPaneJob extends AbstractWrapInJob {
         //------------------------------------------------------------------
         else {
             // Update children before adding them to the new container
-            final List<Job> modifyChildrenJobs = modifyChildrenJobs(children);
-            jobs.addAll(modifyChildrenJobs);
+            jobs.addAll(modifyChildrenJobs(newContainer, children));
 
             // Add the children to the Tab sub container
             final List<Job> addChildrenJobs
-                    = addChildrenToPropertyJobs(tabContainerProperty, children);
+                    = addChildrenJobs(tabContainerProperty, children);
             jobs.addAll(addChildrenJobs);
         }
 
@@ -173,14 +168,5 @@ public class WrapInTabPaneJob extends AbstractWrapInJob {
         jobs.add(addNewContainerPropertyJob);
 
         return jobs;
-    }
-
-    @Override
-    protected List<Job> modifyChildrenJobs(final List<FXOMObject> children) {
-        return Collections.emptyList();
-    }
-
-    @Override
-    protected void modifyContainer(final List<FXOMObject> children) {
     }
 }

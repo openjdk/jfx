@@ -130,7 +130,7 @@ class FTFontFile extends PrismFontFile {
         boolean lcd = strike.getAAMode() == FontResource.AA_LCD &&
                       FTFactory.LCD_SUPPORT;
 
-        int flags = OSFreetype.FT_LOAD_RENDER | OSFreetype.FT_LOAD_NO_HINTING;
+        int flags = OSFreetype.FT_LOAD_RENDER | OSFreetype.FT_LOAD_NO_HINTING | OSFreetype.FT_LOAD_NO_BITMAP;
         FT_Matrix matrix = strike.matrix;
         if (matrix != null) {
             OSFreetype.FT_Set_Transform(face, matrix, 0, 0);
