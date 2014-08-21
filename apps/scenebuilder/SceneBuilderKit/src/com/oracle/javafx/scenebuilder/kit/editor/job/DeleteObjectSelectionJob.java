@@ -34,8 +34,7 @@ package com.oracle.javafx.scenebuilder.kit.editor.job;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.editor.job.togglegroup.AdjustAllToggleGroupJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.v2.ClearSelectionJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.v2.CompositeJob;
+import com.oracle.javafx.scenebuilder.kit.editor.selection.AbstractSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
@@ -45,16 +44,11 @@ import java.util.List;
 /**
  * Delete job for ObjectSelectionGroup.
  */
-public class DeleteObjectSelectionJob extends CompositeJob {
+public class DeleteObjectSelectionJob extends BatchSelectionJob {
 
     public DeleteObjectSelectionJob(EditorController editorController) {
         super(editorController);
-        
     }
-
-    /*
-     * CompositeJob
-     */
 
     @Override
     protected List<Job> makeSubJobs() {
@@ -62,9 +56,6 @@ public class DeleteObjectSelectionJob extends CompositeJob {
         assert selection.getGroup() instanceof ObjectSelectionGroup;
         final ObjectSelectionGroup osg = (ObjectSelectionGroup) selection.getGroup();
         final List<Job> result = new ArrayList<>();
-        
-        // First we clear the selection
-        result.add(new ClearSelectionJob(getEditorController()));
         
         // Next we make one DeleteObjectJob for each selected objects
         int cannotDeleteCount = 0;
@@ -93,22 +84,27 @@ public class DeleteObjectSelectionJob extends CompositeJob {
     @Override
     protected String makeDescription() {
         final String result;
-        final List<Job> subJobs = getSubJobs();
-        final int subJobCount = subJobs.size();
-        assert (subJobCount == 0) || (subJobCount >= 3);
+        final int subJobCount = getSubJobs().size();
+        assert (subJobCount == 0) || (subJobCount >= 2);
         
         switch (subJobCount) {
             case 0:
                 result = "Unexecutable Delete"; // NO18N
                 break;
-            case 3: // Clear + one delete + one AdjustAllToggleGroup
-                result = subJobs.get(1).getDescription();
+            case 2: // one delete + one AdjustAllToggleGroup
+                result = getSubJobs().get(0).getDescription();
                 break;
             default:
-                result = I18N.getString("label.action.edit.delete.n", subJobCount-2);
+                result = I18N.getString("label.action.edit.delete.n", subJobCount-1);
                 break;
         }
         
         return result;
+    }
+
+    @Override
+    protected AbstractSelectionGroup getNewSelectionGroup() {
+        // Selection emptied
+        return null;
     }
 }

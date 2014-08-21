@@ -34,9 +34,8 @@ package com.oracle.javafx.scenebuilder.kit.editor.job;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.editor.job.togglegroup.AdjustAllToggleGroupJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.v2.ClearSelectionJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.v2.CompositeJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.v2.UpdateSelectionJob;
+import com.oracle.javafx.scenebuilder.kit.editor.selection.AbstractSelectionGroup;
+import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMCollection;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
@@ -52,19 +51,16 @@ import javafx.scene.input.Clipboard;
 /**
  *
  */
-public class PasteJob extends CompositeJob {
+public class PasteJob extends BatchSelectionJob {
     
     private final List<Job> insertJobs = new ArrayList<>();
     private FXOMObject targetObject;
+    private List<FXOMObject> newObjects;
 
     public PasteJob(EditorController editorController) {
         super(editorController);
     }
 
-    /*
-     * CompositeJob
-     */
-    
     @Override
     protected List<Job> makeSubJobs() {
         final List<Job> result = new ArrayList<>();
@@ -75,8 +71,7 @@ public class PasteJob extends CompositeJob {
             // Retrieve the FXOMObjects from the clipboard
             final ClipboardDecoder clipboardDecoder
                     = new ClipboardDecoder(Clipboard.getSystemClipboard());
-            final List<FXOMObject> newObjects 
-                    = clipboardDecoder.decode(fxomDocument);
+            newObjects = clipboardDecoder.decode(fxomDocument);
             assert newObjects != null; // But possible empty
 
             if (newObjects.isEmpty() == false) {
@@ -103,14 +98,12 @@ public class PasteJob extends CompositeJob {
                 if (targetObject == null) {
                     // Document is empty : only one object can be inserted
                     if (newObjects.size() == 1) {
-                        result.add(new ClearSelectionJob(getEditorController()));
                         final FXOMObject newObject0 = newObjects.get(0);
                         final SetDocumentRootJob subJob = new SetDocumentRootJob(
                                 newObject0,
                                 getEditorController());
                         result.add(subJob);
                         result.add(new AdjustAllToggleGroupJob(getEditorController()));
-                        result.add(new UpdateSelectionJob(newObject0, getEditorController()));
                         insertJobs.add(subJob);
                     }
                 } else {
@@ -126,7 +119,6 @@ public class PasteJob extends CompositeJob {
                         } else {
                             relocateDelta = 0.0;
                         }
-                        result.add(new ClearSelectionJob(getEditorController()));
                         for (FXOMObject newObject : newObjects) {
                             final InsertAsSubComponentJob subJob = new InsertAsSubComponentJob(
                                     newObject,
@@ -147,7 +139,6 @@ public class PasteJob extends CompositeJob {
                             }
                         }
                         result.add(new AdjustAllToggleGroupJob(getEditorController()));
-                        result.add(new UpdateSelectionJob(newObjects, getEditorController()));
                     }
                 }
             }
@@ -168,6 +159,16 @@ public class PasteJob extends CompositeJob {
         }
         
         return result;
+    }
+
+    @Override
+    protected AbstractSelectionGroup getNewSelectionGroup() {
+        assert newObjects != null; // But possibly empty
+        if (newObjects.isEmpty()) {
+            return null;
+        } else {
+            return new ObjectSelectionGroup(newObjects, newObjects.iterator().next(), null);
+        }
     }
 
     /*
