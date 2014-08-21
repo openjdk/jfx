@@ -849,15 +849,27 @@ public class Tab implements EventTarget, Styleable {
 
         Tab tab = (Tab) o;
 
-        if (content != null ? !content.equals(tab.content) : tab.content != null)
+        Node thisContent = getContent();
+        Node otherContent = tab.getContent();
+        if (thisContent != null ? !thisContent.equals(otherContent) : otherContent != null)
             return false;
-        if (graphic != null ? !graphic.equals(tab.graphic) : tab.graphic != null)
+
+        Node thisGraphic = getGraphic();
+        Node otherGraphic = tab.getGraphic();
+        if (thisGraphic != null ? !thisGraphic.equals(otherGraphic) : otherGraphic != null)
             return false;
-        if (selected != null ? !selected.equals(tab.selected) : tab.selected != null)
+
+        if (isSelected() != tab.isSelected())
             return false;
-        if (tabPane != null ? !tabPane.equals(tab.tabPane) : tab.tabPane != null)
+
+        TabPane thisTabPane = getTabPane();
+        TabPane otherTabPane = tab.getTabPane();
+        if (thisTabPane != null ? !thisTabPane.equals(otherTabPane) : otherTabPane != null)
             return false;
-        if (text != null ? !text.equals(tab.text) : tab.text != null)
+
+        String thisText = getText();
+        String otherText = tab.getText();
+        if (thisText != null ? !thisText.equals(otherText) : otherText != null)
             return false;
 
         return true;
@@ -865,11 +877,11 @@ public class Tab implements EventTarget, Styleable {
 
     /** {@inheritDoc} */
     @Override public int hashCode() {
-        int result = selected != null ? selected.hashCode() : 0;
-        result = 31 * result + (tabPane != null ? tabPane.hashCode() : 0);
-        result = 31 * result + (text != null ? text.hashCode() : 0);
-        result = 31 * result + (graphic != null ? graphic.hashCode() : 0);
-        result = 31 * result + (content != null ? content.hashCode() : 0);
+        int result = isSelected() ? 1 : 0;
+        result = 31 * result + (getTabPane() != null ? getTabPane().hashCode() : 0);
+        result = 31 * result + (getText() != null ? getText().hashCode() : 0);
+        result = 31 * result + (getGraphic() != null ? getGraphic().hashCode() : 0);
+        result = 31 * result + (getContent() != null ? getContent().hashCode() : 0);
         return result;
     }
 

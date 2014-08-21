@@ -70,10 +70,6 @@ import com.sun.javafx.scene.control.skin.TabPaneSkin;
 import com.sun.javafx.scene.input.KeyCodeMap;
 import com.sun.javafx.tk.Toolkit;
 
-/**
- *
- * @author srikalyc
- */
 public class TabPaneTest {
     private TabPane tabPane;//Empty string
     private Toolkit tk;
