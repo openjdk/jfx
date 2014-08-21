@@ -158,9 +158,9 @@ static jfieldID fid_pDblVal;
                 if (vt == VT_UNKNOWN) {
                     //TODO make sure AddRef on elements is not required ?
                     SafeArrayPutElement(psa, &i,  (void*)longPtr[i]);
-                } else if (vt == VT_I4){
+                } else if (vt == VT_I4) {
                     SafeArrayPutElement(psa, &i, (void*)&(intPtr[i]));
-                } else if (vt == VT_R8){
+                } else if (vt == VT_R8) {
                     SafeArrayPutElement(psa, &i, (void*)&(doublePtr[i]));
                 }
             }
@@ -656,8 +656,8 @@ IFACEMETHODIMP GlassAccessible::SetValue(LPCWSTR val)
     if (env == NULL) return E_FAIL;
     jstring str = env->NewString((const jchar *)val, (jsize)size);
     if (!CheckAndClearException(env)) {
-    	env->CallVoidMethod(m_jAccessible, mid_SetValueString, str);
-    	if (CheckAndClearException(env)) return E_FAIL;
+        env->CallVoidMethod(m_jAccessible, mid_SetValueString, str);
+        if (CheckAndClearException(env)) return E_FAIL;
     }
     return S_OK;
 }
@@ -754,7 +754,8 @@ IFACEMETHODIMP GlassAccessible::get_ColumnCount(int *pRetVal)
     return S_OK;
 }
 
-IFACEMETHODIMP GlassAccessible::get_RowCount(int *pRetVal) {
+IFACEMETHODIMP GlassAccessible::get_RowCount(int *pRetVal)
+{
     JNIEnv* env = GetEnv();
     if (env == NULL) return E_FAIL;
     *pRetVal = env->CallIntMethod(m_jAccessible, mid_get_RowCount);
@@ -762,7 +763,8 @@ IFACEMETHODIMP GlassAccessible::get_RowCount(int *pRetVal) {
     return S_OK;
 }
 
-IFACEMETHODIMP GlassAccessible::GetItem(int row, int column, IRawElementProviderSimple **pRetVal) {
+IFACEMETHODIMP GlassAccessible::GetItem(int row, int column, IRawElementProviderSimple **pRetVal)
+{
     if (pRetVal == NULL) return E_INVALIDARG;
     GlassAccessible* ptr = NULL;
     HRESULT hr = callLongMethod(mid_GetItem, &ptr, row, column);
@@ -773,7 +775,8 @@ IFACEMETHODIMP GlassAccessible::GetItem(int row, int column, IRawElementProvider
 /***********************************************/
 /*              IGridItemProvider              */
 /***********************************************/
-IFACEMETHODIMP GlassAccessible::get_Column(int *pRetVal) {
+IFACEMETHODIMP GlassAccessible::get_Column(int *pRetVal)
+{
     JNIEnv* env = GetEnv();
     if (env == NULL) return E_FAIL;
     *pRetVal = env->CallIntMethod(m_jAccessible, mid_get_Column);
@@ -790,7 +793,8 @@ IFACEMETHODIMP GlassAccessible::get_ColumnSpan(int *pRetVal)
     return S_OK;
 }
 
-IFACEMETHODIMP GlassAccessible::get_ContainingGrid(IRawElementProviderSimple **pRetVal){
+IFACEMETHODIMP GlassAccessible::get_ContainingGrid(IRawElementProviderSimple **pRetVal)
+{
     if (pRetVal == NULL) return E_INVALIDARG;
     GlassAccessible* ptr = NULL;
     HRESULT hr = callLongMethod(mid_get_ContainingGrid, &ptr);
@@ -807,7 +811,8 @@ IFACEMETHODIMP GlassAccessible::get_Row(int *pRetVal)
     return S_OK;
 }
 
-IFACEMETHODIMP GlassAccessible::get_RowSpan(int *pRetVal) {
+IFACEMETHODIMP GlassAccessible::get_RowSpan(int *pRetVal)
+{
     JNIEnv* env = GetEnv();
     if (env == NULL) return E_FAIL;
     *pRetVal = env->CallIntMethod(m_jAccessible, mid_get_RowSpan);
@@ -830,7 +835,8 @@ IFACEMETHODIMP GlassAccessible::GetRowHeaders(SAFEARRAY **pRetVal)
     return callArrayMethod(mid_GetRowHeaders, VT_UNKNOWN, pRetVal);
 }
 
-IFACEMETHODIMP GlassAccessible::get_RowOrColumnMajor(RowOrColumnMajor *pRetVal) {
+IFACEMETHODIMP GlassAccessible::get_RowOrColumnMajor(RowOrColumnMajor *pRetVal)
+{
     JNIEnv* env = GetEnv();
     if (env == NULL) return E_FAIL;
     *pRetVal = (RowOrColumnMajor) env->CallIntMethod(m_jAccessible, mid_get_RowOrColumnMajor);
