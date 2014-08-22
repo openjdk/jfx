@@ -244,6 +244,9 @@ public class FXOMInstance extends FXOMObject {
                         }
                     }
                 }
+                if (result != null) {
+                    break;
+                }
             }
         }
         
