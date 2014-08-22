@@ -66,8 +66,8 @@ public class MacAppStoreBundlerTest {
     static File appResourcesDir;
     static File fakeMainJar;
     static File hdpiIcon;
-    static File runtimeJdk;
-    static File runtimeJre;
+    static String runtimeJdk;
+    static String runtimeJre;
     static Set<File> appResources;
     static boolean retain = false;
 
@@ -76,15 +76,12 @@ public class MacAppStoreBundlerTest {
         // only run on mac
         Assume.assumeTrue(System.getProperty("os.name").toLowerCase().contains("os x"));
 
-        String packagerJdkRoot = System.getenv("PACKAGER_JDK_ROOT");
-        runtimeJdk = packagerJdkRoot == null ? null : new File(packagerJdkRoot);
-
-        String packagerJreRoot = System.getenv("PACKAGER_JRE_ROOT");
-        runtimeJre = packagerJreRoot == null ? null : new File(packagerJreRoot);
+        runtimeJdk = System.getenv("PACKAGER_JDK_ROOT");
+        runtimeJre = System.getenv("PACKAGER_JRE_ROOT");
 
         // and only if we have the correct JRE settings
         String jre = System.getProperty("java.home").toLowerCase();
-        Assume.assumeTrue(packagerJdkRoot != null || jre.endsWith("/contents/home/jre") || jre.endsWith("/contents/home/jre"));
+        Assume.assumeTrue(runtimeJdk != null || jre.endsWith("/contents/home/jre") || jre.endsWith("/contents/home/jre"));
 
         // make sure we have a default signing key
         String signingKeyName = MacAppStoreBundler.MAC_APP_STORE_APP_SIGNING_KEY.fetchFrom(new TreeMap<>());
@@ -294,9 +291,8 @@ public class MacAppStoreBundlerTest {
      */
     @Test(expected = ConfigException.class)
     public void testJRE() throws IOException, ConfigException, UnsupportedPlatformException {
-
-        File jre = runtimeJre == null ? new File("/Library/Internet Plug-Ins/JavaAppletPlugin.plugin/") : runtimeJre;
-        Assume.assumeTrue(jre.isDirectory());
+        String jre = runtimeJre == null ? "/Library/Internet Plug-Ins/JavaAppletPlugin.plugin/" : runtimeJre;
+        Assume.assumeTrue(new File(jre).isDirectory());
 
         AbstractBundler bundler = new MacAppStoreBundler();
 

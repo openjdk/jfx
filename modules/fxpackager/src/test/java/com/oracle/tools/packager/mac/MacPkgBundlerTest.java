@@ -64,7 +64,7 @@ public class MacPkgBundlerTest {
     static File appResourcesDir;
     static File fakeMainJar;
     static File hdpiIcon;
-    static File runtimeJdk;
+    static String runtimeJdk;
     static Set<File> appResources;
     static boolean retain = false;
 
@@ -73,12 +73,11 @@ public class MacPkgBundlerTest {
         // only run on mac
         Assume.assumeTrue(System.getProperty("os.name").toLowerCase().contains("os x"));
 
-        String packagerJdkRoot = System.getenv("PACKAGER_JDK_ROOT");
-        runtimeJdk = packagerJdkRoot == null ? null : new File(packagerJdkRoot);
+        runtimeJdk = System.getenv("PACKAGER_JDK_ROOT");
 
         // and only if we have the correct JRE settings
         String jre = System.getProperty("java.home").toLowerCase();
-        Assume.assumeTrue(packagerJdkRoot != null || jre.endsWith("/contents/home/jre") || jre.endsWith("/contents/home/jre"));
+        Assume.assumeTrue(runtimeJdk != null || jre.endsWith("/contents/home/jre") || jre.endsWith("/contents/home/jre"));
 
         Log.setLogger(new Log.Logger(true));
 
