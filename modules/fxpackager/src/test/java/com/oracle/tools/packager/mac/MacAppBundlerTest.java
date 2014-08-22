@@ -142,6 +142,10 @@ public class MacAppBundlerTest {
                 params.put(BUILD_ROOT.getID(), tmpBase);
                 params.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
 
+                if (runtimeJdk != null) {
+                    params.put(MAC_RUNTIME.getID(), runtimeJdk);
+                }
+
                 params.put(VERSION.getID(), v);
                 b.validate(params);
             } catch (ConfigException ce) {
@@ -349,7 +353,7 @@ public class MacAppBundlerTest {
         bundleParams.put(MAC_CF_BUNDLE_IDENTIFIER.getID(), "com.example.everything.cf-bundle-identifier");
         bundleParams.put(MAC_CF_BUNDLE_NAME.getID(), "Everything CF Bundle Name");
         bundleParams.put(MAC_CF_BUNDLE_VERSION.getID(), "8.2.0");
-        bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
+        bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk == null ? System.getProperty("java.home") : runtimeJdk);
         bundleParams.put(MAIN_CLASS.getID(), "hello.TestPackager");
         bundleParams.put(MAIN_JAR.getID(), "mainApp.jar");
         bundleParams.put(CLASSPATH.getID(), "mainApp.jar");
