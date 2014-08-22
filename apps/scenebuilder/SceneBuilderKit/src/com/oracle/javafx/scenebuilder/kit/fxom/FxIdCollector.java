@@ -120,7 +120,7 @@ class FxIdCollector {
             }
             if (endIndex < fxId.length()) {
                 this.prefix = fxId.substring(0, endIndex);
-                this.suffix = Integer.valueOf(fxId.substring(endIndex));
+                this.suffix = Integer.parseInt(fxId.substring(endIndex));
             } else {
                 this.prefix = fxId;
                 this.suffix = -1;
