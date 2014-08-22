@@ -159,6 +159,10 @@ public class MacAppBundlerTest {
                 params.put(BUILD_ROOT.getID(), tmpBase);
                 params.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
 
+                if (runtimeJdk != null) {
+                    params.put(MAC_RUNTIME.getID(), runtimeJdk);
+                }
+
                 params.put(MAC_CF_BUNDLE_VERSION.getID(), v);
                 b.validate(params);
             } catch (ConfigException ce) {
@@ -176,6 +180,10 @@ public class MacAppBundlerTest {
                 params.put(BUILD_ROOT.getID(), tmpBase);
                 params.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
 
+                if (runtimeJdk != null) {
+                    params.put(MAC_RUNTIME.getID(), runtimeJdk);
+                }
+
                 params.put(VERSION.getID(), v);
                 b.validate(params);
                 assertFalse("Invalid appVersion is not the mac.CFBundleVersion", MAC_CF_BUNDLE_VERSION.fetchFrom(params).equals(VERSION.fetchFrom(params)));
@@ -189,6 +197,10 @@ public class MacAppBundlerTest {
                 Map<String, Object> params = new HashMap<>();
                 params.put(BUILD_ROOT.getID(), tmpBase);
                 params.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+
+                if (runtimeJdk != null) {
+                    params.put(MAC_RUNTIME.getID(), runtimeJdk);
+                }
 
                 params.put(MAC_CF_BUNDLE_VERSION.getID(), v);
                 b.validate(params);
