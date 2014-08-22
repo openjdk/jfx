@@ -505,7 +505,13 @@ final class WinAccessible extends Accessible {
         if (container == null) return;
         Node item = null;
         switch (role) {
-            case LIST_ITEM:
+            case LIST_ITEM: {
+                Integer index = (Integer)getAttribute(INDEX);
+                if (index != null) {
+                    item = (Node)container.getAttribute(ITEM_AT_INDEX, index);
+                }
+                break;
+            }
             case TREE_ITEM: {
                 Integer index = (Integer)getAttribute(INDEX);
                 if (index != null) {
@@ -907,7 +913,7 @@ final class WinAccessible extends Accessible {
     private long NavigateListView(WinAccessible listItemAccessible, int direction) {
         Accessible listAccessible = listItemAccessible.getContainer();
         if (listAccessible == null) return 0;
-        Integer count = (Integer)listAccessible.getAttribute(ROW_COUNT);
+        Integer count = (Integer)listAccessible.getAttribute(ITEM_COUNT);
         if (count == null || count == 0) return 0;
         Integer index = (Integer)listItemAccessible.getAttribute(INDEX);
         if (index == null) return 0;
@@ -917,7 +923,7 @@ final class WinAccessible extends Accessible {
             case NavigateDirection_FirstChild: index = 0; break;
             case NavigateDirection_LastChild: index = count - 1; break;
         }
-        Node node = (Node)listAccessible.getAttribute(ROW_AT_INDEX, index);
+        Node node = (Node)listAccessible.getAttribute(ITEM_AT_INDEX, index);
         return getNativeAccessible(node);
     }
 
@@ -1750,6 +1756,8 @@ final class WinAccessible extends Accessible {
             Integer itemCount = 0;
             switch (role) {
                 case LIST_VIEW:
+                    itemCount = (Integer) getAttribute(ITEM_COUNT);
+                    break;
                 case TABLE_VIEW:
                 case TREE_VIEW:
                 case TREE_TABLE_VIEW:
@@ -1781,7 +1789,13 @@ final class WinAccessible extends Accessible {
         if (container == null) return;
         Node item = null;
         switch (role) {
-            case LIST_ITEM:
+            case LIST_ITEM: {
+                Integer index = (Integer)getAttribute(INDEX);
+                if (index != null) {
+                    item = (Node)container.getAttribute(ITEM_AT_INDEX, index);
+                }
+                break;
+            }
             case TREE_ITEM: {
                 Integer index = (Integer)getAttribute(INDEX);
                 if (index != null) {
