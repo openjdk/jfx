@@ -923,6 +923,7 @@ final class WinAccessible extends Accessible {
             case NavigateDirection_FirstChild: index = 0; break;
             case NavigateDirection_LastChild: index = count - 1; break;
         }
+        if (!(0 <= index && index < count)) return 0;
         Node node = (Node)listAccessible.getAttribute(ITEM_AT_INDEX, index);
         return getNativeAccessible(node);
     }
