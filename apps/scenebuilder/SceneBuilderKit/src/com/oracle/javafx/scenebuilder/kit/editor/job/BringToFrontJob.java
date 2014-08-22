@@ -32,35 +32,29 @@
 package com.oracle.javafx.scenebuilder.kit.editor.job;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
+import com.oracle.javafx.scenebuilder.kit.editor.job.togglegroup.AdjustAllToggleGroupJob;
+import com.oracle.javafx.scenebuilder.kit.editor.selection.AbstractSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.GridSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 /**
  *
  */
-public class BringToFrontJob extends ArrangeZOrderJob {
+public class BringToFrontJob extends BatchSelectionJob {
 
     public BringToFrontJob(EditorController editorController) {
         super(editorController);
-        buildSubJobs();
     }
-
     @Override
-    public String getDescription() {
-        if (description == null) {
-            buildDescription();
-        }
-        return description;
-    }
+    protected List<Job> makeSubJobs() {
 
-    /*
-     * Private
-     */
-    private void buildSubJobs() {
+        final List<Job> result = new ArrayList<>();
 
         final Set<FXOMObject> candidates = new HashSet<>();
         final Selection selection = getEditorController().getSelection();
@@ -81,30 +75,45 @@ public class BringToFrontJob extends ArrangeZOrderJob {
                 final ReIndexObjectJob subJob = new ReIndexObjectJob(
                         candidate, null, getEditorController());
                 if (subJob.isExecutable()) {
-                    subJobs.add(subJob);
+                    result.add(subJob);
                 }
             }
         }
+        
+        if (result.isEmpty() == false) {
+            // Finally we adjust toggle groups
+            result.add(new AdjustAllToggleGroupJob(getEditorController()));
+        }
+        return result;
     }
 
-    private void buildDescription() {
-        switch (subJobs.size()) {
+    @Override
+    protected String makeDescription() {
+        final String result;
+        switch (getSubJobs().size()) {
             case 0:
-                description = "Unexecutable Bring To Front"; // NO18N
+                result = "Unexecutable Bring To Front"; // NO18N
                 break;
-            case 1:
-                description = subJobs.get(0).getDescription();
+            case 2: // one arrange Z order + one AdjustAllToggleGroup
+                result = getSubJobs().get(0).getDescription();
                 break;
             default:
-                description = makeMultipleSelectionDescription();
+                result = makeMultipleSelectionDescription();
                 break;
         }
+        return result;
+    }
+
+    @Override
+    protected AbstractSelectionGroup getNewSelectionGroup() {
+        // Selection unchanged
+        return getOldSelectionGroup();
     }
 
     private String makeMultipleSelectionDescription() {
         final StringBuilder result = new StringBuilder();
         result.append("Bring To Front ");
-        result.append(subJobs.size());
+        result.append(getSubJobs().size() - 1);
         result.append(" Objects");
         return result.toString();
     }
