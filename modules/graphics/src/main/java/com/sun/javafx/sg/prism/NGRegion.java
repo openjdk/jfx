@@ -1498,13 +1498,27 @@ public class NGRegion extends NGGroup {
             join = BasicStroke.JOIN_ROUND;
         }
 
-        // If we're doing an INNER or OUTER stroke, then double the width. We end
-        // up trimming off the inner portion when doing an OUTER, or the outer
-        // portion when doing an INNER.
-        // NOTE: It doesn't appear that we have any code to actually draw INNER or OUTER strokes
-//        if (sb.getType() != StrokeType.CENTERED) {
-//            strokeWidth *= 2.0f;
-//        }
+        int type;
+        if (scaleShape) {
+            // Note: this is just a workaround that allows us to avoid shape bounds computation with the given stroke.
+            // By using inner stroke, we know the shape bounds and the shape will be scaled correctly, but the size of
+            // the stroke after the scale will be slightly different, but this should be visible only with big stroke widths
+            // See https://javafx-jira.kenai.com/browse/RT-38384
+            type = BasicStroke.TYPE_INNER;
+        } else {
+            switch (sb.getType()) {
+                case INSIDE:
+                    type = BasicStroke.TYPE_INNER;
+                    break;
+                case OUTSIDE:
+                    type = BasicStroke.TYPE_OUTER;
+                    break;
+                case CENTERED:
+                default:
+                    type = BasicStroke.TYPE_CENTERED;
+                    break;
+            }
+        }
 
         BasicStroke bs;
         if (sb == BorderStrokeStyle.NONE) {
@@ -1576,11 +1590,11 @@ public class NGRegion extends NGGroup {
                 dashOffset = (float) sb.getDashOffset();
             }
 
-            bs = new BasicStroke((float) strokeWidth, cap, join,
+            bs = new BasicStroke(type, (float) strokeWidth, cap, join,
                     (float) sb.getMiterLimit(),
                     array, dashOffset);
         } else {
-            bs = new BasicStroke((float) strokeWidth, cap, join,
+            bs = new BasicStroke(type, (float) strokeWidth, cap, join,
                     (float) sb.getMiterLimit());
         }
 
