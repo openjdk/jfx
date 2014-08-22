@@ -133,40 +133,6 @@ public class FXOMInstance extends FXOMObject {
     public String getType() {
         return getGlueElement().getAttributes().get(FXMLLoader.ROOT_TYPE_ATTRIBUTE);
     }
-        
-    
-    public static FXOMInstance newInstance(FXOMInstance source, FXOMDocument targetDocument) {
-        final FXOMInstance result;
-        
-        assert source != null;
-        assert targetDocument != null;
-        assert source.getFxomDocument() != targetDocument;
-        
-        if (source.getDeclaredClass() == null) {
-            assert source.getSceneGraphObject() == null; // source is unresolved
-            result = new FXOMInstance(
-                    targetDocument,
-                    source.getGlueElement().getTagName());
-        } else {
-            result = new FXOMInstance(
-                    targetDocument,
-                    source.getDeclaredClass());
-        }
-        
-        for (Map.Entry<PropertyName, FXOMProperty> e : source.getProperties().entrySet()) {
-            final FXOMProperty newProperty
-                    = FXOMNodes.newProperty(e.getValue(), targetDocument);
-            newProperty.addToParentInstance(-1, result);
-        }
-        
-        result.setFxConstant(source.getFxConstant());
-        result.setFxController(source.getFxController());
-        result.setFxFactory(source.getFxFactory());
-        result.setFxId(source.getFxId());
-        result.setFxValue(source.getFxValue());
-        
-        return result;
-    }
     
     /*
      * FXOMObject

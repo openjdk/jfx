@@ -92,33 +92,6 @@ public class FXOMCollection extends FXOMObject {
     }    
     
     
-    public static FXOMCollection newInstance(FXOMCollection source, FXOMDocument targetDocument) {
-        final FXOMCollection result;
-        
-        assert source != null;
-        assert targetDocument != null;
-        assert source.getFxomDocument() != targetDocument;
-        
-        
-        result = new FXOMCollection(
-                targetDocument,
-                source.getDeclaredClass());
-        
-        for (FXOMObject sourceItem : source.getItems()) {
-            final FXOMObject newItem = FXOMNodes.newObject(sourceItem, targetDocument);
-            newItem.addToParentCollection(-1, result);
-        }
-        
-        result.setFxConstant(source.getFxConstant());
-        result.setFxController(source.getFxController());
-        result.setFxFactory(source.getFxFactory());
-        result.setFxId(source.getFxId());
-        result.setFxValue(source.getFxValue());
-        
-        return result;
-    }
-    
-    
     /*
      * FXOMObject
      */

@@ -142,38 +142,6 @@ public class FXOMNodes {
     
     
     
-    public static FXOMNode newNode(FXOMNode source, FXOMDocument targetDocument) {
-        final FXOMNode result;
-        
-        if (source instanceof FXOMObject) {
-            result = newObject((FXOMObject) source, targetDocument);
-        } else if (source instanceof FXOMProperty) {
-            result = newProperty((FXOMProperty) source, targetDocument);
-        } else {
-            throw new IllegalArgumentException(FXOMNodes.class.getSimpleName()
-                    + " needs some additional implementation"); //NOI18N
-        }
-        
-        return result;
-    }
-    
-    public static FXOMObject newObject(FXOMObject source, FXOMDocument targetDocument) {
-        final FXOMObject result;
-        
-        if (source instanceof FXOMCollection) {
-            result = FXOMCollection.newInstance((FXOMCollection) source, targetDocument);
-        } else if (source instanceof FXOMInstance) {
-            result = FXOMInstance.newInstance((FXOMInstance) source, targetDocument);
-        } else if (source instanceof FXOMIntrinsic) {
-            result = FXOMIntrinsic.newInstance((FXOMIntrinsic) source, targetDocument);
-        } else {
-            throw new IllegalArgumentException(FXOMNodes.class.getSimpleName()
-                    + " needs some additional implementation"); //NOI18N
-        }
-        
-        return result;
-    }
-    
     public static FXOMObject newObject(FXOMDocument targetDocument, File file)
             throws IOException {
         assert targetDocument != null;
@@ -252,27 +220,17 @@ public class FXOMNodes {
 
         return result;
     }
-
-    public static FXOMProperty newProperty(FXOMProperty source, FXOMDocument targetDocument) {
-        final FXOMProperty result;
-        
-        if (source instanceof FXOMPropertyC) {
-            result = FXOMPropertyC.newInstance((FXOMPropertyC) source, targetDocument);
-        } else if (source instanceof FXOMPropertyT) {
-            result = FXOMPropertyT.newInstance((FXOMPropertyT) source, targetDocument);
-        }else {
-            throw new IllegalArgumentException(FXOMNodes.class.getSimpleName()
-                    + " needs some additional implementation");
-        }
-        
-        return result;
-    }
     
     public static FXOMDocument newDocument(FXOMObject source) {
         assert source != null;
         
         final FXOMDocument result = new FXOMDocument();
         
+        /*
+         * If source's document contains unresolved objects,
+         * then clones import instructions from the source document
+         * to the new document.
+         */
         final FXOMDocument sourceDocument 
                 = source.getFxomDocument();
         assert sourceDocument.getFxomRoot() != null; // contains at least source
@@ -288,10 +246,20 @@ public class FXOMNodes {
             }
         }
         
+        /*
+         * Clones source to the new document
+         */
+        final FXOMCloner cloner = new FXOMCloner(result);
+        final FXOMObject sourceClone = cloner.clone(source);
+        
+        /*
+         * Setup new document : sourceClone is the root, 
+         * same location, same class loader.
+         */
         result.beginUpdate();
         result.setLocation(sourceDocument.getLocation());
         result.setClassLoader(sourceDocument.getClassLoader());
-        result.setFxomRoot(FXOMNodes.newObject(source, result));
+        result.setFxomRoot(sourceClone);
         if (result.getFxomRoot() instanceof FXOMInstance) {
             trimStaticProperties((FXOMInstance) result.getFxomRoot());
         }

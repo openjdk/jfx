@@ -82,23 +82,6 @@ public class FXOMArchive implements Serializable {
         return result;
     }
     
-    public static boolean isArchivable(Collection<FXOMObject> fxomObjects) {
-        
-        // Checks that fxom objects are all self contained
-        int selfContainedCount = 0;
-        FXOMFxIdIndex fxomIndex = null;
-        for (FXOMObject o : fxomObjects) {
-            if ((fxomIndex == null) || (fxomIndex.getFxomDocument() != o.getFxomDocument())) {
-                fxomIndex = new FXOMFxIdIndex(o.getFxomDocument());
-            }
-            if (fxomIndex.isSelfContained(o)) {
-                selfContainedCount++;
-            }
-        }
-        
-        return selfContainedCount == fxomObjects.size();
-    }
-    
     
     public static class Entry implements Serializable {
         
