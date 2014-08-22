@@ -56,6 +56,10 @@ public class FXOMCloner {
     }
     
     public FXOMObject clone(FXOMObject clonee) {
+        return clone(clonee, false /* preserveCloneFxId */);
+    }
+    
+    public FXOMObject clone(FXOMObject clonee, boolean preserveCloneeFxId) {
         assert clonee != null;
         assert addedFxIds.isEmpty();
         
@@ -67,7 +71,7 @@ public class FXOMCloner {
         
         // Renames fxid in the clone so that there is no naming
         // conflict when the clone is hooked to its target document.
-        renameFxIds(result);
+        renameFxIds(result, preserveCloneeFxId);
         
         return result;
     }
@@ -293,9 +297,16 @@ public class FXOMCloner {
     
     
     
-    private void renameFxIds(FXOMObject clone) {
+    private void renameFxIds(FXOMObject clone, boolean preserveCloneeFxId) {
         
         final Map<String, FXOMObject> fxIds = clone.collectFxIds();
+        
+        if (preserveCloneeFxId && (clonee.getFxId() != null)) {
+            // We don't apply renaming to the fx:id of the clonee
+            assert clonee.getFxId().equals(clone.getFxId());
+            assert fxIds.get(clonee.getFxId()) == clone;
+            fxIds.remove(clonee.getFxId());
+        }
         
         for (String candidateFxId : new PriorityQueue<>(fxIds.keySet())) {
             
