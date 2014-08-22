@@ -92,6 +92,8 @@ public class NGCanvas extends NGNode {
     public static final byte POP_CLIP      = ATTR_BASE + 14;
     public static final byte ARC_TYPE      = ATTR_BASE + 15;
     public static final byte FILL_RULE     = ATTR_BASE + 16;
+    public static final byte DASH_ARRAY    = ATTR_BASE + 17;
+    public static final byte DASH_OFFSET   = ATTR_BASE + 18;
 
     public static final byte                     OP_BASE = 20;
     public static final byte FILL_RECT         = OP_BASE + 0;
@@ -316,6 +318,8 @@ public class NGCanvas extends NGNode {
     private float linewidth;
     private int linecap, linejoin;
     private float miterlimit;
+    private double[] dashes;
+    private float dashOffset;
     private BasicStroke stroke;
     private Path2D path;
     private NGText ngtext;
@@ -359,6 +363,8 @@ public class NGCanvas extends NGNode {
         linecap = BasicStroke.CAP_SQUARE;
         linejoin = BasicStroke.JOIN_MITER;
         miterlimit = 10f;
+        dashes = null;
+        dashOffset = 0.0f;
         stroke = null;
         path.setWindingRule(Path2D.WIND_NON_ZERO);
         // ngtext stores no state between render operations
@@ -752,7 +758,7 @@ public class NGCanvas extends NGNode {
     private BasicStroke getStroke() {
         if (stroke == null) {
             stroke = new BasicStroke(linewidth, linecap, linejoin,
-                                     miterlimit);
+                                     miterlimit, dashes, dashOffset);
         }
         return stroke;
     }
@@ -962,6 +968,14 @@ public class NGCanvas extends NGNode {
                     break;
                 case MITER_LIMIT:
                     miterlimit = buf.getFloat();
+                    stroke = null;
+                    break;
+                case DASH_ARRAY:
+                    dashes = (double[]) buf.getObject();
+                    stroke = null;
+                    break;
+                case DASH_OFFSET:
+                    dashOffset = buf.getFloat();
                     stroke = null;
                     break;
                 case FONT:

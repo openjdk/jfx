@@ -58,6 +58,7 @@ import javafx.scene.transform.Affine;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
+import java.util.Arrays;
 import java.util.LinkedList;
 
 /**
@@ -183,6 +184,22 @@ import java.util.LinkedList;
  * may extend in the direction of a sharp corner between segments in the
  * boundary path of a shape, relative to the line width, before it is truncated
  * to a {@link StrokeLineJoin#BEVEL BEVEL} join in a stroke operation.
+ * </td></tr>
+ * <tr class="altColor">
+ * <td class="colLast" style="width:15%">{@link #setLineDashes(double...) Dashes}</td>
+ * <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
+ * <td class="colLast" style="width:10%; text-align:center">{@code null}</td>
+ * <td class="colLast">
+ * The array of dash lengths to be applied to the segments in the boundary
+ * of shapes in a stroke operation.
+ * </td></tr>
+ * <tr class="rowColor">
+ * <td class="colLast" style="width:15%">{@link #setLineDashOffset(double) Dash Offset}</td>
+ * <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
+ * <td class="colLast" style="width:10%; text-align:center">{@code 0.0}</td>
+ * <td class="colLast">
+ * The distance offset into the array of dash lengths at which to start the
+ * dashing of the segments in the boundary of shapes in a stroke operation.
  * </td></tr>
  * 
  * <tr><th colspan="3"><a name="text-attr"><p align="center">Text Attributes</p></a></th></tr>
@@ -487,6 +504,8 @@ public final class GraphicsContext {
         StrokeLineCap linecap;
         StrokeLineJoin linejoin;
         double miterlimit;
+        double dashes[];
+        double dashOffset;
         int numClipPaths;
         Font font;
         TextAlignment textalign;
@@ -503,6 +522,7 @@ public final class GraphicsContext {
                 new Affine2D(),
                 Color.BLACK, Color.BLACK,
                 1.0, StrokeLineCap.SQUARE, StrokeLineJoin.MITER, 10.0,
+                null, 0.0,
                 0, Font.getDefault(), TextAlignment.LEFT, VPos.BASELINE,
                 null, FillRule.NON_ZERO);
         }
@@ -512,6 +532,7 @@ public final class GraphicsContext {
                 new Affine2D(copy.transform),
                 copy.fill, copy.stroke,
                 copy.linewidth, copy.linecap, copy.linejoin, copy.miterlimit,
+                copy.dashes, copy.dashOffset,
                 copy.numClipPaths,
                 copy.font, copy.textalign, copy.textbaseline,
                 copy.effect, copy.fillRule);
@@ -521,6 +542,7 @@ public final class GraphicsContext {
                      Affine2D transform, Paint fill, Paint stroke,
                      double linewidth, StrokeLineCap linecap,
                      StrokeLineJoin linejoin, double miterlimit,
+                     double dashes[], double dashOffset,
                      int numClipPaths,
                      Font font, TextAlignment align, VPos baseline,
                      Effect effect, FillRule fillRule)
@@ -528,7 +550,7 @@ public final class GraphicsContext {
             set(globalAlpha, blendop,
                 new Affine2D(transform),
                 fill, stroke,
-                linewidth, linecap, linejoin, miterlimit,
+                linewidth, linecap, linejoin, miterlimit, dashes, dashOffset,
                 numClipPaths,
                 font, textalign, textbaseline,
                 effect, fillRule);
@@ -538,6 +560,7 @@ public final class GraphicsContext {
                        Affine2D transform, Paint fill, Paint stroke,
                        double linewidth, StrokeLineCap linecap,
                        StrokeLineJoin linejoin, double miterlimit,
+                       double dashes[], double dashOffset,
                        int numClipPaths,
                        Font font, TextAlignment align, VPos baseline,
                        Effect effect, FillRule fillRule)
@@ -551,6 +574,8 @@ public final class GraphicsContext {
             this.linecap = linecap;
             this.linejoin = linejoin;
             this.miterlimit = miterlimit;
+            this.dashes = dashes;
+            this.dashOffset = dashOffset;
             this.numClipPaths = numClipPaths;
             this.font = font;
             this.textalign = align;
@@ -575,6 +600,8 @@ public final class GraphicsContext {
             ctx.setLineCap(linecap);
             ctx.setLineJoin(linejoin);
             ctx.setMiterLimit(miterlimit);
+            ctx.setLineDashes(dashes);
+            ctx.setLineDashOffset(dashOffset);
             GrowableDataBuffer buf = ctx.getBuffer();
             while (ctx.curState.numClipPaths > numClipPaths) {
                 ctx.curState.numClipPaths--;
@@ -1321,6 +1348,119 @@ public final class GraphicsContext {
      */
     public double getMiterLimit() {
         return curState.miterlimit;
+    }
+
+    /**
+     * Sets the current stroke line dash pattern to a normalized copy of
+     * the argument.
+     * The default value is {@code null}.
+     * The line dash array is a <a href="#strk-attr">stroke attribute</a>
+     * used for any of the stroke methods as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>.
+     * If the array is {@code null} or empty or contains all {@code 0} elements
+     * then dashing will be disabled and the current dash array will be set
+     * to {@code null}.
+     * If any of the elements of the array are a negative, infinite, or NaN
+     * value outside the range {@code [0, +inf)} then the entire array will
+     * be ignored and the current dash array will remain unchanged.
+     * If the array is an odd length then it will be treated as if it
+     * were two copies of the array appended to each other.
+     * 
+     * @param dashes the array of finite non-negative dash lengths
+     * @since JavaFX 8u40
+     */
+    public void setLineDashes(double... dashes) {
+        if (dashes == null || dashes.length == 0) {
+            if (curState.dashes == null) {
+                return;
+            }
+            curState.dashes = null;
+        } else {
+            boolean allZeros = true;
+            for (int i = 0; i < dashes.length; i++) {
+                double d = dashes[i];
+                if (d >= 0.0 && d < Double.POSITIVE_INFINITY) {
+                    // Non-NaN, finite, non-negative
+                    // Test cannot be inverted or it will not implicitly test for NaN
+                    if (d > 0) {
+                        allZeros = false;
+                    }
+                } else {
+                    return;
+                }
+            }
+            if (allZeros) {
+                if (curState.dashes == null) {
+                    return;
+                }
+                curState.dashes = null;
+            } else {
+                int dashlen = dashes.length;
+                if ((dashlen & 1) == 0) {
+                    curState.dashes = Arrays.copyOf(dashes, dashlen);
+                } else {
+                    curState.dashes = Arrays.copyOf(dashes, dashlen * 2);
+                    System.arraycopy(dashes, 0, curState.dashes, dashlen, dashlen);
+                }
+            }
+        }
+        GrowableDataBuffer buf = getBuffer();
+        buf.putByte(NGCanvas.DASH_ARRAY);
+        buf.putObject(curState.dashes);
+    }
+
+    /**
+     * Gets a copy of the current line dash array.
+     * The default value is {@code null}.
+     * The array may be normalized by the validation tests in the
+     * {@link #setLineDashes(double...)} method.
+     * The line dash array is a <a href="#strk-attr">stroke attribute</a>
+     * used for any of the stroke methods as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>.
+     * 
+     * @return a copy of the current line dash array.
+     * @since JavaFX 8u40
+     */
+    public double[] getLineDashes() {
+        if (curState.dashes == null) {
+            return null;
+        }
+        return Arrays.copyOf(curState.dashes, curState.dashes.length);
+    }
+
+    /**
+     * Sets the line dash offset.
+     * The default value is {@code 0.0}.
+     * The line dash offset is a <a href="#strk-attr">stroke attribute</a>
+     * used for any of the stroke methods as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>.
+     * An infinite or NaN value outside of the range {@code (-inf, +inf)}
+     * will be ignored and the current value will remain unchanged.
+     * 
+     * @param dashOffset the line dash offset in the range {@code (-inf, +inf)}
+     * @since JavaFX 8u40
+     */
+    public void setLineDashOffset(double dashOffset) {
+        // Per W3C spec: On setting, infinite, and NaN
+        // values must be ignored, leaving the value unchanged
+        if (dashOffset > Double.NEGATIVE_INFINITY && dashOffset < Double.POSITIVE_INFINITY) {
+            curState.dashOffset = dashOffset;
+            writeParam(dashOffset, NGCanvas.DASH_OFFSET);
+        }
+    }
+
+    /**
+     * Gets the current line dash offset.
+     * The default value is {@code 0.0}.
+     * The line dash offset is a <a href="#strk-attr">stroke attribute</a>
+     * used for any of the stroke methods as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>.
+     * 
+     * @return the line dash offset in the range {@code (-inf, +inf)}
+     * @since JavaFX 8u40
+     */
+    public double getLineDashOffset() {
+        return curState.dashOffset;
     }
 
     /**
@@ -2521,7 +2661,7 @@ public final class GraphicsContext {
         if (writer == null) {
             writer = new PixelWriter() {
                 @Override
-                public PixelFormat getPixelFormat() {
+                public PixelFormat<ByteBuffer> getPixelFormat() {
                     return PixelFormat.getByteBgraPreInstance();
                 }
 
@@ -2561,7 +2701,8 @@ public final class GraphicsContext {
                 }
 
                 private int[] checkBounds(int x, int y, int w, int h,
-                                          PixelFormat pf, int scan)
+                                          PixelFormat<? extends Buffer> pf,
+                                          int scan)
                 {
                     // assert (w >= 0 && h >= 0) - checked by caller
                     int cw = (int) Math.ceil(theCanvas.getWidth());
