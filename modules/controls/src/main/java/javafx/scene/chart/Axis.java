@@ -978,7 +978,7 @@ public abstract class Axis<T> extends Region {
     }
 
     final double getEffectiveTickLabelRotation() {
-        return Double.isNaN(effectiveTickLabelRotation) ? getTickLabelRotation() : effectiveTickLabelRotation;
+        return !isAutoRanging() || Double.isNaN(effectiveTickLabelRotation) ? getTickLabelRotation() : effectiveTickLabelRotation;
     }
 
     /**
