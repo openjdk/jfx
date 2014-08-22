@@ -4049,9 +4049,106 @@ public abstract class Node implements EventTarget, Styleable {
         return new BoundingBox(minX, minY, 0.0, maxX - minX, maxY - minY, 0.0);
     }
 
+
     /**
-     * Transforms a point from the coordinate space of the {@link Scene}
+     * Transforms a point from the coordinate space of the scene
      * into the local coordinate space of this {@code Node}.
+     * If the Node does not have any {@link SubScene} or {@code rootScene} is set to true, the arguments are in {@link Scene} coordinates
+     * of the Node returned by {@link #getScene()}. Othwerwise, the subscene coordinates are used, which is equivalent to calling
+     * {@link #sceneToLocal(double, double)}
+     * @param x the x coordinate
+     * @param y the y coordinate
+     * @param rootScene whether Scene coordinates should be used even if the Node is in a SubScene
+     * @return local coordinates of the point
+     * @since JavaFX 8u40
+     */
+    public Point2D sceneToLocal(double x, double y, boolean rootScene) {
+        if (!rootScene) {
+            return sceneToLocal(x, y);
+        }
+        final com.sun.javafx.geom.Point2D tempPt =
+                TempState.getInstance().point;
+
+        tempPt.setLocation((float)(x), (float)y);
+
+        final SubScene subScene = getSubScene();
+        if (subScene != null) {
+            final Point2D ssCoord = SceneUtils.sceneToSubScenePlane(subScene,
+                    new Point2D(tempPt.x, tempPt.y));
+            if (ssCoord == null) {
+                return null;
+            }
+            tempPt.setLocation((float) ssCoord.getX(), (float) ssCoord.getY());
+        }
+
+        try {
+            sceneToLocal(tempPt);
+            return new Point2D(tempPt.x, tempPt.y);
+        } catch (NoninvertibleTransformException e) {
+            return null;
+        }
+    }
+
+    /**
+     * Transforms a point from the coordinate space of the scene
+     * into the local coordinate space of this {@code Node}.
+     * If the Node does not have any {@link SubScene} or {@code rootScene} is set to true, the arguments are in {@link Scene} coordinates
+     * of the Node returned by {@link #getScene()}. Othwerwise, the subscene coordinates are used, which is equivalent to calling
+     * {@link #sceneToLocal(javafx.geometry.Point2D)}
+     * @param point the point
+     * @param rootScene whether Scene coordinates should be used even if the Node is in a SubScene
+     * @return local coordinates of the point
+     * @since JavaFX 8u40
+     */
+    public Point2D sceneToLocal(Point2D point, boolean rootScene) {
+        return sceneToLocal(point.getX(), point.getY(), rootScene);
+    }
+
+    /**
+     * Transforms a bounds from the coordinate space of the scene
+     * into the local coordinate space of this {@code Node}.
+     * If the Node does not have any {@link SubScene} or {@code rootScene} is set to true, the arguments are in {@link Scene} coordinates
+     * of the Node returned by {@link #getScene()}. Othwerwise, the subscene coordinates are used, which is equivalent to calling
+     * {@link #sceneToLocal(javafx.geometry.Bounds)}.
+     * <p>
+     *     Since 3D bounds cannot be converted with {@code rootScene} set to {@code true}, trying to convert 3D bounds will yield {@code null}.
+     * </p>
+     * @param bounds the bounds
+     * @param rootScene whether Scene coordinates should be used even if the Node is in a SubScene
+     * @return local coordinates of the bounds
+     * @since JavaFX 8u40
+     */
+    public Bounds sceneToLocal(Bounds bounds, boolean rootScene) {
+        if (!rootScene) {
+            return sceneToLocal(bounds);
+        }
+        if (bounds.getMinZ() != 0 || bounds.getMaxZ() != 0) {
+            return null;
+        }
+        final Point2D p1 = sceneToLocal(bounds.getMinX(), bounds.getMinY(), true);
+        final Point2D p2 = sceneToLocal(bounds.getMinX(), bounds.getMaxY(), true);
+        final Point2D p3 = sceneToLocal(bounds.getMaxX(), bounds.getMinY(), true);
+        final Point2D p4 = sceneToLocal(bounds.getMaxX(), bounds.getMaxY(), true);
+
+        if (p1 == null || p2 == null || p3 == null || p4 == null) {
+            return null;
+        }
+
+        final double minX = min4(p1.getX(), p2.getX(), p3.getX(), p4.getX());
+        final double maxX = max4(p1.getX(), p2.getX(), p3.getX(), p4.getX());
+        final double minY = min4(p1.getY(), p2.getY(), p3.getY(), p4.getY());
+        final double maxY = max4(p1.getY(), p2.getY(), p3.getY(), p4.getY());
+
+        return new BoundingBox(minX, minY, 0.0, maxX - minX, maxY - minY, 0.0);
+    }
+
+    /**
+     * Transforms a point from the coordinate space of the scene
+     * into the local coordinate space of this {@code Node}.
+     *
+     * Note that if this node is in a {@link SubScene}, the arguments should be in the subscene coordinates,
+     * not that of {@link javafx.scene.Scene}.
+     *
      * @param sceneX x coordinate of a point on a Scene
      * @param sceneY y coordinate of a point on a Scene
      * @return local Node's coordinates of the point or null if Node is not in a {@link Window}.
@@ -4070,8 +4167,12 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     /**
-     * Transforms a point from the coordinate space of the {@link javafx.scene.Scene}
+     * Transforms a point from the coordinate space of the scene
      * into the local coordinate space of this {@code Node}.
+     *
+     * Note that if this node is in a {@link SubScene}, the arguments should be in the subscene coordinates,
+     * not that of {@link javafx.scene.Scene}.
+     *
      * @param scenePoint a point on a Scene
      * @return local Node's coordinates of the point or null if Node is not in a {@link Window}.
      * Null is also returned if the transformation from local to Scene is not invertible.
@@ -4081,8 +4182,12 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     /**
-     * Transforms a point from the coordinate space of the {@link javafx.scene.Scene}
+     * Transforms a point from the coordinate space of the scene
      * into the local coordinate space of this {@code Node}.
+     *
+     * Note that if this node is in a {@link SubScene}, the arguments should be in the subscene coordinates,
+     * not that of {@link javafx.scene.Scene}.
+     *
      * @param scenePoint a point on a Scene
      * @return local Node's coordinates of the point or null if Node is not in a {@link Window}.
      * Null is also returned if the transformation from local to Scene is not invertible.
@@ -4093,8 +4198,12 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     /**
-     * Transforms a point from the coordinate space of the {@link javafx.scene.Scene}
+     * Transforms a point from the coordinate space of the scene
      * into the local coordinate space of this {@code Node}.
+     *
+     * Note that if this node is in a {@link SubScene}, the arguments should be in the subscene coordinates,
+     * not that of {@link javafx.scene.Scene}.
+     *
      * @param sceneX x coordinate of a point on a Scene
      * @param sceneY y coordinate of a point on a Scene
      * @param sceneZ z coordinate of a point on a Scene
@@ -4123,8 +4232,12 @@ public abstract class Node implements EventTarget, Styleable {
 
     /**
      * Transforms a rectangle from the coordinate space of the
-     * {@link javafx.scene.Scene} into the local coordinate space of this
+     * scene into the local coordinate space of this
      * {@code Node}.
+     *
+     * Note that if this node is in a {@link SubScene}, the arguments should be in the subscene coordinates,
+     * not that of {@link javafx.scene.Scene}.
+     *
      * @param sceneBounds bounds on a Scene
      * @return bounds in the local Node'space or null if Node is not in a {@link Window}.
      * Null is also returned if the transformation from local to Scene is not invertible.
@@ -4253,7 +4366,9 @@ public abstract class Node implements EventTarget, Styleable {
 
     /**
      * Transforms a point from the local coordinate space of this {@code Node}
-     * into the coordinate space of its {@link javafx.scene.Scene}.
+     * into the coordinate space of its scene.
+     * Note that if this node is in a {@link SubScene}, the result is in the subscene coordinates,
+     * not that of {@link javafx.scene.Scene}.
      * @param localX x coordinate of a point in Node's space
      * @param localY y coordinate of a point in Node's space
      * @return scene coordinates of the point or null if Node is not in a {@link Window}
@@ -4268,7 +4383,9 @@ public abstract class Node implements EventTarget, Styleable {
 
     /**
      * Transforms a point from the local coordinate space of this {@code Node}
-     * into the coordinate space of its {@link javafx.scene.Scene}.
+     * into the coordinate space of its scene.
+     * Note that if this node is in a {@link SubScene}, the result is in the subscene coordinates,
+     * not that of {@link javafx.scene.Scene}.
      * @param localPoint a point in Node's space
      * @return scene coordinates of the point or null if Node is not in a {@link Window}
      */
@@ -4278,7 +4395,10 @@ public abstract class Node implements EventTarget, Styleable {
 
     /**
      * Transforms a point from the local coordinate space of this {@code Node}
-     * into the coordinate space of its {@link javafx.scene.Scene}.
+     * into the coordinate space of its scene.
+     * Note that if this node is in a {@link SubScene}, the result is in the subscene coordinates,
+     * not that of {@link javafx.scene.Scene}.
+     * @see #localToScene(javafx.geometry.Point3D, boolean)
      * @since JavaFX 8.0
      */
     public Point3D localToScene(Point3D localPoint) {
@@ -4287,7 +4407,10 @@ public abstract class Node implements EventTarget, Styleable {
 
     /**
      * Transforms a point from the local coordinate space of this {@code Node}
-     * into the coordinate space of its {@link javafx.scene.Scene}.
+     * into the coordinate space of its scene.
+     * Note that if this node is in a {@link SubScene}, the result is in the subscene coordinates,
+     * not that of {@link javafx.scene.Scene}.
+     * @see #localToScene(double, double, double, boolean)
      * @since JavaFX 8.0
      */
     public Point3D localToScene(double x, double y, double z) {
@@ -4299,10 +4422,128 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     /**
+     * Transforms a point from the local coordinate space of this {@code Node}
+     * into the coordinate space of its scene.
+     * If the Node does not have any {@link SubScene} or {@code rootScene} is set to true, the result point is in {@link Scene} coordinates
+     * of the Node returned by {@link #getScene()}. Othwerwise, the subscene coordinates are used, which is equivalent to calling
+     * {@link #localToScene(javafx.geometry.Point3D)}
+     *
+     * @param localPoint the point in local coordinates
+     * @param rootScene whether Scene coordinates should be used even if the Node is in a SubScene
+     * @return transformed point
+     *
+     * @see #localToScene(javafx.geometry.Point3D)
+     * @since JavaFX 8u40
+     */
+    public Point3D localToScene(Point3D localPoint, boolean rootScene) {
+        Point3D pt = localToScene(localPoint);
+        if (rootScene) {
+            final SubScene subScene = getSubScene();
+            if (subScene != null) {
+                pt = SceneUtils.subSceneToScene(subScene, pt);
+            }
+        }
+        return pt;
+    }
+
+    /**
+     * Transforms a point from the local coordinate space of this {@code Node}
+     * into the coordinate space of its scene.
+     * If the Node does not have any {@link SubScene} or {@code rootScene} is set to true, the result point is in {@link Scene} coordinates
+     * of the Node returned by {@link #getScene()}. Othwerwise, the subscene coordinates are used, which is equivalent to calling
+     * {@link #localToScene(double, double, double)}
+     *
+     * @param x the x coordinate of the point in local coordinates
+     * @param y the y coordinate of the point in local coordinates
+     * @param z the z coordinate of the point in local coordinates
+     * @param rootScene whether Scene coordinates should be used even if the Node is in a SubScene
+     * @return transformed point
+     *
+     * @see #localToScene(double, double, double)
+     * @since JavaFX 8u40
+     */
+    public Point3D localToScene(double x, double y, double z, boolean rootScene) {
+        return localToScene(new Point3D(x, y, z), rootScene);
+    }
+
+    /**
+     * Transforms a point from the local coordinate space of this {@code Node}
+     * into the coordinate space of its scene.
+     * If the Node does not have any {@link SubScene} or {@code rootScene} is set to true, the result point is in {@link Scene} coordinates
+     * of the Node returned by {@link #getScene()}. Othwerwise, the subscene coordinates are used, which is equivalent to calling
+     * {@link #localToScene(javafx.geometry.Point2D)}
+     *
+     * @param localPoint the point in local coordinates
+     * @param rootScene whether Scene coordinates should be used even if the Node is in a SubScene
+     * @return transformed point
+     *
+     * @see #localToScene(javafx.geometry.Point2D)
+     * @since JavaFX 8u40
+     */
+    public Point2D localToScene(Point2D localPoint, boolean rootScene) {
+        if (!rootScene) {
+            return localToScene(localPoint);
+        }
+        Point3D pt = localToScene(localPoint.getX(), localPoint.getY(), 0, rootScene);
+        return new Point2D(pt.getX(), pt.getY());
+    }
+
+    /**
+     * Transforms a point from the local coordinate space of this {@code Node}
+     * into the coordinate space of its scene.
+     * If the Node does not have any {@link SubScene} or {@code rootScene} is set to true, the result point is in {@link Scene} coordinates
+     * of the Node returned by {@link #getScene()}. Othwerwise, the subscene coordinates are used, which is equivalent to calling
+     * {@link #localToScene(double, double)}
+     *
+     * @param x the x coordinate of the point in local coordinates
+     * @param y the y coordinate of the point in local coordinates
+     * @param rootScene whether Scene coordinates should be used even if the Node is in a SubScene
+     * @return transformed point
+     *
+     * @see #localToScene(double, double)
+     * @since JavaFX 8u40
+     */
+    public Point2D localToScene(double x, double y, boolean rootScene) {
+        return localToScene(new Point2D(x, y), rootScene);
+    }
+
+    /**
+     * Transforms a bounds from the local coordinate space of this {@code Node}
+     * into the coordinate space of its scene.
+     * If the Node does not have any {@link SubScene} or {@code rootScene} is set to true, the result bounds are in {@link Scene} coordinates
+     * of the Node returned by {@link #getScene()}. Othwerwise, the subscene coordinates are used, which is equivalent to calling
+     * {@link #localToScene(javafx.geometry.Bounds)}
+     *
+     * @param localBounds the bounds in local coordinates
+     * @param rootScene whether Scene coordinates should be used even if the Node is in a SubScene
+     * @return transformed bounds
+     *
+     * @see #localToScene(javafx.geometry.Bounds)
+     * @since JavaFX 8u40
+     */
+    public Bounds localToScene(Bounds localBounds, boolean rootScene) {
+        if (!rootScene) {
+            return localToScene(localBounds);
+        }
+        Point3D p1 = localToScene(localBounds.getMinX(), localBounds.getMinY(), localBounds.getMinZ(), true);
+        Point3D p2 = localToScene(localBounds.getMinX(), localBounds.getMinY(), localBounds.getMaxZ(), true);
+        Point3D p3 = localToScene(localBounds.getMinX(), localBounds.getMaxY(), localBounds.getMinZ(), true);
+        Point3D p4 = localToScene(localBounds.getMinX(), localBounds.getMaxY(), localBounds.getMaxZ(), true);
+        Point3D p5 = localToScene(localBounds.getMaxX(), localBounds.getMaxY(), localBounds.getMinZ(), true);
+        Point3D p6 = localToScene(localBounds.getMaxX(), localBounds.getMaxY(), localBounds.getMaxZ(), true);
+        Point3D p7 = localToScene(localBounds.getMaxX(), localBounds.getMinY(), localBounds.getMinZ(), true);
+        Point3D p8 = localToScene(localBounds.getMaxX(), localBounds.getMinY(), localBounds.getMaxZ(), true);
+        return createBoundingBox(p1, p2, p3, p4, p5, p6, p7, p8);
+    }
+
+    /**
      * Transforms a bounds from the local coordinate space of this
-     * {@code Node} into the coordinate space of its {@link javafx.scene.Scene}.
+     * {@code Node} into the coordinate space of its scene.
+     * Note that if this node is in a {@link SubScene}, the result is in the subscene coordinates,
+     * not that of {@link javafx.scene.Scene}.
      * @param localBounds bounds in Node's space
      * @return the bounds in the scene coordinates or null if Node is not in a {@link Window}
+     * @see #localToScene(javafx.geometry.Bounds, boolean)
      */
     public Bounds localToScene(Bounds localBounds) {
         // Do a quick update of localToParentTransform so that we can determine
@@ -5276,7 +5517,9 @@ public abstract class Node implements EventTarget, Styleable {
     /**
      * An affine transform that holds the computed local-to-scene transform.
      * This is the concatenation of all transforms in this node's parents and
-     * in this node, including all of the convenience transforms.
+     * in this node, including all of the convenience transforms up to the root.
+     * If this node is in a {@link javafx.scene.SubScene}, this property represents
+     * transforms up to the subscene, not the root scene.
      *
      * <p>
      * Note that when you register a listener or a binding to this property,
@@ -5285,6 +5528,7 @@ public abstract class Node implements EventTarget, Styleable {
      * property on many nodes may negatively affect performance of
      * transformation changes in their common parents.
      * </p>
+     *
      * @since JavaFX 2.2
      */
     public final ReadOnlyObjectProperty<Transform> localToSceneTransformProperty() {
