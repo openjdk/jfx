@@ -53,7 +53,6 @@ import javafx.scene.input.Clipboard;
  */
 public class PasteJob extends BatchSelectionJob {
     
-    private final List<Job> insertJobs = new ArrayList<>();
     private FXOMObject targetObject;
     private List<FXOMObject> newObjects;
 
@@ -104,10 +103,8 @@ public class PasteJob extends BatchSelectionJob {
                                 getEditorController());
                         result.add(subJob);
                         result.add(new AdjustAllToggleGroupJob(getEditorController()));
-                        insertJobs.add(subJob);
                     }
                 } else {
-                    // Checks if pasted objects are
                     // Build InsertAsSubComponent jobs
                     final DesignHierarchyMask targetMask = new DesignHierarchyMask(targetObject);
                     if (targetMask.isAcceptingSubComponent(newObjects)) {
@@ -126,7 +123,6 @@ public class PasteJob extends BatchSelectionJob {
                                     targetMask.getSubComponentCount(),
                                     getEditorController());
                             result.add(0, subJob);
-                            insertJobs.add(subJob);
                             if ((relocateDelta != 0.0) && newObject.isNode()) {
                                 final Node sceneGraphNode = (Node) newObject.getSceneGraphObject();
                                 final RelocateNodeJob relocateJob = new RelocateNodeJob(
@@ -152,7 +148,7 @@ public class PasteJob extends BatchSelectionJob {
     protected String makeDescription() {
         final String result;
         
-        if (insertJobs.size() == 1) {
+        if (newObjects.size() == 1) {
             result = makeSingleSelectionDescription();
         } else {
             result = makeMultipleSelectionDescription();
@@ -177,17 +173,8 @@ public class PasteJob extends BatchSelectionJob {
     private String makeSingleSelectionDescription() {
         final String result;
 
-        assert insertJobs.size() == 1;
-        final Job subJob0 = insertJobs.get(0);
-        final FXOMObject newObject;
-        if (subJob0 instanceof InsertAsSubComponentJob) {
-            final InsertAsSubComponentJob insertJob = (InsertAsSubComponentJob) subJob0;
-            newObject = insertJob.getNewObject();
-        } else {
-            assert subJob0 instanceof SetDocumentRootJob;
-            final SetDocumentRootJob setRootJob = (SetDocumentRootJob) subJob0;
-            newObject = setRootJob.getNewRoot();
-        }
+        assert newObjects.size() == 1;
+        final FXOMObject newObject = newObjects.get(0);
         if (newObject instanceof FXOMInstance) {
             final Object sceneGraphObject = newObject.getSceneGraphObject();
             if (sceneGraphObject != null) {
@@ -206,7 +193,7 @@ public class PasteJob extends BatchSelectionJob {
     }
 
     private String makeMultipleSelectionDescription() {
-        final int objectCount = insertJobs.size();
+        final int objectCount = newObjects.size();
         return I18N.getString("label.action.edit.paste.n", objectCount);
     }
     
