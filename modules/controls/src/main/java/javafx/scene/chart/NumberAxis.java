@@ -74,7 +74,10 @@ public final class NumberAxis extends ValueAxis<Number> {
     private BooleanProperty forceZeroInRange = new BooleanPropertyBase(true) {
         @Override protected void invalidated() {
             // This will effect layout if we are auto ranging
-            if(isAutoRanging()) requestAxisLayout();
+            if(isAutoRanging()) {
+                requestAxisLayout();
+                invalidateRange();
+            }
         }
 
         @Override

@@ -104,7 +104,13 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
 
     
     /** The scale factor from data units to visual units */
-    private ReadOnlyDoubleWrapper scale = new ReadOnlyDoubleWrapper(this, "scale", 0);
+    private ReadOnlyDoubleWrapper scale = new ReadOnlyDoubleWrapper(this, "scale", 0) {
+        @Override
+        protected void invalidated() {
+            requestAxisLayout();
+            measureInvalid = true;
+        }
+    };
     public final double getScale() { return scale.get(); }
     protected final void setScale(double scale) { this.scale.set(scale); }
     public final ReadOnlyDoubleProperty scaleProperty() { return scale.getReadOnlyProperty(); }

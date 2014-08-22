@@ -87,7 +87,7 @@ public abstract class Axis<T> extends Region {
     private double oldLength = 0;
     /** True when the current range invalid and all dependent calculations need to be updated */
     boolean rangeValid = false;
-    private boolean measureInvalid = false;
+    boolean measureInvalid = false;
 
     private BitSet labelsToSkip = new BitSet();
 
