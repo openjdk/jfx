@@ -23,17 +23,20 @@
  * questions.
  */
 
-package com.sun.javafx.iio;
+package com.sun.javafx.iio.bmp;
 
-import com.sun.javafx.iio.bmp.BMPImageLoaderFactory;
+import com.sun.javafx.iio.ImageFrame;
+import com.sun.javafx.iio.ImageLoader;
+import com.sun.javafx.iio.ImageLoaderFactory;
+import com.sun.javafx.iio.ImageTestHelper;
+import static com.sun.javafx.iio.bmp.BMPImageLoader.checkDisjointMasks;
+import static com.sun.javafx.iio.bmp.BMPImageLoader.isPow2Minus1;
 import com.sun.prism.Image;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBuffer;
 import java.awt.image.IndexColorModel;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import javax.imageio.ImageIO;
@@ -89,23 +92,13 @@ public class BMPImageLoaderTest {
         }
     }
 
-    Image loadImage(InputStream stream) {
+    Image loadImage(InputStream stream) throws IOException {
         ImageLoaderFactory loaderFactory = BMPImageLoaderFactory.getInstance();
-        ImageLoader loader = null;
-        try {
-            loader = loaderFactory.createImageLoader(stream);
-        } catch (IOException ioEx) {
-            fail("unexpected IOException: " + ioEx);
-        }
+        ImageLoader loader = loaderFactory.createImageLoader(stream);
         assertNotNull(loader);
 
-        try {
-            ImageFrame frame = loader.load(0, 0, 0, true, true);
-            return Image.convertImageFrame(frame);
-        } catch (IOException e) {
-            fail("unexpected IOException: " + e);
-        }
-        return null;
+        ImageFrame frame = loader.load(0, 0, 0, true, true);
+        return Image.convertImageFrame(frame);
     }
 
     BufferedImage create4BitImage() {
@@ -131,39 +124,43 @@ public class BMPImageLoaderTest {
         return new BufferedImage(testWidth, testHeight, type);
     }
 
-    void writeBMPImage(BufferedImage bImg, String fileName, String compression) {
-        ImageTestHelper.writeImage(bImg, fileName, "bmp", compression); 
-   }
+    void writeBMPFile(BufferedImage bImg, String fileName, String compression) {
+        try {
+            ImageTestHelper.writeImage(bImg, fileName, "bmp", compression);
+        } catch (IOException e) {
+            System.out.println("writeBMPFile " + fileName + " failed: " + e);
+        }
+    }
 
-    Image getImage(BufferedImage bImg, String compression) {
+    Image getImage(BufferedImage bImg, String compression) throws IOException {
         ByteArrayInputStream stream =
-                ImageTestHelper.writeImageToStream(bImg, "bmp", compression, null);
+                ImageTestHelper.writeImageToStream(bImg, "bmp", compression);
         return loadImage(stream);
     }
 
-    void testImageType(int type, String fileName, String compression) {
+    void testImageType(int type, String fileName, String compression) throws IOException {
         BufferedImage bImg = createImage(type);
         testImage(bImg, fileName, compression);
     }
 
-    void testImageType(int type, String fileName) {
+    void testImageType(int type, String fileName) throws IOException {
         BufferedImage bImg = createImage(type);
         testImage(bImg, fileName, null);
     }
 
-    void testImage(BufferedImage bImg, String fileName, String compression) {
+    void testImage(BufferedImage bImg, String fileName, String compression) throws IOException {
         //ImageTestHelper.drawImageHue(bImg);
         //ImageTestHelper.drawImageAll(bImg);
         ImageTestHelper.drawImageRandom(bImg);
         if (writeFiles) {
-            writeBMPImage(bImg, fileName, compression);
+            writeBMPFile(bImg, fileName, compression);
         }
         Image image = getImage(bImg, compression);
         compare(image, bImg);
     }
 
     @Test
-    public void testRT32213()  {
+    public void testRT32213() throws IOException  {
         final int[] bytes = {
             0x42, 0x4d, 0x42, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x3e, 0x00, 0x00, 0x00, 0x28, 0x00,
@@ -179,12 +176,8 @@ public class BMPImageLoaderTest {
         ByteArrayInputStream stream = constructStream(bytes);
         Image image = loadImage(stream);
         stream.reset();
-        try {
-            BufferedImage bImg = ImageIO.read(new MemoryCacheImageInputStream(stream));
-            compare(image, bImg);
-        } catch (IOException e) {
-            fail("unexpected IOException: " + e);
-        }
+        BufferedImage bImg = ImageIO.read(new MemoryCacheImageInputStream(stream));
+        compare(image, bImg);
     }
 
     private static class RT15619InputStream extends InputStream {
@@ -208,68 +201,68 @@ public class BMPImageLoaderTest {
     }
 
     @Test
-    public void testRT15619() {
+    public void testRT15619() throws IOException {
         BufferedImage bImg = createImage(BufferedImage.TYPE_INT_RGB);
         ImageTestHelper.drawImageRandom(bImg);
         ByteArrayInputStream stream =
-                ImageTestHelper.writeImageToStream(bImg, "bmp", null, null);
+                ImageTestHelper.writeImageToStream(bImg, "bmp", null);
         RT15619InputStream testStream = new RT15619InputStream(stream);
         Image image = loadImage(testStream);
         compare(image, bImg);
     }
 
     @Test
-    public void test1Bit() {
+    public void test1Bit() throws IOException {
         testImageType(BufferedImage.TYPE_BYTE_BINARY, "out1bit.bmp");
     }
 
     @Test
-    public void test4Bit() {
+    public void test4Bit() throws IOException {
         testImage(create4BitImage(), "out4bit.bmp", null);
     }
 
     //@Test
-    public void test4BitRLE() {
+    public void test4BitRLE() throws IOException {
         testImage(create4BitImage(), "out4bitRLE.bmp", "BI_RLE4");
     }
 
     @Test
-    public void test8Bit() {
+    public void test8Bit() throws IOException {
         testImageType(BufferedImage.TYPE_BYTE_INDEXED, "out8bit.bmp");
     }
 
     @Test
-    public void test8BitRLE() {
+    public void test8BitRLE() throws IOException {
         testImageType(BufferedImage.TYPE_BYTE_INDEXED, "out8bitRLE.bmp", "BI_RLE8");
     }
 
     @Test
-    public void test16Bit() {
+    public void test16Bit() throws IOException {
         testImageType(BufferedImage.TYPE_USHORT_555_RGB, "out16bit.bmp");
     }
 
     @Test
-    public void test24Bit() {
+    public void test24Bit() throws IOException {
         testImageType(BufferedImage.TYPE_INT_RGB, "out24bit.bmp");
     }
 
-    void testFile(String fileName, String outFileName, String compression) {
-        try {
-            Image image = loadImage(new FileInputStream(fileName));
-            BufferedImage bImg = ImageIO.read(new File(fileName));
-            if (writeFiles) {
-                writeBMPImage(bImg, outFileName, compression);
-            }
-            compare(image, bImg);
-        } catch (IOException e) {
-            fail("unexpected IOException: " + e);
-        }
+    @Test
+    public void testBitfields() throws IOException {
+        testImageType(BufferedImage.TYPE_USHORT_555_RGB, "out16bit555.bmp", "BI_BITFIELDS");
+        testImageType(BufferedImage.TYPE_USHORT_565_RGB, "out16bit565.bmp", "BI_BITFIELDS");
     }
 
-    //@Test
-    public void testFiles() {
-        testFile("pal4rle.bmp", "pal4rleOut.bmp", "BI_RLE4");
-        testFile("out4bitRLE.bmp", "out4bitRLEOut.bmp", "BI_RLE4");
-        testFile("pal8rletrns.bmp", "pal8rletrnsOut.bmp", null);
+    @Test
+    public void testMasks() {
+        assertTrue(checkDisjointMasks(1, 2, 4));
+        assertTrue(checkDisjointMasks(0x00F, 0x0F0, 0xF00));
+        assertFalse(checkDisjointMasks(1, 2, 5));
+        assertFalse(checkDisjointMasks(2, 1, 6));
+
+        assertTrue(isPow2Minus1(1));
+        assertTrue(isPow2Minus1(3));
+        assertTrue(isPow2Minus1(7));
+        assertFalse(isPow2Minus1(2));
+        assertFalse(isPow2Minus1(11));
     }
 }

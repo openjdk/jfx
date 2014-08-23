@@ -148,8 +148,11 @@ final class BitmapInfoHeader {
                 }
                 break;
             case BI_BITFIELDS:
-                throw new IOException("Unsupported BMP image: " +
-                        "Bitfields BMP files are not supported");
+                if (biBitCount != 16 && biBitCount != 32) {
+                    throw new IOException("Invalid BMP image: " +
+                            "Only 16 or 32 bpp images can use BITFIELDS compression");
+                }
+                break;
             case BI_RGB:
                 break;
             default:
@@ -169,6 +172,10 @@ final class BMPImageLoader extends ImageLoaderImpl {
     int   bfOffBits;
     byte  bgra_palette[];
     BitmapInfoHeader bih;
+    
+    // BI_BITFIELDS support
+    int bitMasks[];
+    int bitOffsets[];
 
     BMPImageLoader(InputStream input) throws IOException {
         super(BMPDescriptor.theInstance);
@@ -198,6 +205,49 @@ final class BMPImageLoader extends ImageLoaderImpl {
                 data.in.skip(length - read);
             }
         }
+        
+        if (bih.biCompression == BitmapInfoHeader.BI_BITFIELDS) {
+            parseBitfields();
+        } else if (bih.biCompression == BitmapInfoHeader.BI_RGB &&
+                bih.biBitCount == 16)
+        {
+            bitMasks = new int[] { 0x7C00, 0x3E0, 0x1F };
+            bitOffsets = new int[] { 10, 5, 0 };
+        }
+    }
+
+    private void parseBitfields() throws IOException {
+        if (bgra_palette.length != 12) {
+            throw new IOException("Invalid bit masks");
+        }
+        bitMasks = new int[3];
+        bitOffsets = new int[3];
+        for (int i = 0; i < 3; i++) {
+            int mask = getDWord(bgra_palette, i * 4);
+            bitMasks[i] = mask;
+            int offset = 0;
+            if (mask != 0) {
+                while ((mask & 1) == 0) {
+                    offset++;
+                    mask = mask >>> 1;
+                }
+                if (!isPow2Minus1(mask)) {
+                    throw new IOException("Bit mask is not contiguous");
+                }
+            }
+            bitOffsets[i] = offset;
+        }
+        if (!checkDisjointMasks(bitMasks[0], bitMasks[1], bitMasks[2])) {
+            throw new IOException("Bit masks overlap");
+        }
+    }
+
+    static boolean checkDisjointMasks(int m1, int m2, int m3) {
+        return ((m1 & m2) | (m1 & m3) | (m2 & m3)) == 0;
+    }
+
+    static boolean isPow2Minus1(int i) {
+        return (i & (i + 1)) == 0;
     }
 
     @Override
@@ -309,6 +359,13 @@ final class BMPImageLoader extends ImageLoaderImpl {
         }
     }
 
+    private static int getDWord(byte[] buf, int pos) {
+        return ((buf[pos    ] & 0xff)     ) |
+               ((buf[pos + 1] & 0xff) << 8) |
+               ((buf[pos + 2] & 0xff) << 16) |
+               ((buf[pos + 3] & 0xff) << 24);
+    }
+
     private static int getWord(byte[] buf, int pos) {
         return ((buf[pos    ] & 0xff)     ) |
                ((buf[pos + 1] & 0xff) << 8);
@@ -318,12 +375,24 @@ final class BMPImageLoader extends ImageLoaderImpl {
         return buf[pos] & 0xff;
     }
 
-    private byte convertFrom5to8Bit(int i) {
-        byte b = (byte)(i & 0x1F);
+    @FunctionalInterface
+    private interface BitConverter {
+        public byte convert(int i, int mask, int offset);
+    }
+
+    private static byte convertFrom5To8Bit(int i, int mask, int offset) {
+        int b = (i & mask) >>> offset;
         return (byte)(b << 3 | b >> 2);
     }
 
-    private void read16Bit555(byte[] image, int rowLength, int hght) throws IOException {
+    private static byte convertFromXTo8Bit(int i, int mask, int offset) {
+        int b = (i & mask) >>> offset;
+        return (byte)(b * 255.0 / (mask >>> offset));
+    }
+
+    private void read16Bit(byte[] image, int rowLength, int hght, BitConverter converter)
+            throws IOException
+    {
         int bytesPerLine = bih.biWidth * 2;
         int srcStride = (bytesPerLine + 3) & ~3;
         byte lineBuf[] = new byte[srcStride];
@@ -334,9 +403,10 @@ final class BMPImageLoader extends ImageLoaderImpl {
 
             for (int x = 0; x != bih.biWidth; x++) {
                 int element = getWord(lineBuf, x * 2);
-                image[dstOffset++] = convertFrom5to8Bit(element >> 10);
-                image[dstOffset++] = convertFrom5to8Bit(element >> 5);
-                image[dstOffset++] = convertFrom5to8Bit(element);
+                for (int j = 0; j < 3; j++) {
+                    image[dstOffset++] =
+                            converter.convert(element, bitMasks[j], bitOffsets[j]);
+                }
             }
         }
     }
@@ -354,6 +424,25 @@ final class BMPImageLoader extends ImageLoaderImpl {
                 image[dstOff++] = lineBuf[srcOff + 2];
                 image[dstOff++] = lineBuf[srcOff + 1];
                 image[dstOff++] = lineBuf[srcOff    ];
+            }
+        }
+    }
+
+    private void read32BitBF(byte[] image, int rowLength, int hght) throws IOException {
+        int bytesPerLine = bih.biWidth * 4;
+        byte lineBuf[] = new byte[bytesPerLine];
+        for (int i = 0; i != hght; ++i) {
+            ImageTools.readFully(data.in, lineBuf);
+            int line = bih.biHeight < 0 ? i : hght - i - 1;
+            int dstOff = line * rowLength;
+
+            for (int x = 0; x != bih.biWidth; x++) {
+                int srcOff = x * 4;
+                int element = getDWord(lineBuf, srcOff);
+                for (int j = 0; j < 3; j++) {
+                    image[dstOff++] =
+                            convertFromXTo8Bit(element, bitMasks[j], bitOffsets[j]);
+                }
             }
         }
     }
@@ -423,10 +512,18 @@ final class BMPImageLoader extends ImageLoaderImpl {
                 }
                 break;
             case 16:
-                read16Bit555(image, stride, hght);
+                if (bih.biCompression == BitmapInfoHeader.BI_BITFIELDS) {
+                    read16Bit(image, stride, hght, BMPImageLoader::convertFromXTo8Bit);
+                } else {
+                    read16Bit(image, stride, hght, BMPImageLoader::convertFrom5To8Bit);
+                }
                 break;
             case 32:
-                read32BitRGB(image, stride, hght);
+                if (bih.biCompression == BitmapInfoHeader.BI_BITFIELDS) {
+                    read32BitBF(image, stride, hght);
+                } else {
+                    read32BitRGB(image, stride, hght);
+                }
                 break;
             case 24:
                 read24Bit(image, stride, hght);

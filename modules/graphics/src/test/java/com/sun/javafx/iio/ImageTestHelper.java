@@ -40,11 +40,12 @@ import javax.imageio.ImageIO;
 import javax.imageio.ImageWriteParam;
 import javax.imageio.ImageWriter;
 import javax.imageio.stream.ImageOutputStream;
-import static org.junit.Assert.fail;
 
 public class ImageTestHelper {
 
-    static void writeImage(BufferedImage bImg, String fileName, String format, String compression) {
+    public static void writeImage(BufferedImage bImg, String fileName, String format, String compression)
+            throws IOException
+    {
         if (fileName != null) {
             File file = new File(fileName);
             file.delete();
@@ -52,7 +53,9 @@ public class ImageTestHelper {
         }
     }
 
-    static void writeImage(BufferedImage bImg, Object out, String format, String compression) {
+    public static void writeImage(BufferedImage bImg, Object out, String format, String compression)
+            throws IOException
+    {
         try (ImageOutputStream ios = ImageIO.createImageOutputStream(out)) {
             Iterator<ImageWriter> iter = ImageIO.getImageWritersByFormatName(format);
             ImageWriter writer = iter.next();
@@ -68,23 +71,18 @@ public class ImageTestHelper {
                 writer.dispose();
                 ios.flush();
             }
-        } catch (IOException e) {
-            fail("unexpected IOException: " + e);
         }
     }
 
-    static ByteArrayInputStream writeImageToStream(BufferedImage bImg,
-            String format, String compression, File file)
+    public static ByteArrayInputStream writeImageToStream(BufferedImage bImg,
+            String format, String compression) throws IOException
     {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         writeImage(bImg, out, format, compression);
-        if (file != null) {
-            writeImage(bImg, file, format, compression);
-        }
         return new ByteArrayInputStream(out.toByteArray());
     }
 
-    static void drawImageGradient(BufferedImage bImg) {
+    public static void drawImageGradient(BufferedImage bImg) {
         int w = bImg.getWidth();
         int h = bImg.getHeight();
         Graphics2D graphics = bImg.createGraphics();
@@ -93,7 +91,7 @@ public class ImageTestHelper {
         graphics.fillRect(0, 0, w, h);
     }
 
-    static void drawImageRandom(BufferedImage bImg) {
+    public static void drawImageRandom(BufferedImage bImg) {
         int w = bImg.getWidth();
         int h = bImg.getHeight();
         Random r = new Random(1);
@@ -104,7 +102,7 @@ public class ImageTestHelper {
         }
     }
 
-    static void drawImageHue(BufferedImage bImg) {
+    public static void drawImageHue(BufferedImage bImg) {
         int w = bImg.getWidth();
         int h = bImg.getHeight();
         for (int y = 0; y < h; y++) {
@@ -123,7 +121,7 @@ public class ImageTestHelper {
         }
     }
 
-    static void drawImageAll(BufferedImage bImg) {
+    public static void drawImageAll(BufferedImage bImg) {
         int w = bImg.getWidth();
         int h = bImg.getHeight();
         //if (h*w < (1<<24)) return;
