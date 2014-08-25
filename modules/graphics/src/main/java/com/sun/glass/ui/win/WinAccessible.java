@@ -597,7 +597,6 @@ final class WinAccessible extends Accessible {
                 break;
             case LIST_VIEW:
                 impl = patternId == UIA_SelectionPatternId ||
-                       patternId == UIA_GridPatternId ||
                        patternId == UIA_ScrollPatternId;
                 break;
             case TREE_TABLE_CELL:
@@ -615,7 +614,6 @@ final class WinAccessible extends Accessible {
                 break;
             case LIST_ITEM:
                 impl = patternId == UIA_SelectionItemPatternId ||
-                       patternId == UIA_GridItemPatternId ||
                        patternId == UIA_ScrollItemPatternId;
                 break;
             case TREE_ITEM:
