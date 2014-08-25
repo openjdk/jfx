@@ -54,8 +54,6 @@ import com.sun.javafx.css.converters.SizeConverter;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 
-import javax.swing.text.DefaultFormatter;
-
 /**
  * A axis class that plots a range of numbers with major tick marks every "tickUnit". You can use any Number type with
  * this axis, Long, Double, BigDecimal etc.
@@ -430,7 +428,7 @@ public final class NumberAxis extends ValueAxis<Number> {
             if (numOfTickMarks == 2 && reqLength > length) {
                 break;
             }
-            if (count > 20) tickUnit *= 2; // This is just for the while loop, if there are still too many ticks
+            if (reqLength > length || count > 20) tickUnit *= 2; // This is just for the while loop, if there are still too many ticks
         }
         // calculate new scale
         final double newScale = calculateNewScale(length, minRounded, maxRounded);
