@@ -917,6 +917,13 @@ final class WinAccessible extends Accessible {
         if (count == null || count == 0) return 0;
         Integer index = (Integer)listItemAccessible.getAttribute(INDEX);
         if (index == null) return 0;
+
+        /* A view implementation can use stock items to measuring, these items can 
+         * have index equal to -1 for identification. See ViewFlow#accumCell as an example.
+         * These items should be ignored to avoid incorrect item count computation by
+         * the screen reader.
+         */
+        if (!(0 <= index && index < count)) return 0;
         switch (direction) {
             case NavigateDirection_NextSibling: index++; break;
             case NavigateDirection_PreviousSibling: index--; break;
