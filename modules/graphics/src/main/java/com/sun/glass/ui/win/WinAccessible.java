@@ -1023,6 +1023,15 @@ final class WinAccessible extends Accessible {
             case NavigateDirection_FirstChild:
             case NavigateDirection_LastChild: {
                 lastIndex = -1;
+                if (role == AccessibleRole.LIST_VIEW) {
+                    /* Windows 7. Initially the ComboBox contains the ListView,
+                     * but the ListCells will only be created if one an item is 
+                     * selected. This causes Narrator to read combo box with
+                     * zero items. The fix is to ask for first item, which will
+                     * cause NavigateListView to be used.
+                     * */
+                    getAttribute(ITEM_AT_INDEX, 0);
+                }
                 if (role == AccessibleRole.TREE_VIEW) {
                     /* The TreeView only returns the root node as child */
                     lastIndex = 0;
