@@ -65,6 +65,7 @@
 #define IS_WINXP IS_WINVER_ATLEAST(5, 1)
 #define IS_WINVISTA IS_WINVER_ATLEAST(6, 0)
 #define IS_WIN7 IS_WINVER_ATLEAST(6, 1)
+#define IS_WIN8 IS_WINVER_ATLEAST(6, 2)
 
 #if defined(DEBUG) || defined(_DEBUG)
 #define LOG(msg, ...) do { printf(msg, __VA_ARGS__); } while (0)

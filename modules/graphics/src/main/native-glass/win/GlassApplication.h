@@ -100,6 +100,10 @@ public:
     static void InstallMouseLLHook();
     static void UninstallMouseLLHook();
 
+    static ULONG IncrementAccessibility();
+    static ULONG DecrementAccessibility();
+    static ULONG GetAccessibilityCount();
+
 protected:
     virtual LRESULT WindowProc(UINT msg, WPARAM wParam, LPARAM lParam);
     virtual LPCTSTR GetWindowClassNameSuffix();
@@ -121,6 +125,7 @@ private:
     static unsigned int sm_mouseLLHookCounter;
     static HHOOK sm_hMouseLLHook;
     static LRESULT CALLBACK MouseLLHook(int nCode, WPARAM wParam, LPARAM lParam);
+    static ULONG s_accessibilityCount;
 };
 
 
