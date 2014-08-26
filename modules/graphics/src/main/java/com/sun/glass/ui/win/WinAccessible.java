@@ -1117,6 +1117,7 @@ final class WinAccessible extends Accessible {
          * Check the role before processing message.
          */
         AccessibleRole role = (AccessibleRole)getAttribute(ROLE);
+        if (role == null) return null;
         switch (role) {
             case TREE_TABLE_VIEW:
             case TABLE_VIEW:
@@ -1143,14 +1144,16 @@ final class WinAccessible extends Accessible {
                     selectionRange = new WinTextRangeProvider(this);
                 }
                 if (!selectionRangeValid) {
-                    int start = (Integer)getAttribute(SELECTION_START);
+                    Integer result = (Integer)getAttribute(SELECTION_START);
+                    int start = result != null ? result : 0;
                     int end = -1;
                     int length = -1;
                     if (start >= 0) {
-                        end = (Integer)getAttribute(SELECTION_END);
+                        result = (Integer)getAttribute(SELECTION_END);
+                        end = result != null ? result : 0;
                         if (end >= start) {
                             String string = (String)getAttribute(TEXT);
-                            length = string.length();
+                            length = string != null ? string.length() : 0;
                         }
                     }
                     if (length != -1 && end <= length) {
