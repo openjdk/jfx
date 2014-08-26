@@ -32,6 +32,7 @@ import javafx.scene.effect.Effect;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.text.Font;
+import javafx.util.Duration;
 import javafx.util.Pair;
 
 import java.util.ArrayList;
@@ -358,6 +359,88 @@ public class StyleablePropertyFactory<S extends Styleable> {
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //
+    // create StyleableProperty<Duration>
+    //
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    /**
+     * Create a StyleableProperty&lt;Duration&gt; with initial value and inherit flag.
+     * @param styleable The <code>this</code> reference of the returned property. This is also the property bean.
+     * @param propertyName The field name of the StyleableProperty&lt;Duration&gt;
+     * @param cssProperty The CSS property name
+     * @param function A function that returns the StyleableProperty&lt;Duration&gt; that was created by this method call.
+     * @param initialValue The initial value of the property. CSS may reset the property to this value. 
+     * @param inherits Whether or not the CSS style can be inherited by child nodes                     
+     */
+    public final StyleableProperty<Duration> createStyleableDurationProperty(
+            S styleable,
+            String propertyName,
+            String cssProperty,
+            Function<S, StyleableProperty<Duration>> function,
+            Duration initialValue,
+            boolean inherits) {
+
+        CssMetaData<S,Duration> cssMetaData = createDurationCssMetaData(cssProperty, function, initialValue, inherits);
+        return new SimpleStyleableObjectProperty<Duration>(cssMetaData, styleable, propertyName, initialValue);
+    }
+
+    /**
+     * Create a StyleableProperty&lt;Duration&gt; with initial value. The inherit flag defaults to false.
+     * @param styleable The <code>this</code> reference of the returned property. This is also the property bean.
+     * @param propertyName The field name of the StyleableProperty&lt;Duration&gt;
+     * @param cssProperty The CSS property name
+     * @param function A function that returns the StyleableProperty&lt;Duration&gt; that was created by this method call.
+     * @param initialValue The initial value of the property. CSS may reset the property to this value. 
+     */
+    public final StyleableProperty<Duration> createStyleableDurationProperty(
+            S styleable,
+            String propertyName,
+            String cssProperty,
+            Function<S, StyleableProperty<Duration>> function,
+            Duration initialValue) {
+        return createStyleableDurationProperty(styleable, propertyName, cssProperty, function, initialValue, false);
+    }
+
+    /**
+     * Create a StyleableProperty&lt;Duration&gt;. The initial value defaults to Duration.BLACK and the 
+     * inherit flag defaults to false.
+     * @param styleable The <code>this</code> reference of the returned property. This is also the property bean.
+     * @param propertyName The field name of the StyleableProperty&lt;Duration&gt;
+     * @param cssProperty The CSS property name
+     * @param function A function that returns the StyleableProperty&lt;Duration&gt; that was created by this method call.
+     */
+    public final StyleableProperty<Duration> createStyleableDurationProperty(
+            S styleable,
+            String propertyName,
+            String cssProperty,
+            Function<S, StyleableProperty<Duration>> function) {
+        return createStyleableDurationProperty(styleable, propertyName, cssProperty, function, Duration.UNKNOWN, false);
+    }
+
+    /**
+     * Create a StyleableProperty&lt;Duration&gt; using previously created CssMetaData for the given <code>cssProperty</code>.
+     * @param styleable The <code>this</code> reference of the returned property. This is also the property bean.
+     * @param propertyName The field name of the StyleableProperty&lt;Duration&gt;
+     * @param cssProperty The CSS property name
+     * @throws java.lang.IllegalArgumentException if <code>cssProperty</code> is null or empty
+     * @throws java.util.NoSuchElementException if the CssMetaData for <code>cssProperty</code> was not created prior to this method invocation
+     */
+    public final StyleableProperty<Duration> createStyleableDurationProperty(
+            S styleable,
+            String propertyName,
+            String cssProperty) {
+
+        if (cssProperty == null || cssProperty.isEmpty()) {
+            throw new IllegalArgumentException("cssProperty cannot be null or empty string");
+        }
+
+        @SuppressWarnings("unchecked")
+        CssMetaData<S,Duration> cssMetaData = (CssMetaData<S,Duration>)getCssMetaData(Duration.class, cssProperty);
+        return new SimpleStyleableObjectProperty<Duration>(cssMetaData, styleable, propertyName, cssMetaData.getInitialValue(styleable));
+    }
+
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //
     // create StyleableProperty<Effect>
     //
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -433,7 +516,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
         }
 
         @SuppressWarnings("unchecked")
-        CssMetaData<S,Effect> cssMetaData = (CssMetaData<S,Effect>)getCssMetaData(Color.class, cssProperty);
+        CssMetaData<S,Effect> cssMetaData = (CssMetaData<S,Effect>)getCssMetaData(Effect.class, cssProperty);
         return new SimpleStyleableObjectProperty<Effect>(cssMetaData, styleable, propertyName, cssMetaData.getInitialValue(styleable));
     }
     
@@ -1169,6 +1252,65 @@ public class StyleablePropertyFactory<S extends Styleable> {
     createColorCssMetaData(final String property, final Function<S,StyleableProperty<Color>> function)
     {
         return createColorCssMetaData(property, function, Color.BLACK, false);
+    }
+
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //                                                                                                              //
+    // create CssMetaData<S, Duration>                                                                                 //
+    //                                                                                                              //
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    /**
+     * Create a CssMetaData&lt;S, Duration&gt; with initial value, and inherit flag.
+     * @param property The CSS property name.
+     * @param function A function that returns the StyleableProperty&lt;Duration&gt; that corresponds to this CssMetaData.
+     * @param initialValue The initial value of the property. CSS may reset the property to this value.
+     * @param inherits Whether or not the CSS style can be inherited by child nodes
+     * @throws java.lang.IllegalArgumentException if <code>property</code> is null or an empty string, or <code>function</code> is null.
+     */
+    public final CssMetaData<S, Duration>
+    createDurationCssMetaData(final String property, final Function<S,StyleableProperty<Duration>> function, final Duration initialValue, final boolean inherits)
+    {
+        if (property == null || property.isEmpty()) {
+            throw new IllegalArgumentException("property cannot be null or empty string");
+        }
+
+        if (function == null) {
+            throw new IllegalArgumentException("function cannot be null");
+        }
+
+        @SuppressWarnings("unchecked") // getCssMetaData checks and will throw a ClassCastException
+                CssMetaData<S, Duration> cssMetaData =
+                (CssMetaData<S, Duration>)getCssMetaData(Duration.class, property, key -> {
+                    final StyleConverter<?,Duration> converter = StyleConverter.getDurationConverter();
+                    return new SimpleCssMetaData<S, Duration>(property, function, converter, initialValue, inherits);
+                });
+        return cssMetaData;
+    }
+
+    /**
+     * Create a CssMetaData&lt;S, Duration&gt; with initial value, and inherit flag defaulting to false.
+     * @param property The CSS property name.
+     * @param function A function that returns the StyleableProperty&lt;Duration&gt; that corresponds to this CssMetaData.
+     * @param initialValue The initial value of the property. CSS may reset the property to this value.
+     * @throws java.lang.IllegalArgumentException if <code>property</code> is null or an empty string, or <code>function</code> is null.
+     */
+    public final CssMetaData<S, Duration>
+    createDurationCssMetaData(final String property, final Function<S,StyleableProperty<Duration>> function, final Duration initialValue)
+    {
+        return createDurationCssMetaData(property, function, initialValue, false);
+    }
+
+    /**
+     * Create a CssMetaData&lt;S, Duration&gt; with initial value of Duration.BLACK, and inherit flag defaulting to false.
+     * @param property The CSS property name.
+     * @param function A function that returns the StyleableProperty&lt;Duration&gt; that corresponds to this CssMetaData.
+     * @throws java.lang.IllegalArgumentException if <code>property</code> is null or an empty string, or <code>function</code> is null.
+     */
+    public final CssMetaData<S, Duration>
+    createDurationCssMetaData(final String property, final Function<S,StyleableProperty<Duration>> function)
+    {
+        return createDurationCssMetaData(property, function, Duration.UNKNOWN, false);
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////

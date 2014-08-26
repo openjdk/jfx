@@ -25,14 +25,31 @@
 
 package hello;
 
+import javafx.animation.Animation;
+import javafx.animation.FadeTransition;
 import javafx.application.Application;
+import javafx.beans.binding.Bindings;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.Property;
+import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.value.WritableValue;
+import javafx.css.CssMetaData;
+import javafx.css.Styleable;
+import javafx.css.StyleableProperty;
+import javafx.css.StyleablePropertyFactory;
+import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
+import javafx.geometry.Pos;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.SubScene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.Slider;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
@@ -40,6 +57,9 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
+import javafx.util.Duration;
+
+import java.util.List;
 
 public class HelloCSS extends Application {
     /**
@@ -82,10 +102,14 @@ public class HelloCSS extends Application {
         SubScene caspianSubScene = new SubScene(subSceneRoot, 300, 100);
         caspianSubScene.setUserAgentStylesheet("com/sun/javafx/scene/control/skin/caspian/caspian.css");
 
-        caspianSubScene.setLayoutX(25);
-        caspianSubScene.setLayoutY(210);
+        caspianSubScene.setLayoutX(275);
+        caspianSubScene.setLayoutY(40);
 
-        ((Group)scene.getRoot()).getChildren().addAll(rect,rect2,swapTest,caspianSubScene);
+        Node durationTest = createDurationTest();
+        durationTest.setLayoutX(25);
+        durationTest.setLayoutY(210);
+
+        ((Group)scene.getRoot()).getChildren().addAll(rect,rect2,swapTest,caspianSubScene, durationTest);
         stage.setScene(scene);
         stage.show();
     }
@@ -117,4 +141,93 @@ public class HelloCSS extends Application {
 
         return hBox;
     }
+
+    private static class TestNode extends Rectangle {
+
+        public TestNode() {
+            super(100, 100);
+        }
+
+        @Override public void impl_processCSS(WritableValue<Boolean> foo) {
+            super.impl_processCSS(foo);
+        }
+        StyleablePropertyFactory<TestNode> factory = new StyleablePropertyFactory<>(Rectangle.getClassCssMetaData());
+        StyleableProperty<Duration> myDuration = factory.createStyleableDurationProperty(this, "myDuration", "-my-duration", (s) -> s.myDuration, Duration.millis(1000));
+
+        @Override public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
+            return factory.getCssMetaData();
+        }
+    }
+
+
+    BooleanProperty fadeIn = new SimpleBooleanProperty(false);
+    private Node createDurationTest() {
+
+        final BorderPane pane = new BorderPane();
+        pane.setStyle("-fx-border-color: blue;");
+        pane.setPadding(new Insets(10,10,10,10));
+
+        Slider slider = new Slider();
+        slider.setPadding(new Insets(5,5,5,10));
+        slider.setMin(500d);
+        slider.setMax(1500d);
+        slider.setBlockIncrement(50);
+        slider.setValue(1000d);
+        slider.setShowTickLabels(true);
+        slider.setShowTickMarks(true);
+        slider.setSnapToTicks(true);
+        slider.setOrientation(Orientation.VERTICAL);
+
+        pane.setRight(slider);
+
+        final TestNode testNode = new TestNode();
+        slider.valueProperty().addListener(o -> testNode.setStyle("-my-duration: " + ((Property<Number>)o).getValue().intValue() + "ms;"));
+
+        final Button fadeButton = new Button();
+        fadeButton.textProperty().bind(Bindings.when(fadeIn).then("Fade In").otherwise("Fade Out"));
+        fadeButton.setOnAction(e -> {
+            Duration duration = testNode.myDuration.getValue();
+            FadeTransition transition = new FadeTransition(duration, testNode);
+            transition.setFromValue(testNode.getOpacity());
+            transition.statusProperty().addListener(o -> {
+                if (((ReadOnlyObjectProperty<Animation.Status>) o).getValue() == Animation.Status.STOPPED) {
+                    fadeButton.setDisable(false);
+                } else {
+                    fadeButton.setDisable(true);
+                }
+            });
+            if (fadeIn.get()) {
+                transition.setToValue(1.0);
+                transition.setByValue(5);
+                transition.setOnFinished(a -> fadeIn.set(false));
+            } else {
+                transition.setToValue(0.1);
+                transition.setByValue(-5);
+                transition.setOnFinished(a -> fadeIn.set(true));
+            }
+            transition.playFromStart();
+        });
+
+        VBox vbox = new VBox(5, testNode, fadeButton);
+        vbox.setAlignment(Pos.CENTER);
+        pane.setCenter(vbox);
+
+        Label label = new Label("Use slider to adjust duration of the\nFadeTransition, then click the button.");
+        pane.setTop(label);
+
+        Label status = new Label();
+        status.textProperty().bind(Bindings.createStringBinding(
+                () -> testNode.myDuration.getValue().toString(),
+                (ObjectProperty<Duration>)testNode.myDuration
+        ));
+        pane.setBottom(status);
+
+        BorderPane.setAlignment(label, Pos.CENTER);
+        BorderPane.setAlignment(slider, Pos.CENTER);
+        BorderPane.setAlignment(vbox, Pos.CENTER);
+        BorderPane.setAlignment(status, Pos.BOTTOM_RIGHT);
+
+        return pane;
+    }
+
 }

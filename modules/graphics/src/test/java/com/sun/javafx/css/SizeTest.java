@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -178,6 +178,25 @@ public class SizeTest {
         result = instance.pixels();
         assertEquals(".25turn to deg", expResult, result, 0.01);
     }
+
+    /**
+     * Test of sizes with time units.
+     */
+    @Test
+    public void testTime() {
+
+        double expResult = 90;
+
+        Size instance = new Size(90, SizeUnits.S);
+        double result = instance.pixels();
+        assertEquals("90s", expResult, result, 0.01);
+
+        instance = new Size(90, SizeUnits.MS);
+        result = instance.pixels();
+        assertEquals("90ms", expResult, result, 0.01);
+
+    }
+
 
     /**
      * Test of equals method, of class Size.

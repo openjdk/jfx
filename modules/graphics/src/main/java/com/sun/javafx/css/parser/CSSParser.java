@@ -40,6 +40,7 @@ import com.sun.javafx.css.SizeUnits;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.css.Stylesheet;
 import com.sun.javafx.css.converters.BooleanConverter;
+import com.sun.javafx.css.converters.DurationConverter;
 import com.sun.javafx.css.converters.EffectConverter;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.FontConverter;
@@ -89,6 +90,7 @@ import javafx.scene.shape.StrokeType;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontPosture;
 import javafx.scene.text.FontWeight;
+import javafx.util.Duration;
 import sun.util.logging.PlatformLogger;
 import sun.util.logging.PlatformLogger.Level;
 
@@ -613,7 +615,14 @@ final public class CSSParser {
             break;
         case CSSLexer.TURN:
             units = SizeUnits.TURN;
-            trim = 5;
+            trim = 4;
+            break;
+        case CSSLexer.SECONDS:
+            units = SizeUnits.S;
+            trim = 1;
+            break;
+        case CSSLexer.MS:
+            units = SizeUnits.MS;
             break;
         default:
             if (LOGGER.isLoggable(Level.FINEST)) {
@@ -853,6 +862,12 @@ final public class CSSParser {
                 value = new ParsedValueImpl<ParsedValue[],Number[]>(sizeValue, SizeConverter.SequenceConverter.getInstance());
             }
             break;
+        case CSSLexer.SECONDS:
+        case CSSLexer.MS: {
+            ParsedValue<Size, Size> sizeValue = new ParsedValueImpl<Size, Size>(size(token), null);
+            value = new ParsedValueImpl<ParsedValue<?, Size>, Duration>(sizeValue, DurationConverter.getInstance());
+            break;
+        }
         case CSSLexer.STRING:
         case CSSLexer.IDENT:
             boolean isIdent = ttype == CSSLexer.IDENT;
@@ -4596,6 +4611,8 @@ final public class CSSParser {
             case CSSLexer.RAD:
             case CSSLexer.TURN:
             case CSSLexer.PERCENTAGE:
+            case CSSLexer.SECONDS:
+            case CSSLexer.MS:
                 break;
 
             case CSSLexer.STRING:
