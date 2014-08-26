@@ -1077,6 +1077,7 @@ final class WinAccessible extends Accessible {
     }
 
     long GetFocus() {
+        if (isDisposed()) return 0;
         Node node = (Node)getAttribute(FOCUS_NODE);
         if (node == null) return 0L;
         Node item = (Node)getAccessible(node).getAttribute(FOCUS_ITEM);
@@ -1325,6 +1326,7 @@ final class WinAccessible extends Accessible {
     }
 
     long get_SelectionContainer() {
+        if (isDisposed()) return 0;
         WinAccessible acc = (WinAccessible)getContainer(); 
         return acc != null ? acc.getNativeAccessible() : 0L;
     }
