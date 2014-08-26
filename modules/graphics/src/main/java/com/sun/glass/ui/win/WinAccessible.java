@@ -554,10 +554,8 @@ final class WinAccessible extends Accessible {
         AccessibleRole role = (AccessibleRole)getAttribute(ROLE);
         boolean impl = false;
         switch (role) {
-            case MENU_ITEM:
-                impl = patternId == UIA_InvokePatternId;
-                break;
             case MENU:
+            case SPLIT_MENU_BUTTON:
                 impl = patternId == UIA_InvokePatternId ||
                        patternId == UIA_ExpandCollapsePatternId;
                 break;
@@ -571,6 +569,7 @@ final class WinAccessible extends Accessible {
             case INCREMENT_BUTTON:
             case DECREMENT_BUTTON:
             case MENU_BUTTON:
+            case MENU_ITEM:
                 impl = patternId == UIA_InvokePatternId;
                 break;
             case PAGE_ITEM:
@@ -591,14 +590,6 @@ final class WinAccessible extends Accessible {
                        patternId == UIA_TablePatternId ||
                        patternId == UIA_ScrollPatternId;
                 break;
-            case TREE_VIEW:
-                impl = patternId == UIA_SelectionPatternId ||
-                       patternId == UIA_ScrollPatternId;
-                break;
-            case LIST_VIEW:
-                impl = patternId == UIA_SelectionPatternId ||
-                       patternId == UIA_ScrollPatternId;
-                break;
             case TREE_TABLE_CELL:
                 impl = patternId == UIA_SelectionItemPatternId ||
                        patternId == UIA_GridItemPatternId ||
@@ -612,13 +603,21 @@ final class WinAccessible extends Accessible {
                        patternId == UIA_TableItemPatternId ||
                        patternId == UIA_ScrollItemPatternId;
                 break;
-            case LIST_ITEM:
-                impl = patternId == UIA_SelectionItemPatternId ||
-                       patternId == UIA_ScrollItemPatternId;
+            case TREE_VIEW:
+                impl = patternId == UIA_SelectionPatternId ||
+                       patternId == UIA_ScrollPatternId;
                 break;
             case TREE_ITEM:
                 impl = patternId == UIA_SelectionItemPatternId ||
                        patternId == UIA_ExpandCollapsePatternId ||
+                       patternId == UIA_ScrollItemPatternId;
+                break;
+            case LIST_VIEW:
+                impl = patternId == UIA_SelectionPatternId ||
+                       patternId == UIA_ScrollPatternId;
+                break;
+            case LIST_ITEM:
+                impl = patternId == UIA_SelectionItemPatternId ||
                        patternId == UIA_ScrollItemPatternId;
                 break;
             /* 
@@ -640,16 +639,10 @@ final class WinAccessible extends Accessible {
             case TEXT:
                 /* UIA_TextPatternId seems overkill for text. Use UIA_NamePropertyId instead */
                 break;
-            case SPLIT_MENU_BUTTON:
-                impl = patternId == UIA_InvokePatternId ||
-                       patternId == UIA_ExpandCollapsePatternId;
-                break;
             case RADIO_BUTTON:
                 impl = patternId == UIA_SelectionItemPatternId;
                 break;
             case CHECK_BOX:
-                impl = patternId == UIA_TogglePatternId;
-                break;
             case TOGGLE_BUTTON:
                 impl = patternId == UIA_TogglePatternId;
                 break;
@@ -986,6 +979,7 @@ final class WinAccessible extends Accessible {
                             return (Node)parentAccessible.getAttribute(AccessibleAttribute.TREE_ITEM_AT_INDEX, index);
                         };
                     } else {
+                        @SuppressWarnings("unchecked")
                         ObservableList<Node> children = (ObservableList<Node>)parentAccessible.getAttribute(CHILDREN);
                         if (children == null) return 0;
                         count = children.size();
@@ -1043,6 +1037,7 @@ final class WinAccessible extends Accessible {
                         node = (Node)getAttribute(TREE_ITEM_AT_INDEX, lastIndex);
                     }
                 } else {
+                    @SuppressWarnings("unchecked")
                     ObservableList<Node> children = (ObservableList<Node>)getAttribute(CHILDREN);
                     if (children != null && children.size() > 0) {
                         lastIndex = direction == NavigateDirection_FirstChild ? 0 : children.size() - 1;
