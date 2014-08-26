@@ -38,10 +38,10 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
 import javafx.fxml.FXMLLoader;
 
 /**
@@ -50,7 +50,7 @@ import javafx.fxml.FXMLLoader;
  */
 public class FXOMInstance extends FXOMObject {
     
-    private final Map<PropertyName, FXOMProperty> properties = new TreeMap<>();
+    private final Map<PropertyName, FXOMProperty> properties = new LinkedHashMap<>();
     private Class<?> declaredClass;
     
     
