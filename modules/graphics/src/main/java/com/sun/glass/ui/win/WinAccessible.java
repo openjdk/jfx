@@ -208,7 +208,6 @@ final class WinAccessible extends Accessible {
     /* Text Support */
     WinTextRangeProvider documentRange;
     WinTextRangeProvider selectionRange;
-    boolean documentRangeValid, selectionRangeValid;
 
     /* The lastIndex is used by parents to keep track of the index of the last child
      * returned in Navigate. It is very common for Narrator to traverse the children
@@ -339,7 +338,6 @@ final class WinAccessible extends Accessible {
                      * not to focus an empty text control when clicking.
                      */
                     if (newStart || newEnd) {
-                        selectionRangeValid = false;
                         UiaRaiseAutomationEvent(peer, UIA_Text_TextSelectionChangedEventId);
                     }
                 }
@@ -363,8 +361,6 @@ final class WinAccessible extends Accessible {
 
                 if (selectionRange != null || documentRange != null) {
                     UiaRaiseAutomationEvent(peer, UIA_Text_TextChangedEventId);
-                    documentRangeValid = false;
-                    selectionRangeValid = false;
                 }
                 break;
             case EXPANDED: {
@@ -1139,25 +1135,22 @@ final class WinAccessible extends Accessible {
                 if (selectionRange == null) {
                     selectionRange = new WinTextRangeProvider(this);
                 }
-                if (!selectionRangeValid) {
-                    Integer result = (Integer)getAttribute(SELECTION_START);
-                    int start = result != null ? result : 0;
-                    int end = -1;
-                    int length = -1;
-                    if (start >= 0) {
-                        result = (Integer)getAttribute(SELECTION_END);
-                        end = result != null ? result : 0;
-                        if (end >= start) {
-                            String string = (String)getAttribute(TEXT);
-                            length = string != null ? string.length() : 0;
-                        }
+                Integer result = (Integer)getAttribute(SELECTION_START);
+                int start = result != null ? result : 0;
+                int end = -1;
+                int length = -1;
+                if (start >= 0) {
+                    result = (Integer)getAttribute(SELECTION_END);
+                    end = result != null ? result : 0;
+                    if (end >= start) {
+                        String string = (String)getAttribute(TEXT);
+                        length = string != null ? string.length() : 0;
                     }
-                    if (length != -1 && end <= length) {
-                        selectionRange.setRange(start, end);
-                    } else {
-                        selectionRange.setRange(0, 0);
-                    }
-                    selectionRangeValid = true;
+                }
+                if (length != -1 && end <= length) {
+                    selectionRange.setRange(start, end);
+                } else {
+                    selectionRange.setRange(0, 0);
                 }
                 return new long[] {selectionRange.getNativeProvider()};
             }
@@ -1355,11 +1348,8 @@ final class WinAccessible extends Accessible {
         if (documentRange == null) {
             documentRange = new WinTextRangeProvider(this);
         }
-        if (!documentRangeValid) {
-            String text = (String)getAttribute(TEXT);
-            documentRange.setRange(0, text.length());
-            documentRangeValid = true;
-        }
+        String text = (String)getAttribute(TEXT);
+        documentRange.setRange(0, text.length());
         return documentRange.getNativeProvider();
     }
 
