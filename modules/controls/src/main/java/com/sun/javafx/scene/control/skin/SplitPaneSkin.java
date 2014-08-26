@@ -139,7 +139,9 @@ public class SplitPaneSkin extends BehaviorSkinBase<SplitPane, BehaviorBase<Spli
             // If we already know the dividers are in the correct position.  We do not
             // need to recheck their values.
             if (checkDividerPos) {
-                checkDividerPosition(divider, posToDividerPos(divider, newValue.doubleValue()), posToDividerPos(divider, oldValue.doubleValue()));                
+                // When checking is enforced, we know that the position was set explicitly
+                divider.posExplicit = true;
+                checkDividerPosition(divider, posToDividerPos(divider, newValue.doubleValue()), posToDividerPos(divider, oldValue.doubleValue()));
             }
             getSkinnable().requestLayout();
         }
@@ -288,6 +290,7 @@ public class SplitPaneSkin extends BehaviorSkinBase<SplitPane, BehaviorBase<Spli
         super.handleControlPropertyChanged(property);
         if ("ORIENTATION".equals(property)) {
             this.horizontal = getSkinnable().getOrientation() == Orientation.HORIZONTAL;
+            this.previousSize = -1;
             for (ContentDivider c: contentDividers) {
                 c.setGrabberStyle(horizontal);
             }
@@ -500,6 +503,7 @@ public class SplitPaneSkin extends BehaviorSkinBase<SplitPane, BehaviorBase<Spli
             d.setX(startX);
             d.setY(startY);              
             setAbsoluteDividerPos(d, (horizontal ? d.getX() : d.getY()));
+            d.posExplicit = false;
         }
         checkDividerPos = true;
     }
@@ -535,9 +539,7 @@ public class SplitPaneSkin extends BehaviorSkinBase<SplitPane, BehaviorBase<Spli
         }
     }
 
-    private double previousArea = -1;
-    private double previousWidth = -1;
-    private double previousHeight = -1;
+    private double previousSize = -1;
     private int lastDividerUpdate = 0;
     private boolean resize = false;
     private boolean checkDividerPos = true;
@@ -556,7 +558,7 @@ public class SplitPaneSkin extends BehaviorSkinBase<SplitPane, BehaviorBase<Spli
         
         double dividerWidth = contentDividers.isEmpty() ? 0 : contentDividers.get(0).prefWidth(-1);
 
-        if (contentDividers.size() > 0 && previousArea != -1 && previousArea != (sw * sh)) {
+        if (contentDividers.size() > 0 && previousSize != -1 && previousSize != (horizontal ? sw  : sh)) {
             //This algorithm adds/subtracts a little to each panel on every resize
             List<Content> resizeList = new ArrayList<Content>();
             for (Content c: contentRegions) {
@@ -565,12 +567,12 @@ public class SplitPaneSkin extends BehaviorSkinBase<SplitPane, BehaviorBase<Spli
                 }
             }
                         
-            double delta = horizontal ? (s.getWidth() - previousWidth) : (s.getHeight() - previousHeight);
+            double delta = (horizontal ? s.getWidth() : s.getHeight()) - previousSize;
             boolean growing = delta > 0;
             
             delta = Math.abs(delta);            
 
-            if (!resizeList.isEmpty()) {
+            if (delta != 0 && !resizeList.isEmpty()) {
                 int portion = (int)(delta)/resizeList.size();
                 int remainder = (int)delta%resizeList.size();
                 int size = 0;
@@ -623,23 +625,21 @@ public class SplitPaneSkin extends BehaviorSkinBase<SplitPane, BehaviorBase<Spli
                         }
                     }
                 }
+
+                // If we are resizing the window save the current area into
+                // resizableWithParentArea.  We use this value during layout.
+                {
+                    for (Content c: contentRegions) {
+                        c.setResizableWithParentArea(c.getArea());
+                        c.setAvailable(0);
+                    }
+                }
+                resize = true;
             }
 
-            previousArea = sw * sh;
-            previousWidth = sw;
-            previousHeight = sh;
-
-            // If we are resizing the window save the current area into
-            // resizableWithParentArea.  We use this value during layout.
-            for (Content c: contentRegions) {
-                c.setResizableWithParentArea(c.getArea());
-                c.setAvailable(0);
-            }
-            resize = true;
+            previousSize = horizontal ? sw : sh;
         } else {
-            previousArea = sw * sh;
-            previousWidth = sw;
-            previousHeight = sh;
+            previousSize = horizontal ? sw : sh;
         }
         
         // If the window is less than the min size we want to resize
@@ -687,7 +687,7 @@ public class SplitPaneSkin extends BehaviorSkinBase<SplitPane, BehaviorBase<Spli
                     // Last panel
                     space = (horizontal ? w : h) - (previousDivider != null ? getAbsoluteDividerPos(previousDivider) + dividerWidth : 0);
                 }
-                if (!resize) {
+                if (!resize || divider.posExplicit) {
                     contentRegions.get(i).setArea(space);
                 }
                 previousDivider = divider;
@@ -933,7 +933,8 @@ public class SplitPaneSkin extends BehaviorSkinBase<SplitPane, BehaviorBase<Spli
         private SplitPane.Divider d;
         private StackPane grabber;
         private double x;
-        private double y;  
+        private double y;
+        private boolean posExplicit;
         private ChangeListener<Number> listener;
 
         public ContentDivider(SplitPane.Divider d) {
