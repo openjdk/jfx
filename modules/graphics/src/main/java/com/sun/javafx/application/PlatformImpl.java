@@ -731,11 +731,31 @@ public class PlatformImpl {
                 if (isMediaSupported == null) {
                     isMediaSupported = checkForClass(
                             "javafx.scene.media.MediaView");
+                    if (isMediaSupported && PlatformUtil.isEmbedded()) {
+                        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+                            String s = System.getProperty(
+                                    "com.sun.javafx.experimental.embedded.media", 
+                                    "false");
+                            isMediaSupported = Boolean.valueOf(s);
+                            return null;
+
+                        });
+                    }
                 }
                 return isMediaSupported;
             case WEB:
                 if (isWebSupported == null) {
                     isWebSupported = checkForClass("javafx.scene.web.WebView");
+                    if (isWebSupported && PlatformUtil.isEmbedded()) {
+                        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+                            String s = System.getProperty(
+                                    "com.sun.javafx.experimental.embedded.web", 
+                                    "false");
+                            isWebSupported = Boolean.valueOf(s);
+                            return null;
+
+                        });
+                    }
                 }
                 return isWebSupported;
             case SWT:
