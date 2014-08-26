@@ -307,7 +307,9 @@ public class FXOMCloner {
             fxIds.remove(clonee.getFxId());
         }
         
-        for (String candidateFxId : fxIds.keySet()) {
+        for (Map.Entry<String, FXOMObject> e : fxIds.entrySet()) {
+            final String candidateFxId = e.getKey();
+            final FXOMObject declarer = e.getValue();
             
             final String renamedFxId = fxIdCollector.importFxId(candidateFxId);
             
@@ -321,7 +323,6 @@ public class FXOMCloner {
                  */
                 
                 // 1)
-                final FXOMObject declarer = fxIds.get(candidateFxId);
                 declarer.setFxId(renamedFxId);
 
                 // 2)
