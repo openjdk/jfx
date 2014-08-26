@@ -33,3 +33,4 @@ syntax: glob
 */Debug/*
 *~
 modules/web/src/main/native/LayoutTests
+apps/scenebuilder/SceneBuilderApp/src/com/oracle/javafx/scenebuilder/app/about/about.properties
