@@ -251,6 +251,7 @@ public abstract class AutoSuggestEditor extends PropertyEditor {
         if (event.getCode() == KeyCode.DOWN) {
             // 'Down' key shows the popup even if popup has been disabled
             suggest = true;
+            suggestedLv.requestFocus();
         }
         handleSuggestedPopup();
     }
@@ -325,8 +326,6 @@ public abstract class AutoSuggestEditor extends PropertyEditor {
             suggestedLv.getSelectionModel().clearSelection();
             // popup x coordinate need to be slightly moved, so that the popup is centered 
             entryField.getContextMenu().show(entryField, Side.BOTTOM, 0, 0);
-
-            suggestedLv.requestFocus();
         }
     }
 
