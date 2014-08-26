@@ -341,7 +341,10 @@ public abstract class AutoSuggestEditor extends PropertyEditor {
             String selected = suggestedLv.getSelectionModel().getSelectedItem();
             entryField.setText(selected);
             entryField.requestFocus();
-            entryField.selectEnd();
+            entryField.selectAll();
+            if (AutoSuggestEditor.this.getCommitListener() != null) {
+                AutoSuggestEditor.this.getCommitListener().handle(null);
+            }
         }
         hidePopup();
     }
