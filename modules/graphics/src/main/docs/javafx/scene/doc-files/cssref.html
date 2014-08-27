@@ -207,6 +207,7 @@
           <li><a href="#typelength">&lt;length&gt;</a></li>
           <li><a href="#typepercentage">&lt;percentage&gt;</a></li>
           <li><a href="#typeangle">&lt;angle&gt;</a></li>
+          <li><a href="#typeduration">&lt;duration&gt;</a></li>
           <li><a href="#typepoint">&lt;point&gt;</a></li>
           <li><a href="#typecolorstop">&lt;color-stop&gt;</a></li>
           <li><a href="#typeurl">&lt;uri&gt;</a></li>
@@ -340,7 +341,7 @@
               <li><a href="#tabpane">TabPane</a></li>
               <li><a href="#tablecolumnheader">TableColumnHeader</a></li>
               <li><a href="#tableview">TableView</a></li>
-              <li><a href="#textarea">TextArea</a></li>
+              <li><a href="#text-area">TextArea</a></li>
               <li><a href="#textinputcontrol">TextInputControl</a></li>
               <li><a href="#textfield">TextField</a></li>
               <li><a href="#titledpane">TitledPane</a></li>
@@ -620,19 +621,21 @@
         Users are cautioned that this will be fixed in a future release. Adherence to the W3C standard is strongly advised.
     </p>
     <p>Since JavaFX 8, the implementation partially supports the CSS3 syntax to load a font from a URL using the
-    <a href="http://www.w3.org/TR/css3-fonts/#the-font-face-rule">@font&#8209;face</a> rule:
-    <code><pre>
+    <a href="http://www.w3.org/TR/css3-fonts/#the-font-face-rule">@font&#8209;face</a> rule:</p>
+    <textarea rows="8" cols="132">
+
      @font-face {
         font-family: 'sample';
         font-style: normal;
         font-weight: normal;
         src: local('sample'), url('http://font.samples/resources/sample.ttf';) format('truetype');
     }
-    </pre></code>
-    This allows public resources for fonts to be used in a JavaFX application. For example, assume the URL
+    </textarea>
+    <p>This allows public resources for fonts to be used in a JavaFX application. For example, assume the URL
     "http://font.samples/web?family=samples" returns the @font&#8209;face rule given above. Then the
-        following code shows how the sample font could be used in a JavaFX application.
-    <code><pre>
+        following code shows how the sample font could be used in a JavaFX application.</p>
+    <textarea rows="20" cols="132">
+
     import javafx.application.Application;
     import javafx.scene.Scene;
     import javafx.scene.control.Label;
@@ -651,8 +654,8 @@
 
         public static void main(String[] args) { launch(args); }
     }
-    </pre></code>
-    Or, the URL could be imported into a stylesheet with the @import rule.</p>
+    </textarea>
+    <p>Or, the URL could be imported into a stylesheet with the @import rule.</p>
     <p>Although the parser will parse the syntax, all @font&#8209;face descriptors are ignored except for
         the <code>src</code> descriptor. The <code>src</code> descriptor is expected to be a
         <a href="#typeurl" class="typelink">&lt;url&gt;</a>. The <code>format</code> hint is ignored.</p>
@@ -903,7 +906,7 @@
     <p>Note that for inline styles, leading dot-segments (e.g. '..' or '.') do resolve since the path is always
     anchored at the root of the classpath.</p>
     <p>This snippet of code creates a scene filled with the "paste" image from HTMLEditor which is found in jfxrt.jar.</p>
-    <textarea rows="8" cols="132">
+    <textarea rows="9" cols="132">
 
     @Override public void start(Stage stage) {
         StackPane root = new StackPane();
@@ -3642,16 +3645,17 @@
     <p class="styleclass">Style class: context-menu</p>
     <p>The ContextMenu class has all the properties of <a href="#poupucontrol">PopupControl</a>.</p>
     The selector for a ContextMenu may be made more specific by using the selector for the control from which the ContextMenu was shown.
-    For example,</p><p class="example">.choice-box > .context-menu { ... }</p>
+    For example,
+    <p class="example">.choice-box > .context-menu { ... }</p>
     <h4>Substructure</h4>
     <ul>
         <li>context-menu &mdash a Region
             <ul>
                 <li>scroll-arrow &mdash; a StackPane
-                    <ul>menu-up-arrow &mdash; a StackPane</ul>
+                    <ul><li>menu-up-arrow &mdash; a StackPane</li></ul>
                 </li>
                 <li>scroll-arrow &mdash; a StackPane
-                    <ul>menu-down-arrow &mdash; a StackPane</ul>
+                    <ul><li>menu-down-arrow &mdash; a StackPane</li></ul>
                 </li>
                 <li>* &mdash; a VBox
                     <ul>
@@ -3817,8 +3821,6 @@
     <p>Label has all the properties and pseudo&#8209;class state of <a href="#labeled">Labeled</a></p>
     <h4><a name="labeled" id="labeled">Labeled</a></h4>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
-    </table>
-    <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
       <thead>
         <tr>
           <th class="propertyname">CSS Property</th>
@@ -3958,22 +3960,15 @@
       </tbody>
     </table>
     <h4>Substructure</h4>
-    <ul>
-        <li>.list-view &mdash; the ListView&lt;T&gt;
-            <ul>
-                <li>.virtual-flow &mdash; VirtualFlow</li>
-                <ul>
-                    <li>.clipped-container &mdash; <a href="#region">Region</a></li>
-                    <ul>
-                        <li>.sheet &mdash; Group</li>
-                        <ul>
-                            <li>.cell.indexed-cell.list-cell &mdash; <a href="#listcell">ListCell&lt;T&gt;</a></li>
-                        </ul>
-                        <li>.scroll-bar &mdash <a href="#scrollbar">ScrollBar</a></li>
+    <ul>.list-view &mdash; the ListView&lt;T&gt;
+            <ul>.virtual-flow &mdash; VirtualFlow
+                <ul>.clipped-container &mdash; <a href="#region">Region</a>
+                    <ul>.sheet &mdash; Group
+                        <ul>.cell.indexed-cell.list-cell &mdash; <a href="#listcell">ListCell&lt;T&gt;</a></ul>
+                        .scroll-bar &mdash; <a href="#scrollbar">ScrollBar</a>
                     </ul>
                 </ul>
             </ul>
-        </li>
     </ul>
 
     <h4><a name="menu" id="menu">Menu</a></h4>
@@ -4917,7 +4912,7 @@
       </li>
         <li>table-column &mdash; TableColumn</li>
     </ul>
-    <h4><a name="textarea" id="textarea">TextArea</a></h4>
+    <h4><a name="text-area" id="text-area">TextArea</a></h4>
     <p class="styleclass">Style class: text-area</p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
       <thead>
@@ -5315,8 +5310,7 @@
     <h4><a name="treeview" id="treeview">TreeView</a></h4>
     <p class="styleclass">Style class: tree-view</p>
     <p>TreeView has all the properites and pseudo&#8209;class state of <a href="#control">Control</a></p>
-    <!--
-        --        --        -- Charts        --        -->
+    <!-- Charts -->
     <h2><a name="charts" id="charts">Charts</a></h2>
     <table summary="property table" class="package" width="100%">
       <tbody>
