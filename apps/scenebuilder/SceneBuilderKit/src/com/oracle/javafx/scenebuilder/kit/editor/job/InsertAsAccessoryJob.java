@@ -34,6 +34,8 @@ package com.oracle.javafx.scenebuilder.kit.editor.job;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.job.v2.AddPropertyJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.v2.AddPropertyValueJob;
+import com.oracle.javafx.scenebuilder.kit.editor.selection.AbstractSelectionGroup;
+import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMCollection;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
@@ -43,18 +45,20 @@ import com.oracle.javafx.scenebuilder.kit.fxom.FXOMPropertyC;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask.Accessory;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 /**
  * Job used to insert new FXOM objects into an accessory location.
  *
  */
-public class InsertAsAccessoryJob extends Job {
+public class InsertAsAccessoryJob extends BatchSelectionJob {
 
     private final FXOMObject newObject;
     private final FXOMObject targetObject;
     private final Accessory accessory;
-    private BatchJob subJob; // Initialized by execute()
-    private String description; // final but initialized lazily
 
     public InsertAsAccessoryJob(
             FXOMObject newObject,
@@ -74,103 +78,76 @@ public class InsertAsAccessoryJob extends Job {
         this.accessory = accessory;
     }
 
-    FXOMObject getNewObject() {
-        return newObject;
-    }
-    
-    /*
-     * Job
-     */
     @Override
-    public boolean isExecutable() {
-        final boolean result;
+    protected List<Job> makeSubJobs() {
+        final List<Job> result = new ArrayList<>();
         if (targetObject instanceof FXOMInstance) {
+
             final DesignHierarchyMask mask = new DesignHierarchyMask(targetObject);
-            result = mask.isAcceptingAccessory(accessory, newObject)
-                    && mask.getAccessory(accessory) == null;
-        } else {
-            // TODO(elp): someday we should support insering in FXOMCollection
-            result = false;
+            if (mask.isAcceptingAccessory(accessory, newObject)
+                    && mask.getAccessory(accessory) == null) { // (1)
+
+                final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
+                final FXOMInstance targetInstance = (FXOMInstance) targetObject;
+                final PropertyName accessoryName = mask.getPropertyNameForAccessory(accessory);
+                assert accessoryName != null;
+
+                // Property has no value yet because of (1)
+                FXOMProperty targetProperty = new FXOMPropertyC(fxomDocument, accessoryName);
+
+                final Job addValueJob
+                        = new AddPropertyValueJob(newObject,
+                                (FXOMPropertyC) targetProperty,
+                                -1,
+                                getEditorController());
+                result.add(addValueJob);
+
+                if (targetProperty.getParentInstance() == null) {
+                    assert targetObject instanceof FXOMInstance;
+                    final Job addPropertyJob
+                            = new AddPropertyJob(targetProperty, targetInstance,
+                                    -1, getEditorController());
+                    result.add(addPropertyJob);
+                }
+
+                final Job pruneJob = new PrunePropertiesJob(newObject, targetObject,
+                        getEditorController());
+                if (pruneJob.isExecutable()) {
+                    result.add(0, pruneJob);
+                }
+            }
         }
         return result;
     }
 
     @Override
-    public void execute() {
-        assert isExecutable(); // (1)
+    protected String makeDescription() {
+        final String result;
+        final StringBuilder sb = new StringBuilder();
 
-        final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
-        final FXOMInstance targetInstance = (FXOMInstance) targetObject;
-        final DesignHierarchyMask mask = new DesignHierarchyMask(targetObject);
-        final PropertyName accessoryName = mask.getPropertyNameForAccessory(accessory);
-        assert accessoryName != null;
+        sb.append("Insert ");
 
-        // Property has no value yet because of (1)
-        FXOMProperty targetProperty = new FXOMPropertyC(fxomDocument, accessoryName);
-
-        subJob = new BatchJob(getEditorController(),
-                true /* shouldUpdateSceneGraph */, null);
-        final Job addValueJob
-                = new AddPropertyValueJob(newObject,
-                        (FXOMPropertyC) targetProperty,
-                        -1,
-                        getEditorController());
-        subJob.addSubJob(addValueJob);
-
-        if (targetProperty.getParentInstance() == null) {
-            assert targetObject instanceof FXOMInstance;
-            final Job addPropertyJob
-                    = new AddPropertyJob(targetProperty, targetInstance,
-                            -1, getEditorController());
-            subJob.addSubJob(addPropertyJob);
-        }
-
-        final Job pruneJob = new PrunePropertiesJob(newObject, targetObject, 
-                getEditorController());
-        if (pruneJob.isExecutable()) {
-            subJob.prependSubJob(pruneJob);
-        }
-            
-        /*
-         * Executes the subjob.
-         */
-        subJob.execute();
-    }
-
-    @Override
-    public void undo() {
-        assert subJob != null;
-        subJob.undo();
-    }
-
-    @Override
-    public void redo() {
-        assert subJob != null;
-        subJob.redo();
-    }
-
-    @Override
-    public String getDescription() {
-        if (description == null) {
-            final StringBuilder sb = new StringBuilder();
-
-            sb.append("Insert ");
-
-            if (newObject instanceof FXOMInstance) {
-                final Object sceneGraphObject = newObject.getSceneGraphObject();
-                if (sceneGraphObject != null) {
-                    sb.append(sceneGraphObject.getClass().getSimpleName());
-                } else {
-                    sb.append("Unresolved Object");
-                }
-            } else if (newObject instanceof FXOMCollection) {
-                sb.append("Collection");
+        if (newObject instanceof FXOMInstance) {
+            final Object sceneGraphObject = newObject.getSceneGraphObject();
+            if (sceneGraphObject != null) {
+                sb.append(sceneGraphObject.getClass().getSimpleName());
             } else {
-                assert false;
-                sb.append(newObject.getClass().getSimpleName());
+                sb.append("Unresolved Object");
             }
-            description = sb.toString();
+        } else if (newObject instanceof FXOMCollection) {
+            sb.append("Collection");
+        } else {
+            assert false;
+            sb.append(newObject.getClass().getSimpleName());
         }
-        return description;
+        result = sb.toString();
+        return result;
+    }
+
+    @Override
+    protected AbstractSelectionGroup getNewSelectionGroup() {
+        final Set<FXOMObject> newObjects = new HashSet<>();
+        newObjects.add(newObject);
+        return new ObjectSelectionGroup(newObjects, newObject, null);
     }
 }

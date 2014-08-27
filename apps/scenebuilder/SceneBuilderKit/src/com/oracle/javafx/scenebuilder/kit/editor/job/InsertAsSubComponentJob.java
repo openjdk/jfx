@@ -34,9 +34,9 @@ package com.oracle.javafx.scenebuilder.kit.editor.job;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.job.v2.AddPropertyJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.v2.AddPropertyValueJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.v2.CompositeJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.v2.RemovePropertyJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.v2.UpdateSelectionJob;
+import com.oracle.javafx.scenebuilder.kit.editor.selection.AbstractSelectionGroup;
+import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMCollection;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
@@ -48,13 +48,15 @@ import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Job used to insert new FXOM objects into a sub component location.
  *
  */
-public class InsertAsSubComponentJob extends CompositeJob {
+public class InsertAsSubComponentJob extends BatchSelectionJob {
 
     private final FXOMObject newObject;
     private final FXOMObject targetObject;
@@ -78,17 +80,6 @@ public class InsertAsSubComponentJob extends CompositeJob {
         this.targetIndex = targetIndex;
     }
 
-    public FXOMObject getTargetObject() {
-        return targetObject;
-    }
-
-    FXOMObject getNewObject() {
-        return newObject;
-    }
-    
-    /*
-     * CompositeJob
-     */
     @Override
     protected List<Job> makeSubJobs() {
         final List<Job> result;
@@ -164,11 +155,6 @@ public class InsertAsSubComponentJob extends CompositeJob {
             }
             
             /*
-             * UpdateSelectionJob
-             */
-            result.add(new UpdateSelectionJob(newObject, getEditorController()));
-            
-            /*
              * PrunePropertiesJob
              */
             final Job pruneJob = new PrunePropertiesJob(newObject, targetObject, 
@@ -205,5 +191,12 @@ public class InsertAsSubComponentJob extends CompositeJob {
         }
         
         return sb.toString();
+    }
+
+    @Override
+    protected AbstractSelectionGroup getNewSelectionGroup() {
+        final Set<FXOMObject> newObjects = new HashSet<>();
+        newObjects.add(newObject);
+        return new ObjectSelectionGroup(newObjects, newObject, null);
     }
 }
