@@ -31,6 +31,7 @@ import javafx.css.PseudoClass;
 import javafx.css.StyleableBooleanProperty;
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.StyleableObjectProperty;
+
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.PaintConverter;
@@ -43,6 +44,8 @@ import javafx.beans.binding.DoubleExpression;
 import javafx.beans.binding.ObjectExpression;
 import javafx.beans.binding.StringExpression;
 import javafx.beans.property.*;
+import javafx.beans.value.WritableBooleanValue;
+import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.css.FontCssMetaData;
@@ -1113,8 +1116,8 @@ public abstract class Axis<T> extends Region {
             }
 
             @Override
-            public StyleableProperty<Number> getStyleableProperty(Axis n) {
-                return (StyleableProperty<Number>)n.tickLengthProperty();
+            public StyleableProperty<Number> getStyleableProperty(Axis<?> n) {
+                return (StyleableProperty<Number>)(WritableValue<Number>)n.tickLengthProperty();
             }
         };
 
@@ -1161,7 +1164,7 @@ public abstract class Axis<T> extends Region {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(Axis<?> n) {
-                return (StyleableProperty<Number>)n.tickLabelGapProperty();
+                return (StyleableProperty<Number>)(WritableValue<Number>)n.tickLabelGapProperty();
             }
         };
 
@@ -1176,7 +1179,7 @@ public abstract class Axis<T> extends Region {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(Axis<?> n) {
-                return (StyleableProperty<Boolean>)n.tickMarkVisibleProperty();
+                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)n.tickMarkVisibleProperty();
             }
         };
 
@@ -1191,7 +1194,7 @@ public abstract class Axis<T> extends Region {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(Axis<?> n) {
-                return (StyleableProperty<Boolean>)n.tickLabelsVisibleProperty();
+                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)n.tickLabelsVisibleProperty();
             }
         };
 

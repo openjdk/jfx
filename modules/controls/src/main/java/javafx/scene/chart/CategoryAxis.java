@@ -37,6 +37,7 @@ import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.ReadOnlyDoubleWrapper;
 import javafx.beans.property.SimpleDoubleProperty;
+import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
@@ -45,12 +46,16 @@ import javafx.geometry.Side;
 import javafx.util.Duration;
 
 import com.sun.javafx.charts.ChartLayoutAnimator;
+
 import javafx.css.StyleableBooleanProperty;
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.CssMetaData;
+
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.SizeConverter;
+
 import java.util.Collections;
+
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 
@@ -556,7 +561,7 @@ public final class CategoryAxis extends Axis<String> {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(CategoryAxis n) {
-                return (StyleableProperty<Number>)n.startMarginProperty();
+                return (StyleableProperty<Number>)(WritableValue<Number>)n.startMarginProperty();
             }
         };
         
@@ -571,7 +576,7 @@ public final class CategoryAxis extends Axis<String> {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(CategoryAxis n) {
-                return (StyleableProperty<Number>)n.endMarginProperty();
+                return (StyleableProperty<Number>)(WritableValue<Number>)n.endMarginProperty();
             }
         };
         
@@ -586,7 +591,7 @@ public final class CategoryAxis extends Axis<String> {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(CategoryAxis n) {
-                return (StyleableProperty<Boolean>)n.gapStartAndEndProperty();
+                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)n.gapStartAndEndProperty();
             }
         };
 

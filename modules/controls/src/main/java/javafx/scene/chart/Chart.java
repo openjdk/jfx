@@ -30,6 +30,7 @@ import java.util.Collections;
 import java.util.List;
 
 import com.sun.javafx.scene.control.skin.Utils;
+
 import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
 import javafx.application.Platform;
@@ -39,6 +40,7 @@ import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.property.StringPropertyBase;
+import javafx.beans.value.WritableValue;
 import javafx.collections.ObservableList;
 import javafx.geometry.Pos;
 import javafx.geometry.Side;
@@ -49,11 +51,14 @@ import javafx.scene.layout.Region;
 
 import com.sun.javafx.charts.ChartLayoutAnimator;
 import com.sun.javafx.charts.Legend;
+
 import javafx.css.StyleableBooleanProperty;
 import javafx.css.StyleableObjectProperty;
 import javafx.css.CssMetaData;
+
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EnumConverter;
+
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 
@@ -439,7 +444,7 @@ public abstract class Chart extends Region {
 
             @Override
             public StyleableProperty<Side> getStyleableProperty(Chart node) {
-                return (StyleableProperty<Side>)node.titleSideProperty();
+                return (StyleableProperty<Side>)(WritableValue<Side>)node.titleSideProperty();
             }
         };
         
@@ -455,7 +460,7 @@ public abstract class Chart extends Region {
 
             @Override
             public StyleableProperty<Side> getStyleableProperty(Chart node) {
-                return (StyleableProperty<Side>)node.legendSideProperty();
+                return (StyleableProperty<Side>)(WritableValue<Side>)node.legendSideProperty();
             }
         };
         
@@ -470,7 +475,7 @@ public abstract class Chart extends Region {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(Chart node) {
-                return (StyleableProperty<Boolean>)node.legendVisibleProperty();
+                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)node.legendVisibleProperty();
             }
         };
 

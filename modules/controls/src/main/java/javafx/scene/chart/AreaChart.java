@@ -109,7 +109,7 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
             return "createSymbols";
         }
 
-        public CssMetaData getCssMetaData() {
+        public CssMetaData<AreaChart<?, ?>,Boolean> getCssMetaData() {
             return StyleableProperties.CREATE_SYMBOLS;
         }
     };

@@ -31,26 +31,27 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import com.sun.javafx.binding.StringFormatter;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.BooleanPropertyBase;
 import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.IntegerProperty;
-import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.value.ChangeListener;
+import javafx.beans.value.WritableValue;
 import javafx.geometry.Dimension2D;
 import javafx.geometry.Side;
 import javafx.util.Duration;
 import javafx.util.StringConverter;
 
 import com.sun.javafx.charts.ChartLayoutAnimator;
+
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.CssMetaData;
+
 import com.sun.javafx.css.converters.SizeConverter;
+
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 
@@ -451,7 +452,7 @@ public final class NumberAxis extends ValueAxis<Number> {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(NumberAxis n) {
-                return (StyleableProperty<Number>)n.tickUnitProperty();
+                return (StyleableProperty<Number>)(WritableValue<Number>)n.tickUnitProperty();
             }
         };
 

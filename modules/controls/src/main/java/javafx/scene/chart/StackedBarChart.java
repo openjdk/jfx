@@ -27,10 +27,12 @@ package javafx.scene.chart;
 
 
 import java.util.*;
+
 import javafx.animation.*;
 import javafx.application.Platform;
 import javafx.beans.NamedArg;
 import javafx.beans.property.DoubleProperty;
+import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Orientation;
@@ -38,11 +40,15 @@ import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 import javafx.scene.layout.StackPane;
 import javafx.util.Duration;
+
 import com.sun.javafx.charts.Legend;
+
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
+
 import com.sun.javafx.css.converters.SizeConverter;
+
 import javafx.collections.ListChangeListener;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
@@ -496,7 +502,7 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
         legend.getItems().clear();
         if (getData() != null) {
             for (int seriesIndex = 0; seriesIndex < getData().size(); seriesIndex++) {
-                Series series = getData().get(seriesIndex);
+                Series<X,Y> series = getData().get(seriesIndex);
                 Legend.LegendItem legenditem = new Legend.LegendItem(series.getName());
                 String defaultColorStyleClass = seriesDefaultColorMap.get(series);
                 legenditem.getSymbol().getStyleClass().addAll("chart-bar", "series" + seriesIndex, "bar-legend-symbol",
@@ -551,7 +557,7 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(StackedBarChart<?,?> node) {
-                return (StyleableProperty<Number>)node.categoryGapProperty();
+                return (StyleableProperty<Number>)(WritableValue<Number>)node.categoryGapProperty();
             }
         };
 
