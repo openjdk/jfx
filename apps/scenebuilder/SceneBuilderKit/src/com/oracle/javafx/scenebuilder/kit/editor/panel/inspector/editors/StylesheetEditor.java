@@ -78,7 +78,7 @@ import javafx.stage.FileChooser;
 public class StylesheetEditor extends InlineListEditor {
 
     private final StackPane root = new StackPane();
-    private final Parent rootInitialBt;
+    private Parent rootInitialBt;
 
     private final MenuItem documentRelativeMenuItem
             = new MenuItem(I18N.getString("inspector.resource.documentrelative"));
@@ -90,9 +90,12 @@ public class StylesheetEditor extends InlineListEditor {
     private Type type;
     private URL fxmlFileLocation;
 
-    @SuppressWarnings("LeakingThisInConstructor")
     public StylesheetEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses, URL fxmlFileLocation) {
         super(propMeta, selectedClasses);
+        initialize(fxmlFileLocation);
+    }
+    
+    private void initialize(URL fxmlFileLocation) {
         this.fxmlFileLocation = fxmlFileLocation;
         setLayoutFormat(PropertyEditor.LayoutFormat.DOUBLE_LINE);
         // Add initial button
@@ -404,24 +407,23 @@ public class StylesheetEditor extends InlineListEditor {
         @FXML
         private TextField stylesheetTf;
 
-        private final Pane root;
+        private Pane root;
         private String currentValue;
-        private final EditorItemDelegate editor;
+        private EditorItemDelegate editor;
         private Type itemType = Type.PLAIN_STRING;
 
-        @SuppressWarnings("LeakingThisInConstructor")
         public StylesheetItem(EditorItemDelegate editor, String url) {
 //            System.out.println("New StylesheetItem.");
+            initialize(editor, url);
+        }
+
+        // Method to please FindBugs
+        private void initialize(EditorItemDelegate editor, String url) {
             this.editor = editor;
             Parent parentRoot = EditorUtils.loadFxml("StylesheetEditorItem.fxml", this);
             assert parentRoot instanceof Pane;
             root = (Pane) parentRoot;
 
-            initialize(url);
-        }
-
-        // Method to please FindBugs
-        private void initialize(String url) {
             setValue(url);
             EventHandler<ActionEvent> onActionListener = event -> {
 //                    System.out.println("StylesheetItem : onActionListener");

@@ -45,11 +45,14 @@ import javafx.scene.control.TextField;
  */
 public class GenericEditor extends PropertyEditor {
 
-    private final TextField textField;
+    private TextField textField;
 
-    @SuppressWarnings("LeakingThisInConstructor")
     public GenericEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses) {
         super(propMeta, selectedClasses);
+        initialize();
+    }
+    
+    private void initialize() {
         textField = new TextField();
         EventHandler<ActionEvent> onActionListener = event -> userUpdateValueProperty(getValue());
         setTextEditorBehavior(this, textField, onActionListener);

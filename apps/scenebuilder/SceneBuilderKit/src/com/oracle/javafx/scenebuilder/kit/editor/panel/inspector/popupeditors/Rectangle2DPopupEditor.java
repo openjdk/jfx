@@ -61,7 +61,6 @@ public class Rectangle2DPopupEditor extends PopupEditor {
     private Parent root;
     private Rectangle2D rectangle2D;
 
-    @SuppressWarnings("LeakingThisInConstructor")
     public Rectangle2DPopupEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses) {
         super(propMeta, selectedClasses);
     }

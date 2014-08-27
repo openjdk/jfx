@@ -48,7 +48,7 @@ import javafx.scene.text.TextAlignment;
  */
 public class TextAlignmentEditor extends PropertyEditor {
 
-    private final Parent root;
+    private Parent root;
     @FXML
     private ToggleButton leftTb;
     @FXML
@@ -60,17 +60,15 @@ public class TextAlignmentEditor extends PropertyEditor {
 
     private final ToggleButton[] toggleButtons = new ToggleButton[4];
 
-    @SuppressWarnings("LeakingThisInConstructor")
     public TextAlignmentEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses) {
         super(propMeta, selectedClasses);
-        root = EditorUtils.loadFxml("TextAlignmentEditor.fxml", this); //NOI18N
-
         initialize();
-        setLayoutFormat(LayoutFormat.SIMPLE_LINE_BOTTOM);
     }
 
     //Method to please FindBugs
     private void initialize() {
+        root = EditorUtils.loadFxml("TextAlignmentEditor.fxml", this); //NOI18N
+
         toggleButtons[0] = leftTb;
         toggleButtons[1] = centerTb;
         toggleButtons[2] = rightTb;
@@ -79,6 +77,7 @@ public class TextAlignmentEditor extends PropertyEditor {
             tb.setOnAction(t -> userUpdateValueProperty(getValue()));
             tb.disableProperty().bind(disableProperty());
         }
+        setLayoutFormat(LayoutFormat.SIMPLE_LINE_BOTTOM);
     }
 
     @Override

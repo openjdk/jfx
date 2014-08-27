@@ -1915,20 +1915,18 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
         @FXML
         private Label titleLb;
 
-        private final Parent root;
+        private Parent root;
 
-        @SuppressWarnings("LeakingThisInConstructor")
         public SubSectionTitle(String title) {
-//            System.out.println("Loading new SubSection.fxml...");
-            URL fxmlURL = SubSectionTitle.class.getResource("SubSection.fxml");
-            root = EditorUtils.loadFxml(fxmlURL, this);
-
             initialize(title);
         }
 
         // Separate method to avoid FindBugs warning
         private void initialize(String title) {
-            titleLb.setText(title);
+//          System.out.println("Loading new SubSection.fxml...");
+          URL fxmlURL = SubSectionTitle.class.getResource("SubSection.fxml");
+          root = EditorUtils.loadFxml(fxmlURL, this);
+          titleLb.setText(title);
         }
 
         public void setTitle(String title) {

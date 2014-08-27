@@ -57,7 +57,7 @@ public class I18nStringEditor extends PropertyEditor {
     private static final String PERCENT_STR = "%"; //NOI18N
     private TextInputControl textNode = new TextField();
     private HBox i18nHBox = null;
-    final EventHandler<ActionEvent> valueListener;
+    private EventHandler<ActionEvent> valueListener;
     private final MenuItem i18nMenuItem = new MenuItem();
     private final String I18N_ON = I18N.getString("inspector.i18n.on");
     private final String I18N_OFF = I18N.getString("inspector.i18n.off");
@@ -68,10 +68,12 @@ public class I18nStringEditor extends PropertyEditor {
     private boolean i18nMode = false;
     private boolean multiLineMode = false;
 
-    @SuppressWarnings("LeakingThisInConstructor")
     public I18nStringEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses) {
         super(propMeta, selectedClasses);
-
+        initialize();
+    }
+    
+    private void initialize() {
         valueListener = event -> {
             userUpdateValueProperty(getValue());
             textNode.selectAll();
