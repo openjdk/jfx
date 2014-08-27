@@ -29,42 +29,107 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
 package com.oracle.javafx.scenebuilder.kit.editor.job;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.editor.job.togglegroup.AdjustAllToggleGroupJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.v2.ClearSelectionJob;
+import com.oracle.javafx.scenebuilder.kit.editor.selection.AbstractSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMFxIdIndex;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  *
  */
-public class TrimSelectionJob extends Job {
-    
-    private BatchJob batchJob;
-    
+public class TrimSelectionJob extends BatchSelectionJob {
 
     public TrimSelectionJob(EditorController editorController) {
         super(editorController);
     }
 
-    
-    /*
-     * Job
-     */
-    
     @Override
-    public boolean isExecutable() {
+    protected List<Job> makeSubJobs() {
+        final List<Job> result = new ArrayList<>();
+
+        if (canTrim()) {
+
+            final Selection selection = getEditorController().getSelection();
+            assert selection.getGroup() instanceof ObjectSelectionGroup; // Because (1)
+            final ObjectSelectionGroup osg = (ObjectSelectionGroup) selection.getGroup();
+            assert osg.getItems().size() == 1;
+            final FXOMObject oldRoot = getEditorController().getFxomDocument().getFxomRoot();
+            final FXOMObject candidateRoot = osg.getItems().iterator().next();
+
+            /*
+             *  This job is composed of subjobs:
+             *      0) Remove fx:controller/fx:root (if defined) from the old root object if any
+             *      1) Unselect the candidate
+             *          => ClearSelectionJob
+             *      2) Disconnect the candidate from its existing parent
+             *          => DeleteObjectJob
+             *      3) Set the candidate as the root of the document
+             *          => SetDocumentRootJob
+             *      4) Add fx:controller/fx:root (if defined) to the new root object
+             */
+            assert oldRoot instanceof FXOMInstance;
+            boolean isFxRoot = ((FXOMInstance) oldRoot).isFxRoot();
+            final String fxController = oldRoot.getFxController();
+            // First remove the fx:controller/fx:root from the old root object
+            if (isFxRoot) {
+                final ToggleFxRootJob fxRootJob = new ToggleFxRootJob(getEditorController());
+                result.add(fxRootJob);
+            }
+            if (fxController != null) {
+                final ModifyFxControllerJob fxControllerJob
+                        = new ModifyFxControllerJob(oldRoot, null, getEditorController());
+                result.add(fxControllerJob);
+            }
+
+            final Job deleteNewRoot = new DeleteObjectJob(candidateRoot, getEditorController());
+            result.add(deleteNewRoot);
+
+            final Job setDocumentRoot = new SetDocumentRootJob(candidateRoot, getEditorController());
+            result.add(setDocumentRoot);
+
+            final Job adjustToggleGroups = new AdjustAllToggleGroupJob(getEditorController());
+            result.add(adjustToggleGroups);
+
+            // Finally add the fx:controller/fx:root to the new root object
+            if (isFxRoot) {
+                final ToggleFxRootJob fxRootJob = new ToggleFxRootJob(getEditorController());
+                result.add(fxRootJob);
+            }
+            if (fxController != null) {
+                final ModifyFxControllerJob fxControllerJob
+                        = new ModifyFxControllerJob(candidateRoot, fxController, getEditorController());
+                result.add(fxControllerJob);
+            }
+        }
+
+        return result;
+    }
+
+    @Override
+    protected String makeDescription() {
+        return I18N.getString("label.action.edit.trim");
+    }
+
+    @Override
+    protected AbstractSelectionGroup getNewSelectionGroup() {
+        // Selection unchanged
+        return getOldSelectionGroup();
+    }
+
+    private boolean canTrim() {
         final Selection selection = getEditorController().getSelection();
         final boolean result;
-        
+
         if (selection.getGroup() instanceof ObjectSelectionGroup) {
             final ObjectSelectionGroup osg = (ObjectSelectionGroup) selection.getGroup();
             if (osg.getItems().size() == 1) {
@@ -89,92 +154,7 @@ public class TrimSelectionJob extends Job {
             //      => cannot trim a selected row/column in a grid pane
             result = false;
         }
-        
+
         return result;
     }
-
-    @Override
-    public void execute() {
-        assert batchJob == null;
-        assert isExecutable(); // (1)
-        
-        final Selection selection = getEditorController().getSelection();
-        assert selection.getGroup() instanceof ObjectSelectionGroup; // Because (1)
-        final ObjectSelectionGroup osg = (ObjectSelectionGroup) selection.getGroup();
-        assert osg.getItems().size() == 1;
-        final FXOMObject oldRoot = getEditorController().getFxomDocument().getFxomRoot();
-        final FXOMObject candidateRoot = osg.getItems().iterator().next();
-        
-        /*
-         *  This job is composed of subjobs:
-         *      0) Remove fx:controller/fx:root (if defined) from the old root object if any
-         *      1) Unselect the candidate
-         *          => ClearSelectionJob
-         *      2) Disconnect the candidate from its existing parent
-         *          => DeleteObjectJob
-         *      3) Set the candidate as the root of the document
-         *          => SetDocumentRootJob
-         *      4) Add fx:controller/fx:root (if defined) to the new root object
-         */
-        
-        batchJob = new BatchJob(getEditorController());
-        
-        assert oldRoot instanceof FXOMInstance;
-        boolean isFxRoot = ((FXOMInstance) oldRoot).isFxRoot();
-        final String fxController = oldRoot.getFxController();
-        // First remove the fx:controller/fx:root from the old root object
-        if (isFxRoot) {
-            final ToggleFxRootJob fxRootJob = new ToggleFxRootJob(getEditorController());
-            batchJob.addSubJob(fxRootJob);
-        }
-        if (fxController != null) {
-            final ModifyFxControllerJob fxControllerJob
-                    = new ModifyFxControllerJob(oldRoot, null, getEditorController());
-            batchJob.addSubJob(fxControllerJob);
-        }
-        
-        final Job clearSelectionJob = new ClearSelectionJob(getEditorController());
-        batchJob.addSubJob(clearSelectionJob);
-        
-        final Job deleteNewRoot = new DeleteObjectJob(candidateRoot, getEditorController());
-        batchJob.addSubJob(deleteNewRoot);
-        
-        final Job setDocumentRoot = new SetDocumentRootJob(candidateRoot, getEditorController());
-        batchJob.addSubJob(setDocumentRoot);
-
-        final Job adjustToggleGroups = new AdjustAllToggleGroupJob(getEditorController());
-        batchJob.addSubJob(adjustToggleGroups);
-               
-        // Finally add the fx:controller/fx:root to the new root object
-        if (isFxRoot) {
-            final ToggleFxRootJob fxRootJob = new ToggleFxRootJob(getEditorController());
-            batchJob.addSubJob(fxRootJob);
-        }
-        if (fxController != null) {
-            final ModifyFxControllerJob fxControllerJob
-                    = new ModifyFxControllerJob(candidateRoot, fxController, getEditorController());
-            batchJob.addSubJob(fxControllerJob);
-        }
-
-        // Now execute the batch
-        batchJob.execute();
-    }
-
-    @Override
-    public void undo() {
-        assert batchJob != null;
-        batchJob.undo();
-    }
-
-    @Override
-    public void redo() {
-        assert batchJob != null;
-        batchJob.redo();
-    }
-
-    @Override
-    public String getDescription() {
-        return I18N.getString("label.action.edit.trim");
-    }
-    
 }
