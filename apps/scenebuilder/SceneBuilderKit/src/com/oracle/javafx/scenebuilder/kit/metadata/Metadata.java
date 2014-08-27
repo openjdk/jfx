@@ -400,6 +400,8 @@ public class Metadata {
             new ComponentClassMetadata(javafx.scene.control.TableView.class, ControlMetadata);
     private final ComponentClassMetadata TextAreaMetadata = 
             new ComponentClassMetadata(javafx.scene.control.TextArea.class, TextInputControlMetadata);
+    private final ComponentClassMetadata TextFormatterMetadata = 
+            new ComponentClassMetadata(javafx.scene.control.TextFormatter.class, null);
     private final ComponentClassMetadata TitledPaneMetadata = 
             new ComponentClassMetadata(javafx.scene.control.TitledPane.class, LabeledMetadata);
     private final ComponentClassMetadata ToolBarMetadata = 
@@ -1104,6 +1106,8 @@ public class Metadata {
             new PropertyName("textAlignment");
     private final PropertyName textFillName = 
             new PropertyName("textFill");
+    private final PropertyName textFormatterName = 
+            new PropertyName("textFormatter");
     private final PropertyName textOriginName = 
             new PropertyName("textOrigin");
     private final PropertyName textOverrunName = 
@@ -3087,12 +3091,12 @@ public class Metadata {
                 true, /* readWrite */
                 javafx.scene.AccessibleRole.BUTTON, /* defaultValue */
                 new InspectorPath("Properties", "Accessibility", 2));
-    private final ValuePropertyMetadata role_RADIO_BUTTON_PropertyMetadata =
+    private final ValuePropertyMetadata role_MENU_BUTTON_PropertyMetadata =
             new EnumerationPropertyMetadata(
                 roleName,
                 javafx.scene.AccessibleRole.class,
                 true, /* readWrite */
-                javafx.scene.AccessibleRole.RADIO_BUTTON, /* defaultValue */
+                javafx.scene.AccessibleRole.MENU_BUTTON, /* defaultValue */
                 new InspectorPath("Properties", "Accessibility", 2));
     private final ValuePropertyMetadata role_CHECK_BOX_PropertyMetadata =
             new EnumerationPropertyMetadata(
@@ -3150,13 +3154,6 @@ public class Metadata {
                 true, /* readWrite */
                 javafx.scene.AccessibleRole.MENU_BAR, /* defaultValue */
                 new InspectorPath("Properties", "Accessibility", 2));
-    private final ValuePropertyMetadata role_MENU_BUTTON_PropertyMetadata =
-            new EnumerationPropertyMetadata(
-                roleName,
-                javafx.scene.AccessibleRole.class,
-                true, /* readWrite */
-                javafx.scene.AccessibleRole.MENU_BUTTON, /* defaultValue */
-                new InspectorPath("Properties", "Accessibility", 2));
     private final ValuePropertyMetadata role_PARENT_PropertyMetadata =
             new EnumerationPropertyMetadata(
                 roleName,
@@ -3184,6 +3181,13 @@ public class Metadata {
                 javafx.scene.AccessibleRole.class,
                 true, /* readWrite */
                 javafx.scene.AccessibleRole.PROGRESS_INDICATOR, /* defaultValue */
+                new InspectorPath("Properties", "Accessibility", 2));
+    private final ValuePropertyMetadata role_RADIO_BUTTON_PropertyMetadata =
+            new EnumerationPropertyMetadata(
+                roleName,
+                javafx.scene.AccessibleRole.class,
+                true, /* readWrite */
+                javafx.scene.AccessibleRole.RADIO_BUTTON, /* defaultValue */
                 new InspectorPath("Properties", "Accessibility", 2));
     private final ValuePropertyMetadata role_SCROLL_BAR_PropertyMetadata =
             new EnumerationPropertyMetadata(
@@ -3972,6 +3976,11 @@ public class Metadata {
                 true, /* readWrite */
                 javafx.scene.paint.Color.BLACK, /* defaultValue */
                 new InspectorPath("Properties", "Text", 7));
+    private final ComponentPropertyMetadata textFormatterPropertyMetadata =
+            new ComponentPropertyMetadata(
+                textFormatterName,
+                TextFormatterMetadata,
+                false); /* collection */
     private final ValuePropertyMetadata textOriginPropertyMetadata =
             new EnumerationPropertyMetadata(
                 textOriginName,
@@ -4666,6 +4675,7 @@ public class Metadata {
         componentClassMap.put(TextAreaMetadata.getKlass(), TextAreaMetadata);
         componentClassMap.put(TextFieldMetadata.getKlass(), TextFieldMetadata);
         componentClassMap.put(TextFlowMetadata.getKlass(), TextFlowMetadata);
+        componentClassMap.put(TextFormatterMetadata.getKlass(), TextFormatterMetadata);
         componentClassMap.put(TextInputControlMetadata.getKlass(), TextInputControlMetadata);
         componentClassMap.put(TilePaneMetadata.getKlass(), TilePaneMetadata);
         componentClassMap.put(TitledPaneMetadata.getKlass(), TitledPaneMetadata);
@@ -4751,7 +4761,7 @@ public class Metadata {
 
         ButtonBaseMetadata.getProperties().add(focusTraversable_true_PropertyMetadata);
         ButtonBaseMetadata.getProperties().add(onActionPropertyMetadata);
-        ButtonBaseMetadata.getProperties().add(role_RADIO_BUTTON_PropertyMetadata);
+        ButtonBaseMetadata.getProperties().add(role_MENU_BUTTON_PropertyMetadata);
         ButtonBaseMetadata.getProperties().add(styleClass_c40_PropertyMetadata);
 
         CameraMetadata.getProperties().add(farClipPropertyMetadata);
@@ -4828,7 +4838,6 @@ public class Metadata {
         ComboBoxBaseMetadata.getProperties().add(onShowingPropertyMetadata);
         ComboBoxBaseMetadata.getProperties().add(onShownPropertyMetadata);
         ComboBoxBaseMetadata.getProperties().add(promptTextPropertyMetadata);
-        ComboBoxBaseMetadata.getProperties().add(role_DATE_PICKER_PropertyMetadata);
         ComboBoxBaseMetadata.getProperties().add(styleClass_c5_PropertyMetadata);
         ComboBoxBaseMetadata.getProperties().add(value_Object_PropertyMetadata);
 
@@ -5548,6 +5557,8 @@ public class Metadata {
         TextFlowMetadata.getProperties().add(role_TEXT_PropertyMetadata);
         TextFlowMetadata.getProperties().add(textAlignmentPropertyMetadata);
 
+        TextFormatterMetadata.getProperties().add(value_Object_PropertyMetadata);
+
         TextInputControlMetadata.getProperties().add(editable_true_PropertyMetadata);
         TextInputControlMetadata.getProperties().add(focusTraversable_true_PropertyMetadata);
         TextInputControlMetadata.getProperties().add(fontPropertyMetadata);
@@ -5556,6 +5567,7 @@ public class Metadata {
         TextInputControlMetadata.getProperties().add(role_PASSWORD_FIELD_PropertyMetadata);
         TextInputControlMetadata.getProperties().add(styleClass_c50_PropertyMetadata);
         TextInputControlMetadata.getProperties().add(textPropertyMetadata);
+        TextInputControlMetadata.getProperties().add(textFormatterPropertyMetadata);
 
         TilePaneMetadata.getProperties().add(alignment_TOP_LEFT_PropertyMetadata);
         TilePaneMetadata.getProperties().add(contentBiasPropertyMetadata);
@@ -5727,6 +5739,7 @@ public class Metadata {
         hiddenProperties.add(new PropertyName("engine"));
         hiddenProperties.add(new PropertyName("eventDispatcher"));
         hiddenProperties.add(new PropertyName("expandedPane"));
+        hiddenProperties.add(new PropertyName("filter"));
         hiddenProperties.add(new PropertyName("focused"));
         hiddenProperties.add(new PropertyName("focusModel"));
         hiddenProperties.add(new PropertyName("graphicsContext2D"));
@@ -5785,6 +5798,7 @@ public class Metadata {
         hiddenProperties.add(new PropertyName("userData"));
         hiddenProperties.add(new PropertyName("useSystemMenuBar"));
         hiddenProperties.add(new PropertyName("valueChanging"));
+        hiddenProperties.add(new PropertyName("valueConverter"));
         hiddenProperties.add(new PropertyName("valueFactory"));
         hiddenProperties.add(new PropertyName("visibleLeafColumns"));
 
@@ -5868,7 +5882,6 @@ public class Metadata {
     //     buttonTypes
     //     expandableContent
     //     redoable
-    //     textFormatter
     //     undoable
 
 }
