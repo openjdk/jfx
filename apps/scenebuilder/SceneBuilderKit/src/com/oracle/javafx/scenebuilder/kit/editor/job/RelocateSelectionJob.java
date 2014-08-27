@@ -34,7 +34,6 @@ package com.oracle.javafx.scenebuilder.kit.editor.job;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
-import com.oracle.javafx.scenebuilder.kit.editor.job.v2.CompositeJob;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
@@ -51,7 +50,7 @@ import javafx.geometry.Point2D;
 /**
  *
  */
-public class RelocateSelectionJob extends CompositeJob {
+public class RelocateSelectionJob extends BatchDocumentJob {
     
     private static final long MERGE_PERIOD = 1000; //  milliseconds
     
@@ -153,10 +152,6 @@ public class RelocateSelectionJob extends CompositeJob {
         
         return result;
     }
-    
-    /*
-     * CompositeJob
-     */
     
     @Override
     protected List<Job> makeSubJobs() {
