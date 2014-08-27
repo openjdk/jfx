@@ -108,7 +108,6 @@ public class IncludeFileJob extends BatchSelectionJob {
                                     targetObject,
                                     targetMask.getSubComponentCount(),
                                     getEditorController()));
-                            result.add(new UpdateSelectionJob(newInclude, getEditorController()));
                         }
                     }
                 }
