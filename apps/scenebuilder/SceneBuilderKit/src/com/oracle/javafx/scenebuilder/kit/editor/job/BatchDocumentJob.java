@@ -65,7 +65,7 @@ public abstract class BatchDocumentJob extends CompositeJob2 {
     }
 
     @Override
-    public final void execute() {
+    public void execute() {
         final FXOMDocument fxomDocument
                 = getEditorController().getFxomDocument();
         fxomDocument.beginUpdate();
@@ -76,7 +76,7 @@ public abstract class BatchDocumentJob extends CompositeJob2 {
     }
 
     @Override
-    public final void undo() {
+    public void undo() {
         final FXOMDocument fxomDocument
                 = getEditorController().getFxomDocument();
         fxomDocument.beginUpdate();
@@ -87,7 +87,7 @@ public abstract class BatchDocumentJob extends CompositeJob2 {
     }
 
     @Override
-    public final void redo() {
+    public void redo() {
         final FXOMDocument fxomDocument
                 = getEditorController().getFxomDocument();
         fxomDocument.beginUpdate();
