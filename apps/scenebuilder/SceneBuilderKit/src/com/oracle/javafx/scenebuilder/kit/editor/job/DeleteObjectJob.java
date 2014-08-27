@@ -32,7 +32,7 @@
 package com.oracle.javafx.scenebuilder.kit.editor.job;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
-import com.oracle.javafx.scenebuilder.kit.editor.job.v2.RemovePropertyValueJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.v2.RemoveObjectJob;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMCollection;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMIntrinsic;
@@ -77,7 +77,8 @@ public class DeleteObjectJob extends InlineDocumentJob {
     protected List<Job> makeAndExecuteSubJobs() {
 
         final List<Job> result = new ArrayList<>();
-        if (targetFxomObject.getParentProperty() == null) {
+        if ((targetFxomObject.getParentProperty() == null) &&
+            (targetFxomObject.getParentCollection() == null)) {
             /*
              * targetFxomObject is the root object
              */
@@ -85,11 +86,11 @@ public class DeleteObjectJob extends InlineDocumentJob {
 
         } else {
 
-            // Then we make a job for removing the value
-            final Job removeValueJob = new RemovePropertyValueJob(
+            // Then we make a job for removing the object
+            final Job removeObjectJob = new RemoveObjectJob(
                     targetFxomObject,
                     getEditorController());
-            result.add(removeValueJob);
+            result.add(removeObjectJob);
         }
 
         for (Job subJob : result) {
