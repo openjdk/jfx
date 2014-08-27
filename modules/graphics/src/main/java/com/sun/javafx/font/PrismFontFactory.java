@@ -134,7 +134,7 @@ public abstract class PrismFontFactory implements FontFactory {
                         }
                     }
 
-                    useNativeRasterizer = isMacOSX || isWindows || (isLinux && !isEmbedded);
+                    useNativeRasterizer = isMacOSX || isWindows || isLinux;
                     String defPrismText = useNativeRasterizer ? "native" : "t2k";
                     String prismText = System.getProperty("prism.text", defPrismText);
                     if (useNativeRasterizer) {
