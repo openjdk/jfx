@@ -33,8 +33,9 @@ package com.oracle.javafx.scenebuilder.kit.editor.job;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
-import com.oracle.javafx.scenebuilder.kit.editor.job.v2.CompositeJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.v2.UpdateSelectionJob;
+import com.oracle.javafx.scenebuilder.kit.editor.selection.AbstractSelectionGroup;
+import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMIntrinsic;
@@ -51,13 +52,14 @@ import java.util.List;
 /**
  *
  */
-public class IncludeFileJob extends CompositeJob {
+public class IncludeFileJob extends BatchSelectionJob {
 
     private final File file;
     private FXOMObject targetObject;
+    private FXOMIntrinsic newInclude;
 
     public IncludeFileJob(File file, EditorController editorController) {
-        super(editorController, true /* shouldRefreshSceneGraph */, false /* shouldUpdateSelection */);
+        super(editorController);
 
         assert file != null;
         this.file = file;
@@ -67,9 +69,6 @@ public class IncludeFileJob extends CompositeJob {
         return targetObject;
     }
 
-    /*
-     * CompositeJob
-     */
     @Override
     protected List<Job> makeSubJobs() {
         final List<Job> result = new ArrayList<>();
@@ -82,7 +81,7 @@ public class IncludeFileJob extends CompositeJob {
             // Cannot include in non saved document
             // Cannot include same file as document one which will create cyclic reference
             if (documentURL != null && URLUtils.equals(documentURL, fileURL) == false) {
-                final FXOMIntrinsic newInclude = FXOMNodes.newInclude(targetDocument, file);
+                newInclude = FXOMNodes.newInclude(targetDocument, file);
 
                 // newInclude is null when file is empty
                 if (newInclude != null) {
@@ -124,5 +123,12 @@ public class IncludeFileJob extends CompositeJob {
     @Override
     protected String makeDescription() {
         return I18N.getString("include.file", file.getName());
+    }
+
+    @Override
+    protected AbstractSelectionGroup getNewSelectionGroup() {
+        final List<FXOMObject> fxomObjects = new ArrayList<>();
+        fxomObjects.add(newInclude);
+        return new ObjectSelectionGroup(fxomObjects, newInclude, null);
     }
 }
