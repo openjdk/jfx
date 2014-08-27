@@ -33,7 +33,6 @@
 package com.oracle.javafx.scenebuilder.kit.editor.job;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
-import com.oracle.javafx.scenebuilder.kit.editor.job.v2.CompositeJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.v2.RemoveFxControllerJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.v2.RemovePropertyJob;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMCollection;
@@ -47,13 +46,13 @@ import java.util.List;
 /**
  *
  */
-public class PrunePropertiesJob extends CompositeJob {
+public class PrunePropertiesJob extends BatchDocumentJob {
     
     private final FXOMObject fxomObject;
     private final FXOMObject targetParent;
 
     public PrunePropertiesJob(FXOMObject fxomObject, FXOMObject targetParent, EditorController editorController) {
-        super(editorController, true /* shouldRefreshSceneGraph */, false /* shouldUpdateSelection */);
+        super(editorController);
         
         assert fxomObject != null;
         
@@ -62,10 +61,6 @@ public class PrunePropertiesJob extends CompositeJob {
     }
     
 
-    /*
-     * CompositeJob
-     */
-    
     @Override
     protected List<Job> makeSubJobs() {
         final List<Job> result = new ArrayList<>();
