@@ -35,6 +35,7 @@ import javafx.scene.shape.FillRule;
 import javafx.scene.shape.StrokeLineCap;
 import javafx.scene.shape.StrokeLineJoin;
 import javafx.scene.text.Font;
+import javafx.scene.text.FontSmoothingType;
 import javafx.scene.text.TextAlignment;
 import javafx.scene.transform.Affine;
 import javafx.scene.transform.Rotate;
@@ -305,6 +306,13 @@ public class CanvasTest {
         assertEquals(f, gc.getFont());
         gc.setFont(null);
         assertEquals(f, gc.getFont());
+    }
+
+    @Test public void testGCState_FontSmoothing_Null() {
+        gc.setFontSmoothingType(FontSmoothingType.GRAY);
+        assertEquals(FontSmoothingType.GRAY, gc.getFontSmoothingType());
+        gc.setFontSmoothingType(null);
+        assertEquals(FontSmoothingType.GRAY, gc.getFontSmoothingType());
     }
 
     @Test public void testGCState_TextBaseline_Null() {
