@@ -1064,8 +1064,6 @@ public class Metadata {
             new PropertyName("strikethrough");
     private final PropertyName strokeName = 
             new PropertyName("stroke");
-    private final PropertyName strokeDashArrayName = 
-            new PropertyName("strokeDashArray");
     private final PropertyName strokeDashOffsetName = 
             new PropertyName("strokeDashOffset");
     private final PropertyName strokeLineCapName = 
@@ -1930,7 +1928,7 @@ public class Metadata {
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.COORDINATE,
                 true, /* readWrite */
                 -1.0, /* defaultValue */
-                new InspectorPath("Properties", "Specific", 127));
+                new InspectorPath("Properties", "Specific", 126));
     private final ValuePropertyMetadata fixedEyeAtCameraZeroPropertyMetadata =
             new BooleanPropertyMetadata(
                 fixedEyeAtCameraZeroName,
@@ -2211,7 +2209,7 @@ public class Metadata {
                 largeArcFlagName,
                 true, /* readWrite */
                 false, /* defaultValue */
-                new InspectorPath("Properties", "Specific", 125));
+                new InspectorPath("Properties", "Specific", 124));
     private final ValuePropertyMetadata layoutBoundsPropertyMetadata =
             new BoundsPropertyMetadata(
                 layoutBoundsName,
@@ -3415,7 +3413,7 @@ public class Metadata {
                 showWeekNumbersName,
                 true, /* readWrite */
                 true, /* defaultValue */
-                new InspectorPath("Properties", "Specific", 126));
+                new InspectorPath("Properties", "Specific", 125));
     private final ValuePropertyMetadata side_NULL_PropertyMetadata =
             new EnumerationPropertyMetadata(
                 sideName,
@@ -3531,12 +3529,6 @@ public class Metadata {
                 true, /* readWrite */
                 null, /* defaultValue */
                 new InspectorPath("Properties", "Stroke", 0));
-    private final ValuePropertyMetadata strokeDashArrayPropertyMetadata =
-            new DoubleListPropertyMetadata(
-                strokeDashArrayName,
-                true, /* readWrite */
-                Collections.emptyList(), /* defaultValue */
-                new InspectorPath("Properties", "Specific", 122));
     private final ValuePropertyMetadata strokeDashOffsetPropertyMetadata =
             new DoublePropertyMetadata(
                 strokeDashOffsetName,
@@ -3914,7 +3906,7 @@ public class Metadata {
                 sweepFlagName,
                 true, /* readWrite */
                 false, /* defaultValue */
-                new InspectorPath("Properties", "Specific", 123));
+                new InspectorPath("Properties", "Specific", 122));
     private final ValuePropertyMetadata tabClosingPolicyPropertyMetadata =
             new EnumerationPropertyMetadata(
                 tabClosingPolicyName,
@@ -4166,7 +4158,7 @@ public class Metadata {
                 userAgentStylesheetName,
                 true, /* readWrite */
                 "", /* defaultValue */
-                new InspectorPath("Properties", "Specific", 128));
+                new InspectorPath("Properties", "Specific", 127));
     private final ValuePropertyMetadata valignment_NULL_PropertyMetadata =
             new EnumerationPropertyMetadata(
                 valignmentName,
@@ -4362,7 +4354,7 @@ public class Metadata {
                 com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.ANGLE,
                 true, /* readWrite */
                 0.0, /* defaultValue */
-                new InspectorPath("Properties", "Specific", 124));
+                new InspectorPath("Properties", "Specific", 123));
     private final ValuePropertyMetadata y_0_PropertyMetadata =
             new DoublePropertyMetadata(
                 yName,
@@ -5387,7 +5379,6 @@ public class Metadata {
         ShapeMetadata.getProperties().add(role_NODE_PropertyMetadata);
         ShapeMetadata.getProperties().add(smoothPropertyMetadata);
         ShapeMetadata.getProperties().add(stroke_NULL_PropertyMetadata);
-        ShapeMetadata.getProperties().add(strokeDashArrayPropertyMetadata);
         ShapeMetadata.getProperties().add(strokeDashOffsetPropertyMetadata);
         ShapeMetadata.getProperties().add(strokeLineCapPropertyMetadata);
         ShapeMetadata.getProperties().add(strokeLineJoinPropertyMetadata);
@@ -5783,6 +5774,7 @@ public class Metadata {
         hiddenProperties.add(new PropertyName("showing"));
         hiddenProperties.add(new PropertyName("sortPolicy"));
         hiddenProperties.add(new PropertyName("skin"));
+        hiddenProperties.add(new PropertyName("strokeDashArray"));
         hiddenProperties.add(new PropertyName("styleableParent"));
         hiddenProperties.add(new PropertyName("tableView"));
         hiddenProperties.add(new PropertyName("tabPane"));
