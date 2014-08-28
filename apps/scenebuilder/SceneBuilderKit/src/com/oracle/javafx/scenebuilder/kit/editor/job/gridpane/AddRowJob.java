@@ -32,22 +32,24 @@
 package com.oracle.javafx.scenebuilder.kit.editor.job.gridpane;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
-import com.oracle.javafx.scenebuilder.kit.editor.job.BatchJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.BatchSelectionJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
 import com.oracle.javafx.scenebuilder.kit.editor.job.gridpane.GridPaneJobUtils.Position;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.AbstractSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.GridSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.GridSelectionGroup.Type;
+import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Job invoked when adding rows.
@@ -60,98 +62,32 @@ import java.util.Map;
  * We add new rows for each selected row, either above or below.
  *
  */
-public class AddRowJob extends Job {
+public class AddRowJob extends BatchSelectionJob {
 
-    private BatchJob subJob;
-    private AbstractSelectionGroup selectionSnapshot;
     // Key = target GridPane instance
-    // Value = list of target row indexes for this GridPane
-    private final Map<FXOMObject, List<Integer>> targetGridPanes = new HashMap<>();
+    // Value = set of target row indexes for this GridPane
+    private final Map<FXOMObject, Set<Integer>> targetGridPanes = new HashMap<>();
     private final Position position;
 
     public AddRowJob(final EditorController editorController, final Position position) {
         super(editorController);
         assert position == Position.ABOVE || position == Position.BELOW;
         this.position = position;
-        buildSubJobs();
     }
+
 
     @Override
-    public boolean isExecutable() {
-        return subJob != null && subJob.isExecutable();
-    }
-
-    @Override
-    public void execute() {
-        final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
-        final Selection selection = getEditorController().getSelection();
-
-        assert isExecutable(); // (1)
-        assert targetGridPanes.isEmpty() == false; // Because of (1)
-
-        try {
-            selectionSnapshot = selection.getGroup().clone();
-        } catch (CloneNotSupportedException x) {
-            // Emergency code
-            throw new RuntimeException(x);
-        }
-        selection.clear();
-        selection.beginUpdate();
-        fxomDocument.beginUpdate();
-        subJob.execute();
-        fxomDocument.endUpdate();
-        updateSelection();
-        selection.endUpdate();
-    }
-
-    @Override
-    public void undo() {
-        assert subJob != null;
-        final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
-        final Selection selection = getEditorController().getSelection();
-
-        selection.beginUpdate();
-        fxomDocument.beginUpdate();
-        subJob.undo();
-        fxomDocument.endUpdate();
-        selection.select(selectionSnapshot);
-        selection.endUpdate();
-    }
-
-    @Override
-    public void redo() {
-        assert subJob != null;
-        final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
-        final Selection selection = getEditorController().getSelection();
-
-        selection.clear();
-        selection.beginUpdate();
-        fxomDocument.beginUpdate();
-        subJob.redo();
-        fxomDocument.endUpdate();
-        updateSelection();
-        selection.endUpdate();
-    }
-
-    @Override
-    public String getDescription() {
-        return "Add Row " + position.name(); //NOI18N
-    }
-
-    private void buildSubJobs() {
+    protected List<Job> makeSubJobs() {
+        final List<Job> result = new ArrayList<>();
 
         if (GridPaneJobUtils.canPerformAdd(getEditorController())) {
-
-            // Create sub job
-            subJob = new BatchJob(getEditorController(),
-                    true /* shouldUpdateSceneGraph */, null);
 
             // Populate the target GridPane map
             assert targetGridPanes.isEmpty() == true;
             final List<FXOMObject> objectList
                     = GridPaneJobUtils.getTargetGridPanes(getEditorController());
             for (FXOMObject object : objectList) {
-                final List<Integer> indexList
+                final Set<Integer> indexList
                         = getTargetIndexes(getEditorController(), object);
                 targetGridPanes.put(object, indexList);
             }
@@ -160,19 +96,48 @@ public class AddRowJob extends Job {
             // First add the new row constraints
             final Job addConstraints = new AddRowConstraintsJob(
                     getEditorController(), position, targetGridPanes);
-            subJob.addSubJob(addConstraints);
+            result.add(addConstraints);
             // Then move the row content
-            moveRowContent();
+            result.addAll(moveRowContent());
         }
+        return result;
     }
 
-    private void moveRowContent() {
+    @Override
+    protected String makeDescription() {
+        return "Add Row " + position.name(); //NOI18N
+    }
 
-        assert subJob != null;
+    @Override
+    protected AbstractSelectionGroup getNewSelectionGroup() {
+        final AbstractSelectionGroup asg;
+        // Update new selection :
+        // - if there is more than 1 GridPane, we select the GridPane instances
+        // - if there is a single GridPane, we select the added rows
+        if (targetGridPanes.size() > 1) {
+            Set<FXOMObject> objects = targetGridPanes.keySet();
+            asg = new ObjectSelectionGroup(objects, objects.iterator().next(), null);
+        } else {
+            assert targetGridPanes.size() == 1;
+            final FXOMInstance targetGridPane
+                    = (FXOMInstance) targetGridPanes.keySet().iterator().next();
+            final Set<Integer> targetIndexes = targetGridPanes.get(targetGridPane);
+            assert targetIndexes.size() >= 1;
+            final Set<Integer> addedIndexes
+                    = GridPaneJobUtils.getAddedIndexes(targetIndexes, position);
+
+            asg = new GridSelectionGroup(targetGridPane, Type.ROW, addedIndexes);
+        }
+        return asg;
+    }
+
+    private List<Job> moveRowContent() {
+
+        final List<Job> result = new ArrayList<>();
 
         for (FXOMObject targetGridPane : targetGridPanes.keySet()) {
 
-            final List<Integer> targetIndexes = targetGridPanes.get(targetGridPane);
+            final Set<Integer> targetIndexes = targetGridPanes.get(targetGridPane);
 
             final DesignHierarchyMask mask = new DesignHierarchyMask(targetGridPane);
             final int rowsSize = mask.getRowsSize();
@@ -213,7 +178,7 @@ public class AddRowJob extends Job {
                         break;
                     default:
                         assert false;
-                        return;
+                        return result;
                 }
 
                 // If fromIndex >= rowsSize, we are below the last existing row 
@@ -224,39 +189,13 @@ public class AddRowJob extends Job {
                             = GridPaneJobUtils.getIndexes(fromIndex, toIndex);
                     final ReIndexRowContentJob reIndexJob = new ReIndexRowContentJob(
                             getEditorController(), offset, targetGridPane, indexes);
-                    subJob.addSubJob(reIndexJob);
+                    result.add(reIndexJob);
                 }
 
                 shiftIndex++;
             }
         }
-    }
-
-    private void updateSelection() {
-        final Selection selection = getEditorController().getSelection();
-        // Update new selection :
-        // - if there is more than 1 GridPane, we select the GridPane instances
-        // - if there is a single GridPane, we select the added rows
-        if (targetGridPanes.size() > 1) {
-            selection.select(targetGridPanes.keySet());
-        } else {
-            assert targetGridPanes.size() == 1;
-            final FXOMInstance targetGridPane
-                    = (FXOMInstance) targetGridPanes.keySet().iterator().next();
-            final List<Integer> targetIndexes = targetGridPanes.get(targetGridPane);
-            assert targetIndexes.size() >= 1;
-            final List<Integer> addedIndexes
-                    = GridPaneJobUtils.getAddedIndexes(targetIndexes, position);
-
-            // Selection has been cleared at execution time
-            assert selection.isEmpty();
-            // Select added rows
-            for (int addedIndex : addedIndexes) {
-                // Selection is empty => just toggle selection
-                selection.toggleSelection(targetGridPane,
-                        GridSelectionGroup.Type.ROW, addedIndex);
-            }
-        }
+        return result;
     }
 
     /**
@@ -265,14 +204,14 @@ public class AddRowJob extends Job {
      *
      * @return the list of target indexes
      */
-    private List<Integer> getTargetIndexes(
+    private Set<Integer> getTargetIndexes(
             final EditorController editorController,
             final FXOMObject targetGridPane) {
 
         final Selection selection = editorController.getSelection();
         final AbstractSelectionGroup asg = selection.getGroup();
 
-        final List<Integer> result = new ArrayList<>();
+        final Set<Integer> result = new HashSet<>();
 
         // Selection == GridPane rows
         // => return the list of selected rows
