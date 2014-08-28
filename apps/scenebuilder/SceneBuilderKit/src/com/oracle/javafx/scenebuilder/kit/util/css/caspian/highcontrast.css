@@ -1,0 +1,91 @@
+/*
+    Document   : highcontrast
+*/
+/*
+ * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.       
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.       
+ *        
+ * This code is free software; you can redistribute it and/or modify it       
+ * under the terms of the GNU General Public License version 2 only, as       
+ * published by the Free Software Foundation.  Oracle designates this       
+ * particular file as subject to the "Classpath" exception as provided       
+ * by Oracle in the LICENSE file that accompanied this code.       
+ *        
+ * This code is distributed in the hope that it will be useful, but WITHOUT     
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or       
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License       
+ * version 2 for more details (a copy is included in the LICENSE file that      
+ * accompanied this code).       
+ *        
+ * You should have received a copy of the GNU General Public License version    
+ * 2 along with this work; if not, write to the Free Software Foundation,  
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.       
+ *        
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA      
+ * or visit www.oracle.com if you need additional information or have any       
+ * questions.
+ *            
+ */
+
+/********************************************************************************
+ *                                                                              *
+ * 508 Compliance:                                                              *
+ * The CSS Styles used in this file provide a contrast ratio of at least 4.5:1  *
+ * for text and its background, per WCAG2.0 guidelines. See also W3C G18.       *
+ *                                                                              *
+ *******************************************************************************/
+
+
+/* ###### HIGH-CONTRAST COLOR THEME ##################################################### */
+
+.scene {
+    -fx-accent: #6ECFFF;
+    -fx-mid-text-color: black;
+    -fx-selection-bar: linear-gradient( from 0% 0% to 0% 100%, -fx-background 7%, derive(-fx-background,-15%) 100% );
+}
+
+
+.menu-item:focused .label {
+    -fx-text-fill: black;
+}
+
+
+.radio-menu-item:focused:checked .radio {
+    -fx-background-color: black;
+}
+
+
+ .check-menu-item:focused:checked .check {
+    -fx-background-color: black;
+}
+
+
+.menu:selected .arrow {
+    -fx-background-color: black;
+}
+
+
+.toggle-button:selected {
+    -fx-background-color:
+            -fx-shadow-highlight-color,
+            linear-gradient( from 0% 0% to 0% 100%, derive(-fx-color,-90%) 0%, derive(-fx-color,-60%) 100%),
+/*          the next line of code paints the dark vertical gradient from the top to the bottom of the selected button */
+			linear-gradient( from 0% 0% to 0% 100%, derive(-fx-color,-80%) 0%, derive(-fx-color,-65%) 45%, derive(-fx-color,-50%) 99%, derive(-fx-color,-60%) 100%),
+/*          the next line of code paints the dark horizontal gradient from the left and right edges toward the center of the selected button */
+            linear-gradient( from 0% 0% to 100% 0%, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0) 10%, rgba(0,0,0,0) 90%, rgba(0,0,0,0.3) 100%);
+        -fx-background-insets: 0 0 -1 0, 0, 1, 1;
+        -fx-text-fill: white;
+    }
+
+.toggle-button:selected:focused {
+    -fx-color: -fx-focused-base;
+    -fx-background-color:
+            -fx-focus-color,
+            linear-gradient( from 0% 0% to 0% 100%, derive(-fx-color,-90%) 0%, derive(-fx-color,-60%) 100%),
+/*          the next line of code paints the dark vertical gradient from the top to the bottom of the selected button */
+            linear-gradient( from 0% 0% to 0% 100%, derive(-fx-color,-80%) 0%, derive(-fx-color,-65%) 45%, derive(-fx-color,-50%) 99%, derive(-fx-color,-60%) 100%),
+/*          the next line of code paints the dark horizontal gradient from the left and right edges toward the center of the selected button */
+            linear-gradient( from 0% 0% to 100% 0%, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0) 10%, rgba(0,0,0,0) 90%, rgba(0,0,0,0.3) 100%);
+        -fx-background-insets: -1.4, 0, 1, 1;
+    }
+
