@@ -33,45 +33,47 @@ package com.oracle.javafx.scenebuilder.kit.editor.job;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController.ControlAction;
+import com.oracle.javafx.scenebuilder.kit.editor.selection.AbstractSelectionGroup;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  *
  */
-public class CutSelectionJob extends Job {
+public class CutSelectionJob extends BatchSelectionJob {
 
-    private final DeleteSelectionJob deleteSelectionSubJob;
+    private DeleteSelectionJob deleteSelectionSubJob;
 
     public CutSelectionJob(EditorController editorController) {
         super(editorController);
-        deleteSelectionSubJob = new DeleteSelectionJob(editorController);
     }
 
     @Override
-    public boolean isExecutable() {
-        return deleteSelectionSubJob.isExecutable()
-                && getEditorController().canPerformControlAction(ControlAction.COPY);
+    protected AbstractSelectionGroup getNewSelectionGroup() {
+        // Selection emptied
+        return null;
     }
 
     @Override
-    public void execute() {
-        // Update clipboard with current selection BEFORE EXECUTING DELETE job
-        assert getEditorController().canPerformControlAction(ControlAction.COPY);
-        getEditorController().performControlAction(ControlAction.COPY);
-        deleteSelectionSubJob.execute();
+    protected List<Job> makeSubJobs() {
+
+        final List<Job> result = new ArrayList<>();
+        if (getEditorController().canPerformControlAction(ControlAction.COPY)) {
+            // Update clipboard with current selection BEFORE EXECUTING DELETE job
+            assert getEditorController().canPerformControlAction(ControlAction.COPY);
+            getEditorController().performControlAction(ControlAction.COPY);
+
+            deleteSelectionSubJob = new DeleteSelectionJob(getEditorController());
+            if (deleteSelectionSubJob.isExecutable()) {
+                result.add(deleteSelectionSubJob);
+            }
+        }
+        return result;
     }
 
     @Override
-    public void undo() {
-        deleteSelectionSubJob.undo();
-    }
-
-    @Override
-    public void redo() {
-        deleteSelectionSubJob.redo();
-    }
-
-    @Override
-    public String getDescription() {
+    protected String makeDescription() {
+        assert deleteSelectionSubJob != null;
         return deleteSelectionSubJob.getDescription();
     }
 }
