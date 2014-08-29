@@ -52,6 +52,7 @@ import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
+import javafx.scene.Scene;
 import javafx.scene.control.cell.CheckBoxListCell;
 import javafx.scene.control.cell.ComboBoxListCell;
 import javafx.scene.control.cell.TextFieldListCell;
@@ -267,8 +268,8 @@ public class ListViewTest {
         assertEquals("Item 1", sm.getSelectedItem());
 
         listView.setItems(FXCollections.observableArrayList("Item 2"));
-        assertEquals(-1, sm.getSelectedIndex());
-        assertEquals(null, sm.getSelectedItem());
+        assertEquals(0, sm.getSelectedIndex());
+        assertEquals("Item 2", sm.getSelectedItem());
     }
 
     @Test public void test_rt15793() {
@@ -793,8 +794,8 @@ public class ListViewTest {
 
         StageLoader sl = new StageLoader(listView);
 
-        // everything should be null to start with
-        assertNull(listView.getSelectionModel().getSelectedItem());
+        // selection starts off on row 0
+        assertEquals("aabbaa", listView.getSelectionModel().getSelectedItem());
 
         // select "bbc" and ensure everything is set to that
         listView.getSelectionModel().select(1);
@@ -868,8 +869,8 @@ public class ListViewTest {
         // test initial state
         assertEquals(sl.getStage().getScene().getFocusOwner(), focusBtn);
         assertTrue(focusBtn.isFocused());
-        assertEquals(-1, sm.getSelectedIndex());
-        assertNull(sm.getSelectedItem());
+        assertEquals(0, sm.getSelectedIndex());
+        assertEquals("A", sm.getSelectedItem());
 
         // move focus to the listview
         listView.requestFocus();
@@ -1031,5 +1032,31 @@ public class ListViewTest {
                 });
             });
         });
+    }
+
+    @Test public void test_rt_37632() {
+        final ObservableList<String> listOne = FXCollections.observableArrayList("A", "B", "C");
+        final ObservableList<String> listTwo = FXCollections.observableArrayList("C");
+
+        final ListView<String> listView = new ListView<>();
+        MultipleSelectionModel<String> sm = listView.getSelectionModel();
+        listView.setItems(listOne);
+        listView.getSelectionModel().selectFirst();
+
+        assertEquals(0, sm.getSelectedIndex());
+        assertEquals("A", sm.getSelectedItem());
+        assertEquals(1, sm.getSelectedIndices().size());
+        assertEquals(0, (int) sm.getSelectedIndices().get(0));
+        assertEquals(1, sm.getSelectedItems().size());
+        assertEquals("A", sm.getSelectedItems().get(0));
+
+        listView.setItems(listTwo);
+
+        assertEquals(0, sm.getSelectedIndex());
+        assertEquals("C", sm.getSelectedItem());
+        assertEquals(1, sm.getSelectedIndices().size());
+        assertEquals(0, (int) sm.getSelectedIndices().get(0));
+        assertEquals(1, sm.getSelectedItems().size());
+        assertEquals("C", sm.getSelectedItems().get(0));
     }
 }

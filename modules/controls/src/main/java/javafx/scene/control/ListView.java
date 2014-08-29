@@ -30,6 +30,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
+import com.sun.javafx.scene.control.behavior.ListCellBehavior;
 import javafx.beans.InvalidationListener;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
@@ -276,7 +277,20 @@ public class ListView<T> extends Control {
     }
     private static final EventType<?> EDIT_COMMIT_EVENT =
             new EventType<>(editAnyEvent(), "EDIT_COMMIT");
-    
+
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Fields                                                                  *
+     *                                                                         *
+     **************************************************************************/
+
+    // by default we always select the first row in the ListView, and when the
+    // items list changes, we also reselect the first row. In some cases, such as
+    // for the ComboBox, this is not desirable, so it can be disabled here.
+    private boolean selectFirstRowByDefault = true;
+
     
 
     /***************************************************************************
@@ -342,6 +356,12 @@ public class ListView<T> extends Control {
                 } else {
                     focusedProperty().removeListener(focusedListener);
                 }
+            }
+
+            if (change.wasAdded() && "selectFirstRowByDefault".equals(change.getKey())) {
+                Boolean _selectFirstRowByDefault = (Boolean) change.getValueAdded();
+                if (_selectFirstRowByDefault == null) return;
+                selectFirstRowByDefault = _selectFirstRowByDefault;
             }
         });
     }
@@ -1276,10 +1296,15 @@ public class ListView<T> extends Control {
                 if (selectedItem != null) {
                     newValueIndex = newList.indexOf(selectedItem);
                 }
+
+                // we put selection onto the first item, if there is at least
+                // one item in the list
+                if (listView.selectFirstRowByDefault && newValueIndex == -1) {
+                    newValueIndex = newList.size() > 0 ? 0 : -1;
+                }
             }
 
-            setSelectedIndex(newValueIndex);
-            focus(newValueIndex);
+            select(newValueIndex);
         }
 
 
@@ -1408,6 +1433,12 @@ public class ListView<T> extends Control {
          * Public selection API                                                *
          *                                                                     *
          **********************************************************************/
+
+        /** {@inheritDoc} */
+        @Override public void clearAndSelect(int row) {
+            ListCellBehavior.setAnchor(listView, row, false);
+            super.clearAndSelect(row);
+        }
 
         /** {@inheritDoc} */
         @Override protected void focus(int row) {

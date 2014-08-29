@@ -225,6 +225,12 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
 
     protected final ListChangeListener<TablePositionBase> selectedCellsListener = c -> {
         while (c.next()) {
+            if (c.wasReplaced()) {
+                if (TreeTableCellBehavior.hasDefaultAnchor(getControl())) {
+                    TreeTableCellBehavior.removeAnchor(getControl());
+                }
+            }
+
             if (! c.wasAdded()) {
                 continue;
             }
@@ -295,7 +301,7 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
      * Call to record the current anchor position
      */
     protected void setAnchor(TablePositionBase tp) {
-        TableCellBehaviorBase.setAnchor(getControl(), tp);
+        TableCellBehaviorBase.setAnchor(getControl(), tp, false);
         setSelectionPathDeviated(false);
     }
     
@@ -310,7 +316,7 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
      * Returns true if there is an anchor set, and false if not anchor is set.
      */
     protected boolean hasAnchor() {
-        return TableCellBehaviorBase.hasAnchor(getControl());
+        return TableCellBehaviorBase.hasNonDefaultAnchor(getControl());
     }
     
     /**

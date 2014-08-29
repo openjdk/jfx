@@ -30,6 +30,7 @@ import com.sun.javafx.collections.NonIterableChange;
 import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
 import com.sun.javafx.scene.control.SelectedCellsMap;
 
+import com.sun.javafx.scene.control.behavior.TreeTableCellBehavior;
 import javafx.beans.property.DoubleProperty;
 import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
@@ -2076,7 +2077,6 @@ public class TreeTableView<S> extends Control {
         private final TreeTableView<S> treeTableView;
 
 
-
         /***********************************************************************
          *                                                                     *
          * Constructors                                                        *
@@ -2204,6 +2204,8 @@ public class TreeTableView<S> extends Control {
 
         private final MappingChange.Map<TreeTablePosition<S,?>,Integer> cellToIndicesMap = f -> f.getRow();
 
+        private TreeTableView<S> treeTableView = null;
+
         /***********************************************************************
          *                                                                     *
          * Constructors                                                        *
@@ -2240,8 +2242,6 @@ public class TreeTableView<S> extends Control {
             };
         }
         
-        private final TreeTableView<S> treeTableView;
-        
         private void updateTreeEventListener(TreeItem<S> oldRoot, TreeItem<S> newRoot) {
             if (oldRoot != null && weakTreeItemListener != null) {
                 oldRoot.removeEventHandler(TreeItem.<S>expandedItemCountChangeEvent(), weakTreeItemListener);
@@ -2255,6 +2255,11 @@ public class TreeTableView<S> extends Control {
         
         private ChangeListener<TreeItem<S>> rootPropertyListener = (observable, oldValue, newValue) -> {
             clearSelection();
+
+            int newValueIndex = getItemCount() > 0 ? 0 : -1;
+            TreeTableColumn<S,?> firstColumn = getTableColumn(0);
+            select(newValueIndex, isCellSelectionEnabled() ? firstColumn : null);
+
             updateTreeEventListener(oldValue, newValue);
         };
         
@@ -2467,6 +2472,11 @@ public class TreeTableView<S> extends Control {
         @Override public void clearAndSelect(int row, TableColumnBase<TreeItem<S>,?> column) {
             if (row < 0 || row >= getItemCount()) return;
 
+            final TreeTablePosition<S,?> newTablePosition = new TreeTablePosition<>(getTreeTableView(), row, (TreeTableColumn<S,?>)column);
+
+            // replace the anchor
+            TreeTableCellBehavior.setAnchor(treeTableView, newTablePosition, false);
+
             // RT-33558 if this method has been called with a given row/column
             // intersection, and that row/column intersection is the only
             // selection currently, then this method becomes a no-op.
@@ -2500,9 +2510,9 @@ public class TreeTableView<S> extends Control {
 
             // fire off a single add/remove/replace notification (rather than
             // individual remove and add notifications) - see RT-33324
-            int changeIndex = selectedCellsSeq.indexOf(new TreeTablePosition<>(getTreeTableView(), row, (TreeTableColumn<S,?>)column));
+            int changeIndex = selectedCellsSeq.indexOf(newTablePosition);
             ListChangeListener.Change<TreeTablePosition<S,?>> change = new NonIterableChange.GenericAddRemoveChange<>(
-                    changeIndex, changeIndex+1, previousSelection, selectedCellsSeq);
+                    changeIndex, changeIndex + 1, previousSelection, selectedCellsSeq);
             handleSelectedCellsListChangeEvent(change);
         }
 
@@ -2521,7 +2531,13 @@ public class TreeTableView<S> extends Control {
             TreeTablePosition<S,?> pos = new TreeTablePosition<>(getTreeTableView(), row, (TreeTableColumn<S,?>)column);
             
             if (getSelectionMode() == SelectionMode.SINGLE) {
+                startAtomic();
                 quietClearSelection();
+                stopAtomic();
+            }
+
+            if (TreeTableCellBehavior.hasDefaultAnchor(treeTableView)) {
+                TreeTableCellBehavior.removeAnchor(treeTableView);
             }
 
             selectedCellsMap.add(pos);
@@ -3030,7 +3046,7 @@ public class TreeTableView<S> extends Control {
                         TreeTablePosition<S,?> added = c.getAddedSubList().get(j);
                         TreeItem<S> addedTreeItem = added.getTreeItem();
 
-                        if (removedTreeItem.equals(addedTreeItem)) {
+                        if (removedTreeItem != null && removedTreeItem.equals(addedTreeItem)) {
                             matchFound = true;
                             break;
                         }

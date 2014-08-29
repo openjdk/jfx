@@ -250,7 +250,7 @@ public class TreeViewTest {
         installChildren();
         TreeItem<String> element = new TreeItem<String>("I AM A CRAZY RANDOM STRING");
         treeView.getSelectionModel().select(element);
-        assertEquals(-1, treeView.getSelectionModel().getSelectedIndex());
+        assertEquals(0, treeView.getSelectionModel().getSelectedIndex());
         assertSame(element, treeView.getSelectionModel().getSelectedItem());
     }
 
@@ -311,10 +311,11 @@ public class TreeViewTest {
         installChildren();
         treeView.getSelectionModel().select(0);
         assertEquals(root, treeView.getSelectionModel().getSelectedItem());
-        
-        treeView.setRoot(new TreeItem<String>("New Root"));
-        assertEquals(-1, treeView.getSelectionModel().getSelectedIndex());
-        assertEquals(null, treeView.getSelectionModel().getSelectedItem());
+
+        TreeItem newRoot = new TreeItem<String>("New Root");
+        treeView.setRoot(newRoot);
+        assertEquals(0, treeView.getSelectionModel().getSelectedIndex());
+        assertEquals(newRoot, treeView.getSelectionModel().getSelectedItem());
     }
     
     @Test public void ensureSelectionRemainsOnBranchWhenExpanded() {
@@ -563,8 +564,8 @@ public class TreeViewTest {
         root.setExpanded(true);
         root.getChildren().setAll(child1, child2, child3);
         treeView.setRoot(root);
-        assertEquals(-1, treeView.getSelectionModel().getSelectedIndex());
-        assertNull(treeView.getSelectionModel().getSelectedItem());
+        assertEquals(0, treeView.getSelectionModel().getSelectedIndex());
+        assertEquals(root, treeView.getSelectionModel().getSelectedItem());
     }
     
     @Test public void test_rt27181() {
@@ -943,6 +944,8 @@ public class TreeViewTest {
         sm.setSelectionMode(SelectionMode.MULTIPLE);
         
         treeView.setRoot(myCompanyRootNode);
+        treeView.getSelectionModel().clearSelection();
+
         myCompanyRootNode.setExpanded(true);
         salesDepartment.setExpanded(true);
         itSupport.setExpanded(true);
@@ -985,6 +988,8 @@ public class TreeViewTest {
         sm.setSelectionMode(SelectionMode.MULTIPLE);
         
         treeView.setRoot(myCompanyRootNode);
+        treeView.getSelectionModel().clearSelection();
+
         myCompanyRootNode.setExpanded(true);
         salesDepartment.setExpanded(false);
         itSupport.setExpanded(true);
@@ -1220,6 +1225,7 @@ public class TreeViewTest {
         assertEquals("item - 0", item0.getValue());
         item0.setExpanded(true);
 
+        treeView.getSelectionModel().clearSelection();
         treeView.getSelectionModel().selectIndices(1,2,3);
         assertEquals(3, treeView.getSelectionModel().getSelectedIndices().size());
 
@@ -1590,8 +1596,8 @@ public class TreeViewTest {
 
         StageLoader sl = new StageLoader(treeView);
 
-        // everything should be null to start with
-        assertNull(treeView.getSelectionModel().getSelectedItem());
+        // We start with selection on row 0
+        assertEquals(root, treeView.getSelectionModel().getSelectedItem());
 
         // select "bbc" and ensure everything is set to that
         treeView.getSelectionModel().select(2);
@@ -1618,8 +1624,8 @@ public class TreeViewTest {
 
         StageLoader sl = new StageLoader(treeView);
 
-        // everything should be null to start with
-        assertNull(treeView.getSelectionModel().getSelectedItem());
+        // We start with selection on row 0
+        assertEquals(root, treeView.getSelectionModel().getSelectedItem());
 
         // select "bbc" and ensure everything is set to that
         treeView.getSelectionModel().select(2);
@@ -2108,5 +2114,31 @@ public class TreeViewTest {
                 });
             });
         });
+    }
+
+    @Test public void test_rt_37632() {
+        final TreeItem<String> rootOne = new TreeItem<>("Root 1");
+        final TreeItem<String> rootTwo = new TreeItem<>("Root 2");
+
+        final TreeView<String> treeView = new TreeView<>();
+        MultipleSelectionModel<TreeItem<String>> sm = treeView.getSelectionModel();
+        treeView.setRoot(rootOne);
+        treeView.getSelectionModel().selectFirst();
+
+        assertEquals(0, sm.getSelectedIndex());
+        assertEquals(rootOne, sm.getSelectedItem());
+        assertEquals(1, sm.getSelectedIndices().size());
+        assertEquals(0, (int) sm.getSelectedIndices().get(0));
+        assertEquals(1, sm.getSelectedItems().size());
+        assertEquals(rootOne, sm.getSelectedItems().get(0));
+
+        treeView.setRoot(rootTwo);
+
+        assertEquals(0, sm.getSelectedIndex());
+        assertEquals(rootTwo, sm.getSelectedItem());
+        assertEquals(1, sm.getSelectedIndices().size());
+        assertEquals(0, (int) sm.getSelectedIndices().get(0));
+        assertEquals(1, sm.getSelectedItems().size());
+        assertEquals(rootTwo, sm.getSelectedItems().get(0));
     }
 }

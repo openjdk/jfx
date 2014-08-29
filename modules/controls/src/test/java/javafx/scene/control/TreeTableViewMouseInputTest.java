@@ -432,7 +432,7 @@ public class TreeTableViewMouseInputTest {
             root.getChildren().add(new TreeItem<>("Row " + i));
         }
 
-        StageLoader sl = new StageLoader(tableView);
+//        StageLoader sl = new StageLoader(tableView);
 
         tableView.setShowRoot(true);
         final MultipleSelectionModel sm = tableView.getSelectionModel();
@@ -451,9 +451,9 @@ public class TreeTableViewMouseInputTest {
         VirtualFlowTestUtils.clickOnRow(tableView, 0, true, KeyModifier.SHIFT);
         assertEquals(0, sm.getSelectedIndex());
         assertEquals(0, fm.getFocusedIndex());
-        assertEquals(1, sm.getSelectedItems().size());
+        assertEquals(debug(), 1, sm.getSelectedItems().size());
 
-        sl.dispose();
+//        sl.dispose();
     }
 
     @Test public void test_rt_32963() {

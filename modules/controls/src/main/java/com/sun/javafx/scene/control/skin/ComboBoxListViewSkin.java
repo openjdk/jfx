@@ -609,6 +609,8 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                 // not what is expected in the ComboBox control (unlike the
                 // ListView control, which does this).
                 getProperties().put("selectOnFocusGain", false);
+
+                getProperties().put("selectFirstRowByDefault", false);
             }
 
             @Override protected double computeMinHeight(double width) {

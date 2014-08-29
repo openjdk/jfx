@@ -134,8 +134,8 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
         // result in the correct selection occuring (whilst the focus index moves
         // about).
         if (shiftDown) {
-            if (! hasAnchor(tableView)) {
-                setAnchor(tableView, focusedCell);
+            if (! hasNonDefaultAnchor(tableView)) {
+                setAnchor(tableView, focusedCell, false);
             }
         } else {
             removeAnchor(tableView);

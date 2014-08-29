@@ -218,9 +218,15 @@ public class TreeTableViewKeyInputTest {
      **************************************************************************/    
     
     @Test public void testInitialState() {
-        assertTrue(sm.getSelectedCells().isEmpty());
-        assertTrue(sm.getSelectedIndices().isEmpty());
-        assertTrue(sm.getSelectedItems().isEmpty());
+        assertEquals(0, sm.getSelectedIndex());
+
+        assertEquals(1, sm.getSelectedCells().size());
+
+        assertEquals(1, sm.getSelectedIndices().size());
+        assertEquals(0, (int) sm.getSelectedIndices().get(0));
+
+        assertEquals(1, sm.getSelectedItems().size());
+        assertEquals(root, sm.getSelectedItems().get(0));
     }
     
     
@@ -444,9 +450,8 @@ public class TreeTableViewKeyInputTest {
         keyboard.doDownArrowPress(KeyModifier.SHIFT);
         keyboard.doDownArrowPress(KeyModifier.SHIFT);
         keyboard.doUpArrowPress(KeyModifier.SHIFT);
-        assertTrue(debug(), sm.isSelected(0));
-        assertTrue(sm.isSelected(1));
-        assertFalse(sm.isSelected(2));
+        assertTrue(debug(), isSelected(0, 1));
+        assertTrue(debug(), isNotSelected(2));
     }
     
     @Test public void testShiftUpTwiceThenShiftDownFrom0Index() {
@@ -1423,7 +1428,7 @@ public class TreeTableViewKeyInputTest {
         for (int i = 0; i <= 5; i++) {
             assertTrue(sm.isSelected(i,col1));
         }
-        assertTrue(isAnchor(5,1));
+        assertTrue(debug(), isAnchor(5,1));
         
         keyboard.doKeyPress(KeyCode.END, KeyModifier.SHIFT, KeyModifier.getShortcutKey());
         for (int i = 0; i < tableView.getExpandedItemCount() - 1; i++) {
@@ -2196,7 +2201,7 @@ public class TreeTableViewKeyInputTest {
         sm.clearAndSelect(5);                          
 
         keyboard.doKeyPress(KeyCode.HOME, KeyModifier.SHIFT); 
-        assertTrue(isSelected(0,1,2,3,4,5));
+        assertTrue(debug(), isSelected(0,1,2,3,4,5));
         assertTrue(isNotSelected(6,7,8,9));
         
         keyboard.doKeyPress(KeyCode.END, KeyModifier.SHIFT); 
@@ -3307,7 +3312,7 @@ public class TreeTableViewKeyInputTest {
         keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT); // col 3
         keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT); // col 4
         assertEquals(0, getAnchor().getRow());
-        assertEquals(0, getAnchor().getColumn());              // anchor does not move
+        assertEquals(debug(), 0, getAnchor().getColumn());              // anchor does not move
         assertTrue(fm.isFocused(0, col4));
         assertTrue(sm.isSelected(0, col0));
         assertTrue(sm.isSelected(0, col1));
@@ -4003,7 +4008,10 @@ public class TreeTableViewKeyInputTest {
         // get the current exception handler before replacing with our own,
         // as ListListenerHelp intercepts the exception otherwise
         final Thread.UncaughtExceptionHandler exceptionHandler = Thread.currentThread().getUncaughtExceptionHandler();
-        Thread.currentThread().setUncaughtExceptionHandler((t, e) -> fail("We don't expect any exceptions in this test!"));
+        Thread.currentThread().setUncaughtExceptionHandler((t, e) -> {
+            e.printStackTrace();
+            fail("We don't expect any exceptions in this test!");
+        });
 
         final int items = 10;
         root.getChildren().clear();

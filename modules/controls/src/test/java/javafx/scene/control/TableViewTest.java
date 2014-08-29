@@ -284,8 +284,8 @@ public class TableViewTest {
         assertEquals("Item 1", sm.getSelectedItem());
         
         table.setItems(FXCollections.observableArrayList("Item 2"));
-        assertEquals(-1, sm.getSelectedIndex());
-        assertEquals(null, sm.getSelectedItem());
+        assertEquals(0, sm.getSelectedIndex());
+        assertEquals("Item 2", sm.getSelectedItem());
     }
 
     /*********************************************************************
@@ -1525,10 +1525,12 @@ public class TableViewTest {
                 ccc = new Person("CCC", "Giles", "jim.bob@example.com")
         ));
 
-        final TableSelectionModel sm = table.getSelectionModel();
+        final TableView.TableViewSelectionModel sm = table.getSelectionModel();
 
         // test pre-conditions
-        assertTrue(sm.isEmpty());
+        assertEquals(1, sm.getSelectedCells().size());
+        assertEquals(1, sm.getSelectedItems().size());
+        assertEquals(1, sm.getSelectedIndices().size());
 
         // select the 3rd row (that is, CCC)
         sm.select(2);
@@ -2569,8 +2571,8 @@ public class TableViewTest {
 
         StageLoader sl = new StageLoader(tableView);
 
-        // everything should be null to start with
-        assertNull(tableView.getSelectionModel().getSelectedItem());
+        // selection starts off at row 0
+        assertEquals("aabbaa", tableView.getSelectionModel().getSelectedItem());
 
         // select "bbc" and ensure everything is set to that
         tableView.getSelectionModel().select(1);
@@ -3808,5 +3810,35 @@ public class TableViewTest {
                 });
             });
         });
+    }
+
+    @Test public void test_rt_37632() {
+        final ObservableList<String> listOne = FXCollections.observableArrayList("A", "B", "C");
+        final ObservableList<String> listTwo = FXCollections.observableArrayList("C");
+
+        TableColumn<String,String> tableColumn = new TableColumn("column");
+        tableColumn.setCellValueFactory(c -> new ReadOnlyStringWrapper(c.getValue()));
+
+        final TableView<String> tableView = new TableView<>();
+        tableView.getColumns().add(tableColumn);
+        MultipleSelectionModel<String> sm = tableView.getSelectionModel();
+        tableView.setItems(listOne);
+        tableView.getSelectionModel().selectFirst();
+
+        assertEquals(0, sm.getSelectedIndex());
+        assertEquals("A", sm.getSelectedItem());
+        assertEquals(1, sm.getSelectedIndices().size());
+        assertEquals(0, (int) sm.getSelectedIndices().get(0));
+        assertEquals(1, sm.getSelectedItems().size());
+        assertEquals("A", sm.getSelectedItems().get(0));
+
+        tableView.setItems(listTwo);
+
+        assertEquals(0, sm.getSelectedIndex());
+        assertEquals("C", sm.getSelectedItem());
+        assertEquals(1, sm.getSelectedIndices().size());
+        assertEquals(0, (int) sm.getSelectedIndices().get(0));
+        assertEquals(1, sm.getSelectedItems().size());
+        assertEquals("C", sm.getSelectedItems().get(0));
     }
 }

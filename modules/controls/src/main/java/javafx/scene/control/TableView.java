@@ -30,6 +30,7 @@ import java.util.*;
 
 import com.sun.javafx.scene.control.Logging;
 import com.sun.javafx.scene.control.SelectedCellsMap;
+import com.sun.javafx.scene.control.behavior.TableCellBehavior;
 import javafx.beans.DefaultProperty;
 import javafx.beans.InvalidationListener;
 import javafx.beans.WeakInvalidationListener;
@@ -2066,10 +2067,16 @@ public class TableView<S> extends Control {
                 if (selectedItem != null) {
                     newValueIndex = newList.indexOf(selectedItem);
                 }
+
+                // we put selection onto the first item, if there is at least
+                // one item in the list
+                if (newValueIndex == -1) {
+                    newValueIndex = newList.size() > 0 ? 0 : -1;
+                }
             }
 
-            setSelectedIndex(newValueIndex);
-            focus(newValueIndex);
+            TableColumn<S,?> firstColumn = getTableColumn(0);
+            select(newValueIndex, isCellSelectionEnabled() ? firstColumn : null);
         }
         
 
@@ -2252,6 +2259,11 @@ public class TableView<S> extends Control {
         @Override public void clearAndSelect(int row, TableColumn<S,?> column) {
             if (row < 0 || row >= getItemCount()) return;
 
+            final TablePosition<S,?> newTablePosition = new TablePosition<>(getTableView(), row, column);
+
+            // replace the anchor
+            TableCellBehavior.setAnchor(tableView, newTablePosition, false);
+
             // RT-33558 if this method has been called with a given row/column
             // intersection, and that row/column intersection is the only
             // selection currently, then this method becomes a no-op.
@@ -2285,9 +2297,9 @@ public class TableView<S> extends Control {
 
             // fire off a single add/remove/replace notification (rather than
             // individual remove and add notifications) - see RT-33324
-            int changeIndex = selectedCellsSeq.indexOf(new TablePosition<>(getTableView(), row, column));
-            ListChangeListener.Change change = new NonIterableChange.GenericAddRemoveChange<TablePosition<S,?>>(
-                    changeIndex, changeIndex+1, previousSelection, selectedCellsSeq);
+            int changeIndex = selectedCellsSeq.indexOf(newTablePosition);
+            ListChangeListener.Change change = new NonIterableChange.GenericAddRemoveChange<>(
+                    changeIndex, changeIndex + 1, previousSelection, selectedCellsSeq);
             handleSelectedCellsListChangeEvent(change);
         }
 
@@ -2306,7 +2318,13 @@ public class TableView<S> extends Control {
             TablePosition<S,?> pos = new TablePosition<>(getTableView(), row, column);
             
             if (getSelectionMode() == SelectionMode.SINGLE) {
+                startAtomic();
                 quietClearSelection();
+                stopAtomic();
+            }
+
+            if (TableCellBehavior.hasDefaultAnchor(tableView)) {
+                TableCellBehavior.removeAnchor(tableView);
             }
 
             selectedCellsMap.add(pos);

@@ -26,6 +26,7 @@
 package javafx.scene.control;
 
 import com.sun.javafx.css.converters.SizeConverter;
+import com.sun.javafx.scene.control.behavior.TreeCellBehavior;
 import com.sun.javafx.scene.control.skin.TreeViewSkin;
 
 import javafx.application.Platform;
@@ -1218,6 +1219,16 @@ public class TreeView<T> extends Control {
 
         /***********************************************************************
          *                                                                     *
+         * Internal fields                                                     *
+         *                                                                     *
+         **********************************************************************/
+
+        private TreeView<T> treeView = null;
+
+
+
+        /***********************************************************************
+         *                                                                     *
          * Constructors                                                        *
          *                                                                     *
          **********************************************************************/
@@ -1231,6 +1242,8 @@ public class TreeView<T> extends Control {
             this.treeView.rootProperty().addListener(weakRootPropertyListener);
                     
             updateTreeEventListener(null, treeView.getRoot());
+
+            TreeCellBehavior.setAnchor(treeView, 0, true);
         }
         
         private void updateTreeEventListener(TreeItem<T> oldRoot, TreeItem<T> newRoot) {
@@ -1246,6 +1259,11 @@ public class TreeView<T> extends Control {
         
         private ChangeListener<TreeItem<T>> rootPropertyListener = (observable, oldValue, newValue) -> {
             clearSelection();
+
+            // if we can, we put selection onto the first row
+            int newValueIndex = getItemCount() > 0 ? 0 : -1;
+            select(newValueIndex);
+
             updateTreeEventListener(oldValue, newValue);
         };
         
@@ -1356,16 +1374,7 @@ public class TreeView<T> extends Control {
         private WeakEventHandler<TreeModificationEvent<T>> weakTreeItemListener;
 
 
-        /***********************************************************************
-         *                                                                     *
-         * Internal properties                                                 *
-         *                                                                     *
-         **********************************************************************/
 
-        private final TreeView<T> treeView;
-
-
-        
         /***********************************************************************
          *                                                                     *
          * Public selection API                                                *
@@ -1414,6 +1423,11 @@ public class TreeView<T> extends Control {
             }
         }
 
+        /** {@inheritDoc} */
+        @Override public void clearAndSelect(int row) {
+            TreeCellBehavior.setAnchor(treeView, row, false);
+            super.clearAndSelect(row);
+        }
 
 
         /***********************************************************************

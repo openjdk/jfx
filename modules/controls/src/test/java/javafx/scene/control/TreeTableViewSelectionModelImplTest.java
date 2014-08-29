@@ -737,6 +737,7 @@ public class TreeTableViewSelectionModelImplTest {
         assertEquals("item - 0", item0.getValue());
         item0.setExpanded(true);
 
+        model.clearSelection();
         model.selectIndices(1,2,3);
         assertEquals(3, model.getSelectedCells().size());
 

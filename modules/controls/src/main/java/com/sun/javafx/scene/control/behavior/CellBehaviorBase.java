@@ -53,26 +53,44 @@ public abstract class CellBehaviorBase<T extends Cell> extends BehaviorBase<T> {
 
     private static final String ANCHOR_PROPERTY_KEY = "anchor";
 
+    // The virtualised controls all start with selection on row 0 by default.
+    // This means that we have a default anchor, but it should be removed if
+    // a different anchor could be set - and normally we ignore the default
+    // anchor anyway.
+    private static final String IS_DEFAULT_ANCHOR_KEY = "isDefaultAnchor";
+
     public static <T> T getAnchor(Control control, T defaultResponse) {
-        return hasAnchor(control) ?
+        return hasNonDefaultAnchor(control) ?
                 (T) control.getProperties().get(ANCHOR_PROPERTY_KEY) :
                 defaultResponse;
     }
 
-    public static <T> void setAnchor(Control control, T anchor) {
+    public static <T> void setAnchor(Control control, T anchor, boolean isDefaultAnchor) {
         if (control != null && anchor == null) {
             removeAnchor(control);
         } else {
             control.getProperties().put(ANCHOR_PROPERTY_KEY, anchor);
+            control.getProperties().put(IS_DEFAULT_ANCHOR_KEY, isDefaultAnchor);
         }
     }
 
-    public static boolean hasAnchor(Control control) {
+    public static boolean hasNonDefaultAnchor(Control control) {
+        Boolean isDefaultAnchor = (Boolean) control.getProperties().remove(IS_DEFAULT_ANCHOR_KEY);
+        return (isDefaultAnchor == null || isDefaultAnchor == false) && hasAnchor(control);
+    }
+
+    public static boolean hasDefaultAnchor(Control control) {
+        Boolean isDefaultAnchor = (Boolean) control.getProperties().remove(IS_DEFAULT_ANCHOR_KEY);
+        return isDefaultAnchor != null && isDefaultAnchor == true && hasAnchor(control);
+    }
+
+    private static boolean hasAnchor(Control control) {
         return control.getProperties().get(ANCHOR_PROPERTY_KEY) != null;
     }
 
     public static void removeAnchor(Control control) {
         control.getProperties().remove(ANCHOR_PROPERTY_KEY);
+        control.getProperties().remove(IS_DEFAULT_ANCHOR_KEY);
     }
 
 
@@ -194,8 +212,8 @@ public abstract class CellBehaviorBase<T extends Cell> extends BehaviorBase<T> {
         // result in the correct selection occuring (whilst the focus index moves
         // about).
         if (shiftDown) {
-            if (! hasAnchor(cellContainer)) {
-                setAnchor(cellContainer, fm.getFocusedIndex());
+            if (! hasNonDefaultAnchor(cellContainer)) {
+                setAnchor(cellContainer, fm.getFocusedIndex(), false);
             }
         } else {
             removeAnchor(cellContainer);

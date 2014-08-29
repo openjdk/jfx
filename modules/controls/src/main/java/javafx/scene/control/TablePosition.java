@@ -26,6 +26,8 @@
 package javafx.scene.control;
 
 import java.lang.ref.WeakReference;
+import java.util.List;
+
 import javafx.beans.NamedArg;
 
 /**
@@ -67,8 +69,10 @@ public class TablePosition<S,T> extends TablePositionBase<TableColumn<S,T>> {
     public TablePosition(@NamedArg("tableView") TableView<S> tableView, @NamedArg("row") int row, @NamedArg("tableColumn") TableColumn<S,T> tableColumn) {
         super(row, tableColumn);
         this.controlRef = new WeakReference<>(tableView);
+
+        List<S> items = tableView.getItems();
         this.itemRef = new WeakReference<>(
-                row >= 0 && row < tableView.getItems().size() ? tableView.getItems().get(row) : null);
+                items != null && row >= 0 && row < items.size() ? items.get(row) : null);
     }
     
     
