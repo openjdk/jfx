@@ -34,7 +34,6 @@ package com.oracle.javafx.scenebuilder.kit.editor.job;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.editor.job.v2.BackupSelectionJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.v2.CompositeJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.v2.UpdateSelectionJob;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.GridSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
@@ -51,14 +50,14 @@ import java.util.Set;
 /**
  *
  */
-public class BatchModifySelectionJob extends CompositeJob {
+public class ModifySelectionJob extends BatchDocumentJob {
 
     private final ValuePropertyMetadata propertyMetadata;
     private final Object newValue;
 
-    public BatchModifySelectionJob(ValuePropertyMetadata propertyMetadata,
+    public ModifySelectionJob(ValuePropertyMetadata propertyMetadata,
             Object newValue, EditorController editorController) {
-        super(editorController, true, false);
+        super(editorController);
         this.propertyMetadata = propertyMetadata;
         this.newValue = newValue;
     }
