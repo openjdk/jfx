@@ -278,6 +278,21 @@ public final class QuantumToolkit extends Toolkit {
         // not implemented
     }
 
+    /**
+     * Method to initialize the Scene Graph on the JavaFX application thread.
+     * Specifically, we will do static initialization for those classes in
+     * the javafx.stage, javafx.scene, and javafx.controls packages necessary
+     * to allow subsequent construction of the Scene or any Node, including
+     * a PopupControl, on a background thread.
+     *
+     * This method is called on the JavaFX application thread.
+     */
+    private static void initSceneGraph() {
+        // It is both necessary and sufficient to call a static method on the
+        // Screen class to allow PopupControl instances to be created on any thread.
+        javafx.stage.Screen.getPrimary();
+    }
+
     // Called by Glass from Application.run()
     void runToolkit() {
         Thread user = Thread.currentThread();
@@ -318,6 +333,8 @@ public final class QuantumToolkit extends Toolkit {
                 }
             });
         }
+        // Initialize JavaFX scene graph
+        initSceneGraph();
         launchLatch.countDown();
         try {
             Application.invokeAndWait(this.userRunnable);
