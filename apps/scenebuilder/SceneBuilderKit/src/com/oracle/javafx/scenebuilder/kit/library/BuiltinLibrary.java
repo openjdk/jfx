@@ -256,12 +256,12 @@ public class BuiltinLibrary extends Library {
     
     private void addDefaultItem(Class<?> componentClass, String section, String... qualifiers) {
         final String name = componentClass.getSimpleName();
-        String nameWithQualifier = name;
+        StringBuilder nameWithQualifier = new StringBuilder(name);
         for (String qualifier : qualifiers) {
-            nameWithQualifier += qualifier;
+            nameWithQualifier.append(qualifier);
         }
         final String fxmlText = makeFxmlText(componentClass);
-        addItem(nameWithQualifier, fxmlText, section, name);
+        addItem(nameWithQualifier.toString(), fxmlText, section, name);
     }
     
     
