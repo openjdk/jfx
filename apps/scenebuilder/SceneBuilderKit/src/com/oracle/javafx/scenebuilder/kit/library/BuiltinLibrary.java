@@ -123,6 +123,8 @@ public class BuiltinLibrary extends Library {
                 "AccordionEmpty", "Accordion", EMPTY_QUALIFIER); //NOI18N
         addRegionItem200x200(javafx.scene.layout.AnchorPane.class, TAG_CONTAINERS);
         addRegionItem200x200(javafx.scene.layout.BorderPane.class, TAG_CONTAINERS);
+        addCustomizedItem(javafx.scene.control.DialogPane.class, TAG_CONTAINERS, FX8_QUALIFIER);
+        addDefaultItem(javafx.scene.control.DialogPane.class, TAG_CONTAINERS, EMPTY_QUALIFIER, FX8_QUALIFIER);
         addRegionItem200x200(javafx.scene.layout.FlowPane.class, TAG_CONTAINERS);
         addCustomizedItem(javafx.scene.layout.GridPane.class, TAG_CONTAINERS);
         addRegionItem200x100(javafx.scene.layout.HBox.class, TAG_CONTAINERS);
@@ -154,7 +156,6 @@ public class BuiltinLibrary extends Library {
         addDefaultItem(javafx.scene.control.ColorPicker.class, TAG_CONTROLS);
         addCustomizedItem(javafx.scene.control.ComboBox.class, TAG_CONTROLS);
         addDefaultItem(javafx.scene.control.DatePicker.class, TAG_CONTROLS, FX8_QUALIFIER);
-        addDefaultItem(javafx.scene.control.DialogPane.class, TAG_CONTROLS, FX8_QUALIFIER);
         addCustomizedItem(javafx.scene.web.HTMLEditor.class, TAG_CONTROLS);
         addCustomizedItem(javafx.scene.control.Hyperlink.class, TAG_CONTROLS);
         addCustomizedItem(javafx.scene.image.ImageView.class, TAG_CONTROLS);
@@ -256,8 +257,8 @@ public class BuiltinLibrary extends Library {
     private void addDefaultItem(Class<?> componentClass, String section, String... qualifiers) {
         final String name = componentClass.getSimpleName();
         String nameWithQualifier = name;
-        if (qualifiers.length > 0) {
-            nameWithQualifier += qualifiers[0];
+        for (String qualifier : qualifiers) {
+            nameWithQualifier += qualifier;
         }
         final String fxmlText = makeFxmlText(componentClass);
         addItem(nameWithQualifier, fxmlText, section, name);
