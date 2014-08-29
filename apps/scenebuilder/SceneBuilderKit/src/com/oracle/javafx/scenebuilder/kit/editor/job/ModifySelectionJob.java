@@ -62,9 +62,6 @@ public class ModifySelectionJob extends BatchDocumentJob {
         this.newValue = newValue;
     }
 
-    /*
-     * CompositeJob
-     */
     @Override
     protected List<Job> makeSubJobs() {
 
