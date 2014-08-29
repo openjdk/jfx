@@ -42,6 +42,7 @@ import javafx.scene.paint.LinearGradient;
 import javafx.scene.paint.Paint;
 import javafx.scene.paint.Stop;
 import javafx.scene.text.Font;
+import javafx.util.Duration;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
@@ -292,5 +293,17 @@ public class CSSParserTest {
         assert obj instanceof Number;
         assertEquals(1d, (Number)obj);
 
+    }
+
+    @Test public void testRT_38483() {
+
+        Duration expected = Duration.millis(42);
+        ParsedValue value = CSSParser.getInstance().parseExpr("foo", "42ms;");
+        Object observed = value.convert(null);
+        assertEquals(expected, observed);
+
+        value = CSSParser.getInstance().parseExpr("foo", "indefinite;");
+        observed = value.convert(null);
+        assertEquals(Duration.INDEFINITE, observed);
     }
 }

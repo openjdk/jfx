@@ -885,6 +885,10 @@ final public class CSSParser {
                 Size size = new Size(Double.MAX_VALUE, SizeUnits.PX);
                 ParsedValueImpl sizeValue = new ParsedValueImpl<Size,Number>(size, null);
                 value = new ParsedValueImpl<ParsedValue<?,Size>,Number>(sizeValue, SizeConverter.getInstance());
+            } else if ("indefinite".equals(text)) {
+                Size size = new Size(Double.POSITIVE_INFINITY, SizeUnits.PX);
+                ParsedValueImpl<Size,Size> sizeValue = new ParsedValueImpl<>(size, null);
+                value = new ParsedValueImpl<ParsedValue<?,Size>,Duration>(sizeValue, DurationConverter.getInstance());
             } else if ("true".equals(text)) {
                 // TODO: handling of boolean is really bogus
                 value = new ParsedValueImpl<String,Boolean>("true",BooleanConverter.getInstance());

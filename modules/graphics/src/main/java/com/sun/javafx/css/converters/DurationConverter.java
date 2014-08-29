@@ -54,10 +54,14 @@ public final class DurationConverter extends StyleConverterImpl<ParsedValue<?, S
         Size size = parsedValue.convert(font);
         double time = size.getValue();
         Duration duration = null;
-        switch (size.getUnits()) {
-            case S: duration = Duration.seconds(time); break;
-            case MS: duration = Duration.millis(time); break;
-            default: duration = Duration.UNKNOWN;
+        if (time < Double.POSITIVE_INFINITY) {
+            switch (size.getUnits()) {
+                case S:  duration = Duration.seconds(time); break;
+                case MS: duration = Duration.millis(time);  break;
+                default: duration = Duration.UNKNOWN;
+            }
+        } else {
+            duration = Duration.INDEFINITE;
         }
         return duration;
     }

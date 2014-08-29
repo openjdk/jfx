@@ -817,12 +817,13 @@
     </ul>
     <h3><a name="typeduration" id="typeduration">&lt;duration&gt;</a></h3>
     <p>A duration is a <a href="#typenumber" class="typeref">&lt;number&gt;</a>
-        with one of the following units.</p>
+        with second or millisecond units, or the value <span class="grammar">indefinite</span>.</p>
     <p> </p>
-    <p class="grammar"><a href="#typenumber">&lt;number&gt;</a>[ s | ms ]</p>
+    <p class="grammar">[<a href="#typenumber">&lt;number&gt;</a>[ s | ms ]] | indefinite</p>
     <ul>
         <li><strong>s</strong>: duration in seconds</li>
         <li><strong>ms</strong>: duration in milliseconds. One second is 1000 milliseconds.</li>
+        <li><strong>indefinite</strong>: See <a href="../../util/Duration.html#INDEFINITE" class="typelink">Duration.INDEFINITE</a></li>
     </ul>
     <p>See also <a href="http://www.w3.org/TR/css3-values/#time" class="typelink">W3C time units</a>.</p>
     <h3><a name="typepoint" id="typepoint">&lt;point&gt;</a></h3>
