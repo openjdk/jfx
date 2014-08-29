@@ -141,7 +141,7 @@ public class SwingNode extends Node {
     private volatile JLightweightFrame lwFrame;
     final JLightweightFrame getLightweightFrame() { return lwFrame; }
 
-    private volatile NGExternalNode peer;
+    private NGExternalNode peer;
 
     private final ReentrantLock paintLock = new ReentrantLock();
 
@@ -298,12 +298,14 @@ public class SwingNode extends Node {
         Runnable r = () -> {
             peer.setImageBuffer(IntBuffer.wrap(data), x, y, w, h, linestride, scale);
         };
-        if (peer != null) {
-            SwingFXUtils.runOnFxThread(r);
-        } else {
-            peerRequests.clear();
-            peerRequests.add(r);
-        }
+        SwingFXUtils.runOnFxThread(() -> {
+            if (peer != null) {
+                r.run();
+            } else {
+                peerRequests.clear();
+                peerRequests.add(r);
+            }
+        });
     }
 
     /*
@@ -313,11 +315,13 @@ public class SwingNode extends Node {
         Runnable r = () -> {
             peer.setImageBounds(x, y, w, h);
         };
-        if (peer != null) {
-            SwingFXUtils.runOnFxThread(r);
-        } else {
-            peerRequests.add(r);
-        }
+        SwingFXUtils.runOnFxThread(() -> {
+            if (peer != null) {
+                r.run();
+            } else {
+                peerRequests.add(r);
+            }
+        });
     }
 
     /*
@@ -328,11 +332,13 @@ public class SwingNode extends Node {
             peer.repaintDirtyRegion(dirtyX, dirtyY, dirtyWidth, dirtyHeight);
             impl_markDirty(DirtyBits.NODE_CONTENTS);
         };
-        if (peer != null) {
-            SwingFXUtils.runOnFxThread(r);
-        } else {
-            peerRequests.add(r);
-        }
+        SwingFXUtils.runOnFxThread(() -> {
+            if (peer != null) {
+                r.run();
+            } else {
+                peerRequests.add(r);
+            }
+        });
     }
 
     @Override public boolean isResizable() {
