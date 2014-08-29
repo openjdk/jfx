@@ -88,11 +88,14 @@ public class InsertColumnJob extends CompositeJob {
                 = new InsertColumnConstraintsJob(gridPaneObject, columnIndex, insertCount, getEditorController());
         result.add(insertJob);
         
-        final Job moveJob
-                = new MoveColumnContentJob(gridPaneObject, columnIndex, +insertCount, getEditorController());
-        if (moveJob.isExecutable()) {
-            result.add(moveJob);
-        } // else column is empty : no children to move
+        final int lastColumnIndex = columnContraintsMeta.getValue(gridPaneObject).size()-1;
+        for (int c = lastColumnIndex; c >= columnIndex; c--) {
+            final Job moveJob
+                    = new MoveColumnContentJob(gridPaneObject, c, +insertCount, getEditorController());
+            if (moveJob.isExecutable()) {
+                result.add(moveJob);
+            } // else column is empty : no children to move
+        }
         
         return result;
     }
