@@ -275,16 +275,16 @@ public class BuiltinLibrary extends Library {
     
     private void addRegionItem200x200(Class<? extends Region> componentClass, String section, String qualifier, String iconName) {
         final String name = componentClass.getSimpleName();
-        String nameWithQualifier = name;
+        StringBuilder nameWithQualifier = new StringBuilder(name);
         if (qualifier != null) {
-            nameWithQualifier += qualifier;
+            nameWithQualifier.append(qualifier);
         }
         final String fxmlText = makeRegionFxmlText(componentClass, 200.0, 200.0);
         String theIconName = name;
         if (iconName != null) {
             theIconName = iconName;
         }
-        addItem(nameWithQualifier, fxmlText, section, theIconName);
+        addItem(nameWithQualifier.toString(), fxmlText, section, theIconName);
     }
     
     
