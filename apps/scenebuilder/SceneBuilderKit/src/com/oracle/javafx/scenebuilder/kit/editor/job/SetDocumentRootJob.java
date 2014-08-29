@@ -82,6 +82,9 @@ public class SetDocumentRootJob extends BatchSelectionJob {
 
     @Override
     protected AbstractSelectionGroup getNewSelectionGroup() {
+        if (newRoot == null) {
+            return null;
+        }
         List<FXOMObject> newObjects = new ArrayList<>();
         newObjects.add(newRoot);
         return new ObjectSelectionGroup(newObjects, newRoot, null);
