@@ -68,15 +68,13 @@ class GlassWindowEventHandler extends Window.EventHandler implements PrivilegedA
                 stage.stageListener.changedLocation(window.getX(), window.getY());
                 //We need to sync the new x,y for painting
                 if (!Application.GetApplication().hasWindowManager()) {
-                    ViewPainter.renderLock.lock();
-                    try { 
+                    QuantumToolkit.runWithRenderLock(() -> {
                         GlassScene scene = stage.getScene();
                         if (scene != null) {
                             scene.updateSceneState();
                         }
-                    } finally { 
-                        ViewPainter.renderLock.unlock();
-                    }
+                        return null;
+                    });
                 }
                 break;
             case WindowEvent.RESIZE:
@@ -145,13 +143,11 @@ class GlassWindowEventHandler extends Window.EventHandler implements PrivilegedA
     public void handleScreenChangedEvent(Window window, long time, Screen oldScreen, Screen newScreen) {
         GlassScene scene = stage.getScene();
         if (scene != null) {
-            ViewPainter.renderLock.lock();
-            try { 
+            QuantumToolkit.runWithRenderLock(() -> {
                 scene.entireSceneNeedsRepaint();
                 scene.updateSceneState();
-            } finally { 
-                ViewPainter.renderLock.unlock();
-            }
+                return null;
+            });
         }
 
         QuantumToolkit.runWithoutRenderLock(() -> {

@@ -374,6 +374,22 @@ public final class QuantumToolkit extends Toolkit {
         }
     }
 
+    /**
+     * Runs the specified supplier, first acquiring the renderLock.
+     * The lock is released when done.
+     * @param <T> the type of the return value
+     * @param supplier the supplier to be run
+     * @return the return value from calling supplier.get()
+     */
+    public static <T> T runWithRenderLock(Supplier<T> supplier) {
+        ViewPainter.renderLock.lock();
+        try {
+            return supplier.get();
+        } finally {
+            ViewPainter.renderLock.unlock();
+        }
+    }
+
     boolean hasNativeSystemVsync() {
         return nativeSystemVsync;
     }
@@ -703,15 +719,13 @@ public final class QuantumToolkit extends Toolkit {
 
         notifyShutdownHooks();
 
-        ViewPainter.renderLock.lock();
-        try {
+        runWithRenderLock(() -> {
             //TODO - should update glass scene view state
             //TODO - doesn't matter because we are exiting
             Application app = Application.GetApplication();
             app.terminate();
-        } finally {
-            ViewPainter.renderLock.unlock();
-        }
+            return null;
+        });
 
         dispose();
 
