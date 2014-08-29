@@ -3866,16 +3866,40 @@ final public class CSSParser {
         // need to read the first token
         currentToken = nextToken(lexer);
 
-        while ((currentToken != null) &&
-               (currentToken.getType() != Token.EOF)) {
+        while((currentToken != null) &&
+                (currentToken.getType() == CSSLexer.AT_KEYWORD)) {
 
-            if (currentToken.getType() == CSSLexer.FONT_FACE) {
+            currentToken = nextToken(lexer);
+
+            if (currentToken == null || currentToken.getType() != CSSLexer.IDENT) {
+
+                // just using ParseException for a nice error message, not for throwing the exception.
+                ParseException parseException = new ParseException("Expected IDENT", currentToken, this);
+                final String msg = parseException.toString();
+                CssError error = createError(msg);
+                if (LOGGER.isLoggable(Level.WARNING)) {
+                    LOGGER.warning(error.toString());
+                }
+                reportError(error);
+
+                // get past EOL or SEMI
+                do {
+                    currentToken = lexer.nextToken();
+                } while ((currentToken != null) &&
+                        (currentToken.getType() == CSSLexer.SEMI) ||
+                        (currentToken.getType() == CSSLexer.WS) ||
+                        (currentToken.getType() == CSSLexer.NL));
+                continue;
+            }
+
+            String keyword = currentToken.getText().toLowerCase(Locale.ROOT);
+            if ("font-face".equals(keyword)) {
                 FontFace fontFace = fontFace(lexer);
                 if (fontFace != null) stylesheet.getFontFaces().add(fontFace);
                 currentToken = nextToken(lexer);
                 continue;
 
-            } else if (currentToken.getType() == CSSLexer.IMPORT) {
+            } else if ("import".equals(keyword)) {
 
                 if (CSSParser.imports == null) {
                     CSSParser.imports = new Stack<>();
@@ -3901,12 +3925,12 @@ final public class CSSParser {
                     }
 
                 } else {
-                    // Import imports import!
+// Import imports import!
                     final int line = currentToken.getLine();
                     final int pos = currentToken.getOffset();
                     final String msg =
                             MessageFormat.format("Recursive @import at {2} [{0,number,#},{1,number,#}]",
-                                    line,pos,imports.peek());
+                                    line, pos, imports.peek());
                     CssError error = createError(msg);
                     if (LOGGER.isLoggable(Level.WARNING)) {
                         LOGGER.warning(error.toString());
@@ -3923,7 +3947,12 @@ final public class CSSParser {
                         (currentToken.getType() == CSSLexer.NL));
 
                 continue;
+
             }
+        }
+
+        while ((currentToken != null) &&
+               (currentToken.getType() != Token.EOF)) {
 
             List<Selector> selectors = selectors(lexer);
             if (selectors == null) return;

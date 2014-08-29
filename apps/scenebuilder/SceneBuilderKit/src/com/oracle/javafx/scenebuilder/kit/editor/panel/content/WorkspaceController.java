@@ -146,15 +146,14 @@ class WorkspaceController {
         return result;
     }
     
-    public void setThemeStyleSheets(List<URL> themeStyleSheets) {
+    public void setThemeStyleSheet(URL themeStyleSheet) {
         assert contentGroup.getParent() instanceof Group;
         final Group isolationGroup = (Group) contentGroup.getParent();
         assert isolationGroup.getStyleClass().contains("root");
         
         isolationGroup.getStylesheets().clear();
-        for (URL url : themeStyleSheets) {
-            isolationGroup.getStylesheets().add(url.toString());
-        }
+        assert themeStyleSheet != null;
+        isolationGroup.getStylesheets().add(themeStyleSheet.toString());
         isolationGroup.applyCss();
     }
     

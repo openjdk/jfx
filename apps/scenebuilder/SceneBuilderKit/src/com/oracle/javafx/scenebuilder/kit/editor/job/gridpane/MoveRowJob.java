@@ -32,7 +32,7 @@
 package com.oracle.javafx.scenebuilder.kit.editor.job.gridpane;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
-import com.oracle.javafx.scenebuilder.kit.editor.job.BatchJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.BatchSelectionJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.DeleteObjectJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
 import com.oracle.javafx.scenebuilder.kit.editor.job.gridpane.GridPaneJobUtils.Position;
@@ -48,16 +48,16 @@ import com.oracle.javafx.scenebuilder.kit.fxom.FXOMPropertyC;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import javafx.scene.layout.RowConstraints;
 
 /**
  * Job invoked when moving rows ABOVE or BELOW.
  */
-public class MoveRowJob extends Job {
+public class MoveRowJob extends BatchSelectionJob {
 
-    private BatchJob subJob;
-    private AbstractSelectionGroup selectionSnapshot;
     private FXOMObject targetGridPane;
     private final List<Integer> targetIndexes = new ArrayList<>();
     private final Position position;
@@ -66,78 +66,14 @@ public class MoveRowJob extends Job {
         super(editorController);
         assert position == Position.ABOVE || position == Position.BELOW;
         this.position = position;
-        buildSubJobs();
     }
 
     @Override
-    public boolean isExecutable() {
-        return subJob != null && subJob.isExecutable();
-    }
+    protected List<Job> makeSubJobs() {
 
-    @Override
-    public void execute() {
-        final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
-        final Selection selection = getEditorController().getSelection();
-
-        assert isExecutable(); // (1)
-        assert targetIndexes.isEmpty() == false; // Because of (1)
-
-        try {
-            selectionSnapshot = selection.getGroup().clone();
-        } catch (CloneNotSupportedException x) {
-            // Emergency code
-            throw new RuntimeException(x);
-        }
-        selection.clear();
-        selection.beginUpdate();
-        fxomDocument.beginUpdate();
-        subJob.execute();
-        fxomDocument.endUpdate();
-        updateSelection();
-        selection.endUpdate();
-    }
-
-    @Override
-    public void undo() {
-        assert subJob != null;
-        final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
-        final Selection selection = getEditorController().getSelection();
-
-        selection.beginUpdate();
-        fxomDocument.beginUpdate();
-        subJob.undo();
-        fxomDocument.endUpdate();
-        selection.select(selectionSnapshot);
-        selection.endUpdate();
-    }
-
-    @Override
-    public void redo() {
-        assert subJob != null;
-        final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
-        final Selection selection = getEditorController().getSelection();
-
-        selection.clear();
-        selection.beginUpdate();
-        fxomDocument.beginUpdate();
-        subJob.redo();
-        fxomDocument.endUpdate();
-        updateSelection();
-        selection.endUpdate();
-    }
-
-    @Override
-    public String getDescription() {
-        return "Move Row " + position.name(); //NOI18N
-    }
-
-    private void buildSubJobs() {
+        final List<Job> result = new ArrayList<>();
 
         if (GridPaneJobUtils.canPerformMove(getEditorController(), position)) {
-
-            // Create sub job
-            subJob = new BatchJob(getEditorController(),
-                    true /* shouldUpdateSceneGraph */, null);
 
             // Retrieve the target GridPane
             final Selection selection = getEditorController().getSelection();
@@ -150,15 +86,32 @@ public class MoveRowJob extends Job {
 
             // Add sub jobs
             // First move the row constraints
-            moveRowConstraints();
+            result.addAll(moveRowConstraints());
             // Then move the row content
-            moveRowContent();
+            result.addAll(moveRowContent());
         }
+        return result;
     }
 
-    private void moveRowConstraints() {
+    @Override
+    protected String makeDescription() {
+        return "Move Row " + position.name(); //NOI18N
+    }
 
-        assert subJob != null;
+    @Override
+    protected AbstractSelectionGroup getNewSelectionGroup() {
+        final Set<Integer> movedIndexes = new HashSet<>();
+        for (int targetIndex : targetIndexes) {
+            int movedIndex = position == Position.ABOVE
+                    ? targetIndex - 1 : targetIndex + 1;
+            movedIndexes.add(movedIndex);
+        }
+        return new GridSelectionGroup(targetGridPane, GridSelectionGroup.Type.ROW, movedIndexes);
+    }
+
+    private List<Job> moveRowConstraints() {
+
+        final List<Job> result = new ArrayList<>();
 
         // Retrieve the constraints property for the specified target GridPane
         final PropertyName propertyName = new PropertyName("rowConstraints"); //NOI18N
@@ -167,7 +120,7 @@ public class MoveRowJob extends Job {
                 = ((FXOMInstance) targetGridPane).getProperties().get(propertyName);
         // GridPane has no constraints property => no constraints to move
         if (constraintsProperty == null) {
-            return;
+            return result;
         }
 
         final DesignHierarchyMask mask = new DesignHierarchyMask(targetGridPane);
@@ -183,7 +136,7 @@ public class MoveRowJob extends Job {
                     break;
                 default:
                     assert false;
-                    return;
+                    return result;
             }
 
             // Retrieve the target constraints
@@ -199,14 +152,14 @@ public class MoveRowJob extends Job {
                 final Job removeValueJob = new DeleteObjectJob(
                         targetConstraints,
                         getEditorController());
-                subJob.addSubJob(removeValueJob);
+                result.add(removeValueJob);
 
                 // Then add the target constraints at new positionIndex
                 final Job addValueJob = new AddPropertyValueJob(
                         targetConstraints,
                         (FXOMPropertyC) constraintsProperty,
                         positionIndex, getEditorController());
-                subJob.addSubJob(addValueJob);
+                result.add(addValueJob);
             }//
             // The target index is not associated to an existing constraints value :
             // we may need to move the constraints above the target one if any
@@ -224,22 +177,23 @@ public class MoveRowJob extends Job {
                             addedConstraints,
                             (FXOMPropertyC) constraintsProperty,
                             positionIndex, getEditorController());
-                    subJob.addSubJob(addValueJob);
+                    result.add(addValueJob);
                 }
             }
         }
+        return result;
     }
 
-    private void moveRowContent() {
+    private List<Job> moveRowContent() {
 
-        assert subJob != null;
+        final List<Job> result = new ArrayList<>();
 
         for (int targetIndex : targetIndexes) {
 
             switch (position) {
                 case ABOVE:
                     // First move the target row content
-                    subJob.addSubJob(new ReIndexRowContentJob(
+                    result.add(new ReIndexRowContentJob(
                             getEditorController(),
                             -1, targetGridPane, targetIndex));
                     int aboveIndex = targetIndex - 1;
@@ -251,14 +205,14 @@ public class MoveRowJob extends Job {
                         while (targetIndexes.contains(targetIndex + shiftIndex)) {
                             shiftIndex++;
                         }
-                        subJob.addSubJob(new ReIndexRowContentJob(
+                        result.add(new ReIndexRowContentJob(
                                 getEditorController(),
                                 shiftIndex, targetGridPane, aboveIndex));
                     }
                     break;
                 case BELOW:
                     // First move the target row content
-                    subJob.addSubJob(new ReIndexRowContentJob(
+                    result.add(new ReIndexRowContentJob(
                             getEditorController(),
                             +1, targetGridPane, targetIndex));
                     int belowIndex = targetIndex + 1;
@@ -270,16 +224,16 @@ public class MoveRowJob extends Job {
                         while (targetIndexes.contains(targetIndex + shiftIndex)) {
                             shiftIndex--;
                         }
-                        subJob.addSubJob(new ReIndexRowContentJob(
+                        result.add(new ReIndexRowContentJob(
                                 getEditorController(),
                                 shiftIndex, targetGridPane, belowIndex));
                     }
                     break;
                 default:
                     assert false;
-                    return;
             }
         }
+        return result;
     }
 
     private FXOMInstance makeRowConstraintsInstance() {
@@ -292,20 +246,5 @@ public class MoveRowJob extends Job {
         result.moveToFxomDocument(getEditorController().getFxomDocument());
 
         return result;
-    }
-
-    private void updateSelection() {
-        final Selection selection = getEditorController().getSelection();
-
-        // Selection has been cleared at execution time
-        assert selection.isEmpty();
-        for (int targetIndex : targetIndexes) {
-            int positionIndex = position == Position.ABOVE
-                    ? targetIndex - 1 : targetIndex + 1;
-
-            // Selection is empty => just toggle selection
-            selection.toggleSelection((FXOMInstance) targetGridPane,
-                    GridSelectionGroup.Type.ROW, positionIndex);
-        }
     }
 }

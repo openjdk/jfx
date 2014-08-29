@@ -232,17 +232,27 @@ public class Deprecation {
     }
 
     public static URL getCaspianHighContrastStylesheetURL() {
-        final String resourceName = "com/sun/javafx/scene/control/skin/caspian/highcontrast.bss"; //NOI18N
+        final String resourceName = "com/oracle/javafx/scenebuilder/kit/util/css/caspian/caspian-highContrast.css"; //NOI18N
         return ClassLoader.getSystemResource(resourceName);
     }
 
     public static URL getCaspianEmbeddedStylesheetURL() {
-        final String resourceName = "com/sun/javafx/scene/control/skin/caspian/embedded.bss"; //NOI18N
+        final String resourceName = "com/oracle/javafx/scenebuilder/kit/util/css/caspian/caspian-embedded.css"; //NOI18N
+        return ClassLoader.getSystemResource(resourceName);
+    }
+
+    public static URL getCaspianEmbeddedHighContrastStylesheetURL() {
+        final String resourceName = "com/oracle/javafx/scenebuilder/kit/util/css/caspian/caspian-embedded-highContrast.css"; //NOI18N
         return ClassLoader.getSystemResource(resourceName);
     }
 
     public static URL getCaspianEmbeddedQVGAStylesheetURL() {
-        final String resourceName = "com/sun/javafx/scene/control/skin/caspian/embedded-qvga.bss"; //NOI18N
+        final String resourceName = "com/oracle/javafx/scenebuilder/kit/util/css/caspian/caspian-embedded-qvga.css"; //NOI18N
+        return ClassLoader.getSystemResource(resourceName);
+    }
+
+    public static URL getCaspianEmbeddedQVGAHighContrastStylesheetURL() {
+        final String resourceName = "com/oracle/javafx/scenebuilder/kit/util/css/caspian/caspian-embedded-qvga-highContrast.css"; //NOI18N
         return ClassLoader.getSystemResource(resourceName);
     }
 
@@ -252,22 +262,37 @@ public class Deprecation {
     }
 
     public static URL getModenaTouchStylesheetURL() {
-        final String resourceName = "com/sun/javafx/scene/control/skin/modena/touch.bss"; //NOI18N
+        final String resourceName = "com/oracle/javafx/scenebuilder/kit/util/css/modena/modena-touch.css"; //NOI18N
         return ClassLoader.getSystemResource(resourceName);
     }
 
     public static URL getModenaHighContrastBlackonwhiteStylesheetURL() {
-        final String resourceName = "com/sun/javafx/scene/control/skin/modena/blackOnWhite.css"; //NOI18N
+        final String resourceName = "com/oracle/javafx/scenebuilder/kit/util/css/modena/modena-highContrast-blackOnWhite.css"; //NOI18N
         return ClassLoader.getSystemResource(resourceName);
     }
 
     public static URL getModenaHighContrastWhiteonblackStylesheetURL() {
-        final String resourceName = "com/sun/javafx/scene/control/skin/modena/whiteOnBlack.css"; //NOI18N
+        final String resourceName = "com/oracle/javafx/scenebuilder/kit/util/css/modena/modena-highContrast-whiteOnBlack.css"; //NOI18N
         return ClassLoader.getSystemResource(resourceName);
     }
 
     public static URL getModenaHighContrastYellowonblackStylesheetURL() {
-        final String resourceName = "com/sun/javafx/scene/control/skin/modena/yellowOnBlack.css"; //NOI18N
+        final String resourceName = "com/oracle/javafx/scenebuilder/kit/util/css/modena/modena-highContrast-yellowOnBlack.css"; //NOI18N
+        return ClassLoader.getSystemResource(resourceName);
+    }
+
+    public static URL getModenaTouchHighContrastBlackonwhiteStylesheetURL() {
+        final String resourceName = "com/oracle/javafx/scenebuilder/kit/util/css/modena/modena-touch-highContrast-blackOnWhite.css"; //NOI18N
+        return ClassLoader.getSystemResource(resourceName);
+    }
+
+    public static URL getModenaTouchHighContrastWhiteonblackStylesheetURL() {
+        final String resourceName = "com/oracle/javafx/scenebuilder/kit/util/css/modena/modena-touch-highContrast-whiteOnBlack.css"; //NOI18N
+        return ClassLoader.getSystemResource(resourceName);
+    }
+
+    public static URL getModenaTouchHighContrastYellowonblackStylesheetURL() {
+        final String resourceName = "com/oracle/javafx/scenebuilder/kit/util/css/modena/modena-touch-highContrast-yellowOnBlack.css"; //NOI18N
         return ClassLoader.getSystemResource(resourceName);
     }
 

@@ -99,85 +99,78 @@ public class EditorPlatform {
     private final static URL caspianThemeUrl = Deprecation.getCaspianStylesheetURL();
     private final static URL caspianHighContrastThemeUrl = Deprecation.getCaspianHighContrastStylesheetURL();
     private final static URL caspianEmbeddedThemeUrl = Deprecation.getCaspianEmbeddedStylesheetURL();
+    private final static URL caspianEmbeddedHighContrastThemeUrl = Deprecation.getCaspianEmbeddedHighContrastStylesheetURL();
     private final static URL caspianEmbeddedQVGAThemeUrl = Deprecation.getCaspianEmbeddedQVGAStylesheetURL();
+    private final static URL caspianEmbeddedQVGAHighContrastThemeUrl = Deprecation.getCaspianEmbeddedQVGAHighContrastStylesheetURL();
     private final static URL modenaThemeUrl = Deprecation.getModenaStylesheetURL();
     private final static URL modenaTouchThemeUrl = Deprecation.getModenaTouchStylesheetURL();
     private final static URL modenaHighContrastBlackonwhiteThemeUrl = Deprecation.getModenaHighContrastBlackonwhiteStylesheetURL();
     private final static URL modenaHighContrastWhiteonblackThemeUrl = Deprecation.getModenaHighContrastWhiteonblackStylesheetURL();
     private final static URL modenaHighContrastYellowonblackThemeUrl = Deprecation.getModenaHighContrastYellowonblackStylesheetURL();
+    private final static URL modenaTouchHighContrastBlackonwhiteThemeUrl = Deprecation.getModenaTouchHighContrastBlackonwhiteStylesheetURL();
+    private final static URL modenaTouchHighContrastWhiteonblackThemeUrl = Deprecation.getModenaTouchHighContrastWhiteonblackStylesheetURL();
+    private final static URL modenaTouchHighContrastYellowonblackThemeUrl = Deprecation.getModenaTouchHighContrastYellowonblackStylesheetURL();
 
     /**
-     * Returns the list of url for locating the specified set of stylesheet in jfxrt.jar.
+     * Returns the list of url for locating the specified stylesheet.
+     * SB uses a set of CSS files aggregating several @import statements (see DTL-6699).
      *
      * @param theme theme for which list of url should be computed
-     * @return list of url for locating the specified stylesheet.
+     * @return url for locating the specified stylesheet.
      */
-    public static List<URL> getThemeStylesheetURLs(Theme theme) {
-        final List<URL> result = new ArrayList<>();
+    public static URL getThemeStylesheetURL(Theme theme) {
+        final URL result;
 
-        // In all modena cases below we do not add to the result the modenaThemeUrl
-        // because it is already the default, set on top of the scenegraph
-        // (it is an FX 8 platform built-in behavior).
         switch (theme) {
             default:
+                result = null;
                 break;
             case MODENA:
+                result = modenaThemeUrl;
                 break;
             case MODENA_TOUCH:
-                result.add(modenaTouchThemeUrl);
+                result = modenaTouchThemeUrl;
                 break;
             case MODENA_HIGH_CONTRAST_BLACK_ON_WHITE:
-                result.add(modenaHighContrastBlackonwhiteThemeUrl);
+                result = modenaHighContrastBlackonwhiteThemeUrl;
                 break;
             case MODENA_HIGH_CONTRAST_WHITE_ON_BLACK:
-                result.add(modenaHighContrastWhiteonblackThemeUrl);
+                result = modenaHighContrastWhiteonblackThemeUrl;
                 break;
             case MODENA_HIGH_CONTRAST_YELLOW_ON_BLACK:
-                result.add(modenaHighContrastYellowonblackThemeUrl);
+                result = modenaHighContrastYellowonblackThemeUrl;
                 break;
             case MODENA_TOUCH_HIGH_CONTRAST_BLACK_ON_WHITE:
-                result.add(modenaTouchThemeUrl);
-                result.add(modenaHighContrastBlackonwhiteThemeUrl);
+                result = modenaTouchHighContrastBlackonwhiteThemeUrl;
                 break;
             case MODENA_TOUCH_HIGH_CONTRAST_WHITE_ON_BLACK:
-                result.add(modenaTouchThemeUrl);
-                result.add(modenaHighContrastWhiteonblackThemeUrl);
+                result = modenaTouchHighContrastWhiteonblackThemeUrl;
                 break;
             case MODENA_TOUCH_HIGH_CONTRAST_YELLOW_ON_BLACK:
-                result.add(modenaTouchThemeUrl);
-                result.add(modenaHighContrastYellowonblackThemeUrl);
+                result = modenaTouchHighContrastYellowonblackThemeUrl;
                 break;
             case CASPIAN:
-                result.add(caspianThemeUrl);
+                result = caspianThemeUrl;
                 break;
             case CASPIAN_HIGH_CONTRAST:
-                result.add(caspianThemeUrl);
-                result.add(caspianHighContrastThemeUrl);
+                result = caspianHighContrastThemeUrl;
                 break;
             case CASPIAN_EMBEDDED:
-                result.add(caspianThemeUrl);
-                result.add(caspianEmbeddedThemeUrl);
+                result = caspianEmbeddedThemeUrl;
                 break;
             case CASPIAN_EMBEDDED_HIGH_CONTRAST:
-                result.add(caspianThemeUrl);
-                result.add(caspianEmbeddedThemeUrl);
-                result.add(caspianHighContrastThemeUrl);
+                result = caspianEmbeddedHighContrastThemeUrl;
                 break;
             case CASPIAN_EMBEDDED_QVGA:
-                result.add(caspianThemeUrl);
-                result.add(caspianEmbeddedThemeUrl);
-                result.add(caspianEmbeddedQVGAThemeUrl);
+                result = caspianEmbeddedQVGAThemeUrl;
                 break;
             case CASPIAN_EMBEDDED_QVGA_HIGH_CONTRAST:
-                result.add(caspianThemeUrl);
-                result.add(caspianEmbeddedThemeUrl);
-                result.add(caspianEmbeddedQVGAThemeUrl);
-                result.add(caspianHighContrastThemeUrl);
+                result = caspianEmbeddedQVGAHighContrastThemeUrl;
                 break;
         }
         
         if (!theme.equals(Theme.MODENA)) {
-            assert !result.isEmpty() : "Missing logic for " + theme;
+            assert result != null : "Missing logic for " + theme;
         }
 
         return result;

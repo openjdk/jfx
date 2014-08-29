@@ -64,16 +64,18 @@ public class I18nStringEditor extends PropertyEditor {
     private final MenuItem multilineMenuItem = new MenuItem();
     private final String MULTI_LINE = I18N.getString("inspector.i18n.multiline");
     private final String SINGLE_LINE = I18N.getString("inspector.i18n.singleline");
+    private boolean multiLineSupported = false;
     // Specific states
     private boolean i18nMode = false;
     private boolean multiLineMode = false;
 
-    public I18nStringEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses) {
+    public I18nStringEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses, boolean multiLineSupported) {
         super(propMeta, selectedClasses);
-        initialize();
+        initialize(multiLineSupported);
     }
     
-    private void initialize() {
+    private void initialize(boolean multiLineSupported) {
+        this.multiLineSupported = multiLineSupported;
         valueListener = event -> {
             userUpdateValueProperty(getValue());
             textNode.selectAll();
@@ -171,9 +173,9 @@ public class I18nStringEditor extends PropertyEditor {
         updateMenuItems();
     }
 
-    @Override
-    public void reset(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses) {
+    public void reset(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses, boolean multiLineSupported) {
         super.reset(propMeta, selectedClasses);
+        this.multiLineSupported = multiLineSupported;
         textNode.setPromptText(null);
     }
 
@@ -270,6 +272,10 @@ public class I18nStringEditor extends PropertyEditor {
         } else {
             multilineMenuItem.setText(MULTI_LINE);
             i18nMenuItem.setDisable(false);
+        }
+        
+        if (!multiLineSupported) {
+            multilineMenuItem.setDisable(true);
         }
     }
 }

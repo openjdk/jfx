@@ -79,6 +79,7 @@ final class CSSLexer {
     final static int IMPORT = 44;
     final static int SECONDS = 45;
     final static int MS = 46;
+    final static int AT_KEYWORD = 47;
 
     private final Recognizer A = (c) -> c == 'a' || c == 'A';
     private final Recognizer B = (c) -> c == 'b' || c == 'B';
@@ -966,31 +967,8 @@ final class CSSLexer {
                         return tok;
 
                     case '@':
-                        // read word after '@' symbol
-                        StringBuilder keywordSB = new StringBuilder();
-                        do {
-                            ch = readChar();
-                            keywordSB.append((char)ch);
-                        } while (!WS_CHARS.recognize(ch) && ch != Token.EOF);
-                        String keyword = keywordSB.substring(0,keywordSB.length()-1);
-                        if ("font-face".equalsIgnoreCase(keyword)) {
-                            token = new Token(FONT_FACE,"@font-face", line, offset);
-                            offset = pos;
-                        } else if ("import".equalsIgnoreCase(keyword)) {
-                            token = new Token(IMPORT,"@import", line, offset);
-                            offset = pos;
-                        } else {
-                            // Skip over other at-rules
-                            do {
-                                ch = readChar();
-                            } while (ch != ';' &&
-                                     ch != Token.EOF);
-                            if (ch == ';') {
-                                ch = readChar();
-                                token = Token.SKIP_TOKEN;
-                                offset = pos;
-                            }
-                        }
+                        token = new Token(AT_KEYWORD, "@", line, offset);
+                        offset = pos;
                         break;
 
                     default:
