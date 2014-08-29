@@ -230,7 +230,9 @@ class LibraryListCell extends ListCell<LibraryListItem> {
             final LibraryItem item = listItem.getLibItem();
             // The classname shall be space character free (it is an API name).
             // If there is a space character then it means a qualifier comes
-            // right after.
+            // right after. In the case there is several qualifiers in a row
+            // only the latest one is taken as is, others are kept with class
+            // name.
             String classname = getClassName(item.getName());
             iconImageView.setManaged(true);
             classNameLabel.setManaged(true);
@@ -274,7 +276,7 @@ class LibraryListCell extends ListCell<LibraryListItem> {
         if (!input.contains(" ")) { //NOI18N
             return ""; //NOI18N
         } else {
-            return input.substring(input.indexOf(' '), input.length()); //NOI18N
+            return input.substring(input.lastIndexOf(' '), input.length()); //NOI18N
         }
     }
 }
