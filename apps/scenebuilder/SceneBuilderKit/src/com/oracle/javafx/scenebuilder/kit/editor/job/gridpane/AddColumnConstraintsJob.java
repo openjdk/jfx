@@ -46,7 +46,7 @@ import com.oracle.javafx.scenebuilder.kit.fxom.FXOMPropertyC;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -101,7 +101,7 @@ public class AddColumnConstraintsJob extends BatchDocumentJob {
             final FXOMInstance targetGridPane,
             final Set<Integer> targetIndexes) {
 
-        final Set<Job> result = new HashSet<>();
+        final Set<Job> result = new LinkedHashSet<>();
         final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
 
         // Retrieve the constraints property for the specified target GridPane
