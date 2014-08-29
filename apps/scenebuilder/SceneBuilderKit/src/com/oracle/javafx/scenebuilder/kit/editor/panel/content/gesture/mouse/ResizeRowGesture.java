@@ -34,7 +34,7 @@ package com.oracle.javafx.scenebuilder.kit.editor.panel.content.gesture.mouse;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
-import com.oracle.javafx.scenebuilder.kit.editor.job.BatchModifyObjectJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.ModifyObjectJob;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.gridpane.GridPaneHandles;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.resizer.GridPaneRowResizer;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
@@ -149,11 +149,12 @@ public class ResizeRowGesture extends AbstractMouseGesture {
         
         final EditorController editorController 
                 = contentPanelController.getEditorController();
-        final BatchModifyObjectJob j = new BatchModifyObjectJob(
-                fxomInstance, 
-                I18N.getString("label.action.edit.resize.row"), 
-                metaValueMap, 
-                editorController);
+        final ModifyObjectJob j = new ModifyObjectJob(
+                fxomInstance,
+                rowConstraintsMeta,
+                newConstraints,
+                editorController,
+                I18N.getString("label.action.edit.resize.row"));
         editorController.getJobManager().push(j);
         
         gridPaneHandles.layoutDecoration();

@@ -35,8 +35,8 @@ package com.oracle.javafx.scenebuilder.kit.editor.panel.content.gesture.mouse;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.editor.job.BatchJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.BatchModifyObjectJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
+import com.oracle.javafx.scenebuilder.kit.editor.job.ModifyObjectJob;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.ContentPanelController;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.resizer.TableColumnResizer;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
@@ -44,7 +44,9 @@ import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.metadata.Metadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import javafx.geometry.Point2D;
 import javafx.scene.control.TableColumn;
@@ -135,10 +137,10 @@ public class ResizeTableColumnGesture extends AbstractMouseGesture {
                 = new BatchJob(editorController, true,
                 I18N.getString("label.action.edit.resize.column"));
         if (changeMap.isEmpty() == false) {
-            batchJob.addSubJob(makeResizeJob(columnInstance, changeMap));
+            batchJob.addSubJobs(makeResizeJob(columnInstance, changeMap));
         }
         if (changeMapNext.isEmpty() == false) {
-            batchJob.addSubJob(makeResizeJob(columnInstance.getNextSlibing(), changeMapNext));
+            batchJob.addSubJobs(makeResizeJob(columnInstance.getNextSlibing(), changeMapNext));
         }
         if (batchJob.isExecutable()) {
             editorController.getJobManager().push(batchJob);
@@ -168,10 +170,12 @@ public class ResizeTableColumnGesture extends AbstractMouseGesture {
      * Private
      */
     
-    private Job makeResizeJob(FXOMObject columnObject, Map<PropertyName, Object> changeMap) {
+    private List<Job> makeResizeJob(FXOMObject columnObject, Map<PropertyName, Object> changeMap) {
         assert columnObject.getSceneGraphObject() instanceof TableColumn;
         assert columnObject instanceof FXOMInstance;
         
+        final List<Job> result = new ArrayList<>();
+
         final Metadata metadata = Metadata.getMetadata();
         final Map<ValuePropertyMetadata, Object> metaValueMap = new HashMap<>();
         for (Map.Entry<PropertyName,Object> e : changeMap.entrySet()) {
@@ -180,12 +184,14 @@ public class ResizeTableColumnGesture extends AbstractMouseGesture {
             metaValueMap.put(vpm, e.getValue());
         }
 
-        final BatchModifyObjectJob result = new BatchModifyObjectJob(
-                (FXOMInstance) columnObject, 
-                BatchModifyObjectJob.class.getSimpleName(), 
-                metaValueMap, 
-                contentPanelController.getEditorController());
-        
+        for (Map.Entry<ValuePropertyMetadata, Object> e : metaValueMap.entrySet()) {
+            final ModifyObjectJob job = new ModifyObjectJob(
+                    (FXOMInstance) columnObject,
+                    e.getKey(),
+                    e.getValue(),
+                    contentPanelController.getEditorController());
+            result.add(job);
+        }        
         return result;
     }
 }

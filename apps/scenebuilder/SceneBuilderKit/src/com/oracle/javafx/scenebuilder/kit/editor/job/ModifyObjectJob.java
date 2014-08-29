@@ -46,21 +46,47 @@ public class ModifyObjectJob extends Job {
     private final ValuePropertyMetadata propertyMetadata;
     private final Object newValue;
     private final Object oldValue;
-    
-    public ModifyObjectJob(FXOMInstance fxomInstance, ValuePropertyMetadata propertyMetadata, Object newValue, EditorController editorController) {
+    private final String description;
+
+    public ModifyObjectJob(
+            FXOMInstance fxomInstance, 
+            ValuePropertyMetadata propertyMetadata, 
+            Object newValue, 
+            EditorController editorController) {
         super(editorController);
-        
+
         assert fxomInstance != null;
         assert fxomInstance.getSceneGraphObject() != null;
         assert propertyMetadata != null;
-        
+
         this.fxomInstance = fxomInstance;
         this.propertyMetadata = propertyMetadata;
         this.newValue = newValue;
         this.oldValue = propertyMetadata.getValueObject(fxomInstance);
+        this.description = I18N.getString("label.action.edit.set.1",
+                propertyMetadata.getName().toString(),
+                fxomInstance.getSceneGraphObject().getClass().getSimpleName());
     }
-    
-    
+
+    public ModifyObjectJob(
+            FXOMInstance fxomInstance,
+            ValuePropertyMetadata propertyMetadata,
+            Object newValue,
+            EditorController editorController,
+            String description) {
+        super(editorController);
+
+        assert fxomInstance != null;
+        assert fxomInstance.getSceneGraphObject() != null;
+        assert propertyMetadata != null;
+
+        this.fxomInstance = fxomInstance;
+        this.propertyMetadata = propertyMetadata;
+        this.newValue = newValue;
+        this.oldValue = propertyMetadata.getValueObject(fxomInstance);
+        this.description = description;
+    }
+
     /*
      * Job
      */
@@ -91,10 +117,7 @@ public class ModifyObjectJob extends Job {
 
     @Override
     public String getDescription() {
-        final String description = I18N.getString("label.action.edit.set.1",
-                propertyMetadata.getName().toString(),
-                fxomInstance.getSceneGraphObject().getClass().getSimpleName());
         return description;
     }
-    
+
 }

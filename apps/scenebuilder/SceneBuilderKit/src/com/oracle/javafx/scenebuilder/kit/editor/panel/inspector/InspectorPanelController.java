@@ -34,9 +34,9 @@ package com.oracle.javafx.scenebuilder.kit.editor.panel.inspector;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.drag.source.AbstractDragSource;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
-import com.oracle.javafx.scenebuilder.kit.editor.job.BatchModifyFxIdJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.BatchModifySelectionJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
+import com.oracle.javafx.scenebuilder.kit.editor.job.ModifyFxIdJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.togglegroup.ModifySelectionToggleGroupJob;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.AnchorPaneConstraintsEditor;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.BooleanEditor;
@@ -1203,7 +1203,7 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
     }
 
     private void setSelectedFXOMInstanceFxId(FXOMObject fxomObject, String fxId) {
-        final BatchModifyFxIdJob job = new BatchModifyFxIdJob(fxomObject, fxId, getEditorController());
+        final ModifyFxIdJob job = new ModifyFxIdJob(fxomObject, fxId, getEditorController());
         pushJob(job);
     }
 

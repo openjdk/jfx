@@ -40,8 +40,8 @@ import com.oracle.javafx.scenebuilder.kit.editor.drag.target.GridPaneDropTarget;
 import com.oracle.javafx.scenebuilder.kit.editor.drag.target.RootDropTarget;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.editor.images.ImageUtils;
-import com.oracle.javafx.scenebuilder.kit.editor.job.BatchModifyFxIdJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.BatchModifyObjectJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.ModifyFxIdJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.ModifyObjectJob;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.HierarchyDNDController;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.HierarchyItem;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.AbstractHierarchyPanelController;
@@ -644,8 +644,8 @@ public class HierarchyTreeCell<T extends HierarchyItem> extends TreeCell<Hierarc
                             assert propertyName != null;
                             final ValuePropertyMetadata vpm
                                     = Metadata.getMetadata().queryValueProperty(fxomInstance, propertyName);
-                            final BatchModifyObjectJob job1
-                                    = new BatchModifyObjectJob(fxomInstance, vpm, newValue, editorController);
+                            final ModifyObjectJob job1
+                                    = new ModifyObjectJob(fxomInstance, vpm, newValue, editorController);
                             if (job1.isExecutable()) {
                                 editorController.getJobManager().push(job1);
                             }
@@ -654,8 +654,8 @@ public class HierarchyTreeCell<T extends HierarchyItem> extends TreeCell<Hierarc
                     case FXID:
                         assert newValue != null;
                         final String fxId = newValue.isEmpty() ? null : newValue;
-                        final BatchModifyFxIdJob job2
-                                = new BatchModifyFxIdJob(fxomObject, fxId, editorController);
+                        final ModifyFxIdJob job2
+                                = new ModifyFxIdJob(fxomObject, fxId, editorController);
                         if (job2.isExecutable()) {
 
                             // If a controller class has been defined, 
