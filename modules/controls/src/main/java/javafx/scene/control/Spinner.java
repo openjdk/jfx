@@ -72,7 +72,6 @@ import java.time.temporal.TemporalUnit;
  *     <li>{@link SpinnerValueFactory.IntegerSpinnerValueFactory}</li>
  *     <li>{@link SpinnerValueFactory.DoubleSpinnerValueFactory}</li>
  *     <li>{@link SpinnerValueFactory.ListSpinnerValueFactory}</li>
- *     <li>{@link SpinnerValueFactory.LocalDateSpinnerValueFactory}</li>
  * </ul>
  *
  * <br/>
