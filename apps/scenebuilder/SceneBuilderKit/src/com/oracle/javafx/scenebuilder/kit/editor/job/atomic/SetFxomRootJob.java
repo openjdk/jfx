@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -29,24 +29,21 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.oracle.javafx.scenebuilder.kit.editor.job;
+package com.oracle.javafx.scenebuilder.kit.editor.job.atomic;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
-import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.SetFxomRootJob;
-import com.oracle.javafx.scenebuilder.kit.editor.selection.AbstractSelectionGroup;
-import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
+import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
- *
  */
-public class SetDocumentRootJob extends BatchSelectionJob {
+public class SetFxomRootJob extends Job {
 
     private final FXOMObject newRoot;
+    private FXOMObject oldRoot;
 
-    public SetDocumentRootJob(FXOMObject newRoot, EditorController editorController) {
+    public SetFxomRootJob(FXOMObject newRoot, EditorController editorController) {
         super(editorController);
 
         assert editorController.getFxomDocument() != null;
@@ -55,35 +52,54 @@ public class SetDocumentRootJob extends BatchSelectionJob {
         this.newRoot = newRoot;
     }
 
-    public FXOMObject getNewRoot() {
-        return newRoot;
+    /*
+     * Job
+     */
+    @Override
+    public boolean isExecutable() {
+        return newRoot != getEditorController().getFxomDocument().getFxomRoot();
     }
 
     @Override
-    protected List<Job> makeSubJobs() {
-        final List<Job> result = new ArrayList<>();
-        if (newRoot != getEditorController().getFxomDocument().getFxomRoot()) {
-            // Before setting newRoot as the root of the fxom document,
-            // we must remove its static properties.
-            // We create a RemovePropertyJob for each existing static property
-            if (newRoot != null) {
-                result.add(new PrunePropertiesJob(newRoot, null, getEditorController()));
-            }
-            result.add(new SetFxomRootJob(newRoot, getEditorController()));
-        }
-        return result;
+    public void execute() {
+        assert oldRoot == null;
+
+        // Saves the current root
+        final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
+        oldRoot = fxomDocument.getFxomRoot();
+
+        fxomDocument.beginUpdate();
+        fxomDocument.setFxomRoot(newRoot);
+        fxomDocument.endUpdate();
     }
 
     @Override
-    protected String makeDescription() {
+    public void undo() {
+        final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
+        assert fxomDocument.getFxomRoot() == newRoot;
+
+        fxomDocument.beginUpdate();
+        fxomDocument.setFxomRoot(oldRoot);
+        fxomDocument.endUpdate();
+
+        assert fxomDocument.getFxomRoot() == oldRoot;
+    }
+
+    @Override
+    public void redo() {
+        final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
+        assert fxomDocument.getFxomRoot() == oldRoot;
+
+        fxomDocument.beginUpdate();
+        fxomDocument.setFxomRoot(newRoot);
+        fxomDocument.endUpdate();
+
+        assert fxomDocument.getFxomRoot() == newRoot;
+    }
+
+    @Override
+    public String getDescription() {
         // Not expected to reach the user
         return getClass().getSimpleName();
-    }
-
-    @Override
-    protected AbstractSelectionGroup getNewSelectionGroup() {
-        List<FXOMObject> newObjects = new ArrayList<>();
-        newObjects.add(newRoot);
-        return new ObjectSelectionGroup(newObjects, newRoot, null);
     }
 }
