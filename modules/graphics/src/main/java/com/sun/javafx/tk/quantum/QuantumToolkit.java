@@ -72,6 +72,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
 import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Clipboard;
 import com.sun.glass.ui.ClipboardAssistance;
@@ -348,6 +349,28 @@ public final class QuantumToolkit extends Toolkit {
                                    " vpipe: " + pipeline.isVsyncSupported());
             }
             PerformanceTracker.logEvent("Toolkit.startup - finished");
+        }
+    }
+
+    /**
+     * Runs the specified supplier, releasing the renderLock if needed.
+     * This is called by glass event handlers for Window, View, and
+     * Accessible.
+     * @param <T> the type of the return value
+     * @param supplier the supplier to be run
+     * @return the return value from calling supplier.get()
+     */
+    public static <T> T runWithoutRenderLock(Supplier<T> supplier) {
+        final boolean locked = ViewPainter.renderLock.isHeldByCurrentThread();
+        try {
+            if (locked) {
+                ViewPainter.renderLock.unlock();
+            }
+            return supplier.get();
+        } finally {
+            if (locked) {
+                ViewPainter.renderLock.lock();
+            }
         }
     }
 

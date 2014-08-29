@@ -32,6 +32,7 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.SceneHelper;
+import com.sun.javafx.tk.quantum.QuantumToolkit;
 import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.AccessibleRole;
@@ -154,9 +155,11 @@ public abstract class Accessible {
     private GetAttribute getAttribute = new GetAttribute();
 
     public Object getAttribute(AccessibleAttribute attribute, Object... parameters) {
-        getAttribute.attribute = attribute;
-        getAttribute.parameters = parameters;
-        return AccessController.doPrivileged(getAttribute, getAccessControlContext());
+        return QuantumToolkit.runWithoutRenderLock(() -> {
+            getAttribute.attribute = attribute;
+            getAttribute.parameters = parameters;
+            return AccessController.doPrivileged(getAttribute, getAccessControlContext());
+        });
     }
 
     private class ExecuteAction implements PrivilegedAction<Void> {
@@ -171,9 +174,11 @@ public abstract class Accessible {
     private ExecuteAction executeAction = new ExecuteAction();
 
     public void executeAction(AccessibleAction action, Object... parameters) {
-        executeAction.action = action;
-        executeAction.parameters = parameters;
-        AccessController.doPrivileged(executeAction, getAccessControlContext());
+        QuantumToolkit.runWithoutRenderLock(() -> {
+            executeAction.action = action;
+            executeAction.parameters = parameters;
+            return AccessController.doPrivileged(executeAction, getAccessControlContext());
+        });
     }
 
     public abstract void sendNotification(AccessibleAttribute notification);

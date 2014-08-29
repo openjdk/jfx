@@ -121,11 +121,13 @@ class GlassWindowEventHandler extends Window.EventHandler implements PrivilegedA
 
     @Override
     public void handleLevelEvent(int level) {
-        AccessControlContext acc = stage.getAccessControlContext();
-        AccessController.doPrivileged((PrivilegedAction<Void>)() -> {
-            stage.stageListener.changedAlwaysOnTop(level != Level.NORMAL);
-            return (Void)null;
-        } , acc);
+        QuantumToolkit.runWithoutRenderLock(() -> {
+            AccessControlContext acc = stage.getAccessControlContext();
+            return AccessController.doPrivileged((PrivilegedAction<Void>)() -> {
+                stage.stageListener.changedAlwaysOnTop(level != Level.NORMAL);
+                return (Void)null;
+            } , acc);
+        });
     }
     
     @Override
@@ -133,8 +135,10 @@ class GlassWindowEventHandler extends Window.EventHandler implements PrivilegedA
         this.window = window;
         this.type = type;
 
-        AccessControlContext acc = stage.getAccessControlContext();
-        AccessController.doPrivileged(this, acc);
+        QuantumToolkit.runWithoutRenderLock(() -> {
+            AccessControlContext acc = stage.getAccessControlContext();
+            return AccessController.doPrivileged(this, acc);
+        });
     }
     
     @Override
@@ -150,10 +154,12 @@ class GlassWindowEventHandler extends Window.EventHandler implements PrivilegedA
             }
         }
 
-        AccessControlContext acc = stage.getAccessControlContext();
-        AccessController.doPrivileged((PrivilegedAction<Void>)() -> {
-            stage.stageListener.changedScreen(oldScreen, newScreen);
-            return (Void)null;
-        } , acc);
+        QuantumToolkit.runWithoutRenderLock(() -> {
+            AccessControlContext acc = stage.getAccessControlContext();
+            return AccessController.doPrivileged((PrivilegedAction<Void>)() -> {
+                stage.stageListener.changedScreen(oldScreen, newScreen);
+                return (Void)null;
+            } , acc);
+        });
     }
 }
