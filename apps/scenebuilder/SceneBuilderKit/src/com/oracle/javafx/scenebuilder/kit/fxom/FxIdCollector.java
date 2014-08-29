@@ -35,7 +35,6 @@ package com.oracle.javafx.scenebuilder.kit.fxom;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.PriorityQueue;
 import java.util.Set;
 
 /**
@@ -88,7 +87,7 @@ class FxIdCollector {
     private void createNextIndexes() {
         nextIndexes = new HashMap<>();
         
-        for (String fxId : new PriorityQueue<>(fxIds)) {
+        for (String fxId : fxIds) {
             updateNextIndexes(fxId);
         }
     }

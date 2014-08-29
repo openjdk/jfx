@@ -53,10 +53,13 @@ public class IntegerEditor extends AutoSuggestEditor {
     private int min;
     private int max;
 
-    @SuppressWarnings("LeakingThisInConstructor")
     public IntegerEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses,
             Map<String, Object> constants, int minVal, int maxVal) {
         super(propMeta, selectedClasses, new ArrayList<>(constants.keySet()), AutoSuggestEditor.Type.INTEGER);
+        initialize(constants, minVal, maxVal);
+    }
+    
+    private void initialize(Map<String, Object> constants, int minVal, int maxVal) {
         this.constants = constants;
         this.min = minVal;
         this.max = maxVal;

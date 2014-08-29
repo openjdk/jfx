@@ -32,13 +32,12 @@
 package com.oracle.javafx.scenebuilder.kit.editor.job.gridpane;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
-import com.oracle.javafx.scenebuilder.kit.editor.job.BatchJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.BatchSelectionJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
 import com.oracle.javafx.scenebuilder.kit.editor.job.togglegroup.AdjustAllToggleGroupJob;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.AbstractSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.GridSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
 import java.util.ArrayList;
@@ -48,71 +47,21 @@ import java.util.List;
 /**
  * Job invoked when removing rows.
  */
-public class DeleteRowJob extends Job {
+public class DeleteRowJob extends BatchSelectionJob {
 
-    private BatchJob subJob;
     private FXOMObject targetGridPane;
     private final List<Integer> targetIndexes = new ArrayList<>();
-    private String description; // Final but constructed lazily
 
     public DeleteRowJob(EditorController editorController) {
         super(editorController);
-        buildSubJobs();
     }
 
     @Override
-    public boolean isExecutable() {
-        return subJob != null && subJob.isExecutable();
-    }
+    protected List<Job> makeSubJobs() {
 
-    @Override
-    public void execute() {
-        final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
-
-        assert isExecutable(); // (1)
-        assert targetIndexes.isEmpty() == false; // Because of (1)
-
-        fxomDocument.beginUpdate();
-        subJob.execute();
-        fxomDocument.endUpdate();
-    }
-
-    @Override
-    public void undo() {
-        assert subJob != null;
-        final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
-
-        fxomDocument.beginUpdate();
-        subJob.undo();
-        fxomDocument.endUpdate();
-    }
-
-    @Override
-    public void redo() {
-        assert subJob != null;
-        final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
-
-        fxomDocument.beginUpdate();
-        subJob.redo();
-        fxomDocument.endUpdate();
-    }
-
-    @Override
-    public String getDescription() {
-        if (description == null) {
-            buildDescription();
-        }
-
-        return description;
-    }
-
-    private void buildSubJobs() {
+        final List<Job> result = new ArrayList<>();
 
         if (GridPaneJobUtils.canPerformRemove(getEditorController())) { // (1)
-
-            // Create sub job
-            subJob = new BatchJob(getEditorController(),
-                    true /* shouldUpdateSceneGraph */, null);
 
             // Retrieve the target GridPane
             final Selection selection = getEditorController().getSelection();
@@ -127,20 +76,44 @@ public class DeleteRowJob extends Job {
             // First remove the row constraints
             final Job removeConstraints = new RemoveRowConstraintsJob(
                     getEditorController(), targetGridPane, targetIndexes);
-            subJob.addSubJob(removeConstraints);
+            result.add(removeConstraints);
             // Then remove the row content
             final Job removeContent = new RemoveRowContentJob(
                     getEditorController(), targetGridPane, targetIndexes);
-            subJob.addSubJob(removeContent);
-            subJob.addSubJob(new AdjustAllToggleGroupJob(getEditorController()));
+            result.add(removeContent);
+            result.add(new AdjustAllToggleGroupJob(getEditorController()));
             // Finally shift the row content
-            moveRowContent();
+            result.addAll(moveRowContent());
         }
+        return result;
     }
 
-    private void moveRowContent() {
+    @Override
+    protected String makeDescription() {
+        String result;
+        switch (targetIndexes.size()) {
+            case 0:
+                result = "Unexecutable Delete"; //NO18N
+                break;
+            case 1:
+                result = "Delete Row"; //NO18N
+                break;
+            default:
+                result = makeMultipleSelectionDescription();
+                break;
+        }
+        return result;
+    }
 
-        assert subJob != null;
+    @Override
+    protected AbstractSelectionGroup getNewSelectionGroup() {
+        // Selection emptied
+        return null;
+    }
+
+    private List<Job> moveRowContent() {
+
+        final List<Job> result = new ArrayList<>();
 
         final DesignHierarchyMask targetGridPaneMask
                 = new DesignHierarchyMask(targetGridPane);
@@ -178,26 +151,13 @@ public class DeleteRowJob extends Job {
                         = GridPaneJobUtils.getIndexes(fromIndex, toIndex);
                 final ReIndexRowContentJob reIndexJob = new ReIndexRowContentJob(
                         getEditorController(), offset, targetGridPane, indexes);
-                subJob.addSubJob(reIndexJob);
+                result.add(reIndexJob);
             }
 
             targetIndex = nextTargetIndex;
             shiftIndex--;
         }
-    }
-
-    private void buildDescription() {
-        switch (targetIndexes.size()) {
-            case 0:
-                description = "Unexecutable Delete"; //NO18N
-                break;
-            case 1:
-                description = "Delete Row"; //NO18N
-                break;
-            default:
-                description = makeMultipleSelectionDescription();
-                break;
-        }
+        return result;
     }
 
     private String makeMultipleSelectionDescription() {

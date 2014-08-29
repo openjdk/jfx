@@ -1,0 +1,527 @@
+/*******************************************************************************
+ *                                                                             *
+ * "Black on White" contrast theme.                                            *
+ *                                                                             *
+ ******************************************************************************/
+
+.root {
+    -fx-base: white;
+    -fx-background: -fx-base;
+    -fx-control-inner-background: -fx-base;
+    -fx-control-inner-background-alt: -fx-base;
+    -fx-faint-focus-color: -fx-accent;
+    -fx-hover-base: black;
+    -fx-pressed-base: derive(-fx-base, -8%);
+    -fx-box-border: -fx-hover-base;
+    -fx-text-box-border: -fx-hover-base;
+    -fx-shadow-highlight-color: -fx-base;
+    -fx-outer-border: -fx-hover-base;
+    -fx-selection-bar-non-focused: -fx-pressed-base;
+}
+/*******************************************************************************
+ *                                                                             *
+ * Font Weight                                                                 *
+ *                                                                             *
+ ******************************************************************************/
+.text,
+.text-input {
+    -fx-font-weight: bold;
+}
+.axis {
+    -fx-tick-label-font-weight: bold;
+}
+/*******************************************************************************
+ *                                                                             *
+ * ToggleButton                                                                *
+ *                                                                             *
+ ******************************************************************************/
+.toggle-button:selected,
+.toggle-button:selected:focused {
+    -fx-mid-text-color: -fx-base;
+}
+.toggle-button:selected:armed,
+.toggle-button:selected:focused:armed {
+    -fx-mid-text-color: -fx-hover-base;
+}
+.toggle-button:selected {
+    -fx-background-color: -fx-shadow-highlight-color, -fx-hover-base, -fx-hover-base;
+}
+.toggle-button:selected:focused {
+    -fx-background-color: -fx-focus-color, -fx-hover-base, -fx-faint-focus-color, -fx-hover-base;
+}
+.toggle-button:selected:armed {
+    -fx-background-color: -fx-shadow-highlight-color, -fx-hover-base, -fx-faint-focus-color, -fx-pressed-base;
+}
+.toggle-button:selected:focused:armed {
+    -fx-background-color: -fx-focus-color, -fx-hover-base, -fx-faint-focus-color, -fx-pressed-base;
+}
+/*******************************************************************************
+ *                                                                             *
+ * Slider                                                                      *
+ *                                                                             *
+ ******************************************************************************/
+.slider .thumb {
+    -fx-background-color: -fx-hover-base, -fx-inner-border, -fx-body-color;
+}
+.slider:focused .thumb {
+    -fx-background-color: -fx-focus-color, -fx-inner-border, -fx-body-color, -fx-faint-focus-color, -fx-body-color;
+}
+/*******************************************************************************
+ *                                                                             *
+ * ScrollBar                                                                   *
+ *                                                                             *
+ ******************************************************************************/
+.scroll-bar > .increment-button,
+.scroll-bar > .decrement-button {
+    -fx-background-color: -fx-outer-border, -fx-base, -fx-base;
+}
+.scroll-bar > .increment-button:hover,
+.scroll-bar > .decrement-button:hover {
+    -fx-background-color: -fx-outer-border, -fx-hover-base, -fx-hover-base;
+}
+.scroll-bar > .increment-button:hover > .increment-arrow,
+.scroll-bar > .decrement-button:hover > .decrement-arrow {
+    -fx-background-color: -fx-base, -fx-base;
+}
+.scroll-bar > .increment-button:hover:pressed > .increment-arrow,
+.scroll-bar > .decrement-button:hover:pressed > .decrement-arrow {
+    -fx-background-color: -fx-hover-base, -fx-hover-base;
+}
+.scroll-bar > .increment-button > .increment-arrow,
+.scroll-bar > .decrement-button > .decrement-arrow {
+    -fx-background-color: -fx-hover-base, -fx-hover-base;
+}
+.scroll-bar > .increment-button:hover:pressed,
+.scroll-bar > .decrement-button:hover:pressed {
+    -fx-background-color: -fx-outer-border, -fx-pressed-base, -fx-pressed-base;
+}
+.scroll-bar:horizontal > .decrement-button > .decrement-arrow,
+.scroll-bar:horizontal > .increment-button > .increment-arrow,
+.scroll-bar:vertical > .decrement-button > .decrement-arrow,
+.scroll-bar:vertical > .increment-button > .increment-arrow {
+    -fx-effect: null;
+}
+.scroll-bar > .thumb:pressed {
+    -fx-background-color: -fx-outer-border, -fx-pressed-base, -fx-pressed-base;
+}
+/*******************************************************************************
+ *                                                                             *
+ * HTML Editor                                                                 *
+ *                                                                             *
+ ******************************************************************************/
+.html-editor-foreground,
+.html-editor-foreground:showing:hover {
+    -fx-graphic: url("HTMLEditor-Text-Color-Black.png");
+}
+.html-editor-background,
+.html-editor-background:showing:hover {
+    -fx-graphic: url("HTMLEditor-Background-Color-Black.png");
+}
+.html-editor-cut,
+.html-editor-cut:hover:armed {
+    -fx-graphic: url("HTMLEditor-Cut-Black.png");
+}
+.html-editor-copy,
+.html-editor-copy:hover:armed {
+    -fx-graphic: url("HTMLEditor-Copy-Black.png");
+}
+.html-editor-paste,
+.html-editor-paste:hover:armed {
+    -fx-graphic: url("HTMLEditor-Paste-Black.png");
+}
+.html-editor-align-left,
+.html-editor-align-left:hover:armed,
+.html-editor-align-left:selected:armed {
+    -fx-graphic: url("HTMLEditor-Left-Black.png");
+}
+.html-editor-align-center,
+.html-editor-align-center:hover:armed,
+.html-editor-align-center:selected:armed {
+    -fx-graphic: url("HTMLEditor-Center-Black.png");
+}
+.html-editor-align-right,
+.html-editor-align-right:hover:armed,
+.html-editor-align-right:selected:armed {
+    -fx-graphic: url("HTMLEditor-Right-Black.png");
+}
+.html-editor-align-justify,
+.html-editor-align-justify:hover:armed,
+.html-editor-align-justify:selected:armed {
+    -fx-graphic: url("HTMLEditor-Justify-Black.png");
+}
+.html-editor-outdent,
+.html-editor-outdent:hover:armed {
+    -fx-graphic: url("HTMLEditor-Outdent-Black.png");
+}
+.html-editor-outdent:dir(rtl),
+.html-editor-outdent:hover:armed:dir(rtl) {
+    -fx-graphic: url("HTMLEditor-Outdent-Black-rtl.png");
+}
+.html-editor-indent,
+.html-editor-indent:hover:armed {
+    -fx-graphic: url("HTMLEditor-Indent-Black.png");
+}
+.html-editor-indent:dir(rtl),
+.html-editor-indent:hover:armed:dir(rtl) {
+    -fx-graphic: url("HTMLEditor-Indent-Black-rtl.png");
+}
+.html-editor-bullets,
+.html-editor-bullets:hover:armed,
+.html-editor-bullets:selected:armed {
+    -fx-graphic: url("HTMLEditor-Bullets-Black.png");
+}
+.html-editor-bullets:dir(rtl),
+.html-editor-bullets:hover:armed:dir(rtl),
+.html-editor-bullets:selected:armed:dir(rtl) {
+    -fx-graphic: url("HTMLEditor-Bullets-Black-rtl.png");
+}
+.html-editor-numbers,
+.html-editor-numbers:hover:armed,
+.html-editor-numbers:selected:armed {
+    -fx-graphic: url("HTMLEditor-Numbered-Black.png");
+}
+.html-editor-numbers:dir(rtl),
+.html-editor-numbers:hover:armed:dir(rtl),
+.html-editor-numbers:selected:armed:dir(rtl) {
+    -fx-graphic: url("HTMLEditor-Numbered-Black-rtl.png");
+}
+.html-editor-bold,
+.html-editor-bold:hover:armed,
+.html-editor-bold:selected:armed {
+    -fx-graphic: url("HTMLEditor-Bold-Black.png");
+}
+.html-editor-italic,
+.html-editor-italic:hover:armed,
+.html-editor-italic:selected:armed {
+    -fx-graphic: url("HTMLEditor-Italic-Black.png");
+}
+.html-editor-underline,
+.html-editor-underline:hover:armed,
+.html-editor-underline:selected:armed {
+    -fx-graphic: url("HTMLEditor-Underline-Black.png");
+}
+.html-editor-strike,
+.html-editor-strike:hover:armed,
+.html-editor-strike:selected:armed {
+    -fx-graphic: url("HTMLEditor-Strikethrough-Black.png");
+}
+.html-editor-hr,
+.html-editor-hr:hover:armed {
+    -fx-graphic: url("HTMLEditor-Break-Black.png");
+}
+.html-editor-foreground:hover {
+    -fx-graphic: url("HTMLEditor-Text-Color-White.png");
+}
+.html-editor-background:hover {
+    -fx-graphic: url("HTMLEditor-Background-Color-White.png");
+}
+.html-editor-cut:hover,
+.html-editor-cut:armed {
+    -fx-graphic: url("HTMLEditor-Cut-White.png");
+}
+.html-editor-copy:hover,
+.html-editor-copy:armed {
+    -fx-graphic: url("HTMLEditor-Copy-White.png");
+}
+.html-editor-paste:hover,
+.html-editor-paste:armed {
+    -fx-graphic: url("HTMLEditor-Paste-White.png");
+}
+.html-editor-align-left:hover,
+.html-editor-align-left:selected {
+    -fx-graphic: url("HTMLEditor-Left-White.png");
+}
+.html-editor-align-center:hover,
+.html-editor-align-center:selected {
+    -fx-graphic: url("HTMLEditor-Center-White.png");
+}
+.html-editor-align-right:hover,
+.html-editor-align-right:selected {
+    -fx-graphic: url("HTMLEditor-Right-White.png");
+}
+.html-editor-align-justify:hover,
+.html-editor-align-justify:selected {
+    -fx-graphic: url("HTMLEditor-Justify-White.png");
+}
+.html-editor-outdent:hover,
+.html-editor-outdent:armed {
+    -fx-graphic: url("HTMLEditor-Outdent-White.png");
+}
+.html-editor-indent:hover,
+.html-editor-indent:armed {
+    -fx-graphic: url("HTMLEditor-Indent-White.png");
+}
+.html-editor-bullets:hover,
+.html-editor-bullets:selected {
+    -fx-graphic: url("HTMLEditor-Bullets-White.png");
+}
+.html-editor-numbers:hover,
+.html-editor-numbers:selected {
+    -fx-graphic: url("HTMLEditor-Numbered-White.png");
+}
+.html-editor-bold:hover,
+.html-editor-bold:selected {
+    -fx-graphic: url("HTMLEditor-Bold-White.png");
+}
+.html-editor-italic:hover,
+.html-editor-italic:selected {
+    -fx-graphic: url("HTMLEditor-Italic-White.png");
+}
+.html-editor-underline:hover,
+.html-editor-underline:selected {
+    -fx-graphic: url("HTMLEditor-Underline-White.png");
+}
+.html-editor-strike:hover,
+.html-editor-strike:selected {
+    -fx-graphic: url("HTMLEditor-Strikethrough-White.png");
+}
+.html-editor-hr:hover,
+.html-editor-hr:armed {
+    -fx-graphic: url("HTMLEditor-Break-White.png");
+}
+/*******************************************************************************
+ *                                                                             *
+ * PopupMenu                                                                   *
+ *                                                                             *
+ ******************************************************************************/
+.context-menu {
+    -fx-background-color: -fx-hover-base, -fx-control-inner-background;
+    -fx-text-fill: red;
+}
+.context-menu > .scroll-arrow > .menu-up-arrow,
+.context-menu > .scroll-arrow > .menu-down-arrow {
+    -fx-background-color: -fx-hover-base;
+}
+.context-menu > .scroll-arrow:hover > .menu-up-arrow,
+.context-menu > .scroll-arrow:hover > .menu-down-arrow {
+    -fx-background-color: -fx-base;
+}
+/*******************************************************************************
+ *                                                                             *
+ * MenuBar                                                                     *
+ *                                                                             *
+ ******************************************************************************/
+.menu-bar {
+    -fx-background-color: -fx-hover-base, -fx-base;
+    -fx-background-insets: 1 1 0 1, 1;
+}
+/*******************************************************************************
+ *                                                                             *
+ * Menu                                                                        *
+ *                                                                             *
+ ******************************************************************************/
+.menu-up-arrow, .menu-down-arrow {
+    -fx-effect: null;
+}
+/*******************************************************************************
+ *                                                                             *
+ * TabPane                                                                     *
+ *                                                                             *
+ ******************************************************************************/
+.tab-header-area {
+    -fx-text-box-border: -fx-base;
+}
+.tab-pane > .tab-header-area > .headers-region > .tab:selected:hover {
+    -fx-background-color: -fx-hover-base;
+}
+.tab-pane:focused > .tab-header-area > .headers-region > .tab:selected .focus-indicator {
+    -fx-border-width: 4;
+    -fx-border-color: -fx-focus-color;
+    -fx-border-insets: -4 -4 -7 -5;
+    -fx-border-radius: 1;
+}
+.tab-pane:focused > .tab-header-area > .headers-region > .tab:bottom:selected .focus-indicator {
+    -fx-border-insets: -7 -5 -4 -4;
+}
+.tab-pane:bottom > .tab-header-area > .tab-header-background,
+.tab-pane:left > .tab-header-area > .tab-header-background,
+.tab-pane:right > .tab-header-area > .tab-header-background {
+    -fx-background-insets: 0, 0 0 1 0, 1;
+}
+/*******************************************************************************
+ *                                                                             *
+ * ComboBox                                                                    *
+ *                                                                             *
+ ******************************************************************************/
+.combo-box-popup > .list-view {
+    -fx-background-color: -fx-outer-border, -fx-control-inner-background;
+}
+.combo-box-popup > .list-view > .virtual-flow > .clipped-container > .sheet > .list-cell:filled:selected:hover {
+    -fx-text-fill: -fx-base;
+}
+/*******************************************************************************
+ *                                                                             *
+ * TitledPane                                                                  *
+ *                                                                             *
+ ******************************************************************************/
+.titled-pane > .title {
+    -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color;
+}
+.titled-pane:focused > .title {
+    -fx-background-color: -fx-faint-focus-color, -fx-focus-color, -fx-body-color;
+    -fx-background-insets: 0, 1, 4;
+}
+.titled-pane > .title:hover {
+    -fx-color: -fx-pressed-base;
+}
+.titled-pane > .title > .arrow-button > .arrow,
+.titled-pane:focused > .title > .arrow-button > .arrow {
+    -fx-background-color: -fx-mark-color;
+    -fx-background-insets: 0;
+    -fx-effect: null;
+}
+.titled-pane > .title:hover > .arrow-button > .arrow {
+    -fx-background-color: -fx-hover-base;
+    -fx-background-insets: 0;
+}
+/*******************************************************************************
+ *                                                                             *
+ * SplitPane                                                                   *
+ *                                                                             *
+ ******************************************************************************/
+.split-pane:horizontal > .split-pane-divider:hover {
+    -fx-background-color: -fx-box-border, -fx-hover-base;
+    -fx-background-insets: 0, 0 1 0 1;
+}
+.split-pane:vertical > .split-pane-divider:hover {
+    -fx-background-color: -fx-box-border, -fx-hover-base;
+    -fx-background-insets: 0, 1 0 1 0;
+}
+.split-pane:horizontal > .split-pane-divider:pressed {
+    -fx-background-color: -fx-box-border, -fx-pressed-base;
+    -fx-background-insets: 0, 0 1 0 1;
+}
+.split-pane:vertical > .split-pane-divider:pressed {
+    -fx-background-color: -fx-box-border, -fx-pressed-base;
+    -fx-background-insets: 0, 1 0 1 0;
+}
+/*******************************************************************************
+ *                                                                             *
+ * ColorPicker                                                                 *
+ *                                                                             *
+ ******************************************************************************/
+.color-palette {
+    -fx-background-color: -fx-hover-base, -fx-base;
+}
+.color-palette > .color-picker-grid > .color-square:selected {
+    -fx-background-color: -fx-hover-base;
+}
+.custom-color-dialog > .color-rect-pane #color-rect-indicator,
+.custom-color-dialog > .color-rect-pane > .color-bar > #color-bar-indicator {
+    -fx-border-width: 2;
+}
+/*******************************************************************************
+ *                                                                             *
+ * Pagination                                                                  *
+ *                                                                             *
+ ******************************************************************************/
+.pagination > .pagination-control > .control-box > .number-button:selected {
+    -fx-background-color: transparent, -fx-hover-base, -fx-inner-border, -fx-body-color;
+}
+.pagination > .pagination-control > .control-box > .bullet-button:selected {
+    -fx-background-color: transparent, -fx-hover-base, -fx-inner-border, -fx-body-color;
+}
+/*******************************************************************************
+ *                                                                             *
+ * Table Cells                                                                 *
+ *                                                                             *
+ ******************************************************************************/
+.table-view:focused > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled > .check-box-table-cell:selected > .check-box > .box,
+.tree-table-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled > .check-box-table-cell:selected > .check-box > .box,
+.table-view:focused > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled:selected > .check-box-table-cell > .check-box > .box,
+.tree-table-view:focused > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled:selected > .check-box-table-cell > .check-box > .box {
+    -fx-background-color: -fx-base, -fx-background;
+}
+.table-view > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled > .check-box-table-cell:selected > .check-box > .box,
+.tree-table-view > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled > .check-box-table-cell:selected > .check-box > .box,
+.table-view > .virtual-flow > .clipped-container > .sheet > .table-row-cell:filled:selected > .check-box-table-cell > .check-box > .box,
+.tree-table-view > .virtual-flow > .clipped-container > .sheet > .tree-table-row-cell:filled:selected > .check-box-table-cell > .check-box > .box {
+    -fx-background-color: -fx-hover-base, -fx-background;
+}
+/*******************************************************************************
+*                                                                              *
+* TableView                                                                    *
+*                                                                              *
+*******************************************************************************/
+.table-view,
+.tree-table-view {
+    /* Constants used throughout the tableview */
+    -fx-table-cell-border-color: derive(-fx-base, -30%);
+}
+/*******************************************************************************
+ *                                                                             *
+ * Tooltip                                                                     *
+ *                                                                             *
+ ******************************************************************************/
+.tooltip {
+    -fx-background-color: -fx-hover-base, rgba(30, 30, 30, 0.8);
+    -fx-background-radius: 6px, 5px;
+    -fx-background-insets: 0, 1;
+    -fx-font-size: 1em;
+    -fx-font-weight: bold;
+}
+/*******************************************************************************
+ *                                                                             *
+ * Charts                                                                      *
+ *                                                                             *
+ ******************************************************************************/
+.chart-legend {
+    -fx-background-color: -fx-hover-base, -fx-base;
+    -fx-background-insets: 0, 1;
+    -fx-background-radius: 4, 3;
+}
+/*******************************************************************************
+ *                                                                             *
+ * Axis                                                                        *
+ *                                                                             *
+ ******************************************************************************/
+.axis {
+    AXIS_COLOR: -fx-dark-text-color;
+    -fx-tick-label-fill: -fx-hover-base;
+}
+/*******************************************************************************
+*                                                                              *
+* ChartPlot                                                                    *
+*                                                                              *
+*******************************************************************************/
+.chart-vertical-grid-lines,
+.chart-horizontal-grid-lines {
+    -fx-stroke: derive(-fx-base, -30%);
+}
+/*******************************************************************************
+ *                                                                             *
+ * ScatterChart, LineChart, AreaChart                                          *
+ *                                                                             *
+ ******************************************************************************/
+.default-color5.chart-symbol, /* hollow circle */
+.chart-line-symbol,
+.chart-area-symbol {
+    -fx-background-radius: 6px;
+    -fx-padding: 6px;
+}
+.chart-area-symbol {
+    -fx-background-color: #f9d900, black;
+    -fx-background-insets: 0, 2;
+}
+.default-color0.chart-area-symbol { -fx-background-color: CHART_COLOR_1, white; }
+.default-color1.chart-area-symbol { -fx-background-color: CHART_COLOR_2, white; }
+.default-color2.chart-area-symbol { -fx-background-color: CHART_COLOR_3, white; }
+.default-color3.chart-area-symbol { -fx-background-color: CHART_COLOR_4, white; }
+.default-color4.chart-area-symbol { -fx-background-color: CHART_COLOR_5, white; }
+.default-color5.chart-area-symbol { -fx-background-color: CHART_COLOR_6, white; }
+.default-color6.chart-area-symbol { -fx-background-color: CHART_COLOR_7, white; }
+.default-color7.chart-area-symbol { -fx-background-color: CHART_COLOR_8, white; }
+.chart-series-area-line {
+    -fx-stroke-width: 3px;
+}
+.default-color0.chart-series-area-fill { -fx-fill: CHART_COLOR_1_TRANS_20; }
+.default-color1.chart-series-area-fill { -fx-fill: CHART_COLOR_2_TRANS_20; }
+.default-color2.chart-series-area-fill { -fx-fill: CHART_COLOR_3_TRANS_20; }
+.default-color3.chart-series-area-fill { -fx-fill: CHART_COLOR_4_TRANS_20; }
+.default-color4.chart-series-area-fill { -fx-fill: CHART_COLOR_5_TRANS_20; }
+.default-color5.chart-series-area-fill { -fx-fill: CHART_COLOR_6_TRANS_20; }
+.default-color6.chart-series-area-fill { -fx-fill: CHART_COLOR_7_TRANS_20; }
+.default-color7.chart-series-area-fill { -fx-fill: CHART_COLOR_8_TRANS_20; }
+.area-legend-symbol {
+    -fx-background-insets: 0, 2;
+}

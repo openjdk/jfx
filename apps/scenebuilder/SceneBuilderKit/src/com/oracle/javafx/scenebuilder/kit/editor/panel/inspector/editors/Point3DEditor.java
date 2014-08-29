@@ -47,7 +47,7 @@ import javafx.scene.Parent;
  */
 public class Point3DEditor extends PropertyEditor {
 
-    private final Parent root;
+    private Parent root;
     @FXML
     private DoubleField xDf;
     @FXML
@@ -56,17 +56,15 @@ public class Point3DEditor extends PropertyEditor {
     private DoubleField zDf;
     DoubleField[] doubleFields = new DoubleField[3];
 
-    @SuppressWarnings("LeakingThisInConstructor")
     public Point3DEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses) {
         super(propMeta, selectedClasses);
-        root = EditorUtils.loadFxml("Point3DEditor.fxml", this);//NOI18N
-
         initialize();
-        setLayoutFormat(PropertyEditor.LayoutFormat.SIMPLE_LINE_BOTTOM);
     }
 
     //Method to please FindBugs
     private void initialize() {
+        root = EditorUtils.loadFxml("Point3DEditor.fxml", this);//NOI18N
+
         doubleFields[0] = xDf;
         doubleFields[1] = yDf;
         doubleFields[2] = zDf;
@@ -74,6 +72,7 @@ public class Point3DEditor extends PropertyEditor {
             EventHandler<ActionEvent> valueListener = event -> userUpdateValueProperty(getValue());
             setNumericEditorBehavior(this, doubleField, valueListener, false);
         }
+        setLayoutFormat(PropertyEditor.LayoutFormat.SIMPLE_LINE_BOTTOM);
     }
 
     @Override

@@ -27,6 +27,7 @@ package javafx.css;
 
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.ColorConverter;
+import com.sun.javafx.css.converters.DurationConverter;
 import com.sun.javafx.css.converters.EffectConverter;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.FontConverter;
@@ -40,6 +41,7 @@ import javafx.scene.effect.Effect;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.text.Font;
+import javafx.util.Duration;
 
 /**
  * Converter converts {@code ParsedValue&tl;F,T&gt;} from type F to type T. the
@@ -80,11 +82,20 @@ public class StyleConverter<F, T> {
      * representation of a web color to a {@code Color}
      * @see Color#web(java.lang.String) 
      */
+    public static StyleConverter<?,Duration> getDurationConverter() {
+        return DurationConverter.getInstance();
+    }
+
+    /**
+     * @return A {@code StyleConverter} that converts a String
+     * representation of a web color to a {@code Color}
+     * @see Color#web(java.lang.String)
+     */
     public static StyleConverter<String,Color> getColorConverter() {
         return ColorConverter.getInstance();
     }
-    
-    /** 
+
+    /**
      * @return A {@code StyleConverter} that converts a parsed representation
      * of an {@code Effect} to an {@code Effect}
      * @see Effect

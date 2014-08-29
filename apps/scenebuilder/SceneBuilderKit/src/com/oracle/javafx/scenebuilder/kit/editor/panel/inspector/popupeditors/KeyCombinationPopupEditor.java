@@ -93,10 +93,13 @@ public class KeyCombinationPopupEditor extends PopupEditor {
         KeyCombination.SHIFT_ANY, KeyCombination.SHIFT_DOWN,
         KeyCombination.SHORTCUT_ANY, KeyCombination.SHORTCUT_DOWN};
 
-    @SuppressWarnings("LeakingThisInConstructor")
     public KeyCombinationPopupEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses,
             EditorController editorController) {
         super(propMeta, selectedClasses);
+        initialize(editorController);
+    }
+    
+    private void initialize(EditorController editorController) {
         this.editorController = editorController;
     }
 
@@ -406,14 +409,17 @@ public class KeyCombinationPopupEditor extends PopupEditor {
         return row;
     }
 
-    @SuppressWarnings("LeakingThisInConstructor")
     private class MainKey extends AutoSuggestEditor {
 
-        private final EditorController editorController;
+        private EditorController editorController;
         String mainKey = null;
 
         public MainKey(List<String> suggestedKeys, EditorController editorController) {
             super("", null, suggestedKeys); //NOI18N
+            initialize(editorController);
+        }
+        
+        private void initialize(EditorController editorController) {
             this.editorController = editorController;
             EventHandler<ActionEvent> onActionListener = t -> {
                 if (Objects.equals(mainKey, getTextField().getText())) {

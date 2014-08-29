@@ -2018,6 +2018,21 @@ project(":fxpackager") {
         }
     }
 
+    task packagerFXPackagedJar(type: Jar) {
+        dependsOn packagerFakeJar
+        from compileTestJava.destinationDir
+        include "hello/**"
+
+        destinationDir project.file("build/tmp/tests/appResources")
+        archiveName "packagedMainApp.jar"
+
+        manifest {
+            attributes(
+                "JavaFX-Application-Class": "hello.TestPackager",
+            )
+        }
+    }
+
     if (!DO_BUILD_SDK_FOR_TEST) {
         def antJavafxJar = new File(TEST_SDK_DIR, "lib/ant-javafx.jar")
         [compileTestJava, test].each {
@@ -2026,7 +2041,7 @@ project(":fxpackager") {
     }
 
     test {
-        dependsOn packagerFakeJar
+        dependsOn packagerFXPackagedJar
         systemProperty "RETAIN_PACKAGER_TESTS", RETAIN_PACKAGER_TESTS
         systemProperty "FULL_TEST", FULL_TEST
     }

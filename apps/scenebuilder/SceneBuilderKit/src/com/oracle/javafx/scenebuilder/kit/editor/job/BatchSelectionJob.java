@@ -34,8 +34,6 @@ package com.oracle.javafx.scenebuilder.kit.editor.job;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.AbstractSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -43,9 +41,8 @@ import java.util.List;
  *
  * The sub jobs are FIRST all created, THEN executed.
  */
-public abstract class BatchSelectionJob extends CompositeJob2 {
+public abstract class BatchSelectionJob extends BatchDocumentJob {
 
-    private List<Job> subJobs;
     private AbstractSelectionGroup oldSelectionGroup;
     private AbstractSelectionGroup newSelectionGroup;
 
@@ -60,36 +57,16 @@ public abstract class BatchSelectionJob extends CompositeJob2 {
     protected abstract AbstractSelectionGroup getNewSelectionGroup();
 
     @Override
-    public final List<Job> getSubJobs() {
-        if (subJobs == null) {
-            subJobs = makeSubJobs();
-            assert subJobs != null;
-            subJobs = Collections.unmodifiableList(subJobs);
-        }
-        return subJobs;
-    }
-
-    @Override
-    public final boolean isExecutable() {
-        return getSubJobs().isEmpty() == false;
-    }
-
-    @Override
     public final void execute() {
         final Selection selection = getEditorController().getSelection();
-        final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
         try {
-            fxomDocument.beginUpdate();
             selection.beginUpdate();
             oldSelectionGroup = selection.getGroup() == null ? null
                     : selection.getGroup().clone();
-            for (Job subJob : getSubJobs()) {
-                subJob.execute();
-            }
+            super.execute();
             newSelectionGroup = getNewSelectionGroup();
             selection.select(newSelectionGroup);
             selection.endUpdate();
-            fxomDocument.endUpdate();
 
         } catch (CloneNotSupportedException x) {
             // Emergency code
@@ -100,30 +77,21 @@ public abstract class BatchSelectionJob extends CompositeJob2 {
     @Override
     public final void undo() {
         final Selection selection = getEditorController().getSelection();
-        final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
-        fxomDocument.beginUpdate();
         selection.beginUpdate();
-        for (int i = getSubJobs().size() - 1; i >= 0; i--) {
-            getSubJobs().get(i).undo();
-        }
+        super.undo();
         selection.select(oldSelectionGroup);
         selection.endUpdate();
-        fxomDocument.endUpdate();
     }
 
     @Override
     public final void redo() {
         final Selection selection = getEditorController().getSelection();
-        final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
-        fxomDocument.beginUpdate();
         selection.beginUpdate();
-        for (Job subJob : getSubJobs()) {
-            subJob.redo();
-        }
+        super.redo();
         selection.select(newSelectionGroup);
         selection.endUpdate();
-        fxomDocument.endUpdate();
     }
 
+    @Override
     protected abstract List<Job> makeSubJobs();
 }

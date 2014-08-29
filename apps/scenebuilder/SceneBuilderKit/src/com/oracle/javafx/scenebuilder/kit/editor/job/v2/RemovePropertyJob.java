@@ -53,7 +53,10 @@ public class RemovePropertyJob extends Job {
         this.targetProperty = targetProperty;
     }
     
-    
+    public FXOMProperty getTargetProperty() {
+        return targetProperty;
+    }
+
 
     /*
      * Job
@@ -67,6 +70,7 @@ public class RemovePropertyJob extends Job {
     @Override
     public void execute() {
         assert parentInstance == null;
+        assert isExecutable();
         
         parentInstance = targetProperty.getParentInstance();
         indexInParentInstance = targetProperty.getIndexInParentInstance();

@@ -51,9 +51,12 @@ public class DoubleEditor extends AutoSuggestEditor {
 
     private Map<String, Object> constants;
 
-    @SuppressWarnings("LeakingThisInConstructor")
     public DoubleEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses, Map<String, Object> constants) {
         super(propMeta, selectedClasses, new ArrayList<>(constants.keySet()), AutoSuggestEditor.Type.DOUBLE);
+        initialize(constants);
+    }
+    
+    private void initialize(Map<String, Object> constants) {
         this.constants = constants;
 
         EventHandler<ActionEvent> onActionListener = event -> {

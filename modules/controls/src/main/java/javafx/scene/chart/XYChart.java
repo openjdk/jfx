@@ -26,9 +26,9 @@
 package javafx.scene.chart;
 
 import com.sun.javafx.collections.NonIterableChange;
+
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -45,6 +45,7 @@ import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.property.StringPropertyBase;
+import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ListChangeListener.Change;
@@ -61,10 +62,14 @@ import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.Path;
 import javafx.scene.shape.Rectangle;
 import javafx.util.Duration;
+
 import java.util.BitSet;
+
 import javafx.css.StyleableBooleanProperty;
 import javafx.css.CssMetaData;
+
 import com.sun.javafx.css.converters.BooleanConverter;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -1024,7 +1029,7 @@ public abstract class XYChart<X,Y> extends Chart {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(XYChart<?,?> node) {
-                return (StyleableProperty<Boolean>)node.horizontalGridLinesVisibleProperty();
+                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)node.horizontalGridLinesVisibleProperty();
             }
         };
 
@@ -1040,7 +1045,7 @@ public abstract class XYChart<X,Y> extends Chart {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(XYChart<?,?> node) {
-                return (StyleableProperty<Boolean>)node.horizontalZeroLineVisibleProperty();
+                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)node.horizontalZeroLineVisibleProperty();
             }
         };
 
@@ -1056,7 +1061,7 @@ public abstract class XYChart<X,Y> extends Chart {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(XYChart<?,?> node) {
-                return (StyleableProperty<Boolean>)node.alternativeRowFillVisibleProperty();
+                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)node.alternativeRowFillVisibleProperty();
             }
         };
 
@@ -1072,7 +1077,7 @@ public abstract class XYChart<X,Y> extends Chart {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(XYChart<?,?> node) {
-                return (StyleableProperty<Boolean>)node.verticalGridLinesVisibleProperty();
+                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)node.verticalGridLinesVisibleProperty();
             }
         };
 
@@ -1088,7 +1093,7 @@ public abstract class XYChart<X,Y> extends Chart {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(XYChart<?,?> node) {
-                return (StyleableProperty<Boolean>)node.verticalZeroLineVisibleProperty();
+                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)node.verticalZeroLineVisibleProperty();
             }
         };
 
@@ -1104,7 +1109,7 @@ public abstract class XYChart<X,Y> extends Chart {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(XYChart<?,?> node) {
-                return (StyleableProperty<Boolean>)node.alternativeColumnFillVisibleProperty();
+                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)node.alternativeColumnFillVisibleProperty();
             }
         };
 

@@ -78,16 +78,25 @@ public class CssInternal {
     private final static URL caspianThemeUrl = Deprecation.getCaspianStylesheetURL();
     private final static URL caspianHighContrastThemeUrl = Deprecation.getCaspianHighContrastStylesheetURL();
     private final static URL caspianEmbeddedThemeUrl = Deprecation.getCaspianEmbeddedStylesheetURL();
+    private final static URL caspianEmbeddedHighContrastThemeUrl = Deprecation.getCaspianEmbeddedHighContrastStylesheetURL();
     private final static URL caspianEmbeddedQVGAThemeUrl = Deprecation.getCaspianEmbeddedQVGAStylesheetURL();
+    private final static URL caspianEmbeddedQVGAHighContrastThemeUrl = Deprecation.getCaspianEmbeddedQVGAHighContrastStylesheetURL();
     private final static URL modenaThemeUrl = Deprecation.getModenaStylesheetURL();
     private final static URL modenaTouchThemeUrl = Deprecation.getModenaTouchStylesheetURL();
     private final static URL modenaHighContrastBlackonwhiteThemeUrl = Deprecation.getModenaHighContrastBlackonwhiteStylesheetURL();
     private final static URL modenaHighContrastWhiteonblackThemeUrl = Deprecation.getModenaHighContrastWhiteonblackStylesheetURL();
     private final static URL modenaHighContrastYellowonblackThemeUrl = Deprecation.getModenaHighContrastYellowonblackStylesheetURL();
+    private final static URL modenaTouchHighContrastBlackonwhiteThemeUrl = Deprecation.getModenaTouchHighContrastBlackonwhiteStylesheetURL();
+    private final static URL modenaTouchHighContrastWhiteonblackThemeUrl = Deprecation.getModenaTouchHighContrastWhiteonblackStylesheetURL();
+    private final static URL modenaTouchHighContrastYellowonblackThemeUrl = Deprecation.getModenaTouchHighContrastYellowonblackStylesheetURL();
     private final static URL[] themeUrls = {
-        caspianThemeUrl, caspianHighContrastThemeUrl, caspianEmbeddedThemeUrl, caspianEmbeddedQVGAThemeUrl,
+        caspianThemeUrl, caspianHighContrastThemeUrl, caspianEmbeddedThemeUrl,
+        caspianEmbeddedHighContrastThemeUrl, caspianEmbeddedQVGAThemeUrl,
+        caspianEmbeddedQVGAHighContrastThemeUrl,
         modenaThemeUrl, modenaTouchThemeUrl, modenaHighContrastBlackonwhiteThemeUrl,
-        modenaHighContrastWhiteonblackThemeUrl, modenaHighContrastYellowonblackThemeUrl
+        modenaHighContrastWhiteonblackThemeUrl, modenaHighContrastYellowonblackThemeUrl,
+        modenaTouchHighContrastBlackonwhiteThemeUrl, modenaTouchHighContrastWhiteonblackThemeUrl,
+        modenaTouchHighContrastYellowonblackThemeUrl
     };
 
     /**
@@ -148,15 +157,11 @@ public class CssInternal {
     }
 
     public static List<String> getThemeStyleClasses(Theme theme) {
-        List<URL> themeStyleSheets = EditorPlatform.getThemeStylesheetURLs(theme);
-        // Add the Modena css, which is not added in the list
-        themeStyleSheets.add(EditorPlatform.getPlatformThemeStylesheetURL());
+        URL themeStyleSheet = EditorPlatform.getThemeStylesheetURL(theme);
         Set<String> themeClasses = new HashSet<>();
-        for (URL themeStyleSheet : themeStyleSheets) {
-            // For Theme css, we need to get the text css (.css) to be able to parse it.
-            // (instead of the default binary format .bss)
-            themeClasses.addAll(getStyleClasses(Deprecation.getThemeTextStylesheet(themeStyleSheet)));
-        }
+        // For Theme css, we need to get the text css (.css) to be able to parse it.
+        // (instead of the default binary format .bss)
+        themeClasses.addAll(getStyleClasses(Deprecation.getThemeTextStylesheet(themeStyleSheet)));
         return new ArrayList<>(themeClasses);
     }
 

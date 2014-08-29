@@ -45,6 +45,7 @@ public class RemovePropertyValueJob extends Job {
     
     private FXOMPropertyC parentProperty;
     private int indexInParentProperty;
+    private RemovePropertyJob removePropertyJob;
 
     public RemovePropertyValueJob(FXOMObject value, EditorController editorController) {
         super(editorController);
@@ -58,18 +59,30 @@ public class RemovePropertyValueJob extends Job {
     
     @Override
     public boolean isExecutable() {
-        final FXOMPropertyC p = targetValue.getParentProperty();
-        return (p != null) && (p.getValues().size() >= 2);
+        return targetValue.getParentProperty() != null;
     }
 
     @Override
     public void execute() {
         assert parentProperty == null;
+        assert isExecutable();
         
         parentProperty = targetValue.getParentProperty();
         indexInParentProperty = targetValue.getIndexInParentProperty();
+        if ((parentProperty.getValues().size() == 1) && (parentProperty.getParentInstance() != null)) {
+            // targetValue is the last value of its parent property
+            // => parent property must also be removed from its parent instance
+            removePropertyJob = new RemovePropertyJob(parentProperty, getEditorController());
+        }
         
-        redo();
+        // Note : below we may have to run removePropertyJob.execute() so
+        // we cannot re-use redo() here.
+        getEditorController().getFxomDocument().beginUpdate();
+        if (removePropertyJob != null) {
+            removePropertyJob.execute();
+        }
+        targetValue.removeFromParentProperty();
+        getEditorController().getFxomDocument().endUpdate();
     }
 
     @Override
@@ -78,6 +91,9 @@ public class RemovePropertyValueJob extends Job {
         
         getEditorController().getFxomDocument().beginUpdate();
         targetValue.addToParentProperty(indexInParentProperty, parentProperty);
+        if (removePropertyJob != null) {
+            removePropertyJob.undo();
+        }
         getEditorController().getFxomDocument().endUpdate();
 
         assert targetValue.getParentProperty() == parentProperty;
@@ -89,8 +105,10 @@ public class RemovePropertyValueJob extends Job {
         assert targetValue.getParentProperty() == parentProperty;
         assert targetValue.getIndexInParentProperty() == indexInParentProperty;
         
-        getEditorController().getSelection().clear();
         getEditorController().getFxomDocument().beginUpdate();
+        if (removePropertyJob != null) {
+            removePropertyJob.redo();
+        }
         targetValue.removeFromParentProperty();
         getEditorController().getFxomDocument().endUpdate();
 

@@ -121,7 +121,11 @@ class GlassWindowEventHandler extends Window.EventHandler implements PrivilegedA
 
     @Override
     public void handleLevelEvent(int level) {
-        stage.stageListener.changedAlwaysOnTop(level != Level.NORMAL);
+        AccessControlContext acc = stage.getAccessControlContext();
+        AccessController.doPrivileged((PrivilegedAction<Void>)() -> {
+            stage.stageListener.changedAlwaysOnTop(level != Level.NORMAL);
+            return (Void)null;
+        } , acc);
     }
     
     @Override

@@ -32,7 +32,7 @@
 package com.oracle.javafx.scenebuilder.kit.editor.job.gridpane;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
-import com.oracle.javafx.scenebuilder.kit.editor.job.BatchJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.BatchDocumentJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
 import com.oracle.javafx.scenebuilder.kit.editor.job.JobUtils;
 import com.oracle.javafx.scenebuilder.kit.editor.job.gridpane.GridPaneJobUtils.Position;
@@ -45,19 +45,21 @@ import com.oracle.javafx.scenebuilder.kit.fxom.FXOMProperty;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMPropertyC;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import javafx.scene.layout.ColumnConstraints;
 
 /**
  * Job invoked when adding column constraints.
  */
-public class AddColumnConstraintsJob extends Job {
+public class AddColumnConstraintsJob extends BatchDocumentJob {
 
-    private BatchJob subJob;
     // Key = target GridPane instance
     // Value = list of target column indexes for this GridPane
-    private final Map<FXOMObject, List<Integer>> targetGridPanes;
+    private final Map<FXOMObject, Set<Integer>> targetGridPanes;
     private final Position position;
     // If the selected column is associated to an existing constraints, 
     // we duplicate the existing constraints.
@@ -68,68 +70,38 @@ public class AddColumnConstraintsJob extends Job {
     public AddColumnConstraintsJob(
             final EditorController editorController,
             final Position position,
-            final Map<FXOMObject, List<Integer>> targetGridPanes) {
+            final Map<FXOMObject, Set<Integer>> targetGridPanes) {
         super(editorController);
         this.position = position;
         this.targetGridPanes = targetGridPanes;
-        buildSubJobs();
     }
 
     @Override
-    public boolean isExecutable() {
-        return subJob != null && subJob.isExecutable();
-    }
+    protected List<Job> makeSubJobs() {
 
-    @Override
-    public void execute() {
-        assert isExecutable();
-        final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
-        fxomDocument.beginUpdate();
-        subJob.execute();
-        fxomDocument.endUpdate();
-    }
-
-    @Override
-    public void undo() {
-        final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
-        fxomDocument.beginUpdate();
-        subJob.undo();
-        fxomDocument.endUpdate();
-    }
-
-    @Override
-    public void redo() {
-        final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
-        fxomDocument.beginUpdate();
-        subJob.redo();
-        fxomDocument.endUpdate();
-    }
-
-    @Override
-    public String getDescription() {
-        return "Add Column Constraints"; //NOI18N
-    }
-
-    private void buildSubJobs() {
-
-        // Create sub job
-        subJob = new BatchJob(getEditorController(),
-                true /* shouldRefreshSceneGraph */, null);
+        final List<Job> result = new ArrayList<>();
 
         // Add column constraints job
         assert targetGridPanes.isEmpty() == false;
         for (FXOMObject targetGridPane : targetGridPanes.keySet()) {
             assert targetGridPane instanceof FXOMInstance;
-            final List<Integer> targetIndexes = targetGridPanes.get(targetGridPane);
-            addColumnConstraints((FXOMInstance) targetGridPane, targetIndexes);
+            final Set<Integer> targetIndexes = targetGridPanes.get(targetGridPane);
+            result.addAll(addColumnConstraints((FXOMInstance) targetGridPane, targetIndexes));
         }
+        
+        return result;
     }
-
-    private void addColumnConstraints(
+    
+    @Override
+    protected String makeDescription() {
+        return "Add Column Constraints"; //NOI18N
+    }
+    
+    private Set<Job> addColumnConstraints(
             final FXOMInstance targetGridPane,
-            final List<Integer> targetIndexes) {
+            final Set<Integer> targetIndexes) {
 
-        assert subJob != null;
+        final Set<Job> result = new HashSet<>();
         final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
 
         // Retrieve the constraints property for the specified target GridPane
@@ -166,7 +138,7 @@ public class AddColumnConstraintsJob extends Job {
                         addedConstraints,
                         (FXOMPropertyC) constraintsProperty,
                         addedIndex, getEditorController());
-                subJob.addSubJob(addValueJob);
+                result.add(addValueJob);
             } //
             // The target index is not associated to an existing constraints value :
             // - we add new empty constraints from the last existing one to the added index (excluded)
@@ -179,7 +151,7 @@ public class AddColumnConstraintsJob extends Job {
                             addedConstraints,
                             (FXOMPropertyC) constraintsProperty,
                             index, getEditorController());
-                    subJob.addSubJob(addValueJob);
+                    result.add(addValueJob);
                 }
                 // Create new constraints with default values for the new added column
                 final FXOMInstance addedConstraints = makeColumnConstraintsInstance();
@@ -189,7 +161,7 @@ public class AddColumnConstraintsJob extends Job {
                         addedConstraints,
                         (FXOMPropertyC) constraintsProperty,
                         addedIndex, getEditorController());
-                subJob.addSubJob(addValueJob);
+                result.add(addValueJob);
                 constraintsSize = addedIndex + 1;
             }
             shiftIndex++;
@@ -203,8 +175,10 @@ public class AddColumnConstraintsJob extends Job {
                     constraintsProperty,
                     targetGridPane,
                     -1, getEditorController());
-            subJob.addSubJob(addPropertyJob);
+            result.add(addPropertyJob);
         }
+        
+        return result;
     }
 
     private FXOMInstance makeColumnConstraintsInstance() {

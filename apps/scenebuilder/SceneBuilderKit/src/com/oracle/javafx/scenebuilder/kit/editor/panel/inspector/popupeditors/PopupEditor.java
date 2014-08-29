@@ -62,17 +62,14 @@ public abstract class PopupEditor extends PropertyEditor implements PopupEditorV
     private Object value;
     private boolean initialized = false;
 
-    @SuppressWarnings("LeakingThisInConstructor")
     public PopupEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses) {
         super(propMeta, selectedClasses);
-
-        EditorUtils.loadPopupFxml("PopupEditor.fxml", this);
-        
         initializeEditor();
     }
     
     // Separate method to please FindBugs
     private void initializeEditor() {
+        EditorUtils.loadPopupFxml("PopupEditor.fxml", this);
         // Lazy initialization of the editor,
         // the first time the popup is opened.
         popupMb.showingProperty().addListener((ChangeListener<Boolean>) (ov, previousVal, newVal) -> {

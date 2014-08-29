@@ -33,7 +33,6 @@ package com.oracle.javafx.scenebuilder.kit.editor.job;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.job.togglegroup.AdjustAllToggleGroupJob;
-import com.oracle.javafx.scenebuilder.kit.editor.selection.AbstractSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.GridSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
@@ -47,7 +46,7 @@ import java.util.Set;
 /**
  *
  */
-public class SendToBackJob extends BatchSelectionJob {
+public class SendToBackJob extends BatchDocumentJob {
 
     public SendToBackJob(EditorController editorController) {
         super(editorController);
@@ -106,12 +105,6 @@ public class SendToBackJob extends BatchSelectionJob {
                 break;
         }
         return result;
-    }
-
-    @Override
-    protected AbstractSelectionGroup getNewSelectionGroup() {
-        // Selection unchanged
-        return getOldSelectionGroup();
     }
 
     private String makeMultipleSelectionDescription() {

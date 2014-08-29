@@ -63,9 +63,12 @@ public class EventHandlerEditor extends AutoSuggestEditor {
     private HBox hbox = null;
     private List<String> suggestedMethods;
 
-    @SuppressWarnings("LeakingThisInConstructor")
     public EventHandlerEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses, List<String> suggestedMethods) {
         super(propMeta, selectedClasses, suggestedMethods); //NOI18N
+        initialize(suggestedMethods);
+    }
+
+    private void initialize(List<String> suggestedMethods) {
         this.suggestedMethods = suggestedMethods;
 
         // text field events handling
@@ -106,7 +109,7 @@ public class EventHandlerEditor extends AutoSuggestEditor {
         // methodeName mode by default
         switchToMethodNameMode();
     }
-
+    
     @Override
     public Object getValue() {
         String valueTf = getTextField().getText();

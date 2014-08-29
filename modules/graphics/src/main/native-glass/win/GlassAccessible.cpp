@@ -28,6 +28,7 @@
 #include "com_sun_glass_ui_win_WinAccessible.h"
 #include "GlassAccessible.h"
 #include "GlassTextRangeProvider.h"
+#include "GlassApplication.h"
 
 /* WinAccessible Method IDs */
 static jmethodID mid_GetPatternProvider;
@@ -253,12 +254,14 @@ GlassAccessible::GlassAccessible(JNIEnv* env, jobject jAccessible)
 : m_refCount(1)
 {
     m_jAccessible = env->NewGlobalRef(jAccessible);
+    GlassApplication::IncrementAccessibility();
 }
 
 GlassAccessible::~GlassAccessible()
 {
     JNIEnv* env = GetEnv();
     if (env) env->DeleteGlobalRef(m_jAccessible);
+    GlassApplication::DecrementAccessibility();
 }
 
 /***********************************************/

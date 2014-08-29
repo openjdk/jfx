@@ -33,6 +33,7 @@ import com.sun.javafx.scene.traversal.TraversalContext;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.BooleanPropertyBase;
 import javafx.beans.value.ChangeListener;
@@ -40,6 +41,7 @@ import javafx.collections.ObservableList;
 import javafx.event.EventDispatcher;
 import javafx.event.EventHandler;
 import javafx.geometry.Orientation;
+import javafx.scene.AccessibleRole;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Parent;
@@ -1757,6 +1759,19 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             if (createCell != null) {
                 accumCell = createCell.call(this);
                 accumCellParent.getChildren().setAll(accumCell);
+
+                // Note the screen reader will attempt to find all
+                // the items inside the view to calculate the item count.
+                // Having items under different parents (sheet and accumCellParent)
+                // leads the screen reader to compute wrong values.
+                // The regular scheme to provide items to the screen reader
+                // uses getPrivateCell(), which places the item in the sheet.
+                // The accumCell, and its children, should be ignored by the
+                // screen reader. 
+                accumCell.setRole(AccessibleRole.NODE);
+                accumCell.getChildrenUnmodifiable().addListener((Observable c) -> {
+                    accumCell.getChildrenUnmodifiable().forEach(n -> n.setRole(AccessibleRole.NODE));
+                });
             }
         }
         setCellIndex(accumCell, index);

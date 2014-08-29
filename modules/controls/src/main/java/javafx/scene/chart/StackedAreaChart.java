@@ -27,6 +27,7 @@ package javafx.scene.chart;
 
 
 import java.util.*;
+
 import javafx.animation.*;
 import javafx.application.Platform;
 import javafx.beans.NamedArg;
@@ -41,10 +42,13 @@ import javafx.scene.Node;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.*;
 import javafx.util.Duration;
+
 import com.sun.javafx.charts.Legend;
 import com.sun.javafx.charts.Legend.LegendItem;
 import com.sun.javafx.css.converters.BooleanConverter;
+
 import javafx.beans.property.BooleanProperty;
+import javafx.beans.value.WritableValue;
 import javafx.css.CssMetaData;
 import javafx.css.Styleable;
 import javafx.css.StyleableBooleanProperty;
@@ -109,7 +113,7 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
             return "createSymbols";
         }
 
-        public CssMetaData getCssMetaData() {
+        public CssMetaData<StackedAreaChart<?, ?>,Boolean> getCssMetaData() {
             return StyleableProperties.CREATE_SYMBOLS;
         }
     };
@@ -910,7 +914,7 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(StackedAreaChart<?,?> node) {
-                return (StyleableProperty<Boolean>) node.createSymbolsProperty();
+                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)node.createSymbolsProperty();
             }
         };
         

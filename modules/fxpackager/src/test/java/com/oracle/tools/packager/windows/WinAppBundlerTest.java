@@ -61,7 +61,9 @@ public class WinAppBundlerTest {
     static File workDir;
     static File appResourcesDir;
     static File fakeMainJar;
+    static File packagedMainJar;
     static Set<File> appResources;
+    static Set<File> packagedAppResources;
     static boolean retain = false;
 
     @BeforeClass
@@ -76,8 +78,10 @@ public class WinAppBundlerTest {
         workDir = new File("build/tmp/tests", "winapp");
         appResourcesDir = new File("build/tmp/tests", "appResources");
         fakeMainJar = new File(appResourcesDir, "mainApp.jar");
+        packagedMainJar = new File(appResourcesDir, "packagedMainApp.jar");
 
         appResources = new HashSet<>(Arrays.asList(fakeMainJar));
+        packagedAppResources = new HashSet<>(Arrays.asList(packagedMainJar));
     }
 
     @Before
@@ -176,6 +180,28 @@ public class WinAppBundlerTest {
         assertTrue(output.isDirectory());
     }
     
+    /**
+     * FX Packaging used to trigger a logic bug.  Make sure it doesn't
+     */
+    @Test
+    public void fxPackaging() throws IOException, ConfigException, UnsupportedPlatformException {
+        Bundler bundler = new WinAppBundler();
+
+        Map<String, Object> bundleParams = new HashMap<>();
+
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, packagedAppResources));
+
+        try {
+            boolean valid = bundler.validate(bundleParams);
+            assertTrue(valid);
+        } catch (ConfigException ce) {
+            assertTrue(ce.getMessage().contains("Java Runtime does not include"));
+        }
+
+    }
+
     public void validatePackageCfg(File root) throws IOException {
         try (FileInputStream fis = new FileInputStream(new File(root, "app\\package.cfg"))) {
             Properties p = new Properties();

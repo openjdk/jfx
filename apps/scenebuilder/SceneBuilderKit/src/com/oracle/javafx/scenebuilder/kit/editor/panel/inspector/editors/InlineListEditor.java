@@ -49,7 +49,6 @@ public abstract class InlineListEditor extends PropertyEditor implements EditorI
     private final VBox vbox = new VBox(1);
     private final List<EditorItem> editorItems = new ArrayList<>();
 
-    @SuppressWarnings("LeakingThisInConstructor")
     public InlineListEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses) {
         super(propMeta, selectedClasses);
         setLayoutFormat(PropertyEditor.LayoutFormat.DOUBLE_LINE);

@@ -42,9 +42,8 @@ import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
-import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleDoubleProperty;
-import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
@@ -60,10 +59,14 @@ import javafx.util.Duration;
 
 import com.sun.javafx.charts.Legend;
 import com.sun.javafx.charts.Legend.LegendItem;
+
 import javafx.css.StyleableBooleanProperty;
 import javafx.css.CssMetaData;
+
 import com.sun.javafx.css.converters.BooleanConverter;
+
 import java.util.*;
+
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 
@@ -622,7 +625,7 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(LineChart<?,?> node) {
-                return (StyleableProperty<Boolean>)node.createSymbolsProperty();
+                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)node.createSymbolsProperty();
             }
         };
 

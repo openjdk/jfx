@@ -50,7 +50,6 @@ public class DividerPositionsEditor extends PropertyEditor {
 
     private final VBox vbox = new VBox(5);
 
-    @SuppressWarnings("LeakingThisInConstructor")
     public DividerPositionsEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses) {
         super(propMeta, selectedClasses);
         setLayoutFormat(PropertyEditor.LayoutFormat.SIMPLE_LINE_TOP);

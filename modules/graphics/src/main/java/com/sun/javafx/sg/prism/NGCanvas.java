@@ -70,6 +70,7 @@ import com.sun.scenario.effect.ImageData;
 import com.sun.scenario.effect.impl.prism.PrDrawable;
 import com.sun.scenario.effect.impl.prism.PrFilterContext;
 import com.sun.scenario.effect.impl.prism.PrTexture;
+import javafx.scene.text.FontSmoothingType;
 
 /**
  */
@@ -94,6 +95,7 @@ public class NGCanvas extends NGNode {
     public static final byte FILL_RULE     = ATTR_BASE + 16;
     public static final byte DASH_ARRAY    = ATTR_BASE + 17;
     public static final byte DASH_OFFSET   = ATTR_BASE + 18;
+    public static final byte FONT_SMOOTH   = ATTR_BASE + 19;
 
     public static final byte                     OP_BASE = 20;
     public static final byte FILL_RECT         = OP_BASE + 0;
@@ -144,6 +146,9 @@ public class NGCanvas extends NGNode {
     public static final byte ARC_OPEN   = 0;
     public static final byte ARC_CHORD  = 1;
     public static final byte ARC_PIE    = 2;
+
+    public static final byte SMOOTH_GRAY = (byte) FontSmoothingType.GRAY.ordinal();
+    public static final byte SMOOTH_LCD  = (byte) FontSmoothingType.LCD.ordinal();
 
     public static final byte ALIGN_LEFT       = 0;
     public static final byte ALIGN_CENTER     = 1;
@@ -325,6 +330,7 @@ public class NGCanvas extends NGNode {
     private NGText ngtext;
     private PrismTextLayout textLayout;
     private PGFont pgfont;
+    private int smoothing;
     private int align;
     private int baseline;
     private Affine2D transform;
@@ -370,6 +376,7 @@ public class NGCanvas extends NGNode {
         // ngtext stores no state between render operations
         // textLayout stores no state between render operations
         pgfont = (PGFont) Font.getDefault().impl_getNativeFont();
+        smoothing = SMOOTH_GRAY;
         align = ALIGN_LEFT;
         baseline = VPos.BASELINE.ordinal();
         transform.setToScale(highestPixelScale, highestPixelScale);
@@ -979,10 +986,11 @@ public class NGCanvas extends NGNode {
                     stroke = null;
                     break;
                 case FONT:
-                {
                     pgfont = (PGFont) buf.getObject();
                     break;
-                }
+                case FONT_SMOOTH:
+                    smoothing = buf.getUByte();
+                    break;
                 case TEXT_ALIGN:
                     align = buf.getUByte();
                     break;
@@ -1390,14 +1398,15 @@ public class NGCanvas extends NGNode {
                     if (token == FILL_TEXT) {
                         ngtext.setMode(NGShape.Mode.FILL);
                         ngtext.setFillPaint(fillPaint);
-                        if (fillPaint.isProportional()) {
+                        if (fillPaint.isProportional() || smoothing == SMOOTH_LCD) {
                             RectBounds textBounds = new RectBounds();
                             computeTextLayoutBounds(textBounds, BaseTransform.IDENTITY_TRANSFORM,
                                                     1, layoutX, layoutY, token);
                             ngtext.setContentBounds(textBounds);
                         }
                     } else {
-                        if (strokePaint.isProportional()) {
+                        // SMOOTH_LCD does not apply to stroked text
+                        if (strokePaint.isProportional() /* || smoothing == SMOOTH_LCD */) {
                             RectBounds textBounds = new RectBounds();
                             computeTextLayoutBounds(textBounds, BaseTransform.IDENTITY_TRANSFORM,
                                                     1, layoutX, layoutY, token);
@@ -1408,6 +1417,7 @@ public class NGCanvas extends NGNode {
                         ngtext.setDrawPaint(strokePaint);
                     }
                     ngtext.setFont(pgfont);
+                    ngtext.setFontSmoothingType(smoothing);
                     ngtext.setGlyphs(textLayout.getRuns());
                     ngtext.renderContent(gr);
                 }

@@ -35,10 +35,10 @@ import com.oracle.javafx.scenebuilder.kit.fxom.glue.GlueElement;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 import java.net.URL;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
 
 /**
  *
@@ -53,7 +53,7 @@ public class FXOMIntrinsic extends FXOMObject {
         UNDEFINED
     }
     
-    private final Map<PropertyName, FXOMProperty> properties = new TreeMap<>();
+    private final Map<PropertyName, FXOMProperty> properties = new LinkedHashMap<>();
     private Object sourceSceneGraphObject;
 
     

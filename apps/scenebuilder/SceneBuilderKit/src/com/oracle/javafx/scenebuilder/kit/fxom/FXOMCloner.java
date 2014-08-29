@@ -36,7 +36,6 @@ import com.oracle.javafx.scenebuilder.kit.metadata.util.PrefixedValue;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.PriorityQueue;
 import java.util.Set;
 
 /**
@@ -308,7 +307,9 @@ public class FXOMCloner {
             fxIds.remove(clonee.getFxId());
         }
         
-        for (String candidateFxId : new PriorityQueue<>(fxIds.keySet())) {
+        for (Map.Entry<String, FXOMObject> e : fxIds.entrySet()) {
+            final String candidateFxId = e.getKey();
+            final FXOMObject declarer = e.getValue();
             
             final String renamedFxId = fxIdCollector.importFxId(candidateFxId);
             
@@ -322,7 +323,6 @@ public class FXOMCloner {
                  */
                 
                 // 1)
-                final FXOMObject declarer = fxIds.get(candidateFxId);
                 declarer.setFxId(renamedFxId);
 
                 // 2)

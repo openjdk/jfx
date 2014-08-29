@@ -32,7 +32,6 @@
 package com.oracle.javafx.scenebuilder.kit.editor.job;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
-import com.oracle.javafx.scenebuilder.kit.editor.selection.AbstractSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.GridSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
@@ -47,7 +46,7 @@ import java.util.Set;
 /**
  *
  */
-public class UseComputedSizesSelectionJob extends BatchSelectionJob {
+public class UseComputedSizesSelectionJob extends BatchDocumentJob {
 
     public UseComputedSizesSelectionJob(EditorController editorController) {
         super(editorController);
@@ -118,12 +117,6 @@ public class UseComputedSizesSelectionJob extends BatchSelectionJob {
                 break;
         }
         return result;
-    }
-
-    @Override
-    protected AbstractSelectionGroup getNewSelectionGroup() {
-        // Selection unchanged
-        return getOldSelectionGroup();
     }
 
     private String makeMultipleSelectionDescription() {

@@ -37,8 +37,8 @@ import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 import com.oracle.javafx.scenebuilder.kit.util.JavaLanguage;
 import com.oracle.javafx.scenebuilder.kit.util.URLUtils;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -405,7 +405,7 @@ public abstract class FXOMObject extends FXOMNode {
     protected abstract void collectIncludes(String source, List<FXOMIntrinsic> result);
 
     public Map<String, FXOMObject> collectFxIds() {
-        final Map<String, FXOMObject> result = new HashMap<>();
+        final Map<String, FXOMObject> result = new LinkedHashMap<>();
         
         collectFxIds(result);
         

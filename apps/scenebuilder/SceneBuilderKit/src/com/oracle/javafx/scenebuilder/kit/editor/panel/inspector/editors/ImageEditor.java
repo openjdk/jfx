@@ -65,7 +65,7 @@ public class ImageEditor extends PropertyEditor {
     @FXML
     private TextField imagePathTf;
 
-    private final Parent root;
+    private Parent root;
     private DesignImage image = null;
 
     private final MenuItem documentRelativeMenuItem
@@ -78,9 +78,13 @@ public class ImageEditor extends PropertyEditor {
     private PrefixedValue.Type type = PrefixedValue.Type.PLAIN_STRING;
     private URL fxmlFileLocation;
 
-    @SuppressWarnings("LeakingThisInConstructor")
     public ImageEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses, URL fxmlFileLocation) {
         super(propMeta, selectedClasses);
+        initialize(fxmlFileLocation);
+    }
+    
+    // Separate method to please FindBugs
+    private void initialize(URL fxmlFileLocation) {
         this.fxmlFileLocation = fxmlFileLocation;
         root = EditorUtils.loadFxml("ImageEditor.fxml", this); //NOI18N
 
@@ -107,11 +111,6 @@ public class ImageEditor extends PropertyEditor {
             image = new DesignImage(imageObj, prefixedValue);
             userUpdateValueProperty(image);
         };
-        initialize(valueListener);
-    }
-
-    // Separate method to please FindBugs
-    private void initialize(EventHandler<ActionEvent> valueListener) {
         setTextEditorBehavior(this, imagePathTf, valueListener);
 
         documentRelativeMenuItem.setOnAction(e -> switchType(PrefixedValue.Type.DOCUMENT_RELATIVE_PATH));

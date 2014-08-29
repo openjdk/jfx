@@ -273,7 +273,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
                 tabHeaderArea.setVisible(true);
             }
             int index = from + i++;
-            tabHeaderArea.addTab(tab, index, false);
+            tabHeaderArea.addTab(tab, index);
             addTabContent(tab);
             final TabHeaderSkin tabRegion = tabHeaderArea.getTabHeaderSkin(tab);
             if (tabRegion != null) {
@@ -768,7 +768,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
 
             int i = 0;
             for (Tab tab: tabPane.getTabs()) {
-                addTab(tab, i++, true);
+                addTab(tab, i++);
             }
 
             controlButtons = new TabControlButtons();
@@ -848,9 +848,8 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
             headerClip.setHeight(clipHeight);
         }
 
-        private void addTab(Tab tab, int addToIndex, boolean visible) {
+        private void addTab(Tab tab, int addToIndex) {
             TabHeaderSkin tabHeaderSkin = new TabHeaderSkin(tab);
-            tabHeaderSkin.setVisible(visible);
             headersRegion.getChildren().add(addToIndex, tabHeaderSkin);
         }
 

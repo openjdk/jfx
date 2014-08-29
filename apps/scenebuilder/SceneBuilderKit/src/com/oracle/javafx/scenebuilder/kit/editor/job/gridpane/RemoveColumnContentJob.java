@@ -32,22 +32,21 @@
 package com.oracle.javafx.scenebuilder.kit.editor.job.gridpane;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
-import com.oracle.javafx.scenebuilder.kit.editor.job.BatchJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.BatchDocumentJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.DeleteObjectJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
 import com.oracle.javafx.scenebuilder.kit.editor.job.togglegroup.AdjustAllToggleGroupJob;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Job invoked when removing column content.
  */
-public class RemoveColumnContentJob extends Job {
+public class RemoveColumnContentJob extends BatchDocumentJob {
 
-    private BatchJob subJob;
     private final FXOMObject targetGridPane;
     private final List<Integer> targetIndexes;
 
@@ -61,52 +60,12 @@ public class RemoveColumnContentJob extends Job {
         assert targetIndexes != null;
         this.targetGridPane = targetGridPane;
         this.targetIndexes = targetIndexes;
-        buildSubJobs();
     }
 
     @Override
-    public boolean isExecutable() {
-        // Remove column content job may be empty 
-        // (when removing a column with no content).
-        // So we do not invoke subJob.isExecutable() here. 
-        return subJob != null;
-    }
+    protected List<Job> makeSubJobs() {
 
-    @Override
-    public void execute() {
-        assert isExecutable();
-        final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
-        fxomDocument.beginUpdate();
-        subJob.execute();
-        fxomDocument.endUpdate();
-    }
-
-    @Override
-    public void undo() {
-        final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
-        fxomDocument.beginUpdate();
-        subJob.undo();
-        fxomDocument.endUpdate();
-    }
-
-    @Override
-    public void redo() {
-        final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
-        fxomDocument.beginUpdate();
-        subJob.redo();
-        fxomDocument.endUpdate();
-    }
-
-    @Override
-    public String getDescription() {
-        return "Remove Column Content"; //NOI18N
-    }
-
-    private void buildSubJobs() {
-
-        // Create sub job
-        subJob = new BatchJob(getEditorController(),
-                true /* shouldRefreshSceneGraph */, null);
+        final List<Job> result = new ArrayList<>();
 
         assert targetGridPane instanceof FXOMInstance;
         assert targetIndexes.isEmpty() == false;
@@ -120,11 +79,17 @@ public class RemoveColumnContentJob extends Job {
                 final Job removeChildJob = new DeleteObjectJob(
                         child,
                         getEditorController());
-                subJob.addSubJob(removeChildJob);
+                result.add(removeChildJob);
             }
         }
-        
+
         final Job adjustToggleGroups = new AdjustAllToggleGroupJob(getEditorController());
-        subJob.addSubJob(adjustToggleGroups);
+        result.add(adjustToggleGroups);
+        return result;
+    }
+
+    @Override
+    protected String makeDescription() {
+        return "Remove Column Content"; //NOI18N
     }
 }

@@ -77,9 +77,12 @@ public class StyleEditor extends InlineListEditor {
     private Set<Class<?>> selectedClasses;
     private EditorController editorController;
 
-    @SuppressWarnings("LeakingThisInConstructor")
     public StyleEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses, EditorController editorController) {
         super(propMeta, selectedClasses);
+        initialize(selectedClasses, editorController);
+    }
+    
+    private void initialize(Set<Class<?>> selectedClasses, EditorController editorController) {
         this.selectedClasses = selectedClasses;
         this.editorController = editorController;
         setLayoutFormat(LayoutFormat.DOUBLE_LINE);
@@ -227,26 +230,25 @@ public class StyleEditor extends InlineListEditor {
         @FXML
         private StackPane propertySp;
 
-        private final Parent root;
+        private Parent root;
         private TextField propertyTf;
         private String currentValue;
-        private final EditorItemDelegate editor;
+        private EditorItemDelegate editor;
         private boolean parsingError = false;
         private ListChangeListener<CssError> errorListener;
 
-        @SuppressWarnings("LeakingThisInConstructor")
         public StyleItem(EditorItemDelegate editor, List<String> suggestedList) {
 //            System.out.println("New StyleItem.");
             // It is an AutoSuggestEditor without MenuButton
             super("", "", suggestedList, false);
-            this.editor = editor;
-            root = EditorUtils.loadFxml("StyleEditorItem.fxml", this);
-
-            initialize();
+            initialize(editor);
         }
 
         // Method to please FindBugs
-        private void initialize() {
+        private void initialize(EditorItemDelegate editor) {
+            this.editor = editor;
+            root = EditorUtils.loadFxml("StyleEditorItem.fxml", this);
+
             // Add the AutoSuggest text field in the scene graph
             propertySp.getChildren().add(super.getRoot());
 

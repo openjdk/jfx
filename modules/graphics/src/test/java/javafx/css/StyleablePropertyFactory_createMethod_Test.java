@@ -35,6 +35,7 @@ import javafx.scene.effect.InnerShadow;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.text.Font;
+import javafx.util.Duration;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -86,6 +87,7 @@ public class StyleablePropertyFactory_createMethod_Test {
         return Arrays.asList(new Data[][] {
                 { new Data("createStyleableBooleanProperty", StyleConverter.getBooleanConverter(), Boolean.TRUE) },
                 { new Data("createStyleableColorProperty",   StyleConverter.getColorConverter(), Color.YELLOW)   },
+                { new Data("createStyleableDurationProperty",   StyleConverter.getDurationConverter(), Duration.millis(30))   },
                 { new Data("createStyleableEffectProperty",  StyleConverter.getEffectConverter(), new InnerShadow(10d, Color.RED)) },
                 { new Data("createStyleableEnumProperty", StyleConverter.getEnumConverter(Pos.class), Pos.CENTER) },
                 { new Data("createStyleableFontProperty", StyleConverter.getFontConverter(), Font.font(18)) },

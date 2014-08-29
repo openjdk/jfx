@@ -46,10 +46,12 @@ public class ControllerClassEditor extends AutoSuggestEditor {
     private static final String PROPERTY_NAME = "Controller class"; //NOI18N
     private static final String DEFAULT_VALUE = null;
 
-    @SuppressWarnings("LeakingThisInConstructor")
     public ControllerClassEditor(List<String> suggestedClasses) {
         super(PROPERTY_NAME, DEFAULT_VALUE, suggestedClasses);
-
+        initialize();
+    }
+    
+    private void initialize() {
         // text field events handling
         EventHandler<ActionEvent> onActionListener = event -> {
             if (isHandlingError()) {

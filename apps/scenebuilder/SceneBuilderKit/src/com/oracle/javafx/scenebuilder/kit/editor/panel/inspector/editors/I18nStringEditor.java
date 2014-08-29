@@ -57,21 +57,25 @@ public class I18nStringEditor extends PropertyEditor {
     private static final String PERCENT_STR = "%"; //NOI18N
     private TextInputControl textNode = new TextField();
     private HBox i18nHBox = null;
-    final EventHandler<ActionEvent> valueListener;
+    private EventHandler<ActionEvent> valueListener;
     private final MenuItem i18nMenuItem = new MenuItem();
     private final String I18N_ON = I18N.getString("inspector.i18n.on");
     private final String I18N_OFF = I18N.getString("inspector.i18n.off");
     private final MenuItem multilineMenuItem = new MenuItem();
     private final String MULTI_LINE = I18N.getString("inspector.i18n.multiline");
     private final String SINGLE_LINE = I18N.getString("inspector.i18n.singleline");
+    private boolean multiLineSupported = false;
     // Specific states
     private boolean i18nMode = false;
     private boolean multiLineMode = false;
 
-    @SuppressWarnings("LeakingThisInConstructor")
-    public I18nStringEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses) {
+    public I18nStringEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses, boolean multiLineSupported) {
         super(propMeta, selectedClasses);
-
+        initialize(multiLineSupported);
+    }
+    
+    private void initialize(boolean multiLineSupported) {
+        this.multiLineSupported = multiLineSupported;
         valueListener = event -> {
             userUpdateValueProperty(getValue());
             textNode.selectAll();
@@ -169,9 +173,9 @@ public class I18nStringEditor extends PropertyEditor {
         updateMenuItems();
     }
 
-    @Override
-    public void reset(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses) {
+    public void reset(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses, boolean multiLineSupported) {
         super.reset(propMeta, selectedClasses);
+        this.multiLineSupported = multiLineSupported;
         textNode.setPromptText(null);
     }
 
@@ -268,6 +272,10 @@ public class I18nStringEditor extends PropertyEditor {
         } else {
             multilineMenuItem.setText(MULTI_LINE);
             i18nMenuItem.setDisable(false);
+        }
+        
+        if (!multiLineSupported) {
+            multilineMenuItem.setDisable(true);
         }
     }
 }

@@ -1060,6 +1060,14 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
 - (void)enterFullscreenWithAnimate:(BOOL)animate withKeepRatio:(BOOL)keepRatio withHideCursor:(BOOL)hideCursor
 {
     LOG("GlassViewDelegate enterFullscreenWithAnimate:%d withKeepRatio:%d withHideCursor:%d", animate, keepRatio, hideCursor);
+
+    if ([[self->nsView window] isKindOfClass:[GlassEmbeddedWindow class]] == NO)
+    {
+        [[self->nsView window] toggleFullScreen:self];
+        // wait until the operation is complete
+        [GlassApplication enterFullScreenExitingLoop];
+        return;
+    }
     
     NSScreen *screen = [[self->nsView window] screen];
 
@@ -1087,7 +1095,6 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
                                                                           withPoint:pointInPrimaryScreenCoords];
         
         // 3.
-        self->backgroundWindow = [[GlassBackgroundWindow alloc] initWithWindow:self->fullscreenWindow];
         
         [self->parentWindow disableFlushWindow];
         {
@@ -1115,12 +1122,17 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
             // 5.
             [self->fullscreenWindow setInitialFirstResponder:self->nsView];
             [self->fullscreenWindow makeFirstResponder:self->nsView];
+
+            // This trick allows an applet to display a focused window. This is harmless otherwise.
+            // If we don't do this, we end up with a literally empty full screen background and no content shown whatsoever.
+            [[NSRunningApplication currentApplication] activateWithOptions:(NSApplicationActivateIgnoringOtherApps | NSApplicationActivateAllWindows)];
+
             [self->fullscreenWindow makeKeyAndOrderFront:self->nsView];
+            [self->fullscreenWindow orderFrontRegardless];
             [self->fullscreenWindow makeMainWindow];
         }
         
         // 6.
-        [self->fullscreenWindow addChildWindow:self->backgroundWindow ordered:NSWindowBelow];
         
         NSRect screenFrame = [screen frame];
         NSRect fullscreenFrame = [screen frame];
@@ -1144,11 +1156,10 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
         
         // 7.
         //[self->fullscreenWindow setBackgroundColor:[NSColor whiteColor]]; // debug
-        [self->fullscreenWindow setFrame:fullscreenFrame display:YES animate:animate];
+        [self->fullscreenWindow setFrame:frameInWindowScreenCoords display:YES animate:animate];
         
         // 8.
-        //[self enterFullScreenMode:[self->fullscreenWindow screen] withOptions:nil];
-        self->fullscreenWindow->displayID = [screen enterFullscreenAndHideCursor:hideCursor];
+        [self->fullscreenWindow toggleFullScreen:self->fullscreenWindow];
     }
     @catch (NSException *e)
     {
@@ -1172,7 +1183,7 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
             return;
         }
         
-        [[self->fullscreenWindow screen] exitFullscreen:self->fullscreenWindow->displayID];
+        [self->fullscreenWindow toggleFullScreen:self->fullscreenWindow];
         
         NSRect frame = [self->parentHost bounds];
         frame.origin = [self->fullscreenWindow point];
@@ -1210,10 +1221,6 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
         [self->fullscreenWindow close];
         self->fullscreenWindow = nil;
         
-        [self->backgroundWindow orderOut:nil];
-        [self->backgroundWindow close];
-        self->backgroundWindow = nil;
-
         // It was retained upon entering the FS mode
         [self->nsView release];
     }

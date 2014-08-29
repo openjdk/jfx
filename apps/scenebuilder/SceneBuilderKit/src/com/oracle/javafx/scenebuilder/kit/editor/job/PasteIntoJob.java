@@ -34,9 +34,7 @@ package com.oracle.javafx.scenebuilder.kit.editor.job;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.editor.job.togglegroup.AdjustAllToggleGroupJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.v2.ClearSelectionJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.v2.CompositeJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.v2.UpdateSelectionJob;
+import com.oracle.javafx.scenebuilder.kit.editor.selection.AbstractSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMCollection;
@@ -55,7 +53,9 @@ import javafx.scene.input.Clipboard;
 /**
  *
  */
-public class PasteIntoJob extends CompositeJob {
+public class PasteIntoJob extends BatchSelectionJob {
+
+    private List<FXOMObject> newObjects;
 
     public PasteIntoJob(EditorController editorController) {
         super(editorController);
@@ -71,8 +71,8 @@ public class PasteIntoJob extends CompositeJob {
             // Retrieve the FXOMObjects from the clipboard
             final ClipboardDecoder clipboardDecoder
                     = new ClipboardDecoder(Clipboard.getSystemClipboard());
-            final List<FXOMObject> newObjects
-                    = clipboardDecoder.decode(fxomDocument);
+            newObjects = clipboardDecoder.decode(fxomDocument);
+            assert newObjects != null; // But possible empty
 
             // Retrieve the target FXOMObject
             final Selection selection = getEditorController().getSelection();
@@ -111,14 +111,8 @@ public class PasteIntoJob extends CompositeJob {
                         }
                     }
 
-                    // Build Selection jobs if needed
                     if (result.size() > 0) {
-                        result.add(0, new ClearSelectionJob(
-                                getEditorController()));
-                        result.add(new AdjustAllToggleGroupJob(
-                                getEditorController()));
-                        result.add(new UpdateSelectionJob(newObjects,
-                                getEditorController()));
+                        result.add(new AdjustAllToggleGroupJob(getEditorController()));
                     }
                 }
             }
@@ -130,7 +124,7 @@ public class PasteIntoJob extends CompositeJob {
     protected String makeDescription() {
         final String result;
 
-        if (getSubJobs().size() == 4) { // ClearSelectionJob + InsertJob + AdjustAllToggleGroupJob + UpdateSelectionJob
+        if (newObjects.size() == 1) {
             result = makeSingleSelectionDescription();
         } else {
             result = makeMultipleSelectionDescription();
@@ -139,21 +133,21 @@ public class PasteIntoJob extends CompositeJob {
         return result;
     }
 
+    @Override
+    protected AbstractSelectionGroup getNewSelectionGroup() {
+        assert newObjects != null; // But possibly empty
+        if (newObjects.isEmpty()) {
+            return null;
+        } else {
+            return new ObjectSelectionGroup(newObjects, newObjects.iterator().next(), null);
+        }
+    }
+    
     private String makeSingleSelectionDescription() {
         final String result;
 
-        assert getSubJobs().size() == 4; // ClearSelectionJob + InsertJob + AdjustAllToggleGroupJob + UpdateSelectionJob
-        final Job subJob0 = getSubJobs().get(1);
-        final FXOMObject newObject;
-        assert subJob0 instanceof InsertAsSubComponentJob
-                || subJob0 instanceof InsertAsAccessoryJob;
-        if (subJob0 instanceof InsertAsSubComponentJob) {
-            final InsertAsSubComponentJob insertJob = (InsertAsSubComponentJob) subJob0;
-            newObject = insertJob.getNewObject();
-        } else {
-            final InsertAsAccessoryJob insertJob = (InsertAsAccessoryJob) subJob0;
-            newObject = insertJob.getNewObject();
-        }
+        assert newObjects.size() == 1;
+        final FXOMObject newObject = newObjects.get(0);
         if (newObject instanceof FXOMInstance) {
             final Object sceneGraphObject = newObject.getSceneGraphObject();
             if (sceneGraphObject != null) {
@@ -172,7 +166,7 @@ public class PasteIntoJob extends CompositeJob {
     }
 
     private String makeMultipleSelectionDescription() {
-        final int objectCount = getSubJobs().size() - 3;
+        final int objectCount = newObjects.size();
         return I18N.getString("label.action.edit.paste.into.n", objectCount);
     }
 }

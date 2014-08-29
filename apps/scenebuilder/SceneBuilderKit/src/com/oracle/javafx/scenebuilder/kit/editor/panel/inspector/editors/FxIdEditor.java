@@ -50,9 +50,12 @@ public class FxIdEditor extends AutoSuggestEditor {
     private static final String DEFAULT_VALUE = null;
     private EditorController editorController;
 
-    @SuppressWarnings("LeakingThisInConstructor")
     public FxIdEditor(List<String> suggestedFxIds, EditorController editorController) {
         super(PROPERTY_NAME, DEFAULT_VALUE, suggestedFxIds); //NOI18N
+        initialize(editorController);
+    }
+    
+    private void initialize(EditorController editorController) {
         this.editorController = editorController;
 
         // text field events handling

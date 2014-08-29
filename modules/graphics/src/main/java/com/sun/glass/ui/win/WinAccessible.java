@@ -208,7 +208,6 @@ final class WinAccessible extends Accessible {
     /* Text Support */
     WinTextRangeProvider documentRange;
     WinTextRangeProvider selectionRange;
-    boolean documentRangeValid, selectionRangeValid;
 
     /* The lastIndex is used by parents to keep track of the index of the last child
      * returned in Navigate. It is very common for Narrator to traverse the children
@@ -339,7 +338,6 @@ final class WinAccessible extends Accessible {
                      * not to focus an empty text control when clicking.
                      */
                     if (newStart || newEnd) {
-                        selectionRangeValid = false;
                         UiaRaiseAutomationEvent(peer, UIA_Text_TextSelectionChangedEventId);
                     }
                 }
@@ -363,8 +361,6 @@ final class WinAccessible extends Accessible {
 
                 if (selectionRange != null || documentRange != null) {
                     UiaRaiseAutomationEvent(peer, UIA_Text_TextChangedEventId);
-                    documentRangeValid = false;
-                    selectionRangeValid = false;
                 }
                 break;
             case EXPANDED: {
@@ -554,10 +550,8 @@ final class WinAccessible extends Accessible {
         AccessibleRole role = (AccessibleRole)getAttribute(ROLE);
         boolean impl = false;
         switch (role) {
-            case MENU_ITEM:
-                impl = patternId == UIA_InvokePatternId;
-                break;
             case MENU:
+            case SPLIT_MENU_BUTTON:
                 impl = patternId == UIA_InvokePatternId ||
                        patternId == UIA_ExpandCollapsePatternId;
                 break;
@@ -571,6 +565,7 @@ final class WinAccessible extends Accessible {
             case INCREMENT_BUTTON:
             case DECREMENT_BUTTON:
             case MENU_BUTTON:
+            case MENU_ITEM:
                 impl = patternId == UIA_InvokePatternId;
                 break;
             case PAGE_ITEM:
@@ -591,15 +586,6 @@ final class WinAccessible extends Accessible {
                        patternId == UIA_TablePatternId ||
                        patternId == UIA_ScrollPatternId;
                 break;
-            case TREE_VIEW:
-                impl = patternId == UIA_SelectionPatternId ||
-                       patternId == UIA_ScrollPatternId;
-                break;
-            case LIST_VIEW:
-                impl = patternId == UIA_SelectionPatternId ||
-                       patternId == UIA_GridPatternId ||
-                       patternId == UIA_ScrollPatternId;
-                break;
             case TREE_TABLE_CELL:
                 impl = patternId == UIA_SelectionItemPatternId ||
                        patternId == UIA_GridItemPatternId ||
@@ -613,14 +599,21 @@ final class WinAccessible extends Accessible {
                        patternId == UIA_TableItemPatternId ||
                        patternId == UIA_ScrollItemPatternId;
                 break;
-            case LIST_ITEM:
-                impl = patternId == UIA_SelectionItemPatternId ||
-                       patternId == UIA_GridItemPatternId ||
-                       patternId == UIA_ScrollItemPatternId;
+            case TREE_VIEW:
+                impl = patternId == UIA_SelectionPatternId ||
+                       patternId == UIA_ScrollPatternId;
                 break;
             case TREE_ITEM:
                 impl = patternId == UIA_SelectionItemPatternId ||
                        patternId == UIA_ExpandCollapsePatternId ||
+                       patternId == UIA_ScrollItemPatternId;
+                break;
+            case LIST_VIEW:
+                impl = patternId == UIA_SelectionPatternId ||
+                       patternId == UIA_ScrollPatternId;
+                break;
+            case LIST_ITEM:
+                impl = patternId == UIA_SelectionItemPatternId ||
                        patternId == UIA_ScrollItemPatternId;
                 break;
             /* 
@@ -642,16 +635,10 @@ final class WinAccessible extends Accessible {
             case TEXT:
                 /* UIA_TextPatternId seems overkill for text. Use UIA_NamePropertyId instead */
                 break;
-            case SPLIT_MENU_BUTTON:
-                impl = patternId == UIA_InvokePatternId ||
-                       patternId == UIA_ExpandCollapsePatternId;
-                break;
             case RADIO_BUTTON:
                 impl = patternId == UIA_SelectionItemPatternId;
                 break;
             case CHECK_BOX:
-                impl = patternId == UIA_TogglePatternId;
-                break;
             case TOGGLE_BUTTON:
                 impl = patternId == UIA_TogglePatternId;
                 break;
@@ -917,6 +904,13 @@ final class WinAccessible extends Accessible {
         if (count == null || count == 0) return 0;
         Integer index = (Integer)listItemAccessible.getAttribute(INDEX);
         if (index == null) return 0;
+
+        /* A view implementation can use stock items to measuring, these items can 
+         * have index equal to -1 for identification. See ViewFlow#accumCell as an example.
+         * These items should be ignored to avoid incorrect item count computation by
+         * the screen reader.
+         */
+        if (!(0 <= index && index < count)) return 0;
         switch (direction) {
             case NavigateDirection_NextSibling: index++; break;
             case NavigateDirection_PreviousSibling: index--; break;
@@ -981,6 +975,7 @@ final class WinAccessible extends Accessible {
                             return (Node)parentAccessible.getAttribute(AccessibleAttribute.TREE_ITEM_AT_INDEX, index);
                         };
                     } else {
+                        @SuppressWarnings("unchecked")
                         ObservableList<Node> children = (ObservableList<Node>)parentAccessible.getAttribute(CHILDREN);
                         if (children == null) return 0;
                         count = children.size();
@@ -1018,6 +1013,15 @@ final class WinAccessible extends Accessible {
             case NavigateDirection_FirstChild:
             case NavigateDirection_LastChild: {
                 lastIndex = -1;
+                if (role == AccessibleRole.LIST_VIEW) {
+                    /* Windows 7. Initially the ComboBox contains the ListView,
+                     * but the ListCells will only be created if one an item is 
+                     * selected. This causes Narrator to read combo box with
+                     * zero items. The fix is to ask for first item, which will
+                     * cause NavigateListView to be used.
+                     * */
+                    getAttribute(ITEM_AT_INDEX, 0);
+                }
                 if (role == AccessibleRole.TREE_VIEW) {
                     /* The TreeView only returns the root node as child */
                     lastIndex = 0;
@@ -1029,6 +1033,7 @@ final class WinAccessible extends Accessible {
                         node = (Node)getAttribute(TREE_ITEM_AT_INDEX, lastIndex);
                     }
                 } else {
+                    @SuppressWarnings("unchecked")
                     ObservableList<Node> children = (ObservableList<Node>)getAttribute(CHILDREN);
                     if (children != null && children.size() > 0) {
                         lastIndex = direction == NavigateDirection_FirstChild ? 0 : children.size() - 1;
@@ -1063,6 +1068,7 @@ final class WinAccessible extends Accessible {
     }
 
     long GetFocus() {
+        if (isDisposed()) return 0;
         Node node = (Node)getAttribute(FOCUS_NODE);
         if (node == null) return 0L;
         Node item = (Node)getAccessible(node).getAttribute(FOCUS_ITEM);
@@ -1103,6 +1109,7 @@ final class WinAccessible extends Accessible {
          * Check the role before processing message.
          */
         AccessibleRole role = (AccessibleRole)getAttribute(ROLE);
+        if (role == null) return null;
         switch (role) {
             case TREE_TABLE_VIEW:
             case TABLE_VIEW:
@@ -1128,23 +1135,22 @@ final class WinAccessible extends Accessible {
                 if (selectionRange == null) {
                     selectionRange = new WinTextRangeProvider(this);
                 }
-                if (!selectionRangeValid) {
-                    int start = (Integer)getAttribute(SELECTION_START);
-                    int end = -1;
-                    int length = -1;
-                    if (start >= 0) {
-                        end = (Integer)getAttribute(SELECTION_END);
-                        if (end >= start) {
-                            String string = (String)getAttribute(TEXT);
-                            length = string.length();
-                        }
+                Integer result = (Integer)getAttribute(SELECTION_START);
+                int start = result != null ? result : 0;
+                int end = -1;
+                int length = -1;
+                if (start >= 0) {
+                    result = (Integer)getAttribute(SELECTION_END);
+                    end = result != null ? result : 0;
+                    if (end >= start) {
+                        String string = (String)getAttribute(TEXT);
+                        length = string != null ? string.length() : 0;
                     }
-                    if (length != -1 && end <= length) {
-                        selectionRange.setRange(start, end);
-                    } else {
-                        selectionRange.setRange(0, 0);
-                    }
-                    selectionRangeValid = true;
+                }
+                if (length != -1 && end <= length) {
+                    selectionRange.setRange(start, end);
+                } else {
+                    selectionRange.setRange(0, 0);
                 }
                 return new long[] {selectionRange.getNativeProvider()};
             }
@@ -1308,6 +1314,7 @@ final class WinAccessible extends Accessible {
     }
 
     long get_SelectionContainer() {
+        if (isDisposed()) return 0;
         WinAccessible acc = (WinAccessible)getContainer(); 
         return acc != null ? acc.getNativeAccessible() : 0L;
     }
@@ -1341,11 +1348,8 @@ final class WinAccessible extends Accessible {
         if (documentRange == null) {
             documentRange = new WinTextRangeProvider(this);
         }
-        if (!documentRangeValid) {
-            String text = (String)getAttribute(TEXT);
-            documentRange.setRange(0, text.length());
-            documentRangeValid = true;
-        }
+        String text = (String)getAttribute(TEXT);
+        documentRange.setRange(0, text.length());
         return documentRange.getNativeProvider();
     }
 

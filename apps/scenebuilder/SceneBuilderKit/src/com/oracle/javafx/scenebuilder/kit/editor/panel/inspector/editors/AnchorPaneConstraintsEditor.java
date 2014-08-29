@@ -80,34 +80,31 @@ public class AnchorPaneConstraintsEditor extends PropertiesEditor {
     @FXML
     private TextField topTf;
 
-    private final Parent root;
+    private Parent root = null;
     private final ArrayList<ConstraintEditor> contraintEditors = new ArrayList<>();
-    private final ChangeListener<Object> constraintListener;
-    private Set<FXOMInstance> selectedInstances;
+    private ChangeListener<Object> constraintListener;
 
-    @SuppressWarnings("LeakingThisInConstructor")
     public AnchorPaneConstraintsEditor(String name, ValuePropertyMetadata topPropMeta,
             ValuePropertyMetadata rightPropMeta,
             ValuePropertyMetadata bottomPropMeta,
             ValuePropertyMetadata leftPropMeta,
             Set<FXOMInstance> selectedInstances) {
         super(name);
-        root = EditorUtils.loadFxml("AnchorPaneConstraintsEditor.fxml", this);
-        this.selectedInstances = selectedInstances;
-
-        constraintListener = (ov, prevValue, newValue) -> {
-            propertyChanged();
-            styleRegions();
-        };
-
-        initialize(topPropMeta, rightPropMeta, bottomPropMeta, leftPropMeta);
+        initialize(topPropMeta, rightPropMeta, bottomPropMeta, leftPropMeta, selectedInstances);
         propertyChanged();
         styleRegions();
     }
 
     // Method to please findBugs
     private void initialize(ValuePropertyMetadata topPropMeta, ValuePropertyMetadata rightPropMeta,
-            ValuePropertyMetadata bottomPropMeta, ValuePropertyMetadata leftPropMeta) {
+            ValuePropertyMetadata bottomPropMeta, ValuePropertyMetadata leftPropMeta, Set<FXOMInstance> selectedInstances) {
+        root = EditorUtils.loadFxml("AnchorPaneConstraintsEditor.fxml", this);
+
+        constraintListener = (ov, prevValue, newValue) -> {
+            propertyChanged();
+            styleRegions();
+        };
+
         contraintEditors.add(
                 new ConstraintEditor(topTf, topTb, selectedInstances, topPropMeta, constraintListener));
         contraintEditors.add(
@@ -132,7 +129,6 @@ public class AnchorPaneConstraintsEditor extends PropertiesEditor {
             ValuePropertyMetadata bottomPropMeta,
             ValuePropertyMetadata leftPropMeta,
             Set<FXOMInstance> selectedInstances) {
-        this.selectedInstances = selectedInstances;
         contraintEditors.get(0).reset(selectedInstances, topPropMeta);
         contraintEditors.get(1).reset(selectedInstances, rightPropMeta);
         contraintEditors.get(2).reset(selectedInstances, bottomPropMeta);
@@ -176,7 +172,6 @@ public class AnchorPaneConstraintsEditor extends PropertiesEditor {
 
         private boolean updateFromTextField = false;
 
-        @SuppressWarnings("LeakingThisInConstructor")
         public ConstraintEditor(TextField textField, ToggleButton toggleButton, Set<FXOMInstance> selectedInstances,
                 ValuePropertyMetadata propMeta, ChangeListener<Object> listener) {
             super(propMeta, null);
@@ -185,7 +180,11 @@ public class AnchorPaneConstraintsEditor extends PropertiesEditor {
             this.toggleButton = toggleButton;
             this.selectedInstances = selectedInstances;
             this.propMeta = propMeta;
-
+            
+            initialize();
+        }
+        
+        private void initialize() {
             //
             // Text field
             //

@@ -32,13 +32,11 @@
 package com.oracle.javafx.scenebuilder.kit.editor.job;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
-import com.oracle.javafx.scenebuilder.kit.editor.job.v2.RemovePropertyJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.v2.RemovePropertyValueJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.v2.RemoveObjectJob;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMCollection;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMIntrinsic;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMPropertyC;
 import java.util.ArrayList;
 import java.util.List;
 import javafx.scene.chart.Axis;
@@ -79,7 +77,8 @@ public class DeleteObjectJob extends InlineDocumentJob {
     protected List<Job> makeAndExecuteSubJobs() {
 
         final List<Job> result = new ArrayList<>();
-        if (targetFxomObject.getParentProperty() == null) {
+        if ((targetFxomObject.getParentProperty() == null) &&
+            (targetFxomObject.getParentCollection() == null)) {
             /*
              * targetFxomObject is the root object
              */
@@ -87,34 +86,11 @@ public class DeleteObjectJob extends InlineDocumentJob {
 
         } else {
 
-            /*
-             * Two cases:
-             *    1) targetFxomObject is the last value of its parent property
-             *       => the property itself must be removed from its parent instance
-             *    2) targetFxomObject is not the last value of its parent property
-             *       => targetFxomObject is removed from its parent property
-             *
-             * Note : in case #1, we also remove targetFxomObject from its 
-             *   parent property ; like this, it can safely be reinserted else
-             *   in the FXOM tree.
-             */
-
-            final FXOMPropertyC parentProperty = targetFxomObject.getParentProperty();
-            final FXOMInstance parentInstance = parentProperty.getParentInstance();
-
-            if ((parentProperty.getValues().size() == 1) && (parentInstance != null)) {
-                // We make a job for removing the property
-                final Job removePropJob = new RemovePropertyJob(
-                        targetFxomObject.getParentProperty(),
-                        getEditorController());
-                result.add(removePropJob);
-            }
-
-            // Then we make a job for removing the value
-            final Job removeValueJob = new RemovePropertyValueJob(
+            // Then we make a job for removing the object
+            final Job removeObjectJob = new RemoveObjectJob(
                     targetFxomObject,
                     getEditorController());
-            result.add(removeValueJob);
+            result.add(removeObjectJob);
         }
 
         for (Job subJob : result) {

@@ -44,8 +44,7 @@
     CGFloat                 parentWindowAlpha;
     
     GlassHostView           *fullscreenHost;
-    GlassBackgroundWindow   *backgroundWindow;
-    // not nil when the FX mode is initiated with the OS X 10.7 widget
+    // not nil when the FS mode is initiated with the OS X 10.7 widget
     NSWindow*               nativeFullScreenModeWindow;
     
     BOOL                    mouseIsDown;
@@ -59,6 +58,7 @@
     NSInteger               lastTrackingNumber;
     
 @public
+    // not nil when we create a new FS window ourselves
     GlassFullscreenWindow   *fullscreenWindow;
 }
 

@@ -154,6 +154,7 @@ public class BuiltinLibrary extends Library {
         addDefaultItem(javafx.scene.control.ColorPicker.class, TAG_CONTROLS);
         addCustomizedItem(javafx.scene.control.ComboBox.class, TAG_CONTROLS);
         addDefaultItem(javafx.scene.control.DatePicker.class, TAG_CONTROLS, FX8_QUALIFIER);
+        addDefaultItem(javafx.scene.control.DialogPane.class, TAG_CONTROLS, FX8_QUALIFIER);
         addCustomizedItem(javafx.scene.web.HTMLEditor.class, TAG_CONTROLS);
         addCustomizedItem(javafx.scene.control.Hyperlink.class, TAG_CONTROLS);
         addCustomizedItem(javafx.scene.image.ImageView.class, TAG_CONTROLS);

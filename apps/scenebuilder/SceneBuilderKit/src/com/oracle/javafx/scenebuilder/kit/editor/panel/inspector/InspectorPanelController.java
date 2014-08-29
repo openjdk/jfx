@@ -1539,6 +1539,23 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
         }
         return 0;
     }
+    
+    private boolean isMultiLinesSupported(Set<Class<?>> selectedClasses, ValuePropertyMetadata propMeta) {
+        String propertyNameStr = propMeta.getName().getName();
+        if (selectedClasses.contains(TextField.class) || selectedClasses.contains(PasswordField.class)) {
+            if (propertyNameStr.equalsIgnoreCase("text")) {
+                return false;
+            }
+        }
+        if (propertyNameStr.equalsIgnoreCase("promptText")) {
+            return false;
+        }
+
+        if (propertyNameStr.equalsIgnoreCase("ellipsisString")) {
+            return false;
+        }
+        return true;
+    }
 
     private int getSpanPropertyMaxIndex(String propNameStr) {
         assert propNameStr.contains("columnSpan") || propNameStr.contains("rowSpan");
@@ -1704,9 +1721,9 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
         Set<Class<?>> selectedClasses = getSelectedClasses();
         if (editorClass == I18nStringEditor.class) {
             if (propertyEditor != null) {
-                ((I18nStringEditor) propertyEditor).reset(propMeta, selectedClasses);
+                ((I18nStringEditor) propertyEditor).reset(propMeta, selectedClasses, isMultiLinesSupported(selectedClasses, propMeta));
             } else {
-                propertyEditor = new I18nStringEditor(propMeta, selectedClasses);
+                propertyEditor = new I18nStringEditor(propMeta, selectedClasses, isMultiLinesSupported(selectedClasses, propMeta));
             }
         } else if (editorClass == StringEditor.class) {
             if (propertyEditor != null) {
@@ -1915,20 +1932,18 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
         @FXML
         private Label titleLb;
 
-        private final Parent root;
+        private Parent root;
 
-        @SuppressWarnings("LeakingThisInConstructor")
         public SubSectionTitle(String title) {
-//            System.out.println("Loading new SubSection.fxml...");
-            URL fxmlURL = SubSectionTitle.class.getResource("SubSection.fxml");
-            root = EditorUtils.loadFxml(fxmlURL, this);
-
             initialize(title);
         }
 
         // Separate method to avoid FindBugs warning
         private void initialize(String title) {
-            titleLb.setText(title);
+//          System.out.println("Loading new SubSection.fxml...");
+          URL fxmlURL = SubSectionTitle.class.getResource("SubSection.fxml");
+          root = EditorUtils.loadFxml(fxmlURL, this);
+          titleLb.setText(title);
         }
 
         public void setTitle(String title) {

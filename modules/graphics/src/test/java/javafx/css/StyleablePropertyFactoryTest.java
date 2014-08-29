@@ -16,6 +16,7 @@ import javafx.scene.paint.CycleMethod;
 import javafx.scene.paint.Paint;
 import javafx.scene.paint.Stop;
 import javafx.scene.text.Font;
+import javafx.util.Duration;
 import org.hamcrest.BaseMatcher;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.Description;
@@ -65,6 +66,7 @@ public class StyleablePropertyFactoryTest {
         return Arrays.asList(new Data[][]{
                 {new Data("myBoolean", "-my-boolean: true;", Boolean.TRUE)},
                 {new Data("myColor", "-my-color: red;", Color.RED)},
+                {new Data("myDuration", "-my-duration: 30ms;", Duration.millis(30))},
                 {new Data("myEffect", "-my-effect: innershadow(gaussian, red, 10, .5, 1, 1);",
                         new InnerShadow(BlurType.GAUSSIAN, Color.RED, 10, .5, 1, 1),
                         new BaseMatcher<InnerShadow>() {
@@ -128,6 +130,11 @@ public class StyleablePropertyFactoryTest {
         public Color getMyColor() { return myColor.getValue(); }
         public void setMyColor(Color value) { myColor.setValue(value); }
         private final StyleableProperty<Color> myColor = fac.createStyleableColorProperty(this, "myColor", "-my-color", s -> ((MyStyleable) s).myColor);
+
+        public ObservableValue<Duration> myDurationProperty () { return (ObservableValue<Duration>) myDuration; }
+        public Duration getMyDuration() { return myDuration.getValue(); }
+        public void setMyDuration(Duration value) { myDuration.setValue(value); }
+        private final StyleableProperty<Duration> myDuration = fac.createStyleableDurationProperty(this, "myDuration", "-my-duration", s -> ((MyStyleable) s).myDuration);
 
         public ObservableValue<Effect> myEffectProperty () { return (ObservableValue<Effect>) myEffect; }
         public Effect getMyEffect() { return myEffect.getValue(); }

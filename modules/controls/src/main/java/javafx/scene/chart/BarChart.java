@@ -38,6 +38,7 @@ import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.beans.NamedArg;
 import javafx.beans.property.DoubleProperty;
+import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Orientation;
@@ -47,10 +48,13 @@ import javafx.util.Duration;
 
 import com.sun.javafx.charts.Legend;
 import com.sun.javafx.charts.Legend.LegendItem;
+
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
+
 import com.sun.javafx.css.converters.SizeConverter;
+
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 
@@ -577,7 +581,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(BarChart<?,?> node) {
-                return (StyleableProperty<Number>)node.barGapProperty();
+                return (StyleableProperty<Number>)(WritableValue<Number>)node.barGapProperty();
             }
         };
          
@@ -592,7 +596,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(BarChart<?,?> node) {
-                return (StyleableProperty<Number>)node.categoryGapProperty();
+                return (StyleableProperty<Number>)(WritableValue<Number>)node.categoryGapProperty();
             }
         };
 

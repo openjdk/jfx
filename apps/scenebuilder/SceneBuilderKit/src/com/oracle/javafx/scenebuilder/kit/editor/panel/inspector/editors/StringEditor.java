@@ -47,12 +47,14 @@ import javafx.scene.control.TextInputControl;
 public class StringEditor extends PropertyEditor {
 
     private TextInputControl textField = new TextField();
-    final EventHandler<ActionEvent> valueListener;
+    private EventHandler<ActionEvent> valueListener;
 
-    @SuppressWarnings("LeakingThisInConstructor")
     public StringEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses) {
         super(propMeta, selectedClasses);
+        initialize();
+    }
 
+    private void initialize() {
         valueListener = event -> {
             userUpdateValueProperty(getValue());
             textField.selectAll();
@@ -62,7 +64,7 @@ public class StringEditor extends PropertyEditor {
         // Double line editor by default
         setLayoutFormat(LayoutFormat.DOUBLE_LINE);
     }
-
+    
     @Override
     public Object getValue() {
         return EditorUtils.getPlainString(textField.getText());
