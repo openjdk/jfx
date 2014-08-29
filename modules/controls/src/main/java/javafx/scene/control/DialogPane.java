@@ -624,7 +624,11 @@ public class DialogPane extends Pane {
     private final BooleanProperty expandedProperty = new SimpleBooleanProperty(this, "expanded", false) {
         protected void invalidated() {
             final Node expandableContent = getExpandableContent();
-            expandableContent.setVisible(isExpanded());
+
+            if (expandableContent != null) {
+                expandableContent.setVisible(isExpanded());
+            }
+
             requestLayout();
         }
     };
