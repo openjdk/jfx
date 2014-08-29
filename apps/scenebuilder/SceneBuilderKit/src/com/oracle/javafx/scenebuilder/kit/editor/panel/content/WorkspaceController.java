@@ -34,7 +34,6 @@ package com.oracle.javafx.scenebuilder.kit.editor.panel.content;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 
-import java.net.URL;
 import java.util.List;
 
 import javafx.animation.FadeTransition;
@@ -146,14 +145,14 @@ class WorkspaceController {
         return result;
     }
     
-    public void setThemeStyleSheet(URL themeStyleSheet) {
+    public void setThemeStyleSheet(String themeStyleSheet) {
         assert contentGroup.getParent() instanceof Group;
         final Group isolationGroup = (Group) contentGroup.getParent();
         assert isolationGroup.getStyleClass().contains("root");
         
         isolationGroup.getStylesheets().clear();
         assert themeStyleSheet != null;
-        isolationGroup.getStylesheets().add(themeStyleSheet.toString());
+        isolationGroup.getStylesheets().add(themeStyleSheet);
         isolationGroup.applyCss();
     }
     

@@ -34,7 +34,6 @@ package com.oracle.javafx.scenebuilder.kit.editor;
 import com.oracle.javafx.scenebuilder.kit.util.Deprecation;
 import java.io.File;
 import java.io.IOException;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -96,76 +95,61 @@ public class EditorPlatform {
         CASPIAN_EMBEDDED_QVGA_HIGH_CONTRAST
     }
 
-    private final static URL caspianThemeUrl = Deprecation.getCaspianStylesheetURL();
-    private final static URL caspianHighContrastThemeUrl = Deprecation.getCaspianHighContrastStylesheetURL();
-    private final static URL caspianEmbeddedThemeUrl = Deprecation.getCaspianEmbeddedStylesheetURL();
-    private final static URL caspianEmbeddedHighContrastThemeUrl = Deprecation.getCaspianEmbeddedHighContrastStylesheetURL();
-    private final static URL caspianEmbeddedQVGAThemeUrl = Deprecation.getCaspianEmbeddedQVGAStylesheetURL();
-    private final static URL caspianEmbeddedQVGAHighContrastThemeUrl = Deprecation.getCaspianEmbeddedQVGAHighContrastStylesheetURL();
-    private final static URL modenaThemeUrl = Deprecation.getModenaStylesheetURL();
-    private final static URL modenaTouchThemeUrl = Deprecation.getModenaTouchStylesheetURL();
-    private final static URL modenaHighContrastBlackonwhiteThemeUrl = Deprecation.getModenaHighContrastBlackonwhiteStylesheetURL();
-    private final static URL modenaHighContrastWhiteonblackThemeUrl = Deprecation.getModenaHighContrastWhiteonblackStylesheetURL();
-    private final static URL modenaHighContrastYellowonblackThemeUrl = Deprecation.getModenaHighContrastYellowonblackStylesheetURL();
-    private final static URL modenaTouchHighContrastBlackonwhiteThemeUrl = Deprecation.getModenaTouchHighContrastBlackonwhiteStylesheetURL();
-    private final static URL modenaTouchHighContrastWhiteonblackThemeUrl = Deprecation.getModenaTouchHighContrastWhiteonblackStylesheetURL();
-    private final static URL modenaTouchHighContrastYellowonblackThemeUrl = Deprecation.getModenaTouchHighContrastYellowonblackStylesheetURL();
-
     /**
-     * Returns the list of url for locating the specified stylesheet.
-     * SB uses a set of CSS files aggregating several @import statements (see DTL-6699).
+     * Returns the url string for locating the specified stylesheet.
+     * SB uses a set of CSS files aggregating several @import statements (see DTL-6799).
      *
-     * @param theme theme for which list of url should be computed
-     * @return url for locating the specified stylesheet.
+     * @param theme theme for which string should be computed
+     * @return string for locating the specified stylesheet.
      */
-    public static URL getThemeStylesheetURL(Theme theme) {
-        final URL result;
+    public static String getThemeStylesheetURL(Theme theme) {
+        final String result;
 
         switch (theme) {
             default:
                 result = null;
                 break;
             case MODENA:
-                result = modenaThemeUrl;
+                result = Deprecation.MODENA_STYLESHEET;
                 break;
             case MODENA_TOUCH:
-                result = modenaTouchThemeUrl;
+                result = Deprecation.MODENA_TOUCH_STYLESHEET;
                 break;
             case MODENA_HIGH_CONTRAST_BLACK_ON_WHITE:
-                result = modenaHighContrastBlackonwhiteThemeUrl;
+                result = Deprecation.MODENA_HIGHCONTRAST_BLACKONWHITE_STYLESHEET;
                 break;
             case MODENA_HIGH_CONTRAST_WHITE_ON_BLACK:
-                result = modenaHighContrastWhiteonblackThemeUrl;
+                result = Deprecation.MODENA_HIGHCONTRAST_WHITEONBLACK_STYLESHEET;
                 break;
             case MODENA_HIGH_CONTRAST_YELLOW_ON_BLACK:
-                result = modenaHighContrastYellowonblackThemeUrl;
+                result = Deprecation.MODENA_HIGHCONTRAST_YELLOWONBLACK_STYLESHEET;
                 break;
             case MODENA_TOUCH_HIGH_CONTRAST_BLACK_ON_WHITE:
-                result = modenaTouchHighContrastBlackonwhiteThemeUrl;
+                result = Deprecation.MODENA_TOUCH_HIGHCONTRAST_BLACKONWHITE_STYLESHEET;
                 break;
             case MODENA_TOUCH_HIGH_CONTRAST_WHITE_ON_BLACK:
-                result = modenaTouchHighContrastWhiteonblackThemeUrl;
+                result = Deprecation.MODENA_TOUCH_HIGHCONTRAST_WHITEONBLACK_STYLESHEET;
                 break;
             case MODENA_TOUCH_HIGH_CONTRAST_YELLOW_ON_BLACK:
-                result = modenaTouchHighContrastYellowonblackThemeUrl;
+                result = Deprecation.MODENA_TOUCH_HIGHCONTRAST_YELLOWONBLACK_STYLESHEET;
                 break;
             case CASPIAN:
-                result = caspianThemeUrl;
+                result = Deprecation.CASPIAN_STYLESHEET;
                 break;
             case CASPIAN_HIGH_CONTRAST:
-                result = caspianHighContrastThemeUrl;
+                result = Deprecation.CASPIAN_HIGHCONTRAST_STYLESHEET;
                 break;
             case CASPIAN_EMBEDDED:
-                result = caspianEmbeddedThemeUrl;
+                result = Deprecation.CASPIAN_EMBEDDED_STYLESHEET;
                 break;
             case CASPIAN_EMBEDDED_HIGH_CONTRAST:
-                result = caspianEmbeddedHighContrastThemeUrl;
+                result = Deprecation.CASPIAN_EMBEDDED_HIGHCONTRAST_STYLESHEET;
                 break;
             case CASPIAN_EMBEDDED_QVGA:
-                result = caspianEmbeddedQVGAThemeUrl;
+                result = Deprecation.CASPIAN_EMBEDDED_QVGA_STYLESHEET;
                 break;
             case CASPIAN_EMBEDDED_QVGA_HIGH_CONTRAST:
-                result = caspianEmbeddedQVGAHighContrastThemeUrl;
+                result = Deprecation.CASPIAN_EMBEDDED_QVGA_HIGHCONTRAST_STYLESHEET;
                 break;
         }
         
@@ -176,9 +160,9 @@ public class EditorPlatform {
         return result;
     }
     
-    public static URL getPlatformThemeStylesheetURL() {
+    public static String getPlatformThemeStylesheetURL() {
         // Return USER_AGENT css, which is Modena for fx 8.0
-        return modenaThemeUrl;
+        return Deprecation.MODENA_STYLESHEET;
     }
     
     public static boolean isModena(Theme theme) {

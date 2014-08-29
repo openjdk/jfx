@@ -72,6 +72,21 @@ public class Deprecation {
         assert false;
     }
 
+    public static String CASPIAN_STYLESHEET = "com/sun/javafx/scene/control/skin/caspian/caspian.bss"; //NOI18N
+    public static String CASPIAN_HIGHCONTRAST_STYLESHEET = "com/oracle/javafx/scenebuilder/kit/util/css/caspian/caspian-highContrast.css"; //NOI18N
+    public static String CASPIAN_EMBEDDED_STYLESHEET = "com/oracle/javafx/scenebuilder/kit/util/css/caspian/caspian-embedded.css"; //NOI18N
+    public static String CASPIAN_EMBEDDED_HIGHCONTRAST_STYLESHEET = "com/oracle/javafx/scenebuilder/kit/util/css/caspian/caspian-embedded-highContrast.css"; //NOI18N
+    public static String CASPIAN_EMBEDDED_QVGA_STYLESHEET = "com/oracle/javafx/scenebuilder/kit/util/css/caspian/caspian-embedded-qvga.css"; //NOI18N
+    public static String CASPIAN_EMBEDDED_QVGA_HIGHCONTRAST_STYLESHEET = "com/oracle/javafx/scenebuilder/kit/util/css/caspian/caspian-embedded-qvga-highContrast.css"; //NOI18N
+    public static String MODENA_STYLESHEET = "com/sun/javafx/scene/control/skin/modena/modena.bss"; //NOI18N
+    public static String MODENA_TOUCH_STYLESHEET = "com/oracle/javafx/scenebuilder/kit/util/css/modena/modena-touch.css"; //NOI18N
+    public static String MODENA_HIGHCONTRAST_BLACKONWHITE_STYLESHEET = "com/oracle/javafx/scenebuilder/kit/util/css/modena/modena-highContrast-blackOnWhite.css"; //NOI18N
+    public static String MODENA_HIGHCONTRAST_WHITEONBLACK_STYLESHEET = "com/oracle/javafx/scenebuilder/kit/util/css/modena/modena-highContrast-whiteOnBlack.css"; //NOI18N
+    public static String MODENA_HIGHCONTRAST_YELLOWONBLACK_STYLESHEET = "com/oracle/javafx/scenebuilder/kit/util/css/modena/modena-highContrast-yellowOnBlack.css"; //NOI18N
+    public static String MODENA_TOUCH_HIGHCONTRAST_BLACKONWHITE_STYLESHEET = "com/oracle/javafx/scenebuilder/kit/util/css/modena/modena-touch-highContrast-blackOnWhite.css"; //NOI18N
+    public static String MODENA_TOUCH_HIGHCONTRAST_WHITEONBLACK_STYLESHEET = "com/oracle/javafx/scenebuilder/kit/util/css/modena/modena-touch-highContrast-whiteOnBlack.css"; //NOI18N
+    public static String MODENA_TOUCH_HIGHCONTRAST_YELLOWONBLACK_STYLESHEET = "com/oracle/javafx/scenebuilder/kit/util/css/modena/modena-touch-highContrast-yellowOnBlack.css"; //NOI18N
+
     // Deprecated stuff in Node
 //    // RT-21247 : Promote impl_getAllParentStylesheets to public API
     public static Group createGroupWithNullParentStylesheets() {
@@ -221,84 +236,13 @@ public class Deprecation {
         };
 
         result.getStyleClass().add("root"); //NOI18N
-        result.getStylesheets().add(getModenaStylesheetURL().toString());
+        result.getStylesheets().add(MODENA_STYLESHEET);
 
         return result;
     }
 
-    public static URL getCaspianStylesheetURL() {
-        final String resourceName = "com/sun/javafx/scene/control/skin/caspian/caspian.bss"; //NOI18N
-        return ClassLoader.getSystemResource(resourceName);
-    }
-
-    public static URL getCaspianHighContrastStylesheetURL() {
-        final String resourceName = "com/oracle/javafx/scenebuilder/kit/util/css/caspian/caspian-highContrast.css"; //NOI18N
-        return ClassLoader.getSystemResource(resourceName);
-    }
-
-    public static URL getCaspianEmbeddedStylesheetURL() {
-        final String resourceName = "com/oracle/javafx/scenebuilder/kit/util/css/caspian/caspian-embedded.css"; //NOI18N
-        return ClassLoader.getSystemResource(resourceName);
-    }
-
-    public static URL getCaspianEmbeddedHighContrastStylesheetURL() {
-        final String resourceName = "com/oracle/javafx/scenebuilder/kit/util/css/caspian/caspian-embedded-highContrast.css"; //NOI18N
-        return ClassLoader.getSystemResource(resourceName);
-    }
-
-    public static URL getCaspianEmbeddedQVGAStylesheetURL() {
-        final String resourceName = "com/oracle/javafx/scenebuilder/kit/util/css/caspian/caspian-embedded-qvga.css"; //NOI18N
-        return ClassLoader.getSystemResource(resourceName);
-    }
-
-    public static URL getCaspianEmbeddedQVGAHighContrastStylesheetURL() {
-        final String resourceName = "com/oracle/javafx/scenebuilder/kit/util/css/caspian/caspian-embedded-qvga-highContrast.css"; //NOI18N
-        return ClassLoader.getSystemResource(resourceName);
-    }
-
-    public static URL getModenaStylesheetURL() {
-        final String resourceName = "com/sun/javafx/scene/control/skin/modena/modena.bss"; //NOI18N
-        return ClassLoader.getSystemResource(resourceName);
-    }
-
-    public static URL getModenaTouchStylesheetURL() {
-        final String resourceName = "com/oracle/javafx/scenebuilder/kit/util/css/modena/modena-touch.css"; //NOI18N
-        return ClassLoader.getSystemResource(resourceName);
-    }
-
-    public static URL getModenaHighContrastBlackonwhiteStylesheetURL() {
-        final String resourceName = "com/oracle/javafx/scenebuilder/kit/util/css/modena/modena-highContrast-blackOnWhite.css"; //NOI18N
-        return ClassLoader.getSystemResource(resourceName);
-    }
-
-    public static URL getModenaHighContrastWhiteonblackStylesheetURL() {
-        final String resourceName = "com/oracle/javafx/scenebuilder/kit/util/css/modena/modena-highContrast-whiteOnBlack.css"; //NOI18N
-        return ClassLoader.getSystemResource(resourceName);
-    }
-
-    public static URL getModenaHighContrastYellowonblackStylesheetURL() {
-        final String resourceName = "com/oracle/javafx/scenebuilder/kit/util/css/modena/modena-highContrast-yellowOnBlack.css"; //NOI18N
-        return ClassLoader.getSystemResource(resourceName);
-    }
-
-    public static URL getModenaTouchHighContrastBlackonwhiteStylesheetURL() {
-        final String resourceName = "com/oracle/javafx/scenebuilder/kit/util/css/modena/modena-touch-highContrast-blackOnWhite.css"; //NOI18N
-        return ClassLoader.getSystemResource(resourceName);
-    }
-
-    public static URL getModenaTouchHighContrastWhiteonblackStylesheetURL() {
-        final String resourceName = "com/oracle/javafx/scenebuilder/kit/util/css/modena/modena-touch-highContrast-whiteOnBlack.css"; //NOI18N
-        return ClassLoader.getSystemResource(resourceName);
-    }
-
-    public static URL getModenaTouchHighContrastYellowonblackStylesheetURL() {
-        final String resourceName = "com/oracle/javafx/scenebuilder/kit/util/css/modena/modena-touch-highContrast-yellowOnBlack.css"; //NOI18N
-        return ClassLoader.getSystemResource(resourceName);
-    }
-
     // Returns the corresponding text css (.css) from a binary css (.bss)
-    public static URL getThemeTextStylesheet(URL binaryStylesheetUrl) {
-        String binaryCssUrlStr = binaryStylesheetUrl.toExternalForm();
+    public static URL getThemeTextStylesheet(String binaryCssUrlStr) {
         String textCssUrlStr = binaryCssUrlStr.replaceAll(".bss", ".css"); //NOI18N
         try {
             return new URL(textCssUrlStr);
