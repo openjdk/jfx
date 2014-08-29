@@ -49,6 +49,7 @@ import com.sun.javafx.tk.Toolkit;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.scene.Scene;
+import javafx.stage.Screen;
 
 import java.security.AccessController;
 import java.security.AllPermission;
@@ -129,6 +130,21 @@ public class PlatformImpl {
      public static boolean isContextual2DNavigation() {
          return contextual2DNavigation;
      }
+
+    /**
+     * Method to initialize the Scene Graph on the JavaFX application thread.
+     * Specifically, we will do static initialization for those classes in
+     * the javafx.stage, javafx.scene, and javafx.controls packages necessary
+     * to allow subsequent construction of the Scene or any Node, including
+     * a PopupControl, on a background thread.
+     *
+     * This method must be called on the JavaFX application thread.
+     */
+    private static void initSceneGraph() {
+        // It is both necessary and sufficient to call a static method on the
+        // Screen class to allow PopupControl instances to be created on any thread.
+        Screen.getPrimary();
+    }
 
     /**
      * This method is invoked typically on the main thread. At this point,
@@ -217,6 +233,9 @@ public class PlatformImpl {
         if (isThreadMerged) {
             installFwEventQueue();
         }
+
+        // Initialize Scene Graph on the app thread
+        runAndWait(() -> initSceneGraph());
     }
 
     private static void installFwEventQueue() {
