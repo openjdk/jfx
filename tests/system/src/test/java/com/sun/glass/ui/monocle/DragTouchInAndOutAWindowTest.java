@@ -33,6 +33,7 @@ import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.Ignore;
 import org.junit.runners.Parameterized;
 
 import java.util.Collection;
@@ -222,7 +223,7 @@ public class DragTouchInAndOutAWindowTest extends ParameterizedTestBase {
         Assert.assertEquals(0, TestLog.countLogContaining("TouchPoint: MOVED"));
         Assert.assertEquals(0, TestLog.countLogContaining("TouchPoint: RELEASED"));
     }
-
+    @Ignore("RT-38482")
     @Test
     /**
      * Drag two touch points simultaneously from outside the window (from the
