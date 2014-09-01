@@ -54,6 +54,10 @@ public class FXOMCloner {
         this.fxIdCollector = new FxIdCollector(targetDocument);
     }
     
+    public FXOMDocument getTargetDocument() {
+        return targetDocument;
+    }
+    
     public FXOMObject clone(FXOMObject clonee) {
         return clone(clonee, false /* preserveCloneFxId */);
     }
@@ -264,7 +268,7 @@ public class FXOMCloner {
                     source.getValue());
         } else {
             assert sourceObject != null;
-            if (getNoClonePropertyNames().contains(source.getName())) {
+            if (FXOMNodes.isWeakReference(source)) {
                 result = null;
             } else {
                 result = new FXOMPropertyC(
@@ -280,21 +284,7 @@ public class FXOMCloner {
     private boolean isInsideClonee(FXOMObject object) {
         assert object != null;
         return (object == clonee) || object.isDescendantOf(clonee);
-    }
-    
-    private static Set<PropertyName> noClonePropertyNames;
-    
-    private static synchronized Set<PropertyName> getNoClonePropertyNames() {
-        if (noClonePropertyNames == null) {
-            noClonePropertyNames = new HashSet<>();
-            noClonePropertyNames.add(new PropertyName("labelFor")); //NOI18N
-            noClonePropertyNames.add(new PropertyName("expandedPane")); //NOI18N
-        }
-        
-        return noClonePropertyNames;
-    }
-    
-    
+    }    
     
     private void renameFxIds(FXOMObject clone, boolean preserveCloneeFxId) {
         

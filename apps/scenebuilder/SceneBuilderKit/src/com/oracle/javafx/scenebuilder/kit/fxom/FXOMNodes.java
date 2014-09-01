@@ -41,6 +41,7 @@ import com.oracle.javafx.scenebuilder.kit.metadata.property.value.ImagePropertyM
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignImage;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PrefixedValue;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
+import com.oracle.javafx.scenebuilder.kit.util.JavaLanguage;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
@@ -549,6 +550,93 @@ public class FXOMNodes {
                 fxIdMap.remove(fxId);
             }
         }
+    }
+    
+    
+    public static String extractReferenceSource(FXOMNode node) {
+        final String result;
+        
+        if (node instanceof FXOMIntrinsic) {
+            final FXOMIntrinsic intrinsic = (FXOMIntrinsic) node;
+            switch(intrinsic.getType()) {
+                case FX_REFERENCE:
+                case FX_COPY:
+                    result = intrinsic.getSource();
+                    break;
+                default:
+                    result = null;
+            }
+        } else if (node instanceof FXOMPropertyT) {
+            final FXOMPropertyT property = (FXOMPropertyT) node;
+            final PrefixedValue pv = new PrefixedValue(property.getValue());
+            if (pv.isExpression() && JavaLanguage.isIdentifier(pv.getSuffix())) {
+                result = pv.getSuffix();
+            } else {
+                result = null;
+            }
+        } else {
+            result = null;
+        }
+        
+        return result;
+    }
+    
+    
+    public static boolean isWeakReference(FXOMNode node) {
+        final boolean result;
+        
+        if (node instanceof FXOMIntrinsic) {
+            final FXOMIntrinsic intrinsic = (FXOMIntrinsic) node;
+            switch(intrinsic.getType()) {
+                case FX_REFERENCE:
+                case FX_COPY:
+                    if (intrinsic.getParentProperty() != null) {
+                        final PropertyName propertyName = intrinsic.getParentProperty().getName();
+                        if (propertyName.getResidenceClass() == null) {
+                            result = getWeakPropertyNames().contains(propertyName.getName());
+                        } else {
+                            result = false;
+                        }
+                    } else {
+                        result = false;
+                    }
+                    break;
+                default:
+                    result = false;
+            }
+        } else if (node instanceof FXOMPropertyT) {
+            final FXOMPropertyT property = (FXOMPropertyT) node;
+            final PrefixedValue pv = new PrefixedValue(property.getValue());
+            if (pv.isExpression() && JavaLanguage.isIdentifier(pv.getSuffix())) {
+                final PropertyName propertyName = property.getName();
+                if (propertyName.getResidenceClass() == null) {
+                    result = getWeakPropertyNames().contains(propertyName.getName());
+                } else {
+                    result = false;
+                }
+            } else {
+                result = false;
+            }
+        } else {
+            result = false;
+        }
+        
+        return result;
+    }
+    
+    
+    private static Set<String> weakPropertyNames;
+    
+    public static synchronized Set<String> getWeakPropertyNames() {
+        
+        if (weakPropertyNames == null) {
+            weakPropertyNames = new HashSet<>();
+            weakPropertyNames.add("labelFor");
+            weakPropertyNames.add("expandedPane");
+            weakPropertyNames.add("clip");
+        }
+        
+        return weakPropertyNames;
     }
     
     
