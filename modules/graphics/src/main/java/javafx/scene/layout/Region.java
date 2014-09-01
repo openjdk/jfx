@@ -262,7 +262,7 @@ public class
 
     private static double snapPortion(double value, boolean snapToPixel) {
         if (snapToPixel) {
-            return (value > 0 ? Math.max(1, Math.floor(value)) : Math.min(-1, Math.ceil(value)));
+            return value == 0 ? 0 :(value > 0 ? Math.max(1, Math.floor(value)) : Math.min(-1, Math.ceil(value)));
         }
         return value;
     }
