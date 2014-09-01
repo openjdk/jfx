@@ -32,6 +32,7 @@
 package com.oracle.javafx.scenebuilder.kit.editor;
 
 import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
+import com.oracle.javafx.scenebuilder.kit.editor.job.reference.UpdateReferencesJob;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -77,8 +78,9 @@ public class JobManager {
             throw new IllegalStateException("Pushing jobs from another job or a job manager listener is forbidden"); //NOI18N
         }
         
-        executeJob(job);
-        undoStack.add(0, job);
+        final Job fixJob = new UpdateReferencesJob(job);
+        executeJob(fixJob);
+        undoStack.add(0, fixJob);
         if (undoStack.size() > undoStackMaxSize) {
             undoStack.remove(undoStack.size()-1);
         }
