@@ -37,8 +37,8 @@ import com.oracle.javafx.scenebuilder.app.SceneBuilderApp;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorPlatform;
 import com.oracle.javafx.scenebuilder.kit.editor.JobManager;
 import com.oracle.javafx.scenebuilder.kit.editor.job.BatchJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.CompositeJob2;
 import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
-import com.oracle.javafx.scenebuilder.kit.editor.job.v2.CompositeJob;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.ContentPanelController;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.util.dialog.ErrorDialog;
 import com.oracle.javafx.scenebuilder.kit.util.MathUtils;
@@ -211,8 +211,8 @@ class DebugMenuController {
     private MenuItem makeJobMenuItem(Job job) {
         final MenuItem result;
         
-        if (job instanceof CompositeJob) {
-            final CompositeJob compositeJob = (CompositeJob)job;
+        if (job instanceof CompositeJob2) {
+            final CompositeJob2 compositeJob = (CompositeJob2)job;
             final Menu newMenu = new Menu(compositeJob.getClass().getSimpleName());
             addJobMenuItems(compositeJob.getSubJobs(), newMenu);
             result = newMenu;
