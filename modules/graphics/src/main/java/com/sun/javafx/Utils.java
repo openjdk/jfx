@@ -457,6 +457,7 @@ public class Utils {
             } else if (hpos == HPos.RIGHT) {
                 hpos = HPos.LEFT;
             }
+            dx *= -1;
         }
 
         double layoutX = positionX(parentBounds, anchorWidth, hpos) + dx;
@@ -465,7 +466,7 @@ public class Utils {
         if (orientation == NodeOrientation.RIGHT_TO_LEFT && hpos == HPos.CENTER) {
             //TODO - testing for an instance of Stage seems wrong but works for menus
             if (scene.getWindow() instanceof Stage) {
-                layoutX = layoutX + parentBounds.getWidth() - anchorWidth + (dx * 2);
+                layoutX = layoutX + parentBounds.getWidth() - anchorWidth;
             } else {
                 layoutX = layoutX - parentBounds.getWidth() - anchorWidth;
             }
