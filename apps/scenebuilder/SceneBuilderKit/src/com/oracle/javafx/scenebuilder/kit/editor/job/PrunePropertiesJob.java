@@ -33,8 +33,8 @@
 package com.oracle.javafx.scenebuilder.kit.editor.job;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
-import com.oracle.javafx.scenebuilder.kit.editor.job.v2.RemoveFxControllerJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.v2.RemovePropertyJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.RemoveFxControllerJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.RemovePropertyJob;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMCollection;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;

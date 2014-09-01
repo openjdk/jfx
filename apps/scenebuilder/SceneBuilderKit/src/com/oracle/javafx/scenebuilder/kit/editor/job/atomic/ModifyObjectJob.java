@@ -29,86 +29,96 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.oracle.javafx.scenebuilder.kit.editor.job.v2;
+package com.oracle.javafx.scenebuilder.kit.editor.job.atomic;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
+import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMProperty;
+import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
+import java.util.Objects;
 
 /**
  *
  */
-public class RemovePropertyJob extends Job {
+public class ModifyObjectJob extends Job {
 
-    private final FXOMProperty targetProperty;
-    
-    private FXOMInstance parentInstance;
-    private int indexInParentInstance;
-    
-    public RemovePropertyJob(FXOMProperty targetProperty, EditorController editorController) {
+    private final FXOMInstance fxomInstance;
+    private final ValuePropertyMetadata propertyMetadata;
+    private final Object newValue;
+    private final Object oldValue;
+    private final String description;
+
+    public ModifyObjectJob(
+            FXOMInstance fxomInstance, 
+            ValuePropertyMetadata propertyMetadata, 
+            Object newValue, 
+            EditorController editorController) {
         super(editorController);
-        
-        assert targetProperty != null;
-        this.targetProperty = targetProperty;
-    }
-    
-    public FXOMProperty getTargetProperty() {
-        return targetProperty;
+
+        assert fxomInstance != null;
+        assert fxomInstance.getSceneGraphObject() != null;
+        assert propertyMetadata != null;
+
+        this.fxomInstance = fxomInstance;
+        this.propertyMetadata = propertyMetadata;
+        this.newValue = newValue;
+        this.oldValue = propertyMetadata.getValueObject(fxomInstance);
+        this.description = I18N.getString("label.action.edit.set.1",
+                propertyMetadata.getName().toString(),
+                fxomInstance.getSceneGraphObject().getClass().getSimpleName());
     }
 
+    public ModifyObjectJob(
+            FXOMInstance fxomInstance,
+            ValuePropertyMetadata propertyMetadata,
+            Object newValue,
+            EditorController editorController,
+            String description) {
+        super(editorController);
+
+        assert fxomInstance != null;
+        assert fxomInstance.getSceneGraphObject() != null;
+        assert propertyMetadata != null;
+
+        this.fxomInstance = fxomInstance;
+        this.propertyMetadata = propertyMetadata;
+        this.newValue = newValue;
+        this.oldValue = propertyMetadata.getValueObject(fxomInstance);
+        this.description = description;
+    }
 
     /*
      * Job
      */
-    
     @Override
     public boolean isExecutable() {
-        return targetProperty.getParentInstance() != null;
+        final Object currentValue = propertyMetadata.getValueObject(fxomInstance);
+        return Objects.equals(newValue, currentValue) == false;
     }
 
     @Override
     public void execute() {
-        assert parentInstance == null;
-        assert isExecutable();
-        
-        parentInstance = targetProperty.getParentInstance();
-        indexInParentInstance = targetProperty.getIndexInParentInstance();
         redo();
     }
 
     @Override
     public void undo() {
-        assert targetProperty.getParentInstance() == null;
-        
         getEditorController().getFxomDocument().beginUpdate();
-        targetProperty.addToParentInstance(indexInParentInstance, parentInstance);
+        this.propertyMetadata.setValueObject(fxomInstance, oldValue);
         getEditorController().getFxomDocument().endUpdate();
-        
-        assert targetProperty.getParentInstance() == parentInstance;
-        assert targetProperty.getIndexInParentInstance() == indexInParentInstance;
     }
 
     @Override
     public void redo() {
-        assert targetProperty.getParentInstance() == parentInstance;
-        assert targetProperty.getIndexInParentInstance() == indexInParentInstance;
-        
-        getEditorController().getSelection().clear();
         getEditorController().getFxomDocument().beginUpdate();
-        targetProperty.removeFromParentInstance();
+        this.propertyMetadata.setValueObject(fxomInstance, newValue);
         getEditorController().getFxomDocument().endUpdate();
-        
-        assert targetProperty.getParentInstance() == null;
     }
 
     @Override
     public String getDescription() {
-        // Should normally not reach the user
-        return getClass().getSimpleName() 
-                + "[" 
-                + targetProperty.getName()
-                + "]";
+        return description;
     }
-    
+
 }

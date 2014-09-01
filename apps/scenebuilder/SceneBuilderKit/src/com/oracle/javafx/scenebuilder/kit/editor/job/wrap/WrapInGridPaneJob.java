@@ -34,7 +34,7 @@ package com.oracle.javafx.scenebuilder.kit.editor.job.wrap;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
 import com.oracle.javafx.scenebuilder.kit.editor.job.JobUtils;
-import com.oracle.javafx.scenebuilder.kit.editor.job.ModifyObjectJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.ModifyObjectJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.wrap.FXOMObjectCourseComparator.BidimensionalComparator;
 import com.oracle.javafx.scenebuilder.kit.editor.job.wrap.FXOMObjectCourseComparator.GridCourse;
 import static com.oracle.javafx.scenebuilder.kit.editor.job.wrap.FXOMObjectCourseComparator.OVERLAP_FUZZ;

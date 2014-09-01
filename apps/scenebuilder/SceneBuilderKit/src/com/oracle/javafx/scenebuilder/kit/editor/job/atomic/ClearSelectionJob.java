@@ -30,61 +30,17 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package com.oracle.javafx.scenebuilder.kit.editor.job.v2;
+package com.oracle.javafx.scenebuilder.kit.editor.job.atomic;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
-import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
+import java.util.Collections;
 
 /**
  *
  */
-public class RemoveObjectJob extends Job {
+public class ClearSelectionJob extends UpdateSelectionJob {
     
-    private final Job subJob;
-    
-    public RemoveObjectJob(FXOMObject targetObject, EditorController editorController) {
-        super(editorController);
-        
-        assert targetObject != null;
-        assert (targetObject.getParentProperty() != null) || (targetObject.getParentCollection() != null);
-        
-        if (targetObject.getParentProperty() != null) {
-            subJob = new RemovePropertyValueJob(targetObject, editorController);
-        } else {
-            assert targetObject.getParentCollection() != null;
-            subJob = new RemoveCollectionItemJob(targetObject, editorController);
-        }
+    public ClearSelectionJob(EditorController editorController) {
+        super(Collections.emptyList(), editorController);
     }
-    
-    
-    /*
-     * Job
-     */
-
-    @Override
-    public boolean isExecutable() {
-        return subJob.isExecutable();
-    }
-
-    @Override
-    public void execute() {
-        subJob.execute();
-    }
-
-    @Override
-    public void undo() {
-        subJob.undo();
-    }
-
-    @Override
-    public void redo() {
-        subJob.redo();
-    }
-
-    @Override
-    public String getDescription() {
-        return getClass().getSimpleName(); // Should not reach end user
-    }
-    
 }

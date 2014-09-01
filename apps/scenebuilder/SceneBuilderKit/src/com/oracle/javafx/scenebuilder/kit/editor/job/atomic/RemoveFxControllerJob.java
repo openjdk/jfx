@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -30,62 +30,58 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package com.oracle.javafx.scenebuilder.kit.editor.job.v2;
+package com.oracle.javafx.scenebuilder.kit.editor.job.atomic;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMNode;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMProperty;
 
 /**
  *
  */
-public class RemoveNodeJob extends Job {
+public class RemoveFxControllerJob extends Job {
     
-    private final Job subJob;
-    
-    public RemoveNodeJob(FXOMNode targetNode, EditorController editorController) {
+    private final FXOMObject fxomObject;
+    private String oldFxController;
+
+    public RemoveFxControllerJob(FXOMObject fxomObject, EditorController editorController) {
         super(editorController);
-        
-        assert (targetNode instanceof FXOMObject) || (targetNode instanceof FXOMProperty);
-        
-        if (targetNode instanceof FXOMObject) {
-            subJob = new RemoveObjectJob((FXOMObject)targetNode, editorController);
-        } else {
-            assert targetNode instanceof FXOMProperty;
-            subJob = new RemovePropertyJob((FXOMProperty)targetNode, editorController);
-        }
+        assert fxomObject != null;
+        this.fxomObject = fxomObject;
     }
-    
-    
+
     /*
      * Job
      */
-
+    
     @Override
     public boolean isExecutable() {
-        return subJob.isExecutable();
+        return fxomObject.getFxController() != null;
     }
 
     @Override
     public void execute() {
-        subJob.execute();
+        assert oldFxController == null;
+        oldFxController = fxomObject.getFxController();
+        // Now like redo()
+        redo();
     }
 
     @Override
     public void undo() {
-        subJob.undo();
+        assert oldFxController != null;
+        fxomObject.setFxController(oldFxController);
     }
 
     @Override
     public void redo() {
-        subJob.redo();
+        assert oldFxController != null;
+        fxomObject.setFxController(null);
     }
 
     @Override
     public String getDescription() {
-        return getClass().getSimpleName(); // Should not reach end user
+        return getClass().getSimpleName(); // Should not reach user
     }
     
 }

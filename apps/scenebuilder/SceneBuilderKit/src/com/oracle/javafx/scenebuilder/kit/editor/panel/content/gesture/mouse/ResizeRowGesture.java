@@ -34,7 +34,7 @@ package com.oracle.javafx.scenebuilder.kit.editor.panel.content.gesture.mouse;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
-import com.oracle.javafx.scenebuilder.kit.editor.job.ModifyObjectJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.ModifyObjectJob;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.gridpane.GridPaneHandles;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.resizer.GridPaneRowResizer;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;

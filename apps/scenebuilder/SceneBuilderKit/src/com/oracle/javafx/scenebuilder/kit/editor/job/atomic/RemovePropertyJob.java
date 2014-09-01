@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -29,68 +29,86 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
-package com.oracle.javafx.scenebuilder.kit.editor.job.v2;
+package com.oracle.javafx.scenebuilder.kit.editor.job.atomic;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
-import com.oracle.javafx.scenebuilder.kit.editor.selection.AbstractSelectionGroup;
-import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMProperty;
 
 /**
  *
  */
-public class BackupSelectionJob extends Job {
+public class RemovePropertyJob extends Job {
 
-    private final AbstractSelectionGroup oldSelectionGroup;
-
-    public BackupSelectionJob(EditorController editorController) {
+    private final FXOMProperty targetProperty;
+    
+    private FXOMInstance parentInstance;
+    private int indexInParentInstance;
+    
+    public RemovePropertyJob(FXOMProperty targetProperty, EditorController editorController) {
         super(editorController);
         
-        // Saves the current selection
-        final Selection selection = getEditorController().getSelection();
-        try {
-            if (selection.getGroup() == null) {
-                this.oldSelectionGroup = null;
-            } else {
-                this.oldSelectionGroup = selection.getGroup().clone();
-            }
-        } catch(CloneNotSupportedException x) {
-            throw new RuntimeException("Bug", x); //NOI18N
-        }
+        assert targetProperty != null;
+        this.targetProperty = targetProperty;
     }
+    
+    public FXOMProperty getTargetProperty() {
+        return targetProperty;
+    }
+
 
     /*
      * Job
      */
-
+    
     @Override
     public boolean isExecutable() {
-        return true;
+        return targetProperty.getParentInstance() != null;
     }
 
     @Override
     public void execute() {
-        // Now same as redo()
+        assert parentInstance == null;
+        assert isExecutable();
+        
+        parentInstance = targetProperty.getParentInstance();
+        indexInParentInstance = targetProperty.getIndexInParentInstance();
         redo();
     }
 
     @Override
     public void undo() {
-        final Selection selection = getEditorController().getSelection();
-        selection.select(oldSelectionGroup);
-        assert selection.isValid(getEditorController().getFxomDocument());
+        assert targetProperty.getParentInstance() == null;
+        
+        getEditorController().getFxomDocument().beginUpdate();
+        targetProperty.addToParentInstance(indexInParentInstance, parentInstance);
+        getEditorController().getFxomDocument().endUpdate();
+        
+        assert targetProperty.getParentInstance() == parentInstance;
+        assert targetProperty.getIndexInParentInstance() == indexInParentInstance;
     }
 
     @Override
     public void redo() {
-        // Nothing to do :)
+        assert targetProperty.getParentInstance() == parentInstance;
+        assert targetProperty.getIndexInParentInstance() == indexInParentInstance;
+        
+        getEditorController().getSelection().clear();
+        getEditorController().getFxomDocument().beginUpdate();
+        targetProperty.removeFromParentInstance();
+        getEditorController().getFxomDocument().endUpdate();
+        
+        assert targetProperty.getParentInstance() == null;
     }
 
     @Override
     public String getDescription() {
-        // Not expected to reach the user
-        return getClass().getSimpleName();
+        // Should normally not reach the user
+        return getClass().getSimpleName() 
+                + "[" 
+                + targetProperty.getName()
+                + "]";
     }
     
 }

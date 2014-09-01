@@ -29,44 +29,46 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.oracle.javafx.scenebuilder.kit.editor.job.v2;
+package com.oracle.javafx.scenebuilder.kit.editor.job.atomic;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMCollection;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMProperty;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 
 /**
  *
  */
-public class AddPropertyJob extends Job {
+public class ReIndexObjectJob extends Job {
 
-    private final FXOMProperty property;
-    private final FXOMInstance targetInstance;
-    private final int targetIndex;
+    private final FXOMObject reindexedObject;
+    private final FXOMObject beforeObject;
+    private final FXOMObject oldBeforeObject;
+    private String description;
     
-    public AddPropertyJob(FXOMProperty property, 
-            FXOMInstance targetInstance,
-            int targetIndex,
+
+    public ReIndexObjectJob(
+            FXOMObject reindexedObject, 
+            FXOMObject beforeObject, 
             EditorController editorController) {
         super(editorController);
+        assert reindexedObject != null;
         
-        assert property != null;
-        assert targetInstance != null;
-        assert targetIndex >= -1;
-        
-        this.property = property;
-        this.targetInstance = targetInstance;
-        this.targetIndex = targetIndex;
+        this.reindexedObject = reindexedObject;
+        this.beforeObject = beforeObject;
+        this.oldBeforeObject = reindexedObject.getNextSlibing();
     }
-
+    
+    
     /*
      * Job
      */
     
     @Override
     public boolean isExecutable() {
-        return property.getParentInstance() == null;
+        return (beforeObject != oldBeforeObject);
     }
 
     @Override
@@ -76,31 +78,47 @@ public class AddPropertyJob extends Job {
 
     @Override
     public void undo() {
-        assert property.getParentInstance() == targetInstance;
-        
-        getEditorController().getSelection().clear();
-        getEditorController().getFxomDocument().beginUpdate();
-        property.removeFromParentInstance();
-        getEditorController().getFxomDocument().endUpdate();
-        
-        assert property.getParentInstance() == null;
+        assert isExecutable();
+
+        final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
+        fxomDocument.beginUpdate();
+        reindexedObject.moveBeforeSibling(oldBeforeObject);
+        fxomDocument.endUpdate();
     }
 
     @Override
     public void redo() {
-        assert property.getParentInstance() == null;
-        
-        getEditorController().getFxomDocument().beginUpdate();
-        property.addToParentInstance(targetIndex, targetInstance);
-        getEditorController().getFxomDocument().endUpdate();
-        
-        assert property.getParentInstance() == targetInstance;
+        assert isExecutable();
+
+        final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
+        fxomDocument.beginUpdate();
+        reindexedObject.moveBeforeSibling(beforeObject);
+        fxomDocument.endUpdate();
     }
 
     @Override
     public String getDescription() {
-        // Should normally not reach the user
-        return getClass().getSimpleName();
+        if (description == null) {
+            final StringBuilder sb = new StringBuilder();
+
+            sb.append("Move ");
+
+            if (reindexedObject instanceof FXOMInstance) {
+                final Object sceneGraphObject = reindexedObject.getSceneGraphObject();
+                if (sceneGraphObject != null) {
+                    sb.append(sceneGraphObject.getClass().getSimpleName());
+                } else {
+                    sb.append("Unresolved Object");
+                }
+            } else if (reindexedObject instanceof FXOMCollection) {
+                sb.append("Collection");
+            } else {
+                assert false;
+                sb.append(reindexedObject.getClass().getSimpleName());
+            }
+            description = sb.toString();
+        }
+        return description;
     }
     
 }

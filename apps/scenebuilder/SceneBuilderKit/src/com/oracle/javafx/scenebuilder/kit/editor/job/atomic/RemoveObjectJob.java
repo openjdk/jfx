@@ -29,82 +29,63 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.oracle.javafx.scenebuilder.kit.editor.job.v2;
 
+package com.oracle.javafx.scenebuilder.kit.editor.job.atomic;
+
+import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.RemoveCollectionItemJob;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMPropertyC;
 
 /**
  *
  */
-public class AddPropertyValueJob extends Job {
-
-    private final FXOMObject value;
-    private final FXOMPropertyC targetProperty;
-    private final int targetIndex;
+public class RemoveObjectJob extends Job {
     
-    public AddPropertyValueJob(FXOMObject value, FXOMPropertyC targetProperty, 
-            int targetIndex, EditorController editorController) {
+    private final Job subJob;
+    
+    public RemoveObjectJob(FXOMObject targetObject, EditorController editorController) {
         super(editorController);
         
-        assert value != null;
-        assert targetProperty != null;
-        assert targetIndex >= -1;
+        assert targetObject != null;
+        assert (targetObject.getParentProperty() != null) || (targetObject.getParentCollection() != null);
         
-        this.value = value;
-        this.targetProperty = targetProperty;
-        this.targetIndex = targetIndex;
+        if (targetObject.getParentProperty() != null) {
+            subJob = new RemovePropertyValueJob(targetObject, editorController);
+        } else {
+            assert targetObject.getParentCollection() != null;
+            subJob = new RemoveCollectionItemJob(targetObject, editorController);
+        }
     }
-
-    /*
-     * AddPropertyValueJob
-     */
     
+    
+    /*
+     * Job
+     */
+
     @Override
     public boolean isExecutable() {
-        return (value.getParentProperty() == null)
-                && (value.getParentCollection() == null);
+        return subJob.isExecutable();
     }
 
     @Override
     public void execute() {
-        assert targetIndex <= targetProperty.getValues().size();
-        redo();
+        subJob.execute();
     }
 
     @Override
     public void undo() {
-        assert value.getParentProperty() == targetProperty;
-        assert value.getParentCollection() == null;
-        
-        getEditorController().getSelection().clear();
-        getEditorController().getFxomDocument().beginUpdate();
-        value.removeFromParentProperty();
-        getEditorController().getFxomDocument().endUpdate();
-        
-        assert value.getParentProperty() == null;
-        assert value.getParentCollection() == null;
+        subJob.undo();
     }
 
     @Override
     public void redo() {
-        assert value.getParentProperty() == null;
-        assert value.getParentCollection() == null;
-        
-        getEditorController().getFxomDocument().beginUpdate();
-        value.addToParentProperty(targetIndex, targetProperty);
-        getEditorController().getFxomDocument().endUpdate();
-        
-        assert value.getParentProperty() == targetProperty;
-        assert value.getParentCollection() == null;
+        subJob.redo();
     }
 
     @Override
     public String getDescription() {
-        // Should normally not reach the user
-        return getClass().getSimpleName();
+        return getClass().getSimpleName(); // Should not reach end user
     }
     
 }

@@ -32,9 +32,9 @@
 package com.oracle.javafx.scenebuilder.kit.editor.job;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
-import com.oracle.javafx.scenebuilder.kit.editor.job.v2.AddPropertyJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.v2.AddPropertyValueJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.v2.RemovePropertyJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.AddPropertyJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.AddPropertyValueJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.RemovePropertyJob;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.AbstractSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMCollection;

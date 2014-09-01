@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -29,66 +29,68 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.oracle.javafx.scenebuilder.kit.editor.job;
+
+package com.oracle.javafx.scenebuilder.kit.editor.job.atomic;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
-import java.util.Objects;
+import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
+import com.oracle.javafx.scenebuilder.kit.editor.selection.AbstractSelectionGroup;
+import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
 
 /**
- * Job used to modify the FX controller class.
  *
  */
-public class ModifyFxControllerJob extends Job {
+public class BackupSelectionJob extends Job {
 
-    private final FXOMObject fxomObject;
-    private final String newValue;
-    private final String oldValue;
+    private final AbstractSelectionGroup oldSelectionGroup;
 
-    public ModifyFxControllerJob(FXOMObject fxomObject, String newValue, EditorController editorController) {
+    public BackupSelectionJob(EditorController editorController) {
         super(editorController);
-
-        assert fxomObject != null;
-
-        this.fxomObject = fxomObject;
-        this.newValue = newValue;
-        this.oldValue = fxomObject.getFxController();
+        
+        // Saves the current selection
+        final Selection selection = getEditorController().getSelection();
+        try {
+            if (selection.getGroup() == null) {
+                this.oldSelectionGroup = null;
+            } else {
+                this.oldSelectionGroup = selection.getGroup().clone();
+            }
+        } catch(CloneNotSupportedException x) {
+            throw new RuntimeException("Bug", x); //NOI18N
+        }
     }
 
     /*
      * Job
      */
+
     @Override
     public boolean isExecutable() {
-        return Objects.equals(oldValue, newValue) == false;
+        return true;
     }
 
     @Override
     public void execute() {
+        // Now same as redo()
         redo();
     }
 
     @Override
     public void undo() {
-        getEditorController().getFxomDocument().beginUpdate();
-        this.fxomObject.setFxController(oldValue);
-        getEditorController().getFxomDocument().endUpdate();
-        assert Objects.equals(fxomObject.getFxController(), oldValue);
+        final Selection selection = getEditorController().getSelection();
+        selection.select(oldSelectionGroup);
+        assert selection.isValid(getEditorController().getFxomDocument());
     }
 
     @Override
     public void redo() {
-        getEditorController().getFxomDocument().beginUpdate();
-        this.fxomObject.setFxController(newValue);
-        getEditorController().getFxomDocument().endUpdate();
-        assert Objects.equals(fxomObject.getFxController(), newValue);
+        // Nothing to do :)
     }
 
     @Override
     public String getDescription() {
-        final StringBuilder result = new StringBuilder();
-        result.append("Set controller class on ");
-        result.append(fxomObject.getGlueElement().getTagName());
-        return result.toString();
+        // Not expected to reach the user
+        return getClass().getSimpleName();
     }
+    
 }

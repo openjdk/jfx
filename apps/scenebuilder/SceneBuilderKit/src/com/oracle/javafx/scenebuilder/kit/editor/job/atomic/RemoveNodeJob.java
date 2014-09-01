@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -29,54 +29,63 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.oracle.javafx.scenebuilder.kit.editor.job;
+
+package com.oracle.javafx.scenebuilder.kit.editor.job.atomic;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
-import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
+import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMNode;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMProperty;
 
 /**
- * Job used to enable/disable fx:root on the fxom document associated
- * to the editor controller (if any).
+ *
  */
-public class ToggleFxRootJob extends Job {
-
-    public ToggleFxRootJob(EditorController editorController) {
+public class RemoveNodeJob extends Job {
+    
+    private final Job subJob;
+    
+    public RemoveNodeJob(FXOMNode targetNode, EditorController editorController) {
         super(editorController);
+        
+        assert (targetNode instanceof FXOMObject) || (targetNode instanceof FXOMProperty);
+        
+        if (targetNode instanceof FXOMObject) {
+            subJob = new RemoveObjectJob((FXOMObject)targetNode, editorController);
+        } else {
+            assert targetNode instanceof FXOMProperty;
+            subJob = new RemovePropertyJob((FXOMProperty)targetNode, editorController);
+        }
     }
-
+    
+    
     /*
      * Job
      */
+
     @Override
     public boolean isExecutable() {
-        final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
-        return (fxomDocument != null) && (fxomDocument.getFxomRoot() instanceof FXOMInstance);
+        return subJob.isExecutable();
     }
 
     @Override
     public void execute() {
-        redo();
+        subJob.execute();
     }
 
     @Override
     public void undo() {
-        redo();
+        subJob.undo();
     }
 
     @Override
     public void redo() {
-        assert getEditorController().getFxomDocument() != null;
-        assert getEditorController().getFxomDocument().getFxomRoot() instanceof FXOMInstance;
-
-        final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
-        final FXOMInstance rootInstance = (FXOMInstance) fxomDocument.getFxomRoot();
-        rootInstance.toggleFxRoot();
+        subJob.redo();
     }
 
     @Override
     public String getDescription() {
-        return I18N.getString("job.toggle.fx.root");
+        return getClass().getSimpleName(); // Should not reach end user
     }
+    
 }

@@ -29,62 +29,31 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.oracle.javafx.scenebuilder.kit.editor.job;
+package com.oracle.javafx.scenebuilder.kit.editor.job.atomic;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
-import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
-import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
+import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import java.util.Objects;
 
 /**
+ * Job used to modify the FX controller class.
  *
  */
-public class ModifyObjectJob extends Job {
+public class ModifyFxControllerJob extends Job {
 
-    private final FXOMInstance fxomInstance;
-    private final ValuePropertyMetadata propertyMetadata;
-    private final Object newValue;
-    private final Object oldValue;
-    private final String description;
+    private final FXOMObject fxomObject;
+    private final String newValue;
+    private final String oldValue;
 
-    public ModifyObjectJob(
-            FXOMInstance fxomInstance, 
-            ValuePropertyMetadata propertyMetadata, 
-            Object newValue, 
-            EditorController editorController) {
+    public ModifyFxControllerJob(FXOMObject fxomObject, String newValue, EditorController editorController) {
         super(editorController);
 
-        assert fxomInstance != null;
-        assert fxomInstance.getSceneGraphObject() != null;
-        assert propertyMetadata != null;
+        assert fxomObject != null;
 
-        this.fxomInstance = fxomInstance;
-        this.propertyMetadata = propertyMetadata;
+        this.fxomObject = fxomObject;
         this.newValue = newValue;
-        this.oldValue = propertyMetadata.getValueObject(fxomInstance);
-        this.description = I18N.getString("label.action.edit.set.1",
-                propertyMetadata.getName().toString(),
-                fxomInstance.getSceneGraphObject().getClass().getSimpleName());
-    }
-
-    public ModifyObjectJob(
-            FXOMInstance fxomInstance,
-            ValuePropertyMetadata propertyMetadata,
-            Object newValue,
-            EditorController editorController,
-            String description) {
-        super(editorController);
-
-        assert fxomInstance != null;
-        assert fxomInstance.getSceneGraphObject() != null;
-        assert propertyMetadata != null;
-
-        this.fxomInstance = fxomInstance;
-        this.propertyMetadata = propertyMetadata;
-        this.newValue = newValue;
-        this.oldValue = propertyMetadata.getValueObject(fxomInstance);
-        this.description = description;
+        this.oldValue = fxomObject.getFxController();
     }
 
     /*
@@ -92,8 +61,7 @@ public class ModifyObjectJob extends Job {
      */
     @Override
     public boolean isExecutable() {
-        final Object currentValue = propertyMetadata.getValueObject(fxomInstance);
-        return Objects.equals(newValue, currentValue) == false;
+        return Objects.equals(oldValue, newValue) == false;
     }
 
     @Override
@@ -104,20 +72,24 @@ public class ModifyObjectJob extends Job {
     @Override
     public void undo() {
         getEditorController().getFxomDocument().beginUpdate();
-        this.propertyMetadata.setValueObject(fxomInstance, oldValue);
+        this.fxomObject.setFxController(oldValue);
         getEditorController().getFxomDocument().endUpdate();
+        assert Objects.equals(fxomObject.getFxController(), oldValue);
     }
 
     @Override
     public void redo() {
         getEditorController().getFxomDocument().beginUpdate();
-        this.propertyMetadata.setValueObject(fxomInstance, newValue);
+        this.fxomObject.setFxController(newValue);
         getEditorController().getFxomDocument().endUpdate();
+        assert Objects.equals(fxomObject.getFxController(), newValue);
     }
 
     @Override
     public String getDescription() {
-        return description;
+        final StringBuilder result = new StringBuilder();
+        result.append("Set controller class on ");
+        result.append(fxomObject.getGlueElement().getTagName());
+        return result.toString();
     }
-
 }

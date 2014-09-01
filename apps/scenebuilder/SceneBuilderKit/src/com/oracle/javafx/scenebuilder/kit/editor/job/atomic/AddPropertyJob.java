@@ -29,99 +29,78 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.oracle.javafx.scenebuilder.kit.editor.job.v2;
+package com.oracle.javafx.scenebuilder.kit.editor.job.atomic;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMPropertyC;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMProperty;
 
 /**
  *
  */
-public class RemovePropertyValueJob extends Job {
+public class AddPropertyJob extends Job {
 
-    private final FXOMObject targetValue;
+    private final FXOMProperty property;
+    private final FXOMInstance targetInstance;
+    private final int targetIndex;
     
-    private FXOMPropertyC parentProperty;
-    private int indexInParentProperty;
-    private RemovePropertyJob removePropertyJob;
-
-    public RemovePropertyValueJob(FXOMObject value, EditorController editorController) {
+    public AddPropertyJob(FXOMProperty property, 
+            FXOMInstance targetInstance,
+            int targetIndex,
+            EditorController editorController) {
         super(editorController);
-        this.targetValue = value;
+        
+        assert property != null;
+        assert targetInstance != null;
+        assert targetIndex >= -1;
+        
+        this.property = property;
+        this.targetInstance = targetInstance;
+        this.targetIndex = targetIndex;
     }
-    
-    
+
     /*
      * Job
      */
     
     @Override
     public boolean isExecutable() {
-        return targetValue.getParentProperty() != null;
+        return property.getParentInstance() == null;
     }
 
     @Override
     public void execute() {
-        assert parentProperty == null;
-        assert isExecutable();
-        
-        parentProperty = targetValue.getParentProperty();
-        indexInParentProperty = targetValue.getIndexInParentProperty();
-        if ((parentProperty.getValues().size() == 1) && (parentProperty.getParentInstance() != null)) {
-            // targetValue is the last value of its parent property
-            // => parent property must also be removed from its parent instance
-            removePropertyJob = new RemovePropertyJob(parentProperty, getEditorController());
-        }
-        
-        // Note : below we may have to run removePropertyJob.execute() so
-        // we cannot re-use redo() here.
-        getEditorController().getFxomDocument().beginUpdate();
-        if (removePropertyJob != null) {
-            removePropertyJob.execute();
-        }
-        targetValue.removeFromParentProperty();
-        getEditorController().getFxomDocument().endUpdate();
+        redo();
     }
 
     @Override
     public void undo() {
-        assert targetValue.getParentProperty() == null;
+        assert property.getParentInstance() == targetInstance;
         
+        getEditorController().getSelection().clear();
         getEditorController().getFxomDocument().beginUpdate();
-        targetValue.addToParentProperty(indexInParentProperty, parentProperty);
-        if (removePropertyJob != null) {
-            removePropertyJob.undo();
-        }
+        property.removeFromParentInstance();
         getEditorController().getFxomDocument().endUpdate();
-
-        assert targetValue.getParentProperty() == parentProperty;
-        assert targetValue.getIndexInParentProperty() == indexInParentProperty;
+        
+        assert property.getParentInstance() == null;
     }
 
     @Override
     public void redo() {
-        assert targetValue.getParentProperty() == parentProperty;
-        assert targetValue.getIndexInParentProperty() == indexInParentProperty;
+        assert property.getParentInstance() == null;
         
         getEditorController().getFxomDocument().beginUpdate();
-        if (removePropertyJob != null) {
-            removePropertyJob.redo();
-        }
-        targetValue.removeFromParentProperty();
+        property.addToParentInstance(targetIndex, targetInstance);
         getEditorController().getFxomDocument().endUpdate();
-
-        assert targetValue.getParentProperty() == null;
+        
+        assert property.getParentInstance() == targetInstance;
     }
 
     @Override
     public String getDescription() {
         // Should normally not reach the user
-        return getClass().getSimpleName() 
-                + "[" 
-                + targetValue.getGlueElement().getTagName()
-                + "]";
+        return getClass().getSimpleName();
     }
     
 }

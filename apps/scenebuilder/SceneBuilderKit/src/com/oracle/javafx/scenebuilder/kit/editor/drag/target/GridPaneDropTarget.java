@@ -43,8 +43,8 @@ import com.oracle.javafx.scenebuilder.kit.editor.job.gridpane.v2.InsertColumnJob
 import com.oracle.javafx.scenebuilder.kit.editor.job.gridpane.v2.InsertRowJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.gridpane.v2.MoveCellContentJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.togglegroup.AdjustAllToggleGroupJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.v2.ClearSelectionJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.v2.UpdateSelectionJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.ClearSelectionJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.UpdateSelectionJob;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;

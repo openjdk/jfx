@@ -61,7 +61,7 @@ import com.oracle.javafx.scenebuilder.kit.editor.job.gridpane.GridPaneJobUtils.P
 import com.oracle.javafx.scenebuilder.kit.editor.job.gridpane.MoveColumnJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.gridpane.MoveRowJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.gridpane.v2.SpanJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.v2.UpdateSelectionJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.UpdateSelectionJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.wrap.AbstractWrapInJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.wrap.UnwrapJob;
 import com.oracle.javafx.scenebuilder.kit.editor.messagelog.MessageLog;

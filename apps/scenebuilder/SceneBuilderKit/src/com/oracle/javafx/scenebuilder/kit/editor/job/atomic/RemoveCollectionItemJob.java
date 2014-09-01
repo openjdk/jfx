@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -29,59 +29,81 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
-package com.oracle.javafx.scenebuilder.kit.editor.job.v2;
+package com.oracle.javafx.scenebuilder.kit.editor.job.atomic;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMCollection;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 
 /**
  *
  */
-public class RemoveFxControllerJob extends Job {
+public class RemoveCollectionItemJob extends Job {
+
+    private final FXOMObject targetValue;
     
-    private final FXOMObject fxomObject;
-    private String oldFxController;
+    private FXOMCollection parentCollection;
+    private int indexInParentCollection;
 
-    public RemoveFxControllerJob(FXOMObject fxomObject, EditorController editorController) {
+    public RemoveCollectionItemJob(FXOMObject value, EditorController editorController) {
         super(editorController);
-        assert fxomObject != null;
-        this.fxomObject = fxomObject;
+        this.targetValue = value;
     }
-
+    
+    
     /*
      * Job
      */
     
     @Override
     public boolean isExecutable() {
-        return fxomObject.getFxController() != null;
+        return targetValue.getParentCollection() != null;
     }
 
     @Override
     public void execute() {
-        assert oldFxController == null;
-        oldFxController = fxomObject.getFxController();
-        // Now like redo()
+        assert parentCollection == null;
+        assert isExecutable();
+        
+        parentCollection = targetValue.getParentCollection();
+        indexInParentCollection = targetValue.getIndexInParentCollection();
+        
+        // Now same as redo()
         redo();
     }
 
     @Override
     public void undo() {
-        assert oldFxController != null;
-        fxomObject.setFxController(oldFxController);
+        assert targetValue.getParentCollection() == null;
+        
+        getEditorController().getFxomDocument().beginUpdate();
+        targetValue.addToParentCollection(indexInParentCollection, parentCollection);
+        getEditorController().getFxomDocument().endUpdate();
+
+        assert targetValue.getParentCollection() == parentCollection;
+        assert targetValue.getIndexInParentCollection() == indexInParentCollection;
     }
 
     @Override
     public void redo() {
-        assert oldFxController != null;
-        fxomObject.setFxController(null);
+        assert targetValue.getParentCollection() == parentCollection;
+        assert targetValue.getIndexInParentCollection() == indexInParentCollection;
+        
+        getEditorController().getFxomDocument().beginUpdate();
+        targetValue.removeFromParentCollection();
+        getEditorController().getFxomDocument().endUpdate();
+
+        assert targetValue.getParentCollection() == null;
     }
 
     @Override
     public String getDescription() {
-        return getClass().getSimpleName(); // Should not reach user
+        // Should normally not reach the user
+        return getClass().getSimpleName() 
+                + "[" //NOI18N
+                + targetValue.getGlueElement().getTagName()
+                + "]"; //NOI18N
     }
     
 }

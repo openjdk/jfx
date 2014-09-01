@@ -32,6 +32,7 @@
 
 package com.oracle.javafx.scenebuilder.kit.editor.job;
 
+import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.RelocateNodeJob;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
