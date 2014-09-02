@@ -148,31 +148,6 @@ public class FXOMIntrinsic extends FXOMObject {
         
         return result;
     }
-    
-    @Override
-    public FXOMNode lookupFirstReference(String fxId, FXOMObject scope) {
-        final FXOMNode result;
-        
-        if (this == scope) {
-            result = null;
-        } else {
-            switch(getType()) {
-                case FX_REFERENCE:
-                case FX_COPY:
-                    if (fxId.equals(getSource())) {
-                        result = this;
-                    } else {
-                        result = null;
-                    }
-                    break;
-                default:
-                    result = null;
-                    break;
-            }
-        }
-        
-        return result;
-    }
 
     @Override
     protected void collectDeclaredClasses(Set<Class<?>> result) {
