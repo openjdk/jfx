@@ -35,10 +35,10 @@ import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.drag.source.AbstractDragSource;
 import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
 import com.oracle.javafx.scenebuilder.kit.editor.job.BatchJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.DeleteObjectJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.InsertAsAccessoryJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.ModifyObjectJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.togglegroup.AdjustAllToggleGroupJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.RemoveObjectJob;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.EnumerationPropertyMetadata;
@@ -111,7 +111,7 @@ public class AccessoryDropTarget extends AbstractDropTarget {
         //  - set the drag source object as accessory of the drop target
 
         if (currentParent != null) {
-            result.addSubJob(new DeleteObjectJob(draggedObject, editorController));
+            result.addSubJob(new RemoveObjectJob(draggedObject, editorController));
         }
         final Job j = new InsertAsAccessoryJob(draggedObject, 
                 targetContainer, accessory, editorController);
