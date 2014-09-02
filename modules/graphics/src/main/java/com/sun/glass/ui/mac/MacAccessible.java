@@ -83,7 +83,7 @@ final class MacAccessible extends Accessible {
         }
     }
 
-    static enum MacAttribute {
+    private static enum MacAttribute {
         // Dynamic mapping to FX attribute, dynamic return type
         NSAccessibilityValueAttribute(null, null),
 
@@ -198,7 +198,7 @@ final class MacAccessible extends Accessible {
      * The Attribute and Action for roles are defined in
      * https://developer.apple.com/library/mac/documentation/UserExperience/Reference/Accessibility_RoleAttribute_Ref/Introduction.html
      */
-    static enum MacRole {
+    private static enum MacRole {
         NSAccessibilityUnknownRole(AccessibleRole.NODE, null, null),
         NSAccessibilityGroupRole(AccessibleRole.PARENT, null, null),
         NSAccessibilityButtonRole(new AccessibleRole[] {AccessibleRole.BUTTON, AccessibleRole.INCREMENT_BUTTON, AccessibleRole.DECREMENT_BUTTON, AccessibleRole.SPLIT_MENU_BUTTON},
@@ -480,7 +480,7 @@ final class MacAccessible extends Accessible {
         }
     }
 
-    static enum MacSubrole {
+    private static enum MacSubrole {
         NSAccessibilityTableRowSubrole(AccessibleRole.LIST_ITEM, AccessibleRole.TABLE_ROW),
         NSAccessibilitySecureTextFieldSubrole(AccessibleRole.PASSWORD_FIELD),
         NSAccessibilityOutlineRowSubrole(new AccessibleRole[] { AccessibleRole.TREE_ITEM, AccessibleRole.TREE_TABLE_ROW },
@@ -528,7 +528,7 @@ final class MacAccessible extends Accessible {
         }
     }
 
-    static enum MacAction {
+    private static enum MacAction {
         NSAccessibilityCancelAction,
         NSAccessibilityConfirmAction,
         NSAccessibilityDecrementAction(AccessibleAction.DECREMENT),
@@ -556,7 +556,7 @@ final class MacAccessible extends Accessible {
         }
     }
 
-    static enum MacNotification {
+    private static enum MacNotification {
         NSAccessibilityCreatedNotification,
         NSAccessibilityFocusedUIElementChangedNotification,
         NSAccessibilityValueChangedNotification,
@@ -574,14 +574,14 @@ final class MacAccessible extends Accessible {
         ;long ptr; /* Initialized natively - treat as final */
     }
 
-    static enum MacOrientation {
+    private static enum MacOrientation {
         NSAccessibilityHorizontalOrientationValue,
         NSAccessibilityVerticalOrientationValue,
         NSAccessibilityUnknownOrientationValue,
         ;long ptr; /* Initialized natively - treat as final */
     }
 
-    static enum MacText {
+    private static enum MacText {
         NSAccessibilityBackgroundColorTextAttribute,
         NSAccessibilityForegroundColorTextAttribute,
         NSAccessibilityUnderlineTextAttribute,
@@ -599,7 +599,7 @@ final class MacAccessible extends Accessible {
      * Do not access the following lists directly from the Mac enums.
      * It can cause the static initialization to happen in an unexpected order.
      */
-    static final List<MacAttribute> baseAttributes = Arrays.asList(
+    private static final List<MacAttribute> baseAttributes = Arrays.asList(
         MacAttribute.NSAccessibilityRoleAttribute,
         MacAttribute.NSAccessibilityRoleDescriptionAttribute,
         MacAttribute.NSAccessibilityHelpAttribute,
@@ -613,7 +613,7 @@ final class MacAccessible extends Accessible {
         MacAttribute.NSAccessibilityTitleUIElementAttribute
     );
 
-    static final List<MacAttribute> textAttributes = Arrays.asList(
+    private static final List<MacAttribute> textAttributes = Arrays.asList(
         MacAttribute.NSAccessibilityEnabledAttribute,
         MacAttribute.NSAccessibilityValueAttribute,
         MacAttribute.NSAccessibilityNumberOfCharactersAttribute,
@@ -623,7 +623,7 @@ final class MacAccessible extends Accessible {
         MacAttribute.NSAccessibilityVisibleCharacterRangeAttribute
     );
 
-    static final List<MacAttribute> textParameterizedAttributes = Arrays.asList(
+    private static final List<MacAttribute> textParameterizedAttributes = Arrays.asList(
         MacAttribute.NSAccessibilityLineForIndexParameterizedAttribute,
         MacAttribute.NSAccessibilityRangeForLineParameterizedAttribute,
         MacAttribute.NSAccessibilityAttributedStringForRangeParameterizedAttribute,
@@ -814,7 +814,7 @@ final class MacAccessible extends Accessible {
         return view;
     }
 
-    long[] getUnignoredChildren(ObservableList<Node> children) {
+    private long[] getUnignoredChildren(ObservableList<Node> children) {
         if (children == null) return new long[0];
         long[] ids = children.stream()
                              .mapToLong(n -> getNativeAccessible(n))
@@ -854,8 +854,8 @@ final class MacAccessible extends Accessible {
         return inSlider;
     }
 
-    Boolean ignoreInnerText;
-    boolean ignoreInnerText() {
+    private Boolean ignoreInnerText;
+    private boolean ignoreInnerText() {
         if (ignoreInnerText != null) return ignoreInnerText;
         /* 
          * JavaFX controls are implemented by the skin by adding new nodes.
@@ -959,7 +959,7 @@ final class MacAccessible extends Accessible {
     }
 
     /* NSAccessibility Protocol - JNI entry points */
-    long[] accessibilityAttributeNames() {
+    private long[] accessibilityAttributeNames() {
         if (getView() != null) return null; /* Let NSView answer for the Scene */
         AccessibleRole role = (AccessibleRole)getAttribute(ROLE);
         if (role != null) {
@@ -1005,7 +1005,7 @@ final class MacAccessible extends Accessible {
         return null;
     }
 
-    int accessibilityArrayAttributeCount(long attribute) {
+    private int accessibilityArrayAttributeCount(long attribute) {
         MacAttribute attr = MacAttribute.getAttribute(attribute);
         if (attr == null) {
             return -1;
@@ -1059,7 +1059,7 @@ final class MacAccessible extends Accessible {
         return -1;
     }
 
-    long[] accessibilityArrayAttributeValues(long attribute, int index, int maxCount) {
+    private long[] accessibilityArrayAttributeValues(long attribute, int index, int maxCount) {
         MacAttribute attr = MacAttribute.getAttribute(attribute);
         if (attr == null) {
             return null;
@@ -1117,7 +1117,7 @@ final class MacAccessible extends Accessible {
         return null;
     }
 
-    boolean accessibilityIsAttributeSettable(long attribute) {
+    private boolean accessibilityIsAttributeSettable(long attribute) {
         MacAttribute attr = MacAttribute.getAttribute(attribute);
         if (attr == null) return false;
         switch (attr) {
@@ -1144,7 +1144,7 @@ final class MacAccessible extends Accessible {
         return false;
     }
 
-    MacVariant accessibilityAttributeValue(long attribute) {
+    private MacVariant accessibilityAttributeValue(long attribute) {
         MacAttribute attr = MacAttribute.getAttribute(attribute);
         if (attr == null) {
             return null;
@@ -1576,7 +1576,7 @@ final class MacAccessible extends Accessible {
         return map.apply(result);
     }
 
-    void accessibilitySetValue(long value, long attribute) {
+    private void accessibilitySetValue(long value, long attribute) {
         MacAttribute attr = MacAttribute.getAttribute(attribute);
         if (attr != null) {
             switch (attr) {
@@ -1662,12 +1662,12 @@ final class MacAccessible extends Accessible {
         }
     }
 
-    long accessibilityIndexOfChild(long child) {
+    private long accessibilityIndexOfChild(long child) {
         /* Forward to native code */
         return -1;
     }
 
-    long[] accessibilityParameterizedAttributeNames() {
+    private long[] accessibilityParameterizedAttributeNames() {
         if (getView() != null) return null; /* Let NSView answer for the Scene */
         AccessibleRole role = (AccessibleRole)getAttribute(ROLE);
         if (role != null) {
@@ -1696,7 +1696,7 @@ final class MacAccessible extends Accessible {
         return null;
     }
 
-    MacVariant accessibilityAttributeValueForParameter(long attribute, long parameter) {
+    private MacVariant accessibilityAttributeValueForParameter(long attribute, long parameter) {
         MacAttribute attr = MacAttribute.getAttribute(attribute);
         if (attr == null || attr.inputType == 0 || attr.jfxAttr == null) {
             return null;
@@ -1816,7 +1816,7 @@ final class MacAccessible extends Accessible {
         return attr.map.apply(result);
     }
 
-    long[] accessibilityActionNames() {
+    private long[] accessibilityActionNames() {
         if (getView() != null) return null; /* Let NSView answer for the Scene */
         AccessibleRole role = (AccessibleRole)getAttribute(ROLE);
         List<MacAction> actions = new ArrayList<>();
@@ -1837,11 +1837,11 @@ final class MacAccessible extends Accessible {
         return actions.stream().mapToLong(a -> a.ptr).toArray();
     }
 
-    String accessibilityActionDescription(long action) {
+    private String accessibilityActionDescription(long action) {
         return NSAccessibilityActionDescription(action);
     }
 
-    void accessibilityPerformAction(long action) {
+    private void accessibilityPerformAction(long action) {
         MacAction macAction = MacAction.getAction(action);
         boolean expand = false;
         if (macAction == MacAction.NSAccessibilityPressAction) {
@@ -1868,7 +1868,7 @@ final class MacAccessible extends Accessible {
         }
     }
 
-    long accessibilityFocusedUIElement() {
+    private long accessibilityFocusedUIElement() {
         Node node = (Node)getAttribute(FOCUS_NODE);
         if (node == null) return 0L;
 
@@ -1877,7 +1877,7 @@ final class MacAccessible extends Accessible {
         return getNativeAccessible(node);
     }
 
-    boolean accessibilityIsIgnored() {
+    private boolean accessibilityIsIgnored() {
         if (isIgnored()) return true;
         if (isInSlider()) {
             /* 
@@ -1897,7 +1897,7 @@ final class MacAccessible extends Accessible {
         return false;
     }
 
-    long accessibilityHitTest(float x, float y) {
+    private long accessibilityHitTest(float x, float y) {
         View view = getView();
         if (view == null) {
             return 0L;

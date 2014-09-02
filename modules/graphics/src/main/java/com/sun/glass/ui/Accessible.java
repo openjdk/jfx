@@ -121,7 +121,7 @@ public abstract class Accessible {
         return null;
     }
 
-    final AccessControlContext getAccessControlContext() {
+    private final AccessControlContext getAccessControlContext() {
         AccessControlContext acc = eventHandler.getAccessControlContext();
         if (acc == null) {
             throw new RuntimeException("Could not get AccessControlContext for " + this);
