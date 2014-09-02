@@ -32,7 +32,7 @@
 package com.oracle.javafx.scenebuilder.kit.editor.job;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
-import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.RemoveObjectJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.reference.ObjectDeleter;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMCollection;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMIntrinsic;
@@ -81,23 +81,24 @@ public class DeleteObjectJob extends InlineDocumentJob {
             (targetFxomObject.getParentCollection() == null)) {
             /*
              * targetFxomObject is the root object
+             * => we reset the root object to null
              */
-            result.add(new SetDocumentRootJob(null, getEditorController()));
+            final Job setRootJob = new SetDocumentRootJob(null, getEditorController());
+            setRootJob.execute();
+            result.add(setRootJob);
 
         } else {
-
-            // Then we make a job for removing the object
-            final Job removeObjectJob = new RemoveObjectJob(
-                    targetFxomObject,
-                    getEditorController());
-            result.add(removeObjectJob);
+            
+            /*
+             * targetFxomObject is not the root object
+             * => we delegate to ObjectDeleter
+             * => this class will take care of references
+             */
+            
+            final ObjectDeleter deleter = new ObjectDeleter(getEditorController());
+            deleter.delete(targetFxomObject);
+            result.addAll(deleter.getExecutedJobs());
         }
-
-        for (Job subJob : result) {
-            subJob.execute();
-        }
-        
-        assert targetFxomObject.getParentProperty() == null;
         
         return result;
     }
