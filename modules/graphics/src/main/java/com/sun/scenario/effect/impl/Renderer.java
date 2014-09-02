@@ -110,23 +110,14 @@ public abstract class Renderer {
 
     public abstract int getCompatibleWidth(int w);
     public abstract int getCompatibleHeight(int h);
-    public abstract PoolFilterable createCompatibleImage(int w, int h);
+    public abstract Filterable createCompatibleImage(int w, int h);
 
-    public PoolFilterable getCompatibleImage(int w, int h) {
+    public Filterable getCompatibleImage(int w, int h) {
         return imagePool.checkOut(this, w, h);
     }
 
     public void releaseCompatibleImage(Filterable image) {
-        if (image instanceof PoolFilterable) {
-            ImagePool pool = ((PoolFilterable) image).getImagePool();
-            if (pool != null) {
-                pool.checkIn((PoolFilterable) image);
-                return;
-            }
-//        } else {
-            // Error?
-        }
-        image.unlock();
+        imagePool.checkIn(image);
     }
 
     /**

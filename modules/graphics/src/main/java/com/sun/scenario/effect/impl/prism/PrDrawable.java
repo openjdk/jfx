@@ -28,14 +28,11 @@ package com.sun.scenario.effect.impl.prism;
 import com.sun.prism.Graphics;
 import com.sun.prism.RTTexture;
 import com.sun.scenario.effect.FilterContext;
-import com.sun.scenario.effect.impl.ImagePool;
-import com.sun.scenario.effect.impl.PoolFilterable;
+import com.sun.scenario.effect.Filterable;
 import com.sun.scenario.effect.impl.Renderer;
-import java.lang.ref.WeakReference;
 
-public abstract class PrDrawable extends PrTexture<RTTexture> implements PoolFilterable {
-    private WeakReference<ImagePool> pool;
-
+public abstract class PrDrawable extends PrTexture<RTTexture> implements Filterable {
+    
     public static PrDrawable create(FilterContext fctx, RTTexture rtt) {
         return ((PrRenderer) Renderer.getRenderer(fctx)).createDrawable(rtt);
     }
@@ -44,34 +41,24 @@ public abstract class PrDrawable extends PrTexture<RTTexture> implements PoolFil
         super(rtt);
     }
 
-    @Override
-    public void setImagePool(ImagePool pool) {
-        this.pool = new WeakReference<>(pool);
-    }
-
-    @Override
-    public ImagePool getImagePool() {
-        return pool == null ? null : pool.get();
-    }
-
-    @Override public float getPixelScale() {
+    public float getPixelScale() {
         return 1.0f;
     }
 
     @Override public int getMaxContentWidth() {
-        return getTextureObject().getMaxContentWidth();
+        return ((RTTexture)getTextureObject()).getMaxContentWidth();
     }
     
     @Override public int getMaxContentHeight() {
-        return getTextureObject().getMaxContentHeight();
+        return ((RTTexture)getTextureObject()).getMaxContentHeight();
     }
     
     @Override public void setContentWidth(int contentW) {
-        getTextureObject().setContentWidth(contentW);
+        ((RTTexture)getTextureObject()).setContentWidth(contentW);
     }
 
     @Override public void setContentHeight(int contentH) {
-        getTextureObject().setContentHeight(contentH);
+        ((RTTexture)getTextureObject()).setContentHeight(contentH);
     }
  
     public abstract Graphics createGraphics();
