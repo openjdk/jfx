@@ -181,6 +181,15 @@ public class FXOMCollection extends FXOMObject {
     }
 
     @Override
+    protected void collectReferences(String source, FXOMObject scope, List<FXOMNode> result) {
+        if ((scope == null) || (scope != this)) {
+            for (FXOMObject i : items) {
+                i.collectReferences(source, scope, result);
+            }
+        }
+    }
+
+    @Override
     public FXOMNode lookupFirstReference(String fxId, FXOMObject scope) {
         FXOMNode result;
         

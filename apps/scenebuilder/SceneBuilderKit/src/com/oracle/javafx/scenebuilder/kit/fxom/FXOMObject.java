@@ -391,7 +391,19 @@ public abstract class FXOMObject extends FXOMNode {
     }
     
     protected abstract void collectReferences(String source, List<FXOMIntrinsic> result);
-
+    
+    public List<FXOMNode> collectReferences(String source, FXOMObject scope) {
+        assert source != null;
+        
+        final List<FXOMNode> result = new ArrayList<>();
+        
+        collectReferences(source, scope, result);
+        
+        return result;
+    }
+    
+    protected abstract void collectReferences(String source, FXOMObject scope, List<FXOMNode> result);
+    
     public abstract FXOMNode lookupFirstReference(String fxId, FXOMObject scope);
 
     public List<FXOMIntrinsic> collectIncludes(String source) {

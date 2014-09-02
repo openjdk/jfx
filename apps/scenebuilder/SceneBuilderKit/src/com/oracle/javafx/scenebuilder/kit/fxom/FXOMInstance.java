@@ -34,6 +34,7 @@ package com.oracle.javafx.scenebuilder.kit.fxom;
 import com.oracle.javafx.scenebuilder.kit.fxom.glue.GlueElement;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PrefixedValue;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
+import com.oracle.javafx.scenebuilder.kit.util.JavaLanguage;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -329,6 +330,30 @@ public class FXOMInstance extends FXOMObject {
             if (p instanceof FXOMPropertyC) {
                 for (FXOMObject v : ((FXOMPropertyC)p).getValues()) {
                     v.collectReferences(source, result);
+                }
+            }
+        }
+    }
+
+    @Override
+    protected void collectReferences(String source, FXOMObject scope, List<FXOMNode> result) {
+        if ((scope == null) || (scope != this)) {
+            for (FXOMProperty p : properties.values()) {
+                if (p instanceof FXOMPropertyC) {
+                    for (FXOMObject v : ((FXOMPropertyC)p).getValues()) {
+                        v.collectReferences(source, scope, result);
+                    }
+                } else if (p instanceof FXOMPropertyT) {
+                    final FXOMPropertyT pt = (FXOMPropertyT) p;
+                    final PrefixedValue pv = new PrefixedValue(pt.getValue());
+                    if (pv.isExpression()) {
+                        final String suffix = pv.getSuffix();
+                        if (JavaLanguage.isIdentifier(suffix)) {
+                            if ((source == null) || source.equals(suffix)) {
+                                result.add(pt);
+                            }
+                        }
+                    }
                 }
             }
         }
