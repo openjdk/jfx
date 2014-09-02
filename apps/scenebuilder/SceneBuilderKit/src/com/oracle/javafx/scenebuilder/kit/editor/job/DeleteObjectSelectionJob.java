@@ -33,7 +33,6 @@ package com.oracle.javafx.scenebuilder.kit.editor.job;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
-import com.oracle.javafx.scenebuilder.kit.editor.job.togglegroup.AdjustAllToggleGroupJob;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.AbstractSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
@@ -69,9 +68,6 @@ public class DeleteObjectSelectionJob extends BatchSelectionJob {
             }
         }
         
-        // Finally we adjust toggle groups
-        result.add(new AdjustAllToggleGroupJob(getEditorController()));
-        
         // If some objects cannot be deleted, then we clear all to
         // make this job not executable.
         if (cannotDeleteCount >= 1) {
@@ -85,17 +81,16 @@ public class DeleteObjectSelectionJob extends BatchSelectionJob {
     protected String makeDescription() {
         final String result;
         final int subJobCount = getSubJobs().size();
-        assert (subJobCount == 0) || (subJobCount >= 2);
         
         switch (subJobCount) {
             case 0:
                 result = "Unexecutable Delete"; // NO18N
                 break;
-            case 2: // one delete + one AdjustAllToggleGroup
+            case 1: // one delete
                 result = getSubJobs().get(0).getDescription();
                 break;
             default:
-                result = I18N.getString("label.action.edit.delete.n", subJobCount-1);
+                result = I18N.getString("label.action.edit.delete.n", subJobCount);
                 break;
         }
         

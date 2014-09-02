@@ -33,10 +33,10 @@ package com.oracle.javafx.scenebuilder.kit.editor.job.gridpane;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.job.BatchSelectionJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.DeleteObjectJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
 import com.oracle.javafx.scenebuilder.kit.editor.job.gridpane.GridPaneJobUtils.Position;
 import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.AddPropertyValueJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.RemoveObjectJob;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.AbstractSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.GridSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
@@ -149,7 +149,7 @@ public class MoveColumnJob extends BatchSelectionJob {
             // indeed, they are automatically shifted while updating the target ones 
             if (targetConstraints != null) {
                 // First remove current target constraints
-                final Job removeValueJob = new DeleteObjectJob(
+                final Job removeValueJob = new RemoveObjectJob(
                         targetConstraints,
                         getEditorController());
                 result.add(removeValueJob);
