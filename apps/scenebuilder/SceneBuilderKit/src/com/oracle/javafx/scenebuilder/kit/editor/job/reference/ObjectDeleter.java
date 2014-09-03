@@ -45,7 +45,6 @@ import com.oracle.javafx.scenebuilder.kit.fxom.FXOMNodes;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMProperty;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMPropertyC;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMPropertyT;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -159,13 +158,6 @@ public class ObjectDeleter {
                 }
             } else if (result instanceof FXOMIntrinsic) {
                 // No prework needed
-            } else if (result instanceof FXOMPropertyT) {
-                // No prework needed
-            } else if (result instanceof FXOMPropertyC) {
-                final FXOMPropertyC cp = (FXOMPropertyC) result;
-                for (FXOMObject value : new LinkedList<>(cp.getValues())) {
-                    prepareDeleteObject(value, target);
-                }
             }
         }
         
