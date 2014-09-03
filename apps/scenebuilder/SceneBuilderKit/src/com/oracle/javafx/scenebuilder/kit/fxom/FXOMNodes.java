@@ -582,6 +582,41 @@ public class FXOMNodes {
     }
     
     
+    private static final PropertyName toggleGroupName = new PropertyName("toggleGroup");
+    
+    public static boolean isToggleGroupReference(FXOMNode node) {
+        final boolean result;
+        
+        if (extractReferenceSource(node) == null) {
+            result = false;
+        } else {
+            if (node instanceof FXOMIntrinsic) {
+                final FXOMIntrinsic intrinsic = (FXOMIntrinsic) node;
+                final FXOMProperty parentProperty = intrinsic.getParentProperty();
+                if (parentProperty == null) {
+                    result = false;
+                } else {
+                    result = parentProperty.getName().equals(toggleGroupName);
+                }
+            } else if (node instanceof FXOMPropertyT) {
+                final FXOMPropertyT property = (FXOMPropertyT) node;
+                result = property.getName().equals(toggleGroupName);
+            } else {
+                result = false;
+            }
+        }
+        
+        return result;
+    }
+    
+    
+    public static FXOMPropertyC makeToggleGroup(FXOMDocument fxomDocument, String fxId) {
+        final FXOMInstance toggleGroup = new FXOMInstance(fxomDocument, ToggleGroup.class);
+        toggleGroup.setFxId(fxId);
+        return new FXOMPropertyC(fxomDocument, toggleGroupName, toggleGroup);
+    }
+    
+    
     public static boolean isWeakReference(FXOMNode node) {
         final boolean result;
         

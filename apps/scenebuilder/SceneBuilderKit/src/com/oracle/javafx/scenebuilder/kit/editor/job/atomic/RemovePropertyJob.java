@@ -57,6 +57,10 @@ public class RemovePropertyJob extends Job {
         return targetProperty;
     }
 
+    public Job makeMirrorJob(FXOMProperty anotherProperty) {
+        return new AddPropertyJob(anotherProperty, parentInstance, 
+                indexInParentInstance, getEditorController());
+    }
 
     /*
      * Job

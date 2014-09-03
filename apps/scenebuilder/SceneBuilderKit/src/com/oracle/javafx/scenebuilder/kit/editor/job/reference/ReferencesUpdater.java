@@ -168,15 +168,27 @@ public class ReferencesUpdater {
         if (declaredFxIds.contains(fxId) == false) {
             // r is a forward reference
             //
+            // 0) r is a toggleGroup reference
+            //    => if toggle group exists, we swap it with the reference
+            //    => if not, replace the reference by a new toggle group
             // 1) r is a weak reference (like labelFor)
             //    => we remove the reference
             // 2) else r is a strong reference
             //    => we expand the reference
             
-
-            // 1)
+            
             final FXOMObject declarer = fxomDocument.searchWithFxId(fxId);
-            if (FXOMNodes.isWeakReference(r) || (declarer == null)) {
+
+            // 0)
+            if (FXOMNodes.isToggleGroupReference(r)) {
+                final Job fixJob = new FixToggleGroupReferenceJob(r, editorController);
+                fixJob.execute();
+                executedJobs.add(fixJob);
+                declaredFxIds.add(fxId);
+            }
+            
+            // 1
+            else if (FXOMNodes.isWeakReference(r) || (declarer == null)) {
                 final Job removeJob = new RemoveNodeJob(r, editorController);
                 removeJob.execute();
                 executedJobs.add(removeJob);
