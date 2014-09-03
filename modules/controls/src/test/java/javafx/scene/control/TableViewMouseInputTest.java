@@ -50,17 +50,17 @@ import static org.junit.Assert.*;
 //@Ignore("Disabling tests as they fail with OOM in continuous builds")
 public class TableViewMouseInputTest {
     private TableView<String> tableView;
-    private TableView.TableViewSelectionModel<String> sm;
+    private TableView.TableViewSelectionModel<?> sm;
     private TableView.TableViewFocusModel<String> fm;
 
-    private final TableColumn<String, String> col0 = new TableColumn<String, String>("col0");
-    private final TableColumn<String, String> col1 = new TableColumn<String, String>("col1");
-    private final TableColumn<String, String> col2 = new TableColumn<String, String>("col2");
-    private final TableColumn<String, String> col3 = new TableColumn<String, String>("col3");
-    private final TableColumn<String, String> col4 = new TableColumn<String, String>("col4");
+    private final TableColumn<String, String> col0 = new TableColumn<>("col0");
+    private final TableColumn<String, String> col1 = new TableColumn<>("col1");
+    private final TableColumn<String, String> col2 = new TableColumn<>("col2");
+    private final TableColumn<String, String> col3 = new TableColumn<>("col3");
+    private final TableColumn<String, String> col4 = new TableColumn<>("col4");
     
     @Before public void setup() {
-        tableView = new TableView<String>();
+        tableView = new TableView<>();
         sm = tableView.getSelectionModel();
         fm = tableView.getFocusModel();
         
@@ -420,7 +420,7 @@ public class TableViewMouseInputTest {
 
         TablePosition pos = sm.getSelectedCells().get(0);
         assertEquals(1, pos.getRow());
-        assertNull(pos.getTableColumn());
+        assertNotNull(pos.getTableColumn());
     }
 
     @Test public void test_rt_33897_cellSelection() {
@@ -552,16 +552,16 @@ public class TableViewMouseInputTest {
         assertTrue(sm.isSelected(0, firstNameCol));
         assertEquals(1, sm.getSelectedCells().size());
 
+        TableCell cell_0_0 = (TableCell) VirtualFlowTestUtils.getCell(table, 0, 0);
         TableCell cell_0_1 = (TableCell) VirtualFlowTestUtils.getCell(table, 0, 1);
         TableCell cell_0_2 = (TableCell) VirtualFlowTestUtils.getCell(table, 0, 2);
-        TableCell cell_0_3 = (TableCell) VirtualFlowTestUtils.getCell(table, 0, 3);
 
+        TableCell cell_1_0 = (TableCell) VirtualFlowTestUtils.getCell(table, 1, 0);
         TableCell cell_1_1 = (TableCell) VirtualFlowTestUtils.getCell(table, 1, 1);
         TableCell cell_1_2 = (TableCell) VirtualFlowTestUtils.getCell(table, 1, 2);
-        TableCell cell_1_3 = (TableCell) VirtualFlowTestUtils.getCell(table, 1, 3);
 
         MouseEventFirer mouse = selectTwoRows ?
-                new MouseEventFirer(cell_1_3) : new MouseEventFirer(cell_0_3);
+                new MouseEventFirer(cell_1_2) : new MouseEventFirer(cell_0_2);
 
         mouse.fireMousePressAndRelease(KeyModifier.SHIFT);
 
@@ -577,14 +577,242 @@ public class TableViewMouseInputTest {
 
         assertEquals(selectTwoRows ? 6 : 3, sm.getSelectedCells().size());
 
+        assertTrue(cell_0_0.isSelected());
         assertTrue(cell_0_1.isSelected());
         assertTrue(cell_0_2.isSelected());
-        assertTrue(cell_0_3.isSelected());
 
         if (selectTwoRows) {
+            assertTrue(cell_1_0.isSelected());
             assertTrue(cell_1_1.isSelected());
             assertTrue(cell_1_2.isSelected());
-            assertTrue(cell_1_3.isSelected());
+        }
+    }
+
+    @Test public void test_rt_38464_rowSelection() {
+        final ObservableList<Person> data =
+                FXCollections.observableArrayList(
+                        new Person("Jacob", "Smith", "jacob.smith@example.com"),
+                        new Person("Isabella", "Johnson", "isabella.johnson@example.com"),
+                        new Person("Ethan", "Williams", "ethan.williams@example.com"),
+                        new Person("Emma", "Jones", "emma.jones@example.com"),
+                        new Person("Michael", "Brown", "michael.brown@example.com"));
+
+        TableView<Person> table = new TableView<>();
+        table.setItems(data);
+
+        sm = table.getSelectionModel();
+        sm.setCellSelectionEnabled(false);
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        TableColumn firstNameCol = new TableColumn("First Name");
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
+
+        TableColumn lastNameCol = new TableColumn("Last Name");
+        lastNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("lastName"));
+
+        TableColumn emailCol = new TableColumn("Email");
+        emailCol.setCellValueFactory(new PropertyValueFactory<Person, String>("email"));
+
+        table.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
+
+        sm.clearSelection();
+        sm.select(0, lastNameCol);
+
+        assertTrue(sm.isSelected(0, lastNameCol));
+        assertEquals(1, sm.getSelectedCells().size());
+
+        TableCell cell_4_2 = (TableCell) VirtualFlowTestUtils.getCell(table, 4, 1);
+
+        MouseEventFirer mouse = new MouseEventFirer(cell_4_2);
+        mouse.fireMousePressAndRelease(KeyModifier.SHIFT);
+
+        // we are in row selection mode, so all cells in the selected rows should
+        // be selected. We test this per-cell, but also per-row.
+        for (int row = 0; row < 5; row++) {
+            // test that the selection model is accurate
+            assertTrue(sm.isSelected(row, firstNameCol));
+            assertTrue(sm.isSelected(row, lastNameCol));
+            assertTrue(sm.isSelected(row, emailCol));
+            assertTrue(sm.isSelected(row));
+
+            // and assert that the visuals are accurate
+            // (TableCells should not be selected, but TableRows should be)
+            for (int column = 0; column < 3; column++) {
+                if (row == 4 && column == 2) {
+                    // bizarrely cell (4,2), i.e. the bottom-right cell consisting
+                    // of Michael Brown's email address, doesn't exist.
+                    continue;
+                }
+                TableCell cell = (TableCell) VirtualFlowTestUtils.getCell(table, row, column);
+                assertFalse("cell[row: " + row + ", column: " + column + "] is selected, but shouldn't be", cell.isSelected());
+            }
+            TableRow cell = (TableRow) VirtualFlowTestUtils.getCell(table, row);
+            assertTrue(cell.isSelected());
+        }
+    }
+
+    @Test public void test_rt_38464_cellSelection() {
+        final ObservableList<Person> data =
+                FXCollections.observableArrayList(
+                        new Person("Jacob", "Smith", "jacob.smith@example.com"),
+                        new Person("Isabella", "Johnson", "isabella.johnson@example.com"),
+                        new Person("Ethan", "Williams", "ethan.williams@example.com"),
+                        new Person("Emma", "Jones", "emma.jones@example.com"),
+                        new Person("Michael", "Brown", "michael.brown@example.com"));
+
+        TableView<Person> table = new TableView<>();
+        table.setItems(data);
+
+        sm = table.getSelectionModel();
+        sm.setCellSelectionEnabled(true);
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        TableColumn firstNameCol = new TableColumn("First Name");
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
+
+        TableColumn lastNameCol = new TableColumn("Last Name");
+        lastNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("lastName"));
+
+        TableColumn emailCol = new TableColumn("Email");
+        emailCol.setCellValueFactory(new PropertyValueFactory<Person, String>("email"));
+
+        table.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
+
+        sm.clearSelection();
+        sm.select(0, emailCol);
+        table.getFocusModel().focus(0, emailCol);
+
+        assertTrue(sm.isSelected(0, emailCol));
+        assertEquals(1, sm.getSelectedCells().size());
+
+        TableCell cell_4_2 = (TableCell) VirtualFlowTestUtils.getCell(table, 4, 2);
+        assertEquals(emailCol, cell_4_2.getTableColumn());
+
+        new MouseEventFirer(cell_4_2).fireMousePressAndRelease(KeyModifier.SHIFT);
+
+        for (int row = 0; row < 5; row++) {
+            // test that the selection model is accurate
+            assertFalse(sm.isSelected(row, firstNameCol));
+            assertFalse(sm.isSelected(row, lastNameCol));
+            assertTrue(sm.isSelected(row, emailCol));
+            assertFalse(sm.isSelected(row));
+
+            // and assert that the visuals are accurate
+            // (some TableCells should be selected, but TableRows should not be)
+            for (int column = 0; column < 3; column++) {
+                if (row == 4 && column == 2) {
+                    // bizarrely cell (4,2), i.e. the bottom-right cell consisting
+                    // of Michael Brown's email address, doesn't exist.
+                    continue;
+                }
+                TableCell cell = (TableCell) VirtualFlowTestUtils.getCell(table, row, column);
+                assertEquals(column == 2 ? true : false, cell.isSelected());
+            }
+            TableRow cell = (TableRow) VirtualFlowTestUtils.getCell(table, row);
+            assertFalse(cell.isSelected());
+        }
+    }
+
+    @Test public void test_rt_38464_selectedColumnChangesWhenCellsInRowClicked_cellSelection_singleSelection() {
+        test_rt_38464_selectedColumnChangesWhenCellsInRowClicked(true, true);
+    }
+
+    @Test public void test_rt_38464_selectedColumnChangesWhenCellsInRowClicked_cellSelection_multipleSelection() {
+        test_rt_38464_selectedColumnChangesWhenCellsInRowClicked(true, false);
+    }
+
+    @Test public void test_rt_38464_selectedColumnChangesWhenCellsInRowClicked_rowSelection_singleSelection() {
+        test_rt_38464_selectedColumnChangesWhenCellsInRowClicked(false, true);
+    }
+
+    @Test public void test_rt_38464_selectedColumnChangesWhenCellsInRowClicked_rowSelection_multipleSelection() {
+        test_rt_38464_selectedColumnChangesWhenCellsInRowClicked(false, false);
+    }
+
+    private void test_rt_38464_selectedColumnChangesWhenCellsInRowClicked(boolean cellSelection, boolean singleSelection) {
+        final ObservableList<Person> data =
+                FXCollections.observableArrayList(
+                        new Person("Jacob", "Smith", "jacob.smith@example.com"),
+                        new Person("Isabella", "Johnson", "isabella.johnson@example.com"),
+                        new Person("Ethan", "Williams", "ethan.williams@example.com"),
+                        new Person("Emma", "Jones", "emma.jones@example.com"),
+                        new Person("Michael", "Brown", "michael.brown@example.com"));
+
+        TableView<Person> table = new TableView<>();
+        table.setItems(data);
+
+        sm = table.getSelectionModel();
+        sm.setCellSelectionEnabled(cellSelection);
+        sm.setSelectionMode(singleSelection ? SelectionMode.SINGLE : SelectionMode.MULTIPLE);
+
+        TableColumn firstNameCol = new TableColumn("First Name");
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
+
+        TableColumn lastNameCol = new TableColumn("Last Name");
+        lastNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("lastName"));
+
+        TableColumn emailCol = new TableColumn("Email");
+        emailCol.setCellValueFactory(new PropertyValueFactory<Person, String>("email"));
+
+        table.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
+
+        TableCell cell_0_0 = (TableCell) VirtualFlowTestUtils.getCell(table, 0, 0);
+        TableCell cell_0_1 = (TableCell) VirtualFlowTestUtils.getCell(table, 0, 1);
+        TableCell cell_0_2 = (TableCell) VirtualFlowTestUtils.getCell(table, 0, 2);
+
+        sm.clearSelection();
+
+        // click on cell (0,0).
+        new MouseEventFirer(cell_0_0).fireMousePressAndRelease();
+
+        if (cellSelection) {
+            // Because we are in cell selection mode, this has the effect of
+            // selecting just the one cell.
+            assertFalse(sm.isSelected(0));
+            assertTrue(sm.isSelected(0, firstNameCol));
+            assertFalse(sm.isSelected(0, lastNameCol));
+            assertFalse(sm.isSelected(0, emailCol));
+            assertEquals(1, sm.getSelectedCells().size());
+            assertEquals(0, sm.getSelectedCells().get(0).getRow());
+            assertEquals(firstNameCol, sm.getSelectedCells().get(0).getTableColumn());
+        } else {
+            // Because we are in row selection mode, this has
+            // the effect of selecting all cells and the backing row. However, the
+            // selected cell will be (0, firstNameCol) only
+            assertTrue(sm.isSelected(0));
+            assertTrue(sm.isSelected(0, firstNameCol));
+            assertTrue(sm.isSelected(0, lastNameCol));
+            assertTrue(sm.isSelected(0, emailCol));
+            assertEquals(1, sm.getSelectedCells().size());
+            assertEquals(0, sm.getSelectedCells().get(0).getRow());
+            assertEquals(firstNameCol, sm.getSelectedCells().get(0).getTableColumn());
+        }
+
+        // click on cell (0,1).
+        new MouseEventFirer(cell_0_1).fireMousePressAndRelease();
+
+        if (cellSelection) {
+            // Everything should remain the same, except the
+            // column of the single selected cell should change to lastNameCol.
+            assertFalse(sm.isSelected(0));
+            assertFalse(sm.isSelected(0, firstNameCol));
+            assertTrue(sm.isSelected(0, lastNameCol));
+            assertFalse(sm.isSelected(0, emailCol));
+            assertEquals(1, sm.getSelectedCells().size());
+            TablePosition<?,?> cell = sm.getSelectedCells().get(0);
+            assertEquals(0, cell.getRow());
+            assertEquals(lastNameCol, cell.getTableColumn());
+        } else {
+            // Everything should remain the same, except the
+            // column of the single selected cell should change to lastNameCol.
+            assertTrue(sm.isSelected(0));
+            assertTrue(sm.isSelected(0, firstNameCol));
+            assertTrue(sm.isSelected(0, lastNameCol));
+            assertTrue(sm.isSelected(0, emailCol));
+            assertEquals(1, sm.getSelectedCells().size());
+            TablePosition<?,?> cell = sm.getSelectedCells().get(0);
+            assertEquals(0, cell.getRow());
+            assertEquals(lastNameCol, cell.getTableColumn());
         }
     }
 }

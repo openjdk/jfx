@@ -500,7 +500,10 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
         if (getIndex() == -1 || tv == null) return;
 
         TreeTableView.TreeTableViewSelectionModel<S> sm = tv.getSelectionModel();
-        if (sm == null) return;
+        if (sm == null) {
+            updateSelected(false);
+            return;
+        }
 
         boolean isSelectedNow = sm.isSelected(getIndex(), getTableColumn());
         if (isSelected == isSelectedNow) return;
@@ -521,7 +524,10 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
         if (getIndex() == -1 || tv == null) return;
 
         TreeTableView.TreeTableViewFocusModel<S> fm = tv.getFocusModel();
-        if (fm == null) return;
+        if (fm == null) {
+            setFocused(false);
+            return;
+        }
 
         boolean isFocusedNow = fm != null &&
                             fm.isFocused(getIndex(), getTableColumn());

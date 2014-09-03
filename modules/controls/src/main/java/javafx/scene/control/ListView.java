@@ -31,6 +31,7 @@ import java.util.HashMap;
 import java.util.List;
 
 import com.sun.javafx.scene.control.behavior.ListCellBehavior;
+import com.sun.javafx.scene.control.behavior.TableCellBehaviorBase;
 import javafx.beans.InvalidationListener;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
@@ -1229,6 +1230,9 @@ public class ListView<T> extends Control {
             }
             
             updateItemCount();
+
+            updateDefaultSelection();
+            ListCellBehavior.setAnchor(listView, 0, true);
         }
         
         // watching for changes to the items list content
@@ -1277,36 +1281,6 @@ public class ListView<T> extends Control {
         private WeakChangeListener<ObservableList<T>> weakItemsObserver = 
                 new WeakChangeListener<ObservableList<T>>(itemsObserver);
         
-        private void updateItemsObserver(ObservableList<T> oldList, ObservableList<T> newList) {
-            // update listeners
-            if (oldList != null) {
-                oldList.removeListener(weakItemsContentObserver);
-            }
-            if (newList != null) {
-                newList.addListener(weakItemsContentObserver);
-            }
-            
-            updateItemCount();
-
-            // when the items list totally changes, we should clear out
-            // the selection and focus
-            int newValueIndex = -1;
-            if (newList != null) {
-                T selectedItem = getSelectedItem();
-                if (selectedItem != null) {
-                    newValueIndex = newList.indexOf(selectedItem);
-                }
-
-                // we put selection onto the first item, if there is at least
-                // one item in the list
-                if (listView.selectFirstRowByDefault && newValueIndex == -1) {
-                    newValueIndex = newList.size() > 0 ? 0 : -1;
-                }
-            }
-
-            select(newValueIndex);
-        }
-
 
 
         /***********************************************************************
@@ -1466,6 +1440,14 @@ public class ListView<T> extends Control {
             return items.get(index);
         }
 
+
+
+        /***********************************************************************
+         *                                                                     *
+         * Private implementation                                              *
+         *                                                                     *
+         **********************************************************************/
+
         private void updateItemCount() {
             if (listView == null) {
                 itemCount = -1;
@@ -1473,7 +1455,41 @@ public class ListView<T> extends Control {
                 List<T> items = listView.getItems();
                 itemCount = items == null ? -1 : items.size();
             }
-        } 
+        }
+
+        private void updateItemsObserver(ObservableList<T> oldList, ObservableList<T> newList) {
+            // update listeners
+            if (oldList != null) {
+                oldList.removeListener(weakItemsContentObserver);
+            }
+            if (newList != null) {
+                newList.addListener(weakItemsContentObserver);
+            }
+
+            updateItemCount();
+            updateDefaultSelection();
+        }
+
+        private void updateDefaultSelection() {
+            // when the items list totally changes, we should clear out
+            // the selection and focus
+            int newValueIndex = -1;
+            if (listView.getItems() != null) {
+                T selectedItem = getSelectedItem();
+                if (selectedItem != null) {
+                    newValueIndex = listView.getItems().indexOf(selectedItem);
+                }
+
+                // we put selection onto the first item, if there is at least
+                // one item in the list
+                if (listView.selectFirstRowByDefault && newValueIndex == -1) {
+                    newValueIndex = listView.getItems().size() > 0 ? 0 : -1;
+                }
+            }
+
+            clearSelection();
+            select(newValueIndex);
+        }
     }
 
 
@@ -1496,6 +1512,10 @@ public class ListView<T> extends Control {
             }
             
             updateItemCount();
+
+            if (itemCount > 0) {
+                focus(0);
+            }
         }
 
         private ChangeListener<ObservableList<T>> itemsListener = (observable, oldList, newList) -> {
@@ -1503,7 +1523,7 @@ public class ListView<T> extends Control {
         };
         
         private WeakChangeListener<ObservableList<T>> weakItemsListener = 
-                new WeakChangeListener<ObservableList<T>>(itemsListener);
+                new WeakChangeListener<>(itemsListener);
         
         private void updateItemsObserver(ObservableList<T> oldList, ObservableList<T> newList) {
             // the listview items list has changed, we need to observe
@@ -1516,34 +1536,32 @@ public class ListView<T> extends Control {
         
         // Listen to changes in the listview items list, such that when it
         // changes we can update the focused index to refer to the new indices.
-        private final ListChangeListener<T> itemsContentListener = new ListChangeListener<T>() {
-            @Override public void onChanged(Change<? extends T> c) {
-                updateItemCount();
-                
+        private final ListChangeListener<T> itemsContentListener = c -> {
+            updateItemCount();
+
+            while (c.next()) {
+                // looking at the first change
+                int from = c.getFrom();
+                if (getFocusedIndex() == -1 || from > getFocusedIndex()) {
+                    return;
+                }
+
+                c.reset();
+                boolean added = false;
+                boolean removed = false;
+                int addedSize = 0;
+                int removedSize = 0;
                 while (c.next()) {
-                    // looking at the first change
-                    int from = c.getFrom();
-                    if (getFocusedIndex() == -1 || from > getFocusedIndex()) {
-                        return;
-                    }
+                    added |= c.wasAdded();
+                    removed |= c.wasRemoved();
+                    addedSize += c.getAddedSize();
+                    removedSize += c.getRemovedSize();
+                }
 
-                    c.reset();
-                    boolean added = false;
-                    boolean removed = false;
-                    int addedSize = 0;
-                    int removedSize = 0;
-                    while (c.next()) {
-                        added |= c.wasAdded();
-                        removed |= c.wasRemoved();
-                        addedSize += c.getAddedSize();
-                        removedSize += c.getRemovedSize();
-                    }
-
-                    if (added && !removed) {
-                        focus(getFocusedIndex() + addedSize);
-                    } else if (!added && removed) {
-                        focus(getFocusedIndex() - removedSize);
-                    }
+                if (added && !removed) {
+                    focus(getFocusedIndex() + addedSize);
+                } else if (!added && removed) {
+                    focus(getFocusedIndex() - removedSize);
                 }
             }
         };

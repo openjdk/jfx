@@ -31,6 +31,7 @@ import java.util.*;
 import com.sun.javafx.scene.control.Logging;
 import com.sun.javafx.scene.control.SelectedCellsMap;
 import com.sun.javafx.scene.control.behavior.TableCellBehavior;
+import com.sun.javafx.scene.control.behavior.TableCellBehaviorBase;
 import javafx.beans.DefaultProperty;
 import javafx.beans.InvalidationListener;
 import javafx.beans.WeakInvalidationListener;
@@ -1960,14 +1961,11 @@ public class TableView<S> extends Control {
             super(tableView);
             this.tableView = tableView;
 
-            updateItemCount();
-            
-            cellSelectionEnabledProperty().addListener(o -> {
-                isCellSelectionEnabled();
-                clearSelection();
-            });
-
-            selectedCellsMap = new SelectedCellsMap<>(c -> handleSelectedCellsListChangeEvent(c));
+            selectedCellsMap = new SelectedCellsMap<TablePosition<S,?>>(c -> handleSelectedCellsListChangeEvent(c)) {
+                @Override public boolean isCellSelectionEnabled() {
+                    return TableViewArrayListSelectionModel.this.isCellSelectionEnabled();
+                }
+            };
 
             selectedItems = new ReadOnlyUnbackedObservableList<S>() {
                 @Override public S get(int i) {
@@ -2004,81 +2002,64 @@ public class TableView<S> extends Control {
             if (items != null) {
                 items.addListener(weakItemsContentListener);
             }
+
+
+            updateItemCount();
+
+            updateDefaultSelection();
+            TableCellBehaviorBase.setAnchor(tableView, getFocusedCell(), true);
+
+            cellSelectionEnabledProperty().addListener(o -> {
+                updateDefaultSelection();
+                TableCellBehaviorBase.setAnchor(tableView, getFocusedCell(), true);
+            });
         }
         
         private final TableView<S> tableView;
         
-        final ListChangeListener<S> itemsContentListener = new ListChangeListener<S>() {
-            @Override public void onChanged(Change<? extends S> c) {
-                updateItemCount();
+        final ListChangeListener<S> itemsContentListener = c -> {
+            updateItemCount();
 
-                List<S> items = getTableModel();
+            List<S> items1 = getTableModel();
 
-                while (c.next()) {
-                    final S selectedItem = getSelectedItem();
-                    final int selectedIndex = getSelectedIndex();
-                    
-                    if (items == null || items.isEmpty()) {
-                        clearSelection();
-                    } else if (getSelectedIndex() == -1 && getSelectedItem() != null) {
-                        int newIndex = items.indexOf(getSelectedItem());
-                        if (newIndex != -1) {
-                            setSelectedIndex(newIndex);
-                        }
-                    } else if (c.wasRemoved() && 
-                            c.getRemovedSize() == 1 && 
-                            ! c.wasAdded() && 
-                            selectedItem != null && 
-                            selectedItem.equals(c.getRemoved().get(0))) {
-                        // Bug fix for RT-28637
-                        if (getSelectedIndex() < getItemCount()) {
-                            S newSelectedItem = getModelItem(selectedIndex);
-                            if (! selectedItem.equals(newSelectedItem)) {
-                                setSelectedItem(newSelectedItem);
-                            }
+            while (c.next()) {
+                if (c.wasReplaced() || c.getAddedSize() == getItemCount()) {
+                    updateDefaultSelection();
+                    return;
+                }
+
+                final S selectedItem = getSelectedItem();
+                final int selectedIndex = getSelectedIndex();
+
+                if (items1 == null || items1.isEmpty()) {
+                    clearSelection();
+                } else if (getSelectedIndex() == -1 && getSelectedItem() != null) {
+                    int newIndex = items1.indexOf(getSelectedItem());
+                    if (newIndex != -1) {
+                        setSelectedIndex(newIndex);
+                    }
+                } else if (c.wasRemoved() &&
+                        c.getRemovedSize() == 1 &&
+                        ! c.wasAdded() &&
+                        selectedItem != null &&
+                        selectedItem.equals(c.getRemoved().get(0))) {
+                    // Bug fix for RT-28637
+                    if (getSelectedIndex() < getItemCount()) {
+                        S newSelectedItem = getModelItem(selectedIndex);
+                        if (! selectedItem.equals(newSelectedItem)) {
+                            setSelectedItem(newSelectedItem);
                         }
                     }
                 }
-
-                updateSelection(c);
             }
+
+            updateSelection(c);
         };
         
         final WeakListChangeListener<S> weakItemsContentListener 
-                = new WeakListChangeListener<S>(itemsContentListener);
+                = new WeakListChangeListener<>(itemsContentListener);
         
-        private void updateItemsObserver(ObservableList<S> oldList, ObservableList<S> newList) {
-            // the items list has changed, we need to observe
-            // the new list, and remove any observer we had from the old list
-            if (oldList != null) {
-                oldList.removeListener(weakItemsContentListener);
-            }
-            if (newList != null) {
-                newList.addListener(weakItemsContentListener);
-            }
-            
-            updateItemCount();
 
-            // when the items list totally changes, we should clear out
-            // the selection
-            int newValueIndex = -1;
-            if (newList != null) {
-                S selectedItem = getSelectedItem();
-                if (selectedItem != null) {
-                    newValueIndex = newList.indexOf(selectedItem);
-                }
-
-                // we put selection onto the first item, if there is at least
-                // one item in the list
-                if (newValueIndex == -1) {
-                    newValueIndex = newList.size() > 0 ? 0 : -1;
-                }
-            }
-
-            TableColumn<S,?> firstColumn = getTableColumn(0);
-            select(newValueIndex, isCellSelectionEnabled() ? firstColumn : null);
-        }
-        
 
         /***********************************************************************
          *                                                                     *
@@ -2264,13 +2245,6 @@ public class TableView<S> extends Control {
             // replace the anchor
             TableCellBehavior.setAnchor(tableView, newTablePosition, false);
 
-            // RT-33558 if this method has been called with a given row/column
-            // intersection, and that row/column intersection is the only
-            // selection currently, then this method becomes a no-op.
-            if (getSelectedCells().size() == 1 && isSelected(row, column)) {
-                return;
-            }
-
             // if I'm in cell selection mode but the column is null, I don't want
             // to select the whole row instead...
             if (isCellSelectionEnabled() && column == null) {
@@ -2311,9 +2285,15 @@ public class TableView<S> extends Control {
         public void select(int row, TableColumn<S,?> column) {
             if (row < 0 || row >= getItemCount()) return;
 
-            // if I'm in cell selection mode but the column is null, I don't want
-            // to select the whole row instead...
-            if (isCellSelectionEnabled() && column == null) return;
+            // if I'm in cell selection mode but the column is null, select each
+            // of the contained cells individually
+            if (isCellSelectionEnabled() && column == null) {
+                List<TableColumn<S,?>> columns = getTableView().getVisibleLeafColumns();
+                for (int i = 0; i < columns.size(); i++) {
+                    select(row, columns.get(i));
+                }
+                return;
+            }
 
             TablePosition<S,?> pos = new TablePosition<>(getTableView(), row, column);
             
@@ -2366,6 +2346,7 @@ public class TableView<S> extends Control {
             // We expect that in concrete subclasses of this class we observe the
             // data model such that we check to see if the given item exists in it,
             // whilst SelectedIndex == -1 && SelectedItem != null.
+            setSelectedIndex(-1);
             setSelectedItem(obj);
         }
 
@@ -2399,28 +2380,49 @@ public class TableView<S> extends Control {
                 }
             } else {
                 int lastIndex = -1;
-                Set<TablePosition<S,?>> positions = new LinkedHashSet<TablePosition<S,?>>();
+                Set<TablePosition<S,?>> positions = new LinkedHashSet<>();
 
+                // --- firstly, we special-case the non-varargs 'row' argument
                 if (row >= 0 && row < rowCount) {
-                    TablePosition<S,Object> tp = new TablePosition<S,Object>(getTableView(), row, null);
-                    
-                    boolean match = selectedCellsMap.isSelected(row, -1);
-                    if (! match) {
-                        positions.add(tp);
-                        lastIndex = row;
+                    // if I'm in cell selection mode, we want to select each
+                    // of the contained cells individually
+                    if (isCellSelectionEnabled()) {
+                        List<TableColumn<S,?>> columns = getTableView().getVisibleLeafColumns();
+                        for (int column = 0; column < columns.size(); column++) {
+                            if (! selectedCellsMap.isSelected(row, column)) {
+                                positions.add(new TablePosition<>(getTableView(), row, columns.get(column)));
+                                lastIndex = row;
+                            }
+                        }
+                    } else {
+                        boolean match = selectedCellsMap.isSelected(row, -1);
+                        if (!match) {
+                            positions.add(new TablePosition<>(getTableView(), row, null));
+                            lastIndex = row;
+                        }
                     }
                 }
 
-                outer: for (int i = 0; i < rows.length; i++) {
+                // --- now we iterate through all varargs values
+                for (int i = 0; i < rows.length; i++) {
                     int index = rows[i];
                     if (index < 0 || index >= rowCount) continue;
                     lastIndex = index;
-                    
-                    if (selectedCellsMap.isSelected(index, -1)) continue outer;
-                    
-                    // if we are here then we have successfully gotten through the for-loop above
-                    TablePosition<S,Object> pos = new TablePosition<S,Object>(getTableView(), index, null);
-                    positions.add(pos);
+
+                    if (isCellSelectionEnabled()) {
+                        List<TableColumn<S,?>> columns = getTableView().getVisibleLeafColumns();
+                        for (int column = 0; column < columns.size(); column++) {
+                            if (! selectedCellsMap.isSelected(index, column)) {
+                                positions.add(new TablePosition<>(getTableView(), index, columns.get(column)));
+                                lastIndex = index;
+                            }
+                        }
+                    } else {
+                        if (! selectedCellsMap.isSelected(index, -1)) {
+                            // if we are here then we have successfully gotten through the for-loop above
+                            positions.add(new TablePosition<>(getTableView(), index, null));
+                        }
+                    }
                 }
 
                 selectedCellsMap.addAll(positions);
@@ -2437,7 +2439,7 @@ public class TableView<S> extends Control {
             quietClearSelection();
 
             if (isCellSelectionEnabled()) {
-                List<TablePosition<S,?>> indices = new ArrayList<TablePosition<S,?>>();
+                List<TablePosition<S,?>> indices = new ArrayList<>();
                 TableColumn<S,?> column;
                 TablePosition<S,?> tp = null;
                 for (int col = 0; col < getTableView().getVisibleLeafColumns().size(); col++) {
@@ -2454,7 +2456,7 @@ public class TableView<S> extends Control {
                     focus(tp.getRow(), tp.getTableColumn());
                 }
             } else {
-                List<TablePosition<S,?>> indices = new ArrayList<TablePosition<S,?>>();
+                List<TablePosition<S,?>> indices = new ArrayList<>();
                 for (int i = 0; i < getItemCount(); i++) {
                     indices.add(new TablePosition<>(getTableView(), i, null));
                 }
@@ -2496,21 +2498,26 @@ public class TableView<S> extends Control {
             final int _maxRow = Math.max(minRow, maxRow);
 
             for (int _row = _minRow; _row <= _maxRow; _row++) {
-                for (int _col = _minColumnIndex; _col <= _maxColumnIndex; _col++) {
-                    // begin copy/paste of select(int, column) method (with some
-                    // slight modifications)
-                    if (_row < 0 || _row >= itemCount) continue;
+                // begin copy/paste of select(int, column) method (with some
+                // slight modifications)
+                if (_row < 0 || _row >= itemCount) continue;
 
-                    final TableColumn<S,?> column = tableView.getVisibleLeafColumn(_col);
-
-                    // if I'm in cell selection mode but the column is null, I don't want
-                    // to select the whole row instead...
-                    if (column == null && isCellSelectionEnabled) continue;
-
-                    TablePosition<S,?> pos = new TablePosition<>(tableView, _row, column);
-
+                if (! isCellSelectionEnabled) {
+                    TablePosition<S, ?> pos = new TablePosition<>(tableView, _row, (TableColumn<S,?>)minColumn);
                     selectedCellsMap.add(pos);
-                    // end copy/paste
+                } else {
+                    for (int _col = _minColumnIndex; _col <= _maxColumnIndex; _col++) {
+                        final TableColumn<S, ?> column = tableView.getVisibleLeafColumn(_col);
+
+                        // if I'm in cell selection mode but the column is null, I don't want
+                        // to select the whole row instead...
+                        if (column == null && isCellSelectionEnabled) continue;
+
+                        TablePosition<S, ?> pos = new TablePosition<>(tableView, _row, column);
+
+                        selectedCellsMap.add(pos);
+                        // end copy/paste
+                    }
                 }
             }
             stopAtomic();
@@ -2542,10 +2549,6 @@ public class TableView<S> extends Control {
             for (TablePosition pos : getSelectedCells()) {
                 if ((! csMode && pos.getRow() == row) || (csMode && pos.equals(tp))) {
                     selectedCellsMap.remove(pos);
-
-//                    // give focus to this cell index
-//                    focus(row);
-
                     return;
                 }
             }
@@ -2571,12 +2574,11 @@ public class TableView<S> extends Control {
         @Override
         public boolean isSelected(int row, TableColumn<S,?> column) {
             // When in cell selection mode, we currently do NOT support selecting
-            // entire rows, so a isSelected(row, null) 
-            // should always return false.
+            // entire rows, so a isSelected(row, null) should always return false.
             final boolean isCellSelectionEnabled = isCellSelectionEnabled();
             if (isCellSelectionEnabled && column == null) return false;
 
-            int columnIndex = tableView.getVisibleLeafIndex(column);
+            int columnIndex = ! isCellSelectionEnabled || column == null ? -1 : tableView.getVisibleLeafIndex(column);
             return selectedCellsMap.isSelected(row, columnIndex);
         }
 
@@ -2707,15 +2709,46 @@ public class TableView<S> extends Control {
          * Support code                                                        *
          *                                                                     *
          **********************************************************************/
+
+        private void updateItemsObserver(ObservableList<S> oldList, ObservableList<S> newList) {
+            // the items list has changed, we need to observe
+            // the new list, and remove any observer we had from the old list
+            if (oldList != null) {
+                oldList.removeListener(weakItemsContentListener);
+            }
+            if (newList != null) {
+                newList.addListener(weakItemsContentListener);
+            }
+
+            updateItemCount();
+            updateDefaultSelection();
+        }
+
+        private void updateDefaultSelection() {
+            // when the items list totally changes, we should clear out
+            // the selection
+            int newValueIndex = -1;
+            if (tableView.getItems() != null) {
+                S selectedItem = getSelectedItem();
+                if (selectedItem != null) {
+                    newValueIndex = tableView.getItems().indexOf(selectedItem);
+                }
+
+                // we put selection onto the first item, if there is at least
+                // one item in the list
+                if (newValueIndex == -1) {
+                    newValueIndex = tableView.getItems().size() > 0 ? 0 : -1;
+                }
+            }
+
+            clearSelection();
+            select(newValueIndex, isCellSelectionEnabled() ? getTableColumn(0) : null);
+        }
         
         private TableColumn<S,?> getTableColumn(int pos) {
             return getTableView().getVisibleLeafColumn(pos);
         }
         
-//        private TableColumn<S,?> getTableColumn(TableColumn<S,?> column) {
-//            return getTableColumn(column, 0);
-//        }
-
         // Gets a table column to the left or right of the current one, given an offset
         private TableColumn<S,?> getTableColumn(TableColumn<S,?> column, int offset) {
             int columnIndex = getTableView().getVisibleLeafIndex(column);
@@ -2897,6 +2930,7 @@ public class TableView<S> extends Control {
         private final TableView<S> tableView;
 
         private final TablePosition<S,?> EMPTY_CELL;
+        private boolean isDefaultFocus = false;
 
         /**
          * Creates a default TableViewFocusModel instance that will be used to
@@ -2916,44 +2950,60 @@ public class TableView<S> extends Control {
                 this.tableView.getItems().addListener(weakItemsContentListener);
             }
 
-            TablePosition<S,?> pos = new TablePosition<>(tableView, -1, null);
-            setFocusedCell(pos);
-            EMPTY_CELL = pos;
+            updateDefaultFocus();
+
+            EMPTY_CELL = new TablePosition<>(tableView, -1, null);
         }
         
         // Listen to changes in the tableview items list, such that when it
         // changes we can update the focused index to refer to the new indices.
-        private final ListChangeListener<S> itemsContentListener = new ListChangeListener<S>() {
-            @Override public void onChanged(Change<? extends S> c) {
-                c.next();
-                if (c.getFrom() > getFocusedIndex()) return;
-                c.reset();
-                boolean added = false;
-                boolean removed = false;
-                int addedSize = 0;
-                int removedSize = 0;
-                while (c.next()) {
-                    added |= c.wasAdded();
-                    removed |= c.wasRemoved();
-                    addedSize += c.getAddedSize();
-                    removedSize += c.getRemovedSize();
+        private final ListChangeListener<S> itemsContentListener = c -> {
+            c.next();
+            TablePosition<S,?> focusedCell = getFocusedCell();
+            final int focusedIndex = focusedCell.getRow();
+            if (focusedIndex == -1 || c.getFrom() > focusedIndex) {
+                return;
+            }
+            c.reset();
+            boolean added = false;
+            boolean removed = false;
+            int addedSize = 0;
+            int removedSize = 0;
+            while (c.next()) {
+                added |= c.wasAdded();
+                removed |= c.wasRemoved();
+                addedSize += c.getAddedSize();
+                removedSize += c.getRemovedSize();
+            }
+
+            if (added && ! removed) {
+                if (isDefaultFocus) {
+                    focus(0, focusedCell.getTableColumn());
+                    isDefaultFocus = false;
+                } else {
+                    final int newFocusIndex = getFocusedIndex() + addedSize;
+                    focus(newFocusIndex, focusedCell.getTableColumn());
                 }
-                if (added && ! removed) {
-                    focus(getFocusedIndex() + addedSize);
-                } else if (!added && removed) {
-                    focus(getFocusedIndex() - removedSize);
+            } else if (!added && removed) {
+                final int newFocusIndex = getFocusedIndex() - removedSize;
+                if (newFocusIndex < 0) {
+                    focus(0, focusedCell.getTableColumn());
+                } else {
+                    focus(newFocusIndex, focusedCell.getTableColumn());
                 }
             }
         };
         
         private WeakListChangeListener<S> weakItemsContentListener 
-                = new WeakListChangeListener<S>(itemsContentListener);
+                = new WeakListChangeListener<>(itemsContentListener);
         
         private void updateItemsObserver(ObservableList<S> oldList, ObservableList<S> newList) {
             // the tableview items list has changed, we need to observe
             // the new list, and remove any observer we had from the old list
             if (oldList != null) oldList.removeListener(weakItemsContentListener);
             if (newList != null) newList.addListener(weakItemsContentListener);
+
+            updateDefaultFocus();
         }
 
         /** {@inheritDoc} */
@@ -3115,13 +3165,54 @@ public class TableView<S> extends Control {
             focus(cell.getRow(), getTableColumn(cell.getTableColumn(), 1));
         }
 
+        /** {@inheritDoc} */
+        @Override public void focusPrevious() {
+            if (getFocusedIndex() == -1) {
+                focus(0);
+            } else if (getFocusedIndex() > 0) {
+                focusAboveCell();
+            }
+        }
 
+        /** {@inheritDoc} */
+        @Override public void focusNext() {
+            if (getFocusedIndex() == -1) {
+                focus(0);
+            } else if (getFocusedIndex() != getItemCount() -1) {
+                focusBelowCell();
+            }
+        }
 
-         /***********************************************************************
+        /***********************************************************************
          *                                                                     *
          * Private Implementation                                              *
          *                                                                     *
          **********************************************************************/
+
+        private void updateDefaultFocus() {
+            // when the items list totally changes, we should clear out
+            // the focus
+            int newValueIndex = -1;
+            if (tableView.getItems() != null) {
+                S focusedItem = getFocusedItem();
+                if (focusedItem != null) {
+                    newValueIndex = tableView.getItems().indexOf(focusedItem);
+                }
+
+                // we put focus onto the first item, if there is at least
+                // one item in the list
+                if (newValueIndex == -1) {
+                    newValueIndex = tableView.getItems().size() > 0 ? 0 : -1;
+                }
+            }
+
+            TablePosition<S,?> focusedCell = getFocusedCell();
+            TableColumn<S,?> focusColumn = focusedCell != null ?
+               focusedCell.getTableColumn() : tableView.getVisibleLeafColumn(0);
+
+            focus(newValueIndex, focusColumn);
+            isDefaultFocus = true;
+        }
 
         private int getColumnCount() {
             return tableView.getVisibleLeafColumns().size();

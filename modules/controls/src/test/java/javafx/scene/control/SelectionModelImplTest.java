@@ -109,9 +109,9 @@ public class SelectionModelImplTest {
             { ListView.ListViewBitSetSelectionModel.class },
             { TreeView.TreeViewBitSetSelectionModel.class },
             { TableView.TableViewArrayListSelectionModel.class },
-            { TreeTableView.TreeTableViewArrayListSelectionModel.class },
-            { ChoiceBox.ChoiceBoxSelectionModel.class },
-            { ComboBox.ComboBoxSelectionModel.class }
+            { TreeTableView.TreeTableViewArrayListSelectionModel.class }
+//            { ChoiceBox.ChoiceBoxSelectionModel.class } TODO re-enable
+//            { ComboBox.ComboBoxSelectionModel.class }  TODO re-enable
         });
     }
 
@@ -249,43 +249,48 @@ public class SelectionModelImplTest {
         return item;
     }
 
-    @Test public void ensureInEmptyState() {
-        assertEquals(-1, model.getSelectedIndex());
-        assertNull(model.getSelectedItem());
+    @Test public void testDefaultState() {
+        assertEquals(0, model.getSelectedIndex());
+        assertEquals(ROW_1_VALUE, getValue(model.getSelectedItem()));
 
         if (focusModel != null) {
-            assertEquals(-1, focusModel.getFocusedIndex());
-            assertNull(focusModel.getFocusedItem());
+            assertEquals(0, focusModel.getFocusedIndex());
+            assertEquals(ROW_1_VALUE, getValue(focusModel.getFocusedItem()));
         }
     }
 
     @Test public void selectInvalidIndex() {
         // there isn't 100 rows, so selecting this shouldn't be possible
         model.select(100);
-        ensureInEmptyState();
+
+        // we should be in a default state
+        testDefaultState();
     }
 
     @Test public void selectRowAfterInvalidIndex() {
         // there isn't 100 rows, so selecting this shouldn't be possible.
-        // The end result should be that we remain at the -1 index
+        // The end result should be that we remain at the 0 index
         model.select(100);
-
-        // go to the 0th index
-        model.selectNext();
-        assertEquals(0, model.getSelectedIndex());
-        if (focusModel != null) assertEquals(0, focusModel.getFocusedIndex());
 
         // go to the 1st index
         model.selectNext();
         assertEquals(1, model.getSelectedIndex());
         if (focusModel != null) assertEquals(1, focusModel.getFocusedIndex());
+
+        // go to the 2nd index
+        model.selectNext();
+        assertEquals(2, model.getSelectedIndex());
+        if (focusModel != null) assertEquals(2, focusModel.getFocusedIndex());
     }
 
     @Test public void selectInvalidItem() {
+        assertEquals(0, model.getSelectedIndex());
+
         Object obj = new TreeItem("DUMMY");
         model.select(obj);
-        assertEquals(-1, model.getSelectedIndex());
+
         assertSame(obj, model.getSelectedItem());
+        assertEquals(-1, model.getSelectedIndex());
     }
 
     @Test public void selectValidIndex() {
@@ -312,6 +317,8 @@ public class SelectionModelImplTest {
     }
 
     @Test public void ensureIsEmptyIsAccurate() {
+        assertFalse(model.isEmpty());
+        model.clearSelection();
         assertTrue(model.isEmpty());
         model.select(5);
         assertFalse(model.isEmpty());
@@ -320,6 +327,7 @@ public class SelectionModelImplTest {
     }
 
     @Test public void testSingleSelectionMode() {
+        model.clearSelection();
         assertTrue(model.isEmpty());
 
         model.select(5);
@@ -336,7 +344,7 @@ public class SelectionModelImplTest {
 
     @Test public void testFocusOnNegativeIndex() {
         if (focusModel == null) return;
-        assertEquals(-1, focusModel.getFocusedIndex());
+        assertEquals(0, focusModel.getFocusedIndex());
         focusModel.focus(-1);
         assertEquals(-1, focusModel.getFocusedIndex());
         assertFalse(focusModel.isFocused(-1));
@@ -344,7 +352,7 @@ public class SelectionModelImplTest {
 
     @Test public void testFocusOnOutOfBoundsIndex() {
         if (focusModel == null) return;
-        assertEquals(-1, focusModel.getFocusedIndex());
+        assertEquals(0, focusModel.getFocusedIndex());
         focusModel.focus(Integer.MAX_VALUE);
         assertEquals(-1, focusModel.getFocusedIndex());
         assertNull(focusModel.getFocusedItem());
@@ -353,7 +361,7 @@ public class SelectionModelImplTest {
 
     @Test public void testFocusOnValidIndex() {
         if (focusModel == null) return;
-        assertEquals(-1, focusModel.getFocusedIndex());
+        assertEquals(0, focusModel.getFocusedIndex());
         focusModel.focus(1);
         assertEquals(1, focusModel.getFocusedIndex());
         assertTrue(focusModel.isFocused(1));
@@ -510,12 +518,12 @@ public class SelectionModelImplTest {
 
         assertEquals(0, rt32618_count);
 
-        model.select(0);
+        model.select(1);
         assertEquals(1, rt32618_count);
-        assertEquals(ROW_1_VALUE, getValue(model.getSelectedItem()));
-
-        model.clearAndSelect(1);
-        assertEquals(2, rt32618_count);
         assertEquals(ROW_2_VALUE, getValue(model.getSelectedItem()));
+
+        model.clearAndSelect(2);
+        assertEquals(2, rt32618_count);
+        assertEquals(ROW_3_VALUE, getValue(model.getSelectedItem()));
     }
 }

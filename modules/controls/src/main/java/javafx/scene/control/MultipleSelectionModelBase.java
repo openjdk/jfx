@@ -402,6 +402,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         // We expect that in concrete subclasses of this class we observe the
         // data model such that we check to see if the given item exists in it,
         // whilst SelectedIndex == -1 && SelectedItem != null.
+        setSelectedIndex(-1);
         setSelectedItem(obj);
     }
 

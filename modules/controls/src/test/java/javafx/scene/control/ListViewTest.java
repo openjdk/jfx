@@ -42,21 +42,14 @@ import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import javafx.application.Platform;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
-import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleObjectProperty;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
-import javafx.event.Event;
-import javafx.event.EventHandler;
-import javafx.scene.Scene;
 import javafx.scene.control.cell.CheckBoxListCell;
 import javafx.scene.control.cell.ComboBoxListCell;
 import javafx.scene.control.cell.TextFieldListCell;
-import javafx.scene.control.cell.TextFieldTreeCell;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.VBox;
@@ -79,7 +72,7 @@ public class ListViewTest {
     private MultipleSelectionModel<String> sm;
 
     @Before public void setup() {
-        listView = new ListView<String>();
+        listView = new ListView<>();
         sm = listView.getSelectionModel();
     }
 
@@ -109,34 +102,34 @@ public class ListViewTest {
     }
 
     @Test public void singleArgConstructorSetsTheStyleClass() {
-        final ListView<String> b2 = new ListView<String>(FXCollections.observableArrayList("Hi"));
+        final ListView<String> b2 = new ListView<>(FXCollections.observableArrayList("Hi"));
         assertStyleClassContains(b2, "list-view");
     }
 
     @Test public void singleArgConstructorSetsNonNullSelectionModel() {
-        final ListView<String> b2 = new ListView<String>(FXCollections.observableArrayList("Hi"));
+        final ListView<String> b2 = new ListView<>(FXCollections.observableArrayList("Hi"));
         assertNotNull(b2.getSelectionModel());
     }
 
     @Test public void singleArgConstructorAllowsNullItems() {
-        final ListView<String> b2 = new ListView<String>(null);
+        final ListView<String> b2 = new ListView<>(null);
         assertNull(b2.getItems());
     }
 
     @Test public void singleArgConstructorTakesItems() {
         ObservableList<String> items = FXCollections.observableArrayList("Hi");
-        final ListView<String> b2 = new ListView<String>(items);
+        final ListView<String> b2 = new ListView<>(items);
         assertSame(items, b2.getItems());
     }
 
     @Test public void singleArgConstructor_selectedItemIsNull() {
-        final ListView<String> b2 = new ListView<String>(FXCollections.observableArrayList("Hi"));
-        assertNull(b2.getSelectionModel().getSelectedItem());
+        final ListView<String> b2 = new ListView<>(FXCollections.observableArrayList("Hi"));
+        assertEquals("Hi", b2.getSelectionModel().getSelectedItem());
     }
 
     @Test public void singleArgConstructor_selectedIndexIsNegativeOne() {
-        final ListView<String> b2 = new ListView<String>(FXCollections.observableArrayList("Hi"));
-        assertEquals(-1, b2.getSelectionModel().getSelectedIndex());
+        final ListView<String> b2 = new ListView<>(FXCollections.observableArrayList("Hi"));
+        assertEquals(0, b2.getSelectionModel().getSelectedIndex());
     }
 
     /*********************************************************************

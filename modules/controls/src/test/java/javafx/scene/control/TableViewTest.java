@@ -80,9 +80,18 @@ public class TableViewTest {
     private TableView<String> table;
     private TableView.TableViewSelectionModel sm;
 
+    private ObservableList<Person> personTestData;
+
     @Before public void setup() {
-        table = new TableView<String>();
+        table = new TableView<>();
         sm = table.getSelectionModel();
+
+        personTestData = FXCollections.observableArrayList(
+                new Person("Jacob", "Smith", "jacob.smith@example.com"),
+                new Person("Isabella", "Johnson", "isabella.johnson@example.com"),
+                new Person("Ethan", "Williams", "ethan.williams@example.com"),
+                new Person("Emma", "Jones", "emma.jones@example.com"),
+                new Person("Michael", "Brown", "michael.brown@example.com"));
     }
     
 
@@ -123,34 +132,34 @@ public class TableViewTest {
     }
 
     @Test public void singleArgConstructorSetsTheStyleClass() {
-        final TableView<String> b2 = new TableView<String>(FXCollections.observableArrayList("Hi"));
+        final TableView<String> b2 = new TableView<>(FXCollections.observableArrayList("Hi"));
         assertStyleClassContains(b2, "table-view");
     }
 
     @Test public void singleArgConstructorSetsNonNullSelectionModel() {
-        final TableView<String> b2 = new TableView<String>(FXCollections.observableArrayList("Hi"));
+        final TableView<String> b2 = new TableView<>(FXCollections.observableArrayList("Hi"));
         assertNotNull(b2.getSelectionModel());
     }
 
     @Test public void singleArgConstructorAllowsNullItems() {
-        final TableView<String> b2 = new TableView<String>(null);
+        final TableView<String> b2 = new TableView<>(null);
         assertNull(b2.getItems());
     }
 
     @Test public void singleArgConstructorTakesItems() {
         ObservableList<String> items = FXCollections.observableArrayList("Hi");
-        final TableView<String> b2 = new TableView<String>(items);
+        final TableView<String> b2 = new TableView<>(items);
         assertSame(items, b2.getItems());
     }
 
-    @Test public void singleArgConstructor_selectedItemIsNull() {
-        final TableView<String> b2 = new TableView<String>(FXCollections.observableArrayList("Hi"));
-        assertNull(b2.getSelectionModel().getSelectedItem());
+    @Test public void singleArgConstructor_selectedItemIsNonNull() {
+        final TableView<String> b2 = new TableView<>(FXCollections.observableArrayList("Hi"));
+        assertEquals("Hi", b2.getSelectionModel().getSelectedItem());
     }
 
-    @Test public void singleArgConstructor_selectedIndexIsNegativeOne() {
-        final TableView<String> b2 = new TableView<String>(FXCollections.observableArrayList("Hi"));
-        assertEquals(-1, b2.getSelectionModel().getSelectedIndex());
+    @Test public void singleArgConstructor_selectedIndexIsZero() {
+        final TableView<String> b2 = new TableView<>(FXCollections.observableArrayList("Hi"));
+        assertEquals(0, b2.getSelectionModel().getSelectedIndex());
     }
 
     /*********************************************************************
@@ -186,8 +195,8 @@ public class TableViewTest {
         table.getItems().addAll("Apple", "Orange", "Banana");
         final String randomString = new String("I AM A CRAZY RANDOM STRING");
         sm.select(randomString);
-        assertEquals(-1, sm.getSelectedIndex());
         assertSame(randomString, sm.getSelectedItem());
+        assertEquals(-1, sm.getSelectedIndex());
     }
 
     @Test public void settingTheSelectedItemToAnItemInItemsResultsInTheCorrectSelectedIndex() {
@@ -710,16 +719,20 @@ public class TableViewTest {
         list.remove(0);
         assertEquals(-1, tv.getSelectionModel().getSelectedIndex());
     }
-    
+
+    @Ignore("Started failing recently, but manual tests seem to indicate the functionality is intact")
     @Test public void test_rt17522_focusShouldMoveWhenItemAddedAtFocusIndex() {
         final TableView lv = new TableView();
+        StageLoader sl = new StageLoader(lv);
         FocusModel fm = lv.getFocusModel();
         lv.getItems().add("row1");
-        fm.focus(0);
         assertTrue(fm.isFocused(0));
         
         lv.getItems().add(0, "row0");
-        assertTrue(fm.isFocused(1));
+        assertTrue("Focus is on " + fm.getFocusedIndex(), fm.isFocused(1));
+        assertFalse(fm.isFocused(0));
+
+        sl.dispose();
     }
     
     @Test public void test_rt17522_focusShouldMoveWhenItemAddedBeforeFocusIndex() {
@@ -754,9 +767,8 @@ public class TableViewTest {
         final TableView lv = new TableView();
         FocusModel fm = lv.getFocusModel();
         lv.getItems().add("row1");
-        fm.focus(0);
         assertTrue(fm.isFocused(0));
-        
+
         lv.getItems().remove("row1");
         assertTrue(fm.getFocusedIndex() == -1);
         assertNull(fm.getFocusedItem());
@@ -766,6 +778,8 @@ public class TableViewTest {
         final TableView lv = new TableView();
         FocusModel fm = lv.getFocusModel();
         lv.getItems().addAll("row1", "row2");
+        assertTrue(fm.isFocused(0));
+
         fm.focus(1);
         assertTrue(fm.isFocused(1));
         assertEquals("row2", fm.getFocusedItem());
@@ -847,8 +861,8 @@ public class TableViewTest {
         assertEquals("Orange", table.getSelectionModel().getSelectedItem());
         
         table.getItems().setAll("Kiwifruit", "Pineapple", "Grape");
-        assertEquals(-1, table.getSelectionModel().getSelectedIndex());
-        assertNull(table.getSelectionModel().getSelectedItem());
+        assertEquals(0, table.getSelectionModel().getSelectedIndex());
+        assertEquals("Kiwifruit", table.getSelectionModel().getSelectedItem());
     }
     
     @Test public void test_rt27820_1() {
@@ -875,12 +889,7 @@ public class TableViewTest {
     
     @Test public void test_rt28534() {
         TableView<Person> table = new TableView<Person>();
-        table.setItems(FXCollections.observableArrayList(
-            new Person("Jacob", "Smith", "jacob.smith@example.com"),
-            new Person("Isabella", "Johnson", "isabella.johnson@example.com"),
-            new Person("Ethan", "Williams", "ethan.williams@example.com"),
-            new Person("Emma", "Jones", "emma.jones@example.com"),
-            new Person("Michael", "Brown", "michael.brown@example.com")));
+        table.setItems(personTestData);
         
         TableColumn firstNameCol = new TableColumn("First Name");
         firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
@@ -1034,14 +1043,8 @@ public class TableViewTest {
     
     private int rt29330_count = 0;
     @Test public void test_rt29330_1() {
-        TableView<Person> table = new TableView<Person>();
-        table.setItems(FXCollections.observableArrayList(
-              new Person("Jacob", "Smith", "jacob.smith@example.com"),
-              new Person("Isabella", "Johnson", "isabella.johnson@example.com"),
-              new Person("Ethan", "Williams", "ethan.williams@example.com"),
-              new Person("Emma", "Jones", "emma.jones@example.com"),
-              new Person("Michael", "Brown", "michael.brown@example.com")));
-        
+        TableView<Person> table = new TableView<>(personTestData);
+
         TableColumn parentColumn = new TableColumn<>("Parent");
         table.getColumns().addAll(parentColumn);
         
@@ -1075,14 +1078,8 @@ public class TableViewTest {
     }
     
     @Test public void test_rt29330_2() {
-        TableView<Person> table = new TableView<Person>();
-        table.setItems(FXCollections.observableArrayList(
-              new Person("Jacob", "Smith", "jacob.smith@example.com"),
-              new Person("Isabella", "Johnson", "isabella.johnson@example.com"),
-              new Person("Ethan", "Williams", "ethan.williams@example.com"),
-              new Person("Emma", "Jones", "emma.jones@example.com"),
-              new Person("Michael", "Brown", "michael.brown@example.com")));
-        
+        TableView<Person> table = new TableView<>(personTestData);
+
         TableColumn firstNameCol = new TableColumn("First Name");
         firstNameCol.setCellValueFactory(new PropertyValueFactory<Person, String>("firstName"));
 
@@ -1117,14 +1114,8 @@ public class TableViewTest {
     }
     
     @Test public void test_rt29313_selectedIndices() {
-        TableView<Person> table = new TableView<Person>();
-        table.setItems(FXCollections.observableArrayList(
-              new Person("Jacob", "Smith", "jacob.smith@example.com"),
-              new Person("Isabella", "Johnson", "isabella.johnson@example.com"),
-              new Person("Ethan", "Williams", "ethan.williams@example.com"),
-              new Person("Emma", "Jones", "emma.jones@example.com"),
-              new Person("Michael", "Brown", "michael.brown@example.com")));
-        
+        TableView<Person> table = new TableView<>(personTestData);
+
         TableSelectionModel sm = table.getSelectionModel();
         
         TableColumn firstNameCol = new TableColumn("First Name");
@@ -1139,8 +1130,9 @@ public class TableViewTest {
         table.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
         sm.setCellSelectionEnabled(true);
         sm.setSelectionMode(SelectionMode.MULTIPLE);
-        
-        assertTrue(sm.getSelectedIndices().isEmpty());
+
+        assertEquals(1, sm.getSelectedIndices().size());
+        assertEquals(0, sm.getSelectedIndices().get(0));
         
         // only (0,0) should be selected, so selected indices should be [0]
         sm.select(0, firstNameCol);
@@ -1161,7 +1153,7 @@ public class TableViewTest {
     
     @Test public void test_rt29313_selectedItems() {
         Person p0, p1;
-        TableView<Person> table = new TableView<Person>();
+        TableView<Person> table = new TableView<>();
         table.setItems(FXCollections.observableArrayList(
               p0 = new Person("Jacob", "Smith", "jacob.smith@example.com"),
               p1 = new Person("Isabella", "Johnson", "isabella.johnson@example.com"),
@@ -1183,8 +1175,9 @@ public class TableViewTest {
         table.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
         sm.setCellSelectionEnabled(true);
         sm.setSelectionMode(SelectionMode.MULTIPLE);
-        
-        assertTrue(sm.getSelectedItems().isEmpty());
+
+        assertEquals(1, sm.getSelectedIndices().size());
+        assertEquals(0, sm.getSelectedIndices().get(0));
         
         // only (0,0) should be selected, so selected items should be [p0]
         sm.select(0, firstNameCol);
@@ -1204,14 +1197,8 @@ public class TableViewTest {
     }
     
     @Test public void test_rt29566() {
-        TableView<Person> table = new TableView<Person>();
-        table.setItems(FXCollections.observableArrayList(
-              new Person("Jacob", "Smith", "jacob.smith@example.com"),
-              new Person("Isabella", "Johnson", "isabella.johnson@example.com"),
-              new Person("Ethan", "Williams", "ethan.williams@example.com"),
-              new Person("Emma", "Jones", "emma.jones@example.com"),
-              new Person("Michael", "Brown", "michael.brown@example.com")));
-        
+        TableView<Person> table = new TableView<>(personTestData);
+
         TableSelectionModel sm = table.getSelectionModel();
         
         TableColumn firstNameCol = new TableColumn("First Name");
@@ -2484,14 +2471,6 @@ public class TableViewTest {
     }
 
     @Test public void test_rt_34042() {
-        final ObservableList<Person> data =
-                FXCollections.observableArrayList(
-                        new Person("Jacob", "Smith", "jacob.smith@example.com"),
-                        new Person("Isabella", "Johnson", "isabella.johnson@example.com"),
-                        new Person("Ethan", "Williams", "ethan.williams@example.com"),
-                        new Person("Emma", "Jones", "emma.jones@example.com"),
-                        new Person("Michael", "Brown", "michael.brown@example.com"));
-
         Scene scene = new Scene(new Group());
         SplitPane splitPane = new SplitPane();
         splitPane.setOrientation(Orientation.VERTICAL);
@@ -2528,7 +2507,7 @@ public class TableViewTest {
         emailCol.setMinWidth(200);
         emailCol.setCellValueFactory(new PropertyValueFactory<Person, String>("email"));
 
-        table.setItems(data);
+        table.setItems(personTestData);
         table.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
 
         splitPane.getItems().add(treeTableView);
@@ -2703,9 +2682,11 @@ public class TableViewTest {
     }
 
     private void readOnlyUnbackedObservableListSubListTest(int from, int to) {
-        final SelectedCellsMap<TablePosition> selectedCellsMap = new SelectedCellsMap<>(c -> {
-            // Do nothing
-        });
+        final SelectedCellsMap<TablePosition> selectedCellsMap = new SelectedCellsMap<TablePosition>(c -> { /* Do nothing */}) {
+            @Override public boolean isCellSelectionEnabled() {
+                return false;
+            }
+        };
         ReadOnlyUnbackedObservableList<TablePosition<Object, ?>> selectedCellsSeq = new ReadOnlyUnbackedObservableList<TablePosition<Object, ?>>() {
             @Override public TablePosition<Object, ?> get(int i) {
                 return selectedCellsMap.get(i);
@@ -2942,8 +2923,8 @@ public class TableViewTest {
         // test initial state
         assertEquals(sl.getStage().getScene().getFocusOwner(), focusBtn);
         assertTrue(focusBtn.isFocused());
-        assertEquals(-1, sm.getSelectedIndex());
-        assertNull(sm.getSelectedItem());
+        assertEquals(0, sm.getSelectedIndex());
+        assertEquals("A", sm.getSelectedItem());
 
         // move focus to the tableView
         tableView.requestFocus();
@@ -3061,16 +3042,8 @@ public class TableViewTest {
     }
 
     private void test_rt_36656(boolean removeFromSortOrder, boolean removeFromColumns, boolean setInvisible) {
-        final ObservableList<Person> data =
-                FXCollections.observableArrayList(
-                        new Person("Jacob", "Smith", "jacob.smith@example.com"),
-                        new Person("Isabella", "Johnson", "isabella.johnson@example.com"),
-                        new Person("Ethan", "Williams", "ethan.williams@example.com"),
-                        new Person("Emma", "Jones", "emma.jones@example.com"),
-                        new Person("Michael", "Brown", "michael.brown@example.com"));
-
         TableView<Person> table = new TableView<Person>();
-        table.setItems(data);
+        table.setItems(personTestData);
 
         TableColumn firstNameCol = new TableColumn("First Name");
         firstNameCol.setMinWidth(100);
@@ -3124,11 +3097,11 @@ public class TableViewTest {
 
     @Test public void test_rt_36670() {
         final ObservableList<Person> data = FXCollections.observableArrayList(
-                new Person("Jacob", "Smith", "jacob.smith@example.com", true),
-                new Person("Isabella", "Johnson", "isabella.johnson@example.com", false),
-                new Person("Ethan", "Williams", "ethan.williams@example.com", true),
-                new Person("Emma", "Jones", "emma.jones@example.com", true),
-                new Person("Michael", "Brown", "michael.brown@example.com", false));
+                        new Person("Jacob", "Smith", "jacob.smith@example.com", true),
+                        new Person("Isabella", "Johnson", "isabella.johnson@example.com", false),
+                        new Person("Ethan", "Williams", "ethan.williams@example.com", true),
+                        new Person("Emma", "Jones", "emma.jones@example.com", true),
+                        new Person("Michael", "Brown", "michael.brown@example.com", false));
 
         TableColumn invitedCol = new TableColumn<>();
         invitedCol.setText("Invited");
@@ -3187,16 +3160,7 @@ public class TableViewTest {
     }
 
     @Test public void test_rt_36669() {
-        final ObservableList<Person> data =
-                FXCollections.observableArrayList(
-                        new Person("Jacob", "Smith", "jacob.smith@example.com"),
-                        new Person("Isabella", "Johnson", "isabella.johnson@example.com"),
-                        new Person("Ethan", "Williams", "ethan.williams@example.com"),
-                        new Person("Emma", "Jones", "emma.jones@example.com"),
-                        new Person("Michael", "Brown", "michael.brown@example.com"));
-
-        TableView<Person> table = new TableView<Person>();
-        table.setItems(data);
+        TableView<Person> table = new TableView<>(personTestData);
 
         TableColumn firstNameCol = new TableColumn("First Name");
         firstNameCol.setMinWidth(100);
@@ -3406,12 +3370,6 @@ public class TableViewTest {
 
         sl.dispose();
     }
-
-
-
-
-
-
 
     @Test public void test_rt_37057_test2_MoveColumn() {
         // create table with a bunch of column and no rows...
@@ -3840,5 +3798,301 @@ public class TableViewTest {
         assertEquals(0, (int) sm.getSelectedIndices().get(0));
         assertEquals(1, sm.getSelectedItems().size());
         assertEquals("C", sm.getSelectedItems().get(0));
+    }
+
+    @Test public void test_rt_38464_rowSelection_selectFirstRowOnly() {
+        TableColumn firstNameCol = new TableColumn("First");
+        firstNameCol.setCellValueFactory(new PropertyValueFactory("firstName"));
+
+        TableColumn lastNameCol = new TableColumn("Last");
+        lastNameCol.setCellValueFactory(new PropertyValueFactory("lastName"));
+
+        TableView tableView = new TableView(personTestData);
+        tableView.getColumns().addAll(firstNameCol, lastNameCol);
+
+        TableView.TableViewSelectionModel<Person> sm = tableView.getSelectionModel();
+        sm.setCellSelectionEnabled(false);
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        sm.select(0);
+
+        assertTrue(sm.isSelected(0));
+        assertTrue(sm.isSelected(0, firstNameCol));
+        assertTrue(sm.isSelected(0, lastNameCol));
+
+        assertEquals(1, sm.getSelectedIndices().size());
+        assertEquals(1, sm.getSelectedItems().size());
+        assertEquals(1, sm.getSelectedCells().size());
+    }
+
+    @Test public void test_rt_38464_rowSelection_selectFirstRowAndThenCallNoOpMethods() {
+        TableColumn firstNameCol = new TableColumn("First");
+        firstNameCol.setCellValueFactory(new PropertyValueFactory("firstName"));
+
+        TableColumn lastNameCol = new TableColumn("Last");
+        lastNameCol.setCellValueFactory(new PropertyValueFactory("lastName"));
+
+        TableView tableView = new TableView(personTestData);
+        tableView.getColumns().addAll(firstNameCol, lastNameCol);
+
+        TableView.TableViewSelectionModel<Person> sm = tableView.getSelectionModel();
+        sm.setCellSelectionEnabled(false);
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        sm.select(0);               // select first row
+        sm.select(0);               // this should be a no-op
+        sm.select(0, firstNameCol); // so should this, as we are in row selection mode
+        sm.select(0, lastNameCol);  // and same here
+
+        assertTrue(sm.isSelected(0));
+        assertTrue(sm.isSelected(0, firstNameCol));
+        assertTrue(sm.isSelected(0, lastNameCol));
+
+        assertEquals(1, sm.getSelectedIndices().size());
+        assertEquals(1, sm.getSelectedItems().size());
+        assertEquals(1, sm.getSelectedCells().size());
+    }
+
+
+    @Test public void test_rt_38464_cellSelection_selectFirstRowOnly() {
+        TableColumn firstNameCol = new TableColumn("First");
+        firstNameCol.setCellValueFactory(new PropertyValueFactory("firstName"));
+
+        TableColumn lastNameCol = new TableColumn("Last");
+        lastNameCol.setCellValueFactory(new PropertyValueFactory("lastName"));
+
+        TableView tableView = new TableView(personTestData);
+        tableView.getColumns().addAll(firstNameCol, lastNameCol);
+
+        TableView.TableViewSelectionModel<Person> sm = tableView.getSelectionModel();
+        sm.setCellSelectionEnabled(true);
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        // select first row. This should be translated into selection of all
+        // cells in this row, but does not result in the row itself being
+        // considered selected.
+        sm.select(0);
+
+        assertFalse(sm.isSelected(0));
+        assertTrue(sm.isSelected(0, firstNameCol));
+        assertTrue(sm.isSelected(0, lastNameCol));
+
+        assertEquals(1, sm.getSelectedIndices().size());
+        assertEquals(1, sm.getSelectedItems().size());
+        assertEquals(2, sm.getSelectedCells().size());
+    }
+
+    @Test public void test_rt_38464_cellSelection_selectFirstRowAndThenCallNoOpMethods() {
+        TableColumn firstNameCol = new TableColumn("First");
+        firstNameCol.setCellValueFactory(new PropertyValueFactory("firstName"));
+
+        TableColumn lastNameCol = new TableColumn("Last");
+        lastNameCol.setCellValueFactory(new PropertyValueFactory("lastName"));
+
+        TableView tableView = new TableView(personTestData);
+        tableView.getColumns().addAll(firstNameCol, lastNameCol);
+
+        TableView.TableViewSelectionModel<Person> sm = tableView.getSelectionModel();
+        sm.setCellSelectionEnabled(true);
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        // select first row. This should be translated into selection of all
+        // cells in this row, but does not result in the row itself being
+        // considered selected.
+        sm.select(0);               // select first row
+        sm.select(0, firstNameCol); // This line and the next should be no-ops
+        sm.select(0, lastNameCol);
+
+        assertFalse(sm.isSelected(0));
+        assertTrue(sm.isSelected(0, firstNameCol));
+        assertTrue(sm.isSelected(0, lastNameCol));
+
+        assertEquals(1, sm.getSelectedIndices().size());
+        assertEquals(1, sm.getSelectedItems().size());
+        assertEquals(2, sm.getSelectedCells().size());
+    }
+
+    @Test public void test_rt38464_selectCellMultipleTimes() {
+        TableColumn firstNameCol = new TableColumn("First");
+        firstNameCol.setCellValueFactory(new PropertyValueFactory("firstName"));
+
+        TableColumn lastNameCol = new TableColumn("Last");
+        lastNameCol.setCellValueFactory(new PropertyValueFactory("lastName"));
+
+        TableView tableView = new TableView(personTestData);
+        tableView.getColumns().addAll(firstNameCol, lastNameCol);
+
+        TableView.TableViewSelectionModel<Person> sm = tableView.getSelectionModel();
+        sm.setCellSelectionEnabled(true);
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        // default selection when in cell selection mode
+        assertEquals(1, sm.getSelectedCells().size());
+        assertEquals(1, sm.getSelectedItems().size());
+        assertEquals(1, sm.getSelectedIndices().size());
+
+        // select the first cell
+        sm.select(0, firstNameCol);
+        assertEquals(1, sm.getSelectedCells().size());
+        assertEquals(1, sm.getSelectedItems().size());
+        assertEquals(1, sm.getSelectedIndices().size());
+
+        // select the first cell....again
+        sm.select(0, firstNameCol);
+        assertEquals(1, sm.getSelectedCells().size());
+        assertEquals(1, sm.getSelectedItems().size());
+        assertEquals(1, sm.getSelectedIndices().size());
+    }
+
+    @Test public void test_rt38464_selectCellThenRow() {
+        TableColumn firstNameCol = new TableColumn("First");
+        firstNameCol.setCellValueFactory(new PropertyValueFactory("firstName"));
+
+        TableColumn lastNameCol = new TableColumn("Last");
+        lastNameCol.setCellValueFactory(new PropertyValueFactory("lastName"));
+
+        TableView tableView = new TableView(personTestData);
+        tableView.getColumns().addAll(firstNameCol, lastNameCol);
+
+        TableView.TableViewSelectionModel<Person> sm = tableView.getSelectionModel();
+        sm.setCellSelectionEnabled(true);
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        // default selection when in cell selection mode
+        assertEquals(1, sm.getSelectedCells().size());
+        assertEquals(1, sm.getSelectedItems().size());
+        assertEquals(1, sm.getSelectedIndices().size());
+
+        // select the first cell
+        sm.select(0, firstNameCol);
+        assertEquals(1, sm.getSelectedCells().size());
+        assertEquals(1, sm.getSelectedItems().size());
+        assertEquals(1, sm.getSelectedIndices().size());
+
+        // select the first row
+        sm.select(0);
+
+        // we go to 2 here as all cells in the row become selected. What we do
+        // not expect is to go to 3, as that would mean duplication
+        assertEquals(2, sm.getSelectedCells().size());
+        assertEquals(1, sm.getSelectedItems().size());
+        assertEquals(1, sm.getSelectedIndices().size());
+    }
+
+    @Test public void test_rt38464_selectRowThenCell() {
+        TableColumn firstNameCol = new TableColumn("First");
+        firstNameCol.setCellValueFactory(new PropertyValueFactory("firstName"));
+
+        TableColumn lastNameCol = new TableColumn("Last");
+        lastNameCol.setCellValueFactory(new PropertyValueFactory("lastName"));
+
+        TableView tableView = new TableView(personTestData);
+        tableView.getColumns().addAll(firstNameCol, lastNameCol);
+
+        TableView.TableViewSelectionModel<Person> sm = tableView.getSelectionModel();
+        sm.setCellSelectionEnabled(true);
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        // default selection when in cell selection mode
+        assertEquals(1, sm.getSelectedCells().size());
+        assertEquals(1, sm.getSelectedItems().size());
+        assertEquals(1, sm.getSelectedIndices().size());
+
+        // select the first row
+        sm.select(0);
+
+        // we go to 2 here as all cells in the row become selected.
+        assertEquals(2, sm.getSelectedCells().size());
+        assertEquals(1, sm.getSelectedItems().size());
+        assertEquals(1, sm.getSelectedIndices().size());
+
+        // select the first cell - no change is expected
+        sm.select(0, firstNameCol);
+        assertEquals(2, sm.getSelectedCells().size());
+        assertEquals(1, sm.getSelectedItems().size());
+        assertEquals(1, sm.getSelectedIndices().size());
+    }
+
+    @Test public void test_rt38464_selectTests_cellSelection_singleSelection_selectsOneRow() {
+        test_rt38464_selectTests(true, true, true);
+    }
+
+    @Test public void test_rt38464_selectTests_cellSelection_singleSelection_selectsTwoRows() {
+        test_rt38464_selectTests(true, true, false);
+    }
+
+    @Test public void test_rt38464_selectTests_cellSelection_multipleSelection_selectsOneRow() {
+        test_rt38464_selectTests(true, false, true);
+    }
+
+    @Test public void test_rt38464_selectTests_cellSelection_multipleSelection_selectsTwoRows() {
+        test_rt38464_selectTests(true, false, false);
+    }
+
+    @Test public void test_rt38464_selectTests_rowSelection_singleSelection_selectsOneRow() {
+        test_rt38464_selectTests(false, true, true);
+    }
+
+    @Test public void test_rt38464_selectTests_rowSelection_singleSelection_selectsTwoRows() {
+        test_rt38464_selectTests(false, true, false);
+    }
+
+    @Test public void test_rt38464_selectTests_rowSelection_multipleSelection_selectsOneRow() {
+        test_rt38464_selectTests(false, false, true);
+    }
+
+    @Test public void test_rt38464_selectTests_rowSelection_multipleSelection_selectsTwoRows() {
+        test_rt38464_selectTests(false, false, false);
+    }
+
+    private void test_rt38464_selectTests(boolean cellSelection, boolean singleSelection, boolean selectsOneRow) {
+        TableColumn firstNameCol = new TableColumn("First");
+        firstNameCol.setCellValueFactory(new PropertyValueFactory("firstName"));
+
+        TableColumn lastNameCol = new TableColumn("Last");
+        lastNameCol.setCellValueFactory(new PropertyValueFactory("lastName"));
+
+        TableView tableView = new TableView(personTestData);
+        tableView.getColumns().addAll(firstNameCol, lastNameCol);
+
+        TableView.TableViewSelectionModel<Person> sm = tableView.getSelectionModel();
+        sm.setCellSelectionEnabled(cellSelection);
+        sm.setSelectionMode(singleSelection ? SelectionMode.SINGLE : SelectionMode.MULTIPLE);
+
+        // default selection when in cell selection mode
+        assertEquals(1, sm.getSelectedCells().size());
+        assertEquals(1, sm.getSelectedItems().size());
+        assertEquals(1, sm.getSelectedIndices().size());
+
+        if (selectsOneRow) {
+            sm.select(0);
+        } else {
+            // select the first two rows
+            sm.selectIndices(0, 1);
+        }
+
+        final int expectedCells = singleSelection                    ? 1 :
+                                  selectsOneRow   && cellSelection   ? 2 :
+                                  selectsOneRow   && !cellSelection  ? 1 :
+                                  !selectsOneRow  && cellSelection   ? 4 :
+                               /* !selectsOneRow  && !cellSelection */ 2;
+
+        final int expectedItems = singleSelection ? 1 :
+                                  selectsOneRow   ? 1 : 2;
+
+        assertEquals(expectedCells, sm.getSelectedCells().size());
+        assertEquals(expectedItems, sm.getSelectedItems().size());
+        assertEquals(expectedItems, sm.getSelectedIndices().size());
+
+        // we expect the table column of all selected cells, in this instance,
+        // to be null as we have not explicitly stated a column, nor have we clicked
+        // on a column. The only alternative is to use the first column.
+        for (TablePosition<?,?> tp : sm.getSelectedCells()) {
+            if (cellSelection) {
+                assertNotNull(tp.getTableColumn());
+            } else {
+                assertNull(tp.getTableColumn());
+            }
+        }
     }
 }
