@@ -156,9 +156,7 @@ public class ObjectDeleter {
                 for (FXOMObject i : new LinkedList<>(fxomCollection.getItems())) {
                     prepareDeleteObject(i, target);
                 }
-            } else if (result instanceof FXOMIntrinsic) {
-                // No prework needed
-            }
+            } // else no prework needed
         }
         
         return result;
