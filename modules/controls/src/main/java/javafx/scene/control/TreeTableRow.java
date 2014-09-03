@@ -544,10 +544,13 @@ public class TreeTableRow<T> extends IndexedCell<T> {
                 return treeTableView.queryAccessibleAttribute(AccessibleAttribute.ROW_AT_INDEX, parentIndex);
             }
             case TREE_ITEM_COUNT: {
-                return treeItem == null  ? 0 : treeItem.getChildren().size();
+                if (treeItem == null) return 0;
+                if (!treeItem.isExpanded()) return 0;
+                return treeItem.getChildren().size();
             }
             case TREE_ITEM_AT_INDEX: {
                 if (treeItem == null) return null;
+                if (!treeItem.isExpanded()) return null;
                 int index = (Integer)parameters[0];
                 if (index >= treeItem.getChildren().size()) return null;
                 TreeItem<T> child = treeItem.getChildren().get(index);
