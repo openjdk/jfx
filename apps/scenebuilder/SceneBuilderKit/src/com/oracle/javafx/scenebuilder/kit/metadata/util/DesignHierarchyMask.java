@@ -42,6 +42,7 @@ import com.oracle.javafx.scenebuilder.kit.metadata.Metadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.klass.ComponentClassMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ComponentPropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
+import com.oracle.javafx.scenebuilder.kit.util.Deprecation;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -763,26 +764,15 @@ public class DesignHierarchyMask {
      * @return the number of columns
      */
     public int getColumnsSize() {
-        assert fxomObject instanceof FXOMInstance;
-        final FXOMInstance fxomInstance = (FXOMInstance) fxomObject;
-        assert fxomInstance.getSceneGraphObject() instanceof GridPane;
-
-        // Retrieve the column constraints size
-        final int constraintsSize = getColumnsConstraintsSize();
-
-        // Retrieve the max column index
-        int maxColumnIndex = -1;
-        for (int i = 0, count = getSubComponentCount(); i < count; i++) {
-            final FXOMObject childObject = getSubComponentAtIndex(i);
-            if (childObject.getSceneGraphObject() != null) {
-                final DesignHierarchyMask childMask = new DesignHierarchyMask(childObject);
-                if (maxColumnIndex < childMask.getColumnIndex()) {
-                    maxColumnIndex = childMask.getColumnIndex();
-                }
-            }
+        final Object sceneGraphObject;
+        // For FXOMIntrinsic, we use the source sceneGraphObject
+        if (fxomObject instanceof FXOMIntrinsic) {
+            sceneGraphObject = ((FXOMIntrinsic) fxomObject).getSourceSceneGraphObject();
+        } else {
+            sceneGraphObject = fxomObject.getSceneGraphObject();
         }
-
-        return Math.max(constraintsSize, maxColumnIndex + 1);
+        assert sceneGraphObject instanceof GridPane;
+        return Deprecation.getGridPaneColumnCount((GridPane) sceneGraphObject);
     }
 
     /**
@@ -794,26 +784,15 @@ public class DesignHierarchyMask {
      * @return the number of rows
      */
     public int getRowsSize() {
-        assert fxomObject instanceof FXOMInstance;
-        final FXOMInstance fxomInstance = (FXOMInstance) fxomObject;
-        assert fxomInstance.getSceneGraphObject() instanceof GridPane;
-
-        // Retrieve the row constraints size
-        final int constraintsSize = getRowsConstraintsSize();
-
-        // Retrieve the max row index
-        int maxRowIndex = -1;
-        for (int i = 0, count = getSubComponentCount(); i < count; i++) {
-            final FXOMObject childObject = getSubComponentAtIndex(i);
-            if (childObject.getSceneGraphObject() != null) {
-                final DesignHierarchyMask childMask = new DesignHierarchyMask(childObject);
-                if (maxRowIndex < childMask.getRowIndex()) {
-                    maxRowIndex = childMask.getRowIndex();
-                }
-            }
+        final Object sceneGraphObject;
+        // For FXOMIntrinsic, we use the source sceneGraphObject
+        if (fxomObject instanceof FXOMIntrinsic) {
+            sceneGraphObject = ((FXOMIntrinsic) fxomObject).getSourceSceneGraphObject();
+        } else {
+            sceneGraphObject = fxomObject.getSceneGraphObject();
         }
-
-        return Math.max(constraintsSize, maxRowIndex + 1);
+        assert sceneGraphObject instanceof GridPane;
+        return Deprecation.getGridPaneRowCount((GridPane) sceneGraphObject);
     }
     
     public List<FXOMObject> getColumnContentAtIndex(int index) {

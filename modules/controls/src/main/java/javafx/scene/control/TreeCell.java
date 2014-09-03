@@ -532,9 +532,14 @@ public class TreeCell<T> extends IndexedCell<T> {
     private void updateSelection() {
         if (isEmpty()) return;
         if (getIndex() == -1 || getTreeView() == null) return;
-        if (getTreeView().getSelectionModel() == null) return;
+
+        SelectionModel<TreeItem<T>> sm = getTreeView().getSelectionModel();
+        if (sm == null) {
+            updateSelected(false);
+            return;
+        }
         
-        boolean isSelected = getTreeView().getSelectionModel().isSelected(getIndex());
+        boolean isSelected = sm.isSelected(getIndex());
         if (isSelected() == isSelected) return;
         
         updateSelected(isSelected);
@@ -542,9 +547,14 @@ public class TreeCell<T> extends IndexedCell<T> {
 
     private void updateFocus() {
         if (getIndex() == -1 || getTreeView() == null) return;
-        if (getTreeView().getFocusModel() == null) return;
+
+        FocusModel<TreeItem<T>> fm = getTreeView().getFocusModel();
+        if (fm == null) {
+            setFocused(false);
+            return;
+        }
         
-        setFocused(getTreeView().getFocusModel().isFocused(getIndex()));
+        setFocused(fm.isFocused(getIndex()));
     }
 
     private boolean updateEditingIndex = true;

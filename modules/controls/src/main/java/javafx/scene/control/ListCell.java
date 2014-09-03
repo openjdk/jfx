@@ -501,7 +501,10 @@ public class ListCell<T> extends IndexedCell<T> {
         if (index == -1 || listView == null) return;
         
         SelectionModel<T> sm = listView.getSelectionModel();
-        if (sm == null) return;
+        if (sm == null) {
+            updateSelected(false);
+            return;
+        }
         
         boolean isSelected = sm.isSelected(index);
         if (isSelected() == isSelected) return;
@@ -515,7 +518,10 @@ public class ListCell<T> extends IndexedCell<T> {
         if (index == -1 || listView == null) return;
         
         FocusModel<T> fm = listView.getFocusModel();
-        if (fm == null) return;
+        if (fm == null) {
+            setFocused(false);
+            return;
+        }
         
         setFocused(fm.isFocused(index));
     }

@@ -30,6 +30,7 @@ import com.sun.javafx.collections.NonIterableChange;
 import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;
 import com.sun.javafx.scene.control.SelectedCellsMap;
 
+import com.sun.javafx.scene.control.behavior.TableCellBehaviorBase;
 import com.sun.javafx.scene.control.behavior.TreeTableCellBehavior;
 import javafx.beans.property.DoubleProperty;
 import javafx.css.CssMetaData;
@@ -2096,11 +2097,6 @@ public class TreeTableView<S> extends Control {
             }
 
             this.treeTableView = treeTableView;
-            
-            cellSelectionEnabledProperty().addListener(o -> {
-                isCellSelectionEnabled();
-                clearSelection();
-            });
         }
 
 
@@ -2219,7 +2215,11 @@ public class TreeTableView<S> extends Control {
             this.treeTableView.rootProperty().addListener(weakRootPropertyListener);
             updateTreeEventListener(null, treeTableView.getRoot());
 
-            selectedCellsMap = new SelectedCellsMap<>(c -> handleSelectedCellsListChangeEvent(c));
+            selectedCellsMap = new SelectedCellsMap<TreeTablePosition<S,?>>(c -> handleSelectedCellsListChangeEvent(c)) {
+                @Override public boolean isCellSelectionEnabled() {
+                    return TreeTableViewArrayListSelectionModel.this.isCellSelectionEnabled();
+                }
+            };
 
             selectedItems = new ReadOnlyUnbackedObservableList<TreeItem<S>>() {
                 @Override public TreeItem<S> get(int i) {
@@ -2240,6 +2240,15 @@ public class TreeTableView<S> extends Control {
                     return selectedCellsMap.size();
                 }
             };
+
+
+            updateDefaultSelection();
+            TableCellBehaviorBase.setAnchor(treeTableView, getFocusedCell(), true);
+
+            cellSelectionEnabledProperty().addListener(o -> {
+                updateDefaultSelection();
+                TableCellBehaviorBase.setAnchor(treeTableView, getFocusedCell(), true);
+            });
         }
         
         private void updateTreeEventListener(TreeItem<S> oldRoot, TreeItem<S> newRoot) {
@@ -2254,15 +2263,11 @@ public class TreeTableView<S> extends Control {
         }
         
         private ChangeListener<TreeItem<S>> rootPropertyListener = (observable, oldValue, newValue) -> {
-            clearSelection();
-
-            int newValueIndex = getItemCount() > 0 ? 0 : -1;
-            TreeTableColumn<S,?> firstColumn = getTableColumn(0);
-            select(newValueIndex, isCellSelectionEnabled() ? firstColumn : null);
+            updateDefaultSelection();
 
             updateTreeEventListener(oldValue, newValue);
         };
-        
+
         private EventHandler<TreeItem.TreeModificationEvent<S>> treeItemListener = new EventHandler<TreeItem.TreeModificationEvent<S>>() {
             @Override public void handle(TreeItem.TreeModificationEvent<S> e) {
                 
@@ -2477,13 +2482,6 @@ public class TreeTableView<S> extends Control {
             // replace the anchor
             TreeTableCellBehavior.setAnchor(treeTableView, newTablePosition, false);
 
-            // RT-33558 if this method has been called with a given row/column
-            // intersection, and that row/column intersection is the only
-            // selection currently, then this method becomes a no-op.
-            if (getSelectedCells().size() == 1 && isSelected(row, column)) {
-                return;
-            }
-
             // if I'm in cell selection mode but the column is null, I don't want
             // to select the whole row instead...
             if (isCellSelectionEnabled() && column == null) {
@@ -2524,9 +2522,15 @@ public class TreeTableView<S> extends Control {
             // TODO we need to bring in the TreeView selection stuff here...
             if (row < 0 || row >= getRowCount()) return;
 
-            // if I'm in cell selection mode but the column is null, I don't want
-            // to select the whole row instead...
-            if (isCellSelectionEnabled() && column == null) return;
+            // if I'm in cell selection mode but the column is null, select each
+            // of the contained cells individually
+            if (isCellSelectionEnabled() && column == null) {
+                List<TreeTableColumn<S,?>> columns = getTreeTableView().getVisibleLeafColumns();
+                for (int i = 0; i < columns.size(); i++) {
+                    select(row, columns.get(i));
+                }
+                return;
+            }
 
             TreeTablePosition<S,?> pos = new TreeTablePosition<>(getTreeTableView(), row, (TreeTableColumn<S,?>)column);
             
@@ -2579,6 +2583,7 @@ public class TreeTableView<S> extends Control {
             // We expect that in concrete subclasses of this class we observe the
             // data model such that we check to see if the given item exists in it,
             // whilst SelectedIndex == -1 && SelectedItem != null.
+            setSelectedIndex(-1);
             setSelectedItem(obj);
         }
 
@@ -2612,28 +2617,49 @@ public class TreeTableView<S> extends Control {
                 }
             } else {
                 int lastIndex = -1;
-                Set<TreeTablePosition<S,?>> positions = new LinkedHashSet<TreeTablePosition<S,?>>();
+                Set<TreeTablePosition<S,?>> positions = new LinkedHashSet<>();
 
+                // --- firstly, we special-case the non-varargs 'row' argument
                 if (row >= 0 && row < rowCount) {
-                    TreeTablePosition<S,Object> pos = new TreeTablePosition<S,Object>(getTreeTableView(), row, null);
-                    
-                    boolean match = selectedCellsMap.isSelected(row, -1);
-                    if (! match) {
-                        positions.add(pos);
-                        lastIndex = row;
+                    // if I'm in cell selection mode, we want to select each
+                    // of the contained cells individually
+                    if (isCellSelectionEnabled()) {
+                        List<TreeTableColumn<S,?>> columns = getTreeTableView().getVisibleLeafColumns();
+                        for (int column = 0; column < columns.size(); column++) {
+                            if (! selectedCellsMap.isSelected(row, column)) {
+                                positions.add(new TreeTablePosition<>(getTreeTableView(), row, columns.get(column)));
+                                lastIndex = row;
+                            }
+                        }
+                    } else {
+                        boolean match = selectedCellsMap.isSelected(row, -1);
+                        if (!match) {
+                            positions.add(new TreeTablePosition<>(getTreeTableView(), row, null));
+                            lastIndex = row;
+                        }
                     }
                 }
 
-                outer: for (int i = 0; i < rows.length; i++) {
+                // --- now we iterate through all varargs values
+                for (int i = 0; i < rows.length; i++) {
                     int index = rows[i];
                     if (index < 0 || index >= rowCount) continue;
                     lastIndex = index;
-                    
-                    if (selectedCellsMap.isSelected(index, -1)) continue outer;
-                    
-                    // if we are here then we have successfully gotten through the for-loop above
-                    TreeTablePosition<S,Object> pos = new TreeTablePosition<S,Object>(getTreeTableView(), index, null);
-                    positions.add(pos);
+
+                    if (isCellSelectionEnabled()) {
+                        List<TreeTableColumn<S,?>> columns = getTreeTableView().getVisibleLeafColumns();
+                        for (int column = 0; column < columns.size(); column++) {
+                            if (! selectedCellsMap.isSelected(index, column)) {
+                                positions.add(new TreeTablePosition<>(getTreeTableView(), index, columns.get(column)));
+                                lastIndex = index;
+                            }
+                        }
+                    } else {
+                        if (! selectedCellsMap.isSelected(index, -1)) {
+                            // if we are here then we have successfully gotten through the for-loop above
+                            positions.add(new TreeTablePosition<>(getTreeTableView(), index, null));
+                        }
+                    }
                 }
 
                 selectedCellsMap.addAll(positions);
@@ -2651,7 +2677,7 @@ public class TreeTableView<S> extends Control {
 //            if (getTableModel() == null) return;
 
             if (isCellSelectionEnabled()) {
-                List<TreeTablePosition<S,?>> indices = new ArrayList<TreeTablePosition<S,?>>();
+                List<TreeTablePosition<S,?>> indices = new ArrayList<>();
                 TreeTableColumn<S,?> column;
                 TreeTablePosition<S,?> tp = null;
                 for (int col = 0; col < getTreeTableView().getVisibleLeafColumns().size(); col++) {
@@ -2668,7 +2694,7 @@ public class TreeTableView<S> extends Control {
                     focus(tp.getRow(), tp.getTableColumn());
                 }
             } else {
-                List<TreeTablePosition<S,?>> indices = new ArrayList<TreeTablePosition<S,?>>();
+                List<TreeTablePosition<S,?>> indices = new ArrayList<>();
                 for (int i = 0; i < getRowCount(); i++) {
                     indices.add(new TreeTablePosition<>(getTreeTableView(), i, null));
                 }
@@ -2710,21 +2736,26 @@ public class TreeTableView<S> extends Control {
             final int _maxRow = Math.max(minRow, maxRow);
 
             for (int _row = _minRow; _row <= _maxRow; _row++) {
-                for (int _col = _minColumnIndex; _col <= _maxColumnIndex; _col++) {
-                    // begin copy/paste of select(int, column) method (with some
-                    // slight modifications)
-                    if (_row < 0 || _row >= itemCount) continue;
+                // begin copy/paste of select(int, column) method (with some
+                // slight modifications)
+                if (_row < 0 || _row >= itemCount) continue;
 
-                    final TreeTableColumn<S,?> column = treeTableView.getVisibleLeafColumn(_col);
-
-                    // if I'm in cell selection mode but the column is null, I don't want
-                    // to select the whole row instead...
-                    if (column == null && isCellSelectionEnabled) continue;
-
-                    TreeTablePosition<S,?> pos = new TreeTablePosition<>(treeTableView, _row, column);
-
+                if (! isCellSelectionEnabled) {
+                    TreeTablePosition<S, ?> pos = new TreeTablePosition<>(treeTableView, _row, (TreeTableColumn<S,?>)minColumn);
                     selectedCellsMap.add(pos);
-                    // end copy/paste
+                } else {
+                    for (int _col = _minColumnIndex; _col <= _maxColumnIndex; _col++) {
+                        final TreeTableColumn<S, ?> column = treeTableView.getVisibleLeafColumn(_col);
+
+                        // if I'm in cell selection mode but the column is null, I don't want
+                        // to select the whole row instead...
+                        if (column == null && isCellSelectionEnabled) continue;
+
+                        TreeTablePosition<S, ?> pos = new TreeTablePosition<>(treeTableView, _row, column);
+
+                        selectedCellsMap.add(pos);
+                        // end copy/paste
+                    }
                 }
             }
             stopAtomic();
@@ -2754,10 +2785,6 @@ public class TreeTableView<S> extends Control {
             for (TreeTablePosition<S,?> pos : getSelectedCells()) {
                 if ((! csMode && pos.getRow() == row) || (csMode && pos.equals(tp))) {
                     selectedCellsMap.remove(pos);
-
-                    // give focus to this cell index
-//                    focus(row);
-
                     return;
                 }
             }
@@ -2786,7 +2813,7 @@ public class TreeTableView<S> extends Control {
             final boolean isCellSelectionEnabled = isCellSelectionEnabled();
             if (isCellSelectionEnabled && column == null) return false;
 
-            int columnIndex = treeTableView.getVisibleLeafIndex((TreeTableColumn<S,?>) column);
+            int columnIndex = ! isCellSelectionEnabled || column == null ? -1 : treeTableView.getVisibleLeafIndex((TreeTableColumn<S,?>) column);
             return selectedCellsMap.isSelected(row, columnIndex);
         }
 
@@ -2915,6 +2942,13 @@ public class TreeTableView<S> extends Control {
          * Support code                                                        *
          *                                                                     *
          **********************************************************************/
+
+        private void updateDefaultSelection() {
+            // if we can, we put selection onto the first row
+            int newValueIndex = getItemCount() > 0 ? 0 : -1;
+            clearSelection();
+            select(newValueIndex, isCellSelectionEnabled() ? getTableColumn(0) : null);
+        }
         
         private TreeTableColumn<S,?> getTableColumn(int pos) {
             return getTreeTableView().getVisibleLeafColumn(pos);
@@ -3135,9 +3169,11 @@ public class TreeTableView<S> extends Control {
             this.treeTableView.rootProperty().addListener(weakRootPropertyListener);
             updateTreeEventListener(null, treeTableView.getRoot());
 
-            TreeTablePosition<S,?> pos = new TreeTablePosition<>(treeTableView, -1, null);
+            int focusRow = getItemCount() > 0 ? 0 : -1;
+            TreeTablePosition<S,?> pos = new TreeTablePosition<>(treeTableView, focusRow, null);
             setFocusedCell(pos);
-            EMPTY_CELL = pos;
+
+            EMPTY_CELL = new TreeTablePosition<>(treeTableView, -1, null);
         }
         
         private final ChangeListener<TreeItem<S>> rootPropertyListener = (observable, oldValue, newValue) -> {
@@ -3379,6 +3415,24 @@ public class TreeTableView<S> extends Control {
             TreeTablePosition<S,?> cell = getFocusedCell();
             if (cell.getColumn() == getColumnCount() - 1) return;
             focus(cell.getRow(), getTableColumn(cell.getTableColumn(), 1));
+        }
+
+        /** {@inheritDoc} */
+        @Override public void focusPrevious() {
+            if (getFocusedIndex() == -1) {
+                focus(0);
+            } else if (getFocusedIndex() > 0) {
+                focusAboveCell();
+            }
+        }
+
+        /** {@inheritDoc} */
+        @Override public void focusNext() {
+            if (getFocusedIndex() == -1) {
+                focus(0);
+            } else if (getFocusedIndex() != getItemCount() -1) {
+                focusBelowCell();
+            }
         }
 
 

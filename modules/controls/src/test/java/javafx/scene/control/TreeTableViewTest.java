@@ -885,7 +885,7 @@ public class TreeTableViewTest {
         installChildren();
         TreeItem<String> element = new TreeItem<String>("I AM A CRAZY RANDOM STRING");
         treeTableView.getSelectionModel().select(element);
-        assertEquals(0, treeTableView.getSelectionModel().getSelectedIndex());
+        assertEquals(-1, treeTableView.getSelectionModel().getSelectedIndex());
         assertSame(element, treeTableView.getSelectionModel().getSelectedItem());
     }
 
@@ -1662,7 +1662,7 @@ public class TreeTableViewTest {
         sm.setCellSelectionEnabled(true);
         sm.setSelectionMode(SelectionMode.MULTIPLE);
         
-        assertTrue(sm.getSelectedIndices().isEmpty());
+        assertFalse(sm.getSelectedIndices().isEmpty());
         
         // only (0,0) should be selected, so selected indices should be [0]
         sm.select(0, firstNameCol);
@@ -1712,8 +1712,8 @@ public class TreeTableViewTest {
         table.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
         sm.setCellSelectionEnabled(true);
         sm.setSelectionMode(SelectionMode.MULTIPLE);
-        
-        assertTrue(sm.getSelectedItems().isEmpty());
+
+        assertFalse(sm.getSelectedItems().isEmpty());
         
         // only (0,0) should be selected, so selected items should be [p0]
         sm.select(0, firstNameCol);
@@ -3317,8 +3317,8 @@ public class TreeTableViewTest {
         // test initial state
         assertEquals(sl.getStage().getScene().getFocusOwner(), focusBtn);
         assertTrue(focusBtn.isFocused());
-        assertEquals(-1, sm.getSelectedIndex());
-        assertNull(sm.getSelectedItem());
+        assertEquals(0, sm.getSelectedIndex());
+        assertNotNull(sm.getSelectedItem());
 
         // move focus to the TreeTableView
         treeView.requestFocus();
@@ -3930,5 +3930,266 @@ public class TreeTableViewTest {
         assertEquals(0, (int) sm.getSelectedIndices().get(0));
         assertEquals(1, sm.getSelectedItems().size());
         assertEquals(rootTwo, sm.getSelectedItems().get(0));
+    }
+
+    private TreeTableView<Person> test_rt_38464_createControl() {
+        ObservableList<TreeItem<Person>> persons = FXCollections.observableArrayList(
+                new TreeItem<>(new Person("Jacob", "Smith", "jacob.smith@example.com")),
+                new TreeItem<>(new Person("Isabella", "Johnson", "isabella.johnson@example.com")),
+                new TreeItem<>(new Person("Ethan", "Williams", "ethan.williams@example.com")),
+                new TreeItem<>(new Person("Emma", "Jones", "emma.jones@example.com")),
+                new TreeItem<>(new Person("Michael", "Brown", "michael.brown@example.com")));
+
+        TreeTableView<Person> table = new TreeTableView<>();
+        table.setShowRoot(false);
+
+        TreeItem<Person> root = new TreeItem<>(new Person("Root", null, null));
+        root.setExpanded(true);
+        root.getChildren().setAll(persons);
+        table.setRoot(root);
+
+
+
+        TreeTableColumn firstNameCol = new TreeTableColumn("First Name");
+        firstNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("firstName"));
+
+        TreeTableColumn lastNameCol = new TreeTableColumn("Last Name");
+        lastNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("lastName"));
+
+        table.getColumns().addAll(firstNameCol, lastNameCol);
+
+        return table;
+    }
+
+    @Test public void test_rt_38464_rowSelection_selectFirstRowOnly() {
+        TreeTableView<Person> table = test_rt_38464_createControl();
+        TreeTableView.TreeTableViewSelectionModel<Person> sm = table.getSelectionModel();
+        sm.setCellSelectionEnabled(false);
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        sm.select(0);
+
+        assertTrue(sm.isSelected(0));
+        assertTrue(sm.isSelected(0, table.getColumns().get(0)));
+        assertTrue(sm.isSelected(0, table.getColumns().get(1)));
+
+        assertEquals(1, sm.getSelectedIndices().size());
+        assertEquals(1, sm.getSelectedItems().size());
+        assertEquals(1, sm.getSelectedCells().size());
+    }
+
+    @Test public void test_rt_38464_rowSelection_selectFirstRowAndThenCallNoOpMethods() {
+        TreeTableView<Person> table = test_rt_38464_createControl();
+        TreeTableView.TreeTableViewSelectionModel<Person> sm = table.getSelectionModel();
+        sm.setCellSelectionEnabled(false);
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        sm.select(0);               // select first row
+        sm.select(0);               // this should be a no-op
+        sm.select(0, table.getColumns().get(0)); // so should this, as we are in row selection mode
+        sm.select(0, table.getColumns().get(1));  // and same here
+
+        assertTrue(sm.isSelected(0));
+        assertTrue(sm.isSelected(0, table.getColumns().get(0)));
+        assertTrue(sm.isSelected(0, table.getColumns().get(1)));
+
+        assertEquals(1, sm.getSelectedIndices().size());
+        assertEquals(1, sm.getSelectedItems().size());
+        assertEquals(1, sm.getSelectedCells().size());
+    }
+
+
+    @Test public void test_rt_38464_cellSelection_selectFirstRowOnly() {
+        TreeTableView<Person> table = test_rt_38464_createControl();
+        TreeTableView.TreeTableViewSelectionModel<Person> sm = table.getSelectionModel();
+        sm.setCellSelectionEnabled(true);
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        // select first row. This should be translated into selection of all
+        // cells in this row, but does not result in the row itself being
+        // considered selected.
+        sm.select(0);
+
+        assertFalse(sm.isSelected(0));
+        assertTrue(sm.isSelected(0, table.getColumns().get(0)));
+        assertTrue(sm.isSelected(0, table.getColumns().get(1)));
+
+        assertEquals(1, sm.getSelectedIndices().size());
+        assertEquals(1, sm.getSelectedItems().size());
+        assertEquals(2, sm.getSelectedCells().size());
+    }
+
+    @Test public void test_rt_38464_cellSelection_selectFirstRowAndThenCallNoOpMethods() {
+        TreeTableView<Person> table = test_rt_38464_createControl();
+        TreeTableView.TreeTableViewSelectionModel<Person> sm = table.getSelectionModel();
+        sm.setCellSelectionEnabled(true);
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        // select first row. This should be translated into selection of all
+        // cells in this row, but does not result in the row itself being
+        // considered selected.
+        sm.select(0);               // select first row
+        sm.select(0, table.getColumns().get(0)); // This line and the next should be no-ops
+        sm.select(0, table.getColumns().get(1));
+
+        assertFalse(sm.isSelected(0));
+        assertTrue(sm.isSelected(0, table.getColumns().get(0)));
+        assertTrue(sm.isSelected(0, table.getColumns().get(1)));
+
+        assertEquals(1, sm.getSelectedIndices().size());
+        assertEquals(1, sm.getSelectedItems().size());
+        assertEquals(2, sm.getSelectedCells().size());
+    }
+
+    @Test public void test_rt38464_selectCellMultipleTimes() {
+        TreeTableView<Person> table = test_rt_38464_createControl();
+        TreeTableView.TreeTableViewSelectionModel<Person> sm = table.getSelectionModel();
+        sm.setCellSelectionEnabled(true);
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        // default selection when in cell selection mode
+        assertEquals(1, sm.getSelectedCells().size());
+        assertEquals(1, sm.getSelectedItems().size());
+        assertEquals(1, sm.getSelectedIndices().size());
+
+        // select the first cell
+        sm.select(0, table.getColumns().get(0));
+        assertEquals(1, sm.getSelectedCells().size());
+        assertEquals(1, sm.getSelectedItems().size());
+        assertEquals(1, sm.getSelectedIndices().size());
+
+        // select the first cell....again
+        sm.select(0, table.getColumns().get(0));
+        assertEquals(1, sm.getSelectedCells().size());
+        assertEquals(1, sm.getSelectedItems().size());
+        assertEquals(1, sm.getSelectedIndices().size());
+    }
+
+    @Test public void test_rt38464_selectCellThenRow() {
+        TreeTableView<Person> table = test_rt_38464_createControl();
+        TreeTableView.TreeTableViewSelectionModel<Person> sm = table.getSelectionModel();
+        sm.setCellSelectionEnabled(true);
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        // default selection when in cell selection mode
+        assertEquals(1, sm.getSelectedCells().size());
+        assertEquals(1, sm.getSelectedItems().size());
+        assertEquals(1, sm.getSelectedIndices().size());
+
+        // select the first cell
+        sm.select(0, table.getColumns().get(0));
+        assertEquals(1, sm.getSelectedCells().size());
+        assertEquals(1, sm.getSelectedItems().size());
+        assertEquals(1, sm.getSelectedIndices().size());
+
+        // select the first row
+        sm.select(0);
+
+        // we go to 2 here as all cells in the row become selected. What we do
+        // not expect is to go to 3, as that would mean duplication
+        assertEquals(2, sm.getSelectedCells().size());
+        assertEquals(1, sm.getSelectedItems().size());
+        assertEquals(1, sm.getSelectedIndices().size());
+    }
+
+    @Test public void test_rt38464_selectRowThenCell() {
+        TreeTableView<Person> table = test_rt_38464_createControl();
+        TreeTableView.TreeTableViewSelectionModel<Person> sm = table.getSelectionModel();
+        sm.setCellSelectionEnabled(true);
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        // default selection when in cell selection mode
+        assertEquals(1, sm.getSelectedCells().size());
+        assertEquals(1, sm.getSelectedItems().size());
+        assertEquals(1, sm.getSelectedIndices().size());
+
+        // select the first row
+        sm.select(0);
+
+        // we go to 2 here as all cells in the row become selected.
+        assertEquals(2, sm.getSelectedCells().size());
+        assertEquals(1, sm.getSelectedItems().size());
+        assertEquals(1, sm.getSelectedIndices().size());
+
+        // select the first cell - no change is expected
+        sm.select(0, table.getColumns().get(0));
+        assertEquals(2, sm.getSelectedCells().size());
+        assertEquals(1, sm.getSelectedItems().size());
+        assertEquals(1, sm.getSelectedIndices().size());
+    }
+
+    @Test public void test_rt38464_selectTests_cellSelection_singleSelection_selectsOneRow() {
+        test_rt38464_selectTests(true, true, true);
+    }
+
+    @Test public void test_rt38464_selectTests_cellSelection_singleSelection_selectsTwoRows() {
+        test_rt38464_selectTests(true, true, false);
+    }
+
+    @Test public void test_rt38464_selectTests_cellSelection_multipleSelection_selectsOneRow() {
+        test_rt38464_selectTests(true, false, true);
+    }
+
+    @Test public void test_rt38464_selectTests_cellSelection_multipleSelection_selectsTwoRows() {
+        test_rt38464_selectTests(true, false, false);
+    }
+
+    @Test public void test_rt38464_selectTests_rowSelection_singleSelection_selectsOneRow() {
+        test_rt38464_selectTests(false, true, true);
+    }
+
+    @Test public void test_rt38464_selectTests_rowSelection_singleSelection_selectsTwoRows() {
+        test_rt38464_selectTests(false, true, false);
+    }
+
+    @Test public void test_rt38464_selectTests_rowSelection_multipleSelection_selectsOneRow() {
+        test_rt38464_selectTests(false, false, true);
+    }
+
+    @Test public void test_rt38464_selectTests_rowSelection_multipleSelection_selectsTwoRows() {
+        test_rt38464_selectTests(false, false, false);
+    }
+
+    private void test_rt38464_selectTests(boolean cellSelection, boolean singleSelection, boolean selectsOneRow) {
+        TreeTableView<Person> table = test_rt_38464_createControl();
+        TreeTableView.TreeTableViewSelectionModel<Person> sm = table.getSelectionModel();
+        sm.setCellSelectionEnabled(cellSelection);
+        sm.setSelectionMode(singleSelection ? SelectionMode.SINGLE : SelectionMode.MULTIPLE);
+
+        // default selection when in cell selection mode
+        assertEquals(1, sm.getSelectedCells().size());
+        assertEquals(1, sm.getSelectedItems().size());
+        assertEquals(1, sm.getSelectedIndices().size());
+
+        if (selectsOneRow) {
+            sm.select(0);
+        } else {
+            // select the first two rows
+            sm.selectIndices(0, 1);
+        }
+
+        final int expectedCells = singleSelection                    ? 1 :
+                                  selectsOneRow   && cellSelection   ? 2 :
+                                  selectsOneRow   && !cellSelection  ? 1 :
+                                  !selectsOneRow  && cellSelection   ? 4 :
+                               /* !selectsOneRow  && !cellSelection */ 2;
+
+        final int expectedItems = singleSelection ? 1 :
+                selectsOneRow   ? 1 : 2;
+
+        assertEquals(expectedCells, sm.getSelectedCells().size());
+        assertEquals(expectedItems, sm.getSelectedItems().size());
+        assertEquals(expectedItems, sm.getSelectedIndices().size());
+
+        // we expect the table column of all selected cells, in this instance,
+        // to be null as we have not explicitly stated a column, nor have we clicked
+        // on a column. The only alternative is to use the first column.
+        for (TreeTablePosition<?,?> tp : sm.getSelectedCells()) {
+            if (cellSelection) {
+                assertNotNull(tp.getTableColumn());
+            } else {
+                assertNull(tp.getTableColumn());
+            }
+        }
     }
 }

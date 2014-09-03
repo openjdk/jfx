@@ -61,8 +61,8 @@ import org.junit.Test;
 //@Ignore("Disabling tests as they fail with OOM in continuous builds")
 public class TreeTableViewMouseInputTest {
     private TreeTableView<String> tableView;
-    private TreeTableView.TreeTableViewSelectionModel<String> sm;
-    private TreeTableView.TreeTableViewFocusModel<String> fm;
+    private TreeTableView.TreeTableViewSelectionModel<?> sm;
+    private TreeTableView.TreeTableViewFocusModel<?> fm;
     
     private final TreeTableColumn<String, String> col0 = new TreeTableColumn<String, String>("col0");
     private final TreeTableColumn<String, String> col1 = new TreeTableColumn<String, String>("col1");
@@ -152,8 +152,8 @@ public class TreeTableViewMouseInputTest {
     private String debug() {
         StringBuilder sb = new StringBuilder("Selected Cells: [");
         
-        List<TreeTablePosition<String,?>> cells = sm.getSelectedCells();
-        for (TreeTablePosition<String,?> tp : cells) {
+        ObservableList<? extends TreeTablePosition<?, ?>> cells = sm.getSelectedCells();
+        for (TreeTablePosition<?,?> tp : cells) {
             sb.append("(");
             sb.append(tp.getRow());
             sb.append(",");
@@ -573,7 +573,7 @@ public class TreeTableViewMouseInputTest {
 
         TreeTablePosition pos = sm.getSelectedCells().get(0);
         assertEquals(1, pos.getRow());
-        assertNull(pos.getTableColumn());
+        assertNotNull(pos.getTableColumn());
     }
 
     @Test public void test_rt_33897_cellSelection() {
@@ -738,16 +738,16 @@ public class TreeTableViewMouseInputTest {
         assertTrue(sm.isSelected(0, firstNameCol));
         assertEquals(1, sm.getSelectedCells().size());
 
+        TreeTableCell cell_0_0 = (TreeTableCell) VirtualFlowTestUtils.getCell(table, 0, 0);
         TreeTableCell cell_0_1 = (TreeTableCell) VirtualFlowTestUtils.getCell(table, 0, 1);
         TreeTableCell cell_0_2 = (TreeTableCell) VirtualFlowTestUtils.getCell(table, 0, 2);
-        TreeTableCell cell_0_3 = (TreeTableCell) VirtualFlowTestUtils.getCell(table, 0, 3);
 
+        TreeTableCell cell_1_0 = (TreeTableCell) VirtualFlowTestUtils.getCell(table, 1, 0);
         TreeTableCell cell_1_1 = (TreeTableCell) VirtualFlowTestUtils.getCell(table, 1, 1);
         TreeTableCell cell_1_2 = (TreeTableCell) VirtualFlowTestUtils.getCell(table, 1, 2);
-        TreeTableCell cell_1_3 = (TreeTableCell) VirtualFlowTestUtils.getCell(table, 1, 3);
 
         MouseEventFirer mouse = selectTwoRows ?
-                new MouseEventFirer(cell_1_3) : new MouseEventFirer(cell_0_3);
+                new MouseEventFirer(cell_1_2) : new MouseEventFirer(cell_0_2);
 
         mouse.fireMousePressAndRelease(KeyModifier.SHIFT);
 
@@ -763,14 +763,254 @@ public class TreeTableViewMouseInputTest {
 
         assertEquals(selectTwoRows ? 6 : 3, sm.getSelectedCells().size());
 
+        assertTrue(cell_0_0.isSelected());
         assertTrue(cell_0_1.isSelected());
         assertTrue(cell_0_2.isSelected());
-        assertTrue(cell_0_3.isSelected());
 
         if (selectTwoRows) {
+            assertTrue(cell_1_0.isSelected());
             assertTrue(cell_1_1.isSelected());
             assertTrue(cell_1_2.isSelected());
-            assertTrue(cell_1_3.isSelected());
+        }
+    }
+
+    @Test public void test_rt_38464_rowSelection() {
+        ObservableList<TreeItem<Person>> persons = FXCollections.observableArrayList(
+                new TreeItem<>(new Person("Jacob", "Smith", "jacob.smith@example.com")),
+                new TreeItem<>(new Person("Isabella", "Johnson", "isabella.johnson@example.com")),
+                new TreeItem<>(new Person("Ethan", "Williams", "ethan.williams@example.com")),
+                new TreeItem<>(new Person("Emma", "Jones", "emma.jones@example.com")),
+                new TreeItem<>(new Person("Michael", "Brown", "michael.brown@example.com")));
+
+        TreeTableView<Person> table = new TreeTableView<>();
+
+        TreeItem<Person> root = new TreeItem<Person>(new Person("Root", null, null));
+        root.setExpanded(true);
+        table.setRoot(root);
+        table.setShowRoot(false);
+        root.getChildren().setAll(persons);
+
+        TreeTableColumn firstNameCol = new TreeTableColumn("First Name");
+        firstNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("firstName"));
+
+        TreeTableColumn lastNameCol = new TreeTableColumn("Last Name");
+        lastNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("lastName"));
+
+        TreeTableColumn emailCol = new TreeTableColumn("Email");
+        emailCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("email"));
+
+        table.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
+
+        sm = table.getSelectionModel();
+        sm.setCellSelectionEnabled(false);
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        sm.clearSelection();
+        sm.select(0, lastNameCol);
+
+        assertTrue(sm.isSelected(0, lastNameCol));
+        assertEquals(1, sm.getSelectedCells().size());
+
+        TreeTableCell cell_4_2 = (TreeTableCell) VirtualFlowTestUtils.getCell(table, 4, 1);
+
+        MouseEventFirer mouse = new MouseEventFirer(cell_4_2);
+        mouse.fireMousePressAndRelease(KeyModifier.SHIFT);
+
+        // we are in row selection mode, so all cells in the selected rows should
+        // be selected. We test this per-cell, but also per-row.
+        for (int row = 0; row < 5; row++) {
+            // test that the selection model is accurate
+            assertTrue(sm.isSelected(row, firstNameCol));
+            assertTrue(sm.isSelected(row, lastNameCol));
+            assertTrue(sm.isSelected(row, emailCol));
+            assertTrue(sm.isSelected(row));
+
+            // and assert that the visuals are accurate
+            // (TableCells should not be selected, but TableRows should be)
+            for (int column = 0; column < 3; column++) {
+                if (row == 4 && column == 2) {
+                    // bizarrely cell (4,2), i.e. the bottom-right cell consisting
+                    // of Michael Brown's email address, doesn't exist.
+                    continue;
+                }
+                TreeTableCell cell = (TreeTableCell) VirtualFlowTestUtils.getCell(table, row, column);
+                assertFalse("cell[row: " + row + ", column: " + column + "] is selected, but shouldn't be", cell.isSelected());
+            }
+            TreeTableRow cell = (TreeTableRow) VirtualFlowTestUtils.getCell(table, row);
+            assertTrue(cell.isSelected());
+        }
+    }
+
+    @Test public void test_rt_38464_cellSelection() {
+        ObservableList<TreeItem<Person>> persons = FXCollections.observableArrayList(
+                new TreeItem<>(new Person("Jacob", "Smith", "jacob.smith@example.com")),
+                new TreeItem<>(new Person("Isabella", "Johnson", "isabella.johnson@example.com")),
+                new TreeItem<>(new Person("Ethan", "Williams", "ethan.williams@example.com")),
+                new TreeItem<>(new Person("Emma", "Jones", "emma.jones@example.com")),
+                new TreeItem<>(new Person("Michael", "Brown", "michael.brown@example.com")));
+
+        TreeTableView<Person> table = new TreeTableView<>();
+
+        TreeItem<Person> root = new TreeItem<>(new Person("Root", null, null));
+        root.setExpanded(true);
+        table.setRoot(root);
+        table.setShowRoot(false);
+        root.getChildren().setAll(persons);
+
+        TreeTableColumn firstNameCol = new TreeTableColumn("First Name");
+        firstNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("firstName"));
+
+        TreeTableColumn lastNameCol = new TreeTableColumn("Last Name");
+        lastNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("lastName"));
+
+        TreeTableColumn emailCol = new TreeTableColumn("Email");
+        emailCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("email"));
+
+        table.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
+
+        sm = table.getSelectionModel();
+        sm.setCellSelectionEnabled(true);
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        sm.clearSelection();
+        sm.select(0, emailCol);
+        table.getFocusModel().focus(0, emailCol);
+
+        assertTrue(sm.isSelected(0, emailCol));
+        assertEquals(1, sm.getSelectedCells().size());
+
+        TreeTableCell cell_4_2 = (TreeTableCell) VirtualFlowTestUtils.getCell(table, 4, 2);
+        assertEquals(emailCol, cell_4_2.getTableColumn());
+
+        new MouseEventFirer(cell_4_2).fireMousePressAndRelease(KeyModifier.SHIFT);
+
+        for (int row = 0; row < 5; row++) {
+            // test that the selection model is accurate
+            assertFalse(sm.isSelected(row, firstNameCol));
+            assertFalse(sm.isSelected(row, lastNameCol));
+            assertTrue(sm.isSelected(row, emailCol));
+            assertFalse(sm.isSelected(row));
+
+            // and assert that the visuals are accurate
+            // (some TableCells should be selected, but TableRows should not be)
+            for (int column = 0; column < 3; column++) {
+                if (row == 4 && column == 2) {
+                    // bizarrely cell (4,2), i.e. the bottom-right cell consisting
+                    // of Michael Brown's email address, doesn't exist.
+                    continue;
+                }
+                TreeTableCell cell = (TreeTableCell) VirtualFlowTestUtils.getCell(table, row, column);
+                assertEquals(column == 2 ? true : false, cell.isSelected());
+            }
+            TreeTableRow cell = (TreeTableRow) VirtualFlowTestUtils.getCell(table, row);
+            assertFalse(cell.isSelected());
+        }
+    }
+
+    @Test public void test_rt_38464_selectedColumnChangesWhenCellsInRowClicked_cellSelection_singleSelection() {
+        test_rt_38464_selectedColumnChangesWhenCellsInRowClicked(true, true);
+    }
+
+    @Test public void test_rt_38464_selectedColumnChangesWhenCellsInRowClicked_cellSelection_multipleSelection() {
+        test_rt_38464_selectedColumnChangesWhenCellsInRowClicked(true, false);
+    }
+
+    @Test public void test_rt_38464_selectedColumnChangesWhenCellsInRowClicked_rowSelection_singleSelection() {
+        test_rt_38464_selectedColumnChangesWhenCellsInRowClicked(false, true);
+    }
+
+    @Test public void test_rt_38464_selectedColumnChangesWhenCellsInRowClicked_rowSelection_multipleSelection() {
+        test_rt_38464_selectedColumnChangesWhenCellsInRowClicked(false, false);
+    }
+
+    private void test_rt_38464_selectedColumnChangesWhenCellsInRowClicked(boolean cellSelection, boolean singleSelection) {
+        ObservableList<TreeItem<Person>> persons = FXCollections.observableArrayList(
+                new TreeItem<>(new Person("Jacob", "Smith", "jacob.smith@example.com")),
+                new TreeItem<>(new Person("Isabella", "Johnson", "isabella.johnson@example.com")),
+                new TreeItem<>(new Person("Ethan", "Williams", "ethan.williams@example.com")),
+                new TreeItem<>(new Person("Emma", "Jones", "emma.jones@example.com")),
+                new TreeItem<>(new Person("Michael", "Brown", "michael.brown@example.com")));
+
+        TreeTableView<Person> table = new TreeTableView<>();
+
+        TreeItem<Person> root = new TreeItem<Person>(new Person("Root", null, null));
+        root.setExpanded(true);
+        table.setRoot(root);
+        table.setShowRoot(false);
+        root.getChildren().setAll(persons);
+
+        TreeTableColumn firstNameCol = new TreeTableColumn("First Name");
+        firstNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("firstName"));
+
+        TreeTableColumn lastNameCol = new TreeTableColumn("Last Name");
+        lastNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("lastName"));
+
+        TreeTableColumn emailCol = new TreeTableColumn("Email");
+        emailCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("email"));
+
+        table.getColumns().addAll(firstNameCol, lastNameCol, emailCol);
+
+        TreeTableView.TreeTableViewSelectionModel<Person> sm = table.getSelectionModel();
+        sm.setCellSelectionEnabled(cellSelection);
+        sm.setSelectionMode(singleSelection ? SelectionMode.SINGLE : SelectionMode.MULTIPLE);
+
+        TreeTableCell cell_0_0 = (TreeTableCell) VirtualFlowTestUtils.getCell(table, 0, 0);
+        TreeTableCell cell_0_1 = (TreeTableCell) VirtualFlowTestUtils.getCell(table, 0, 1);
+        TreeTableCell cell_0_2 = (TreeTableCell) VirtualFlowTestUtils.getCell(table, 0, 2);
+
+        sm.clearSelection();
+
+        // click on cell (0,0).
+        new MouseEventFirer(cell_0_0).fireMousePressAndRelease();
+
+        if (cellSelection) {
+            // Because we are in cell selection mode, this has the effect of
+            // selecting just the one cell.
+            assertFalse(sm.isSelected(0));
+            assertTrue(sm.isSelected(0, firstNameCol));
+            assertFalse(sm.isSelected(0, lastNameCol));
+            assertFalse(sm.isSelected(0, emailCol));
+            assertEquals(1, sm.getSelectedCells().size());
+            assertEquals(0, sm.getSelectedCells().get(0).getRow());
+            assertEquals(firstNameCol, sm.getSelectedCells().get(0).getTableColumn());
+        } else {
+            // Because we are in row selection mode, this has
+            // the effect of selecting all cells and the backing row. However, the
+            // selected cell will be (0, firstNameCol) only
+            assertTrue(sm.isSelected(0));
+            assertTrue(sm.isSelected(0, firstNameCol));
+            assertTrue(sm.isSelected(0, lastNameCol));
+            assertTrue(sm.isSelected(0, emailCol));
+            assertEquals(1, sm.getSelectedCells().size());
+            assertEquals(0, sm.getSelectedCells().get(0).getRow());
+            assertEquals(firstNameCol, sm.getSelectedCells().get(0).getTableColumn());
+        }
+
+        // click on cell (0,1).
+        new MouseEventFirer(cell_0_1).fireMousePressAndRelease();
+
+        if (cellSelection) {
+            // Everything should remain the same, except the
+            // column of the single selected cell should change to lastNameCol.
+            assertFalse(sm.isSelected(0));
+            assertFalse(sm.isSelected(0, firstNameCol));
+            assertTrue(sm.isSelected(0, lastNameCol));
+            assertFalse(sm.isSelected(0, emailCol));
+            assertEquals(1, sm.getSelectedCells().size());
+            TreeTablePosition<?,?> cell = sm.getSelectedCells().get(0);
+            assertEquals(0, cell.getRow());
+            assertEquals(lastNameCol, cell.getTableColumn());
+        } else {
+            // Everything should remain the same, except the
+            // column of the single selected cell should change to lastNameCol.
+            assertTrue(sm.isSelected(0));
+            assertTrue(sm.isSelected(0, firstNameCol));
+            assertTrue(sm.isSelected(0, lastNameCol));
+            assertTrue(sm.isSelected(0, emailCol));
+            assertEquals(1, sm.getSelectedCells().size());
+            TreeTablePosition<?,?> cell = sm.getSelectedCells().get(0);
+            assertEquals(0, cell.getRow());
+            assertEquals(lastNameCol, cell.getTableColumn());
         }
     }
 }
