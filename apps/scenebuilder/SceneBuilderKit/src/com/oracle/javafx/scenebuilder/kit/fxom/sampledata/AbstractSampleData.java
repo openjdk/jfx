@@ -80,6 +80,11 @@ abstract class AbstractSampleData {
         Color.AZURE, Color.CHARTREUSE, Color.CRIMSON, Color.DARKCYAN
     };
     
+    private static final String[] alphabet = {
+        "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", //NOI18N
+        "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z" //NOI18N
+    };
+    
     public abstract void applyTo(Object sceneGraphObject);
     public abstract void removeFrom(Object sceneGraphObject);
     
@@ -94,5 +99,9 @@ abstract class AbstractSampleData {
     
     protected static Color color(int index) {
         return colors[index % colors.length];
+    }
+
+    protected static String alphabet(int index) {
+        return alphabet[index % alphabet.length];
     }
 }
