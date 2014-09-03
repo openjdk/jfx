@@ -36,7 +36,6 @@ import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.ModifyFxControllerJo
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.RemoveObjectJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.togglegroup.AdjustAllToggleGroupJob;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.AbstractSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
@@ -99,9 +98,6 @@ public class TrimSelectionJob extends BatchSelectionJob {
 
             final Job setDocumentRoot = new SetDocumentRootJob(candidateRoot, getEditorController());
             result.add(setDocumentRoot);
-
-            final Job adjustToggleGroups = new AdjustAllToggleGroupJob(getEditorController());
-            result.add(adjustToggleGroups);
 
             // Finally add the fx:controller/fx:root to the new root object
             if (isFxRoot) {

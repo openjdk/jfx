@@ -34,7 +34,6 @@ package com.oracle.javafx.scenebuilder.kit.editor.job;
 import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.RelocateNodeJob;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
-import com.oracle.javafx.scenebuilder.kit.editor.job.togglegroup.AdjustAllToggleGroupJob;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.AbstractSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
@@ -103,7 +102,6 @@ public class PasteJob extends BatchSelectionJob {
                                 newObject0,
                                 getEditorController());
                         result.add(subJob);
-                        result.add(new AdjustAllToggleGroupJob(getEditorController()));
                     }
                 } else {
                     // Build InsertAsSubComponent jobs
@@ -135,7 +133,6 @@ public class PasteJob extends BatchSelectionJob {
                                 result.add(relocateJob);
                             }
                         }
-                        result.add(new AdjustAllToggleGroupJob(getEditorController()));
                     }
                 }
             }

@@ -41,7 +41,6 @@ import com.oracle.javafx.scenebuilder.kit.editor.job.gridpane.v2.GridSnapshot;
 import com.oracle.javafx.scenebuilder.kit.editor.job.gridpane.v2.InsertColumnJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.gridpane.v2.InsertRowJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.gridpane.v2.MoveCellContentJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.togglegroup.AdjustAllToggleGroupJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.ClearSelectionJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.RemoveObjectJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.UpdateSelectionJob;
@@ -202,8 +201,7 @@ public class GridPaneDropTarget extends AbstractDropTarget {
         //  4) add new columns/rows in target grip pane as needed
         //  5) add drag source objects to this drop target
         //  6) restore grid related properties
-        //  7) adjust toggle group declaration
-        //  8) select the dragged objects
+        //  7) select the dragged objects
         //
         //  Note: if source and target parents are the same, skip #2,#3,#5,#7 and #8
                         
@@ -308,10 +306,8 @@ public class GridPaneDropTarget extends AbstractDropTarget {
         }
         
         if (reparenting) {
-            // Step #7
-            result.addSubJob(new AdjustAllToggleGroupJob(editorController));
         
-            // Step #8
+            // Step #7
             result.addSubJob(new UpdateSelectionJob(draggedObjects, editorController));
         }
         

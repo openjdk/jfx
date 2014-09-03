@@ -34,10 +34,8 @@ package com.oracle.javafx.scenebuilder.kit.editor.job.togglegroup;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
+import com.oracle.javafx.scenebuilder.kit.editor.job.BatchDocumentJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
-import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.ClearSelectionJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.v2.CompositeJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.UpdateSelectionJob;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
@@ -50,7 +48,7 @@ import javafx.scene.control.ToggleGroup;
 /**
  *
  */
-public class ModifySelectionToggleGroupJob extends CompositeJob {
+public class ModifySelectionToggleGroupJob extends BatchDocumentJob {
 
     private final String toggleGroupId;
 
@@ -64,7 +62,7 @@ public class ModifySelectionToggleGroupJob extends CompositeJob {
     
     
     /*
-     * CompositeJob
+     * BatchSelectionJob
      */
     
     @Override
@@ -109,12 +107,6 @@ public class ModifySelectionToggleGroupJob extends CompositeJob {
                     if (subJob.isExecutable()) {
                         result.add(subJob);
                     }
-                }
-
-                if (result.isEmpty() == false) {
-                    result.add(0, new ClearSelectionJob(getEditorController()));
-                    result.add(new AdjustAllToggleGroupJob(getEditorController()));
-                    result.add(new UpdateSelectionJob(osg.getItems(), getEditorController()));
                 }
             }
         }

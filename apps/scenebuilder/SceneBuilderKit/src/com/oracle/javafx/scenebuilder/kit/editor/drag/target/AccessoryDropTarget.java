@@ -37,7 +37,6 @@ import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
 import com.oracle.javafx.scenebuilder.kit.editor.job.BatchJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.InsertAsAccessoryJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.ModifyObjectJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.togglegroup.AdjustAllToggleGroupJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.RemoveObjectJob;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
@@ -133,8 +132,6 @@ public class AccessoryDropTarget extends AbstractDropTarget {
                             Pos.CENTER.toString(), editorController);
             result.addSubJob(alignmentJob);
         }
-        
-        result.addSubJob(new AdjustAllToggleGroupJob(editorController));
         
         assert result.isExecutable();
         

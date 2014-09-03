@@ -33,7 +33,6 @@ package com.oracle.javafx.scenebuilder.kit.editor.job;
 
 import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.ReIndexObjectJob;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
-import com.oracle.javafx.scenebuilder.kit.editor.job.togglegroup.AdjustAllToggleGroupJob;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.GridSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
@@ -82,10 +81,6 @@ public class BringForwardJob extends BatchDocumentJob {
             }
         }
         
-        if (result.isEmpty() == false) {
-            // Finally we adjust toggle groups
-            result.add(new AdjustAllToggleGroupJob(getEditorController()));
-        }
         return result;
     }
 
@@ -96,7 +91,7 @@ public class BringForwardJob extends BatchDocumentJob {
             case 0:
                 result = "Unexecutable Bring Forward"; // NO18N
                 break;
-            case 2: // one arrange Z order + one AdjustAllToggleGroup
+            case 1: // one arrange Z order
                 result = getSubJobs().get(0).getDescription();
                 break;
             default:
@@ -109,7 +104,7 @@ public class BringForwardJob extends BatchDocumentJob {
     private String makeMultipleSelectionDescription() {
         final StringBuilder result = new StringBuilder();
         result.append("Bring Forward ");
-        result.append(getSubJobs().size() - 1);
+        result.append(getSubJobs().size());
         result.append(" Objects");
         return result.toString();
     }
