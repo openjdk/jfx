@@ -39,6 +39,10 @@ public class SwipeSimpleTest extends ParameterizedTestBase {
     int startPointX;
     int startPointY;
 
+    static {
+        System.setProperty("com.sun.javafx.isEmbedded", "true");
+    }
+
     public SwipeSimpleTest(TestTouchDevice device) {
         super(device);
     }
@@ -94,119 +98,119 @@ public class SwipeSimpleTest extends ParameterizedTestBase {
             Assert.assertEquals(0, TestLog.countLogContaining("SWIPE"));
         }
     }
-    @Ignore("RT-38349")
+
     @Test
     public void testSwipeRight1() throws Exception {
         Point[] path = {new Point(startPointX, startPointY),
                 new Point(startPointX + getDelta(), startPointY)};
         swipe(path, "SWIPE_RIGHT");
     }
-    @Ignore("RT-38349")
+
     @Test
     public void testSwipeRight2() throws Exception {
         Point[] path = {new Point(startPointX, startPointY), new Point(65,
                 getDelta(), startPointX, startPointY)};
         swipe(path, "SWIPE_RIGHT");
     }
-    @Ignore("RT-38349")
+
     @Test
     public void testSwipeRight3() throws Exception {
         Point[] path = {new Point(startPointX, startPointY), new Point(80,
                 getDelta(), startPointX, startPointY)};
         swipe(path, "SWIPE_RIGHT");
     }
-    @Ignore("RT-38349")
+
     @Test
     public void testSwipeRight4() throws Exception {
         Point[] path = {new Point(startPointX, startPointY), new Point(115,
                 getDelta(), startPointX, startPointY)};
         swipe(path, "SWIPE_RIGHT");
     }
-    @Ignore("RT-38349")
+
     @Test
     public void testSwipeLeft1() throws Exception {
         Point[] path = {new Point(startPointX, startPointY),
                 new Point(startPointX - getDelta(), startPointY)};
         swipe(path, "SWIPE_LEFT");
     }
-    @Ignore("RT-38349")
+
     @Test
     public void testSwipeLeft2() throws Exception {
         Point[] path = {new Point(startPointX, startPointY), new Point(-65,
                 getDelta(), startPointX, startPointY)};
         swipe(path, "SWIPE_LEFT");
     }
-    @Ignore("RT-38349")
+
     @Test
     public void testSwipeLeft3() throws Exception {
         Point[] path = {new Point(startPointX, startPointY), new Point(-80,
                 getDelta(), startPointX, startPointY)};
         swipe(path, "SWIPE_LEFT");
     }
-    @Ignore("RT-38349")
+
     @Test
     public void testSwipeLeft4() throws Exception {
         Point[] path = {new Point(startPointX, startPointY), new Point(-115,
                 getDelta(), startPointX, startPointY)};
         swipe(path, "SWIPE_LEFT");
     }
-    @Ignore("RT-38349")
+
     @Test
     public void testSwipeUp1() throws Exception {
         Point[] path = {new Point(startPointX, startPointY),
                 new Point(startPointX, startPointY - getDelta())};
         swipe(path, "SWIPE_UP");
     }
-    @Ignore("RT-38349")
+
     @Test
     public void testSwipeUp2() throws Exception {
         Point[] path = {new Point(startPointX, startPointY), new Point(25,
                 getDelta(), startPointX, startPointY)};
         swipe(path, "SWIPE_UP");
     }
-    @Ignore("RT-38349")
+
     @Test
     public void testSwipeUp3() throws Exception {
         Point[] path = {new Point(startPointX, startPointY), new Point(-25,
                 getDelta(), startPointX, startPointY)};
         swipe(path, "SWIPE_UP");
     }
-    @Ignore("RT-38349")
+
     @Test
     public void testSwipeDown1() throws Exception {
         Point[] path = {new Point(startPointX, startPointY),
                 new Point(startPointX, startPointY + getDelta())};
         swipe(path, "SWIPE_DOWN");
     }
-    @Ignore("RT-38349")
+
     @Test
     public void testSwipeDown2() throws Exception {
         Point[] path = {new Point(startPointX, startPointY), new Point(155,
                 getDelta(), startPointX, startPointY)};
         swipe(path, "SWIPE_DOWN");
     }
-    @Ignore("RT-38349")
+
     @Test
     public void testSwipeDown3() throws Exception {
         Point[] path = {new Point(startPointX, startPointY), new Point(-155,
                 getDelta(), startPointX, startPointY)};
         swipe(path, "SWIPE_DOWN");
     }
-    @Ignore("RT-38349")
+
     @Test
     public void testNoSwipeUp() throws Exception {
         Point[] path = {new Point(startPointX, startPointY), new Point(31,
                 getDelta(), startPointX, startPointY)};
         swipe(path, null);
     }
-    @Ignore("RT-38349")
+
     @Test
     public void testNoSwipeRight() throws Exception {
         Point[] path = {new Point(startPointX, startPointY), new Point(59,
                 getDelta(), startPointX, startPointY)};
         swipe(path, null);
     }
-    @Ignore("RT-38349")
+
     @Test
     public void testSwipeUp4Points() throws Exception {
         int delta = getDelta();
