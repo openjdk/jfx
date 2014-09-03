@@ -1404,7 +1404,7 @@ public abstract class Parent extends Node {
             for (int i=0, max=children.size(); i<max; i++) {
                 final Node node = children.get(i);
                 if (node.isVisible()) {
-                    bounds = node.getTransformedBounds(bounds, tx);
+                    bounds = getChildTransformedBounds(node, tx, bounds);
                     // if the bounds of the child are invalid, we don't want
                     // to use those in the remaining computations.
                     if (bounds.isEmpty()) continue;
@@ -1511,9 +1511,7 @@ public abstract class Parent extends Node {
             Node node = children.get(0);
             node.boundsChanged = false;
             if (node.isVisible()) {
-                cachedBounds = node.getTransformedBounds(
-                                        cachedBounds,
-                                        BaseTransform.IDENTITY_TRANSFORM);
+                cachedBounds = getChildTransformedBounds(node, BaseTransform.IDENTITY_TRANSFORM, cachedBounds);
                 top = left = bottom = right = near = far = node;
             } else {
                 cachedBounds.makeEmpty();
@@ -1585,8 +1583,7 @@ public abstract class Parent extends Node {
                 // assert node.isVisible();
                 node.boundsChanged = false;
                 --remainingDirtyNodes;
-                tmp = node.getTransformedBounds(
-                               tmp, BaseTransform.IDENTITY_TRANSFORM);
+                tmp = getChildTransformedBounds(node, BaseTransform.IDENTITY_TRANSFORM, tmp);
                 if (!tmp.isEmpty()) {
                     float tmpx = tmp.getMinX();
                     float tmpy = tmp.getMinY();
@@ -1712,11 +1709,29 @@ public abstract class Parent extends Node {
         super.updateBounds();
     }
 
+    // Note: this marks the currently processed child in terms of transformed bounds. In rare situations like
+    // in RT-37879, it might happen that the child bounds will be marked as invalid. Due to optimizations,
+    // the invalidation must *always* be propagated to the parent, because the parent with some transformation
+    // calls child's getTransformedBounds non-idenitity transform and the child's transformed bounds are thus not validated.
+    // This does not apply to the call itself however, because the call will yield the correct result even if something
+    // was invalidated during the computation. We can safely ignore such invalidations from that Node in this case
+    private Node currentlyProcessedChild;
+
+    private BaseBounds getChildTransformedBounds(Node node, BaseTransform tx, BaseBounds bounds) {
+        currentlyProcessedChild = node;
+        bounds = node.getTransformedBounds(bounds, tx);
+        currentlyProcessedChild = null;
+        return bounds;
+    }
+
     /**
      * Called by Node whenever its bounds have changed.
      */
     void childBoundsChanged(Node node) {
-        // assert node.isVisible();
+        // See comment above at "currentlyProcessedChild" field
+        if (node == currentlyProcessedChild) {
+            return;
+        }
 
         cachedBoundsInvalid = true;
 
