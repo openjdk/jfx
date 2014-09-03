@@ -489,35 +489,6 @@ public class FXOMNodes {
     }
     
     
-    public static List<FXOMPropertyT> collectToggleGroupReferences(FXOMObject fxomRoot, String toggleGroupId) {
-        assert fxomRoot != null;
-        assert toggleGroupId != null;
-        
-        final PropertyName toggleGroupName = new PropertyName("toggleGroup");
-        final List<FXOMPropertyT> result = new ArrayList<>();
-        
-        for (FXOMProperty p : fxomRoot.collectProperties(toggleGroupName)) {
-            if (p instanceof FXOMPropertyT) {
-                final FXOMPropertyT pt = (FXOMPropertyT) p;
-                final PrefixedValue pv = new PrefixedValue(pt.getValue());
-                if (pv.isExpression()) {
-                    /*
-                     * p is an FXOMPropertyT like this:
-                     * 
-                     * <.... toggleGroup="$id" .... />
-                     */
-                    final String id = pv.getSuffix();
-                    if (id.equals(toggleGroupId)) {
-                        result.add(pt);
-                    }
-                }
-            }
-        }
-        
-        return result;
-    }
-    
-    
     public static List<FXOMObject> collectUnresolvedObjects(FXOMObject fxomObject) {
         final List<FXOMObject> result = new ArrayList<>();
         
