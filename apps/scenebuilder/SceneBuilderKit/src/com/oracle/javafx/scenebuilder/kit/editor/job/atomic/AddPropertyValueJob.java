@@ -79,7 +79,6 @@ public class AddPropertyValueJob extends Job {
         assert value.getParentProperty() == targetProperty;
         assert value.getParentCollection() == null;
         
-        getEditorController().getSelection().clear();
         getEditorController().getFxomDocument().beginUpdate();
         value.removeFromParentProperty();
         getEditorController().getFxomDocument().endUpdate();

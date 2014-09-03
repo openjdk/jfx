@@ -98,7 +98,6 @@ public class RemovePropertyJob extends Job {
         assert targetProperty.getParentInstance() == parentInstance;
         assert targetProperty.getIndexInParentInstance() == indexInParentInstance;
         
-        getEditorController().getSelection().clear();
         getEditorController().getFxomDocument().beginUpdate();
         targetProperty.removeFromParentInstance();
         getEditorController().getFxomDocument().endUpdate();
