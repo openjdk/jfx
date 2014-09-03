@@ -122,7 +122,6 @@ public class FixToggleGroupIntrinsicReferenceJob extends InlineDocumentJob {
         } else {
             
             // 2b.1) Removes reference
-            final FXOMInstance targetInstance = reference.getParentProperty().getParentInstance();
             final FXOMPropertyC referenceProperty = reference.getParentProperty();
             final RemovePropertyJob removeReferenceJob 
                     = new RemovePropertyJob(referenceProperty, getEditorController());
