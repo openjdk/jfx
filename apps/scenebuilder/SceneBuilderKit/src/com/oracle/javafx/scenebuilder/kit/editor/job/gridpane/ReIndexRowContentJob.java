@@ -32,9 +32,10 @@
 package com.oracle.javafx.scenebuilder.kit.editor.job.gridpane;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
-import com.oracle.javafx.scenebuilder.kit.editor.job.BatchDocumentJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.BatchJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
 import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.ModifyObjectJob;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.metadata.Metadata;
@@ -46,9 +47,13 @@ import java.util.List;
 
 /**
  * Job invoked when re-indexing rows content.
+ * 
+ * IMPORTANT:
+ * This job cannot extends BatchDocumentJob because its sub jobs list cannot be initialized lazily.
  */
-public class ReIndexRowContentJob extends BatchDocumentJob {
+public class ReIndexRowContentJob extends Job {
 
+    private BatchJob subJob;
     private final int offset;
     private final FXOMObject targetGridPane;
     private final List<Integer> targetIndexes;
@@ -62,6 +67,7 @@ public class ReIndexRowContentJob extends BatchDocumentJob {
         this.offset = offset;
         this.targetGridPane = targetGridPane;
         this.targetIndexes = targetIndexes;
+        buildSubJobs();
     }
 
     public ReIndexRowContentJob(
@@ -74,12 +80,52 @@ public class ReIndexRowContentJob extends BatchDocumentJob {
         this.targetGridPane = targetGridPane;
         this.targetIndexes = new ArrayList<>();
         this.targetIndexes.add(targetIndex);
+        buildSubJobs();
     }
 
     @Override
-    protected List<Job> makeSubJobs() {
+    public boolean isExecutable() {
+        // When the rows are empty, there is no content to move and the 
+        // sub job list may be empty. 
+        // => we do not invoke subJob.isExecutable() here. 
+        return subJob != null;
+    }
 
-        final List<Job> result = new ArrayList<>();
+    @Override
+    public void execute() {
+        final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
+        assert isExecutable();
+        fxomDocument.beginUpdate();
+        subJob.execute();
+        fxomDocument.endUpdate();
+    }
+
+    @Override
+    public void undo() {
+        final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
+        fxomDocument.beginUpdate();
+        subJob.undo();
+        fxomDocument.endUpdate();
+    }
+
+    @Override
+    public void redo() {
+        final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
+        fxomDocument.beginUpdate();
+        subJob.redo();
+        fxomDocument.endUpdate();
+    }
+
+    @Override
+    public String getDescription() {
+        return "ReIndex Row Content"; //NOI18N
+    }
+
+    private void buildSubJobs() {
+
+        // Create sub job
+        subJob = new BatchJob(getEditorController(),
+                true /* shouldRefreshSceneGraph */, null);
 
         assert targetIndexes.isEmpty() == false;
         final DesignHierarchyMask targetGridPaneMask
@@ -98,14 +144,8 @@ public class ReIndexRowContentJob extends BatchDocumentJob {
                 int newIndexValue = targetIndex + offset;
                 final Job modifyJob = new ModifyObjectJob(
                         childInstance, vpm, newIndexValue, getEditorController());
-                result.add(modifyJob);
+                subJob.addSubJob(modifyJob);
             }
         }
-        return result;
-    }
-
-    @Override
-    protected String makeDescription() {
-        return "ReIndex Row Content"; //NOI18N
     }
 }
