@@ -1648,7 +1648,9 @@ public class NGCanvas extends NGNode {
         {
             Filterable f = PrDrawable.create(fctx, tex);
             Rectangle r = new Rectangle(tex.getContentWidth(), tex.getContentHeight());
+            f.lock();
             ImageData id = new ImageData(fctx, f, r);
+            id.setReusable(true);
             if (pixelscale != 1.0f || !transform.isIdentity()) {
                 Affine2D a2d = new Affine2D();
                 a2d.scale(1.0f / pixelscale, 1.0f / pixelscale);
