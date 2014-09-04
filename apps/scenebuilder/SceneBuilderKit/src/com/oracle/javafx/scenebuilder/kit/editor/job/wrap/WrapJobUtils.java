@@ -49,6 +49,7 @@ import javafx.geometry.Bounds;
 import javafx.scene.Node;
 import javafx.scene.chart.Axis;
 import javafx.scene.control.Accordion;
+import javafx.scene.control.DialogPane;
 import javafx.scene.control.TabPane;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.text.TextFlow;
@@ -127,9 +128,10 @@ public class WrapJobUtils {
         if (TabPane.class.isAssignableFrom(containerInstance.getDeclaredClass())) {
             return false;
         }
-        // Cannot unwrap all Pane subclasses (ex : BorderPane and TextFlow)
+        // Cannot unwrap all Pane subclasses (ex : BorderPane, TextFlow and DialogPane)
         if (BorderPane.class.isAssignableFrom(containerInstance.getDeclaredClass())
-                || TextFlow.class.isAssignableFrom(containerInstance.getDeclaredClass())) {
+                || TextFlow.class.isAssignableFrom(containerInstance.getDeclaredClass())
+                || DialogPane.class.isAssignableFrom(containerInstance.getDeclaredClass())) {
             return false;
         }
         // Can unwrap classes supporting wrapping except TabPane + some Pane subclasses (see above)

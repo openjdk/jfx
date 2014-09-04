@@ -270,7 +270,8 @@ public class HierarchyDNDController {
 
                 assert treeItem != rootTreeItem;
                 assert item instanceof HierarchyItemBorderPane
-                        || item instanceof HierarchyItemGraphic;
+                        || item instanceof HierarchyItemGraphic
+                        || item instanceof HierarchyItemDialogPane;
 
                 if (item.isEmpty()) {
                     // Set the drop target
@@ -280,6 +281,8 @@ public class HierarchyDNDController {
                     // Set the accessory
                     if (item instanceof HierarchyItemBorderPane) {
                         accessory = ((HierarchyItemBorderPane) item).getPosition();
+                    } else if (item instanceof HierarchyItemDialogPane) {
+                        accessory = ((HierarchyItemDialogPane) item).getAccessory();
                     } else {
                         accessory = Accessory.GRAPHIC;
                     }
@@ -435,7 +438,12 @@ public class HierarchyDNDController {
                         Accessory.CONTENT,
                         Accessory.CONTEXT_MENU,
                         Accessory.GRAPHIC,
-                        Accessory.TOOLTIP};
+                        Accessory.TOOLTIP,
+                        Accessory.HEADER,
+                        Accessory.DP_GRAPHIC,
+                        Accessory.DP_CONTENT,
+                        Accessory.EXPANDABLE_CONTENT
+                    };
                     for (Accessory a : accessories) {
                         final AccessoryDropTarget dropTarget
                                 = new AccessoryDropTarget(dropTargetInstance, a);

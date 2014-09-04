@@ -65,6 +65,10 @@ public class ComponentClassMetadata extends ClassMetadata {
             // We consider that BorderPane has no subcomponents.
             // left, right, bottom and top components are treated as "accessories".
             result = null;
+        } else if (componentClass == javafx.scene.control.DialogPane.class) {
+            // We consider that DialogPane has no subcomponents.
+            // content, expanded content, header and graphic components are treated as "accessories".
+            result = null;
         } else {
             while ((result == null) && (componentClass != null)) {
                 result = getSubComponentProperty(componentClass);
@@ -121,7 +125,8 @@ public class ComponentClassMetadata extends ClassMetadata {
     private static PropertyName getSubComponentProperty(Class<?> componentClass) {
         final PropertyName result;
         
-        assert componentClass != javafx.scene.layout.BorderPane.class;
+        assert componentClass != javafx.scene.layout.BorderPane.class
+                && componentClass != javafx.scene.control.DialogPane.class;
         
         /*
          * Component Class -> Sub Component Property

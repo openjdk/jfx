@@ -54,6 +54,7 @@ import javafx.geometry.Orientation;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.DialogPane;
 import javafx.scene.control.Labeled;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
@@ -99,10 +100,26 @@ public class DesignHierarchyMask {
         CENTER,
         XAXIS,
         YAXIS,
-        TREE_COLUMN
+        TREE_COLUMN,
+        EXPANDABLE_CONTENT,
+        HEADER,
+        DP_CONTENT {
+                    @Override
+                    public String toString() {
+                        return "CONTENT"; // NOI18N
+                    }
+                },
+        DP_GRAPHIC {
+                    @Override
+                    public String toString() {
+                        return "GRAPHIC"; // NOI18N
+                    }
+                }
     }
     private static final PropertyName graphicName = new PropertyName("graphic");
     private static final PropertyName contentName = new PropertyName("content");
+    private static final PropertyName expandableContentName = new PropertyName("expandableContent");
+    private static final PropertyName headerName = new PropertyName("header");
     private static final PropertyName topName = new PropertyName("top");
     private static final PropertyName bottomName = new PropertyName("bottom");
     private static final PropertyName leftName = new PropertyName("left");
@@ -379,6 +396,24 @@ public class DesignHierarchyMask {
     public boolean isAcceptingAccessory(Accessory accessory) {
         final PropertyName propertyName = getPropertyNameForAccessory(accessory);
         final Class<?> valueClass = getClassForAccessory(accessory);
+
+        final Object sceneGraphObject = fxomObject.getSceneGraphObject();
+        switch (accessory) {
+            case CONTENT:
+            case GRAPHIC:
+                if (sceneGraphObject instanceof DialogPane == true) {
+                    return false;
+                }
+                break;
+            case DP_CONTENT:
+            case DP_GRAPHIC:
+                if (sceneGraphObject instanceof DialogPane == false) {
+                    return false;
+                }
+                break;
+            default:
+                break;
+        }
         return isAcceptingProperty(propertyName, valueClass);
     }
 
@@ -428,6 +463,12 @@ public class DesignHierarchyMask {
                 break;
             case TREE_COLUMN:
                 result = javafx.scene.control.TreeTableColumn.class;
+                break;
+            case DP_CONTENT:
+            case EXPANDABLE_CONTENT:
+            case DP_GRAPHIC:
+            case HEADER:
+                result = javafx.scene.Node.class;
                 break;
             default: // Bug
                 throw new IllegalStateException("Unexpected accessory " + accessory);
@@ -607,10 +648,18 @@ public class DesignHierarchyMask {
 
         switch (accessory) {
             case GRAPHIC:
+            case DP_GRAPHIC:
                 result = graphicName;
                 break;
             case CONTENT:
+            case DP_CONTENT:
                 result = contentName;
+                break;
+            case EXPANDABLE_CONTENT:
+                result = expandableContentName;
+                break;
+            case HEADER:
+                result = headerName;
                 break;
             case TOP:
                 result = topName;
