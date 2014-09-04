@@ -656,6 +656,8 @@ public class Metadata {
             new PropertyName("endX");
     private final PropertyName endYName = 
             new PropertyName("endY");
+    private final PropertyName expandableContentName = 
+            new PropertyName("expandableContent");
     private final PropertyName expandedName = 
             new PropertyName("expanded");
     private final PropertyName expandedItemCountName = 
@@ -1837,6 +1839,11 @@ public class Metadata {
                 true, /* readWrite */
                 0.0, /* defaultValue */
                 new InspectorPath("Layout", "Position", 8));
+    private final ComponentPropertyMetadata expandableContentPropertyMetadata =
+            new ComponentPropertyMetadata(
+                expandableContentName,
+                NodeMetadata,
+                false); /* collection */
     private final ValuePropertyMetadata expanded_false_PropertyMetadata =
             new BooleanPropertyMetadata(
                 expandedName,
@@ -3091,13 +3098,6 @@ public class Metadata {
                 true, /* readWrite */
                 javafx.scene.AccessibleRole.BUTTON, /* defaultValue */
                 new InspectorPath("Properties", "Accessibility", 2));
-    private final ValuePropertyMetadata role_MENU_BUTTON_PropertyMetadata =
-            new EnumerationPropertyMetadata(
-                roleName,
-                javafx.scene.AccessibleRole.class,
-                true, /* readWrite */
-                javafx.scene.AccessibleRole.MENU_BUTTON, /* defaultValue */
-                new InspectorPath("Properties", "Accessibility", 2));
     private final ValuePropertyMetadata role_CHECK_BOX_PropertyMetadata =
             new EnumerationPropertyMetadata(
                 roleName,
@@ -3153,6 +3153,13 @@ public class Metadata {
                 javafx.scene.AccessibleRole.class,
                 true, /* readWrite */
                 javafx.scene.AccessibleRole.MENU_BAR, /* defaultValue */
+                new InspectorPath("Properties", "Accessibility", 2));
+    private final ValuePropertyMetadata role_MENU_BUTTON_PropertyMetadata =
+            new EnumerationPropertyMetadata(
+                roleName,
+                javafx.scene.AccessibleRole.class,
+                true, /* readWrite */
+                javafx.scene.AccessibleRole.MENU_BUTTON, /* defaultValue */
                 new InspectorPath("Properties", "Accessibility", 2));
     private final ValuePropertyMetadata role_PARENT_PropertyMetadata =
             new EnumerationPropertyMetadata(
@@ -4900,6 +4907,7 @@ public class Metadata {
         DialogPaneMetadata.getProperties().add(children_c1_PropertyMetadata);
         DialogPaneMetadata.getProperties().add(content_Node_NULL_PropertyMetadata);
         DialogPaneMetadata.getProperties().add(contentTextPropertyMetadata);
+        DialogPaneMetadata.getProperties().add(expandableContentPropertyMetadata);
         DialogPaneMetadata.getProperties().add(expanded_false_PropertyMetadata);
         DialogPaneMetadata.getProperties().add(graphicPropertyMetadata);
         DialogPaneMetadata.getProperties().add(headerPropertyMetadata);
@@ -5880,7 +5888,6 @@ public class Metadata {
     // The following properties are uncertified:
     //     axisSortingPolicy
     //     buttonTypes
-    //     expandableContent
     //     redoable
     //     undoable
 
