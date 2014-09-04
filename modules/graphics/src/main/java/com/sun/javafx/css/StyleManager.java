@@ -605,12 +605,13 @@ final public class StyleManager {
         if ((subScene.getUserAgentStylesheet() != null) &&
                 (!(sceneUserAgentStylesheet = subScene.getUserAgentStylesheet().trim()).isEmpty())) {
 
-            for(int n=0,nMax=userAgentStylesheetContainers.size(); n<nMax; n++) {
-                StylesheetContainer container = userAgentStylesheetContainers.get(n);
+            Iterator<StylesheetContainer> iterator = userAgentStylesheetContainers.iterator();
+            while(iterator.hasNext()) {
+                StylesheetContainer container = iterator.next();
                 if (sceneUserAgentStylesheet.equals(container.fname)) {
                     container.parentUsers.remove(subScene.getRoot());
                     if (container.parentUsers.list.size() == 0) {
-                        userAgentStylesheetContainers.remove(n);
+                        iterator.remove();
                     }
                 }
             }

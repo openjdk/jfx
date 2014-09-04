@@ -97,21 +97,45 @@ public class HelloCSS extends Application {
         swapTest.setLayoutX(25);
         swapTest.setLayoutY(110);
 
-        VBox subSceneRoot = new VBox(5, new Label("Caspian style button in a SubScene"), new Button("CASPIAN"));
-        subSceneRoot.setStyle("-fx-border-color: white; -fx-alignment: center;");
-        SubScene caspianSubScene = new SubScene(subSceneRoot, 300, 100);
-        caspianSubScene.setUserAgentStylesheet("com/sun/javafx/scene/control/skin/caspian/caspian.css");
-
-        caspianSubScene.setLayoutX(275);
-        caspianSubScene.setLayoutY(40);
+        Node subScene = createSubSceneTest();
+        subScene.setLayoutX(275);
+        subScene.setLayoutY(40);
 
         Node durationTest = createDurationTest();
         durationTest.setLayoutX(25);
         durationTest.setLayoutY(210);
 
-        ((Group)scene.getRoot()).getChildren().addAll(rect,rect2,swapTest,caspianSubScene, durationTest);
+        ((Group)scene.getRoot()).getChildren().addAll(rect,rect2,swapTest,subScene, durationTest);
         stage.setScene(scene);
         stage.show();
+    }
+
+    BooleanProperty isCaspian = new SimpleBooleanProperty(this, "isCaspian");
+    private Node createSubSceneTest() {
+
+        Button button = new Button();
+        button.setOnAction(e -> isCaspian.set(!isCaspian.get()));
+        button.textProperty().bind(Bindings.when(isCaspian).then("Click for MODENA").otherwise("Click for CASPIAN"));
+
+        Label label = new Label();
+        label.textProperty().bind(Bindings.when(isCaspian).then("Caspian style button in a SubScene").otherwise("Modena style button in a SubScene"));
+
+        VBox subSceneRoot = new VBox(5, label, button);
+        subSceneRoot.setStyle("-fx-border-color: white; -fx-alignment: center;");
+        SubScene subScene = new SubScene(subSceneRoot, 300, 100);
+
+        isCaspian.addListener(observable -> {
+            boolean _isCaspian = ((BooleanProperty)observable).get();
+            if (_isCaspian) {
+                subScene.setUserAgentStylesheet("com/sun/javafx/scene/control/skin/caspian/caspian.css");
+            } else {
+                subScene.setUserAgentStylesheet("com/sun/javafx/scene/control/skin/modena/modena.css");
+            }
+        });
+
+        isCaspian.setValue(Boolean.TRUE);
+
+        return subScene;
     }
 
     private Node createSwapTest() {
