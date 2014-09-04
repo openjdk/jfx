@@ -306,7 +306,9 @@ public class MenuBarController {
 
     // Preview
     @FXML
-    private MenuItem showPreviewMenuItem;
+    private MenuItem showPreviewInWindowMenuItem;
+    @FXML
+    private MenuItem showPreviewInDialogMenuItem;
     @FXML
     private RadioMenuItem modenaThemeMenuItem;
     @FXML
@@ -533,7 +535,8 @@ public class MenuBarController {
         assert wrapInGroupMenuItem != null;
         assert unwrapMenuItem != null;
 
-        assert showPreviewMenuItem != null;
+        assert showPreviewInWindowMenuItem != null;
+        assert showPreviewInDialogMenuItem != null;
         assert modenaThemeMenuItem != null;
         assert modenaTouchThemeMenuItem != null;
         assert modenaHighContrastBlackonwhiteThemeMenuItem != null;
@@ -924,8 +927,9 @@ public class MenuBarController {
         /*
          * Preview menu
          */
-        showPreviewMenuItem.setUserData(new DocumentControlActionController(DocumentControlAction.SHOW_PREVIEW_WINDOW));
-        showPreviewMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.P, modifier));
+        showPreviewInWindowMenuItem.setUserData(new DocumentControlActionController(DocumentControlAction.SHOW_PREVIEW_WINDOW));
+        showPreviewInWindowMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.P, modifier));
+        showPreviewInDialogMenuItem.setUserData(new DocumentControlActionController(DocumentControlAction.SHOW_PREVIEW_DIALOG));
         caspianHighContrastThemeMenuItem.setUserData(new SetThemeActionController(EditorPlatform.Theme.CASPIAN_HIGH_CONTRAST));
         caspianThemeMenuItem.setUserData(new SetThemeActionController(EditorPlatform.Theme.CASPIAN));
         caspianEmbeddedThemeMenuItem.setUserData(new SetThemeActionController(EditorPlatform.Theme.CASPIAN_EMBEDDED));

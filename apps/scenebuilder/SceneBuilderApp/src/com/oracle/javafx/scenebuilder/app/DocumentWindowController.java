@@ -99,6 +99,7 @@ import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.control.Accordion;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.DialogPane;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
@@ -142,6 +143,7 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         TOGGLE_OUTLINES_VISIBILITY,
         TOGGLE_GUIDES_VISIBILITY,
         SHOW_PREVIEW_WINDOW,
+        SHOW_PREVIEW_DIALOG,
         ADD_SCENE_STYLE_SHEET,
         SET_RESOURCE,
         REMOVE_RESOURCE,
@@ -511,6 +513,15 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
                 result = true;
                 break;
                 
+            case SHOW_PREVIEW_DIALOG:
+                final FXOMDocument fxomDocument = editorController.getFxomDocument();
+                if (fxomDocument != null) {
+                    Object sceneGraphRoot = fxomDocument.getSceneGraphRoot();
+                    return sceneGraphRoot instanceof DialogPane;
+                }
+                result = false;
+                break;
+                
             case SAVE_FILE:
                 result = isDocumentDirty()
                         || editorController.getFxomDocument().getLocation() == null; // Save new empty document
@@ -589,6 +600,14 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
                     previewWindowController.setToolStylesheet(getToolStylesheet());
                 }
                 previewWindowController.openWindow();
+                break;
+                
+            case SHOW_PREVIEW_DIALOG:
+                if (previewWindowController == null) {
+                    previewWindowController = new PreviewWindowController(editorController, getStage());
+                    previewWindowController.setToolStylesheet(getToolStylesheet());
+                }
+                previewWindowController.openDialog();
                 break;
                 
             case SAVE_FILE:
