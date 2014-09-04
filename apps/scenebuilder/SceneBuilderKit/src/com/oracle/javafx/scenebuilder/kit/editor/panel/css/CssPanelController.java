@@ -177,8 +177,10 @@ public class CssPanelController extends AbstractFxmlPanelController {
     private final Delegate applicationDelegate;
     private final ObjectProperty<NodeCssState> cssStateProperty = new SimpleObjectProperty<>();
 
-    /*
-     * Should be implemented by the application
+    /**
+     * Should be implemented by the application.
+     *
+     * @treatAsPrivate
      */
     public static abstract class Delegate {
 
@@ -228,8 +230,9 @@ public class CssPanelController extends AbstractFxmlPanelController {
         }
     }
 
-    /*
-     * AbstractFxmlPanelController
+    /**
+     * AbstractFxmlPanelController.
+     *
      */
     @Override
     protected void controllerDidLoadFxml() {
@@ -395,18 +398,36 @@ public class CssPanelController extends AbstractFxmlPanelController {
         searchPatternDidChange();
     }
 
+    /**
+     * 
+     * @param selectionListener selection listener.
+     * @treatAsPrivate
+     */
     public void addSelectionListener(ChangeListener<Item> selectionListener) {
         selectionPath.selected().addListener(selectionListener);
     }
 
+    /**
+     * 
+     * @param path path.
+     * @treatAsPrivate
+     */
     public void setSelectionPath(Path path) {
         selectionPath.setSelectionPath(path);
     }
 
+    /**
+     * @treatAsPrivate
+     */
     public void resetSelectionPath() {
         selectionPath.setSelectionPath(new Path(new ArrayList<>()));
     }
 
+    /**
+     * 
+     * @param mess message.
+     * @treatAsPrivate
+     */
     public void viewMessage(String mess) {
         root.getChildren().removeAll(messagePane, header, table, rulesPane, textPane);
 //        mainMenu.setDisable(true);
@@ -415,20 +436,40 @@ public class CssPanelController extends AbstractFxmlPanelController {
         root.getChildren().add(messagePane);
     }
 
+    /**
+     *
+     * @return node.
+     * @treatAsPrivate
+     */
     public final Node getRulesPane() {
         return rulesPane;
     }
 
+    /**
+     *
+     * @return node.
+     * @treatAsPrivate
+     */
     public final Node getTextPane() {
         return textPane;
     }
 
+    /**
+     *
+     * @param model model.
+     * @param state state.
+     * @treatAsPrivate
+     */
     public void setContent(ObservableList<CssProperty> model, NodeCssState state) {
         changeView(currentView);
         initializeRulesTextPanes(state);
         this.model = FXCollections.observableArrayList(model);
     }
 
+    /**
+     *
+     * @treatAsPrivate
+     */
     public void clearContent() {
         table.getItems().clear();
         resetSelectionPath();
@@ -452,6 +493,15 @@ public class CssPanelController extends AbstractFxmlPanelController {
         updateTable(filtered);
     }
 
+    /**
+     *
+     * @param parent parent.
+     * @param cssProp css property.
+     * @param style css style.
+     * @param applied applied.
+     * @param isLookup lookup.
+     * @treatAsPrivate
+     */
     public static void attachStyleProperty(TreeItem<Node> parent, CssPropertyState cssProp, CssStyle style,
             boolean applied, boolean isLookup) {
         if (isLookup) {
@@ -484,6 +534,10 @@ public class CssPanelController extends AbstractFxmlPanelController {
         currentView = view;
     }
 
+    /**
+     *
+     * @treatAsPrivate
+     */
     public void copyStyleablePath() {
         final ClipboardContent content = new ClipboardContent();
         content.putString(selectionPath.toString());
@@ -528,8 +582,9 @@ public class CssPanelController extends AbstractFxmlPanelController {
 
     /*
      *
-     * FXML methods
+     * FXML methods.
      *
+     * @treatAsPrivate
      */
     public void initialize() {
 
@@ -1651,6 +1706,14 @@ public class CssPanelController extends AbstractFxmlPanelController {
         }
     }
 
+    /**
+     *
+     * @param component component.
+     * @param css css property state.
+     * @param lookupRoot root css style.
+     * @param parent parent.
+     * @treatAsPrivate
+     */
     public static void attachLookupStyles(Object component, CssPropertyState css, CssStyle lookupRoot, TreeItem<Node> parent) {
         // Some lookup that comes from the SB itself, skip them.
         // This is expected, these lookups are superceeded by the 
@@ -1724,6 +1787,10 @@ public class CssPanelController extends AbstractFxmlPanelController {
         }
     }
 
+    /**
+     *
+     * @treatAsPrivate
+     */
     public void copyRules() {
         CopyHandler.copy(rulesTree);
     }

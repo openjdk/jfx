@@ -69,6 +69,7 @@ import javafx.scene.text.Font;
 
 /**
  *
+ * @treatAsPrivate
  */
 public class CssValueConverter {
 
