@@ -253,6 +253,7 @@ public final class QuantumToolkit extends Toolkit {
         try {
             this.userRunnable = userStartupRunnable;
 
+            // Ensure that the toolkit can only be started here
             Application.run(() -> runToolkit());
         } catch (RuntimeException ex) {
             if (verbose) {

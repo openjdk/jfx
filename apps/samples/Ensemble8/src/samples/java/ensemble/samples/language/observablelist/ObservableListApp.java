@@ -116,6 +116,7 @@ public class ObservableListApp extends Application {
         Button buttonRemove = new Button("Remove list listener");
         buttonRemove.setPrefSize(190, 45);
         buttonRemove.setOnAction((ActionEvent t) -> {
+            //remove the listener
             list.removeListener(listener);
             textMessage.setText("listener removed");
         });

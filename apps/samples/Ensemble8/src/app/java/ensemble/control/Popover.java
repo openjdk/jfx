@@ -128,6 +128,7 @@ public class Popover extends Region implements EventHandler<Event>{
         setScaleY(.8);
         // create handlers for auto hiding
         popoverHideHandler = (MouseEvent t) -> {
+            // check if event is outside popup
             Point2D mouseInFilterPane = sceneToLocal(t.getX(), t.getY());
             if (mouseInFilterPane.getX() < 0 || mouseInFilterPane.getX() > (getWidth()) ||
                     mouseInFilterPane.getY() < 0 || mouseInFilterPane.getY() > (getHeight())) {

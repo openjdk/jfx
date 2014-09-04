@@ -452,6 +452,7 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
         ** In a ScrollPane a vertical scroll should scroll on the vertical only,
         ** whereas in a horizontal ScrollBar it can scroll horizontally.
         */ 
+        // block the event from being passed down to children
         final EventDispatcher blockEventDispatcher = (event, tail) -> event;
         // block ScrollEvent from being passed down to scrollbar's skin
         final EventDispatcher oldHsbEventDispatcher = hsb.getEventDispatcher();

@@ -299,7 +299,16 @@ public class HelloTableView extends Application {
         firstNameCol.setSortNode(sortNode);
 //        firstNameCol.setCellFactory(TextFieldCellFactory.tableView());
         firstNameCol.setCellValueFactory(new PropertyValueFactory<>("firstName"));
-        firstNameCol.setOnEditCommit(t -> System.out.println("Edit commit event: " + t.getNewValue()));
+        firstNameCol.setOnEditCommit(t -> {
+            System.out.println("Edit commit event: " + t.getNewValue());
+//            Object obj = t.getNewValue();
+//
+//            if (obj instanceof String) {
+//                ListView lv = t.getSource();
+//                lv.getItems().remove((int) lv.getEditingIndex());
+//                lv.getItems().add( (int) lv.getEditingIndex(), obj);
+//            }
+        });
 
         TableColumn<Person, String> lastNameCol = new TableColumn<>();
         lastNameCol.setText("Last");
@@ -454,7 +463,10 @@ public class HelloTableView extends Application {
         GridPane.setConstraints(insertBtn, 1, 9);
 
         final Button renameEthanBtn = new Button("Rename Ethan");
-        renameEthanBtn.setOnAction(t -> data.get(2).setFirstName(new BigInteger(40, new Random()).toString(32)));
+        renameEthanBtn.setOnAction(t -> {
+            data.get(2).setFirstName(new BigInteger(40, new Random()).toString(32));
+            // data.set(2, new Person("Jonathan", "Giles"));
+        });
         grid.getChildren().add(renameEthanBtn);
         GridPane.setConstraints(renameEthanBtn, 1, 10);
 

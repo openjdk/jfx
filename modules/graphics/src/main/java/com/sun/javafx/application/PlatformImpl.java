@@ -445,7 +445,10 @@ public class PlatformImpl {
         if (initialized.get()) {
             // Always call toolkit exit on FX app thread
 //            System.err.println("PlatformImpl.tkExit: scheduling Toolkit.exit");
-            PlatformImpl.runAndWait(() -> Toolkit.getToolkit().exit(), true);
+            PlatformImpl.runAndWait(() -> {
+//                System.err.println("PlatformImpl.tkExit: calling Toolkit.exit");
+                Toolkit.getToolkit().exit();
+            }, true);
 
             if (isThreadMerged) {
                 removeFwEventQueue();

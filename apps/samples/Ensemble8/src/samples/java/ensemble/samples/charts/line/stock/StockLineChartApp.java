@@ -74,6 +74,7 @@ public class StockLineChartApp extends Application {
         animation = new Timeline();
         animation.getKeyFrames()
                 .add(new KeyFrame(Duration.millis(1000 / 60), (ActionEvent actionEvent) -> {
+                     // 6 minutes data per frame
                     for (int count = 0; count < 6; count++) {
                         nextTime();
                         plotTime();
