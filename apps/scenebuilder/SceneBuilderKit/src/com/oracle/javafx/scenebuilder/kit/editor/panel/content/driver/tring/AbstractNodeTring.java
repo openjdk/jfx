@@ -35,7 +35,6 @@ import com.oracle.javafx.scenebuilder.kit.editor.panel.content.ContentPanelContr
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import javafx.geometry.Bounds;
 import javafx.scene.Node;
-import javafx.scene.transform.Transform;
 
 /**
  *
@@ -63,8 +62,8 @@ public abstract class AbstractNodeTring<T extends Node> extends AbstractGenericT
     }
 
     @Override
-    public Transform getSceneGraphToSceneTransform() {
-        return getSceneGraphObject().getLocalToSceneTransform();
+    public Node getSceneGraphObjectProxy() {
+        return getSceneGraphObject();
     }
 
     @Override

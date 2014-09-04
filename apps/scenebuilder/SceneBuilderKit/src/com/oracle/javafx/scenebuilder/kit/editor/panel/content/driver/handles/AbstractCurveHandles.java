@@ -64,8 +64,8 @@ public abstract class AbstractCurveHandles<T extends Node> extends AbstractHandl
     }
 
     @Override
-    public Transform getSceneGraphToSceneTransform() {
-        return getSceneGraphObject().getLocalToSceneTransform();
+    public Node getSceneGraphObjectProxy() {
+        return getSceneGraphObject();
     }
 
     @Override

@@ -80,8 +80,8 @@ public class HitNodeChrome extends AbstractDecoration<Object> {
     }
 
     @Override
-    public Transform getSceneGraphToSceneTransform() {
-        return closestNode.getLocalToSceneTransform();
+    public Node getSceneGraphObjectProxy() {
+        return closestNode;
     }
 
     @Override

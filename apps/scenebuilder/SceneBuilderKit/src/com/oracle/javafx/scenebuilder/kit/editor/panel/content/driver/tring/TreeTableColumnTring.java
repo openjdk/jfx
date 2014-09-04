@@ -35,6 +35,7 @@ import com.oracle.javafx.scenebuilder.kit.editor.panel.content.ContentPanelContr
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.TreeTableViewDesignInfoX;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import javafx.geometry.Bounds;
+import javafx.scene.Node;
 import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTableView;
 import javafx.scene.transform.Transform;
@@ -68,8 +69,8 @@ public class TreeTableColumnTring extends AbstractGenericTring<Object> {
     }
 
     @Override
-    public Transform getSceneGraphToSceneTransform() {
-        return getTreeTableColumn().getTreeTableView().getLocalToSceneTransform();
+    public Node getSceneGraphObjectProxy() {
+        return getTreeTableColumn().getTreeTableView();
     }
 
     @Override

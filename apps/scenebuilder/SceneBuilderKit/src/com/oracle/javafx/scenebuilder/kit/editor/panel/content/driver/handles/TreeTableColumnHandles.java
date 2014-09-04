@@ -110,10 +110,9 @@ public class TreeTableColumnHandles extends AbstractResilientHandles<Object> {
     }
 
     @Override
-    public Transform getSceneGraphToSceneTransform() {
-        assert isReady();
+    public Node getSceneGraphObjectProxy() {
         assert treeTableView != null;
-        return treeTableView.getLocalToSceneTransform();
+        return treeTableView;
     }
 
     @Override

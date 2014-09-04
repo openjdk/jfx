@@ -37,7 +37,6 @@ import javafx.geometry.Point2D;
 import javafx.scene.Node;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
-import javafx.scene.transform.Transform;
 
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.AbstractResilientHandles;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.ContentPanelController;
@@ -103,11 +102,11 @@ public class TabHandles extends AbstractResilientHandles<Tab> {
     }
 
     @Override
-    public Transform getSceneGraphToSceneTransform() {
+    public Node getSceneGraphObjectProxy() {
         assert isReady();
         assert tabPane != null;
         
-        return tabPane.getLocalToSceneTransform();
+        return tabPane;
     }
 
     @Override

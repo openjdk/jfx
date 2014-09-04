@@ -71,8 +71,8 @@ public class TreeTableColumnPring extends AbstractGenericPring<Object> {
     }
 
     @Override
-    public Transform getSceneGraphToSceneTransform() {
-        return getTreeTableColumn().getTreeTableView().getLocalToSceneTransform();
+    public Node getSceneGraphObjectProxy() {
+        return getTreeTableColumn().getTreeTableView();
     }
 
     @Override

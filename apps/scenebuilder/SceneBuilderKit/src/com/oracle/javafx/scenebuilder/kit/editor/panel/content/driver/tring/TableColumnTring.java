@@ -35,9 +35,9 @@ import com.oracle.javafx.scenebuilder.kit.editor.panel.content.ContentPanelContr
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.TableViewDesignInfoX;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import javafx.geometry.Bounds;
+import javafx.scene.Node;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
-import javafx.scene.transform.Transform;
 
 /**
  *
@@ -68,8 +68,8 @@ public class TableColumnTring extends AbstractGenericTring<Object> {
     }
 
     @Override
-    public Transform getSceneGraphToSceneTransform() {
-        return getTableColumn().getTableView().getLocalToSceneTransform();
+    public Node getSceneGraphObjectProxy() {
+        return getTableColumn().getTableView();
     }
 
     @Override

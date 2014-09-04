@@ -108,8 +108,8 @@ public class TabPring extends AbstractPring<Tab> {
     }
 
     @Override
-    public Transform getSceneGraphToSceneTransform() {
-        return getSceneGraphObject().getTabPane().getLocalToSceneTransform();
+    public Node getSceneGraphObjectProxy() {
+        return getSceneGraphObject().getTabPane();
     }
 
     @Override

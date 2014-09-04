@@ -136,7 +136,8 @@ public abstract class AbstractDecoration<T> {
     }
     
     public Transform getSceneGraphObjectToDecorationTransform() {
-        final Transform t1 = getSceneGraphToSceneTransform();
+        final Node proxy = getSceneGraphObjectProxy();
+        final Transform t1 = proxy.getLocalToSceneTransform();
         final Transform t2 = getRootNode().getLocalToSceneTransform();
         final Transform result;
         
@@ -151,7 +152,7 @@ public abstract class AbstractDecoration<T> {
     }
     
     public abstract Bounds getSceneGraphObjectBounds();
-    public abstract Transform getSceneGraphToSceneTransform();
+    public abstract Node getSceneGraphObjectProxy();
     protected abstract void startListeningToSceneGraphObject();
     protected abstract void stopListeningToSceneGraphObject();
     protected abstract void layoutDecoration();
@@ -162,8 +163,8 @@ public abstract class AbstractDecoration<T> {
      */
     
     public Point2D sceneGraphObjectToDecoration(double x, double y) {
-        final Transform t = getSceneGraphToSceneTransform();
-        return getRootNode().sceneToLocal(t.transform(x, y));
+        final Node proxy = getSceneGraphObjectProxy();
+        return getRootNode().sceneToLocal(proxy.localToScene(x, y, true /* rootScene */));
     }
             
     protected void startListeningToLayoutBounds(Node node) {
