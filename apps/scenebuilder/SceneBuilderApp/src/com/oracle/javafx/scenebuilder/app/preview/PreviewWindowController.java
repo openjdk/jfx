@@ -192,7 +192,7 @@ public final class PreviewWindowController extends AbstractWindowController {
         final Object sceneGraphRoot = fxomDocument.getSceneGraphRoot();
         assert sceneGraphRoot instanceof DialogPane;
         final DialogPane dialogPane = (DialogPane) sceneGraphRoot;
-        final Dialog dialog = new Dialog();
+        final Dialog<? extends Object> dialog = new Dialog<>();
         dialog.setDialogPane(dialogPane);
         if (dialogPane.getButtonTypes().isEmpty()) {
             dialog.getDialogPane().getButtonTypes().setAll(ButtonType.CLOSE);
