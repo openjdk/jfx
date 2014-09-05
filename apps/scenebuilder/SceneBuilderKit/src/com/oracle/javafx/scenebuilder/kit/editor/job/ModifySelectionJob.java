@@ -34,8 +34,6 @@ package com.oracle.javafx.scenebuilder.kit.editor.job;
 import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.ModifyObjectJob;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
-import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.BackupSelectionJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.UpdateSelectionJob;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.GridSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
@@ -99,7 +97,7 @@ public class ModifySelectionJob extends BatchDocumentJob {
             assert selection.getGroup() == null : "Add implementation for " + selection.getGroup();
         }
 
-        // First add ModifyObject jobs
+        // Add ModifyObject jobs
         for (FXOMInstance fxomInstance : candidates) {
             final ModifyObjectJob subJob = new ModifyObjectJob(
                     fxomInstance, propertyMetadata, newValue, getEditorController());
@@ -107,14 +105,7 @@ public class ModifySelectionJob extends BatchDocumentJob {
                 result.add(subJob);
             }
         }
-
-        // If the list of ModifyObject jobs is not empty,
-        // then add selection specific jobs
-        if (result.isEmpty() == false) {
-            result.add(0, new BackupSelectionJob(getEditorController()));
-            result.add(new UpdateSelectionJob(selection.getGroup(), getEditorController()));
-        }
-
+        
         return result;
     }
 
@@ -123,22 +114,21 @@ public class ModifySelectionJob extends BatchDocumentJob {
         final String result;
         final List<Job> subJobs = getSubJobs();
         final int subJobCount = subJobs.size();
-        assert (subJobCount == 0) || (subJobCount >= 3);
 
         switch (subJobCount) {
             case 0:
                 result = "Unexecutable Set"; //NOI18N
                 break;
-            case 3: // BackupSelection + 1 ModifyObject + UpdateSelection
-                result = subJobs.get(1).getDescription();
+            case 1: // Single selection
+                result = subJobs.get(0).getDescription();
                 break;
             default:
                 result = I18N.getString("label.action.edit.set.n",
                         propertyMetadata.getName().toString(),
-                        subJobCount - 2); // Remove 2 selection jobs (BackupSelection + UpdateSelection) 
+                        subJobCount);
                 break;
         }
-
+        
         return result;
     }
 }
