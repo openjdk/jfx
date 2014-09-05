@@ -455,7 +455,7 @@ public class DragGesture extends AbstractGesture {
         assert shadow != null;
         
         final Group rudderLayer = contentPanelController.getRudderLayer();
-        final Point2D p = rudderLayer.sceneToLocal(hitX, hitY);
+        final Point2D p = rudderLayer.sceneToLocal(hitX, hitY, true /* rootScene */);
         shadow.setLayoutX(p.getX());
         shadow.setLayoutY(p.getY());
     }

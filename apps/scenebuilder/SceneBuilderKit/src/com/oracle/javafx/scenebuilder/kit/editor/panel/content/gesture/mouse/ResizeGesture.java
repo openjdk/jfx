@@ -258,8 +258,8 @@ public class ResizeGesture extends AbstractMouseGesture {
         final double startSceneY = getMousePressedEvent().getSceneY();
         final double currentSceneX = getLastMouseEvent().getSceneX();
         final double currentSceneY = getLastMouseEvent().getSceneY();
-        final Point2D start = sceneGraphObject.sceneToLocal(startSceneX, startSceneY);
-        final Point2D current = sceneGraphObject.sceneToLocal(currentSceneX, currentSceneY);
+        final Point2D start = sceneGraphObject.sceneToLocal(startSceneX, startSceneY, true /* rootScene */);
+        final Point2D current = sceneGraphObject.sceneToLocal(currentSceneX, currentSceneY, true /* rootScene */);
         final double rawDeltaX, rawDeltaY;
         if ((start != null) && (current != null)) {
             rawDeltaX = current.getX() - start.getX();

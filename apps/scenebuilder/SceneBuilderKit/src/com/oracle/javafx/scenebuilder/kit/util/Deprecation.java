@@ -172,7 +172,7 @@ public class Deprecation {
 
     // RT-20184 : FX should provide a Parent.pick() routine
     public static Node pick(Node node, double sceneX, double sceneY) {
-        final Point2D p = node.sceneToLocal(sceneX, sceneY);
+        final Point2D p = node.sceneToLocal(sceneX, sceneY, true /* rootScene */);
         final PickRay pickRay = new PickRay(p.getX(), p.getY(), 1.0, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY);
         final PickResultChooser prc = new PickResultChooser();
         node.impl_pickNode(pickRay, prc);

@@ -72,7 +72,7 @@ public class GenericParentTring extends AbstractNodeTring<Parent> {
         
         final DesignHierarchyMask m = new DesignHierarchyMask(fxomObject);
         final Parent parent = (Parent) m.getFxomObject().getSceneGraphObject();
-        final Point2D hitPoint = parent.sceneToLocal(sceneX, sceneY);
+        final Point2D hitPoint = parent.sceneToLocal(sceneX, sceneY, true /* rootScene */);
         final int childCount = m.getSubComponentCount();
         
         final int targetIndex;

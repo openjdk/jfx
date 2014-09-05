@@ -156,7 +156,7 @@ public class TableViewDesignInfoX /* extends TableViewDesignInfo */ {
             for (TableColumn<T,?> tc : columnPath) {
                 final Node headerNode = getColumnNode(tc);
                 final Bounds headerBounds = headerNode.getLayoutBounds();
-                final Point2D p = headerNode.sceneToLocal(sceneX, sceneY);
+                final Point2D p = headerNode.sceneToLocal(sceneX, sceneY, true /* rootScene */);
                 if (headerBounds.contains(p)) {
                     result = tc;
                     break;
@@ -177,7 +177,7 @@ public class TableViewDesignInfoX /* extends TableViewDesignInfo */ {
             final Node headerNode = getColumnNode(tc);
             if (headerNode != null) {
                 final Bounds headerBounds = headerNode.getLayoutBounds();
-                final Point2D p = headerNode.sceneToLocal(sceneX, 0);
+                final Point2D p = headerNode.sceneToLocal(sceneX, 0, true /* rootScene */);
                 if ((headerBounds.getMinX() <= p.getX()) 
                         && (p.getX() < headerBounds.getMaxX())) {
                     result = tc;

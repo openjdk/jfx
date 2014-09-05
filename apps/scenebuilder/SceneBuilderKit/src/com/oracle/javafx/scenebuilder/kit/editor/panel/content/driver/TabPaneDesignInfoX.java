@@ -135,7 +135,7 @@ public class TabPaneDesignInfoX /* extends TabDesignInfo */ {
         if (controlMenuNode == null) {
             insideControlMenu = false;
         } else {
-            Point2D p = controlMenuNode.sceneToLocal(sceneX, sceneY);
+            Point2D p = controlMenuNode.sceneToLocal(sceneX, sceneY, true /* rootScene */);
             insideControlMenu = controlMenuNode.contains(p);
         }
         
@@ -150,7 +150,7 @@ public class TabPaneDesignInfoX /* extends TabDesignInfo */ {
                 Tab tab = it.next();
                 Node tabNode = getTabNode(tabPane, tab);
                 assert tabNode != null;
-                Point2D p = tabNode.sceneToLocal(sceneX, sceneY);
+                Point2D p = tabNode.sceneToLocal(sceneX, sceneY, true /* rootScene */);
                 if (tabNode.contains(p)) {
                     result = tab;
                 }
@@ -160,7 +160,7 @@ public class TabPaneDesignInfoX /* extends TabDesignInfo */ {
             if (result == null) {
                 final Node contentNode = getContentNode(tabPane);
                 if (contentNode != null) {
-                    final Point2D p = contentNode.sceneToLocal(sceneX, sceneY);
+                    final Point2D p = contentNode.sceneToLocal(sceneX, sceneY, true /* rootScene */);
                     if (contentNode.contains(p)) {
                         result = tabPane.getSelectionModel().getSelectedItem();
                     }

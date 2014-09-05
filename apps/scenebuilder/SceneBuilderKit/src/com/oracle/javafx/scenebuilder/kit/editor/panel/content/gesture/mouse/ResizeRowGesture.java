@@ -114,8 +114,8 @@ public class ResizeRowGesture extends AbstractMouseGesture {
         final double startSceneY = getMousePressedEvent().getSceneY();
         final double currentSceneX = getLastMouseEvent().getSceneX();
         final double currentSceneY = getLastMouseEvent().getSceneY();
-        final Point2D start = gridPane.sceneToLocal(startSceneX, startSceneY);
-        final Point2D current = gridPane.sceneToLocal(currentSceneX, currentSceneY);
+        final Point2D start = gridPane.sceneToLocal(startSceneX, startSceneY, true /* rootScene */);
+        final Point2D current = gridPane.sceneToLocal(currentSceneX, currentSceneY, true /* rootScene */);
         final double dy = current.getY() - start.getY();
         
         resizer.updateHeight(dy);

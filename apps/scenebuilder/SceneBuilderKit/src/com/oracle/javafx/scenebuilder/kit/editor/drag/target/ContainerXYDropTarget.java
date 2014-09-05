@@ -179,7 +179,7 @@ public class ContainerXYDropTarget extends AbstractDropTarget {
             }
             
             final Parent targetParent = (Parent)targetContainer.getSceneGraphObject();
-            final Point2D targetCenter = targetParent.sceneToLocal(sceneX, sceneY);
+            final Point2D targetCenter = targetParent.sceneToLocal(sceneX, sceneY, true /* rootScene */);
             final Bounds layoutBounds = hitNode.getLayoutBounds();
             final Point2D currentOrigin = hitNode.localToParent(0.0, 0.0);
             final Point2D currentCenter = hitNode.localToParent(
@@ -268,7 +268,7 @@ public class ContainerXYDropTarget extends AbstractDropTarget {
          * Computes drop target location in hitObject parent coordinate space
          */
         final Parent sceneGraphParent = sceneGraphNode.getParent();
-        final Point2D newHit = sceneGraphParent.sceneToLocal(sceneX, sceneY);
+        final Point2D newHit = sceneGraphParent.sceneToLocal(sceneX, sceneY, true /* rootScene */);
         
         final double dx = newHit.getX() - currentHit.getX();
         final double dy = newHit.getY() - currentHit.getY();
