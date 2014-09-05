@@ -67,6 +67,7 @@ public class MacDmgBundlerTest {
     static Set<File> appResources;
     static boolean retain = false;
     static boolean full_tests = false;
+    static boolean simple_dmg = true;
 
     @BeforeClass
     public static void prepareApp() {
@@ -84,6 +85,7 @@ public class MacDmgBundlerTest {
 
         retain = Boolean.parseBoolean(System.getProperty("RETAIN_PACKAGER_TESTS"));
         full_tests = Boolean.parseBoolean(System.getProperty("FULL_TEST"));
+        simple_dmg = !retain;
 
         workDir = new File("build/tmp/tests", "macdmg");
         hdpiIcon = new File("build/tmp/tests", "GenericAppHiDPI.icns");
@@ -138,9 +140,6 @@ public class MacDmgBundlerTest {
      */
     @Test
     public void smokeTest() throws IOException, ConfigException, UnsupportedPlatformException {
-        // only run with full tests
-        Assume.assumeTrue(full_tests);
-
         AbstractBundler bundler = new MacDmgBundler();
 
         assertNotNull(bundler.getName());
@@ -163,6 +162,7 @@ public class MacDmgBundlerTest {
         bundleParams.put(LICENSE_FILE.getID(), Arrays.asList("LICENSE", "LICENSE2"));
         bundleParams.put(VERBOSE.getID(), true);
         bundleParams.put(SYSTEM_WIDE.getID(), false);
+        bundleParams.put(SIMPLE_DMG.getID(), simple_dmg);
 
         if (runtimeJdk != null) {
             bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
@@ -199,6 +199,7 @@ public class MacDmgBundlerTest {
         bundleParams.put(BUILD_ROOT.getID(), tmpBase);
 
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        bundleParams.put(SIMPLE_DMG.getID(), simple_dmg);
 
         if (runtimeJdk != null) {
             bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
@@ -257,6 +258,7 @@ public class MacDmgBundlerTest {
         dmgBundleParams.put(APP_NAME.getID(), "External APP DMG Test");
         dmgBundleParams.put(IDENTIFIER.getID(), "com.example.dmg.external");
 
+        dmgBundleParams.put(SIMPLE_DMG.getID(), simple_dmg);
         dmgBundleParams.put(VERBOSE.getID(), true);
 
         if (runtimeJdk != null) {
@@ -314,6 +316,7 @@ public class MacDmgBundlerTest {
         dmgBundleParams.put(APP_NAME.getID(), "External APP DMG Test");
         dmgBundleParams.put(IDENTIFIER.getID(), "com.example.dmg.external");
 
+        dmgBundleParams.put(SIMPLE_DMG.getID(), simple_dmg);
         dmgBundleParams.put(VERBOSE.getID(), true);
 
         if (runtimeJdk != null) {

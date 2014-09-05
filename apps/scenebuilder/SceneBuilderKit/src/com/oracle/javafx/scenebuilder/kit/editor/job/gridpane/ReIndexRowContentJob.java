@@ -47,6 +47,9 @@ import java.util.List;
 
 /**
  * Job invoked when re-indexing rows content.
+ * 
+ * IMPORTANT:
+ * This job cannot extends BatchDocumentJob because its sub jobs list cannot be initialized lazily.
  */
 public class ReIndexRowContentJob extends Job {
 

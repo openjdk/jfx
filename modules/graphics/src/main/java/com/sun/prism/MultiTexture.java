@@ -235,6 +235,12 @@ public final class MultiTexture implements Texture {
     }
 
     @Override
+    public boolean getUseMipmap() {
+        // TODO: MultiTexture doesn't support mipmap yet
+        return false;
+    }
+
+    @Override
     public boolean getLinearFiltering() {
         return linearFiltering;
     }

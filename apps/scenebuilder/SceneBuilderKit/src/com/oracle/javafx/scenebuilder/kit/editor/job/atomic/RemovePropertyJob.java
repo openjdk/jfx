@@ -57,6 +57,10 @@ public class RemovePropertyJob extends Job {
         return targetProperty;
     }
 
+    public Job makeMirrorJob(FXOMProperty anotherProperty) {
+        return new AddPropertyJob(anotherProperty, parentInstance, 
+                indexInParentInstance, getEditorController());
+    }
 
     /*
      * Job
@@ -94,7 +98,6 @@ public class RemovePropertyJob extends Job {
         assert targetProperty.getParentInstance() == parentInstance;
         assert targetProperty.getIndexInParentInstance() == indexInParentInstance;
         
-        getEditorController().getSelection().clear();
         getEditorController().getFxomDocument().beginUpdate();
         targetProperty.removeFromParentInstance();
         getEditorController().getFxomDocument().endUpdate();

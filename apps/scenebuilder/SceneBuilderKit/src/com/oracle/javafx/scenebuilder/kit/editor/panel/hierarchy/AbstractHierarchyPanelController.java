@@ -653,7 +653,26 @@ public abstract class AbstractHierarchyPanelController extends AbstractFxmlPanel
             final FXOMObject fxomObject,
             final Accessory accessory) {
         final HierarchyItemBorderPane item
-                = new HierarchyItemBorderPane(owner, fxomObject, getDisplayOption(), accessory);
+                = new HierarchyItemBorderPane(owner, fxomObject, accessory);
+        final TreeItem<HierarchyItem> treeItem = new TreeItem<>(item);
+        // Set back the TreeItem expanded property if any
+        Boolean expanded = treeItemsExpandedMapProperty.get(fxomObject);
+        if (expanded != null) {
+            treeItem.setExpanded(expanded);
+        }
+        // Mask may be null for empty place holder
+        if (item.getMask() != null) {
+            updateTreeItem(treeItem);
+        }
+        return treeItem;
+    }
+
+    private TreeItem<HierarchyItem> makeTreeItemDialogPane(
+            final DesignHierarchyMask owner,
+            final FXOMObject fxomObject,
+            final Accessory accessory) {
+        final HierarchyItemDialogPane item
+                = new HierarchyItemDialogPane(owner, fxomObject, accessory);
         final TreeItem<HierarchyItem> treeItem = new TreeItem<>(item);
         // Set back the TreeItem expanded property if any
         Boolean expanded = treeItemsExpandedMapProperty.get(fxomObject);
@@ -677,7 +696,7 @@ public abstract class AbstractHierarchyPanelController extends AbstractFxmlPanel
             final DesignHierarchyMask owner,
             final FXOMObject fxomObject) {
         final HierarchyItemGraphic item
-                = new HierarchyItemGraphic(owner, fxomObject, getDisplayOption());
+                = new HierarchyItemGraphic(owner, fxomObject);
         final TreeItem<HierarchyItem> treeItem = new TreeItem<>(item);
         Boolean expanded = treeItemsExpandedMapProperty.get(fxomObject);
         if (expanded != null) {
@@ -837,6 +856,19 @@ public abstract class AbstractHierarchyPanelController extends AbstractFxmlPanel
             if (mask.isAcceptingAccessory(accessory)) {
                 final FXOMObject value = mask.getAccessory(accessory);
                 treeItem.getChildren().add(makeTreeItemBorderPane(mask, value, accessory));
+            }
+        }
+
+        // DialogPane
+        //---------------------------------
+        for (Accessory accessory : new Accessory[]{
+            Accessory.HEADER,
+            Accessory.DP_GRAPHIC,
+            Accessory.DP_CONTENT,
+            Accessory.EXPANDABLE_CONTENT}) {
+            if (mask.isAcceptingAccessory(accessory)) {
+                final FXOMObject value = mask.getAccessory(accessory);
+                treeItem.getChildren().add(makeTreeItemDialogPane(mask, value, accessory));
             }
         }
 

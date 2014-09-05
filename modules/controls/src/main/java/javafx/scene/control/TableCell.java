@@ -510,7 +510,10 @@ public class TableCell<S,T> extends IndexedCell<T> {
         if (getIndex() == -1 || tableView == null) return;
 
         TableSelectionModel<S> sm = tableView.getSelectionModel();
-        if (sm == null) return;
+        if (sm == null) {
+            updateSelected(false);
+            return;
+        }
 
         boolean isSelectedNow = sm.isSelected(getIndex(), getTableColumn());
         if (isSelected == isSelectedNow) return;
@@ -533,7 +536,10 @@ public class TableCell<S,T> extends IndexedCell<T> {
         if (index == -1 || tableView == null || tableRow == null) return;
 
         final TableViewFocusModel<S> fm = tableView.getFocusModel();
-        if (fm == null) return;
+        if (fm == null) {
+            setFocused(false);
+            return;
+        }
 
         boolean isFocusedNow = fm != null && fm.isFocused(index, getTableColumn());
 

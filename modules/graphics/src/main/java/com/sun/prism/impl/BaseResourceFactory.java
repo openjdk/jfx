@@ -42,6 +42,9 @@ public abstract class BaseResourceFactory implements ResourceFactory {
         new WeakHashMap<Image,Texture>();
     private static final Map<Image,Texture> repeatTexCache =
         new WeakHashMap<Image,Texture>();
+    // Solely used by diffuse and selfillum maps in PhongMaterial for 3D rendering
+    private static final Map<Image,Texture> mipmapTexCache =
+        new WeakHashMap<Image,Texture>();
 
     // Use a WeakHashMap as it automatically removes dead objects when they're
     // collected
@@ -69,6 +72,7 @@ public abstract class BaseResourceFactory implements ResourceFactory {
     protected void clearTextureCache() {
         clearTextureCache(clampTexCache);
         clearTextureCache(repeatTexCache);
+        clearTextureCache(mipmapTexCache);
     }
 
     protected void clearTextureCache(Map<Image,Texture> texCache) {
@@ -90,6 +94,7 @@ public abstract class BaseResourceFactory implements ResourceFactory {
     protected void notifyReset() {
         clampTexCache.clear();
         repeatTexCache.clear();
+        mipmapTexCache.clear();
 
         // Iterate over a *copy* of the key set because listeners may remove
         // themselves during the callback
@@ -107,6 +112,7 @@ public abstract class BaseResourceFactory implements ResourceFactory {
     protected void notifyReleased() {
         clampTexCache.clear();
         repeatTexCache.clear();
+        mipmapTexCache.clear();
 
         // Iterate over a *copy* of the key set because listeners may remove
         // themselves during the callback
@@ -118,16 +124,38 @@ public abstract class BaseResourceFactory implements ResourceFactory {
         }
     }
 
+    static long sizeWithMipMap(int w, int h, PixelFormat format) {
+        long size = 0;
+        int bytesPerPixel = format.getBytesPerPixelUnit();
+        while (w > 1 && h > 1) {
+            size += ((long) w) * ((long) h);
+            w = (w + 1) >> 1;
+            h = (h + 1) >> 1;            
+        }
+        size += 1;
+        return size * bytesPerPixel;
+    }
+
     @Override
     public Texture getCachedTexture(Image image, WrapMode wrapMode) {
+       return  getCachedTexture(image, wrapMode, false);
+    }
+
+    @Override
+    public Texture getCachedTexture(Image image, WrapMode wrapMode, boolean useMipmap) {
         if (image == null) {
             throw new IllegalArgumentException("Image must be non-null");
         }
         Map<Image,Texture> texCache;
         if (wrapMode == WrapMode.CLAMP_TO_EDGE) {
+            // Mipmap not supported with CLAMP mode in current implementation
+            if (useMipmap) {
+                throw new IllegalArgumentException("Mipmap not supported with CLAMP mode: useMipmap = "
+                        + useMipmap + ", wrapMode = " + wrapMode);
+            }
             texCache = clampTexCache;
         } else if (wrapMode == WrapMode.REPEAT) {
-            texCache = repeatTexCache;
+            texCache = useMipmap ? mipmapTexCache : repeatTexCache;
         } else {
             throw new IllegalArgumentException("no caching for "+wrapMode);
         }
@@ -140,7 +168,9 @@ public abstract class BaseResourceFactory implements ResourceFactory {
              }
          }
          int serial = image.getSerial();
-         if (tex == null) {
+
+         // Doesn't apply if useMipmap is true
+         if (!useMipmap && tex == null) {
             // Try to share a converted texture from the other cache
             Texture othertex = (wrapMode == WrapMode.REPEAT
                    ? clampTexCache
@@ -162,15 +192,19 @@ public abstract class BaseResourceFactory implements ResourceFactory {
                 othertex.unlock();
             }
         }
+
         if (tex == null) {
             int w = image.getWidth();
             int h = image.getHeight();
             TextureResourcePool pool = getTextureResourcePool();
-            long size = pool.estimateTextureSize(w, h, image.getPixelFormat());
+            // Mipmap will use more memory
+            long size = useMipmap ? sizeWithMipMap(w, h, image.getPixelFormat())
+                    : pool.estimateTextureSize(w, h, image.getPixelFormat());
             if (!pool.prepareForAllocation(size)) {
                 return null;
             }
-            tex = createTexture(image, Usage.DEFAULT, wrapMode);
+
+            tex = createTexture(image, Usage.DEFAULT, wrapMode, useMipmap);
             if (tex != null) {
                 tex.setLastImageSerial(serial);
                 texCache.put(image, tex);
@@ -183,14 +217,18 @@ public abstract class BaseResourceFactory implements ResourceFactory {
     }
 
     @Override
-    public Texture createTexture(Image image,
-                                 Usage usageHint,
-                                 WrapMode wrapMode)
-    {
+    public Texture createTexture(Image image, Usage usageHint, WrapMode wrapMode) {
+        return createTexture(image, usageHint, wrapMode, false);
+    }
+
+    @Override
+    public Texture createTexture(Image image, Usage usageHint, WrapMode wrapMode,
+            boolean useMipmap) {
         PixelFormat format = image.getPixelFormat();
         int w = image.getWidth();
         int h = image.getHeight();
-        Texture tex = createTexture(format, usageHint, wrapMode, w, h);
+
+        Texture tex = createTexture(format, usageHint, wrapMode, w, h, useMipmap);
         // creation of a texture does not require flushing the vertex buffer
         // since there are no pending vertices that depend on this new texture,
         // so pass skipFlush=true here...

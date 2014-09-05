@@ -193,28 +193,29 @@ public class TreeViewTest {
     }
 
     @Test public void singleArgConstructorSetsTheStyleClass() {
-        final TreeView<String> b2 = new TreeView<String>(new TreeItem<String>("Hi"));
+        final TreeView<String> b2 = new TreeView<>(new TreeItem<>("Hi"));
         assertStyleClassContains(b2, "tree-view");
     }
 
     @Test public void singleArgConstructorSetsNonNullSelectionModel() {
-        final TreeView<String> b2 = new TreeView<String>(new TreeItem<String>("Hi"));
+        final TreeView<String> b2 = new TreeView<>(new TreeItem<>("Hi"));
         assertNotNull(b2.getSelectionModel());
     }
 
     @Test public void singleArgConstructorAllowsNullItems() {
-        final TreeView<String> b2 = new TreeView<String>(null);
+        final TreeView<String> b2 = new TreeView<>(null);
         assertNull(b2.getRoot());
     }
 
-    @Test public void singleArgConstructor_selectedItemIsNull() {
-        final TreeView<String> b2 = new TreeView<String>(new TreeItem<String>("Hi"));
-        assertNull(b2.getSelectionModel().getSelectedItem());
+    @Test public void singleArgConstructor_selectedItemIsNotNull() {
+        TreeItem<String> hiItem = new TreeItem<>("Hi");
+        final TreeView<String> b2 = new TreeView<>(hiItem);
+        assertEquals(hiItem, b2.getSelectionModel().getSelectedItem());
     }
 
-    @Test public void singleArgConstructor_selectedIndexIsNegativeOne() {
-        final TreeView<String> b2 = new TreeView<String>(new TreeItem<String>("Hi"));
-        assertEquals(-1, b2.getSelectionModel().getSelectedIndex());
+    @Test public void singleArgConstructor_selectedIndexIsZero() {
+        final TreeView<String> b2 = new TreeView<>(new TreeItem<>("Hi"));
+        assertEquals(0, b2.getSelectionModel().getSelectedIndex());
     }
 
     /*********************************************************************
@@ -250,7 +251,7 @@ public class TreeViewTest {
         installChildren();
         TreeItem<String> element = new TreeItem<String>("I AM A CRAZY RANDOM STRING");
         treeView.getSelectionModel().select(element);
-        assertEquals(0, treeView.getSelectionModel().getSelectedIndex());
+        assertEquals(-1, treeView.getSelectionModel().getSelectedIndex());
         assertSame(element, treeView.getSelectionModel().getSelectedItem());
     }
 
@@ -1734,8 +1735,8 @@ public class TreeViewTest {
         // test initial state
         assertEquals(sl.getStage().getScene().getFocusOwner(), focusBtn);
         assertTrue(focusBtn.isFocused());
-        assertEquals(-1, sm.getSelectedIndex());
-        assertNull(sm.getSelectedItem());
+        assertEquals(0, sm.getSelectedIndex());
+        assertNotNull(sm.getSelectedItem());
 
         // move focus to the treeview
         treeView.requestFocus();

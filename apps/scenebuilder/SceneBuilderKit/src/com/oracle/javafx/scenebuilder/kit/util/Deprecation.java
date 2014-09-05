@@ -172,7 +172,7 @@ public class Deprecation {
 
     // RT-20184 : FX should provide a Parent.pick() routine
     public static Node pick(Node node, double sceneX, double sceneY) {
-        final Point2D p = node.sceneToLocal(sceneX, sceneY);
+        final Point2D p = node.sceneToLocal(sceneX, sceneY, true /* rootScene */);
         final PickRay pickRay = new PickRay(p.getX(), p.getY(), 1.0, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY);
         final PickResultChooser prc = new PickResultChooser();
         node.impl_pickNode(pickRay, prc);
@@ -261,5 +261,15 @@ public class Deprecation {
     // using it would break ability to compile over JDK 8 GA, not an option for now.
     public static int getNodeLevel(TreeItem<?> item) {
         return TreeView.getNodeLevel(item);
+    } 
+    
+    public static Point2D localToLocal(Node source, double sourceX, double sourceY, Node target) {
+        final Point2D sceneXY = source.localToScene(sourceX, sourceY, true /* rootScene */);
+        return target.sceneToLocal(sceneXY, true /* rootScene */);
+    }
+    
+    public static Bounds localToLocal(Node source, Bounds sourceBounds, Node target) {
+        final Bounds sceneBounds = source.localToScene(sourceBounds, true /* rootScene */);
+        return target.sceneToLocal(sceneBounds, true /* rootScene */);
     }
 }

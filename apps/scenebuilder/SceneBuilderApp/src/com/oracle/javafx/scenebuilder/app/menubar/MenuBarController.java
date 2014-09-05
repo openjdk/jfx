@@ -276,6 +276,8 @@ public class MenuBarController {
     @FXML
     private MenuItem wrapInAnchorPaneMenuItem;
     @FXML
+    private MenuItem wrapInBorderPaneMenuItem;
+    @FXML
     private MenuItem wrapInFlowPaneMenuItem;
     @FXML
     private MenuItem wrapInGridPaneMenuItem;
@@ -306,7 +308,9 @@ public class MenuBarController {
 
     // Preview
     @FXML
-    private MenuItem showPreviewMenuItem;
+    private MenuItem showPreviewInWindowMenuItem;
+    @FXML
+    private MenuItem showPreviewInDialogMenuItem;
     @FXML
     private RadioMenuItem modenaThemeMenuItem;
     @FXML
@@ -518,6 +522,7 @@ public class MenuBarController {
         assert bringForwardMenuItem != null;
         assert sendBackwardMenuItem != null;
         assert wrapInAnchorPaneMenuItem != null;
+        assert wrapInBorderPaneMenuItem != null;
         assert wrapInFlowPaneMenuItem != null;
         assert wrapInGridPaneMenuItem != null;
         assert wrapInHBoxMenuItem != null;
@@ -533,7 +538,8 @@ public class MenuBarController {
         assert wrapInGroupMenuItem != null;
         assert unwrapMenuItem != null;
 
-        assert showPreviewMenuItem != null;
+        assert showPreviewInWindowMenuItem != null;
+        assert showPreviewInDialogMenuItem != null;
         assert modenaThemeMenuItem != null;
         assert modenaTouchThemeMenuItem != null;
         assert modenaHighContrastBlackonwhiteThemeMenuItem != null;
@@ -903,6 +909,7 @@ public class MenuBarController {
         sendBackwardMenuItem.setAccelerator(
                 new KeyCharacterCombination("[", modifier)); //NOI18N
         wrapInAnchorPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_ANCHOR_PANE));
+        wrapInBorderPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_BORDER_PANE));
         wrapInFlowPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_FLOW_PANE));
         wrapInGroupMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_GROUP));
         wrapInGridPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_GRID_PANE));
@@ -924,8 +931,9 @@ public class MenuBarController {
         /*
          * Preview menu
          */
-        showPreviewMenuItem.setUserData(new DocumentControlActionController(DocumentControlAction.SHOW_PREVIEW_WINDOW));
-        showPreviewMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.P, modifier));
+        showPreviewInWindowMenuItem.setUserData(new DocumentControlActionController(DocumentControlAction.SHOW_PREVIEW_WINDOW));
+        showPreviewInWindowMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.P, modifier));
+        showPreviewInDialogMenuItem.setUserData(new DocumentControlActionController(DocumentControlAction.SHOW_PREVIEW_DIALOG));
         caspianHighContrastThemeMenuItem.setUserData(new SetThemeActionController(EditorPlatform.Theme.CASPIAN_HIGH_CONTRAST));
         caspianThemeMenuItem.setUserData(new SetThemeActionController(EditorPlatform.Theme.CASPIAN));
         caspianEmbeddedThemeMenuItem.setUserData(new SetThemeActionController(EditorPlatform.Theme.CASPIAN_EMBEDDED));

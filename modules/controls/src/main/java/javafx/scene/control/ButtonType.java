@@ -122,12 +122,12 @@ public final class ButtonType {
     }
 
     /**
-     * Creates a ButtonType instance with the given text, and the ButtonType set 
+     * Creates a ButtonType instance with the given text, and the ButtonData set
      * as specified.
      * 
      * @param text The string to display in the text property of controls such
      *      as {@link Button#textProperty() Button}.
-     * @param buttonData The type of Button that should be created from this ButtonType.
+     * @param buttonData The type of button that should be created from this ButtonType.
      */ 
     public ButtonType(@NamedArg("text") String text, 
                         @NamedArg("buttonData") ButtonData buttonData) {

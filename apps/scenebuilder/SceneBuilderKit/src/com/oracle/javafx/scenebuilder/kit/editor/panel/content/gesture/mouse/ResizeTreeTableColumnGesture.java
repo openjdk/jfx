@@ -101,8 +101,8 @@ public class ResizeTreeTableColumnGesture extends AbstractMouseGesture {
         final double currentSceneX = getLastMouseEvent().getSceneX();
         final double currentSceneY = getLastMouseEvent().getSceneY();
         final TreeTableView<?> treeTableView = resizer.getTreeTableColumn().getTreeTableView();
-        final Point2D start = treeTableView.sceneToLocal(startSceneX, startSceneY);
-        final Point2D current = treeTableView.sceneToLocal(currentSceneX, currentSceneY);
+        final Point2D start = treeTableView.sceneToLocal(startSceneX, startSceneY, true /* rootScene */);
+        final Point2D current = treeTableView.sceneToLocal(currentSceneX, currentSceneY, true /* rootScene */);
         final double dx = current.getX() - start.getX();
         
         resizer.updateWidth(dx);

@@ -59,11 +59,15 @@ import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.PerspectiveCamera;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.Dialog;
+import javafx.scene.control.DialogPane;
 import javafx.scene.control.Label;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.MeshView;
 import javafx.scene.transform.Scale;
 import javafx.scene.transform.Translate;
+import javafx.stage.Modality;
 import javafx.stage.Window;
 import javafx.stage.WindowEvent;
 
@@ -181,6 +185,21 @@ public final class PreviewWindowController extends AbstractWindowController {
             requestUpdate(IMMEDIATE);
             isDirty = false;
         }
+    }
+
+    public void openDialog() {
+        final FXOMDocument fxomDocument = editorController.getFxomDocument();
+        assert fxomDocument != null;
+        final Object sceneGraphRoot = fxomDocument.getSceneGraphRoot();
+        assert sceneGraphRoot instanceof DialogPane;
+        final DialogPane dialogPane = (DialogPane) sceneGraphRoot;
+        final Dialog<? extends Object> dialog = new Dialog<>();
+        dialog.setDialogPane(dialogPane);
+        dialog.initModality(Modality.NONE);
+        if (dialogPane.getButtonTypes().isEmpty()) {
+            dialog.getDialogPane().getButtonTypes().setAll(ButtonType.CLOSE);
+        }
+        dialog.show();
     }
     
     @Override

@@ -37,7 +37,6 @@ import com.oracle.javafx.scenebuilder.kit.editor.panel.content.gesture.SelectWit
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import javafx.geometry.Bounds;
 import javafx.scene.Node;
-import javafx.scene.transform.Transform;
 
 /**
  *
@@ -64,8 +63,8 @@ public class NodePring extends AbstractGenericPring<Node> {
     }
 
     @Override
-    public Transform getSceneGraphToSceneTransform() {
-        return getSceneGraphObject().getLocalToSceneTransform();
+    public Node getSceneGraphObjectProxy() {
+        return getSceneGraphObject();
     }
 
     @Override

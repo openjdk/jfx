@@ -62,7 +62,7 @@ public class FXOMIntrinsic extends FXOMObject {
         this.sourceSceneGraphObject = targetSceneGraphObject;
     }
     
-    FXOMIntrinsic(FXOMDocument document, Type type, String source) {
+    public FXOMIntrinsic(FXOMDocument document, Type type, String source) {
         super(document, makeTagNameFromType(type));
         getGlueElement().getAttributes().put("source", source);
     }
@@ -148,31 +148,6 @@ public class FXOMIntrinsic extends FXOMObject {
         
         return result;
     }
-    
-    @Override
-    public FXOMNode lookupFirstReference(String fxId, FXOMObject scope) {
-        final FXOMNode result;
-        
-        if (this == scope) {
-            result = null;
-        } else {
-            switch(getType()) {
-                case FX_REFERENCE:
-                case FX_COPY:
-                    if (fxId.equals(getSource())) {
-                        result = this;
-                    } else {
-                        result = null;
-                    }
-                    break;
-                default:
-                    result = null;
-                    break;
-            }
-        }
-        
-        return result;
-    }
 
     @Override
     protected void collectDeclaredClasses(Set<Class<?>> result) {
@@ -201,6 +176,18 @@ public class FXOMIntrinsic extends FXOMObject {
         if ((getType() == Type.FX_REFERENCE) 
                 && ((source == null) || source.equals(getSource()))) {
             result.add(this);
+        }
+    }
+
+    @Override
+    protected void collectReferences(String source, FXOMObject scope, List<FXOMNode> result) {
+        assert result != null;
+        
+        if ((scope == null) || (scope != this)) {
+            if ((getType() == Type.FX_REFERENCE) 
+                    && ((source == null) || source.equals(getSource()))) {
+                result.add(this);
+            }
         }
     }
 

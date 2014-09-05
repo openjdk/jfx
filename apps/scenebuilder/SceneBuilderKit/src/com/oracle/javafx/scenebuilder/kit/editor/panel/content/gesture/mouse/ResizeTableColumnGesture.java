@@ -101,8 +101,8 @@ public class ResizeTableColumnGesture extends AbstractMouseGesture {
         final double currentSceneX = getLastMouseEvent().getSceneX();
         final double currentSceneY = getLastMouseEvent().getSceneY();
         final TableView<?> tableView = resizer.getTableColumn().getTableView();
-        final Point2D start = tableView.sceneToLocal(startSceneX, startSceneY);
-        final Point2D current = tableView.sceneToLocal(currentSceneX, currentSceneY);
+        final Point2D start = tableView.sceneToLocal(startSceneX, startSceneY, true /* rootScene */);
+        final Point2D current = tableView.sceneToLocal(currentSceneX, currentSceneY, true /* rootScene */);
         final double dx = current.getX() - start.getX();
         
         resizer.updateWidth(dx);

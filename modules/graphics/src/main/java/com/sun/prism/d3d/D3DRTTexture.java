@@ -61,7 +61,7 @@ class D3DRTTexture extends D3DTexture
     {
         super(context, PixelFormat.INT_ARGB_PRE, wrapMode, pResource,
               physicalWidth, physicalHeight,
-              contentX, contentY, contentWidth, contentHeight, true, samples);
+              contentX, contentY, contentWidth, contentHeight, true, samples, false);
         this.opaque = false;
     }
 

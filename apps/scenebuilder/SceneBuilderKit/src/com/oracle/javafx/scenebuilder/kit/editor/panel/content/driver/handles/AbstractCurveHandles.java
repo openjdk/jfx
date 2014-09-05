@@ -37,7 +37,6 @@ import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import javafx.beans.value.ChangeListener;
 import javafx.geometry.Bounds;
 import javafx.scene.Node;
-import javafx.scene.transform.Transform;
 
 /**
  *
@@ -64,8 +63,8 @@ public abstract class AbstractCurveHandles<T extends Node> extends AbstractHandl
     }
 
     @Override
-    public Transform getSceneGraphToSceneTransform() {
-        return getSceneGraphObject().getLocalToSceneTransform();
+    public Node getSceneGraphObjectProxy() {
+        return getSceneGraphObject();
     }
 
     @Override

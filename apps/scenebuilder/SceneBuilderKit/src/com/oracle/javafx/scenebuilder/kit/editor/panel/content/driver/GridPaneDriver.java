@@ -155,7 +155,7 @@ public class GridPaneDriver extends AbstractNodeDriver {
             result = new GridPaneDropTarget(fxomInstance, 0, 0, ColumnArea.CENTER, RowArea.CENTER);
         } else {
         
-            final Point2D hitPoint = gridPane.sceneToLocal(sceneX, sceneY);
+            final Point2D hitPoint = gridPane.sceneToLocal(sceneX, sceneY, true /* rootScene */);
             final double hitX = hitPoint.getX();
             final double hitY = hitPoint.getY();
             final int targetColumnIndex, targetRowIndex;

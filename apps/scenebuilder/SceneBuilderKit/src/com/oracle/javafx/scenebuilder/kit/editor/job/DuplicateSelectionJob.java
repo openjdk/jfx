@@ -34,7 +34,6 @@ package com.oracle.javafx.scenebuilder.kit.editor.job;
 import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.RelocateNodeJob;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
-import com.oracle.javafx.scenebuilder.kit.editor.job.togglegroup.AdjustAllToggleGroupJob;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.AbstractSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
@@ -112,7 +111,6 @@ public class DuplicateSelectionJob extends BatchSelectionJob {
                         result.add(relocateSubJob);
                     }
                 }
-                result.add(new AdjustAllToggleGroupJob(getEditorController()));
             }
         }
         return result;

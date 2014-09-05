@@ -40,7 +40,6 @@ import javafx.geometry.Bounds;
 import javafx.scene.Node;
 import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTableView;
-import javafx.scene.transform.Transform;
 
 /**
  *
@@ -71,8 +70,8 @@ public class TreeTableColumnPring extends AbstractGenericPring<Object> {
     }
 
     @Override
-    public Transform getSceneGraphToSceneTransform() {
-        return getTreeTableColumn().getTreeTableView().getLocalToSceneTransform();
+    public Node getSceneGraphObjectProxy() {
+        return getTreeTableColumn().getTreeTableView();
     }
 
     @Override

@@ -77,8 +77,8 @@ public class RelocateNodeJob extends Job {
         assert fxomInstance.getSceneGraphObject() instanceof Node;
         
         this.fxomInstance = fxomInstance;
-        this.newLayoutX = newLayoutX;
-        this.newLayoutY = newLayoutY;
+        this.newLayoutX = newLayoutX; // Root scene coordinates
+        this.newLayoutY = newLayoutY; // Root scene coordinates
         
         final Metadata metadata = Metadata.getMetadata();
         final Class<?> sgoClass = fxomInstance.getSceneGraphObject().getClass();

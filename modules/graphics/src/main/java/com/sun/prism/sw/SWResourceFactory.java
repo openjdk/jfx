@@ -170,6 +170,11 @@ final class SWResourceFactory
         return SWTexture.create(this, formatHint, wrapMode, w, h);
     }
 
+    @Override public Texture createTexture(PixelFormat formatHint, Usage usageHint,
+            WrapMode wrapMode, int w, int h, boolean useMipmap) {
+        return createTexture(formatHint, usageHint, wrapMode, w, h);
+    }
+
     public PhongMaterial createPhongMaterial() {
         throw new UnsupportedOperationException("Not supported yet.");
 }

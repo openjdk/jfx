@@ -441,6 +441,7 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DContext_nSetTexture
         D3DTEXTUREFILTERTYPE fhint = linear ? D3DTEXF_LINEAR : D3DTEXF_POINT;
         pd3dDevice->SetSamplerState(texUnit, D3DSAMP_MAGFILTER, fhint);
         pd3dDevice->SetSamplerState(texUnit, D3DSAMP_MINFILTER, fhint);
+        pd3dDevice->SetSamplerState(texUnit, D3DSAMP_MIPFILTER, fhint);
         if (wrapMode != 0) {
             pd3dDevice->SetSamplerState(texUnit, D3DSAMP_ADDRESSU, wrapMode);
             pd3dDevice->SetSamplerState(texUnit, D3DSAMP_ADDRESSV, wrapMode);

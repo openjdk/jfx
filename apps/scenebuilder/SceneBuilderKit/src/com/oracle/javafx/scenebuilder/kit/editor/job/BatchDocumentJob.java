@@ -42,7 +42,7 @@ import java.util.List;
  *
  * The sub jobs are FIRST all created, THEN executed.
  */
-public abstract class BatchDocumentJob extends CompositeJob2 {
+public abstract class BatchDocumentJob extends CompositeJob {
 
     private List<Job> subJobs;
 

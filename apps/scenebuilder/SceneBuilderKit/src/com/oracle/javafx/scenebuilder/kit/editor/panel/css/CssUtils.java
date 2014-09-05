@@ -50,6 +50,7 @@ import javafx.scene.layout.Pane;
 /**
  * CSS support for Scene Builder.
  *
+ * @treatAsPrivate
  */
 public class CssUtils {
 

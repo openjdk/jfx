@@ -35,10 +35,10 @@ import com.oracle.javafx.scenebuilder.kit.editor.panel.content.ContentPanelContr
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.TabOutline;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import javafx.geometry.Bounds;
+import javafx.scene.Node;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.paint.Paint;
-import javafx.scene.transform.Transform;
 
 /**
  *
@@ -87,8 +87,8 @@ public class TabTring extends AbstractTring<Tab> {
     }
 
     @Override
-    public Transform getSceneGraphToSceneTransform() {
-        return getSceneGraphObject().getTabPane().getLocalToSceneTransform();
+    public Node getSceneGraphObjectProxy() {
+        return getSceneGraphObject().getTabPane();
     }
 
     @Override

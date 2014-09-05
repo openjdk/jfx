@@ -37,13 +37,13 @@ import javafx.geometry.Point2D;
 import javafx.scene.Node;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
-import javafx.scene.transform.Transform;
 
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.AbstractResilientHandles;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.ContentPanelController;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.TabPaneDesignInfoX;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.util.BoundsUtils;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
+import com.oracle.javafx.scenebuilder.kit.util.Deprecation;
 
 /**
  *
@@ -96,18 +96,18 @@ public class TabHandles extends AbstractResilientHandles<Tab> {
 
         // Convert tabNode bounds from tabNode local space to tabPane local space
         final Bounds b = tabNode.getLayoutBounds();
-        final Point2D min = tabPane.sceneToLocal(tabNode.localToScene(b.getMinX(), b.getMinY()));
-        final Point2D max = tabPane.sceneToLocal(tabNode.localToScene(b.getMaxX(), b.getMaxY()));
+        final Point2D min = Deprecation.localToLocal(tabNode, b.getMinX(), b.getMinY(), tabPane);
+        final Point2D max = Deprecation.localToLocal(tabNode, b.getMaxX(), b.getMaxY(), tabPane);
         
         return BoundsUtils.makeBounds(min, max);
     }
 
     @Override
-    public Transform getSceneGraphToSceneTransform() {
+    public Node getSceneGraphObjectProxy() {
         assert isReady();
         assert tabPane != null;
         
-        return tabPane.getLocalToSceneTransform();
+        return tabPane;
     }
 
     @Override

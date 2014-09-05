@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -29,31 +29,63 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.oracle.javafx.scenebuilder.kit.editor.job;
+
+package com.oracle.javafx.scenebuilder.kit.editor.job.reference;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
-import java.util.List;
+import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMIntrinsic;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMNode;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMPropertyT;
 
 /**
- * This Job handles a list of sub jobs and a description.
+ *
  */
-public abstract class CompositeJob2 extends Job {
-
-    private String description;
-
-    public CompositeJob2(EditorController editorController) {
+public class FixToggleGroupReferenceJob  extends Job {
+    
+    private final Job subJob;
+    
+    public FixToggleGroupReferenceJob(FXOMNode reference, EditorController editorController) {
         super(editorController);
+        if (reference instanceof FXOMIntrinsic) {
+            final FXOMIntrinsic fxomIntrinsic = (FXOMIntrinsic) reference;
+            subJob = new FixToggleGroupIntrinsicReferenceJob(fxomIntrinsic, getEditorController());
+        } else if (reference instanceof FXOMPropertyT) {
+            final FXOMPropertyT fxomProperty = (FXOMPropertyT) reference;
+            subJob = new FixToggleGroupExpressionReferenceJob(fxomProperty, getEditorController());
+        } else {
+            throw new RuntimeException("Bug"); //NOI18N
+        }
+    }
+    
+    /*
+     * Job
+     */
+    @Override
+    public boolean isExecutable() {
+        return subJob.isExecutable();
     }
 
     @Override
-    public final String getDescription() {
-        if (description == null) {
-            description = makeDescription();
-            assert description != null;
-        }
-        return description;
+    public void execute() {
+        subJob.execute();
     }
 
-    public abstract List<Job> getSubJobs();
-    protected abstract String makeDescription();
+    @Override
+    public void undo() {
+        subJob.undo();
+    }
+
+    @Override
+    public void redo() {
+        subJob.redo();
+    }
+
+    @Override
+    public String getDescription() {
+        return subJob.getDescription();
+    }
+
+
+    
 }

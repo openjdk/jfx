@@ -47,6 +47,9 @@ import java.util.List;
 
 /**
  * Job invoked when re-indexing columns content.
+ * 
+ * IMPORTANT:
+ * This job cannot extends BatchDocumentJob because its sub jobs list cannot be initialized lazily.
  */
 public class ReIndexColumnContentJob extends Job {
 

@@ -73,7 +73,11 @@ abstract class GLContext {
     // Use by Texture
     final static int GL_TEXTURE_2D                = 50;
     final static int GL_TEXTURE_BINDING_2D        = 51;
-    final static int GL_LINEAR                    = 52;
+    final static int GL_NEAREST                   = 52;
+    final static int GL_LINEAR                    = 53;
+    final static int GL_NEAREST_MIPMAP_NEAREST    = 54;
+    final static int GL_LINEAR_MIPMAP_LINEAR      = 55;
+    
 
     // Use by glPixelStorei
     final static int GL_UNPACK_ALIGNMENT          = 60;
@@ -159,13 +163,13 @@ abstract class GLContext {
             int x, int y, int w, int h);
     private static native void nSetDepthTest(long nativeCtxInfo, boolean depthTest);
     private static native void nSetMSAA(long nativeCtxInfo, boolean msaa);
-    private static native void nTexParamsMinMax(int pname);
+    private static native void nTexParamsMinMax(int min, int max);
     private static native boolean nTexImage2D0(int target, int level, int internalFormat,
             int width, int height, int border, int format,
-            int type, Object pixels, int pixelsByteOffset);
+            int type, Object pixels, int pixelsByteOffset, boolean useMipmap);
     private static native boolean nTexImage2D1(int target, int level, int internalFormat,
             int width, int height, int border, int format,
-            int type, Object pixels, int pixelsByteOffset);
+            int type, Object pixels, int pixelsByteOffset, boolean useMipmap);
     private static native void nTexSubImage2D0(int target, int level,
             int xoffset, int yoffset, int width, int height, int format,
             int type, Object pixels, int pixelsByteOffset);
@@ -544,22 +548,28 @@ abstract class GLContext {
         nUseProgram(nativeCtxInfo, progid);
     }
 
-    void texParamsMinMax(int pname) {
-        nTexParamsMinMax(pname);
+    void texParamsMinMax(int pname, boolean useMipmap) {
+        int min = pname;
+        int max = pname;
+        if (useMipmap) {
+            min = (min == GLContext.GL_LINEAR) ? GLContext.GL_LINEAR_MIPMAP_LINEAR
+                    : GLContext.GL_NEAREST_MIPMAP_NEAREST;
+        }
+        nTexParamsMinMax(min, max);
     }
 
     boolean texImage2D(int target, int level, int internalFormat,
             int width, int height, int border, int format, int type,
-            java.nio.Buffer pixels) {
+            java.nio.Buffer pixels, boolean useMipmap) {
         boolean result;
         boolean direct = BufferFactory.isDirect(pixels);
         if (direct) {
             result = nTexImage2D0(target, level, internalFormat, width, height, border, format,
-                    type, pixels, BufferFactory.getDirectBufferByteOffset(pixels));
+                    type, pixels, BufferFactory.getDirectBufferByteOffset(pixels), useMipmap);
         } else {
             result = nTexImage2D1(target, level, internalFormat, width, height, border, format,
                     type, BufferFactory.getArray(pixels),
-                    BufferFactory.getIndirectBufferByteOffset(pixels));
+                    BufferFactory.getIndirectBufferByteOffset(pixels), useMipmap);
         }
         return result;
 

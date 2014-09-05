@@ -83,17 +83,17 @@ public class BoundsUtils {
             final double maxX = b.getMaxX();
             final double maxY = b.getMaxY();
             
-            final Point2D p1 = node.localToScene(minX, minY);
-            final Point2D p2 = node.localToScene(maxX, minY);
-            final Point2D p3 = node.localToScene(maxX, maxY);
-            final Point2D p4 = node.localToScene(minX, maxY);
+            final Point2D p1 = node.localToScene(minX, minY, true /* rootScene */);
+            final Point2D p2 = node.localToScene(maxX, minY, true /* rootScene */);
+            final Point2D p3 = node.localToScene(maxX, maxY, true /* rootScene */);
+            final Point2D p4 = node.localToScene(minX, maxY, true /* rootScene */);
 
             final LineEquation nl = new LineEquation(p1, p2);
             final LineEquation el = new LineEquation(p2, p3);
             final LineEquation sl = new LineEquation(p3, p4);
             final LineEquation wl = new LineEquation(p4, p1);
 
-            final Point2D p = node.localToScene(x, y);
+            final Point2D p = node.localToScene(x, y, true /* rootScene */);
             final double sceneX = p.getX();
             final double sceneY = p.getY();
             final Point2D nh = nl.pointAtOffset(nl.offsetAtPoint(sceneX, sceneY));

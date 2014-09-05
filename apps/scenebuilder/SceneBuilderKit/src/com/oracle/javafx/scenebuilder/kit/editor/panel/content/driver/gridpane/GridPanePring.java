@@ -43,7 +43,6 @@ import javafx.scene.Node;
 import javafx.scene.layout.GridPane;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
-import javafx.scene.transform.Transform;
 
 /**
  *
@@ -75,8 +74,8 @@ public class GridPanePring extends AbstractPring<GridPane> {
     }
 
     @Override
-    public Transform getSceneGraphToSceneTransform() {
-        return getSceneGraphObject().getLocalToSceneTransform();
+    public Node getSceneGraphObjectProxy() {
+        return getSceneGraphObject();
     }
 
     @Override

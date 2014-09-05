@@ -47,8 +47,6 @@ import javafx.scene.image.Image;
 /**
  * Object representing the data contained within the hierarchy TreeItems.
  *
- * p
- *
  * @treatAsPrivate
  */
 public class HierarchyItem {

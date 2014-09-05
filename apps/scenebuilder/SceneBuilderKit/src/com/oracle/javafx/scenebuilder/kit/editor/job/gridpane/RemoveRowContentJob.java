@@ -35,7 +35,6 @@ import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.job.BatchDocumentJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.DeleteObjectJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
-import com.oracle.javafx.scenebuilder.kit.editor.job.togglegroup.AdjustAllToggleGroupJob;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
@@ -82,9 +81,6 @@ public class RemoveRowContentJob extends BatchDocumentJob {
                 result.add(removeChildJob);
             }
         }
-
-        final Job adjustToggleGroups = new AdjustAllToggleGroupJob(getEditorController());
-        result.add(adjustToggleGroups);
 
         return result;
     }

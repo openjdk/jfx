@@ -35,7 +35,6 @@ import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
 import javafx.scene.Node;
 import javafx.scene.shape.Line;
-import javafx.scene.transform.Transform;
 
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.ContentPanelController;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.util.LineEquation;
@@ -68,8 +67,8 @@ public class ResizeRudder extends AbstractRudder<Node> {
     }
 
     @Override
-    public Transform getSceneGraphToSceneTransform() {
-        return getSceneGraphObject().getLocalToSceneTransform();
+    public Node getSceneGraphObjectProxy() {
+        return getSceneGraphObject();
     }
 
     @Override

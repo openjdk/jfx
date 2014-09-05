@@ -83,7 +83,13 @@ public class ES2ResourceFactory extends BaseShaderFactory {
                                  WrapMode wrapMode,
                                  int w, int h)
     {
-        return ES2Texture.create(context, formatHint, wrapMode, w, h);
+        return createTexture(formatHint, usageHint, wrapMode, w, h, false);
+    }
+
+    @Override
+    public Texture createTexture(PixelFormat formatHint, Usage usageHint,
+            WrapMode wrapMode, int w, int h, boolean useMipmap) {
+        return ES2Texture.create(context, formatHint, wrapMode, w, h, useMipmap);
     }
 
     public Texture createTexture(MediaFrame frame) {

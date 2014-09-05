@@ -33,7 +33,6 @@ package com.oracle.javafx.scenebuilder.kit.editor.job;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
-import com.oracle.javafx.scenebuilder.kit.editor.job.togglegroup.AdjustAllToggleGroupJob;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.AbstractSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
@@ -109,10 +108,6 @@ public class PasteIntoJob extends BatchSelectionJob {
                                 break;
                             }
                         }
-                    }
-
-                    if (result.size() > 0) {
-                        result.add(new AdjustAllToggleGroupJob(getEditorController()));
                     }
                 }
             }

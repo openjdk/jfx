@@ -36,7 +36,6 @@ import com.oracle.javafx.scenebuilder.kit.editor.drag.source.AbstractDragSource;
 import com.oracle.javafx.scenebuilder.kit.editor.drag.target.AbstractDropTarget;
 import com.oracle.javafx.scenebuilder.kit.editor.drag.target.AccessoryDropTarget;
 import com.oracle.javafx.scenebuilder.kit.editor.drag.target.ContainerZDropTarget;
-import com.oracle.javafx.scenebuilder.kit.editor.drag.target.GridPaneDropTarget;
 import com.oracle.javafx.scenebuilder.kit.editor.drag.target.RootDropTarget;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
@@ -45,7 +44,6 @@ import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask.Accessory;
 import javafx.scene.control.TreeItem;
 import javafx.scene.input.DragEvent;
-import javafx.scene.layout.GridPane;
 
 /**
  * Controller for all drag and drop gestures in hierarchy panel. This class does
@@ -272,7 +270,8 @@ public class HierarchyDNDController {
 
                 assert treeItem != rootTreeItem;
                 assert item instanceof HierarchyItemBorderPane
-                        || item instanceof HierarchyItemGraphic;
+                        || item instanceof HierarchyItemGraphic
+                        || item instanceof HierarchyItemDialogPane;
 
                 if (item.isEmpty()) {
                     // Set the drop target
@@ -282,6 +281,8 @@ public class HierarchyDNDController {
                     // Set the accessory
                     if (item instanceof HierarchyItemBorderPane) {
                         accessory = ((HierarchyItemBorderPane) item).getPosition();
+                    } else if (item instanceof HierarchyItemDialogPane) {
+                        accessory = ((HierarchyItemDialogPane) item).getAccessory();
                     } else {
                         accessory = Accessory.GRAPHIC;
                     }
@@ -411,22 +412,18 @@ public class HierarchyDNDController {
                         = new DesignHierarchyMask(dropTargetInstance);
                 // Check if the drop target accepts sub components
                 if (dropTargetMask.isAcceptingSubComponent(dragSource.getDraggedObjects())) {
-                    if (dropTargetInstance.getSceneGraphObject() instanceof GridPane) {
-                        result = new GridPaneDropTarget(dropTargetInstance, targetIndex);
+                    final FXOMObject beforeChild;
+                    if (targetIndex == -1) {
+                        beforeChild = null;
                     } else {
-                        final FXOMObject beforeChild;
-                        if (targetIndex == -1) {
+                        // targetIndex is the last sub component
+                        if (targetIndex == dropTargetMask.getSubComponentCount()) {
                             beforeChild = null;
                         } else {
-                            // targetIndex is the last sub component
-                            if (targetIndex == dropTargetMask.getSubComponentCount()) {
-                                beforeChild = null;
-                            } else {
-                                beforeChild = dropTargetMask.getSubComponentAtIndex(targetIndex);
-                            }
+                            beforeChild = dropTargetMask.getSubComponentAtIndex(targetIndex);
                         }
-                        result = new ContainerZDropTarget(dropTargetInstance, beforeChild);
                     }
+                    result = new ContainerZDropTarget(dropTargetInstance, beforeChild);
                 } //
                 // Check if the drop target accepts accessories
                 else {
@@ -441,7 +438,12 @@ public class HierarchyDNDController {
                         Accessory.CONTENT,
                         Accessory.CONTEXT_MENU,
                         Accessory.GRAPHIC,
-                        Accessory.TOOLTIP};
+                        Accessory.TOOLTIP,
+                        Accessory.HEADER,
+                        Accessory.DP_GRAPHIC,
+                        Accessory.DP_CONTENT,
+                        Accessory.EXPANDABLE_CONTENT
+                    };
                     for (Accessory a : accessories) {
                         final AccessoryDropTarget dropTarget
                                 = new AccessoryDropTarget(dropTargetInstance, a);

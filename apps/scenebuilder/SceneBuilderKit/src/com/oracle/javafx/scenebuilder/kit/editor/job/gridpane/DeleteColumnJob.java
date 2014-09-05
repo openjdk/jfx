@@ -34,7 +34,6 @@ package com.oracle.javafx.scenebuilder.kit.editor.job.gridpane;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.job.BatchSelectionJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
-import com.oracle.javafx.scenebuilder.kit.editor.job.togglegroup.AdjustAllToggleGroupJob;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.AbstractSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.GridSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
@@ -81,7 +80,6 @@ public class DeleteColumnJob extends BatchSelectionJob {
             final Job removeContent = new RemoveColumnContentJob(
                     getEditorController(), targetGridPane, targetIndexes);
             result.add(removeContent);
-            result.add(new AdjustAllToggleGroupJob(getEditorController()));
             // Finally shift the column content
             result.addAll(moveColumnContent());
         }

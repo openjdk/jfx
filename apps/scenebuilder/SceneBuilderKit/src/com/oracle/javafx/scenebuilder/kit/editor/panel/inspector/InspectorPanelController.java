@@ -2232,7 +2232,7 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
         // Position the scrollBar such as the editor is centered in the TitledPane (when possible)
         final ScrollPane scrollPane = sp;
         double editorHeight = valueEditorNode.getLayoutBounds().getHeight();
-        final Point2D pt = scrollPane.getContent().sceneToLocal(valueEditorNode.localToScene(0, 0));
+        final Point2D pt = Deprecation.localToLocal(valueEditorNode, 0, 0, scrollPane.getContent());
         // viewport height
         double vpHeight = scrollPane.getViewportBounds().getHeight();
         // Position of the editor in the scrollPane content

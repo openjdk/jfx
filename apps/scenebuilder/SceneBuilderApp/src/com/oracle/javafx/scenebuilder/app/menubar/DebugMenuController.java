@@ -37,8 +37,9 @@ import com.oracle.javafx.scenebuilder.app.SceneBuilderApp;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorPlatform;
 import com.oracle.javafx.scenebuilder.kit.editor.JobManager;
 import com.oracle.javafx.scenebuilder.kit.editor.job.BatchJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.CompositeJob2;
+import com.oracle.javafx.scenebuilder.kit.editor.job.CompositeJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
+import com.oracle.javafx.scenebuilder.kit.editor.job.reference.UpdateReferencesJob;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.ContentPanelController;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.util.dialog.ErrorDialog;
 import com.oracle.javafx.scenebuilder.kit.util.MathUtils;
@@ -211,8 +212,8 @@ class DebugMenuController {
     private MenuItem makeJobMenuItem(Job job) {
         final MenuItem result;
         
-        if (job instanceof CompositeJob2) {
-            final CompositeJob2 compositeJob = (CompositeJob2)job;
+        if (job instanceof CompositeJob) {
+            final CompositeJob compositeJob = (CompositeJob)job;
             final Menu newMenu = new Menu(compositeJob.getClass().getSimpleName());
             addJobMenuItems(compositeJob.getSubJobs(), newMenu);
             result = newMenu;
@@ -220,6 +221,11 @@ class DebugMenuController {
             final BatchJob batchJob = (BatchJob)job;
             final Menu newMenu = new Menu(batchJob.getClass().getSimpleName());
             addJobMenuItems(batchJob.getSubJobs(), newMenu);
+            result = newMenu;
+        } else if (job instanceof UpdateReferencesJob) {
+            final UpdateReferencesJob fixReferencesJob = (UpdateReferencesJob)job;
+            final Menu newMenu = new Menu(fixReferencesJob.getClass().getSimpleName());
+            addJobMenuItems(fixReferencesJob, newMenu);
             result = newMenu;
         } else {
             result = new MenuItem(job.getClass().getSimpleName());
@@ -229,13 +235,22 @@ class DebugMenuController {
     }
     
     private void addJobMenuItems(List<Job> jobs, Menu targetMenu) {
-        targetMenu.getItems().clear();
         for (Job job : jobs) {
             targetMenu.getItems().add(makeJobMenuItem(job));
         }
         
         if (targetMenu.getItems().isEmpty()) {
             targetMenu.getItems().add(makeMenuItem("Empty", true)); //NOI18N
+        }
+    }
+    
+    
+    private void addJobMenuItems(UpdateReferencesJob j, Menu targetMenu) {
+        targetMenu.getItems().add(makeJobMenuItem(j.getSubJob()));
+        final List<Job> fixJobs = j.getFixJobs();
+        if (fixJobs.isEmpty() == false) {
+            targetMenu.getItems().add(new SeparatorMenuItem());
+            addJobMenuItems(fixJobs, targetMenu);
         }
     }
 }

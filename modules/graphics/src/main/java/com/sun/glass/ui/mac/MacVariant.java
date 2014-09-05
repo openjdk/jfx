@@ -30,7 +30,7 @@ import java.time.ZoneId;
 import java.util.Arrays;
 import javafx.geometry.Bounds;
 
-class MacVariant {
+final class MacVariant {
     final static int NSArray_id = 1;
     final static int NSArray_NSString = 2;
     final static int NSArray_int = 3;

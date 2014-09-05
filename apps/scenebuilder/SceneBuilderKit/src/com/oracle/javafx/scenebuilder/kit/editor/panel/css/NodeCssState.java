@@ -59,6 +59,7 @@ import javafx.scene.control.Skinnable;
 
 /**
  *
+ * @treatAsPrivate
  */
 public class NodeCssState {
 
@@ -95,6 +96,10 @@ public class NodeCssState {
         getAllStyleables();
     }
 
+    /**
+     *
+     * @treatAsPrivate
+     */
     @SuppressWarnings("rawtypes")
     public static class CssProperty implements Comparable<CssProperty> {
 
@@ -415,6 +420,10 @@ public class NodeCssState {
         return userAgent;
     }
 
+    /**
+     *
+     * @treatAsPrivate
+     */
     public static class RuleComparator implements Comparator<MatchingRule> {
 
         @Override
@@ -451,6 +460,10 @@ public class NodeCssState {
         return count;
     }
 
+    /**
+     *
+     * @treatAsPrivate
+     */
     public static class MatchingRule {
 
         private final Rule rule;
@@ -500,6 +513,10 @@ public class NodeCssState {
         }
     }
 
+    /**
+     *
+     * @treatAsPrivate
+     */
     public static class MatchingDeclaration {
 
         private final CssContentMaker.CssPropertyState.CssStyle style;

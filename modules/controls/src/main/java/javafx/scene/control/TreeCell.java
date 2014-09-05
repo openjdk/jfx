@@ -532,9 +532,14 @@ public class TreeCell<T> extends IndexedCell<T> {
     private void updateSelection() {
         if (isEmpty()) return;
         if (getIndex() == -1 || getTreeView() == null) return;
-        if (getTreeView().getSelectionModel() == null) return;
+
+        SelectionModel<TreeItem<T>> sm = getTreeView().getSelectionModel();
+        if (sm == null) {
+            updateSelected(false);
+            return;
+        }
         
-        boolean isSelected = getTreeView().getSelectionModel().isSelected(getIndex());
+        boolean isSelected = sm.isSelected(getIndex());
         if (isSelected() == isSelected) return;
         
         updateSelected(isSelected);
@@ -542,9 +547,14 @@ public class TreeCell<T> extends IndexedCell<T> {
 
     private void updateFocus() {
         if (getIndex() == -1 || getTreeView() == null) return;
-        if (getTreeView().getFocusModel() == null) return;
+
+        FocusModel<TreeItem<T>> fm = getTreeView().getFocusModel();
+        if (fm == null) {
+            setFocused(false);
+            return;
+        }
         
-        setFocused(getTreeView().getFocusModel().isFocused(getIndex()));
+        setFocused(fm.isFocused(getIndex()));
     }
 
     private boolean updateEditingIndex = true;
@@ -652,10 +662,13 @@ public class TreeCell<T> extends IndexedCell<T> {
                 return treeView.queryAccessibleAttribute(AccessibleAttribute.ROW_AT_INDEX, parentIndex);
             }
             case TREE_ITEM_COUNT: {
-                return treeItem == null  ? 0 : treeItem.getChildren().size();
+                if (treeItem == null) return 0;
+                if (!treeItem.isExpanded()) return 0;
+                return treeItem.getChildren().size();
             }
             case TREE_ITEM_AT_INDEX: {
                 if (treeItem == null) return null;
+                if (!treeItem.isExpanded()) return null;
                 int index = (Integer)parameters[0];
                 if (index >= treeItem.getChildren().size()) return null;
                 TreeItem<T> child = treeItem.getChildren().get(index);

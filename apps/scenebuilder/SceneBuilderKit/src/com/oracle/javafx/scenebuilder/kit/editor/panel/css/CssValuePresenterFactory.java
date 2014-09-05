@@ -41,6 +41,7 @@ import javafx.scene.shape.Rectangle;
 
 /**
  *
+ * @treatAsPrivate
  */
 public class CssValuePresenterFactory {
 

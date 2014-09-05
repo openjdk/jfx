@@ -56,6 +56,7 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
     private final InvokeLaterDispatcher invokeLaterDispatcher;
 
     MacApplication() {
+        // Embedded in SWT, with shared event thread
         boolean isEventThread = AccessController
                 .doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("javafx.embed.isEventThread"));
         if (!isEventThread) {

@@ -101,7 +101,7 @@ class J2DTexture extends BaseTexture<J2DTexResource> {
     }
 
     J2DTexture(J2DTexture sharedTex, WrapMode altMode) {
-        super(sharedTex, altMode);
+        super(sharedTex, altMode, false);
         this.setter = sharedTex.setter;
     }
 

@@ -178,6 +178,7 @@ public class MediaControl extends BorderPane {
         });
         mp.setOnPaused(() -> {
             playButton.setGraphic(imageViewPlay);
+            //playButton.setText("||");
         });
         mp.setOnReady(() -> {
             duration = mp.getMedia().getDuration();

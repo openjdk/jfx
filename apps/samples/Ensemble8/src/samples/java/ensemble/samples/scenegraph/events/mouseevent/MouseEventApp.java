@@ -107,6 +107,7 @@ public class MouseEventApp extends Application {
         circleBig.setTranslateY(BIG_CIRCLE_STARTY);
         // we can set mouse event to any node, also on the rectangle
         rectangle.setOnMouseMoved((MouseEvent me) -> {
+            //log mouse move to console, method listed below
             showOnConsole("Mouse moved, x: " + me.getX() + ", y: " + me.getY());
         });
 
@@ -172,6 +173,7 @@ public class MouseEventApp extends Application {
             showOnConsole(name + " was dragged (x:" + dragX + ", y:" + dragY + ")");
         });
         circle.setOnMouseEntered((MouseEvent me) -> {
+            //change the z-coordinate of the circle
             circle.toFront();
             showOnConsole("Mouse entered " + name);
         });
@@ -179,6 +181,7 @@ public class MouseEventApp extends Application {
             showOnConsole("Mouse exited " + name);
         });
         circle.setOnMousePressed((MouseEvent me) -> {
+            //when mouse is pressed, store initial position
             initX = circle.getTranslateX();
             initY = circle.getTranslateY();
             dragAnchor = new Point2D(me.getSceneX(), me.getSceneY());

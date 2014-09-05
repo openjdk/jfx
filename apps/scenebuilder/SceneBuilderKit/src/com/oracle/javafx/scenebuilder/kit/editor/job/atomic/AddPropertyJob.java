@@ -78,7 +78,6 @@ public class AddPropertyJob extends Job {
     public void undo() {
         assert property.getParentInstance() == targetInstance;
         
-        getEditorController().getSelection().clear();
         getEditorController().getFxomDocument().beginUpdate();
         property.removeFromParentInstance();
         getEditorController().getFxomDocument().endUpdate();

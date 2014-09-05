@@ -108,18 +108,22 @@ public class TimelineApp extends Application {
         //start/stop/pause/play from start buttons
         Button buttonStart = new Button("Start");
         buttonStart.setOnAction((ActionEvent t) -> {
+            //start timeline
             timeline.play();
         });
         Button buttonStop = new Button("Stop");
         buttonStop.setOnAction((ActionEvent t) -> {
+            //stop timeline
             timeline.stop();
         });
         Button buttonPlayFromStart = new Button("Restart");
         buttonPlayFromStart.setOnAction((ActionEvent t) -> {
+            //play from start
             timeline.playFromStart();
         });
         Button buttonPause = new Button("Pause");
         buttonPause.setOnAction((ActionEvent t) -> {
+            //pause from start
             timeline.pause();
         });
         //text showing current time
