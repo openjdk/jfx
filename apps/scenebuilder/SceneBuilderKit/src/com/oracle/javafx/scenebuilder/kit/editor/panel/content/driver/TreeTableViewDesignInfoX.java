@@ -31,6 +31,7 @@
  */
 package com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver;
 
+import com.oracle.javafx.scenebuilder.kit.util.Deprecation;
 import com.sun.javafx.scene.control.skin.TableColumnHeader;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -85,7 +86,7 @@ public class TreeTableViewDesignInfoX {
     public Bounds getColumnHeaderBounds(TreeTableColumn<?,?> treeTableColumn) {
         final TreeTableView<?> tv = treeTableColumn.getTreeTableView();
         final Node hn = getColumnNode(treeTableColumn);
-        return tv.sceneToLocal(hn.localToScene(hn.getLayoutBounds()));
+        return Deprecation.localToLocal(hn, hn.getLayoutBounds(), tv);
     }
     
     

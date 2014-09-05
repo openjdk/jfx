@@ -32,6 +32,7 @@
 package com.oracle.javafx.scenebuilder.kit.editor.panel.content;
 
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
+import com.oracle.javafx.scenebuilder.kit.util.Deprecation;
 
 import javafx.beans.value.ChangeListener;
 import javafx.geometry.Bounds;
@@ -164,7 +165,7 @@ public abstract class AbstractDecoration<T> {
     
     public Point2D sceneGraphObjectToDecoration(double x, double y) {
         final Node proxy = getSceneGraphObjectProxy();
-        return getRootNode().sceneToLocal(proxy.localToScene(x, y, true /* rootScene */));
+        return Deprecation.localToLocal(proxy, x, y, getRootNode());
     }
             
     protected void startListeningToLayoutBounds(Node node) {

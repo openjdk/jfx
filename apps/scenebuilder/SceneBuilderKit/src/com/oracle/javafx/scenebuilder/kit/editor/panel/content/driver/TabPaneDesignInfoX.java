@@ -31,6 +31,7 @@
  */
 package com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver;
 
+import com.oracle.javafx.scenebuilder.kit.util.Deprecation;
 import com.sun.javafx.scene.control.skin.TabPaneSkin;
 import java.util.Iterator;
 import java.util.Set;
@@ -178,8 +179,8 @@ public class TabPaneDesignInfoX /* extends TabDesignInfo */ {
         final Bounds b = tabNode.getLayoutBounds();
 
         // Convert b from tabNode local space to tabPane local space
-        final Point2D min = tabPane.sceneToLocal(tabNode.localToScene(b.getMinX(), b.getMinY()));
-        final Point2D max = tabPane.sceneToLocal(tabNode.localToScene(b.getMaxX(), b.getMaxY()));
+        final Point2D min = Deprecation.localToLocal(tabNode, b.getMinX(), b.getMinY(), tabPane);
+        final Point2D max = Deprecation.localToLocal(tabNode, b.getMaxX(), b.getMaxY(), tabPane);
         return makeBoundingBox(min, max);
     }
     
@@ -190,8 +191,8 @@ public class TabPaneDesignInfoX /* extends TabDesignInfo */ {
         final Bounds b = contentNode.getLayoutBounds();
         
         // Convert b from contentNode local space to tabPane local space
-        final Point2D min = tabPane.sceneToLocal(contentNode.localToScene(b.getMinX(), b.getMinY()));
-        final Point2D max = tabPane.sceneToLocal(contentNode.localToScene(b.getMaxX(), b.getMaxY()));
+        final Point2D min = Deprecation.localToLocal(contentNode, b.getMinX(), b.getMinY(), tabPane);
+        final Point2D max = Deprecation.localToLocal(contentNode, b.getMaxX(), b.getMaxY(), tabPane);
         return makeBoundingBox(min, max);
     }
     
