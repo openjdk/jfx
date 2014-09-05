@@ -123,8 +123,6 @@ import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
 import com.oracle.javafx.scenebuilder.kit.util.Deprecation;
-import javafx.geometry.BoundingBox;
-import javafx.geometry.Point2D;
 
 /**
  * This class creates and controls the <b>Content Panel</b> of Scene Builder Kit.

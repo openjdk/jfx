@@ -43,7 +43,6 @@ import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTableView;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Line;
-import javafx.scene.transform.Transform;
 
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.AbstractResilientHandles;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.ContentPanelController;
