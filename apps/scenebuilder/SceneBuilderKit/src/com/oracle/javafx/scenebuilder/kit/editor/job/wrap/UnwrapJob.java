@@ -55,6 +55,10 @@ import java.util.List;
 import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
 import javafx.scene.Node;
+import javafx.scene.control.DialogPane;
+import javafx.scene.control.TabPane;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.text.TextFlow;
 
 /**
  * Main class used for the unwrap jobs.
@@ -68,11 +72,90 @@ public class UnwrapJob extends BatchSelectionJob {
         super(editorController);
     }
 
+    protected boolean canUnwrap() {
+        final Selection selection = getEditorController().getSelection();
+        if (selection.isEmpty()) {
+            return false;
+        }
+        final AbstractSelectionGroup asg = selection.getGroup();
+        if ((asg instanceof ObjectSelectionGroup) == false) {
+            return false;
+        }
+        final ObjectSelectionGroup osg = (ObjectSelectionGroup) asg;
+        if (osg.getItems().size() != 1) {
+            return false;
+        }
+        final FXOMObject container = osg.getItems().iterator().next();
+        if (container instanceof FXOMInstance == false) {
+            return false;
+        }
+        final FXOMInstance containerInstance = (FXOMInstance) container;
+        
+        // Unresolved custom type
+        if (container.getSceneGraphObject() == null) {
+            return false;
+        }
+        
+        // Cannot unwrap TabPane
+        if (TabPane.class.isAssignableFrom(containerInstance.getDeclaredClass())) {
+            return false;
+        }
+        // Cannot unwrap all Pane subclasses (ex : BorderPane, TextFlow and DialogPane)
+        if (BorderPane.class.isAssignableFrom(containerInstance.getDeclaredClass())
+                || TextFlow.class.isAssignableFrom(containerInstance.getDeclaredClass())
+                || DialogPane.class.isAssignableFrom(containerInstance.getDeclaredClass())) {
+            return false;
+        }
+        // Can unwrap classes supporting wrapping except TabPane + some Pane subclasses (see above)
+        boolean isAssignableFrom = false;
+        for (Class<?> clazz : EditorController.getClassesSupportingWrapping()) {
+            isAssignableFrom |= clazz.isAssignableFrom(
+                    containerInstance.getDeclaredClass());
+        }
+        if (isAssignableFrom == false) {
+            return false;
+        }
+
+        // Retrieve the num of children of the container to unwrap
+        final DesignHierarchyMask containerMask
+                = new DesignHierarchyMask(container);
+        int childrenCount;
+        if (containerMask.isAcceptingSubComponent()) {
+            childrenCount = containerMask.getSubComponentCount();
+        } else {
+            assert containerMask.isAcceptingAccessory(Accessory.CONTENT); // Because of (1)
+            childrenCount = containerMask.getAccessoryProperty(Accessory.CONTENT) == null ? 0 : 1;
+        }
+        // If the container to unwrap has no childen, it cannot be unwrapped
+        if (childrenCount == 0) {
+            return false;
+        }
+
+        // Retrieve the parent of the container to unwrap
+        final FXOMObject parentContainer = container.getParentObject();
+        // Unwrap the root node
+        if (parentContainer == null) {
+            return childrenCount == 1;
+        } else {
+            // Check that the num of children can be added to the parent container
+            final DesignHierarchyMask parentContainerMask
+                    = new DesignHierarchyMask(parentContainer);
+            if (parentContainerMask.isAcceptingSubComponent()) {
+                return childrenCount >= 1;
+            } else {
+                assert parentContainerMask.isAcceptingAccessory(Accessory.CONTENT)
+                        || parentContainerMask.isAcceptingAccessory(Accessory.GRAPHIC)
+                        || parentContainerMask.getFxomObject().getSceneGraphObject() instanceof BorderPane;
+                return childrenCount == 1;
+            }
+        }
+    }
+    
     @Override
     protected List<Job> makeSubJobs() {
         final List<Job> result = new ArrayList<>();
 
-        if (WrapJobUtils.canUnwrap(getEditorController())) { // (1)
+        if (canUnwrap()) { // (1)
 
             final Selection selection = getEditorController().getSelection();
             final AbstractSelectionGroup asg = selection.getGroup();

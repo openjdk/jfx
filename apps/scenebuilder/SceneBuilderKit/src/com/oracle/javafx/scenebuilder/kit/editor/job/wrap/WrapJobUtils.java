@@ -33,9 +33,6 @@ package com.oracle.javafx.scenebuilder.kit.editor.job.wrap;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.ModifyObjectJob;
-import com.oracle.javafx.scenebuilder.kit.editor.selection.AbstractSelectionGroup;
-import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
-import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.metadata.Metadata;
@@ -47,137 +44,12 @@ import java.util.List;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
 import javafx.scene.Node;
-import javafx.scene.chart.Axis;
-import javafx.scene.control.Accordion;
-import javafx.scene.control.DialogPane;
-import javafx.scene.control.TabPane;
 import javafx.scene.layout.BorderPane;
-import javafx.scene.text.TextFlow;
 
 /**
  * Utilities to build wrap jobs.
  */
 public class WrapJobUtils {
-
-    /**
-     * Returns true if the selection is an ObjectSelectionGroup that share
-     * the same parent.
-     *
-     * @param editorController
-     * @return
-     */
-    static boolean canWrapIn(final EditorController editorController) {
-        final Selection selection = editorController.getSelection();
-        if (selection.isEmpty()) {
-            return false;
-        }
-        final AbstractSelectionGroup asg = selection.getGroup();
-        if ((asg instanceof ObjectSelectionGroup) == false) {
-            return false;
-        }
-        final ObjectSelectionGroup osg = (ObjectSelectionGroup) asg;
-        if (osg.hasSingleParent() == false) {
-            return false;
-        }
-        if (editorController.isSelectionNode() == false) {
-            return false;
-        }
-        // Cannot wrap in Axis nodes
-        for (FXOMObject fxomObject : osg.getItems()) {
-            if (fxomObject.getSceneGraphObject() instanceof Axis) {
-                return false;
-            }
-        }
-        final FXOMObject parent = osg.getAncestor();
-        if (parent == null) { // selection == root object
-            return true;
-        }
-        final Object parentSceneGraphObject = parent.getSceneGraphObject();
-        if (parentSceneGraphObject instanceof BorderPane) {
-            return osg.getItems().size() == 1;
-        }
-        return !(parentSceneGraphObject instanceof Accordion) // accepts only TitledPanes
-                && !(parentSceneGraphObject instanceof TabPane); // accepts only Tabs
-    }
-
-    static boolean canUnwrap(final EditorController editorController) {
-        final Selection selection = editorController.getSelection();
-        if (selection.isEmpty()) {
-            return false;
-        }
-        final AbstractSelectionGroup asg = selection.getGroup();
-        if ((asg instanceof ObjectSelectionGroup) == false) {
-            return false;
-        }
-        final ObjectSelectionGroup osg = (ObjectSelectionGroup) asg;
-        if (osg.getItems().size() != 1) {
-            return false;
-        }
-        final FXOMObject container = osg.getItems().iterator().next();
-        if (container instanceof FXOMInstance == false) {
-            return false;
-        }
-        final FXOMInstance containerInstance = (FXOMInstance) container;
-        
-        // Unresolved custom type
-        if (container.getSceneGraphObject() == null) {
-            return false;
-        }
-        
-        // Cannot unwrap TabPane
-        if (TabPane.class.isAssignableFrom(containerInstance.getDeclaredClass())) {
-            return false;
-        }
-        // Cannot unwrap all Pane subclasses (ex : BorderPane, TextFlow and DialogPane)
-        if (BorderPane.class.isAssignableFrom(containerInstance.getDeclaredClass())
-                || TextFlow.class.isAssignableFrom(containerInstance.getDeclaredClass())
-                || DialogPane.class.isAssignableFrom(containerInstance.getDeclaredClass())) {
-            return false;
-        }
-        // Can unwrap classes supporting wrapping except TabPane + some Pane subclasses (see above)
-        boolean isAssignableFrom = false;
-        for (Class<?> clazz : EditorController.getClassesSupportingWrapping()) {
-            isAssignableFrom |= clazz.isAssignableFrom(
-                    containerInstance.getDeclaredClass());
-        }
-        if (isAssignableFrom == false) {
-            return false;
-        }
-
-        // Retrieve the num of children of the container to unwrap
-        final DesignHierarchyMask containerMask
-                = new DesignHierarchyMask(container);
-        int childrenCount;
-        if (containerMask.isAcceptingSubComponent()) {
-            childrenCount = containerMask.getSubComponentCount();
-        } else {
-            assert containerMask.isAcceptingAccessory(Accessory.CONTENT); // Because of (1)
-            childrenCount = containerMask.getAccessoryProperty(Accessory.CONTENT) == null ? 0 : 1;
-        }
-        // If the container to unwrap has no childen, it cannot be unwrapped
-        if (childrenCount == 0) {
-            return false;
-        }
-
-        // Retrieve the parent of the container to unwrap
-        final FXOMObject parentContainer = container.getParentObject();
-        // Unwrap the root node
-        if (parentContainer == null) {
-            return childrenCount == 1;
-        } else {
-            // Check that the num of children can be added to the parent container
-            final DesignHierarchyMask parentContainerMask
-                    = new DesignHierarchyMask(parentContainer);
-            if (parentContainerMask.isAcceptingSubComponent()) {
-                return childrenCount >= 1;
-            } else {
-                assert parentContainerMask.isAcceptingAccessory(Accessory.CONTENT)
-                        || parentContainerMask.isAcceptingAccessory(Accessory.GRAPHIC)
-                        || parentContainerMask.getFxomObject().getSceneGraphObject() instanceof BorderPane;
-                return childrenCount == 1;
-            }
-        }
-    }
 
     /**
      * Returns the property name of the specified container to be used for wrapping jobs.
@@ -193,7 +65,7 @@ public class WrapJobUtils {
         final DesignHierarchyMask mask = new DesignHierarchyMask(container);
         final PropertyName result;
 
-        if (mask.getFxomObject().getSceneGraphObject() instanceof BorderPane) {
+        if (container.getSceneGraphObject() instanceof BorderPane) {
             // wrap/unwrap the child of a BorderPane
             assert mask.isAcceptingAccessory(Accessory.TOP);
             assert mask.isAcceptingAccessory(Accessory.LEFT);

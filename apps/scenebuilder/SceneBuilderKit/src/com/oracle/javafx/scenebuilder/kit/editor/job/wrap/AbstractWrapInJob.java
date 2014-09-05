@@ -58,6 +58,10 @@ import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
 import javafx.scene.Node;
 import javafx.scene.Parent;
+import javafx.scene.chart.Axis;
+import javafx.scene.control.Accordion;
+import javafx.scene.control.TabPane;
+import javafx.scene.layout.BorderPane;
 
 /**
  * Main class used for the wrap jobs.
@@ -110,11 +114,45 @@ public abstract class AbstractWrapInJob extends BatchSelectionJob {
         return job;
     }
 
+    protected boolean canWrapIn() {
+        final Selection selection = getEditorController().getSelection();
+        if (selection.isEmpty()) {
+            return false;
+        }
+        final AbstractSelectionGroup asg = selection.getGroup();
+        if ((asg instanceof ObjectSelectionGroup) == false) {
+            return false;
+        }
+        final ObjectSelectionGroup osg = (ObjectSelectionGroup) asg;
+        if (osg.hasSingleParent() == false) {
+            return false;
+        }
+        if (getEditorController().isSelectionNode() == false) {
+            return false;
+        }
+        // Cannot wrap in Axis nodes
+        for (FXOMObject fxomObject : osg.getItems()) {
+            if (fxomObject.getSceneGraphObject() instanceof Axis) {
+                return false;
+            }
+        }
+        final FXOMObject parent = osg.getAncestor();
+        if (parent == null) { // selection == root object
+            return true;
+        }
+        final Object parentSceneGraphObject = parent.getSceneGraphObject();
+        if (parentSceneGraphObject instanceof BorderPane) {
+            return osg.getItems().size() == 1;
+        }
+        return !(parentSceneGraphObject instanceof Accordion) // accepts only TitledPanes
+                && !(parentSceneGraphObject instanceof TabPane); // accepts only Tabs
+    }
+    
     @Override
     protected List<Job> makeSubJobs() {
         final List<Job> result = new ArrayList<>();
 
-        if (WrapJobUtils.canWrapIn(getEditorController())) { // (1)
+        if (canWrapIn()) { // (1)
 
             final Selection selection = getEditorController().getSelection();
             final AbstractSelectionGroup asg = selection.getGroup();

@@ -34,8 +34,8 @@ package com.oracle.javafx.scenebuilder.kit.editor.job.wrap;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
 import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.AddPropertyJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.AddPropertyValueJob;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
+import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
+import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMPropertyC;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
@@ -43,7 +43,6 @@ import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask.Acce
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 import java.util.ArrayList;
 import java.util.List;
-import javafx.scene.layout.AnchorPane;
 
 /**
  * Main class used for the wrap jobs using the new container CONTENT property.
@@ -54,6 +53,21 @@ public abstract class AbstractWrapInContentJob extends AbstractWrapInJob {
         super(editorController);
     }
 
+    @Override
+    protected boolean canWrapIn() {
+        final boolean result;
+        if (super.canWrapIn()) { // (1)
+            // Can wrap in CONTENT property single selection only
+            final Selection selection = getEditorController().getSelection();
+            assert selection.getGroup() instanceof ObjectSelectionGroup; // Because of (1)
+            final ObjectSelectionGroup osg = (ObjectSelectionGroup) selection.getGroup();
+            result = osg.getItems().size() == 1;
+        } else {
+            result = false;
+        }
+        return result;
+    }
+    
     @Override
     protected List<Job> wrapChildrenJobs(final List<FXOMObject> children) {
 
@@ -70,58 +84,12 @@ public abstract class AbstractWrapInContentJob extends AbstractWrapInJob {
         final FXOMPropertyC newContainerProperty = new FXOMPropertyC(
                 newContainer.getFxomDocument(), newContainerPropertyName);
 
-        //------------------------------------------------------------------
-        // The selection is multiple :
-        // - we set the new container CONTENT property to a new AnchorPane sub container
-        // - we add the children to the new AnchorPane sub container
-        //------------------------------------------------------------------
-        if (children.size() > 1) {
+        assert children.size() == 1;
+        // Update children before adding them to the new container
+        jobs.addAll(modifyChildrenJobs(newContainer, children));
 
-            // Create the AnchorPane sub container
-            final FXOMInstance subContainer = makeNewContainerInstance(AnchorPane.class);
-            final DesignHierarchyMask subContainerMask
-                    = new DesignHierarchyMask(subContainer);
-
-            // Retrieve the AnchorPane sub container property name to be used
-            final PropertyName subContainerPropertyName
-                    = subContainerMask.getSubComponentPropertyName();
-            // Create the sub container property
-            final FXOMPropertyC subContainerProperty = new FXOMPropertyC(
-                    subContainer.getFxomDocument(), subContainerPropertyName);
-
-            // Add the sub container to the new container
-            final Job addValueJob = new AddPropertyValueJob(
-                    subContainer,
-                    newContainerProperty,
-                    -1,
-                    getEditorController());
-            jobs.add(addValueJob);
-
-            // Update children before adding them to the sub container
-            jobs.addAll(modifyChildrenJobs(subContainer, children));
-
-            // Add the children to the sub container
-            jobs.addAll(addChildrenJobs(subContainerProperty, children));
-
-            // Add the sub container property to the sub container instance
-            assert subContainerProperty.getParentInstance() == null;
-            final Job addPropertyJob = new AddPropertyJob(
-                    subContainerProperty,
-                    subContainer,
-                    -1, getEditorController());
-            jobs.add(addPropertyJob);
-        }//
-        //------------------------------------------------------------------
-        // The selection is single :
-        // - we set the new container CONTENT property to the single child
-        //------------------------------------------------------------------
-        else {
-            // Update children before adding them to the new container
-            jobs.addAll(modifyChildrenJobs(newContainer, children));
-
-            // Add the children to the new container
-            jobs.addAll(addChildrenJobs(newContainerProperty, children));
-        }
+        // Add the children to the new container
+        jobs.addAll(addChildrenJobs(newContainerProperty, children));
 
         // Add the new container property to the new container instance
         assert newContainerProperty.getParentInstance() == null;
