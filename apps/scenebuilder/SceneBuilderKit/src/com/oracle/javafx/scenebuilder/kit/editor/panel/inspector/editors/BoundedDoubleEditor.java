@@ -96,8 +96,8 @@ public class BoundedDoubleEditor extends AutoSuggestEditor {
     public BoundedDoubleEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses, Set<FXOMInstance> selectedInstances, Map<String, Object> constantsMap) {
         super(propMeta, selectedClasses, new ArrayList<>(constantsMap.keySet()), AutoSuggestEditor.Type.DOUBLE);
         this.constants = constantsMap;
-        initialize();
         handleSpecificCases(propMeta, selectedInstances);
+        initialize();
     }
 
     // Method to please FindBugs
