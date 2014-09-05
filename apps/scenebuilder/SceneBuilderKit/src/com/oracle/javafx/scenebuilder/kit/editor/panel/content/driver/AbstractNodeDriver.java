@@ -198,10 +198,11 @@ public abstract class AbstractNodeDriver extends AbstractDriver {
     public boolean intersectsBounds(FXOMObject fxomObject, Bounds bounds) {
         assert fxomObject.getSceneGraphObject() instanceof Node;
         
+        // Note: bounds are in root scene coordinates
         final Node sceneGraphNode 
                 = (Node) fxomObject.getSceneGraphObject();
         final Bounds sceneGraphNodeBounds 
-                = sceneGraphNode.localToScene(sceneGraphNode.getLayoutBounds());
+                = sceneGraphNode.localToScene(sceneGraphNode.getLayoutBounds(), true /* rootScene */);
 
         return sceneGraphNodeBounds.intersects(bounds);
     }

@@ -88,7 +88,7 @@ public class MovingGuideRenderer {
             chrome.setVisible(false);
         }
         
-        final Bounds scope = guideGroup.sceneToLocal(scopeInScene);
+        final Bounds scope = guideGroup.sceneToLocal(scopeInScene, true /* rootScene */);
         for (AbstractSegment s : newLines) {
             final Line chrome;
             if (reusableChromes.isEmpty()) {

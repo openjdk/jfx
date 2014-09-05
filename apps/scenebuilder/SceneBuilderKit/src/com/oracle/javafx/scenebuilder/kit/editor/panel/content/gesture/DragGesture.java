@@ -346,7 +346,7 @@ public class DragGesture extends AbstractGesture {
         if (movingGuideController.hasSampleBounds() && (guidesDisabled == false)) {
             updateShadow(hitX, hitY);
             final Bounds shadowBounds = shadow.getLayoutBounds();
-            final Bounds shadowBoundsInScene = shadow.localToScene(shadowBounds);
+            final Bounds shadowBoundsInScene = shadow.localToScene(shadowBounds, true /* rootScene */);
             movingGuideController.match(shadowBoundsInScene);
             
             guidedX = hitX + movingGuideController.getSuggestedDX();
@@ -472,7 +472,7 @@ public class DragGesture extends AbstractGesture {
     
     private void setupMovingGuideController() {
         final Bounds scope = contentPanelController.getWorkspacePane().getLayoutBounds();
-        final Bounds scopeInScene = contentPanelController.getWorkspacePane().localToScene(scope);
+        final Bounds scopeInScene = contentPanelController.getWorkspacePane().localToScene(scope, true /* rootScene */);
         this.movingGuideController = new MovingGuideController(
                 contentPanelController.getGuidesColor(), scopeInScene);
         final Group rudderLayer = contentPanelController.getRudderLayer();
@@ -507,7 +507,7 @@ public class DragGesture extends AbstractGesture {
         final Bounds hitParentBounds = hitParentNode.getLayoutBounds();
         final Bounds insetBounds = BoundsUtils.inset(hitParentBounds, MARGIN, MARGIN);
         if (insetBounds.isEmpty() == false) {
-            final Bounds insetBoundsInScene = hitParentNode.localToScene(insetBounds);
+            final Bounds insetBoundsInScene = hitParentNode.localToScene(insetBounds, true /* rootScene */);
             movingGuideController.addSampleBounds(insetBoundsInScene, false /* addMiddle */);
         }
     }    

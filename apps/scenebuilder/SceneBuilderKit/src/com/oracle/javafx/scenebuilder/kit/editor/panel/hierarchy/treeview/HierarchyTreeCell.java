@@ -231,7 +231,7 @@ public class HierarchyTreeCell<T extends HierarchyItem> extends TreeCell<Hierarc
             final TreeItem<HierarchyItem> treeItem
                     = HierarchyTreeCell.this.getTreeItem();
             final Bounds bounds = HierarchyTreeCell.this.getLayoutBounds();
-            final Point2D point = HierarchyTreeCell.this.localToScene(bounds.getMinX(), bounds.getMinY());
+            final Point2D point = HierarchyTreeCell.this.localToScene(bounds.getMinX(), bounds.getMinY(), true /* rootScene */);
             final DroppingMouseLocation location;
             if (event.getSceneY() <= point.getY()) {
                 location = DroppingMouseLocation.TOP;

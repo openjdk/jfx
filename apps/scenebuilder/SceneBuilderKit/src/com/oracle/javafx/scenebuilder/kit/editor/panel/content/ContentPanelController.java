@@ -123,6 +123,8 @@ import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
 import com.oracle.javafx.scenebuilder.kit.util.Deprecation;
+import javafx.geometry.BoundingBox;
+import javafx.geometry.Point2D;
 
 /**
  * This class creates and controls the <b>Content Panel</b> of Scene Builder Kit.
@@ -365,14 +367,14 @@ public class ContentPanelController extends AbstractFxmlPanelController
                 final FXOMObject nodeFxomObject = mask.getClosestFxNode();
                 if (nodeFxomObject != null) {
                     final Node node = (Node) nodeFxomObject.getSceneGraphObject();
-                    union.add(node.localToScene(node.getLayoutBounds()));
+                    union.add(node.localToScene(node.getLayoutBounds(), true /* rootScene */));
                 }
             }
         }
 
         if (union.getResult() != null) {
             final Node content = scrollPane.getContent();
-            final Bounds enclosing = content.sceneToLocal(union.getResult());
+            final Bounds enclosing = content.sceneToLocal(union.getResult(), true /* rootScene */);
             final ScrollPaneBooster spb = new ScrollPaneBooster(scrollPane);
             spb.scrollTo(enclosing);
         }
