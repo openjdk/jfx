@@ -33,9 +33,9 @@
 package com.oracle.javafx.scenebuilder.kit.editor.job.togglegroup;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
+import com.oracle.javafx.scenebuilder.kit.editor.job.BatchDocumentJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
 import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.AddPropertyJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.v2.CompositeJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.RemovePropertyJob;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
@@ -54,7 +54,7 @@ import java.util.List;
 /**
  *
  */
-public class ModifyToggleGroupJob extends CompositeJob {
+public class ModifyToggleGroupJob extends BatchDocumentJob {
     
     private static final PropertyName toggleGroupName 
             = new PropertyName("toggleGroup"); //NOI18N
