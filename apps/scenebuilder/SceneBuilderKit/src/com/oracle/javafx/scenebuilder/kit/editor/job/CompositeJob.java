@@ -37,11 +37,11 @@ import java.util.List;
 /**
  * This Job handles a list of sub jobs and a description.
  */
-public abstract class CompositeJob2 extends Job {
+public abstract class CompositeJob extends Job {
 
     private String description;
 
-    public CompositeJob2(EditorController editorController) {
+    public CompositeJob(EditorController editorController) {
         super(editorController);
     }
 

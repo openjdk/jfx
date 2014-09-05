@@ -42,7 +42,7 @@ import java.util.List;
  *
  * The sub jobs are created and executed just after.
  */
-public abstract class InlineDocumentJob extends CompositeJob2 {
+public abstract class InlineDocumentJob extends CompositeJob {
 
     private List<Job> subJobs;
 
