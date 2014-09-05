@@ -653,7 +653,7 @@ public abstract class AbstractHierarchyPanelController extends AbstractFxmlPanel
             final FXOMObject fxomObject,
             final Accessory accessory) {
         final HierarchyItemBorderPane item
-                = new HierarchyItemBorderPane(owner, fxomObject, getDisplayOption(), accessory);
+                = new HierarchyItemBorderPane(owner, fxomObject, accessory);
         final TreeItem<HierarchyItem> treeItem = new TreeItem<>(item);
         // Set back the TreeItem expanded property if any
         Boolean expanded = treeItemsExpandedMapProperty.get(fxomObject);
@@ -696,7 +696,7 @@ public abstract class AbstractHierarchyPanelController extends AbstractFxmlPanel
             final DesignHierarchyMask owner,
             final FXOMObject fxomObject) {
         final HierarchyItemGraphic item
-                = new HierarchyItemGraphic(owner, fxomObject, getDisplayOption());
+                = new HierarchyItemGraphic(owner, fxomObject);
         final TreeItem<HierarchyItem> treeItem = new TreeItem<>(item);
         Boolean expanded = treeItemsExpandedMapProperty.get(fxomObject);
         if (expanded != null) {

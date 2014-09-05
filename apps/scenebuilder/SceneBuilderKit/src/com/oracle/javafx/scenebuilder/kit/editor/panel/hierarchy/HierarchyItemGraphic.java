@@ -33,7 +33,6 @@ package com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy;
 
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.editor.images.ImageUtils;
-import com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.AbstractHierarchyPanelController.DisplayOption;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
 import java.net.URL;
@@ -44,7 +43,6 @@ import javafx.scene.image.Image;
  * Object representing the data contained within the hierarchy TreeItems for the
  * Labeled/MenuItem/Tab/TableColumnBase/Tooltip/TreeItem graphic property.
  *
- * p
  * @treatAsPrivate
  */
 public class HierarchyItemGraphic extends HierarchyItem {
@@ -57,12 +55,10 @@ public class HierarchyItemGraphic extends HierarchyItem {
      *
      * @param owner The accessory owner
      * @param fxomObject The FX object represented by this item
-     * @param option The display option
      */
     public HierarchyItemGraphic(
             final DesignHierarchyMask owner, 
-            final FXOMObject fxomObject, 
-            final DisplayOption option) {
+            final FXOMObject fxomObject) {
         assert owner != null;
         this.owner = owner;
         // fxomObject can be null for place holder items
