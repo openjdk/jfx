@@ -41,27 +41,17 @@ class D3DTexture extends BaseTexture<D3DTextureResource>
     D3DTexture(D3DContext context, PixelFormat format, WrapMode wrapMode,
                long pResource,
                int physicalWidth, int physicalHeight,
-               int contentWidth, int contentHeight)
-    {
-        this(context, format, wrapMode, pResource,
-             physicalWidth, physicalHeight,
-             contentWidth, contentHeight, false);
-    }
-
-    D3DTexture(D3DContext context, PixelFormat format, WrapMode wrapMode,
-               long pResource,
-               int physicalWidth, int physicalHeight,
                int contentWidth, int contentHeight, boolean isRTT)
     {
         this(context, format, wrapMode, pResource, physicalWidth, physicalHeight,
-                0, 0, contentWidth, contentHeight, isRTT, 0);
+                0, 0, contentWidth, contentHeight, isRTT, 0, false);
     }
 
     D3DTexture(D3DContext context, PixelFormat format, WrapMode wrapMode,
                long pResource,
                int physicalWidth, int physicalHeight,
                int contentX, int contentY, int contentWidth, int contentHeight,
-               boolean isRTT, int samples)
+               boolean isRTT, int samples, boolean useMipmap)
     {
         super(new D3DTextureResource(new D3DTextureData(context, pResource, isRTT,
                                                         physicalWidth, physicalHeight,
@@ -69,11 +59,12 @@ class D3DTexture extends BaseTexture<D3DTextureResource>
               format, wrapMode,
               physicalWidth, physicalHeight,
               contentX, contentY, contentWidth, contentHeight, 
-              physicalWidth, physicalHeight);
+              physicalWidth, physicalHeight, useMipmap);
     }
 
+    // TODO: We don't handle mipmap in shared texture yet.
     D3DTexture(D3DTexture sharedTex, WrapMode altMode) {
-        super(sharedTex, altMode);
+        super(sharedTex, altMode, false);
     }
 
     @Override

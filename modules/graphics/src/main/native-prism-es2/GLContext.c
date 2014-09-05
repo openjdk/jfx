@@ -925,8 +925,14 @@ int translatePrismToGL(int value) {
             return GL_TEXTURE_2D;
         case com_sun_prism_es2_GLContext_GL_TEXTURE_BINDING_2D:
             return GL_TEXTURE_BINDING_2D;
+        case com_sun_prism_es2_GLContext_GL_NEAREST:
+            return GL_NEAREST;
         case com_sun_prism_es2_GLContext_GL_LINEAR:
             return GL_LINEAR;
+        case com_sun_prism_es2_GLContext_GL_NEAREST_MIPMAP_NEAREST:
+            return GL_NEAREST_MIPMAP_NEAREST;
+        case com_sun_prism_es2_GLContext_GL_LINEAR_MIPMAP_LINEAR:
+            return GL_LINEAR_MIPMAP_LINEAR;
 
         case com_sun_prism_es2_GLContext_WRAPMODE_REPEAT:
             return GL_REPEAT;
@@ -1072,9 +1078,10 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nScissorTest
  * Signature: (I)V
  */
 JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nTexParamsMinMax
-(JNIEnv *env, jclass class, jint pname) {
-    GLenum param = translatePrismToGL(pname);
+(JNIEnv *env, jclass class, jint min, jint max) {
+    GLenum param = translatePrismToGL(max);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, param);
+    param = translatePrismToGL(min);    
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, param);
 }
 
@@ -1086,7 +1093,7 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nTexParamsMinMax
 JNIEXPORT jboolean JNICALL Java_com_sun_prism_es2_GLContext_nTexImage2D0
 (JNIEnv *env, jclass class, jint target, jint level, jint internalFormat,
         jint width, jint height, jint border, jint format, jint type,
-        jobject pixels, jint pixelsByteOffset) {
+        jobject pixels, jint pixelsByteOffset, jboolean useMipmap) {
     GLvoid *ptr = NULL;
     GLenum err;
 
@@ -1096,6 +1103,9 @@ JNIEXPORT jboolean JNICALL Java_com_sun_prism_es2_GLContext_nTexImage2D0
     }
 
     glGetError();
+    if (useMipmap) {
+        glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE);
+    }
     glTexImage2D((GLenum) translatePrismToGL(target), (GLint) level,
             (GLint) translatePrismToGL(internalFormat),
             (GLsizei) width, (GLsizei) height, (GLint) border,
@@ -1115,7 +1125,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_prism_es2_GLContext_nTexImage2D0
 JNIEXPORT jboolean JNICALL Java_com_sun_prism_es2_GLContext_nTexImage2D1
 (JNIEnv *env, jclass class, jint target, jint level, jint internalFormat,
         jint width, jint height, jint border, jint format, jint type,
-        jobject pixels, jint pixelsByteOffset) {
+        jobject pixels, jint pixelsByteOffset, jboolean useMipmap) {
     GLvoid *ptr = NULL;
     GLenum err;
 
@@ -1125,6 +1135,9 @@ JNIEXPORT jboolean JNICALL Java_com_sun_prism_es2_GLContext_nTexImage2D1
     }
 
     glGetError();
+    if (useMipmap) {
+        glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE);
+    }
     glTexImage2D((GLenum) translatePrismToGL(target), (GLint) level,
             (GLint) translatePrismToGL(internalFormat),
             (GLsizei) width, (GLsizei) height, (GLint) border,

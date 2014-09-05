@@ -53,7 +53,7 @@ class DummyTexture extends BaseTexture  {
     {
         super(new DummyManagedResource(), format, wrapMode,
               contentWidth, contentHeight,
-              0, 0, contentWidth, contentHeight);
+              0, 0, contentWidth, contentHeight, false);
 
         this.context = context;
 

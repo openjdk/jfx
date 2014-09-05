@@ -115,6 +115,11 @@ class J2DResourceFactory extends BaseResourceFactory
         return J2DTexture.create(formatHint, wrapMode, w, h);
     }
 
+    public Texture createTexture(PixelFormat formatHint,
+            Usage usageHint, WrapMode wrapMode, int w, int h, boolean useMipmap) {
+        return createTexture(formatHint, usageHint, wrapMode, w, h);
+    }
+
     public Texture createTexture(MediaFrame vdb) {
         Texture tex;
 
