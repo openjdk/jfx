@@ -276,6 +276,8 @@ public class MenuBarController {
     @FXML
     private MenuItem wrapInAnchorPaneMenuItem;
     @FXML
+    private MenuItem wrapInBorderPaneMenuItem;
+    @FXML
     private MenuItem wrapInFlowPaneMenuItem;
     @FXML
     private MenuItem wrapInGridPaneMenuItem;
@@ -520,6 +522,7 @@ public class MenuBarController {
         assert bringForwardMenuItem != null;
         assert sendBackwardMenuItem != null;
         assert wrapInAnchorPaneMenuItem != null;
+        assert wrapInBorderPaneMenuItem != null;
         assert wrapInFlowPaneMenuItem != null;
         assert wrapInGridPaneMenuItem != null;
         assert wrapInHBoxMenuItem != null;
@@ -906,6 +909,7 @@ public class MenuBarController {
         sendBackwardMenuItem.setAccelerator(
                 new KeyCharacterCombination("[", modifier)); //NOI18N
         wrapInAnchorPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_ANCHOR_PANE));
+        wrapInBorderPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_BORDER_PANE));
         wrapInFlowPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_FLOW_PANE));
         wrapInGroupMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_GROUP));
         wrapInGridPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_GRID_PANE));

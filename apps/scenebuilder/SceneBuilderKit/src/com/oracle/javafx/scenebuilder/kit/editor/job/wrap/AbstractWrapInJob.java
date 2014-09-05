@@ -83,6 +83,8 @@ public abstract class AbstractWrapInJob extends BatchSelectionJob {
         final AbstractWrapInJob job;
         if (wrappingClass == javafx.scene.layout.AnchorPane.class) {
             job = new WrapInAnchorPaneJob(editorController);
+        } else if (wrappingClass == javafx.scene.layout.BorderPane.class) {
+            job = new WrapInBorderPaneJob(editorController);
         } else if (wrappingClass == javafx.scene.layout.FlowPane.class) {
             job = new WrapInFlowPaneJob(editorController);
         } else if (wrappingClass == javafx.scene.layout.GridPane.class) {
