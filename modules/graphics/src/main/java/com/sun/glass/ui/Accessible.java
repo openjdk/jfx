@@ -121,10 +121,16 @@ public abstract class Accessible {
         return null;
     }
 
+    /*
+     * IMPORTANT: Calling to the user code should not proceed if
+     * this method returns NULL.
+     */
     private final AccessControlContext getAccessControlContext() {
-        AccessControlContext acc = eventHandler.getAccessControlContext();
-        if (acc == null) {
-            throw new RuntimeException("Could not get AccessControlContext for " + this);
+        AccessControlContext acc = null;
+        try {
+            acc = eventHandler.getAccessControlContext();
+        } catch (Exception e) {
+            /* The node was already removed from the scene */
         }
         return acc;
     }
@@ -155,10 +161,12 @@ public abstract class Accessible {
     private GetAttribute getAttribute = new GetAttribute();
 
     public Object getAttribute(AccessibleAttribute attribute, Object... parameters) {
+        AccessControlContext acc = getAccessControlContext();
+        if (acc == null) return null;
         return QuantumToolkit.runWithoutRenderLock(() -> {
             getAttribute.attribute = attribute;
             getAttribute.parameters = parameters;
-            return AccessController.doPrivileged(getAttribute, getAccessControlContext());
+            return AccessController.doPrivileged(getAttribute, acc);
         });
     }
 
@@ -174,10 +182,12 @@ public abstract class Accessible {
     private ExecuteAction executeAction = new ExecuteAction();
 
     public void executeAction(AccessibleAction action, Object... parameters) {
+        AccessControlContext acc = getAccessControlContext();
+        if (acc == null) return;
         QuantumToolkit.runWithoutRenderLock(() -> {
             executeAction.action = action;
             executeAction.parameters = parameters;
-            return AccessController.doPrivileged(executeAction, getAccessControlContext());
+            return AccessController.doPrivileged(executeAction, acc);
         });
     }
 

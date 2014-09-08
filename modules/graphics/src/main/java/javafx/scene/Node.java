@@ -9677,7 +9677,10 @@ public abstract class Node implements EventTarget, Styleable {
                 @SuppressWarnings("deprecation")
                 @Override public AccessControlContext getAccessControlContext() {
                     Scene scene = getScene();
-                    if (scene == null) throw new RuntimeException("Accessbility requested for node not on a scene");
+                    if (scene == null) {
+                        /* This can happen during the release process of an accessible object. */
+                        throw new RuntimeException("Accessbility requested for node not on a scene");
+                    }
                     if (scene.impl_getPeer() != null) {
                         return scene.impl_getPeer().getAccessControlContext();
                     } else {

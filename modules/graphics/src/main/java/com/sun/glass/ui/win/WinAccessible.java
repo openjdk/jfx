@@ -531,7 +531,9 @@ final class WinAccessible extends Accessible {
             if (!clear) {
                 @SuppressWarnings("unchecked")
                 ObservableList<Node> items = (ObservableList<Node>)container.getAttribute(SELECTED_ITEMS);
-                newItems.addAll(items);
+                if (items != null) {
+                    newItems.addAll(items);
+                }
             }
             if (add) {
                 newItems.add(item);
@@ -1597,6 +1599,7 @@ final class WinAccessible extends Accessible {
         if (get_VerticallyScrollable()) {
             Node vsb = (Node)getAttribute(VERTICAL_SCROLLBAR);
             Accessible vsba = getAccessible(vsb);
+            if (vsba == null) return;
             switch (verticalAmount) {
                 case ScrollAmount_LargeIncrement:
                     vsba.executeAction(AccessibleAction.BLOCK_INCREMENT);
@@ -1618,6 +1621,7 @@ final class WinAccessible extends Accessible {
         if (get_HorizontallyScrollable()) {
             Node hsb = (Node)getAttribute(HORIZONTAL_SCROLLBAR);
             Accessible hsba = getAccessible(hsb);
+            if (hsba == null) return;
             switch (horizontalAmount) {
                 case ScrollAmount_LargeIncrement:
                     hsba.executeAction(AccessibleAction.BLOCK_INCREMENT);
@@ -1643,6 +1647,7 @@ final class WinAccessible extends Accessible {
         if (verticalPercent != UIA_ScrollPatternNoScroll && get_VerticallyScrollable()) {
             Node vsb = (Node)getAttribute(VERTICAL_SCROLLBAR);
             Accessible acc = getAccessible(vsb);
+            if (acc == null) return;
             Double min = (Double)acc.getAttribute(MIN_VALUE);
             Double max = (Double)acc.getAttribute(MAX_VALUE);
             if (min != null && max != null) {
@@ -1654,6 +1659,7 @@ final class WinAccessible extends Accessible {
         if (horizontalPercent != UIA_ScrollPatternNoScroll && get_HorizontallyScrollable()) {
             Node hsb = (Node)getAttribute(HORIZONTAL_SCROLLBAR);
             Accessible acc = getAccessible(hsb);
+            if (acc == null) return;
             Double min = (Double)acc.getAttribute(MIN_VALUE);
             Double max = (Double)acc.getAttribute(MAX_VALUE);
             if (min != null && max != null) {
@@ -1751,6 +1757,7 @@ final class WinAccessible extends Accessible {
         double scrollPaneHeight = scrollPaneBounds.getHeight();
 
         AccessibleRole role = (AccessibleRole) getAttribute(ROLE);
+        if (role == null) return 0;
         if (role == AccessibleRole.SCROLL_PANE) {
             Node content = (Node) getAttribute(CONTENTS);
             if (content != null) {

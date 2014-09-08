@@ -1041,6 +1041,7 @@ final class MacAccessible extends Accessible {
                 if (getAttribute(ROLE) == AccessibleRole.MENU) {
                     @SuppressWarnings("unchecked")
                     ObservableList<Node> children = (ObservableList<Node>)getAttribute(CHILDREN);
+                    if (children == null) return 0;
                     long[] ids = getUnignoredChildren(children);
                     int count = ids.length;
                     if (getAttribute(SUBMENU) != null) {
@@ -1088,6 +1089,7 @@ final class MacAccessible extends Accessible {
                     if (i < maxCount) {
                         @SuppressWarnings("unchecked")
                         ObservableList<Node> children = (ObservableList<Node>)getAttribute(CHILDREN);
+                        if (children == null) return null;
                         long[] ids = getUnignoredChildren(children);
                         index--;
                         while (i < maxCount && index < ids.length) {
@@ -1498,7 +1500,9 @@ final class MacAccessible extends Accessible {
             case NSAccessibilitySelectedTextAttribute: {
                 int start = (Integer)result, end = -1;
                 if (start != -1) {
-                    end = (Integer)getAttribute(SELECTION_END);
+                    result = getAttribute(SELECTION_END);
+                    if (result == null) return null;
+                    end = (Integer)result;
                 }
                 if (start < 0 || end < 0 || start > end) return null;
                 String string = (String)getAttribute(TEXT);
@@ -1510,7 +1514,9 @@ final class MacAccessible extends Accessible {
             case NSAccessibilitySelectedTextRangeAttribute: {
                 int start = (Integer)result, end = -1;
                 if (start != -1) {
-                    end = (Integer)getAttribute(SELECTION_END);
+                    result = getAttribute(SELECTION_END);
+                    if (result == null) return null;
+                    end = (Integer)result;
                 }
                 if (start < 0 || end < 0 || start > end) return null;
                 String string = (String)getAttribute(TEXT);
