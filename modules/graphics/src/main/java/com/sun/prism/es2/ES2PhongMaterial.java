@@ -25,6 +25,7 @@
 
 package com.sun.prism.es2;
 
+import com.sun.javafx.PlatformUtil;
 import com.sun.prism.Image;
 import com.sun.prism.PhongMaterial;
 import com.sun.prism.Texture;
@@ -96,8 +97,8 @@ class ES2PhongMaterial extends BaseGraphicsResource implements PhongMaterial {
                     continue;
                 }
             }
-            // Enable mipmap if map is diffuse or self illum.
-            boolean useMipmap = (i == PhongMaterial.DIFFUSE) || (i == PhongMaterial.SELF_ILLUM);
+            // Enable mipmap if platform isn't embedded and map is diffuse or self illum
+            boolean useMipmap = (!PlatformUtil.isEmbedded()) && (i == PhongMaterial.DIFFUSE) || (i == PhongMaterial.SELF_ILLUM);
             texture = setupTexture(maps[i], useMipmap);
             maps[i].setTexture(texture);
             maps[i].setDirty(false);
