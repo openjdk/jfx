@@ -98,7 +98,7 @@ class ES2PhongMaterial extends BaseGraphicsResource implements PhongMaterial {
                 }
             }
             // Enable mipmap if platform isn't embedded and map is diffuse or self illum
-            boolean useMipmap = (!PlatformUtil.isEmbedded()) && (i == PhongMaterial.DIFFUSE) || (i == PhongMaterial.SELF_ILLUM);
+            boolean useMipmap = (!PlatformUtil.isEmbedded()) && (i == PhongMaterial.DIFFUSE || i == PhongMaterial.SELF_ILLUM);
             texture = setupTexture(maps[i], useMipmap);
             maps[i].setTexture(texture);
             maps[i].setDirty(false);
