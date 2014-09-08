@@ -96,7 +96,7 @@ class LinuxInputDeviceRegistry extends InputDeviceRegistry {
         if (processor == null) {
             return null;
         } else {
-            device.setInputProcessor(createInputProcessor(device));
+            device.setInputProcessor(processor);
             Thread thread = new Thread(device);
             thread.setName(name);
             thread.setDaemon(true);

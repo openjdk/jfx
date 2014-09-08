@@ -56,6 +56,8 @@ public class TestTouchDevices {
                 new EGalaxSingleTouchDevice2(),
                 new EGalaxMultiTouchDevice1(),
                 new EGalaxMultiTouchDevice2(),
+                new EGalaxMultiTouchDevice3(),
+                new EGalaxMultiTouchDevice4(),
                 new TouchRevolutionFusionDevice(),
                 new NTrigDevice(),
                 new SamsungLMS700KF07004Device(),

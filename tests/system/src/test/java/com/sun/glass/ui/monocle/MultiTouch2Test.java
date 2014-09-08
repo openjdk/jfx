@@ -167,6 +167,13 @@ public class MultiTouch2Test extends ParameterizedTestBase {
         device.sync();
         TestLog.waitForLogContaining("Touch released: %d, %d", x2, y2);
         TestLog.waitForLogContaining("TouchPoint: RELEASED %d, %d", x2, y2);
+        TestLog.reset();
+        // tap to cancel inertia
+        int p3 = device.addPoint(x1, y1);
+        device.sync();
+        device.removePoint(p3);
+        device.sync();
+        TestLog.waitForLog("Mouse clicked: %d, %d", x1, y1);
     }
 
     /**
@@ -218,5 +225,54 @@ public class MultiTouch2Test extends ParameterizedTestBase {
         TestLog.waitForLogContaining("TouchPoint: RELEASED %d, %d", x1, y1);
         TestLog.waitForLogContaining("TouchPoint: RELEASED %d, %d", x2, y2);
     }
+
+    @Test
+    public void twoFingerDragSingleFingerTap() throws Exception {
+        final int x1 = (int) Math.round(width * 0.5f);
+        final int y1 = (int) Math.round(height * 0.5f);
+        final int x2 = (int) Math.round(width * 0.75f);
+        final int y2 = (int) Math.round(height * 0.75f);
+        final int dx = device.getTapRadius();
+        final int dy = device.getTapRadius();
+        // first finger
+        int p1 = device.addPoint(x1, y1);
+        device.sync();
+        TestLog.waitForLogContaining("TouchPoint: PRESSED %d, %d", x1, y1);
+        // add a second finger
+        int p2 = device.addPoint(x2, y2);
+        device.sync();
+        TestLog.waitForLogContaining("TouchPoint: STATIONARY %d, %d", x1, y1);
+        TestLog.waitForLogContaining("TouchPoint: PRESSED %d, %d", x2, y2);
+        // drag both fingers
+        device.setPoint(p1, x1 + dx, y1);
+        device.setPoint(p2, x2 + dx, y2);
+        device.sync();
+        TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d", x1 + dx, y1);
+        TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d", x2 + dx, y2);
+
+        // release first finger
+        TestLog.reset();
+        device.removePoint(p1);
+        device.sync();
+        TestLog.waitForLogContaining("Touch released: %d, %d", x1 + dx, y1);
+        TestLog.waitForLogContaining("TouchPoint: RELEASED %d, %d", x1 + dx, y1);
+        TestLog.waitForLogContaining("TouchPoint: STATIONARY %d, %d", x2 + dx, y2);
+        // release second finger
+        TestLog.reset();
+        device.removePoint(p2);
+        device.sync();
+        TestLog.waitForLogContaining("Touch released: %d, %d", x2 + dx, y2);
+        TestLog.waitForLogContaining("TouchPoint: RELEASED %d, %d", x2 + dx, y2);
+
+        // tap
+        int p3 = device.addPoint(x1, y1 + dy);
+        device.sync();
+        TestLog.waitForLogContaining("TouchPoint: PRESSED %d, %d", x1, y1 + dy);
+        // release
+        device.removePoint(p3);
+        device.sync();
+        TestLog.waitForLogContaining("TouchPoint: RELEASED %d, %d", x1, y1 + dy);
+    }
+
 
 }

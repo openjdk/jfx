@@ -51,6 +51,9 @@ class LinuxStatefulMultiTouchProcessor extends LinuxTouchProcessor {
         LinuxEventBuffer buffer = device.getBuffer();
         int x = COORD_UNDEFINED;
         int y = COORD_UNDEFINED;
+        // Some devices send EV_KEY BTN_TOUCH 0 to notify that all
+        // touch points are released.
+        boolean allPointsReleased = false;
         while (buffer.hasNextEvent()) {
             switch (buffer.getEventType()) {
                 case LinuxInput.EV_ABS: {
@@ -96,6 +99,19 @@ class LinuxStatefulMultiTouchProcessor extends LinuxTouchProcessor {
                     }
                     break;
                 }
+
+                case LinuxInput.EV_KEY:
+                    switch (buffer.getEventCode()) {
+                        case LinuxInput.BTN_TOUCH:
+                            if (buffer.getEventValue() == 0) {
+                                allPointsReleased = true;
+                            }
+                            break;
+
+                    }
+                    break;
+
+
                 case LinuxInput.EV_SYN:
                     switch (buffer.getEventCode()) {
                         case LinuxInput.SYN_MT_REPORT: {
@@ -118,9 +134,12 @@ class LinuxStatefulMultiTouchProcessor extends LinuxTouchProcessor {
                                 // but no SYN_MT_REPORT event. Assign these
                                 // coordinates to the current ID.
                                 updatePoint(x, y);
+                            } else if (allPointsReleased) {
+                                state.clear();
                             }
                             pipeline.pushState(state);
                             x = y = COORD_UNDEFINED;
+                            allPointsReleased = false;
                             break;
                         default: // ignore
                     }
