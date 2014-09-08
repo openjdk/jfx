@@ -30,7 +30,6 @@ import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
 import com.sun.prism.Graphics;
 import com.sun.prism.GraphicsPipeline;
 import com.sun.prism.impl.Disposer;
-import com.sun.prism.impl.ManagedResource;
 
 /**
  * The PresentingPainter is used when we are rendering to the main screen.
@@ -123,7 +122,7 @@ final class PresentingPainter extends ViewPainter {
             ViewScene viewScene = (ViewScene)sceneState.getScene();
             viewScene.setPainting(false);
 
-            ManagedResource.freeDisposalRequestedAndCheckResources(errored);
+            factory.getTextureResourcePool().freeDisposalRequestedAndCheckResources(errored);
 
             renderLock.unlock();
         }

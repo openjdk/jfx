@@ -35,7 +35,6 @@ import com.sun.prism.RTTexture;
 import com.sun.prism.Texture.WrapMode;
 import com.sun.prism.impl.BufferUtil;
 import com.sun.prism.impl.Disposer;
-import com.sun.prism.impl.ManagedResource;
 
 /**
  * UploadingPainter is used when we need to render into an offscreen buffer.
@@ -184,7 +183,7 @@ final class UploadingPainter extends ViewPainter implements Runnable {
 
             sceneState.getScene().setPainting(false);
 
-            ManagedResource.freeDisposalRequestedAndCheckResources(errored);
+            factory.getTextureResourcePool().freeDisposalRequestedAndCheckResources(errored);
 
             renderLock.unlock();
         }

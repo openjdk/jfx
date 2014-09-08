@@ -1432,8 +1432,8 @@ public final class QuantumToolkit extends Toolkit {
                     errored = true;
                     t.printStackTrace(System.err);
                 } finally {
-                    Disposer.cleanUp();            
-                    ManagedResource.freeDisposalRequestedAndCheckResources(errored);
+                    Disposer.cleanUp();
+                    rf.getTextureResourcePool().freeDisposalRequestedAndCheckResources(errored);
                 }
             }
         });
