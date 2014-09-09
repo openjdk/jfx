@@ -1108,9 +1108,24 @@ public class MenuBarController {
     /*
      * Private (zoom menu)
      */
+    
+    final static double[] scalingTable = {0.25, 0.50, 0.75, 1.00, 1.50, 2.0, 4.0};
+    
     private void updateZoomMenu() {
         final double[] scalingTable = {0.25, 0.50, 0.75, 1.00, 1.50, 2.0, 4.0};
 
+        final MenuItem zoomInMenuItem = new MenuItem(I18N.getString("menu.title.zoom.in"));
+        zoomInMenuItem.setUserData(new ZoomInActionController());
+        zoomInMenuItem.setAccelerator(new KeyCharacterCombination("+", modifier)); //NOI18N
+        zoomMenu.getItems().add(zoomInMenuItem);
+        
+        final MenuItem zoomOutMenuItem = new MenuItem(I18N.getString("menu.title.zoom.out"));
+        zoomOutMenuItem.setUserData(new ZoomOutActionController());
+        zoomOutMenuItem.setAccelerator(new KeyCharacterCombination("-", modifier)); //NOI18N
+        zoomMenu.getItems().add(zoomOutMenuItem);
+        
+        zoomMenu.getItems().add(new SeparatorMenuItem());
+        
         for (int i = 0; i < scalingTable.length; i++) {
             final double scaling = scalingTable[i];
             final String title = String.format("%.0f%%", scaling * 100); //NOI18N
@@ -1120,6 +1135,20 @@ public class MenuBarController {
         }
     }
 
+    
+    private static int findZoomScaleIndex(double zoomScale) {
+        int result = -1;
+        
+        for (int i = 0; i < scalingTable.length; i++) {
+            if (MathUtils.equals(zoomScale, scalingTable[i])) {
+                result = i;
+                break;
+            }
+        }
+        
+        return result;
+    }
+    
     private void updateOpenRecentMenuItems() {
 
         final List<MenuItem> menuItems = new ArrayList<>();
@@ -1695,6 +1724,67 @@ public class MenuBarController {
             }
 
             return result;
+        }
+
+    }
+    
+    class ZoomInActionController extends MenuItemController {
+
+        @Override
+        public boolean canPerform() {
+            boolean result;
+            if (documentWindowController == null) {
+                result = false;
+            } else {
+                final ContentPanelController contentPanelController
+                        = documentWindowController.getContentPanelController();
+                final int currentScalingIndex
+                        = findZoomScaleIndex(contentPanelController.getScaling());
+                result = currentScalingIndex+1 < scalingTable.length;
+            }
+            return result;
+        }
+
+        @Override
+        public void perform() {
+            final ContentPanelController contentPanelController
+                    = documentWindowController.getContentPanelController();
+            final int currentScalingIndex
+                    = findZoomScaleIndex(contentPanelController.getScaling());
+            final double newScaling
+                    = scalingTable[currentScalingIndex+1];
+            contentPanelController.setScaling(newScaling);
+        }
+
+    }
+    
+
+    class ZoomOutActionController extends MenuItemController {
+
+        @Override
+        public boolean canPerform() {
+            boolean result;
+            if (documentWindowController == null) {
+                result = false;
+            } else {
+                final ContentPanelController contentPanelController
+                        = documentWindowController.getContentPanelController();
+                final int currentScalingIndex
+                        = findZoomScaleIndex(contentPanelController.getScaling());
+                result = 0 <= currentScalingIndex-1;
+            }
+            return result;
+        }
+
+        @Override
+        public void perform() {
+            final ContentPanelController contentPanelController
+                    = documentWindowController.getContentPanelController();
+            final int currentScalingIndex
+                    = findZoomScaleIndex(contentPanelController.getScaling());
+            final double newScaling
+                    = scalingTable[currentScalingIndex-1];
+            contentPanelController.setScaling(newScaling);
         }
 
     }
