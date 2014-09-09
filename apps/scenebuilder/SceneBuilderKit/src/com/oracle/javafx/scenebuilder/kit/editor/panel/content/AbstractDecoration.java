@@ -40,6 +40,7 @@ import javafx.geometry.Point2D;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.SubScene;
 import javafx.scene.transform.NonInvertibleTransformException;
 import javafx.scene.transform.Transform;
 
@@ -138,13 +139,15 @@ public abstract class AbstractDecoration<T> {
     
     public Transform getSceneGraphObjectToDecorationTransform() {
         final Node proxy = getSceneGraphObjectProxy();
-        final Transform t1 = proxy.getLocalToSceneTransform();
+        final SubScene contentSubScene = contentPanelController.getContentSubScene();
+        final Transform t0 = proxy.getLocalToSceneTransform();
+        final Transform t1 = contentSubScene.getLocalToSceneTransform();
         final Transform t2 = getRootNode().getLocalToSceneTransform();
         final Transform result;
         
         try {
             final Transform i2 = t2.createInverse();
-            result = i2.createConcatenation(t1);
+            result = i2.createConcatenation(t1).createConcatenation(t0);
         } catch(NonInvertibleTransformException x) {
             throw new RuntimeException(x);
         }
@@ -191,11 +194,17 @@ public abstract class AbstractDecoration<T> {
     protected void startListeningToLocalToSceneTransform(Node node) {
         assert node != null;
         node.localToSceneTransformProperty().addListener(localToSceneTransformListener);
+        node.sceneProperty().addListener(sceneListener);
+        final SubScene contentSubScene = contentPanelController.getContentSubScene();
+        contentSubScene.localToSceneTransformProperty().addListener(localToSceneTransformListener);
     }
     
     protected void stopListeningToLocalToSceneTransform(Node node) {
         assert node != null;
         node.localToSceneTransformProperty().removeListener(localToSceneTransformListener);
+        node.sceneProperty().removeListener(sceneListener);
+        final SubScene contentSubScene = contentPanelController.getContentSubScene();
+        contentSubScene.localToSceneTransformProperty().removeListener(localToSceneTransformListener);
     }
     
     /*
@@ -226,5 +235,8 @@ public abstract class AbstractDecoration<T> {
         = (ov, v1, v2) -> layoutDecoration();
     
     private final ChangeListener<Transform> localToSceneTransformListener
-        = (ov, v1, v2) -> layoutDecoration();
+        = (ov, v1, v2) -> layoutDecoration(); 
+    
+    private final ChangeListener<Scene> sceneListener
+        = (ov, v1, v2) -> layoutDecoration(); 
 }

@@ -219,28 +219,6 @@ public class Deprecation {
         tableColumn.impl_setReorderable(reordable);
     }
 
-    // RT-21247 : Promote impl_getAllParentStylesheets to public API
-    public static Group makeStylingIsolationGroupA() {
-        final Group result = new Group() {
-            @Override
-            public List<String> impl_getAllParentStylesheets() { return null; }
-        };
-
-        return result;
-    }
-
-    public static Group makeStylingIsolationGroupB() {
-        final Group result = new Group() {
-            @Override
-            public Styleable getStyleableParent() { return null; }
-        };
-
-        result.getStyleClass().add("root"); //NOI18N
-        result.getStylesheets().add(MODENA_STYLESHEET);
-
-        return result;
-    }
-
     // Returns the corresponding text css (.css) from a binary css (.bss)
     public static URL getThemeTextStylesheet(String binaryCssUrlStr) {
         String textCssUrlStr = binaryCssUrlStr.replaceAll(".bss", ".css"); //NOI18N

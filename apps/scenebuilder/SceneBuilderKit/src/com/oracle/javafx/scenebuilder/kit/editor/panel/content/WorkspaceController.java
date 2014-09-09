@@ -46,6 +46,7 @@ import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.SubScene;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.Region;
@@ -62,6 +63,7 @@ class WorkspaceController {
     
     private ScrollPane scrollPane;
     private Group scalingGroup;
+    private SubScene contentSubScene;
     private Group contentGroup;
     private Label backgroundPane;
     private Rectangle extensionRect;
@@ -72,16 +74,18 @@ class WorkspaceController {
     private FXOMDocument fxomDocument;
 
     public void panelControllerDidLoadFxml(ScrollPane scrollPane, 
-            Group scalingGroup, Group contentGroup, Label backgroundPane, 
+            Group scalingGroup, SubScene contentSubScene, Group contentGroup, Label backgroundPane, 
             Rectangle extensionRect) {
         assert scrollPane != null;
         assert backgroundPane != null;
         assert scalingGroup != null;
+        assert contentSubScene != null;
         assert contentGroup != null;
         assert extensionRect != null;
         
         this.scrollPane = scrollPane;
         this.scalingGroup = scalingGroup;
+        this.contentSubScene = contentSubScene;
         this.contentGroup = contentGroup;
         this.backgroundPane = backgroundPane;
         this.extensionRect = extensionRect;
@@ -146,14 +150,8 @@ class WorkspaceController {
     }
     
     public void setThemeStyleSheet(String themeStyleSheet) {
-        assert contentGroup.getParent() instanceof Group;
-        final Group isolationGroup = (Group) contentGroup.getParent();
-        assert isolationGroup.getStyleClass().contains("root");
-        
-        isolationGroup.getStylesheets().clear();
         assert themeStyleSheet != null;
-        isolationGroup.getStylesheets().add(themeStyleSheet);
-        isolationGroup.applyCss();
+        contentSubScene.setUserAgentStylesheet(themeStyleSheet);
     }
     
     public void setPreviewStyleSheets(List<String> previewStyleSheets) {
@@ -166,7 +164,7 @@ class WorkspaceController {
         if (scrollPane != null) {
             try {
                 if (applyCSS) {
-                    scrollPane.getContent().applyCss();
+                    contentSubScene.getRoot().applyCss();
                 }
                 scrollPane.layout();
                 layoutException = null;
@@ -387,6 +385,9 @@ class WorkspaceController {
         extensionRect.setY(extensionBounds.getMinY());
         extensionRect.setWidth(extensionBounds.getWidth());
         extensionRect.setHeight(extensionBounds.getHeight());
+        
+        contentSubScene.setWidth(contentGroup.getLayoutBounds().getWidth());
+        contentSubScene.setHeight(contentGroup.getLayoutBounds().getHeight());
     }
     
     private static Bounds computeUnclippedBounds(Node node) {
