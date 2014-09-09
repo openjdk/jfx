@@ -721,8 +721,8 @@ public abstract class Axis<T> extends Region {
                         if (m.isTextVisible()) {
                             double tickHeight = measureTickMarkSize(m.getValue(), getRange()).getHeight();
                             lastStart = updateAndGetDisplayPosition(m) - tickHeight / 2;
+                            break;
                         }
-                        break;
                     }
 
                     for (int i = tickMarks.size() - 1; i > stop; i--) {
@@ -745,8 +745,8 @@ public abstract class Axis<T> extends Region {
                         if (m.isTextVisible()) {
                             double tickWidth = measureTickMarkSize(m.getValue(), getRange()).getWidth();
                             lastStart = updateAndGetDisplayPosition(m) - tickWidth / 2;
+                            break;
                         }
-                        break;
                     }
 
                     for (int i = 0; i < stop; ++i) {
