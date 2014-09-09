@@ -111,7 +111,7 @@ public class StyleClassEditor extends InlineListEditor {
         List<String> value = FXCollections.observableArrayList();
         // Group all the item values in a list
         for (EditorItem styleItem : getEditorItems()) {
-            String itemValue = styleItem.getValue();
+            String itemValue = EditorUtils.toString(styleItem.getValue());
             if (itemValue.isEmpty()) {
                 continue;
             }
@@ -255,7 +255,7 @@ public class StyleClassEditor extends InlineListEditor {
                     ((TextField) event.getSource()).selectAll();
                 }
                 updateButtons();
-                currentValue = getValue();
+                currentValue = EditorUtils.toString(getValue());
             };
 
             ChangeListener<String> textPropertyChange = (ov, prevText, newText) -> {
@@ -308,15 +308,15 @@ public class StyleClassEditor extends InlineListEditor {
         }
 
         @Override
-        public String getValue() {
+        public Object getValue() {
             return EditorUtils.getPlainString(styleClassTf.getText()).trim();
         }
 
         @Override
-        public void setValue(String styleClass) {
-            styleClassTf.setText(styleClass.trim());
+        public void setValue(Object styleClass) {
+            styleClassTf.setText(EditorUtils.toString(styleClass).trim());
             updateButtons();
-            currentValue = getValue();
+            currentValue = EditorUtils.toString(getValue());
         }
 
         @Override
@@ -353,6 +353,12 @@ public class StyleClassEditor extends InlineListEditor {
         @Override
         public Button getPlusButton() {
             return plusBt;
+        }
+
+        @Override
+        public Button getMinusButton() {
+            // not used here
+            return null;
         }
 
         @FXML

@@ -111,7 +111,7 @@ public class StyleEditor extends InlineListEditor {
         // Concatenate all the item values
         String value = null;
         for (EditorItem styleItem : getEditorItems()) {
-            String itemValue = styleItem.getValue();
+            String itemValue = EditorUtils.toString(styleItem.getValue());
             if (itemValue.isEmpty()) {
                 continue;
             }
@@ -271,7 +271,7 @@ public class StyleEditor extends InlineListEditor {
                 }
 
                 updateButtons();
-                currentValue = getValue();
+                currentValue = EditorUtils.toString(getValue());
             };
 
             ChangeListener<String> textPropertyChange = (ov, prevText, newText) -> {
@@ -327,7 +327,7 @@ public class StyleEditor extends InlineListEditor {
         }
 
         @Override
-        public String getValue() {
+        public Object getValue() {
             String value;
             if (propertyTf.getText().isEmpty() && valueTf.getText().isEmpty()) {
                 return ""; //NOI18N
@@ -351,25 +351,26 @@ public class StyleEditor extends InlineListEditor {
         }
 
         @Override
-        public void setValue(String style) {
+        public void setValue(Object style) {
+            String styleStr = EditorUtils.toString(style);
             // remove last ';' if any
-            if (style.endsWith(";")) { //NOI18N
-                style = style.substring(0, style.length() - 1);
+            if (styleStr.endsWith(";")) { //NOI18N
+                styleStr = styleStr.substring(0, styleStr.length() - 1);
             }
             // split in property and value
-            int dotIndex = style.indexOf(':');
+            int dotIndex = styleStr.indexOf(':');
             String propertyStr;
             String valueStr = ""; //NOI18N
             if (dotIndex != -1) {
-                propertyStr = style.substring(0, dotIndex);
-                valueStr = style.substring(dotIndex + 1);
+                propertyStr = styleStr.substring(0, dotIndex);
+                valueStr = styleStr.substring(dotIndex + 1);
             } else {
-                propertyStr = style;
+                propertyStr = styleStr;
             }
             propertyTf.setText(propertyStr);
             valueTf.setText(valueStr);
             updateButtons();
-            currentValue = getValue();
+            currentValue = EditorUtils.toString(getValue());
         }
 
         @Override
@@ -410,6 +411,12 @@ public class StyleEditor extends InlineListEditor {
         @Override
         public Button getPlusButton() {
             return plusBt;
+        }
+
+        @Override
+        public Button getMinusButton() {
+            // Not used here
+            return null;
         }
 
         @FXML

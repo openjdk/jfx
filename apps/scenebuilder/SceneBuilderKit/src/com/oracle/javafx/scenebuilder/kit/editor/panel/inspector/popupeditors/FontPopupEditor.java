@@ -89,7 +89,7 @@ public class FontPopupEditor extends PopupEditor {
     }
     
     private void setStyle() {
-        styleEditor.reset("", "", new ArrayList<>(getStyles(familyEditor.getValue(), false, editorController)));//NOI18N
+        styleEditor.reset("", "", new ArrayList<>(getStyles(EditorUtils.toString(familyEditor.getValue()), false, editorController)));//NOI18N
         styleEditor.setUpdateFromModel(true);
         styleEditor.setValue(font.getStyle());
         styleEditor.setUpdateFromModel(false);
@@ -109,7 +109,8 @@ public class FontPopupEditor extends PopupEditor {
         Font oldFont = font;
         Object sizeObj = sizeEditor.getValue();
         assert sizeObj instanceof Double;
-        Font newFont = getFont(familyEditor.getValue(), styleEditor.getValue(), (Double) sizeObj, editorController);
+        Font newFont = getFont(EditorUtils.toString(familyEditor.getValue()), EditorUtils.toString(styleEditor.getValue()),
+                (Double) sizeObj, editorController);
         if (newFont != null) {
             return newFont;
         } else {
@@ -236,7 +237,7 @@ public class FontPopupEditor extends PopupEditor {
         }
 
         @Override
-        public String getValue() {
+        public Object getValue() {
             return getTextField().getText();
         }
 
@@ -275,7 +276,7 @@ public class FontPopupEditor extends PopupEditor {
         }
 
         @Override
-        public String getValue() {
+        public Object getValue() {
             return getTextField().getText();
         }
     }

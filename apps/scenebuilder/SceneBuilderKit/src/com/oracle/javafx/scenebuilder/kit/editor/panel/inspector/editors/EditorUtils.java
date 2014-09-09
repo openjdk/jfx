@@ -542,4 +542,9 @@ public class EditorUtils {
         File file = new File(url);
         return file.getName();
     }
+    
+    public static String toString(Object obj) {
+        assert obj instanceof String;
+        return (String) obj; 
+    }
 }
