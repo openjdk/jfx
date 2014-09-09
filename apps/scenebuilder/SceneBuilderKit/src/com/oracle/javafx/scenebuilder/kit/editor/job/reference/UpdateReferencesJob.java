@@ -72,7 +72,6 @@ public class UpdateReferencesJob extends Job {
     @Override
     public void execute() {
         final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
-        final Selection selection = getEditorController().getSelection();
         
         fxomDocument.beginUpdate();
         
@@ -90,7 +89,6 @@ public class UpdateReferencesJob extends Job {
     @Override
     public void undo() {
         final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
-        final Selection selection = getEditorController().getSelection();
         
         fxomDocument.beginUpdate();
         for (int i = fixJobs.size() - 1; i >= 0; i--) {
@@ -103,7 +101,6 @@ public class UpdateReferencesJob extends Job {
     @Override
     public void redo() {
         final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
-        final Selection selection = getEditorController().getSelection();
         
         fxomDocument.beginUpdate();
         subJob.redo();
