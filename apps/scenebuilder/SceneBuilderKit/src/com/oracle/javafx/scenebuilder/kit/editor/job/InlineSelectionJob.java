@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -32,54 +32,66 @@
 package com.oracle.javafx.scenebuilder.kit.editor.job;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
-import com.oracle.javafx.scenebuilder.kit.editor.EditorController.ControlAction;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.AbstractSelectionGroup;
-import java.util.ArrayList;
+import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
 import java.util.List;
 
 /**
+ * This Job updates the FXOM document AND the selection at execution time.
  *
+ * The sub jobs are created and executed just after.
  */
-public class CutSelectionJob extends InlineSelectionJob {
+public abstract class InlineSelectionJob extends InlineDocumentJob {
 
-    private DeleteSelectionJob deleteSelectionSubJob;
+    private AbstractSelectionGroup oldSelectionGroup;
+    private AbstractSelectionGroup newSelectionGroup;
 
-    public CutSelectionJob(EditorController editorController) {
+    public InlineSelectionJob(EditorController editorController) {
         super(editorController);
     }
 
-    @Override
-    public boolean isExecutable() {
-        return getEditorController().canPerformControlAction(ControlAction.COPY);
+    protected final AbstractSelectionGroup getOldSelectionGroup() {
+        return oldSelectionGroup;
     }
 
-    @Override
-    protected AbstractSelectionGroup getNewSelectionGroup() {
-        // Selection emptied
-        return null;
-    }
+    protected abstract AbstractSelectionGroup getNewSelectionGroup();
 
     @Override
-    protected List<Job> makeAndExecuteSubJobs() {
+    public final void execute() {
+        final Selection selection = getEditorController().getSelection();
+        try {
+            selection.beginUpdate();
+            oldSelectionGroup = selection.getGroup() == null ? null
+                    : selection.getGroup().clone();
+            super.execute();
+            newSelectionGroup = getNewSelectionGroup();
+            selection.select(newSelectionGroup);
+            selection.endUpdate();
 
-        final List<Job> result = new ArrayList<>();
-        if (getEditorController().canPerformControlAction(ControlAction.COPY)) {
-            // Update clipboard with current selection BEFORE EXECUTING DELETE job
-            assert getEditorController().canPerformControlAction(ControlAction.COPY);
-            getEditorController().performControlAction(ControlAction.COPY);
-
-            deleteSelectionSubJob = new DeleteSelectionJob(getEditorController());
-            if (deleteSelectionSubJob.isExecutable()) {
-                deleteSelectionSubJob.execute(); 
-                result.add(deleteSelectionSubJob);
-            }
+        } catch (CloneNotSupportedException x) {
+            // Emergency code
+            throw new RuntimeException(x);
         }
-        return result;
     }
 
     @Override
-    protected String makeDescription() {
-        assert deleteSelectionSubJob != null;
-        return deleteSelectionSubJob.getDescription();
+    public final void undo() {
+        final Selection selection = getEditorController().getSelection();
+        selection.beginUpdate();
+        super.undo();
+        selection.select(oldSelectionGroup);
+        selection.endUpdate();
     }
+
+    @Override
+    public final void redo() {
+        final Selection selection = getEditorController().getSelection();
+        selection.beginUpdate();
+        super.redo();
+        selection.select(newSelectionGroup);
+        selection.endUpdate();
+    }
+
+    @Override
+    protected abstract List<Job> makeAndExecuteSubJobs();
 }
