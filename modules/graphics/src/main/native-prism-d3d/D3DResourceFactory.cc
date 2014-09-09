@@ -67,7 +67,7 @@ Java_com_sun_prism_d3d_D3DResourceFactory_nCreateTexture
         jlong ctx, jint formatHint, jint usageHint, jboolean isRTT,
         jint width, jint height, jint samples, jboolean useMipmap)
 {
-    TraceLn5(NWT_TRACE_INFO,
+    TraceLn6(NWT_TRACE_INFO,
              "nCreateTexture formatHint=%d usageHint=%d isRTT=%d w=%d h=%d useMipmap=%d",
              formatHint, usageHint, isRTT, width, height, useMipmap);
 
