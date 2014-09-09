@@ -1121,7 +1121,8 @@ public class MenuBarController {
         
         final MenuItem zoomOutMenuItem = new MenuItem(I18N.getString("menu.title.zoom.out"));
         zoomOutMenuItem.setUserData(new ZoomOutActionController());
-        zoomOutMenuItem.setAccelerator(new KeyCharacterCombination("-", modifier)); //NOI18N
+        zoomOutMenuItem.setAccelerator(new KeyCharacterCombination("+",  //NOI18N
+                KeyCombination.SHIFT_DOWN, modifier));
         zoomMenu.getItems().add(zoomOutMenuItem);
         
         zoomMenu.getItems().add(new SeparatorMenuItem());
