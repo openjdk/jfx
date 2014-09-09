@@ -193,6 +193,7 @@
               <items>
                 <MenuItem fx:id="wrapInAnchorPaneMenuItem" mnemonicParsing="false" text="AnchorPane" />
                 <MenuItem fx:id="wrapInBorderPaneMenuItem" mnemonicParsing="false" text="BorderPane" />
+                <MenuItem fx:id="wrapInDialogPaneMenuItem" mnemonicParsing="false" text="DialogPane" />
                 <MenuItem fx:id="wrapInFlowPaneMenuItem" mnemonicParsing="false" text="FlowPane" />
                 <MenuItem fx:id="wrapInGridPaneMenuItem" mnemonicParsing="false" text="GridPane" />
                 <MenuItem fx:id="wrapInGroupMenuItem" mnemonicParsing="false" text="Group" />

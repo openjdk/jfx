@@ -117,15 +117,7 @@ public class UnwrapJob extends BatchSelectionJob {
         }
 
         // Retrieve the num of children of the container to unwrap
-        final DesignHierarchyMask containerMask
-                = new DesignHierarchyMask(container);
-        int childrenCount;
-        if (containerMask.isAcceptingSubComponent()) {
-            childrenCount = containerMask.getSubComponentCount();
-        } else {
-            assert containerMask.isAcceptingAccessory(Accessory.CONTENT); // Because of (1)
-            childrenCount = containerMask.getAccessoryProperty(Accessory.CONTENT) == null ? 0 : 1;
-        }
+        int childrenCount = getChildren(container).size();
         // If the container to unwrap has no childen, it cannot be unwrapped
         if (childrenCount == 0) {
             return false;
@@ -145,7 +137,8 @@ public class UnwrapJob extends BatchSelectionJob {
             } else {
                 assert parentContainerMask.isAcceptingAccessory(Accessory.CONTENT)
                         || parentContainerMask.isAcceptingAccessory(Accessory.GRAPHIC)
-                        || parentContainerMask.getFxomObject().getSceneGraphObject() instanceof BorderPane;
+                        || parentContainerMask.getFxomObject().getSceneGraphObject() instanceof BorderPane
+                        || parentContainerMask.getFxomObject().getSceneGraphObject() instanceof DialogPane;
                 return childrenCount == 1;
             }
         }
@@ -346,14 +339,13 @@ public class UnwrapJob extends BatchSelectionJob {
         final DesignHierarchyMask mask = new DesignHierarchyMask(container);
         final List<FXOMObject> result = new ArrayList<>();
         if (mask.isAcceptingSubComponent()) {
-            for (int i = 0, count = mask.getSubComponentCount(); i < count; i++) {
-                final FXOMObject child = mask.getSubComponentAtIndex(i);
-                result.add(child);
-            }
+            result.addAll(mask.getSubComponents());
         } else {
             assert mask.isAcceptingAccessory(Accessory.CONTENT);
             final FXOMObject child = mask.getAccessory(Accessory.CONTENT);
-            result.add(child);
+            if (child != null) {
+                result.add(child);
+            }
         }
         return result;
     }

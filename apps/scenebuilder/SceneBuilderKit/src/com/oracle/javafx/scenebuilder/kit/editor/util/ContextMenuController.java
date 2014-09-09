@@ -80,6 +80,7 @@ public class ContextMenuController {
     private Menu wrapInMenu;
     private MenuItem wrapInAnchorPaneMenuItem;
     private MenuItem wrapInBorderPaneMenuItem;
+    private MenuItem wrapInDialogPaneMenuItem;
     private MenuItem wrapInFlowPaneMenuItem;
     private MenuItem wrapInGridPaneMenuItem;
     private MenuItem wrapInGroupMenuItem;
@@ -388,6 +389,9 @@ public class ContextMenuController {
         wrapInBorderPaneMenuItem = new MenuItem("BorderPane");
         wrapInBorderPaneMenuItem.setOnAction(onActionEventHandler);
         wrapInBorderPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_BORDER_PANE));
+        wrapInDialogPaneMenuItem = new MenuItem("DialogPane");
+        wrapInDialogPaneMenuItem.setOnAction(onActionEventHandler);
+        wrapInDialogPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_DIALOG_PANE));
         wrapInFlowPaneMenuItem = new MenuItem("FlowPane");
         wrapInFlowPaneMenuItem.setOnAction(onActionEventHandler);
         wrapInFlowPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_FLOW_PANE));
@@ -430,6 +434,7 @@ public class ContextMenuController {
         wrapInMenu.getItems().setAll(
                 wrapInAnchorPaneMenuItem,
                 wrapInBorderPaneMenuItem,
+                wrapInDialogPaneMenuItem,
                 wrapInFlowPaneMenuItem,
                 wrapInGridPaneMenuItem,
                 wrapInGroupMenuItem,
