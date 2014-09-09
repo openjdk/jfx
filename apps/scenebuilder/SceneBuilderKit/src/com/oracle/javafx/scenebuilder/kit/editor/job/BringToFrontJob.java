@@ -33,40 +33,47 @@ package com.oracle.javafx.scenebuilder.kit.editor.job;
 
 import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.ReIndexObjectJob;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
-import com.oracle.javafx.scenebuilder.kit.editor.selection.GridSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 /**
  *
  */
-public class BringToFrontJob extends BatchDocumentJob {
+public class BringToFrontJob extends InlineDocumentJob {
 
     public BringToFrontJob(EditorController editorController) {
         super(editorController);
     }
-    @Override
-    protected List<Job> makeSubJobs() {
 
+    @Override
+    public boolean isExecutable() {
+        final Selection selection = getEditorController().getSelection();
+        if (selection.getGroup() instanceof ObjectSelectionGroup == false) {
+            return false;
+        }
+        final ObjectSelectionGroup osg = (ObjectSelectionGroup) selection.getGroup();
+        for (FXOMObject item : osg.getSortedItems()) {
+            final FXOMObject nextSlibing = item.getNextSlibing();
+            if (nextSlibing == null) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    @Override
+    protected List<Job> makeAndExecuteSubJobs() {
+
+        assert isExecutable(); // (1)
         final List<Job> result = new ArrayList<>();
 
-        final Set<FXOMObject> candidates = new HashSet<>();
         final Selection selection = getEditorController().getSelection();
-        if (selection.getGroup() instanceof ObjectSelectionGroup) {
-            final ObjectSelectionGroup osg = (ObjectSelectionGroup) selection.getGroup();
-            candidates.addAll(osg.getFlattenItems());
-        } else if (selection.getGroup() instanceof GridSelectionGroup) {
-            // GridPane rows / columns are selected : BringToFrontJob is meaningless
-            // Just do nothing
-        } else {
-            assert selection.getGroup() == null :
-                    "Add implementation for " + selection.getGroup();
-        }
+        assert selection.getGroup() instanceof ObjectSelectionGroup; // Because of (1)
+        final ObjectSelectionGroup osg = (ObjectSelectionGroup) selection.getGroup();
+        final List<FXOMObject> candidates = osg.getSortedItems();
 
         for (FXOMObject candidate : candidates) {
             final FXOMObject nextSlibing = candidate.getNextSlibing();
@@ -74,11 +81,12 @@ public class BringToFrontJob extends BatchDocumentJob {
                 final ReIndexObjectJob subJob = new ReIndexObjectJob(
                         candidate, null, getEditorController());
                 if (subJob.isExecutable()) {
+                    subJob.execute();
                     result.add(subJob);
                 }
             }
         }
-        
+
         return result;
     }
 
