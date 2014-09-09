@@ -79,10 +79,6 @@ public abstract class AbstractDecoration<T> {
         this.sceneGraphObject = sceneGraphClass.cast(fxomObject.getSceneGraphObject());
         
         this.rootNode.sceneProperty().addListener((ChangeListener<Scene>) (ov, v1, v2) -> rootNodeSceneDidChange());
-        
-        // This is workaround for DTL-6628 
-        rootNode.getStyleClass().add("theme-presets"); //NOI18N
-        rootNode.getStyleClass().add("SBKIT-content-panel"); //NOI18N
     }
 
     public ContentPanelController getContentPanelController() {
