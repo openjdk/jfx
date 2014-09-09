@@ -122,7 +122,9 @@ final class PresentingPainter extends ViewPainter {
             ViewScene viewScene = (ViewScene)sceneState.getScene();
             viewScene.setPainting(false);
 
-            factory.getTextureResourcePool().freeDisposalRequestedAndCheckResources(errored);
+            if (factory != null) {
+                factory.getTextureResourcePool().freeDisposalRequestedAndCheckResources(errored);
+            }
 
             renderLock.unlock();
         }

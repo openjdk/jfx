@@ -183,7 +183,9 @@ final class UploadingPainter extends ViewPainter implements Runnable {
 
             sceneState.getScene().setPainting(false);
 
-            factory.getTextureResourcePool().freeDisposalRequestedAndCheckResources(errored);
+            if (factory != null) {
+                factory.getTextureResourcePool().freeDisposalRequestedAndCheckResources(errored);
+            }
 
             renderLock.unlock();
         }
