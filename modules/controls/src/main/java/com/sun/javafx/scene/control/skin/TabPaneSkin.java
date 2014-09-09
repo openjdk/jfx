@@ -26,10 +26,7 @@
 package com.sun.javafx.scene.control.skin;
 
 import com.sun.javafx.Utils;
-import javafx.animation.Interpolator;
-import javafx.animation.KeyFrame;
-import javafx.animation.KeyValue;
-import javafx.animation.Timeline;
+import javafx.animation.*;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.WeakInvalidationListener;
@@ -242,13 +239,15 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
     }
     private void removeTabs(List<? extends Tab> removedList) {
         for (final Tab tab : removedList) {
+            stopCurrentAnimation(tab);
             // Animate the tab removal
             final TabHeaderSkin tabRegion = tabHeaderArea.getTabHeaderSkin(tab);
             if (tabRegion != null) {
                 tabRegion.isClosing = true;
                 if (closeTabAnimation.get() == TabAnimation.GROW) {
                     tabRegion.animating = true;
-                    Timeline closedTabTimeline = createTimeline(tabRegion, Duration.millis(ANIMATION_SPEED), 0.0F, event -> {
+                    Timeline closedTabTimeline = tabRegion.currentAnimation =
+                            createTimeline(tabRegion, Duration.millis(ANIMATION_SPEED), 0.0F, event -> {
                         handleClosedTab(tab);
                     });
                     closedTabTimeline.play();    
@@ -258,7 +257,17 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
             }
         }
     }
-    
+
+    private void stopCurrentAnimation(Tab tab) {
+        final TabHeaderSkin tabRegion = tabHeaderArea.getTabHeaderSkin(tab);
+        if (tabRegion != null && tabRegion.currentAnimation != null) {
+            // Execute the code immediately, don't wait for the animation to finish.
+            tabRegion.currentAnimation.getKeyFrames().get(0).getOnFinished().handle(null);
+            tabRegion.currentAnimation.stop();
+            tabRegion.currentAnimation = null;
+        }
+    }
+
     private void handleClosedTab(Tab tab) {
         removeTab(tab);
         if (getSkinnable().getTabs().isEmpty()) {
@@ -268,6 +277,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
     private void addTabs(List<? extends Tab> addedList, int from) {
         int i = 0;
         for (final Tab tab : addedList) {
+            stopCurrentAnimation(tab); // Note that this must happen before addTab() call below
             // A new tab was added - animate it out
             if (!tabHeaderArea.isVisible()) {
                 tabHeaderArea.setVisible(true);
@@ -281,10 +291,12 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
                     tabRegion.animating = true;
                     tabRegion.animationTransition.setValue(0.0);
                     tabRegion.setVisible(true);
-                    createTimeline(tabRegion, Duration.millis(ANIMATION_SPEED), 1.0, event -> {
+                    tabRegion.currentAnimation = createTimeline(tabRegion, Duration.millis(ANIMATION_SPEED), 1.0, event -> {
                         tabRegion.animating = false;
+                        tabRegion.setVisible(true);
                         tabRegion.inner.requestLayout();
-                    }).play();
+                    });
+                    tabRegion.currentAnimation.play();
                 } else {
                     tabRegion.setVisible(true);
                     tabRegion.inner.requestLayout();
@@ -1403,6 +1415,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
         }
 
         private boolean animating = false;
+        private Timeline currentAnimation;
 
         @Override protected double computePrefWidth(double height) {
 //            if (animating) {
