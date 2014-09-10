@@ -111,13 +111,8 @@ public class ButtonTypeEditor extends InlineListEditor {
     }
 
     private Comparator<ButtonType> getButtonTypeComparator() {
-        return new Comparator<ButtonType>() {
-
-            @Override
-            public int compare(ButtonType bt1, ButtonType bt2) {
-                return bt1.getText().compareTo(bt2.getText());
-            }
-        };
+        Comparator<ButtonType> comparator = (ButtonType bt1, ButtonType bt2) -> bt1.getText().compareTo(bt2.getText());
+        return comparator;
     }
 
     @Override
@@ -126,11 +121,11 @@ public class ButtonTypeEditor extends InlineListEditor {
         // Group all the item values in a list
         for (EditorItem buttonTypeItem : getEditorItems()) {
             Object itemValueObj = buttonTypeItem.getValue();
-            assert itemValueObj instanceof ButtonType;
-            ButtonType itemValue = (ButtonType) itemValueObj;
-            if (itemValue == null) {
+            if (itemValueObj == null) {
                 continue;
             }
+            assert itemValueObj instanceof ButtonType;
+            ButtonType itemValue = (ButtonType) itemValueObj;
             value.add(itemValue);
         }
         if (value.isEmpty()) {
