@@ -145,7 +145,7 @@ public class LinuxRpmBundler extends AbstractBundler {
 
             //TODO: Version is ignored; need to extract version string and compare!
             String content = new String(baos.toByteArray());
-            Pattern pattern = Pattern.compile("RPM version (\\d+\\.\\d+)");
+            Pattern pattern = Pattern.compile(" (\\d+\\.\\d+)");
             Matcher matcher = pattern.matcher(content);
             if (matcher.find()) {
                 String v = matcher.group(1);
