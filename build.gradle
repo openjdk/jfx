@@ -331,6 +331,11 @@ ext.IS_COMPILE_JFR = Boolean.parseBoolean(COMPILE_JFR)
 defineProperty("RETAIN_PACKAGER_TESTS", "false")
 ext.IS_RETAIN_PACKAGER_TESTS = Boolean.parseBoolean(RETAIN_PACKAGER_TESTS)
 
+// TEST_PACKAGER_DMG whether tests that create DMG files via hdiutil
+// should be run.  On OSX 10.7 this tends to hang automated builds
+defineProperty("TEST_PACKAGER_DMG", "false")
+ext.IS_TEST_PACKAGER_DMG = Boolean.parseBoolean(TEST_PACKAGER_DMG)
+
 // Define the SWT.jar that we are going to have to download during the build process based
 // on what platform we are compiling from (not based on our target).
 ext.SWT_FILE_NAME = IS_MAC ? "org.eclipse.swt.cocoa.macosx.x86_64_3.7.2.v3740f" :
@@ -2043,6 +2048,7 @@ project(":fxpackager") {
     test {
         dependsOn packagerFXPackagedJar
         systemProperty "RETAIN_PACKAGER_TESTS", RETAIN_PACKAGER_TESTS
+        systemProperty "TEST_PACKAGER_DMG", TEST_PACKAGER_DMG
         systemProperty "FULL_TEST", FULL_TEST
     }
 }

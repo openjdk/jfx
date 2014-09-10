@@ -73,6 +73,9 @@ public class MacDmgBundlerTest {
     public static void prepareApp() {
         // only run on mac
         Assume.assumeTrue(System.getProperty("os.name").toLowerCase().contains("os x"));
+        
+        // only run if explicitly requested
+        Assume.assumeTrue(Boolean.parseBoolean(System.getProperty("TEST_PACKAGER_DMG")));
 
         runtimeJdk = System.getenv("PACKAGER_JDK_ROOT");
 
