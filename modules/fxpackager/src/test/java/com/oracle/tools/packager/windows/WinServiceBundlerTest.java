@@ -168,6 +168,7 @@ public class WinServiceBundlerTest {
 
         bundleParams.put(DESCRIPTION.getID(), "Does a random heart beat every 30 seconds or so to a log file in tmp");
         bundleParams.put(LICENSE_FILE.getID(), "LICENSE");
+        bundleParams.put(LICENSE_TYPE.getID(), "GPL v2 + CLASSPATH");
         bundleParams.put(VENDOR.getID(), "OpenJDK");
 
         bundleParams.put(BUILD_ROOT.getID(), tmpBase);

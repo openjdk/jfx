@@ -28,6 +28,8 @@ package com.oracle.tools.packager.linux;
 import com.oracle.tools.packager.*;
 import com.oracle.tools.packager.IOUtils;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.attribute.PosixFilePermission;
@@ -92,6 +94,31 @@ public class LinuxRpmBundler extends AbstractBundler {
                         .replaceAll("[ _]", "-")
                         .replaceAll("[^-abcdefghijklmnopqrstuvwxyz0123456789]", "");
                 return nm;
+            },
+            (s, p) -> s);
+
+    public static final BundlerParamInfo<String> XDG_FILE_PREFIX = new StandardBundlerParam<> (
+            I18N.getString("param.xdg-prefix.name"),
+            I18N.getString("param.xdg-prefix.description"),
+            "linux.xdg-prefix",
+            String.class,
+            params -> {
+                try {
+                    String vendor;
+                    if (params.containsKey(VENDOR.getID())) {
+                        vendor = VENDOR.fetchFrom(params);
+                    } else {
+                        vendor = "javapackager";
+                    }
+                    String appName = APP_FS_NAME.fetchFrom(params);
+
+                    return (vendor + "-" + appName).replaceAll("\\s", "");
+                } catch (Exception e) {
+                    if (Log.isDebug()) {
+                        e.printStackTrace();
+                    }
+                }
+                return "unknown-MimeInfo.xml";
             },
             (s, p) -> s);
 
@@ -162,6 +189,24 @@ public class LinuxRpmBundler extends AbstractBundler {
                 throw new ConfigException(
                         I18N.getString(MessageFormat.format("error.cannot-find-rpmbuild", TOOL_RPMBUILD_MIN_VERSION)),
                         I18N.getString(MessageFormat.format("error.cannot-find-rpmbuild.advice", TOOL_RPMBUILD_MIN_VERSION)));
+            }
+
+            // only one mime type per association, at least one file extension
+            List<Map<String, ? super Object>> associations = FILE_ASSOCIATIONS.fetchFrom(p);
+            if (associations != null) {
+                for (int i = 0; i < associations.size(); i++) {
+                    Map<String, ? super Object> assoc = associations.get(i);
+                    List<String> mimes = FA_CONTENT_TYPE.fetchFrom(assoc);
+                    if (mimes == null || mimes.isEmpty()) {
+                        throw new ConfigException(
+                                MessageFormat.format(I18N.getString("error.no-content-types-for-file-association"), i),
+                                I18N.getString("error.no-content-types-for-file-association.advice"));
+                    } else if (mimes.size() > 1) {
+                        throw new ConfigException(
+                                MessageFormat.format(I18N.getString("error.too-many-content-types-for-file-association"), i),
+                                I18N.getString("error.too-many-content-types-for-file-association.advice"));
+                    }
+                }
             }
 
             return true;
@@ -244,17 +289,19 @@ public class LinuxRpmBundler extends AbstractBundler {
     protected void saveConfigFiles(Map<String, ? super Object> params) {
         try {
             File configRoot = CONFIG_ROOT.fetchFrom(params);
+            File rootDir = LinuxAppBundler.getRootDir(RPM_IMAGE_DIR.fetchFrom(params), params);
+
             if (getConfig_SpecFile(params).exists()) {
                 IOUtils.copyFile(getConfig_SpecFile(params),
                         new File(configRoot, getConfig_SpecFile(params).getName()));
             }
-            if (getConfig_DesktopShortcutFile(params).exists()) {
-                IOUtils.copyFile(getConfig_DesktopShortcutFile(params),
-                        new File(configRoot, getConfig_DesktopShortcutFile(params).getName()));
+            if (getConfig_DesktopShortcutFile(rootDir, params).exists()) {
+                IOUtils.copyFile(getConfig_DesktopShortcutFile(rootDir, params),
+                        new File(configRoot, getConfig_DesktopShortcutFile(rootDir, params).getName()));
             }
-            if (getConfig_IconFile(params).exists()) {
-                IOUtils.copyFile(getConfig_IconFile(params),
-                        new File(configRoot, getConfig_IconFile(params).getName()));
+            if (getConfig_IconFile(rootDir, params).exists()) {
+                IOUtils.copyFile(getConfig_IconFile(rootDir, params),
+                        new File(configRoot, getConfig_IconFile(rootDir, params).getName()));
             }
             if (SERVICE_HINT.fetchFrom(params)) {
                 if (getConfig_InitScriptFile(params).exists()) {
@@ -283,44 +330,11 @@ public class LinuxRpmBundler extends AbstractBundler {
     }
 
     private boolean prepareProjectConfig(Map<String, ? super Object> params) throws IOException {
-        Map<String, String> data = new HashMap<>();
-
-        data.put("APPLICATION_NAME", APP_NAME.fetchFrom(params));
-        data.put("APPLICATION_FS_NAME", APP_FS_NAME.fetchFrom(params));
-        data.put("APPLICATION_PACKAGE", BUNDLE_NAME.fetchFrom(params));
-        data.put("APPLICATION_VENDOR", VENDOR.fetchFrom(params));
-        data.put("APPLICATION_VERSION", VERSION.fetchFrom(params));
-        data.put("APPLICATION_LAUNCHER_FILENAME", APP_FS_NAME.fetchFrom(params));
-        data.put("DEPLOY_BUNDLE_CATEGORY", CATEGORY.fetchFrom(params)); //TODO rpm categories
-        data.put("APPLICATION_DESCRIPTION", DESCRIPTION.fetchFrom(params));
-        data.put("APPLICATION_SUMMARY", TITLE.fetchFrom(params));
-        data.put("APPLICATION_LICENSE_TYPE", LICENSE_TYPE.fetchFrom(params));
-        data.put("APPLICATION_LICENSE_FILE", getLicenseFileString(params));
-        data.put("SERVICE_HINT", String.valueOf(SERVICE_HINT.fetchFrom(params)));
-        data.put("START_ON_INSTALL", String.valueOf(START_ON_INSTALL.fetchFrom(params)));
-        data.put("STOP_ON_UNINSTALL", String.valueOf(STOP_ON_UNINSTALL.fetchFrom(params)));
-        data.put("RUN_AT_STARTUP", String.valueOf(RUN_AT_STARTUP.fetchFrom(params)));
-
-        //prepare spec file
-        Writer w = new BufferedWriter(new FileWriter(getConfig_SpecFile(params)));
-        String content = preprocessTextResource(
-                LinuxAppBundler.LINUX_BUNDLER_PREFIX + getConfig_SpecFile(params).getName(),
-                I18N.getString("resource.rpm-spec-file"), DEFAULT_SPEC_TEMPLATE, data,
-                VERBOSE.fetchFrom(params));
-        w.write(content);
-        w.close();
-
-        //prepare desktop shortcut
-        w = new BufferedWriter(new FileWriter(getConfig_DesktopShortcutFile(params)));
-        content = preprocessTextResource(
-                LinuxAppBundler.LINUX_BUNDLER_PREFIX + getConfig_DesktopShortcutFile(params).getName(),
-                I18N.getString("resource.menu-shortcut-descriptor"), DEFAULT_DESKTOP_FILE_TEMPLATE, data,
-                VERBOSE.fetchFrom(params));
-        w.write(content);
-        w.close();
+        Map<String, String> data = createReplacementData(params);
+        File rootDir = LinuxAppBundler.getRootDir(RPM_IMAGE_DIR.fetchFrom(params), params);
 
         //prepare installer icon
-        File iconTarget = getConfig_IconFile(params);
+        File iconTarget = getConfig_IconFile(rootDir, params);
         File icon = LinuxAppBundler.ICON_PNG.fetchFrom(params);
         if (icon == null || !icon.exists()) {
             fetchResource(LinuxAppBundler.LINUX_BUNDLER_PREFIX + iconTarget.getName(),
@@ -335,6 +349,191 @@ public class LinuxRpmBundler extends AbstractBundler {
                     iconTarget,
                     VERBOSE.fetchFrom(params));
         }
+
+        StringBuilder installScripts = new StringBuilder();
+        StringBuilder removeScripts = new StringBuilder();
+        for (Map<String, ? super Object> secondaryLauncher : SECONDARY_LAUNCHERS.fetchFrom(params)) {
+            Map<String, String> secondaryLauncherData = createReplacementData(secondaryLauncher);
+            secondaryLauncherData.put("APPLICATION_FS_NAME", data.get("APPLICATION_FS_NAME"));
+            secondaryLauncherData.put("DESKTOP_MIMES", "");
+
+            //prepare desktop shortcut
+            Writer w = new BufferedWriter(new FileWriter(getConfig_DesktopShortcutFile(rootDir, secondaryLauncher)));
+            String content = preprocessTextResource(
+                    LinuxAppBundler.LINUX_BUNDLER_PREFIX + getConfig_DesktopShortcutFile(rootDir, secondaryLauncher).getName(),
+                    I18N.getString("resource.menu-shortcut-descriptor"), DEFAULT_DESKTOP_FILE_TEMPLATE, secondaryLauncherData,
+                    VERBOSE.fetchFrom(params));
+            w.write(content);
+            w.close();
+
+            //prepare installer icon
+            iconTarget = getConfig_IconFile(rootDir, secondaryLauncher);
+            icon = LinuxAppBundler.ICON_PNG.fetchFrom(secondaryLauncher);
+            if (icon == null || !icon.exists()) {
+                fetchResource(LinuxAppBundler.LINUX_BUNDLER_PREFIX + iconTarget.getName(),
+                        I18N.getString("resource.menu-icon"),
+                        DEFAULT_ICON,
+                        iconTarget,
+                        VERBOSE.fetchFrom(params));
+            } else {
+                fetchResource(LinuxAppBundler.LINUX_BUNDLER_PREFIX + iconTarget.getName(),
+                        I18N.getString("resource.menu-icon"),
+                        icon,
+                        iconTarget,
+                        VERBOSE.fetchFrom(params));
+            }
+
+            //post copying of desktop icon
+            installScripts.append("xdg-desktop-menu install --novendor /opt/");
+            installScripts.append(data.get("APPLICATION_FS_NAME"));
+            installScripts.append("/");
+            installScripts.append(secondaryLauncherData.get("APPLICATION_LAUNCHER_FILENAME"));
+            installScripts.append(".desktop\n");
+
+            //preun cleanup of desktop icon
+            removeScripts.append("xdg-desktop-menu uninstall --novendor /opt/");
+            removeScripts.append(data.get("APPLICATION_FS_NAME"));
+            removeScripts.append("/");
+            removeScripts.append(secondaryLauncherData.get("APPLICATION_LAUNCHER_FILENAME"));
+            removeScripts.append(".desktop\n");
+
+        }
+        data.put("SECONDARY_LAUNCHERS_INSTALL", installScripts.toString());
+        data.put("SECONDARY_LAUNCHERS_REMOVE", removeScripts.toString());
+
+        List<Map<String, ? super Object>> associations = FILE_ASSOCIATIONS.fetchFrom(params);
+        data.put("FILE_ASSOCIATION_INSTALL", "");
+        data.put("FILE_ASSOCIATION_REMOVE", "");
+        data.put("DESKTOP_MIMES", "");
+        if (associations != null) {
+            String mimeInfoFile = XDG_FILE_PREFIX.fetchFrom(params) + "-MimeInfo.xml";
+            StringBuilder mimeInfo = new StringBuilder("<?xml version=\"1.0\"?>\n<mime-info xmlns='http://www.freedesktop.org/standards/shared-mime-info'>\n");
+            StringBuilder registrations = new StringBuilder();
+            StringBuilder deregistrations = new StringBuilder();
+            StringBuilder desktopMimes = new StringBuilder("MimeType=");
+            boolean addedEntry = false;
+
+            for (Map<String, ? super Object> assoc : associations) {
+                //  <mime-type type="application/x-vnd.awesome">
+                //    <comment>Awesome document</comment>
+                //    <glob pattern="*.awesome"/>
+                //    <glob pattern="*.awe"/>
+                //  </mime-type>
+
+                if (assoc == null) {
+                    continue;
+                }
+
+                String description = FA_DESCRIPTION.fetchFrom(assoc);
+                File faIcon = FA_ICON.fetchFrom(assoc); //TODO FA_ICON_PNG
+                List<String> extensions = FA_EXTENSIONS.fetchFrom(assoc);
+                List<String> mimes = FA_CONTENT_TYPE.fetchFrom(assoc);
+                if (mimes == null || mimes.isEmpty()) {
+                    continue;
+                }
+                String thisMime = mimes.get(0);
+                String dashMime = thisMime.replace('/', '-');
+
+                mimeInfo.append("  <mime-type type='")
+                        .append(thisMime)
+                        .append("'>\n");
+                if (description != null && !description.isEmpty()) {
+                    mimeInfo.append("    <comment>")
+                            .append(description)
+                            .append("</comment>\n");
+                }
+
+                if (extensions != null) {
+                    for (String ext : extensions) {
+                        mimeInfo.append("    <glob pattern='*.")
+                                .append(ext)
+                                .append("'/>");
+                    }
+                }
+
+                mimeInfo.append("  </mime-type>\n");
+                if (!addedEntry) {
+                    registrations.append("xdg-mime install /opt/")
+                            .append(data.get("APPLICATION_FS_NAME"))
+                            .append("/")
+                            .append(mimeInfoFile)
+                            .append("\n");
+                    registrations.append("xdg-mime install /opt/")
+                            .append(data.get("APPLICATION_FS_NAME"))
+                            .append("/")
+                            .append(mimeInfoFile)
+                            .append("\n");
+
+                    deregistrations.append("xdg-mime uninstall /opt/")
+                            .append(data.get("APPLICATION_FS_NAME"))
+                            .append("/")
+                            .append(mimeInfoFile)
+                            .append("\n");
+                    addedEntry = true;
+                } else {
+                    desktopMimes.append(";");
+                }
+                desktopMimes.append(thisMime);
+
+                if (faIcon != null && faIcon.exists()) {
+                    int size = getSquareSizeOfImage(faIcon);
+
+                    if (size > 0) {
+                        File target = new File(rootDir, APP_FS_NAME.fetchFrom(params) + "_fa_" + faIcon.getName());
+                        IOUtils.copyFile(faIcon, target);
+
+                        //xdg-icon-resource install --context mimetypes --size 64 awesomeapp_fa_1.png application-x.vnd-awesome
+                        registrations.append("        xdg-icon-resource install --context mimetypes --size ")
+                                .append(size)
+                                .append(" /opt/")
+                                .append(data.get("APPLICATION_FS_NAME"))
+                                .append("/")
+                                .append(target.getName())
+                                .append(" ")
+                                .append(dashMime)
+                                .append("\n");
+
+                        //xdg-icon-resource uninstall --context mimetypes --size 64 awesomeapp_fa_1.png application-x.vnd-awesome
+                        deregistrations.append("        xdg-icon-resource uninstall --context mimetypes --size ")
+                                .append(size)
+                                .append(" /opt/")
+                                .append(data.get("APPLICATION_FS_NAME"))
+                                .append("/")
+                                .append(target.getName())
+                                .append(" ")
+                                .append(dashMime)
+                                .append("\n");
+                    }
+                }
+            }
+            mimeInfo.append("</mime-info>");
+
+            if (addedEntry) {
+                Writer w = new BufferedWriter(new FileWriter(new File(rootDir, mimeInfoFile)));
+                w.write(mimeInfo.toString());
+                w.close();
+                data.put("FILE_ASSOCIATION_INSTALL", registrations.toString());
+                data.put("FILE_ASSOCIATION_REMOVE", deregistrations.toString());
+                data.put("DESKTOP_MIMES", desktopMimes.toString());
+            }
+        }
+        //prepare desktop shortcut
+        Writer w = new BufferedWriter(new FileWriter(getConfig_DesktopShortcutFile(rootDir, params)));
+        String content = preprocessTextResource(
+                LinuxAppBundler.LINUX_BUNDLER_PREFIX + getConfig_DesktopShortcutFile(rootDir, params).getName(),
+                I18N.getString("resource.menu-shortcut-descriptor"), DEFAULT_DESKTOP_FILE_TEMPLATE, data,
+                VERBOSE.fetchFrom(params));
+        w.write(content);
+        w.close();
+
+        //prepare spec file
+        w = new BufferedWriter(new FileWriter(getConfig_SpecFile(params)));
+        content = preprocessTextResource(
+                LinuxAppBundler.LINUX_BUNDLER_PREFIX + getConfig_SpecFile(params).getName(),
+                I18N.getString("resource.rpm-spec-file"), DEFAULT_SPEC_TEMPLATE, data,
+                VERBOSE.fetchFrom(params));
+        w.write(content);
+        w.close();
 
         if (SERVICE_HINT.fetchFrom(params)) {
             //prepare init script
@@ -353,13 +552,35 @@ public class LinuxRpmBundler extends AbstractBundler {
         return true;
     }
 
-    private File getConfig_DesktopShortcutFile(Map<String, ? super Object> params) {
-        return new File(LinuxAppBundler.getRootDir(RPM_IMAGE_DIR.fetchFrom(params), params),
+    private Map<String, String> createReplacementData(Map<String, ? super Object> params) {
+        Map<String, String> data = new HashMap<>();
+
+        data.put("APPLICATION_NAME", APP_NAME.fetchFrom(params));
+        data.put("APPLICATION_FS_NAME", APP_FS_NAME.fetchFrom(params));
+        data.put("APPLICATION_PACKAGE", BUNDLE_NAME.fetchFrom(params));
+        data.put("APPLICATION_VENDOR", VENDOR.fetchFrom(params));
+        data.put("APPLICATION_VERSION", VERSION.fetchFrom(params));
+        data.put("APPLICATION_LAUNCHER_FILENAME", APP_FS_NAME.fetchFrom(params));
+        data.put("XDG_PREFIX", XDG_FILE_PREFIX.fetchFrom(params));
+        data.put("DEPLOY_BUNDLE_CATEGORY", CATEGORY.fetchFrom(params)); //TODO rpm categories
+        data.put("APPLICATION_DESCRIPTION", DESCRIPTION.fetchFrom(params));
+        data.put("APPLICATION_SUMMARY", TITLE.fetchFrom(params));
+        data.put("APPLICATION_LICENSE_TYPE", LICENSE_TYPE.fetchFrom(params));
+        data.put("APPLICATION_LICENSE_FILE", getLicenseFileString(params));
+        data.put("SERVICE_HINT", String.valueOf(SERVICE_HINT.fetchFrom(params)));
+        data.put("START_ON_INSTALL", String.valueOf(START_ON_INSTALL.fetchFrom(params)));
+        data.put("STOP_ON_UNINSTALL", String.valueOf(STOP_ON_UNINSTALL.fetchFrom(params)));
+        data.put("RUN_AT_STARTUP", String.valueOf(RUN_AT_STARTUP.fetchFrom(params)));
+        return data;
+    }
+
+    private File getConfig_DesktopShortcutFile(File rootDir, Map<String, ? super Object> params) {
+        return new File(rootDir,
                 APP_FS_NAME.fetchFrom(params) + ".desktop");
     }
 
-    private File getConfig_IconFile(Map<String, ? super Object> params) {
-        return new File(LinuxAppBundler.getRootDir(RPM_IMAGE_DIR.fetchFrom(params), params),
+    private File getConfig_IconFile(File rootDir, Map<String, ? super Object> params) {
+        return new File(rootDir,
                 APP_FS_NAME.fetchFrom(params) + ".png");
     }
 
@@ -459,5 +680,20 @@ public class LinuxRpmBundler extends AbstractBundler {
     @Override
     public File execute(Map<String, ? super Object> params, File outputParentDir) {
         return bundle(params, outputParentDir);
+    }
+
+
+    public int getSquareSizeOfImage(File f) {
+        try {
+            BufferedImage bi = ImageIO.read(f);
+            if (bi.getWidth() == bi.getHeight()) {
+                return bi.getWidth();
+            } else {
+                return 0;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return 0;
+        }
     }
 }

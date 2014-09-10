@@ -470,20 +470,21 @@ public class DeployParams extends CommonParams {
     static final Set<String> multi_args = new TreeSet<>(Arrays.asList(
             StandardBundlerParam.JVM_PROPERTIES.getID(),
             StandardBundlerParam.JVM_OPTIONS.getID(),
-            StandardBundlerParam.USER_JVM_OPTIONS.getID()
+            StandardBundlerParam.USER_JVM_OPTIONS.getID(),
+            StandardBundlerParam.ARGUMENTS.getID()
     ));
 
     @SuppressWarnings("unchecked")
-    public void addBundleArgument(String key, String value) {
+    public void addBundleArgument(String key, Object value) {
         // special hack for multi-line arguments
-        if (multi_args.contains(key)) {
+        if (multi_args.contains(key) && value instanceof String) {
             Object existingValue = bundlerArguments.get(key);
             if (existingValue instanceof String) {
                 bundlerArguments.put(key, existingValue + "\n\n" + value);
             } else if (existingValue instanceof List) {
-                ((List<String>)existingValue).add(value);
-            } else if (existingValue instanceof Map && value.contains("=")) {
-                String[] mapValues = value.split("=", 2);
+                ((List)existingValue).add(value);
+            } else if (existingValue instanceof Map && ((String)value).contains("=")) {
+                String[] mapValues = ((String)value).split("=", 2);
                 ((Map)existingValue).put(mapValues[0], mapValues[1]);
             } else {
                 bundlerArguments.put(key, value);
@@ -546,6 +547,7 @@ public class DeployParams extends CommonParams {
             bundleParams.setJvmProperties(properties);
             bundleParams.setJvmargs(jvmargs);
             bundleParams.setJvmUserArgs(jvmUserArgs);
+            bundleParams.setArguments(arguments);
 
             File appIcon = null;
             for (Icon ic: icons) {

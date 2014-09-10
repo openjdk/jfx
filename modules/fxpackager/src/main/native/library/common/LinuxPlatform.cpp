@@ -1,36 +1,362 @@
 /*
- * Copyright (c) 2006, 2013, Oracle and/or its affiliates. All rights reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ * Copyright (c) 2014, Oracle and/or its affiliates.
+ * All rights reserved. Use is subject to license terms.
  *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Oracle designates this
- * particular file as subject to the "Classpath" exception as provided
- * by Oracle in the LICENSE file that accompanied this code.
+ * This file is available and licensed under the following license:
  *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
  *
- * You should have received a copy of the GNU General Public License version
- * 2 along with this work; if not, write to the Free Software Foundation,
- * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *  - Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *  - Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the distribution.
+ *  - Neither the name of Oracle Corporation nor the names of its
+ *    contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
  *
- * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
- * or visit www.oracle.com if you need additional information or have any
- * questions.
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "DeployPlatform.h"
-#include "xmlparser.h"
+
+#include "Platform.h"
+
+#ifdef LINUX
+
+#include "LinuxPlatform.h"
+
+
+#include <stdlib.h>
+#include <pwd.h>
+
+
+TString GetEnv(const TString &name) {
+    TString result;
+
+    char *value = ::getenv((TCHAR*)name.c_str());
+
+    if (value != NULL) {
+       result = value;
+    }
+
+    return result;
+}
+
+LinuxPlatform::LinuxPlatform(void) : Platform(), GenericPlatform(), PosixPlatform() {
+    FMainThread = pthread_self();
+}
+
+LinuxPlatform::~LinuxPlatform(void) {
+}
+
+void LinuxPlatform::ShowError(TString title, TString description) {
+    printf(PlatformString(title).toPlatformString(), PlatformString(description).toPlatformString());
+}
+
+void LinuxPlatform::ShowError(TString description) {
+    TString appname = GetModuleFileName();
+    appname = FilePath::ExtractFileName(appname);
+    ShowError(PlatformString(appname).toPlatformString(), PlatformString(description).toPlatformString());
+}
+
+TString LinuxPlatform::GetModuleFileName() {
+    TString result;
+    DynamicBuffer<TCHAR> buffer(MAX_PATH);
+
+    if (readlink("/proc/self/exe", buffer.GetData(), MAX_PATH) != -1) {
+        result = buffer.GetData();
+    }
+
+    return result;
+}
+
+void LinuxPlatform::SetCurrentDirectory(TString Value) {
+    chdir(PlatformString(Value).toPlatformString());
+}
+
+TString LinuxPlatform::GetPackageRootDirectory() {
+    TString filename = GetModuleFileName();
+    return FilePath::ExtractFilePath(filename);
+}
+
+TString LinuxPlatform::GetAppDataDirectory() {
+    TString result;
+    TString home = GetEnv(_T("$HOME"));
+
+    if (home.empty() == false) {
+        result += FilePath::IncludeTrailingSlash(home) +
+            FilePath::IncludeTrailingSlash(_T(".local")) + GetAppName();
+    }
+
+    return result;
+}
+
+PropertyContainer* LinuxPlatform::GetConfigFile() {
+    return new PropertyFile(GetConfigFileName());
+}
+
+int LinuxPlatform::GetProcessID() {
+    int pid = getpid();
+    return pid;
+}
+
+TString LinuxPlatform::GetJvmPath() {
+    TString result = FilePath::IncludeTrailingSlash(GetPackageRootDirectory()) +
+        TString("runtime/jre/lib/") + TString(JAVAARCH) + TString("/client/libjvm.so");
+
+    if (FilePath::FileExists(result) == false) {
+        result = FilePath::IncludeTrailingSlash(GetPackageRootDirectory()) +
+            "runtime/jre/"JAVAARCH"/server/libjvm.so";
+    }
+
+    return result;
+}
+
+TString LinuxPlatform::GetSystemJRE() {
+    TString result;
+    TString jreHome = GetEnv("JRE_HOME");
+
+    if (jreHome.empty() == false) {
+        result = FilePath::IncludeTrailingSlash(jreHome) + _T("/lib/rt.jar");
+
+        if (FilePath::FileExists(result) == false) {
+            result = FilePath::IncludeTrailingSlash(jreHome) + _T("/jre/lib/rt.jar");
+
+            if (FilePath::FileExists(result) == false) {
+                //check redhat location
+                if (FilePath::FileExists(_T("/usr/java/latest/jre/lib/rt.jar")) == true) {
+                    result = _T("/usr/java/latest/jre");
+                }
+                else if (FilePath::FileExists(_T("/usr/lib/jvm/default-java/jre/lib/rt.jar")) == true) {
+                    result = _T("/usr/lib/jvm/default-java/jre");
+                }
+                else {
+                    result = _T("");
+                }
+            }
+        }
+    }
+
+    if (result.empty() == false) {
+        result = FilePath::ExtractFilePath(result);
+    }
+
+    return result;
+}
+
+TString LinuxPlatform::GetSystemJvmPath() {
+    TString result;
+    TString jreHome = GetSystemJRE();
+
+    if (jreHome.empty() == false && FilePath::DirectoryExists(jreHome) == true) {
+        result = FilePath::IncludeTrailingSlash(jreHome) +
+            _T("/lib/"JAVAARCH"/client/libjvm.so");
+
+        if (FilePath::FileExists(result) == false) {
+            result = FilePath::IncludeTrailingSlash(jreHome) +
+                _T("/lib/"JAVAARCH"/server/libjvm.so");
+        }
+    }
+
+    return result;
+}
+
+bool LinuxPlatform::IsMainThread() {
+    bool result = (FMainThread == pthread_self());
+    return result;
+}
+
+size_t LinuxPlatform::GetMemorySize() {
+    return 0;
+}
+
+//--------------------------------------------------------------------------------------------------
+
+#ifndef __UNIX_DEPLOY_PLATFORM__
+#define __UNIX_DEPLOY_PLATFORM__
+
+/** Provide an abstraction for difference in the platform APIs,
+     e.g. string manipulation functions, etc. */
+#include<stdio.h>
+#include<string.h>
+#include<strings.h>
+#include<sys/stat.h>
+
+#define TCHAR char
+
+#define _T(x) x
+
+#define DEPLOY_MULTIBYTE_SNPRINTF snprintf
+
+#define DEPLOY_SNPRINTF(buffer, sizeOfBuffer, count, format, ...) \
+    snprintf((buffer), (count), (format), __VA_ARGS__)
+
+#define DEPLOY_PRINTF(format, ...) \
+    printf((format), ##__VA_ARGS__)
+
+#define DEPLOY_FPRINTF(dest, format, ...) \
+    fprintf((dest), (format), __VA_ARGS__)
+
+#define DEPLOY_SSCANF(buf, format, ...) \
+    sscanf((buf), (format), __VA_ARGS__)
+
+#define DEPLOY_STRDUP(strSource) \
+    strdup((strSource))
+
+//return "error code" (like on Windows)
+static int DEPLOY_STRNCPY(char *strDest, size_t numberOfElements, const char *strSource, size_t count) {
+    char *s = strncpy(strDest, strSource, count);
+    // Duplicate behavior of the Windows' _tcsncpy_s() by adding a NULL
+    // terminator at the end of the string.
+    if (count < numberOfElements) {
+        s[count] = '\0';
+    } else {
+        s[numberOfElements - 1] = '\0';
+    }
+    return (s == strDest) ? 0 : 1;
+}
+
+static int DEPLOY_STRNCAT(char *strDest, size_t numberOfElements, const char *strSource, size_t count) {
+    // strncat always return null terminated string
+    char *s = strncat(strDest, strSource, count);
+    return (s == strDest) ? 0 : 1;
+}
+
+#define DEPLOY_STRICMP(x, y) \
+    strcasecmp((x), (y))
+
+#define DEPLOY_STRNICMP(x, y, cnt) \
+    strncasecmp((x), (y), (cnt))
+
+#define DEPLOY_STRNCMP(x, y, cnt) \
+    strncmp((x), (y), (cnt))
+
+#define DEPLOY_STRLEN(x) \
+    strlen((x))
+
+#define DEPLOY_STRSTR(x, y) \
+    strstr((x), (y))
+
+#define DEPLOY_STRCHR(x, y) \
+    strchr((x), (y))
+
+#define DEPLOY_STRRCHR(x, y) \
+    strrchr((x), (y))
+
+#define DEPLOY_STRPBRK(x, y) \
+    strpbrk((x), (y))
+
+#define DEPLOY_GETENV(x) \
+    getenv((x))
+
+#define DEPLOY_PUTENV(x) \
+    putenv((x))
+
+#define DEPLOY_STRCMP(x, y) \
+    strcmp((x), (y))
+
+#define DEPLOY_STRCPY(x, y) \
+    strcpy((x), (y))
+
+#define DEPLOY_STRCAT(x, y) \
+    strcat((x), (y))
+
+#define DEPLOY_ATOI(x) \
+    atoi((x))
+
+static int getFileSize(TCHAR* filename) {
+    struct stat statBuf;
+    if (stat(filename, &statBuf) == 0) {
+        return statBuf.st_size;
+    }
+    return -1;
+}
+
+#define DEPLOY_FILE_SIZE(filename) getFileSize(filename)
+
+#define DEPLOY_FOPEN(x, y) \
+    fopen((x), (y))
+
+#define DEPLOY_FGETS(x, y, z) \
+    fgets((x), (y), (z))
+
+#define DEPLOY_REMOVE(x) \
+    remove((x))
+
+#define DEPLOY_SPAWNV(mode, cmd, args) \
+    spawnv((mode), (cmd), (args))
+
+#define DEPLOY_ISDIGIT(ch) isdigit(ch)
+
+// for non-unicode, just return the input string for
+// the following 2 conversions
+#define DEPLOY_NEW_MULTIBYTE(message) message
+
+#define DEPLOY_NEW_FROM_MULTIBYTE(message) message
+
+// for non-unicode, no-op for the relase operation
+// since there is no memory allocated for the
+// string conversions
+#define DEPLOY_RELEASE_MULTIBYTE(tmpMBCS)
+
+#define DEPLOY_RELEASE_FROM_MULTIBYTE(tmpMBCS)
+
+// The size will be used for converting from 1 byte to 1 byte encoding.
+// Ensure have space for zero-terminator.
+#define DEPLOY_GET_SIZE_FOR_ENCODING(message, theLength) (theLength + 1)
+
+#endif
+#define xmlTagType    0
+#define xmlPCDataType 1
+
+typedef struct _xmlNode XMLNode;
+typedef struct _xmlAttribute XMLAttribute;
+
+struct _xmlNode {
+    int           _type;        /* Type of node: tag, pcdata, cdate */
+    TCHAR*         _name;        /* Contents of node */
+    XMLNode*      _next;        /* Next node at same level */
+    XMLNode*      _sub;         /* First sub-node */
+    XMLAttribute* _attributes;  /* List of attributes */
+};
+
+struct _xmlAttribute {
+    TCHAR* _name;              /* Name of attribute */
+    TCHAR* _value;             /* Value of attribute */
+    XMLAttribute* _next;      /* Next attribute for this tag */
+};
+
+/* Public interface */
+static void     RemoveNonAsciiUTF8FromBuffer(char *buf);
+XMLNode* ParseXMLDocument    (TCHAR* buf);
+void     FreeXMLDocument     (XMLNode* root);
+
+/* Utility methods for parsing document */
+XMLNode* FindXMLChild        (XMLNode* root,      const TCHAR* name);
+TCHAR*    FindXMLAttribute    (XMLAttribute* attr, const TCHAR* name);
+
+/* Debugging */
+void PrintXMLDocument(XMLNode* node, int indt);
+
 
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <ctype.h>
 #include <setjmp.h>
 #include <stdlib.h>
+#include <wctype.h>
+
 
 #define JWS_assert(s, msg)      \
     if (!(s)) { Abort(msg); }
@@ -290,7 +616,6 @@ static TCHAR* SkipFilling(void) {
     return CurPos;
 }
 
-
 /* Parses next token and initializes the global token variables above
    The tokennizer automatically skips comments (<!-- comment -->) and
    <! ... > directives.
@@ -339,7 +664,6 @@ static void GetNextToken(void) {
     CurPos = p;
 }
 
-
 static XMLNode* CreateXMLNode(int type, TCHAR* name) {
     XMLNode* node;
     node  = (XMLNode*)malloc(sizeof(XMLNode));
@@ -354,7 +678,6 @@ static XMLNode* CreateXMLNode(int type, TCHAR* name) {
     return node;
 }
 
-
 static XMLAttribute* CreateXMLAttribute(TCHAR *name, TCHAR* value) {
     XMLAttribute* attr;
     attr = (XMLAttribute*)malloc(sizeof(XMLAttribute));
@@ -366,7 +689,6 @@ static XMLAttribute* CreateXMLAttribute(TCHAR *name, TCHAR* value) {
     attr->_next =  NULL;
     return attr;
 }
-
 
 XMLNode* ParseXMLDocument(TCHAR* buf) {
     XMLNode* root;
@@ -566,7 +888,7 @@ static void FreeXMLAttribute(XMLAttribute* attr) {
 }
 
 /* Find element at current level with a given name */
-XMLNode* FindXMLChild(XMLNode* root, TCHAR* name) {
+XMLNode* FindXMLChild(XMLNode* root, const TCHAR* name) {
   if (root == NULL) return NULL;
 
   if (root->_type == xmlTagType && DEPLOY_STRCMP(root->_name, name) == 0) {
@@ -579,7 +901,7 @@ XMLNode* FindXMLChild(XMLNode* root, TCHAR* name) {
 /* Search for an attribute with the given name and returns the contents. Returns NULL if
  * attribute is not found
  */
-TCHAR* FindXMLAttribute(XMLAttribute* attr, TCHAR* name) {
+TCHAR* FindXMLAttribute(XMLAttribute* attr, const TCHAR* name) {
   if (attr == NULL) return NULL;
   if (DEPLOY_STRCMP(attr->_name, name) == 0) return attr->_value;
   return FindXMLAttribute(attr->_next, name);
@@ -622,8 +944,8 @@ static void indent(int indt) {
     }
 }
 
-TCHAR *CDStart = _T("<![CDATA[");
-TCHAR *CDEnd = _T("]]>");
+const TCHAR *CDStart = _T("<![CDATA[");
+const TCHAR *CDEnd = _T("]]>");
 
 
 static TCHAR* SkipPCData(TCHAR *p) {
@@ -637,3 +959,91 @@ static TCHAR* SkipPCData(TCHAR *p) {
 static int IsPCData(TCHAR *p) {
     return (DEPLOY_STRNCMP(CDStart, p, sizeof(CDStart)) == 0);
 }
+
+//--------------------------------------------------------------------------------------------------
+
+LinuxJavaUserPreferences::LinuxJavaUserPreferences(void) : JavaUserPreferences() {
+}
+
+LinuxJavaUserPreferences::~LinuxJavaUserPreferences(void) {
+}
+
+TString LinuxJavaUserPreferences::GetUserPrefFileName(TString Appid) {
+    TString result;
+    struct passwd *pw = getpwuid(getuid());
+    TString homedir = pw->pw_dir;
+    TString userOverrideFileName = FilePath::IncludeTrailingSlash(homedir) +
+        FilePath::IncludeTrailingSlash(_T(".java/.userPrefs")) +
+        FilePath::IncludeTrailingSlash(Appid) +
+        FilePath::IncludeTrailingSlash(_T("JVMUserOptions")) +
+        _T("prefs.xml");
+
+    if (FilePath::DirectoryExists(result) == true) {
+        result = userOverrideFileName;
+    }
+
+    return result;
+}
+
+std::map<TString, TString> ReadNode(XMLNode* node) {
+    std::map<TString, TString> result;
+    XMLNode* keyNode = FindXMLChild(node->_sub, "entry");
+
+    while (keyNode != NULL) {
+        TString key = FindXMLAttribute(keyNode->_attributes, "key");
+        TString value = FindXMLAttribute(keyNode->_attributes, "value");
+        result.insert(std::map<TString, TString>::value_type(key, value));
+        keyNode = keyNode->_next;
+    }
+
+    return result;
+}
+
+std::map<TString, TString> getJvmUserArgs(TString filename) {
+    std::map<TString, TString> result;
+
+    if (FilePath::FileExists(filename) == true) {
+        //scan file for the key
+        FILE* fp = fopen(PlatformString(filename).toPlatformString(), "r");
+
+        if (fp != NULL) {
+            fseek(fp, 0, SEEK_END);
+            long fsize = ftell(fp);
+            rewind(fp);
+            char *buf = (char*)malloc(fsize + 1);
+            fread(buf, fsize, 1, fp);
+            fclose(fp);
+            buf[fsize] = 0;
+
+            XMLNode* node = NULL;
+            XMLNode* doc = ParseXMLDocument(buf);
+
+            if (doc != NULL) {
+                node = FindXMLChild(doc, "map");
+
+                if (node != NULL) {
+                    result = ReadNode(node);
+                }
+            }
+            free(buf);
+        }
+    }
+
+    return result;
+}
+
+bool LinuxJavaUserPreferences::Load(TString Appid) {
+    bool result = false;
+    TString filename = GetUserPrefFileName(Appid);
+
+    if (FilePath::FileExists(filename) == true) {
+        FMap = getJvmUserArgs(filename);
+        result = true;
+    }
+
+    return result;
+}
+
+//--------------------------------------------------------------------------------------------------
+
+#endif // LINUX

@@ -230,17 +230,16 @@ public class MacAppBundlerTest {
 
         bundleParams.put(APP_NAME.getID(), "Smoke Test App");
         bundleParams.put(MAC_CF_BUNDLE_NAME.getID(), "Smoke");
-        bundleParams.put(MAIN_CLASS.getID(), "hello.TestPackager");
+        bundleParams.put(MAIN_CLASS.getID(), "hello.HelloRectangle");
         bundleParams.put(PREFERENCES_ID.getID(), "the/really/long/preferences/id");
         bundleParams.put(MAIN_JAR.getID(),
                 new RelativeFileSet(fakeMainJar.getParentFile(),
                         new HashSet<>(Arrays.asList(fakeMainJar)))
         );
-        bundleParams.put(CLASSPATH.getID(), fakeMainJar.toString());
+        bundleParams.put(CLASSPATH.getID(), "mainApp.jar");
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
         bundleParams.put(VERBOSE.getID(), true);
         bundleParams.put(DEVELOPER_ID_APP_SIGNING_KEY.getID(), null); // force no signing
-        bundleParams.put(ICON.getID(), "java-logo2.gif"); // force no signing
 
         if (runtimeJdk != null) {
             bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
@@ -250,6 +249,51 @@ public class MacAppBundlerTest {
         assertTrue(valid);
 
         File result = bundler.execute(bundleParams, new File(workDir, "smoke"));
+        System.err.println("Bundle at - " + result);
+        assertNotNull(result);
+        assertTrue(result.exists());
+    }
+
+    /**
+     * See File Associaiton
+     */
+    @Test
+    public void fileAssociation() throws IOException, ConfigException, UnsupportedPlatformException {
+        AbstractBundler bundler = new MacAppBundler();
+
+        assertNotNull(bundler.getName());
+        assertNotNull(bundler.getID());
+        assertNotNull(bundler.getDescription());
+        //assertNotNull(bundler.getBundleParameters());
+
+        Map<String, Object> bundleParams = new HashMap<>();
+
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+
+        bundleParams.put(APP_NAME.getID(), "File Association Test App");
+        bundleParams.put(MAC_CF_BUNDLE_NAME.getID(), "FASmoke");
+        bundleParams.put(MAIN_CLASS.getID(), "hello.HelloRectangle");
+        bundleParams.put(MAIN_JAR.getID(),
+                new RelativeFileSet(fakeMainJar.getParentFile(),
+                        new HashSet<>(Arrays.asList(fakeMainJar)))
+        );
+        bundleParams.put(CLASSPATH.getID(), "mainApp.jar");
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        bundleParams.put(VERBOSE.getID(), true);
+        bundleParams.put(DEVELOPER_ID_APP_SIGNING_KEY.getID(), null); // force no signing
+
+        Map<String, Object> fileAssociation = new HashMap<>();
+        fileAssociation.put(FA_DESCRIPTION.getID(), "Bogus File");
+        fileAssociation.put(FA_EXTENSIONS.getID(), "bogus");
+        fileAssociation.put(FA_CONTENT_TYPE.getID(), "application/x-vnd.test-bogus");
+        fileAssociation.put(FA_ICON.getID(), new File(appResourcesDir, "test.icns"));
+
+        bundleParams.put(FILE_ASSOCIATIONS.getID(), Arrays.asList(fileAssociation));
+
+        boolean valid = bundler.validate(bundleParams);
+        assertTrue(valid);
+
+        File result = bundler.execute(bundleParams, new File(workDir, "FASmoke"));
         System.err.println("Bundle at - " + result);
         assertNotNull(result);
         assertTrue(result.exists());
@@ -273,7 +317,7 @@ public class MacAppBundlerTest {
 
         bundleParams.put(APP_NAME.getID(), "Quarantined Test App");
         bundleParams.put(MAC_CF_BUNDLE_NAME.getID(), "Quarantine");
-        bundleParams.put(MAIN_CLASS.getID(), "hello.TestPackager");
+        bundleParams.put(MAIN_CLASS.getID(), "hello.HelloRectangle");
         bundleParams.put(PREFERENCES_ID.getID(), "the/really/long/preferences/id");
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
         bundleParams.put(VERBOSE.getID(), true);
@@ -356,6 +400,7 @@ public class MacAppBundlerTest {
 
         bundleParams.put(APP_NAME.getID(), "Everything App Name");
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        bundleParams.put(ARGUMENTS.getID(), Arrays.asList("He Said", "She Said"));
         bundleParams.put(BUNDLE_ID_SIGNING_PREFIX.getID(), "everything.signing.prefix.");
         bundleParams.put(DEVELOPER_ID_APP_SIGNING_KEY.getID(), "Developer ID Application");
         bundleParams.put(ICON_ICNS.getID(), hdpiIcon);
@@ -366,7 +411,7 @@ public class MacAppBundlerTest {
         bundleParams.put(MAC_CF_BUNDLE_NAME.getID(), "Everything CF Bundle Name");
         bundleParams.put(MAC_CF_BUNDLE_VERSION.getID(), "8.2.0");
         bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk == null ? System.getProperty("java.home") : runtimeJdk);
-        bundleParams.put(MAIN_CLASS.getID(), "hello.TestPackager");
+        bundleParams.put(MAIN_CLASS.getID(), "hello.HelloRectangle");
         bundleParams.put(MAIN_JAR.getID(), "mainApp.jar");
         bundleParams.put(CLASSPATH.getID(), "mainApp.jar");
         bundleParams.put(PREFERENCES_ID.getID(), "everything/preferences/id");
@@ -428,14 +473,14 @@ public class MacAppBundlerTest {
 
             bundleParams.put(APP_NAME.getID(), "User JVM Options App - " + name);
             bundleParams.put(MAC_CF_BUNDLE_NAME.getID(), name + ".application");
-            bundleParams.put(MAIN_CLASS.getID(), "hello.TestPackager");
+            bundleParams.put(MAIN_CLASS.getID(), "hello.HelloRectangle");
             bundleParams.put(IDENTIFIER.getID(), name);
             bundleParams.put(PREFERENCES_ID.getID(), name.replace(".", "/"));
             bundleParams.put(MAIN_JAR.getID(),
                     new RelativeFileSet(fakeMainJar.getParentFile(),
                             new HashSet<>(Arrays.asList(fakeMainJar)))
             );
-            bundleParams.put(CLASSPATH.getID(), fakeMainJar.toString());
+            bundleParams.put(CLASSPATH.getID(), "mainApp.jar");
             bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
             bundleParams.put(VERBOSE.getID(), true);
             bundleParams.put(DEVELOPER_ID_APP_SIGNING_KEY.getID(), null); // force no signing

@@ -19,6 +19,10 @@ set -e
 
 case "$1" in
     remove|upgrade|deconfigure)
+        echo Removing shortcut
+SECONDARY_LAUNCHERS_REMOVE
+        xdg-desktop-menu uninstall --novendor /opt/APPLICATION_FS_NAME/APPLICATION_LAUNCHER_FILENAME.desktop
+FILE_ASSOCIATION_REMOVE
 
         if [ "SERVICE_HINT" = "true" ]; then
             if [ "STOP_ON_UNINSTALL" = "true" ]; then

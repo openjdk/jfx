@@ -41,6 +41,8 @@
 #include <sys/stat.h>
 #include <io.h>
 #include <strsafe.h>
+#include <Shellapi.h>
+
 
 // http://msdn.microsoft.com/en-us/library/ms997538.aspx
 
@@ -191,23 +193,23 @@ bool ChangeIcon(_TCHAR* iconFileName, _TCHAR* executableFileName)
 
 int _tmain(int argc, _TCHAR* argv[])
 {
-	bool printUsage = true;
+    bool printUsage = true;
 
-	if (argc == 3)
-	{
-		wprintf(L"Icon File Name: %s\n", argv[1]);
-		wprintf(L"Executable File Name: %s\n", argv[2]);
+    if (argc == 3)
+    {
+        wprintf(L"Icon File Name: %s\n", argv[1]);
+        wprintf(L"Executable File Name: %s\n", argv[2]);
 
-		if (ChangeIcon(argv[1], argv[2]) == true)
-			printUsage = false;
-		else
-			printf("failed\n");
-	}
+        if (ChangeIcon(argv[1], argv[2]) == true)
+            printUsage = false;
+        else
+            printf("failed\n");
+    }
 
-	if (printUsage == true)
-	{
-		printf("Usage: iconswap.exe [Icon File Name] [Executable File Name]\n");
-	}
+    if (printUsage == true)
+    {
+        printf("Usage: iconswap.exe [Icon File Name] [Executable File Name]\n");
+    }
 
-	return 0;
+    return 0;
 }

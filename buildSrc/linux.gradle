@@ -173,6 +173,12 @@ LINUX.launcher.ccFlags = ["-DJAVAARCH=\"$OS_ARCH\"", "-I$JDK_HOME/include", "-I$
 LINUX.launcher.linker = linker
 LINUX.launcher.linkFlags = ["-ldl"]
 
+LINUX.launcherlibrary = [:]
+LINUX.launcherlibrary.compiler = compiler
+LINUX.launcherlibrary.ccFlags = ["-DJAVAARCH=\"$OS_ARCH\"", "-I$JDK_HOME/include", "-I$JDK_HOME/include/linux", "-c", "-fPIC"]
+LINUX.launcherlibrary.linker = linker
+LINUX.launcherlibrary.linkFlags = ["-ldl", "-lpthread", "-shared"]
+
 LINUX.iio = [:]
 LINUX.iio.javahInclude = ["com/sun/javafx/iio/**/*"]
 LINUX.iio.nativeSource = [

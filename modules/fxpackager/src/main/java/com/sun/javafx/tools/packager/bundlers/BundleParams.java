@@ -163,6 +163,10 @@ public class BundleParams {
         putUnlessNullOrEmpty(JVM_PROPERTIES.getID(), jvmProperties);
     }
 
+    public void setArguments(List<String> arguments) {
+        putUnlessNullOrEmpty(ARGUMENTS.getID(), arguments);
+    }
+
     public String getApplicationID() {
         return fetchParam(IDENTIFIER);
     }
@@ -306,6 +310,10 @@ public class BundleParams {
 
     public List<String> getJvmargs() {
         return JVM_OPTIONS.fetchFrom(params);
+    }
+
+    public List<String> getArguments() {
+        return ARGUMENTS.fetchFrom(params);
     }
 
     //Validation approach:

@@ -124,6 +124,18 @@ MAC.launcher.ccFlags = [
 MAC.launcher.linker = linker
 MAC.launcher.linkFlags = ["-ldl"]
 
+MAC.launcherlibrary = [:]
+MAC.launcherlibrary.compiler = compiler
+MAC.launcherlibrary.ccFlags = [
+//        "-std=c++0x",
+        "-c",
+        ccBaseFlags,
+        IS_DEBUG_NATIVE ? ["-DDEBUG", "-O0"] : ["-O3", "-DNDEBUG"]].flatten()
+MAC.launcherlibrary.linker = linker
+MAC.launcherlibrary.linkFlags = ["-ldl", "-dynamiclib",
+        "-framework", "Cocoa",
+        "-stdlib=libstdc++"]
+
 MAC.iio = [:]
 MAC.iio.javahInclude = ["com/sun/javafx/iio/**/*"]
 MAC.iio.nativeSource = [

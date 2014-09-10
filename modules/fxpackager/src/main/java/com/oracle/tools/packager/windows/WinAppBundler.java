@@ -66,6 +66,9 @@ public class WinAppBundler extends AbstractBundler {
             (s, p) -> null);
 
     private final static String EXECUTABLE_NAME = "WinLauncher.exe";
+    private final static String LIBRARY_NAME = "packager.dll";
+    private final static String REDIST_MSVCR = "msvcr100.dll";
+    private final static String REDIST_MSVCP = "msvcp100.dll";
 
     private static final String TOOL_ICON_SWAP="IconSwap.exe";
 
@@ -191,8 +194,12 @@ public class WinAppBundler extends AbstractBundler {
         return new File(outDir, APP_NAME.fetchFrom(p));
     }
 
-    public static File getLauncher(File outDir, Map<String, ? super Object> p) {
-        return new File(getRootDir(outDir, p), APP_NAME.fetchFrom(p) +".exe");
+    public static String getLauncherName(Map<String, ? super Object> p) {
+        return APP_NAME.fetchFrom(p) +".exe";
+    }
+
+    public static String getLauncherCfgName(Map<String, ? super Object> p) {
+        return "app\\" + APP_NAME.fetchFrom(p) +".cfg";
     }
 
     private File getConfig_AppIcon(Map<String, ? super Object> params) {
@@ -232,6 +239,7 @@ public class WinAppBundler extends AbstractBundler {
     }
 
     File doBundle(Map<String, ? super Object> p, File outputDirectory, boolean dependentTask) {
+        Map<String, ? super Object> originalParams = new HashMap<>(p);
         if (!outputDirectory.isDirectory() && !outputDirectory.mkdirs()) {
             throw new RuntimeException(MessageFormat.format(I18N.getString("error.cannot-create-output-dir"), outputDirectory.getAbsolutePath()));
         }
@@ -243,8 +251,6 @@ public class WinAppBundler extends AbstractBundler {
                 Log.info(MessageFormat.format(I18N.getString("message.creating-app-bundle"), APP_NAME.fetchFrom(p), outputDirectory.getAbsolutePath()));
             }
 
-            prepareConfigFiles(p);
-
             // Create directory structure
             File rootDirectory = getRootDir(outputDirectory, p);
             IOUtils.deleteRecursive(rootDirectory);
@@ -254,46 +260,31 @@ public class WinAppBundler extends AbstractBundler {
             appDirectory.mkdirs();
             copyApplication(p, appDirectory);
 
-            // Generate PkgInfo
-            File pkgInfoFile = new File(appDirectory, "package.cfg");
-            pkgInfoFile.createNewFile();
-            writePkgInfo(p, pkgInfoFile);
+            // create the .exe launchers
+            createLauncherForEntryPoint(p, rootDirectory);
 
-            // Copy executable root folder
-            File executableFile = getLauncher(outputDirectory, p);
+            // copy in the needed libraries
             IOUtils.copyFromURL(
-                    RAW_EXECUTABLE_URL.fetchFrom(p),
-                    executableFile);
-            executableFile.setExecutable(true, false);
+                    WinResources.class.getResource(LIBRARY_NAME),
+                    new File(rootDirectory, LIBRARY_NAME));
+            IOUtils.copyFromURL(
+                    WinResources.class.getResource(REDIST_MSVCR),
+                    new File(rootDirectory, REDIST_MSVCR));
+            IOUtils.copyFromURL(
+                    WinResources.class.getResource(REDIST_MSVCP),
+                    new File(rootDirectory, REDIST_MSVCP));
 
-            //Update branding of exe file
-            if (REBRAND_EXECUTABLE.fetchFrom(p) && getConfig_AppIcon(p).exists()) {
-                //extract helper tool
-                File iconSwapTool = File.createTempFile("iconswap", ".exe");
-                iconSwapTool.delete();
-                IOUtils.copyFromURL(
-                        WinResources.class.getResource(TOOL_ICON_SWAP),
-                        iconSwapTool);
-                iconSwapTool.setExecutable(true, false);
-                iconSwapTool.deleteOnExit();
-
-                //run it on launcher file
-                executableFile.setWritable(true);
-                ProcessBuilder pb = new ProcessBuilder(
-                        iconSwapTool.getAbsolutePath(),
-                        getConfig_AppIcon(p).getAbsolutePath(),
-                        executableFile.getAbsolutePath());
-                IOUtils.exec(pb, VERBOSE.fetchFrom(p));
-                executableFile.setReadOnly();
-                iconSwapTool.delete();
+            // create the secondary launchers, if any
+            List<Map<String, ? super Object>> entryPoints = StandardBundlerParam.SECONDARY_LAUNCHERS.fetchFrom(p);
+            for (Map<String, ? super Object> entryPoint : entryPoints) {
+                Map<String, ? super Object> tmp = new HashMap<>(originalParams);
+                tmp.putAll(entryPoint);
+                createLauncherForEntryPoint(tmp, rootDirectory);
             }
 
             // Copy runtime to PlugIns folder
             File runtimeDirectory = new File(rootDirectory, "runtime");
             copyRuntime(p, runtimeDirectory);
-
-            IOUtils.copyFile(getConfig_AppIcon(p),
-                    new File(getRootDir(outputDirectory, p), APP_NAME.fetchFrom(p) + ".ico"));
 
             if (!dependentTask) {
                 Log.info(MessageFormat.format(I18N.getString("message.result-dir"), outputDirectory.getAbsolutePath()));
@@ -314,6 +305,44 @@ public class WinAppBundler extends AbstractBundler {
 
     }
 
+    private void createLauncherForEntryPoint(Map<String, ? super Object> p, File rootDirectory) throws IOException {
+        prepareConfigFiles(p);
+
+        writePkgInfo(p, rootDirectory);
+
+        // Copy executable root folder
+        File executableFile = new File(rootDirectory, getLauncherName(p));
+        IOUtils.copyFromURL(
+                RAW_EXECUTABLE_URL.fetchFrom(p),
+                executableFile);
+        executableFile.setExecutable(true, false);
+
+        //Update branding of exe file
+        if (REBRAND_EXECUTABLE.fetchFrom(p) && getConfig_AppIcon(p).exists()) {
+            //extract helper tool
+            File iconSwapTool = File.createTempFile("iconswap", ".exe");
+            iconSwapTool.delete();
+            IOUtils.copyFromURL(
+                    WinResources.class.getResource(TOOL_ICON_SWAP),
+                    iconSwapTool);
+            iconSwapTool.setExecutable(true, false);
+            iconSwapTool.deleteOnExit();
+
+            //run it on launcher file
+            executableFile.setWritable(true);
+            ProcessBuilder pb = new ProcessBuilder(
+                    iconSwapTool.getAbsolutePath(),
+                    getConfig_AppIcon(p).getAbsolutePath(),
+                    executableFile.getAbsolutePath());
+            IOUtils.exec(pb, VERBOSE.fetchFrom(p));
+            executableFile.setReadOnly();
+            iconSwapTool.delete();
+        }
+
+        IOUtils.copyFile(getConfig_AppIcon(p),
+                new File(rootDirectory, APP_NAME.fetchFrom(p) + ".ico"));
+    }
+
     private void copyApplication(Map<String, ? super Object> params, File appDirectory) throws IOException {
         RelativeFileSet appResource = APP_RESOURCES.fetchFrom(params);
         if (appResource == null) {
@@ -326,7 +355,9 @@ public class WinAppBundler extends AbstractBundler {
         }
     }
 
-    private void writePkgInfo(Map<String, ? super Object> params, File pkgInfoFile) throws FileNotFoundException {
+    private void writePkgInfo(Map<String, ? super Object> params, File rootDir) throws FileNotFoundException {
+        File pkgInfoFile = new File(rootDir, getLauncherCfgName(params));
+
         pkgInfoFile.delete();
 
         PrintStream out = new PrintStream(pkgInfoFile);
@@ -357,7 +388,6 @@ public class WinAppBundler extends AbstractBundler {
             idx++;
         }
 
-
         Map<String, String> overridableJVMOptions = USER_JVM_OPTIONS.fetchFrom(params);
         idx = 1;
         for (Map.Entry<String, String> arg: overridableJVMOptions.entrySet()) {
@@ -370,6 +400,15 @@ public class WinAppBundler extends AbstractBundler {
             }
             idx++;
         }
+
+        // add command line args
+        List<String> args = ARGUMENTS.fetchFrom(params);
+        idx = 1;
+        for (String a : args) {
+            out.println("arg."+idx+"="+a);
+            idx++;
+        }
+
         out.close();
     }
 
@@ -419,6 +458,7 @@ public class WinAppBundler extends AbstractBundler {
         return Arrays.asList(
                 APP_NAME,
                 APP_RESOURCES,
+                ARGUMENTS,
                 ICON_ICO,
                 JVM_OPTIONS,
                 JVM_PROPERTIES,

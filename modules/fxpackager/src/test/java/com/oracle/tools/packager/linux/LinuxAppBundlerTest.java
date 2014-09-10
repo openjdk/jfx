@@ -40,10 +40,12 @@ import org.junit.Test;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
@@ -132,13 +134,13 @@ public class LinuxAppBundlerTest {
         bundleParams.put(BUILD_ROOT.getID(), tmpBase);
 
         bundleParams.put(APP_NAME.getID(), "Smoke Test");
-        bundleParams.put(MAIN_CLASS.getID(), "hello.TestPackager");
+        bundleParams.put(MAIN_CLASS.getID(), "hello.HelloRectangle");
         bundleParams.put(PREFERENCES_ID.getID(), "the/really/long/preferences/id");
         bundleParams.put(MAIN_JAR.getID(),
                 new RelativeFileSet(fakeMainJar.getParentFile(),
                         new HashSet<>(Arrays.asList(fakeMainJar)))
         );
-        bundleParams.put(CLASSPATH.getID(), fakeMainJar.toString());
+        bundleParams.put(CLASSPATH.getID(), "mainApp.jar");
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
         bundleParams.put(VERBOSE.getID(), true);
 
@@ -146,7 +148,7 @@ public class LinuxAppBundlerTest {
         assertTrue(valid);
         
         File output = bundler.execute(bundleParams, new File(workDir, "smoke"));
-        validatePackageCfg(output);
+        validatePackageCfg(output, bundleParams);
     }
 
     /**
@@ -169,12 +171,12 @@ public class LinuxAppBundlerTest {
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
 
         File output = bundler.execute(bundleParams, new File(workDir, "BareMinimum"));
-        validatePackageCfg(output);
+        validatePackageCfg(output, bundleParams);
         assertTrue(output.isDirectory());
     }
 
-    public void validatePackageCfg(File root) throws IOException {
-        try (FileInputStream fis = new FileInputStream(new File(root, "app/package.cfg"))) {
+    public void validatePackageCfg(File root, Map<String, ? super Object> params) throws IOException {
+        try (FileInputStream fis = new FileInputStream(new File(root, LinuxAppBundler.getLauncherCfgName(params)))) {
             Properties p = new Properties();
             p.load(fis);
 
@@ -217,10 +219,11 @@ public class LinuxAppBundlerTest {
 
         bundleParams.put(APP_NAME.getID(), "Everything App Name");
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        bundleParams.put(ARGUMENTS.getID(), Arrays.asList("He Said", "She Said"));
         bundleParams.put(LinuxAppBundler.LINUX_RUNTIME.getID(), System.getProperty("java.home"));
         bundleParams.put(JVM_OPTIONS.getID(), "-Xms128M");
         bundleParams.put(JVM_PROPERTIES.getID(), "everything.jvm.property=everything.jvm.property.value");
-        bundleParams.put(MAIN_CLASS.getID(), "hello.TestPackager");
+        bundleParams.put(MAIN_CLASS.getID(), "hello.HelloRectangle");
         bundleParams.put(MAIN_JAR.getID(), "mainApp.jar");
         bundleParams.put(CLASSPATH.getID(), "mainApp.jar");
         bundleParams.put(PREFERENCES_ID.getID(), "everything/preferences/id");
@@ -263,5 +266,48 @@ public class LinuxAppBundlerTest {
         System.err.println("Bundle at - " + result);
         assertNotNull(result);
         assertTrue(result.exists());
+    }
+
+    /**
+     * multiple launchers
+     */
+    @Test
+    public void twoLaunchersTest() throws IOException, ConfigException, UnsupportedPlatformException {
+        Bundler bundler = new LinuxAppBundler();
+
+        assertNotNull(bundler.getName());
+        assertNotNull(bundler.getID());
+        assertNotNull(bundler.getDescription());
+        //assertNotNull(bundler.getBundleParameters());
+
+        Map<String, Object> bundleParams = new HashMap<>();
+
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+
+        bundleParams.put(APP_NAME.getID(), "Two Launchers Test");
+        bundleParams.put(MAIN_CLASS.getID(), "hello.HelloRectangle");
+        bundleParams.put(PREFERENCES_ID.getID(), "the/really/long/preferences/id");
+        bundleParams.put(MAIN_JAR.getID(),
+                new RelativeFileSet(fakeMainJar.getParentFile(),
+                        new HashSet<>(Arrays.asList(fakeMainJar)))
+        );
+        bundleParams.put(CLASSPATH.getID(), "mainApp.jar");
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        bundleParams.put(VERBOSE.getID(), true);
+
+        List<Map<String, ? super Object>> secondaryLaunchers = new ArrayList<>();
+        for (String name : new String[] {"Fire", "More Fire"}) {
+            Map<String, ? super Object> launcher = new HashMap<>();
+            launcher.put(APP_NAME.getID(), name);
+            launcher.put(PREFERENCES_ID.getID(), "secondary/launcher/" + name);
+            secondaryLaunchers.add(launcher);
+        }
+        bundleParams.put(SECONDARY_LAUNCHERS.getID(), secondaryLaunchers);
+
+        boolean valid = bundler.validate(bundleParams);
+        assertTrue(valid);
+
+        File output = bundler.execute(bundleParams, new File(workDir, "launchers"));
+        validatePackageCfg(output, bundleParams);
     }
 }

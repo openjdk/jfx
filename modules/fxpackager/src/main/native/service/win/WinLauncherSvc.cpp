@@ -88,7 +88,7 @@ static void debug(LPCTSTR pszFormat, ...) {
     if (isDebug) {
         va_start(ap, cchDest);
         StringCchPrintf(szOutput, cchDest, pszFormat);
-	va_end(ap);
+        va_end(ap);
 
         OutputDebugString(szOutput);
     }
@@ -359,10 +359,10 @@ VOID SvcStartOnInstall(SC_HANDLE schService)
         debug(TEXT("Service started successfully."));
     } else {
         debug(TEXT("Service not started."));
-	debug(TEXT("Current State: %d"), ssStatus.dwCurrentState);
-	debug(TEXT("Exit Code: %d"), ssStatus.dwWin32ExitCode);
-	debug(TEXT("Check Point: %d"), ssStatus.dwCheckPoint);
-	debug(TEXT("Wait Hint: %d"), ssStatus.dwWaitHint);
+        debug(TEXT("Current State: %d"), ssStatus.dwCurrentState);
+        debug(TEXT("Exit Code: %d"), ssStatus.dwWin32ExitCode);
+        debug(TEXT("Check Point: %d"), ssStatus.dwCheckPoint);
+        debug(TEXT("Wait Hint: %d"), ssStatus.dwWaitHint);
     }
 }
 
@@ -438,7 +438,7 @@ VOID SvcStopOnUninstall(SC_HANDLE schSCManager, SC_HANDLE schService)
                                &dwBytesNeeded))
     {
         debug(TEXT("QueryServiceStatusEx failed (%d)"), GetLastError());
-	return;
+        return;
     }
 
     if (ssp.dwCurrentState == SERVICE_STOPPED) {
@@ -516,7 +516,7 @@ VOID SvcStopOnUninstall(SC_HANDLE schSCManager, SC_HANDLE schService)
 
         if (ssp.dwCurrentState == SERVICE_STOPPED) {
             break;
-	}
+        }
 
         if (GetTickCount() - dwStartTime > dwTimeout) {
             debug(TEXT("Wait timed out."));
@@ -560,7 +560,7 @@ BOOL StopDependentServices(SC_HANDLE schSCManager, SC_HANDLE schService) {
   
         if (!lpDependencies) {
             return FALSE;
-	}
+        }
 
         __try {
             // Enumerate the dependencies.
@@ -580,7 +580,7 @@ BOOL StopDependentServices(SC_HANDLE schSCManager, SC_HANDLE schService) {
 
                 if (!hDepService) {
                     return FALSE;
-		}
+                }
 
                 __try {
                     // Send a stop code.

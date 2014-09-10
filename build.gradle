@@ -103,7 +103,7 @@ void defineProperty(String name, Properties props, String defaultValue) {
  * cygwin is installed, as I hope one day to remove the requirement to build
  * with cygwin, but at present (due to GStreamer / Webkit) cygwin is needed
  * anyway.
- * 
+ *
  * @param path the path to convert
  * @return the path converted to windows style, if on windows, otherwise it
  *         is the supplied path.
@@ -149,7 +149,7 @@ class CompileTarget {
 /**
  * Iterates over each of the compile targets, passing the given closure
  * a CompileTarget instance.
- * 
+ *
  * @param c The closure to call
  */
 void compileTargets(Closure c) {
@@ -170,11 +170,11 @@ void compileTargets(Closure c) {
  * content for a properties file built at build time and stored in the
  * root project's $buildDir, and then loading that properties file and
  * passing it to the processor closure.
- * 
+ *
  * This is used on windows to produce a properties file containing all the
  * windows visual studio paths and environment variables, and on Linux
  * for storing the results of pkg-config calls.
- * 
+ *
  * @param name the name of the file to produce
  * @param loader a closure which is invoked, given the properties file. This
  *        closure is invoked only if the properties file needs to be created
@@ -442,7 +442,7 @@ if (!importCrossTools && hasProperty("IMPORT_CROSS_TOOLS")) {
 ext.IS_IMPORT_CROSS_TOOLS = importCrossTools
 
 // Location of the cross compile tools
-def crossToolsDir = "../crosslibs" 
+def crossToolsDir = "../crosslibs"
 if (hasProperty("CROSS_TOOLS_DIR")) {
     crossToolsDir = CROSS_TOOLS_DIR
 }
@@ -670,7 +670,7 @@ compileTargets { t ->
     // This value is used to under ./build/${sdkDirName} to allow for
     // a common name for the hosted build (for use when building apps)
     // and a unique name for cross builds.
-    if (rootProject.defaultHostTarget.equals(t.name)) { 
+    if (rootProject.defaultHostTarget.equals(t.name)) {
         // use a simple common default for the "host" build
         targetProperties.sdkDirName="sdk"
     } else {
@@ -846,7 +846,7 @@ ext.BUILD_SRC = rootProject.files("buildSrc/build/libs/buildSrc.jar")
  * Convenience method for creating javah, cc, link, and "native" tasks in the given project. These
  * tasks are parameterized by name, so that we can produce, for example, javahGlass, ccGlass, etc
  * named tasks.
- * 
+ *
  * @param project The project to add tasks to
  * @param name The name of the project, such as "prism-common". This name is used
  *        in the name of the generated task, such as ccPrismCommon, and also
@@ -865,7 +865,7 @@ void addNative(Project project, String name) {
     if (project.hasProperty("nativeAllTask")) project.nativeAllTask.dependsOn nativeTask
     project.assemble.dependsOn(nativeTask)
     if (project.hasProperty("cleanNativeAllTask")) project.cleanNativeAllTask.dependsOn cleanTask
-    
+
     // Each of the different compile targets will be placed in a sub directory
     // of these root dirs, with the name of the dir being the name of the target
     def headerRootDir = project.file("$project.buildDir/generated-src/headers/$name")
@@ -892,7 +892,7 @@ void addNative(Project project, String name) {
             println("Native library ${name} disabled in ${t.name} project properties");
             return
         }
-        
+
         def javahTask = project.task("javah${t.capital}${capitalName}", type: JavaHeaderTask, dependsOn: project.classes, group: "Build") {
             description = "Generates JNI Headers for ${name} for ${t.name}"
             if (properties.javahSource == null) {
@@ -1809,10 +1809,9 @@ project(":fxpackager") {
     }
     processResources.dependsOn man
 
-    // Compile the native launchers. These are included in ant-javafx.jar
-    // TODO should teach this to know 32 / 64 bit
+    // Compile the native launchers. These are included in ant-javafx.jar.
     if (IS_WINDOWS && COMPILE_FXPACKAGER) {
-        task compileWinLauncher(type: CCTask, group: "Build") {
+        task buildWinLauncher(type: CCTask, group: "Build") {
             description = "Compiles native sources for the application co-bundle launcher";
             matches = "WinLauncher\\.cpp";
             params.addAll(WIN.launcher.ccFlags);
@@ -1824,16 +1823,39 @@ project(":fxpackager") {
             doLast {
                 copy {
                     from "$buildDir/native/WinLauncher/WinLauncher.exe"
+                    from "$MSVCR"
+                    from "$MSVCP"
                     into "$buildDir/classes/main/com/oracle/tools/packager/windows"
                 }
             }
         }
-        task compileWinLauncherSvc(type: CCTask, group: "Build") {
+        task compileWinLibrary(type: CCTask, group: "Build") {
+            description = "Compiles native sources for the application co-bundle launcher library";
+            matches = ".*\\.cpp"
+            source(file("src/main/native/library/common"));
+            params.addAll(WIN.launcherlibrary.ccFlags)
+            output(file("$buildDir/native/WinLauncher/obj"));
+            compiler = WIN.launcherlibrary.compiler
+        }
+        task linkWinLibrary(type: LinkTask, group: "Build", dependsOn: compileWinLibrary) {
+            description = "Links native sources for the application co-bundle launcher library";
+            objectDir = file("$buildDir/native/WinLauncher/obj")
+            linkParams.addAll(WIN.launcherlibrary.linkFlags);
+            lib = file("$buildDir/native/WinLauncher/packager.dll")
+            linker = WIN.launcherlibrary.linker
+            doLast {
+                copy {
+                    from "$buildDir/native/WinLauncher/packager.dll"
+                    into "$buildDir/classes/main/com/oracle/tools/packager/windows"
+                }
+            }
+        }
+        task buildWinLauncherSvc(type: CCTask, group: "Build") {
             description = "Compiles native sources for the application co-bundle launcher";
             matches = "WinLauncherSvc\\.cpp";
             params.addAll(WIN.launcher.ccFlags);
             output(file("$buildDir/native/WinLauncherSvc"));
-            source(file("src/main/native/launcher/win"));
+            source(file("src/main/native/service/win"));
             compiler = WIN.launcher.compiler
             exe = true;
             linkerOptions.addAll(WIN.launcher.linkFlags);
@@ -1844,12 +1866,12 @@ project(":fxpackager") {
                 }
             }
         }
-        task compileIconSwap(type: CCTask, group: "Build") {
+        task buildIconSwap(type: CCTask, group: "Build") {
             description = "Compiles native sources for the application co-bundle launcher"
             matches = "IconSwap\\.cpp"
             params.addAll(WIN.iconLauncher.ccFlags)
             output(file("$buildDir/native/IconSwap"))
-            source file("src/main/native/launcher/win")
+            source file("src/main/native/tools/win")
             compiler = WIN.launcher.compiler
             exe = true
             linkerOptions.addAll(WIN.iconLauncher.linkFlags)
@@ -1860,40 +1882,70 @@ project(":fxpackager") {
                 }
             }
         }
-        task compileLauncher(dependsOn: [compileWinLauncher, compileWinLauncherSvc, compileIconSwap])
+        task compileLauncher(dependsOn: [buildWinLauncher, linkWinLibrary, buildWinLauncherSvc, buildIconSwap])
         jar.dependsOn compileLauncher;
-    } else if (COMPILE_FXPACKAGER) {
-        if (IS_MAC) {
-            task compileLauncher(type: CCTask, group: "Build") {
-                description = "Compiles native sources for the application co-bundle launcher"
-                matches = ".*\\.m"
-                output(file("$buildDir/classes/main/com/oracle/tools/packager/mac"))
-                params.addAll(MAC.launcher.ccFlags)
-                source file("src/main/native/launcher/mac")
-                compiler = MAC.launcher.compiler
-                eachOutputFile = { f ->
-                    return new File(f.getParent(), "JavaAppLauncher")
-                }
+    } else if (IS_MAC && COMPILE_FXPACKAGER) {
+        task buildMacLauncher(type: CCTask, group: "Build") {
+            description = "Compiles native sources for the application co-bundle launcher"
+            matches = ".*\\.m"
+            source file("src/main/native/launcher/mac")
+            params.addAll(MAC.launcher.ccFlags)
+            compiler = MAC.launcher.compiler
+            output(file("$buildDir/classes/main/com/oracle/tools/packager/mac"))
+            eachOutputFile = { f ->
+                return new File(f.getParent(), "JavaAppLauncher")
             }
-            jar.dependsOn compileLauncher;
-        } else {
-            def ccTask = project.task("compileLauncher", type: CCTask, group: "Build") {
-                description = "Compiles native sources for the application co-bundle launcher"
-                matches = ".*\\.c"
-                output(file("$buildDir/native/launcher"))
-                params.addAll(LINUX.launcher.ccFlags)
-                compiler = LINUX.launcher.compiler
-                source file("src/main/native/launcher/linux")
-            }
-            def linkTask = project.task("linkLauncher", type: LinkTask, dependsOn: ccTask, group: "Build") {
-                description = "Creates native dynamic library for the application co-bundle launcher"
-                linker = LINUX.launcher.linker
-                linkParams.addAll(LINUX.launcher.linkFlags)
-                objectDir = file("$buildDir/native/launcher")
-                lib = file("$buildDir/classes/main/com/oracle/tools/packager/linux/JavaAppLauncher")
-            }
-            jar.dependsOn linkTask;
         }
+        task compileMacLibrary(type: CCTask, group: "Build") {
+            description = "Compiles native sources for the application co-bundle launcher library"
+            matches = ".*\\.cpp|.*\\.mm"
+            source file("src/main/native/library/common");
+            params.addAll(MAC.launcherlibrary.ccFlags)
+            compiler = MAC.launcherlibrary.compiler
+            output(file("$buildDir/native/maclauncher/obj"))
+        }
+        task linkMacLibrary(type: LinkTask, group: "Build", dependsOn: compileMacLibrary) {
+            description = "Links native sources for the application co-bundle launcher library"
+            objectDir = file("$buildDir/native/maclauncher/obj")
+            linkParams.addAll(MAC.launcherlibrary.linkFlags)
+            linker = MAC.launcherlibrary.linker
+            lib = file("$buildDir/classes/main/com/oracle/tools/packager/mac/libpackager.dylib")
+        }
+        task compileLauncher(dependsOn: [buildMacLauncher, linkMacLibrary])
+        jar.dependsOn compileLauncher;
+    } else if (IS_LINUX && COMPILE_FXPACKAGER) {
+        task compileLinuxLauncher(type: CCTask, group: "Build") {
+            description = "Compiles native sources for the application co-bundle launcher"
+            matches = ".*\\.cpp"
+            source file("src/main/native/launcher/linux")
+            params.addAll(LINUX.launcher.ccFlags)
+            compiler = LINUX.launcher.compiler
+            output(file("$buildDir/native/linuxlauncher/launcherobj"))
+        }
+        task linkLinuxLauncher(type: LinkTask, dependsOn: compileLinuxLauncher, group: "Build") {
+            description = "Links native dynamic library for the application co-bundle launcher"
+            objectDir = file("$buildDir/native/linuxlauncher/launcherobj")
+            linkParams.addAll(LINUX.launcher.linkFlags)
+            linker = LINUX.launcher.linker
+            lib = file("$buildDir/classes/main/com/oracle/tools/packager/linux/JavaAppLauncher")
+        }
+        task compileLinuxLibrary(type: CCTask, group: "Build") {
+            description = "Compiles native sources for the application co-bundle launcher library"
+            matches = ".*\\.cpp"
+            source file("src/main/native/library/common")
+            params.addAll(LINUX.launcherlibrary.ccFlags)
+            compiler = LINUX.launcherlibrary.compiler
+            output(file("$buildDir/native/linuxlauncher/obj"))
+        }
+        task linkLinuxLibrary(type: LinkTask, dependsOn: compileLinuxLibrary, group: "Build") {
+            description = "Links native dynamic library for the application co-bundle launcher library"
+            objectDir = file("$buildDir/native/linuxlauncher/obj")
+            linkParams.addAll(LINUX.launcherlibrary.linkFlags)
+            linker = LINUX.launcherlibrary.linker
+            lib = file("$buildDir/classes/main/com/oracle/tools/packager/linux/libpackager.so")
+        }
+        task compileLauncher(dependsOn: [linkLinuxLauncher, linkLinuxLibrary])
+        jar.dependsOn compileLauncher;
     }
 
     // Builds the javapackager executable. For everything other than windows,
@@ -1974,7 +2026,20 @@ project(":fxpackager") {
         }
     }
 
+    task packagerJar(type: Jar) {
+        group = "Basic"
+        description = "Creates the packager.jar"
+        archiveName = "packager.jar";
+        includeEmptyDirs = false
+        from("$buildDir/classes/main");
+        from("$buildDir/resources/main");
+        include('jdk/packager/**')
+
+        dependsOn(buildJavaPackager);
+    }
+
     jar.dependsOn buildJavaPackager
+    jar.dependsOn packagerJar
 
     classes << {
         // Copy all of the download libraries to libs directory for the sake of the IDEs
@@ -2001,7 +2066,7 @@ project(":fxpackager") {
 
         manifest {
             attributes(
-                    "Main-Class": "hello.TestPackager",
+                    "Main-Class": "hello.HelloRectangle",
                     "Custom-Attribute": " Is it stripped?"
             )
         }
@@ -2012,7 +2077,10 @@ project(":fxpackager") {
                 from "$projectDir/src/main/resources/com/oracle/tools/packager/mac/GenericAppHiDPI.icns"
                 from "$projectDir/src/main/resources/com/oracle/tools/packager/windows/javalogo_white_48.ico"
                 from "$projectDir/src/test/resources/hello/java-logo2.gif"
+                from "$projectDir/src/test/resources/hello/small.ico"
+                from "$projectDir/src/test/resources/hello/test.icns"
                 from "$projectDir/../../LICENSE"
+                from "$projectDir/build/libs/packager.jar"
                 into project.file("$projectDir/build/tmp/tests/appResources")
             }
             copy {
@@ -2050,6 +2118,17 @@ project(":fxpackager") {
         systemProperty "RETAIN_PACKAGER_TESTS", RETAIN_PACKAGER_TESTS
         systemProperty "TEST_PACKAGER_DMG", TEST_PACKAGER_DMG
         systemProperty "FULL_TEST", FULL_TEST
+    }
+
+    task packagerDev(dependsOn: [jar, packagerFakeJar], type:JavaExec) {
+        workingDir = project.file("build/tmp/tests/appResources/")
+        classpath = project.files("build/libs/ant-javafx.jar", "build/classes/test", "build/resources/test")
+        main = "hello.SimpleBundle"
+        args = [
+                "-o", "$projectDir/build/dev",
+                "-all",
+                "image"
+        ]
     }
 }
 
