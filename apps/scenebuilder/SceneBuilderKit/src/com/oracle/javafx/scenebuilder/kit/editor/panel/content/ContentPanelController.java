@@ -366,16 +366,23 @@ public class ContentPanelController extends AbstractFxmlPanelController
                 final FXOMObject nodeFxomObject = mask.getClosestFxNode();
                 if (nodeFxomObject != null) {
                     final Node node = (Node) nodeFxomObject.getSceneGraphObject();
-                    union.add(node.localToScene(node.getLayoutBounds(), true /* rootScene */));
+                    assert node.getLayoutBounds() != null;
+                    final Bounds nodeBounds = node.localToScene(node.getLayoutBounds(), true /* rootScene */);
+                    assert nodeBounds != null;
+                    union.add(nodeBounds);
                 }
             }
         }
 
         if (union.getResult() != null) {
             final Node content = scrollPane.getContent();
-            final Bounds enclosing = content.sceneToLocal(union.getResult(), true /* rootScene */);
+            final Bounds sceneEnclosing = union.getResult();
+            assert sceneEnclosing.getMinZ() == 0.0; // Side effect of SubScene
+            assert sceneEnclosing.getMaxZ() == 0.0;
+            final Bounds localEnclosing = content.sceneToLocal(sceneEnclosing, true /* rootScene */);
+            assert localEnclosing != null;
             final ScrollPaneBooster spb = new ScrollPaneBooster(scrollPane);
-            spb.scrollTo(enclosing);
+            spb.scrollTo(localEnclosing);
         }
     }
 
