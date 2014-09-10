@@ -131,15 +131,11 @@ public class CssInternal {
     }
 
     public static boolean isThemeRule(Rule rule) {
-        // With SB 2, we apply explicitly theme css (Modena, Caspian, ...)
-        // So although their rules appear with an AUTHOR origin, we have to consider them as USER_AGENT.
-        if (rule.getOrigin() == StyleOrigin.AUTHOR) {
-            String stylePath = rule.getStylesheet().getUrl();
-            assert stylePath != null;
-            for (String themeUrl : themeUrls) {
-                if (stylePath.endsWith(themeUrl)) {
-                    return true;
-                }
+        String stylePath = rule.getStylesheet().getUrl();
+        assert stylePath != null;
+        for (String themeUrl : themeUrls) {
+            if (stylePath.endsWith(themeUrl)) {
+                return true;
             }
         }
         return false;
@@ -496,24 +492,9 @@ public class CssInternal {
         if (style == null || style.getDeclaration() == null) {
             return null;
         }
-        return getOrigin(style.getDeclaration().getRule());
+        return style.getDeclaration().getRule().getOrigin();
     }
 
-    // Wrapper method that force the origin to be USER_AGENT if this is an Fx theme style.
-    public static StyleOrigin getOrigin(Rule rule) {
-        if (rule == null) {
-            return null;
-        }
-        if (isThemeRule(rule)) {
-            // Force the origin to be USER_AGENT if this is an Fx theme style.
-            return StyleOrigin.USER_AGENT;
-        } else {
-            // Are the 2 lines below equivalent ?
-            // styleOrigin = style.getDeclaration().getRule().getStylesheet().getOrigin();
-            return rule.getOrigin();
-        }
-    }
-    
     // From an css url, returns the theme display name
     public static String getThemeDisplayName(String url) {
         String themeName = ""; //NOI18N

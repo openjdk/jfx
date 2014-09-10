@@ -1336,5 +1336,5 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_win_WinAccessible_UiaRaiseAutomati
 JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_win_WinAccessible_UiaClientsAreListening
   (JNIEnv *env, jclass jClass)
 {
-    return UiaClientsAreListening();
+    return UiaClientsAreListening() ? JNI_TRUE : JNI_FALSE;
 }
