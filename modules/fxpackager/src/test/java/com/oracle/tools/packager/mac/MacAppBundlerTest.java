@@ -270,6 +270,10 @@ public class MacAppBundlerTest {
 
         bundleParams.put(BUILD_ROOT.getID(), tmpBase);
 
+        if (runtimeJdk != null) {
+            bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
+        }
+
         bundleParams.put(APP_NAME.getID(), "File Association Test App");
         bundleParams.put(MAC_CF_BUNDLE_NAME.getID(), "FASmoke");
         bundleParams.put(MAIN_CLASS.getID(), "hello.HelloRectangle");
