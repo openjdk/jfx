@@ -1996,6 +1996,7 @@
 
 .progress-indicator {
     -fx-indeterminate-segment-count: 8;
+    -fx-spin-enabled: true;
 }
 
 .progress-indicator > .determinate-indicator > .indicator {

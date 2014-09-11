@@ -29,8 +29,11 @@ import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
 import javafx.application.Application;
+import javafx.beans.binding.Bindings;
+import javafx.beans.property.BooleanProperty;
 import javafx.scene.Group;
 import javafx.scene.Scene;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.ProgressIndicator;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
@@ -112,17 +115,16 @@ public class HelloProgressIndicator extends Application {
         pInd6.setProgress(0.5);
         root.getChildren().add(pInd6);
 
+        // busy indicator - indeterminate and spin are enabled by default
+        // See https://wiki.openjdk.java.net/display/OpenJFX/ProgressIndicator+User+Experience+Documentation
         ProgressIndicator pInd7 = new ProgressIndicator();
         pInd7.setLayoutX(300);
         pInd7.setLayoutY(250);
-        pInd7.setProgress(-1);
-        pInd7.setStyle("-fx-spin-enabled:true;");
         root.getChildren().add(pInd7);
 
         ProgressIndicator pInd8 = new ProgressIndicator();
         pInd8.setLayoutX(360);
         pInd8.setLayoutY(250);
-        pInd8.setProgress(-1);
         pInd8.setStyle("-fx-spin-enabled:false;");
         root.getChildren().add(pInd8);
 
@@ -195,6 +197,16 @@ public class HelloProgressIndicator extends Application {
         }
         //System.out.println("<path d=\""+circles+"\" />");
 
+        CheckBox checkBox = new CheckBox("Use caspian theme");
+        checkBox.selectedProperty().addListener(observable -> {
+            if (((BooleanProperty)observable).get()) Application.setUserAgentStylesheet(STYLESHEET_CASPIAN);
+            else Application.setUserAgentStylesheet(STYLESHEET_MODENA);
+        });
+        checkBox.setLayoutX(5);
+        checkBox.setLayoutY(425);
+
+
+        root.getChildren().add(checkBox);
         stage.setScene(scene);
         stage.show();
     }
