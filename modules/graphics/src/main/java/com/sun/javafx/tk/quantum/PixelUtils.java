@@ -74,18 +74,18 @@ class PixelUtils {
                     case Pixels.Format.BYTE_ARGB:
                     {
                         byte newbytes[] = new byte[w * h * 4];
-                        ByteRgb.ToByteArgbConverter.convert(bytes, 0, scanBytes,
-                                                            newbytes, 0, w * 4,
-                                                            w, h);
+                        ByteRgb.ToByteArgbConverter().convert(bytes, 0, scanBytes,
+                                                              newbytes, 0, w * 4,
+                                                              w, h);
                         bytes = ByteBuffer.wrap(newbytes);
                         break;
                     }
                     case Pixels.Format.BYTE_BGRA_PRE:
                     {
                         byte newbytes[] = new byte[w * h * 4];
-                        ByteRgb.ToByteBgraPreConverter.convert(bytes, 0, scanBytes,
-                                                               newbytes, 0, w * 4,
-                                                               w, h);
+                        ByteRgb.ToByteBgraPreConverter().convert(bytes, 0, scanBytes,
+                                                                 newbytes, 0, w * 4,
+                                                                 w, h);
                         bytes = ByteBuffer.wrap(newbytes);
                         break;
                     }
@@ -95,8 +95,8 @@ class PixelUtils {
             } else if (image.getPixelFormat() != PixelFormat.BYTE_BGRA_PRE) {
                 throw new IllegalArgumentException("non-RGB image format");
             }
-            pixels = app.createPixels((int)image.getWidth(),
-                                      (int)image.getHeight(), bytes);
+            pixels = app.createPixels(image.getWidth(),
+                                      image.getHeight(), bytes);
             return pixels;
         } else if (pixelType == PixelFormat.DataType.INT) {
             if (ByteOrder.nativeOrder() != ByteOrder.LITTLE_ENDIAN) {
@@ -108,8 +108,8 @@ class PixelUtils {
              * is INT_ARGB_PRE == BYTE_BGRA_PRE.  No conversion necessary.
              */
             IntBuffer ints = (IntBuffer)image.getPixelBuffer();
-            pixels = app.createPixels((int)image.getWidth(),
-                                      (int)image.getHeight(), ints);
+            pixels = app.createPixels(image.getWidth(),
+                                      image.getHeight(), ints);
             return pixels;
         } else {
             throw new IllegalArgumentException("unhandled image type: " + pixelType);
