@@ -305,9 +305,6 @@ public class UnwrapJob extends BatchSelectionJob {
 
         assert oldContainer.getSceneGraphObject() instanceof Node;
         final Node oldContainerNode = (Node) oldContainer.getSceneGraphObject();
-        final Bounds oldContainerBounds = oldContainerNode.getLayoutBounds();
-        final Point2D point = oldContainerNode.localToParent(
-                oldContainerBounds.getMinX(), oldContainerBounds.getMinY());
         
         for (FXOMObject child : children) {
             assert child.getSceneGraphObject() instanceof Node;
