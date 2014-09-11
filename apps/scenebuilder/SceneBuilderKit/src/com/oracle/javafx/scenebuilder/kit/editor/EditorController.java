@@ -61,7 +61,6 @@ import com.oracle.javafx.scenebuilder.kit.editor.job.gridpane.GridPaneJobUtils.P
 import com.oracle.javafx.scenebuilder.kit.editor.job.gridpane.MoveColumnJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.gridpane.MoveRowJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.gridpane.v2.SpanJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.UpdateSelectionJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.wrap.AbstractWrapInJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.wrap.UnwrapJob;
 import com.oracle.javafx.scenebuilder.kit.editor.messagelog.MessageLog;
@@ -1583,18 +1582,10 @@ public class EditorController {
         newObject.moveToFxomDocument(getFxomDocument());
         final FXOMObject rootObject = getFxomDocument().getFxomRoot();
         if (rootObject == null) { // Empty document
-            job = new BatchJob(this, true,
-                    I18N.getString("drop.job.insert.library.item", libraryItem.getName()));
-            ((BatchJob) job).addSubJob(new SetDocumentRootJob(newObject, this));
-            // New root container may need a resize
-            final DesignHierarchyMask mask = new DesignHierarchyMask(newObject);
-            if (mask.needResizeWhenTopElement()) {
-                ((BatchJob) job).addSubJob(new UsePredefinedSizeJob(this,
-                        EditorController.Size.SIZE_DEFAULT, newObject));
-            }
-                        
-            // As for non root element the inserted object is selected.
-            ((BatchJob) job).addSubJob(new UpdateSelectionJob(newObject, this));
+            final String description
+                    = I18N.getString("drop.job.insert.library.item", libraryItem.getName());
+            job = new SetDocumentRootJob(newObject, true /* usePredefinedSize */, description, this);
+
         } else {
             if (selection.isEmpty() || selection.isSelected(rootObject)) {
                 // No selection or root is selected -> we insert below root
@@ -1637,7 +1628,7 @@ public class EditorController {
                 final FXOMObject rootObject = getFxomDocument().getFxomRoot();
                 if (rootObject == null) { // Empty document
                     final SetDocumentRootJob job = new SetDocumentRootJob(
-                            newItemRoot, this);
+                            newItemRoot, true /* usePredefinedSize */, "unused", this); //NOI18N
                     result = job.isExecutable();
                 } else {
                     if (selection.isEmpty() || selection.isSelected(rootObject)) {
