@@ -49,6 +49,7 @@ import java.util.Set;
 
 import javafx.beans.value.ChangeListener;
 import javafx.event.ActionEvent;
+import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.scene.Node;
@@ -336,15 +337,20 @@ public class KeyCombinationPopupEditor extends PopupEditor {
             modifierChoiceBox.getSelectionModel().select(modifier);
         }
 
-        modifierChoiceBox.getSelectionModel().selectedItemProperty().addListener((ChangeListener<Modifier>) (observable, oldValue, newValue) -> {
-            if (!mainKey.isEmpty()) {
-        KeyCombination kc = createKeyCombination();
-        if (kc != null) {
-            commit(kc);
-        }
-            }
-            buildUI();
-         });
+        modifierChoiceBox.getSelectionModel().selectedItemProperty()
+                .addListener((ChangeListener<Modifier>) (observable, oldValue, newValue) -> {
+                    if (!mainKey.isEmpty()) {
+                        KeyCombination kc = createKeyCombination();
+                        if (kc != null) {
+                            commit(kc);
+                        }
+                    }
+                    buildUI();
+                });
+        // Workaround for RT-37679
+        modifierChoiceBox.addEventHandler(ActionEvent.ACTION, (Event event) -> {
+            event.consume();
+        });
         return modifierChoiceBox;
     }
 
