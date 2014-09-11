@@ -203,6 +203,7 @@
                 <MenuItem fx:id="wrapInSplitPaneMenuItem" mnemonicParsing="false" text="SplitPane" />
                 <MenuItem fx:id="wrapInStackPaneMenuItem" mnemonicParsing="false" text="StackPane" />
                 <MenuItem fx:id="wrapInTabPaneMenuItem" mnemonicParsing="false" text="TabPane" />
+                <MenuItem fx:id="wrapInTextFlowMenuItem" mnemonicParsing="false" text="TextFlow" />
                 <MenuItem fx:id="wrapInTilePaneMenuItem" mnemonicParsing="false" text="TilePane" />
                 <MenuItem fx:id="wrapInTitledPaneMenuItem" mnemonicParsing="false" text="TitledPane" />
                 <MenuItem fx:id="wrapInToolBarMenuItem" mnemonicParsing="false" text="ToolBar" />

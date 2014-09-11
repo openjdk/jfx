@@ -296,6 +296,8 @@ public class MenuBarController {
     @FXML
     private MenuItem wrapInTabPaneMenuItem;
     @FXML
+    private MenuItem wrapInTextFlowMenuItem;
+    @FXML
     private MenuItem wrapInTilePaneMenuItem;
     @FXML
     private MenuItem wrapInTitledPaneMenuItem;
@@ -534,6 +536,7 @@ public class MenuBarController {
         assert wrapInSplitPaneMenuItem != null;
         assert wrapInStackPaneMenuItem != null;
         assert wrapInTabPaneMenuItem != null;
+        assert wrapInTextFlowMenuItem != null;
         assert wrapInTilePaneMenuItem != null;
         assert wrapInTitledPaneMenuItem != null;
         assert wrapInToolBarMenuItem != null;
@@ -923,6 +926,7 @@ public class MenuBarController {
         wrapInSplitPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_SPLIT_PANE));
         wrapInStackPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_STACK_PANE));
         wrapInTabPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_TAB_PANE));
+        wrapInTextFlowMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_TEXT_FLOW));
         wrapInTilePaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_TILE_PANE));
         wrapInTitledPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_TITLED_PANE));
         wrapInToolBarMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_TOOL_BAR));

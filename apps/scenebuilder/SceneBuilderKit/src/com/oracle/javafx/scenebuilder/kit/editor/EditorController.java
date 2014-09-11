@@ -193,6 +193,7 @@ public class EditorController {
         WRAP_IN_SPLIT_PANE,
         WRAP_IN_STACK_PANE,
         WRAP_IN_TAB_PANE,
+        WRAP_IN_TEXT_FLOW,
         WRAP_IN_TILE_PANE,
         WRAP_IN_TITLED_PANE,
         WRAP_IN_TOOL_BAR,
@@ -1103,6 +1104,10 @@ public class EditorController {
                 performWrap(javafx.scene.control.TabPane.class);
                 break;
             }
+            case WRAP_IN_TEXT_FLOW: {
+                performWrap(javafx.scene.text.TextFlow.class);
+                break;
+            }
             case WRAP_IN_TILE_PANE: {
                 performWrap(javafx.scene.layout.TilePane.class);
                 break;
@@ -1335,6 +1340,10 @@ public class EditorController {
             }
             case WRAP_IN_TAB_PANE: {
                 result = canPerformWrap(javafx.scene.control.TabPane.class);
+                break;
+            }
+            case WRAP_IN_TEXT_FLOW: {
+                result = canPerformWrap(javafx.scene.text.TextFlow.class);
                 break;
             }
             case WRAP_IN_TILE_PANE: {
@@ -1699,6 +1708,7 @@ public class EditorController {
             classesSupportingWrapping.add(javafx.scene.control.SplitPane.class);
             classesSupportingWrapping.add(javafx.scene.layout.StackPane.class);
             classesSupportingWrapping.add(javafx.scene.control.TabPane.class);
+            classesSupportingWrapping.add(javafx.scene.text.TextFlow.class);
             classesSupportingWrapping.add(javafx.scene.layout.TilePane.class);
             classesSupportingWrapping.add(javafx.scene.control.TitledPane.class);
             classesSupportingWrapping.add(javafx.scene.control.ToolBar.class);

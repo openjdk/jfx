@@ -58,7 +58,6 @@ import javafx.scene.Node;
 import javafx.scene.control.DialogPane;
 import javafx.scene.control.TabPane;
 import javafx.scene.layout.BorderPane;
-import javafx.scene.text.TextFlow;
 
 /**
  * Main class used for the unwrap jobs.
@@ -90,23 +89,13 @@ public class UnwrapJob extends BatchSelectionJob {
             return false;
         }
         final FXOMInstance containerInstance = (FXOMInstance) container;
-        
+
         // Unresolved custom type
         if (container.getSceneGraphObject() == null) {
             return false;
         }
-        
-        // Cannot unwrap TabPane
-        if (TabPane.class.isAssignableFrom(containerInstance.getDeclaredClass())) {
-            return false;
-        }
-        // Cannot unwrap all Pane subclasses (ex : BorderPane, TextFlow and DialogPane)
-        if (BorderPane.class.isAssignableFrom(containerInstance.getDeclaredClass())
-                || TextFlow.class.isAssignableFrom(containerInstance.getDeclaredClass())
-                || DialogPane.class.isAssignableFrom(containerInstance.getDeclaredClass())) {
-            return false;
-        }
-        // Can unwrap classes supporting wrapping except TabPane + some Pane subclasses (see above)
+
+        // Can unwrap ALL classes supporting wrapping
         boolean isAssignableFrom = false;
         for (Class<?> clazz : EditorController.getClassesSupportingWrapping()) {
             isAssignableFrom |= clazz.isAssignableFrom(
@@ -117,7 +106,7 @@ public class UnwrapJob extends BatchSelectionJob {
         }
 
         // Retrieve the num of children of the container to unwrap
-        int childrenCount = getChildren(container).size();
+        int childrenCount = getChildren(containerInstance).size();
         // If the container to unwrap has no childen, it cannot be unwrapped
         if (childrenCount == 0) {
             return false;
@@ -143,7 +132,7 @@ public class UnwrapJob extends BatchSelectionJob {
             }
         }
     }
-    
+
     @Override
     protected List<Job> makeSubJobs() {
         final List<Job> result = new ArrayList<>();
@@ -319,32 +308,60 @@ public class UnwrapJob extends BatchSelectionJob {
         final Bounds oldContainerBounds = oldContainerNode.getLayoutBounds();
         final Point2D point = oldContainerNode.localToParent(
                 oldContainerBounds.getMinX(), oldContainerBounds.getMinY());
-
+        
         for (FXOMObject child : children) {
             assert child.getSceneGraphObject() instanceof Node;
+            
             final Node childNode = (Node) child.getSceneGraphObject();
-            double layoutX = point.getX() + childNode.getLayoutX();
-            double layoutY = point.getY() + childNode.getLayoutY();
+            final double currentLayoutX = childNode.getLayoutX();
+            final double currentLayoutY = childNode.getLayoutY();
+            
+            final Point2D nextLayoutXY = oldContainerNode.localToParent(
+                    currentLayoutX, currentLayoutY);
+            
             final ModifyObjectJob modifyLayoutX = WrapJobUtils.modifyObjectJob(
-                    (FXOMInstance) child, "layoutX", layoutX, getEditorController());
+                    (FXOMInstance) child, "layoutX", nextLayoutXY.getX(), getEditorController());
             jobs.add(modifyLayoutX);
             final ModifyObjectJob modifyLayoutY = WrapJobUtils.modifyObjectJob(
-                    (FXOMInstance) child, "layoutY", layoutY, getEditorController());
+                    (FXOMInstance) child, "layoutY", nextLayoutXY.getY(), getEditorController());
             jobs.add(modifyLayoutY);
         }
         return jobs;
     }
 
-    private List<FXOMObject> getChildren(final FXOMObject container) {
+    private List<FXOMObject> getChildren(final FXOMInstance container) {
         final DesignHierarchyMask mask = new DesignHierarchyMask(container);
         final List<FXOMObject> result = new ArrayList<>();
         if (mask.isAcceptingSubComponent()) {
-            result.addAll(mask.getSubComponents());
+            // TabPane => unwrap first Tab CONTENT
+            if (TabPane.class.isAssignableFrom(container.getDeclaredClass())) {
+                final List<FXOMObject> tabs = mask.getSubComponents();
+                if (tabs.size() >= 1) {
+                    final FXOMObject tab = tabs.get(0);
+                    final DesignHierarchyMask tabMask = new DesignHierarchyMask(tab);
+                    assert tabMask.isAcceptingAccessory(Accessory.CONTENT);
+                    if (tabMask.getAccessory(Accessory.CONTENT) != null) {
+                        result.add(tabMask.getAccessory(Accessory.CONTENT));
+                    }
+                }
+            } else {
+                result.addAll(mask.getSubComponents());
+            }
         } else {
-            assert mask.isAcceptingAccessory(Accessory.CONTENT);
-            final FXOMObject child = mask.getAccessory(Accessory.CONTENT);
-            if (child != null) {
-                result.add(child);
+            // BorderPane => unwrap CENTER accessory
+            if (mask.isAcceptingAccessory(Accessory.CENTER)
+                    && mask.getAccessory(Accessory.CENTER) != null) {
+                result.add(mask.getAccessory(Accessory.CENTER));
+            } 
+            // DialogPane => unwrap DP_CONTENT accessory
+            else if (mask.isAcceptingAccessory(Accessory.DP_CONTENT)
+                    && mask.getAccessory(Accessory.DP_CONTENT) != null) {
+                result.add(mask.getAccessory(Accessory.DP_CONTENT));
+            }
+            // ScrollPane => unwrap CONTENT accessory
+            else if (mask.isAcceptingAccessory(Accessory.CONTENT)
+                    && mask.getAccessory(Accessory.CONTENT) != null) {
+                result.add(mask.getAccessory(Accessory.CONTENT));
             }
         }
         return result;
