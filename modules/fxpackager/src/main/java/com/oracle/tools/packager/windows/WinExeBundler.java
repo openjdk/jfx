@@ -512,18 +512,24 @@ public class WinExeBundler extends AbstractBundler {
 
         StringBuilder registryEntries = new StringBuilder();
         String regName = APP_REGISTRY_NAME.fetchFrom(params);
-        for (Map<String, ? super Object> fileAssociation : FILE_ASSOCIATIONS.fetchFrom(params)) {
+        List<Map<String, ? super Object>> fetchFrom = FILE_ASSOCIATIONS.fetchFrom(params);
+        for (int i = 0; i < fetchFrom.size(); i++) {
+            Map<String, ? super Object> fileAssociation = fetchFrom.get(i);
             String description = FA_DESCRIPTION.fetchFrom(fileAssociation);
             File icon = FA_ICON.fetchFrom(fileAssociation); //TODO FA_ICON_ICO
 
             List<String> extensions = FA_EXTENSIONS.fetchFrom(fileAssociation);
+            String entryName = regName + "File";
+            if (i > 0) {
+                entryName += "." + i;
+            }
             for (String ext : extensions) {
                 // "Root: HKCR; Subkey: \".myp\"; ValueType: string; ValueName: \"\"; ValueData: \"MyProgramFile\"; Flags: uninsdeletevalue"
                 registryEntries.append("Root: HKCR; Subkey: \".")
                     .append(ext)
                     .append("\"; ValueType: string; ValueName: \"\"; ValueData: \"")
-                        .append(regName)
-                        .append("\"; Flags: uninsdeletevalue\r\n");
+                    .append(entryName)
+                    .append("\"; Flags: uninsdeletevalue\r\n");
             }
 
             if (!extensions.isEmpty()) {
@@ -541,7 +547,7 @@ public class WinExeBundler extends AbstractBundler {
 
             //"Root: HKCR; Subkey: \"MyProgramFile\"; ValueType: string; ValueName: \"\"; ValueData: \"My Program File\"; Flags: uninsdeletekey"
             registryEntries.append("Root: HKCR; Subkey: \"")
-                .append(regName)
+                .append(entryName)
                 .append("\"; ValueType: string; ValueName: \"\"; ValueData: \"")
                 .append(description)
                 .append("\"; Flags: uninsdeletekey\r\n");
@@ -549,7 +555,7 @@ public class WinExeBundler extends AbstractBundler {
             if (icon != null && icon.exists()) {
                 // "Root: HKCR; Subkey: \"MyProgramFile\\DefaultIcon\"; ValueType: string; ValueName: \"\"; ValueData: \"{app}\\MYPROG.EXE,0\"\n" +
                 registryEntries.append("Root: HKCR; Subkey: \"")
-                        .append(regName)
+                        .append(entryName)
                         .append("\\DefaultIcon\"; ValueType: string; ValueName: \"\"; ValueData: \"{app}\\")
                         .append(icon.getName())
                         .append("\"\r\n");
@@ -557,7 +563,7 @@ public class WinExeBundler extends AbstractBundler {
 
             //"Root: HKCR; Subkey: \"MyProgramFile\\shell\\open\\command\"; ValueType: string; ValueName: \"\"; ValueData: \"\"\"{app}\\MYPROG.EXE\"\" \"\"%1\"\"\"\n"
             registryEntries.append("Root: HKCR; Subkey: \"")
-                    .append(regName)
+                    .append(entryName)
                     .append("\\shell\\open\\command\"; ValueType: string; ValueName: \"\"; ValueData: \"\"\"{app}\\")
                     .append(APP_NAME.fetchFrom(params))
                     .append("\"\" \"\"%1\"\"\"\r\n");

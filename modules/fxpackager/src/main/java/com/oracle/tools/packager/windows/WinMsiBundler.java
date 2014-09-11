@@ -706,11 +706,16 @@ public class WinMsiBundler  extends AbstractBundler {
         if (launcherSet) {
             List<Map<String, ? super Object>> fileAssociations = FILE_ASSOCIATIONS.fetchFrom(params);
             String regName = APP_REGISTRY_NAME.fetchFrom(params);
-            for (Map<String, ? super Object> fileAssociation : fileAssociations) {
+            for (int i = 0; i < fileAssociations.size(); i++) {
+                Map<String, ? super Object> fileAssociation = fileAssociations.get(i);
                 String description = FA_DESCRIPTION.fetchFrom(fileAssociation);
                 File icon = FA_ICON.fetchFrom(fileAssociation); //TODO FA_ICON_ICO
+                String entryName = regName + "File";
+                if (i > 0) {
+                    entryName += "." + i;
+                }
 
-                out.println(prefix + "   <ProgId Id='" + regName + "File' Description='" + description + "' Icon='" + idToFileMap.get(icon.getName()) + "' IconIndex='0'>");
+                out.println(prefix + "   <ProgId Id='" + entryName + "' Description='" + description + "' Icon='" + idToFileMap.get(icon.getName()) + "' IconIndex='0'>");
 
                 List<String> extensions = FA_EXTENSIONS.fetchFrom(fileAssociation);
                 List<String> mimeTypes = FA_CONTENT_TYPE.fetchFrom(fileAssociation);
