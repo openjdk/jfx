@@ -34,6 +34,7 @@ package com.oracle.javafx.scenebuilder.kit.editor;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorPlatform.Theme;
 import com.oracle.javafx.scenebuilder.kit.editor.drag.DragController;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
+import com.oracle.javafx.scenebuilder.kit.editor.job.AddContextMenuToSelectionJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.BatchJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.ModifySelectionJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.BringForwardJob;
@@ -2212,42 +2213,9 @@ public class EditorController {
      * selected objects.
      */
     public void performAddContextMenu() {
-        assert canPerformAddContextMenu(); // (1)
-
-        // Build the ContextMenu item from the library builtin items
-        final String contextMenuFxmlPath = "builtin/ContextMenu.fxml"; //NOI18N
-        final URL contextMenuFxmlURL 
-                = BuiltinLibrary.class.getResource(contextMenuFxmlPath);
-        assert contextMenuFxmlURL != null;
-        try {
-            final String contextMenuFxmlText
-                    = FXOMDocument.readContentFromURL(contextMenuFxmlURL);
-
-            final AbstractSelectionGroup asg = selection.getGroup();
-            assert asg instanceof ObjectSelectionGroup; // Because of (1)
-            final ObjectSelectionGroup osg = (ObjectSelectionGroup) asg;
-
-            final BatchJob job = new BatchJob(this, true,
-                    I18N.getString("label.action.edit.add.context.menu"));
-            for (FXOMObject fxomObject : osg.getItems()) {
-                final FXOMDocument contextMenuDocument = new FXOMDocument(
-                        contextMenuFxmlText,
-                        contextMenuFxmlURL, getLibrary().getClassLoader(), null);
-
-                assert contextMenuDocument != null;
-                final FXOMObject contextMenuObject = contextMenuDocument.getFxomRoot();
-                assert contextMenuObject != null;
-                contextMenuObject.moveToFxomDocument(getFxomDocument());
-                assert contextMenuDocument.getFxomRoot() == null;
-
-                final Job insertJob = new InsertAsAccessoryJob(
-                        contextMenuObject, fxomObject, Accessory.CONTEXT_MENU, this);
-                job.addSubJob(insertJob);
-            }
-            getJobManager().push(job);
-        } catch (IOException x) {
-            throw new IllegalStateException("Bug in " + getClass().getSimpleName(), x); //NOI18N
-        }
+        assert canPerformAddContextMenu();
+        final Job addContextMenuJob = new AddContextMenuToSelectionJob(this);
+        getJobManager().push(addContextMenuJob);
     }
     
     /**
