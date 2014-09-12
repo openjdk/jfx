@@ -26,6 +26,8 @@
 package javafx.scene.transform;
 
 import java.util.Iterator;
+
+import com.sun.javafx.geometry.BoundsUtils;
 import javafx.event.EventDispatchChain;
 
 import javafx.scene.Node;
@@ -1239,16 +1241,24 @@ public abstract class Transform implements Cloneable, EventTarget {
      * @since JavaFX 8.0
      */
     public Bounds transform(Bounds bounds) {
-        final Point3D base = transform(
-                bounds.getMinX(),
-                bounds.getMinY(),
-                bounds.getMinZ());
-        final Point3D size = deltaTransform(
-                bounds.getWidth(),
-                bounds.getHeight(),
-                bounds.getDepth());
-        return new BoundingBox(base.getX(), base.getY(), base.getZ(),
-                size.getX(), size.getY(), size.getZ());
+        if (isType2D() && (bounds.getMinZ() == 0) && (bounds.getMaxZ() == 0)) {
+            Point2D p1 = transform(bounds.getMinX(), bounds.getMinY());
+            Point2D p2 = transform(bounds.getMaxX(), bounds.getMinY());
+            Point2D p3 = transform(bounds.getMaxX(), bounds.getMaxY());
+            Point2D p4 = transform(bounds.getMinX(), bounds.getMaxY());
+
+            return BoundsUtils.createBoundingBox(p1, p2, p3, p4);
+        }
+        Point3D p1 = transform(bounds.getMinX(), bounds.getMinY(), bounds.getMinZ());
+        Point3D p2 = transform(bounds.getMinX(), bounds.getMinY(), bounds.getMaxZ());
+        Point3D p3 = transform(bounds.getMinX(), bounds.getMaxY(), bounds.getMinZ());
+        Point3D p4 = transform(bounds.getMinX(), bounds.getMaxY(), bounds.getMaxZ());
+        Point3D p5 = transform(bounds.getMaxX(), bounds.getMaxY(), bounds.getMinZ());
+        Point3D p6 = transform(bounds.getMaxX(), bounds.getMaxY(), bounds.getMaxZ());
+        Point3D p7 = transform(bounds.getMaxX(), bounds.getMinY(), bounds.getMinZ());
+        Point3D p8 = transform(bounds.getMaxX(), bounds.getMinY(), bounds.getMaxZ());
+        
+        return BoundsUtils.createBoundingBox(p1, p2, p3, p4, p5, p6, p7, p8);
     }
 
     /**
@@ -1536,17 +1546,25 @@ public abstract class Transform implements Cloneable, EventTarget {
      */
     public Bounds inverseTransform(Bounds bounds)
             throws NonInvertibleTransformException {
+        if (isType2D() && (bounds.getMinZ() == 0) && (bounds.getMaxZ() == 0)) {
+            Point2D p1 = inverseTransform(bounds.getMinX(), bounds.getMinY());
+            Point2D p2 = inverseTransform(bounds.getMaxX(), bounds.getMinY());
+            Point2D p3 = inverseTransform(bounds.getMaxX(), bounds.getMaxY());
+            Point2D p4 = inverseTransform(bounds.getMinX(), bounds.getMaxY());
 
-        Point3D base = inverseTransform(
-                bounds.getMinX(),
-                bounds.getMinY(),
-                bounds.getMinZ());
-        Point3D size = inverseDeltaTransform(
-                bounds.getWidth(),
-                bounds.getHeight(),
-                bounds.getDepth());
-        return new BoundingBox(base.getX(), base.getY(), base.getZ(),
-                size.getX(), size.getY(), size.getZ());
+            return BoundsUtils.createBoundingBox(p1, p2, p3, p4);
+        }
+        Point3D p1 = inverseTransform(bounds.getMinX(), bounds.getMinY(), bounds.getMinZ());
+        Point3D p2 = inverseTransform(bounds.getMinX(), bounds.getMinY(), bounds.getMaxZ());
+        Point3D p3 = inverseTransform(bounds.getMinX(), bounds.getMaxY(), bounds.getMinZ());
+        Point3D p4 = inverseTransform(bounds.getMinX(), bounds.getMaxY(), bounds.getMaxZ());
+        Point3D p5 = inverseTransform(bounds.getMaxX(), bounds.getMaxY(), bounds.getMinZ());
+        Point3D p6 = inverseTransform(bounds.getMaxX(), bounds.getMaxY(), bounds.getMaxZ());
+        Point3D p7 = inverseTransform(bounds.getMaxX(), bounds.getMinY(), bounds.getMinZ());
+        Point3D p8 = inverseTransform(bounds.getMaxX(), bounds.getMinY(), bounds.getMaxZ());
+
+        return BoundsUtils.createBoundingBox(p1, p2, p3, p4, p5, p6, p7, p8);
+
     }
 
     /**
