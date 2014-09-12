@@ -35,7 +35,7 @@ import com.oracle.javafx.scenebuilder.kit.editor.EditorPlatform.Theme;
 import com.oracle.javafx.scenebuilder.kit.editor.drag.DragController;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.editor.job.AddContextMenuToSelectionJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.BatchJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.AddTooltipToSelectionJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.ModifySelectionJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.BringForwardJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.BringToFrontJob;
@@ -45,7 +45,6 @@ import com.oracle.javafx.scenebuilder.kit.editor.job.DuplicateSelectionJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.FitToParentSelectionJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.ImportFileJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.IncludeFileJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.InsertAsAccessoryJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.InsertAsSubComponentJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
 import com.oracle.javafx.scenebuilder.kit.editor.job.PasteIntoJob;
@@ -2236,42 +2235,9 @@ public class EditorController {
      */
     public void performAddTooltip() {
         assert canPerformAddTooltip(); // (1)
-
-        // Build the Tooltip item from the library builtin items
-        final String tooltipFxmlPath = "builtin/Tooltip.fxml"; //NOI18N
-        final URL tooltipFxmlURL 
-                = BuiltinLibrary.class.getResource(tooltipFxmlPath);
-        assert tooltipFxmlURL != null;
-        try {
-            final String tooltipFxmlText
-                    = FXOMDocument.readContentFromURL(tooltipFxmlURL);
-
-            final AbstractSelectionGroup asg = selection.getGroup();
-            assert asg instanceof ObjectSelectionGroup; // Because of (1)
-            final ObjectSelectionGroup osg = (ObjectSelectionGroup) asg;
-
-            final BatchJob job = new BatchJob(this, true,
-                    I18N.getString("label.action.edit.add.tooltip"));
-            for (FXOMObject fxomObject : osg.getItems()) {
-                final FXOMDocument tooltipDocument = new FXOMDocument(
-                        tooltipFxmlText,
-                        tooltipFxmlURL, getLibrary().getClassLoader(), null);
-
-                assert tooltipDocument != null;
-                final FXOMObject tooltipObject = tooltipDocument.getFxomRoot();
-                assert tooltipObject != null;
-                tooltipObject.moveToFxomDocument(getFxomDocument());
-                assert tooltipDocument.getFxomRoot() == null;
-
-                final Job insertJob = new InsertAsAccessoryJob(
-                        tooltipObject, fxomObject, Accessory.TOOLTIP, this);
-                job.addSubJob(insertJob);
-            }
-            getJobManager().push(job);
-        } catch (IOException x) {
-            throw new IllegalStateException("Bug in " + getClass().getSimpleName(), x); //NOI18N
-        }
-    }
+        final Job addTooltipJob = new AddTooltipToSelectionJob(this);
+        getJobManager().push(addTooltipJob);
+   }
     
     /**
      * Returns the URL of the CSS style associated to EditorController class.
