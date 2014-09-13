@@ -37,18 +37,29 @@ import java.nio.IntBuffer;
 public class ByteRgb {
     public static final BytePixelGetter getter = Getter.instance;
 
-    public static final ByteToBytePixelConverter ToByteBgraConverter =
-        ByteRgb.ToByteBgrfConv.nonpremult;
-    public static final ByteToBytePixelConverter ToByteBgraPreConverter =
-        ByteRgb.ToByteBgrfConv.premult;
-    public static final ByteToIntPixelConverter ToIntArgbConverter =
-        ByteRgb.ToIntFrgbConv.nonpremult;
-    public static final ByteToIntPixelConverter ToIntArgbPreConverter =
-        ByteRgb.ToIntFrgbConv.premult;
-    public static final ByteToBytePixelConverter ToByteArgbConverter =
-        ByteRgb.ToByteFrgbConv.nonpremult;
-    public static final ByteToBytePixelConverter ToByteBgrConverter =
-        ByteRgb.SwapThreeByteConverter.rgbToBgrInstance;
+    public static ByteToBytePixelConverter ToByteBgraConverter() {
+        return ByteRgb.ToByteBgrfConv.nonpremult;
+    }
+
+    public static ByteToBytePixelConverter ToByteBgraPreConverter() {
+        return ByteRgb.ToByteBgrfConv.premult;
+    }
+
+    public static ByteToIntPixelConverter ToIntArgbConverter() {
+        return ByteRgb.ToIntFrgbConv.nonpremult;
+    }
+
+    public static ByteToIntPixelConverter ToIntArgbPreConverter() {
+        return ByteRgb.ToIntFrgbConv.premult;
+    }
+
+    public static ByteToBytePixelConverter ToByteArgbConverter() {
+        return ByteRgb.ToByteFrgbConv.nonpremult;
+    }
+
+    public static final ByteToBytePixelConverter ToByteBgrConverter() {
+        return ByteRgb.SwapThreeByteConverter.rgbToBgrInstance;
+    }
 
     static class Getter implements BytePixelGetter {
         static final BytePixelGetter instance = new Getter();
@@ -104,11 +115,7 @@ public class ByteRgb {
             new ToByteBgrfConv(ByteBgraPre.setter);
 
         private ToByteBgrfConv(BytePixelSetter setter) {
-            // Note that using ByteRgb.getter here causes a circular reference
-            // between the classes that prevents the above *premult fields
-            // from being initialized before the ByteRgb class copies their
-            // (not yet inited = null) values into its owns static fields.
-            super(ByteRgb.Getter.instance, setter);
+            super(ByteRgb.getter, setter);
         }
 
         @Override
@@ -160,11 +167,7 @@ public class ByteRgb {
             new ToIntFrgbConv(IntArgbPre.setter);
 
         private ToIntFrgbConv(IntPixelSetter setter) {
-            // Note that using ByteRgb.getter here causes a circular reference
-            // between the classes that prevents the above *premult fields
-            // from being initialized before the ByteRgb class copies their
-            // (not yet inited = null) values into its owns static fields.
-            super(ByteRgb.Getter.instance, setter);
+            super(ByteRgb.getter, setter);
         }
 
         @Override
@@ -210,11 +213,7 @@ public class ByteRgb {
             new ToByteFrgbConv(ByteArgb.setter);
 
         private ToByteFrgbConv(BytePixelSetter setter) {
-            // Note that using ByteRgb.getter here causes a circular reference
-            // between the classes that prevents the above *premult fields
-            // from being initialized before the ByteRgb class copies their
-            // (not yet inited = null) values into its owns static fields.
-            super(ByteRgb.Getter.instance, setter);
+            super(ByteRgb.getter, setter);
         }
 
         @Override
@@ -258,8 +257,7 @@ public class ByteRgb {
 
     static class SwapThreeByteConverter extends BaseByteToByteConverter {
         static final ByteToBytePixelConverter rgbToBgrInstance =
-            new SwapThreeByteConverter(ByteRgb.Getter.instance,
-                                       ByteBgr.Accessor.instance);
+            new SwapThreeByteConverter(ByteRgb.getter, ByteBgr.accessor);
 
         public SwapThreeByteConverter(BytePixelGetter getter, BytePixelSetter setter) {
             super(getter, setter);

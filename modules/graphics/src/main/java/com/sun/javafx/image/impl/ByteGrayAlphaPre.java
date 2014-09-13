@@ -35,6 +35,7 @@ public class ByteGrayAlphaPre {
     public static final BytePixelSetter     setter = ByteGrayAlpha.Accessor.premul;
     public static final BytePixelAccessor accessor = ByteGrayAlpha.Accessor.premul;
 
-    public static final ByteToBytePixelConverter ToByteBgraPre =
-        ByteGrayAlpha.ToByteBgraSameConv.premul;
+    public static ByteToBytePixelConverter ToByteBgraPreConverter() {
+        return ByteGrayAlpha.ToByteBgraSameConv.premul;
+    }
 }

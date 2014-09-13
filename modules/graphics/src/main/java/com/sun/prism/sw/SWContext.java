@@ -103,6 +103,16 @@ final class SWContext {
         private final DirectRTPiscesAlphaConsumer alphaConsumer = new DirectRTPiscesAlphaConsumer();
 
         public void renderShape(PiscesRenderer pr, Shape shape, BasicStroke stroke, BaseTransform tr, Rectangle clip) {
+            if (stroke != null && stroke.getType() != BasicStroke.TYPE_CENTERED) {
+                // RT-27427
+                // TODO: Optimize the combinatorial strokes for simple
+                // shapes and/or teach the rasterizer to be able to
+                // do a "differential fill" between two shapes.
+                // Note that most simple shapes will use a more optimized path
+                // than this method for the INNER/OUTER strokes anyway.
+                shape = stroke.createStrokedShape(shape);
+                stroke = null;
+            }
             final Renderer r = OpenPiscesPrismUtils.setupRenderer(shape, stroke, tr, clip);
             alphaConsumer.initConsumer(r, pr);
             r.produceAlphas(alphaConsumer);

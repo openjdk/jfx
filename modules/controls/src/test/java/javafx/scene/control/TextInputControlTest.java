@@ -350,8 +350,8 @@ public class TextInputControlTest {
     @Test
     public void caretAndAnchorPositionAfterSettingText() {
         textInput.setText("The quick brown fox");
-        assertEquals(19, textInput.getCaretPosition());
-        assertEquals(19, textInput.getAnchor());
+        assertEquals(0, textInput.getCaretPosition());
+        assertEquals(0, textInput.getAnchor());
     }
 
     /******************************************************

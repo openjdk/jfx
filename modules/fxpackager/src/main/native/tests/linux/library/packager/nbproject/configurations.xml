@@ -1,0 +1,499 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configurationDescriptor version="94">
+  <logicalFolder name="root" displayName="root" projectFiles="true" kind="ROOT">
+    <logicalFolder name="HeaderFiles"
+                   displayName="Header Files"
+                   projectFiles="true">
+    </logicalFolder>
+    <logicalFolder name="ResourceFiles"
+                   displayName="Resource Files"
+                   projectFiles="true">
+    </logicalFolder>
+    <logicalFolder name="SourceFiles"
+                   displayName="Source Files"
+                   projectFiles="true">
+    </logicalFolder>
+    <logicalFolder name="TestFiles"
+                   displayName="Test Files"
+                   projectFiles="false"
+                   kind="TEST_LOGICAL_FOLDER">
+    </logicalFolder>
+    <logicalFolder name="ExternalFiles"
+                   displayName="Important Files"
+                   projectFiles="false"
+                   kind="IMPORTANT_FILES_FOLDER">
+      <itemPath>Makefile</itemPath>
+    </logicalFolder>
+    <logicalFolder name="TestFiles"
+                   displayName="Test Files"
+                   projectFiles="false"
+                   kind="TEST_LOGICAL_FOLDER">
+    </logicalFolder>
+    <logicalFolder name="ExternalFiles"
+                   displayName="Important Files"
+                   projectFiles="false"
+                   kind="IMPORTANT_FILES_FOLDER">
+      <itemPath>Makefile</itemPath>
+    </logicalFolder>
+    <itemPath>../../../../library/common/Exports.cpp</itemPath>
+    <itemPath>../../../../library/common/Exports.h</itemPath>
+    <itemPath>../../../../library/common/FilePath.cpp</itemPath>
+    <itemPath>../../../../library/common/FilePath.h</itemPath>
+    <itemPath>../../../../library/common/GenericPlatform.cpp</itemPath>
+    <itemPath>../../../../library/common/GenericPlatform.h</itemPath>
+    <itemPath>../../../../library/common/Helpers.cpp</itemPath>
+    <itemPath>../../../../library/common/Helpers.h</itemPath>
+    <itemPath>../../../../library/common/Java.cpp</itemPath>
+    <itemPath>../../../../library/common/Java.h</itemPath>
+    <itemPath>../../../../library/common/JavaUserPreferences.cpp</itemPath>
+    <itemPath>../../../../library/common/JavaUserPreferences.h</itemPath>
+    <itemPath>../../../../library/common/JavaVirtualMachine.cpp</itemPath>
+    <itemPath>../../../../library/common/JavaVirtualMachine.h</itemPath>
+    <itemPath>../../../../library/common/LinuxPlatform.cpp</itemPath>
+    <itemPath>../../../../library/common/LinuxPlatform.h</itemPath>
+    <itemPath>../../../../library/common/Lock.cpp</itemPath>
+    <itemPath>../../../../library/common/Lock.h</itemPath>
+    <itemPath>../../../../library/common/MacPlatform.h</itemPath>
+    <itemPath>../../../../library/common/Macros.cpp</itemPath>
+    <itemPath>../../../../library/common/Macros.h</itemPath>
+    <itemPath>../../../../library/common/Messages.cpp</itemPath>
+    <itemPath>../../../../library/common/Messages.h</itemPath>
+    <itemPath>../../../../library/common/Package.cpp</itemPath>
+    <itemPath>../../../../library/common/Package.h</itemPath>
+    <itemPath>../../../../library/common/Platform.cpp</itemPath>
+    <itemPath>../../../../library/common/Platform.h</itemPath>
+    <itemPath>../../../../library/common/PlatformString.cpp</itemPath>
+    <itemPath>../../../../library/common/PlatformString.h</itemPath>
+    <itemPath>../../../../library/common/PlatformThread.cpp</itemPath>
+    <itemPath>../../../../library/common/PlatformThread.h</itemPath>
+    <itemPath>../../../../library/common/PosixPlatform.cpp</itemPath>
+    <itemPath>../../../../library/common/PosixPlatform.h</itemPath>
+    <itemPath>../../../../library/common/PropertyFile.cpp</itemPath>
+    <itemPath>../../../../library/common/PropertyFile.h</itemPath>
+    <itemPath>../../../../library/common/WindowsPlatform.cpp</itemPath>
+    <itemPath>../../../../library/common/WindowsPlatform.h</itemPath>
+    <itemPath>../../../../library/common/main.cpp</itemPath>
+  </logicalFolder>
+  <sourceRootList>
+    <Elem>../../../../library/common</Elem>
+    <Elem>../../../../library/common</Elem>
+  </sourceRootList>
+  <projectmakefile>Makefile</projectmakefile>
+  <confs>
+    <conf name="Debug" type="2">
+      <toolsSet>
+        <compilerSet>default</compilerSet>
+        <dependencyChecking>true</dependencyChecking>
+        <rebuildPropChanged>false</rebuildPropChanged>
+      </toolsSet>
+      <compileType>
+        <ccTool>
+          <incDir>
+            <pElem>/home/cbensen/java/jdk1.8.0/include</pElem>
+            <pElem>/home/cbensen/java/jdk1.8.0/include/linux</pElem>
+          </incDir>
+          <preprocessorList>
+            <Elem>DEBUG</Elem>
+            <Elem>JAVAARCH="i386"</Elem>
+          </preprocessorList>
+        </ccTool>
+        <linkerTool>
+          <output>/home/cbensen/src/projects/packager/JavaFXSceneBuilder2.0/libpackager.so</output>
+          <linkerLibItems>
+            <linkerLibStdlibItem>PosixThreads</linkerLibStdlibItem>
+            <linkerLibStdlibItem>DynamicLinking</linkerLibStdlibItem>
+          </linkerLibItems>
+        </linkerTool>
+      </compileType>
+      <item path="../../../../library/common/Exports.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/Exports.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/FilePath.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/FilePath.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/GenericPlatform.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/GenericPlatform.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/Helpers.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/Helpers.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/Java.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/Java.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../../../../library/common/JavaUserPreferences.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/JavaUserPreferences.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/JavaVirtualMachine.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/JavaVirtualMachine.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/LinuxPlatform.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/LinuxPlatform.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/Lock.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/Lock.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../../../../library/common/MacPlatform.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/Macros.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/Macros.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/Messages.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/Messages.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/Package.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/Package.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/Platform.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/Platform.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/PlatformString.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/PlatformString.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/PlatformThread.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/PlatformThread.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/PosixPlatform.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/PosixPlatform.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/PropertyFile.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/PropertyFile.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/WindowsPlatform.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/WindowsPlatform.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/main.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+    </conf>
+    <conf name="Release" type="2">
+      <toolsSet>
+        <compilerSet>default</compilerSet>
+        <dependencyChecking>true</dependencyChecking>
+        <rebuildPropChanged>false</rebuildPropChanged>
+      </toolsSet>
+      <compileType>
+        <cTool>
+          <developmentMode>5</developmentMode>
+        </cTool>
+        <ccTool>
+          <developmentMode>5</developmentMode>
+        </ccTool>
+        <fortranCompilerTool>
+          <developmentMode>5</developmentMode>
+        </fortranCompilerTool>
+        <asmTool>
+          <developmentMode>5</developmentMode>
+        </asmTool>
+      </compileType>
+      <item path="../../../../library/common/Exports.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/Exports.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/FilePath.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/FilePath.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/GenericPlatform.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/GenericPlatform.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/Helpers.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/Helpers.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/Java.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/Java.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../../../../library/common/JavaUserPreferences.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/JavaUserPreferences.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/JavaVirtualMachine.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/JavaVirtualMachine.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/LinuxPlatform.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/LinuxPlatform.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/Lock.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/Lock.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../../../../library/common/MacPlatform.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/Macros.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/Macros.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/Messages.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/Messages.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/Package.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/Package.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/Platform.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/Platform.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/PlatformString.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/PlatformString.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/PlatformThread.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/PlatformThread.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/PosixPlatform.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/PosixPlatform.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/PropertyFile.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/PropertyFile.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/WindowsPlatform.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/WindowsPlatform.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="../../../../library/common/main.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+    </conf>
+  </confs>
+</configurationDescriptor>

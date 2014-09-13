@@ -282,11 +282,9 @@ public class ProgressBarSkin extends ProgressIndicatorSkin {
         indeterminateTransition = new IndeterminateTransition(startX, endX, getIndeterminateBarFlip(), this);
         indeterminateTransition.setCycleCount(Timeline.INDEFINITE);
 
-        if (!clipRegion.translateXProperty().isBound()) {
-            clipRegion.translateXProperty().bind(new When(bar.scaleXProperty().isEqualTo(-1.0, 1e-100)).
-                    then(bar.translateXProperty().subtract(w).add(indeterminateBarLengthProperty())).
-                    otherwise(bar.translateXProperty().negate()));
-        }
+        clipRegion.translateXProperty().bind(new When(bar.scaleXProperty().isEqualTo(-1.0, 1e-100)).
+                then(bar.translateXProperty().subtract(w).add(indeterminateBarLengthProperty())).
+                otherwise(bar.translateXProperty().negate()));
     }
 
     boolean wasIndeterminate = false;

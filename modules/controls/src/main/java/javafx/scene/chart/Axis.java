@@ -721,13 +721,18 @@ public abstract class Axis<T> extends Region {
                         if (m.isTextVisible()) {
                             double tickHeight = measureTickMarkSize(m.getValue(), getRange()).getHeight();
                             lastStart = updateAndGetDisplayPosition(m) - tickHeight / 2;
+                            break;
+                        } else {
+                            labelsToSkip.set(stop);
                         }
-                        break;
                     }
 
                     for (int i = tickMarks.size() - 1; i > stop; i--) {
                         TickMark<T> m = tickMarks.get(i);
-                        if (!m.isTextVisible()) continue;
+                        if (!m.isTextVisible()) {
+                            labelsToSkip.set(i);
+                            continue;
+                        }
                         double tickHeight = measureTickMarkSize(m.getValue(), getRange()).getHeight();
                         double tickStart = updateAndGetDisplayPosition(m) - tickHeight / 2;
                         if (tickStart <= prevEnd || tickStart + tickHeight > lastStart) {
@@ -745,13 +750,18 @@ public abstract class Axis<T> extends Region {
                         if (m.isTextVisible()) {
                             double tickWidth = measureTickMarkSize(m.getValue(), getRange()).getWidth();
                             lastStart = updateAndGetDisplayPosition(m) - tickWidth / 2;
+                            break;
+                        } else {
+                            labelsToSkip.set(stop);
                         }
-                        break;
                     }
 
                     for (int i = 0; i < stop; ++i) {
                         TickMark<T> m = tickMarks.get(i);
-                        if (!m.isTextVisible()) continue;
+                        if (!m.isTextVisible()) {
+                            labelsToSkip.set(i);
+                            continue;
+                        }
                         double tickWidth = measureTickMarkSize(m.getValue(), getRange()).getWidth();
                         double tickStart = updateAndGetDisplayPosition(m) - tickWidth / 2;
                         if (tickStart <= prevEnd || tickStart + tickWidth > lastStart) {

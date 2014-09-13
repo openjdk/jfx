@@ -120,7 +120,7 @@ public class StylesheetEditor extends InlineListEditor {
         List<String> value = FXCollections.observableArrayList();
         // Group all the item values in a list
         for (EditorItem stylesheetItem : getEditorItems()) {
-            String itemValue = stylesheetItem.getValue();
+            String itemValue = EditorUtils.toString(stylesheetItem.getValue());
             if (itemValue.isEmpty()) {
                 continue;
             }
@@ -238,7 +238,7 @@ public class StylesheetEditor extends InlineListEditor {
     }
 
     private String getUrl(EditorItem source) {
-        URL url = EditorUtils.getUrl(source.getValue(), fxmlFileLocation);
+        URL url = EditorUtils.getUrl(EditorUtils.toString(source.getValue()), fxmlFileLocation);
         if (url == null) {
             return null;
         }
@@ -330,7 +330,7 @@ public class StylesheetEditor extends InlineListEditor {
         for (EditorItem editorItem : getEditorItems()) {
             assert editorItem instanceof StylesheetItem;
             StylesheetItem stylesheetItem = (StylesheetItem) editorItem;
-            URL url = EditorUtils.getUrl(stylesheetItem.getValue(), fxmlFileLocation);
+            URL url = EditorUtils.getUrl(EditorUtils.toString(stylesheetItem.getValue()), fxmlFileLocation);
             String value = null;
             if ((url == null) || (type == Type.CLASSLOADER_RELATIVE_PATH)) {
                 // In this case we empty the text field (i.e. suffix) content
@@ -380,7 +380,7 @@ public class StylesheetEditor extends InlineListEditor {
             absoluteMenuItem.setDisable(true);
         }
     }
-
+    
     /**
      ***************************************************************************
      *
@@ -441,7 +441,7 @@ public class StylesheetEditor extends InlineListEditor {
                 }
                 updateButtons();
                 updateOpenRevealMenuItems();
-                currentValue = getValue();
+                currentValue = EditorUtils.toString(getValue());
             };
 
             ChangeListener<String> textPropertyChange = (ov, prevText, newText) -> {
@@ -468,7 +468,7 @@ public class StylesheetEditor extends InlineListEditor {
         }
 
         @Override
-        public String getValue() {
+        public Object getValue() {
             String suffix;
             if (stylesheetTf.getText().isEmpty()) {
                 return ""; //NOI18N
@@ -479,8 +479,8 @@ public class StylesheetEditor extends InlineListEditor {
         }
 
         @Override
-        public void setValue(String styleSheet) {
-            PrefixedValue prefixedValue = new PrefixedValue(styleSheet);
+        public void setValue(Object styleSheet) {
+            PrefixedValue prefixedValue = new PrefixedValue(EditorUtils.toString(styleSheet));
             itemType = prefixedValue.getType();
             handlePrefix(itemType);
             if (prefixedValue.getSuffix() != null) {
@@ -491,7 +491,7 @@ public class StylesheetEditor extends InlineListEditor {
             }
             updateButtons();
             updateOpenRevealMenuItems();
-            currentValue = getValue();
+            currentValue = EditorUtils.toString(getValue());
         }
 
         @Override
@@ -527,6 +527,12 @@ public class StylesheetEditor extends InlineListEditor {
         @Override
         public Button getPlusButton() {
             return plusBt;
+        }
+
+        @Override
+        public Button getMinusButton() {
+            // not used here
+            return null;
         }
 
         @FXML
@@ -568,7 +574,7 @@ public class StylesheetEditor extends InlineListEditor {
 
         private void updateOpenRevealMenuItems() {
             // Get the file name part of the suffix
-            String suffix = new PrefixedValue(getValue()).getSuffix();
+            String suffix = new PrefixedValue(EditorUtils.toString(getValue())).getSuffix();
             String fileName = null;
             if (!suffix.isEmpty()) {
                 fileName = EditorUtils.getSimpleFileName(suffix);

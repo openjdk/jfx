@@ -255,25 +255,25 @@ public class TextFormatter<V> {
         int anchor;
         int caret;
 
-        Change(Control control, FormatterAccessor accessor,  int newAnchor, int newCaretPosition) {
-            this.control = control;
-            this.accessor = accessor;
-            anchor = newAnchor;
-            caret = newCaretPosition;
-            text = "";
-            start = end = newCaretPosition;
+        Change(Control control, FormatterAccessor accessor,  int anchor, int caret) {
+            this(control, accessor, caret, caret, "", anchor, caret);
+        }
+
+        Change(Control control, FormatterAccessor accessor, int start, int end, String text) {
+            this(control, accessor, start, end, text, start + text.length(), start + text.length());
         }
 
         // Restrict construction to TextInputControl only. Because we are the
         // only ones who can create this, we don't bother doing a check here
         // to make sure the arguments are within reason (they will be).
-        Change(Control control, FormatterAccessor accessor, int start, int end, String text) {
+        Change(Control control, FormatterAccessor accessor, int start, int end, String text, int anchor, int caret) {
             this.control = control;
             this.accessor = accessor;
             this.start = start;
             this.end = end;
             this.text = text;
-            this.anchor = this.caret = start + text.length();
+            this.anchor = anchor;
+            this.caret = caret;
         }
 
         /**

@@ -132,10 +132,6 @@ public abstract class ComboBoxBase<T> extends Control {
         // End of fix for RT-29885
     }
     
-    void valueInvalidated() {
-        fireEvent(new ActionEvent());
-    }
-    
     /***************************************************************************
      *                                                                         *
      * Properties                                                              *
@@ -149,21 +145,8 @@ public abstract class ComboBoxBase<T> extends Control {
      * either the value input by the user, or the last selected item.
      */
     public ObjectProperty<T> valueProperty() { return value; }
-    private ObjectProperty<T> value = new SimpleObjectProperty<T>(this, "value") {
-        T oldValue;
-        
-        @Override protected void invalidated() {
-            super.invalidated();
-            T newValue = get();
-            
-            if ((oldValue == null && newValue != null) ||
-                    oldValue != null && ! oldValue.equals(newValue)) {
-                valueInvalidated();
-            }
-            
-            oldValue = newValue;
-        }
-    };
+    private ObjectProperty<T> value = new SimpleObjectProperty<T>(this, "value");
+
     public final void setValue(T value) { valueProperty().set(value); }
     public final T getValue() { return valueProperty().get(); }
     

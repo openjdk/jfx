@@ -37,6 +37,7 @@ import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.WeakListChangeListener;
 import javafx.css.PseudoClass;
+import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.event.EventTarget;
 import javafx.scene.AccessibleAttribute;
@@ -249,6 +250,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             updateButtonCell();
         } else if ("VALUE".equals(p)) {
             updateValue();
+            comboBox.fireEvent(new ActionEvent());
         } else if ("EDITABLE".equals(p)) {
             updateEditable();
         }

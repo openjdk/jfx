@@ -34,7 +34,8 @@ package com.oracle.javafx.scenebuilder.kit.editor;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorPlatform.Theme;
 import com.oracle.javafx.scenebuilder.kit.editor.drag.DragController;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
-import com.oracle.javafx.scenebuilder.kit.editor.job.BatchJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.AddContextMenuToSelectionJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.AddTooltipToSelectionJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.ModifySelectionJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.BringForwardJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.BringToFrontJob;
@@ -44,7 +45,6 @@ import com.oracle.javafx.scenebuilder.kit.editor.job.DuplicateSelectionJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.FitToParentSelectionJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.ImportFileJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.IncludeFileJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.InsertAsAccessoryJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.InsertAsSubComponentJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
 import com.oracle.javafx.scenebuilder.kit.editor.job.PasteIntoJob;
@@ -61,7 +61,6 @@ import com.oracle.javafx.scenebuilder.kit.editor.job.gridpane.GridPaneJobUtils.P
 import com.oracle.javafx.scenebuilder.kit.editor.job.gridpane.MoveColumnJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.gridpane.MoveRowJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.gridpane.v2.SpanJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.UpdateSelectionJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.wrap.AbstractWrapInJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.wrap.UnwrapJob;
 import com.oracle.javafx.scenebuilder.kit.editor.messagelog.MessageLog;
@@ -183,6 +182,7 @@ public class EditorController {
         UNWRAP,
         WRAP_IN_ANCHOR_PANE,
         WRAP_IN_BORDER_PANE,
+        WRAP_IN_DIALOG_PANE,
         WRAP_IN_FLOW_PANE,
         WRAP_IN_GRID_PANE,
         WRAP_IN_GROUP,
@@ -192,6 +192,7 @@ public class EditorController {
         WRAP_IN_SPLIT_PANE,
         WRAP_IN_STACK_PANE,
         WRAP_IN_TAB_PANE,
+        WRAP_IN_TEXT_FLOW,
         WRAP_IN_TILE_PANE,
         WRAP_IN_TITLED_PANE,
         WRAP_IN_TOOL_BAR,
@@ -1062,6 +1063,10 @@ public class EditorController {
                 performWrap(javafx.scene.layout.BorderPane.class);
                 break;
             }
+            case WRAP_IN_DIALOG_PANE: {
+                performWrap(javafx.scene.control.DialogPane.class);
+                break;
+            }
             case WRAP_IN_FLOW_PANE: {
                 performWrap(javafx.scene.layout.FlowPane.class);
                 break;
@@ -1096,6 +1101,10 @@ public class EditorController {
             }
             case WRAP_IN_TAB_PANE: {
                 performWrap(javafx.scene.control.TabPane.class);
+                break;
+            }
+            case WRAP_IN_TEXT_FLOW: {
+                performWrap(javafx.scene.text.TextFlow.class);
                 break;
             }
             case WRAP_IN_TILE_PANE: {
@@ -1292,6 +1301,10 @@ public class EditorController {
                 result = canPerformWrap(javafx.scene.layout.BorderPane.class);
                 break;
             }
+            case WRAP_IN_DIALOG_PANE: {
+                result = canPerformWrap(javafx.scene.control.DialogPane.class);
+                break;
+            }
             case WRAP_IN_FLOW_PANE: {
                 result = canPerformWrap(javafx.scene.layout.FlowPane.class);
                 break;
@@ -1326,6 +1339,10 @@ public class EditorController {
             }
             case WRAP_IN_TAB_PANE: {
                 result = canPerformWrap(javafx.scene.control.TabPane.class);
+                break;
+            }
+            case WRAP_IN_TEXT_FLOW: {
+                result = canPerformWrap(javafx.scene.text.TextFlow.class);
                 break;
             }
             case WRAP_IN_TILE_PANE: {
@@ -1565,18 +1582,10 @@ public class EditorController {
         newObject.moveToFxomDocument(getFxomDocument());
         final FXOMObject rootObject = getFxomDocument().getFxomRoot();
         if (rootObject == null) { // Empty document
-            job = new BatchJob(this, true,
-                    I18N.getString("drop.job.insert.library.item", libraryItem.getName()));
-            ((BatchJob) job).addSubJob(new SetDocumentRootJob(newObject, this));
-            // New root container may need a resize
-            final DesignHierarchyMask mask = new DesignHierarchyMask(newObject);
-            if (mask.needResizeWhenTopElement()) {
-                ((BatchJob) job).addSubJob(new UsePredefinedSizeJob(this,
-                        EditorController.Size.SIZE_DEFAULT, newObject));
-            }
-                        
-            // As for non root element the inserted object is selected.
-            ((BatchJob) job).addSubJob(new UpdateSelectionJob(newObject, this));
+            final String description
+                    = I18N.getString("drop.job.insert.library.item", libraryItem.getName());
+            job = new SetDocumentRootJob(newObject, true /* usePredefinedSize */, description, this);
+
         } else {
             if (selection.isEmpty() || selection.isSelected(rootObject)) {
                 // No selection or root is selected -> we insert below root
@@ -1619,7 +1628,7 @@ public class EditorController {
                 final FXOMObject rootObject = getFxomDocument().getFxomRoot();
                 if (rootObject == null) { // Empty document
                     final SetDocumentRootJob job = new SetDocumentRootJob(
-                            newItemRoot, this);
+                            newItemRoot, true /* usePredefinedSize */, "unused", this); //NOI18N
                     result = job.isExecutable();
                 } else {
                     if (selection.isEmpty() || selection.isSelected(rootObject)) {
@@ -1680,6 +1689,7 @@ public class EditorController {
             classesSupportingWrapping = new ArrayList<>();
             classesSupportingWrapping.add(javafx.scene.layout.AnchorPane.class);
             classesSupportingWrapping.add(javafx.scene.layout.BorderPane.class);
+            classesSupportingWrapping.add(javafx.scene.control.DialogPane.class);
             classesSupportingWrapping.add(javafx.scene.layout.FlowPane.class);
             classesSupportingWrapping.add(javafx.scene.layout.GridPane.class);
             classesSupportingWrapping.add(javafx.scene.Group.class);
@@ -1689,6 +1699,7 @@ public class EditorController {
             classesSupportingWrapping.add(javafx.scene.control.SplitPane.class);
             classesSupportingWrapping.add(javafx.scene.layout.StackPane.class);
             classesSupportingWrapping.add(javafx.scene.control.TabPane.class);
+            classesSupportingWrapping.add(javafx.scene.text.TextFlow.class);
             classesSupportingWrapping.add(javafx.scene.layout.TilePane.class);
             classesSupportingWrapping.add(javafx.scene.control.TitledPane.class);
             classesSupportingWrapping.add(javafx.scene.control.ToolBar.class);
@@ -2201,42 +2212,9 @@ public class EditorController {
      * selected objects.
      */
     public void performAddContextMenu() {
-        assert canPerformAddContextMenu(); // (1)
-
-        // Build the ContextMenu item from the library builtin items
-        final String contextMenuFxmlPath = "builtin/ContextMenu.fxml"; //NOI18N
-        final URL contextMenuFxmlURL 
-                = BuiltinLibrary.class.getResource(contextMenuFxmlPath);
-        assert contextMenuFxmlURL != null;
-        try {
-            final String contextMenuFxmlText
-                    = FXOMDocument.readContentFromURL(contextMenuFxmlURL);
-
-            final AbstractSelectionGroup asg = selection.getGroup();
-            assert asg instanceof ObjectSelectionGroup; // Because of (1)
-            final ObjectSelectionGroup osg = (ObjectSelectionGroup) asg;
-
-            final BatchJob job = new BatchJob(this, true,
-                    I18N.getString("label.action.edit.add.context.menu"));
-            for (FXOMObject fxomObject : osg.getItems()) {
-                final FXOMDocument contextMenuDocument = new FXOMDocument(
-                        contextMenuFxmlText,
-                        contextMenuFxmlURL, getLibrary().getClassLoader(), null);
-
-                assert contextMenuDocument != null;
-                final FXOMObject contextMenuObject = contextMenuDocument.getFxomRoot();
-                assert contextMenuObject != null;
-                contextMenuObject.moveToFxomDocument(getFxomDocument());
-                assert contextMenuDocument.getFxomRoot() == null;
-
-                final Job insertJob = new InsertAsAccessoryJob(
-                        contextMenuObject, fxomObject, Accessory.CONTEXT_MENU, this);
-                job.addSubJob(insertJob);
-            }
-            getJobManager().push(job);
-        } catch (IOException x) {
-            throw new IllegalStateException("Bug in " + getClass().getSimpleName(), x); //NOI18N
-        }
+        assert canPerformAddContextMenu();
+        final Job addContextMenuJob = new AddContextMenuToSelectionJob(this);
+        getJobManager().push(addContextMenuJob);
     }
     
     /**
@@ -2257,42 +2235,9 @@ public class EditorController {
      */
     public void performAddTooltip() {
         assert canPerformAddTooltip(); // (1)
-
-        // Build the Tooltip item from the library builtin items
-        final String tooltipFxmlPath = "builtin/Tooltip.fxml"; //NOI18N
-        final URL tooltipFxmlURL 
-                = BuiltinLibrary.class.getResource(tooltipFxmlPath);
-        assert tooltipFxmlURL != null;
-        try {
-            final String tooltipFxmlText
-                    = FXOMDocument.readContentFromURL(tooltipFxmlURL);
-
-            final AbstractSelectionGroup asg = selection.getGroup();
-            assert asg instanceof ObjectSelectionGroup; // Because of (1)
-            final ObjectSelectionGroup osg = (ObjectSelectionGroup) asg;
-
-            final BatchJob job = new BatchJob(this, true,
-                    I18N.getString("label.action.edit.add.tooltip"));
-            for (FXOMObject fxomObject : osg.getItems()) {
-                final FXOMDocument tooltipDocument = new FXOMDocument(
-                        tooltipFxmlText,
-                        tooltipFxmlURL, getLibrary().getClassLoader(), null);
-
-                assert tooltipDocument != null;
-                final FXOMObject tooltipObject = tooltipDocument.getFxomRoot();
-                assert tooltipObject != null;
-                tooltipObject.moveToFxomDocument(getFxomDocument());
-                assert tooltipDocument.getFxomRoot() == null;
-
-                final Job insertJob = new InsertAsAccessoryJob(
-                        tooltipObject, fxomObject, Accessory.TOOLTIP, this);
-                job.addSubJob(insertJob);
-            }
-            getJobManager().push(job);
-        } catch (IOException x) {
-            throw new IllegalStateException("Bug in " + getClass().getSimpleName(), x); //NOI18N
-        }
-    }
+        final Job addTooltipJob = new AddTooltipToSelectionJob(this);
+        getJobManager().push(addTooltipJob);
+   }
     
     /**
      * Returns the URL of the CSS style associated to EditorController class.

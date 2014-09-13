@@ -98,6 +98,12 @@
 
 #RETAIN_PACKAGER_TESTS = false
 
+# Specifies whether or not Packager DMG tests should be run.
+# Mac OSX 10.7 tends to hang on automated builds with hdiutil is run,
+# hence the default is false.
+
+#TEST_PACKAGER_DMG = false
+
 # Specify the COMPILE_TARGETS when performing cross compiles. A Cross-Compile is
 # when you build for a platform other than the one you are building on. For example,
 # to build for Apple iOS, you would specify ios as one of the COMPILE_TARGETS.

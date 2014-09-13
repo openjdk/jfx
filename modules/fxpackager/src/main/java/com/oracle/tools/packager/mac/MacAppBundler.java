@@ -57,6 +57,7 @@ public class MacAppBundler extends AbstractBundler {
             BUNDLER_PREFIX + "macosx" + File.separator;
 
     private static final String EXECUTABLE_NAME      = "JavaAppLauncher";
+    private final static String LIBRARY_NAME         = "libpackager.dylib";
     private static final String TEMPLATE_BUNDLE_ICON = "GenericApp.icns";
     private static final String OS_TYPE_CODE         = "APPL";
     private static final String TEMPLATE_INFO_PLIST  = "Info.plist.template";
@@ -366,7 +367,6 @@ public class MacAppBundler extends AbstractBundler {
 
         }
 
-
         return true;
     }
 
@@ -443,6 +443,11 @@ public class MacAppBundler extends AbstractBundler {
                     RAW_EXECUTABLE_URL.fetchFrom(p),
                     executableFile);
 
+            // Copy library to the MacOS folder
+            IOUtils.copyFromURL(
+                    MacResources.class.getResource(LIBRARY_NAME),
+                    new File(macOSDirectory, LIBRARY_NAME));
+
             executableFile.setExecutable(true, false);
 
             // Copy runtime to PlugIns folder
@@ -459,6 +464,17 @@ public class MacAppBundler extends AbstractBundler {
             // Copy icon to Resources folder
             IOUtils.copyFile(getConfig_Icon(p),
                     new File(resourcesDirectory, getConfig_Icon(p).getName()));
+
+            // copy file association icons
+            for (Map<String, ? super Object> fa : FILE_ASSOCIATIONS.fetchFrom(p)) {
+                File f = FA_ICON.fetchFrom(fa);
+                if (f != null && f.exists()) {
+                    IOUtils.copyFile(f,
+                            new File(resourcesDirectory, f.getName()));
+                }
+            }
+
+
             // Generate Info.plist
             IOUtils.copyFile(getConfig_InfoPlist(p),
                     new File(contentsDirectory, "Info.plist"));
@@ -623,13 +639,22 @@ public class MacAppBundler extends AbstractBundler {
 
         data.put("DEPLOY_JVM_OPTIONS", sb.toString());
 
+        sb = new StringBuilder();
+        List<String> args = ARGUMENTS.fetchFrom(params);
+        newline = ""; //So we don't add unneccessary extra line after last append
+        for (String o : args) {
+            sb.append(newline).append("    <string>").append(o).append("</string>");
+            newline = "\n";
+        }
+        data.put("DEPLOY_ARGUMENTS", sb.toString());
+
         newline = "";
         sb = new StringBuilder();
         Map<String, String> overridableJVMOptions = USER_JVM_OPTIONS.fetchFrom(params);
         for (Map.Entry<String, String> arg: overridableJVMOptions.entrySet()) {
-            sb.append(newline);
-            sb.append("      <key>").append(arg.getKey()).append("</key>\n");
-            sb.append("      <string>").append(arg.getValue()).append("</string>");
+            sb.append(newline)
+                .append("      <key>").append(arg.getKey()).append("</key>\n")
+                .append("      <string>").append(arg.getValue()).append("</string>");
             newline = "\n";
         }
         data.put("DEPLOY_JVM_USER_OPTIONS", sb.toString());
@@ -641,9 +666,131 @@ public class MacAppBundler extends AbstractBundler {
 //        } else {
         data.put("DEPLOY_LAUNCHER_CLASS", MAIN_CLASS.fetchFrom(params));
 //        }
-        data.put("DEPLOY_APP_CLASSPATH", CLASSPATH.fetchFrom(params));
+
+        StringBuilder macroedPath = new StringBuilder();
+        for (String s : CLASSPATH.fetchFrom(params).split("[ ;:]+")) {
+            macroedPath.append("$PACKAGEDIR/");
+            macroedPath.append(s);
+            macroedPath.append(":");
+        }
+        macroedPath.deleteCharAt(macroedPath.length() - 1);
+
+        data.put("DEPLOY_APP_CLASSPATH", macroedPath.toString());
 
         //TODO: Add remainder of the classpath
+
+        StringBuilder bundleDocumentTypes = new StringBuilder();
+        StringBuilder exportedTypes = new StringBuilder();
+        for (Map<String, ? super Object> fileAssociation : FILE_ASSOCIATIONS.fetchFrom(params)) {
+
+            List<String> extensions = FA_EXTENSIONS.fetchFrom(fileAssociation);
+            List<String> mimeTypes = FA_CONTENT_TYPE.fetchFrom(fileAssociation);
+            String itemContentType = MAC_CF_BUNDLE_IDENTIFIER.fetchFrom(params) + "." + ((extensions == null || extensions.isEmpty())
+                    ? "mime"
+                    : extensions.get(0));
+            String description = FA_DESCRIPTION.fetchFrom(fileAssociation);
+            File icon = FA_ICON.fetchFrom(fileAssociation); //TODO FA_ICON_ICNS
+
+            bundleDocumentTypes.append("    <dict>\n")
+                .append("      <key>LSItemContentTypes</key>\n")
+                .append("      <array>\n")
+                .append("        <string>")
+                .append(itemContentType)
+                .append("</string>\n")
+                .append("      </array>\n")
+                .append("\n")
+                .append("      <key>CFBundleTypeName</key>\n")
+                .append("      <string>")
+                .append(description)
+                .append("</string>\n")
+                .append("\n")
+                .append("      <key>LSHandlerRank</key>\n")
+                .append("      <string>Owner</string>\n") //TODO make a bundler arg
+                .append("\n")
+                .append("      <key>CFBundleTypeRole</key>\n")
+                .append("      <string>Editor</string>\n") // TODO make a bundler arg
+                .append("\n")
+                .append("      <key>LSIsAppleDefaultForType</key>\n")
+                .append("      <true/>\n") // TODO make a bundler arg
+                .append("\n");
+
+            if (icon != null && icon.exists()) {
+                //?
+                bundleDocumentTypes.append("      <key>CFBundleTypeIconFile</key>\n")
+                        .append("      <string>")
+                        .append(icon.getName())
+                        .append("</string>\n");
+            }
+            bundleDocumentTypes.append("    </dict>\n");
+
+            exportedTypes.append("    <dict>\n")
+                .append("      <key>UTTypeIdentifier</key>\n")
+                .append("      <string>")
+                .append(itemContentType)
+                .append("</string>\n")
+                .append("\n")
+                .append("      <key>UTTypeDescription</key>\n")
+                .append("      <string>")
+                .append(description)
+                .append("</string>\n")
+                .append("      <key>UTTypeConformsTo</key>\n")
+                .append("      <array>\n")
+                .append("          <string>public.data</string>\n") //TODO expose this?
+                .append("      </array>\n")
+                .append("\n");
+            
+            if (icon != null && icon.exists()) {
+                exportedTypes.append("      <key>UTTypeIconFile</key>\n")
+                    .append("      <string>")
+                    .append(icon.getName())
+                    .append("</string>\n")
+                    .append("\n");
+            }
+
+            exportedTypes.append("\n")
+                .append("      <key>UTTypeTagSpecification</key>\n")
+                .append("      <dict>\n")
+            //TODO expose via param? .append("        <key>com.apple.ostype</key>\n");
+            //TODO expose via param? .append("        <string>ABCD</string>\n")
+                .append("\n");
+
+            if (extensions != null && !extensions.isEmpty()) {
+                exportedTypes.append("        <key>public.filename-extension</key>\n")
+                    .append("        <array>\n");
+
+                for (String ext : extensions) {
+                    exportedTypes.append("          <string>")
+                        .append(ext)
+                        .append("</string>\n");
+                }
+                exportedTypes.append("        </array>\n");
+            }
+            if (mimeTypes != null && !mimeTypes.isEmpty()) {
+                exportedTypes.append("        <key>public.mime-type</key>\n")
+                    .append("        <array>\n");
+
+                for (String mime : mimeTypes) {
+                    exportedTypes.append("          <string>")
+                        .append(mime)
+                        .append("</string>\n");
+                }
+                exportedTypes.append("        </array>\n");
+            }
+            exportedTypes.append("      </dict>\n")
+                    .append("    </dict>\n");
+        }
+        String associationData;
+        if (bundleDocumentTypes.length() > 0) {
+            associationData = "\n  <key>CFBundleDocumentTypes</key>\n  <array>\n"
+                    + bundleDocumentTypes.toString()
+                    + "  </array>\n\n  <key>UTExportedTypeDeclarations</key>\n  <array>\n"
+                    + exportedTypes.toString()
+                    + "  </array>\n";
+        } else {
+            associationData = "";
+        }
+        data.put("DEPLOY_FILE_ASSOCIATIONS", associationData);
+
 
         Writer w = new BufferedWriter(new FileWriter(file));
         w.write(preprocessTextResource(
@@ -836,6 +983,7 @@ public class MacAppBundler extends AbstractBundler {
         return Arrays.asList(
                 APP_NAME,
                 APP_RESOURCES,
+                ARGUMENTS,
                 BUNDLE_ID_SIGNING_PREFIX,
                 DEVELOPER_ID_APP_SIGNING_KEY,
                 ICON_ICNS,

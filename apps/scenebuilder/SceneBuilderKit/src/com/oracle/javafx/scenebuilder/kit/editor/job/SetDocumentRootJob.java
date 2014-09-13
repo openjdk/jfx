@@ -36,6 +36,7 @@ import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.SetFxomRootJob;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.AbstractSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
+import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -45,14 +46,27 @@ import java.util.List;
 public class SetDocumentRootJob extends BatchSelectionJob {
 
     private final FXOMObject newRoot;
+    private final boolean usePredefinedSize;
+    private final String description;
 
-    public SetDocumentRootJob(FXOMObject newRoot, EditorController editorController) {
+    public SetDocumentRootJob(FXOMObject newRoot, 
+            boolean usePredefinedSize, 
+            String description,
+            EditorController editorController) {
         super(editorController);
 
         assert editorController.getFxomDocument() != null;
         assert (newRoot == null) || (newRoot.getFxomDocument() == editorController.getFxomDocument());
+        assert description != null;
 
         this.newRoot = newRoot;
+        this.usePredefinedSize = usePredefinedSize;
+        this.description = description;
+    }
+    
+    public SetDocumentRootJob(FXOMObject newRoot, EditorController editorController) {
+        this(newRoot, false /* usePredefinedSize */, 
+                SetDocumentRootJob.class.getSimpleName(), editorController);
     }
 
     public FXOMObject getNewRoot() {
@@ -69,15 +83,25 @@ public class SetDocumentRootJob extends BatchSelectionJob {
             if (newRoot != null) {
                 result.add(new PrunePropertiesJob(newRoot, null, getEditorController()));
             }
+            
+            // Adds job that effectively modifes the root
             result.add(new SetFxomRootJob(newRoot, getEditorController()));
+            
+            // If need, we add a job for resizing the root object
+            if ((newRoot != null) && usePredefinedSize) {
+                final DesignHierarchyMask mask = new DesignHierarchyMask(newRoot);
+                if (mask.needResizeWhenTopElement()) {
+                    result.add(new UsePredefinedSizeJob(getEditorController(), 
+                            EditorController.Size.SIZE_DEFAULT, newRoot));
+                }
+            }
         }
         return result;
     }
 
     @Override
     protected String makeDescription() {
-        // Not expected to reach the user
-        return getClass().getSimpleName();
+        return description;
     }
 
     @Override

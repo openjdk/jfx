@@ -1,0 +1,151 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{0E29BA9D-7DE3-45F0-99BC-0442BFABE2D7}</ProjectGuid>
+    <RootNamespace>library</RootNamespace>
+    <Keyword>MFCDLLProj</Keyword>
+    <ProjectName>packager</ProjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>Unicode</CharacterSet>
+    <UseOfMfc>false</UseOfMfc>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+    <UseOfMfc>Dynamic</UseOfMfc>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+    <EmbedManifest>false</EmbedManifest>
+    <OutDir>C:\Projects\Packager\MyApp</OutDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;_DEBUG;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>"c:\java\jdk\include/win32";"c:\java\jdk\include"</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <ModuleDefinitionFile>.\main.def</ModuleDefinitionFile>
+      <OutputFile>C:\Projects\Packager\MyApp\$(TargetName)$(TargetExt)</OutputFile>
+    </Link>
+    <Midl>
+      <MkTypLibCompatible>false</MkTypLibCompatible>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </Midl>
+    <ResourceCompile>
+      <Culture>0x0409</Culture>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <ModuleDefinitionFile>.\library.def</ModuleDefinitionFile>
+    </Link>
+    <Midl>
+      <MkTypLibCompatible>false</MkTypLibCompatible>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </Midl>
+    <ResourceCompile>
+      <Culture>0x0409</Culture>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <None Include="..\..\..\library\common\MacPlatform.mm" />
+    <None Include="main.def" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\..\library\common\Exports.cpp" />
+    <ClCompile Include="..\..\..\library\common\FilePath.cpp" />
+    <ClCompile Include="..\..\..\library\common\GenericPlatform.cpp" />
+    <ClCompile Include="..\..\..\library\common\Helpers.cpp" />
+    <ClCompile Include="..\..\..\library\common\Java.cpp" />
+    <ClCompile Include="..\..\..\library\common\JavaUserPreferences.cpp" />
+    <ClCompile Include="..\..\..\library\common\JavaVirtualMachine.cpp" />
+    <ClCompile Include="..\..\..\library\common\LinuxPlatform.cpp" />
+    <ClCompile Include="..\..\..\library\common\Lock.cpp" />
+    <ClCompile Include="..\..\..\library\common\Macros.cpp" />
+    <ClCompile Include="..\..\..\library\common\main.cpp" />
+    <ClCompile Include="..\..\..\library\common\Messages.cpp" />
+    <ClCompile Include="..\..\..\library\common\Package.cpp" />
+    <ClCompile Include="..\..\..\library\common\Platform.cpp" />
+    <ClCompile Include="..\..\..\library\common\PlatformString.cpp" />
+    <ClCompile Include="..\..\..\library\common\PlatformThread.cpp" />
+    <ClCompile Include="..\..\..\library\common\PosixPlatform.cpp" />
+    <ClCompile Include="..\..\..\library\common\PropertyFile.cpp" />
+    <ClCompile Include="..\..\..\library\common\WindowsPlatform.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\..\library\common\Exports.h" />
+    <ClInclude Include="..\..\..\library\common\FilePath.h" />
+    <ClInclude Include="..\..\..\library\common\GenericPlatform.h" />
+    <ClInclude Include="..\..\..\library\common\Helpers.h" />
+    <ClInclude Include="..\..\..\library\common\Java.h" />
+    <ClInclude Include="..\..\..\library\common\JavaUserPreferences.h" />
+    <ClInclude Include="..\..\..\library\common\JavaVirtualMachine.h" />
+    <ClInclude Include="..\..\..\library\common\LinuxPlatform.h" />
+    <ClInclude Include="..\..\..\library\common\Lock.h" />
+    <ClInclude Include="..\..\..\library\common\MacPlatform.h" />
+    <ClInclude Include="..\..\..\library\common\Macros.h" />
+    <ClInclude Include="..\..\..\library\common\Messages.h" />
+    <ClInclude Include="..\..\..\library\common\Package.h" />
+    <ClInclude Include="..\..\..\library\common\Platform.h" />
+    <ClInclude Include="..\..\..\library\common\PlatformString.h" />
+    <ClInclude Include="..\..\..\library\common\PlatformThread.h" />
+    <ClInclude Include="..\..\..\library\common\PosixPlatform.h" />
+    <ClInclude Include="..\..\..\library\common\PropertyFile.h" />
+    <ClInclude Include="..\..\..\library\common\WindowsPlatform.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

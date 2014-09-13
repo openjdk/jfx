@@ -25,42 +25,35 @@
 
 package hello;
 
+import jdk.packager.services.UserJvmOptionsService;
+
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.Toolkit;
 import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import java.util.prefs.Preferences;
-import javax.swing.BorderFactory;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JList;
-import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-import javax.swing.ListSelectionModel;
-import javax.swing.WindowConstants;
+import java.util.Map;
+import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
 
 public class TestPackager {
 
+    private static String[] args;
+
     private static void createAndShowGUI() {
         //Create and set up the window.
-        try {
-            String preferencesId = System.getProperty("app.preferences.id");
-            Preferences node = Preferences.userRoot().node(preferencesId);
-            Preferences jvmOptions = node.node("JVMUserOptions");
-            String[] keys = jvmOptions.keys();
-            for (String key: keys) {
-                System.out.println("key:" + key);
-            }
-            jvmOptions.putLong("-DlastRunMs=", System.currentTimeMillis());
-            jvmOptions.put("-Xmx", "192m");
-            node.flush();
-        } catch (Exception ex) {
-            Logger.getLogger(TestPackager.class.getName()).log(Level.WARNING, null, ex);
+        UserJvmOptionsService ujo = UserJvmOptionsService.getUserJVMDefaults();
+        Map<String, String> userOptions = ujo.getUserJVMOptions();
+
+        for (Map.Entry <String, String> entry : userOptions.entrySet()) {
+            System.out.println("key:" + entry.getKey() + " value:" + entry.getValue());
         }
+        if (!userOptions.containsKey("-DfirstRunMs")) {
+            userOptions.put("-DfirstRunMs", Long.toString(System.currentTimeMillis()));
+        }
+        userOptions.put("-DlastRunMs", Long.toString(System.currentTimeMillis()));
+        ujo.setUserJVMOptions(userOptions);
 
         JFrame frame = new JFrame("Display Parameters");
         frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
@@ -74,32 +67,74 @@ public class TestPackager {
         long t = Runtime.getRuntime().totalMemory();
         Long total = t / 1048576;
 
-        JLabel label = new JLabel("Max" + value.toString() + "  Total"
-                + total.toString());
+        JLabel label = new JLabel("Max (bytes) " + value.toString()
+                + "  Total (bytes) " + total.toString());
 
         RuntimeMXBean RuntimemxBean = ManagementFactory.getRuntimeMXBean();
         List<String> arguments = RuntimemxBean.getInputArguments();
 
         JList<String> list = new JList<>(arguments.toArray(new String[arguments.size()]));
         list.setSelectionMode(ListSelectionModel.SINGLE_INTERVAL_SELECTION);
-        list.setLayoutOrientation(JList.HORIZONTAL_WRAP);
-        list.setVisibleRowCount(-1);
+        list.setLayoutOrientation(JList.VERTICAL);
         JScrollPane listScroller = new JScrollPane(list);
         listScroller.setPreferredSize(new Dimension(400, 200));
+
+        DefaultTableModel model = new DefaultTableModel();
+        model.addColumn("Key");
+        model.addColumn("Effective");
+        model.addColumn("Default");
+
+        Map<String, String> defaults = ujo.getUserJVMOptionDefaults();
+        for (Map.Entry <String, String> entry : userOptions.entrySet()) {
+            String def = defaults.get(entry.getKey());
+            model.addRow(new Object[] {entry.getKey(), entry.getValue(), def == null ? "<no default>" : def});
+        }
+        JTable prefs = new JTable(model);
+        JScrollPane prefsScroller = new JScrollPane(prefs);
+        prefsScroller.setPreferredSize(new Dimension(400, 100));
+
+        JList<String> argList = new JList<>(args);
+        argList.setSelectionMode(ListSelectionModel.SINGLE_INTERVAL_SELECTION);
+        argList.setLayoutOrientation(JList.VERTICAL);
+        JScrollPane argListScroller = new JScrollPane(argList);
+        argListScroller.setPreferredSize(new Dimension(400, 100));
+
+
+        Box box = Box.createVerticalBox();
+
+        box.add(new JLabel("JVM Arguments (user, options, and properties"));
+        box.add(Box.createVerticalStrut(5));
+        box.add(listScroller);
+
+        box.add(Box.createVerticalStrut(10));
+        box.add(new JLabel("User JVM Options, as set and with defaults"));
+        box.add(Box.createVerticalStrut(5));
+        box.add(prefsScroller);
+
+        box.add(Box.createVerticalStrut(10));
+        box.add(new JLabel("Command Line Arguments"));
+        box.add(Box.createVerticalStrut(5));
+        box.add(argListScroller);
+
         JPanel panel = new JPanel();
         panel.setLayout(new BorderLayout());
         panel.setBorder(BorderFactory.createEmptyBorder(30, 10, 30, 30));
         panel.add(label, BorderLayout.NORTH);
-        panel.add(listScroller, BorderLayout.CENTER);
+
+        panel.add(box, BorderLayout.CENTER);
+        panel.setSize(panel.getPreferredSize());
 
         frame.getContentPane().add(panel);
         frame.setLocationRelativeTo(null);
+        frame.setSize(frame.getPreferredSize());
 
         //Display the window.
         frame.setVisible(true);
+        frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
     }
 
     public static void main(String[] args) {
+        TestPackager.args = args;
         //Schedule a job for the event-dispatching thread:
         //creating and showing this application's GUI.
         javax.swing.SwingUtilities.invokeLater(TestPackager::createAndShowGUI);

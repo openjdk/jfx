@@ -26,6 +26,7 @@
 package javafx.scene;
 
 
+import com.sun.javafx.geometry.BoundsUtils;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.binding.BooleanExpression;
@@ -3628,51 +3629,6 @@ public abstract class Node implements EventTarget, Styleable {
     @Deprecated
     protected abstract boolean impl_computeContains(double localX, double localY);
 
-    private double min4(double v1, double v2, double v3, double v4) {
-        return Math.min(Math.min(v1, v2), Math.min(v3, v4));
-    }
-
-    private double max4(double v1, double v2, double v3, double v4) {
-        return Math.max(Math.max(v1, v2), Math.max(v3, v4));
-    }
-
-    private double min8(double v1, double v2, double v3, double v4,
-            double v5, double v6, double v7, double v8) {
-        return Math.min(min4(v1, v2, v3, v4), min4(v5, v6, v7, v8));
-    }
-
-    private double max8(double v1, double v2, double v3, double v4,
-            double v5, double v6, double v7, double v8) {
-        return Math.max(max4(v1, v2, v3, v4), max4(v5, v6, v7, v8));
-    }
-
-    Bounds createBoundingBox(Point3D p1, Point3D p2, Point3D p3, Point3D p4,
-            Point3D p5, Point3D p6, Point3D p7, Point3D p8) {
-        double minX = min8(p1.getX(), p2.getX(), p3.getX(), p4.getX(),
-                p5.getX(), p6.getX(), p7.getX(), p8.getX());
-        double maxX = max8(p1.getX(), p2.getX(), p3.getX(), p4.getX(),
-                p5.getX(), p6.getX(), p7.getX(), p8.getX());
-        double minY = min8(p1.getY(), p2.getY(), p3.getY(), p4.getY(),
-                p5.getY(), p6.getY(), p7.getY(), p8.getY());
-        double maxY = max8(p1.getY(), p2.getY(), p3.getY(), p4.getY(),
-                p5.getY(), p6.getY(), p7.getY(), p8.getY());
-        double minZ = min8(p1.getZ(), p2.getZ(), p3.getZ(), p4.getZ(),
-                p5.getZ(), p6.getZ(), p7.getZ(), p8.getZ());
-        double maxZ = max8(p1.getZ(), p2.getZ(), p3.getZ(), p4.getZ(),
-                p5.getZ(), p6.getZ(), p7.getZ(), p8.getZ());
-
-        return new BoundingBox(minX, minY, minZ, maxX - minX, maxY - minY, maxZ - minZ);
-    }
-
-    Bounds createBoundingBox(Point2D p1, Point2D p2, Point2D p3, Point2D p4) {
-        double minX = min4(p1.getX(), p2.getX(), p3.getX(), p4.getX());
-        double maxX = max4(p1.getX(), p2.getX(), p3.getX(), p4.getX());
-        double minY = min4(p1.getY(), p2.getY(), p3.getY(), p4.getY());
-        double maxY = max4(p1.getY(), p2.getY(), p3.getY(), p4.getY());
-
-        return new BoundingBox(minX, minY, maxX - minX, maxY - minY);
-    }
-
     /*
      *                   Bounds Invalidation And Notification
      *
@@ -4037,16 +3993,7 @@ public abstract class Node implements EventTarget, Styleable {
         final Point2D p3 = screenToLocal(screenBounds.getMaxX(), screenBounds.getMinY());
         final Point2D p4 = screenToLocal(screenBounds.getMaxX(), screenBounds.getMaxY());
 
-        if (p1 == null || p2 == null || p3 == null || p4 == null) {
-            return null;
-        }
-
-        final double minX = min4(p1.getX(), p2.getX(), p3.getX(), p4.getX());
-        final double maxX = max4(p1.getX(), p2.getX(), p3.getX(), p4.getX());
-        final double minY = min4(p1.getY(), p2.getY(), p3.getY(), p4.getY());
-        final double maxY = max4(p1.getY(), p2.getY(), p3.getY(), p4.getY());
-
-        return new BoundingBox(minX, minY, 0.0, maxX - minX, maxY - minY, 0.0);
+        return BoundsUtils.createBoundingBox(p1, p2, p3, p4);
     }
 
 
@@ -4130,16 +4077,7 @@ public abstract class Node implements EventTarget, Styleable {
         final Point2D p3 = sceneToLocal(bounds.getMaxX(), bounds.getMinY(), true);
         final Point2D p4 = sceneToLocal(bounds.getMaxX(), bounds.getMaxY(), true);
 
-        if (p1 == null || p2 == null || p3 == null || p4 == null) {
-            return null;
-        }
-
-        final double minX = min4(p1.getX(), p2.getX(), p3.getX(), p4.getX());
-        final double maxX = max4(p1.getX(), p2.getX(), p3.getX(), p4.getX());
-        final double minY = min4(p1.getY(), p2.getY(), p3.getY(), p4.getY());
-        final double maxY = max4(p1.getY(), p2.getY(), p3.getY(), p4.getY());
-
-        return new BoundingBox(minX, minY, 0.0, maxX - minX, maxY - minY, 0.0);
+        return BoundsUtils.createBoundingBox(p1, p2, p3, p4);
     }
 
     /**
@@ -4252,7 +4190,7 @@ public abstract class Node implements EventTarget, Styleable {
             Point2D p3 = sceneToLocal(sceneBounds.getMaxX(), sceneBounds.getMaxY());
             Point2D p4 = sceneToLocal(sceneBounds.getMinX(), sceneBounds.getMaxY());
 
-            return createBoundingBox(p1, p2, p3, p4);
+            return BoundsUtils.createBoundingBox(p1, p2, p3, p4);
         }
         try {
             Point3D p1 = sceneToLocal0(sceneBounds.getMinX(), sceneBounds.getMinY(), sceneBounds.getMinZ());
@@ -4263,7 +4201,7 @@ public abstract class Node implements EventTarget, Styleable {
             Point3D p6 = sceneToLocal0(sceneBounds.getMaxX(), sceneBounds.getMaxY(), sceneBounds.getMaxZ());
             Point3D p7 = sceneToLocal0(sceneBounds.getMaxX(), sceneBounds.getMinY(), sceneBounds.getMinZ());
             Point3D p8 = sceneToLocal0(sceneBounds.getMaxX(), sceneBounds.getMinY(), sceneBounds.getMaxZ());
-            return createBoundingBox(p1, p2, p3, p4, p5, p6, p7, p8);
+            return BoundsUtils.createBoundingBox(p1, p2, p3, p4, p5, p6, p7, p8);
         } catch (NoninvertibleTransformException e) {
             return null;
         }
@@ -4347,21 +4285,7 @@ public abstract class Node implements EventTarget, Styleable {
         final Point2D p7 = localToScreen(localBounds.getMaxX(), localBounds.getMinY(), localBounds.getMinZ());
         final Point2D p8 = localToScreen(localBounds.getMaxX(), localBounds.getMinY(), localBounds.getMaxZ());
 
-        if (p1 == null || p2 == null || p3 == null || p4 == null
-                || p5 == null || p6 == null || p7 == null || p8 == null) {
-            return null;
-        }
-
-        final double minX = min8(p1.getX(), p2.getX(), p3.getX(), p4.getX(),
-                p5.getX(), p6.getX(), p7.getX(), p8.getX());
-        final double maxX = max8(p1.getX(), p2.getX(), p3.getX(), p4.getX(),
-                p5.getX(), p6.getX(), p7.getX(), p8.getX());
-        final double minY = min8(p1.getY(), p2.getY(), p3.getY(), p4.getY(),
-                p5.getY(), p6.getY(), p7.getY(), p8.getY());
-        final double maxY = max8(p1.getY(), p2.getY(), p3.getY(), p4.getY(),
-                p5.getY(), p6.getY(), p7.getY(), p8.getY());
-
-        return new BoundingBox(minX, minY, maxX - minX, maxY - minY);
+        return BoundsUtils.createBoundingBox(p1, p2, p3, p4, p5, p6, p7, p8);
     }
 
     /**
@@ -4533,7 +4457,7 @@ public abstract class Node implements EventTarget, Styleable {
         Point3D p6 = localToScene(localBounds.getMaxX(), localBounds.getMaxY(), localBounds.getMaxZ(), true);
         Point3D p7 = localToScene(localBounds.getMaxX(), localBounds.getMinY(), localBounds.getMinZ(), true);
         Point3D p8 = localToScene(localBounds.getMaxX(), localBounds.getMinY(), localBounds.getMaxZ(), true);
-        return createBoundingBox(p1, p2, p3, p4, p5, p6, p7, p8);
+        return BoundsUtils.createBoundingBox(p1, p2, p3, p4, p5, p6, p7, p8);
     }
 
     /**
@@ -4555,7 +4479,7 @@ public abstract class Node implements EventTarget, Styleable {
             Point2D p3 = localToScene(localBounds.getMaxX(), localBounds.getMaxY());
             Point2D p4 = localToScene(localBounds.getMinX(), localBounds.getMaxY());
 
-            return createBoundingBox(p1, p2, p3, p4);
+            return BoundsUtils.createBoundingBox(p1, p2, p3, p4);
         }
         Point3D p1 = localToScene(localBounds.getMinX(), localBounds.getMinY(), localBounds.getMinZ());
         Point3D p2 = localToScene(localBounds.getMinX(), localBounds.getMinY(), localBounds.getMaxZ());
@@ -4565,7 +4489,7 @@ public abstract class Node implements EventTarget, Styleable {
         Point3D p6 = localToScene(localBounds.getMaxX(), localBounds.getMaxY(), localBounds.getMaxZ());
         Point3D p7 = localToScene(localBounds.getMaxX(), localBounds.getMinY(), localBounds.getMinZ());
         Point3D p8 = localToScene(localBounds.getMaxX(), localBounds.getMinY(), localBounds.getMaxZ());
-        return createBoundingBox(p1, p2, p3, p4, p5, p6, p7, p8);
+        return BoundsUtils.createBoundingBox(p1, p2, p3, p4, p5, p6, p7, p8);
 
     }
 
@@ -4633,7 +4557,7 @@ public abstract class Node implements EventTarget, Styleable {
             Point2D p3 = parentToLocal(parentBounds.getMaxX(), parentBounds.getMaxY());
             Point2D p4 = parentToLocal(parentBounds.getMinX(), parentBounds.getMaxY());
 
-            return createBoundingBox(p1, p2, p3, p4);
+            return BoundsUtils.createBoundingBox(p1, p2, p3, p4);
         }
         Point3D p1 = parentToLocal(parentBounds.getMinX(), parentBounds.getMinY(), parentBounds.getMinZ());
         Point3D p2 = parentToLocal(parentBounds.getMinX(), parentBounds.getMinY(), parentBounds.getMaxZ());
@@ -4643,7 +4567,7 @@ public abstract class Node implements EventTarget, Styleable {
         Point3D p6 = parentToLocal(parentBounds.getMaxX(), parentBounds.getMaxY(), parentBounds.getMaxZ());
         Point3D p7 = parentToLocal(parentBounds.getMaxX(), parentBounds.getMinY(), parentBounds.getMinZ());
         Point3D p8 = parentToLocal(parentBounds.getMaxX(), parentBounds.getMinY(), parentBounds.getMaxZ());
-        return createBoundingBox(p1, p2, p3, p4, p5, p6, p7, p8);
+        return BoundsUtils.createBoundingBox(p1, p2, p3, p4, p5, p6, p7, p8);
     }
 
     /**
@@ -4702,7 +4626,7 @@ public abstract class Node implements EventTarget, Styleable {
             Point2D p3 = localToParent(localBounds.getMaxX(), localBounds.getMaxY());
             Point2D p4 = localToParent(localBounds.getMinX(), localBounds.getMaxY());
 
-            return createBoundingBox(p1, p2, p3, p4);
+            return BoundsUtils.createBoundingBox(p1, p2, p3, p4);
         }
         Point3D p1 = localToParent(localBounds.getMinX(), localBounds.getMinY(), localBounds.getMinZ());
         Point3D p2 = localToParent(localBounds.getMinX(), localBounds.getMinY(), localBounds.getMaxZ());
@@ -4712,7 +4636,7 @@ public abstract class Node implements EventTarget, Styleable {
         Point3D p6 = localToParent(localBounds.getMaxX(), localBounds.getMaxY(), localBounds.getMaxZ());
         Point3D p7 = localToParent(localBounds.getMaxX(), localBounds.getMinY(), localBounds.getMinZ());
         Point3D p8 = localToParent(localBounds.getMaxX(), localBounds.getMinY(), localBounds.getMaxZ());
-        return createBoundingBox(p1, p2, p3, p4, p5, p6, p7, p8);
+        return BoundsUtils.createBoundingBox(p1, p2, p3, p4, p5, p6, p7, p8);
     }
 
     /**
@@ -9677,7 +9601,10 @@ public abstract class Node implements EventTarget, Styleable {
                 @SuppressWarnings("deprecation")
                 @Override public AccessControlContext getAccessControlContext() {
                     Scene scene = getScene();
-                    if (scene == null) throw new RuntimeException("Accessbility requested for node not on a scene");
+                    if (scene == null) {
+                        /* This can happen during the release process of an accessible object. */
+                        throw new RuntimeException("Accessbility requested for node not on a scene");
+                    }
                     if (scene.impl_getPeer() != null) {
                         return scene.impl_getPeer().getAccessControlContext();
                     } else {

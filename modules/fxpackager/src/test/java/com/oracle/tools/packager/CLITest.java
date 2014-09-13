@@ -64,7 +64,7 @@ public class CLITest {
                 "-srcfiles", fakeMainJar.getCanonicalPath(),
                 "-outdir", workDir.getCanonicalPath(),
                 "-outfile", "SimpleTest",
-                "-appclass", "hello.TestPackager",
+                "-appclass", "hello.HelloRectangle",
                 "-native",
                 "-name", "SimpleTest");
     }
@@ -82,7 +82,7 @@ public class CLITest {
                 "-srcfiles", fakeMainJar.getCanonicalPath(),
                 "-outdir", workDir.getCanonicalPath(),
                 "-outfile", "SimpleTest",
-                "-appclass", "hello.TestPackager",
+                "-appclass", "hello.HelloRectangle",
                 "-native", "image",
                 "-name", "SimpleTest",
                 "-BOptionThatWillNeverExist=true",
@@ -98,7 +98,7 @@ public class CLITest {
                 "-srcfiles", fakeMainJar.getCanonicalPath(),
                 "-outdir", workDir.getCanonicalPath(),
                 "-outfile", "SimpleTest",
-                "-appclass", "hello.TestPackager",
+                "-appclass", "hello.HelloRectangle",
                 "-native", "image",
                 "-name", "SimpleTest",
                 "-BjvmOptions=-Dsqe.foo.bar=baz -Dsqe.qux.corge=grault",
@@ -114,7 +114,7 @@ public class CLITest {
                 "-srcfiles", fakeMainJar.getCanonicalPath(),
                 "-outdir", workDir.getCanonicalPath(),
                 "-outfile", "SimpleTest",
-                "-appclass", "hello.TestPackager",
+                "-appclass", "hello.HelloRectangle",
                 "-native", "image",
                 "-name", "SimpleTest",
                 "-Bname=DuplicateTest");
@@ -127,7 +127,7 @@ public class CLITest {
                 "-srcfiles", fakeMainJar.getCanonicalPath(),
                 "-outdir", workDir.getCanonicalPath(),
                 "-outfile", "SimpleTest",
-                "-appclass", "hello.TestPackager",
+                "-appclass", "hello.HelloRectangle",
                 "-native", "image",
                 "-name", "SimpleTest",
                 "-Bname=SimpleTest");

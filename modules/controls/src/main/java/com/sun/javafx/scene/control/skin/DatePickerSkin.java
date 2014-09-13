@@ -39,6 +39,7 @@ import com.sun.javafx.scene.traversal.TraversalContext;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.css.PseudoClass;
+import javafx.event.ActionEvent;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.control.DatePicker;
@@ -242,6 +243,7 @@ public class DatePickerSkin extends ComboBoxPopupControl<LocalDate> {
                 datePickerContent.displayedYearMonthProperty().set((date != null) ? YearMonth.from(date) : YearMonth.now());
                 datePickerContent.updateValues();
             }
+            datePicker.fireEvent(new ActionEvent());
         } else {
             super.handleControlPropertyChanged(p);
         }

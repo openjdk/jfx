@@ -18,5 +18,5 @@
       <attribute name="optional" value="true"/>
     </attributes>
   </classpathentry>
-  <classpathentry kind="src" exported="true" path="/graphics"/>
+  <classpathentry kind="src" exported="true" path="/controls"/>
 </classpath>

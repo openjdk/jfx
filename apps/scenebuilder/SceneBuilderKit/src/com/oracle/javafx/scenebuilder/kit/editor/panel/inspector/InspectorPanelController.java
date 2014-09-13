@@ -41,6 +41,7 @@ import com.oracle.javafx.scenebuilder.kit.editor.job.togglegroup.ModifySelection
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.AnchorPaneConstraintsEditor;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.BooleanEditor;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.BoundedDoubleEditor;
+import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.ButtonTypeEditor;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.ColumnResizePolicyEditor;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.CursorEditor;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.DividerPositionsEditor;
@@ -256,6 +257,7 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
     private final Stack<Editor> columnResizePolicyEditorPool = new Stack<>();
     private final Stack<Editor> rectangle2DPopupEditorPool = new Stack<>();
     private final Stack<Editor> toggleGroupEditorPool = new Stack<>();
+    private final Stack<Editor> buttonTypeEditorPool = new Stack<>();
     // ...
     //
     // Subsection title pool
@@ -350,6 +352,7 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
         editorPools.put(ColumnResizePolicyEditor.class, columnResizePolicyEditorPool);
         editorPools.put(Rectangle2DPopupEditor.class, rectangle2DPopupEditorPool);
         editorPools.put(ToggleGroupEditor.class, toggleGroupEditorPool);
+        editorPools.put(ButtonTypeEditor.class, buttonTypeEditorPool);
 
         // ...
     }
@@ -1349,6 +1352,9 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
                 case "stylesheets": //NOI18N
                     propertyEditor = makePropertyEditor(StylesheetEditor.class, propMeta);
                     break;
+                case "buttonTypes": //NOI18N
+                    propertyEditor = makePropertyEditor(ButtonTypeEditor.class, propMeta);
+                    break;
                 case "dividerPositions": //NOI18N
                     propertyEditor = makePropertyEditor(DividerPositionsEditor.class, propMeta);
                     break;
@@ -1889,6 +1895,12 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
                 ((ToggleGroupEditor) propertyEditor).reset(propMeta, selectedClasses, getSuggestedToggleGroups());
             } else {
                 propertyEditor = new ToggleGroupEditor(propMeta, selectedClasses, getSuggestedToggleGroups());
+            }
+        } else if (editorClass == ButtonTypeEditor.class) {
+            if (propertyEditor != null) {
+                ((ButtonTypeEditor) propertyEditor).reset(propMeta, selectedClasses);
+            } else {
+                propertyEditor = new ButtonTypeEditor(propMeta, selectedClasses);
             }
         } else {
             if (propertyEditor != null) {

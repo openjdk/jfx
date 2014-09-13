@@ -80,6 +80,7 @@ public class ContextMenuController {
     private Menu wrapInMenu;
     private MenuItem wrapInAnchorPaneMenuItem;
     private MenuItem wrapInBorderPaneMenuItem;
+    private MenuItem wrapInDialogPaneMenuItem;
     private MenuItem wrapInFlowPaneMenuItem;
     private MenuItem wrapInGridPaneMenuItem;
     private MenuItem wrapInGroupMenuItem;
@@ -89,6 +90,7 @@ public class ContextMenuController {
     private MenuItem wrapInSplitPaneMenuItem;
     private MenuItem wrapInStackPaneMenuItem;
     private MenuItem wrapInTabPaneMenuItem;
+    private MenuItem wrapInTextFlowMenuItem;
     private MenuItem wrapInTilePaneMenuItem;
     private MenuItem wrapInTitledPaneMenuItem;
     private MenuItem wrapInToolBarMenuItem;
@@ -388,6 +390,9 @@ public class ContextMenuController {
         wrapInBorderPaneMenuItem = new MenuItem("BorderPane");
         wrapInBorderPaneMenuItem.setOnAction(onActionEventHandler);
         wrapInBorderPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_BORDER_PANE));
+        wrapInDialogPaneMenuItem = new MenuItem("DialogPane");
+        wrapInDialogPaneMenuItem.setOnAction(onActionEventHandler);
+        wrapInDialogPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_DIALOG_PANE));
         wrapInFlowPaneMenuItem = new MenuItem("FlowPane");
         wrapInFlowPaneMenuItem.setOnAction(onActionEventHandler);
         wrapInFlowPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_FLOW_PANE));
@@ -415,6 +420,9 @@ public class ContextMenuController {
         wrapInTilePaneMenuItem = new MenuItem("TilePane");
         wrapInTilePaneMenuItem.setOnAction(onActionEventHandler);
         wrapInTilePaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_TILE_PANE));
+        wrapInTextFlowMenuItem = new MenuItem("TextFlow");
+        wrapInTextFlowMenuItem.setOnAction(onActionEventHandler);
+        wrapInTextFlowMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_TEXT_FLOW));
         wrapInTitledPaneMenuItem = new MenuItem("TitledPane");
         wrapInTitledPaneMenuItem.setOnAction(onActionEventHandler);
         wrapInTitledPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_TITLED_PANE));
@@ -430,6 +438,7 @@ public class ContextMenuController {
         wrapInMenu.getItems().setAll(
                 wrapInAnchorPaneMenuItem,
                 wrapInBorderPaneMenuItem,
+                wrapInDialogPaneMenuItem,
                 wrapInFlowPaneMenuItem,
                 wrapInGridPaneMenuItem,
                 wrapInGroupMenuItem,
@@ -439,6 +448,7 @@ public class ContextMenuController {
                 wrapInSplitPaneMenuItem,
                 wrapInStackPaneMenuItem,
                 wrapInTabPaneMenuItem,
+                wrapInTextFlowMenuItem,
                 wrapInTilePaneMenuItem,
                 wrapInTitledPaneMenuItem,
                 wrapInToolBarMenuItem,

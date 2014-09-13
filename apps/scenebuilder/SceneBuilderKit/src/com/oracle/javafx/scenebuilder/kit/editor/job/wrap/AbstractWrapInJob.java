@@ -60,6 +60,7 @@ import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.chart.Axis;
 import javafx.scene.control.Accordion;
+import javafx.scene.control.DialogPane;
 import javafx.scene.control.TabPane;
 import javafx.scene.layout.BorderPane;
 
@@ -85,6 +86,8 @@ public abstract class AbstractWrapInJob extends BatchSelectionJob {
             job = new WrapInAnchorPaneJob(editorController);
         } else if (wrappingClass == javafx.scene.layout.BorderPane.class) {
             job = new WrapInBorderPaneJob(editorController);
+        } else if (wrappingClass == javafx.scene.control.DialogPane.class) {
+            job = new WrapInDialogPaneJob(editorController);
         } else if (wrappingClass == javafx.scene.layout.FlowPane.class) {
             job = new WrapInFlowPaneJob(editorController);
         } else if (wrappingClass == javafx.scene.layout.GridPane.class) {
@@ -103,6 +106,8 @@ public abstract class AbstractWrapInJob extends BatchSelectionJob {
             job = new WrapInStackPaneJob(editorController);
         } else if (wrappingClass == javafx.scene.control.TabPane.class) {
             job = new WrapInTabPaneJob(editorController);
+        } else if (wrappingClass == javafx.scene.text.TextFlow.class) {
+            job = new WrapInTextFlowJob(editorController);
         } else if (wrappingClass == javafx.scene.layout.TilePane.class) {
             job = new WrapInTilePaneJob(editorController);
         } else if (wrappingClass == javafx.scene.control.TitledPane.class) {
@@ -143,7 +148,8 @@ public abstract class AbstractWrapInJob extends BatchSelectionJob {
             return true;
         }
         final Object parentSceneGraphObject = parent.getSceneGraphObject();
-        if (parentSceneGraphObject instanceof BorderPane) {
+        if (parentSceneGraphObject instanceof BorderPane
+                || parentSceneGraphObject instanceof DialogPane) {
             return osg.getItems().size() == 1;
         }
         return !(parentSceneGraphObject instanceof Accordion) // accepts only TitledPanes

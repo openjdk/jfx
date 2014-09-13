@@ -123,6 +123,7 @@ public class BuiltinLibrary extends Library {
                 "AccordionEmpty", "Accordion", EMPTY_QUALIFIER); //NOI18N
         addRegionItem200x200(javafx.scene.layout.AnchorPane.class, TAG_CONTAINERS);
         addRegionItem200x200(javafx.scene.layout.BorderPane.class, TAG_CONTAINERS);
+        addCustomizedItem(javafx.scene.control.ButtonBar.class, TAG_CONTAINERS, FX8_QUALIFIER);
         addCustomizedItem(javafx.scene.control.DialogPane.class, TAG_CONTAINERS, FX8_QUALIFIER);
         addDefaultItem(javafx.scene.control.DialogPane.class, TAG_CONTAINERS, EMPTY_QUALIFIER, FX8_QUALIFIER);
         addRegionItem200x200(javafx.scene.layout.FlowPane.class, TAG_CONTAINERS);

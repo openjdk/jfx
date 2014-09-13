@@ -1152,19 +1152,20 @@ public abstract class TextInputControl extends Control {
         redoable.set(undoChange.next != null);
     }
 
-    boolean filterAndSet(String value) {
+    private boolean filterAndSet(String value) {
         // Send the new value through the textFormatter, if one exists.
         TextFormatter<?> formatter = getTextFormatter();
         int length = content.length();
         if (formatter != null && formatter.getFilter() != null && !text.isBound()) {
-            TextFormatter.Change change = new TextFormatter.Change(TextInputControl.this, getFormatterAccessor(), 0, length, value);
+            TextFormatter.Change change = new TextFormatter.Change(
+                    TextInputControl.this, getFormatterAccessor(), 0, length, value, 0, 0);
             change = formatter.getFilter().apply(change);
             if (change == null) {
                 return false;
             }
             replaceText(change.start, change.end, change.text, change.getAnchor(), change.getCaretPosition());
         } else {
-            replaceText(0, length, value, value.length(), value.length());
+            replaceText(0, length, value, 0, 0);
         }
         return true;
     }

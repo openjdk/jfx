@@ -186,7 +186,7 @@ bool checkJavaHome(HKEY key, const char * sKey, const char * jv, JavaVersion *ve
             ) {
         DWORD ot = REG_SZ;
         DWORD size = 255;
-		char data[MAX_PATH] = {0};
+        char data[MAX_PATH] = {0};
         if ((res = RegQueryValueExA(hKey, "JavaHome", NULL, &ot, (BYTE *) data, &size)) == ERROR_SUCCESS) {
             version->home = data;
             strcat_s(data, sizeof(data) - strlen(data), "\\bin\\java.exe");

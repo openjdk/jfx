@@ -678,7 +678,8 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
 {
     isFullScreenExitingLoop = YES;
     GET_MAIN_JENV;
-    [GlassApplication enterNestedEventLoopWithEnv:env];
+    (*env)->CallStaticObjectMethod(env, jApplicationClass,
+            javaIDs.Application.enterNestedEventLoop);
     isFullScreenExitingLoop = NO;
 }
 
@@ -688,7 +689,8 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
         return;
     }
     GET_MAIN_JENV;
-    [GlassApplication leaveNestedEventLoopWithEnv:env retValue:0L];
+    (*env)->CallStaticVoidMethod(env, jApplicationClass,
+            javaIDs.Application.leaveNestedEventLoop, (jobject)NULL);
 }
 
 + (void)registerKeyEvent:(NSEvent*)event
@@ -780,6 +782,14 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacApplication__1initIDs
 
     javaIDs.Application.reportException = (*env)->GetStaticMethodID(
             env, jClass, "reportException", "(Ljava/lang/Throwable;)V");
+    if ((*env)->ExceptionCheck(env)) return;
+
+    javaIDs.Application.enterNestedEventLoop = (*env)->GetStaticMethodID(
+            env, jClass, "enterNestedEventLoop", "()Ljava/lang/Object;");
+    if ((*env)->ExceptionCheck(env)) return;
+
+    javaIDs.Application.leaveNestedEventLoop = (*env)->GetStaticMethodID(
+            env, jClass, "leaveNestedEventLoop", "(Ljava/lang/Object;)V");
     if ((*env)->ExceptionCheck(env)) return;
 
     javaIDs.MacApplication.notifyApplicationDidTerminate = (*env)->GetMethodID(
@@ -891,11 +901,6 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacApplication__1enterNested
 
     NSAutoreleasePool *glasspool = [[NSAutoreleasePool alloc] init];
     {
-        if (isFullScreenExitingLoop) {
-            // If we ever hit this point (which is unlikely), then we must switch to
-            // using the ui.EventLoop for the internal nested event loop
-            fprintf(stderr, "ERROR in Glass: user's enterNestedEventLoop call while an internal nested event loop is spinning. Please file a bug against Glass.\n");
-        }
         ret = [GlassApplication enterNestedEventLoopWithEnv:env];
     }
     [glasspool drain]; glasspool=nil;
@@ -916,11 +921,6 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacApplication__1leaveNestedEve
 
     NSAutoreleasePool *glasspool = [[NSAutoreleasePool alloc] init];
     {
-        if (isFullScreenExitingLoop) {
-            // If we ever hit this point (which is unlikely), then we must switch to
-            // using the ui.EventLoop for the internal nested event loop
-            fprintf(stderr, "ERROR in Glass: user's leaveNestedEventLoop call while an internal nested event loop is spinning. Please file a bug against Glass.\n");
-        }
         [GlassApplication leaveNestedEventLoopWithEnv:env retValue:retValue];
     }
     [glasspool drain]; glasspool=nil;

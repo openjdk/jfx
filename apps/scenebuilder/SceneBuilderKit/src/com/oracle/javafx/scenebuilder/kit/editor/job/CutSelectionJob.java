@@ -40,12 +40,17 @@ import java.util.List;
 /**
  *
  */
-public class CutSelectionJob extends BatchSelectionJob {
+public class CutSelectionJob extends InlineSelectionJob {
 
     private DeleteSelectionJob deleteSelectionSubJob;
 
     public CutSelectionJob(EditorController editorController) {
         super(editorController);
+    }
+
+    @Override
+    public boolean isExecutable() {
+        return getEditorController().canPerformControlAction(ControlAction.COPY);
     }
 
     @Override
@@ -55,7 +60,7 @@ public class CutSelectionJob extends BatchSelectionJob {
     }
 
     @Override
-    protected List<Job> makeSubJobs() {
+    protected List<Job> makeAndExecuteSubJobs() {
 
         final List<Job> result = new ArrayList<>();
         if (getEditorController().canPerformControlAction(ControlAction.COPY)) {
@@ -65,6 +70,7 @@ public class CutSelectionJob extends BatchSelectionJob {
 
             deleteSelectionSubJob = new DeleteSelectionJob(getEditorController());
             if (deleteSelectionSubJob.isExecutable()) {
+                deleteSelectionSubJob.execute(); 
                 result.add(deleteSelectionSubJob);
             }
         }

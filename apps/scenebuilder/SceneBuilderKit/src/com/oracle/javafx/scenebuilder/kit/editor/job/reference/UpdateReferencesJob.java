@@ -33,7 +33,6 @@
 package com.oracle.javafx.scenebuilder.kit.editor.job.reference;
 
 import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
-import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -72,9 +71,7 @@ public class UpdateReferencesJob extends Job {
     @Override
     public void execute() {
         final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
-        final Selection selection = getEditorController().getSelection();
         
-        selection.beginUpdate();
         fxomDocument.beginUpdate();
         
         // First executes the subjob => references may become valid
@@ -86,37 +83,30 @@ public class UpdateReferencesJob extends Job {
         fixJobs.addAll(updater.getExecutedJobs());
         
         fxomDocument.endUpdate();
-        selection.endUpdate();
     }
 
     @Override
     public void undo() {
         final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
-        final Selection selection = getEditorController().getSelection();
         
-        selection.beginUpdate();
         fxomDocument.beginUpdate();
         for (int i = fixJobs.size() - 1; i >= 0; i--) {
             fixJobs.get(i).undo();
         }
         subJob.undo();
         fxomDocument.endUpdate();
-        selection.endUpdate();
     }
 
     @Override
     public void redo() {
         final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
-        final Selection selection = getEditorController().getSelection();
         
-        selection.beginUpdate();
         fxomDocument.beginUpdate();
         subJob.redo();
         for (Job fixJob : fixJobs) {
             fixJob.redo();
         }
         fxomDocument.endUpdate();
-        selection.endUpdate();
     }
 
     @Override

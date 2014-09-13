@@ -133,6 +133,7 @@ public class ComponentClassMetadata extends ClassMetadata {
          * =========================================
          * 
          * Accordion        panes
+         * ButtonBar        buttons
          * ContextMenu      items
          * Menu             items
          * MenuBar          menus
@@ -154,6 +155,8 @@ public class ComponentClassMetadata extends ClassMetadata {
       
         if (componentClass == javafx.scene.control.Accordion.class) {
             result = panesName;
+        } else if (componentClass == javafx.scene.control.ButtonBar.class) {
+            result = buttonsName;
         } else if (componentClass == javafx.scene.control.ContextMenu.class) {
             result = itemsName;
         } else if (componentClass == javafx.scene.control.Menu.class) {
@@ -191,6 +194,7 @@ public class ComponentClassMetadata extends ClassMetadata {
         return result;
     }
         
+    private static final PropertyName buttonsName = new PropertyName("buttons");
     private static final PropertyName columnsName = new PropertyName("columns");
     private static final PropertyName elementsName = new PropertyName("elements");
     private static final PropertyName itemsName = new PropertyName("items");

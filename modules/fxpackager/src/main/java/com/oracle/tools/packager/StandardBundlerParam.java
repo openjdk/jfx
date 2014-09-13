@@ -219,6 +219,17 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
             );
 
     @SuppressWarnings("unchecked")
+    public static final StandardBundlerParam<List<String>> ARGUMENTS =
+            new StandardBundlerParam<>(
+                    I18N.getString("param.arguments.name"),
+                    I18N.getString("param.arguments.description"),
+                    "arguments",
+                    (Class<List<String>>) (Object) List.class,
+                    params -> Collections.emptyList(),
+                    (s, p) -> Arrays.asList(s.split("\\s+"))
+            );
+
+    @SuppressWarnings("unchecked")
     public static final StandardBundlerParam<List<String>> JVM_OPTIONS =
             new StandardBundlerParam<>(
                     I18N.getString("param.jvm-options.name"),
@@ -449,6 +460,72 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     params -> false,
                     // valueOf(null) is false, and we actually do want null in some cases
                     (s, p) -> (s == null || "null".equalsIgnoreCase(s))? true : Boolean.valueOf(s)
+            );
+
+    @SuppressWarnings("unchecked")
+    public static final StandardBundlerParam<List<Map<String, ? super Object>>> SECONDARY_LAUNCHERS =
+            new StandardBundlerParam<>(
+                    I18N.getString("param.secondary-launchers.name"),
+                    I18N.getString("param.secondary-launchers.description"),
+                    "secondaryLaunchers",
+                    (Class<List<Map<String, ? super Object>>>) (Object) List.class,
+                    params -> new ArrayList<>(1),
+                    // valueOf(null) is false, and we actually do want null in some cases
+                    (s, p) -> null
+            );
+
+    @SuppressWarnings("unchecked")
+    public static final StandardBundlerParam<List<Map<String, ? super Object>>> FILE_ASSOCIATIONS =
+            new StandardBundlerParam<>(
+                    I18N.getString("param.file-associations.name"),
+                    I18N.getString("param.file-associations.description"),
+                    "fileAssociations",
+                    (Class<List<Map<String, ? super Object>>>) (Object) List.class,
+                    params -> new ArrayList<>(1),
+                    // valueOf(null) is false, and we actually do want null in some cases
+                    (s, p) -> null
+            );
+
+    @SuppressWarnings("unchecked")
+    public static final StandardBundlerParam<List<String>> FA_EXTENSIONS =
+            new StandardBundlerParam<>(
+                    I18N.getString("param.fa-extension.name"),
+                    I18N.getString("param.fa-extension.description"),
+                    "fileAssociation.extension",
+                    (Class<List<String>>) (Object) List.class,
+                    params -> null, // null means not matched to an extension
+                    (s, p) -> Arrays.asList(s.split("(,\\s)+"))
+            );
+
+    @SuppressWarnings("unchecked")
+    public static final StandardBundlerParam<List<String>> FA_CONTENT_TYPE =
+            new StandardBundlerParam<>(
+                    I18N.getString("param.fa-content-type.name"),
+                    I18N.getString("param.fa-content-type.description"),
+                    "fileAssociation.contentType",
+                    (Class<List<String>>) (Object) List.class,
+                    params -> null, // null means not matched to a content/mime type
+                    (s, p) -> Arrays.asList(s.split("(,\\s)+"))
+            );
+
+    public static final StandardBundlerParam<String> FA_DESCRIPTION =
+            new StandardBundlerParam<>(
+                    I18N.getString("param.fa-description.name"),
+                    I18N.getString("param.fa-description.description"),
+                    "fileAssociation.description",
+                    String.class,
+                    params -> APP_NAME.fetchFrom(params) + " File",
+                    null
+            );
+
+    public static final StandardBundlerParam<File> FA_ICON =
+            new StandardBundlerParam<>(
+                    I18N.getString("param.fa-icon.name"),
+                    I18N.getString("param.fa-icon.description"),
+                    "fileAssociation.icon",
+                    File.class,
+                    ICON::fetchFrom,
+                    (s, p) -> new File(s)
             );
 
     public static void extractMainClassInfoFromAppResources(Map<String, ? super Object> params) {

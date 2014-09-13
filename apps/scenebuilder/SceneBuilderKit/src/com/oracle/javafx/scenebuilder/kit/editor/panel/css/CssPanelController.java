@@ -1882,7 +1882,7 @@ public class CssPanelController extends AbstractFxmlPanelController {
             } catch (MalformedURLException ex) {
                 System.out.println("Invalid URL: " + ex);
             }
-            origin = CssInternal.getOrigin(rule);
+            origin = rule.getOrigin();
         }
         return getSource(url, origin);
     }

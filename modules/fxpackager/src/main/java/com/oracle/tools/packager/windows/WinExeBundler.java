@@ -35,6 +35,7 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static com.oracle.tools.packager.StandardBundlerParam.SECONDARY_LAUNCHERS;
 import static com.oracle.tools.packager.StandardBundlerParam.SERVICE_HINT;
 import static com.oracle.tools.packager.StandardBundlerParam.VERBOSE;
 import static com.oracle.tools.packager.windows.WindowsBundlerParam.*;
@@ -301,6 +302,13 @@ public class WinExeBundler extends AbstractBundler {
                 IOUtils.copyFile(lfile, new File(imageDir, lfile.getName()));
             }
         }
+
+        for (Map<String, ? super Object> fileAssociation : FILE_ASSOCIATIONS.fetchFrom(params)) {
+            File icon = FA_ICON.fetchFrom(fileAssociation); //TODO FA_ICON_ICO
+            if (icon != null && icon.exists()) {
+                IOUtils.copyFile(icon, new File(appOutputDir, icon.getName()));
+            }
+        }
         
         if (SERVICE_HINT.fetchFrom(params)) {
             // copies the service launcher to the app root folder
@@ -440,8 +448,7 @@ public class WinExeBundler extends AbstractBundler {
         validateValueAndPut(data, "APPLICATION_VERSION", VERSION, params); // TODO make our own version paraminfo?
         validateValueAndPut(data, "INSTALLER_FILE_NAME", INSTALLER_FILE_NAME, params);
 
-        data.put("APPLICATION_LAUNCHER_FILENAME",
-                innosetupEscape(WinAppBundler.getLauncher(EXE_IMAGE_DIR.fetchFrom(params), params).getName()));
+        data.put("APPLICATION_LAUNCHER_FILENAME", innosetupEscape(WinAppBundler.getLauncherName(params)));
 
         data.put("APPLICATION_DESKTOP_SHORTCUT", SHORTCUT_HINT.fetchFrom(params) ? "returnTrue" : "returnFalse");
         data.put("APPLICATION_MENU_SHORTCUT", MENU_HINT.fetchFrom(params) ? "returnTrue" : "returnFalse");
@@ -475,7 +482,97 @@ public class WinExeBundler extends AbstractBundler {
         data.put("APPLICATION_NOT_SERVICE", SERVICE_HINT.fetchFrom(params) ? "returnFalse" : "returnTrue");
         data.put("START_ON_INSTALL", START_ON_INSTALL.fetchFrom(params) ? "-startOnInstall" : "");
         data.put("STOP_ON_UNINSTALL", STOP_ON_UNINSTALL.fetchFrom(params) ? "-stopOnUninstall" : "");
-        data.put("RUN_AT_STARTUP", RUN_AT_STARTUP.fetchFrom(params) ? "-runAtStartup" : "");        
+        data.put("RUN_AT_STARTUP", RUN_AT_STARTUP.fetchFrom(params) ? "-runAtStartup" : "");
+
+        StringBuilder secondaryLaunchersCfg = new StringBuilder();
+        for (Map<String, ? super Object> launcher : SECONDARY_LAUNCHERS.fetchFrom(params)) {
+            String application_name = APP_NAME.fetchFrom(launcher);
+            if (MENU_HINT.fetchFrom(launcher)) {
+                //Name: "{group}\APPLICATION_NAME"; Filename: "{app}\APPLICATION_NAME.exe"; IconFilename: "{app}\APPLICATION_NAME.ico"
+                secondaryLaunchersCfg.append("Name: \"{group}\\");
+                secondaryLaunchersCfg.append(application_name);
+                secondaryLaunchersCfg.append("\"; Filename: \"{app}\\");
+                secondaryLaunchersCfg.append(application_name);
+                secondaryLaunchersCfg.append(".exe\"; IconFilename: \"{app}\\");
+                secondaryLaunchersCfg.append(application_name);
+                secondaryLaunchersCfg.append(".ico\"\r\n");
+            }
+            if (SHORTCUT_HINT.fetchFrom(launcher)) {
+                //Name: "{commondesktop}\APPLICATION_NAME"; Filename: "{app}\APPLICATION_NAME.exe";  IconFilename: "{app}\APPLICATION_NAME.ico"
+                secondaryLaunchersCfg.append("Name: \"{commondesktop}\\");
+                secondaryLaunchersCfg.append(application_name);
+                secondaryLaunchersCfg.append("\"; Filename: \"{app}\\");
+                secondaryLaunchersCfg.append(application_name);
+                secondaryLaunchersCfg.append(".exe\";  IconFilename: \"{app}\\");
+                secondaryLaunchersCfg.append(application_name);
+                secondaryLaunchersCfg.append(".ico\"\r\n");
+            }
+        }
+        data.put("SECONDARY_LAUNCHERS", secondaryLaunchersCfg.toString());
+
+        StringBuilder registryEntries = new StringBuilder();
+        String regName = APP_REGISTRY_NAME.fetchFrom(params);
+        List<Map<String, ? super Object>> fetchFrom = FILE_ASSOCIATIONS.fetchFrom(params);
+        for (int i = 0; i < fetchFrom.size(); i++) {
+            Map<String, ? super Object> fileAssociation = fetchFrom.get(i);
+            String description = FA_DESCRIPTION.fetchFrom(fileAssociation);
+            File icon = FA_ICON.fetchFrom(fileAssociation); //TODO FA_ICON_ICO
+
+            List<String> extensions = FA_EXTENSIONS.fetchFrom(fileAssociation);
+            String entryName = regName + "File";
+            if (i > 0) {
+                entryName += "." + i;
+            }
+            for (String ext : extensions) {
+                // "Root: HKCR; Subkey: \".myp\"; ValueType: string; ValueName: \"\"; ValueData: \"MyProgramFile\"; Flags: uninsdeletevalue"
+                registryEntries.append("Root: HKCR; Subkey: \".")
+                    .append(ext)
+                    .append("\"; ValueType: string; ValueName: \"\"; ValueData: \"")
+                    .append(entryName)
+                    .append("\"; Flags: uninsdeletevalue\r\n");
+            }
+
+            if (!extensions.isEmpty()) {
+                String ext = extensions.get(0);
+                List<String> mimeTypes = FA_CONTENT_TYPE.fetchFrom(fileAssociation);
+                for (String mime : mimeTypes) {
+                    // "Root: HKCR; Subkey: HKCR\\Mime\\Database\\Content Type\\application/chaos; ValueType: string; ValueName: Extension; ValueData: .chaos; Flags: uninsdeletevalue"
+                    registryEntries.append("Root: HKCR; Subkey: \"Mime\\Database\\Content Type\\")
+                        .append(mime)
+                        .append("\"; ValueType: string; ValueName: \"Extension\"; ValueData: \".")
+                        .append(ext)
+                        .append("\"; Flags: uninsdeletevalue\r\n");
+                }
+            }
+
+            //"Root: HKCR; Subkey: \"MyProgramFile\"; ValueType: string; ValueName: \"\"; ValueData: \"My Program File\"; Flags: uninsdeletekey"
+            registryEntries.append("Root: HKCR; Subkey: \"")
+                .append(entryName)
+                .append("\"; ValueType: string; ValueName: \"\"; ValueData: \"")
+                .append(description)
+                .append("\"; Flags: uninsdeletekey\r\n");
+
+            if (icon != null && icon.exists()) {
+                // "Root: HKCR; Subkey: \"MyProgramFile\\DefaultIcon\"; ValueType: string; ValueName: \"\"; ValueData: \"{app}\\MYPROG.EXE,0\"\n" +
+                registryEntries.append("Root: HKCR; Subkey: \"")
+                        .append(entryName)
+                        .append("\\DefaultIcon\"; ValueType: string; ValueName: \"\"; ValueData: \"{app}\\")
+                        .append(icon.getName())
+                        .append("\"\r\n");
+            }
+
+            //"Root: HKCR; Subkey: \"MyProgramFile\\shell\\open\\command\"; ValueType: string; ValueName: \"\"; ValueData: \"\"\"{app}\\MYPROG.EXE\"\" \"\"%1\"\"\"\n"
+            registryEntries.append("Root: HKCR; Subkey: \"")
+                    .append(entryName)
+                    .append("\\shell\\open\\command\"; ValueType: string; ValueName: \"\"; ValueData: \"\"\"{app}\\")
+                    .append(APP_NAME.fetchFrom(params))
+                    .append("\"\" \"\"%1\"\"\"\r\n");
+        }
+        if (registryEntries.length() > 0) {
+            data.put("FILE_ASSOCIATIONS", "ChangesAssociations=yes\r\n\r\n[Registry]\r\n" + registryEntries.toString());
+        } else {
+            data.put("FILE_ASSOCIATIONS", "");
+        }
 
         Writer w = new BufferedWriter(new FileWriter(getConfig_ExeProjectFile(params)));
         String content = preprocessTextResource(

@@ -56,6 +56,7 @@ public class LinuxAppBundler extends AbstractBundler {
     protected static final String LINUX_BUNDLER_PREFIX =
             BUNDLER_PREFIX + "linux" + File.separator;
     private static final String EXECUTABLE_NAME = "JavaAppLauncher";
+    private static final String LIBRARY_NAME    = "libpackager.so";
 
     public static final BundlerParamInfo<File> ICON_PNG = new StandardBundlerParam<>(
             I18N.getString("param.icon-png.name"),
@@ -173,7 +174,16 @@ public class LinuxAppBundler extends AbstractBundler {
         return new File(outDir, APP_FS_NAME.fetchFrom(p));
     }
 
+    public static String getLauncherName(Map<String, ? super Object> p) {
+        return APP_FS_NAME.fetchFrom(p);
+    }
+
+    public static String getLauncherCfgName(Map<String, ? super Object> p) {
+        return "app/" + APP_FS_NAME.fetchFrom(p) +".cfg";
+    }
+
     File doBundle(Map<String, ? super Object> p, File outputDirectory, boolean dependentTask) {
+        Map<String, ? super Object> originalParams = new HashMap<>(p);
         try {
             if (!outputDirectory.isDirectory() && !outputDirectory.mkdirs()) {
                 throw new RuntimeException(MessageFormat.format(I18N.getString("error.cannot-create-output-dir"), outputDirectory.getAbsolutePath()));
@@ -183,7 +193,7 @@ public class LinuxAppBundler extends AbstractBundler {
             }
 
             // Create directory structure
-            File rootDirectory = new File(outputDirectory, APP_FS_NAME.fetchFrom(p));
+            File rootDirectory = getRootDir(outputDirectory, p);
             IOUtils.deleteRecursive(rootDirectory);
             rootDirectory.mkdirs();
 
@@ -196,19 +206,21 @@ public class LinuxAppBundler extends AbstractBundler {
             File appDirectory = new File(rootDirectory, "app");
             appDirectory.mkdirs();
 
-            // Copy executable to Linux folder
-            File executableFile = new File(getRootDir(outputDirectory, p), APP_FS_NAME.fetchFrom(p));
+            // create the primary launcher
+            createLauncherForEntryPoint(p, rootDirectory);
+
+            // Copy library to the launcher folder
             IOUtils.copyFromURL(
-                    RAW_EXECUTABLE_URL.fetchFrom(p),
-                    executableFile);
+                    LinuxResources.class.getResource(LIBRARY_NAME),
+                    new File(rootDirectory, LIBRARY_NAME));
 
-            executableFile.setExecutable(true, false);
-            executableFile.setWritable(true, true); //for str
-
-            // Generate PkgInfo
-            File pkgInfoFile = new File(appDirectory, "package.cfg");
-            pkgInfoFile.createNewFile();
-            writePkgInfo(p, pkgInfoFile);
+            // create the secondary launchers, if any
+            List<Map<String, ? super Object>> entryPoints = StandardBundlerParam.SECONDARY_LAUNCHERS.fetchFrom(p);
+            for (Map<String, ? super Object> entryPoint : entryPoints) {
+                Map<String, ? super Object> tmp = new HashMap<>(originalParams);
+                tmp.putAll(entryPoint);
+                createLauncherForEntryPoint(tmp, rootDirectory);
+            }
 
             // Copy runtime to PlugIns folder
             copyRuntime(p, runtimeDirectory);
@@ -227,6 +239,20 @@ public class LinuxAppBundler extends AbstractBundler {
         }
     }
 
+    private void createLauncherForEntryPoint(Map<String, ? super Object> p, File rootDir) throws IOException {
+        // Copy executable to Linux folder
+        File executableFile = new File(rootDir, getLauncherName(p));
+        IOUtils.copyFromURL(
+                RAW_EXECUTABLE_URL.fetchFrom(p),
+                executableFile);
+
+        executableFile.setExecutable(true, false);
+        executableFile.setWritable(true, true); //for str
+
+        // Generate PkgInfo
+        writePkgInfo(p, rootDir);
+    }
+
     private void copyApplication(Map<String, ? super Object> params, File appDirectory) throws IOException {
         RelativeFileSet appResources = APP_RESOURCES.fetchFrom(params);
         if (appResources == null) {
@@ -239,7 +265,9 @@ public class LinuxAppBundler extends AbstractBundler {
         }
     }
 
-    private void writePkgInfo(Map<String, ? super Object> params, File pkgInfoFile) throws FileNotFoundException {
+    private void writePkgInfo(Map<String, ? super Object> params, File rootDir) throws FileNotFoundException {
+        File pkgInfoFile = new File(rootDir, getLauncherCfgName(params));
+
         pkgInfoFile.delete();
         PrintStream out = new PrintStream(pkgInfoFile);
         out.println("app.mainjar=" + MAIN_JAR.fetchFrom(params).getIncludedFiles().iterator().next());
@@ -253,7 +281,15 @@ public class LinuxAppBundler extends AbstractBundler {
             out.println("app.mainclass=" +
                     MAIN_CLASS.fetchFrom(params).replaceAll("\\.", "/"));
         }
-        out.println("app.classpath=" + CLASSPATH.fetchFrom(params));
+
+        StringBuilder macroedPath = new StringBuilder();
+        for (String s : CLASSPATH.fetchFrom(params).split("[ ;:]+")) {
+            macroedPath.append("$PACKAGEDIR/");
+            macroedPath.append(s);
+            macroedPath.append(":");
+        }
+        macroedPath.deleteCharAt(macroedPath.length() - 1);
+        out.println("app.classpath=" + macroedPath.toString());
 
         List<String> jvmargs = JVM_OPTIONS.fetchFrom(params);
         int idx = 1;
@@ -282,6 +318,15 @@ public class LinuxAppBundler extends AbstractBundler {
             }
             idx++;
         }
+
+        // add command line args
+        List<String> args = ARGUMENTS.fetchFrom(params);
+        idx = 1;
+        for (String a : args) {
+            out.println("arg."+idx+"="+a);
+            idx++;
+        }
+
         out.close();
     }
 
@@ -331,6 +376,7 @@ public class LinuxAppBundler extends AbstractBundler {
         return Arrays.asList(
                 APP_NAME,
                 APP_RESOURCES,
+                ARGUMENTS,
                 JVM_OPTIONS,
                 JVM_PROPERTIES,
                 LINUX_RUNTIME,

@@ -20,7 +20,9 @@ set -e
 case "$1" in
     configure)
         echo Adding shortcut to the menu
-        cp /opt/APPLICATION_FS_NAME/APPLICATION_FS_NAME.desktop /usr/share/applications/
+SECONDARY_LAUNCHERS_INSTALL
+        xdg-desktop-menu install --novendor /opt/APPLICATION_FS_NAME/APPLICATION_LAUNCHER_FILENAME.desktop
+FILE_ASSOCIATION_INSTALL
 
         if [ "SERVICE_HINT" = "true" ]; then
             echo Installing daemon

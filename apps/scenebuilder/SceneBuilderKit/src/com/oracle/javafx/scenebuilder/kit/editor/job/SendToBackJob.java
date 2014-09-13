@@ -33,44 +33,51 @@ package com.oracle.javafx.scenebuilder.kit.editor.job;
 
 import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.ReIndexObjectJob;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
-import com.oracle.javafx.scenebuilder.kit.editor.selection.GridSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMPropertyC;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 /**
  *
  */
-public class SendToBackJob extends BatchDocumentJob {
+public class SendToBackJob extends InlineDocumentJob {
 
     public SendToBackJob(EditorController editorController) {
         super(editorController);
     }
 
     @Override
-    protected List<Job> makeSubJobs() {
+    public boolean isExecutable() {
+        final Selection selection = getEditorController().getSelection();
+        if (selection.getGroup() instanceof ObjectSelectionGroup == false) {
+            return false;
+        }
+        final ObjectSelectionGroup osg = (ObjectSelectionGroup) selection.getGroup();
+        for (FXOMObject item : osg.getSortedItems()) {
+            final FXOMObject previousSlibing = item.getPreviousSlibing();
+            if (previousSlibing == null) {
+                return false;
+            }
+        }
+        return true;
+    }
 
+    @Override
+    protected List<Job> makeAndExecuteSubJobs() {
+
+        assert isExecutable(); // (1)
         final List<Job> result = new ArrayList<>();
 
-        final Set<FXOMObject> candidates = new HashSet<>();
         final Selection selection = getEditorController().getSelection();
-        if (selection.getGroup() instanceof ObjectSelectionGroup) {
-            final ObjectSelectionGroup osg = (ObjectSelectionGroup) selection.getGroup();
-            candidates.addAll(osg.getFlattenItems());
-        } else if (selection.getGroup() instanceof GridSelectionGroup) {
-            // GridPane rows / columns are selected : SendToBackJob is meaningless
-            // Just do nothing
-        } else {
-            assert selection.getGroup() == null :
-                    "Add implementation for " + selection.getGroup();
-        }
+        assert selection.getGroup() instanceof ObjectSelectionGroup; // Because of (1)
+        final ObjectSelectionGroup osg = (ObjectSelectionGroup) selection.getGroup();
+        final List<FXOMObject> candidates = osg.getSortedItems();
 
-        for (FXOMObject candidate : candidates) {
+        for (int i = candidates.size() - 1; i >= 0; i--) {
+            final FXOMObject candidate = candidates.get(i);
             final FXOMObject previousSlibing = candidate.getPreviousSlibing();
             if (previousSlibing != null) {
                 final FXOMPropertyC parentProperty = candidate.getParentProperty();
@@ -78,11 +85,12 @@ public class SendToBackJob extends BatchDocumentJob {
                 final ReIndexObjectJob subJob = new ReIndexObjectJob(
                         candidate, beforeChild, getEditorController());
                 if (subJob.isExecutable()) {
+                    subJob.execute();
                     result.add(subJob);
                 }
             }
         }
-        
+
         return result;
     }
 

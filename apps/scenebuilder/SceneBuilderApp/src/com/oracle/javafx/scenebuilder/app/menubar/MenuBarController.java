@@ -278,6 +278,8 @@ public class MenuBarController {
     @FXML
     private MenuItem wrapInBorderPaneMenuItem;
     @FXML
+    private MenuItem wrapInDialogPaneMenuItem;
+    @FXML
     private MenuItem wrapInFlowPaneMenuItem;
     @FXML
     private MenuItem wrapInGridPaneMenuItem;
@@ -293,6 +295,8 @@ public class MenuBarController {
     private MenuItem wrapInStackPaneMenuItem;
     @FXML
     private MenuItem wrapInTabPaneMenuItem;
+    @FXML
+    private MenuItem wrapInTextFlowMenuItem;
     @FXML
     private MenuItem wrapInTilePaneMenuItem;
     @FXML
@@ -523,6 +527,7 @@ public class MenuBarController {
         assert sendBackwardMenuItem != null;
         assert wrapInAnchorPaneMenuItem != null;
         assert wrapInBorderPaneMenuItem != null;
+        assert wrapInDialogPaneMenuItem != null;
         assert wrapInFlowPaneMenuItem != null;
         assert wrapInGridPaneMenuItem != null;
         assert wrapInHBoxMenuItem != null;
@@ -531,6 +536,7 @@ public class MenuBarController {
         assert wrapInSplitPaneMenuItem != null;
         assert wrapInStackPaneMenuItem != null;
         assert wrapInTabPaneMenuItem != null;
+        assert wrapInTextFlowMenuItem != null;
         assert wrapInTilePaneMenuItem != null;
         assert wrapInTitledPaneMenuItem != null;
         assert wrapInToolBarMenuItem != null;
@@ -910,6 +916,7 @@ public class MenuBarController {
                 new KeyCharacterCombination("[", modifier)); //NOI18N
         wrapInAnchorPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_ANCHOR_PANE));
         wrapInBorderPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_BORDER_PANE));
+        wrapInDialogPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_DIALOG_PANE));
         wrapInFlowPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_FLOW_PANE));
         wrapInGroupMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_GROUP));
         wrapInGridPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_GRID_PANE));
@@ -919,6 +926,7 @@ public class MenuBarController {
         wrapInSplitPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_SPLIT_PANE));
         wrapInStackPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_STACK_PANE));
         wrapInTabPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_TAB_PANE));
+        wrapInTextFlowMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_TEXT_FLOW));
         wrapInTilePaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_TILE_PANE));
         wrapInTitledPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_TITLED_PANE));
         wrapInToolBarMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_TOOL_BAR));
@@ -1104,9 +1112,25 @@ public class MenuBarController {
     /*
      * Private (zoom menu)
      */
+    
+    final static double[] scalingTable = {0.25, 0.50, 0.75, 1.00, 1.50, 2.0, 4.0};
+    
     private void updateZoomMenu() {
         final double[] scalingTable = {0.25, 0.50, 0.75, 1.00, 1.50, 2.0, 4.0};
 
+        final MenuItem zoomInMenuItem = new MenuItem(I18N.getString("menu.title.zoom.in"));
+        zoomInMenuItem.setUserData(new ZoomInActionController());
+        zoomInMenuItem.setAccelerator(new KeyCharacterCombination("+", modifier)); //NOI18N
+        zoomMenu.getItems().add(zoomInMenuItem);
+        
+        final MenuItem zoomOutMenuItem = new MenuItem(I18N.getString("menu.title.zoom.out"));
+        zoomOutMenuItem.setUserData(new ZoomOutActionController());
+        zoomOutMenuItem.setAccelerator(new KeyCharacterCombination("+",  //NOI18N
+                KeyCombination.SHIFT_DOWN, modifier));
+        zoomMenu.getItems().add(zoomOutMenuItem);
+        
+        zoomMenu.getItems().add(new SeparatorMenuItem());
+        
         for (int i = 0; i < scalingTable.length; i++) {
             final double scaling = scalingTable[i];
             final String title = String.format("%.0f%%", scaling * 100); //NOI18N
@@ -1116,6 +1140,20 @@ public class MenuBarController {
         }
     }
 
+    
+    private static int findZoomScaleIndex(double zoomScale) {
+        int result = -1;
+        
+        for (int i = 0; i < scalingTable.length; i++) {
+            if (MathUtils.equals(zoomScale, scalingTable[i])) {
+                result = i;
+                break;
+            }
+        }
+        
+        return result;
+    }
+    
     private void updateOpenRecentMenuItems() {
 
         final List<MenuItem> menuItems = new ArrayList<>();
@@ -1691,6 +1729,67 @@ public class MenuBarController {
             }
 
             return result;
+        }
+
+    }
+    
+    class ZoomInActionController extends MenuItemController {
+
+        @Override
+        public boolean canPerform() {
+            boolean result;
+            if (documentWindowController == null) {
+                result = false;
+            } else {
+                final ContentPanelController contentPanelController
+                        = documentWindowController.getContentPanelController();
+                final int currentScalingIndex
+                        = findZoomScaleIndex(contentPanelController.getScaling());
+                result = currentScalingIndex+1 < scalingTable.length;
+            }
+            return result;
+        }
+
+        @Override
+        public void perform() {
+            final ContentPanelController contentPanelController
+                    = documentWindowController.getContentPanelController();
+            final int currentScalingIndex
+                    = findZoomScaleIndex(contentPanelController.getScaling());
+            final double newScaling
+                    = scalingTable[currentScalingIndex+1];
+            contentPanelController.setScaling(newScaling);
+        }
+
+    }
+    
+
+    class ZoomOutActionController extends MenuItemController {
+
+        @Override
+        public boolean canPerform() {
+            boolean result;
+            if (documentWindowController == null) {
+                result = false;
+            } else {
+                final ContentPanelController contentPanelController
+                        = documentWindowController.getContentPanelController();
+                final int currentScalingIndex
+                        = findZoomScaleIndex(contentPanelController.getScaling());
+                result = 0 <= currentScalingIndex-1;
+            }
+            return result;
+        }
+
+        @Override
+        public void perform() {
+            final ContentPanelController contentPanelController
+                    = documentWindowController.getContentPanelController();
+            final int currentScalingIndex
+                    = findZoomScaleIndex(contentPanelController.getScaling());
+            final double newScaling
+                    = scalingTable[currentScalingIndex-1];
+            contentPanelController.setScaling(newScaling);
         }
 
     }

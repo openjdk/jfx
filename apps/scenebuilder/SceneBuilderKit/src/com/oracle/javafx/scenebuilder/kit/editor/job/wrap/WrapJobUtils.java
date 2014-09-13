@@ -44,6 +44,7 @@ import java.util.List;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
 import javafx.scene.Node;
+import javafx.scene.control.DialogPane;
 import javafx.scene.layout.BorderPane;
 
 /**
@@ -91,6 +92,32 @@ public class WrapJobUtils {
                 result = mask.getPropertyNameForAccessory(Accessory.LEFT);
             } else if (child.equals(right)) {
                 result = mask.getPropertyNameForAccessory(Accessory.RIGHT);
+            } else {
+                assert false;
+                result = null;
+            }
+        } else if (container.getSceneGraphObject() instanceof DialogPane) {
+            // wrap/unwrap the child of a DialodPane
+            assert mask.isAcceptingAccessory(Accessory.DP_CONTENT);
+            assert mask.isAcceptingAccessory(Accessory.DP_GRAPHIC);
+            assert mask.isAcceptingAccessory(Accessory.EXPANDABLE_CONTENT);
+            assert mask.isAcceptingAccessory(Accessory.HEADER);
+            assert children != null && children.size() == 1; // wrap job is executable
+            final FXOMObject child = children.iterator().next();
+
+            final FXOMObject content = mask.getAccessory(Accessory.DP_CONTENT);
+            final FXOMObject graphic = mask.getAccessory(Accessory.DP_GRAPHIC);
+            final FXOMObject expandableContent = mask.getAccessory(Accessory.EXPANDABLE_CONTENT);
+            final FXOMObject header = mask.getAccessory(Accessory.HEADER);
+            // Return same accessory as the child container one
+            if (child.equals(content)) {
+                result = mask.getPropertyNameForAccessory(Accessory.DP_CONTENT);
+            } else if (child.equals(graphic)) {
+                result = mask.getPropertyNameForAccessory(Accessory.DP_GRAPHIC);
+            } else if (child.equals(expandableContent)) {
+                result = mask.getPropertyNameForAccessory(Accessory.EXPANDABLE_CONTENT);
+            } else if (child.equals(header)) {
+                result = mask.getPropertyNameForAccessory(Accessory.HEADER);
             } else {
                 assert false;
                 result = null;

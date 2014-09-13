@@ -26,8 +26,13 @@
 package com.sun.javafx.tools.ant;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import com.oracle.tools.packager.StandardBundlerParam;
 import com.sun.javafx.tools.ant.Platform.Jvmarg;
 import com.sun.javafx.tools.ant.Platform.Property;
 import com.sun.javafx.tools.packager.DeployParams;
@@ -194,6 +199,11 @@ public class DeployFXTask extends Task implements DynamicAttribute {
                         DeployParams.RunMode.WEBSTART);
                 }
             }
+
+            deployParams.addBundleArgument(StandardBundlerParam.FILE_ASSOCIATIONS.getID(),
+                    appInfo.fileAssociations.stream()
+                        .map(FileAssociation::createLauncherMap)
+                        .collect(Collectors.toList()));
         }
 
         deployParams.setUpdateMode(updateMode);
@@ -255,6 +265,15 @@ public class DeployFXTask extends Task implements DynamicAttribute {
                    Utils.addResources(deployParams, fs);
             }
         }
+
+        List<Map<String, ? super Object>> launchersAsMap = new ArrayList<>();
+        for (SecondaryLauncher sl : secondaryLaunchers) {
+            launchersAsMap.add(sl.createLauncherMap());
+        }
+
+        deployParams.addBundleArgument(
+                StandardBundlerParam.SECONDARY_LAUNCHERS.getID(),
+                launchersAsMap);
 
         deployParams.setBundleType(nativeBundles);
         deployParams.setTargetFormat(bundleFormat);
@@ -499,6 +518,15 @@ public class DeployFXTask extends Task implements DynamicAttribute {
         bundleArgumentList.add(ba);
         return ba;
     }
+
+    private List<SecondaryLauncher> secondaryLaunchers = new ArrayList<>();
+
+    public SecondaryLauncher createSecondaryLauncher() {
+        SecondaryLauncher sl = new SecondaryLauncher();
+        secondaryLaunchers.add(sl);
+        return sl;
+    }
+
 
     @Override
     public void setDynamicAttribute(String name, String value) throws BuildException {
