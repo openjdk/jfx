@@ -157,23 +157,23 @@ public:
 
 extern "C" {
 
-JNIEXPORT jstring JNICALL Java_jdk_packager_userjvmoptions_LauncherUserJvmOptions__1getUserJvmOptionDefaultValue(JNIEnv *env, jclass klass, jstring option) {
+JNIEXPORT jstring JNICALL Java_jdk_packager_services_userjvmoptions_LauncherUserJvmOptions__1getUserJvmOptionDefaultValue(JNIEnv *env, jclass klass, jstring option) {
     return UserJVMArgsExports::_getUserJvmOptionDefaultValue(env, option);
 }
 
-JNIEXPORT jobjectArray JNICALL Java_jdk_packager_userjvmoptions_LauncherUserJvmOptions__1getUserJvmOptionDefaultKeys(JNIEnv *env, jclass klass) {
+JNIEXPORT jobjectArray JNICALL Java_jdk_packager_services_userjvmoptions_LauncherUserJvmOptions__1getUserJvmOptionDefaultKeys(JNIEnv *env, jclass klass) {
     return UserJVMArgsExports::_getUserJvmOptionDefaultKeys(env);
 }
 
-JNIEXPORT jstring JNICALL Java_jdk_packager_userjvmoptions_LauncherUserJvmOptions__1getUserJvmOptionValue(JNIEnv *env, jclass klass, jstring option) {
+JNIEXPORT jstring JNICALL Java_jdk_packager_services_userjvmoptions_LauncherUserJvmOptions__1getUserJvmOptionValue(JNIEnv *env, jclass klass, jstring option) {
     return UserJVMArgsExports::_getUserJvmOptionValue(env, option);
 }
 
-JNIEXPORT void JNICALL Java_jdk_packager_userjvmoptions_LauncherUserJvmOptions__1setUserJvmKeysAndValues(JNIEnv *env, jclass klass, jobjectArray options, jobjectArray values) {
+JNIEXPORT void JNICALL Java_jdk_packager_services_userjvmoptions_LauncherUserJvmOptions__1setUserJvmKeysAndValues(JNIEnv *env, jclass klass, jobjectArray options, jobjectArray values) {
     UserJVMArgsExports::_setUserJvmKeysAndValues(env, options, values);
 }
 
-JNIEXPORT jobjectArray JNICALL Java_jdk_packager_userjvmoptions_LauncherUserJvmOptions__1getUserJvmOptionKeys(JNIEnv *env, jclass klass) {
+JNIEXPORT jobjectArray JNICALL Java_jdk_packager_services_userjvmoptions_LauncherUserJvmOptions__1getUserJvmOptionKeys(JNIEnv *env, jclass klass) {
     return UserJVMArgsExports::_getUserJvmOptionKeys(env);
 }
 
