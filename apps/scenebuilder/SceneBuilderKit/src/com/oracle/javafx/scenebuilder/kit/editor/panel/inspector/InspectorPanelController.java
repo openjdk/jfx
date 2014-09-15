@@ -582,6 +582,11 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
         selectionState = new SelectionState(editorController);
         viewModeChanged(null, getViewMode());
         expandedSectionChanged();
+        
+        accordion.expandedPaneProperty().addListener((ChangeListener<TitledPane>) (ov, t, t1) -> {
+            expandedSectionProperty.setValue(getExpandedSectionId());
+        });
+        
         accordion.setPrefSize(300, 700);
         buildExpandedSection();
         updateClassNameInSectionTitles();
