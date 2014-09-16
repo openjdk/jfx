@@ -640,6 +640,9 @@ public class Tooltip extends PopupControl {
     }
 
     @Override public Styleable getStyleableParent() {
+        if (BEHAVIOR.hoveredNode == null) {
+            return super.getStyleableParent();
+        }
         return BEHAVIOR.hoveredNode;
     }
 
