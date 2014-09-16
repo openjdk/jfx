@@ -663,7 +663,6 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
 
         // Exit if confirmed
         if (exitConfirmed) {
-            final PreferencesController pc = PreferencesController.getSingleton();
             for (DocumentWindowController dwc : new ArrayList<>(windowList)) {
                 // Write to java preferences before closing
                 dwc.updatePreferences();
