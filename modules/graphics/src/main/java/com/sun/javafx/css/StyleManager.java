@@ -532,9 +532,10 @@ final public class StyleManager {
             }
         }
 
-        Iterator<StylesheetContainer> containerIterator = stylesheetContainerMap.values().iterator();
+        Iterator<Entry<String,StylesheetContainer>> containerIterator = stylesheetContainerMap.entrySet().iterator();
         while (containerIterator.hasNext()) {
-            StylesheetContainer container = containerIterator.next();
+            Entry<String,StylesheetContainer> entry = containerIterator.next();
+            StylesheetContainer container = entry.getValue();
             container.parentUsers.remove(parent);
             if (container.parentUsers.list.isEmpty()) {
 
@@ -620,13 +621,14 @@ final public class StyleManager {
         //
         // remove any parents belonging to this SubScene from the stylesheetContainerMap
         //
-        Set<Entry<String,StylesheetContainer>> stylesheetContainers = stylesheetContainerMap.entrySet();
-        Iterator<Entry<String,StylesheetContainer>> iter = stylesheetContainers.iterator();
+        // copy the list to avoid concurrent mod.
+        List<StylesheetContainer> stylesheetContainers = new ArrayList<>(stylesheetContainerMap.values());
+
+        Iterator<StylesheetContainer> iter = stylesheetContainers.iterator();
 
         while(iter.hasNext()) {
 
-            Entry<String,StylesheetContainer> entry = iter.next();
-            StylesheetContainer container = entry.getValue();
+            StylesheetContainer container = iter.next();
 
             Iterator<Reference<Parent>> parentIter = container.parentUsers.list.iterator();
             while (parentIter.hasNext()) {
