@@ -223,7 +223,7 @@ public final class PreviewWindowController extends AbstractWindowController {
             = (observable, oldValue, newValue) -> requestUpdate(DELAYED);
 
     private final ChangeListener<Number> cssRevisionListener
-            = (observable, oldValue, newValue) -> Deprecation.reapplyCSS(getScene());
+            = (observable, oldValue, newValue) -> requestUpdate(IMMEDIATE);
 
     /**
      * We use the provided delay before refreshing the content of the preview.
