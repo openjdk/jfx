@@ -31,6 +31,7 @@ import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.stage.Stage;
 import org.junit.Test;
+import static util.Util.TIMEOUT;
 
 public class ImageRaceTest extends Application {
     static boolean verbose;
@@ -70,7 +71,7 @@ public class ImageRaceTest extends Application {
     }
 
     void forkAndJoinInitializers() {
-        long limit = System.currentTimeMillis() + 1000;
+        long limit = System.currentTimeMillis() + TIMEOUT;
         for (Initializer i : initalizers) {
             i.start();
             while (!i.isRunning() && System.currentTimeMillis() < limit) {
@@ -87,7 +88,7 @@ public class ImageRaceTest extends Application {
         } catch (InterruptedException ex) {}
         ready = true;
 
-        limit = System.currentTimeMillis() + 3000;
+        limit = System.currentTimeMillis() + TIMEOUT;
         try {
             for (Initializer i : initalizers) {
                 long now = System.currentTimeMillis();

@@ -1221,18 +1221,6 @@ public abstract class AbstractHierarchyPanelController extends AbstractFxmlPanel
     private void handleOnKeyPressed(final KeyEvent event) {
         switch (event.getCode()) {
 
-            // Handle edit actions
-            case BACK_SPACE:
-            case DELETE:
-                final EditorController editorController = getEditorController();
-                if (editorController.canPerformEditAction(EditorController.EditAction.DELETE)) {
-                    editorController.performEditAction(EditorController.EditAction.DELETE);
-                } else {
-                    System.out.println("Beep... :(");
-                }
-                event.consume();
-                break;
-
             // Handle Inline editing
             case ENTER:
                 startEditingDisplayInfo();

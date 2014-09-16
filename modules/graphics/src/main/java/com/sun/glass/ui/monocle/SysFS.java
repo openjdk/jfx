@@ -32,7 +32,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.LongBuffer;
+import java.nio.IntBuffer;
 import java.util.BitSet;
 import java.util.HashMap;
 import java.util.Map;
@@ -61,12 +61,12 @@ class SysFS {
                 if (elements == null) {
                     continue;
                 }
-                byte[] b = new byte[elements.length * 8];
+                byte[] b = new byte[elements.length * 4];
                 ByteBuffer bb = ByteBuffer.wrap(b);
                 bb.order(ByteOrder.LITTLE_ENDIAN);
-                LongBuffer lb = bb.asLongBuffer();
+                IntBuffer ib = bb.asIntBuffer();
                 for (int j = elements.length - 1; j >= 0; j--) {
-                    lb.put(Long.parseUnsignedLong(elements[j], 16));
+                    ib.put(Integer.parseUnsignedInt(elements[j], 16));
                 }
                 capsMap.put(capsFiles[i].getName(), BitSet.valueOf(b));
             } catch (IOException | RuntimeException e) {
