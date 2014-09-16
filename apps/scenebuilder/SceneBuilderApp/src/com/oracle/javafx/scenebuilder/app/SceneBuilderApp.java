@@ -36,7 +36,6 @@ import com.oracle.javafx.scenebuilder.app.about.AboutWindowController;
 import com.oracle.javafx.scenebuilder.app.i18n.I18N;
 import com.oracle.javafx.scenebuilder.app.menubar.MenuBarController;
 import com.oracle.javafx.scenebuilder.app.preferences.PreferencesController;
-import com.oracle.javafx.scenebuilder.app.preferences.PreferencesRecordDocument;
 import com.oracle.javafx.scenebuilder.app.preferences.PreferencesRecordGlobal;
 import com.oracle.javafx.scenebuilder.app.preferences.PreferencesWindowController;
 import com.oracle.javafx.scenebuilder.app.template.FxmlTemplates;
@@ -667,8 +666,7 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
             final PreferencesController pc = PreferencesController.getSingleton();
             for (DocumentWindowController dwc : new ArrayList<>(windowList)) {
                 // Write to java preferences before closing
-                final PreferencesRecordDocument recordDocument = pc.getRecordDocument(dwc);
-                recordDocument.writeToJavaPreferences();
+                dwc.updatePreferences();
                 documentWindowRequestClose(dwc);
             }
             logTimestamp(ACTION.STOP);

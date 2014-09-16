@@ -941,6 +941,26 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         }
     }
 
+    public void updatePreferences() {
+        final PreferencesController pc = PreferencesController.getSingleton();
+        final URL fxmlLocation = getEditorController().getFxmlLocation();
+        if (fxmlLocation == null) {
+            // Document has not been saved => nothing to write
+            // This is the case with initial empty document 
+            return;
+        }
+        // Update record document
+        final PreferencesRecordDocument recordDocument = pc.getRecordDocument(this);
+        recordDocument.writeToJavaPreferences();
+        // Update record global
+        final PreferencesRecordGlobal recordGlobal = pc.getRecordGlobal();
+        // recentItems may not contain the current document
+        // if the Open Recent -> Clear menu has been invoked
+        if (recordGlobal.containsRecentItem(fxmlLocation) == false) {
+            recordGlobal.addRecentItem(fxmlLocation);
+        }
+    }
+
     /*
      * AbstractFxmlWindowController
      */
@@ -2012,9 +2032,7 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
             SceneBuilderApp.getSingleton().documentWindowRequestClose(this);
             
             // Write java preferences at close time
-            final PreferencesController pc = PreferencesController.getSingleton();
-            final PreferencesRecordDocument recordDocument = pc.getRecordDocument(this);
-            recordDocument.writeToJavaPreferences();
+            updatePreferences();
         }
                 
         return closeConfirmed ? ActionStatus.DONE : ActionStatus.CANCELLED;

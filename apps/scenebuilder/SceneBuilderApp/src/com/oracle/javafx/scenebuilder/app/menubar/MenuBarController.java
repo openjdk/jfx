@@ -2256,8 +2256,7 @@ public class MenuBarController {
         @Override
         public void handle(ActionEvent t) {
             final PreferencesController pc = PreferencesController.getSingleton();
-            final PreferencesRecordGlobal recordGlobal = pc.getRecordGlobal();
-            recordGlobal.clearRecentItems();
+            pc.clearRecentItems();
         }
     }
 }
