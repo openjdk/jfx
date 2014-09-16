@@ -36,6 +36,7 @@ import com.oracle.javafx.scenebuilder.kit.editor.drag.source.AbstractDragSource;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.editor.job.ModifySelectionJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
+import com.oracle.javafx.scenebuilder.kit.editor.job.ModifyCacheHintJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.ModifyFxIdJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.togglegroup.ModifySelectionToggleGroupJob;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.AnchorPaneConstraintsEditor;
@@ -1200,7 +1201,13 @@ public class InspectorPanelController extends AbstractFxmlPanelController {
     }
 
     private void setSelectedFXOMInstances(ValuePropertyMetadata propMeta, Object value) {
-        final ModifySelectionJob job = new ModifySelectionJob(propMeta, value, getEditorController());
+        final PropertyName cacheHintPN = new PropertyName("cacheHint"); //NOI18N
+        final ModifySelectionJob job;
+        if (cacheHintPN.equals(propMeta.getName())) {
+            job = new ModifyCacheHintJob(propMeta, value, getEditorController());
+        } else {
+            job = new ModifySelectionJob(propMeta, value, getEditorController());
+        }
 //        System.out.println(job.getDescription());
         pushJob(job);
     }
