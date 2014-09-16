@@ -124,13 +124,34 @@ public class WrapJobUtils {
             }
         } else if (mask.isAcceptingSubComponent()) {
             result = mask.getSubComponentPropertyName();
-        } else if (mask.isAcceptingAccessory(Accessory.CONTENT)) {
-            result = mask.getPropertyNameForAccessory(Accessory.CONTENT);
-        } else if (mask.isAcceptingAccessory(Accessory.GRAPHIC)) {
-            result = mask.getPropertyNameForAccessory(Accessory.GRAPHIC);
         } else {
-            assert false;
-            result = null;
+            assert mask.isAcceptingAccessory(Accessory.CONTENT)
+                    || mask.isAcceptingAccessory(Accessory.GRAPHIC);
+            assert children != null && children.size() == 1; // wrap job is executable
+            final FXOMObject child = children.iterator().next();
+
+            if (mask.isAcceptingAccessory(Accessory.GRAPHIC) == false) {
+                // Containers accepting CONTENT only
+                assert mask.isAcceptingAccessory(Accessory.CONTENT);
+                result = mask.getPropertyNameForAccessory(Accessory.CONTENT);
+            } else if (mask.isAcceptingAccessory(Accessory.CONTENT) == false) {
+                // Containers accepting GRAPHIC only
+                assert mask.isAcceptingAccessory(Accessory.GRAPHIC);
+                result = mask.getPropertyNameForAccessory(Accessory.GRAPHIC);
+            } else {
+                // Containers accepting both CONTENT and GRAPHIC
+                final FXOMObject content = mask.getAccessory(Accessory.CONTENT);
+                final FXOMObject graphic = mask.getAccessory(Accessory.GRAPHIC);
+                // Return same accessory as the child container one
+                if (child.equals(content)) {
+                    result = mask.getPropertyNameForAccessory(Accessory.CONTENT);
+                } else if (child.equals(graphic)) {
+                    result = mask.getPropertyNameForAccessory(Accessory.GRAPHIC);
+                } else {
+                    assert false;
+                    result = null;
+                }
+            }
         }
         return result;
     }
