@@ -1288,7 +1288,7 @@ public class NGRegion extends NGGroup {
                     g.draw(paths[1]);
                 }
                 if (bottomStyle != BorderStrokeStyle.NONE) {
-                    double rsum = radii.getTopRightVerticalRadius() - radii.getBottomRightVerticalRadius();
+                    double rsum = radii.getBottomLeftVerticalRadius() - radii.getBottomRightHorizontalRadius();
                     double bottomLineLength = width + rsum * (Math.PI / 4 - 1);
                     g.setStroke(createStroke(bottomStyle, bottomWidth, bottomLineLength, true));
                     g.setPaint(getPlatformPaint(bottomStroke));
