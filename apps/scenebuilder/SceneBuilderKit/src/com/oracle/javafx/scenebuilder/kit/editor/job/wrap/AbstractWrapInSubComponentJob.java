@@ -69,7 +69,7 @@ public abstract class AbstractWrapInSubComponentJob extends AbstractWrapInJob {
                 newContainer.getFxomDocument(), newContainerPropertyName);
 
         // Update children before adding them to the new container
-        jobs.addAll(modifyChildrenJobs(newContainer, children));
+        jobs.addAll(modifyChildrenJobs(children));
 
         // Sort the children before adding them to their new container
         final Collection<FXOMObject> sorted = sortChildren(children);

@@ -112,7 +112,7 @@ public class WrapInTabPaneJob extends AbstractWrapInJob {
 
         assert children.size() == 1;
         // Update children before adding them to the new container
-        jobs.addAll(modifyChildrenJobs(newContainer, children));
+        jobs.addAll(modifyChildrenJobs(children));
 
         // Add the children to the Tab sub container
         final List<Job> addChildrenJobs

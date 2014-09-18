@@ -46,6 +46,7 @@ import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMProperty;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMPropertyC;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask.Accessory;
@@ -190,13 +191,7 @@ public class UnwrapJob extends BatchSelectionJob {
                         && newContainerProperty.getParentInstance() != null;
 
                 // Update children bounds before adding them to the new container
-                final DesignHierarchyMask newContainerMask
-                        = new DesignHierarchyMask(newContainer);
-                if (newContainerMask.isFreeChildPositioning()) {
-                    final List<Job> modifyChildrenLayoutJobs
-                            = modifyChildrenJobs(oldContainerChildren);
-                    result.addAll(modifyChildrenLayoutJobs);
-                }
+                result.addAll(modifyChildrenJobs(oldContainerChildren));
 
                 // Add the children to the new container
                 int index = oldContainer.getIndexInParentProperty();
@@ -295,32 +290,55 @@ public class UnwrapJob extends BatchSelectionJob {
     /**
      * Used to modify the specified children.
      *
-     * @param children The children.
+     * @param children The children to be modified.
      * @return A list of jobs.
      */
     protected List<Job> modifyChildrenJobs(final List<FXOMObject> children) {
 
         final List<Job> jobs = new ArrayList<>();
+        final DesignHierarchyMask newContainerMask = new DesignHierarchyMask(newContainer);
 
         assert oldContainer.getSceneGraphObject() instanceof Node;
         final Node oldContainerNode = (Node) oldContainer.getSceneGraphObject();
-        
+
         for (FXOMObject child : children) {
             assert child.getSceneGraphObject() instanceof Node;
-            
+
             final Node childNode = (Node) child.getSceneGraphObject();
             final double currentLayoutX = childNode.getLayoutX();
             final double currentLayoutY = childNode.getLayoutY();
-            
-            final Point2D nextLayoutXY = oldContainerNode.localToParent(
-                    currentLayoutX, currentLayoutY);
-            
-            final ModifyObjectJob modifyLayoutX = WrapJobUtils.modifyObjectJob(
-                    (FXOMInstance) child, "layoutX", nextLayoutXY.getX(), getEditorController());
-            jobs.add(modifyLayoutX);
-            final ModifyObjectJob modifyLayoutY = WrapJobUtils.modifyObjectJob(
-                    (FXOMInstance) child, "layoutY", nextLayoutXY.getY(), getEditorController());
-            jobs.add(modifyLayoutY);
+
+            // Modify child LAYOUT bounds
+            if (newContainerMask.isFreeChildPositioning()) {
+                final Point2D nextLayoutXY = oldContainerNode.localToParent(
+                        currentLayoutX, currentLayoutY);
+
+                final ModifyObjectJob modifyLayoutX = WrapJobUtils.modifyObjectJob(
+                        (FXOMInstance) child, "layoutX", nextLayoutXY.getX(), getEditorController());
+                jobs.add(modifyLayoutX);
+                final ModifyObjectJob modifyLayoutY = WrapJobUtils.modifyObjectJob(
+                        (FXOMInstance) child, "layoutY", nextLayoutXY.getY(), getEditorController());
+                jobs.add(modifyLayoutY);
+            } else {
+                final ModifyObjectJob modifyLayoutX = WrapJobUtils.modifyObjectJob(
+                        (FXOMInstance) child, "layoutX", 0.0, getEditorController());
+                jobs.add(modifyLayoutX);
+                final ModifyObjectJob modifyLayoutY = WrapJobUtils.modifyObjectJob(
+                        (FXOMInstance) child, "layoutY", 0.0, getEditorController());
+                jobs.add(modifyLayoutY);
+            }
+
+            // Remove static properties from child
+            if (child instanceof FXOMInstance) {
+                final FXOMInstance fxomInstance = (FXOMInstance) child;
+                for (FXOMProperty p : fxomInstance.getProperties().values()) {
+                    final Class<?> residentClass = p.getName().getResidenceClass();
+                    if (residentClass != null
+                            && residentClass != newContainer.getDeclaredClass()) {
+                        jobs.add(new RemovePropertyJob(p, getEditorController()));
+                    }
+                }
+            }
         }
         return jobs;
     }
@@ -348,13 +366,11 @@ public class UnwrapJob extends BatchSelectionJob {
             if (mask.isAcceptingAccessory(Accessory.CENTER)
                     && mask.getAccessory(Accessory.CENTER) != null) {
                 result.add(mask.getAccessory(Accessory.CENTER));
-            } 
-            // DialogPane => unwrap DP_CONTENT accessory
+            } // DialogPane => unwrap DP_CONTENT accessory
             else if (mask.isAcceptingAccessory(Accessory.DP_CONTENT)
                     && mask.getAccessory(Accessory.DP_CONTENT) != null) {
                 result.add(mask.getAccessory(Accessory.DP_CONTENT));
-            }
-            // ScrollPane => unwrap CONTENT accessory
+            } // ScrollPane => unwrap CONTENT accessory
             else if (mask.isAcceptingAccessory(Accessory.CONTENT)
                     && mask.getAccessory(Accessory.CONTENT) != null) {
                 result.add(mask.getAccessory(Accessory.CONTENT));
