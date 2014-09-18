@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,6 @@
 
 package javafx.scene.control;
 
-import javafx.css.CssMetaData;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.property.StringProperty;
@@ -35,6 +34,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
+import javafx.scene.Scene;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -191,4 +191,99 @@ public class ControlSkinTest {
             super(null);
         }
     }
+
+    @Test public void getUserAgentStylesheet() {
+
+        org.junit.Assume.assumeNotNull(ControlSkinTest.class.getResource("ControlSkinTest.css"));
+
+        ControlStub control = new ControlStub() {
+            @Override public String getUserAgentStylesheet() {
+                return "javafx/scene/control/ControlSkinTest.css";
+            }
+            {
+                setId("get-user-agent-stylesheet-test");
+            }
+        };
+
+        Scene scene = new Scene(control);
+        control.applyCss();
+
+        //  opacity set in ControlSkinTest.css
+        assertEquals(.7, control.getOpacity(), 1E-6);
+        assertNull(control.getSkin());
+
+    }
+
+    @Test public void getUserAgentStylesheetDoesNotOverrideUserSetValue() {
+
+        org.junit.Assume.assumeNotNull(ControlSkinTest.class.getResource("ControlSkinTest.css"));
+
+        ControlStub control = new ControlStub() {
+            @Override public String getUserAgentStylesheet() {
+                return "javafx/scene/control/ControlSkinTest.css";
+            }
+            {
+                setId("get-user-agent-stylesheet-test");
+                setOpacity(.3);
+            }
+        };
+        Scene scene = new Scene(control);
+        control.applyCss();
+
+        //  opacity set by setOpacity
+        assertEquals(.3, control.getOpacity(), 1E-6);
+        assertNull(control.getSkin());
+
+    }
+
+    @Test public void getUserAgentStylesheetInlineStylePrevails() {
+
+        org.junit.Assume.assumeNotNull(ControlSkinTest.class.getResource("ControlSkinTest.css"));
+
+        ControlStub control = new ControlStub() {
+            @Override public String getUserAgentStylesheet() {
+                return "javafx/scene/control/ControlSkinTest.css";
+            }
+            {
+                setId("get-user-agent-stylesheet-test");
+                setStyle("-fx-opacity: 42%;");
+            }
+        };
+
+        Scene scene = new Scene(control);
+        control.applyCss();
+
+        //  opacity set by setStyle
+        assertEquals(.42, control.getOpacity(), 1E-6);
+        assertNull(control.getSkin());
+
+    }
+
+    @Test public void getUserAgentStylesheetWithSkin() {
+
+        org.junit.Assume.assumeNotNull(ControlSkinTest.class.getResource("ControlSkinTest.css"));
+
+        ControlStub control = new ControlStub() {
+            @Override public String getUserAgentStylesheet() {
+                return "javafx/scene/control/ControlSkinTest.css";
+            }
+            @Override protected Skin<ControlStub> createDefaultSkin() {
+                assert false : "createDefaultSkin should not be called";
+                return null;
+            }
+            {
+                setId("get-user-agent-stylesheet-test-with-skin");
+            }
+        };
+        control.setSkin(new SkinStub<>(control));
+
+        Scene scene = new Scene(control);
+        control.applyCss();
+
+        //  opacity set in ControlSkinTest.css
+        assertEquals(.85, control.getOpacity(), 1E-6);
+        assertEquals(SkinStub.class, control.getSkin().getClass());
+
+    }
+
 }
