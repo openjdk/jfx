@@ -308,9 +308,9 @@ public class FXOMDocument {
              * include stylesheetPath and update them.
              * Right now, we use a workaround solution because of bug RT-34863.
              */
-            final Node rootNode = (Node) sceneGraphRoot;
-            if ((rootNode.getScene() != null) && (rootNode instanceof Parent)) {
-                Deprecation.reapplyCSS((Parent)rootNode, stylesheetPath.toString());
+            final Node contentGroup = ((Node) sceneGraphRoot).getParent();
+            if ((contentGroup.getScene() != null) && (contentGroup instanceof Parent)) {
+                Deprecation.reapplyCSS((Parent)contentGroup, stylesheetPath.toString());
                 cssRevision.set(cssRevision.get()+1);
             }
         }
