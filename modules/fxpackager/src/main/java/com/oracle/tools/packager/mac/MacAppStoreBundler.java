@@ -279,13 +279,6 @@ public class MacAppStoreBundler extends MacBaseInstallerBundler {
                             I18N.getString("error.non-existent-runtime.advice")));
         }
 
-        File f = new File(baseDir, "Contents/Home/jre/lib/libjfxmedia_qtkit.dylib");
-        while (f != null) {
-            System.out.println(f);
-            System.out.println(f.exists());
-            f = f.getParentFile();
-        }
-
         if (new File(baseDir, "Contents/Home/lib/libjfxmedia_qtkit.dylib").exists()
             || new File(baseDir, "Contents/Home/jre/lib/libjfxmedia_qtkit.dylib").exists())
         {
