@@ -2766,10 +2766,9 @@ task apps() {
 task findbugs() {
     dependsOn(sdk)
 
-    // TODO: implement this
     doLast {
         if (!BUILD_CLOSED) {
-            println "findbugs task is not implemented"
+            println "findbugs task is only run for a closed build"
         }
     }
 }
