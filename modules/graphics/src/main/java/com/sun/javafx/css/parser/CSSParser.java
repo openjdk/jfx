@@ -119,11 +119,15 @@ final public class CSSParser {
         final static CSSParser INSTANCE = new CSSParser();
     }
 
+    /**
+     * @deprecated As of 8u40, use new CSSParser() instead.
+     */
+    @Deprecated
     public static CSSParser getInstance() {
         return InstanceHolder.INSTANCE;
     }
 
-    private CSSParser() {
+    public CSSParser() {
         properties = new HashMap<String,String>();
     }
 
@@ -4191,18 +4195,18 @@ final public class CSSParser {
                     new ParsedValueImpl<ParsedValue[], String>(uriValues, URLConverter.getInstance());
 
             String urlString = parsedValue.convert(null);
-
-            try {
-                URL url = new URL(urlString);
-                return new CSSParser().parse(url);
-            } catch (MalformedURLException malf) {
-
-            } catch (IOException ioe) {
-
-            }
+            importedStylesheet = StyleManager.loadStylesheet(urlString);
         }
-
-        return null;
+        if (importedStylesheet == null) {
+            final String msg =
+                    MessageFormat.format("Could not import {0}", fname);
+            CssError error = createError(msg);
+            if (LOGGER.isLoggable(Level.WARNING)) {
+                LOGGER.warning(error.toString());
+            }
+            reportError(error);
+        }
+        return importedStylesheet;
     }
 
     private List<Selector> selectors(CSSLexer lexer) {

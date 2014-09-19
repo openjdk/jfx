@@ -885,13 +885,10 @@ final public class StyleManager {
         return new byte[0];
     }
 
-    private static Stylesheet loadStylesheet(final String fname) {
+    public static Stylesheet loadStylesheet(final String fname) {
         try {
             return loadStylesheetUnPrivileged(fname);
         } catch (java.security.AccessControlException ace) {
-            if (getLogger().isLoggable(Level.INFO)) {
-                getLogger().info("Could not load the stylesheet, trying with FilePermissions : " + fname);
-            }
 
             /*
             ** we got an access control exception, so
