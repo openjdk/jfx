@@ -159,6 +159,10 @@ public class TestGraphics extends BaseGraphics {
         }
 
         @Override
+        public void validateClearOp(BaseGraphics g) {
+        }
+
+        @Override
         public void validatePaintOp(BaseGraphics g, BaseTransform xform, Texture maskTex, float bx, float by, float bw, float bh) {
         }
 

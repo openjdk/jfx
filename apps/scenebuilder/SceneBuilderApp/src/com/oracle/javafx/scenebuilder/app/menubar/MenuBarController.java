@@ -278,6 +278,8 @@ public class MenuBarController {
     @FXML
     private MenuItem wrapInBorderPaneMenuItem;
     @FXML
+    private MenuItem wrapInButtonBarMenuItem;
+    @FXML
     private MenuItem wrapInDialogPaneMenuItem;
     @FXML
     private MenuItem wrapInFlowPaneMenuItem;
@@ -527,6 +529,7 @@ public class MenuBarController {
         assert sendBackwardMenuItem != null;
         assert wrapInAnchorPaneMenuItem != null;
         assert wrapInBorderPaneMenuItem != null;
+        assert wrapInButtonBarMenuItem != null;
         assert wrapInDialogPaneMenuItem != null;
         assert wrapInFlowPaneMenuItem != null;
         assert wrapInGridPaneMenuItem != null;
@@ -916,6 +919,7 @@ public class MenuBarController {
                 new KeyCharacterCombination("[", modifier)); //NOI18N
         wrapInAnchorPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_ANCHOR_PANE));
         wrapInBorderPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_BORDER_PANE));
+        wrapInButtonBarMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_BUTTON_BAR));
         wrapInDialogPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_DIALOG_PANE));
         wrapInFlowPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_FLOW_PANE));
         wrapInGroupMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_GROUP));
@@ -1125,8 +1129,7 @@ public class MenuBarController {
         
         final MenuItem zoomOutMenuItem = new MenuItem(I18N.getString("menu.title.zoom.out"));
         zoomOutMenuItem.setUserData(new ZoomOutActionController());
-        zoomOutMenuItem.setAccelerator(new KeyCharacterCombination("+",  //NOI18N
-                KeyCombination.SHIFT_DOWN, modifier));
+        zoomOutMenuItem.setAccelerator(new KeyCharacterCombination("/", modifier));  //NOI18N
         zoomMenu.getItems().add(zoomOutMenuItem);
         
         zoomMenu.getItems().add(new SeparatorMenuItem());
@@ -2252,8 +2255,7 @@ public class MenuBarController {
         @Override
         public void handle(ActionEvent t) {
             final PreferencesController pc = PreferencesController.getSingleton();
-            final PreferencesRecordGlobal recordGlobal = pc.getRecordGlobal();
-            recordGlobal.clearRecentItems();
+            pc.clearRecentItems();
         }
     }
 }

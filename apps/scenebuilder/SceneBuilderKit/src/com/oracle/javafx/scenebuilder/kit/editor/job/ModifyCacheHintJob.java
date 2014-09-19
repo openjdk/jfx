@@ -31,16 +31,16 @@
  */
 package com.oracle.javafx.scenebuilder.kit.editor.job;
 
-import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.ModifyObjectJob;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
-import com.oracle.javafx.scenebuilder.kit.editor.selection.GridSelectionGroup;
+import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.ModifyObjectJob;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
+import com.oracle.javafx.scenebuilder.kit.metadata.Metadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
-import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
+import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -49,18 +49,17 @@ import java.util.Set;
 /**
  *
  */
-public class ModifySelectionJob extends BatchDocumentJob {
+public class ModifyCacheHintJob extends ModifySelectionJob {
 
-    protected final ValuePropertyMetadata propertyMetadata;
-    protected final Object newValue;
+    private int subJobCount = 0;
+    private final PropertyName cachePN = new PropertyName("cache"); //NOI18N
+    private final PropertyName cacheHintPN = new PropertyName("cacheHint"); //NOI18N
 
-    public ModifySelectionJob(ValuePropertyMetadata propertyMetadata,
-            Object newValue, EditorController editorController) {
-        super(editorController);
-        this.propertyMetadata = propertyMetadata;
-        this.newValue = newValue;
+    public ModifyCacheHintJob(ValuePropertyMetadata propertyMetadata, Object newValue, EditorController editorController) {
+        super(propertyMetadata, newValue, editorController);
+        assert cacheHintPN.equals(propertyMetadata.getName());
     }
-    
+
     @Override
     protected List<Job> makeSubJobs() {
 
@@ -74,53 +73,44 @@ public class ModifySelectionJob extends BatchDocumentJob {
                     candidates.add((FXOMInstance) fxomObject);
                 }
             }
-        } else if (selection.getGroup() instanceof GridSelectionGroup) {
-            final GridSelectionGroup gsg = (GridSelectionGroup) selection.getGroup();
-            final DesignHierarchyMask mask = new DesignHierarchyMask(gsg.getAncestor());
-            for (int index : gsg.getIndexes()) {
-                FXOMObject constraints = null;
-                switch (gsg.getType()) {
-                    case COLUMN:
-                        constraints = mask.getColumnConstraintsAtIndex(index);
-                        break;
-                    case ROW:
-                        constraints = mask.getRowConstraintsAtIndex(index);
-                        break;
-                    default:
-                        assert false;
-                        break;
-                }
-                assert constraints instanceof FXOMInstance;
-                candidates.add((FXOMInstance) constraints);
-            }
         } else {
             assert selection.getGroup() == null : "Add implementation for " + selection.getGroup();
         }
 
         // Add ModifyObject jobs
         for (FXOMInstance fxomInstance : candidates) {
-            final ModifyObjectJob subJob = new ModifyObjectJob(
+            // ModifyObject job for the cacheHint property
+            final ModifyObjectJob subJob1 = new ModifyObjectJob(
                     fxomInstance, propertyMetadata, newValue, getEditorController());
-            if (subJob.isExecutable()) {
-                result.add(subJob);
+            if (subJob1.isExecutable()) {
+                result.add(subJob1);
+                subJobCount++;
+            }
+            // ModifyObject job for the cache property
+            if ("DEFAULT".equals(newValue) == false) { //NOI18N
+                final ValuePropertyMetadata cacheVPM
+                        = Metadata.getMetadata().queryValueProperty(fxomInstance, cachePN);
+                final ModifyObjectJob subJob2 = new ModifyObjectJob(
+                        fxomInstance, cacheVPM, Boolean.TRUE, getEditorController());
+                if (subJob2.isExecutable()) {
+                    result.add(subJob2);
+                }
             }
         }
-        
+
         return result;
     }
 
     @Override
     protected String makeDescription() {
         final String result;
-        final List<Job> subJobs = getSubJobs();
-        final int subJobCount = subJobs.size();
 
         switch (subJobCount) {
             case 0:
                 result = "Unexecutable Set"; //NOI18N
                 break;
             case 1: // Single selection
-                result = subJobs.get(0).getDescription();
+                result = getSubJobs().get(0).getDescription();
                 break;
             default:
                 result = I18N.getString("label.action.edit.set.n",
@@ -128,7 +118,7 @@ public class ModifySelectionJob extends BatchDocumentJob {
                         subJobCount);
                 break;
         }
-        
+
         return result;
     }
 }

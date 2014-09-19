@@ -43,8 +43,8 @@ import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMNodes;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
-import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import javafx.scene.Node;
@@ -55,7 +55,7 @@ import javafx.scene.Node;
 public class DuplicateSelectionJob extends BatchSelectionJob {
 
     private final static double offset = 10;
-    final Map<FXOMObject, FXOMObject> newFxomObjects = new HashMap<>();
+    final Map<FXOMObject, FXOMObject> newFxomObjects = new LinkedHashMap<>();
 
     public DuplicateSelectionJob(EditorController editorController) {
         super(editorController);
@@ -63,10 +63,10 @@ public class DuplicateSelectionJob extends BatchSelectionJob {
 
     @Override
     protected List<Job> makeSubJobs() {
-        final List<Job> result = new ArrayList<>();
+        final List<Job> result = new LinkedList<>();
 
         if (canDuplicate()) { // (1)
-
+            
             final Selection selection = getEditorController().getSelection();
             final AbstractSelectionGroup asg = selection.getGroup();
             assert asg instanceof ObjectSelectionGroup; // Because of (1)
@@ -75,7 +75,7 @@ public class DuplicateSelectionJob extends BatchSelectionJob {
             final FXOMObject targetObject = osg.getAncestor();
             assert targetObject != null; // Because of (1)
             final FXOMDocument targetDocument = getEditorController().getFxomDocument();
-            for (FXOMObject selectedObject : osg.getItems()) {
+            for (FXOMObject selectedObject : osg.getSortedItems()) {
                 final FXOMDocument newDocument = FXOMNodes.newDocument(selectedObject);
                 final FXOMObject newObject = newDocument.getFxomRoot();
                 newObject.moveToFxomDocument(targetDocument);
@@ -87,13 +87,14 @@ public class DuplicateSelectionJob extends BatchSelectionJob {
             // Build InsertAsSubComponent jobs
             final DesignHierarchyMask targetMask = new DesignHierarchyMask(targetObject);
             if (targetMask.isAcceptingSubComponent(newFxomObjects.keySet())) {
+                int index = 0;
                 for (Map.Entry<FXOMObject, FXOMObject> entry : newFxomObjects.entrySet()) {
                     final FXOMObject selectedFxomObject = entry.getKey();
                     final FXOMObject newFxomObject = entry.getValue();
                     final InsertAsSubComponentJob insertSubJob = new InsertAsSubComponentJob(
                             newFxomObject,
                             targetObject,
-                            targetMask.getSubComponentCount(),
+                            targetMask.getSubComponentCount() + index++,
                             getEditorController());
                     result.add(insertSubJob);
                     final Object selectedSceneGraphObject = selectedFxomObject.getSceneGraphObject();

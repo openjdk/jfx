@@ -242,19 +242,6 @@ public abstract class Control extends Region implements Skinnable {
             // result in reinstalling the skin
             currentSkinClassName = skin == null ? null : skin.getClass().getName();
 
-            // If skinClassName is null, then someone called setSkin directly
-            // rather than the skin being set via css. We know this is because
-            // impl_processCSS ensures the skin is set, and impl_processCSS
-            // expands the skin property to see if the skin has been set.
-            // If skinClassName is null, then we need to see if there is
-            // a UA stylesheet at this point since the logic in impl_processCSS
-            // depends on skinClassName being null.
-            if (skinClassName == null) {
-                final String url = Control.this.getUserAgentStylesheet();
-                if (url != null) {
-                    StyleManager.getInstance().addUserAgentStylesheet(url);
-                }
-            }
             // if someone calls setSkin, we need to make it look like they
             // called set on skinClassName in order to keep CSS from overwriting
             // the skin.
@@ -764,16 +751,6 @@ public abstract class Control extends Region implements Skinnable {
      *                                                                         *
      **************************************************************************/
 
-    /**
-     * Implementors may specify their own user-agent stylesheet. The return
-     * value is a string URL. A relative URL is resolved using the class
-     * loader of the implementing Control.
-     * @return A string URL
-     */
-    protected String getUserAgentStylesheet() {
-        return null;
-    }
-
     private static class StyleableProperties {
         private static final CssMetaData<Control,String> SKIN =
             new CssMetaData<Control,String>("-fx-skin",
@@ -874,14 +851,6 @@ public abstract class Control extends Region implements Skinnable {
      */
     @Deprecated
     @Override protected void impl_processCSS(WritableValue<Boolean> unused) {
-        // don't muck with this if block without first reading the comments in skin property's set method!
-        if (skinClassNameProperty().get() == null) {
-            // TODO: using skinClassName as a flag in skin property's set method is probably a bad idea
-            final String url = Control.this.getUserAgentStylesheet();
-            if (url != null) {
-                StyleManager.getInstance().addUserAgentStylesheet(url);
-            }
-        }
 
         super.impl_processCSS(unused);
 

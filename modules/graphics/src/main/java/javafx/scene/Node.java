@@ -7950,6 +7950,9 @@ public abstract class Node implements EventTarget, Styleable {
             p.setLayoutFlag(LayoutFlags.DIRTY_BRANCH);
             if (p.isSceneRoot()) {
                 Toolkit.getToolkit().requestNextPulse();
+                if (getSubScene() != null) {
+                    getSubScene().setDirtyLayout(p);
+                }
             }
             p = p.getParent();
         }

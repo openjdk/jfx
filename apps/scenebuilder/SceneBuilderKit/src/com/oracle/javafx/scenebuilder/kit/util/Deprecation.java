@@ -34,13 +34,13 @@ package com.oracle.javafx.scenebuilder.kit.util;
 import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Application.EventHandler;
 import com.sun.javafx.css.Style;
-import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.scene.control.skin.MenuBarSkin;
 import com.sun.javafx.scene.input.PickResultChooser;
 
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -54,7 +54,8 @@ import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
 import javafx.scene.Group;
 import javafx.scene.Node;
-import javafx.scene.Scene;
+import javafx.scene.Parent;
+import javafx.scene.SubScene;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.PopupControl;
@@ -108,11 +109,29 @@ public class Deprecation {
         return node.impl_findStyles(null);
     }
 
-    // Used to woraround RT-34863
-    public static void reapplyCSS(Scene scene) {
-        assert scene != null;
-        StyleManager.getInstance().forget(scene);
-        scene.getRoot().impl_reapplyCSS();
+    public static void reapplyCSS(Parent parent, String stylesheetPath) {
+        assert parent != null;
+        
+        final List<String> stylesheets = parent.getStylesheets();
+        for (String s : new LinkedList<>(stylesheets)) {
+            if (s.endsWith(stylesheetPath)) {
+                final int index = stylesheets.indexOf(s);
+                assert index != -1;
+                stylesheets.remove(index);
+                stylesheets.add(index, s);
+                break;
+            }
+        }
+        
+        for (Node child : parent.getChildrenUnmodifiable()) {
+            if (child instanceof Parent) {
+                final Parent childParent = (Parent) child;
+                reapplyCSS(childParent, stylesheetPath);
+            } else if (child instanceof SubScene) {
+                final SubScene childSubScene = (SubScene) child;
+                reapplyCSS(childSubScene.getRoot(), stylesheetPath);
+            }
+        }
     }
 
     // Retrieve the node of the Styleable.

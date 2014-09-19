@@ -287,10 +287,6 @@ public class StylesheetEditor extends InlineListEditor {
         }
         addItem(new StylesheetItem(this, urlStr));
 
-        // Workaround for RT-34863: Reload of an updated css file has no effect.
-        // This reset the whole CSS from top. Would need to be moved on the FXOM side.
-        Deprecation.reapplyCSS(root.getScene());
-
         userUpdateValueProperty(getValue());
     }
 

@@ -136,12 +136,9 @@ public class SplitPaneSkin extends BehaviorSkinBase<SplitPane, BehaviorBase<Spli
         }
         
         @Override public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {  
-            // If we already know the dividers are in the correct position.  We do not
-            // need to recheck their values.
             if (checkDividerPos) {
                 // When checking is enforced, we know that the position was set explicitly
                 divider.posExplicit = true;
-                checkDividerPosition(divider, posToDividerPos(divider, newValue.doubleValue()), posToDividerPos(divider, oldValue.doubleValue()));
             }
             getSkinnable().requestLayout();
         }
@@ -263,9 +260,7 @@ public class SplitPaneSkin extends BehaviorSkinBase<SplitPane, BehaviorBase<Spli
                 delta = e.getSceneY();
             }
             delta -= divider.getPressPos();
-            double newPos = Math.ceil(divider.getInitialPos() + delta);
-            checkDividerPos = true;
-            setAbsoluteDividerPos(divider, newPos);
+            setAndCheckAbsoluteDividerPos(divider, Math.ceil(divider.getInitialPos() + delta));
             e.consume();
         });
     }
@@ -665,23 +660,26 @@ public class SplitPaneSkin extends BehaviorSkinBase<SplitPane, BehaviorBase<Spli
             ContentDivider previousDivider = null;
             ContentDivider divider = null;            
             for (int i = 0; i < contentRegions.size(); i++) {
-                double space = 0;                
+                double space = 0;
                 if (i < contentDividers.size()) {
                     divider = contentDividers.get(i);
+                    if (divider.posExplicit) {
+                        checkDividerPosition(divider, posToDividerPos(divider, divider.d.getPosition()),
+                                divider.getDividerPos());
+                    }
                     if (i == 0) {
                         // First panel
                         space = getAbsoluteDividerPos(divider);
                     } else {
+                        double newPos = getAbsoluteDividerPos(previousDivider) + dividerWidth;
                         // Middle panels
                         if (getAbsoluteDividerPos(divider) <= getAbsoluteDividerPos(previousDivider)) {
                             // The current divider and the previous divider share the same position
                             // or the current divider position is less than the previous position.
                             // We will set the divider next to the previous divider.
-                            double pos = getAbsoluteDividerPos(previousDivider);                                
-                            checkDividerPos = true;
-                            setAbsoluteDividerPos(divider, pos + dividerWidth);
+                            setAndCheckAbsoluteDividerPos(divider, newPos);
                         }
-                        space = getAbsoluteDividerPos(divider) - (getAbsoluteDividerPos(previousDivider) + dividerWidth);
+                        space = getAbsoluteDividerPos(divider) - newPos;
                     }
                 } else if (i == contentDividers.size()) {
                     // Last panel
@@ -833,6 +831,12 @@ public class SplitPaneSkin extends BehaviorSkinBase<SplitPane, BehaviorBase<Spli
 
         layoutDividersAndContent(w, h);        
         resize = false;        
+    }
+
+    private void setAndCheckAbsoluteDividerPos(ContentDivider divider, double value) {
+        double oldPos = divider.getDividerPos();
+        setAbsoluteDividerPos(divider, value);
+        checkDividerPosition(divider, value, oldPos);
     }
 
     @Override protected double computeMinWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {

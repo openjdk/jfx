@@ -44,6 +44,10 @@ class LinuxPlatform extends NativePlatform {
 
     @Override
     protected NativeScreen createScreen() {
-        return new FBDevScreen();
+        try {
+            return new FBDevScreen();
+        } catch (RuntimeException e) {
+            return new HeadlessScreen();
+        }
     }
 }

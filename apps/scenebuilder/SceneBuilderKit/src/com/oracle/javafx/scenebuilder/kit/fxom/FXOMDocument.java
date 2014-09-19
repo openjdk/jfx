@@ -50,6 +50,7 @@ import com.oracle.javafx.scenebuilder.kit.fxom.glue.GlueDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.sampledata.SampleDataGenerator;
 import com.oracle.javafx.scenebuilder.kit.util.Deprecation;
 import com.oracle.javafx.scenebuilder.kit.util.URLUtils;
+import javafx.scene.Parent;
 
 /**
  *
@@ -307,9 +308,9 @@ public class FXOMDocument {
              * include stylesheetPath and update them.
              * Right now, we use a workaround solution because of bug RT-34863.
              */
-            final Node rootNode = (Node) sceneGraphRoot;
-            if (rootNode.getScene() != null) {
-                Deprecation.reapplyCSS(rootNode.getScene());
+            final Parent contentGroup = ((Node) sceneGraphRoot).getParent();
+            if (contentGroup.getScene() != null) {
+                Deprecation.reapplyCSS(contentGroup, stylesheetPath.toString());
                 cssRevision.set(cssRevision.get()+1);
             }
         }

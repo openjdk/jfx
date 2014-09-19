@@ -98,7 +98,6 @@ public class PreferencesRecordDocument {
     private static final double DEFAULT_LEFT_DIVIDER_VPOS = UNDEFINED_POS;
 
     // Document preferences
-    private String path = null;
     private double xPos = DEFAULT_X_POS;
     private double yPos = DEFAULT_Y_POS;
     private double stageHeight = DEFAULT_STAGE_HEIGHT;
@@ -164,14 +163,6 @@ public class PreferencesRecordDocument {
     
     public void resetDocumentPreferences() {
         this.documentPreferences = null;
-    }
-
-    public String getPath() {
-        return path;
-    }
-
-    public void setPath(String value) {
-        path = value;
     }
 
     public double getXPos() {

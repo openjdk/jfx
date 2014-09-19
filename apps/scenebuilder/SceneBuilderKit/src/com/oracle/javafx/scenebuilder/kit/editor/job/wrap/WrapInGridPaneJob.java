@@ -70,8 +70,8 @@ public class WrapInGridPaneJob extends AbstractWrapInSubComponentJob {
     }
 
     @Override
-    protected List<Job> modifyChildrenJobs(final FXOMInstance container, final List<FXOMObject> children) {
-        final List<Job> jobs = super.modifyChildrenJobs(container, children);
+    protected List<Job> modifyChildrenJobs(final List<FXOMObject> children) {
+        final List<Job> jobs = super.modifyChildrenJobs(children);
 
         for (FXOMObject child : children) {
             int[] childIndices = indices.get(child);

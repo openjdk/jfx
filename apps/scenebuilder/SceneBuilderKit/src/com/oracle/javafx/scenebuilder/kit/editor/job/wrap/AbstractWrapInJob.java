@@ -40,6 +40,7 @@ import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.ModifyObjectJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.SetDocumentRootJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.ToggleFxRootJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.AddPropertyValueJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.RemovePropertyJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.RemovePropertyValueJob;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.AbstractSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
@@ -47,7 +48,10 @@ import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMProperty;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMPropertyC;
+import com.oracle.javafx.scenebuilder.kit.metadata.Metadata;
+import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 import java.util.ArrayList;
@@ -86,6 +90,8 @@ public abstract class AbstractWrapInJob extends BatchSelectionJob {
             job = new WrapInAnchorPaneJob(editorController);
         } else if (wrappingClass == javafx.scene.layout.BorderPane.class) {
             job = new WrapInBorderPaneJob(editorController);
+        } else if (wrappingClass == javafx.scene.control.ButtonBar.class) {
+            job = new WrapInButtonBarJob(editorController);
         } else if (wrappingClass == javafx.scene.control.DialogPane.class) {
             job = new WrapInDialogPaneJob(editorController);
         } else if (wrappingClass == javafx.scene.layout.FlowPane.class) {
@@ -155,7 +161,7 @@ public abstract class AbstractWrapInJob extends BatchSelectionJob {
         return !(parentSceneGraphObject instanceof Accordion) // accepts only TitledPanes
                 && !(parentSceneGraphObject instanceof TabPane); // accepts only Tabs
     }
-    
+
     @Override
     protected List<Job> makeSubJobs() {
         final List<Job> result = new ArrayList<>();
@@ -313,19 +319,19 @@ public abstract class AbstractWrapInJob extends BatchSelectionJob {
     /**
      * Used to modify the specified children.
      *
-     * @param container
      * @param children The children to be modified.
      * @return A list of jobs.
      */
-    protected List<Job> modifyChildrenJobs(final FXOMInstance container, final List<FXOMObject> children) {
+    protected List<Job> modifyChildrenJobs(final List<FXOMObject> children) {
 
         final List<Job> jobs = new ArrayList<>();
-        final DesignHierarchyMask newContainerMask = new DesignHierarchyMask(container);
+        final DesignHierarchyMask newContainerMask = new DesignHierarchyMask(newContainer);
+        final Bounds unionOfBounds = WrapJobUtils.getUnionOfBounds(children);
 
-        if (newContainerMask.isFreeChildPositioning()) {
-            final Bounds unionOfBounds = WrapJobUtils.getUnionOfBounds(children);
+        for (FXOMObject child : children) {
 
-            for (FXOMObject child : children) {
+            // Modify child LAYOUT bounds
+            if (newContainerMask.isFreeChildPositioning()) {
                 assert child.getSceneGraphObject() instanceof Node;
                 final Node childNode = (Node) child.getSceneGraphObject();
                 final Bounds childBounds = childNode.getLayoutBounds();
@@ -340,9 +346,7 @@ public abstract class AbstractWrapInJob extends BatchSelectionJob {
                 final ModifyObjectJob modifyLayoutY = WrapJobUtils.modifyObjectJob(
                         (FXOMInstance) child, "layoutY", layoutY, getEditorController());
                 jobs.add(modifyLayoutY);
-            }
-        } else {
-            for (FXOMObject child : children) {
+            } else {
                 assert child.getSceneGraphObject() instanceof Node;
 
                 final ModifyObjectJob modifyLayoutX = WrapJobUtils.modifyObjectJob(
@@ -352,7 +356,19 @@ public abstract class AbstractWrapInJob extends BatchSelectionJob {
                         (FXOMInstance) child, "layoutY", 0.0, getEditorController());
                 jobs.add(modifyLayoutY);
             }
+
+            // Remove static properties from child
+            if (child instanceof FXOMInstance) {
+                final FXOMInstance fxomInstance = (FXOMInstance) child;
+                for (FXOMProperty p : fxomInstance.getProperties().values()) {
+                    final Class<?> residentClass = p.getName().getResidenceClass();
+                    if (residentClass != null) {
+                        jobs.add(new RemovePropertyJob(p, getEditorController()));
+                    }
+                }
+            }
         }
+
         return jobs;
     }
 
@@ -373,6 +389,24 @@ public abstract class AbstractWrapInJob extends BatchSelectionJob {
                 JobUtils.setLayoutY(newContainer, Node.class, unionOfBounds.getMinY());
 //            JobUtils.setMinHeight(newContainer, Region.class, unionOfBounds.getHeight());
 //            JobUtils.setMinWidth(newContainer, Region.class, unionOfBounds.getMinY());
+            }
+        }
+
+        // Add static properties to the new container
+        // (meaningfull for single selection only)
+        if (children.size() == 1) {
+            final Metadata metadata = Metadata.getMetadata();
+            final FXOMObject child = children.get(0);
+            if (child instanceof FXOMInstance) {
+                final FXOMInstance fxomInstance = (FXOMInstance) child;
+                for (FXOMProperty p : fxomInstance.getProperties().values()) {
+                    final Class<?> residentClass = p.getName().getResidenceClass();
+                    if (residentClass != null) {
+                        final ValuePropertyMetadata vpm = metadata.queryValueProperty(fxomInstance, p.getName());
+                        final Object value = vpm.getValueObject(fxomInstance);
+                        vpm.setValueObject(newContainer, value);
+                    }
+                }
             }
         }
     }

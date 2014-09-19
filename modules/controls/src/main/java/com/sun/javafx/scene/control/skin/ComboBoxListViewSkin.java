@@ -241,7 +241,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             updateCellFactory();
         } else if ("VISIBLE_ROW_COUNT".equals(p)) {
             if (listView == null) return;
-            listView.setPrefHeight(getListViewPrefHeight());
+            listView.requestLayout();
         } else if ("CONVERTER".equals(p)) {
             updateListViewItems();
         } else if ("EDITOR".equals(p)) {

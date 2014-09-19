@@ -202,27 +202,25 @@ public class BorderStroke {
         // TODO: Our inside / outside should be 0 when stroke type is NONE in that dimension!
         // In fact, we could adjust the widths in such a case so that when you ask for the
         // widths, you get 0 instead of whatever was specified. See 4.3 of the CSS Spec.
-        StrokeType type = this.topStyle.getType();
-        double inside, outside;
-        if (type == StrokeType.OUTSIDE) {
-            outside = this.widths.getTop();
-            inside = 0;
-        } else if (type == StrokeType.CENTERED) {
-            final double width = this.getWidths().getTop();
-            outside = inside = width / 2.0;
-        } else if (type == StrokeType.INSIDE) {
-            outside = 0;
-            inside = this.widths.getTop();
-        } else {
-            throw new AssertionError("Unexpected Stroke Type");
-        }
 
-        // This constructor enforces that they are all uniform
-        strokeUniform = true;
+        // Strokes can only differ in width
+        strokeUniform = this.widths.left == this.widths.top &&
+                        this.widths.left == this.widths.right &&
+                        this.widths.left == this.widths.bottom;
 
         // Since insets are empty, don't have to worry about it
-        innerEdge = new Insets(inside);
-        outerEdge = new Insets(outside);
+        innerEdge = new Insets(
+                computeInside(this.topStyle.getType(), this.widths.getTop()),
+                computeInside(this.rightStyle.getType(), this.widths.getRight()),
+                computeInside(this.bottomStyle.getType(), this.widths.getBottom()),
+                computeInside(this.leftStyle.getType(), this.widths.getLeft())
+        );
+        outerEdge = new Insets(
+                Math.max(0, computeOutside(this.topStyle.getType(), this.widths.getTop())),
+                Math.max(0, computeOutside(this.rightStyle.getType(), this.widths.getRight())),
+                Math.max(0, computeOutside(this.bottomStyle.getType(), this.widths.getBottom())),
+                Math.max(0, computeOutside(this.leftStyle.getType(), this.widths.getLeft()))
+        );
         this.hash = preComputeHash();
     }
 

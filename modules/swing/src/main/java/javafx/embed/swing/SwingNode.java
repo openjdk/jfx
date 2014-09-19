@@ -454,7 +454,9 @@ public class SwingNode extends Node {
 
     private final EventHandler<FocusUngrabEvent> ungrabHandler = event -> {
         if (!skipBackwardUnrgabNotification) {
-            AccessController.doPrivileged(new PostEventAction(new UngrabEvent(lwFrame)));
+            if (lwFrame != null) {
+                AccessController.doPrivileged(new PostEventAction(new UngrabEvent(lwFrame)));
+            }
         }
     };
 

@@ -38,6 +38,7 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.SubScene;
 import javafx.scene.image.Image;
+import javafx.scene.layout.Region;
 import javafx.scene.text.Font;
 import javafx.stage.Window;
 import sun.util.logging.PlatformLogger;
@@ -532,9 +533,10 @@ final public class StyleManager {
             }
         }
 
-        Iterator<StylesheetContainer> containerIterator = stylesheetContainerMap.values().iterator();
+        Iterator<Entry<String,StylesheetContainer>> containerIterator = stylesheetContainerMap.entrySet().iterator();
         while (containerIterator.hasNext()) {
-            StylesheetContainer container = containerIterator.next();
+            Entry<String,StylesheetContainer> entry = containerIterator.next();
+            StylesheetContainer container = entry.getValue();
             container.parentUsers.remove(parent);
             if (container.parentUsers.list.isEmpty()) {
 
@@ -620,13 +622,14 @@ final public class StyleManager {
         //
         // remove any parents belonging to this SubScene from the stylesheetContainerMap
         //
-        Set<Entry<String,StylesheetContainer>> stylesheetContainers = stylesheetContainerMap.entrySet();
-        Iterator<Entry<String,StylesheetContainer>> iter = stylesheetContainers.iterator();
+        // copy the list to avoid concurrent mod.
+        List<StylesheetContainer> stylesheetContainers = new ArrayList<>(stylesheetContainerMap.values());
+
+        Iterator<StylesheetContainer> iter = stylesheetContainers.iterator();
 
         while(iter.hasNext()) {
 
-            Entry<String,StylesheetContainer> entry = iter.next();
-            StylesheetContainer container = entry.getValue();
+            StylesheetContainer container = iter.next();
 
             Iterator<Reference<Parent>> parentIter = container.parentUsers.list.iterator();
             while (parentIter.hasNext()) {
@@ -1599,6 +1602,11 @@ final public class StyleManager {
         final boolean hasSubSceneUserAgentStylesheet =
                 subSceneUserAgentStylesheet != null && subSceneUserAgentStylesheet.trim().isEmpty() == false;
 
+        final String regionUserAgentStylesheet =
+                (node instanceof Region) ? ((Region)node).getUserAgentStylesheet() : null;
+        final boolean hasRegionUserAgentStylesheet =
+                regionUserAgentStylesheet != null && regionUserAgentStylesheet.trim().isEmpty() == false;
+
         //
         // Are there any stylesheets at all?
         // If not, then there is nothing to match and the
@@ -1609,6 +1617,7 @@ final public class StyleManager {
                 && hasSceneStylesheets == false
                 && hasSceneUserAgentStylesheet == false
                 && hasSubSceneUserAgentStylesheet == false
+                && hasRegionUserAgentStylesheet == false
                 && platformUserAgentStylesheetContainers.isEmpty()) {
             return StyleMap.EMPTY_MAP;
         }
@@ -1631,7 +1640,7 @@ final public class StyleManager {
             key.styleClasses.add(StyleClassSet.getStyleClass(styleClass));
         }
 
-        Map<Key, Cache> cacheMap = cacheContainer.getCacheMap(parentStylesheets);
+        Map<Key, Cache> cacheMap = cacheContainer.getCacheMap(parentStylesheets,regionUserAgentStylesheet);
         Cache cache = cacheMap.get(key);
 
         if (cache != null) {
@@ -1692,6 +1701,38 @@ final public class StyleManager {
                         selectorData.addAll(matchingRules);
                     }
                 }
+            }
+
+            if (hasRegionUserAgentStylesheet) {
+                // Unfortunate duplication of code from previous block. No time to refactor.
+                StylesheetContainer container = null;
+                for (int n=0, nMax=userAgentStylesheetContainers.size(); n<nMax; n++) {
+                    container = userAgentStylesheetContainers.get(n);
+                    if (regionUserAgentStylesheet.equals(container.fname)) {
+                        break;
+                    }
+                    container = null;
+                }
+
+                if (container == null) {
+                    Stylesheet stylesheet = loadStylesheet(regionUserAgentStylesheet);
+                    if (stylesheet != null) {
+                        stylesheet.setOrigin(StyleOrigin.USER_AGENT);
+                    }
+                    container = new StylesheetContainer(regionUserAgentStylesheet, stylesheet);
+                    userAgentStylesheetContainers.add(container);
+                }
+
+                if (container.selectorPartitioning != null) {
+
+                    // I know node is a Region...
+                    container.parentUsers.add((Parent)node);
+
+                    final List<Selector> matchingRules =
+                            container.selectorPartitioning.match(id, cname, key.styleClasses);
+                    selectorData.addAll(matchingRules);
+                }
+
             }
 
             // Scene stylesheets come next since declarations from
@@ -1784,13 +1825,14 @@ final public class StyleManager {
             return styleCache;
         }
 
-        private Map<Key,Cache> getCacheMap(List<StylesheetContainer> parentStylesheets) {
+        private Map<Key,Cache> getCacheMap(List<StylesheetContainer> parentStylesheets, String regionUserAgentStylesheet) {
 
             if (cacheMap == null) {
                 cacheMap = new HashMap<List<String>,Map<Key,Cache>>();
             }
 
-            if (parentStylesheets == null || parentStylesheets.isEmpty()) {
+            if ((parentStylesheets == null || parentStylesheets.isEmpty()) &&
+                    (regionUserAgentStylesheet == null || regionUserAgentStylesheet.isEmpty())) {
 
                 Map<Key,Cache> cmap = cacheMap.get(null);
                 if (cmap == null) {
@@ -1809,6 +1851,9 @@ final public class StyleManager {
                     StylesheetContainer sc = parentStylesheets.get(n);
                     if (sc == null || sc.fname == null || sc.fname.isEmpty()) continue;
                     cacheMapKey.add(sc.fname);
+                }
+                if (regionUserAgentStylesheet != null) {
+                    cacheMapKey.add(regionUserAgentStylesheet);
                 }
                 Map<Key,Cache> cmap = cacheMap.get(cacheMapKey);
                 if (cmap == null) {

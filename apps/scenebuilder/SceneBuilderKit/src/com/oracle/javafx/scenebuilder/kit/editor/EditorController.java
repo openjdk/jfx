@@ -182,6 +182,7 @@ public class EditorController {
         UNWRAP,
         WRAP_IN_ANCHOR_PANE,
         WRAP_IN_BORDER_PANE,
+        WRAP_IN_BUTTON_BAR,
         WRAP_IN_DIALOG_PANE,
         WRAP_IN_FLOW_PANE,
         WRAP_IN_GRID_PANE,
@@ -1063,6 +1064,10 @@ public class EditorController {
                 performWrap(javafx.scene.layout.BorderPane.class);
                 break;
             }
+            case WRAP_IN_BUTTON_BAR: {
+                performWrap(javafx.scene.control.ButtonBar.class);
+                break;
+            }
             case WRAP_IN_DIALOG_PANE: {
                 performWrap(javafx.scene.control.DialogPane.class);
                 break;
@@ -1299,6 +1304,10 @@ public class EditorController {
             }
             case WRAP_IN_BORDER_PANE: {
                 result = canPerformWrap(javafx.scene.layout.BorderPane.class);
+                break;
+            }
+            case WRAP_IN_BUTTON_BAR: {
+                result = canPerformWrap(javafx.scene.control.ButtonBar.class);
                 break;
             }
             case WRAP_IN_DIALOG_PANE: {
@@ -1689,6 +1698,7 @@ public class EditorController {
             classesSupportingWrapping = new ArrayList<>();
             classesSupportingWrapping.add(javafx.scene.layout.AnchorPane.class);
             classesSupportingWrapping.add(javafx.scene.layout.BorderPane.class);
+            classesSupportingWrapping.add(javafx.scene.control.ButtonBar.class);
             classesSupportingWrapping.add(javafx.scene.control.DialogPane.class);
             classesSupportingWrapping.add(javafx.scene.layout.FlowPane.class);
             classesSupportingWrapping.add(javafx.scene.layout.GridPane.class);

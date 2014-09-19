@@ -125,7 +125,7 @@ import com.sun.javafx.event.EventHandlerManager;
  * 
  * <p><strong>Option 1: The 'traditional' approach</strong>
  * <pre>{@code Optional<ButtonType> result = dialog.showAndWait();
- * if (result.get() == ButtonType.OK) {
+ * if (result.isPresent() && result.get() == ButtonType.OK) {
  *     formatSystem();
  * }}</pre>
  * 

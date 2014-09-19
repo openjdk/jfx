@@ -203,10 +203,11 @@ final class SWPaint {
         for (int i = 0; i < nstops; i++) {
             final Stop stop = grd.getStops().get(i);
             final Color stopColor = stop.getColor();
-            argb[i] = ((((int)(255 * stopColor.getAlpha() * compositeAlpha)) & 0xFF) << 24) +
-                    ((((int)(255 * stopColor.getRed())) & 0xFF) << 16) +
-                    ((((int)(255 * stopColor.getGreen())) & 0xFF) << 8) +
-                    (((int)(255 * stopColor.getBlue())) & 0xFF);
+            float alpha255 = 255 * stopColor.getAlpha() * compositeAlpha;
+            argb[i] = ((((int)(alpha255)) & 0xFF) << 24) +
+                    ((((int)(alpha255 * stopColor.getRed())) & 0xFF) << 16) +
+                    ((((int)(alpha255 * stopColor.getGreen())) & 0xFF) << 8) +
+                    (((int)(alpha255 * stopColor.getBlue())) & 0xFF);
         }
         return argb;
     }

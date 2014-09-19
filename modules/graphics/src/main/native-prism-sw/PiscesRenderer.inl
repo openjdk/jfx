@@ -206,7 +206,7 @@ renderer_setCompositeRule(Renderer* rdr, jint compositeRule) {
         if ((compositeRule == COMPOSITE_SRC_OVER) ||
             (((compositeRule == COMPOSITE_CLEAR) ||
             (compositeRule == COMPOSITE_SRC)) &&
-            ((rdr->_imageType == TYPE_INT_ARGB) || (rdr->_imageType == TYPE_INT_ARGB_PRE))))
+            ((rdr->_imageType == TYPE_INT_ARGB_PRE))))
         {
             rdr->_rendererState |= INVALID_COLOR_ALPHA_MAP |
                                    INVALID_PAINT_ALPHA_MAP;
@@ -506,7 +506,7 @@ updateRendererSurface(Renderer* rdr) {
     if (rdr->_imageType != surface->imageType)
     {
         if ((rdr->_compositeRule != COMPOSITE_SRC_OVER) && 
-            (surface->imageType == TYPE_INT_ARGB || surface->imageType == TYPE_INT_ARGB_PRE))
+            (surface->imageType == TYPE_INT_ARGB_PRE))
         {
             rdr->_rendererState |= INVALID_COLOR_ALPHA_MAP |
                                    INVALID_PAINT_ALPHA_MAP;
@@ -522,31 +522,6 @@ updateRendererSurface(Renderer* rdr) {
 static void
 updateSurfaceDependedRoutines(Renderer* rdr) {
     switch (rdr->_imageType) {
-        case TYPE_INT_ARGB:
-            rdr->_bl_SourceOverNoMask = blitSrcOver8888;
-            rdr->_bl_PT_SourceOverNoMask = blitPTSrcOver8888;
-            rdr->_bl_SourceNoMask = blitSrc8888;
-            rdr->_bl_PT_SourceNoMask = blitPTSrc8888;
-
-            rdr->_bl_SourceOverMask = NULL;
-            rdr->_bl_PT_SourceOverMask = NULL;
-            rdr->_bl_SourceMask = NULL;
-            rdr->_bl_PT_SourceMask = NULL;
-
-            rdr->_bl_SourceOverLCDMask = NULL;
-            rdr->_bl_PT_SourceOverLCDMask = NULL;
-            rdr->_bl_SourceLCDMask = NULL;
-            rdr->_bl_PT_SourceLCDMask = NULL;
-
-            rdr->_bl_Clear = blitSrc8888;
-            rdr->_bl_PT_Clear = blitSrc8888;
-            rdr->_clearRect = clearRect8888;
-
-            rdr->_el_Source = emitLineSource8888;
-            rdr->_el_SourceOver = emitLineSourceOver8888;
-            rdr->_el_PT_Source = emitLinePTSource8888;
-            rdr->_el_PT_SourceOver = emitLinePTSourceOver8888;
-            break;
         case TYPE_INT_ARGB_PRE:
             rdr->_bl_SourceOverNoMask = blitSrcOver8888_pre;
             rdr->_bl_PT_SourceOverNoMask = blitPTSrcOver8888_pre;
@@ -565,7 +540,7 @@ updateSurfaceDependedRoutines(Renderer* rdr) {
 
             rdr->_bl_Clear = blitSrc8888_pre;
             rdr->_bl_PT_Clear = blitSrc8888_pre;
-            rdr->_clearRect = clearRect8888;
+            rdr->_clearRect = clearRect8888_any;
 
             rdr->_el_Source = emitLineSource8888_pre;
             rdr->_el_SourceOver = emitLineSourceOver8888_pre;

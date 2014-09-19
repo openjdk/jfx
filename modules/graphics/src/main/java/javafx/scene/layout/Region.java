@@ -3108,6 +3108,49 @@ public class
      *                                                                         *
      **************************************************************************/
 
+    /**
+     * An implementation may specify its own user-agent styles for this Region, and its children,
+     * by overriding this method. These styles are used in addition to whatever user-agent stylesheets
+     * are in use. This provides a mechanism for third parties to introduce styles for custom controls.
+     * <p>
+     * The URL is a hierarchical URI of the form [scheme:][//authority][path]. If the URL
+     * does not have a [scheme:] component, the URL is considered to be the [path] component only.
+     * Any leading '/' character of the [path] is ignored and the [path] is treated as a path relative to
+     * the root of the application's classpath.
+     * </p>
+     * <code><pre>
+     *
+     * package com.example.javafx.app;
+     *
+     * import javafx.application.Application;
+     * import javafx.scene.Group;
+     * import javafx.scene.Scene;
+     * import javafx.stage.Stage;
+     *
+     * public class MyApp extends Application {
+     *
+     *     {@literal @}Override public void start(Stage stage) {
+     *         Scene scene = new Scene(new Group());
+     *         scene.getStylesheets().add("/com/example/javafx/app/mystyles.css");
+     *         stage.setScene(scene);
+     *         stage.show();
+     *     }
+     *
+     *     public static void main(String[] args) {
+     *         launch(args);
+     *     }
+     * }
+     * </pre></code>
+     * For additional information about using CSS with the scene graph,
+     * see the <a href="../doc-files/cssref.html">CSS Reference Guide</a>.
+     *
+     * @return A string URL
+     * @since JavaFX 8u40
+     */
+    public String getUserAgentStylesheet() {
+        return null;
+    }
+
      /**
       * Super-lazy instantiation pattern from Bill Pugh.
       * @treatAsPrivate implementation detail

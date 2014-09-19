@@ -266,7 +266,8 @@ JNIEXPORT void JNICALL
 JNIEXPORT jlong JNICALL
  Java_com_sun_glass_ui_monocle_X_XCreateBitmapFromData
  (JNIEnv *UNUSED(env), jclass UNUSED(xClass),
-        jlong display, jlong drawable, jobject buf, jint width, jint height) {
+        jlong display, jlong drawable, jobject buf,
+        jint UNUSED(width), jint UNUSED(height)) {
     void *data = (*env)->GetDirectBufferAddress(env, buf);
     return asJLong(XCreateBitmapFromData((Display *) asPtr(display),
                                 (Window) drawable, data, 1, 1));
@@ -275,8 +276,9 @@ JNIEXPORT jlong JNICALL
 JNIEXPORT jlong JNICALL
  Java_com_sun_glass_ui_monocle_X_XCreatePixmapCursor
  (JNIEnv *UNUSED(env), jclass UNUSED(xClass),
-        jlong display, jlong source, jlong mask, jlong fg, jlong bg,
-        jint x, jint y) {
+        jlong display, jlong source, jlong mask,
+        jlong UNUSED(fg), jlong UNUSED(bg),
+        jint UNUSED(x), jint UNUSED(y)) {
     XColor black;
     black.red = black.green = black.blue = 0;
     return asJLong(XCreatePixmapCursor ((Display *) asPtr(display),

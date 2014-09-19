@@ -223,7 +223,7 @@ public final class PreviewWindowController extends AbstractWindowController {
             = (observable, oldValue, newValue) -> requestUpdate(DELAYED);
 
     private final ChangeListener<Number> cssRevisionListener
-            = (observable, oldValue, newValue) -> Deprecation.reapplyCSS(getScene());
+            = (observable, oldValue, newValue) -> requestUpdate(IMMEDIATE);
 
     /**
      * We use the provided delay before refreshing the content of the preview.
@@ -244,6 +244,7 @@ public final class PreviewWindowController extends AbstractWindowController {
                 // => we must wrap the code into a Runnable object and call the Platform.runLater
                 Platform.runLater(() -> {
                     final FXOMDocument fxomDocument = editorController.getFxomDocument();
+                    String themeStyleSheetString = null;
                     if (fxomDocument != null) {
                         // We clone the FXOMDocument
                         FXOMDocument clone;
@@ -259,8 +260,7 @@ public final class PreviewWindowController extends AbstractWindowController {
                         }
 
                         Object sceneGraphRoot = clone.getSceneGraphRoot();
-                        final List<String> themeStyleSheetStrings = new ArrayList<>();
-                        themeStyleSheetStrings.add( EditorPlatform.getThemeStylesheetURL(editorControllerTheme));
+                        themeStyleSheetString = EditorPlatform.getThemeStylesheetURL(editorControllerTheme);
 
                         if (sceneGraphRoot instanceof Parent) {
                             ((Parent) sceneGraphRoot).setId(NID_PREVIEW_ROOT);
@@ -270,12 +270,12 @@ public final class PreviewWindowController extends AbstractWindowController {
 
                             // Compute the proper styling
                             List<String> newStyleSheets1 = new ArrayList<>();
-                            computeStyleSheets(newStyleSheets1, sceneGraphRoot, themeStyleSheetStrings);
+                            computeStyleSheets(newStyleSheets1, sceneGraphRoot);
 
                             // Clean all styling
                             ((Parent) sceneGraphRoot).getStylesheets().removeAll();
 
-                            // Apply the new styling as a whole
+                            // Apply the new styling
                            ((Parent) sceneGraphRoot).getStylesheets().addAll(newStyleSheets1);
                         } else if (sceneGraphRoot instanceof Node) {
                             StackPane sp1 = new StackPane();
@@ -283,7 +283,7 @@ public final class PreviewWindowController extends AbstractWindowController {
                             
                             // Compute the proper styling
                             List<String> newStyleSheets2 = new ArrayList<>();
-                            computeStyleSheets(newStyleSheets2, sceneGraphRoot, themeStyleSheetStrings);
+                            computeStyleSheets(newStyleSheets2, sceneGraphRoot);
 
                             // Apply the new styling as a whole
                             sp1.getStylesheets().addAll(newStyleSheets2);
@@ -311,6 +311,9 @@ public final class PreviewWindowController extends AbstractWindowController {
                     }
 
                     getScene().setRoot(getRoot());
+                    if (themeStyleSheetString != null) {
+                        getScene().setUserAgentStylesheet(themeStyleSheetString);
+                    }
                     updateWindowSize();
                     updateWindowTitle();
                 });
@@ -534,10 +537,7 @@ public final class PreviewWindowController extends AbstractWindowController {
         requestUpdate(IMMEDIATE);
     }
     
-    private void computeStyleSheets(List<String> newStyleSheets, Object sceneGraphRoot, List<String> themeStyleSheetStrings) {        
-        // Add theme style sheet; order is significant ==> theme one always first
-        newStyleSheets.addAll(0, themeStyleSheetStrings);
-
+    private void computeStyleSheets(List<String> newStyleSheets, Object sceneGraphRoot) {        
         if (sceneGraphRoot instanceof Parent) {
             // At that stage current style sheets are the one defined within the FXML
             ObservableList<String> currentStyleSheets = ((Parent) sceneGraphRoot).getStylesheets();
