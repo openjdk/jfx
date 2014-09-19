@@ -26,12 +26,15 @@
 package com.sun.javafx.css;
 
 import com.sun.javafx.css.parser.CSSParser;
+import javafx.css.StyleOrigin;
+import javafx.css.StyleableProperty;
 import javafx.scene.Group;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.SubScene;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
+import javafx.scene.paint.Paint;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.PopupWindow;
 import javafx.stage.Window;
@@ -45,6 +48,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 /**
  *
@@ -310,7 +314,7 @@ public class StyleManagerTest {
         scene.getRoot().applyCss();
 
         int index = indexOf(sm.platformUserAgentStylesheetContainers,"/com/sun/javafx/css/ua0.css");
-        assertEquals(0,index);
+        assertEquals(0, index);
 
         index = indexOf(sm.userAgentStylesheetContainers,"/com/sun/javafx/css/ua0.css");
         assertEquals(-1, index);
@@ -653,7 +657,7 @@ public class StyleManagerTest {
         scene.getRoot().applyCss();
 
         int index = indexOf(sm.platformUserAgentStylesheetContainers,"/com/sun/javafx/css/ua0.css");
-        assertEquals(0,index);
+        assertEquals(0, index);
 
         index = indexOf(sm.userAgentStylesheetContainers,"/com/sun/javafx/css/ua0.css");
         assertEquals(-1, index);
@@ -1024,4 +1028,54 @@ public class StyleManagerTest {
         assertEquals("/com/sun/javafx/css/ua0.css", sm.platformUserAgentStylesheetContainers.get(0).fname);
     }
 
+    @Test
+    public void testRT_38687_with_Scene() {
+
+        Rectangle rect = new Rectangle(50,50) {{ getStyleClass().add("rect"); }};
+        Scene scene = new Scene(new Group(rect));
+        scene.setUserAgentStylesheet("com/sun/javafx/css/ua0.css");
+        scene.getRoot().applyCss();
+
+        StyleableProperty<Paint> fillProperty = (StyleableProperty<Paint>)rect.fillProperty();
+        assertEquals(StyleOrigin.USER_AGENT, fillProperty.getStyleOrigin());
+
+        scene.setUserAgentStylesheet("com/sun/javafx/css/ua1.css");
+        scene.getRoot().applyCss();
+
+        assertEquals(null, fillProperty.getStyleOrigin());
+
+        rect.setFill(Color.GREEN);
+
+        scene.setUserAgentStylesheet("com/sun/javafx/css/rt38637.css");
+        scene.getRoot().applyCss();
+        assertEquals(StyleOrigin.USER, fillProperty.getStyleOrigin());
+
+    }
+
+    @Test
+    public void testRT_38687_with_SubScene() {
+
+        Rectangle rect = new Rectangle(50,50) {{ getStyleClass().add("rect"); }};
+        Group group = new Group(rect);
+        SubScene subScene = new SubScene(group, 100, 100);
+        subScene.setUserAgentStylesheet("com/sun/javafx/css/ua0.css");
+
+        Scene scene = new Scene(new Group(subScene));
+        scene.getRoot().applyCss();
+
+        StyleableProperty<Paint> fillProperty = (StyleableProperty<Paint>)rect.fillProperty();
+        assertEquals(StyleOrigin.USER_AGENT, fillProperty.getStyleOrigin());
+
+        subScene.setUserAgentStylesheet("com/sun/javafx/css/ua1.css");
+        scene.getRoot().applyCss();
+
+        assertEquals(null, fillProperty.getStyleOrigin());
+
+        rect.setFill(Color.GREEN);
+
+        subScene.setUserAgentStylesheet("com/sun/javafx/css/rt38637.css");
+        scene.getRoot().applyCss();
+        assertEquals(StyleOrigin.USER, fillProperty.getStyleOrigin());
+
+    }
 }
