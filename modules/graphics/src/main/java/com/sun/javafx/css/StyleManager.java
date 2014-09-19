@@ -427,7 +427,7 @@ final public class StyleManager {
         if ((scene.getUserAgentStylesheet() != null) &&
                 (!(sceneUserAgentStylesheet = scene.getUserAgentStylesheet().trim()).isEmpty())) {
 
-            for(int n=0,nMax=userAgentStylesheetContainers.size(); n<nMax; n++) {
+            for(int n=userAgentStylesheetContainers.size()-1; 0<=n; --n) {
                 StylesheetContainer container = userAgentStylesheetContainers.get(n);
                 if (sceneUserAgentStylesheet.equals(container.fname)) {
                     container.parentUsers.remove(scene.getRoot());

@@ -149,13 +149,6 @@ final public class Rule {
     /* package */
     void setStylesheet(Stylesheet stylesheet) {
 
-        // For an imported stylesheet, update origin, but not stylesheet ref
-        // TODO: I don't like this. Done as an expedient for at-import-rule.
-        if (this.stylesheet != null && stylesheet != null) {
-            this.stylesheet.setOrigin(stylesheet.getOrigin());
-            return;
-        }
-
         this.stylesheet = stylesheet;
         
         if (stylesheet != null && stylesheet.getUrl() != null) {
