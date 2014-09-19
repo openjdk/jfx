@@ -95,6 +95,18 @@ abstract class GLContext {
     final static int GL_FRONT                     = 111;
     final static int GL_NONE                      = 112;
 
+    // Use for querying hardware/implementation limits
+    final static int GL_MAX_FRAGMENT_UNIFORM_COMPONENTS  = 120;
+    final static int GL_MAX_FRAGMENT_UNIFORM_VECTORS     = 121;
+    final static int GL_MAX_TEXTURE_IMAGE_UNITS          = 122;
+    final static int GL_MAX_TEXTURE_SIZE                 = 123;
+    final static int GL_MAX_VERTEX_ATTRIBS               = 124;
+    final static int GL_MAX_VARYING_COMPONENTS           = 125;
+    final static int GL_MAX_VARYING_VECTORS              = 126;
+    final static int GL_MAX_VERTEX_TEXTURE_IMAGE_UNITS   = 127;
+    final static int GL_MAX_VERTEX_UNIFORM_COMPONENTS    = 128;
+    final static int GL_MAX_VERTEX_UNIFORM_VECTORS       = 129;
+
     final static int MAPTYPE_DIFFUSE = MapType.DIFFUSE.ordinal();
     final static int MAPTYPE_SPECULAR = MapType.SPECULAR.ordinal();
     final static int MAPTYPE_BUMP = MapType.BUMP.ordinal();
@@ -104,7 +116,7 @@ abstract class GLContext {
     final static int NUM_MATRIX_ELEMENTS          = 16;
 
     long nativeCtxInfo;
-    private int maxTextureSize = -1;
+    private int maxTextureSize = -1;    
     private Boolean nonPowTwoExtAvailable;
     private Boolean clampToZeroAvailable;
 
@@ -150,8 +162,8 @@ abstract class GLContext {
     private static native void nFinish();
     private static native int nGenAndBindTexture();
     private static native int nGetFBO();
+    private static native int nGetIntParam(int pname);
     private static native int nGetMaxSampleSize();
-    private static native int nGetMaxTextureSize();
     private static native int nGetUniformLocation(long nativeCtxInfo,
             int programID, String name);
     private static native void nPixelStorei(int pname, int param);
@@ -481,6 +493,10 @@ abstract class GLContext {
     }
     /***********************************************************/
 
+    int getIntParam(int param) {
+        return nGetIntParam(param);
+    }
+
     int getSampleSize() {
         int maxSamples = getMaxSampleSize();
         return maxSamples < 2 ? 0 : (maxSamples < 4 ? 2 : 4);
@@ -498,7 +514,7 @@ abstract class GLContext {
         if (maxTextureSize > -1) {
             return maxTextureSize;
         }
-        return maxTextureSize = nGetMaxTextureSize();
+        return maxTextureSize = getIntParam(GLContext.GL_MAX_TEXTURE_SIZE);
     }
 
     int getUniformLocation(int programID, String name) {

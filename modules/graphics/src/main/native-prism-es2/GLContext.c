@@ -588,6 +588,8 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_es2_GLContext_nCreateProgram
             ctxInfo->glGetProgramInfoLog(shaderProgram, length, NULL, msg);
             fprintf(stderr, "Program link log: %.*s\n", length, msg);
             free(msg);
+        } else {
+            fprintf(stderr, "glLinkProgram: GL_LINK_STATUS returns GL_FALSE but GL_INFO_LOG_LENGTH returns 0\n");
         }
 
         ctxInfo->glDetachShader(shaderProgram, vertID);
@@ -639,7 +641,7 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_es2_GLContext_nCompileShader
     }
     ctxInfo->glShaderSource(shaderID, 1, (const GLchar **) &shaderString, (GLint *) NULL);
     ctxInfo->glCompileShader(shaderID);
-    ctxInfo->glGetShaderiv(shaderID, GL_COMPILE_STATUS, &success);
+    ctxInfo->glGetShaderiv(shaderID, GL_COMPILE_STATUS, &success);    
 
     free(shaderString);
 
@@ -652,6 +654,8 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_es2_GLContext_nCompileShader
             ctxInfo->glGetShaderInfoLog(shaderID, length, NULL, msg);
             fprintf(stderr, "Shader compile log: %.*s\n", length, msg);
             free(msg);
+        } else {
+            fprintf(stderr, "glCompileShader: GL_COMPILE_STATUS returns GL_FALSE but GL_INFO_LOG_LENGTH returns 0\n");
         }
 
         ctxInfo->glDeleteShader(shaderID);
@@ -859,18 +863,6 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_es2_GLContext_nGetMaxSampleSize
 
 /*
  * Class:     com_sun_prism_es2_GLContext
- * Method:    nGetMaxTextureSize
- * Signature: ()I
- */
-JNIEXPORT jint JNICALL Java_com_sun_prism_es2_GLContext_nGetMaxTextureSize
-(JNIEnv *env, jclass class) {
-    GLint param;
-    glGetIntegerv(GL_MAX_TEXTURE_SIZE, &param);
-    return (jint) param;
-}
-
-/*
- * Class:     com_sun_prism_es2_GLContext
  * Method:    nGetUniformLocation
  * Signature: (JILjava/lang/String;)I
  */
@@ -940,6 +932,28 @@ int translatePrismToGL(int value) {
             return GL_CLAMP_TO_EDGE;
         case com_sun_prism_es2_GLContext_WRAPMODE_CLAMP_TO_BORDER:
             return GL_CLAMP_TO_BORDER;
+
+        case com_sun_prism_es2_GLContext_GL_MAX_FRAGMENT_UNIFORM_COMPONENTS:
+            return GL_MAX_FRAGMENT_UNIFORM_COMPONENTS;
+        case com_sun_prism_es2_GLContext_GL_MAX_FRAGMENT_UNIFORM_VECTORS:
+            return GL_MAX_FRAGMENT_UNIFORM_VECTORS;
+        case com_sun_prism_es2_GLContext_GL_MAX_TEXTURE_IMAGE_UNITS:
+            return GL_MAX_TEXTURE_IMAGE_UNITS;
+        case com_sun_prism_es2_GLContext_GL_MAX_TEXTURE_SIZE:
+            return GL_MAX_TEXTURE_SIZE;
+        case com_sun_prism_es2_GLContext_GL_MAX_VARYING_COMPONENTS:
+            return GL_MAX_VARYING_COMPONENTS;
+        case com_sun_prism_es2_GLContext_GL_MAX_VARYING_VECTORS:
+            return GL_MAX_VARYING_VECTORS;
+        case com_sun_prism_es2_GLContext_GL_MAX_VERTEX_ATTRIBS:
+            return GL_MAX_VERTEX_ATTRIBS;
+        case com_sun_prism_es2_GLContext_GL_MAX_VERTEX_UNIFORM_COMPONENTS:
+            return GL_MAX_VERTEX_UNIFORM_COMPONENTS;
+        case com_sun_prism_es2_GLContext_GL_MAX_VERTEX_UNIFORM_VECTORS:
+            return GL_MAX_VERTEX_UNIFORM_VECTORS;
+        case com_sun_prism_es2_GLContext_GL_MAX_VERTEX_TEXTURE_IMAGE_UNITS:
+            return GL_MAX_VERTEX_TEXTURE_IMAGE_UNITS;
+            
         default:
             fprintf(stderr, "warning: Unknown value. Returning value = %d\n", value);
     }
@@ -962,6 +976,19 @@ GLint translatePixelStore(int pname) {
             fprintf(stderr, "warning: Unknown pname. Returning pname = %d\n", pname);
     }
     return (GLint) pname;
+}
+
+/*
+ * Class:     com_sun_prism_es2_GLContext
+ * Method:    nGetIntParam
+ * Signature: (I)I
+ */
+JNIEXPORT jint JNICALL Java_com_sun_prism_es2_GLContext_nGetIntParam
+(JNIEnv *env, jclass class, jint pname) {
+    GLint param;
+
+    glGetIntegerv((GLenum) translatePrismToGL(pname), &param);
+    return (jint) param;
 }
 
 /*
