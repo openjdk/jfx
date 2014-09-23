@@ -500,7 +500,7 @@ public class ProgressBarSkin extends ProgressIndicatorSkin {
             this.endX = endX;
             this.skin = new WeakReference<>(progressBarSkin);
             this.flip = progressBarSkin.getIndeterminateBarFlip();
-            progressBarSkin.getIndeterminateBarEscape()
+            progressBarSkin.getIndeterminateBarEscape();
             setCycleDuration(Duration.seconds(progressBarSkin.getIndeterminateBarAnimationTime() * (flip ? 2 : 1)));
         }
 
