@@ -67,6 +67,7 @@ private:
 
 public:
     DynamicBuffer(size_t Size) {
+        FSize = 0;
         FData = NULL;
         Resize(Size);
     }
