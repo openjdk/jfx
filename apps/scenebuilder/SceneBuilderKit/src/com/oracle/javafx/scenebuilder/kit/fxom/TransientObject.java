@@ -122,14 +122,7 @@ class TransientObject extends TransientNode {
             } else {
                 assert fxRootType == null;
                 
-                final DefaultProperty annotation 
-                        = declaredClass.getAnnotation(DefaultProperty.class);
-                if ((annotation != null) && (collectedItems.size() >= 1)) {
-                    assert annotation.value() != null;
-                    final PropertyName defaultPropertyName 
-                            = new PropertyName(annotation.value());
-                    createDefaultProperty(defaultPropertyName, fxomDocument);
-                }
+                addDefaultProperty(fxomDocument, declaredClass);
                 result = new FXOMInstance(fxomDocument, glueElement, 
                                           declaredClass, getSceneGraphObject(),
                                           properties);
@@ -147,6 +140,7 @@ class TransientObject extends TransientNode {
             final Class<?> rootClass = getSceneGraphObject().getClass();
             assert fxRootType.equals(rootClass.getName())
                     || fxRootType.equals(rootClass.getSimpleName());
+            addDefaultProperty(fxomDocument, rootClass);
             result = new FXOMInstance(fxomDocument, glueElement, 
                                       rootClass, getSceneGraphObject(),
                                       properties);
@@ -159,6 +153,15 @@ class TransientObject extends TransientNode {
     /*
      * Private
      */
+    
+    private void addDefaultProperty(FXOMDocument fxomDocument, Class<?> klass) {
+        final DefaultProperty annotation = klass.getAnnotation(DefaultProperty.class);
+        if ((annotation != null) && (collectedItems.size() >= 1)) {
+            assert annotation.value() != null;
+            final PropertyName defaultPropertyName = new PropertyName(annotation.value());
+            createDefaultProperty(defaultPropertyName, fxomDocument);
+        }
+    }
     
     private void createDefaultProperty(PropertyName defaultName, FXOMDocument fxomDocument) {
         /*
