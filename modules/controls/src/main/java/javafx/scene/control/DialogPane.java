@@ -255,10 +255,8 @@ public class DialogPane extends Pane {
             }
 
             Node newGraphic = getGraphic();
-            graphicRef = new WeakReference<Node>(newGraphic);
-            if (newGraphic != null) {
-                updateHeaderArea();
-            }            
+            graphicRef = new WeakReference<>(newGraphic);
+            updateHeaderArea();
         }
     };
 
