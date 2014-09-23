@@ -82,7 +82,7 @@ public class ListCell<T> extends IndexedCell<T> {
      */
     public ListCell() {
         getStyleClass().addAll(DEFAULT_STYLE_CLASS);
-        setRole(AccessibleRole.LIST_ITEM);
+        setAccessibleRole(AccessibleRole.LIST_ITEM);
     }
 
 

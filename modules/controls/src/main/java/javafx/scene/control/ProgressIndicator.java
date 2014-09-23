@@ -99,7 +99,7 @@ public class ProgressIndicator extends Control {
         ((StyleableProperty<Boolean>)(WritableValue<Boolean>)focusTraversableProperty()).applyStyle(null, Boolean.FALSE);
         setProgress(progress);
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
-        setRole(AccessibleRole.PROGRESS_INDICATOR);
+        setAccessibleRole(AccessibleRole.PROGRESS_INDICATOR);
         
         // need to initialize pseudo-class state
         final int c = Double.compare(INDETERMINATE_PROGRESS, progress);

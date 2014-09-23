@@ -29,7 +29,6 @@ import javafx.animation.Transition;
 import javafx.geometry.Orientation;
 import javafx.geometry.Point2D;
 import javafx.geometry.Side;
-import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.AccessibleRole;
 import javafx.scene.chart.NumberAxis;
@@ -93,7 +92,7 @@ public class SliderSkin extends BehaviorSkinBase<Slider, SliderBehavior> {
             }
         };
         thumb.getStyleClass().setAll("thumb");
-        thumb.setRole(AccessibleRole.THUMB);
+        thumb.setAccessibleRole(AccessibleRole.THUMB);
         track = new StackPane();
         track.getStyleClass().setAll("track");
 //        horizontal = getSkinnable().isVertical();

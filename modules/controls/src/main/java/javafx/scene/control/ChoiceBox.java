@@ -100,7 +100,7 @@ public class ChoiceBox<T> extends Control {
      */
     public ChoiceBox(ObservableList<T> items) {
         getStyleClass().setAll("choice-box");
-        setRole(AccessibleRole.COMBO_BOX);
+        setAccessibleRole(AccessibleRole.COMBO_BOX);
         setItems(items);
         setSelectionModel(new ChoiceBoxSelectionModel<T>(this));
         

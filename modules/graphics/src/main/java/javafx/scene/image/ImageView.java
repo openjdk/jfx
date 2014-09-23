@@ -145,7 +145,7 @@ public class ImageView extends Node {
      */
     public ImageView() {
         getStyleClass().add(DEFAULT_STYLE_CLASS);
-        setRole(AccessibleRole.IMAGE_VIEW);
+        setAccessibleRole(AccessibleRole.IMAGE_VIEW);
         setNodeOrientation(NodeOrientation.LEFT_TO_RIGHT);
     }
 
@@ -173,7 +173,7 @@ public class ImageView extends Node {
      */
     public ImageView(Image image) {
         getStyleClass().add(DEFAULT_STYLE_CLASS);
-        setRole(AccessibleRole.IMAGE_VIEW);
+        setAccessibleRole(AccessibleRole.IMAGE_VIEW);
         setNodeOrientation(NodeOrientation.LEFT_TO_RIGHT);
         setImage(image);
     }

@@ -95,7 +95,7 @@ public class Button extends ButtonBase {
 
     private void initialize() {
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
-        setRole(AccessibleRole.BUTTON);
+        setAccessibleRole(AccessibleRole.BUTTON);
         setMnemonicParsing(true);     // enable mnemonic auto-parsing by default
     }
 

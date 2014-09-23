@@ -29,7 +29,6 @@ import com.sun.javafx.scene.traversal.ParentTraversalEngine;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
-import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
@@ -1284,7 +1283,7 @@ public abstract class Parent extends Node {
      */
     protected Parent() {
         layoutFlag = LayoutFlags.NEEDS_LAYOUT;
-        setRole(AccessibleRole.PARENT);
+        setAccessibleRole(AccessibleRole.PARENT);
     }
 
     /**

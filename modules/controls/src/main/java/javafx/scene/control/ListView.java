@@ -31,7 +31,6 @@ import java.util.HashMap;
 import java.util.List;
 
 import com.sun.javafx.scene.control.behavior.ListCellBehavior;
-import com.sun.javafx.scene.control.behavior.TableCellBehaviorBase;
 import javafx.beans.InvalidationListener;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
@@ -327,7 +326,7 @@ public class ListView<T> extends Control {
      */
     public ListView(ObservableList<T> items) {
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
-        setRole(AccessibleRole.LIST_VIEW);
+        setAccessibleRole(AccessibleRole.LIST_VIEW);
 
         setItems(items);
 

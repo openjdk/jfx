@@ -157,7 +157,7 @@ public class TextFlow extends Pane {
     public TextFlow() {
         super();
         effectiveNodeOrientationProperty().addListener(observable -> checkOrientation());
-        setRole(AccessibleRole.TEXT);
+        setAccessibleRole(AccessibleRole.TEXT);
     }
 
     /**

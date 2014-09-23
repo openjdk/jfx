@@ -9356,33 +9356,33 @@ public abstract class Node implements EventTarget, Styleable {
      * 
      * @since JavaFX 8u40
      */
-    private ObjectProperty<AccessibleRole> role;
+    private ObjectProperty<AccessibleRole> accessibleRole;
 
-    public final void setRole(AccessibleRole value) {
+    public final void setAccessibleRole(AccessibleRole value) {
         if (value == null) value = AccessibleRole.NODE;
-        roleProperty().set(value);
+        accessibleRoleProperty().set(value);
     }
 
-    public final AccessibleRole getRole() {
-        if (role == null) return AccessibleRole.NODE;
-        return roleProperty().get();
+    public final AccessibleRole getAccessibleRole() {
+        if (accessibleRole == null) return AccessibleRole.NODE;
+        return accessibleRoleProperty().get();
     }
-    
-    public final ObjectProperty<AccessibleRole> roleProperty() {
-        if (role == null) {
-            role = new SimpleObjectProperty<AccessibleRole>(this, "role", AccessibleRole.NODE);
+
+    public final ObjectProperty<AccessibleRole> accessibleRoleProperty() {
+        if (accessibleRole == null) {
+            accessibleRole = new SimpleObjectProperty<AccessibleRole>(this, "accessibleRole", AccessibleRole.NODE);
         }
-        return role;
+        return accessibleRole;
     }
 
-    public final void setRoleDescription(String value) {
-        roleDescriptionProperty().set(value);
+    public final void setAccessibleRoleDescription(String value) {
+        accessibleRoleDescriptionProperty().set(value);
     }
 
-    public final String getRoleDescription() {
+    public final String getAccessibleRoleDescription() {
         if (accessibilityProperties == null) return null;
-        if (accessibilityProperties.roleDescription == null) return null;
-        return roleDescriptionProperty().get();
+        if (accessibilityProperties.accessibleRoleDescription == null) return null;
+        return accessibleRoleDescriptionProperty().get();
     }
 
     /**
@@ -9399,8 +9399,8 @@ public abstract class Node implements EventTarget, Styleable {
      * 
      * @since JavaFX 8u40
      */
-    public final ObjectProperty<String> roleDescriptionProperty() {
-        return getAccessibilityProperties().getRoleDescription();
+    public final ObjectProperty<String> accessibleRoleDescriptionProperty() {
+        return getAccessibilityProperties().getAccessibleRoleDescription();
     }
 
     public final void setAccessibleText(String value) {
@@ -9464,12 +9464,12 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     private class AccessibilityProperties {
-        ObjectProperty<String> roleDescription;
-        ObjectProperty<String> getRoleDescription() {
-            if (roleDescription == null) {
-                roleDescription = new SimpleObjectProperty<String>(Node.this, "roleDescription", null);
+        ObjectProperty<String> accessibleRoleDescription;
+        ObjectProperty<String> getAccessibleRoleDescription() {
+            if (accessibleRoleDescription == null) {
+                accessibleRoleDescription = new SimpleObjectProperty<String>(Node.this, "accessibleRoleDescription", null);
             }
-            return roleDescription;
+            return accessibleRoleDescription;
         }
         ObjectProperty<String> accessibleText;
         ObjectProperty<String> getAccessibleText() {
@@ -9507,8 +9507,8 @@ public abstract class Node implements EventTarget, Styleable {
      */
     public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
-            case ROLE: return getRole();
-            case ROLE_DESCRIPTION: return getRoleDescription();
+            case ROLE: return getAccessibleRole();
+            case ROLE_DESCRIPTION: return getAccessibleRoleDescription();
             case TEXT: return getAccessibleText();
             case HELP: return getAccessibleHelp();
             case PARENT: return getParent();

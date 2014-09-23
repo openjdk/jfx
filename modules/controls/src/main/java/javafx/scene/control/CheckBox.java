@@ -100,7 +100,7 @@ public class CheckBox extends ButtonBase {
 
     private void initialize() {
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
-        setRole(AccessibleRole.CHECK_BOX);
+        setAccessibleRole(AccessibleRole.CHECK_BOX);
         setAlignment(Pos.CENTER_LEFT);
         setMnemonicParsing(true);     // enable mnemonic auto-parsing by default
         

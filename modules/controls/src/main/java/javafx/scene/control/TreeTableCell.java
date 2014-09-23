@@ -85,7 +85,7 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
      */
     public TreeTableCell() {
         getStyleClass().addAll(DEFAULT_STYLE_CLASS);
-        setRole(AccessibleRole.TREE_TABLE_CELL);
+        setAccessibleRole(AccessibleRole.TREE_TABLE_CELL);
         
         updateColumnIndex();
     }

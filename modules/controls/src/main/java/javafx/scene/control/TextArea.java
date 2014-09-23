@@ -452,7 +452,7 @@ public class TextArea extends TextInputControl {
         super(new TextAreaContent());
 
         getStyleClass().add("text-area");
-        setRole(AccessibleRole.TEXT_AREA);
+        setAccessibleRole(AccessibleRole.TEXT_AREA);
         setText(text);
     }
 

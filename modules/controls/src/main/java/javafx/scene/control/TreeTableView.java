@@ -363,7 +363,7 @@ public class TreeTableView<S> extends Control {
      */
     public TreeTableView(TreeItem<S> root) {
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
-        setRole(AccessibleRole.TREE_TABLE_VIEW);
+        setAccessibleRole(AccessibleRole.TREE_TABLE_VIEW);
 
         setRoot(root);
         updateExpandedItemCount(root);

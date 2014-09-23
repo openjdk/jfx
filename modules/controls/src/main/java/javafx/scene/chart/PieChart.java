@@ -952,8 +952,8 @@ public class PieChart extends Chart {
             setName(name);
             setPieValue(value);
             textNode.getStyleClass().addAll("text", "chart-pie-label");
-            textNode.setRole(AccessibleRole.TEXT);
-            textNode.setRoleDescription("slice");
+            textNode.setAccessibleRole(AccessibleRole.TEXT);
+            textNode.setAccessibleRoleDescription("slice");
             textNode.focusTraversableProperty().bind(Platform.accessibilityActiveProperty());
             textNode.accessibleTextProperty().bind( new StringBinding() {
                 {bind(nameProperty(), currentPieValueProperty());} 

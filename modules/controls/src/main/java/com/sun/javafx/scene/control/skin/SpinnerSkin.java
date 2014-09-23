@@ -84,7 +84,7 @@ public class SpinnerSkin<T> extends BehaviorSkinBase<Spinner<T>, SpinnerBehavior
                 }
             }
         };
-        incrementArrowButton.setRole(AccessibleRole.INCREMENT_BUTTON);
+        incrementArrowButton.setAccessibleRole(AccessibleRole.INCREMENT_BUTTON);
         incrementArrowButton.setFocusTraversable(false);
         incrementArrowButton.getStyleClass().setAll("increment-arrow-button");
         incrementArrowButton.getChildren().add(incrementArrow);
@@ -109,7 +109,7 @@ public class SpinnerSkin<T> extends BehaviorSkinBase<Spinner<T>, SpinnerBehavior
                 }
             }
         };
-        decrementArrowButton.setRole(AccessibleRole.DECREMENT_BUTTON);
+        decrementArrowButton.setAccessibleRole(AccessibleRole.DECREMENT_BUTTON);
         decrementArrowButton.setFocusTraversable(false);
         decrementArrowButton.getStyleClass().setAll("decrement-arrow-button");
         decrementArrowButton.getChildren().add(decrementArrow);

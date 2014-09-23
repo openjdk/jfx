@@ -96,7 +96,7 @@ public class SplitMenuButton extends MenuButton {
         }
 
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
-        setRole(AccessibleRole.SPLIT_MENU_BUTTON);
+        setAccessibleRole(AccessibleRole.SPLIT_MENU_BUTTON);
         setMnemonicParsing(true);     // enable mnemonic auto-parsing by default
     }
 

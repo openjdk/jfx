@@ -581,7 +581,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         // As long as the screen-reader is concerned this node is not a list item.
         // This matters because the screen-reader counts the number of list item
         // within combo and speaks it to the user.
-        buttonCell.setRole(AccessibleRole.NODE);
+        buttonCell.setAccessibleRole(AccessibleRole.NODE);
     }
 
     private void updateCellFactory() {

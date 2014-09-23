@@ -27,12 +27,10 @@ package javafx.scene.control;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 import com.sun.javafx.collections.UnmodifiableListSet;
-import com.sun.javafx.css.Selector;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
@@ -121,7 +119,7 @@ public class TabPane extends Control {
      */
     public TabPane(Tab... tabs) {
         getStyleClass().setAll("tab-pane");
-        setRole(AccessibleRole.TAB_PANE);
+        setAccessibleRole(AccessibleRole.TAB_PANE);
         setSelectionModel(new TabPaneSelectionModel(this));
 
         this.tabs.addListener((ListChangeListener<Tab>) c -> {

@@ -134,7 +134,7 @@ public class MenuButton extends ButtonBase {
         }
 
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
-        setRole(AccessibleRole.MENU_BUTTON);
+        setAccessibleRole(AccessibleRole.MENU_BUTTON);
         setMnemonicParsing(true);     // enable mnemonic auto-parsing by default
         // the default value for popupSide = Side.BOTTOM therefor
         // PSEUDO_CLASS_OPENVERTICALLY should be set from the start.

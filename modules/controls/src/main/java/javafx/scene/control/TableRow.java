@@ -28,7 +28,6 @@ package javafx.scene.control;
 import javafx.beans.InvalidationListener;
 import javafx.beans.WeakInvalidationListener;
 import javafx.collections.ListChangeListener;
-import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.AccessibleRole;
 import javafx.scene.control.TableView.TableViewFocusModel;
@@ -73,7 +72,7 @@ public class TableRow<T> extends IndexedCell<T> {
      */
     public TableRow() {
         getStyleClass().addAll(DEFAULT_STYLE_CLASS);
-        setRole(AccessibleRole.TABLE_ROW);
+        setAccessibleRole(AccessibleRole.TABLE_ROW);
     }
 
 

@@ -125,7 +125,7 @@ public class Slider extends Control {
     private void initialize() {
         //Initialize the style class to be 'slider'.
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
-        setRole(AccessibleRole.SLIDER);
+        setAccessibleRole(AccessibleRole.SLIDER);
     }
     /**
      * The maximum value represented by this Slider. This must be a

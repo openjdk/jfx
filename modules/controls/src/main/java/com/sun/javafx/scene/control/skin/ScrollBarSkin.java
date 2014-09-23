@@ -103,7 +103,7 @@ public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior
             }
         };
         thumb.getStyleClass().setAll("thumb");
-        thumb.setRole(AccessibleRole.THUMB);
+        thumb.setAccessibleRole(AccessibleRole.THUMB);
 
 
         if (!IS_TOUCH_SUPPORTED) {
@@ -119,7 +119,7 @@ public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior
                     }
                 }
             };
-            incButton.setRole(AccessibleRole.INCREMENT_BUTTON);
+            incButton.setAccessibleRole(AccessibleRole.INCREMENT_BUTTON);
             incButton.setOnMousePressed(me -> {
                 /*
                 ** if the tracklenght isn't greater than do nothing....
@@ -150,7 +150,7 @@ public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior
                     }
                 }
             };
-            decButton.setRole(AccessibleRole.DECREMENT_BUTTON);
+            decButton.setAccessibleRole(AccessibleRole.DECREMENT_BUTTON);
             decButton.setOnMousePressed(me -> {
                 /*
                 ** if the tracklenght isn't greater than do nothing....
