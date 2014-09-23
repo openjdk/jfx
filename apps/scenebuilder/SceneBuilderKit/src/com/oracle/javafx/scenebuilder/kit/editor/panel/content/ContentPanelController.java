@@ -778,7 +778,6 @@ public class ContentPanelController extends AbstractFxmlPanelController
     @Override
     protected void jobManagerRevisionDidChange() {
         getEditorController().setPickModeEnabled(false);
-        fxomDocumentDidRefreshSceneGraph(getEditorController().getFxomDocument());
     }
 
     /**
