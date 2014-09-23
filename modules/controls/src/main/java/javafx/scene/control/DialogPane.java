@@ -51,13 +51,17 @@ import javafx.css.StyleableProperty;
 import javafx.css.StyleableStringProperty;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.geometry.HPos;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.ButtonBar.ButtonData;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.ColumnConstraints;
+import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Pane;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 
@@ -158,7 +162,7 @@ public class DialogPane extends Pane {
      * 
      **************************************************************************/
     
-    private final BorderPane headerTextPanel;
+    private final GridPane headerTextPanel;
     private final Label contentLabel;
     private final StackPane graphicContainer;
     private final Node buttonBar;
@@ -187,7 +191,7 @@ public class DialogPane extends Pane {
     public DialogPane() {
         getStyleClass().add("dialog-pane");
         
-        headerTextPanel = new BorderPane();
+        headerTextPanel = new GridPane();
         getChildren().add(headerTextPanel);
         
         graphicContainer = new StackPane();
@@ -779,11 +783,7 @@ public class DialogPane extends Pane {
             detailsButton.getStyleClass().setAll("details-button", (isExpanded ? "less" : "more")); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
         });
 
-        detailsButton.setOnAction(new EventHandler<ActionEvent>() {
-            @Override public void handle(ActionEvent ae) {
-                setExpanded(!isExpanded());
-            }
-        });
+        detailsButton.setOnAction(ae -> setExpanded(!isExpanded()));
         return detailsButton;
     }
     
@@ -806,7 +806,6 @@ public class DialogPane extends Pane {
         final Node expandableContent = getExpandableContent();
 
         final double graphicPrefWidth = hasHeader || graphic == null ? 0 : graphic.prefWidth(h);
-        
         final double headerPrefHeight = hasHeader ? header.prefHeight(w) : 0;
         final double buttonBarPrefHeight = buttonBar == null ? 0 : buttonBar.prefHeight(w);
         final double expandableContentPrefHeight = isExpanded() ? expandableContent.prefHeight(w) : 0;
@@ -842,7 +841,7 @@ public class DialogPane extends Pane {
     
     /** {@inheritDoc} */
     @Override protected double computePrefWidth(double height) {
-        double headerPrefWidth = hasHeader() ? getActualHeader().prefWidth(height) : 0;
+        double headerPrefWidth = hasHeader() ? getActualHeader().prefWidth(height) + 10 : 0;
         double contentPrefWidth = getActualContent().prefWidth(height);
         double buttonBarPrefWidth = buttonBar == null ? 0 : buttonBar.prefWidth(height);
         double graphicPrefWidth = getActualGraphic().prefWidth(height);
@@ -953,6 +952,8 @@ public class DialogPane extends Pane {
             headerTextPanel.setVisible(false);
             headerTextPanel.setManaged(false);
         } else {
+            headerTextPanel.getChildren().clear();
+
             // recreate the headerTextNode and add it to the children list.
             headerTextPanel.setMaxWidth(Double.MAX_VALUE);
 
@@ -964,10 +965,10 @@ public class DialogPane extends Pane {
             Label headerLabel = new Label(getHeaderText());
             headerLabel.setWrapText(true);
             headerLabel.setAlignment(Pos.CENTER_LEFT);
-//            headerLabel.setPrefWidth(Dialog.MIN_DIALOG_WIDTH);
-            headerTextPanel.setLeft(headerLabel);
-            BorderPane.setAlignment(headerLabel, Pos.CENTER_LEFT);
-    
+            headerLabel.setMaxWidth(Double.MAX_VALUE);
+            headerLabel.setMaxHeight(Double.MAX_VALUE);
+            headerTextPanel.add(headerLabel, 0, 0);
+
             // on the right of the header is a graphic, if one is specified
             graphicContainer.getChildren().clear();
 
@@ -979,7 +980,16 @@ public class DialogPane extends Pane {
             if (graphic != null) {
                 graphicContainer.getChildren().add(graphic);
             }
-            headerTextPanel.setRight(graphicContainer);
+            headerTextPanel.add(graphicContainer, 1, 0);
+
+            // column constraints
+            ColumnConstraints textColumn = new ColumnConstraints();
+            textColumn.setFillWidth(true);
+            textColumn.setHgrow(Priority.ALWAYS);
+            ColumnConstraints graphicColumn = new ColumnConstraints();
+            graphicColumn.setFillWidth(false);
+            graphicColumn.setHgrow(Priority.NEVER);
+            headerTextPanel.getColumnConstraints().setAll(textColumn , graphicColumn);
             
             headerTextPanel.setVisible(true);
             headerTextPanel.setManaged(true);
