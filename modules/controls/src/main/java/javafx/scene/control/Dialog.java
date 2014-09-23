@@ -452,14 +452,24 @@ public class Dialog<R> implements EventTarget {
             
             Dialog.this.dialog.sizeToScene();
         };
-        
-        WeakReference<DialogPane> dialogPaneRef = new WeakReference<DialogPane>(null);
+
+        final InvalidationListener headerListener = o -> {
+            final Node root = Dialog.this.dialog.getRoot();
+            if (root == null) return;
+            final boolean hasHeader = getDialogPane().hasHeader();
+            root.pseudoClassStateChanged(HEADER_PSEUDO_CLASS,      hasHeader);
+            root.pseudoClassStateChanged(NO_HEADER_PSEUDO_CLASS,   !hasHeader);
+        };
+
+        WeakReference<DialogPane> dialogPaneRef = new WeakReference<>(null);
         
         protected void invalidated() {
             DialogPane oldDialogPane = dialogPaneRef.get();
             if (oldDialogPane != null) {
                 // clean up
                 oldDialogPane.expandedProperty().removeListener(expandedListener);
+                oldDialogPane.headerProperty().removeListener(headerListener);
+                oldDialogPane.headerTextProperty().removeListener(headerListener);
                 oldDialogPane.setDialog(null);
             }
             
@@ -473,6 +483,8 @@ public class Dialog<R> implements EventTarget {
                     newDialogPane.requestLayout();
                 });
                 newDialogPane.expandedProperty().addListener(expandedListener);
+                newDialogPane.headerProperty().addListener(headerListener);
+                newDialogPane.headerTextProperty().addListener(headerListener);
                 newDialogPane.requestLayout();
             }
             

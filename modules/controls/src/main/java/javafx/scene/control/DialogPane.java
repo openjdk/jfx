@@ -418,10 +418,8 @@ public class DialogPane extends Pane {
             }
             
             Node newHeader = getHeader();
-            headerRef = new WeakReference<Node>(newHeader);
-            if (newHeader != null) {
-                updateHeaderArea();
-            }
+            headerRef = new WeakReference<>(newHeader);
+            updateHeaderArea();
         }
     };
 
@@ -950,17 +948,20 @@ public class DialogPane extends Pane {
             headerTextPanel.setVisible(false);
             headerTextPanel.setManaged(false);
         } else {
+            final String headerText = getHeaderText();
+
             headerTextPanel.getChildren().clear();
+            headerTextPanel.getStyleClass().clear();
 
             // recreate the headerTextNode and add it to the children list.
             headerTextPanel.setMaxWidth(Double.MAX_VALUE);
 
-            if (! headerTextPanel.getStyleClass().contains("header-panel")) { //$NON-NLS-1$
+            if (headerText != null && ! headerText.isEmpty()) {
                 headerTextPanel.getStyleClass().add("header-panel"); //$NON-NLS-1$
             }
     
             // on left of header is the text
-            Label headerLabel = new Label(getHeaderText());
+            Label headerLabel = new Label(headerText);
             headerLabel.setWrapText(true);
             headerLabel.setAlignment(Pos.CENTER_LEFT);
             headerLabel.setMaxWidth(Double.MAX_VALUE);
