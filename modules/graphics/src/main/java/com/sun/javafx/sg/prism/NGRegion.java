@@ -979,18 +979,26 @@ public class NGRegion extends NGGroup {
             double topInset, double rightInset, double bottomInset, double leftInset,
             int outsetsTop, int outsetsRight, int outsetsBottom, int outsetsLeft) {
 
+        // All cache operations are padded by (just shy of) half a pixel so
+        // that as we are translated by sub-pixel amounts we continue to sample
+        // all of the cached pixels out until they become transparent at (or
+        // 1-bit worth of non-zero alhpa from) the center of the border pixel
+        // around the cache.  If there is an integer translation, then our
+        // padding should come up just shy of including new rows/columns of
+        // pixels in the rendering and thus have no impact on pixel fill rates.
+        final float pad = 0.5f - 1f/256f;
         final float dstWidth = outsetsLeft + width + outsetsRight;
         final float dstHeight = outsetsTop + height + outsetsBottom;
         final boolean sameWidth = textureWidth == dstWidth;
         final boolean sameHeight = textureHeight == dstHeight;
-        final float dstX1 = -outsetsLeft;
-        final float dstY1 = -outsetsTop;
-        final float dstX2 = width + outsetsRight;
-        final float dstY2 = height + outsetsBottom;
-        final float srcX1 = rect.x;
-        final float srcY1 = rect.y;
-        final float srcX2 = srcX1 + textureWidth;
-        final float srcY2 = srcY1 + textureHeight;
+        final float dstX1 = -outsetsLeft - pad;
+        final float dstY1 = -outsetsTop - pad;
+        final float dstX2 = width + outsetsRight + pad;
+        final float dstY2 = height + outsetsBottom + pad;
+        final float srcX1 = rect.x - pad;
+        final float srcY1 = rect.y - pad;
+        final float srcX2 = rect.x + textureWidth + pad;
+        final float srcY2 = rect.y + textureHeight + pad;
 
         // If total destination width is < the source width, then we need to start
         // shrinking the left and right sides to accommodate. Likewise in the other dimension.
@@ -1013,8 +1021,8 @@ public class NGRegion extends NGGroup {
             g.drawTexture(cached, dstX1, dstY1, dstX2, dstY2, srcX1, srcY1, srcX2, srcY2);
         } else if (sameHeight) {
             // We do 3-patch rendering fixed height
-            final float left = (float) (adjustedLeftInset + outsetsLeft);
-            final float right = (float) (adjustedRightInset + outsetsRight);
+            final float left  = pad + (float) (adjustedLeftInset  + outsetsLeft);
+            final float right = pad + (float) (adjustedRightInset + outsetsRight);
 
             final float dstLeftX = dstX1 + left;
             final float dstRightX = dstX2 - right;
@@ -1027,8 +1035,8 @@ public class NGRegion extends NGGroup {
                                  dstLeftX, dstRightX, srcLeftX, srcRightX);
         } else if (sameWidth) {
             // We do 3-patch rendering fixed width
-            final float top = (float) (adjustedTopInset + outsetsTop);
-            final float bottom = (float) (adjustedBottomInset + outsetsBottom);
+            final float top    = pad + (float) (adjustedTopInset    + outsetsTop);
+            final float bottom = pad + (float) (adjustedBottomInset + outsetsBottom);
 
             final float dstTopY = dstY1 + top;
             final float dstBottomY = dstY2 - bottom;
@@ -1041,10 +1049,10 @@ public class NGRegion extends NGGroup {
                                  dstTopY, dstBottomY, srcTopY, srcBottomY);
         } else {
             // We do 9-patch rendering
-            final float left = (float) (adjustedLeftInset + outsetsLeft);
-            final float top = (float) (adjustedTopInset + outsetsTop);
-            final float right = (float) (adjustedRightInset + outsetsRight);
-            final float bottom = (float) (adjustedBottomInset + outsetsBottom);
+            final float left   = pad + (float) (adjustedLeftInset   + outsetsLeft);
+            final float top    = pad + (float) (adjustedTopInset    + outsetsTop);
+            final float right  = pad + (float) (adjustedRightInset  + outsetsRight);
+            final float bottom = pad + (float) (adjustedBottomInset + outsetsBottom);
 
             final float dstLeftX = dstX1 + left;
             final float dstRightX = dstX2 - right;
