@@ -1281,21 +1281,21 @@ public class NGRegion extends NGGroup {
                     g.draw(paths[0]);
                 }
                 if (rightStyle != BorderStrokeStyle.NONE) {
-                    double rsum = radii.getTopRightVerticalRadius() - radii.getBottomRightVerticalRadius();
+                    double rsum = radii.getTopRightVerticalRadius() + radii.getBottomRightVerticalRadius();
                     double rightLineLength = height + rsum * (Math.PI / 4 - 1);
                     g.setStroke(createStroke(rightStyle, rightWidth, rightLineLength, true));
                     g.setPaint(getPlatformPaint(rightStroke));
                     g.draw(paths[1]);
                 }
                 if (bottomStyle != BorderStrokeStyle.NONE) {
-                    double rsum = radii.getBottomLeftVerticalRadius() - radii.getBottomRightHorizontalRadius();
+                    double rsum = radii.getBottomLeftHorizontalRadius() + radii.getBottomRightHorizontalRadius();
                     double bottomLineLength = width + rsum * (Math.PI / 4 - 1);
                     g.setStroke(createStroke(bottomStyle, bottomWidth, bottomLineLength, true));
                     g.setPaint(getPlatformPaint(bottomStroke));
                     g.draw(paths[2]);
                 }
                 if (leftStyle != BorderStrokeStyle.NONE) {
-                    double rsum = radii.getTopLeftVerticalRadius() - radii.getBottomLeftVerticalRadius();
+                    double rsum = radii.getTopLeftVerticalRadius() + radii.getBottomLeftVerticalRadius();
                     double leftLineLength = height + rsum * (Math.PI / 4 - 1);
                     g.setStroke(createStroke(leftStyle, leftWidth, leftLineLength, true));
                     g.setPaint(getPlatformPaint(leftStroke));
