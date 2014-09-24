@@ -1783,6 +1783,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
             this.tab = tab;
             setDisable(tab.isDisable());
             tab.disableProperty().addListener(weakDisableListener);
+            textProperty().bind(tab.textProperty());
         }
 
         public Tab getTab() {
