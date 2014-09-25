@@ -157,6 +157,33 @@ static void initialize_key()
     glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(y), com_sun_glass_events_KeyEvent_VK_Y);
     glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(z), com_sun_glass_events_KeyEvent_VK_Z);
 
+    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(A), com_sun_glass_events_KeyEvent_VK_A);
+    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(B), com_sun_glass_events_KeyEvent_VK_B);
+    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(C), com_sun_glass_events_KeyEvent_VK_C);
+    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(D), com_sun_glass_events_KeyEvent_VK_D);
+    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(E), com_sun_glass_events_KeyEvent_VK_E);
+    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(F), com_sun_glass_events_KeyEvent_VK_F);
+    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(G), com_sun_glass_events_KeyEvent_VK_G);
+    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(H), com_sun_glass_events_KeyEvent_VK_H);
+    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(I), com_sun_glass_events_KeyEvent_VK_I);
+    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(J), com_sun_glass_events_KeyEvent_VK_J);
+    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(K), com_sun_glass_events_KeyEvent_VK_K);
+    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(L), com_sun_glass_events_KeyEvent_VK_L);
+    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(M), com_sun_glass_events_KeyEvent_VK_M);
+    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(N), com_sun_glass_events_KeyEvent_VK_N);
+    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(O), com_sun_glass_events_KeyEvent_VK_O);
+    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(P), com_sun_glass_events_KeyEvent_VK_P);
+    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(Q), com_sun_glass_events_KeyEvent_VK_Q);
+    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(R), com_sun_glass_events_KeyEvent_VK_R);
+    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(S), com_sun_glass_events_KeyEvent_VK_S);
+    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(T), com_sun_glass_events_KeyEvent_VK_T);
+    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(U), com_sun_glass_events_KeyEvent_VK_U);
+    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(V), com_sun_glass_events_KeyEvent_VK_V);
+    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(W), com_sun_glass_events_KeyEvent_VK_W);
+    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(X), com_sun_glass_events_KeyEvent_VK_X);
+    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(Y), com_sun_glass_events_KeyEvent_VK_Y);
+    glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(Z), com_sun_glass_events_KeyEvent_VK_Z);
+
     glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(KP_0), com_sun_glass_events_KeyEvent_VK_NUMPAD0);
     glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(KP_1), com_sun_glass_events_KeyEvent_VK_NUMPAD1);
     glass_g_hash_table_insert_int(keymap, GLASS_GDK_KEY_CONSTANT(KP_2), com_sun_glass_events_KeyEvent_VK_NUMPAD2);
@@ -301,13 +328,16 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1getKeyCodeForC
     if (ucs_char == NULL) {
         return com_sun_glass_events_KeyEvent_VK_UNDEFINED;
     }
-    
+
     guint keyval = gdk_unicode_to_keyval(*ucs_char);
-    g_free(ucs_char);
 
     if (keyval == (*ucs_char | 0x01000000)) {
+        g_free(ucs_char);
         return com_sun_glass_events_KeyEvent_VK_UNDEFINED;
     }
+
+    g_free(ucs_char);
+
     return gdk_keyval_to_glass(keyval);
 }
 
