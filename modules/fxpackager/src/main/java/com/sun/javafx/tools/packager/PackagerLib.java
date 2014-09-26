@@ -71,6 +71,7 @@ import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.text.MessageFormat;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Collection;
 import java.util.EnumMap;
 import java.util.Enumeration;
@@ -90,7 +91,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
-import sun.misc.BASE64Encoder;
 
 public class PackagerLib {
     public static final String JAVAFX_VERSION = "8.0";
@@ -1107,8 +1107,7 @@ public class PackagerLib {
     }
 
     private String encodeAsBase64(byte inp[]) {
-        BASE64Encoder encoder = new BASE64Encoder();
-        return encoder.encode(inp);
+        return Base64.getEncoder().encodeToString(inp);
     }
 
     private void generateHTML(PrintStream out,
@@ -1129,10 +1128,8 @@ public class PackagerLib {
         String jnlp_content_webstart = null;
 
         if (deployParams.embedJNLP) {
-            jnlp_content_browser =
-                    encodeAsBase64(jnlp_bytes_browser).replaceAll("\\r|\\n", "");
-            jnlp_content_webstart =
-                    encodeAsBase64(jnlp_bytes_webstart).replaceAll("\\r|\\n", "");
+            jnlp_content_browser = encodeAsBase64(jnlp_bytes_browser);
+            jnlp_content_webstart = encodeAsBase64(jnlp_bytes_webstart);
         }
 
         out.println("<html><head>");

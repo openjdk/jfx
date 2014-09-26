@@ -48,9 +48,9 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.jar.Attributes;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
+import java.util.Base64;
 import com.sun.javafx.jmx.MXExtension;
 import com.sun.javafx.runtime.SystemProperties;
-import sun.misc.BASE64Decoder;
 
 
 public class LauncherImpl {
@@ -562,9 +562,7 @@ public class LauncherImpl {
     }
 
     private static String decodeBase64(String inp) throws IOException {
-        BASE64Decoder decoder = new BASE64Decoder();
-        byte[] decodedBytes = decoder.decodeBuffer(inp);
-        return new String(decodedBytes);
+        return new String(Base64.getDecoder().decode(inp));
     }
 
     private static String[] getAppArguments(Attributes attrs) {
