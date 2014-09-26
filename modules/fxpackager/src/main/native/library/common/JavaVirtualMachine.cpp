@@ -440,7 +440,7 @@ bool JavaVirtualMachine::StartJVM() {
     std::list<TString> largs = package.GetArgs();
     vmargs.splice(vmargs.end(), largs, largs.begin(), largs.end());
     size_t argc = vmargs.size();
-    DynamicBuffer<char*> argv(argc);
+    DynamicBuffer<char*> argv(argc+1);
     unsigned int index = 0;
 
     for (std::list<TString>::const_iterator iterator = vmargs.begin();
@@ -453,6 +453,7 @@ bool JavaVirtualMachine::StartJVM() {
         argv[index] = PlatformString::duplicate(arg.c_str());
         index++;
     }
+    argv[argc] = NULL;
 
     JavaLibrary javaLibrary(package.GetJVMPath());
 
@@ -463,7 +464,7 @@ bool JavaVirtualMachine::StartJVM() {
     }
 #endif //MAC
 
-    if (javaLibrary.JavaVMCreate((int)argv.GetSize(), argv.GetData()) == true) {
+    if (javaLibrary.JavaVMCreate(argc, argv.GetData()) == true) {
         return true;
     }
 

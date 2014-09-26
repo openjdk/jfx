@@ -523,8 +523,8 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
         Node bar = item.getNode();
         if (bar == null) {
             bar = new StackPane();
-            bar.setRole(AccessibleRole.TEXT);
-            bar.setRoleDescription("Bar");
+            bar.setAccessibleRole(AccessibleRole.TEXT);
+            bar.setAccessibleRoleDescription("Bar");
             bar.focusTraversableProperty().bind(Platform.accessibilityActiveProperty());
             item.setNode(bar);
         }

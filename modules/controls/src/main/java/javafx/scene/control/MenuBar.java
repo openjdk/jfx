@@ -96,7 +96,7 @@ public class MenuBar extends Control {
      */
     public MenuBar(Menu... menus) {
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
-        setRole(AccessibleRole.MENU_BAR);
+        setAccessibleRole(AccessibleRole.MENU_BAR);
 
         if (menus != null) {
             getMenus().addAll(menus);

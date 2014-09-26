@@ -603,7 +603,7 @@ public class ToolBarSkin extends BehaviorSkinBase<ToolBar, ToolBarBehavior> {
 
         public ToolBarOverflowMenu(ObservableList<MenuItem> items) {
             getStyleClass().setAll("tool-bar-overflow-button");
-            setRole(AccessibleRole.BUTTON);
+            setAccessibleRole(AccessibleRole.BUTTON);
             setAccessibleText(getString("Accessibility.title.ToolBar.OverflowButton"));
             setFocusTraversable(true);
             this.menuItems = items;

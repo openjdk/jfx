@@ -53,7 +53,6 @@ import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.event.WeakEventHandler;
-import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.AccessibleRole;
 import javafx.scene.control.TreeItem.TreeModificationEvent;
@@ -322,7 +321,7 @@ public class TreeView<T> extends Control {
      */
     public TreeView(TreeItem<T> root) {
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
-        setRole(AccessibleRole.TREE_VIEW);
+        setAccessibleRole(AccessibleRole.TREE_VIEW);
 
         setRoot(root);
         updateExpandedItemCount(root);

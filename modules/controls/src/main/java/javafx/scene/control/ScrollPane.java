@@ -104,7 +104,7 @@ public class ScrollPane extends Control {
      */
     public ScrollPane() {
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
-        setRole(AccessibleRole.SCROLL_PANE);
+        setAccessibleRole(AccessibleRole.SCROLL_PANE);
         // focusTraversable is styleable through css. Calling setFocusTraversable
         // makes it look to css like the user set the value and css will not 
         // override. Initializing focusTraversable by calling applyStyle with

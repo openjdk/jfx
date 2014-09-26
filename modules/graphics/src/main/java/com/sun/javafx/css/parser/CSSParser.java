@@ -3920,10 +3920,7 @@ final public class CSSParser {
                     Stylesheet importedStylesheet = handleImport(lexer);
 
                     if (importedStylesheet != null) {
-                        List<Rule> importedRules = importedStylesheet.getRules();
-                        if (importedRules != null && !importedRules.isEmpty()) {
-                            stylesheet.getRules().addAll(importedRules);
-                        }
+                        stylesheet.importStylesheet(importedStylesheet);
                     }
 
                     imports.pop();

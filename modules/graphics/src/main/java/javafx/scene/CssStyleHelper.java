@@ -666,10 +666,9 @@ final class CssStyleHelper {
 
             if (fastpath && !forceSlowpath) {
 
-                // calculatedValue may be null,
-                // but we should never put SKIP in cache.
+                // If the cache contains SKIP, then there was an
+                // exception thrown from applyStyle
                 if (calculatedValue == SKIP) {
-                    assert false : "cache returned SKIP for " + property;
                     continue;
                 }
 
@@ -784,21 +783,42 @@ final class CssStyleHelper {
 
             } catch (Exception e) {
 
-                // RT-27155: if setting value raises exception, reset value
-                // the value to initial and thereafter skip setting the property
-                cacheEntry.put(property, null);
+                StyleableProperty styleableProperty = cssMetaData.getStyleableProperty(node);
+
+                final String msg = String.format("Failed to set css [%s] on [%s] due to '%s'\n",
+                        cssMetaData.getProperty(), styleableProperty, e.getMessage());
 
                 List<CssError> errors = null;
                 if ((errors = StyleManager.getErrors()) != null) {
-                    final String msg = String.format("Failed to set css [%s] due to %s\n", cssMetaData, e.getMessage());
                     final CssError error = new CssError.PropertySetError(cssMetaData, node, msg);
                     errors.add(error);
                 }
-                // TODO: use logger here
+
                 PlatformLogger logger = Logging.getCSSLogger();
                 if (logger.isLoggable(Level.WARNING)) {
-                    logger.warning(String.format("Failed to set css [%s]\n", cssMetaData), e);
+                    logger.warning(msg);
                 }
+
+                // RT-27155: if setting value raises exception, reset value
+                // the value to initial and thereafter skip setting the property
+                cacheEntry.put(property, SKIP);
+
+                CalculatedValue cachedValue = null;
+                if (cacheContainer != null && cacheContainer.cssSetProperties != null) {
+                    cachedValue = cacheContainer.cssSetProperties.get(cssMetaData);
+                }
+                Object value = (cachedValue != null) ? cachedValue.getValue() : cssMetaData.getInitialValue(node);
+                StyleOrigin origin = (cachedValue != null) ? cachedValue.getOrigin() : null;
+                try {
+                    styleableProperty.applyStyle(origin, value);
+                } catch (Exception ebad) {
+                    // This would be bad.
+                    if (logger.isLoggable(Level.SEVERE)) {
+                        logger.severe(String.format("Could not reset [%s] on [%s] due to %s\n" ,
+                                cssMetaData.getProperty(), styleableProperty, e.getMessage()));
+                    }
+                }
+
             }
 
         }

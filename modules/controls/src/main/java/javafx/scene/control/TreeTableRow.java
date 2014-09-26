@@ -28,7 +28,6 @@ package javafx.scene.control;
 import javafx.css.PseudoClass;
 import com.sun.javafx.scene.control.skin.TreeTableRowSkin;
 import java.lang.ref.WeakReference;
-import java.util.List;
 
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
@@ -81,7 +80,7 @@ public class TreeTableRow<T> extends IndexedCell<T> {
      */
     public TreeTableRow() {
         getStyleClass().addAll(DEFAULT_STYLE_CLASS);
-        setRole(AccessibleRole.TREE_TABLE_ROW);
+        setAccessibleRole(AccessibleRole.TREE_TABLE_ROW);
     }
 
 

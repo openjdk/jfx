@@ -227,7 +227,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
      */
     public ComboBox(ObservableList<T> items) {
         getStyleClass().add(DEFAULT_STYLE_CLASS);
-        setRole(AccessibleRole.COMBO_BOX);
+        setAccessibleRole(AccessibleRole.COMBO_BOX);
         setItems(items);
         setSelectionModel(new ComboBoxSelectionModel<T>(this));
         

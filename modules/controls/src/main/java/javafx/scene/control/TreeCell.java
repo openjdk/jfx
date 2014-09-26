@@ -85,7 +85,7 @@ public class TreeCell<T> extends IndexedCell<T> {
      */
     public TreeCell() {
         getStyleClass().addAll(DEFAULT_STYLE_CLASS);
-        setRole(AccessibleRole.TREE_ITEM);
+        setAccessibleRole(AccessibleRole.TREE_ITEM);
     }
 
 

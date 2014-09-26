@@ -39,7 +39,7 @@ public class PasswordField extends TextField {
      */
     public PasswordField() {
         getStyleClass().add("password-field");
-        setRole(AccessibleRole.PASSWORD_FIELD);
+        setAccessibleRole(AccessibleRole.PASSWORD_FIELD);
     }
 
     /***************************************************************************

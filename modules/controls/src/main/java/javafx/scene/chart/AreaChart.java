@@ -498,8 +498,8 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
         // check if symbol has already been created
         if (symbol == null && getCreateSymbols()) {
             symbol = new StackPane();
-            symbol.setRole(AccessibleRole.TEXT);
-            symbol.setRoleDescription("Point");
+            symbol.setAccessibleRole(AccessibleRole.TEXT);
+            symbol.setAccessibleRoleDescription("Point");
             symbol.focusTraversableProperty().bind(Platform.accessibilityActiveProperty());
             item.setNode(symbol);
         }

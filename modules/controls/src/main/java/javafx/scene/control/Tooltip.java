@@ -659,7 +659,7 @@ public class Tooltip extends PopupControl {
 
         CSSBridge() {
             super();
-            setRole(AccessibleRole.TOOLTIP);
+            setAccessibleRole(AccessibleRole.TOOLTIP);
         }
     }
 

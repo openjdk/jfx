@@ -1061,7 +1061,7 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
         public MenuBarButton(MenuBarSkin menuBarSkin, String text, Node graphic) {
             super(text, graphic);
             this.menuBarSkin = menuBarSkin;
-            setRole(AccessibleRole.MENU);
+            setAccessibleRole(AccessibleRole.MENU);
         }
 
         public MenuBarSkin getMenuBarSkin() {

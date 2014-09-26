@@ -512,7 +512,7 @@ public class TableView<S> extends Control {
      */
     public TableView(ObservableList<S> items) {
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
-        setRole(AccessibleRole.TABLE_VIEW);
+        setAccessibleRole(AccessibleRole.TABLE_VIEW);
 
         // we quite happily accept items to be null here
         setItems(items);

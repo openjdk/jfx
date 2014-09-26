@@ -1147,7 +1147,13 @@ final public class StyleManager {
                 StylesheetContainer container = platformUserAgentStylesheetContainers.get(n);
                 // assignment in this conditional is intentional!
                 if(isSame = fname.equals(container.fname)) {
-                    byte[] checksum = calculateCheckSum(fname);
+                    // don't use fname in calculateCheckSum since it is just the key to
+                    // find the StylesheetContainer. Rather, use the URL of the
+                    // stylesheet that was already loaded. For example, we could have
+                    // fname = "com/sun/javafx/scene/control/skin/modena/modena.css, but
+                    // the stylesheet URL could be jar:file://some/path/!com/sun/javafx/scene/control/skin/modena/modena.bss
+                    String stylesheetUrl = container.stylesheet.getUrl();
+                    byte[] checksum = calculateCheckSum(stylesheetUrl);
                     isSame = Arrays.equals(checksum, container.checksum);
                 }
             }

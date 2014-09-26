@@ -112,7 +112,7 @@ public class Text extends Shape {
      * Creates an empty instance of Text.
      */
     public Text() {
-        setRole(AccessibleRole.TEXT);
+        setAccessibleRole(AccessibleRole.TEXT);
         InvalidationListener listener = observable -> checkSpan();
         parentProperty().addListener(listener);
         managedProperty().addListener(listener);

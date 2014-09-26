@@ -36,8 +36,8 @@ package javafx.scene;
  * the current value of the slider.  The slider must respond
  * appropriately to both these requests.
  *
- * @see Node#setRole(AccessibleRole)
- * @see Node#getRole()
+ * @see Node#setAccessibleRole(AccessibleRole)
+ * @see Node#getAccessibleRole()
  * @see AccessibleAttribute#ROLE
  * @see Node#queryAccessibleAttribute(AccessibleAttribute, Object...)
  * @see Node#executeAccessibleAction(AccessibleAction, Object...)

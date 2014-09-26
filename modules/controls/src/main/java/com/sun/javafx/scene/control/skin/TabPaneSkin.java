@@ -1126,7 +1126,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
             getStyleClass().setAll(tab.getStyleClass());
             setId(tab.getId());
             setStyle(tab.getStyle());
-            setRole(AccessibleRole.TAB_ITEM);
+            setAccessibleRole(AccessibleRole.TAB_ITEM);
 
             this.tab = tab;
             clip = new Rectangle();
@@ -1143,7 +1143,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
                     return CLOSE_BTN_SIZE;
                 }
             };
-            closeBtn.setRole(AccessibleRole.BUTTON);
+            closeBtn.setAccessibleRole(AccessibleRole.BUTTON);
             closeBtn.setAccessibleText(getString("Accessibility.title.TabPane.CloseButton"));
             closeBtn.getStyleClass().setAll("tab-close-button");
             closeBtn.setOnMousePressed(new EventHandler<MouseEvent>() {
@@ -1783,6 +1783,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
             this.tab = tab;
             setDisable(tab.isDisable());
             tab.disableProperty().addListener(weakDisableListener);
+            textProperty().bind(tab.textProperty());
         }
 
         public Tab getTab() {

@@ -127,7 +127,7 @@ public class Spinner<T> extends Control {
      */
     public Spinner() {
         getStyleClass().add(DEFAULT_STYLE_CLASS);
-        setRole(AccessibleRole.SPINNER);
+        setAccessibleRole(AccessibleRole.SPINNER);
 
         getEditor().setOnAction(action -> {
             String text = getEditor().getText();

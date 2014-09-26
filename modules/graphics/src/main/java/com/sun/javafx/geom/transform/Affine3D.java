@@ -1124,4 +1124,33 @@ public class Affine3D extends AffineBase {
     static boolean almostOne(double a) {
         return ((a < 1+EPSILON_ABSOLUTE) && (a > 1-EPSILON_ABSOLUTE));
     }
+
+    // Round values to sane precision for printing
+    // Note that Math.sin(Math.PI) has an error of about 10^-16
+    private static double _matround(double matval) {
+        return Math.rint(matval * 1E15) / 1E15;
+    }
+
+    /**
+     * Returns a <code>String</code> that represents the value of this
+     * {@link Object}.
+     * @return a <code>String</code> representing the value of this
+     * <code>Object</code>.
+     */
+    @Override
+    public String toString() {
+        return ("Affine3D[["
+                + _matround(mxx) + ", "
+                + _matround(mxy) + ", "
+                + _matround(mxz) + ", "
+                + _matround(mxt) + "], ["
+                + _matround(myx) + ", "
+                + _matround(myy) + ", "
+                + _matround(myz) + ", "
+                + _matround(myt) + "], ["
+                + _matround(mzx) + ", "
+                + _matround(mzy) + ", "
+                + _matround(mzz) + ", "
+                + _matround(mzt) + "]]");
+    }
 }

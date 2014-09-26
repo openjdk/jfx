@@ -127,8 +127,10 @@ void Package::Initialize() {
         FBootFields->FJVMPath = platform.GetSystemJvmPath();
     }
 
-    // Read args.
-    FBootFields->FArgs = Helpers::GetArgsFromConfig(config);
+    // Read args if none were passed in.
+    if (FBootFields->FArgs.size() == 0) {
+        FBootFields->FArgs = Helpers::GetArgsFromConfig(config);
+    }  
 
     // Read all jvmargs.
     FBootFields->FJVMArgs = Helpers::GetJVMArgsFromConfig(config);

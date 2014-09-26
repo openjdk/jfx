@@ -30,7 +30,6 @@ package javafx.scene.control;
 import java.time.LocalDate;
 import java.time.DateTimeException;
 import java.time.chrono.Chronology;
-import java.time.chrono.ChronoLocalDate;
 import java.time.chrono.IsoChronology;
 import java.time.format.FormatStyle;
 import java.util.ArrayList;
@@ -162,7 +161,7 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
     public DatePicker(LocalDate localDate) {
         setValue(localDate);
         getStyleClass().add(DEFAULT_STYLE_CLASS);
-        setRole(AccessibleRole.DATE_PICKER);
+        setAccessibleRole(AccessibleRole.DATE_PICKER);
         setEditable(true);
     }
 

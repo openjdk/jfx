@@ -147,7 +147,7 @@ public class TextField extends TextInputControl {
     public TextField(String text) {
         super(new TextFieldContent());
         getStyleClass().add("text-field");
-        setRole(AccessibleRole.TEXT_FIELD);
+        setAccessibleRole(AccessibleRole.TEXT_FIELD);
         setText(text);
     }
 

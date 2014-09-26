@@ -962,7 +962,7 @@ public class ContextMenuContent extends Region {
      */
     class MenuBox extends VBox {
         MenuBox() {
-            setRole(AccessibleRole.CONTEXT_MENU);
+            setAccessibleRole(AccessibleRole.CONTEXT_MENU);
         }
 
         @Override protected void layoutChildren() {
@@ -1115,19 +1115,19 @@ public class ContextMenuContent extends Region {
                 pseudoProperty = ((Menu)item).showingProperty();
                 listener.registerChangeListener(pseudoProperty, "MENU_SHOWING");
                 pseudoClassStateChanged(SELECTED_PSEUDOCLASS_STATE, pseudoProperty.get());
-                setRole(AccessibleRole.MENU);
+                setAccessibleRole(AccessibleRole.MENU);
             } else if (item instanceof RadioMenuItem) {
                 pseudoProperty = ((RadioMenuItem)item).selectedProperty();
                 listener.registerChangeListener(pseudoProperty, "RADIO_ITEM_SELECTED");
                 pseudoClassStateChanged(CHECKED_PSEUDOCLASS_STATE, pseudoProperty.get());
-                setRole(AccessibleRole.RADIO_MENU_ITEM);
+                setAccessibleRole(AccessibleRole.RADIO_MENU_ITEM);
             } else if (item instanceof CheckMenuItem) {
                 pseudoProperty = ((CheckMenuItem)item).selectedProperty();
                 listener.registerChangeListener(pseudoProperty, "CHECK_ITEM_SELECTED");
                 pseudoClassStateChanged(CHECKED_PSEUDOCLASS_STATE, pseudoProperty.get());
-                setRole(AccessibleRole.CHECK_MENU_ITEM);
+                setAccessibleRole(AccessibleRole.CHECK_MENU_ITEM);
             } else {
-                setRole(AccessibleRole.MENU_ITEM);
+                setAccessibleRole(AccessibleRole.MENU_ITEM);
             }
             
             pseudoClassStateChanged(DISABLED_PSEUDOCLASS_STATE, item.disableProperty().get());

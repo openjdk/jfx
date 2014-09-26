@@ -1769,9 +1769,9 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 // uses getPrivateCell(), which places the item in the sheet.
                 // The accumCell, and its children, should be ignored by the
                 // screen reader. 
-                accumCell.setRole(AccessibleRole.NODE);
+                accumCell.setAccessibleRole(AccessibleRole.NODE);
                 accumCell.getChildrenUnmodifiable().addListener((Observable c) -> {
-                    accumCell.getChildrenUnmodifiable().forEach(n -> n.setRole(AccessibleRole.NODE));
+                    accumCell.getChildrenUnmodifiable().forEach(n -> n.setAccessibleRole(AccessibleRole.NODE));
                 });
             }
         }

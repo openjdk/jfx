@@ -88,7 +88,7 @@ public class TitledPane extends Labeled {
      */
     public TitledPane() {
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
-        setRole(AccessibleRole.TITLED_PANE);
+        setAccessibleRole(AccessibleRole.TITLED_PANE);
 
         // initialize pseudo-class state
         pseudoClassStateChanged(PSEUDO_CLASS_EXPANDED, true);

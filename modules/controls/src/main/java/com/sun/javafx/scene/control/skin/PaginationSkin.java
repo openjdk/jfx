@@ -1203,7 +1203,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
             });
 
             prefHeightProperty().bind(minHeightProperty());
-            setRole(AccessibleRole.PAGE_ITEM);
+            setAccessibleRole(AccessibleRole.PAGE_ITEM);
         }
 
         private void setIndicatorType() {

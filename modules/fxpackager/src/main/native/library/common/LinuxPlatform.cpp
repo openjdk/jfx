@@ -118,7 +118,7 @@ TString LinuxPlatform::GetJvmPath() {
 
     if (FilePath::FileExists(result) == false) {
         result = FilePath::IncludeTrailingSlash(GetPackageRootDirectory()) +
-            "runtime/jre/"JAVAARCH"/server/libjvm.so";
+            "runtime/jre/lib/"JAVAARCH"/server/libjvm.so";
     }
 
     return result;

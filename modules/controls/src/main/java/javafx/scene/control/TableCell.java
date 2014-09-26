@@ -88,7 +88,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
      */
     public TableCell() {
         getStyleClass().addAll(DEFAULT_STYLE_CLASS);
-        setRole(AccessibleRole.TABLE_CELL);
+        setAccessibleRole(AccessibleRole.TABLE_CELL);
         
         updateColumnIndex();
     }

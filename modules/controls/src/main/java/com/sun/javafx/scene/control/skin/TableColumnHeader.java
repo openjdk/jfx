@@ -173,7 +173,7 @@ public class TableColumnHeader extends Region {
             setStyle(column.getStyle());
             updateStyleClass();
             /* Having TableColumn role parented by TableColumn causes VoiceOver to be unhappy */
-            setRole(AccessibleRole.TABLE_COLUMN);
+            setAccessibleRole(AccessibleRole.TABLE_COLUMN);
         }
     }
     

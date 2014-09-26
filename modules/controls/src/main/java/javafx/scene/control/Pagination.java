@@ -126,7 +126,7 @@ public class Pagination extends Control {
      */
     public Pagination(int pageCount, int pageIndex) {
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
-        setRole(AccessibleRole.PAGINATION);
+        setAccessibleRole(AccessibleRole.PAGINATION);
         setPageCount(pageCount);
         setCurrentPageIndex(pageIndex);
     }
