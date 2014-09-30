@@ -141,8 +141,8 @@ public class HelloComboBox extends Application {
         editBox.getChildren().add(editFontComboBox);
         
         
-        HBox vbox = new HBox(20);
-        vbox.setLayoutX(40);
+        HBox vbox = new HBox(10);
+        vbox.setLayoutX(30);
         vbox.setLayoutY(25);
         
         vbox.getChildren().addAll(nonEditBox, editBox);
