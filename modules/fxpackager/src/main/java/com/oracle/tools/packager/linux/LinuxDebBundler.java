@@ -542,6 +542,10 @@ public class LinuxDebBundler extends AbstractBundler {
                 String description = FA_DESCRIPTION.fetchFrom(assoc);
                 File faIcon = FA_ICON.fetchFrom(assoc); //TODO FA_ICON_PNG
                 List<String> extensions = FA_EXTENSIONS.fetchFrom(assoc);
+                if (extensions == null) {
+                    Log.info(I18N.getString("message.creating-association-with-null-extension"));
+                }
+
                 List<String> mimes = FA_CONTENT_TYPE.fetchFrom(assoc);
                 if (mimes == null || mimes.isEmpty()) {
                     continue;

@@ -258,7 +258,26 @@ public class MacAppBundlerTest {
      * See File Associaiton
      */
     @Test
-    public void fileAssociation() throws IOException, ConfigException, UnsupportedPlatformException {
+    public void testFileAssociation()
+        throws IOException, ConfigException, UnsupportedPlatformException
+    {
+        testFileAssociation("Bogus File", "bogus", "application/x-vnd.test-bogus",
+                            new File(appResourcesDir, "test.icns"));        
+    }
+    
+    @Test
+    public void testFileAssociationWithNullExtension()
+        throws IOException, ConfigException, UnsupportedPlatformException
+    {
+        // association with no extension is still valid case (see RT-38625)
+        testFileAssociation("Bogus File", null, "application/x-vnd.test-bogus",
+                            new File(appResourcesDir, "test.icns"));
+    }
+
+    private void testFileAssociation(String description, String extensions,
+                                     String contentType, File icon)
+        throws IOException, ConfigException, UnsupportedPlatformException
+    {
         AbstractBundler bundler = new MacAppBundler();
 
         assertNotNull(bundler.getName());
@@ -287,10 +306,10 @@ public class MacAppBundlerTest {
         bundleParams.put(DEVELOPER_ID_APP_SIGNING_KEY.getID(), null); // force no signing
 
         Map<String, Object> fileAssociation = new HashMap<>();
-        fileAssociation.put(FA_DESCRIPTION.getID(), "Bogus File");
-        fileAssociation.put(FA_EXTENSIONS.getID(), "bogus");
-        fileAssociation.put(FA_CONTENT_TYPE.getID(), "application/x-vnd.test-bogus");
-        fileAssociation.put(FA_ICON.getID(), new File(appResourcesDir, "test.icns"));
+        fileAssociation.put(FA_DESCRIPTION.getID(), description);
+        fileAssociation.put(FA_EXTENSIONS.getID(), extensions);
+        fileAssociation.put(FA_CONTENT_TYPE.getID(), contentType);
+        fileAssociation.put(FA_ICON.getID(), icon);
 
         bundleParams.put(FILE_ASSOCIATIONS.getID(), Arrays.asList(fileAssociation));
 

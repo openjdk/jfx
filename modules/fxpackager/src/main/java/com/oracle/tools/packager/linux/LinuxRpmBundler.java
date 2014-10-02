@@ -26,7 +26,6 @@
 package com.oracle.tools.packager.linux;
 
 import com.oracle.tools.packager.*;
-import com.oracle.tools.packager.IOUtils;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -427,6 +426,10 @@ public class LinuxRpmBundler extends AbstractBundler {
                 String description = FA_DESCRIPTION.fetchFrom(assoc);
                 File faIcon = FA_ICON.fetchFrom(assoc); //TODO FA_ICON_PNG
                 List<String> extensions = FA_EXTENSIONS.fetchFrom(assoc);
+                if (extensions == null) {
+                    Log.info(I18N.getString("message.creating-association-with-null-extension"));
+                }
+
                 List<String> mimes = FA_CONTENT_TYPE.fetchFrom(assoc);
                 if (mimes == null || mimes.isEmpty()) {
                     continue;
