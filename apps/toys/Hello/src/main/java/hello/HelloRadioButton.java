@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -50,7 +50,7 @@ public class HelloRadioButton extends Application {
         stage.setHeight(450);
         Scene scene = newScene();
         ToggleGroup group = new ToggleGroup();
-        RadioButton button1 = new RadioButton("Luke, *I* am your father");
+        RadioButton button1 = new RadioButton("No, *I* am your father");
         button1.setToggleGroup(group);
         RadioButton button2 = new RadioButton("Nooooooooo!");
         button2.setLayoutY(40);
