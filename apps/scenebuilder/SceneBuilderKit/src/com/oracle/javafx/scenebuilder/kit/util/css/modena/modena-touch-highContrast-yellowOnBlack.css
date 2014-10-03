@@ -30,7 +30,6 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* Once RT-38395 is fixed paths below might start with com/sun/javafx/scene/control/skin/modena/ */
-@import "modena.css";
-@import "touch.css";
-@import "yellowOnBlack.css";
+@import "com/sun/javafx/scene/control/skin/modena/modena.css";
+@import "com/sun/javafx/scene/control/skin/modena/touch.css";
+@import "com/sun/javafx/scene/control/skin/modena/yellowOnBlack.css";
