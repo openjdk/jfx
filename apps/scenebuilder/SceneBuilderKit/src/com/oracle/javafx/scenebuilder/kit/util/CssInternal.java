@@ -237,7 +237,7 @@ public class CssInternal {
         Set<String> styleClasses = new HashSet<>();
         Stylesheet s;
         try {
-            s = CSSParser.getInstance().parse(url);
+            s = new CSSParser().parse(url);
         } catch (IOException ex) {
             System.out.println("Warning: Invalid Stylesheet " + url); //NOI18N
             return styleClasses;

@@ -55,16 +55,17 @@ import javafx.css.StyleableProperty;
 
 
 /**
-    * StackedBarChart is a variation of {@link BarChart} that plots bars indicating 
-    * data values for a category. The bars can be vertical or horizontal depending 
-    * on which axis is a category axis. 
-    * The bar for each series is stacked on top of the previous series.
-    * @since JavaFX 2.1
-    */
+ * StackedBarChart is a variation of {@link BarChart} that plots bars indicating
+ * data values for a category. The bars can be vertical or horizontal depending
+ * on which axis is a category axis.
+ * The bar for each series is stacked on top of the previous series.
+ * @since JavaFX 2.1
+ */
 public class StackedBarChart<X, Y> extends XYChart<X, Y> {
         
     // -------------- PRIVATE FIELDS -------------------------------------------
-    private Map<Series, Map<String, List<Data<X, Y>>>> seriesCategoryMap = new HashMap<Series, Map<String, List<Data<X, Y>>>>();
+    private Map<Series, Map<String, List<Data<X, Y>>>> seriesCategoryMap =
+                         new HashMap<Series, Map<String, List<Data<X, Y>>>>();
     private Legend legend = new Legend();
     private final Orientation orientation;
     private CategoryAxis categoryAxis;
@@ -130,24 +131,24 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
 
     // -------------- CONSTRUCTOR ----------------------------------------------
     /**
-        * Construct a new StackedBarChart with the given axis. The two axis should be a ValueAxis/NumberAxis and a CategoryAxis,
-        * they can be in either order depending on if you want a horizontal or vertical bar chart.
-        *
-        * @param xAxis The x axis to use
-        * @param yAxis The y axis to use
-        */
+     * Construct a new StackedBarChart with the given axis. The two axis should be a ValueAxis/NumberAxis and a CategoryAxis,
+     * they can be in either order depending on if you want a horizontal or vertical bar chart.
+     *
+     * @param xAxis The x axis to use
+     * @param yAxis The y axis to use
+     */
     public StackedBarChart(@NamedArg("xAxis") Axis<X> xAxis, @NamedArg("yAxis") Axis<Y> yAxis) {
         this(xAxis, yAxis, FXCollections.<Series<X, Y>>observableArrayList());
     }
 
     /**
-        * Construct a new StackedBarChart with the given axis and data. The two axis should be a ValueAxis/NumberAxis and a
-        * CategoryAxis, they can be in either order depending on if you want a horizontal or vertical bar chart.
-        *
-        * @param xAxis The x axis to use
-        * @param yAxis The y axis to use
-        * @param data The data to use, this is the actual list used so any changes to it will be reflected in the chart
-        */
+     * Construct a new StackedBarChart with the given axis and data. The two axis should be a ValueAxis/NumberAxis and a
+     * CategoryAxis, they can be in either order depending on if you want a horizontal or vertical bar chart.
+     *
+     * @param xAxis The x axis to use
+     * @param yAxis The y axis to use
+     * @param data The data to use, this is the actual list used so any changes to it will be reflected in the chart
+     */
     public StackedBarChart(@NamedArg("xAxis") Axis<X> xAxis, @NamedArg("yAxis") Axis<Y> yAxis, @NamedArg("data") ObservableList<Series<X, Y>> data) {
         super(xAxis, yAxis);
         getStyleClass().add("stacked-bar-chart");
@@ -173,14 +174,14 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
     }
 
     /**
-        * Construct a new StackedBarChart with the given axis and data. The two axis should be a ValueAxis/NumberAxis and a
-        * CategoryAxis, they can be in either order depending on if you want a horizontal or vertical bar chart.
-        *
-        * @param xAxis The x axis to use
-        * @param yAxis The y axis to use
-        * @param data The data to use, this is the actual list used so any changes to it will be reflected in the chart
-        * @param categoryGap The gap to leave between bars in separate categories
-        */
+     * Construct a new StackedBarChart with the given axis and data. The two axis should be a ValueAxis/NumberAxis and a
+     * CategoryAxis, they can be in either order depending on if you want a horizontal or vertical bar chart.
+     *
+     * @param xAxis The x axis to use
+     * @param yAxis The y axis to use
+     * @param data The data to use, this is the actual list used so any changes to it will be reflected in the chart
+     * @param categoryGap The gap to leave between bars in separate categories
+     */
     public StackedBarChart(@NamedArg("xAxis") Axis<X> xAxis, @NamedArg("yAxis") Axis<Y> yAxis, @NamedArg("data") ObservableList<Series<X, Y>> data, @NamedArg("categoryGap") double categoryGap) {
         this(xAxis, yAxis);
         setData(data);
@@ -435,8 +436,8 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
         final double upperBoundValue = valueAxis.getUpperBound();
         // update bar positions and sizes
         for (String category : categoryAxis.getCategories()) {
-            int currentPositiveValue = 0;
-            int currentNegativeValue = 0;
+            double currentPositiveValue = 0;
+            double currentNegativeValue = 0;
             Iterator<Series<X, Y>> seriesIterator = getDisplayedSeriesIterator();
             while (seriesIterator.hasNext()) {
                 Series<X, Y> series = seriesIterator.next();
@@ -482,9 +483,9 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
     }
 
     /**
-        * Computes the size of series linked list
-        * @return size of series linked list
-        */
+     * Computes the size of series linked list
+     * @return size of series linked list
+     */
     @Override int getSeriesSize() {
         int count = 0;
         Iterator<Series<X, Y>> seriesIterator = getDisplayedSeriesIterator();
@@ -496,8 +497,8 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
     }
 
     /**
-        * This is called whenever a series is added or removed and the legend needs to be updated
-        */
+     * This is called whenever a series is added or removed and the legend needs to be updated
+     */
     @Override protected void updateLegend() {
         legend.getItems().clear();
         if (getData() != null) {
@@ -535,7 +536,8 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
 
     private List<Data<X, Y>> getDataItem(Series<X, Y> series, String category) {
         Map<String, List<Data<X, Y>>> catmap = seriesCategoryMap.get(series);
-        return catmap != null ? catmap.get(category) != null ? catmap.get(category) : new ArrayList<Data<X, Y>>() : new ArrayList<Data<X, Y>>();
+        return catmap != null ? catmap.get(category) != null ?
+            catmap.get(category) : new ArrayList<Data<X, Y>>() : new ArrayList<Data<X, Y>>();
     }
 
 // -------------- STYLESHEET HANDLING ------------------------------------------------------------------------------

@@ -401,7 +401,26 @@ public class WinMsiBundlerTest {
      * Set File Association
      */
     @Test
-    public void fileAssociation() throws IOException, ConfigException, UnsupportedPlatformException {
+    public void testFileAssociation()
+        throws IOException, ConfigException, UnsupportedPlatformException
+    {
+        testFileAssociation("Bogus File", "bogus", "application/x-vnd.test-bogus",
+    	                    new File(appResourcesDir, "small.ico"));
+    }
+
+    @Test
+    public void testFileAssociationWithNullExtension()
+        throws IOException, ConfigException, UnsupportedPlatformException
+    {
+        // association with no extension is still valid case (see RT-38625)
+        testFileAssociation("Bogus File", null, "application/x-vnd.test-bogus",
+                            new File(appResourcesDir, "small.ico"));
+    }
+    
+    private void testFileAssociation(String description, String extensions,
+                                     String contentType, File icon)
+        throws IOException, ConfigException, UnsupportedPlatformException
+    {
         AbstractBundler bundler = new WinMsiBundler();
 
         assertNotNull(bundler.getName());
@@ -426,10 +445,10 @@ public class WinMsiBundlerTest {
         bundleParams.put(VENDOR.getID(), "Packager Tests");
 
         Map<String, Object> fileAssociation = new HashMap<>();
-        fileAssociation.put(FA_DESCRIPTION.getID(), "Bogus File");
-        fileAssociation.put(FA_EXTENSIONS.getID(), "bogus");
-        fileAssociation.put(FA_CONTENT_TYPE.getID(), "application/x-vnd.test-bogus");
-        fileAssociation.put(FA_ICON.getID(), new File(appResourcesDir, "small.ico"));
+        fileAssociation.put(FA_DESCRIPTION.getID(), description);
+        fileAssociation.put(FA_EXTENSIONS.getID(), extensions);
+        fileAssociation.put(FA_CONTENT_TYPE.getID(), contentType);
+        fileAssociation.put(FA_ICON.getID(), icon);
 
         bundleParams.put(FILE_ASSOCIATIONS.getID(), Arrays.asList(fileAssociation));
 
@@ -439,6 +458,6 @@ public class WinMsiBundlerTest {
         File result = bundler.execute(bundleParams, new File(workDir, "FASmoke"));
         System.err.println("Bundle at - " + result);
         assertNotNull(result);
-        assertTrue(result.exists());
+        assertTrue(result.exists());    	
     }
 }

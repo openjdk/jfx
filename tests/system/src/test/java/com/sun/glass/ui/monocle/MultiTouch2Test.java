@@ -274,5 +274,51 @@ public class MultiTouch2Test extends ParameterizedTestBase {
         TestLog.waitForLogContaining("TouchPoint: RELEASED %d, %d", x1, y1 + dy);
     }
 
+    @Test
+    public void twoFingersPressDragOne() throws Exception {
+        int delta = device.getTapRadius() + 1;
+        TestLog.reset();
+        int x1 = (int) Math.round(width * 0.2);
+        int y1 = (int) Math.round(height * 0.2);
+        int x2 = (int) Math.round(width * 0.5);
+        int y2 = (int) Math.round(height * 0.5);
 
+        //press two fingers
+        int p1 = device.addPoint(x1, y1);
+        int p2 = device.addPoint(x2, y2);
+        device.sync();
+        TestLog.waitForLogContaining("TouchPoint: PRESSED %d, %d", x1, y1);
+        TestLog.waitForLogContaining("TouchPoint: PRESSED %d, %d", x2, y2);
+
+        //drag second finger only
+        TestLog.reset();
+        for (int i = 1; i < 4; i++) {
+            x2 += delta;
+            device.setPoint(p2, x2, y2);
+            device.sync();
+            TestLog.waitForLogContaining("TouchPoint: MOVED %d, %d", x2, y2);
+        }
+
+        TestLog.reset();
+        device.removePoint(p1);
+        device.removePoint(p2);
+        device.sync();
+        TestLog.waitForLogContaining("TouchPoint: RELEASED %d, %d", x1, y1);
+        TestLog.waitForLogContaining("TouchPoint: RELEASED %d, %d", x2, y2);
+
+        //press one finger
+        TestLog.reset();
+        int p3 = device.addPoint(x1, y1);
+        device.sync();
+        TestLog.waitForLogContaining("TouchPoint: PRESSED %d, %d", x1, y1);
+        TestLog.waitForLogContaining("Mouse pressed: %d, %d", x1, y1);
+        TestLog.waitForLogContaining("Touch points count: [1]");
+
+        //release finger
+        device.removePoint(p3);
+        device.sync();
+        TestLog.waitForLogContaining("TouchPoint: RELEASED %d, %d", x1, y1);
+        TestLog.waitForLogContaining("Mouse released: %d, %d", x1, y1);
+        TestLog.waitForLogContaining("Mouse clicked: %d, %d", x1, y1);
+    }
 }

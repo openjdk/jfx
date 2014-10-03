@@ -26,7 +26,6 @@
 package com.oracle.tools.packager.windows;
 
 import com.oracle.tools.packager.*;
-import com.oracle.tools.packager.IOUtils;
 import com.sun.javafx.tools.packager.bundlers.BundleParams;
 
 import java.io.*;
@@ -523,16 +522,21 @@ public class WinExeBundler extends AbstractBundler {
             if (i > 0) {
                 entryName += "." + i;
             }
-            for (String ext : extensions) {
-                // "Root: HKCR; Subkey: \".myp\"; ValueType: string; ValueName: \"\"; ValueData: \"MyProgramFile\"; Flags: uninsdeletevalue"
-                registryEntries.append("Root: HKCR; Subkey: \".")
-                    .append(ext)
-                    .append("\"; ValueType: string; ValueName: \"\"; ValueData: \"")
-                    .append(entryName)
-                    .append("\"; Flags: uninsdeletevalue\r\n");
+            
+            if (extensions == null) {
+                Log.info(I18N.getString("message.creating-association-with-null-extension"));
+            } else {
+                for (String ext : extensions) {
+                    // "Root: HKCR; Subkey: \".myp\"; ValueType: string; ValueName: \"\"; ValueData: \"MyProgramFile\"; Flags: uninsdeletevalue"
+                    registryEntries.append("Root: HKCR; Subkey: \".")
+                        .append(ext)
+                        .append("\"; ValueType: string; ValueName: \"\"; ValueData: \"")
+                        .append(entryName)
+                        .append("\"; Flags: uninsdeletevalue\r\n");
+                }
             }
 
-            if (!extensions.isEmpty()) {
+            if (extensions != null && !extensions.isEmpty()) {
                 String ext = extensions.get(0);
                 List<String> mimeTypes = FA_CONTENT_TYPE.fetchFrom(fileAssociation);
                 for (String mime : mimeTypes) {

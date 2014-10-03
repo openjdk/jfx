@@ -340,7 +340,7 @@ public class StyleEditor extends InlineListEditor {
             // Parse the style, and set the parsingError boolean if any error
             parsingError = false;
             StyleManager.errorsProperty().addListener(errorListener);
-            CSSParser.getInstance().parseInlineStyle(new StyleableStub(value));
+            new CSSParser().parseInlineStyle(new StyleableStub(value));
             StyleManager.errorsProperty().removeListener(errorListener);
 
             return value;

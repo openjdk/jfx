@@ -684,6 +684,11 @@ public class MacAppBundler extends AbstractBundler {
         for (Map<String, ? super Object> fileAssociation : FILE_ASSOCIATIONS.fetchFrom(params)) {
 
             List<String> extensions = FA_EXTENSIONS.fetchFrom(fileAssociation);
+            
+            if (extensions == null) {
+                Log.info(I18N.getString("message.creating-association-with-null-extension"));
+            }
+
             List<String> mimeTypes = FA_CONTENT_TYPE.fetchFrom(fileAssociation);
             String itemContentType = MAC_CF_BUNDLE_IDENTIFIER.fetchFrom(params) + "." + ((extensions == null || extensions.isEmpty())
                     ? "mime"

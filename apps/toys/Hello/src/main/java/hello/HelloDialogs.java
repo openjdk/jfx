@@ -24,6 +24,7 @@
  */
 package hello;
 
+import java.net.URL;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -424,7 +425,10 @@ public class HelloDialogs extends Application {
         dlg.getDialogPane().setHeaderText(cbShowMasthead.isSelected() ? masthead : null);
         
         if (cbCustomGraphic.isSelected()) {
-            dlg.getDialogPane().setGraphic(new ImageView(new Image(getClass().getResource("tick.png").toExternalForm())));
+            URL url = getClass().getResource("dialog/tick.png");
+            Image image = new Image(url.toExternalForm());
+            ImageView iv = new ImageView(image);
+            dlg.getDialogPane().setGraphic(iv);
         }
         
         dlg.initStyle(styleCombobox.getValue());

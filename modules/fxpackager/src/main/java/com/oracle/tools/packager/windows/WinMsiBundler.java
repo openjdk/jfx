@@ -720,17 +720,21 @@ public class WinMsiBundler  extends AbstractBundler {
                 List<String> extensions = FA_EXTENSIONS.fetchFrom(fileAssociation);
                 List<String> mimeTypes = FA_CONTENT_TYPE.fetchFrom(fileAssociation);
 
-                for (String ext : extensions) {
-                    out.println(prefix + "    <Extension Id='" + ext + "' Advertise='no'>");
-                    out.println(prefix + "      <Verb Id='open' Command='Open' TargetFile='" + LAUNCHER_ID + "' Argument='\"%1\"'/>");
-                    boolean defaultSet = false;
-                    for (String mime : mimeTypes) {
-                        out.println(prefix + "      <MIME ContentType='" + mime + "'" + (defaultSet
-                                ? ">"
-                                : " Default='yes'/>"));
-                        defaultSet = true;
+                if (extensions == null) {
+                    Log.info(I18N.getString("message.creating-association-with-null-extension"));
+                } else {
+                    for (String ext : extensions) {
+                        out.println(prefix + "    <Extension Id='" + ext + "' Advertise='no'>");
+                        out.println(prefix + "      <Verb Id='open' Command='Open' TargetFile='" + LAUNCHER_ID + "' Argument='\"%1\"'/>");
+                        boolean defaultSet = false;
+                        for (String mime : mimeTypes) {
+                            out.println(prefix + "      <MIME ContentType='" + mime + "'" + (defaultSet
+                                    ? ">"
+                                    : " Default='yes'/>"));
+                            defaultSet = true;
+                        }
+                        out.println(prefix + "    </Extension>");
                     }
-                    out.println(prefix + "    </Extension>");
                 }
                 out.println(prefix + "   </ProgId>");
             }
