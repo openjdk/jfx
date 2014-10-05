@@ -32,10 +32,10 @@ import java.nio.ByteOrder;
  * A buffer holding raw Linux input events waiting to be processed
  */
 class LinuxEventBuffer {
-    static final int EVENT_STRUCT_SIZE = 16;
-    private static final int EVENT_STRUCT_TYPE_INDEX = 8;
-    private static final int EVENT_STRUCT_CODE_INDEX = 10;
-    private static final int EVENT_STRUCT_VALUE_INDEX = 12;
+    private static final int EVENT_STRUCT_TYPE_INDEX = LinuxArch.is64Bit() ? 16 : 8;
+    private static final int EVENT_STRUCT_CODE_INDEX = EVENT_STRUCT_TYPE_INDEX + 2;
+    private static final int EVENT_STRUCT_VALUE_INDEX = EVENT_STRUCT_TYPE_INDEX + 4;
+    static final int EVENT_STRUCT_SIZE = EVENT_STRUCT_TYPE_INDEX + 8;
 
     /**
      * EVENT_BUFFER_SIZE controls the maximum number of event lines that can be
