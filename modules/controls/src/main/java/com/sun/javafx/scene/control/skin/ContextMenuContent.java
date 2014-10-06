@@ -1369,7 +1369,15 @@ public class ContextMenuContent extends Region {
 
             // fire the action before hiding the menu
             item.fire();
-            hideAllMenus(item);
+
+            if (item instanceof CustomMenuItem) {
+                CustomMenuItem customMenuItem = (CustomMenuItem) item;
+                if (customMenuItem.isHideOnClick()) {
+                    hideAllMenus(item);
+                }
+            } else {
+                hideAllMenus(item);
+            }
         }
 
         private EventHandler<MouseEvent> customMenuItemMouseClickedHandler;
