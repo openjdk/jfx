@@ -354,6 +354,55 @@ public class MacPkgBundlerTest {
         bundler.validate(bundleParams);
     }
 
+    /**
+     * Test a misconfiguration where signature is requested but no key is specified.
+     */
+    @Test(expected = ConfigException.class)
+    public void signButNoCert() throws IOException, ConfigException, UnsupportedPlatformException {
+        // only run with full tests
+        Assume.assumeTrue(Boolean.parseBoolean(System.getProperty("FULL_TEST")));
+
+        // first create the external app
+        Bundler appBundler = new MacAppBundler();
+
+        Map<String, Object> appBundleParams = new HashMap<>();
+
+        appBundleParams.put(BUILD_ROOT.getID(), tmpBase);
+
+        appBundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        appBundleParams.put(APP_NAME.getID(), "External APP PKG Negative Signature Test");
+        appBundleParams.put(IDENTIFIER.getID(), "com.example.pkg.external");
+        appBundleParams.put(VERBOSE.getID(), true);
+
+        if (runtimeJdk != null) {
+            appBundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
+        }
+
+        boolean valid = appBundler.validate(appBundleParams);
+        assertTrue(valid);
+
+        File appOutput = appBundler.execute(appBundleParams, new File(workDir, "PKGExternalAppSignTest"));
+        System.err.println("App at - " + appOutput);
+        assertNotNull(appOutput);
+        assertTrue(appOutput.exists());
+
+        // now create the PKG referencing this external app
+        Bundler pkgBundler = new MacPkgBundler();
+
+        Map<String, Object> pkgBundleParams = new HashMap<>();
+
+        pkgBundleParams.put(BUILD_ROOT.getID(), tmpBase);
+
+        pkgBundleParams.put(MAC_APP_IMAGE.getID(), appOutput);
+        pkgBundleParams.put(APP_NAME.getID(), "Negative Signature Test");
+        pkgBundleParams.put(IDENTIFIER.getID(), "com.example.pkg.external");
+
+        pkgBundleParams.put(SIGN_BUNDLE.getID(), true);
+        pkgBundleParams.put(DEVELOPER_ID_INSTALLER_SIGNING_KEY.getID(), null);
+
+        pkgBundler.validate(pkgBundleParams);
+    }
+
     @Test
     public void configureEverything() throws Exception {
         AbstractBundler bundler = new MacPkgBundler();

@@ -44,6 +44,7 @@ import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.ResourceBundle;
 
 import static com.oracle.tools.packager.StandardBundlerParam.*;
@@ -354,6 +355,13 @@ public class MacAppStoreBundler extends MacBaseInstallerBundler {
 
             //we are not interested in return code, only possible exception
             validateAppImageAndBundeler(params);
+
+            // reject explicitly set to not sign
+            if (!Optional.ofNullable(SIGN_BUNDLE.fetchFrom(params)).orElse(Boolean.TRUE)) {
+                throw new ConfigException(
+                        I18N.getString("error.must-sign-app-store"),
+                        I18N.getString("error.must-sign-app-store.advice"));
+            }
 
             // make sure we have settings for signatures
             if (MAC_APP_STORE_APP_SIGNING_KEY.fetchFrom(params) == null) {

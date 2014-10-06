@@ -364,9 +364,18 @@ public class MacAppBundler extends AbstractBundler {
             throw new ConfigException(
                     I18N.getString("error.invalid-cfbundle-version"),
                     I18N.getString("error.invalid-cfbundle-version.advice"));
-
         }
-
+        
+        // reject explicitly set sign to true and no valid signature key
+        if (Optional.ofNullable(SIGN_BUNDLE.fetchFrom(p)).orElse(Boolean.FALSE)) {
+            String signingIdentity = DEVELOPER_ID_APP_SIGNING_KEY.fetchFrom(p);
+            if (signingIdentity == null) {
+                throw new ConfigException(
+                        I18N.getString("error.explicit-sign-no-cert"),
+                        I18N.getString("error.explicit-sign-no-cert.advice"));
+            }
+        }
+        
         return true;
     }
 
@@ -480,9 +489,11 @@ public class MacAppBundler extends AbstractBundler {
                     new File(contentsDirectory, "Info.plist"));
 
             // maybe sign
-            String signingIdentity = DEVELOPER_ID_APP_SIGNING_KEY.fetchFrom(p);
-            if (signingIdentity != null) {
-                MacBaseInstallerBundler.signAppBundle(p, rootDirectory, signingIdentity, BUNDLE_ID_SIGNING_PREFIX.fetchFrom(p));
+            if (Optional.ofNullable(SIGN_BUNDLE.fetchFrom(p)).orElse(Boolean.TRUE)) {
+                String signingIdentity = DEVELOPER_ID_APP_SIGNING_KEY.fetchFrom(p);
+                if (signingIdentity != null) {
+                    MacBaseInstallerBundler.signAppBundle(p, rootDirectory, signingIdentity, BUNDLE_ID_SIGNING_PREFIX.fetchFrom(p));
+                }
             }
         } catch (IOException ex) {
             Log.info(ex.toString());

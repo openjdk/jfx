@@ -326,8 +326,7 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     BundleParams.PARAM_SERVICE_HINT,
                     Boolean.class,
                     params -> false,
-                    // valueOf(null) is false, and we actually do want null in some cases
-                    (s, p) -> (s == null || "null".equalsIgnoreCase(s))? true : Boolean.valueOf(s)
+                    (s, p) -> (s == null || "null".equalsIgnoreCase(s))? false : Boolean.valueOf(s)
             );
 
     public static final StandardBundlerParam<Boolean> START_ON_INSTALL  =
@@ -337,8 +336,7 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     "startOnInstall",
                     Boolean.class,
                     params -> false,
-                    // valueOf(null) is false, and we actually do want null in some cases
-                    (s, p) -> (s == null || "null".equalsIgnoreCase(s))? true : Boolean.valueOf(s)
+                    (s, p) -> (s == null || "null".equalsIgnoreCase(s))? false : Boolean.valueOf(s)
             );
 
     public static final StandardBundlerParam<Boolean> STOP_ON_UNINSTALL  =
@@ -348,7 +346,6 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     "stopOnUninstall",
                     Boolean.class,
                     params -> true,
-                    // valueOf(null) is false, and we actually do want null in some cases
                     (s, p) -> (s == null || "null".equalsIgnoreCase(s))? true : Boolean.valueOf(s)
             );
 
@@ -359,8 +356,18 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     "runAtStartup",
                     Boolean.class,
                     params -> false,
+                    (s, p) -> (s == null || "null".equalsIgnoreCase(s))? false : Boolean.valueOf(s)
+            );
+
+    public static final StandardBundlerParam<Boolean> SIGN_BUNDLE  =
+            new StandardBundlerParam<>(
+                    I18N.getString("param.sign-bundle.name"),
+                    I18N.getString("param.sign-bundle.description"),
+                    "signBundle",
+                    Boolean.class,
+                    params -> null,
                     // valueOf(null) is false, and we actually do want null in some cases
-                    (s, p) -> (s == null || "null".equalsIgnoreCase(s))? true : Boolean.valueOf(s)
+                    (s, p) -> (s == null || "null".equalsIgnoreCase(s))? null : Boolean.valueOf(s)
             );
 
     public static final StandardBundlerParam<Boolean> SHORTCUT_HINT =

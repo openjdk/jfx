@@ -331,6 +331,8 @@ public class Main {
                             srcfilesSet = true;
                         } else if (arg.equalsIgnoreCase("-argument")) {
                             addArgument(deployParams, nextArg(args, i++));
+                        } else if (arg.equalsIgnoreCase("-nosign")) {
+                            deployParams.setSignBundle(false);
                         } else {
                             throw new PackagerException("ERR_UnknownArgument", arg);
                         }
