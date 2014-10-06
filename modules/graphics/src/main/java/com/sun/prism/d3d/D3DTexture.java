@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -92,7 +92,7 @@ class D3DTexture extends BaseTexture<D3DTextureResource>
         }
         frame.holdFrame();
 
-        ByteBuffer pixels = (ByteBuffer)frame.getBuffer();
+        ByteBuffer pixels = (ByteBuffer)frame.getBufferForPlane(0);
         int result;
 
         // FIXME: checkVideoParams since they differ from normal params slightly
@@ -107,20 +107,17 @@ class D3DTexture extends BaseTexture<D3DTextureResource>
 
         // always do plane 0 since it's used for packed formats
         if (targetFormat.getDataType() == PixelFormat.DataType.INT) {
-            pixels.position(frame.offsetForPlane(0));
             result = D3DResourceFactory.nUpdateTextureI(
                     ctx.getContextHandle(),
                     getNativeSourceHandle(),
-                    pixels.slice().asIntBuffer(), null,
+                    pixels.asIntBuffer(), null,
                     0, 0, 0, 0, frame.getEncodedWidth(), frame.getEncodedHeight(),
                     frame.strideForPlane(0));
         } else {
-            pixels.position(frame.offsetForPlane(0));
-            // FIXME: is pixels.slice() necessary?
             result = D3DResourceFactory.nUpdateTextureB(
                     ctx.getContextHandle(),
                     getNativeSourceHandle(),
-                    pixels.slice(), null,
+                    pixels, null,
                     targetFormat.ordinal(),
                     0, 0,
                     0, 0, frame.getEncodedWidth(), frame.getEncodedHeight(),

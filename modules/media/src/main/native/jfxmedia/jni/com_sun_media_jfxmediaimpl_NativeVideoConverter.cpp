@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -96,11 +96,6 @@ static void initialize_jni_methods(JNIEnv *env) {
             throw "Internal Error: Can't find VideoDataBuffer.getPlaneCount()";
         }
 
-        vdbGetPlaneOffsetsID = env->GetMethodID(vdbClass, "getPlaneOffsets", "()[I");
-        if (!vdbGetPlaneOffsetsID) {
-            throw "Internal Error: Can't find VideoDataBuffer.getPlaneOffsets()";
-        }
-
         vdbGetPlaneStridesID = env->GetMethodID(vdbClass, "getPlaneStrides", "()[I");
         if (!vdbGetPlaneStridesID) {
             throw "Internal Error: Can't find VideoDataBuffer.getPlaneStrides()";
@@ -110,12 +105,6 @@ static void initialize_jni_methods(JNIEnv *env) {
         if (!vdbGetFormatID) {
             throw "Internal Error: Can't find VideoDataBuffer.getFormat()";
         }
-
-        vdbGetFrameNumberID = env->GetMethodID(vdbClass, "getFrameNumber", "()J");
-        if (!vdbGetFrameNumberID) {
-            throw "Internal Error: Can't find VideoDataBuffer.getFrameNumber()";
-        }
-
 
         formatGetNativeTypeID = env->GetMethodID(formatClass, "getNativeType", "()I");
         if (!formatGetNativeTypeID) {

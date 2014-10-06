@@ -76,9 +76,7 @@ public abstract class Platform {
 
     /**
      * Prepare for playing the specified media. If the media stream is unsupported
-     * return null so other platforms may be used, otherwise return an Object
-     * that gets passed to createMediaPlayer to create the actual player.
+     * return null so other platforms may be used.
      */
-    public abstract Object prerollMediaPlayer(Locator source);
-    public abstract MediaPlayer createMediaPlayer(Locator source, Object cookie);
+    public abstract MediaPlayer createMediaPlayer(Locator source);
 }

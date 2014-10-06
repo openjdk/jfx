@@ -36,15 +36,22 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 
 /**
- * Mac OS X Platform implementation.
+ * Mac OS X Platform implementation. This class implements both the QTKit based
+ * platform and the AVFoundation based platforms.
+ * 
+ * NOTE: The QTKit based platform is deprecated and will be removed in a future
+ * release.
  */
 public final class OSXPlatform extends Platform {
     /**
      * The MIME types of all supported media.
      */
     private static final String[] CONTENT_TYPES = {
-        "video/mp4",
+        "audio/x-aiff",
+        "audio/mp3",
+        "audio/mpeg",
         "audio/x-m4a",
+        "video/mp4",
         "video/x-m4v",
         "application/vnd.apple.mpegurl",
         "audio/mpegurl"
@@ -58,13 +65,20 @@ public final class OSXPlatform extends Platform {
             boolean isLoaded = false;
             try {
                 isLoaded = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
+                    boolean avf = false;
+                    boolean qtk = false;
+                    // attempt to load the AVFoundation based player first
+                    // AVFoundation will have precedence
+                    try {
+                        NativeLibLoader.loadLibrary("jfxmedia_avf");
+                        avf = true;
+                    } catch (UnsatisfiedLinkError ule) {}
                     try {
                         NativeLibLoader.loadLibrary("jfxmedia_qtkit");
-                    } catch (UnsatisfiedLinkError ule) {
-                        // non-fatal condition, keep quiet about it
-                        return Boolean.FALSE;
-                    }
-                    return Boolean.TRUE;
+                        qtk = true;
+                    } catch (UnsatisfiedLinkError ule) {}
+
+                    return avf || qtk;
                 });
             } catch (Exception e) {
                 // Ignore
@@ -95,15 +109,14 @@ public final class OSXPlatform extends Platform {
 
         // ULE should not happen here, but just in case
         try {
-            osxPlatformInit();
+            return osxPlatformInit();
         } catch (UnsatisfiedLinkError ule) {
             if (Logger.canLog(Logger.DEBUG)) {
                 Logger.logMsg(Logger.DEBUG, "Unable to load OSX platform.");
             }
-//                MediaUtils.nativeError(OSXPlatform.class, MediaError.ERROR_MANAGER_ENGINEINIT_FAIL);
+//            MediaUtils.nativeError(OSXPlatform.class, MediaError.ERROR_MANAGER_ENGINEINIT_FAIL);
             return false;
         }
-        return true;
     }
 
     @Override
@@ -119,22 +132,17 @@ public final class OSXPlatform extends Platform {
     }
 
     @Override
-    public Object prerollMediaPlayer(Locator source) {
-        // attempt the actual player creation, then preroll here
-        // on success we return a reference to the native player as the cookie
-        return new OSXMediaPlayer(source);
-    }
-
-    @Override
-    public MediaPlayer createMediaPlayer(Locator source, Object cookie) {
-        if (cookie instanceof OSXMediaPlayer) {
-            OSXMediaPlayer player = (OSXMediaPlayer)cookie;
-            // do native initialization
-            player.initializePlayer();
-            return player;
+    public MediaPlayer createMediaPlayer(Locator source) {
+        try {
+            return new OSXMediaPlayer(source);
+        } catch (Exception ex) {
+            if (Logger.canLog(Logger.DEBUG)) {
+                Logger.logMsg(Logger.DEBUG, "OSXPlatform caught exception while creating media player: "+ex);
+                ex.printStackTrace();
+            }
         }
         return null;
     }
 
-    private static native void osxPlatformInit();
+    private static native boolean osxPlatformInit();
 }

@@ -2174,9 +2174,9 @@ project(":media") {
                              "com.sun.media.jfxmediaimpl.platform.gstreamer.GSTPlatform",
                              "com.sun.media.jfxmediaimpl.platform.gstreamer.GSTMedia",
                              "com.sun.media.jfxmediaimpl.platform.gstreamer.GSTMediaPlayer",
-                             "com.sun.media.jfxmediaimpl.platform.gstreamer.GSTAudioEqualizer",
-                             "com.sun.media.jfxmediaimpl.platform.gstreamer.GSTEqualizerBand",
-                             "com.sun.media.jfxmediaimpl.platform.gstreamer.GSTAudioSpectrum"]
+                             "com.sun.media.jfxmediaimpl.NativeAudioEqualizer",
+                             "com.sun.media.jfxmediaimpl.NativeEqualizerBand",
+                             "com.sun.media.jfxmediaimpl.NativeAudioSpectrum"]
             if (IS_MAC) {
                 classesList.addAll( ["com.sun.media.jfxmediaimpl.platform.osx.OSXPlatform",
                                      "com.sun.media.jfxmediaimpl.platform.osx.OSXMedia",
@@ -3056,7 +3056,7 @@ compileTargets { t ->
 
                     if (t.name == "mac") {
                         // OSX media natives
-                        [ "jfxmedia_qtkit", "glib-lite" ].each { name ->
+                        [ "jfxmedia_qtkit", "jfxmedia_avf", "glib-lite" ].each { name ->
                             from ("modules/media/build/native/${t.name}/${mediaBuildType}/${library(name)}") }
                     } else if (t.name == "linux") {
                         from("modules/media/build/native/${t.name}/${mediaBuildType}") { include "libavplugin*.so" }
@@ -3065,7 +3065,11 @@ compileTargets { t ->
                     [ "fxplugins", "gstreamer-lite", "jfxmedia" ].each { name ->
                         from ("$LIBRARY_STUB/${library(name)}") }
 
-                    if (t.name == "linux") {
+                    if (t.name == "mac") {
+                        // copy libjfxmedia_{avf,qtkit}.dylib if they exist
+                        [ "jfxmedia_qtkit", "jfxmedia_avf", "glib-lite" ].each { name ->
+                            from ("$LIBRARY_STUB/${library(name)}") }
+                    } else if (t.name == "linux") {
                         from(LIBRARY_STUB) { include "libavplugin*.so" }
                     }
                     else from ("$LIBRARY_STUB/${library("glib-lite")}")

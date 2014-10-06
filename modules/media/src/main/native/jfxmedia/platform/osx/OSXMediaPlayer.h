@@ -42,8 +42,8 @@
 }
 
 // Called from OSXPlatform.osxPlatformInit() (java)
-+ (void) initPlayerPlatform;
++ (BOOL) initPlayerPlatform;
 
-@property (readonly) id<OSXPlayerProtocol> player;
+@property (nonatomic,readonly) id<OSXPlayerProtocol> player;
 
 @end

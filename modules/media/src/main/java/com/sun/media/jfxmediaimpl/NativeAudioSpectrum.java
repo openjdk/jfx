@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,20 +23,20 @@
  * questions.
  */
 
-package com.sun.media.jfxmediaimpl.platform.gstreamer;
+package com.sun.media.jfxmediaimpl;
 
 import com.sun.media.jfxmedia.effects.AudioSpectrum;
 
-final class GSTAudioSpectrum implements AudioSpectrum {
-    private static float[] EMPTY_FLOAT_ARRAY  = new float[0];
+final class NativeAudioSpectrum implements AudioSpectrum {
+    private static final float[] EMPTY_FLOAT_ARRAY  = new float[0];
     public static final int      DEFAULT_THRESHOLD = -60;
     public static final int      DEFAULT_BANDS = 128;
     public static final double   DEFAULT_INTERVAL = 0.1;
 
     /**
-     * Handle to the native media player.
+     * Handle to the native spectrum.
      */
-    private long refMedia;
+    private final long nativeRef;
 
     private float[] magnitudes = EMPTY_FLOAT_ARRAY;
     private float[] phases = EMPTY_FLOAT_ARRAY;
@@ -49,40 +49,44 @@ final class GSTAudioSpectrum implements AudioSpectrum {
      * Constructor.
      * @param refNativePlayer A reference to the native player.
      */
-    GSTAudioSpectrum(long refMedia) {
+    NativeAudioSpectrum(long refMedia) {
         if (refMedia == 0) {
             throw new IllegalArgumentException("Invalid native media reference");
         }
 
-        this.refMedia = refMedia;
+        this.nativeRef = refMedia;
         setBandCount(DEFAULT_BANDS);
     }
 
     //**************************************************************************
     //***** Public functions
     //**************************************************************************
+    @Override
     public boolean getEnabled() {
-        return gstGetEnabled(refMedia);
+        return nativeGetEnabled(nativeRef);
     }
 
+    @Override
     public void setEnabled(boolean enabled) {
-        gstSetEnabled(refMedia, enabled);
+        nativeSetEnabled(nativeRef, enabled);
     }
 
+    @Override
     public int getBandCount() {
         // just return the current size of one of the band arrays
         return phases.length;
     }
 
+    @Override
     public void setBandCount(int bands) {
         if (bands > 1) {
             magnitudes = new float[bands];
             for (int i = 0; i < magnitudes.length; i++) {
-                magnitudes[i] = Float.NEGATIVE_INFINITY;
+                magnitudes[i] = (float)DEFAULT_THRESHOLD;//Float.NEGATIVE_INFINITY;
             }
 
             phases = new float[bands];
-            gstSetBands(refMedia, bands, magnitudes, phases);
+            nativeSetBands(nativeRef, bands, magnitudes, phases);
         } else {
             magnitudes = EMPTY_FLOAT_ARRAY;
             phases = EMPTY_FLOAT_ARRAY;
@@ -91,30 +95,35 @@ final class GSTAudioSpectrum implements AudioSpectrum {
         }
     }
 
+    @Override
     public double getInterval() {
-        return gstGetInterval(refMedia);
+        return nativeGetInterval(nativeRef);
     }
 
+    @Override
     public void setInterval(double interval) {
-        if (interval * GSTMediaPlayer.ONE_SECOND >= 1) {
-            gstSetInterval(refMedia, interval);
+        if (interval * NativeMediaPlayer.ONE_SECOND >= 1) {
+            nativeSetInterval(nativeRef, interval);
         } else {
             throw new IllegalArgumentException("Interval can't be less that 1 nanosecond");
         }
     }
 
+    @Override
     public int getSensitivityThreshold() {
-        return gstGetThreshold(refMedia);
+        return nativeGetThreshold(nativeRef);
     }
 
+    @Override
     public void setSensitivityThreshold(int threshold) {
         if (threshold <= 0) {
-            gstSetThreshold(refMedia, threshold);
+            nativeSetThreshold(nativeRef, threshold);
         } else {
             throw new IllegalArgumentException(String.format("Sensitivity threshold must be less than 0: %d", threshold));
         }
     }
 
+    @Override
     public float[] getMagnitudes(float[] mag) {
         int size = magnitudes.length;
         if(mag == null || mag.length < size) {
@@ -124,6 +133,7 @@ final class GSTAudioSpectrum implements AudioSpectrum {
         return mag;
     }
 
+    @Override
     public float[] getPhases(float[] phs) {
         int size = phases.length;
         if(phs == null || phs.length < size) {
@@ -134,13 +144,13 @@ final class GSTAudioSpectrum implements AudioSpectrum {
     }
 
     //**************************************************************************
-    //***** JNI functions
+    //***** JNI methods
     //**************************************************************************
-    private native boolean gstGetEnabled(long refMedia);
-    private native void    gstSetEnabled(long refMedia, boolean enable);
-    private native void    gstSetBands(long refMedia, int bands, float[] magnitudes, float[] phases);
-    private native double  gstGetInterval(long refMedia);
-    private native void    gstSetInterval(long refMedia, double interval);
-    private native int     gstGetThreshold(long refMedia);
-    private native void    gstSetThreshold(long refMedia, int threshold);
+    private native boolean nativeGetEnabled(long nativeRef);
+    private native void    nativeSetEnabled(long nativeRef, boolean enable);
+    private native void    nativeSetBands(long nativeRef, int bands, float[] magnitudes, float[] phases);
+    private native double  nativeGetInterval(long nativeRef);
+    private native void    nativeSetInterval(long nativeRef, double interval);
+    private native int     nativeGetThreshold(long nativeRef);
+    private native void    nativeSetThreshold(long nativeRef, int threshold);
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,7 +23,7 @@
  * questions.
  */
 
-#include "com_sun_media_jfxmediaimpl_platform_gstreamer_GSTEqualizerBand.h"
+#include "com_sun_media_jfxmediaimpl_NativeEqualizerBand.h"
 
 #include <jni/JniUtils.h>
 #include <PipelineManagement/AudioEqualizer.h>
@@ -33,14 +33,14 @@ extern "C" {
 #endif
 
 JNIEXPORT jdouble JNICALL
-Java_com_sun_media_jfxmediaimpl_platform_gstreamer_GSTEqualizerBand_gstGetCenterFrequency(JNIEnv *env, jobject obj, jlong band_ref)
+Java_com_sun_media_jfxmediaimpl_NativeEqualizerBand_nativeGetCenterFrequency(JNIEnv *env, jobject obj, jlong band_ref)
 {
     CEqualizerBand* pBand = (CEqualizerBand*)jlong_to_ptr(band_ref);
     return (jdouble)pBand->GetCenterFrequency();
 }
 
 JNIEXPORT void JNICALL
-Java_com_sun_media_jfxmediaimpl_platform_gstreamer_GSTEqualizerBand_gstSetCenterFrequency(JNIEnv *env, jobject obj, jlong band_ref,
+Java_com_sun_media_jfxmediaimpl_NativeEqualizerBand_nativeSetCenterFrequency(JNIEnv *env, jobject obj, jlong band_ref,
     jdouble centerFrequency)
 {
     CEqualizerBand* pBand = (CEqualizerBand*)jlong_to_ptr(band_ref);
@@ -48,14 +48,14 @@ Java_com_sun_media_jfxmediaimpl_platform_gstreamer_GSTEqualizerBand_gstSetCenter
 }
 
 JNIEXPORT jdouble JNICALL
-Java_com_sun_media_jfxmediaimpl_platform_gstreamer_GSTEqualizerBand_gstGetBandwidth(JNIEnv *env, jobject obj, jlong band_ref)
+Java_com_sun_media_jfxmediaimpl_NativeEqualizerBand_nativeGetBandwidth(JNIEnv *env, jobject obj, jlong band_ref)
 {
     CEqualizerBand* pBand = (CEqualizerBand*)jlong_to_ptr(band_ref);
     return (jdouble)pBand->GetBandwidth();
 }
 
 JNIEXPORT void JNICALL
-Java_com_sun_media_jfxmediaimpl_platform_gstreamer_GSTEqualizerBand_gstSetBandwidth(JNIEnv *env, jobject obj, jlong band_ref,
+Java_com_sun_media_jfxmediaimpl_NativeEqualizerBand_nativeSetBandwidth(JNIEnv *env, jobject obj, jlong band_ref,
     jdouble bandwidth)
 {
     CEqualizerBand* pBand = (CEqualizerBand*)jlong_to_ptr(band_ref);
@@ -63,14 +63,14 @@ Java_com_sun_media_jfxmediaimpl_platform_gstreamer_GSTEqualizerBand_gstSetBandwi
 }
 
 JNIEXPORT jdouble JNICALL
-Java_com_sun_media_jfxmediaimpl_platform_gstreamer_GSTEqualizerBand_gstGetGain(JNIEnv *env, jobject obj, jlong band_ref)
+Java_com_sun_media_jfxmediaimpl_NativeEqualizerBand_nativeGetGain(JNIEnv *env, jobject obj, jlong band_ref)
 {
     CEqualizerBand* pBand = (CEqualizerBand*)jlong_to_ptr(band_ref);
     return (jdouble)pBand->GetGain();
 }
 
 JNIEXPORT void JNICALL
-Java_com_sun_media_jfxmediaimpl_platform_gstreamer_GSTEqualizerBand_gstSetGain(JNIEnv *env, jobject obj, jlong band_ref, jdouble gain)
+Java_com_sun_media_jfxmediaimpl_NativeEqualizerBand_nativeSetGain(JNIEnv *env, jobject obj, jlong band_ref, jdouble gain)
 {
     CEqualizerBand* pBand = (CEqualizerBand*)jlong_to_ptr(band_ref);
     pBand->SetGain(gain);

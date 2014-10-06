@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,16 +23,16 @@
  * questions.
  */
 
-package com.sun.media.jfxmediaimpl.platform.gstreamer;
+package com.sun.media.jfxmediaimpl;
 
 import com.sun.media.jfxmedia.effects.AudioEqualizer;
 import com.sun.media.jfxmedia.effects.EqualizerBand;
 
-final class GSTAudioEqualizer implements AudioEqualizer {
+final class NativeAudioEqualizer implements AudioEqualizer {
     /**
-     * Handle to the native media player.
+     * Handle to the native equalizer.
      */
-    private long refMedia;
+    private final long nativeRef;
 
     //**************************************************************************
     //***** Constructors
@@ -40,47 +40,50 @@ final class GSTAudioEqualizer implements AudioEqualizer {
 
     /**
      * Constructor.
-     * @param refNativePlayer A reference to the native player.
+     * @param nativeRef A reference to the native component.
      */
-    GSTAudioEqualizer(long refMedia) {
-        if (refMedia == 0) {
+    NativeAudioEqualizer(long nativeRef) {
+        if (nativeRef == 0) {
             throw new IllegalArgumentException("Invalid native media reference");
         }
 
-        this.refMedia = refMedia;
+        this.nativeRef = nativeRef;
     }
 
     //**************************************************************************
     //***** Public functions
     //**************************************************************************
 
+    @Override
     public boolean getEnabled() {
-        return gstGetEnabled(refMedia);
+        return nativeGetEnabled(nativeRef);
     }
 
+    @Override
     public void setEnabled(boolean enable) {
-        gstSetEnabled(refMedia, enable);
+        nativeSetEnabled(nativeRef, enable);
     }
 
+    @Override
     public EqualizerBand addBand(double centerFrequency, double bandwidth, double gain) {
-        return (gstGetNumBands(refMedia) >= MAX_NUM_BANDS &&
+        return (nativeGetNumBands(nativeRef) >= MAX_NUM_BANDS &&
                 gain >= EqualizerBand.MIN_GAIN && gain <= EqualizerBand.MAX_GAIN) ?
-                null : gstAddBand(refMedia, centerFrequency, bandwidth, gain);
+                null : nativeAddBand(nativeRef, centerFrequency, bandwidth, gain);
     }
 
+    @Override
     public boolean removeBand(double centerFrequency) {
-        return (centerFrequency > 0) ? gstRemoveBand(refMedia, centerFrequency) : false;
+        return (centerFrequency > 0) ? nativeRemoveBand(nativeRef, centerFrequency) : false;
     }
 
     //**************************************************************************
-    //***** JNI functions
+    //***** JNI methods
     //**************************************************************************
-    private native boolean gstGetEnabled(long refMedia);
-    private native void gstSetEnabled(long refMedia, boolean enable);
-    private native int gstGetNumBands(long refMedia);
-    private native EqualizerBand gstAddBand(long refMedia,
+    private native boolean nativeGetEnabled(long nativeRef);
+    private native void nativeSetEnabled(long nativeRef, boolean enable);
+    private native int nativeGetNumBands(long nativeRef);
+    private native EqualizerBand nativeAddBand(long nativeRef,
                                                double centerFrequency, double bandwidth,
                                                double gain);
-    private native boolean gstRemoveBand(long refMedia,
-                                            double centerFrequency);
+    private native boolean nativeRemoveBand(long nativeRef, double centerFrequency);
 }

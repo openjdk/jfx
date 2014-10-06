@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,22 +23,15 @@
  * questions.
  */
 
-package com.sun.media.jfxmediaimpl.platform.gstreamer;
+package com.sun.media.jfxmediaimpl;
 
 import com.sun.media.jfxmedia.effects.EqualizerBand;
 
-final class GSTEqualizerBand implements EqualizerBand {
+final class NativeEqualizerBand implements EqualizerBand {
 
-    private long bandRef; // Native band backend
+    private final long bandRef; // Native band backend
 
-    private native double gstGetCenterFrequency(long bandRef);
-    private native void   gstSetCenterFrequency(long bandRef, double centerFrequency);
-    private native double gstGetBandwidth(long bandRef);
-    private native void   gstSetBandwidth(long bandRef, double bandwidth);
-    private native double gstGetGain(long bandRef);
-    private native void   gstSetGain(long bandRef, double gain);
-
-    private GSTEqualizerBand(long bandRef) {
+    private NativeEqualizerBand(long bandRef) {
         if (bandRef != 0) {
             this.bandRef = bandRef;
         } else {
@@ -46,29 +39,45 @@ final class GSTEqualizerBand implements EqualizerBand {
         }
     }
 
+    @Override
     public double getCenterFrequency() {
-        return gstGetCenterFrequency(bandRef);
+        return nativeGetCenterFrequency(bandRef);
     }
 
+    @Override
     public void setCenterFrequency(double centerFrequency) {
-        gstSetCenterFrequency(bandRef, centerFrequency);
+        nativeSetCenterFrequency(bandRef, centerFrequency);
     }
 
+    @Override
     public double getBandwidth() {
-        return gstGetBandwidth(bandRef);
+        return nativeGetBandwidth(bandRef);
     }
 
+    @Override
     public void setBandwidth(double bandwidth) {
-        gstSetBandwidth(bandRef, bandwidth);
+        nativeSetBandwidth(bandRef, bandwidth);
     }
 
+    @Override
     public double getGain() {
-        return gstGetGain(bandRef);
+        return nativeGetGain(bandRef);
     }
 
+    @Override
     public void setGain(double gain) {
         if (gain >= MIN_GAIN && gain <= MAX_GAIN) {
-            gstSetGain(bandRef, gain);
+            nativeSetGain(bandRef, gain);
         }
     }
+
+    //**************************************************************************
+    //***** JNI methods
+    //**************************************************************************
+    private native double nativeGetCenterFrequency(long bandRef);
+    private native void   nativeSetCenterFrequency(long bandRef, double centerFrequency);
+    private native double nativeGetBandwidth(long bandRef);
+    private native void   nativeSetBandwidth(long bandRef, double bandwidth);
+    private native double nativeGetGain(long bandRef);
+    private native void   nativeSetGain(long bandRef, double gain);
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,7 +34,6 @@ import com.sun.prism.PixelFormat;
 import com.sun.prism.impl.BaseTexture;
 import com.sun.prism.impl.BufferUtil;
 import com.sun.prism.impl.PrismSettings;
-import com.sun.prism.impl.PrismTrace;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -532,7 +531,7 @@ class ES2Texture<T extends ES2TextureData> extends BaseTexture<ES2TextureResourc
         int srcw = frame.getEncodedWidth();
         int srch = frame.getEncodedHeight();
         int adjHeight = srch;
-        ByteBuffer pixels = frame.getBuffer();
+        ByteBuffer pixels = frame.getBufferForPlane(0);
 
         switch (frame.getPixelFormat()) {
             case INT_ARGB_PRE:
@@ -576,10 +575,9 @@ class ES2Texture<T extends ES2TextureData> extends BaseTexture<ES2TextureResourc
             glCtx.pixelStorei(GLContext.GL_UNPACK_ALIGNMENT, alignment);
             glCtx.pixelStorei(GLContext.GL_UNPACK_ROW_LENGTH,
                     frame.strideForPlane(0) / alignment);
-            pixels.position(frame.offsetForPlane(0));
             glCtx.texSubImage2D(target, 0,
                     0, 0, srcw, frame.getHeight(),
-                    pixelFormat, pixelType, pixels.slice());
+                    pixelFormat, pixelType, pixels);
         }
         frame.releaseFrame();
         return result;

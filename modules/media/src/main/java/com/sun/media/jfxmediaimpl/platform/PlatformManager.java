@@ -198,14 +198,9 @@ public final class PlatformManager {
         // go down the list until we get one that can be created
         for (Platform platty : platforms) {
             if (platty.canPlayContentType(mimeType)) {
-                // attempt to preroll the player
-                Object cookie = platty.prerollMediaPlayer(source);
-                if (null != cookie) {
-                    // OK to play, go ahead with player creation
-                    MediaPlayer outPlayer = platty.createMediaPlayer(source, cookie);
-                    if (null != outPlayer) {
-                        return outPlayer;
-                    }
+                MediaPlayer outPlayer = platty.createMediaPlayer(source);
+                if (null != outPlayer) {
+                    return outPlayer;
                 }
             }
         }

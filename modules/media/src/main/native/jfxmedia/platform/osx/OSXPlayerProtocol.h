@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,6 +39,10 @@
 
 @protocol OSXPlayerProtocol <NSObject>
 
+@optional
+// Return YES if the associated class can be used
++ (BOOL) playerAvailable;
+
 @required
 @property (nonatomic,assign) int64_t audioSyncDelay;
 
@@ -49,6 +53,9 @@
 @property (nonatomic,assign) BOOL mute;
 @property (nonatomic,assign) float volume;
 @property (nonatomic,assign) float balance;
+
+@property (nonatomic,readonly) CAudioEqualizer *audioEqualizer;
+@property (nonatomic,readonly) CAudioSpectrum *audioSpectrum;
 
 - (id) initWithURL:(NSURL *)source eventHandler:(CJavaPlayerEventDispatcher*)hdlr;
 

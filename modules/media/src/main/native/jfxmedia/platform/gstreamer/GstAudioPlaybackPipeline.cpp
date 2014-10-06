@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -50,9 +50,9 @@
 CGstAudioPlaybackPipeline::CGstAudioPlaybackPipeline(const GstElementContainer& elements, int flags, CPipelineOptions* pOptions)
 :   CPipeline(pOptions),
     m_Elements(elements),
-    m_AudioFlags(flags),
     m_pAudioEqualizer(NULL),
-    m_pAudioSpectrum(NULL)
+    m_pAudioSpectrum(NULL),
+    m_AudioFlags(flags)
 {
     m_dResumeDeltaTime = m_Elements[VIDEO_SINK] ? VIDEO_RESUME_DELTA_TIME : AUDIO_RESUME_DELTA_TIME;
 
@@ -1399,7 +1399,7 @@ gboolean CGstAudioPlaybackPipeline::BusCallback(GstBus* bus, GstMessage* msg, sB
                         magnitudes[i] = g_value_get_float( gst_value_list_get_value (magnitudes_value, i));
                         phases[i] = g_value_get_float( gst_value_list_get_value (phases_value, i));
                     }
-                    pPipeline->GetAudioSpectrum()->UpdateBands(bandsNum, magnitudes, phases);
+                    pPipeline->GetAudioSpectrum()->UpdateBands((int)bandsNum, magnitudes, phases);
 
                     delete [] magnitudes;
                     delete [] phases;

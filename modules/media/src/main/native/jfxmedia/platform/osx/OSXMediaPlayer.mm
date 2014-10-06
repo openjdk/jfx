@@ -30,6 +30,8 @@
 #import <Utils/JavaUtils.h>
 #import <CoreAudio/CoreAudio.h>
 #import <jni/Logger.h>
+#import <jni/JniUtils.h>
+#import <jfxmedia_errors.h>
 
 #import <objc/runtime.h>
 
@@ -61,17 +63,51 @@ static Class gMediaPlayerClass = nil;
     [gMediaPlayerPeers removePeer:player];
 }
 
-+ (void) initPlayerPlatform
++ (BOOL) initPlayerPlatform
 {
-    // Determine if we can use QTKMediaPlayer or not, without directly linking and pulling
-    // in unwanted dependencies
-    Class klass = objc_getClass("QTKMediaPlayer");
-    if (klass) {
-        // And make sure it conforms to the OSXPlayerProtocol
-        if ([klass conformsToProtocol:@protocol(OSXPlayerProtocol)]) {
-            gMediaPlayerClass = klass;
+    BOOL enableAVF = YES;
+    BOOL enableQTK = YES;
+
+    // Check environment to see if platforms are enabled
+    char *value = getenv("JFXMEDIA_AVF");
+    if (value ? strncasecmp(value, "yes", 3) != 0 : NO) {
+        enableAVF = NO;
+    }
+
+    value = getenv("JFXMEDIA_QTKIT");
+    if (value ? strncasecmp(value, "yes", 3) != 0 : NO) {
+        enableQTK = NO;
+    }
+
+    // Determine if we can use OSX native player libs, without linking directly
+    Class klass;
+
+    if (enableAVF) {
+        klass = objc_getClass("AVFMediaPlayer");
+        if (klass) {
+            if ([klass conformsToProtocol:@protocol(OSXPlayerProtocol)]) {
+                if ([klass respondsToSelector:@selector(playerAvailable)] ? [klass playerAvailable] : YES) {
+                    gMediaPlayerClass = klass;
+                    return YES;
+                }
+            }
         }
-    } // else we can't log yet, so fail silently
+    }
+
+    if (enableQTK) {
+        klass = objc_getClass("QTKMediaPlayer");
+        if (klass) {
+            // And make sure it conforms to the OSXPlayerProtocol
+            if ([klass conformsToProtocol:@protocol(OSXPlayerProtocol)]) {
+                if ([klass respondsToSelector:@selector(playerAvailable)] ? [klass playerAvailable] : YES) {
+                    gMediaPlayerClass = klass;
+                    return YES;
+                }
+            }
+        }
+    }
+
+    return NO;
 }
 
 - (id) init
@@ -159,6 +195,16 @@ static Class gMediaPlayerClass = nil;
 - (id<OSXPlayerProtocol>) player
 {
     return [[player retain] autorelease];
+}
+
+- (CAudioEqualizer*) audioEqualizer
+{
+    return player.audioEqualizer;
+}
+
+- (CAudioSpectrum*) audioSpectrum
+{
+    return player.audioSpectrum;
 }
 
 - (int64_t) audioSyncDelay
@@ -265,28 +311,66 @@ JNIEXPORT void JNICALL Java_com_sun_media_jfxmediaimpl_platform_osx_OSXMediaPlay
 
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
     NSString *sourceURIString = NSStringFromJavaString(env, sourceURI);
-    if (!sourceURIString) {        
+    if (!sourceURIString) {
         LOGGER_ERRORMSG("OSXMediaPlayer: Unable to create sourceURIString\n");
-        eventHandler->SendPlayerMediaErrorEvent(ERROR_OSX_INIT);
+        ThrowJavaException(env, "com/sun/media/jfxmedia/MediaException",
+                           "OSXMediaPlayer: Unable to create sourceURIString");
         return;
     }
     
     NSURL *mediaURL = [[NSURL alloc] initWithString:sourceURIString];
-    if (!mediaURL) {        
+    if (!mediaURL) {
         LOGGER_WARNMSG("OSXMediaPlayer: Unable to create mediaURL\n");
-        eventHandler->SendPlayerMediaErrorEvent(ERROR_OSX_INIT);
+        ThrowJavaException(env, "com/sun/media/jfxmedia/MediaException",
+                           "OSXMediaPlayer: Unable to create mediaURL");
         return;
     }
     
     OSXMediaPlayer *player = [[OSXMediaPlayer alloc] initWithURL:mediaURL javaPlayer:playerObject andEnv:env eventHandler:eventHandler];
     if (!player) {
         LOGGER_WARNMSG("OSXMediaPlayer: Unable to create player\n");
-        eventHandler->SendPlayerMediaErrorEvent(ERROR_OSX_INIT);
+        ThrowJavaException(env, "com/sun/media/jfxmedia/MediaException",
+                           "OSXMediaPlayer: Unable to create player");
+        [mediaURL release];
         return;
     }
-    
+
     [player release]; // The player peer list retains for us
     [pool drain];
+}
+
+/*
+ * Class:     com_sun_media_jfxmediaimpl_platform_osx_OSXMediaPlayer
+ * Method:    osxGetAudioEqualizerRef
+ * Signature: ()J
+ */
+JNIEXPORT jlong JNICALL Java_com_sun_media_jfxmediaimpl_platform_osx_OSXMediaPlayer_osxGetAudioEqualizerRef
+(JNIEnv *env, jobject playerObject) {
+    NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+    OSXMediaPlayer *player = [OSXMediaPlayer peerForPlayer:playerObject andEnv:env];
+    CAudioEqualizer *eq = 0;
+    if (player) {
+        eq = player.audioEqualizer;
+    }
+    [pool drain];
+    return ptr_to_jlong(eq);
+}
+
+/*
+ * Class:     com_sun_media_jfxmediaimpl_platform_osx_OSXMediaPlayer
+ * Method:    osxGetAudioSpectrumRef
+ * Signature: ()J
+ */
+JNIEXPORT jlong JNICALL Java_com_sun_media_jfxmediaimpl_platform_osx_OSXMediaPlayer_osxGetAudioSpectrumRef
+(JNIEnv *env, jobject playerObject) {
+    NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+    OSXMediaPlayer *player = [OSXMediaPlayer peerForPlayer:playerObject andEnv:env];
+    CAudioSpectrum *spectrum = NULL;
+    if (player) {
+        spectrum = player.audioSpectrum;
+    }
+    [pool drain];
+    return ptr_to_jlong(spectrum);
 }
 
 /*

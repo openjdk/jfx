@@ -31,9 +31,9 @@
  * Method:    osxPlatformInit
  * Signature: ()V
  */
-JNIEXPORT void JNICALL Java_com_sun_media_jfxmediaimpl_platform_osx_OSXPlatform_osxPlatformInit
+JNIEXPORT jboolean JNICALL Java_com_sun_media_jfxmediaimpl_platform_osx_OSXPlatform_osxPlatformInit
     (JNIEnv *env, jclass klass)
 {
     // Tell OSXMediaPlayer to initialize itself
-    [OSXMediaPlayer initPlayerPlatform];
+    return (jboolean)[OSXMediaPlayer initPlayerPlatform];
 }
