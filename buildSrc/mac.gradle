@@ -127,7 +127,7 @@ MAC.launcher.linkFlags = ["-ldl"]
 MAC.launcherlibrary = [:]
 MAC.launcherlibrary.compiler = compiler
 MAC.launcherlibrary.ccFlags = [
-//        "-std=c++0x",
+        "-stdlib=libstdc++",
         "-c",
         ccBaseFlags,
         IS_DEBUG_NATIVE ? ["-DDEBUG", "-O0"] : ["-O3", "-DNDEBUG"]].flatten()
