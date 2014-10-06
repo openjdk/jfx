@@ -122,14 +122,6 @@ class LinuxSystem {
 
     static final int SEEK_SET = 0;
 
-    /**
-     * Calls the "sysconf" function defined in unistd.h
-     * @param name The name of the POSIX variable to query
-     * @return The value of the system resource, or -1 if name is invalid
-     */
-    native long sysconf(int name);
-
-    static final int _SC_LONG_BIT = 106;
     // input.h
 
     /**

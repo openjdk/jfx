@@ -79,11 +79,6 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_monocle_LinuxSystem_read
     return (jlong) read((int) fdL, data + position, limit - position);
 }
 
-JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_monocle_LinuxSystem_sysconf
-  (JNIEnv *UNUSED(env), jobject UNUSED(obj), jint name) {
-    return (jlong) sysconf((int) name);
-}
-
 JNIEXPORT jint JNICALL Java_com_sun_glass_ui_monocle_LinuxSystem_EVIOCGABS
   (JNIEnv *UNUSED(env), jobject UNUSED(obj), jint type) {
     return (jint) EVIOCGABS((int) type);
