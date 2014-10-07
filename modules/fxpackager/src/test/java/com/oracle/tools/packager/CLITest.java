@@ -133,4 +133,16 @@ public class CLITest {
                 "-Bname=SimpleTest");
     }
 
+    @Test(expected = PackagerException.class)
+    public void invalidSrcDir() throws Exception {
+        com.sun.javafx.tools.packager.Main.main("-deploy",
+                "-verbose", // verbose is required or test will call System.exit() on failures and break the build
+                "-srcdir", fakeMainJar.getCanonicalPath(), // should be a directory, not a jar
+                "-outdir", workDir.getCanonicalPath(),
+                "-outfile", "SimpleTest",
+                "-appclass", "hello.HelloRectangle",
+                "-native", "image",
+                "-name", "SimpleTest",
+                "-Bname=SimpleTest");
+    }
 }
