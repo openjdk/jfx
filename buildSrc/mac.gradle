@@ -127,10 +127,13 @@ MAC.launcher.linkFlags = ["-ldl"]
 MAC.launcherlibrary = [:]
 MAC.launcherlibrary.compiler = compiler
 MAC.launcherlibrary.ccFlags = [
-//        "-std=c++0x",
         "-c",
         ccBaseFlags,
         IS_DEBUG_NATIVE ? ["-DDEBUG", "-O0"] : ["-O3", "-DNDEBUG"]].flatten()
+// 10.7 doesn't have libstdc++ as an option for stdlib, so filter it out
+if (!(MACOSX_MIN_VERSION in ['10.7', '10.8'])) {
+    MAC.launcherlibrary.ccFlags += "-stdlib=libstdc++"
+}
 MAC.launcherlibrary.linker = linker
 MAC.launcherlibrary.linkFlags = ["-ldl", "-dynamiclib",
         "-framework", "Cocoa",
