@@ -174,6 +174,9 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
                     break;
                 }
             }
+
+            // fix for RT-37853
+            getSkinnable().edit(-1);
             
             rowCountDirty = true;
             getSkinnable().requestLayout();

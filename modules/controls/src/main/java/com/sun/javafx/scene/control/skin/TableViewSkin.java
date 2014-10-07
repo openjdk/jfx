@@ -198,6 +198,10 @@ public class TableViewSkin<T> extends TableViewSkinBase<T, T, TableView<T>, Tabl
         return tableView.resizeColumn(tc, delta);
     }
 
+    @Override protected void edit(int index, TableColumn<T, ?> column) {
+        tableView.edit(index, (TableColumn<T,?>)column);
+    }
+
     /*
      * FIXME: Naive implementation ahead
      * Attempts to resize column based on the pref width of all items contained

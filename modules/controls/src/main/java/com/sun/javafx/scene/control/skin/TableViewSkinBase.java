@@ -271,6 +271,9 @@ public abstract class TableViewSkinBase<M, S, C extends Control, B extends Behav
             }
         }
 
+        // fix for RT-37853
+        edit(-1, null);
+
         rowCountDirty = true;
         getSkinnable().requestLayout();
     };
@@ -364,6 +367,8 @@ public abstract class TableViewSkinBase<M, S, C extends Control, B extends Behav
     // Method to resize the column based on the content in that column, based on
     // the maxRows number of rows
     protected abstract void resizeColumnToFitContent(TC tc, int maxRows);
+
+    protected abstract void edit(int index, TC column);
     
     
     

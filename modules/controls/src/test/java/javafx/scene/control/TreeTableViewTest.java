@@ -4185,4 +4185,52 @@ public class TreeTableViewTest {
             }
         }
     }
+
+    @Test public void test_rt_37853_replaceRoot() {
+        test_rt_37853(true);
+    }
+
+    @Test public void test_rt_37853_replaceRootChildren() {
+        test_rt_37853(false);
+    }
+
+    private int rt_37853_cancelCount;
+    private int rt_37853_commitCount;
+    public void test_rt_37853(boolean replaceRoot) {
+        TreeTableColumn<String,String> first = new TreeTableColumn<>("first");
+        first.setEditable(true);
+        first.setCellFactory(TextFieldTreeTableCell.forTreeTableColumn());
+        treeTableView.getColumns().add(first);
+        treeTableView.setEditable(true);
+        treeTableView.setRoot(new TreeItem<>("Root"));
+        treeTableView.getRoot().setExpanded(true);
+
+        for (int i = 0; i < 10; i++) {
+            treeTableView.getRoot().getChildren().add(new TreeItem<>("" + i));
+        }
+
+        StageLoader sl = new StageLoader(treeTableView);
+
+        first.setOnEditCancel(editEvent -> rt_37853_cancelCount++);
+        first.setOnEditCommit(editEvent -> rt_37853_commitCount++);
+
+        assertEquals(0, rt_37853_cancelCount);
+        assertEquals(0, rt_37853_commitCount);
+
+        treeTableView.edit(1, first);
+        assertNotNull(treeTableView.getEditingCell());
+
+        if (replaceRoot) {
+            treeTableView.setRoot(new TreeItem<>("New Root"));
+        } else {
+            treeTableView.getRoot().getChildren().clear();
+            for (int i = 0; i < 10; i++) {
+                treeTableView.getRoot().getChildren().add(new TreeItem<>("new item " + i));
+            }
+        }
+        assertEquals(1, rt_37853_cancelCount);
+        assertEquals(0, rt_37853_commitCount);
+
+        sl.dispose();
+    }
 }

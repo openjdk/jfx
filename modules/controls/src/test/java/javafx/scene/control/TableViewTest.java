@@ -4088,4 +4088,35 @@ public class TableViewTest {
             }
         }
     }
+
+    private int rt_37853_cancelCount;
+    private int rt_37853_commitCount;
+    @Test public void test_rt_37853() {
+        TableColumn<String,String> first = new TableColumn<>("first");
+        first.setEditable(true);
+        first.setCellFactory(TextFieldTableCell.forTableColumn());
+        table.getColumns().add(first);
+        table.setEditable(true);
+
+        for (int i = 0; i < 10; i++) {
+            table.getItems().add("" + i);
+        }
+
+        StageLoader sl = new StageLoader(table);
+
+        first.setOnEditCancel(editEvent -> rt_37853_cancelCount++);
+        first.setOnEditCommit(editEvent -> rt_37853_commitCount++);
+
+        assertEquals(0, rt_37853_cancelCount);
+        assertEquals(0, rt_37853_commitCount);
+
+        table.edit(1, first);
+        assertNotNull(table.getEditingCell());
+
+        table.getItems().clear();
+        assertEquals(1, rt_37853_cancelCount);
+        assertEquals(0, rt_37853_commitCount);
+
+        sl.dispose();
+    }
 }

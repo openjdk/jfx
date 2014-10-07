@@ -50,6 +50,7 @@ import javafx.event.ActionEvent;
 import javafx.scene.control.cell.CheckBoxListCell;
 import javafx.scene.control.cell.ComboBoxListCell;
 import javafx.scene.control.cell.TextFieldListCell;
+import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.VBox;
@@ -109,12 +110,12 @@ public class ListViewTest {
     }
 
     @Test public void singleArgConstructorSetsNonNullSelectionModel() {
-        final ListView<String> b2 = new ListView<>(FXCollections.observableArrayList("Hi"));
+        final ListView<String> b2 = new ListView<>(FXCollections.<String>observableArrayList("Hi"));
         assertNotNull(b2.getSelectionModel());
     }
 
     @Test public void singleArgConstructorAllowsNullItems() {
-        final ListView<String> b2 = new ListView<>(null);
+        final ListView<String> b2 = new ListView<String>(null);
         assertNull(b2.getItems());
     }
 
@@ -1054,5 +1055,33 @@ public class ListViewTest {
         assertNull(sm.getSelectedItem());
         assertEquals(0, sm.getSelectedIndices().size());
         assertEquals(0, sm.getSelectedItems().size());
+    }
+
+    private int rt_37853_cancelCount;
+    private int rt_37853_commitCount;
+    @Test public void test_rt_37853() {
+        listView.setCellFactory(TextFieldListCell.forListView());
+        listView.setEditable(true);
+
+        for (int i = 0; i < 10; i++) {
+            listView.getItems().add("" + i);
+        }
+
+        StageLoader sl = new StageLoader(listView);
+
+        listView.setOnEditCancel(editEvent -> rt_37853_cancelCount++);
+        listView.setOnEditCommit(editEvent -> rt_37853_commitCount++);
+
+        assertEquals(0, rt_37853_cancelCount);
+        assertEquals(0, rt_37853_commitCount);
+
+        listView.edit(1);
+        assertNotNull(listView.getEditingIndex());
+
+        listView.getItems().clear();
+        assertEquals(1, rt_37853_cancelCount);
+        assertEquals(0, rt_37853_commitCount);
+
+        sl.dispose();
     }
 }

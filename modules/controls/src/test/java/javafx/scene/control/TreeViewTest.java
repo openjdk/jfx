@@ -57,6 +57,7 @@ import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.cell.CheckBoxTreeCell;
+import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.control.cell.TextFieldTreeCell;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
@@ -2139,5 +2140,51 @@ public class TreeViewTest {
         assertNull(sm.getSelectedItem());
         assertEquals(0, sm.getSelectedIndices().size());
         assertEquals(0, sm.getSelectedItems().size());
+    }
+
+    @Test public void test_rt_37853_replaceRoot() {
+        test_rt_37853(true);
+    }
+
+    @Test public void test_rt_37853_replaceRootChildren() {
+        test_rt_37853(false);
+    }
+
+    private int rt_37853_cancelCount;
+    private int rt_37853_commitCount;
+    private void test_rt_37853(boolean replaceRoot) {
+        treeView.setCellFactory(TextFieldTreeCell.forTreeView());
+        treeView.setEditable(true);
+        treeView.setRoot(new TreeItem<>("Root"));
+        treeView.getRoot().setExpanded(true);
+
+        for (int i = 0; i < 10; i++) {
+            treeView.getRoot().getChildren().add(new TreeItem<>("" + i));
+        }
+
+        StageLoader sl = new StageLoader(treeView);
+
+        treeView.setOnEditCancel(editEvent -> rt_37853_cancelCount++);
+        treeView.setOnEditCommit(editEvent -> rt_37853_commitCount++);
+
+        assertEquals(0, rt_37853_cancelCount);
+        assertEquals(0, rt_37853_commitCount);
+
+        treeView.edit(treeView.getRoot().getChildren().get(0));
+        assertNotNull(treeView.getEditingItem());
+
+        if (replaceRoot) {
+            treeView.setRoot(new TreeItem<>("New Root"));
+        } else {
+            treeView.getRoot().getChildren().clear();
+            for (int i = 0; i < 10; i++) {
+                treeView.getRoot().getChildren().add(new TreeItem<>("new item " + i));
+            }
+        }
+
+        assertEquals(1, rt_37853_cancelCount);
+        assertEquals(0, rt_37853_commitCount);
+
+        sl.dispose();
     }
 }

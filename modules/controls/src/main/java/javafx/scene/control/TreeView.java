@@ -446,8 +446,11 @@ public class TreeView<T> extends Control {
             if (root != null) {
                 weakRootEventListener = new WeakEventHandler<>(rootEvent);
                 getRoot().addEventHandler(TreeItem.<T>treeNotificationEvent(), weakRootEventListener);
-                weakOldItem = new WeakReference<TreeItem<T>>(root);
+                weakOldItem = new WeakReference<>(root);
             }
+
+            // Fix for RT-37853
+            edit(null);
 
             expandedItemCountDirty = true;
             updateRootExpanded();
