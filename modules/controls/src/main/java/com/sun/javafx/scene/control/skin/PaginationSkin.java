@@ -44,6 +44,8 @@ import javafx.animation.*;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WritableValue;
 import javafx.collections.ListChangeListener;
 import javafx.css.Styleable;
@@ -114,9 +116,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
         getChildren().addAll(currentStackPane, nextStackPane, navigation);
 
         pagination.maxPageIndicatorCountProperty().addListener(o -> {
-            resetIndexes(false);
-            navigation.initializePageIndicators();
-            navigation.updatePageIndicators();
+            resetIndiciesAndNav();
         });
 
         registerChangeListener(pagination.widthProperty(), "WIDTH");
@@ -125,6 +125,12 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
         registerChangeListener(pagination.pageFactoryProperty(), "PAGE_FACTORY");
 
         initializeSwipeAndTouchHandlers();
+    }
+
+    protected void resetIndiciesAndNav() {
+        resetIndexes(false);
+        navigation.initializePageIndicators();
+        navigation.updatePageIndicators();
     }
 
     public void selectNext() {
@@ -648,19 +654,13 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
                 // Speedup and finish the animation then update the page factory.
                 timeline.setRate(8);
                 timeline.setOnFinished(arg0 -> {
-                    resetIndexes(false);
-                    navigation.initializePageIndicators();
-                    navigation.updatePageIndicators();
+                    resetIndiciesAndNav();
                 });
                 return;
             }
-            resetIndexes(false);
-            navigation.initializePageIndicators();
-            navigation.updatePageIndicators();
+            resetIndiciesAndNav();
         } else if ("PAGE_COUNT".equals(p)) {
-            resetIndexes(false);
-            navigation.initializePageIndicators();
-            navigation.updatePageIndicators();
+            resetIndiciesAndNav();
         } else if ("WIDTH".equals(p)) {
             clipRect.setWidth(getSkinnable().getWidth());
         } else if ("HEIGHT".equals(p)) {
@@ -824,7 +824,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
         private void initializePageIndicators() {
             previousIndicatorCount = 0;
             controlBox.getChildren().clear();
-            indicatorButtons.getToggles().clear();
+            clearIndicatorButtons();
 
             controlBox.getChildren().add(leftArrowButton);
             for (int i = fromIndex; i <= toIndex; i++) {
@@ -834,6 +834,16 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
                 controlBox.getChildren().add(ib);
             }
             controlBox.getChildren().add(rightArrowButton);
+        }
+
+        private void clearIndicatorButtons() {
+            for (Toggle toggle : indicatorButtons.getToggles()) {
+                if (toggle instanceof IndicatorButton) {
+                    IndicatorButton indicatorButton = (IndicatorButton) toggle;
+                    indicatorButton.release();
+                }
+            }
+            indicatorButtons.getToggles().clear();
         }
 
         // Finds and selects the IndicatorButton using the currentIndex.
@@ -1175,6 +1185,12 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
     }
 
     class IndicatorButton extends ToggleButton {
+        private final ListChangeListener<String> updateSkinIndicatorType =
+                                                    c -> setIndicatorType();
+
+        private final ChangeListener<Boolean> updateTooltipVisibility =
+                       (ob, oldValue, newValue) -> setTooltipVisible(newValue);
+
         private int pageNumber;
 
         public IndicatorButton(int pageNumber) {
@@ -1183,9 +1199,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
             setIndicatorType();
             setTooltipVisible(isTooltipVisible());
 
-            getSkinnable().getStyleClass().addListener((ListChangeListener<String>) change -> {
-                setIndicatorType();
-            });
+            getSkinnable().getStyleClass().addListener(updateSkinIndicatorType);
 
             setOnAction(new EventHandler<ActionEvent>() {
                 @Override public void handle(ActionEvent arg0) {
@@ -1198,9 +1212,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
                 }
             });
 
-            tooltipVisibleProperty().addListener((ov, oldValue, newValue) -> {
-                setTooltipVisible(newValue);
-            });
+            tooltipVisibleProperty().addListener(updateTooltipVisibility);
 
             prefHeightProperty().bind(minHeightProperty());
             setAccessibleRole(AccessibleRole.PAGE_ITEM);
@@ -1241,6 +1253,11 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
             if (getToggleGroup() == null || !isSelected()) {
                 super.fire();
             }
+        }
+
+        public void release() {
+            getSkinnable().getStyleClass().removeListener(updateSkinIndicatorType);
+            tooltipVisibleProperty().removeListener(updateTooltipVisibility);
         }
 
         @Override
