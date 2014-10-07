@@ -220,15 +220,10 @@ public class TreeTableViewKeyInputTest {
      **************************************************************************/    
     
     @Test public void testInitialState() {
-        assertEquals(0, sm.getSelectedIndex());
-
-        assertEquals(1, sm.getSelectedCells().size());
-
-        assertEquals(1, sm.getSelectedIndices().size());
-        assertEquals(0, (int) sm.getSelectedIndices().get(0));
-
-        assertEquals(1, sm.getSelectedItems().size());
-        assertEquals(root, sm.getSelectedItems().get(0));
+        assertEquals(-1, sm.getSelectedIndex());
+        assertEquals(0, sm.getSelectedCells().size());
+        assertEquals(0, sm.getSelectedIndices().size());
+        assertEquals(0, sm.getSelectedItems().size());
     }
     
     
@@ -4280,21 +4275,12 @@ public class TreeTableViewKeyInputTest {
         StageLoader sl = new StageLoader(tableView);
 
         // test the initial state to ensure it is as we expect
-        if (cellSelection) {
-            assertFalse(sm.isSelected(0));
-            assertTrue(sm.isSelected(0, col));
-            assertFalse(sm.isSelected(0, col2));
-            assertEquals(1, sm.getSelectedIndices().size());
-            assertEquals(1, sm.getSelectedItems().size());
-            assertEquals(1, sm.getSelectedCells().size());
-        } else {
-            assertTrue(sm.isSelected(0));
-            assertTrue(sm.isSelected(0, col));
-            assertTrue(sm.isSelected(0, col2));
-            assertEquals(1, sm.getSelectedIndices().size());
-            assertEquals(1, sm.getSelectedItems().size());
-            assertEquals(1, sm.getSelectedCells().size());
-        }
+        assertFalse(sm.isSelected(0));
+        assertFalse(sm.isSelected(0, col));
+        assertFalse(sm.isSelected(0, col2));
+        assertEquals(0, sm.getSelectedIndices().size());
+        assertEquals(0, sm.getSelectedItems().size());
+        assertEquals(0, sm.getSelectedCells().size());
 
         final int startRow = 5;
         sm.clearSelection();

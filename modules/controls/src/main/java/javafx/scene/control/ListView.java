@@ -340,24 +340,11 @@ public class ListView<T> extends Control {
         // ...edit commit handler
         setOnEditCommit(DEFAULT_EDIT_COMMIT_HANDLER);
 
-        // Fix for RT-35679
-        focusedProperty().addListener(focusedListener);
-
         // Fix for RT-36651, which was introduced by RT-35679 (above) and resolved
         // by having special-case code to remove the listener when requested.
         // This is done by ComboBoxListViewSkin, so that selection is not done
         // when a ComboBox is shown.
         getProperties().addListener((MapChangeListener<Object, Object>) change -> {
-            if (change.wasAdded() && "selectOnFocusGain".equals(change.getKey())) {
-                Boolean selectOnFocusGain = (Boolean) change.getValueAdded();
-                if (selectOnFocusGain == null) return;
-                if (selectOnFocusGain) {
-                    focusedProperty().addListener(focusedListener);
-                } else {
-                    focusedProperty().removeListener(focusedListener);
-                }
-            }
-
             if (change.wasAdded() && "selectFirstRowByDefault".equals(change.getKey())) {
                 Boolean _selectFirstRowByDefault = (Boolean) change.getValueAdded();
                 if (_selectFirstRowByDefault == null) return;
@@ -381,21 +368,7 @@ public class ListView<T> extends Control {
         list.set(index, t.getNewValue());
     };
 
-    private InvalidationListener focusedListener = observable -> {
-        // RT-25679 - we select the first item in the control if there is no
-        // current selection or focus on any other cell
-        List<T> items = getItems();
-        MultipleSelectionModel<T> sm = getSelectionModel();
-        FocusModel<T> fm = getFocusModel();
 
-        if (items != null && items.size() > 0 &&
-            sm != null && sm.isEmpty() &&
-            fm != null && fm.getFocusedIndex() == -1) {
-                sm.select(0);
-        }
-    };
-    
-    
     
     /***************************************************************************
      *                                                                         *
@@ -962,7 +935,7 @@ public class ListView<T> extends Control {
     
     /**
      * Called when there's a request to scroll an index into view using {@link #scrollTo(int)}
-     * or {@link #scrollTo(S)}
+     * or {@link #scrollTo(Object)}
      * @since JavaFX 8.0
      */
     private ObjectProperty<EventHandler<ScrollToEvent<Integer>>> onScrollTo;
@@ -1231,7 +1204,6 @@ public class ListView<T> extends Control {
             updateItemCount();
 
             updateDefaultSelection();
-            ListCellBehavior.setAnchor(listView, 0, true);
         }
         
         // watching for changes to the items list content
@@ -1472,22 +1444,25 @@ public class ListView<T> extends Control {
         private void updateDefaultSelection() {
             // when the items list totally changes, we should clear out
             // the selection and focus
-            int newValueIndex = -1;
+            int newSelectionIndex = -1;
+            int newFocusIndex = -1;
             if (listView.getItems() != null) {
                 T selectedItem = getSelectedItem();
                 if (selectedItem != null) {
-                    newValueIndex = listView.getItems().indexOf(selectedItem);
+                    newSelectionIndex = listView.getItems().indexOf(selectedItem);
+                    newFocusIndex = newSelectionIndex;
                 }
 
-                // we put selection onto the first item, if there is at least
+                // we put focus onto the first item, if there is at least
                 // one item in the list
-                if (listView.selectFirstRowByDefault && newValueIndex == -1) {
-                    newValueIndex = listView.getItems().size() > 0 ? 0 : -1;
+                if (listView.selectFirstRowByDefault && newFocusIndex == -1) {
+                    newFocusIndex = listView.getItems().size() > 0 ? 0 : -1;
                 }
             }
 
             clearSelection();
-            select(newValueIndex);
+            select(newSelectionIndex);
+            focus(newFocusIndex);
         }
     }
 

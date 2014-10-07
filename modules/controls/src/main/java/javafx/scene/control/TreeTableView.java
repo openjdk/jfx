@@ -395,8 +395,6 @@ public class TreeTableView<S> extends Control {
             }
         });
 
-        focusedProperty().addListener(focusedListener);
-
         isInited = true;
     }
     
@@ -749,26 +747,8 @@ public class TreeTableView<S> extends Control {
     private final WeakInvalidationListener weakCellSelectionModelInvalidationListener = 
             new WeakInvalidationListener(cellSelectionModelInvalidationListener);
 
-    private InvalidationListener focusedListener = observable -> {
-        // RT-25679 - we select the first item in the control if there is no
-        // current selection or focus on any other cell
-        TableSelectionModel<TreeItem<S>> sm = getSelectionModel();
-        FocusModel<TreeItem<S>> fm = getFocusModel();
 
-        if (getExpandedItemCount() > 0 &&
-                sm != null && sm.isEmpty() &&
-                fm != null && fm.getFocusedItem() == null) {
-            if (sm.isCellSelectionEnabled()) {
-                TreeTableColumn<S,?> firstVisibleColumn = getVisibleLeafColumn(0);
-                if (firstVisibleColumn != null) {
-                    sm.select(0, firstVisibleColumn);
-                }
-            } else {
-                sm.select(0);
-            }
-        }
-    };
-    
+
     /***************************************************************************
      *                                                                         *
      * Properties                                                              *
@@ -2243,7 +2223,6 @@ public class TreeTableView<S> extends Control {
 
 
             updateDefaultSelection();
-            TableCellBehaviorBase.setAnchor(treeTableView, getFocusedCell(), true);
 
             cellSelectionEnabledProperty().addListener(o -> {
                 updateDefaultSelection();
@@ -2944,10 +2923,12 @@ public class TreeTableView<S> extends Control {
          **********************************************************************/
 
         private void updateDefaultSelection() {
-            // if we can, we put selection onto the first row
-            int newValueIndex = getItemCount() > 0 ? 0 : -1;
             clearSelection();
-            select(newValueIndex, isCellSelectionEnabled() ? getTableColumn(0) : null);
+
+            // we put focus onto the first item, if there is at least
+            // one item in the list
+            int newFocusIndex = getItemCount() > 0 ? 0 : -1;
+            focus(newFocusIndex, isCellSelectionEnabled() ? getTableColumn(0) : null);
         }
         
         private TreeTableColumn<S,?> getTableColumn(int pos) {

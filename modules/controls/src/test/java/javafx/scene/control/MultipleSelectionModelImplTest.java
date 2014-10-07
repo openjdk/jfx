@@ -249,8 +249,8 @@ public class MultipleSelectionModelImplTest {
     }
 
     @Test public void ensureInDefaultState() {
-        assertEquals(0, model.getSelectedIndex());
-        assertNotNull(model.getSelectedItem());
+        assertEquals(-1, model.getSelectedIndex());
+        assertNull(model.getSelectedItem());
 
         if (focusModel != null) {
             assertEquals(0, focusModel.getFocusedIndex());
@@ -259,8 +259,8 @@ public class MultipleSelectionModelImplTest {
 
         assertNotNull(msModel().getSelectedIndices());
         assertNotNull(msModel().getSelectedItems());
-        assertEquals(1, msModel().getSelectedIndices().size());
-        assertEquals(1, msModel().getSelectedItems().size());
+        assertEquals(0, msModel().getSelectedIndices().size());
+        assertEquals(0, msModel().getSelectedItems().size());
     }
 
     @Test public void selectValidIndex() {
@@ -336,16 +336,16 @@ public class MultipleSelectionModelImplTest {
         assertTrue(model.isSelected(6));
     }
 
-    @Test public void testSelectedIndicesObservableListIsNotEmpty() {
-        assertFalse(msModel().getSelectedIndices().isEmpty());
+    @Test public void testSelectedIndicesObservableListIsEmpty() {
+        assertTrue(msModel().getSelectedIndices().isEmpty());
     }
 
     @Test public void testSelectedIndicesIteratorIsNotNull() {
         assertNotNull(msModel().getSelectedIndices().iterator());
     }
 
-    @Test public void testSelectedIndicesIteratorHasNext() {
-        assertTrue(msModel().getSelectedIndices().iterator().hasNext());
+    @Test public void testSelectedIndicesIteratorHasNoNext() {
+        assertFalse(msModel().getSelectedIndices().iterator().hasNext());
     }
 
     @Test public void testSelectedIndicesIteratorWorksWithSingleSelection() {
@@ -374,8 +374,8 @@ public class MultipleSelectionModelImplTest {
         assertTrue(msModel().getSelectedIndices().contains(5));
     }
 
-    @Test public void testSelectedItemsObservableListIsNotEmpty() {
-        assertFalse(msModel().getSelectedItems().isEmpty());
+    @Test public void testSelectedItemsObservableListIsEmpty() {
+        assertTrue(msModel().getSelectedItems().isEmpty());
     }
 
     @Test public void testSelectedItemsIndexOf() {

@@ -706,7 +706,7 @@ public class TableViewSelectionModelImplTest {
         model.setSelectionMode(SelectionMode.MULTIPLE);
         model.setCellSelectionEnabled(true);
 
-        assertFalse(model.getSelectedCells().isEmpty());
+        assertTrue(model.getSelectedCells().isEmpty());
 
         // select from (0,0) to (4,2) -> 5 x 3 cells = 15 cells in total
         model.selectRange(0, col0, 4, col2);
