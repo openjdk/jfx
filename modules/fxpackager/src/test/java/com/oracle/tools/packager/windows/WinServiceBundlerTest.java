@@ -135,6 +135,9 @@ public class WinServiceBundlerTest {
         bundleParams.put(APP_NAME.getID(), "Smoke Test");
         bundleParams.put(VERBOSE.getID(), true);
 
+        bundleParams.put(SERVICE_HINT.getID(), true);
+        bundleParams.put(SYSTEM_WIDE.getID(), true);
+        
         boolean valid = bundler.validate(bundleParams);
         assertTrue(valid);
 
@@ -156,6 +159,8 @@ public class WinServiceBundlerTest {
         Map<String, Object> bundleParams = new HashMap<>();
 
         bundleParams.put(SERVICE_HINT.getID(), true);
+        bundleParams.put(SYSTEM_WIDE.getID(), true);
+
         bundleParams.put(START_ON_INSTALL.getID(), true);
         bundleParams.put(STOP_ON_UNINSTALL.getID(), true);
         bundleParams.put(RUN_AT_STARTUP.getID(), true);
@@ -184,7 +189,43 @@ public class WinServiceBundlerTest {
         assertTrue(result.exists());
     }
 
+    /*
+     * Test that bundler doesn't support per-user services (RT-37985)
+     */
+    @Test(expected = ConfigException.class)
+    public void perUserExeServiceTest() throws ConfigException, UnsupportedPlatformException {
+        Bundler bundler = new WinExeBundler();
 
+        Map<String, Object> bundleParams = new HashMap<>();
+        
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+
+        bundleParams.put(VERBOSE.getID(), true);
+
+        bundleParams.put(SERVICE_HINT.getID(), true);
+        bundleParams.put(SYSTEM_WIDE.getID(), false);
+        
+        bundler.validate(bundleParams);
+    }
+
+    @Test
+    public void perSystemExeServiceTest() throws ConfigException, UnsupportedPlatformException {
+        Bundler bundler = new WinExeBundler();
+
+        Map<String, Object> bundleParams = new HashMap<>();
+        
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+
+        bundleParams.put(VERBOSE.getID(), true);
+
+        bundleParams.put(SERVICE_HINT.getID(), true);
+        bundleParams.put(SYSTEM_WIDE.getID(), true);
+        
+        bundler.validate(bundleParams);        
+    }
+    
     @Test
     public void winMsiService() throws Exception {
         // only run if we have Wix tools installed
@@ -196,6 +237,8 @@ public class WinServiceBundlerTest {
         Map<String, Object> bundleParams = new HashMap<>();
 
         bundleParams.put(SERVICE_HINT.getID(), true);
+        bundleParams.put(SYSTEM_WIDE.getID(), true);
+        
         bundleParams.put(START_ON_INSTALL.getID(), true);
         bundleParams.put(STOP_ON_UNINSTALL.getID(), true);
         bundleParams.put(RUN_AT_STARTUP.getID(), true);
@@ -213,7 +256,7 @@ public class WinServiceBundlerTest {
 
         bundleParams.put(BUILD_ROOT.getID(), tmpBase);
         bundleParams.put(VERBOSE.getID(), true);
-
+        
         // assert it validates
         boolean valid = bundler.validate(bundleParams);
         assertTrue(valid);
@@ -224,4 +267,38 @@ public class WinServiceBundlerTest {
         assertTrue(result.exists());
     }
 
+    /*
+     * Test that bundler doesn't support per-user services (RT-37985)
+     */
+    @Test(expected = ConfigException.class)
+    public void perUserMsiServiceTest() throws ConfigException, UnsupportedPlatformException {
+        Bundler bundler = new WinMsiBundler();
+
+        Map<String, Object> bundleParams = new HashMap<>();
+        
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        bundleParams.put(VERBOSE.getID(), true);
+
+        bundleParams.put(SERVICE_HINT.getID(), true);
+        bundleParams.put(SYSTEM_WIDE.getID(), false);
+        
+        bundler.validate(bundleParams);
+    }
+
+    @Test
+    public void perSystemMsiServiceTest() throws ConfigException, UnsupportedPlatformException {
+        Bundler bundler = new WinMsiBundler();
+
+        Map<String, Object> bundleParams = new HashMap<>();
+        
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        bundleParams.put(VERBOSE.getID(), true);
+
+        bundleParams.put(SERVICE_HINT.getID(), true);
+        bundleParams.put(SYSTEM_WIDE.getID(), true);
+        
+        bundler.validate(bundleParams);        
+    }
 }

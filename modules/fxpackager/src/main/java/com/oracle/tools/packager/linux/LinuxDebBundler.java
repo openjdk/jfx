@@ -249,11 +249,22 @@ public class LinuxDebBundler extends AbstractBundler {
                 Log.info(I18N.getString("message.debs-like-licenses"));
             }
 
+            boolean serviceHint = p.containsKey(SERVICE_HINT.getID()) && SERVICE_HINT.fetchFrom(p);
+            
             // for services, the app launcher must be less than 16 characters or init.d complains
-            if (p.containsKey(SERVICE_HINT.getID()) && SERVICE_HINT.fetchFrom(p) && BUNDLE_NAME.fetchFrom(p).length() > 16) {
+            if (serviceHint && BUNDLE_NAME.fetchFrom(p).length() > 16) {
                 throw new ConfigException(
                         MessageFormat.format(I18N.getString("error.launcher-name-too-long"), BUNDLE_NAME.fetchFrom(p)),
                         MessageFormat.format(I18N.getString("error.launcher-name-too-long.advice"), BUNDLE_NAME.getID()));
+            }
+
+            //treat default null as "system wide install"
+            boolean systemWide = SYSTEM_WIDE.fetchFrom(p) == null || SYSTEM_WIDE.fetchFrom(p);
+
+            if (serviceHint && !systemWide) {
+                throw new ConfigException(
+                        I18N.getString("error.no-support-for-peruser-daemons"),
+                        I18N.getString("error.no-support-for-peruser-daemons.advice"));
             }
 
             // only one mime type per association, at least one file extention

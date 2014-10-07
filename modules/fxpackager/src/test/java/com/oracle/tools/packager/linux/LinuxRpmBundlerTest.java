@@ -414,4 +414,37 @@ public class LinuxRpmBundlerTest {
         assertNotNull(result);
         assertTrue(result.exists());
     }
+    
+    /*
+     * Test that bundler doesn't support per-user daemons (RT-37985)
+     */
+    @Test(expected = ConfigException.class)
+    public void perUserDaemonTest() throws ConfigException, UnsupportedPlatformException {
+        AbstractBundler bundler = new LinuxRpmBundler();
+
+        Map<String, Object> bundleParams = new HashMap<>();
+        
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+
+        bundleParams.put(SERVICE_HINT.getID(), true);
+        bundleParams.put(SYSTEM_WIDE.getID(), false);
+
+        bundler.validate(bundleParams);
+    }
+
+    @Test
+    public void perSystemDaemonTest() throws ConfigException, UnsupportedPlatformException {
+        AbstractBundler bundler = new LinuxRpmBundler();
+
+        Map<String, Object> bundleParams = new HashMap<>();
+        
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+
+        bundleParams.put(SERVICE_HINT.getID(), true);
+        bundleParams.put(SYSTEM_WIDE.getID(), true);
+
+        bundler.validate(bundleParams);
+    }
 }
