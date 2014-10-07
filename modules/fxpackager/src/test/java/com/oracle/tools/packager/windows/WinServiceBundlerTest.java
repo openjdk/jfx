@@ -202,23 +202,34 @@ public class WinServiceBundlerTest {
     /*
      * Test that bundler doesn't support per-user services (RT-37985)
      */
-    @Test(expected = ConfigException.class)
+    @Test
+    // This bug is not fixed in the approved versions of JUnit
+    // https://github.com/junit-team/junit/issues/121
+    //@Test(expected = ConfigException.class)
+    // so we cannot do the above and get the desired skipped/passed/failed reporting
     public void perUserExeServiceTest() throws ConfigException, UnsupportedPlatformException {
         assumeInnoSetupPresent();
 
-        Bundler bundler = new WinExeBundler();
+        try {
+            Bundler bundler = new WinExeBundler();
 
-        Map<String, Object> bundleParams = new HashMap<>();
-        
-        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
-        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+            Map<String, Object> bundleParams = new HashMap<>();
 
-        bundleParams.put(VERBOSE.getID(), true);
+            bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+            bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
 
-        bundleParams.put(SERVICE_HINT.getID(), true);
-        bundleParams.put(SYSTEM_WIDE.getID(), false);
-        
-        bundler.validate(bundleParams);
+            bundleParams.put(VERBOSE.getID(), true);
+
+            bundleParams.put(SERVICE_HINT.getID(), true);
+            bundleParams.put(SYSTEM_WIDE.getID(), false);
+
+            bundler.validate(bundleParams);
+            
+            // if we get here we fail
+            assertTrue("ConfigException should have been thrown", false);
+        } catch (ConfigException ignore) {
+            // passes the test
+        }
     }
 
     @Test
@@ -282,22 +293,33 @@ public class WinServiceBundlerTest {
     /*
      * Test that bundler doesn't support per-user services (RT-37985)
      */
-    @Test(expected = ConfigException.class)
+    @Test
+    // This bug is not fixed in the approved versions of JUnit
+    // https://github.com/junit-team/junit/issues/121
+    //@Test(expected = ConfigException.class)
+    // so we cannot do the above and get the desired skipped/passed/failed reporting
     public void perUserMsiServiceTest() throws ConfigException, UnsupportedPlatformException {
         assumeWiXPresent();
 
-        Bundler bundler = new WinMsiBundler();
-
-        Map<String, Object> bundleParams = new HashMap<>();
-        
-        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
-        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
-        bundleParams.put(VERBOSE.getID(), true);
-
-        bundleParams.put(SERVICE_HINT.getID(), true);
-        bundleParams.put(SYSTEM_WIDE.getID(), false);
-        
-        bundler.validate(bundleParams);
+        try {
+            Bundler bundler = new WinMsiBundler();
+    
+            Map<String, Object> bundleParams = new HashMap<>();
+            
+            bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+            bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+            bundleParams.put(VERBOSE.getID(), true);
+    
+            bundleParams.put(SERVICE_HINT.getID(), true);
+            bundleParams.put(SYSTEM_WIDE.getID(), false);
+            
+            bundler.validate(bundleParams);
+    
+            // if we get here we fail
+            assertTrue("ConfigException should have been thrown", false);
+        } catch (ConfigException ignore) {
+            // passes the test
+        }
     }
 
     @Test
