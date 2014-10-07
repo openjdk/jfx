@@ -61,6 +61,17 @@ public class WinServiceBundlerTest {
     static Set<File> appResources;
     static boolean retain = false;
 
+    public static void assumeWiXPresent() {
+        // only run if we have Wix tools installed
+        Assume.assumeNotNull(WinMsiBundler.TOOL_LIGHT_EXECUTABLE.fetchFrom(new HashMap<>()));
+        Assume.assumeNotNull(WinMsiBundler.TOOL_CANDLE_EXECUTABLE.fetchFrom(new HashMap<>()));
+    }
+    
+    public static void assumeInnoSetupPresent() {
+        // only run if we have InnoSetup installed
+        Assume.assumeNotNull(WinExeBundler.TOOL_INNO_SETUP_COMPILER_EXECUTABLE.fetchFrom(new HashMap<>()));
+    }
+    
     @BeforeClass
     public static void prepareApp() {
         // only run on windows
@@ -151,8 +162,7 @@ public class WinServiceBundlerTest {
 
     @Test
     public void winExeService() throws Exception {
-        // only run if we have InnoSetup installed
-        Assume.assumeNotNull(WinExeBundler.TOOL_INNO_SETUP_COMPILER_EXECUTABLE.fetchFrom(new HashMap<>()));
+        assumeInnoSetupPresent();
 
         Bundler bundler = new WinExeBundler();
 
@@ -194,6 +204,8 @@ public class WinServiceBundlerTest {
      */
     @Test(expected = ConfigException.class)
     public void perUserExeServiceTest() throws ConfigException, UnsupportedPlatformException {
+        assumeInnoSetupPresent();
+
         Bundler bundler = new WinExeBundler();
 
         Map<String, Object> bundleParams = new HashMap<>();
@@ -211,6 +223,8 @@ public class WinServiceBundlerTest {
 
     @Test
     public void perSystemExeServiceTest() throws ConfigException, UnsupportedPlatformException {
+        assumeInnoSetupPresent();
+
         Bundler bundler = new WinExeBundler();
 
         Map<String, Object> bundleParams = new HashMap<>();
@@ -228,9 +242,7 @@ public class WinServiceBundlerTest {
     
     @Test
     public void winMsiService() throws Exception {
-        // only run if we have Wix tools installed
-        Assume.assumeNotNull(WinMsiBundler.TOOL_LIGHT_EXECUTABLE.fetchFrom(new HashMap<>()));
-        Assume.assumeNotNull(WinMsiBundler.TOOL_CANDLE_EXECUTABLE.fetchFrom(new HashMap<>()));
+        assumeWiXPresent();
 
         Bundler bundler = new WinMsiBundler();
 
@@ -272,6 +284,8 @@ public class WinServiceBundlerTest {
      */
     @Test(expected = ConfigException.class)
     public void perUserMsiServiceTest() throws ConfigException, UnsupportedPlatformException {
+        assumeWiXPresent();
+
         Bundler bundler = new WinMsiBundler();
 
         Map<String, Object> bundleParams = new HashMap<>();
@@ -288,6 +302,8 @@ public class WinServiceBundlerTest {
 
     @Test
     public void perSystemMsiServiceTest() throws ConfigException, UnsupportedPlatformException {
+        assumeWiXPresent();
+
         Bundler bundler = new WinMsiBundler();
 
         Map<String, Object> bundleParams = new HashMap<>();
