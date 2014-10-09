@@ -25,10 +25,14 @@
 
 package com.oracle.tools.packager;
 
+import com.oracle.tools.packager.linux.LinuxAppBundler;
 import com.sun.javafx.tools.packager.PackagerException;
 import org.junit.*;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.PrintStream;
+import java.util.ResourceBundle;
 
 public class CLITest {
 
@@ -87,8 +91,8 @@ public class CLITest {
                 "-native", "image",
                 "-name", "SmokeParams",
                 "-BOptionThatWillNeverExist=true",
-                "-BuserJvmOptions=-Xmx1g",
-                "-BuserJvmOptions=-Xms512m",
+                "-BuserJvmOptions=-Xmx=1g",
+                "-BuserJvmOptions=-Xms=512m",
                 "-BdesktopHint=false",
                 "-BshortcutHint=true",
                 "-Bruntime=" + runtime);
@@ -146,5 +150,34 @@ public class CLITest {
                 "-appclass", "hello.HelloRectangle",
                 "-native", "image",
                 "-name", "InvalidSrcDir");
+    }
+
+    @Test
+    public void userJvmArgNoValue() throws Exception {
+        PrintStream oldOut = System.out;
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
+             PrintStream outStr = new PrintStream(baos)) 
+        {
+            System.setOut(outStr);
+            com.sun.javafx.tools.packager.Main.main("-deploy",
+                    "-verbose", // verbose is required or test will call System.exit() on failures and break the build
+                    "-srcfiles", fakeMainJar.getCanonicalPath(),
+                    "-outdir", workDir.getCanonicalPath(),
+                    "-outfile", "DuplicateNameMatch",
+                    "-appclass", "hello.HelloRectangle",
+                    "-native", "image",
+                    "-nosign",
+                    "-name", "UserJvmArgNoValue",
+                    "-BuserJvmOptions=-Xmx1g",
+                    "-BuserJvmOptions=-Xms512m");
+            ResourceBundle I18N = ResourceBundle.getBundle(LinuxAppBundler.class.getName());
+            
+            outStr.flush();
+            oldOut.println(baos);
+            Assert.assertTrue("Look for expected failure message", 
+                    baos.toString().contains(I18N.getString("error.empty-user-jvm-option-value.advice")));
+        } finally {
+            System.setOut(oldOut);
+        }
     }
 }

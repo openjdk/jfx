@@ -351,6 +351,17 @@ public class MacAppBundler extends AbstractBundler {
 
         StandardBundlerParam.validateMainClassInfoFromAppResources(p);
 
+        Map<String, String> userJvmOptions = USER_JVM_OPTIONS.fetchFrom(p);
+        if (userJvmOptions != null) {
+            for (Map.Entry<String, String> entry : userJvmOptions.entrySet()) {
+                if (entry.getValue() == null || entry.getValue().isEmpty()) {
+                    throw new ConfigException(
+                            MessageFormat.format(I18N.getString("error.empty-user-jvm-option-value"), entry.getKey()),
+                            I18N.getString("error.empty-user-jvm-option-value.advice"));
+                }
+            }
+        }
+
         if (getPredefinedImage(p) != null) {
             return true;
         }

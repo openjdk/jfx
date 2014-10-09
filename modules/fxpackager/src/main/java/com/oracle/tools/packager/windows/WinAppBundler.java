@@ -148,6 +148,17 @@ public class WinAppBundler extends AbstractBundler {
 
         StandardBundlerParam.validateMainClassInfoFromAppResources(p);
 
+        Map<String, String> userJvmOptions = USER_JVM_OPTIONS.fetchFrom(p);
+        if (userJvmOptions != null) {
+            for (Map.Entry<String, String> entry : userJvmOptions.entrySet()) {
+                if (entry.getValue() == null || entry.getValue().isEmpty()) {
+                    throw new ConfigException(
+                            MessageFormat.format(I18N.getString("error.empty-user-jvm-option-value"), entry.getKey()),
+                            I18N.getString("error.empty-user-jvm-option-value.advice"));
+                }
+            }
+        }
+
         if (WinResources.class.getResource(TOOL_ICON_SWAP) == null) {
             throw new ConfigException(
                     I18N.getString("error.no-windows-resources"),
