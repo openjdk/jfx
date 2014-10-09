@@ -56,6 +56,7 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Rectangle;
+import javafx.stage.Window;
 import javafx.util.Duration;
 
 import java.util.ArrayList;
@@ -79,6 +80,7 @@ public class ContextMenuContent extends Region {
     private double maxLabelWidth = 0;
     private double maxRowHeight = 0;
     private double maxLeftWidth = 0;
+    private double oldWidth = 0;
 
     private Rectangle clipRect;
     MenuBox itemsContainer;
@@ -208,6 +210,33 @@ public class ContextMenuContent extends Region {
                 }
             }
         }
+
+        // Fix for RT-38838.
+        // This fixes the issue where CSS is applied to a menu after it has been
+        // showing, resulting in its bounds changing. In this case, we need to
+        // shift the submenu such that it is properly aligned with its parent menu.
+        //
+        // To do this, we must firstly determine if the open submenu is shifted
+        // horizontally to appear on the other side of this menu, as this is the
+        // only situation where shifting has to happen. If so, we need to check
+        // if we should shift the submenu due to changes in width.
+        //
+        // We need to get the parent menu of this contextMenu, so that we only
+        // modify the X value in the following conditions:
+        // 1) There exists a parent menu
+        // 2) The parent menu is in the correct position (i.e. to the left of this
+        //    menu in normal LTR systems).
+        final double newWidth = maxRightWidth + maxLabelWidth + maxGraphicWidth + maxLeftWidth;
+        Window ownerWindow = contextMenu.getOwnerWindow();
+        if (ownerWindow instanceof ContextMenu) {
+            if (contextMenu.getX() < ownerWindow.getX()) {
+                if (oldWidth != newWidth) {
+                    contextMenu.setX(contextMenu.getX() + oldWidth - newWidth);
+                }
+            }
+        }
+
+        oldWidth = newWidth;
     }
     
     private void updateVisualItems() {
