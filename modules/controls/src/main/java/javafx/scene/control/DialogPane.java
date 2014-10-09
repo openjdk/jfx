@@ -86,7 +86,27 @@ import com.sun.javafx.css.converters.StringConverter;
  * properties, but they are far more convenient for developers in the common case,
  * as it is likely the case that a developer more often than not simply wants to
  * set a string value into the header or content areas of the DialogPane.
- * 
+ *
+ * <p>It is important to understand the implications of setting non-null values
+ * in the {@link #headerProperty() header} and {@link #headerTextProperty() headerText}
+ * properties. The key points are as follows:
+ *
+ * <ol>
+ *   <li>The {@code header} property takes precedence over the {@code headerText}
+ *       property, so if both are set to non-null values, {@code header} will be
+ *       used and {@code headerText} will be ignored.</li>
+ *   <li>If {@code headerText} is set to a non-null value, and a
+ *       {@link #graphicProperty() graphic} has also been set, the default position
+ *       for the graphic shifts from being located to the left of the content area
+ *       to being to the right of the header text.</li>
+ *   <li>If {@code header} is set to a non-null value, and a
+ *       {@link #graphicProperty() graphic} has also been set, the graphic is
+ *       removed from its default position (to the left of the content area),
+ *       and <strong>is not</strong> placed to the right of the custom header
+ *       node. If the graphic is desired, it should be manually added in to the
+ *       layout of the custom header node manually.</li>
+ * </ol>
+ *
  * <p>DialogPane operates on the concept of {@link ButtonType}. A ButtonType is
  * a descriptor of a single button that should be represented visually in the 
  * DialogPane. Developers who create a DialogPane therefore must specify the
@@ -424,26 +444,29 @@ public class DialogPane extends Pane {
     };
 
     /**
-     * Node which acts as dialog's header
+     * Node which acts as the dialog pane header.
      * 
-     * @return dialog's header
+     * @return the header of the dialog pane.
      */
     public final Node getHeader() {
         return header.get();
     }
 
     /**
-     * Assigns dialog's header. Any Node can be used
+     * Assigns the dialog pane header. Any Node can be used.
      * 
-     * @param header
-     *            future header
+     * @param header The new header of the DialogPane.
      */
     public final void setHeader(Node header) {
         this.header.setValue(header);
     }
 
     /**
-     * Property representing the header area of the dialog.
+     * Property representing the header area of the dialog pane. Note that if this
+     * header is set to a non-null value, that it will take up the entire top
+     * area of the DialogPane. It will also result in the DialogPane switching its
+     * layout to the 'header' layout - as outlined in the {@link DialogPane} class
+     * javadoc.
      */
     public final ObjectProperty<Node> headerProperty() {
         return header;
@@ -464,6 +487,10 @@ public class DialogPane extends Pane {
      * is lower precedence than the {@link #headerProperty() header node}, meaning
      * that if both the header node and the headerText properties are set, the
      * header text will not be displayed in a default DialogPane instance.
+     *
+     * <p>When headerText is set to a non-null value, this will result in the
+     * DialogPane switching its layout to the 'header' layout - as outlined in
+     * the {@link DialogPane} class javadoc.</p>
      */
     public final void setHeaderText(String headerText) {
         this.headerText.set(headerText);
@@ -481,6 +508,10 @@ public class DialogPane extends Pane {
      * is lower precedence than the {@link #headerProperty() header node}, meaning
      * that if both the header node and the headerText properties are set, the
      * header text will not be displayed in a default DialogPane instance.
+     *
+     * <p>When headerText is set to a non-null value, this will result in the
+     * DialogPane switching its layout to the 'header' layout - as outlined in
+     * the {@link DialogPane} class javadoc.</p>
      */
     public final StringProperty headerTextProperty() {
         return headerText;
