@@ -81,11 +81,14 @@ public class CLITest {
                 "-verbose", // verbose is required or test will call System.exit() on failures and break the build
                 "-srcfiles", fakeMainJar.getCanonicalPath(),
                 "-outdir", workDir.getCanonicalPath(),
-                "-outfile", "SimpleTest",
+                "-outfile", "SmokeParams",
                 "-appclass", "hello.HelloRectangle",
+                "-nosign",
                 "-native", "image",
-                "-name", "SimpleTest",
+                "-name", "SmokeParams",
                 "-BOptionThatWillNeverExist=true",
+                "-BuserJvmOptions=-Xmx1g",
+                "-BuserJvmOptions=-Xms512m",
                 "-BdesktopHint=false",
                 "-BshortcutHint=true",
                 "-Bruntime=" + runtime);
@@ -97,10 +100,10 @@ public class CLITest {
                 "-verbose", // verbose is required or test will call System.exit() on failures and break the build
                 "-srcfiles", fakeMainJar.getCanonicalPath(),
                 "-outdir", workDir.getCanonicalPath(),
-                "-outfile", "SimpleTest",
+                "-outfile", "PropsViaBundlerArgs",
                 "-appclass", "hello.HelloRectangle",
                 "-native", "image",
-                "-name", "SimpleTest",
+                "-name", "PropsViaBundlerArgs",
                 "-BjvmOptions=-Dsqe.foo.bar=baz -Dsqe.qux.corge=grault",
                 "-BuserJvmOptions=-Xmx=1g\n-Xms=512m",
                 "-BjvmProperties=sqe.aba.caba=dabacaba"
@@ -113,10 +116,10 @@ public class CLITest {
                 "-verbose", // verbose is required or test will call System.exit() on failures and break the build
                 "-srcfiles", fakeMainJar.getCanonicalPath(),
                 "-outdir", workDir.getCanonicalPath(),
-                "-outfile", "SimpleTest",
+                "-outfile", "DuplicateNameClash",
                 "-appclass", "hello.HelloRectangle",
                 "-native", "image",
-                "-name", "SimpleTest",
+                "-name", "DuplicateNameClash",
                 "-Bname=DuplicateTest");
     }
 
@@ -126,11 +129,11 @@ public class CLITest {
                 "-verbose", // verbose is required or test will call System.exit() on failures and break the build
                 "-srcfiles", fakeMainJar.getCanonicalPath(),
                 "-outdir", workDir.getCanonicalPath(),
-                "-outfile", "SimpleTest",
+                "-outfile", "DuplicateNameMatch",
                 "-appclass", "hello.HelloRectangle",
                 "-native", "image",
-                "-name", "SimpleTest",
-                "-Bname=SimpleTest");
+                "-name", "DuplicateNameMatch",
+                "-Bname=DuplicateNameMatch");
     }
 
     @Test(expected = PackagerException.class)
@@ -139,10 +142,9 @@ public class CLITest {
                 "-verbose", // verbose is required or test will call System.exit() on failures and break the build
                 "-srcdir", fakeMainJar.getCanonicalPath(), // should be a directory, not a jar
                 "-outdir", workDir.getCanonicalPath(),
-                "-outfile", "SimpleTest",
+                "-outfile", "InvalidSrcDir",
                 "-appclass", "hello.HelloRectangle",
                 "-native", "image",
-                "-name", "SimpleTest",
-                "-Bname=SimpleTest");
+                "-name", "InvalidSrcDir");
     }
 }
