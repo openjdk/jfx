@@ -39,7 +39,6 @@ import com.sun.javafx.binding.ErrorLoggingUtiltity;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
@@ -84,28 +83,21 @@ public class ListExpressionTest {
         assertEquals(2, op2.getSize());
     }
 
-    @Ignore("RT-27128")
     @Test
     public void testValueAt_Constant() {
-        synchronized(log) {
-            log.reset();
-            
-            assertNull(opNull.valueAt(0).get());
-            log.check(0, "WARNING", 1, "IndexOutOfBoundsException");
-            assertNull(opEmpty.valueAt(0).get());
-            log.check(0, "WARNING", 1, "IndexOutOfBoundsException");
+        assertNull(opNull.valueAt(0).get());
+        log.checkFine(IndexOutOfBoundsException.class);
+        assertNull(opEmpty.valueAt(0).get());
+        log.checkFine(IndexOutOfBoundsException.class);
 
-            assertEquals(data1_0, op1.valueAt(0).get());
-            log.reset();
-            assertNull(op1.valueAt(1).get());
-            log.check(0, "WARNING", 1, "IndexOutOfBoundsException");
+        assertEquals(data1_0, op1.valueAt(0).get());
+        assertNull(op1.valueAt(1).get());
+        log.checkFine(IndexOutOfBoundsException.class);
 
-            assertEquals(data2_0, op2.valueAt(0).get());
-            assertEquals(data2_1, op2.valueAt(1).get());
-            log.reset();
-            assertNull(op2.valueAt(2).get());
-            log.check(0, "WARNING", 1, "IndexOutOfBoundsException");
-        }
+        assertEquals(data2_0, op2.valueAt(0).get());
+        assertEquals(data2_1, op2.valueAt(1).get());
+        assertNull(op2.valueAt(2).get());
+        log.checkFine(IndexOutOfBoundsException.class);
     }
     
     @Test(expected = IllegalArgumentException.class)
@@ -113,51 +105,45 @@ public class ListExpressionTest {
         op1.valueAt(-1);
     }
 
-    @Ignore("RT-27128")
     @Test
     public void testValueAt_Variable() {
-        synchronized(log) {
-            final IntegerProperty index = new SimpleIntegerProperty(-1);
+        final IntegerProperty index = new SimpleIntegerProperty(-1);
 
-            log.reset();
-            assertNull(opNull.valueAt(index).get());
-            log.check(0, "WARNING", 1, "IndexOutOfBoundsException");
-            assertNull(opEmpty.valueAt(index).get());
-            log.check(0, "WARNING", 1, "IndexOutOfBoundsException");
-            assertNull(op1.valueAt(index).get());
-            log.check(0, "WARNING", 1, "IndexOutOfBoundsException");
-            assertNull(op2.valueAt(index).get());
-            log.check(0, "WARNING", 1, "IndexOutOfBoundsException");
+        assertNull(opNull.valueAt(index).get());
+        log.checkFine(IndexOutOfBoundsException.class);
+        assertNull(opEmpty.valueAt(index).get());
+        log.checkFine(ArrayIndexOutOfBoundsException.class);
+        assertNull(op1.valueAt(index).get());
+        log.checkFine(ArrayIndexOutOfBoundsException.class);
+        assertNull(op2.valueAt(index).get());
+        log.checkFine(ArrayIndexOutOfBoundsException.class);
 
-            index.set(0);
-            assertNull(opNull.valueAt(index).get());
-            log.check(0, "WARNING", 1, "IndexOutOfBoundsException");
-            assertNull(opEmpty.valueAt(index).get());
-            log.check(0, "WARNING", 1, "IndexOutOfBoundsException");
-            assertEquals(data1_0, op1.valueAt(index).get());
-            assertEquals(data2_0, op2.valueAt(index).get());
-            log.reset();
+        index.set(0);
+        assertNull(opNull.valueAt(index).get());
+        log.checkFine(IndexOutOfBoundsException.class);
+        assertNull(opEmpty.valueAt(index).get());
+        log.checkFine(IndexOutOfBoundsException.class);
+        assertEquals(data1_0, op1.valueAt(index).get());
+        assertEquals(data2_0, op2.valueAt(index).get());
 
-            index.set(1);
-            assertNull(opNull.valueAt(index).get());
-            log.check(0, "WARNING", 1, "IndexOutOfBoundsException");
-            assertNull(opEmpty.valueAt(index).get());
-            log.check(0, "WARNING", 1, "IndexOutOfBoundsException");
-            assertNull(op1.valueAt(index).get());
-            log.check(0, "WARNING", 1, "IndexOutOfBoundsException");
-            assertEquals(data2_1, op2.valueAt(index).get());
-            log.reset();
+        index.set(1);
+        assertNull(opNull.valueAt(index).get());
+        log.checkFine(IndexOutOfBoundsException.class);
+        assertNull(opEmpty.valueAt(index).get());
+        log.checkFine(IndexOutOfBoundsException.class);
+        assertNull(op1.valueAt(index).get());
+        log.checkFine(IndexOutOfBoundsException.class);
+        assertEquals(data2_1, op2.valueAt(index).get());
 
-            index.set(2);
-            assertNull(opNull.valueAt(index).get());
-            log.check(0, "WARNING", 1, "IndexOutOfBoundsException");
-            assertNull(opEmpty.valueAt(index).get());
-            log.check(0, "WARNING", 1, "IndexOutOfBoundsException");
-            assertNull(op1.valueAt(index).get());
-            log.check(0, "WARNING", 1, "IndexOutOfBoundsException");
-            assertNull(op2.valueAt(index).get());
-            log.check(0, "WARNING", 1, "IndexOutOfBoundsException");
-        }
+        index.set(2);
+        assertNull(opNull.valueAt(index).get());
+        log.checkFine(IndexOutOfBoundsException.class);
+        assertNull(opEmpty.valueAt(index).get());
+        log.checkFine(IndexOutOfBoundsException.class);
+        assertNull(op1.valueAt(index).get());
+        log.checkFine(IndexOutOfBoundsException.class);
+        assertNull(op2.valueAt(index).get());
+        log.checkFine(IndexOutOfBoundsException.class);
     }
 
     @Test

@@ -25,44 +25,71 @@
 
 package com.sun.javafx.binding;
 
-import java.io.ByteArrayOutputStream;
-import java.io.PrintStream;
+import java.util.logging.Handler;
+import java.util.logging.Level;
+import java.util.logging.LogManager;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
 
 import static org.junit.Assert.*;
 
 public class ErrorLoggingUtiltity {
 
-    private PrintStream defaultStream = System.err;
-    private ByteArrayOutputStream haystack;
+    static {
+        // initialize PlatformLogger
+        Logging.getLogger();
+    }
+
+    // getLogManager will redirect existing PlatformLogger to the Logger
+    private static final Logger logger = LogManager.getLogManager().getLogger("beans");
+
+    Level level;
+    LogRecord lastRecord;
+
+    Handler handler = new Handler() {
+
+        @Override
+        public void publish(LogRecord record) {
+            lastRecord = record;
+        }
+
+        @Override
+        public void flush() {
+        }
+
+        @Override
+        public void close() throws SecurityException {
+        }
+    };
 
     public void start() {
-        haystack = new ByteArrayOutputStream();
-        System.setErr(new PrintStream(haystack, true));
+        reset();
+        level = logger.getLevel();
+        logger.setLevel(Level.ALL);
+        logger.addHandler(handler);
     }
 
     public void stop() {
-        System.setErr(defaultStream);
-        haystack = null;
+        logger.setLevel(level);
+        logger.removeHandler(handler);
     }
     
     public void reset() {
-        if (haystack != null) {
-            haystack.reset();
-        }
+        lastRecord = null;
     }
 
-    public void check(Object... expected) {
-        final int n = expected.length / 2;
-        final String[] lines = (haystack == null)? new String[0] : haystack.toString().split("\n");
-        for (int i=0; i<n; i++) {
-            final int lineNumber = (Integer)expected[2*i];
-            final String needle = (String)expected[2*i+1];
-            assertTrue(String.format("Could not find '%s' in line %d: %s", needle, lineNumber, lines[lineNumber]), lines[lineNumber].contains(needle));
-        }
+    public void checkFine(Class expectedException) {
+        check(Level.FINE, expectedException);        
+    }
+
+    public void check(Level expectedLevel, Class expectedException) {
+        assertNotNull(lastRecord);
+        assertEquals(expectedLevel, lastRecord.getLevel());
+        assertEquals(expectedException, lastRecord.getThrown().getClass());
         reset();
     }
 
     public boolean isEmpty() {
-        return (haystack == null) || (haystack.size() == 0);
+        return lastRecord == null;
     }
 }
