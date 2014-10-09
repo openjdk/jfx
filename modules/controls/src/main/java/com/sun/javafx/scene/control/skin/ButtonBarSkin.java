@@ -135,19 +135,41 @@ public class ButtonBarSkin extends BehaviorSkinBase<ButtonBar, BehaviorBase<Butt
         final List<? extends Node> buttons = buttonBar.getButtons();
         final double buttonMinWidth = buttonBar.getButtonMinWidth();
         
-        Map<String, List<Node>> buttonMap = buildButtonMap(buttons);
         String buttonOrder = getSkinnable().getButtonOrder();
-        
-        if (buttonOrder == null || buttonOrder.isEmpty()) {
-            throw new IllegalStateException("ButtonBar buttonOrder string can not be null or empty"); //$NON-NLS-1$
-        }
-         
-        char[] buttonOrderArr = buttonOrder.toCharArray();
+
         layout.getChildren().clear();
-        
+
+        // empty is valid, because it is BUTTON_ORDER_NONE
+        if (buttonOrder == null) {
+            throw new IllegalStateException("ButtonBar buttonOrder string can not be null"); //$NON-NLS-1$
+        }
+
+        if (buttonOrder == ButtonBar.BUTTON_ORDER_NONE) {
+            // when using BUTTON_ORDER_NONE, we just lay out the buttons in the
+            // order they are specified, but we do right-align the buttons by
+            // inserting a dynamic spacer.
+            Spacer.DYNAMIC.add(layout, true);
+            for (Node btn: buttons) {
+                sizeButton(btn, buttonMinWidth, DO_NOT_CHANGE_SIZE, Double.MAX_VALUE);
+                layout.getChildren().add(btn);
+                HBox.setHgrow(btn, Priority.NEVER);
+            }
+        } else {
+            doButtonOrderLayout(buttonOrder);
+        }
+    }
+
+    private void doButtonOrderLayout(String buttonOrder) {
+        final ButtonBar buttonBar = getSkinnable();
+        final List<? extends Node> buttons = buttonBar.getButtons();
+        final double buttonMinWidth = buttonBar.getButtonMinWidth();
+        Map<String, List<Node>> buttonMap = buildButtonMap(buttons);
+
+        char[] buttonOrderArr = buttonOrder.toCharArray();
+
         int buttonIndex = 0; // to determine edge cases
         Spacer spacer = Spacer.NONE;
-        
+
         for (int i = 0; i < buttonOrderArr.length; i++) {
             char type = buttonOrderArr[i];
             boolean edgeCase = buttonIndex <= 0 && buttonIndex >= buttons.size()-1;
@@ -159,21 +181,19 @@ public class ButtonBarSkin extends BehaviorSkinBase<ButtonBar, BehaviorBase<Butt
             } else {
                 List<Node> buttonList = buttonMap.get(String.valueOf(type).toUpperCase());
                 if (buttonList != null) {
-                    
                     spacer.add(layout,edgeCase);
-                    
+
                     for (Node btn: buttonList) {
                         sizeButton(btn, buttonMinWidth, DO_NOT_CHANGE_SIZE, Double.MAX_VALUE);
-                        
+
                         layout.getChildren().add(btn);
                         HBox.setHgrow(btn, Priority.NEVER);
                         buttonIndex++;
                     }
                     spacer = spacer.replace(Spacer.NONE);
-                } 
+                }
             }
         }
-        
     }
     
     // Button sizing. If buttonUniformSize is true button size = max(buttonMinSize, max(all button pref sizes))

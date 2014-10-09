@@ -163,7 +163,8 @@ public class ButtonBar extends Control {
     /**
      * A button ordering string that specifies there is no button ordering. In 
      * other words, buttons will be placed in the order that exist in the 
-     * {@link #getButtons()} list.
+     * {@link #getButtons()} list. The only aspect of layout that makes this
+     * different than using an HBox is that the buttons are right-aligned.
      */
     public static final String BUTTON_ORDER_NONE   = ""; //$NON-NLS-1$
 
