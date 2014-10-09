@@ -250,17 +250,28 @@ public class MacAppBundler extends AbstractBundler {
             (s, p) -> new File(s));
 
     public static RelativeFileSet extractMacRuntime(String base, Map<String, ? super Object> params) {
-        String realBase;
         if (base.isEmpty()) {
             return null;
-        } else if (base.endsWith("/Home")) {
-            realBase = new File(base).getParentFile().getParentFile().toString();
-        } else if (base.endsWith("/Home/jre")) {
-            realBase = new File(base).getParentFile().getParentFile().getParentFile().toString();
-        } else {
-            realBase = base;
         }
-        return JreUtils.extractJreAsRelativeFileSet(realBase,
+
+        File workingBase = new File(base);
+        workingBase = workingBase.getAbsoluteFile();
+        try {
+            workingBase = workingBase.getCanonicalFile();
+        } catch (IOException ignore) {
+            // we tried, workingBase will remain absolute and not canonical.
+        }
+        
+        if (workingBase.getName().equals("jre")) {
+            workingBase = workingBase.getParentFile();
+        }
+        if (workingBase.getName().equals("Home")) {
+            workingBase = workingBase.getParentFile();
+        }
+        if (workingBase.getName().equals("Contents")) {
+            workingBase = workingBase.getParentFile();
+        }
+        return JreUtils.extractJreAsRelativeFileSet(workingBase.toString(),
                 MAC_RULES.fetchFrom(params));
     }
 
