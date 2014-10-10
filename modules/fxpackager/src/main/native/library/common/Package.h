@@ -78,10 +78,9 @@ private:
     
     bool FDebugging;
 
-    PropertyFile* FJVMUserConfig;
-
-    std::map<TString, TValueIndex> FDefaultJVMUserArgs;
-    std::map<TString, TValueIndex> FJVMUserArgs;
+    PropertyFile* FJVMUserConfig; // Contains JVM user overrides
+    std::map<TString, TValueIndex> FDefaultJVMUserArgs; // Contains JVM user defaults
+    std::map<TString, TValueIndex> FJVMUserArgs; // Contains a merge of JVM defaults and user overrides
 
 
     Package(void);
@@ -93,8 +92,7 @@ private:
 public:
     static Package& GetInstance();
     ~Package(void);
-    
-    void Shutdown();
+
     void FreeBootFields();
 
     void SetCommandLineArguments(int argc, TCHAR* argv[]);

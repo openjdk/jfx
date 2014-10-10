@@ -117,7 +117,5 @@ extern "C" {
     }
     
     void stop_launcher() {
-        Package& package = Package::GetInstance();
-        package.Shutdown();
     }
 }

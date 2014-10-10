@@ -76,6 +76,7 @@ void PropertyFile::SetReadOnly(bool Value) {
 void PropertyFile::Assign(std::map<TString, TString> Value) {
     FData.clear();
     FData.insert(Value.begin(), Value.end());
+    SetModified(true);
 }
 
 bool PropertyFile::LoadFromFile(const TString FileName) {

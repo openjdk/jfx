@@ -36,6 +36,9 @@ import java.util.List;
 import java.util.Map;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.event.TableModelEvent;
+import javax.swing.event.TableModelListener;
+import javax.swing.JOptionPane;
 
 public class TestPackager {
 
@@ -49,10 +52,10 @@ public class TestPackager {
         for (Map.Entry <String, String> entry : userOptions.entrySet()) {
             System.out.println("key:" + entry.getKey() + " value:" + entry.getValue());
         }
-        if (!userOptions.containsKey("-DfirstRunMs")) {
-            userOptions.put("-DfirstRunMs", Long.toString(System.currentTimeMillis()));
+        if (!userOptions.containsKey("-DfirstRunMs=")) {
+            userOptions.put("-DfirstRunMs=", Long.toString(System.currentTimeMillis()));
         }
-        userOptions.put("-DlastRunMs", Long.toString(System.currentTimeMillis()));
+        userOptions.put("-DlastRunMs=", Long.toString(System.currentTimeMillis()));
         ujo.setUserJVMOptions(userOptions);
 
         JFrame frame = new JFrame("Display Parameters");
@@ -83,6 +86,28 @@ public class TestPackager {
         model.addColumn("Key");
         model.addColumn("Effective");
         model.addColumn("Default");
+        model.addTableModelListener(new TableModelListener() {
+          public void tableChanged(TableModelEvent e) {
+             System.out.println(e);
+
+             switch (e.getType()) {
+               case TableModelEvent.UPDATE:
+                 int column = e.getColumn();
+                 int row = e.getFirstRow();
+
+                 if (column == 1) {
+                   String key = model.getValueAt(row, 0).toString();
+                   String value = model.getValueAt(row, column).toString();
+                   JOptionPane.showMessageDialog(null, key + "=" + value + " column=" + String.valueOf(column) + " row=" + String.valueOf(row), "Changed", JOptionPane.INFORMATION_MESSAGE);
+                   UserJvmOptionsService ujo = UserJvmOptionsService.getUserJVMDefaults();
+                   Map<String, String> userOptions = ujo.getUserJVMOptions();
+                   userOptions.put(key, value);
+                   ujo.setUserJVMOptions(userOptions);
+                 }
+                 break;
+             }
+          }
+        });
 
         Map<String, String> defaults = ujo.getUserJVMOptionDefaults();
         for (Map.Entry <String, String> entry : userOptions.entrySet()) {

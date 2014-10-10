@@ -133,7 +133,7 @@ public class LauncherUserJvmOptions implements UserJvmOptionsService {
     }
 
     @Override
-    public synchronized void setUserJVMOptions(Map<String, String> options) {
+    public void setUserJVMOptions(Map<String, String> options) {
         checkAllPermissions();
         synchronized (semaphore) {
             List<String> keys = new LinkedList<>();
@@ -150,7 +150,7 @@ public class LauncherUserJvmOptions implements UserJvmOptionsService {
     }
 
     @Override
-    public synchronized Map<String, String> getUserJVMOptionDefaults() {
+    public Map<String, String> getUserJVMOptionDefaults() {
         checkAllPermissions();
         synchronized (semaphore) {
             Map<String, String> results = new TreeMap<>();

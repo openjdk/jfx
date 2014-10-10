@@ -208,7 +208,7 @@ bool FilePath::CreateDirectory(TString Path) {
     std::list<TString> paths;
     TString lpath = Path;
 
-    while (lpath.empty() == false && FileExists(lpath) == false) {
+    while (lpath.empty() == false && DirectoryExists(lpath) == false) {
         paths.push_front(lpath);
         lpath = ExtractFilePath(lpath);
     }

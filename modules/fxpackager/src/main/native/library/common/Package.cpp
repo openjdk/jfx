@@ -188,7 +188,9 @@ void Package::SetCommandLineArguments(int argc, TCHAR* argv[]) {
                 Platform& platform = Platform::GetInstance();
 
                 if (platform.IsMainThread() == true) {
-                    printf("%s\n", arg.c_str()); //TODO remove
+#ifdef DEBUG
+                    printf("%s\n", arg.c_str());
+#endif //DEBUG
                     continue;
                 }
             }
@@ -215,14 +217,6 @@ Package& Package::GetInstance() {
 }
 
 Package::~Package(void) {
-}
-
-void Package::Shutdown() {
-    if (FJVMUserConfig->IsModified()) {
-        Platform& platform = Platform::GetInstance();
-        FJVMUserConfig->SaveToFile(platform.GetJVMUserArgsConfigFileName());
-    }
-
     delete FJVMUserConfig;
 }
 
@@ -266,6 +260,10 @@ void Package::SetJVMUserArgOverrides(std::map<TString, TValueIndex> Value) {
     }
 
     MergeJVMDefaultsWithOverrides();
+    if (FJVMUserConfig->IsModified()) {
+        Platform& platform = Platform::GetInstance();
+        FJVMUserConfig->SaveToFile(platform.GetJVMUserArgsConfigFileName());
+    }
 }
 
 std::map<TString, TValueIndex> Package::GetJVMUserArgs() {
