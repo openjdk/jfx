@@ -52,13 +52,14 @@ void PlatformString::initialize() {
     FData = NULL;
 }
 
-void PlatformString::CopyTString(char *Destination, size_t NumberOfElements, const char *Source) {
+void PlatformString::CopyString(char *Destination, size_t NumberOfElements, const char *Source) {
 #ifdef WINDOWS
     strcpy_s(Destination, NumberOfElements, Source);
 #endif //WINDOWS
 #ifdef POSIX
-    strcpy(Destination, Source);
+    strncpy(Destination, Source, NumberOfElements);
 #endif //POSIX
+    Destination[NumberOfElements - 1] = '\0';
 }
 
 PlatformString::PlatformString(void) {
@@ -131,14 +132,14 @@ PlatformString::PlatformString(const PlatformString &value) {
     initialize();
     FLength = value.FLength;
     FData = new char[FLength + 1];
-    PlatformString::CopyTString(FData, FLength + 1, value.FData);
+    PlatformString::CopyString(FData, FLength + 1, value.FData);
 }
 
 PlatformString::PlatformString(const char* value) {
     initialize();
     FLength = strlen(value);
     FData = new char[FLength + 1];
-    PlatformString::CopyTString(FData, FLength + 1, value);
+    PlatformString::CopyString(FData, FLength + 1, value);
 }
 
 PlatformString::PlatformString(size_t Value) {
@@ -151,7 +152,7 @@ PlatformString::PlatformString(size_t Value) {
     
     FLength = strlen(s.c_str());
     FData = new char[FLength + 1];
-    PlatformString::CopyTString(FData, FLength + 1, s.c_str());
+    PlatformString::CopyString(FData, FLength + 1, s.c_str());
 }
     
 PlatformString::PlatformString(const wchar_t* value) {
@@ -166,7 +167,7 @@ PlatformString::PlatformString(const std::string &value) {
     const char* lvalue = value.data();
     FLength = value.size();
     FData = new char[FLength + 1];
-    PlatformString::CopyTString(FData, FLength + 1, lvalue);
+    PlatformString::CopyString(FData, FLength + 1, lvalue);
 }
 
 PlatformString::PlatformString(const std::wstring &value) {
@@ -195,7 +196,7 @@ PlatformString::PlatformString(JNIEnv *env, jstring value) {
             }
 
             FData = new char[FLength + 1];
-            PlatformString::CopyTString(FData, FLength + 1, lvalue);
+            PlatformString::CopyString(FData, FLength + 1, lvalue);
 
             env->ReleaseStringUTFChars(value, lvalue);
 
@@ -329,6 +330,6 @@ PlatformString::operator std::wstring () {
 char* PlatformString::duplicate(const char* Value) {
     size_t length = strlen(Value);
     char* result = new char[length + 1];
-    PlatformString::CopyTString(result, length + 1, Value);
+    PlatformString::CopyString(result, length + 1, Value);
     return result;
 }

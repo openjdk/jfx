@@ -51,7 +51,7 @@ bool Helpers::SplitOptionIntoNameValue(TString option, TString& Name, TString& V
     return result;
 }
 
-TString Helpers::ReplaceTString(TString subject, const TString& search,
+TString Helpers::ReplaceString(TString subject, const TString& search,
                             const TString& replace) {
     size_t pos = 0;
     while((pos = subject.find(search, pos)) != TString::npos) {
@@ -66,7 +66,7 @@ TString Helpers::ConvertIdToFilePath(TString Value) {
     search = '/';
     TString replace;
     replace = '\\';
-    TString result = ReplaceTString(Value, search, replace);
+    TString result = ReplaceString(Value, search, replace);
     return result;
 }
 
@@ -75,9 +75,9 @@ TString Helpers::ConvertIdToJavaPath(TString Value) {
     search = '.';
     TString replace;
     replace = '/';
-    TString result = ReplaceTString(Value, search, replace);
+    TString result = ReplaceString(Value, search, replace);
     search = '\\';
-    result = ReplaceTString(result, search, replace);
+    result = ReplaceString(result, search, replace);
     return result;
 }
 
@@ -86,7 +86,7 @@ TString Helpers::ConvertPathToId(TString Value) {
     search = '/';
     TString replace;
     replace = '.';
-    TString result = ReplaceTString(Value, search, replace);
+    TString result = ReplaceString(Value, search, replace);
     return result;
 }
 

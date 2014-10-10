@@ -71,11 +71,12 @@ public:
     virtual Module LoadLibrary(TString FileName);
     virtual void FreeLibrary(Module AModule);
     virtual Procedure GetProcAddress(Module AModule, std::string MethodName);
-    virtual int GetProcessID();
-    virtual bool IsNativeDebuggerPresent();
 
     virtual bool IsMainThread();
     virtual size_t GetMemorySize();
+
+    virtual int GetProcessID();
+    virtual bool IsNativeDebuggerPresent();
 };
 #pragma warning( pop ) // C4250
 

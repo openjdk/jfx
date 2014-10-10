@@ -62,7 +62,8 @@ LinuxPlatform::~LinuxPlatform(void) {
 }
 
 void LinuxPlatform::ShowError(TString title, TString description) {
-    printf(PlatformString(title).toPlatformString(), PlatformString(description).toPlatformString());
+    printf("%s %s\n", PlatformString(title).toPlatformString(), PlatformString(description).toPlatformString());
+    fflush(stdout);
 }
 
 void LinuxPlatform::ShowError(TString description) {
@@ -114,7 +115,7 @@ int LinuxPlatform::GetProcessID() {
 
 TString LinuxPlatform::GetJvmPath() {
     TString result = FilePath::IncludeTrailingSlash(GetPackageRootDirectory()) +
-        TString("runtime/jre/lib/") + TString(JAVAARCH) + TString("/client/libjvm.so");
+        "runtime/jre/lib/"JAVAARCH"/client/libjvm.so";
 
     if (FilePath::FileExists(result) == false) {
         result = FilePath::IncludeTrailingSlash(GetPackageRootDirectory()) +
@@ -189,10 +190,10 @@ size_t LinuxPlatform::GetMemorySize() {
 
 /** Provide an abstraction for difference in the platform APIs,
      e.g. string manipulation functions, etc. */
-#include<stdio.h>
-#include<string.h>
-#include<strings.h>
-#include<sys/stat.h>
+#include <stdio.h>
+#include <string.h>
+#include <strings.h>
+#include <sys/stat.h>
 
 #define TCHAR char
 

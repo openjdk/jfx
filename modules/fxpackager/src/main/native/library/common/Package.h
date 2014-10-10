@@ -43,7 +43,7 @@
 #include <map>
 #include <list>
 
-class BootFields {
+class PackageBootFields {
 public:
     enum MemoryState {msManual, msAuto};
     
@@ -74,7 +74,7 @@ private:
     void operator=(Package const&); // Don't implement
 
 private:
-    BootFields* FBootFields;
+    PackageBootFields* FBootFields;
     
     bool FDebugging;
 
@@ -121,7 +121,7 @@ public:
     TString GetCommandName();
     
     size_t GetMemorySize();
-    BootFields::MemoryState GetMemoryState();
+    PackageBootFields::MemoryState GetMemoryState();
 };
 
 #endif //PACKAGE_H

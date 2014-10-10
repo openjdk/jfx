@@ -1,7 +1,5 @@
 //
-//  Prefix header
-//
-//  The contents of this file are implicitly included at the beginning of every source file.
+// Prefix header for all source files of the '%s' target in the '%s' project
 //
 
 #ifdef __OBJC__

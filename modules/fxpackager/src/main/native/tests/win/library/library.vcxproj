@@ -43,7 +43,8 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
     <EmbedManifest>false</EmbedManifest>
-    <OutDir>C:\Projects\Packager\MyApp</OutDir>
+    <OutDir>..\..\..\..\..\..\build\dev\DevTest\</OutDir>
+    <TargetName>$(TargetName)</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -61,7 +62,7 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <ModuleDefinitionFile>.\main.def</ModuleDefinitionFile>
-      <OutputFile>C:\Projects\Packager\MyApp\$(TargetName)$(TargetExt)</OutputFile>
+      <OutputFile>..\..\..\..\..\..\build\dev\DevTest\$(TargetName)$(TargetExt)</OutputFile>
     </Link>
     <Midl>
       <MkTypLibCompatible>false</MkTypLibCompatible>

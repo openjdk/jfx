@@ -88,7 +88,8 @@ public:
         }
 
         if (FSize != 0) {
-            FData = new T[Size];
+            FData = new T[FSize];
+            memset(FData, 0, FSize * sizeof(T));
         }
     }
 
@@ -106,7 +107,7 @@ private:
 
     void initialize();
 
-    static void CopyTString(char *Destination, size_t NumberOfElements, const char *Source);
+    static void CopyString(char *Destination, size_t NumberOfElements, const char *Source);
     static WideString MultibyteStringToWideString(const char* value);
     static MultibyteString WideStringToMultibyteString(const wchar_t* value);
 

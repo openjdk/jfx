@@ -112,12 +112,12 @@ bool JavaVMCreate(JavaVM** jvm, JNIEnv** env, void* jvmArgs) {
         return result;
     }
 #else
-    bool JavaVMCreate(int argc, char *argv[]) {
+    bool JavaVMCreate(size_t argc, char *argv[]) {
         if (FCreateProc == NULL) {
             return false;
         }
 
-        return FCreateProc(argc, argv,
+        return FCreateProc((int)argc, argv,
             0, NULL,
             0, NULL,
             "",
@@ -344,7 +344,7 @@ bool JavaVirtualMachine::StartJVM() {
     options.AppendValues(package.GetJVMArgs());
     options.AppendValues(RemoveTrailingEquals(package.GetJVMUserArgs()));
     
-    if (package.GetMemoryState() == BootFields::msAuto) {
+    if (package.GetMemoryState() == PackageBootFields::msAuto) {
         options.ReplaceValue(_T("-Xms"), _T("256m"));
         options.ReplaceValue(_T("-Xmx"), PlatformString(package.GetMemorySize()).toString());
     }

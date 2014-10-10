@@ -142,7 +142,7 @@ std::list<TString> GenericPlatform::LoadFromFile(TString FileName) {
 void GenericPlatform::SaveToFile(TString FileName, std::list<TString> Contents) {
     TString path = FilePath::ExtractFilePath(FileName);
 
-    if (FilePath::FileExists(path) == false) {
+    if (FilePath::DirectoryExists(path) == false) {
         FilePath::CreateDirectory(path);
     }
 

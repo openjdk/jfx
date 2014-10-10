@@ -45,8 +45,8 @@ private:
 
 public:
     static bool SplitOptionIntoNameValue(TString option, TString& Name, TString& Value);
-    static TString ReplaceTString(TString subject, const TString& search,
-                                const TString& replace);
+    static TString ReplaceString(TString subject, const TString& search,
+                                 const TString& replace);
     static TString ConvertIdToFilePath(TString Value);
     static TString ConvertIdToJavaPath(TString Value);
     static TString ConvertPathToId(TString Value);

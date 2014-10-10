@@ -74,7 +74,7 @@ TString Macros::ExpandMacros(TString Value) {
 
         if (Value.find(name) != TString::npos) {
             TString lvalue = iterator->second;
-            result = Helpers::ReplaceTString(Value, name, lvalue);
+            result = Helpers::ReplaceString(Value, name, lvalue);
             break;
         }
     }

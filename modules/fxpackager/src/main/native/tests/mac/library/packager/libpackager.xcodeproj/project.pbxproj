@@ -324,7 +324,7 @@
 		DE0959C119A51A02008845F2 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 0510;
+				LastUpgradeCheck = 0600;
 				ORGANIZATIONNAME = "___FULLUSERNAME___";
 				TargetAttributes = {
 					DE0959DB19A51A02008845F2 = {
@@ -435,7 +435,7 @@
 				CLANG_WARN_INT_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				CONFIGURATION_BUILD_DIR = ../../../../../../../../build/dev/DevTest.app/Contents/MacOS;
+				CONFIGURATION_BUILD_DIR = ../../../../../../../build/dev/DevTest.app/Contents/MacOS;
 				COPY_PHASE_STRIP = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_DYNAMIC_NO_PIC = NO;
@@ -495,12 +495,14 @@
 		DE0959EE19A51A02008845F2 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
 				CONFIGURATION_BUILD_DIR = ../../../../../../../build/dev/DevTest.app/Contents/MacOS;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "packager/libpackager-Prefix.pch";
 				PRODUCT_NAME = libpackager;
+				SDKROOT = macosx;
 				USER_HEADER_SEARCH_PATHS = "/System/Library/Frameworks/JavaVM.framework/Headers /Library/Java/JavaVirtualMachines/jdk1.8.0_20.jdk/Contents/Home/include/**";
 			};
 			name = Debug;
@@ -508,11 +510,13 @@
 		DE0959EF19A51A02008845F2 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "packager/libpackager-Prefix.pch";
 				PRODUCT_NAME = libpackager;
+				SDKROOT = macosx;
 				USER_HEADER_SEARCH_PATHS = "/System/Library/Frameworks/JavaVM.framework/Headers /Library/Java/JavaVirtualMachines/jdk1.8.0_20.jdk/Contents/Home/include/**";
 			};
 			name = Release;
@@ -527,7 +531,7 @@
 					"$(inherited)",
 				);
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
-				GCC_PREFIX_HEADER = "packager/packager-Prefix.pch";
+				GCC_PREFIX_HEADER = "packager/libpackager-Prefix.pch";
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"DEBUG=1",
 					"$(inherited)",
@@ -549,7 +553,7 @@
 					"$(inherited)",
 				);
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
-				GCC_PREFIX_HEADER = "packager/packager-Prefix.pch";
+				GCC_PREFIX_HEADER = "packager/libpackager-Prefix.pch";
 				INFOPLIST_FILE = "packagerTests/libpackagerTests-Info.plist";
 				PRODUCT_NAME = libpackagerTests;
 				TEST_HOST = "$(BUNDLE_LOADER)";

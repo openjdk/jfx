@@ -183,11 +183,7 @@ public:
     virtual Module LoadLibrary(TString FileName) = 0;
     virtual void FreeLibrary(Module Module) = 0;
     virtual Procedure GetProcAddress(Module Module, std::string MethodName) = 0;
-
-    virtual Platform::DebugState GetDebugState() = 0;
-    virtual int GetProcessID() = 0;
-    virtual bool IsNativeDebuggerPresent() = 0;
-
+    
     virtual bool IsMainThread() = 0;
     virtual size_t GetMemorySize() = 0;
     
@@ -195,6 +191,10 @@ public:
 
     virtual std::list<TString> LoadFromFile(TString FileName) = 0;
     virtual void SaveToFile(TString FileName, std::list<TString> Contents) = 0;
+
+    virtual Platform::DebugState GetDebugState() = 0;
+    virtual int GetProcessID() = 0;
+    virtual bool IsNativeDebuggerPresent() = 0;
 };
 
 

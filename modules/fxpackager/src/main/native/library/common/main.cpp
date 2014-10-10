@@ -41,59 +41,29 @@
 
 #include "jni.h"
 
-#include "Lock.h" //TODO remove?
-
 #ifdef WINDOWS
 #include <Shellapi.h>
 #endif
 
-#ifdef MAC
-#include <locale.h>
-#include <pthread.h>
-#endif //MAC
 
-
-// Create the VM from a thread so we have the main thread.
-class VMThread : public PlatformThread {
-public:
-    virtual void Execute() {
-        Platform& platform = Platform::GetInstance();
-        Package& package = Package::GetInstance();
-
-        TString appFolder = package.GetPackageAppDirectory();
-        platform.SetCurrentDirectory(appFolder);
-        JavaVirtualMachine javavm;
-
-        if (javavm.StartJVM() == true) {
-        }
-        else {
-            platform.ShowError(_T("Failed to launch JVM\n"));
-        }
-    }
-};
-
-//TODO update comment.
 /*
-   This is launcher program for application package on Windows.
+This is launcher program for application packaging on Windows, Mac and Linux.
 
-   Basic approach:
-      - we read app/package.cfg file to find out details on what and how to launch
-         (package.cfg is property file)
-      - load JVM with requested JVM settings (client JVM if availble, server otherwise)
-      - load embedded launcher class com.javafx.main.Main class and run main()
-      - wait for JVM to exit and then exit from WinMain
-      - support a way to "debug" application by setting env variable
-        or passing "/Debug" option on command line
-      - TODO: default directory is set to user's Documents and Settings
-      - TODO: application folder is added to the library path (so LoadLibrary()) works
+Basic approach:
+  - Launcher executable loads packager.dll/libpackager.dylib/libpackager.so and calls start_launcher below.
+  - Reads app/package.cfg or Info.plist or app/<appname>.cfg for application launch configuration
+     (package.cfg is property file).
+  - Load JVM with requested JVM settings (bundled client JVM if availble, server or installed JVM otherwise).
+  - Wait for JVM to exit and then exit from Main
+  - To debug application by set env variable (TODO) or pass "/Debug" option on command line.
+  - TODO: default directory is set to user's Documents and Settings.
+  - Application folder is added to the library path (so LoadLibrary()) works.
 
-   Limitations and future work:
-      - Running Java code in primordial thread may cause problems
-        (example: can not use custom stack size).
-        Solution used by java launcher is to create a new thread to invoke JVM.
-        See CR 6316197 for more information.
-      - Reuse code between windows/linux launchers and borrow more code from
-        java.exe launcher implementation.
+Limitations and future work:
+  - Running Java code in primordial thread may cause problems
+    (example: can not use custom stack size).
+    Solution used by java launcher is to create a new thread to invoke JVM.
+    See CR 6316197 for more information.
 */
 
 
@@ -120,6 +90,7 @@ extern "C" {
 #endif //WINDOWS
 #ifdef POSIX
             printf("%s\n", PlatformString(platform.GetProcessID()).c_str());
+            fflush(stdout);
 #endif //POSIX
                 while (platform.IsNativeDebuggerPresent() == false) {
                 }
