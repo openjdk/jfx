@@ -35,6 +35,7 @@ import javafx.scene.input.MouseButton;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
+import javafx.scene.Node;
 import com.sun.javafx.Utils;
 import com.sun.javafx.scene.control.behavior.ScrollBarBehavior;
 
@@ -452,7 +453,7 @@ public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior
         ScrollBar s = getSkinnable();
         double clampedValue = Utils.clamp(s.getMin(), s.getValue(), s.getMax());
         trackPos = (s.getMax() - s.getMin() > 0) ? ((trackLength - thumbLength) * (clampedValue - s.getMin()) / (s.getMax() - s.getMin())) : (0.0F);
-
+        
         if (!IS_TOUCH_SUPPORTED) {
             if (s.getOrientation() == Orientation.VERTICAL) {
                 trackPos += decButton.prefHeight(-1);
@@ -460,11 +461,11 @@ public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior
                 trackPos += decButton.prefWidth(-1);
             }
         }
-
+        
         thumb.setTranslateX( snapPosition(s.getOrientation() == Orientation.VERTICAL ? snappedLeftInset() : trackPos + snappedLeftInset()));
         thumb.setTranslateY( snapPosition(s.getOrientation() == Orientation.VERTICAL ? trackPos + snappedTopInset() : snappedTopInset()));
     }
-
+    
     @Override protected void layoutChildren(final double x, final double y,
             final double w, final double h) {
         
@@ -537,7 +538,7 @@ public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior
 
             s.resize(snapSize(s.getWidth()), snapSize(s.getHeight()));
         }
-
+        
         // things should be invisible only when well below minimum length
         if (s.getOrientation() == Orientation.VERTICAL && h >= (computeMinHeight(-1, (int)y , snappedRightInset(), snappedBottomInset(), (int)x) - (y+snappedBottomInset())) ||
             s.getOrientation() == Orientation.HORIZONTAL && w >= (computeMinWidth(-1, (int)y , snappedRightInset(), snappedBottomInset(), (int)x) - (x+snappedRightInset()))) {
@@ -573,6 +574,23 @@ public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior
                 }
             }
         }
+    }
+
+    
+    public Node getThumb() {
+        return thumb;
+    }
+    
+    public Node getTrack() {
+        return track;
+    }
+    
+    public Node getIncButton() {
+        return incButton;
+    }
+    
+    public Node getDecButton() {
+        return decButton;
     }
     
     private static class EndButton extends Region {
