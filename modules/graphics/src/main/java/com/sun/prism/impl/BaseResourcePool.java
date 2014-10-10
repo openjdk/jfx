@@ -34,61 +34,58 @@ import java.lang.ref.WeakReference;
  * @param <T> the type of objects stored in this resource pool
  */
 public abstract class BaseResourcePool<T> implements ResourcePool<T> {
-    // Number of calls to checkAndDispose() before we consider a resource to
-    // have not been used in a hypothetical "FOREVER".
+    // Number of calls to freeDisposalRequestedAndCheckResources() before we
+    // consider a resource to have not been used in a hypothetical "FOREVER".
     private static final int FOREVER = 1024;
+    // Number of calls to freeDisposalRequestedAndCheckResources() before we
+    // consider a resource to have not been used "RECENTLY", with different
+    // cutoffs for useful and unuseful textures.
+    private static final int RECENTLY_USEFUL = 100;
+    private static final int RECENT = 10;
 
-    /* 
-     * Which resources to clean up in a call to {@link cleanup}.
-     */
-    public static enum PruningLevel {
-        /**
-         * Only resources that have been reclaimed through GC or other
-         * asynchronous disposal mechanisms should be pruned.
-         * This basically makes sure that our resource accounting is up
-         * to date.
-         */
-        OBSOLETE,
+    static interface Predicate {
+        boolean test(ManagedResource<?> mr);
+    }
 
-        /**
-         * Only (unlocked, nonpermanent) resources that have not been used in
-         * a very long time should be pruned.
-         */
-        UNUSED_FOREVER,
-
-        /**
-         * Only (unlocked, nonpermanent) resources that hold no interesting
-         * data should be pruned.
-         */
-        UNINTERESTING,
-
-        /**
-         * Any resource that is unlocked and nonpermanent should be pruned.
-         */
-        ALL_UNLOCKED
+    private static final Predicate stageTesters[];
+    private static final String    stageReasons[];
+    static {
+        stageTesters = new Predicate[6];
+        stageReasons = new String[6];
+        stageTesters[0] = (mr) -> { return !mr.isInteresting() && mr.getAge() > FOREVER; };
+        stageReasons[0] = "Pruning unuseful older than "+FOREVER;
+        stageTesters[1] = (mr) -> { return !mr.isInteresting() && mr.getAge() > FOREVER/2; };
+        stageReasons[1] = "Pruning unuseful older than "+FOREVER/2;
+        stageTesters[2] = (mr) -> { return !mr.isInteresting() && mr.getAge() > RECENT; };
+        stageReasons[2] = "Pruning unuseful older than "+RECENT;
+        stageTesters[3] = (mr) -> { return mr.getAge() > FOREVER; };
+        stageReasons[3] = "Pruning all older than "+FOREVER;
+        stageTesters[4] = (mr) -> { return mr.getAge() > FOREVER/2; };
+        stageReasons[4] = "Pruning all older than "+FOREVER/2;
+        stageTesters[5] = (mr) -> { return mr.getAge() > RECENTLY_USEFUL; };
+        stageReasons[5] = "Pruning all older than "+RECENTLY_USEFUL;
     }
 
     long managedSize;
+    final long origTarget;
+    long curTarget;
     final long maxSize;
     final ResourcePool<T> sharedParent;
     private final Thread managerThread;
     private WeakLinkedList<T> resourceHead;
 
-    protected BaseResourcePool() {
-        this(null, Long.MAX_VALUE);
-    }
-
-    protected BaseResourcePool(long max) {
-        this(null, max);
+    protected BaseResourcePool(long target, long max) {
+        this(null, target, max);
     }
 
     protected BaseResourcePool(ResourcePool<T> parent) {
-        this(parent, parent.max());
+        this(parent, parent.target(), parent.max());
     }
 
-    protected BaseResourcePool(ResourcePool<T> parent, long max) {
+    protected BaseResourcePool(ResourcePool<T> parent, long target, long max) {
         this.resourceHead = new WeakLinkedList<>();
         this.sharedParent = parent;
+        this.origTarget = this.curTarget = target;
         this.maxSize = ((parent == null)
                         ? max
                         : Math.min(parent.max(), max));
@@ -104,12 +101,14 @@ public abstract class BaseResourcePool<T> implements ResourcePool<T> {
      * <ol>
      * <li> Prune any resources which are already free, but have not been
      *      accounted for yet.
-     * <li> Prune any resources that have not been used in a very long time.
-     * <li> Go through 2 more passes cleaning out any resources that have
-     *      not been used in a long time with decreasing cutoff limits for
-     *      the maximum age of the resource.
-     * <li> Finally, prune any resources that are not currently being used
-     *      (i.e. locked or permanent).
+     * <li> Go through a few passes cleaning out any non-interesting resources
+     *      that have not been used in a long time with decreasing cutoff
+     *      limits for the maximum age of the resource.
+     * <li> Go through more passes cleaning out even interesting resources that
+     *      have not been used in a fairly long time with decreasing age limits.
+     * <li> Attempt to grow the target to accommodate the new request.
+     * <li> Finally, prune any resources that are not currently in the process
+     *      of being used (i.e. locked or permanent).
      * </ol>
      * 
      * @param needed
@@ -117,70 +116,122 @@ public abstract class BaseResourcePool<T> implements ResourcePool<T> {
      */
     public boolean cleanup(long needed) {
         if (used() + needed <= target()) return true;
-        cleanup(PruningLevel.OBSOLETE, FOREVER);
-        if (used() + needed <= target()) return true;
-        cleanup(PruningLevel.UNUSED_FOREVER, FOREVER);
-        if (used() + needed <= target()) return true;
-        cleanup(PruningLevel.UNUSED_FOREVER, FOREVER/2);
-        if (used() + needed <= target()) return true;
-        cleanup(PruningLevel.UNUSED_FOREVER, FOREVER/4);
-        if (used() + needed <= target()) return true;
-        cleanup(PruningLevel.UNINTERESTING, FOREVER);
-        if (used() + needed <= target()) return true;
-        System.gc();
-        cleanup(PruningLevel.ALL_UNLOCKED, FOREVER);
-        if (used() + needed <= max()) return true;
-        // Our alternative is to return false and cause an allocation
-        // failure which is usually bad news for any SG, so it is worth
-        // sleeping to give the GC some time to find a dead resource that
-        // was dropped on the floor...
-        System.gc();
-        try { Thread.sleep(20); } catch (InterruptedException e) { }
-        cleanup(PruningLevel.ALL_UNLOCKED, FOREVER);
-        return (used() + needed <= max());
-    }
-
-    private void cleanup(PruningLevel plevel, int max_age) {
+        long wasused = used();
+        long wanted = target() / 16;
+        if (wanted < needed) {
+            wanted = needed;
+        }
         if (PrismSettings.poolDebug) {
-            switch (plevel) {
-                case OBSOLETE: System.err.print("Pruning"); break;
-                case UNUSED_FOREVER: System.err.print("Cleaning up unused in "+max_age); break;
-                case UNINTERESTING: System.err.print("Cleaning up uninteresting"); break;
-                case ALL_UNLOCKED: System.err.print("Aggressively cleaning up"); break;
-                default: throw new InternalError("Unrecognized pruning level: "+plevel);
-            }
-            System.err.println(" pool: "+this);
+            System.err.printf("Need %,d (hoping for %,d) from pool: %s\n", needed, wanted, this);
             printSummary(false);
         }
-        long wasused = used();
+
+        try {
+            // First cleanup pass is just for previously freed resources that
+            // are in the Disposer queue already or were manually freed by
+            // mechanisms and are still in the accounting list.
+            // The pruner predicate choose no additional resources to free.
+            Disposer.cleanUp();
+            if (PrismSettings.poolDebug) System.err.println("Pruning obsolete in pool: "+this);
+            cleanup((mr) -> { return false; });
+            if (used() + wanted <= target()) return true;
+
+            // Multiple stages of pruning useful and unuseful resources of
+            // various ages as determined by the static initializer above.
+            for (int stage = 0; stage < stageTesters.length; stage++) {
+                if (PrismSettings.poolDebug) {
+                    System.err.println(stageReasons[stage]+" in pool: "+this);
+                }
+                cleanup(stageTesters[stage]);
+                if (used() + wanted <= target()) return true;
+            }
+
+            // Now look to grow the target if we can satisfy this allocation at
+            // less than max().
+            long rem = max() - used();
+            if (wanted > rem) {
+                wanted = needed;
+            }
+            if (wanted <= rem) {
+                long grow = (max() - origTarget()) / 32;
+                if (grow < wanted) {
+                    grow = wanted;
+                } else if (grow > rem) {
+                    grow = rem;
+                }
+                setTarget(used() + grow);
+                if (PrismSettings.poolDebug || PrismSettings.verbose) {
+                    System.err.printf("Growing pool %s target to %,d\n", this, target());
+                }
+                return true;
+            }
+
+            // Finally, look to the garbage collector to dislodge some unreferenced
+            // resources that we can free with a very aggressive age set of (0, 0)
+            // which will target all unlocked/non-permanent textures.
+            // Two tries, one with just a gc(), and a desperate one with a sleep...
+            for (int i = 0; i < 2; i++) {
+                pruneLastChance(i > 0);
+                if (used() + needed <= max()) {
+                    if (used() + needed > target()) {
+                        setTarget(used() + needed);
+                        if (PrismSettings.poolDebug || PrismSettings.verbose) {
+                            System.err.printf("Growing pool %s target to %,d\n", this, target());
+                        }
+                    }
+                    return true;
+                }
+            }
+
+            // That was our last gasp, we either succeeded in making room under
+            // the max() amount or we failed and need to return false.
+            return false;
+        } finally {
+            if (PrismSettings.poolDebug) {
+                System.err.printf("cleaned up %,d from pool: %s\n", wasused - used(), this);
+                printSummary(false);
+                System.err.println();
+            }
+        }
+    }
+
+    private void pruneLastChance(boolean desperate) {
+        System.gc();
+        if (desperate) {
+            // Our alternative is to return false here and cause an allocation
+            // failure which is usually bad news for any SG, so it is worth
+            // sleeping on the second time around to give one last GC some time
+            // to find a dead resource that was dropped on the floor...
+            try { Thread.sleep(20); }
+            catch (InterruptedException e) { }
+        }
+        Disposer.cleanUp();
+        if (PrismSettings.poolDebug) {
+            if (desperate) {
+                System.err.print("Last chance pruning");
+            } else {
+                System.err.print("Pruning everything");
+            }
+            System.err.println(" in pool: "+this);
+        }
+        cleanup((mr) -> { return true; });
+    }
+
+    private void cleanup(Predicate predicate) {
         WeakLinkedList<T> prev = resourceHead;
         WeakLinkedList<T> cur = prev.next;
         while (cur != null) {
-            ManagedResource<?> mr = cur.getResource();
+            ManagedResource<T> mr = cur.getResource();
             if (ManagedResource._isgone(mr)) {
-                if (PrismSettings.poolDebug) {
-                    System.err.println("pruning: "+mr+" ("+cur.size+")"+
-                                       ((mr == null) ? "" :
-                                        ((mr.isPermanent() ? " perm" : "") +
-                                         (mr.isLocked() ? " lock" : "") +
-                                         (mr.isInteresting() ? " int" : ""))));
-                }
+                if (PrismSettings.poolDebug) showLink("unlinking", cur, false);
                 recordFree(cur.size);
                 cur = cur.next;
                 prev.next = cur;
-            } else if (plevel != PruningLevel.OBSOLETE &&
-                       !mr.isPermanent() &&
+            } else if (!mr.isPermanent() &&
                        !mr.isLocked() &&
-                       (plevel == PruningLevel.ALL_UNLOCKED ||
-                        (plevel == PruningLevel.UNINTERESTING && !mr.isInteresting()) ||
-                        (/* plevel == PruningLevel.UNUSED_FOREVER && */ mr.getAge() >= max_age)))
+                       predicate.test(mr))
             {
-                if (PrismSettings.poolDebug) {
-                    System.err.println("disposing: "+mr+" ("+cur.size+") age="+mr.getAge()+
-                                       (mr.isPermanent() ? " perm" : "") +
-                                       (mr.isLocked() ? " lock" : "") +
-                                       (mr.isInteresting() ? " int" : ""));
-                }
+                if (PrismSettings.poolDebug) showLink("pruning", cur, true);
                 mr.free();
                 mr.resource = null;
                 recordFree(cur.size);
@@ -191,11 +242,20 @@ public abstract class BaseResourcePool<T> implements ResourcePool<T> {
                 cur = cur.next;
             }
         }
-        if (PrismSettings.poolDebug) {
-            long isused = used();
-            System.err.println("cleaned up "+(wasused - isused)+" from pool: "+this);
-            printSummary(false);
+    }
+
+    static void showLink(String label, WeakLinkedList<?> cur, boolean showAge) {
+        ManagedResource<?> mr = cur.getResource();
+        System.err.printf("%s: %s (size=%,d)", label, mr, cur.size);
+        if (mr != null) {
+            if (showAge) {
+                System.err.printf(" (age=%d)", mr.getAge());
+            }
+            if (mr.isPermanent())   System.err.print(" perm");
+            if (mr.isLocked())      System.err.print(" lock");
+            if (mr.isInteresting()) System.err.print(" int");
         }
+        System.err.println();
     }
 
     /**
@@ -246,7 +306,12 @@ public abstract class BaseResourcePool<T> implements ResourcePool<T> {
                 System.err.println("Outstanding resource locks detected:");
             }
             printSummary(true);
+            System.err.println();
         }
+    }
+
+    static String commas(long v) {
+        return String.format("%,d", v);
     }
 
     public void printSummary(boolean printlocksources) {
@@ -261,13 +326,11 @@ public abstract class BaseResourcePool<T> implements ResourcePool<T> {
         boolean trackLockSources = ManagedResource.trackLockSources;
 
         double percentUsed = used() * 100.0 / max();
-        double percentManaged = managed() * 100.0 / max();
-        String str =
-            String.format("%s: %,d used (%.1f%%), %,d managed (%.1f%%), %,d total",
+        double percentTarget = target() * 100.0 / max();
+        System.err.printf("%s: %,d used (%.1f%%), %,d target (%.1f%%), %,d max\n",
                           this, used(), percentUsed,
-                          managed(), percentManaged,
+                          target(), percentTarget,
                           max());
-        System.err.println(str);
 
         for (WeakLinkedList<T> cur = resourceHead.next; cur != null; cur = cur.next) {
             ManagedResource<T> mr = cur.getResource();
@@ -302,20 +365,18 @@ public abstract class BaseResourcePool<T> implements ResourcePool<T> {
 
         double avg_age = ((double) total_age) / total;
         System.err.println(total+" total resources being managed");
-        System.err.println(String.format("average resource age is %.1f frames", avg_age));
+        System.err.printf("average resource age is %.1f frames\n", avg_age);
         printpoolpercent(numancient, total, "at maximum supported age");
         printpoolpercent(numpermanent, total, "marked permanent");
         printpoolpercent(nummismatched, total, "have had mismatched locks");
         printpoolpercent(numlocked, total, "locked");
         printpoolpercent(numinteresting, total, "contain interesting data");
         printpoolpercent(numgone, total, "disappeared");
-        System.err.println();
     }
 
     private static void printpoolpercent(int stat, int total, String desc) {
         double percent = stat * 100.0 / total;
-        String str = String.format("%,d resources %s (%.1f%%)", stat, desc, percent);
-        System.err.println(str);
+        System.err.printf("%,d resources %s (%.1f%%)\n", stat, desc, percent);
     }
 
     @Override
@@ -339,6 +400,29 @@ public abstract class BaseResourcePool<T> implements ResourcePool<T> {
     @Override
     public final long max() {
         return maxSize;
+    }
+
+    @Override
+    public final long origTarget() {
+        return origTarget;
+    }
+
+    @Override
+    public final long target() {
+        return curTarget;
+    }
+
+    @Override
+    public final void setTarget(long newTarget) {
+        if (newTarget > maxSize) {
+            throw new IllegalArgumentException("New target "+newTarget+
+                                               " larger than max "+maxSize);
+        }
+        if (newTarget < origTarget) {
+            throw new IllegalArgumentException("New target "+newTarget+
+                                               " smaller than initial target "+origTarget);
+        }
+        curTarget = newTarget;
     }
 
     @Override

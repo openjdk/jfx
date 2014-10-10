@@ -104,13 +104,35 @@ public interface ResourcePool<T> {
     public long max();
 
     /**
-     * The target of the maximum amount of space in this resource pool that
-     * should be used so as to be friendly to other parts of the system.
+     * The current target of the maximum amount of space in this resource pool
+     * that should be used so as to be friendly to other parts of the system.
      * This number must be less than or equal to the amount returned by the
-     * {@link max()} method.
-     * @return the typical target amount of the resource to be used
+     * {@link max()} method, larger than the amount returned by the
+     * {@link origTarget()} method, and may change over time.
+     * @return the current target amount of the resource to be used
+     * @see #setTarget(long)
      */
     public long target();
+
+    /**
+     * The initial target of the maximum amount of space in this resource pool
+     * that should be used so as to be friendly to other parts of the system.
+     * This number must be less than or equal to the amount returned by the
+     * {@link max()} method.
+     * @return the initial target amount of the resource to be used
+     */
+    public long origTarget();
+
+    /**
+     * Sets a new current target of the maximum amount of space in this
+     * resource pool that should be used so as to be friendly to other parts
+     * of the system.
+     * The specified {@code newTarget} number must be less than or equal to
+     * the amount returned by the {@link max()} method, larger than the amount
+     * returned by the {@link origTarget()} method.
+     * @param newTarget the new current target to be set
+     */
+    public void setTarget(long newTarget);
 
     /**
      * The estimated size of the indicated resource.
