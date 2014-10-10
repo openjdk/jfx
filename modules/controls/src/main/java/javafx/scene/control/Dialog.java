@@ -158,21 +158,25 @@ import com.sun.javafx.event.EventHandlerManager;
  *   two situations:
  *     <ol>
  *       <li>When the dialog only has one button, or
- *       <li>When the dialog has multiple buttons, as long as one of them has
- *       a {@link ButtonType} whose {@link ButtonData} is of type 
- *       {@link ButtonData#CANCEL_CLOSE}.
+ *       <li>When the dialog has multiple buttons, as long as one of them meets
+ *       one of the following requirements:
+ *       <ol>
+ *           <li>The button has a {@link ButtonType} whose {@link ButtonData} is of type
+ *           {@link ButtonData#CANCEL_CLOSE}.</li>
+ *           <li>The button has a {@link ButtonType} whose {@link ButtonData} returns true
+ *           when {@link ButtonData#isCancelButton()} is called.</li>
+ *       </ol>
  *     </ol>
  *   <li>In all other situations, the dialog will refuse to respond to all 
  *   close requests, remaining open until the user clicks on one of the available
  *   buttons in the {@link DialogPane} area of the dialog.
  *   <li>If a dialog is closed abnormally, and if the dialog contains a button
- *   which has a {@link ButtonData} of {@link ButtonData#CANCEL_CLOSE},
- *   the dialog will attempt to set the {@link #resultProperty() result} property
- *   to whatever value is returned from calling the 
- *   {@link #resultConverterProperty() result converter} with the first matching
- *   {@link ButtonType}.
+ *   which meets one of the two criteria above, the dialog will attempt to set
+ *   the {@link #resultProperty() result} property to whatever value is returned
+ *   from calling the {@link #resultConverterProperty() result converter} with
+ *   the first matching {@link ButtonType}.
  *   <li>If for any reason the result converter returns null, or if the dialog
- *   is closed when on one non-cancel button is present, the 
+ *   is closed when only one non-cancel button is present, the
  *   {@link #resultProperty() result} property will be null, and the 
  *   {@link #showAndWait()} method will return {@link Optional#empty()}. This
  *   later point means that, if you use either of option 2 or option 3 (as
@@ -314,22 +318,38 @@ public class Dialog<R> implements EventTarget {
             return;
         }
 
-        // This code is called just before close, and ONLY in cases where the
-        // dialog was closed abnormally (as represented by closeWasNormal).
-        // In these cases, and where the dialog had a cancel button, we call
-        // into the result converter to see what to do. This is used primarily
-        // to handle the requirement that the X button has the same result as
-        // clicking the cancel button.
-        // TODO we used to discern between normal and abnormal closures of the
-        // stage, but this was not resilient enough. For now, we no longer check
-        // in the code below whether the close was normal or not, but depending
-        // on how things work out, this may need to change
+        // if we are here we have permission to close the dialog. However, we
+        // may not have a result set to return to the user. Therefore, we need
+        // to handle that before the dialog closes (especially in case the
+        // dialog is blocking, in which case having a null result is really going
+        // to mess up users).
+        //
+        // In cases where the result is null, and where the dialog has a cancel
+        // button, we call into the result converter to see what to do. This is
+        // used primarily to handle the requirement that the X button has the
+        // same result as clicking the cancel button.
+        //
+        // A 'cancel button' can mean two different things (although they may
+        // be the same thing):
+        // 1) A button whose ButtonData is of type CANCEL_CLOSE.
+        // 2) A button whose ButtonData returns true for isCancelButton().
         if (result == null) {
             ButtonType cancelButton = null;
+
+            // we do two things here. We are primarily looking for a button with
+            // ButtonData.CANCEL_CLOSE. If we find one, we use it as the result.
+            // However, if we don't find one, we can also use any button that
+            // is a cancel button.
             for (ButtonType button : getDialogPane().getButtonTypes()) {
-                if (button.getButtonData() == ButtonData.CANCEL_CLOSE) {
+                ButtonData buttonData = button.getButtonData();
+                if (buttonData == null) continue;
+
+                if (buttonData == ButtonData.CANCEL_CLOSE) {
                     cancelButton = button;
                     break;
+                }
+                if (buttonData.isCancelButton()) {
+                    cancelButton = button;
                 }
             }
 

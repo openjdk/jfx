@@ -84,7 +84,6 @@ abstract class FXDialog {
         // clean up, if we don't consume the event to cancel closing...
         DialogPane dialogPane = dialog.getDialogPane();
         if (dialogPane != null) {
-
             List<ButtonType> buttons = dialogPane.getButtonTypes();
             if (buttons.size() == 1) {
                 denyClose = false;
@@ -92,8 +91,16 @@ abstract class FXDialog {
                 // look for cancel button type
                 for (ButtonType button : buttons) {
                     if (button == null) continue;
+
                     ButtonBar.ButtonData type = button.getButtonData();
-                    if (type == ButtonBar.ButtonData.CANCEL_CLOSE) {
+                    if (type == null) continue;
+
+                    // refer to the comments in close() - we support both CANCEL_CLOSE
+                    // and isCancelButton() for allowing a dialog to close in
+                    // abnormal circumstances. This allows for consistency with
+                    // the ESC key being pressed (which triggers the cancel button
+                    // being pressed)
+                    if (type == ButtonBar.ButtonData.CANCEL_CLOSE || type.isCancelButton()) {
                         denyClose = false;
                         break;
                     }
