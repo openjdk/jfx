@@ -48,6 +48,7 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.ResourceBundle;
 
 import static com.oracle.tools.packager.StandardBundlerParam.*;
@@ -358,10 +359,12 @@ public class MacPkgBundler extends MacBaseInstallerBundler {
             commandLine.add(CONFIG_ROOT.fetchFrom(params).getAbsolutePath());
 
             // maybe sign
-            String signingIdentity = DEVELOPER_ID_INSTALLER_SIGNING_KEY.fetchFrom(params);
-            if (signingIdentity != null) {
-                commandLine.add("--sign");
-                commandLine.add(signingIdentity);
+            if (Optional.ofNullable(SIGN_BUNDLE.fetchFrom(params)).orElse(Boolean.TRUE)) {
+                String signingIdentity = DEVELOPER_ID_INSTALLER_SIGNING_KEY.fetchFrom(params);
+                if (signingIdentity != null) {
+                    commandLine.add("--sign");
+                    commandLine.add(signingIdentity);
+                }
             }
 
             commandLine.add("--distribution");
@@ -452,6 +455,16 @@ public class MacPkgBundler extends MacBaseInstallerBundler {
                                 MessageFormat.format(I18N.getString("error.license-missing.advice"),
                                         license, appResources.getBaseDirectory().toString()));
                     }
+                }
+            }
+
+            // reject explicitly set sign to true and no valid signature key
+            if (Optional.ofNullable(SIGN_BUNDLE.fetchFrom(params)).orElse(Boolean.FALSE)) {
+                String signingIdentity = DEVELOPER_ID_INSTALLER_SIGNING_KEY.fetchFrom(params);
+                if (signingIdentity == null) {
+                    throw new ConfigException(
+                            I18N.getString("error.explicit-sign-no-cert"),
+                            I18N.getString("error.explicit-sign-no-cert.advice"));
                 }
             }
 

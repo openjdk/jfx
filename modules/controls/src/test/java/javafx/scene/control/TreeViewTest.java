@@ -57,6 +57,7 @@ import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.cell.CheckBoxTreeCell;
+import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.control.cell.TextFieldTreeCell;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
@@ -210,12 +211,12 @@ public class TreeViewTest {
     @Test public void singleArgConstructor_selectedItemIsNotNull() {
         TreeItem<String> hiItem = new TreeItem<>("Hi");
         final TreeView<String> b2 = new TreeView<>(hiItem);
-        assertEquals(hiItem, b2.getSelectionModel().getSelectedItem());
+        assertNull(b2.getSelectionModel().getSelectedItem());
     }
 
     @Test public void singleArgConstructor_selectedIndexIsZero() {
         final TreeView<String> b2 = new TreeView<>(new TreeItem<>("Hi"));
-        assertEquals(0, b2.getSelectionModel().getSelectedIndex());
+        assertEquals(-1, b2.getSelectionModel().getSelectedIndex());
     }
 
     /*********************************************************************
@@ -313,10 +314,10 @@ public class TreeViewTest {
         treeView.getSelectionModel().select(0);
         assertEquals(root, treeView.getSelectionModel().getSelectedItem());
 
-        TreeItem newRoot = new TreeItem<String>("New Root");
+        TreeItem newRoot = new TreeItem<>("New Root");
         treeView.setRoot(newRoot);
-        assertEquals(0, treeView.getSelectionModel().getSelectedIndex());
-        assertEquals(newRoot, treeView.getSelectionModel().getSelectedItem());
+        assertEquals(-1, treeView.getSelectionModel().getSelectedIndex());
+        assertNull(treeView.getSelectionModel().getSelectedItem());
     }
     
     @Test public void ensureSelectionRemainsOnBranchWhenExpanded() {
@@ -558,15 +559,15 @@ public class TreeViewTest {
         assertEquals(1, treeView.getSelectionModel().getSelectedIndex());
         assertEquals(child1, treeView.getSelectionModel().getSelectedItem());
         
-        TreeItem root = new TreeItem<String>("New Root");
-        TreeItem child1 = new TreeItem<String>("New Child 1");
-        TreeItem child2 = new TreeItem<String>("New Child 2");
-        TreeItem child3 = new TreeItem<String>("New Child 3");
+        TreeItem root = new TreeItem<>("New Root");
+        TreeItem child1 = new TreeItem<>("New Child 1");
+        TreeItem child2 = new TreeItem<>("New Child 2");
+        TreeItem child3 = new TreeItem<>("New Child 3");
         root.setExpanded(true);
         root.getChildren().setAll(child1, child2, child3);
         treeView.setRoot(root);
-        assertEquals(0, treeView.getSelectionModel().getSelectedIndex());
-        assertEquals(root, treeView.getSelectionModel().getSelectedItem());
+        assertEquals(-1, treeView.getSelectionModel().getSelectedIndex());
+        assertNull(treeView.getSelectionModel().getSelectedItem());
     }
     
     @Test public void test_rt27181() {
@@ -1597,8 +1598,8 @@ public class TreeViewTest {
 
         StageLoader sl = new StageLoader(treeView);
 
-        // We start with selection on row 0
-        assertEquals(root, treeView.getSelectionModel().getSelectedItem());
+        // We start with selection on row -1
+        assertNull(treeView.getSelectionModel().getSelectedItem());
 
         // select "bbc" and ensure everything is set to that
         treeView.getSelectionModel().select(2);
@@ -1625,8 +1626,8 @@ public class TreeViewTest {
 
         StageLoader sl = new StageLoader(treeView);
 
-        // We start with selection on row 0
-        assertEquals(root, treeView.getSelectionModel().getSelectedItem());
+        // We start with selection on row -1
+        assertNull(treeView.getSelectionModel().getSelectedItem());
 
         // select "bbc" and ensure everything is set to that
         treeView.getSelectionModel().select(2);
@@ -1735,8 +1736,8 @@ public class TreeViewTest {
         // test initial state
         assertEquals(sl.getStage().getScene().getFocusOwner(), focusBtn);
         assertTrue(focusBtn.isFocused());
-        assertEquals(0, sm.getSelectedIndex());
-        assertNotNull(sm.getSelectedItem());
+        assertEquals(-1, sm.getSelectedIndex());
+        assertNull(sm.getSelectedItem());
 
         // move focus to the treeview
         treeView.requestFocus();
@@ -1744,8 +1745,8 @@ public class TreeViewTest {
         // ensure that there is a selection (where previously there was not one)
         assertEquals(sl.getStage().getScene().getFocusOwner(), treeView);
         assertTrue(treeView.isFocused());
-        assertEquals(0, sm.getSelectedIndex());
-        assertEquals(root, sm.getSelectedItem());
+        assertEquals(-1, sm.getSelectedIndex());
+        assertNull(sm.getSelectedItem());
 
         sl.dispose();
     }
@@ -2135,11 +2136,55 @@ public class TreeViewTest {
 
         treeView.setRoot(rootTwo);
 
-        assertEquals(0, sm.getSelectedIndex());
-        assertEquals(rootTwo, sm.getSelectedItem());
-        assertEquals(1, sm.getSelectedIndices().size());
-        assertEquals(0, (int) sm.getSelectedIndices().get(0));
-        assertEquals(1, sm.getSelectedItems().size());
-        assertEquals(rootTwo, sm.getSelectedItems().get(0));
+        assertEquals(-1, sm.getSelectedIndex());
+        assertNull(sm.getSelectedItem());
+        assertEquals(0, sm.getSelectedIndices().size());
+        assertEquals(0, sm.getSelectedItems().size());
+    }
+
+    @Test public void test_rt_37853_replaceRoot() {
+        test_rt_37853(true);
+    }
+
+    @Test public void test_rt_37853_replaceRootChildren() {
+        test_rt_37853(false);
+    }
+
+    private int rt_37853_cancelCount;
+    private int rt_37853_commitCount;
+    private void test_rt_37853(boolean replaceRoot) {
+        treeView.setCellFactory(TextFieldTreeCell.forTreeView());
+        treeView.setEditable(true);
+        treeView.setRoot(new TreeItem<>("Root"));
+        treeView.getRoot().setExpanded(true);
+
+        for (int i = 0; i < 10; i++) {
+            treeView.getRoot().getChildren().add(new TreeItem<>("" + i));
+        }
+
+        StageLoader sl = new StageLoader(treeView);
+
+        treeView.setOnEditCancel(editEvent -> rt_37853_cancelCount++);
+        treeView.setOnEditCommit(editEvent -> rt_37853_commitCount++);
+
+        assertEquals(0, rt_37853_cancelCount);
+        assertEquals(0, rt_37853_commitCount);
+
+        treeView.edit(treeView.getRoot().getChildren().get(0));
+        assertNotNull(treeView.getEditingItem());
+
+        if (replaceRoot) {
+            treeView.setRoot(new TreeItem<>("New Root"));
+        } else {
+            treeView.getRoot().getChildren().clear();
+            for (int i = 0; i < 10; i++) {
+                treeView.getRoot().getChildren().add(new TreeItem<>("new item " + i));
+            }
+        }
+
+        assertEquals(1, rt_37853_cancelCount);
+        assertEquals(0, rt_37853_commitCount);
+
+        sl.dispose();
     }
 }

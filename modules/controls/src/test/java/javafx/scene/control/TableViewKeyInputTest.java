@@ -162,9 +162,9 @@ public class TableViewKeyInputTest {
      **************************************************************************/    
     
     @Test public void testInitialState() {
-        assertEquals(1,sm.getSelectedCells().size());
-        assertEquals(1,sm.getSelectedIndices().size());
-        assertEquals(1,sm.getSelectedItems().size());
+        assertEquals(0,sm.getSelectedCells().size());
+        assertEquals(0,sm.getSelectedIndices().size());
+        assertEquals(0,sm.getSelectedItems().size());
     }
     
     
@@ -3839,21 +3839,12 @@ public class TableViewKeyInputTest {
         StageLoader sl = new StageLoader(tableView);
 
         // test the initial state to ensure it is as we expect
-        if (cellSelection) {
-            assertFalse(sm.isSelected(0));
-            assertTrue(sm.isSelected(0, col));
-            assertFalse(sm.isSelected(0, col2));
-            assertEquals(1, sm.getSelectedIndices().size());
-            assertEquals(1, sm.getSelectedItems().size());
-            assertEquals(1, sm.getSelectedCells().size());
-        } else {
-            assertTrue(sm.isSelected(0));
-            assertTrue(sm.isSelected(0, col));
-            assertTrue(sm.isSelected(0, col2));
-            assertEquals(1, sm.getSelectedIndices().size());
-            assertEquals(1, sm.getSelectedItems().size());
-            assertEquals(1, sm.getSelectedCells().size());
-        }
+        assertFalse(sm.isSelected(0));
+        assertFalse(sm.isSelected(0, col));
+        assertFalse(sm.isSelected(0, col2));
+        assertEquals(0, sm.getSelectedIndices().size());
+        assertEquals(0, sm.getSelectedItems().size());
+        assertEquals(0, sm.getSelectedCells().size());
 
         final int startRow = 5;
         sm.clearSelection();

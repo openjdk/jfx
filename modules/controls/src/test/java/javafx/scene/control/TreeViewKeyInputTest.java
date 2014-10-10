@@ -177,11 +177,9 @@ public class TreeViewKeyInputTest {
      **************************************************************************/    
     
     @Test public void testInitialState() {
-        assertEquals(0, sm.getSelectedIndex());
-        assertEquals(1, sm.getSelectedIndices().size());
-        assertEquals(0, (int) sm.getSelectedIndices().get(0));
-        assertEquals(1, sm.getSelectedItems().size());
-        assertEquals(root, sm.getSelectedItems().get(0));
+        assertEquals(-1, sm.getSelectedIndex());
+        assertEquals(0, sm.getSelectedIndices().size());
+        assertEquals(0, sm.getSelectedItems().size());
     }
     
     /***************************************************************************

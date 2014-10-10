@@ -213,6 +213,9 @@ public class Main {
                             throw new PackagerException("ERR_UnknownArgument", arg);
                         }
                     }
+                    if (srcdir != null && !srcdir.isDirectory()) {
+                        throw new PackagerException("ERR_InvalidDirectory", srcdir.getAbsolutePath());                            
+                    }
                     if (!srcfilesSet) {
                         //using "." as default dir is confusing. Require explicit list of inputs
                         if (srcdir == null) {
@@ -331,12 +334,17 @@ public class Main {
                             srcfilesSet = true;
                         } else if (arg.equalsIgnoreCase("-argument")) {
                             addArgument(deployParams, nextArg(args, i++));
+                        } else if (arg.equalsIgnoreCase("-nosign")) {
+                            deployParams.setSignBundle(false);
                         } else {
                             throw new PackagerException("ERR_UnknownArgument", arg);
                         }
                     }
                     if (templateInFile != null) {
                         deployParams.addTemplate(templateInFile, templateOutFile);
+                    }
+                    if (srcdir != null && !srcdir.isDirectory()) {
+                        throw new PackagerException("ERR_InvalidDirectory", srcdir.getAbsolutePath());                            
                     }
                     if (!srcfilesSet) {
                         //using "." as default dir is confusing. Require explicit list of inputs
@@ -363,6 +371,9 @@ public class Main {
                         } else {
                             throw new PackagerException("ERR_UnknownArgument", arg);
                         }
+                    }
+                    if (srcdir != null && !srcdir.isDirectory()) {
+                        throw new PackagerException("ERR_InvalidDirectory", srcdir.getAbsolutePath());                            
                     }
                     if (!srcfilesSet) {
                         //using "." as default dir is confusing. Require explicit list of inputs
@@ -400,6 +411,9 @@ public class Main {
                         } else {
                             throw new PackagerException("ERR_UnknownArgument", arg);
                         }
+                    }
+                    if (srcdir != null && !srcdir.isDirectory()) {
+                        throw new PackagerException("ERR_InvalidDirectory", srcdir.getAbsolutePath());                            
                     }
                     if (!srcfilesSet) {
                         //using "." as default dir is confusing. Require explicit list of inputs

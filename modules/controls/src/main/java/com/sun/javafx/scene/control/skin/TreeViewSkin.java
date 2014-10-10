@@ -160,6 +160,9 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
                 eventType = eventType.getSuperType();
             }
         }
+
+        // fix for RT-37853
+        getSkinnable().edit(null);
     };
     
     private WeakEventHandler<TreeModificationEvent<T>> weakRootListener;
@@ -178,7 +181,7 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
             weakRootListener = new WeakEventHandler<>(rootListener);
             getRoot().addEventHandler(TreeItem.<T>treeNotificationEvent(), weakRootListener);
         }
-        
+
         updateRowCount();
     }
 

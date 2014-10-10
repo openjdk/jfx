@@ -50,6 +50,7 @@ import javafx.event.ActionEvent;
 import javafx.scene.control.cell.CheckBoxListCell;
 import javafx.scene.control.cell.ComboBoxListCell;
 import javafx.scene.control.cell.TextFieldListCell;
+import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.VBox;
@@ -70,10 +71,12 @@ import com.sun.javafx.tk.Toolkit;
 public class ListViewTest {
     private ListView<String> listView;
     private MultipleSelectionModel<String> sm;
+    private FocusModel<String> fm;
 
     @Before public void setup() {
         listView = new ListView<>();
         sm = listView.getSelectionModel();
+        fm = listView.getFocusModel();
     }
 
 
@@ -107,12 +110,12 @@ public class ListViewTest {
     }
 
     @Test public void singleArgConstructorSetsNonNullSelectionModel() {
-        final ListView<String> b2 = new ListView<>(FXCollections.observableArrayList("Hi"));
+        final ListView<String> b2 = new ListView<>(FXCollections.<String>observableArrayList("Hi"));
         assertNotNull(b2.getSelectionModel());
     }
 
     @Test public void singleArgConstructorAllowsNullItems() {
-        final ListView<String> b2 = new ListView<>(null);
+        final ListView<String> b2 = new ListView<String>(null);
         assertNull(b2.getItems());
     }
 
@@ -124,12 +127,12 @@ public class ListViewTest {
 
     @Test public void singleArgConstructor_selectedItemIsNull() {
         final ListView<String> b2 = new ListView<>(FXCollections.observableArrayList("Hi"));
-        assertEquals("Hi", b2.getSelectionModel().getSelectedItem());
+        assertNull(b2.getSelectionModel().getSelectedItem());
     }
 
     @Test public void singleArgConstructor_selectedIndexIsNegativeOne() {
         final ListView<String> b2 = new ListView<>(FXCollections.observableArrayList("Hi"));
-        assertEquals(0, b2.getSelectionModel().getSelectedIndex());
+        assertEquals(-1, b2.getSelectionModel().getSelectedIndex());
     }
 
     /*********************************************************************
@@ -261,8 +264,10 @@ public class ListViewTest {
         assertEquals("Item 1", sm.getSelectedItem());
 
         listView.setItems(FXCollections.observableArrayList("Item 2"));
-        assertEquals(0, sm.getSelectedIndex());
-        assertEquals("Item 2", sm.getSelectedItem());
+        assertEquals(-1, sm.getSelectedIndex());
+        assertNull(sm.getSelectedItem());
+        assertEquals(0, fm.getFocusedIndex());
+        assertEquals("Item 2", fm.getFocusedItem());
     }
 
     @Test public void test_rt15793() {
@@ -787,8 +792,8 @@ public class ListViewTest {
 
         StageLoader sl = new StageLoader(listView);
 
-        // selection starts off on row 0
-        assertEquals("aabbaa", listView.getSelectionModel().getSelectedItem());
+        // selection starts off on row -1
+        assertNull(listView.getSelectionModel().getSelectedItem());
 
         // select "bbc" and ensure everything is set to that
         listView.getSelectionModel().select(1);
@@ -840,7 +845,8 @@ public class ListViewTest {
         assertEquals(0, rt_35889_cancel_count);
 
         textField.setText("Z");
-        textField.getOnAction().handle(new ActionEvent());
+        KeyEventFirer keyboard = new KeyEventFirer(textField);
+        keyboard.doKeyPress(KeyCode.ENTER);
 
         assertEquals(0, rt_35889_cancel_count);
     }
@@ -862,8 +868,8 @@ public class ListViewTest {
         // test initial state
         assertEquals(sl.getStage().getScene().getFocusOwner(), focusBtn);
         assertTrue(focusBtn.isFocused());
-        assertEquals(0, sm.getSelectedIndex());
-        assertEquals("A", sm.getSelectedItem());
+        assertEquals(-1, sm.getSelectedIndex());
+        assertNull(sm.getSelectedItem());
 
         // move focus to the listview
         listView.requestFocus();
@@ -871,8 +877,8 @@ public class ListViewTest {
         // ensure that there is a selection (where previously there was not one)
         assertEquals(sl.getStage().getScene().getFocusOwner(), listView);
         assertTrue(listView.isFocused());
-        assertEquals(0, sm.getSelectedIndex());
-        assertEquals("A", sm.getSelectedItem());
+        assertEquals(-1, sm.getSelectedIndex());
+        assertNull(sm.getSelectedItem());
 
         sl.dispose();
     }
@@ -1045,11 +1051,37 @@ public class ListViewTest {
 
         listView.setItems(listTwo);
 
-        assertEquals(0, sm.getSelectedIndex());
-        assertEquals("C", sm.getSelectedItem());
-        assertEquals(1, sm.getSelectedIndices().size());
-        assertEquals(0, (int) sm.getSelectedIndices().get(0));
-        assertEquals(1, sm.getSelectedItems().size());
-        assertEquals("C", sm.getSelectedItems().get(0));
+        assertEquals(-1, sm.getSelectedIndex());
+        assertNull(sm.getSelectedItem());
+        assertEquals(0, sm.getSelectedIndices().size());
+        assertEquals(0, sm.getSelectedItems().size());
+    }
+
+    private int rt_37853_cancelCount;
+    private int rt_37853_commitCount;
+    @Test public void test_rt_37853() {
+        listView.setCellFactory(TextFieldListCell.forListView());
+        listView.setEditable(true);
+
+        for (int i = 0; i < 10; i++) {
+            listView.getItems().add("" + i);
+        }
+
+        StageLoader sl = new StageLoader(listView);
+
+        listView.setOnEditCancel(editEvent -> rt_37853_cancelCount++);
+        listView.setOnEditCommit(editEvent -> rt_37853_commitCount++);
+
+        assertEquals(0, rt_37853_cancelCount);
+        assertEquals(0, rt_37853_commitCount);
+
+        listView.edit(1);
+        assertNotNull(listView.getEditingIndex());
+
+        listView.getItems().clear();
+        assertEquals(1, rt_37853_cancelCount);
+        assertEquals(0, rt_37853_commitCount);
+
+        sl.dispose();
     }
 }

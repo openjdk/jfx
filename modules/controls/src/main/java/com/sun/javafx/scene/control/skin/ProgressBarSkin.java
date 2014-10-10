@@ -247,11 +247,7 @@ public class ProgressBarSkin extends ProgressIndicatorSkin {
         track = new StackPane();
         track.getStyleClass().setAll("track");
 
-        bar = new StackPane() {
-            {
-                impl_treeVisibleProperty().addListener(treeVisibleListener);
-            }
-        };
+        bar = new StackPane();
         bar.getStyleClass().setAll("bar");
 
         getChildren().setAll(track, bar);

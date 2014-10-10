@@ -42,7 +42,6 @@ import javafx.beans.property.SimpleStringProperty;
 import com.sun.javafx.binding.ErrorLoggingUtiltity;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -90,39 +89,34 @@ public class BindingsCreateBindingTest<T> {
         this.defaultValue = defaultValue;
     }
 
-    @Ignore("RT-27128")
     @Test
     public void testNoDependencies() {
-        synchronized (log) {
-            log.reset();
+        // func returns value0, no dependencies specified
+        final Callable<T> func0 = () -> value0;
+        final Binding<T> binding0 = f.create(func0);
 
-            // func returns value0, no dependencies specified
-            final Callable<T> func0 = () -> value0;
-            final Binding<T> binding0 = f.create(func0);
+        f.check(value0, binding0.getValue());
+        assertTrue(binding0.getDependencies().isEmpty());
+        binding0.dispose();
 
-            f.check(value0, binding0.getValue());
-            assertTrue(binding0.getDependencies().isEmpty());
-            binding0.dispose();
+        // func returns value1, dependencies set to null
+        final Callable<T> func1 = () -> value1;
+        final Binding<T> binding1 = f.create(func1, (Observable[])null);
 
-            // func returns value1, dependencies set to null
-            final Callable<T> func1 = () -> value1;
-            final Binding<T> binding1 = f.create(func1, (Observable[])null);
+        f.check(value1, binding1.getValue());
+        assertTrue(binding1.getDependencies().isEmpty());
+        binding1.dispose();
 
-            f.check(value1, binding1.getValue());
-            assertTrue(binding1.getDependencies().isEmpty());
-            binding1.dispose();
+        // func throws exception, dependencies set to empty array
+        final Callable<T> func2 = () -> {
+            throw new Exception();
+        };
+        final Binding<T> binding2 = f.create(func2, new Observable [0]);
 
-            // func throws exception, dependencies set to empty array
-            final Callable<T> func2 = () -> {
-                throw new Exception();
-            };
-            final Binding<T> binding2 = f.create(func2, new Observable [0]);
-
-            f.check(defaultValue, binding2.getValue());
-            log.check(0, "WARNING", 1, "Exception");
-            assertTrue(binding2.getDependencies().isEmpty());
-            binding2.dispose();
-        }
+        f.check(defaultValue, binding2.getValue());
+        log.check(java.util.logging.Level.WARNING, Exception.class);
+        assertTrue(binding2.getDependencies().isEmpty());
+        binding2.dispose();
     }
 
     @Test

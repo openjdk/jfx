@@ -95,6 +95,7 @@ public class DeployFXTask extends Task implements DynamicAttribute {
     private String outdir = null;
     private boolean embedJNLP;
     private boolean isExtension = false;
+    private Boolean signBundle;
 
     //Before FCS default is to include DT files with app
     // to ensure tests are using latest and compatible.
@@ -146,6 +147,7 @@ public class DeployFXTask extends Task implements DynamicAttribute {
         deployParams.setOfflineAllowed(offlineAllowed);
         deployParams.setVerbose(verbose);
         deployParams.setCodebase(codebase);
+        deployParams.setSignBundle(signBundle);
 
         if (width != null) {
             deployParams.setWidth(Integer.valueOf(width));
@@ -456,6 +458,10 @@ public class DeployFXTask extends Task implements DynamicAttribute {
     public void setPlaceholderId(String id) {
         //raw id of the placeholder, need to escape it
         this.placeholder = "'"+id+"'";
+    }
+    
+    public void setSignBundle(boolean signBundle) {
+        this.signBundle = signBundle;
     }
 
     public Info createInfo() {

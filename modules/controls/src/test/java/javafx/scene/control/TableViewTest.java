@@ -79,12 +79,14 @@ import static org.junit.Assert.assertEquals;
 public class TableViewTest {
     private TableView<String> table;
     private TableView.TableViewSelectionModel sm;
+    private TableView.TableViewFocusModel<String> fm;
 
     private ObservableList<Person> personTestData;
 
     @Before public void setup() {
         table = new TableView<>();
         sm = table.getSelectionModel();
+        fm = table.getFocusModel();
 
         personTestData = FXCollections.observableArrayList(
                 new Person("Jacob", "Smith", "jacob.smith@example.com"),
@@ -152,14 +154,14 @@ public class TableViewTest {
         assertSame(items, b2.getItems());
     }
 
-    @Test public void singleArgConstructor_selectedItemIsNonNull() {
+    @Test public void singleArgConstructor_selectedItemIsNull() {
         final TableView<String> b2 = new TableView<>(FXCollections.observableArrayList("Hi"));
-        assertEquals("Hi", b2.getSelectionModel().getSelectedItem());
+        assertNull(b2.getSelectionModel().getSelectedItem());
     }
 
-    @Test public void singleArgConstructor_selectedIndexIsZero() {
+    @Test public void singleArgConstructor_selectedIndexIsNegativeOne() {
         final TableView<String> b2 = new TableView<>(FXCollections.observableArrayList("Hi"));
-        assertEquals(0, b2.getSelectionModel().getSelectedIndex());
+        assertEquals(-1, b2.getSelectionModel().getSelectedIndex());
     }
 
     /*********************************************************************
@@ -293,8 +295,10 @@ public class TableViewTest {
         assertEquals("Item 1", sm.getSelectedItem());
         
         table.setItems(FXCollections.observableArrayList("Item 2"));
-        assertEquals(0, sm.getSelectedIndex());
-        assertEquals("Item 2", sm.getSelectedItem());
+        assertEquals(-1, sm.getSelectedIndex());
+        assertNull(sm.getSelectedItem());
+        assertEquals(0, fm.getFocusedIndex());
+        assertEquals("Item 2", fm.getFocusedItem());
     }
 
     /*********************************************************************
@@ -861,8 +865,10 @@ public class TableViewTest {
         assertEquals("Orange", table.getSelectionModel().getSelectedItem());
         
         table.getItems().setAll("Kiwifruit", "Pineapple", "Grape");
-        assertEquals(0, table.getSelectionModel().getSelectedIndex());
-        assertEquals("Kiwifruit", table.getSelectionModel().getSelectedItem());
+        assertEquals(-1, table.getSelectionModel().getSelectedIndex());
+        assertNull(table.getSelectionModel().getSelectedItem());
+        assertEquals(0, table.getFocusModel().getFocusedIndex());
+        assertEquals("Kiwifruit", table.getFocusModel().getFocusedItem());
     }
     
     @Test public void test_rt27820_1() {
@@ -1131,9 +1137,8 @@ public class TableViewTest {
         sm.setCellSelectionEnabled(true);
         sm.setSelectionMode(SelectionMode.MULTIPLE);
 
-        assertEquals(1, sm.getSelectedIndices().size());
-        assertEquals(0, sm.getSelectedIndices().get(0));
-        
+        assertEquals(0, sm.getSelectedIndices().size());
+
         // only (0,0) should be selected, so selected indices should be [0]
         sm.select(0, firstNameCol);
         assertEquals(1, sm.getSelectedIndices().size());
@@ -1176,9 +1181,8 @@ public class TableViewTest {
         sm.setCellSelectionEnabled(true);
         sm.setSelectionMode(SelectionMode.MULTIPLE);
 
-        assertEquals(1, sm.getSelectedIndices().size());
-        assertEquals(0, sm.getSelectedIndices().get(0));
-        
+        assertEquals(0, sm.getSelectedIndices().size());
+
         // only (0,0) should be selected, so selected items should be [p0]
         sm.select(0, firstNameCol);
         assertEquals(1, sm.getSelectedItems().size());
@@ -1515,9 +1519,9 @@ public class TableViewTest {
         final TableView.TableViewSelectionModel sm = table.getSelectionModel();
 
         // test pre-conditions
-        assertEquals(1, sm.getSelectedCells().size());
-        assertEquals(1, sm.getSelectedItems().size());
-        assertEquals(1, sm.getSelectedIndices().size());
+        assertEquals(0, sm.getSelectedCells().size());
+        assertEquals(0, sm.getSelectedItems().size());
+        assertEquals(0, sm.getSelectedIndices().size());
 
         // select the 3rd row (that is, CCC)
         sm.select(2);
@@ -2550,8 +2554,8 @@ public class TableViewTest {
 
         StageLoader sl = new StageLoader(tableView);
 
-        // selection starts off at row 0
-        assertEquals("aabbaa", tableView.getSelectionModel().getSelectedItem());
+        // selection starts off at row -1
+        assertNull(tableView.getSelectionModel().getSelectedItem());
 
         // select "bbc" and ensure everything is set to that
         tableView.getSelectionModel().select(1);
@@ -2923,8 +2927,8 @@ public class TableViewTest {
         // test initial state
         assertEquals(sl.getStage().getScene().getFocusOwner(), focusBtn);
         assertTrue(focusBtn.isFocused());
-        assertEquals(0, sm.getSelectedIndex());
-        assertEquals("A", sm.getSelectedItem());
+        assertEquals(-1, sm.getSelectedIndex());
+        assertNull(sm.getSelectedItem());
 
         // move focus to the tableView
         tableView.requestFocus();
@@ -2934,22 +2938,13 @@ public class TableViewTest {
         assertTrue(tableView.isFocused());
 
         if (rowSelection) {
-            assertEquals(1, sm.getSelectedIndices().size());
-            assertEquals("A", sm.getSelectedItem());
-            assertTrue(sm.isSelected(0));
-
-            assertEquals(1, sm.getSelectedCells().size());
-            TablePosition selectedCell = sm.getSelectedCells().get(0);
-            assertEquals(0, selectedCell.getRow());
-            assertEquals(-1, selectedCell.getColumn());
-            assertNull(selectedCell.getTableColumn());
+            assertEquals(0, sm.getSelectedIndices().size());
+            assertNull(sm.getSelectedItem());
+            assertFalse(sm.isSelected(0));
+            assertEquals(0, sm.getSelectedCells().size());
         } else {
-            assertTrue(sm.isSelected(0, tableColumn));
-            assertEquals(1, sm.getSelectedCells().size());
-            TablePosition selectedCell = sm.getSelectedCells().get(0);
-            assertEquals(0, selectedCell.getRow());
-            assertEquals(0, selectedCell.getColumn());
-            assertEquals(tableColumn, selectedCell.getTableColumn());
+            assertFalse(sm.isSelected(0, tableColumn));
+            assertEquals(0, sm.getSelectedCells().size());
         }
 
         sl.dispose();
@@ -3792,12 +3787,10 @@ public class TableViewTest {
 
         tableView.setItems(listTwo);
 
-        assertEquals(0, sm.getSelectedIndex());
-        assertEquals("C", sm.getSelectedItem());
-        assertEquals(1, sm.getSelectedIndices().size());
-        assertEquals(0, (int) sm.getSelectedIndices().get(0));
-        assertEquals(1, sm.getSelectedItems().size());
-        assertEquals("C", sm.getSelectedItems().get(0));
+        assertEquals(-1, sm.getSelectedIndex());
+        assertNull(sm.getSelectedItem());
+        assertEquals(0, sm.getSelectedIndices().size());
+        assertEquals(0, sm.getSelectedItems().size());
     }
 
     @Test public void test_rt_38464_rowSelection_selectFirstRowOnly() {
@@ -3927,9 +3920,9 @@ public class TableViewTest {
         sm.setSelectionMode(SelectionMode.MULTIPLE);
 
         // default selection when in cell selection mode
-        assertEquals(1, sm.getSelectedCells().size());
-        assertEquals(1, sm.getSelectedItems().size());
-        assertEquals(1, sm.getSelectedIndices().size());
+        assertEquals(0, sm.getSelectedCells().size());
+        assertEquals(0, sm.getSelectedItems().size());
+        assertEquals(0, sm.getSelectedIndices().size());
 
         // select the first cell
         sm.select(0, firstNameCol);
@@ -3959,9 +3952,9 @@ public class TableViewTest {
         sm.setSelectionMode(SelectionMode.MULTIPLE);
 
         // default selection when in cell selection mode
-        assertEquals(1, sm.getSelectedCells().size());
-        assertEquals(1, sm.getSelectedItems().size());
-        assertEquals(1, sm.getSelectedIndices().size());
+        assertEquals(0, sm.getSelectedCells().size());
+        assertEquals(0, sm.getSelectedItems().size());
+        assertEquals(0, sm.getSelectedIndices().size());
 
         // select the first cell
         sm.select(0, firstNameCol);
@@ -3994,9 +3987,9 @@ public class TableViewTest {
         sm.setSelectionMode(SelectionMode.MULTIPLE);
 
         // default selection when in cell selection mode
-        assertEquals(1, sm.getSelectedCells().size());
-        assertEquals(1, sm.getSelectedItems().size());
-        assertEquals(1, sm.getSelectedIndices().size());
+        assertEquals(0, sm.getSelectedCells().size());
+        assertEquals(0, sm.getSelectedItems().size());
+        assertEquals(0, sm.getSelectedIndices().size());
 
         // select the first row
         sm.select(0);
@@ -4060,9 +4053,9 @@ public class TableViewTest {
         sm.setSelectionMode(singleSelection ? SelectionMode.SINGLE : SelectionMode.MULTIPLE);
 
         // default selection when in cell selection mode
-        assertEquals(1, sm.getSelectedCells().size());
-        assertEquals(1, sm.getSelectedItems().size());
-        assertEquals(1, sm.getSelectedIndices().size());
+        assertEquals(0, sm.getSelectedCells().size());
+        assertEquals(0, sm.getSelectedItems().size());
+        assertEquals(0, sm.getSelectedIndices().size());
 
         if (selectsOneRow) {
             sm.select(0);
@@ -4094,5 +4087,36 @@ public class TableViewTest {
                 assertNull(tp.getTableColumn());
             }
         }
+    }
+
+    private int rt_37853_cancelCount;
+    private int rt_37853_commitCount;
+    @Test public void test_rt_37853() {
+        TableColumn<String,String> first = new TableColumn<>("first");
+        first.setEditable(true);
+        first.setCellFactory(TextFieldTableCell.forTableColumn());
+        table.getColumns().add(first);
+        table.setEditable(true);
+
+        for (int i = 0; i < 10; i++) {
+            table.getItems().add("" + i);
+        }
+
+        StageLoader sl = new StageLoader(table);
+
+        first.setOnEditCancel(editEvent -> rt_37853_cancelCount++);
+        first.setOnEditCommit(editEvent -> rt_37853_commitCount++);
+
+        assertEquals(0, rt_37853_cancelCount);
+        assertEquals(0, rt_37853_commitCount);
+
+        table.edit(1, first);
+        assertNotNull(table.getEditingCell());
+
+        table.getItems().clear();
+        assertEquals(1, rt_37853_cancelCount);
+        assertEquals(0, rt_37853_commitCount);
+
+        sl.dispose();
     }
 }

@@ -2120,6 +2120,13 @@ project(":fxpackager") {
         systemProperty "FULL_TEST", FULL_TEST
     }
 
+    def packagerDevOpts = []
+    try {
+        packagerDevOpts.addAll(PACKAGER_DEV_OPTS.split(' '))
+    } catch (MissingPropertyException ignore) {
+        packagerDevOpts.addAll("image")
+    }
+    
     task packagerDev(dependsOn: [jar, packagerFakeJar], type:JavaExec) {
         workingDir = project.file("build/tmp/tests/appResources/")
         classpath = project.files("build/libs/ant-javafx.jar", "build/classes/test", "build/resources/test")
@@ -2127,8 +2134,8 @@ project(":fxpackager") {
         args = [
                 "-o", "$projectDir/build/dev",
                 "-all",
-                "image"
-        ]
+                packagerDevOpts
+        ].flatten()
     }
 }
 

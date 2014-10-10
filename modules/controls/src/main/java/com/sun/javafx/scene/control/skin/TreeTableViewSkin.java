@@ -176,6 +176,9 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeItem<S>, Tree
                 eventType = eventType.getSuperType();
             }
         }
+
+        // fix for RT-37853
+        getSkinnable().edit(-1, null);
     };
     
     private WeakEventHandler<TreeModificationEvent<S>> weakRootListener;
@@ -271,6 +274,10 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeItem<S>, Tree
     
     @Override protected boolean resizeColumn(TreeTableColumn<S,?> tc, double delta) {
         return treeTableView.resizeColumn(tc, delta);
+    }
+
+    @Override protected void edit(int index, TreeTableColumn<S, ?> column) {
+        treeTableView.edit(index, column);
     }
 
     /*

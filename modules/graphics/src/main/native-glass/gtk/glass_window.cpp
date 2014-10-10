@@ -963,13 +963,13 @@ void WindowContextTop::process_configure(GdkEventConfigure* event) {
     } else {
         --stale_config_notifications;
     }
-    if (jview) {
+    if (jview && map_received) {
         mainEnv->CallVoidMethod(jview, jViewNotifyResize,
                 event->width,
                 event->height);
         CHECK_JNI_EXCEPTION(mainEnv)
     }
-    if (jwindow) {
+    if (jwindow && map_received) {
         mainEnv->CallVoidMethod(jwindow, jWindowNotifyResize,
                 (is_maximized)
                     ? com_sun_glass_events_WindowEvent_MAXIMIZE
@@ -1139,7 +1139,7 @@ void WindowContextTop::window_configure(XWindowChanges *windowChanges,
         return;
     }
 
-    if (!gtk_widget_get_visible(gtk_widget)) {
+    if (!(gtk_widget_get_visible(gtk_widget) && map_received)) {
         // not visible yet, synchronize with gtk only
         if (windowChangesMask & (CWX | CWY)) {
             gint newX, newY;

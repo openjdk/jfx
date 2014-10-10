@@ -949,8 +949,10 @@ public class TreeTableViewTest {
 
         TreeItem newRoot = new TreeItem<String>("New Root");
         treeTableView.setRoot(newRoot);
-        assertEquals(0, treeTableView.getSelectionModel().getSelectedIndex());
-        assertEquals(newRoot, treeTableView.getSelectionModel().getSelectedItem());
+        assertEquals(-1, treeTableView.getSelectionModel().getSelectedIndex());
+        assertNull(treeTableView.getSelectionModel().getSelectedItem());
+        assertEquals(0, treeTableView.getFocusModel().getFocusedIndex());
+        assertEquals(newRoot, treeTableView.getFocusModel().getFocusedItem());
     }
     
     @Test public void ensureSelectionRemainsOnBranchWhenExpanded() {
@@ -1223,8 +1225,10 @@ public class TreeTableViewTest {
         root.setExpanded(true);
         root.getChildren().setAll(child1, child2, child3);
         treeTableView.setRoot(root);
-        assertEquals(0, treeTableView.getSelectionModel().getSelectedIndex());
-        assertEquals(root, treeTableView.getSelectionModel().getSelectedItem());
+        assertEquals(-1, treeTableView.getSelectionModel().getSelectedIndex());
+        assertNull(treeTableView.getSelectionModel().getSelectedItem());
+        assertEquals(0, treeTableView.getFocusModel().getFocusedIndex());
+        assertEquals(root, treeTableView.getFocusModel().getFocusedItem());
     }
     
     @Test public void test_rt27181() {
@@ -1662,7 +1666,7 @@ public class TreeTableViewTest {
         sm.setCellSelectionEnabled(true);
         sm.setSelectionMode(SelectionMode.MULTIPLE);
         
-        assertFalse(sm.getSelectedIndices().isEmpty());
+        assertTrue(sm.getSelectedIndices().isEmpty());
         
         // only (0,0) should be selected, so selected indices should be [0]
         sm.select(0, firstNameCol);
@@ -1713,7 +1717,7 @@ public class TreeTableViewTest {
         sm.setCellSelectionEnabled(true);
         sm.setSelectionMode(SelectionMode.MULTIPLE);
 
-        assertFalse(sm.getSelectedItems().isEmpty());
+        assertTrue(sm.getSelectedItems().isEmpty());
         
         // only (0,0) should be selected, so selected items should be [p0]
         sm.select(0, firstNameCol);
@@ -2301,9 +2305,9 @@ public class TreeTableViewTest {
         treeTableView.getColumns().add(col);
 
         // test pre-conditions
-        assertEquals(1, sm.getSelectedCells().size());
-        assertEquals(1, sm.getSelectedItems().size());
-        assertEquals(1, sm.getSelectedIndices().size());
+        assertEquals(0, sm.getSelectedCells().size());
+        assertEquals(0, sm.getSelectedItems().size());
+        assertEquals(0, sm.getSelectedIndices().size());
 
         // select the 4th row (that is, the third child of the root)
         sm.select(3);
@@ -3120,8 +3124,8 @@ public class TreeTableViewTest {
 
         StageLoader sl = new StageLoader(treeView);
 
-        // Selection starts in row 0
-        assertEquals(root, treeView.getSelectionModel().getSelectedItem());
+        // Selection starts in row -1
+        assertNull(treeView.getSelectionModel().getSelectedItem());
 
         // select "bbc" and ensure everything is set to that
         treeView.getSelectionModel().select(2);
@@ -3148,8 +3152,8 @@ public class TreeTableViewTest {
 
         StageLoader sl = new StageLoader(treeView);
 
-        // Selection starts in row 0
-        assertEquals(root, treeView.getSelectionModel().getSelectedItem());
+        // Selection starts in row -1
+        assertNull(treeView.getSelectionModel().getSelectedItem());
 
         // select "bbc" and ensure everything is set to that
         treeView.getSelectionModel().select(2);
@@ -3317,8 +3321,8 @@ public class TreeTableViewTest {
         // test initial state
         assertEquals(sl.getStage().getScene().getFocusOwner(), focusBtn);
         assertTrue(focusBtn.isFocused());
-        assertEquals(0, sm.getSelectedIndex());
-        assertNotNull(sm.getSelectedItem());
+        assertEquals(-1, sm.getSelectedIndex());
+        assertNull(sm.getSelectedItem());
 
         // move focus to the TreeTableView
         treeView.requestFocus();
@@ -3328,22 +3332,13 @@ public class TreeTableViewTest {
         assertTrue(treeView.isFocused());
 
         if (rowSelection) {
-            assertEquals(1, sm.getSelectedIndices().size());
-            assertEquals(root, sm.getSelectedItem());
-            assertTrue(sm.isSelected(0));
-
-            assertEquals(1, sm.getSelectedCells().size());
-            TreeTablePosition selectedCell = sm.getSelectedCells().get(0);
-            assertEquals(0, selectedCell.getRow());
-            assertEquals(-1, selectedCell.getColumn());
-            assertNull(selectedCell.getTableColumn());
+            assertEquals(0, sm.getSelectedIndices().size());
+            assertNull(sm.getSelectedItem());
+            assertFalse(sm.isSelected(0));
+            assertEquals(0, sm.getSelectedCells().size());
         } else {
-            assertTrue(sm.isSelected(0, tableColumn));
-            assertEquals(1, sm.getSelectedCells().size());
-            TreeTablePosition selectedCell = sm.getSelectedCells().get(0);
-            assertEquals(0, selectedCell.getRow());
-            assertEquals(0, selectedCell.getColumn());
-            assertEquals(tableColumn, selectedCell.getTableColumn());
+            assertFalse(sm.isSelected(0, tableColumn));
+            assertEquals(0, sm.getSelectedCells().size());
         }
 
         sl.dispose();
@@ -3924,12 +3919,10 @@ public class TreeTableViewTest {
 
         treeTableView.setRoot(rootTwo);
 
-        assertEquals(0, sm.getSelectedIndex());
-        assertEquals(rootTwo, sm.getSelectedItem());
-        assertEquals(1, sm.getSelectedIndices().size());
-        assertEquals(0, (int) sm.getSelectedIndices().get(0));
-        assertEquals(1, sm.getSelectedItems().size());
-        assertEquals(rootTwo, sm.getSelectedItems().get(0));
+        assertEquals(-1, sm.getSelectedIndex());
+        assertNull(sm.getSelectedItem());
+        assertEquals(0, sm.getSelectedIndices().size());
+        assertEquals(0, sm.getSelectedItems().size());
     }
 
     private TreeTableView<Person> test_rt_38464_createControl() {
@@ -4048,9 +4041,9 @@ public class TreeTableViewTest {
         sm.setSelectionMode(SelectionMode.MULTIPLE);
 
         // default selection when in cell selection mode
-        assertEquals(1, sm.getSelectedCells().size());
-        assertEquals(1, sm.getSelectedItems().size());
-        assertEquals(1, sm.getSelectedIndices().size());
+        assertEquals(0, sm.getSelectedCells().size());
+        assertEquals(0, sm.getSelectedItems().size());
+        assertEquals(0, sm.getSelectedIndices().size());
 
         // select the first cell
         sm.select(0, table.getColumns().get(0));
@@ -4072,9 +4065,9 @@ public class TreeTableViewTest {
         sm.setSelectionMode(SelectionMode.MULTIPLE);
 
         // default selection when in cell selection mode
-        assertEquals(1, sm.getSelectedCells().size());
-        assertEquals(1, sm.getSelectedItems().size());
-        assertEquals(1, sm.getSelectedIndices().size());
+        assertEquals(0, sm.getSelectedCells().size());
+        assertEquals(0, sm.getSelectedItems().size());
+        assertEquals(0, sm.getSelectedIndices().size());
 
         // select the first cell
         sm.select(0, table.getColumns().get(0));
@@ -4099,9 +4092,9 @@ public class TreeTableViewTest {
         sm.setSelectionMode(SelectionMode.MULTIPLE);
 
         // default selection when in cell selection mode
-        assertEquals(1, sm.getSelectedCells().size());
-        assertEquals(1, sm.getSelectedItems().size());
-        assertEquals(1, sm.getSelectedIndices().size());
+        assertEquals(0, sm.getSelectedCells().size());
+        assertEquals(0, sm.getSelectedItems().size());
+        assertEquals(0, sm.getSelectedIndices().size());
 
         // select the first row
         sm.select(0);
@@ -4157,9 +4150,9 @@ public class TreeTableViewTest {
         sm.setSelectionMode(singleSelection ? SelectionMode.SINGLE : SelectionMode.MULTIPLE);
 
         // default selection when in cell selection mode
-        assertEquals(1, sm.getSelectedCells().size());
-        assertEquals(1, sm.getSelectedItems().size());
-        assertEquals(1, sm.getSelectedIndices().size());
+        assertEquals(0, sm.getSelectedCells().size());
+        assertEquals(0, sm.getSelectedItems().size());
+        assertEquals(0, sm.getSelectedIndices().size());
 
         if (selectsOneRow) {
             sm.select(0);
@@ -4191,5 +4184,53 @@ public class TreeTableViewTest {
                 assertNull(tp.getTableColumn());
             }
         }
+    }
+
+    @Test public void test_rt_37853_replaceRoot() {
+        test_rt_37853(true);
+    }
+
+    @Test public void test_rt_37853_replaceRootChildren() {
+        test_rt_37853(false);
+    }
+
+    private int rt_37853_cancelCount;
+    private int rt_37853_commitCount;
+    public void test_rt_37853(boolean replaceRoot) {
+        TreeTableColumn<String,String> first = new TreeTableColumn<>("first");
+        first.setEditable(true);
+        first.setCellFactory(TextFieldTreeTableCell.forTreeTableColumn());
+        treeTableView.getColumns().add(first);
+        treeTableView.setEditable(true);
+        treeTableView.setRoot(new TreeItem<>("Root"));
+        treeTableView.getRoot().setExpanded(true);
+
+        for (int i = 0; i < 10; i++) {
+            treeTableView.getRoot().getChildren().add(new TreeItem<>("" + i));
+        }
+
+        StageLoader sl = new StageLoader(treeTableView);
+
+        first.setOnEditCancel(editEvent -> rt_37853_cancelCount++);
+        first.setOnEditCommit(editEvent -> rt_37853_commitCount++);
+
+        assertEquals(0, rt_37853_cancelCount);
+        assertEquals(0, rt_37853_commitCount);
+
+        treeTableView.edit(1, first);
+        assertNotNull(treeTableView.getEditingCell());
+
+        if (replaceRoot) {
+            treeTableView.setRoot(new TreeItem<>("New Root"));
+        } else {
+            treeTableView.getRoot().getChildren().clear();
+            for (int i = 0; i < 10; i++) {
+                treeTableView.getRoot().getChildren().add(new TreeItem<>("new item " + i));
+            }
+        }
+        assertEquals(1, rt_37853_cancelCount);
+        assertEquals(0, rt_37853_commitCount);
+
+        sl.dispose();
     }
 }

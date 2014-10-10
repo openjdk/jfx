@@ -26,6 +26,7 @@ package javafx.scene.control;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 
 import com.sun.javafx.scene.control.skin.AccordionSkin;
 import com.sun.javafx.scene.control.skin.resources.ControlResources;
@@ -92,7 +93,8 @@ public class ChoiceDialog<T> extends Dialog<T> {
      * @param choices All possible choices to present to the user.
      */
     public ChoiceDialog(T defaultChoice,  @SuppressWarnings("unchecked") T... choices) {
-        this(defaultChoice, Arrays.asList(choices));
+        this(defaultChoice,
+             choices == null ? Collections.emptyList() : Arrays.asList(choices));
     }
 
     /**

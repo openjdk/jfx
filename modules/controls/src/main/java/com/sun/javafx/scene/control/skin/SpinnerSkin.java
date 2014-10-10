@@ -33,6 +33,7 @@ import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleRole;
 import javafx.scene.control.Spinner;
 import javafx.scene.control.TextField;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
@@ -135,6 +136,9 @@ public class SpinnerSkin<T> extends BehaviorSkinBase<Spinner<T>, SpinnerBehavior
                 // event to the textfield that occurs in the final else statement
                 // of the conditions below.
                 if (ke.getTarget().equals(textField)) return;
+
+                // Fix for RT-38527 which led to a stack overflow
+                if (ke.getCode() == KeyCode.ESCAPE) return;
 
                 // Fix for the regression noted in a comment in RT-29885.
                 // This forwards the event down into the TextField when

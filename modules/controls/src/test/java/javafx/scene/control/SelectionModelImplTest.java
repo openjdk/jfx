@@ -250,8 +250,8 @@ public class SelectionModelImplTest {
     }
 
     @Test public void testDefaultState() {
-        assertEquals(0, model.getSelectedIndex());
-        assertEquals(ROW_1_VALUE, getValue(model.getSelectedItem()));
+        assertEquals(-1, model.getSelectedIndex());
+        assertNull(getValue(model.getSelectedItem()));
 
         if (focusModel != null) {
             assertEquals(0, focusModel.getFocusedIndex());
@@ -284,7 +284,7 @@ public class SelectionModelImplTest {
     }
 
     @Test public void selectInvalidItem() {
-        assertEquals(0, model.getSelectedIndex());
+        assertEquals(-1, model.getSelectedIndex());
 
         Object obj = new TreeItem("DUMMY");
         model.select(obj);
@@ -317,8 +317,6 @@ public class SelectionModelImplTest {
     }
 
     @Test public void ensureIsEmptyIsAccurate() {
-        assertFalse(model.isEmpty());
-        model.clearSelection();
         assertTrue(model.isEmpty());
         model.select(5);
         assertFalse(model.isEmpty());

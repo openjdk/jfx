@@ -331,8 +331,6 @@ public class TreeView<T> extends Control {
         MultipleSelectionModel<TreeItem<T>> sm = new TreeViewBitSetSelectionModel<T>(this);
         setSelectionModel(sm);
         setFocusModel(new TreeViewFocusModel<T>(this));
-
-        focusedProperty().addListener(focusedListener);
     }
     
     
@@ -383,19 +381,7 @@ public class TreeView<T> extends Control {
     
     private WeakEventHandler<TreeModificationEvent<T>> weakRootEventListener;
 
-    private InvalidationListener focusedListener = observable -> {
-        // RT-25679 - we select the first item in the control if there is no
-        // current selection or focus on any other cell
-        MultipleSelectionModel<TreeItem<T>> sm = getSelectionModel();
-        FocusModel<TreeItem<T>> fm = getFocusModel();
 
-        if (getExpandedItemCount() > 0 &&
-                sm != null && sm.isEmpty() &&
-                fm != null && fm.getFocusedIndex() == -1) {
-            sm.select(0);
-        }
-    };
-    
     
     /***************************************************************************
      *                                                                         *
@@ -460,8 +446,11 @@ public class TreeView<T> extends Control {
             if (root != null) {
                 weakRootEventListener = new WeakEventHandler<>(rootEvent);
                 getRoot().addEventHandler(TreeItem.<T>treeNotificationEvent(), weakRootEventListener);
-                weakOldItem = new WeakReference<TreeItem<T>>(root);
+                weakOldItem = new WeakReference<>(root);
             }
+
+            // Fix for RT-37853
+            edit(null);
 
             expandedItemCountDirty = true;
             updateRootExpanded();
@@ -1243,7 +1232,6 @@ public class TreeView<T> extends Control {
             updateTreeEventListener(null, treeView.getRoot());
 
             updateDefaultSelection();
-            TreeCellBehavior.setAnchor(treeView, 0, true);
         }
         
         private void updateTreeEventListener(TreeItem<T> oldRoot, TreeItem<T> newRoot) {
@@ -1468,10 +1456,11 @@ public class TreeView<T> extends Control {
          **********************************************************************/
 
         private void updateDefaultSelection() {
-            // if we can, we put selection onto the first row
-            int newValueIndex = getItemCount() > 0 ? 0 : -1;
             clearSelection();
-            select(newValueIndex);
+
+            // we put focus onto the first item, if there is at least
+            // one item in the list
+            focus(getItemCount() > 0 ? 0 : -1);
         }
     }
     

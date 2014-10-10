@@ -327,4 +327,37 @@ public class MacAppStoreBundlerTest {
 
         checkFiles(result);
     }
+
+    /**
+     * Request no signature, should be a validaiton error
+     */
+    @Test(expected = ConfigException.class)
+    public void invalidDoNotSign() throws IOException, ConfigException, UnsupportedPlatformException {
+        AbstractBundler bundler = new MacAppStoreBundler();
+
+        Map<String, Object> bundleParams = new HashMap<>();
+
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+
+        bundleParams.put(APP_NAME.getID(), "Smoke Test");
+        bundleParams.put(MAIN_CLASS.getID(), "hello.HelloRectangle");
+        bundleParams.put(PREFERENCES_ID.getID(), "the/really/long/preferences/id");
+        bundleParams.put(MAIN_JAR.getID(),
+                new RelativeFileSet(fakeMainJar.getParentFile(),
+                        new HashSet<>(Arrays.asList(fakeMainJar)))
+        );
+        bundleParams.put(CLASSPATH.getID(), "mainApp.jar");
+        bundleParams.put(IDENTIFIER.getID(), "com.example.javapacakger.hello.TestPackager");
+        bundleParams.put(MacAppBundler.MAC_CATEGORY.getID(), "public.app-category.developer-tools");
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        bundleParams.put(VERBOSE.getID(), true);
+
+        if (runtimeJdk != null) {
+            bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
+        }
+
+        bundleParams.put(SIGN_BUNDLE.getID(), false);
+        
+        bundler.validate(bundleParams);
+    }
 }

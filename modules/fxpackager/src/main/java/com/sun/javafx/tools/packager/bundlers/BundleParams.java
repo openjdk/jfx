@@ -237,6 +237,8 @@ public class BundleParams {
         putUnlessNull(PARAM_SERVICE_HINT, b);
     }
     
+    public void setSignBundle(Boolean b) { putUnlessNull(SIGN_BUNDLE.getID(), b); }
+    
     public com.oracle.tools.packager.RelativeFileSet getRuntime() {
         return getRuntime(params);
     }

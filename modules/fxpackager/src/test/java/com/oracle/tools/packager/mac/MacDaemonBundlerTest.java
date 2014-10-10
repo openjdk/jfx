@@ -29,6 +29,7 @@ import static com.oracle.tools.packager.StandardBundlerParam.APP_NAME;
 import static com.oracle.tools.packager.StandardBundlerParam.IDENTIFIER;
 import static com.oracle.tools.packager.StandardBundlerParam.BUILD_ROOT;
 import static com.oracle.tools.packager.StandardBundlerParam.VERBOSE;
+import static com.oracle.tools.packager.StandardBundlerParam.SYSTEM_WIDE;
 
 import java.io.File;
 import java.io.IOException;
@@ -133,6 +134,7 @@ public class MacDaemonBundlerTest {
         bundleParams.put(APP_NAME.getID(), "Smoke Test App");
         bundleParams.put(IDENTIFIER.getID(), "smoke.app");        
         bundleParams.put(VERBOSE.getID(), true);
+        bundleParams.put(SYSTEM_WIDE.getID(), true);
 
         if (runtimeJdk != null) {
             bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
@@ -147,4 +149,26 @@ public class MacDaemonBundlerTest {
         assertTrue(result.exists());
     }
     
+    /*
+     * Test that bundler doesn't support per-user daemons (RT-37985)
+     */
+    @Test(expected = ConfigException.class)
+    public void perUserDaemonTest() throws ConfigException, UnsupportedPlatformException {
+        AbstractBundler bundler = new MacDaemonBundler();
+
+        Map<String, Object> bundleParams = new HashMap<>();
+        bundleParams.put(SYSTEM_WIDE.getID(), false);
+
+        bundler.validate(bundleParams);
+    }
+
+    @Test
+    public void perSystemDaemonTest() throws ConfigException, UnsupportedPlatformException {
+        AbstractBundler bundler = new MacDaemonBundler();
+
+        Map<String, Object> bundleParams = new HashMap<>();
+        bundleParams.put(SYSTEM_WIDE.getID(), true);
+
+        bundler.validate(bundleParams);
+    }
 }

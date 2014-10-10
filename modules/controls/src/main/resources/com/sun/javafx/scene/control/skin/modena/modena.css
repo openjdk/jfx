@@ -1206,6 +1206,12 @@ is being used to size a border should also be in pixels.
     -fx-font-size: 0.916667em; /* 11pt - 1 less than the default font */
     -fx-fill: -fx-text-background-color;
 }
+.progress-indicator:indeterminate > .spinner {
+    /** Applying to undo styling from .spinner, reported in RT-37965 */
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-background-radius: 0;
+}
 .progress-indicator:indeterminate .segment {
     -fx-background-color: -fx-accent;
 }
@@ -3007,6 +3013,7 @@ is being used to size a border should also be in pixels.
     -fx-spacing: 0.25em; /* 3 */
     -fx-alignment: CENTER;
     -fx-fill-height: false;
+    -fx-background-color: transparent;
 }
 .date-picker-popup > * > .spinner > .button {
     -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color;
@@ -3331,7 +3338,7 @@ is being used to size a border should also be in pixels.
     -fx-background-color: linear-gradient(#ffffff,#f3f3f4);
     -fx-border-width: 1px;
     -fx-border-color: #b4b4b4 transparent #b4b4b4 transparent;
-    -fx-font-size: 1.083333em; /*13px;*/
+    -fx-font-size: 1em; /*12px;*/
     -fx-text-fill: #292929;
 }
 

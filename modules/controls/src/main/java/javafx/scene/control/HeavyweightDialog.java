@@ -34,7 +34,6 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Modality;
-import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.Window;
@@ -54,6 +53,9 @@ class HeavyweightDialog extends FXDialog {
     private final StackPane sceneRoot;
     
     private DialogPane dialogPane;
+
+    private double prefX = Double.NaN;
+    private double prefY = Double.NaN;
     
 
 
@@ -67,50 +69,9 @@ class HeavyweightDialog extends FXDialog {
         this.dialog = dialog;
         this.stage = new Stage() {
             @Override public void centerOnScreen() {
-                double x = getX();
-                double y = getY();
-                
-                // if the user has specified an x/y location, use it
-                if (!Double.isNaN(x) && !Double.isNaN(y)) {
-                    // weird, but if I don't call setX/setY here, the stage
-                    // isn't where I expect it to be (in instances where a single
-                    // dialog is shown and closed multiple times). I expect the
-                    // second showing to be in the place the dialog was when it
-                    // was closed the first time, but on Windows it jumps to the
-                    // top-left of the screen.
-                    setX(x);
-                    setY(y);
-                    return;
-                }
-                
                 Window owner = getOwner();
                 if (owner != null) {
-                    Scene scene = owner.getScene();
-
-                    // scene.getY() seems to represent the y-offset from the top of the titlebar to the
-                    // start point of the scene, so it is the titlebar height
-                    final double titleBarHeight = scene.getY();
-
-                    // because Stage does not seem to centre itself over its owner, we
-                    // do it here.
-                    final double dialogWidth = sceneRoot.prefWidth(-1);
-                    final double dialogHeight = sceneRoot.prefHeight(-1);
-
-                    if (owner.getX() < 0 || owner.getY() < 0) {
-                        // Fix for #165
-                        Screen screen = Screen.getPrimary();
-                        double maxW = screen.getVisualBounds().getWidth();
-                        double maxH = screen.getVisualBounds().getHeight();
-
-                        x = maxW / 2.0 - dialogWidth / 2.0;
-                        y = maxH / 2.0 - dialogHeight / 2.0 + titleBarHeight;
-                    } else {
-                        x = owner.getX() + (scene.getWidth() / 2.0) - (dialogWidth / 2.0);
-                        y = owner.getY() +  titleBarHeight + (scene.getHeight() / 2.0) - (dialogHeight / 2.0);
-                    }
-
-                    setX(x);
-                    setY(y);
+                    positionStage();
                 } else {
                     super.centerOnScreen();
                 }
@@ -188,11 +149,13 @@ class HeavyweightDialog extends FXDialog {
 
     @Override public void show() {
         dialogPane.heightProperty().addListener(o -> stage.centerOnScreen());
+        stage.centerOnScreen();
         stage.show();
     }
 
     @Override public void showAndWait() {
         dialogPane.heightProperty().addListener(o -> stage.centerOnScreen());
+        stage.centerOnScreen();
         stage.showAndWait();
     }
 
@@ -270,5 +233,53 @@ class HeavyweightDialog extends FXDialog {
 
     @Override public void sizeToScene() {
         stage.sizeToScene();
+    }
+
+
+
+    /**************************************************************************
+     *
+     * Private implementation
+     *
+     **************************************************************************/
+
+    private void positionStage() {
+        double x = getX();
+        double y = getY();
+
+        // if the user has specified an x/y location, use it
+        if (!Double.isNaN(x) && !Double.isNaN(y) &&
+             Double.compare(x, prefX) != 0 && Double.compare(y, prefY) != 0) {
+            // weird, but if I don't call setX/setY here, the stage
+            // isn't where I expect it to be (in instances where a single
+            // dialog is shown and closed multiple times). I expect the
+            // second showing to be in the place the dialog was when it
+            // was closed the first time, but on Windows it jumps to the
+            // top-left of the screen.
+            setX(x);
+            setY(y);
+            return;
+        }
+
+        final Window owner = getOwner();
+        final Scene scene = owner.getScene();
+
+        // scene.getY() seems to represent the y-offset from the top of the titlebar to the
+        // start point of the scene, so it is the titlebar height
+        final double titleBarHeight = scene.getY();
+
+        // because Stage does not seem to centre itself over its owner, we
+        // do it here.
+        final double dialogWidth = sceneRoot.prefWidth(-1);
+        final double dialogHeight = sceneRoot.prefHeight(-1);
+
+        x = owner.getX() + (scene.getWidth() / 2.0) - (dialogWidth / 2.0);
+        y = owner.getY() +  titleBarHeight + (scene.getHeight() / 2.0) - (dialogHeight / 2.0);
+
+        prefX = x;
+        prefY = y;
+
+        setX(x);
+        setY(y);
     }
 }

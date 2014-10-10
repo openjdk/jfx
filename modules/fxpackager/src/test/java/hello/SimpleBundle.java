@@ -72,24 +72,26 @@ public class SimpleBundle {
                     output = new File(argsQ.remove());
                     output.mkdirs();
                     break;
+
                 case "-b":
                     params.put(argsQ.remove(), argsQ.remove());
                     break;
+
                 case "-all":
                     // JVM args
                     params.put(StandardBundlerParam.JVM_OPTIONS.getID(), "-Doption.1=bundlerargs\n-Doption.2=bundlerargs\n-Dcollide=jvmoptions");
-
                     // properties
                     params.put(StandardBundlerParam.JVM_PROPERTIES.getID(), "prop.1=bundlerargs\nprop.2=bundlerargs\ncollide=properties");
-
                     // userJVM Args
                     params.put(StandardBundlerParam.USER_JVM_OPTIONS.getID(), "-Duser.arg.1\\==bundlerargs\n-Duser.arg.2=\\=bundlerargs\n-Dcollide=\\=userjvmoptions\n-Dcollide\\=jvmoptions=AWESOME");
-
                     // arguments
                     params.put(StandardBundlerParam.ARGUMENTS.getID(), "argument1\nargument2");
+                    break;
 
                 default:
-                    bundlerIDs.add(arg);
+                    if (!arg.isEmpty() && !"all".equals(arg)) {
+                        bundlerIDs.add(arg);
+                    }
             }
         }
 

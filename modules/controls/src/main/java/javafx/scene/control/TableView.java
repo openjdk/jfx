@@ -547,8 +547,6 @@ public class TableView<S> extends Control {
             }
         });
 
-        focusedProperty().addListener(focusedListener);
-
         isInited = true;
     }
 
@@ -686,26 +684,6 @@ public class TableView<S> extends Control {
     private final WeakInvalidationListener weakCellSelectionModelInvalidationListener = 
             new WeakInvalidationListener(cellSelectionModelInvalidationListener);
 
-    private InvalidationListener focusedListener = observable -> {
-        // RT-25679 - we select the first item in the control if there is no
-        // current selection or focus on any other cell
-        List<S> items = getItems();
-        TableSelectionModel<S> sm = getSelectionModel();
-        FocusModel<S> fm = getFocusModel();
-
-        if (items != null && items.size() > 0 &&
-                sm != null && sm.isEmpty() &&
-                fm != null && fm.getFocusedItem() == null) {
-            if (sm.isCellSelectionEnabled()) {
-                TableColumn<S,?> firstVisibleColumn = getVisibleLeafColumn(0);
-                if (firstVisibleColumn != null) {
-                    sm.select(0, firstVisibleColumn);
-                }
-            } else {
-                sm.select(0);
-            }
-        }
-    };
 
     
     /***************************************************************************
@@ -2007,7 +1985,6 @@ public class TableView<S> extends Control {
             updateItemCount();
 
             updateDefaultSelection();
-            TableCellBehaviorBase.setAnchor(tableView, getFocusedCell(), true);
 
             cellSelectionEnabledProperty().addListener(o -> {
                 updateDefaultSelection();
@@ -2727,22 +2704,24 @@ public class TableView<S> extends Control {
         private void updateDefaultSelection() {
             // when the items list totally changes, we should clear out
             // the selection
-            int newValueIndex = -1;
+            int newSelectionIndex = -1;
+            int newFocusIndex = -1;
             if (tableView.getItems() != null) {
                 S selectedItem = getSelectedItem();
                 if (selectedItem != null) {
-                    newValueIndex = tableView.getItems().indexOf(selectedItem);
+                    newSelectionIndex = tableView.getItems().indexOf(selectedItem);
                 }
 
-                // we put selection onto the first item, if there is at least
+                // we put focus onto the first item, if there is at least
                 // one item in the list
-                if (newValueIndex == -1) {
-                    newValueIndex = tableView.getItems().size() > 0 ? 0 : -1;
+                if (newFocusIndex == -1) {
+                    newFocusIndex = tableView.getItems().size() > 0 ? 0 : -1;
                 }
             }
 
             clearSelection();
-            select(newValueIndex, isCellSelectionEnabled() ? getTableColumn(0) : null);
+            select(newSelectionIndex, isCellSelectionEnabled() ? getTableColumn(0) : null);
+            focus(newFocusIndex, isCellSelectionEnabled() ? getTableColumn(0) : null);
         }
         
         private TableColumn<S,?> getTableColumn(int pos) {

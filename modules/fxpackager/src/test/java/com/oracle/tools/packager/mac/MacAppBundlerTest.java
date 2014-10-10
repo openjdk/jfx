@@ -395,7 +395,6 @@ public class MacAppBundlerTest {
         assertTrue(output.exists());
     }
 
-
     /**
      * Test a misconfiguration where the runtime is misconfigured.
      */
@@ -410,6 +409,26 @@ public class MacAppBundlerTest {
 
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
         bundleParams.put(MAC_RUNTIME.getID(), APP_RESOURCES.fetchFrom(bundleParams));
+
+        bundler.validate(bundleParams);
+    }
+
+    /**
+     * Test a misconfiguration where signature is requested but no key is kept.
+     */
+    @Test(expected = ConfigException.class)
+    public void signButNoCert() throws IOException, ConfigException, UnsupportedPlatformException {
+        Bundler bundler = new MacAppBundler();
+
+        Map<String, Object> bundleParams = new HashMap<>();
+
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+        bundleParams.put(VERBOSE.getID(), true);
+
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+
+        bundleParams.put(SIGN_BUNDLE.getID(), true);
+        bundleParams.put(DEVELOPER_ID_APP_SIGNING_KEY.getID(), null);
 
         bundler.validate(bundleParams);
     }

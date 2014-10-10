@@ -503,7 +503,7 @@ public class PackagerLib {
 
         for (com.oracle.tools.packager.Bundler bundler : Bundlers.createBundlersInstance().getBundlers(bundleType)) {
             // if they specify the bundle format, require we match the ID
-            if (bundleFormat != null && !bundleFormat.equals(bundler.getID())) continue;
+            if (bundleFormat != null && !bundleFormat.equalsIgnoreCase(bundler.getID())) continue;
 
             Map<String, ? super Object> localParams = new HashMap<>(params);
             try {
