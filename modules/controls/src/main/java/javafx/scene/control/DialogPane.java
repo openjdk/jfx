@@ -528,10 +528,8 @@ public class DialogPane extends Pane {
             }
             
             Node newContent = getContent();
-            contentRef = new WeakReference<Node>(newContent);
-            if (newContent != null) {
-                updateContentArea();
-            }
+            contentRef = new WeakReference<>(newContent);
+            updateContentArea();
         }
     };
 
@@ -1041,11 +1039,10 @@ public class DialogPane extends Pane {
             contentLabel.setManaged(false);
         } else {
             final String contentText = getContentText();
-            if (contentText != null && !contentText.isEmpty()) {
-                contentLabel.setText(contentText);
-                contentLabel.setVisible(true);
-                contentLabel.setManaged(true);
-            }
+            final boolean visible = contentText != null && !contentText.isEmpty();
+            contentLabel.setText(visible ? contentText : "");
+            contentLabel.setVisible(visible);
+            contentLabel.setManaged(visible);
         }
     }
     
