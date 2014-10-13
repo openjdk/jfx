@@ -774,7 +774,9 @@ public class DialogPane extends Pane {
         button.setCancelButton(buttonType != null && buttonData.isCancelButton());
         button.addEventHandler(ActionEvent.ACTION, ae -> {
             if (ae.isConsumed()) return;
-            dialog.impl_setResultAndClose(buttonType, true);
+            if (dialog != null) {
+                dialog.impl_setResultAndClose(buttonType, true);
+            }
         });
         
         return button;
@@ -972,7 +974,9 @@ public class DialogPane extends Pane {
     private void updateHeaderArea() {
         Node header = getHeader();
         if (header != null) {
-            getChildren().add(header);
+            if (! getChildren().contains(header)) {
+                getChildren().add(header);
+            }
             
             headerTextPanel.setVisible(false);
             headerTextPanel.setManaged(false);
