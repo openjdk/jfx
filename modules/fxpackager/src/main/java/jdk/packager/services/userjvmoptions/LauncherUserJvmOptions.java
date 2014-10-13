@@ -28,10 +28,10 @@ package jdk.packager.services.userjvmoptions;
 import jdk.packager.services.UserJvmOptionsService;
 
 import java.security.AllPermission;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
 
 /**
  *
@@ -124,7 +124,7 @@ public class LauncherUserJvmOptions implements UserJvmOptionsService {
     public Map<String, String> getUserJVMOptions() {
         checkAllPermissions();
         synchronized (semaphore) {
-            Map<String, String> results = new TreeMap<>();
+            Map<String, String> results = new LinkedHashMap<>();
             for (String s : _getUserJvmOptionKeys()) {
                 results.put(s, _getUserJvmOptionValue(s));
             }
@@ -153,7 +153,7 @@ public class LauncherUserJvmOptions implements UserJvmOptionsService {
     public Map<String, String> getUserJVMOptionDefaults() {
         checkAllPermissions();
         synchronized (semaphore) {
-            Map<String, String> results = new TreeMap<>();
+            Map<String, String> results = new LinkedHashMap<>();
             for (String s : _getUserJvmOptionDefaultKeys()) {
                 results.put(s, _getUserJvmOptionDefaultValue(s));
             }
