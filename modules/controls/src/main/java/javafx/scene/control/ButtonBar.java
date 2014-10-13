@@ -440,6 +440,10 @@ public class ButtonBar extends Control {
     public ButtonBar(final String buttonOrder) {
         getStyleClass().add("button-bar"); //$NON-NLS-1$
 
+        // we allow for the buttons inside the ButtonBar to be focus traversable,
+        // but the ButtonBar itself is not.
+        setFocusTraversable(false);
+
         final boolean buttonOrderEmpty = buttonOrder == null || buttonOrder.isEmpty();
         
         if (Utils.isMac()) {
@@ -453,55 +457,6 @@ public class ButtonBar extends Control {
             setButtonOrder(buttonOrderEmpty ? BUTTON_ORDER_WINDOWS : buttonOrder);
             setButtonMinWidth(75); 
         }
-
-        // fix for issue where initial focus / tab navigation got lost on the ButtonBar -
-        // this code moves the focus onto the correct button inside the ButtonBar
-        focusedProperty().addListener(new InvalidationListener() {
-            @Override public void invalidated(Observable o) {
-                if (! isFocused()) return;
-
-                boolean focusSet = false;
-                for (Node button : getButtons()) {
-                    if (button instanceof Button && ((Button)button).isDefaultButton()) {
-                        button.requestFocus();
-                        focusSet = true;
-                        break;
-                    }
-                }
-
-                // if we are here there is no default button, so for now we
-                // will simply give focus to the first button (this can 
-                // definitely be improved in the future!)
-                if (! focusSet && ! getButtons().isEmpty()) {
-                    getButtons().get(0).requestFocus();
-                }
-            }
-        });
-
-        ParentTraversalEngine engine = new ParentTraversalEngine(this, new Algorithm() {
-            @Override public Node selectLast(TraversalContext context) {
-                return getButtons().get(0);
-            }
-
-            @Override public Node selectFirst(TraversalContext context) {
-                return getButtons().get(getButtons().size() - 1);
-            }
-
-            @Override public Node select(Node node, Direction direction, TraversalContext context) {
-                if (ButtonBar.this.equals(node)) {
-                    if (direction == null || direction.equals(Direction.NEXT)) {
-                        // Sends the focus to the first button in the button bar
-                        return getButtons().get(0);
-                    } else if (direction.equals(Direction.PREVIOUS)) {
-                        // Sends the focus to the last button in the button bar
-                        return getButtons().get(getButtons().size() - 1);
-                    }
-                }
-                return null;
-            }
-        });
-        setImpl_traversalEngine(engine);
-        // end of focus / traversal fix
     }
 
 
