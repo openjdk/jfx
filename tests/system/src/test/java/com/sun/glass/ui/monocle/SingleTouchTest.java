@@ -242,7 +242,7 @@ public class SingleTouchTest extends ParameterizedTestBase {
     public void tapDragReleaseTapAgain() throws Exception {
         Assume.assumeTrue(device.getTapRadius() < width * 0.2);
         final int x1 = (int) Math.round(width * 0.5);
-        final int y1 = (int) Math.round(height * 0.5);te
+        final int y1 = (int) Math.round(height * 0.5);
         final int x2 = (int) Math.round(width * 0.7);
         final int y2 = (int) Math.round(height * 0.7);
         // tap
