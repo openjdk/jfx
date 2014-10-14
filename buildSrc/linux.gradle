@@ -35,8 +35,6 @@ LINUX.compileSWT = true;
 LINUX.compileFXPackager = true;
 LINUX.compileDesignTime = true;
 
-LINUX.includeLens = true
-
 // Libraries end up in the sdk/rt/lib/$OS_ARCH directory for Linux
 LINUX.libDest = "lib/$OS_ARCH"
 
