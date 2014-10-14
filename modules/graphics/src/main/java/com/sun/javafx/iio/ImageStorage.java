@@ -299,14 +299,9 @@ public class ImageStorage {
             try {
                 if (pixelScale > 1.9f) {
                     // Use Mac Retina conventions for > 1.9f
-                    StringBuilder new_input = new StringBuilder();
-                    int last_dot_idx = input.lastIndexOf(".");
-                    if (last_dot_idx < 0) last_dot_idx = input.length();
-                    new_input.append(input.substring(0, last_dot_idx));
-                    new_input.append("@2x");
-                    new_input.append(input.substring(last_dot_idx));
                     try {
-                        theStream = ImageTools.createInputStream(new_input.toString());
+                        String name2x = ImageTools.getScaledImageName(input);
+                        theStream = ImageTools.createInputStream(name2x);
                     } catch (IOException e) {
                     }
                 }

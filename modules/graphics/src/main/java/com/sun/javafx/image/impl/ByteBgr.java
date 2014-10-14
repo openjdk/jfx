@@ -41,18 +41,33 @@ public class ByteBgr {
     public static final BytePixelSetter     setter = Accessor.instance;
     public static final BytePixelAccessor accessor = Accessor.instance;
 
-    public static final ByteToBytePixelConverter ToByteBgrConverter =
-        BaseByteToByteConverter.create(accessor);
-    public static final ByteToBytePixelConverter ToByteBgraConverter =
-        ByteBgr.ToByteBgrfConv.nonpremult;
-    public static final ByteToBytePixelConverter ToByteBgraPreConverter =
-        ByteBgr.ToByteBgrfConv.premult;
-    public static final ByteToIntPixelConverter ToIntArgbConverter =
-        ByteBgr.ToIntFrgbConv.nonpremult;
-    public static final ByteToIntPixelConverter ToIntArgbPreConverter =
-        ByteBgr.ToIntFrgbConv.premult;
-    public static final ByteToBytePixelConverter ToByteArgbConverter =
-        ByteBgr.ToByteFrgbConv.nonpremult;
+    private static ByteToBytePixelConverter ToByteBgrObj;
+    public  static ByteToBytePixelConverter ToByteBgrConverter() {
+        if (ToByteBgrObj == null) {
+            ToByteBgrObj = BaseByteToByteConverter.create(accessor);
+        }
+        return ToByteBgrObj;
+    }
+
+    public static ByteToBytePixelConverter ToByteBgraConverter() {
+        return ByteBgr.ToByteBgrfConv.nonpremult;
+    }
+
+    public static ByteToBytePixelConverter ToByteBgraPreConverter() {
+        return ByteBgr.ToByteBgrfConv.premult;
+    }
+
+    public static ByteToIntPixelConverter ToIntArgbConverter() {
+        return ByteBgr.ToIntFrgbConv.nonpremult;
+    }
+
+    public static ByteToIntPixelConverter ToIntArgbPreConverter() {
+        return ByteBgr.ToIntFrgbConv.premult;
+    }
+
+    public static ByteToBytePixelConverter ToByteArgbConverter() {
+        return ByteBgr.ToByteFrgbConv.nonpremult;
+    }
 
     static class Accessor implements BytePixelAccessor {
         static final BytePixelAccessor instance = new Accessor();
@@ -132,11 +147,7 @@ public class ByteBgr {
             new ToByteBgrfConv(ByteBgraPre.setter);
 
         private ToByteBgrfConv(BytePixelSetter setter) {
-            // Note that using ByteBgr.getter here causes a circular reference
-            // between the classes that prevents the above *premult fields
-            // from being initialized before the ByteBgr class copies their
-            // (not yet inited = null) values into its owns static fields.
-            super(Accessor.instance, setter);
+            super(ByteBgr.getter, setter);
         }
 
         @Override
@@ -185,11 +196,7 @@ public class ByteBgr {
             new ToIntFrgbConv(IntArgbPre.setter);
 
         private ToIntFrgbConv(IntPixelSetter setter) {
-            // Note that using ByteBgr.getter here causes a circular reference
-            // between the classes that prevents the above *premult fields
-            // from being initialized before the ByteBgr class copies their
-            // (not yet inited = null) values into its owns static fields.
-            super(Accessor.instance, setter);
+            super(ByteBgr.getter, setter);
         }
 
         @Override
@@ -234,11 +241,7 @@ public class ByteBgr {
             new ToByteFrgbConv(ByteArgb.setter);
 
         private ToByteFrgbConv(BytePixelSetter setter) {
-            // Note that using ByteBgr.getter here causes a circular reference
-            // between the classes that prevents the above *premult fields
-            // from being initialized before the ByteBgr class copies their
-            // (not yet inited = null) values into its owns static fields.
-            super(Accessor.instance, setter);
+            super(ByteBgr.getter, setter);
         }
 
         @Override

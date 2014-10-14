@@ -27,15 +27,19 @@ package javafx.scene.control;
 
 import com.sun.javafx.event.EventUtil;
 import com.sun.javafx.pgstub.StubScene;
+
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
+
 import org.junit.Before;
 import org.junit.Test;
 
+import static junit.framework.Assert.assertEquals;
+import static junit.framework.Assert.assertNotNull;
 import static org.junit.Assert.*;
 
 public class ToggleGroupTest {
@@ -519,5 +523,28 @@ public class ToggleGroupTest {
         assertTrue(b1.isSelected());
         assertFalse(b2.isSelected());
         assertEquals(g1.getSelectedToggle(), b1);
+    }
+    
+    @Test public void testProperties() {
+        javafx.collections.ObservableMap<Object, Object> properties = g1.getProperties();
+
+        /* If we ask for it, we should get it.
+         */
+        assertNotNull(properties);
+
+        /* What we put in, we should get out.
+         */
+        properties.put("MyKey", "MyValue");
+        assertEquals("MyValue", properties.get("MyKey"));
+
+        /* If we ask for it again, we should get the same thing.
+         */
+        javafx.collections.ObservableMap<Object, Object> properties2 = g1.getProperties();
+        assertEquals(properties2, properties);
+
+        /* What we put in to the other one, we should get out of this one because
+         * they should be the same thing.
+         */
+        assertEquals("MyValue", properties2.get("MyKey"));
     }
 }

@@ -36,9 +36,7 @@ import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 
 import javafx.beans.value.ChangeListener;
 import javafx.geometry.Bounds;
-import javafx.geometry.Point2D;
 import javafx.scene.Node;
-import javafx.scene.transform.Transform;
 
 /**
  *
@@ -65,18 +63,8 @@ public abstract class AbstractCurveHandles<T extends Node> extends AbstractHandl
     }
 
     @Override
-    public Transform getSceneGraphToSceneTransform() {
-        return getSceneGraphObject().getLocalToSceneTransform();
-    }
-
-    @Override
-    public Point2D sceneGraphObjectToScene(double x, double y) {
-        return getSceneGraphObject().localToScene(x,y);
-    }
-
-    @Override
-    public Point2D sceneToSceneGraphObject(double x, double y) {
-        return getSceneGraphObject().sceneToLocal(x,y);
+    public Node getSceneGraphObjectProxy() {
+        return getSceneGraphObject();
     }
 
     @Override

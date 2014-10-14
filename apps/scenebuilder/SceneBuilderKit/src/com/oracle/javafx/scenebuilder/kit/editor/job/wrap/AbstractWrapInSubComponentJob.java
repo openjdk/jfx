@@ -33,7 +33,7 @@ package com.oracle.javafx.scenebuilder.kit.editor.job.wrap;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
-import com.oracle.javafx.scenebuilder.kit.editor.job.v2.AddPropertyJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.AddPropertyJob;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMPropertyC;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
@@ -41,10 +41,10 @@ import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Set;
 
 /**
- * Main class used for the wrap jobs using the new container SUB COMPONENT property.
+ * Main class used for the wrap jobs using the new container SUB COMPONENT
+ * property.
  */
 public abstract class AbstractWrapInSubComponentJob extends AbstractWrapInJob {
 
@@ -53,7 +53,7 @@ public abstract class AbstractWrapInSubComponentJob extends AbstractWrapInJob {
     }
 
     @Override
-    protected List<Job> wrapInJobs(final Set<FXOMObject> children) {
+    protected List<Job> wrapChildrenJobs(final List<FXOMObject> children) {
 
         final List<Job> jobs = new ArrayList<>();
 
@@ -69,15 +69,12 @@ public abstract class AbstractWrapInSubComponentJob extends AbstractWrapInJob {
                 newContainer.getFxomDocument(), newContainerPropertyName);
 
         // Update children before adding them to the new container
-        final List<Job> modifyChildrenJobs = modifyChildrenJobs(children);
-        jobs.addAll(modifyChildrenJobs);
+        jobs.addAll(modifyChildrenJobs(children));
 
         // Sort the children before adding them to their new container
         final Collection<FXOMObject> sorted = sortChildren(children);
         // Add the children to the new container
-        final List<Job> addChildrenJobs
-                = addChildrenToPropertyJobs(newContainerProperty, sorted);
-        jobs.addAll(addChildrenJobs);
+        jobs.addAll(addChildrenJobs(newContainerProperty, sorted));
 
         // Add the new container property to the new container instance
         assert newContainerProperty.getParentInstance() == null;
@@ -89,8 +86,8 @@ public abstract class AbstractWrapInSubComponentJob extends AbstractWrapInJob {
 
         return jobs;
     }
-    
-    protected Collection<FXOMObject> sortChildren(Set<FXOMObject> children) {
+
+    protected Collection<FXOMObject> sortChildren(List<FXOMObject> children) {
         return children;
     }
 }

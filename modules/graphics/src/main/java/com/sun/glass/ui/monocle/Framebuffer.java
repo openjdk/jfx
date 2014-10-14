@@ -37,7 +37,7 @@ import java.nio.channels.WritableByteChannel;
  * A ByteBuffer used as a rendering target for window composition. Stored as
  * 32-bit and can write to a 16-bit or 32-bit target.
  */
-public class Framebuffer {
+class Framebuffer {
 
     private ByteBuffer bb;
     private int width;
@@ -49,7 +49,7 @@ public class Framebuffer {
     private Buffer linePixelBuffer;
     private int address;
 
-    public Framebuffer(ByteBuffer bb, int width, int height, int depth, boolean clear) {
+    Framebuffer(ByteBuffer bb, int width, int height, int depth, boolean clear) {
         this.bb = bb;
         this.width = width;
         this.height = height;
@@ -59,20 +59,20 @@ public class Framebuffer {
         }
     }
 
-    public ByteBuffer getBuffer() {
+    ByteBuffer getBuffer() {
         bb.clear();
         return bb;
     }
 
-    public void reset() {
+    void reset() {
         receivedData = false;
     }
 
-    public void setStartAddress(int address) {
+    void setStartAddress(int address) {
         this.address = address;
     }
 
-    public void clearBufferContents() {
+    void clearBufferContents() {
         bb.clear();
         bb.position(address);
         bb.limit(address + width * height * 4);
@@ -82,11 +82,11 @@ public class Framebuffer {
         }
     }
 
-    public boolean hasReceivedData() {
+    boolean hasReceivedData() {
         return receivedData;
     }
 
-    public void composePixels(Buffer src,
+    void composePixels(Buffer src,
                               int pX, int pY, int pW, int pH,
                               float alpha) {
         int stride = pW * 4;
@@ -208,7 +208,7 @@ public class Framebuffer {
         return (dstA << 24)| (dstR << 16) | (dstG << 8) | dstB;
     }
 
-    public void write(WritableByteChannel out) throws IOException {
+    void write(WritableByteChannel out) throws IOException {
         bb.clear();
         if (byteDepth == 4) {
             out.write(bb);
@@ -236,7 +236,7 @@ public class Framebuffer {
         }
     }
 
-    public void copyToBuffer(ByteBuffer out) {
+    void copyToBuffer(ByteBuffer out) {
         bb.clear();
         if (byteDepth == 4) {
             out.put(bb);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package launchertest;
 
+import com.sun.javafx.PlatformUtil;
 import java.util.ArrayList;
 import java.util.Collection;
 import junit.framework.AssertionFailedError;
@@ -34,6 +35,7 @@ import org.junit.runners.Parameterized;
 import org.junit.Test;
 
 import static launchertest.Constants.*;
+import static org.junit.Assume.*;
 
 /**
  * Unit test for FX support in Java 8 launcher
@@ -49,6 +51,7 @@ public class MainLauncherTest {
     public static class TestData {
         final String appName;
         final String pldrName;
+        final boolean headless;
         final int exitCode;
 
         public TestData(String appName) {
@@ -60,8 +63,17 @@ public class MainLauncherTest {
         }
 
         public TestData(String appName, String pldrName, int exitCode) {
+            this(appName, pldrName, false, exitCode);
+        }
+
+        public TestData(String appName, boolean headless, int exitCode) {
+            this(appName, null, headless, exitCode);
+        }
+
+        public TestData(String appName, String pldrName, boolean headless, int exitCode) {
             this.appName = pkgName + "." + appName;
             this.pldrName = pldrName == null ? null : pkgName + "." +  pldrName;
+            this.headless = headless;
             this.exitCode = exitCode;
         }
     }
@@ -75,6 +87,7 @@ public class MainLauncherTest {
         new TestData("TestNotApplicationThreadCheck", ERROR_NONE),
         new TestData("TestAppThreadCheck", "TestPreloader", ERROR_NONE),
         new TestData("TestAppNoMainThreadCheck", "TestPreloader", ERROR_NONE),
+        new TestData("TestHeadlessApp", true, ERROR_NONE),
     };
 
     @Parameters
@@ -90,16 +103,23 @@ public class MainLauncherTest {
 
     private final String testAppName;
     private final String testPldrName;
+    private final boolean headless;
     private final int testExitCode;
 
     public MainLauncherTest(TestData testData) {
         this.testAppName = testData.appName;
         this.testPldrName = testData.pldrName;
+        this.headless = testData.headless;
         this.testExitCode = testData.exitCode;
     }
 
     @Test (timeout=5000)
     public void testMainLauncher() throws Exception {
+        if (headless) {
+            // Headless tests currently only run on Linux
+            assumeTrue(PlatformUtil.isLinux());
+        }
+
         final String classpath = System.getProperty("java.class.path");
         ProcessBuilder builder;
         if (testPldrName != null) {
@@ -107,6 +127,10 @@ public class MainLauncherTest {
                     "-Djavafx.preloader=" + testPldrName, testAppName);
         } else {
             builder = new ProcessBuilder("java", "-cp", classpath, testAppName);
+        }
+        if (headless) {
+            // Set DISPLAY variable to empty to run in headless mode on Linux
+            builder.environment().put("DISPLAY", "");
         }
         builder.redirectError(ProcessBuilder.Redirect.INHERIT);
         builder.redirectOutput(ProcessBuilder.Redirect.INHERIT);
@@ -187,7 +211,14 @@ public class MainLauncherTest {
                 throw new AssertionFailedError(testAppName
                         + ": preloader stop called on wrong thread");
 
-           default:
+            case ERROR_UNEXPECTED_EXCEPTION:
+                throw new AssertionFailedError(testAppName
+                + ": unexpected exception");
+            case ERROR_LAUNCH_SUCCEEDED:
+                throw new AssertionFailedError(testAppName
+                + ": Application.launch unexpectedly succeeded");
+
+            default:
                 throw new AssertionFailedError(testAppName
                         + ": Unexpected error exit: " + retVal);
         }

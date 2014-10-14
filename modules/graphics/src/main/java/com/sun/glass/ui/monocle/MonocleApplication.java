@@ -35,10 +35,6 @@ import com.sun.glass.ui.Size;
 import com.sun.glass.ui.Timer;
 import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
-import com.sun.glass.ui.monocle.input.InputDevice;
-import com.sun.glass.ui.monocle.input.KeyInput;
-import com.sun.glass.ui.monocle.input.MouseInput;
-import com.sun.glass.ui.monocle.input.MouseState;
 import javafx.collections.SetChangeListener;
 
 import java.io.File;
@@ -369,11 +365,11 @@ public final class MonocleApplication extends Application {
         super.finishTerminating();
     }
 
-    public void enterDnDEventLoop() {
+    void enterDnDEventLoop() {
         _enterNestedEventLoop();
     }
 
-    public void leaveDndEventLoop() {
+    void leaveDndEventLoop() {
         _leaveNestedEventLoop(null);
     }
 

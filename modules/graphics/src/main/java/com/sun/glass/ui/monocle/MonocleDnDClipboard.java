@@ -28,13 +28,12 @@ package com.sun.glass.ui.monocle;
 import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Clipboard;
 import com.sun.glass.ui.SystemClipboard;
-import com.sun.glass.ui.monocle.input.MouseInput;
 
 import java.util.HashMap;
 
 final class MonocleDnDClipboard extends SystemClipboard {
 
-    public MonocleDnDClipboard() {
+    MonocleDnDClipboard() {
         super(Clipboard.DND);
     }
 

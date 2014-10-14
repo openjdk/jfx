@@ -25,6 +25,7 @@
 
 package javafx.scene.control;
 
+import com.sun.javafx.scene.control.FormatterAccessor;
 import javafx.beans.DefaultProperty;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
@@ -32,6 +33,9 @@ import javafx.beans.binding.IntegerBinding;
 import javafx.beans.binding.StringBinding;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ObjectPropertyBase;
+import javafx.beans.property.ReadOnlyBooleanProperty;
+import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyIntegerProperty;
 import javafx.beans.property.ReadOnlyIntegerWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
@@ -52,8 +56,8 @@ import javafx.css.StyleOrigin;
 import javafx.css.Styleable;
 import javafx.css.StyleableObjectProperty;
 import javafx.css.StyleableProperty;
-//import javafx.scene.accessibility.Action;
-//import javafx.scene.accessibility.Attribute;
+import javafx.scene.AccessibleAction;
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.text.Font;
@@ -65,6 +69,7 @@ import java.util.List;
 
 import com.sun.javafx.Utils;
 import com.sun.javafx.binding.ExpressionHelper;
+import javafx.util.StringConverter;
 
 /**
  * Abstract base class for text input controls.
@@ -131,7 +136,7 @@ public abstract class TextInputControl extends Control {
             if (content.length() > 0) {
                 text.textIsNull = false;
             }
-            text.invalidate();
+            text.controlContentHasChanged();
         });
 
         // Bind the length to be based on the length of the text property
@@ -157,6 +162,16 @@ public abstract class TextInputControl extends Control {
                 if (end > start + length) end = length;
                 if (start > length-1) start = end = 0;
                 return txt.substring(start, end);
+            }
+        });
+
+        focusedProperty().addListener((ob, o, n) -> {
+            if (n) {
+                if (getTextFormatter() != null) {
+                    updateText(getTextFormatter());
+                }
+            } else {
+                commitValue();
             }
         });
 
@@ -266,6 +281,58 @@ public abstract class TextInputControl extends Control {
     public final void setPromptText(String value) { promptText.set(value); }
 
 
+    /**
+     * The property contains currently attached {@link TextFormatter}.
+     * Since the value is part of the {@code Formatter}, changing the TextFormatter will update the text based on the new textFormatter.
+     *
+     * @defaultValue null
+     * @since JavaFX 8u40
+     */
+    private final ObjectProperty<TextFormatter<?>> textFormatter = new ObjectPropertyBase<TextFormatter<?>>() {
+
+        private TextFormatter<?> oldFormatter = null;
+
+        @Override
+        public Object getBean() {
+            return TextInputControl.this;
+        }
+
+        @Override
+        public String getName() {
+            return "textFormatter";
+        }
+
+        @Override
+        protected void invalidated() {
+            final TextFormatter<?> formatter = get();
+            try {
+                if (formatter != null) {
+                    try {
+                        formatter.bindToControl(f -> updateText(f));
+                    } catch (IllegalStateException e) {
+                        if (isBound()) {
+                            unbind();
+                        }
+                        set(null);
+                        throw e;
+                    }
+                    if (!isFocused()) {
+                        updateText(get());
+                    }
+                }
+
+                if (oldFormatter != null) {
+                    oldFormatter.unbindFromControl();
+                }
+            } finally {
+                oldFormatter = formatter;
+            }
+        }
+    };
+    public final ObjectProperty<TextFormatter<?>> textFormatterProperty() { return textFormatter; }
+    public final TextFormatter<?> getTextFormatter() { return textFormatter.get(); }
+    public final void setTextFormatter(TextFormatter<?> value) { textFormatter.set(value); }
+
     private final Content content;
     /**
      * Returns the text input's content model.
@@ -339,18 +406,28 @@ public abstract class TextInputControl extends Control {
     public final int getCaretPosition() { return caretPosition.get(); }
     public final ReadOnlyIntegerProperty caretPositionProperty() { return caretPosition.getReadOnlyProperty(); }
 
+    private UndoRedoChange undoChangeHead = new UndoRedoChange();
+    private UndoRedoChange undoChange = undoChangeHead;
+    private boolean createNewUndoRecord = false;
+
     /**
-     * This flag is used to indicate that the text on replace trigger should
-     * NOT update the caret position. Basically it is a flag we use to
-     * indicate that the change to textInputControl.text was from us instead of from
-     * the developer. The language being what it is, it is possible that the
-     * developer is also bound to textInputControl.text and that they will change the
-     * text value before our on replace trigger gets called. We will therefore
-     * have to check the caret position against the text to make sure we don't
-     * get a caret position out of bounds. But otherwise, we don't update
-     * the caret when text is set internally.
+     * The property describes if it's currently possible to undo the latest change of the content that was done.
+     * @defaultValue false
+     * @since JavaFX 8u40
      */
-    private boolean doNotAdjustCaret = false;
+    private final ReadOnlyBooleanWrapper undoable = new ReadOnlyBooleanWrapper(this, "undoable", false);
+    public final boolean isUndoable() { return undoable.get(); }
+    public final ReadOnlyBooleanProperty undoableProperty() { return undoable.getReadOnlyProperty(); }
+
+
+    /**
+     * The property describes if it's currently possible to redo the latest change of the content that was undone.
+     * @defaultValue false
+     * @since JavaFX 8u40
+     */
+    private final ReadOnlyBooleanWrapper redoable = new ReadOnlyBooleanWrapper(this, "redoable", false);
+    public final boolean isRedoable() { return redoable.get(); }
+    public final ReadOnlyBooleanProperty redoableProperty() { return redoable.getReadOnlyProperty(); }
 
     /***************************************************************************
      *                                                                         *
@@ -365,7 +442,6 @@ public abstract class TextInputControl extends Control {
      * @param end must be less than or equal to the length
      */
     public String getText(int start, int end) {
-        // TODO these checks really belong in Content
         if (start > end) {
             throw new IllegalArgumentException("The start must be <= the end");
         }
@@ -429,13 +505,8 @@ public abstract class TextInputControl extends Control {
      * @see #replaceText(int, int, String)
      */
     public void replaceText(IndexRange range, String text) {
-        if (range == null) {
-            throw new NullPointerException();
-        }
-
-        int start = range.getStart();
-        int end = start + range.getLength();
-
+        final int start = range.getStart();
+        final int end = start + range.getLength();
         replaceText(start, end, text);
     }
 
@@ -448,7 +519,7 @@ public abstract class TextInputControl extends Control {
      *            and &lt;= the length of the text.
      * @param text The text that is to replace the range. This must not be null.
      */
-    public void replaceText(int start, int end, String text) {
+    public void replaceText(final int start, final int end, final String text) {
         if (start > end) {
             throw new IllegalArgumentException();
         }
@@ -463,12 +534,58 @@ public abstract class TextInputControl extends Control {
         }
 
         if (!this.text.isBound()) {
-            getContent().delete(start, end, text.isEmpty());
-            getContent().insert(start, text, true);
+            final int oldLength = getLength();
+            TextFormatter<?> formatter = getTextFormatter();
+            TextFormatter.Change change = new TextFormatter.Change(this, getFormatterAccessor(), start, end, text);
+            if (formatter != null && formatter.getFilter() != null) {
+                change = formatter.getFilter().apply(change);
+                if (change == null) {
+                    return;
+                }
+            }
 
-            start += text.length();
-            selectRange(start, start);
+            // Update the content
+            updateContent(change, oldLength == 0);
+
         }
+    }
+
+    private void updateContent(TextFormatter.Change change, boolean forceNewUndoRecord) {
+        final boolean nonEmptySelection = getSelection().getLength() > 0;
+        String oldText = getText(change.start, change.end);
+        int adjustmentAmount = replaceText(change.start, change.end, change.text, change.getAnchor(), change.getCaretPosition());
+
+        // If you select some stuff and type anything, then we need to
+        // create an undo record. If the range is a single character and
+        // is right next to the index of the last undo record end index, then
+        // we don't need to create a new undo record. In all other cases
+        // we do.
+        int endOfUndoChange = undoChange == undoChangeHead ? -1 : undoChange.start + undoChange.newText.length();
+        String newText = getText(change.start, change.start + change.text.length() - adjustmentAmount);
+        if (createNewUndoRecord || nonEmptySelection || endOfUndoChange == -1 || forceNewUndoRecord ||
+                (endOfUndoChange != change.start && endOfUndoChange != change.end) || change.start - change.end > 1) {
+            undoChange = undoChange.add(change.start, oldText, newText);
+        } else if (change.start != change.end && change.text.isEmpty()) {
+            // I know I am deleting, and am located at the end of the range of the current undo record
+            if (undoChange.newText.length() > 0) {
+                undoChange.newText = undoChange.newText.substring(0, change.start - undoChange.start);
+                if (undoChange.newText.isEmpty()) {
+                    // throw away this undo change record
+                    undoChange = undoChange.discard();
+                }
+            } else {
+                if (change.start == endOfUndoChange) {
+                    undoChange.oldText += oldText;
+                } else { // end == endOfUndoChange
+                    undoChange.oldText = oldText + undoChange.oldText;
+                    undoChange.start--;
+                }
+            }
+        } else {
+            // I know I am adding, and am located at the end of the range of the current undo record
+            undoChange.newText += newText;
+        }
+        updateUndoRedoState();
     }
 
     /**
@@ -504,7 +621,12 @@ public abstract class TextInputControl extends Control {
         if (clipboard.hasString()) {
             final String text = clipboard.getString();
             if (text != null) {
-                replaceSelection(text);
+                createNewUndoRecord = true;
+                try {
+                    replaceSelection(text);
+                } finally {
+                    createNewUndoRecord = false;
+                }
             }
         }
     }
@@ -772,11 +894,8 @@ public abstract class TextInputControl extends Control {
                 // Note: Do not use charIterator here, because we do want to
                 // break up clusters when deleting backwards.
                 int p = Character.offsetByCodePoints(text, dot, -1);
-                doNotAdjustCaret = true;
                 deleteText(p, dot);
-                selectRange(p, p);
                 failed = false;
-                doNotAdjustCaret = false;
             }
         }
         return !failed;
@@ -796,8 +915,6 @@ public abstract class TextInputControl extends Control {
             if (dot != mark) {
                 // there is a selection of text to remove
                 replaceSelection("");
-                int newDot = Math.min(dot, mark);
-                selectRange(newDot, newDot);
                 failed = false;
             } else if (text.length() > 0 && dot < text.length()) {
                 // The caret is not at the end, so remove some characters.
@@ -809,11 +926,8 @@ public abstract class TextInputControl extends Control {
                 }
                 charIterator.setText(text);
                 int p = charIterator.following(dot);
-                doNotAdjustCaret = true;
-                //setText(text.substring(0, dot) + text.substring(dot + delChars));
                 deleteText(dot, p);
                 failed = false;
-                doNotAdjustCaret = false;
             }
         }
         return !failed;
@@ -896,10 +1010,26 @@ public abstract class TextInputControl extends Control {
      * Positions the anchor and caretPosition explicitly.
      */
     public void selectRange(int anchor, int caretPosition) {
+        caretPosition = Utils.clamp(0, caretPosition, getLength());
+        anchor = Utils.clamp(0, anchor, getLength());
+
+        TextFormatter.Change change = new TextFormatter.Change(this, getFormatterAccessor(), anchor, caretPosition);
+        TextFormatter<?> formatter = getTextFormatter();
+        if (formatter != null && formatter.getFilter() != null) {
+            change = formatter.getFilter().apply(change);
+            if (change == null) {
+                return;
+            }
+        }
+
+        updateContent(change, false);
+    }
+
+    private void doSelectRange(int anchor, int caretPosition) {
         this.caretPosition.set(Utils.clamp(0, caretPosition, getLength()));
         this.anchor.set(Utils.clamp(0, anchor, getLength()));
         this.selection.set(IndexRange.normalize(getAnchor(), getCaretPosition()));
-//        accSendNotification(Attribute.SELECTION_START);
+        notifyAccessibleAttributeChanged(AccessibleAttribute.SELECTION_START);
     }
 
     /**
@@ -948,44 +1078,173 @@ public abstract class TextInputControl extends Control {
      * and the given replacement text inserted.
      */
     public void replaceSelection(String replacement) {
-        if (text.isBound()) return;
+        replaceText(getSelection(), replacement);
+    }
 
-        if (replacement == null) {
-            throw new NullPointerException();
-        }
+    /**
+     * If possible, undoes the last modification. If {@link #isUndoable()} returns
+     * false, then calling this method has no effect.
+     * @since JavaFX 8u40
+     */
+    public final void undo() {
+        if (isUndoable()) {
+            // Apply reverse change here
+            final int start = undoChange.start;
+            final String newText = undoChange.newText;
+            final String oldText = undoChange.oldText;
 
-        final int dot = getCaretPosition();
-        final int mark = getAnchor();
-        int start = Math.min(dot, mark);
-        int end = Math.max(dot, mark);
-        int pos = dot;
-
-        if (getLength() == 0) {
-            doNotAdjustCaret = true;
-            setText(replacement);
-            selectRange(getLength(), getLength());
-            doNotAdjustCaret = false;
-        } else {
-            deselect();
-            // RT-16566: Need to take into account stripping of chars into caret pos
-            doNotAdjustCaret = true;
-            int oldLength = getLength();
-            end = Math.min(end, oldLength);
-            if (end > start) {
-                getContent().delete(start, end, replacement.isEmpty());
-                oldLength -= (end - start);
+            if (newText != null) {
+                getContent().delete(start, start + newText.length(), oldText.isEmpty());
             }
-            getContent().insert(start, replacement, true);
-            // RT-16566: Need to take into account stripping of chars into caret pos
-            final int p = start + getLength() - oldLength;
-            selectRange(p, p);
-            doNotAdjustCaret = false;
+
+            if (oldText != null) {
+                getContent().insert(start, oldText, true);
+                doSelectRange(start, start + oldText.length());
+            } else {
+                doSelectRange(start, start + newText.length());
+            }
+
+            undoChange = undoChange.prev;
         }
+        updateUndoRedoState();
+    }
+
+    /**
+     * If possible, redoes the last undone modification. If {@link #isRedoable()} returns
+     * false, then calling this method has no effect.
+     * @since JavaFX 8u40
+     */
+    public final void redo() {
+        if (isRedoable()) {
+            // Apply change here
+            undoChange = undoChange.next;
+            final int start = undoChange.start;
+            final String newText = undoChange.newText;
+            final String oldText = undoChange.oldText;
+
+            if (oldText != null) {
+                getContent().delete(start, start + oldText.length(), newText.isEmpty());
+            }
+
+            if (newText != null) {
+                getContent().insert(start, newText, true);
+                doSelectRange(start + newText.length(), start + newText.length());
+            } else {
+                doSelectRange(start, start);
+            }
+        }
+        updateUndoRedoState();
+        // else beep ?
     }
 
     // Used by TextArea, although there are probably other better ways of
     // doing this.
     void textUpdated() { }
+
+    private void resetUndoRedoState() {
+        undoChange = undoChangeHead;
+        undoChange.next = null;
+        updateUndoRedoState();
+    }
+
+    private void updateUndoRedoState() {
+        undoable.set(undoChange != undoChangeHead);
+        redoable.set(undoChange.next != null);
+    }
+
+    private boolean filterAndSet(String value) {
+        // Send the new value through the textFormatter, if one exists.
+        TextFormatter<?> formatter = getTextFormatter();
+        int length = content.length();
+        if (formatter != null && formatter.getFilter() != null && !text.isBound()) {
+            TextFormatter.Change change = new TextFormatter.Change(
+                    TextInputControl.this, getFormatterAccessor(), 0, length, value, 0, 0);
+            change = formatter.getFilter().apply(change);
+            if (change == null) {
+                return false;
+            }
+            replaceText(change.start, change.end, change.text, change.getAnchor(), change.getCaretPosition());
+        } else {
+            replaceText(0, length, value, 0, 0);
+        }
+        return true;
+    }
+
+    /**
+     * This is what is ultimately called by every code path that will update
+     * the content (except for undo / redo). The input into this method has
+     * already run through the textFormatter where appropriate.
+     *
+     * @param start            The start index into the existing text which
+     *                         will be replaced by the new value
+     * @param end              The end index into the existing text which will
+     *                         be replaced by the new value. As with
+     *                         String.replace this is a lastIndex+1 value
+     * @param value            The new text value
+     * @param anchor           The new selection anchor after the change is made
+     * @param caretPosition    The new selection caretPosition after the change
+     *                         is made.
+     * @return The amount of adjustment made to the end / anchor / caretPosition to
+     *         accommodate for subsequent filtering (such as the filtering of
+     *         new lines by the TextField)
+     */
+    private int replaceText(int start, int end, String value, int anchor, int caretPosition) {
+        // RT-16566: Need to take into account stripping of chars into the
+        // final anchor & caret position
+        int length = getLength();
+        int adjustmentAmount = 0;
+        if (end != start) {
+            getContent().delete(start, end, value.isEmpty());
+            length -= (end - start);
+        }
+        if (value != null) {
+            getContent().insert(start, value, true);
+            adjustmentAmount = value.length() - (getLength() - length);
+            anchor -= adjustmentAmount;
+            caretPosition -= adjustmentAmount;
+        }
+        doSelectRange(anchor, caretPosition);
+        return adjustmentAmount;
+    }
+
+    private <T> void updateText(TextFormatter<T> formatter) {
+        T value = formatter.getValue();
+        StringConverter<T> converter = formatter.getValueConverter();
+        if (converter != null) {
+            String text = converter.toString(value);
+            replaceText(0, getLength(), text, text.length(), text.length());
+        }
+    }
+
+    /**
+     * Commit the current text and convert it to a value.
+     * @since JavaFX 8u40
+     */
+    public final void commitValue() {
+        if (getTextFormatter() != null) {
+            getTextFormatter().updateValue(getText());
+        }
+    }
+
+    /**
+     * If the field is currently being edited, this call will set text to the last commited value.
+     * @since JavaFX 8u40
+     */
+    public final void cancelEdit() {
+        if (getTextFormatter() != null) {
+            updateText(getTextFormatter());
+        }
+    }
+
+    private FormatterAccessor accessor;
+
+    private FormatterAccessor getFormatterAccessor() {
+        if (accessor == null) {
+            accessor = new TextInputControlFromatterAccessor();
+        }
+        return accessor;
+    }
+
 
     /**
      * A little utility method for stripping out unwanted characters.
@@ -1062,9 +1321,13 @@ public abstract class TextInputControl extends Control {
             markInvalid();
         }
 
-        private void invalidate() {
+        /**
+         * Called whenever the content on the control has changed (as determined
+         * by a listener on the content).
+         */
+        private void controlContentHasChanged() {
             markInvalid();
-//            accSendNotification(Attribute.TITLE);
+            notifyAccessibleAttributeChanged(AccessibleAttribute.TEXT);
         }
 
         @Override public void bind(ObservableValue<? extends String> observable) {
@@ -1127,17 +1390,33 @@ public abstract class TextInputControl extends Control {
             fireValueChangedEvent();
         }
 
+        /**
+         * doSet is called whenever the setText() method was called directly
+         * on the TextInputControl, or when the text property was bound,
+         * unbound, or reacted to a binding invalidation. It is *not* called
+         * when modifications to the content happened indirectly, such as
+         * through the replaceText / replaceSelection methods.
+         *
+         * @param value The new value
+         */
         private void doSet(String value) {
             // Guard against the null value.
             textIsNull = value == null;
             if (value == null) value = "";
-            // Update the content
-            content.delete(0, content.length(), value.isEmpty());
-            content.insert(0, value, true);
-            if (!doNotAdjustCaret) {
-                selectRange(0, 0);
-                textUpdated();
+
+            if (!filterAndSet(value)) return;
+
+            if (getTextFormatter() != null) {
+                getTextFormatter().updateValue(getText());
             }
+
+            textUpdated();
+
+            // If the programmer has directly manipulated the text property
+            // or has it bound up, then we will clear out any modifications
+            // from the undo manager as we must suppose that the control is
+            // being reused, for example, between forms.
+            resetUndoRedoState();
         }
 
         private class Listener implements InvalidationListener {
@@ -1153,6 +1432,65 @@ public abstract class TextInputControl extends Control {
         }
     }
 
+    /**
+     * Used to form a linked-list of Undo / Redo changes. Each UndoRedoChange
+     * records the old and new text, and the start index. It also has
+     * the links to the previous and next Changes in the chain. There
+     * are two special UndoRedoChange objects in this chain representing the
+     * head and the tail so we can have beforeFirst and afterLast
+     * behavior as necessary.
+     */
+    static class UndoRedoChange {
+        int start;
+        String oldText;
+        String newText;
+        UndoRedoChange prev;
+        UndoRedoChange next;
+
+        UndoRedoChange() { }
+
+        public UndoRedoChange add(int start, String oldText, String newText) {
+            UndoRedoChange c = new UndoRedoChange();
+            c.start = start;
+            c.oldText = oldText;
+            c.newText = newText;
+            c.prev = this;
+            next = c;
+            return c;
+        }
+
+        public UndoRedoChange discard() {
+            prev.next = next;
+            return prev;
+        }
+
+        // Handy to use when debugging, just put it in undo or redo
+        // method or replaceText to see what is happening to the undo
+        // history as it occurs.
+        void debugPrint() {
+            UndoRedoChange c = this;
+            System.out.print("[");
+            while (c != null) {
+                System.out.print(c.toString());
+                if (c.next != null) System.out.print(", ");
+                c = c.next;
+            }
+            System.out.println("]");
+        }
+
+        @Override public String toString() {
+            if (oldText == null && newText == null) {
+                return "head";
+            }
+            if (oldText.isEmpty() && !newText.isEmpty()) {
+                return "added '" + newText + "' at index " + start;
+            } else if (!oldText.isEmpty() && !newText.isEmpty()) {
+                return "replaced '" + oldText + "' with '" + newText + "' at index " + start;
+            } else {
+                return "deleted '" + oldText + "' at index " + start;
+            }
+        }
+    }
 
     /***************************************************************************
      *                                                                         *
@@ -1216,41 +1554,67 @@ public abstract class TextInputControl extends Control {
      *                                                                         *
      **************************************************************************/
 
-//    /** @treatAsPrivate */
-//    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//        switch (attribute) {
-//            case TITLE: {
-//                String text = getText();
-//                if (text == null || text.isEmpty()) {
-//                    text = getPromptText();
-//                }
-//                return text;
-//            }
-//            case SELECTION_START: return getSelection().getStart();
-//            case SELECTION_END: return getSelection().getEnd();
-//            case CARET_OFFSET: return getCaretPosition();
-//            case FONT: return getFont();
-//            default: return super.accGetAttribute(attribute, parameters);
-//        }
-//    }
-//
-//    /** @treatAsPrivate */
-//    @Override public void accExecuteAction(Action action, Object... parameters) {
-//        switch (action) {
-//            case SET_TITLE: {
-//                String value = (String) parameters[0];
-//                if (value != null) setText(value);
-//            }
-//            case SELECT: {
-//                Integer start = (Integer) parameters[0];
-//                Integer end = (Integer) parameters[1];
-//                if (start != null && end != null) {
-//                    selectRange(start,  end);
-//                }
-//                break;
-//            }
-//            case SCROLL_TO_INDEX: //Skin
-//            default: super.accExecuteAction(action, parameters);
-//        }
-//    }
+    @Override
+    public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
+        switch (attribute) {
+            case TEXT: {
+                String accText = getAccessibleText();
+                if (accText != null && !accText.isEmpty()) return accText;
+
+                String text = getText();
+                if (text == null || text.isEmpty()) {
+                    text = getPromptText();
+                }
+                return text;
+            }
+            case EDITABLE: return isEditable();
+            case SELECTION_START: return getSelection().getStart();
+            case SELECTION_END: return getSelection().getEnd();
+            case CARET_OFFSET: return getCaretPosition();
+            case FONT: return getFont();
+            default: return super.queryAccessibleAttribute(attribute, parameters);
+        }
+    }
+
+    @Override
+    public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
+        switch (action) {
+            case SET_TEXT: {
+                String value = (String) parameters[0];
+                if (value != null) setText(value);
+            }
+            case SET_TEXT_SELECTION: {
+                Integer start = (Integer) parameters[0];
+                Integer end = (Integer) parameters[1];
+                if (start != null && end != null) {
+                    selectRange(start,  end);
+                }
+                break;
+            }
+            default: super.executeAccessibleAction(action, parameters);
+        }
+    }
+
+    private class TextInputControlFromatterAccessor implements FormatterAccessor {
+        @Override
+        public int getTextLength() {
+            return TextInputControl.this.getLength();
+        }
+
+        @Override
+        public String getText(int begin, int end) {
+            return TextInputControl.this.getText(begin, end);
+        }
+
+        @Override
+        public int getCaret() {
+            return TextInputControl.this.getCaretPosition();
+        }
+
+        @Override
+        public int getAnchor() {
+            return TextInputControl.this.getAnchor();
+        }
+    }
+
 }

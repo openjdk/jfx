@@ -95,6 +95,36 @@ public class NGTriangleMeshTest {
     }
 
     /**
+     * Test of syncNormals method, of class NGTriangleMesh.
+     */
+    @Test
+    public void testSyncNormals() {
+        final float[] normals = new float[]{0, 1, 2, 3, 4, 5};
+        NGTriangleMesh instance = new NGTriangleMesh();
+        instance.syncNormals((array, fromAndLengthIndices) -> normals);
+        float[] actuals = instance.test_getNormals();
+        float[] expecteds = new float[]{0, 1, 2, 3, 4, 5};
+        assertArrayEquals(expecteds, actuals, EPSILON_FLOAT);
+    }
+
+    /**
+     * Test of syncNormals method, of class NGTriangleMesh.
+     */
+    @Test
+    public void testSyncNormals2() {
+        final float[] normals = new float[]{0, 1, 2, 3, 4, 5};
+        NGTriangleMesh instance = new NGTriangleMesh();
+        instance.syncNormals((array, fromAndLengthIndices) -> normals);
+        instance.syncNormals((array, fromAndLengthIndices) -> {
+            Arrays.fill(array, 1, 1 + 4, 1);
+            return array;
+        });
+        float[] actuals = instance.test_getNormals();
+        float[] expecteds = new float[]{0, 1, 1, 1, 1, 5};
+        assertArrayEquals(expecteds, actuals, EPSILON_FLOAT);
+    }
+
+    /**
      * Test of syncTexCoords method, of class NGTriangleMesh.
      */
     @Test

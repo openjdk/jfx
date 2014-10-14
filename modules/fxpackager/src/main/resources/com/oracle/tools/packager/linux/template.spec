@@ -35,7 +35,9 @@ APPLICATION_LICENSE_FILE
 /opt/APPLICATION_FS_NAME
 
 %post
-cp /opt/APPLICATION_FS_NAME/APPLICATION_FS_NAME.desktop /usr/share/applications/
+SECONDARY_LAUNCHERS_INSTALL
+xdg-desktop-menu install --novendor /opt/APPLICATION_FS_NAME/APPLICATION_LAUNCHER_FILENAME.desktop
+FILE_ASSOCIATION_INSTALL
 if [ "SERVICE_HINT" = "true" ]; then
     cp /opt/APPLICATION_FS_NAME/APPLICATION_PACKAGE.init /etc/init.d/APPLICATION_PACKAGE
     if [ -x "/etc/init.d/APPLICATION_PACKAGE" ]; then
@@ -47,7 +49,9 @@ if [ "SERVICE_HINT" = "true" ]; then
 fi
 
 %preun
-rm -f /usr/share/applications/APPLICATION_FS_NAME.desktop
+SECONDARY_LAUNCHERS_REMOVE
+xdg-desktop-menu install --novendor /opt/APPLICATION_FS_NAME/APPLICATION_LAUNCHER_FILENAME.desktop
+FILE_ASSOCIATION_REMOVE
 if [ "SERVICE_HINT" = "true" ]; then
     if [ -x "/etc/init.d/APPLICATION_PACKAGE" ]; then
         if [ "STOP_ON_UNINSTALL" = "true" ]; then

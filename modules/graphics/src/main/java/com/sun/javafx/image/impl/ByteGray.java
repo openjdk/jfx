@@ -41,18 +41,33 @@ public class ByteGray {
     public static final BytePixelSetter     setter = Accessor.instance;
     public static final BytePixelAccessor accessor = Accessor.instance;
 
-    public static final ByteToBytePixelConverter ToByteGrayConverter =
-        BaseByteToByteConverter.create(accessor);
-    public static final ByteToBytePixelConverter ToByteBgraConverter =
-        ByteGray.ToByteBgrfConv.nonpremult;
-    public static final ByteToBytePixelConverter ToByteBgraPreConverter =
-        ByteGray.ToByteBgrfConv.premult;
-    public static final ByteToIntPixelConverter ToIntArgbConverter =
-        ByteGray.ToIntFrgbConv.nonpremult;
-    public static final ByteToIntPixelConverter ToIntArgbPreConverter =
-        ByteGray.ToIntFrgbConv.premult;
-    public static final ByteToBytePixelConverter ToByteBgrConverter =
-        ByteGray.ToByteRgbAnyConv.bgr;
+    private static ByteToBytePixelConverter ToByteGrayObj;
+    public  static ByteToBytePixelConverter ToByteGrayConverter() {
+        if (ToByteGrayObj == null) {
+            ToByteGrayObj = BaseByteToByteConverter.create(accessor);
+        }
+        return ToByteGrayObj;
+    }
+
+    public static ByteToBytePixelConverter ToByteBgraConverter() {
+        return ByteGray.ToByteBgrfConv.nonpremult;
+    }
+
+    public static ByteToBytePixelConverter ToByteBgraPreConverter() {
+        return ByteGray.ToByteBgrfConv.premult;
+    }
+
+    public static ByteToIntPixelConverter ToIntArgbConverter() {
+        return ByteGray.ToIntFrgbConv.nonpremult;
+    }
+
+    public static ByteToIntPixelConverter ToIntArgbPreConverter() {
+        return ByteGray.ToIntFrgbConv.premult;
+    }
+
+    public static ByteToBytePixelConverter ToByteBgrConverter() {
+        return ByteGray.ToByteRgbAnyConv.bgr;
+    }
 
     static class Accessor implements BytePixelAccessor {
         static final BytePixelAccessor instance = new Accessor();
@@ -208,7 +223,7 @@ public class ByteGray {
         static ToByteRgbAnyConv bgr = new ToByteRgbAnyConv(ByteBgr.setter);
 
         private ToByteRgbAnyConv(BytePixelSetter setter) {
-            super(Accessor.instance, setter);
+            super(ByteGray.getter, setter);
         }
 
         @Override

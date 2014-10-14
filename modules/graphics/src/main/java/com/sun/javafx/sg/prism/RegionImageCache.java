@@ -58,7 +58,7 @@ class RegionImageCache {
 
     RegionImageCache(final ResourceFactory factory) {
         imageMap = new HashMap<>();
-        backingStore = factory.createRTTexture(WIDTH + WIDTH, HEIGHT, WrapMode.CLAMP_NOT_NEEDED);
+        backingStore = factory.createRTTexture(WIDTH + WIDTH, HEIGHT, WrapMode.CLAMP_TO_ZERO);
         backingStore.contentsUseful();
         backingStore.makePermanent();
         factory.setRegionTexture(backingStore);

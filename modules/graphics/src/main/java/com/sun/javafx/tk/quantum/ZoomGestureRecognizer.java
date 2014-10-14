@@ -49,7 +49,10 @@ class ZoomGestureRecognizer implements GestureRecognizer {
     private static boolean ZOOM_INERTIA_ENABLED = true;
     private static double MAX_ZOOMIN_VELOCITY = 3.0;
     private static double MAX_ZOOMOUT_VELOCITY = 0.3333;
-    private static double ZOOM_INERTIA_MILLIS = 1500;
+    private static double ZOOM_INERTIA_MILLIS = 500;
+    private static double MAX_ZOOM_IN_FACTOR = 10;
+    private static double MAX_ZOOM_OUT_FACTOR = 0.1;
+    
     static {
         AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             String s = System.getProperty("com.sun.javafx.gestures.zoom.threshold");
@@ -97,8 +100,9 @@ class ZoomGestureRecognizer implements GestureRecognizer {
             double currentTime = inertiaTimeline.getCurrentTime().toSeconds();
             double timePassed = currentTime - inertiaLastTime;
             inertiaLastTime = currentTime;
-            zoomFactor = 1 + timePassed * (inertiaZoomVelocity.get() - 1);
-            totalZoomFactor *= zoomFactor;
+            double prevTotalZoomFactor = totalZoomFactor;
+            totalZoomFactor += timePassed * inertiaZoomVelocity.get(); // zoom += dz/dt * time
+            zoomFactor = totalZoomFactor / prevTotalZoomFactor;
 
             //send inertia zoom event
             sendZoomEvent(true);
@@ -187,31 +191,45 @@ class ZoomGestureRecognizer implements GestureRecognizer {
             }
             if (ZOOM_INERTIA_ENABLED && (state == ZoomRecognitionState.PRE_INERTIA || state == ZoomRecognitionState.ACTIVE)) {
                 double timeFromLastZoom = ((double)time - zoomStartTime) / 1000000;
-                if (timeFromLastZoom < 300) {
+                if (initialInertiaZoomVelocity != 0 && timeFromLastZoom < 200) {
                     state = ZoomRecognitionState.INERTIA;
                     // activate inertia
                     inertiaLastTime = 0;
-                    if (initialInertiaZoomVelocity > MAX_ZOOMIN_VELOCITY) 
-                        initialInertiaZoomVelocity = MAX_ZOOMIN_VELOCITY;
-                    else if (initialInertiaZoomVelocity < MAX_ZOOMOUT_VELOCITY)
-                        initialInertiaZoomVelocity = MAX_ZOOMOUT_VELOCITY;
-                        
+                    double duration = ZOOM_INERTIA_MILLIS / 1000;
+                    double newZoom = totalZoomFactor + initialInertiaZoomVelocity * duration;
+                    if (initialInertiaZoomVelocity > 0) {
+                        //zoom in
+                        if (newZoom / totalZoomFactor > MAX_ZOOM_IN_FACTOR) {
+                            newZoom = totalZoomFactor * MAX_ZOOM_IN_FACTOR;
+                            duration = (newZoom - totalZoomFactor) / initialInertiaZoomVelocity;
+                        }
+                    } else {
+                        //zoom out
+                        if (newZoom / totalZoomFactor < MAX_ZOOM_OUT_FACTOR) {
+                            newZoom = totalZoomFactor * MAX_ZOOM_OUT_FACTOR;
+                            duration = (newZoom - totalZoomFactor) / initialInertiaZoomVelocity;
+                        }
+                    }
+                    
                     inertiaTimeline.getKeyFrames().setAll(
                         new KeyFrame(
                             Duration.millis(0),
                             new KeyValue(inertiaZoomVelocity, initialInertiaZoomVelocity, Interpolator.LINEAR)),
                         new KeyFrame(
-                            Duration.millis(ZOOM_INERTIA_MILLIS * Math.abs(initialInertiaZoomVelocity - 1) / (MAX_ZOOMIN_VELOCITY - 1)),
+                            //Duration.millis(ZOOM_INERTIA_MILLIS * Math.abs(initialInertiaZoomVelocity - 1) / (MAX_ZOOMIN_VELOCITY - 1)),
+                            Duration.seconds(duration),
                             event -> {
                                 //stop inertia
                                 reset();
                             },
-                            new KeyValue(inertiaZoomVelocity, 1.0, Interpolator.LINEAR))
+                            new KeyValue(inertiaZoomVelocity, 0, Interpolator.LINEAR))
                         );
                     inertiaTimeline.playFromStart();
                 } else {
                     reset();
                 }
+            } else {
+                reset();
             }
         } else {
             // currentTouchCount >= 1
@@ -236,6 +254,7 @@ class ZoomGestureRecognizer implements GestureRecognizer {
                 // currentTouchCount >= 2
                 if (state == ZoomRecognitionState.IDLE) {
                     state = ZoomRecognitionState.TRACKING;
+                    zoomStartTime = time;
                 }
                 
                 calculateCenter();
@@ -254,13 +273,16 @@ class ZoomGestureRecognizer implements GestureRecognizer {
                         }
                     }
                     if (state == ZoomRecognitionState.ACTIVE) {
+                        double prevTotalZoomFactor = totalZoomFactor;
                         totalZoomFactor *= zoomFactor;
                         sendZoomEvent(false);
                         distanceReference = currentDistance;
                         double timePassed = ((double)time - zoomStartTime) / 1000000000;
                         if (timePassed > 1e-4) {
-                            initialInertiaZoomVelocity = (zoomFactor-1) / timePassed + 1;
+                            initialInertiaZoomVelocity = (totalZoomFactor - prevTotalZoomFactor) / timePassed;
                             zoomStartTime = time;
+                        } else {
+                            initialInertiaZoomVelocity = 0;
                         }
                     }
                 }

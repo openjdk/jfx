@@ -26,7 +26,6 @@
 package com.sun.javafx.webkit.theme;
 
 import java.lang.ref.WeakReference;
-import java.lang.reflect.Field;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -245,11 +244,11 @@ public final class ScrollBarThemeImpl extends ScrollBarTheme {
             incBtnX = trackX - (int)track.getLayoutBounds().getWidth();
         }
 
-        if (thumb.isVisible() && thumb.contains(thumbX, thumbY)) {
+        if (thumb != null && thumb.isVisible() && thumb.contains(thumbX, thumbY)) {
             log.finer("thumb");
             return THUMB_PART;
 
-        } else if (track.isVisible() && track.contains(trackX, trackY)) {
+        } else if (track != null && track.isVisible() && track.contains(trackX, trackY)) {
 
             if ((orientation == VERTICAL_SCROLLBAR && thumbPosition() >= trackY) ||
                 (orientation == HORIZONTAL_SCROLLBAR && thumbPosition() >= trackX))
@@ -263,11 +262,11 @@ public final class ScrollBarThemeImpl extends ScrollBarTheme {
                 log.finer("forward track");
                 return FORWARD_TRACK_PART;
             }
-        } else if (decButton.contains(x, y)) {
+        } else if (decButton != null && decButton.isVisible() && decButton.contains(x, y)) {
             log.finer("back button");
             return BACK_BUTTON_START_PART;
 
-        } else if (incButton.contains(incBtnX, incBtnY)) {
+        } else if (incButton != null && incButton.isVisible() && incButton.contains(incBtnX, incBtnY)) {
             log.finer("forward button");
             return FORWARD_BUTTON_START_PART;
         }
@@ -283,6 +282,9 @@ public final class ScrollBarThemeImpl extends ScrollBarTheme {
         }
         // position calculated after ScrollBarSkin.positionThumb()
         Node thumb = getThumb(testSB);
+        if (thumb == null) {
+            return 0;
+        }
         double thumbLength = testSB.getOrientation() == Orientation.VERTICAL
                              ? thumb.getLayoutBounds().getHeight()
                              : thumb.getLayoutBounds().getWidth();
@@ -302,15 +304,17 @@ public final class ScrollBarThemeImpl extends ScrollBarTheme {
     @Override protected int getThumbLength(int w, int h, int orientation,
                                            int value,
                                            int visibleSize, int totalSize)
-    {
+    {        
         ScrollBar testSB = testSBRef.get();
         if (testSB == null) {
             return 0;
         }
         Node thumb = getThumb(testSB);
-
+        if (thumb == null) {
+            return 0;
+        }
         adjustScrollBar(testSB, w, h, orientation, value, visibleSize, totalSize);
-
+        
         double len = 0;
         if (orientation == VERTICAL_SCROLLBAR) {
             len = thumb.getLayoutBounds().getHeight();
@@ -327,7 +331,9 @@ public final class ScrollBarThemeImpl extends ScrollBarTheme {
             return 0;
         }
         Node decButton = getDecButton(testSB);
-
+        if (decButton == null) {
+            return 0;
+        }
         adjustScrollBar(testSB, w, h, orientation);
 
         double pos = 0;
@@ -346,7 +352,9 @@ public final class ScrollBarThemeImpl extends ScrollBarTheme {
             return 0;
         }
         Node track = getTrack(testSB);
-
+        if (track == null) {
+            return 0;
+        }
         adjustScrollBar(testSB, w, h, orientation);
 
         double len = 0;
@@ -389,35 +397,18 @@ public final class ScrollBarThemeImpl extends ScrollBarTheme {
     }
 
     private static Node getThumb(ScrollBar scrollBar) {
-        return (Node) getFieldValue("thumb", ScrollBarSkin.class,
-                scrollBar.getSkin());
+        return ((ScrollBarSkin)scrollBar.getSkin()).getThumb();
     }
 
     private static Node getTrack(ScrollBar scrollBar) {
-        return (Node) getFieldValue("track", ScrollBarSkin.class,
-                scrollBar.getSkin());
+        return ((ScrollBarSkin)scrollBar.getSkin()).getTrack();
     }
 
     private static Node getIncButton(ScrollBar scrollBar) {
-        return (Node) getFieldValue("incButton", ScrollBarSkin.class,
-                scrollBar.getSkin());
+        return ((ScrollBarSkin)scrollBar.getSkin()).getIncButton();
     }
 
     private static Node getDecButton(ScrollBar scrollBar) {
-        return (Node) getFieldValue("decButton", ScrollBarSkin.class,
-                scrollBar.getSkin());
-    }
-    
-    private static Object getFieldValue(String fieldName, Class cls,
-            Object obj)
-    {
-        try {
-            Field f = cls.getDeclaredField(fieldName);
-            f.setAccessible(true);
-            return f.get(obj);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return null;
+        return ((ScrollBarSkin)scrollBar.getSkin()).getDecButton();
     }
 }

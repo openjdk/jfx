@@ -28,10 +28,10 @@ package com.sun.javafx.scene.control.skin;
 import javafx.beans.value.ObservableValue;
 import javafx.css.Styleable;
 import javafx.geometry.*;
-//import javafx.scene.accessibility.Attribute;
 import javafx.scene.control.*;
 import com.sun.javafx.scene.control.behavior.ComboBoxBaseBehavior;
 import javafx.beans.InvalidationListener;
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Region;
@@ -83,9 +83,7 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
     }
     
     private Point2D getPrefPopupPosition() {
-        double dx = 0;
-        dx += (getSkinnable().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) ? -3 : 0;
-        return com.sun.javafx.Utils.pointRelativeTo(getSkinnable(), getPopupContent(), HPos.CENTER, VPos.BOTTOM, dx, 0, false);
+        return com.sun.javafx.Utils.pointRelativeTo(getSkinnable(), getPopupContent(), HPos.CENTER, VPos.BOTTOM, 0, 0, false);
     }
     
     private void positionAndShowPopup() {
@@ -140,7 +138,7 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
         popup.addEventHandler(WindowEvent.WINDOW_HIDDEN, t -> {
             // Make sure the accessibility focus returns to the combo box
             // after the window closes.
-//            getSkinnable().accSendNotification(Attribute.FOCUS_NODE);
+            getSkinnable().notifyAccessibleAttributeChanged(AccessibleAttribute.FOCUS_NODE);
         });
         
         // Fix for RT-21207

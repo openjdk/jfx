@@ -51,6 +51,7 @@ import javafx.scene.layout.*;
 /**
  * CSS panel selection path handling.
  *
+ * @treatAsPrivate
  */
 // TODO : should have its UI defined in an fxml file.
 public class SelectionPath extends HBox {
@@ -261,6 +262,10 @@ public class SelectionPath extends HBox {
         }
     }
 
+    /**
+     *
+     * @treatAsPrivate
+     */
     public static class Item {
 
         private final Object item;
@@ -303,6 +308,10 @@ public class SelectionPath extends HBox {
         }
     }
 
+    /**
+     *
+     * @treatAsPrivate
+     */
     public static class Path {
 
         private final List<Item> items;

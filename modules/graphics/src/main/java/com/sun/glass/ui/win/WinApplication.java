@@ -36,8 +36,6 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.List;
 
-import com.sun.javafx.scene.accessibility.Accessible;
-
 final class WinApplication extends Application implements InvokeLaterDispatcher.InvokeLaterSubmitter {
 
     private static native void initIDs();
@@ -64,6 +62,7 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
 
     private final InvokeLaterDispatcher invokeLaterDispatcher;
     WinApplication() {
+        // Embedded in SWT, with shared event thread
         boolean isEventThread = AccessController
                 .doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("javafx.embed.isEventThread"));
         if (!isEventThread) {
@@ -210,8 +209,8 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
         return WinTimer.getMaxPeriod_impl();
     }
 
-    @Override public PlatformAccessible createAccessible(Accessible accessible) {
-        return WinAccessible.createAccessible(accessible);
+    @Override public Accessible createAccessible() {
+        return new WinAccessible();
     }
 
     @Override protected FileChooserResult staticCommonDialogs_showFileChooser(Window owner, String folder, String filename, String title, int type,

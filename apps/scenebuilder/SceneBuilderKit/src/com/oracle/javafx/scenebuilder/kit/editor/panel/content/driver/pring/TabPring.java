@@ -38,12 +38,10 @@ import com.oracle.javafx.scenebuilder.kit.editor.panel.content.gesture.AbstractG
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.gesture.SelectWithPringGesture;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import javafx.geometry.Bounds;
-import javafx.geometry.Point2D;
 import javafx.scene.Node;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.paint.Paint;
-import javafx.scene.transform.Transform;
 
 /**
  *
@@ -109,20 +107,8 @@ public class TabPring extends AbstractPring<Tab> {
     }
 
     @Override
-    public Transform getSceneGraphToSceneTransform() {
-        return getSceneGraphObject().getTabPane().getLocalToSceneTransform();
-    }
-
-    @Override
-    public Point2D sceneGraphObjectToScene(double x, double y) {
-        final TabPane tabPane = getSceneGraphObject().getTabPane();
-        return tabPane.localToScene(x, y);
-    }
-
-    @Override
-    public Point2D sceneToSceneGraphObject(double x, double y) {
-        final TabPane tabPane = getSceneGraphObject().getTabPane();
-        return tabPane.sceneToLocal(x, y);
+    public Node getSceneGraphObjectProxy() {
+        return getSceneGraphObject().getTabPane();
     }
 
     @Override

@@ -44,6 +44,8 @@ import javafx.animation.*;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WritableValue;
 import javafx.collections.ListChangeListener;
 import javafx.css.Styleable;
@@ -55,10 +57,10 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.geometry.Side;
 import javafx.geometry.VPos;
+import javafx.scene.AccessibleAction;
+import javafx.scene.AccessibleAttribute;
+import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
-//import javafx.scene.accessibility.Action;
-//import javafx.scene.accessibility.Attribute;
-//import javafx.scene.accessibility.Role;
 import javafx.scene.control.*;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.TouchEvent;
@@ -114,9 +116,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
         getChildren().addAll(currentStackPane, nextStackPane, navigation);
 
         pagination.maxPageIndicatorCountProperty().addListener(o -> {
-            resetIndexes(false);
-            navigation.initializePageIndicators();
-            navigation.updatePageIndicators();
+            resetIndiciesAndNav();
         });
 
         registerChangeListener(pagination.widthProperty(), "WIDTH");
@@ -125,6 +125,12 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
         registerChangeListener(pagination.pageFactoryProperty(), "PAGE_FACTORY");
 
         initializeSwipeAndTouchHandlers();
+    }
+
+    protected void resetIndiciesAndNav() {
+        resetIndexes(false);
+        navigation.initializePageIndicators();
+        navigation.updatePageIndicators();
     }
 
     public void selectNext() {
@@ -648,19 +654,13 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
                 // Speedup and finish the animation then update the page factory.
                 timeline.setRate(8);
                 timeline.setOnFinished(arg0 -> {
-                    resetIndexes(false);
-                    navigation.initializePageIndicators();
-                    navigation.updatePageIndicators();
+                    resetIndiciesAndNav();
                 });
                 return;
             }
-            resetIndexes(false);
-            navigation.initializePageIndicators();
-            navigation.updatePageIndicators();
+            resetIndiciesAndNav();
         } else if ("PAGE_COUNT".equals(p)) {
-            resetIndexes(false);
-            navigation.initializePageIndicators();
-            navigation.updatePageIndicators();
+            resetIndiciesAndNav();
         } else if ("WIDTH".equals(p)) {
             clipRect.setWidth(getSkinnable().getWidth());
         } else if ("HEIGHT".equals(p)) {
@@ -700,15 +700,19 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
         layoutInArea(navigation, x, stackPaneHeight, w, navigationHeight, 0, HPos.CENTER, VPos.CENTER);
     }
 
-//    @Override protected Object accGetAttribute(Attribute attribute, Object... parameters) {
-//        switch (attribute) {
-//            // Role: Pagination (specified in Pagination class)
-//            case FOCUS_ITEM: return navigation.indicatorButtons.getSelectedToggle();
-//            case SELECTED_PAGE: return navigation.indicatorButtons.getSelectedToggle();
-//            case PAGES: return navigation.indicatorButtons.getToggles();
-//            default: return super.accGetAttribute(attribute, parameters);
-//        }
-//    }
+    @Override
+    protected Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
+        switch (attribute) {
+            case FOCUS_ITEM: return navigation.indicatorButtons.getSelectedToggle();
+            case ITEM_COUNT: return navigation.indicatorButtons.getToggles().size();
+            case ITEM_AT_INDEX: {
+                Integer index = (Integer)parameters[0];
+                if (index == null) return null;
+                return navigation.indicatorButtons.getToggles().get(index);
+            }
+            default: return super.queryAccessibleAttribute(attribute, parameters);
+        }
+    }
 
     class NavigationControl extends StackPane {
 
@@ -734,14 +738,8 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
             controlBox = new HBox();
             controlBox.getStyleClass().add("control-box");
 
-            leftArrowButton = new Button() {
-//                @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//                    switch (attribute) {
-//                        case TITLE: return getString("Accessibility.title.Pagination.PreviousButton");
-//                        default: return super.accGetAttribute(attribute, parameters);
-//                    }
-//                }
-            };
+            leftArrowButton = new Button();
+            leftArrowButton.setAccessibleText(getString("Accessibility.title.Pagination.PreviousButton"));
             minButtonSize = leftArrowButton.getFont().getSize() * 2;
             leftArrowButton.fontProperty().addListener((arg0, arg1, newFont) -> {
                 minButtonSize = newFont.getSize() * 2;
@@ -762,14 +760,8 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
             leftArrowButton.setGraphic(leftArrow);
             leftArrow.getStyleClass().add("left-arrow");
 
-            rightArrowButton = new Button() {
-//                @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//                    switch (attribute) {
-//                        case TITLE: return getString("Accessibility.title.Pagination.NextButton");
-//                        default: return super.accGetAttribute(attribute, parameters);
-//                    }
-//                }
-            };
+            rightArrowButton = new Button();
+            rightArrowButton.setAccessibleText(getString("Accessibility.title.Pagination.NextButton"));
             rightArrowButton.setMinSize(minButtonSize, minButtonSize);
             rightArrowButton.prefWidthProperty().bind(rightArrowButton.minWidthProperty());
             rightArrowButton.prefHeightProperty().bind(rightArrowButton.minHeightProperty());
@@ -832,7 +824,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
         private void initializePageIndicators() {
             previousIndicatorCount = 0;
             controlBox.getChildren().clear();
-            indicatorButtons.getToggles().clear();
+            clearIndicatorButtons();
 
             controlBox.getChildren().add(leftArrowButton);
             for (int i = fromIndex; i <= toIndex; i++) {
@@ -842,6 +834,16 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
                 controlBox.getChildren().add(ib);
             }
             controlBox.getChildren().add(rightArrowButton);
+        }
+
+        private void clearIndicatorButtons() {
+            for (Toggle toggle : indicatorButtons.getToggles()) {
+                if (toggle instanceof IndicatorButton) {
+                    IndicatorButton indicatorButton = (IndicatorButton) toggle;
+                    indicatorButton.release();
+                }
+            }
+            indicatorButtons.getToggles().clear();
         }
 
         // Finds and selects the IndicatorButton using the currentIndex.
@@ -854,7 +856,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
                     break;
                 }
             }
-//            getSkinnable().accSendNotification(Attribute.SELECTED_PAGE);
+            getSkinnable().notifyAccessibleAttributeChanged(AccessibleAttribute.FOCUS_ITEM);
         }
 
         // Update the page index using the currentIndex and updates the page set
@@ -1183,6 +1185,12 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
     }
 
     class IndicatorButton extends ToggleButton {
+        private final ListChangeListener<String> updateSkinIndicatorType =
+                                                    c -> setIndicatorType();
+
+        private final ChangeListener<Boolean> updateTooltipVisibility =
+                       (ob, oldValue, newValue) -> setTooltipVisible(newValue);
+
         private int pageNumber;
 
         public IndicatorButton(int pageNumber) {
@@ -1191,9 +1199,7 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
             setIndicatorType();
             setTooltipVisible(isTooltipVisible());
 
-            getSkinnable().getStyleClass().addListener((ListChangeListener<String>) change -> {
-                setIndicatorType();
-            });
+            getSkinnable().getStyleClass().addListener(updateSkinIndicatorType);
 
             setOnAction(new EventHandler<ActionEvent>() {
                 @Override public void handle(ActionEvent arg0) {
@@ -1206,11 +1212,10 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
                 }
             });
 
-            tooltipVisibleProperty().addListener((ov, oldValue, newValue) -> {
-                setTooltipVisible(newValue);
-            });
+            tooltipVisibleProperty().addListener(updateTooltipVisibility);
 
             prefHeightProperty().bind(minHeightProperty());
+            setAccessibleRole(AccessibleRole.PAGE_ITEM);
         }
 
         private void setIndicatorType() {
@@ -1250,21 +1255,29 @@ public class PaginationSkin extends BehaviorSkinBase<Pagination, PaginationBehav
             }
         }
 
-//        @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//            switch (attribute) {
-//                case ROLE: return Role.PAGE;
-//                case TITLE: return getText();
-//                case SELECTED: return isSelected();
-//                default: return super.accGetAttribute(attribute, parameters);
-//            }
-//        }
-//
-//        @Override public void accExecuteAction(Action action, Object... parameters) {
-//            switch (action) {
-//                case SELECT: setSelected(true); break;
-//                default: super.accExecuteAction(action);
-//            }
-//        }
+        public void release() {
+            getSkinnable().getStyleClass().removeListener(updateSkinIndicatorType);
+            tooltipVisibleProperty().removeListener(updateTooltipVisibility);
+        }
+
+        @Override
+        public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
+            switch (attribute) {
+                case TEXT: return getText();
+                case SELECTED: return isSelected();
+                default: return super.queryAccessibleAttribute(attribute, parameters);
+            }
+        }
+
+        @Override
+        public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
+            switch (action) {
+                case REQUEST_FOCUS:
+                    getSkinnable().setCurrentPageIndex(pageNumber);
+                    break;
+                default: super.executeAccessibleAction(action);
+            }
+        }
     }
 
     /***************************************************************************

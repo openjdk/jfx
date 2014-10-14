@@ -221,6 +221,12 @@ abstract class SWTexture implements Texture {
         return wrapMode;
     }
 
+    @Override
+    public boolean getUseMipmap() {
+        // TODO: Currently mipmapping not support for software texture
+        return false;
+    }
+
     public Texture getSharedTexture(WrapMode altMode) {
         assertLocked();
         if (wrapMode == altMode) {

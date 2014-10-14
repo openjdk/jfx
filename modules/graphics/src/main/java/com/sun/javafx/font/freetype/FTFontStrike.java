@@ -28,6 +28,7 @@ package com.sun.javafx.font.freetype;
 import com.sun.javafx.font.DisposerRecord;
 import com.sun.javafx.font.FontStrikeDesc;
 import com.sun.javafx.font.Glyph;
+import com.sun.javafx.font.PrismFontFactory;
 import com.sun.javafx.font.PrismFontStrike;
 import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.geom.transform.BaseTransform;
@@ -39,7 +40,7 @@ class FTFontStrike extends PrismFontStrike<FTFontFile> {
                               BaseTransform tx, int aaMode,
                               FontStrikeDesc desc) {
         super(fontResource, size, tx, aaMode, desc);
-        float maxDim = 80f;
+        float maxDim = PrismFontFactory.getFontSizeLimit();
         if (tx.isTranslateOrIdentity()) {
             drawShapes = size > maxDim;
         } else {

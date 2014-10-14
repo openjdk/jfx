@@ -31,49 +31,49 @@
  */
 package com.oracle.javafx.scenebuilder.kit.editor.job;
 
+import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.ReIndexObjectJob;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
-import com.oracle.javafx.scenebuilder.kit.editor.selection.GridSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  *
  */
-public class SendBackwardJob extends ArrangeZOrderJob {
+public class SendBackwardJob extends InlineDocumentJob {
 
     public SendBackwardJob(EditorController editorController) {
         super(editorController);
-        buildSubJobs();
     }
 
     @Override
-    public String getDescription() {
-        if (description == null) {
-            buildDescription();
+    public boolean isExecutable() {
+        final Selection selection = getEditorController().getSelection();
+        if (selection.getGroup() instanceof ObjectSelectionGroup == false) {
+            return false;
         }
-        return description;
+        final ObjectSelectionGroup osg = (ObjectSelectionGroup) selection.getGroup();
+        for (FXOMObject item : osg.getSortedItems()) {
+            final FXOMObject previousSlibing = item.getPreviousSlibing();
+            if (previousSlibing == null) {
+                return false;
+            }
+        }
+        return true;
     }
 
-    /*
-     * Private
-     */
-    private void buildSubJobs() {
+    @Override
+    protected List<Job> makeAndExecuteSubJobs() {
 
-        final Set<FXOMObject> candidates = new HashSet<>();
+        assert isExecutable(); // (1)
+        final List<Job> result = new ArrayList<>();
+
         final Selection selection = getEditorController().getSelection();
-        if (selection.getGroup() instanceof ObjectSelectionGroup) {
-            final ObjectSelectionGroup osg = (ObjectSelectionGroup) selection.getGroup();
-            candidates.addAll(osg.getFlattenItems());
-        } else if (selection.getGroup() instanceof GridSelectionGroup) {
-            // GridPane rows / columns are selected : SendBackwardJob is meaningless
-            // Just do nothing
-        } else {
-            assert selection.getGroup() == null :
-                    "Add implementation for " + selection.getGroup();
-        }
+        assert selection.getGroup() instanceof ObjectSelectionGroup; // Because of (1)
+        final ObjectSelectionGroup osg = (ObjectSelectionGroup) selection.getGroup();
+        final List<FXOMObject> candidates = osg.getSortedItems();
 
         for (FXOMObject candidate : candidates) {
             final FXOMObject previousSlibing = candidate.getPreviousSlibing();
@@ -81,30 +81,36 @@ public class SendBackwardJob extends ArrangeZOrderJob {
                 final ReIndexObjectJob subJob = new ReIndexObjectJob(
                         candidate, previousSlibing, getEditorController());
                 if (subJob.isExecutable()) {
-                    subJobs.add(subJob);
+                    subJob.execute();
+                    result.add(subJob);
                 }
             }
         }
+
+        return result;
     }
 
-    private void buildDescription() {
-        switch (subJobs.size()) {
+    @Override
+    protected String makeDescription() {
+        final String result;
+        switch (getSubJobs().size()) {
             case 0:
-                description = "Unexecutable Send Backward"; // NO18N
+                result = "Unexecutable Send Backward"; // NO18N
                 break;
-            case 1:
-                description = subJobs.get(0).getDescription();
+            case 1: // one arrange Z order
+                result = getSubJobs().get(0).getDescription();
                 break;
             default:
-                description = makeMultipleSelectionDescription();
+                result = makeMultipleSelectionDescription();
                 break;
         }
+        return result;
     }
 
     private String makeMultipleSelectionDescription() {
         final StringBuilder result = new StringBuilder();
         result.append("Send Backward ");
-        result.append(subJobs.size());
+        result.append(getSubJobs().size());
         result.append(" Objects");
         return result.toString();
     }

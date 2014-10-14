@@ -32,21 +32,20 @@
 package com.oracle.javafx.scenebuilder.kit.editor.job.gridpane;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
-import com.oracle.javafx.scenebuilder.kit.editor.job.BatchJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.BatchDocumentJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.DeleteObjectJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Job invoked when removing column constraints.
  */
-public class RemoveColumnConstraintsJob extends Job {
+public class RemoveColumnConstraintsJob extends BatchDocumentJob {
 
-    private BatchJob subJob;
     private final FXOMObject targetGridPane;
     private final List<Integer> targetIndexes;
 
@@ -60,51 +59,12 @@ public class RemoveColumnConstraintsJob extends Job {
         assert targetIndexes != null;
         this.targetGridPane = targetGridPane;
         this.targetIndexes = targetIndexes;
-        buildSubJobs();
     }
 
     @Override
-    public boolean isExecutable() {
-        // Remove column constraints job may be empty 
-        // (when there is no constraints defined for the selected column).
-        return subJob != null;
-    }
+    protected List<Job> makeSubJobs() {
 
-    @Override
-    public void execute() {
-        assert isExecutable();
-        final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
-        fxomDocument.beginUpdate();
-        subJob.execute();
-        fxomDocument.endUpdate();
-    }
-
-    @Override
-    public void undo() {
-        final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
-        fxomDocument.beginUpdate();
-        subJob.undo();
-        fxomDocument.endUpdate();
-    }
-
-    @Override
-    public void redo() {
-        final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
-        fxomDocument.beginUpdate();
-        subJob.redo();
-        fxomDocument.endUpdate();
-    }
-
-    @Override
-    public String getDescription() {
-        return "Remove Column Constraints"; //NOI18N
-    }
-
-    private void buildSubJobs() {
-
-        // Create sub job
-        subJob = new BatchJob(getEditorController(),
-                true /* shouldRefreshSceneGraph */, null);
+        final List<Job> result = new ArrayList<>();
 
         // Remove column constraints job
         assert targetGridPane instanceof FXOMInstance;
@@ -112,7 +72,7 @@ public class RemoveColumnConstraintsJob extends Job {
 
         final DesignHierarchyMask mask = new DesignHierarchyMask(targetGridPane);
         for (int targetIndex : targetIndexes) {
-            final FXOMObject targetConstraints 
+            final FXOMObject targetConstraints
                     = mask.getColumnConstraintsAtIndex(targetIndex);
             // The target index is associated to an existing constraints value :
             // => we remove the constraints value
@@ -120,8 +80,14 @@ public class RemoveColumnConstraintsJob extends Job {
                 final Job removeValueJob = new DeleteObjectJob(
                         targetConstraints,
                         getEditorController());
-                subJob.addSubJob(removeValueJob);
+                result.add(removeValueJob);
             }
         }
+        return result;
+    }
+
+    @Override
+    protected String makeDescription() {
+        return "Remove Column Constraints"; //NOI18N
     }
 }

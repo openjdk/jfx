@@ -53,10 +53,13 @@ import com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.AbstractHierarc
 import com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.AbstractHierarchyPanelController.DisplayOption;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.library.LibraryPanelController.DISPLAY_MODE;
 import java.io.File;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.prefs.Preferences;
 import javafx.scene.image.Image;
 import javafx.scene.paint.Color;
@@ -265,10 +268,36 @@ public class PreferencesRecordGlobal {
         return recentItems;
     }
 
+    public boolean containsRecentItem(File file) {
+        final String path = file.getPath();
+        return recentItems.contains(path);
+    }
+
+    public boolean containsRecentItem(URL url) {
+        final File fxmlFile;
+        try {
+            fxmlFile = new File(url.toURI());
+            return containsRecentItem(fxmlFile);
+        } catch (URISyntaxException ex) {
+            Logger.getLogger(PreferencesRecordGlobal.class.getName()).log(Level.SEVERE, null, ex);
+            return false;
+        }
+    }
+
     public void addRecentItem(File file) {
         final List<File> files = new ArrayList<>();
         files.add(file);
         addRecentItems(files);
+    }
+
+    public void addRecentItem(URL url) {
+        final File fxmlFile;
+        try {
+            fxmlFile = new File(url.toURI());
+            addRecentItem(fxmlFile);
+        } catch (URISyntaxException ex) {
+            Logger.getLogger(PreferencesRecordGlobal.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
     public void addRecentItems(List<File> files) {
@@ -487,7 +516,7 @@ public class PreferencesRecordGlobal {
         // Recent items list
         final String items = applicationRootPreferences.get(RECENT_ITEMS, null);
         assert recentItems.isEmpty();
-        if (items != null) {
+        if (items != null && items.isEmpty() == false) {
             final String[] itemsArray = items.split("\\" + File.pathSeparator); //NOI18N
             assert itemsArray.length <= recentItemsSize;
             recentItems.addAll(Arrays.asList(itemsArray));

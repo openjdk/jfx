@@ -254,6 +254,15 @@ public class MacDaemonBundler extends AbstractBundler {
             throw new UnsupportedPlatformException();
         }
 
+        //treat default null as "system wide install"
+        boolean systemWide = SYSTEM_WIDE.fetchFrom(p) == null || SYSTEM_WIDE.fetchFrom(p);
+
+        if (!systemWide) {
+            throw new ConfigException(
+                    I18N.getString("error.no-support-for-peruser-daemons"),
+                    I18N.getString("error.no-support-for-peruser-daemons.advice"));
+        }
+
         return true;
     }
 

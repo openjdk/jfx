@@ -292,6 +292,31 @@ public class SamplePage extends GridPane {
                 withState(ComboBoxBuilder.<String>create().items(sampleItems()).value("Item B").editable(true).build(), "editable,contains-focus", ".text-field", "focused"),
                 ComboBoxBuilder.<String>create().items(sampleItems()).value("Item C").editable(true).disable(true).build()
                 );
+
+        String[] spinnerStyles = new String[] {
+                "default",
+                Spinner.STYLE_CLASS_ARROWS_ON_RIGHT_HORIZONTAL,
+                Spinner.STYLE_CLASS_ARROWS_ON_LEFT_VERTICAL,
+                Spinner.STYLE_CLASS_ARROWS_ON_LEFT_HORIZONTAL,
+                Spinner.STYLE_CLASS_SPLIT_ARROWS_VERTICAL,
+                Spinner.STYLE_CLASS_SPLIT_ARROWS_HORIZONTAL
+        };
+        for (String style: spinnerStyles) {
+            final Spinner[] spinners = new Spinner[3];
+            for (int i=0; i<spinners.length; i++) {
+                spinners[i] = new Spinner();
+                spinners[i].getStyleClass().add(style);
+                spinners[i].setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(5, 10));
+            }
+            spinners[2].setDisable(true);
+            newSection(
+                    "Spinner ("+style+"):",
+                    spinners[0],
+                    withState(spinners[1], "focused"),
+                    spinners[2]
+            );
+        }
+
         newSection(
                 "Color Picker:",
                 ColorPickerBuilder.create().value(Color.RED).build(),

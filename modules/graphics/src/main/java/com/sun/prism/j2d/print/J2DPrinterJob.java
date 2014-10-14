@@ -1002,6 +1002,7 @@ public class J2DPrinterJob implements PrinterJobImpl {
             PrismPrintGraphics ppg =
                     new PrismPrintGraphics((Graphics2D) g, w, h);
             NGNode pgNode = node.impl_getPeer();
+            boolean errored = false;
             try {
                 pgNode.render(ppg);
             } catch (Throwable t) {
@@ -1009,7 +1010,11 @@ public class J2DPrinterJob implements PrinterJobImpl {
                     System.err.println("printNode caught exception.");
                     t.printStackTrace();
                 }
+                errored = true;
             }
+            ppg.getResourceFactory()
+                    .getTextureResourcePool()
+                    .freeDisposalRequestedAndCheckResources(errored);
         }
 
         public Printable getPrintable(int pageIndex) {

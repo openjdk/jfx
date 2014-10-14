@@ -258,21 +258,11 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
 
     private void insertNewLine() {
         TextArea textArea = getControl();
-        IndexRange selection = textArea.getSelection();
-        int start = selection.getStart();
-        int end = selection.getEnd();
-
-        getUndoManager().addChange(start, textArea.textProperty().getValueSafe().substring(start, end), "\n", false);
         textArea.replaceSelection("\n");
     }
 
     private void insertTab() {
         TextArea textArea = getControl();
-        IndexRange selection = textArea.getSelection();
-        int start = selection.getStart();
-        int end = selection.getEnd();
-
-        getUndoManager().addChange(start, textArea.textProperty().getValueSafe().substring(start, end), "\t", false);
         textArea.replaceSelection("\t");
     }
 
@@ -288,7 +278,6 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
             lineStart(false, false);
             int start = textArea.getCaretPosition();
             if (end > start) {
-                getUndoManager().addChange(start, textArea.textProperty().getValueSafe().substring(start, end), null);
                 replaceText(start, end, "");
             }
         }

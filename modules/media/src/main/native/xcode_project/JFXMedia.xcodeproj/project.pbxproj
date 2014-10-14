@@ -1,0 +1,1257 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXAggregateTarget section */
+		65989B02199161F900319296 /* All */ = {
+			isa = PBXAggregateTarget;
+			buildConfigurationList = 65989B03199161F900319296 /* Build configuration list for PBXAggregateTarget "All" */;
+			buildPhases = (
+			);
+			dependencies = (
+				65989B071991620500319296 /* PBXTargetDependency */,
+				65989B091991620500319296 /* PBXTargetDependency */,
+				65989B0B1991620500319296 /* PBXTargetDependency */,
+			);
+			name = All;
+			productName = All;
+		};
+/* End PBXAggregateTarget section */
+
+/* Begin PBXBuildFile section */
+		652BECEF199BDB28007217BB /* NativeAudioEqualizer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 652BECED199BDB28007217BB /* NativeAudioEqualizer.cpp */; };
+		652BECF2199BDB4C007217BB /* NativeAudioSpectrum.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 652BECF0199BDB4C007217BB /* NativeAudioSpectrum.cpp */; };
+		652BECF7199D2919007217BB /* NativeEqualizerBand.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 652BECF6199D2919007217BB /* NativeEqualizerBand.cpp */; };
+		652BECFA199E620F007217BB /* AVFAudioProcessor.mm in Sources */ = {isa = PBXBuildFile; fileRef = 652BECF9199E620F007217BB /* AVFAudioProcessor.mm */; };
+		652BED0619A444FB007217BB /* MediaToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 652BED0519A444FB007217BB /* MediaToolbox.framework */; };
+		652BEE3619A66029007217BB /* AVFSoundLevelUnit.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 652BEE3419A66029007217BB /* AVFSoundLevelUnit.cpp */; };
+		652BEE3819A69B3E007217BB /* AudioUnit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 652BEE3719A69B3E007217BB /* AudioUnit.framework */; };
+		652BEE3A19A69B48007217BB /* CoreMIDI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 652BEE3919A69B48007217BB /* CoreMIDI.framework */; };
+		652BEE3C19A69B50007217BB /* Accelerate.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 652BEE3B19A69B50007217BB /* Accelerate.framework */; };
+		652BEF1A19A69B84007217BB /* AUBase.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 652BEE5C19A69B84007217BB /* AUBase.cpp */; };
+		652BEF1C19A69B84007217BB /* AUInputElement.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 652BEE6019A69B84007217BB /* AUInputElement.cpp */; };
+		652BEF1D19A69B84007217BB /* AUOutputElement.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 652BEE6219A69B84007217BB /* AUOutputElement.cpp */; };
+		652BEF1E19A69B84007217BB /* AUPlugInDispatch.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 652BEE6419A69B84007217BB /* AUPlugInDispatch.cpp */; };
+		652BEF1F19A69B84007217BB /* AUScopeElement.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 652BEE6719A69B84007217BB /* AUScopeElement.cpp */; };
+		652BEF2019A69B84007217BB /* ComponentBase.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 652BEE6919A69B84007217BB /* ComponentBase.cpp */; };
+		652BEF2A19A69B84007217BB /* AUEffectBase.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 652BEE8419A69B84007217BB /* AUEffectBase.cpp */; };
+		652BEF5D19A69B84007217BB /* CASpectralProcessor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 652BEEFE19A69B84007217BB /* CASpectralProcessor.cpp */; };
+		652BEF6519A69C4C007217BB /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 652BEF6419A69C4C007217BB /* AudioToolbox.framework */; };
+		652BEF6819ABA566007217BB /* AVFAudioSpectrumUnit.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 652BEF6619ABA566007217BB /* AVFAudioSpectrumUnit.cpp */; };
+		652BEF7719AF87FE007217BB /* AVFKernelProcessor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 652BEF7519AF87FE007217BB /* AVFKernelProcessor.cpp */; };
+		652BEF7819AF9DE4007217BB /* AVFAudioEqualizer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 652BECFC199EA7CD007217BB /* AVFAudioEqualizer.cpp */; };
+		653A2FF91991A0F800983DE9 /* CoreMedia.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 653A2FF81991A0F800983DE9 /* CoreMedia.framework */; };
+		65989A391991570800319296 /* com_sun_media_jfxmedia_logging_Logger.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 659896661991570800319296 /* com_sun_media_jfxmedia_logging_Logger.cpp */; };
+		65989A3B1991570800319296 /* JavaBandsHolder.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 659896681991570800319296 /* JavaBandsHolder.cpp */; };
+		65989A3D1991570800319296 /* JavaInputStreamCallbacks.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6598966A1991570800319296 /* JavaInputStreamCallbacks.cpp */; };
+		65989A3F1991570800319296 /* JavaMediaWarningListener.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6598966C1991570800319296 /* JavaMediaWarningListener.cpp */; };
+		65989A411991570800319296 /* JavaPlayerEventDispatcher.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6598966E1991570800319296 /* JavaPlayerEventDispatcher.cpp */; };
+		65989A431991570800319296 /* JniUtils.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 659896701991570800319296 /* JniUtils.cpp */; };
+		65989A451991570800319296 /* Logger.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 659896721991570800319296 /* Logger.cpp */; };
+		65989A471991570800319296 /* NativeVideoBuffer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 659896741991570800319296 /* NativeVideoBuffer.cpp */; };
+		65989A481991570800319296 /* Locator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 659896761991570800319296 /* Locator.cpp */; };
+		65989A4A1991570800319296 /* LocatorStream.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 659896781991570800319296 /* LocatorStream.cpp */; };
+		65989A4C1991570800319296 /* Media.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6598967B1991570800319296 /* Media.cpp */; };
+		65989A4E1991570800319296 /* MediaManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6598967D1991570800319296 /* MediaManager.cpp */; };
+		65989A541991570800319296 /* AudioTrack.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 659896841991570800319296 /* AudioTrack.cpp */; };
+		65989A561991570800319296 /* Pipeline.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 659896861991570800319296 /* Pipeline.cpp */; };
+		65989A581991570800319296 /* PipelineFactory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 659896881991570800319296 /* PipelineFactory.cpp */; };
+		65989A5C1991570800319296 /* SubtitleTrack.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6598968C1991570800319296 /* SubtitleTrack.cpp */; };
+		65989A5E1991570800319296 /* Track.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6598968E1991570800319296 /* Track.cpp */; };
+		65989A601991570800319296 /* VideoFrame.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 659896901991570800319296 /* VideoFrame.cpp */; };
+		65989A621991570800319296 /* VideoTrack.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 659896921991570800319296 /* VideoTrack.cpp */; };
+		65989A641991570800319296 /* GstAudioEqualizer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 659896961991570800319296 /* GstAudioEqualizer.cpp */; };
+		65989A661991570800319296 /* GstAudioPlaybackPipeline.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 659896981991570800319296 /* GstAudioPlaybackPipeline.cpp */; };
+		65989A681991570800319296 /* GstAudioSpectrum.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6598969A1991570800319296 /* GstAudioSpectrum.cpp */; };
+		65989A6A1991570800319296 /* GstAVPlaybackPipeline.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6598969C1991570800319296 /* GstAVPlaybackPipeline.cpp */; };
+		65989A6C1991570800319296 /* GstElementContainer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6598969E1991570800319296 /* GstElementContainer.cpp */; };
+		65989A6F1991570800319296 /* GstJniUtils.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 659896A11991570800319296 /* GstJniUtils.cpp */; };
+		65989A711991570800319296 /* GstMedia.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 659896A31991570800319296 /* GstMedia.cpp */; };
+		65989A721991570800319296 /* GstMediaManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 659896A41991570800319296 /* GstMediaManager.cpp */; };
+		65989A741991570800319296 /* GstMediaPlayer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 659896A61991570800319296 /* GstMediaPlayer.cpp */; };
+		65989A751991570800319296 /* GstPipelineFactory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 659896A71991570800319296 /* GstPipelineFactory.cpp */; };
+		65989A771991570800319296 /* GstPlatform.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 659896A91991570800319296 /* GstPlatform.cpp */; };
+		65989A781991570800319296 /* GstVideoFrame.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 659896AA1991570800319296 /* GstVideoFrame.cpp */; };
+		65989A991991570800319296 /* CVVideoFrame.mm in Sources */ = {isa = PBXBuildFile; fileRef = 659896CE1991570800319296 /* CVVideoFrame.mm */; };
+		65989A9B1991570800319296 /* OSXMediaPlayer.mm in Sources */ = {isa = PBXBuildFile; fileRef = 659896D01991570800319296 /* OSXMediaPlayer.mm */; };
+		65989A9C1991570800319296 /* OSXPlatform.mm in Sources */ = {isa = PBXBuildFile; fileRef = 659896D11991570800319296 /* OSXPlatform.mm */; };
+		65989AA41991570800319296 /* ColorConverter.c in Sources */ = {isa = PBXBuildFile; fileRef = 659896DE1991570800319296 /* ColorConverter.c */; };
+		65989AA71991570800319296 /* JavaUtils.m in Sources */ = {isa = PBXBuildFile; fileRef = 659896E11991570800319296 /* JavaUtils.m */; };
+		65989AAA1991570800319296 /* JObjectPeers.m in Sources */ = {isa = PBXBuildFile; fileRef = 659896E41991570800319296 /* JObjectPeers.m */; };
+		65989AAB1991570800319296 /* LowLevelPerf.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 659896E51991570800319296 /* LowLevelPerf.cpp */; };
+		65989AAD1991570800319296 /* MediaWarningDispatcher.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 659896E71991570800319296 /* MediaWarningDispatcher.cpp */; };
+		65989AB01991570800319296 /* MTObjectProxy.m in Sources */ = {isa = PBXBuildFile; fileRef = 659896EA1991570800319296 /* MTObjectProxy.m */; };
+		65989AB11991570800319296 /* posix_critical_section.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 659896EC1991570800319296 /* posix_critical_section.cpp */; };
+		65989ABC1991574B00319296 /* CoreVideo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 65989ABB1991574B00319296 /* CoreVideo.framework */; };
+		65989ACE199160EC00319296 /* QTKMediaPlayer.mm in Sources */ = {isa = PBXBuildFile; fileRef = 659896D41991570800319296 /* QTKMediaPlayer.mm */; };
+		65989AED199160EC00319296 /* CoreVideo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 65989ABB1991574B00319296 /* CoreVideo.framework */; };
+		65989AEE199160EC00319296 /* QTKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 65989AB91991574400319296 /* QTKit.framework */; };
+		65989AEF199160EC00319296 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 65989AB71991573600319296 /* AVFoundation.framework */; };
+		65989AF0199160EC00319296 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 65FF27961991545E006BF9EE /* Cocoa.framework */; };
+		65989AF91991613700319296 /* CoreVideo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 65989ABB1991574B00319296 /* CoreVideo.framework */; };
+		65989AFB1991613700319296 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 65989AB71991573600319296 /* AVFoundation.framework */; };
+		65989AFC1991613700319296 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 65FF27961991545E006BF9EE /* Cocoa.framework */; };
+		65989B011991614C00319296 /* AVFMediaPlayer.mm in Sources */ = {isa = PBXBuildFile; fileRef = 659896CC1991570800319296 /* AVFMediaPlayer.mm */; };
+		65D754D219B7888C00EE3C99 /* AUBuffer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 652BEE9319A69B84007217BB /* AUBuffer.cpp */; };
+		65D754D819B78C1D00EE3C99 /* CAAudioChannelLayout.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 652BEEA319A69B84007217BB /* CAAudioChannelLayout.cpp */; };
+		65D754E719B7BFFB00EE3C99 /* CAStreamBasicDescription.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 65D754E519B7BFFB00EE3C99 /* CAStreamBasicDescription.cpp */; };
+		65D754E819B7BFFB00EE3C99 /* CAVectorUnit.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 65D754E619B7BFFB00EE3C99 /* CAVectorUnit.cpp */; };
+		65D7941D19CA37B600C9F5F8 /* com_sun_media_jfxmediaimpl_NativeVideoConverter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 65D7941C19CA37B600C9F5F8 /* com_sun_media_jfxmediaimpl_NativeVideoConverter.cpp */; };
+		65FF27971991545E006BF9EE /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 65FF27961991545E006BF9EE /* Cocoa.framework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		65989B061991620500319296 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 65FF278B1991545E006BF9EE /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 65FF27921991545E006BF9EE;
+			remoteInfo = JFXMedia;
+		};
+		65989B081991620500319296 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 65FF278B1991545E006BF9EE /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 65989ABD199160EC00319296;
+			remoteInfo = "JFXMedia QTKit";
+		};
+		65989B0A1991620500319296 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 65FF278B1991545E006BF9EE /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 65989AF51991613700319296;
+			remoteInfo = "JFXMedia AVF";
+		};
+		65989B0C19917CC500319296 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 65FF278B1991545E006BF9EE /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 65FF27921991545E006BF9EE;
+			remoteInfo = JFXMedia;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		652BECE8199BCFD4007217BB /* NullAudioEqualizer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NullAudioEqualizer.h; sourceTree = "<group>"; };
+		652BECEB199BD515007217BB /* NullAudioSpectrum.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NullAudioSpectrum.h; sourceTree = "<group>"; };
+		652BECED199BDB28007217BB /* NativeAudioEqualizer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = NativeAudioEqualizer.cpp; sourceTree = "<group>"; };
+		652BECF0199BDB4C007217BB /* NativeAudioSpectrum.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = NativeAudioSpectrum.cpp; sourceTree = "<group>"; };
+		652BECF6199D2919007217BB /* NativeEqualizerBand.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = NativeEqualizerBand.cpp; sourceTree = "<group>"; };
+		652BECF8199E620F007217BB /* AVFAudioProcessor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AVFAudioProcessor.h; sourceTree = "<group>"; };
+		652BECF9199E620F007217BB /* AVFAudioProcessor.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = AVFAudioProcessor.mm; sourceTree = "<group>"; };
+		652BECFC199EA7CD007217BB /* AVFAudioEqualizer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AVFAudioEqualizer.cpp; sourceTree = "<group>"; };
+		652BECFD199EA7CD007217BB /* AVFAudioEqualizer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AVFAudioEqualizer.h; sourceTree = "<group>"; };
+		652BED0519A444FB007217BB /* MediaToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MediaToolbox.framework; path = System/Library/Frameworks/MediaToolbox.framework; sourceTree = SDKROOT; };
+		652BEE3419A66029007217BB /* AVFSoundLevelUnit.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AVFSoundLevelUnit.cpp; sourceTree = "<group>"; };
+		652BEE3519A66029007217BB /* AVFSoundLevelUnit.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AVFSoundLevelUnit.h; sourceTree = "<group>"; };
+		652BEE3719A69B3E007217BB /* AudioUnit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AudioUnit.framework; path = System/Library/Frameworks/AudioUnit.framework; sourceTree = SDKROOT; };
+		652BEE3919A69B48007217BB /* CoreMIDI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMIDI.framework; path = System/Library/Frameworks/CoreMIDI.framework; sourceTree = SDKROOT; };
+		652BEE3B19A69B50007217BB /* Accelerate.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Accelerate.framework; path = System/Library/Frameworks/Accelerate.framework; sourceTree = SDKROOT; };
+		652BEE5C19A69B84007217BB /* AUBase.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AUBase.cpp; sourceTree = "<group>"; };
+		652BEE5D19A69B84007217BB /* AUBase.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AUBase.h; sourceTree = "<group>"; };
+		652BEE6019A69B84007217BB /* AUInputElement.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AUInputElement.cpp; sourceTree = "<group>"; };
+		652BEE6119A69B84007217BB /* AUInputElement.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AUInputElement.h; sourceTree = "<group>"; };
+		652BEE6219A69B84007217BB /* AUOutputElement.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AUOutputElement.cpp; sourceTree = "<group>"; };
+		652BEE6319A69B84007217BB /* AUOutputElement.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AUOutputElement.h; sourceTree = "<group>"; };
+		652BEE6419A69B84007217BB /* AUPlugInDispatch.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AUPlugInDispatch.cpp; sourceTree = "<group>"; };
+		652BEE6519A69B84007217BB /* AUPlugInDispatch.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AUPlugInDispatch.h; sourceTree = "<group>"; };
+		652BEE6719A69B84007217BB /* AUScopeElement.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AUScopeElement.cpp; sourceTree = "<group>"; };
+		652BEE6819A69B84007217BB /* AUScopeElement.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AUScopeElement.h; sourceTree = "<group>"; };
+		652BEE6919A69B84007217BB /* ComponentBase.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ComponentBase.cpp; sourceTree = "<group>"; };
+		652BEE6A19A69B84007217BB /* ComponentBase.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ComponentBase.h; sourceTree = "<group>"; };
+		652BEE8419A69B84007217BB /* AUEffectBase.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AUEffectBase.cpp; sourceTree = "<group>"; };
+		652BEE8519A69B84007217BB /* AUEffectBase.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AUEffectBase.h; sourceTree = "<group>"; };
+		652BEE9319A69B84007217BB /* AUBuffer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AUBuffer.cpp; sourceTree = "<group>"; };
+		652BEE9419A69B84007217BB /* AUBuffer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AUBuffer.h; sourceTree = "<group>"; };
+		652BEE9F19A69B84007217BB /* CAAtomic.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CAAtomic.h; sourceTree = "<group>"; };
+		652BEEA319A69B84007217BB /* CAAudioChannelLayout.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CAAudioChannelLayout.cpp; sourceTree = "<group>"; };
+		652BEEA419A69B84007217BB /* CAAudioChannelLayout.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CAAudioChannelLayout.h; sourceTree = "<group>"; };
+		652BEEB719A69B84007217BB /* CAAutoDisposer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CAAutoDisposer.h; sourceTree = "<group>"; };
+		652BEEB819A69B84007217BB /* CABitOperations.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CABitOperations.h; sourceTree = "<group>"; };
+		652BEEF719A69B84007217BB /* CAReferenceCounted.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CAReferenceCounted.h; sourceTree = "<group>"; };
+		652BEEFE19A69B84007217BB /* CASpectralProcessor.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CASpectralProcessor.cpp; sourceTree = "<group>"; };
+		652BEEFF19A69B84007217BB /* CASpectralProcessor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CASpectralProcessor.h; sourceTree = "<group>"; };
+		652BEF6419A69C4C007217BB /* AudioToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AudioToolbox.framework; path = System/Library/Frameworks/AudioToolbox.framework; sourceTree = SDKROOT; };
+		652BEF6619ABA566007217BB /* AVFAudioSpectrumUnit.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AVFAudioSpectrumUnit.cpp; sourceTree = "<group>"; };
+		652BEF6719ABA566007217BB /* AVFAudioSpectrumUnit.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AVFAudioSpectrumUnit.h; sourceTree = "<group>"; };
+		652BEF7519AF87FE007217BB /* AVFKernelProcessor.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AVFKernelProcessor.cpp; sourceTree = "<group>"; };
+		652BEF7619AF87FE007217BB /* AVFKernelProcessor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AVFKernelProcessor.h; sourceTree = "<group>"; };
+		653A2FF81991A0F800983DE9 /* CoreMedia.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMedia.framework; path = System/Library/Frameworks/CoreMedia.framework; sourceTree = SDKROOT; };
+		6548E54819C1050900CDAC55 /* CAAtomicStack.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CAAtomicStack.h; sourceTree = "<group>"; };
+		6548E54919C106E200CDAC55 /* CAVectorUnitTypes.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CAVectorUnitTypes.h; sourceTree = "<group>"; };
+		6548E54A19C1070200CDAC55 /* CADebugPrintf.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CADebugPrintf.h; sourceTree = "<group>"; };
+		659896631991570800319296 /* ProductFlags.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ProductFlags.h; sourceTree = "<group>"; };
+		659896661991570800319296 /* com_sun_media_jfxmedia_logging_Logger.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = com_sun_media_jfxmedia_logging_Logger.cpp; sourceTree = "<group>"; };
+		659896681991570800319296 /* JavaBandsHolder.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = JavaBandsHolder.cpp; sourceTree = "<group>"; };
+		659896691991570800319296 /* JavaBandsHolder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = JavaBandsHolder.h; sourceTree = "<group>"; };
+		6598966A1991570800319296 /* JavaInputStreamCallbacks.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = JavaInputStreamCallbacks.cpp; sourceTree = "<group>"; };
+		6598966B1991570800319296 /* JavaInputStreamCallbacks.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = JavaInputStreamCallbacks.h; sourceTree = "<group>"; };
+		6598966C1991570800319296 /* JavaMediaWarningListener.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = JavaMediaWarningListener.cpp; sourceTree = "<group>"; };
+		6598966D1991570800319296 /* JavaMediaWarningListener.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = JavaMediaWarningListener.h; sourceTree = "<group>"; };
+		6598966E1991570800319296 /* JavaPlayerEventDispatcher.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = JavaPlayerEventDispatcher.cpp; sourceTree = "<group>"; };
+		6598966F1991570800319296 /* JavaPlayerEventDispatcher.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = JavaPlayerEventDispatcher.h; sourceTree = "<group>"; };
+		659896701991570800319296 /* JniUtils.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = JniUtils.cpp; sourceTree = "<group>"; };
+		659896711991570800319296 /* JniUtils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = JniUtils.h; sourceTree = "<group>"; };
+		659896721991570800319296 /* Logger.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Logger.cpp; sourceTree = "<group>"; };
+		659896731991570800319296 /* Logger.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Logger.h; sourceTree = "<group>"; };
+		659896741991570800319296 /* NativeVideoBuffer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = NativeVideoBuffer.cpp; sourceTree = "<group>"; };
+		659896761991570800319296 /* Locator.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Locator.cpp; sourceTree = "<group>"; };
+		659896771991570800319296 /* Locator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Locator.h; sourceTree = "<group>"; };
+		659896781991570800319296 /* LocatorStream.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = LocatorStream.cpp; sourceTree = "<group>"; };
+		659896791991570800319296 /* LocatorStream.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LocatorStream.h; sourceTree = "<group>"; };
+		6598967B1991570800319296 /* Media.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Media.cpp; sourceTree = "<group>"; };
+		6598967C1991570800319296 /* Media.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Media.h; sourceTree = "<group>"; };
+		6598967D1991570800319296 /* MediaManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MediaManager.cpp; sourceTree = "<group>"; };
+		6598967E1991570800319296 /* MediaManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MediaManager.h; sourceTree = "<group>"; };
+		6598967F1991570800319296 /* MediaTypes.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MediaTypes.h; sourceTree = "<group>"; };
+		659896801991570800319296 /* MediaWarningListener.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MediaWarningListener.h; sourceTree = "<group>"; };
+		659896821991570800319296 /* AudioEqualizer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AudioEqualizer.h; sourceTree = "<group>"; };
+		659896831991570800319296 /* AudioSpectrum.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AudioSpectrum.h; sourceTree = "<group>"; };
+		659896841991570800319296 /* AudioTrack.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = AudioTrack.cpp; sourceTree = "<group>"; };
+		659896851991570800319296 /* AudioTrack.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AudioTrack.h; sourceTree = "<group>"; };
+		659896861991570800319296 /* Pipeline.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Pipeline.cpp; sourceTree = "<group>"; };
+		659896871991570800319296 /* Pipeline.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Pipeline.h; sourceTree = "<group>"; };
+		659896881991570800319296 /* PipelineFactory.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PipelineFactory.cpp; sourceTree = "<group>"; };
+		659896891991570800319296 /* PipelineFactory.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PipelineFactory.h; sourceTree = "<group>"; };
+		6598968A1991570800319296 /* PipelineOptions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PipelineOptions.h; sourceTree = "<group>"; };
+		6598968B1991570800319296 /* PlayerEventDispatcher.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PlayerEventDispatcher.h; sourceTree = "<group>"; };
+		6598968C1991570800319296 /* SubtitleTrack.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SubtitleTrack.cpp; sourceTree = "<group>"; };
+		6598968D1991570800319296 /* SubtitleTrack.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SubtitleTrack.h; sourceTree = "<group>"; };
+		6598968E1991570800319296 /* Track.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Track.cpp; sourceTree = "<group>"; };
+		6598968F1991570800319296 /* Track.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Track.h; sourceTree = "<group>"; };
+		659896901991570800319296 /* VideoFrame.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = VideoFrame.cpp; sourceTree = "<group>"; };
+		659896911991570800319296 /* VideoFrame.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = VideoFrame.h; sourceTree = "<group>"; };
+		659896921991570800319296 /* VideoTrack.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = VideoTrack.cpp; sourceTree = "<group>"; };
+		659896931991570800319296 /* VideoTrack.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = VideoTrack.h; sourceTree = "<group>"; };
+		659896961991570800319296 /* GstAudioEqualizer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = GstAudioEqualizer.cpp; sourceTree = "<group>"; };
+		659896971991570800319296 /* GstAudioEqualizer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GstAudioEqualizer.h; sourceTree = "<group>"; };
+		659896981991570800319296 /* GstAudioPlaybackPipeline.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = GstAudioPlaybackPipeline.cpp; sourceTree = "<group>"; };
+		659896991991570800319296 /* GstAudioPlaybackPipeline.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GstAudioPlaybackPipeline.h; sourceTree = "<group>"; };
+		6598969A1991570800319296 /* GstAudioSpectrum.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = GstAudioSpectrum.cpp; sourceTree = "<group>"; };
+		6598969B1991570800319296 /* GstAudioSpectrum.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GstAudioSpectrum.h; sourceTree = "<group>"; };
+		6598969C1991570800319296 /* GstAVPlaybackPipeline.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = GstAVPlaybackPipeline.cpp; sourceTree = "<group>"; };
+		6598969D1991570800319296 /* GstAVPlaybackPipeline.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GstAVPlaybackPipeline.h; sourceTree = "<group>"; };
+		6598969E1991570800319296 /* GstElementContainer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = GstElementContainer.cpp; sourceTree = "<group>"; };
+		6598969F1991570800319296 /* GstElementContainer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GstElementContainer.h; sourceTree = "<group>"; };
+		659896A11991570800319296 /* GstJniUtils.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = GstJniUtils.cpp; sourceTree = "<group>"; };
+		659896A21991570800319296 /* GstJniUtils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GstJniUtils.h; sourceTree = "<group>"; };
+		659896A31991570800319296 /* GstMedia.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = GstMedia.cpp; sourceTree = "<group>"; };
+		659896A41991570800319296 /* GstMediaManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = GstMediaManager.cpp; sourceTree = "<group>"; };
+		659896A51991570800319296 /* GstMediaManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GstMediaManager.h; sourceTree = "<group>"; };
+		659896A61991570800319296 /* GstMediaPlayer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = GstMediaPlayer.cpp; sourceTree = "<group>"; };
+		659896A71991570800319296 /* GstPipelineFactory.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = GstPipelineFactory.cpp; sourceTree = "<group>"; };
+		659896A81991570800319296 /* GstPipelineFactory.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GstPipelineFactory.h; sourceTree = "<group>"; };
+		659896A91991570800319296 /* GstPlatform.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = GstPlatform.cpp; sourceTree = "<group>"; };
+		659896AA1991570800319296 /* GstVideoFrame.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = GstVideoFrame.cpp; sourceTree = "<group>"; };
+		659896AB1991570800319296 /* GstVideoFrame.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GstVideoFrame.h; sourceTree = "<group>"; };
+		659896CB1991570800319296 /* AVFMediaPlayer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AVFMediaPlayer.h; sourceTree = "<group>"; };
+		659896CC1991570800319296 /* AVFMediaPlayer.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = AVFMediaPlayer.mm; sourceTree = "<group>"; };
+		659896CD1991570800319296 /* CVVideoFrame.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CVVideoFrame.h; sourceTree = "<group>"; };
+		659896CE1991570800319296 /* CVVideoFrame.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = CVVideoFrame.mm; sourceTree = "<group>"; };
+		659896CF1991570800319296 /* OSXMediaPlayer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OSXMediaPlayer.h; sourceTree = "<group>"; };
+		659896D01991570800319296 /* OSXMediaPlayer.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = OSXMediaPlayer.mm; sourceTree = "<group>"; };
+		659896D11991570800319296 /* OSXPlatform.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = OSXPlatform.mm; sourceTree = "<group>"; };
+		659896D21991570800319296 /* OSXPlayerProtocol.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OSXPlayerProtocol.h; sourceTree = "<group>"; };
+		659896D31991570800319296 /* QTKMediaPlayer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = QTKMediaPlayer.h; sourceTree = "<group>"; };
+		659896D41991570800319296 /* QTKMediaPlayer.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = QTKMediaPlayer.mm; sourceTree = "<group>"; };
+		659896DD1991570800319296 /* AutoLock.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AutoLock.h; sourceTree = "<group>"; };
+		659896DE1991570800319296 /* ColorConverter.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = ColorConverter.c; sourceTree = "<group>"; };
+		659896DF1991570800319296 /* ColorConverter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ColorConverter.h; sourceTree = "<group>"; };
+		659896E01991570800319296 /* JavaUtils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = JavaUtils.h; sourceTree = "<group>"; };
+		659896E11991570800319296 /* JavaUtils.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = JavaUtils.m; sourceTree = "<group>"; };
+		659896E21991570800319296 /* JfxCriticalSection.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = JfxCriticalSection.h; sourceTree = "<group>"; };
+		659896E31991570800319296 /* JObjectPeers.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = JObjectPeers.h; sourceTree = "<group>"; };
+		659896E41991570800319296 /* JObjectPeers.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = JObjectPeers.m; sourceTree = "<group>"; };
+		659896E51991570800319296 /* LowLevelPerf.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = LowLevelPerf.cpp; sourceTree = "<group>"; };
+		659896E61991570800319296 /* LowLevelPerf.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LowLevelPerf.h; sourceTree = "<group>"; };
+		659896E71991570800319296 /* MediaWarningDispatcher.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MediaWarningDispatcher.cpp; sourceTree = "<group>"; };
+		659896E81991570800319296 /* MediaWarningDispatcher.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MediaWarningDispatcher.h; sourceTree = "<group>"; };
+		659896E91991570800319296 /* MTObjectProxy.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MTObjectProxy.h; sourceTree = "<group>"; };
+		659896EA1991570800319296 /* MTObjectProxy.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MTObjectProxy.m; sourceTree = "<group>"; };
+		659896EC1991570800319296 /* posix_critical_section.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = posix_critical_section.cpp; sourceTree = "<group>"; };
+		659896ED1991570800319296 /* Singleton.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Singleton.h; sourceTree = "<group>"; };
+		659896EE1991570800319296 /* Thread.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Thread.h; sourceTree = "<group>"; };
+		65989AB71991573600319296 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
+		65989AB91991574400319296 /* QTKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QTKit.framework; path = System/Library/Frameworks/QTKit.framework; sourceTree = SDKROOT; };
+		65989ABB1991574B00319296 /* CoreVideo.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreVideo.framework; path = System/Library/Frameworks/CoreVideo.framework; sourceTree = SDKROOT; };
+		65989AF4199160EC00319296 /* libjfxmedia_qtkit.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = libjfxmedia_qtkit.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
+		65989B001991613700319296 /* libjfxmedia_avf.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = libjfxmedia_avf.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
+		65989B121991823700319296 /* build_prereqs.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = build_prereqs.sh; sourceTree = "<group>"; };
+		65989B131991823700319296 /* java_home.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = java_home.sh; sourceTree = "<group>"; };
+		65D754D319B789C500EE3C99 /* AUSilentTimeout.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AUSilentTimeout.h; sourceTree = "<group>"; };
+		65D754D419B789E100EE3C99 /* AUBaseHelper.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AUBaseHelper.h; sourceTree = "<group>"; };
+		65D754DC19B7BBC000EE3C99 /* CADebugMacros.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CADebugMacros.h; sourceTree = "<group>"; };
+		65D754DD19B7BEA600EE3C99 /* CAException.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CAException.h; sourceTree = "<group>"; };
+		65D754DE19B7BF1700EE3C99 /* CAStreamBasicDescription.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CAStreamBasicDescription.h; sourceTree = "<group>"; };
+		65D754DF19B7BF5700EE3C99 /* CAXException.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CAXException.h; sourceTree = "<group>"; };
+		65D754E019B7BF7100EE3C99 /* CAMath.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CAMath.h; sourceTree = "<group>"; };
+		65D754E119B7BFA600EE3C99 /* CAThreadSafeList.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CAThreadSafeList.h; sourceTree = "<group>"; };
+		65D754E219B7BFB500EE3C99 /* CAVectorUnit.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CAVectorUnit.h; sourceTree = "<group>"; };
+		65D754E319B7BFC700EE3C99 /* CAMutex.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CAMutex.h; sourceTree = "<group>"; };
+		65D754E419B7BFD800EE3C99 /* CAHostTimeBase.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CAHostTimeBase.h; sourceTree = "<group>"; };
+		65D754E519B7BFFB00EE3C99 /* CAStreamBasicDescription.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CAStreamBasicDescription.cpp; sourceTree = "<group>"; };
+		65D754E619B7BFFB00EE3C99 /* CAVectorUnit.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CAVectorUnit.cpp; sourceTree = "<group>"; };
+		65D7941C19CA37B600C9F5F8 /* com_sun_media_jfxmediaimpl_NativeVideoConverter.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = com_sun_media_jfxmediaimpl_NativeVideoConverter.cpp; sourceTree = "<group>"; };
+		65FF27931991545E006BF9EE /* libjfxmedia.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = libjfxmedia.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
+		65FF27961991545E006BF9EE /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
+		65FF27991991545E006BF9EE /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		65FF279A1991545E006BF9EE /* CoreData.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreData.framework; path = System/Library/Frameworks/CoreData.framework; sourceTree = SDKROOT; };
+		65FF279B1991545E006BF9EE /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
+		65FF279E1991545E006BF9EE /* JFXMedia-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "JFXMedia-Prefix.pch"; sourceTree = SOURCE_ROOT; };
+		65FF27A71991545E006BF9EE /* XCTest.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = XCTest.framework; path = Library/Frameworks/XCTest.framework; sourceTree = DEVELOPER_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		65989AEC199160EC00319296 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				65989AED199160EC00319296 /* CoreVideo.framework in Frameworks */,
+				65989AEE199160EC00319296 /* QTKit.framework in Frameworks */,
+				65989AEF199160EC00319296 /* AVFoundation.framework in Frameworks */,
+				65989AF0199160EC00319296 /* Cocoa.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		65989AF81991613700319296 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				652BEF6519A69C4C007217BB /* AudioToolbox.framework in Frameworks */,
+				652BEE3C19A69B50007217BB /* Accelerate.framework in Frameworks */,
+				652BEE3A19A69B48007217BB /* CoreMIDI.framework in Frameworks */,
+				652BEE3819A69B3E007217BB /* AudioUnit.framework in Frameworks */,
+				652BED0619A444FB007217BB /* MediaToolbox.framework in Frameworks */,
+				653A2FF91991A0F800983DE9 /* CoreMedia.framework in Frameworks */,
+				65989AF91991613700319296 /* CoreVideo.framework in Frameworks */,
+				65989AFB1991613700319296 /* AVFoundation.framework in Frameworks */,
+				65989AFC1991613700319296 /* Cocoa.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		65FF27901991545E006BF9EE /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				65989ABC1991574B00319296 /* CoreVideo.framework in Frameworks */,
+				65FF27971991545E006BF9EE /* Cocoa.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		652BECFB199EA77D007217BB /* avf */ = {
+			isa = PBXGroup;
+			children = (
+				659896CB1991570800319296 /* AVFMediaPlayer.h */,
+				659896CC1991570800319296 /* AVFMediaPlayer.mm */,
+				652BECF8199E620F007217BB /* AVFAudioProcessor.h */,
+				652BECF9199E620F007217BB /* AVFAudioProcessor.mm */,
+				652BECFD199EA7CD007217BB /* AVFAudioEqualizer.h */,
+				652BECFC199EA7CD007217BB /* AVFAudioEqualizer.cpp */,
+				652BEE3519A66029007217BB /* AVFSoundLevelUnit.h */,
+				652BEE3419A66029007217BB /* AVFSoundLevelUnit.cpp */,
+				652BEF6719ABA566007217BB /* AVFAudioSpectrumUnit.h */,
+				652BEF6619ABA566007217BB /* AVFAudioSpectrumUnit.cpp */,
+				652BEF7619AF87FE007217BB /* AVFKernelProcessor.h */,
+				652BEF7519AF87FE007217BB /* AVFKernelProcessor.cpp */,
+			);
+			path = avf;
+			sourceTree = "<group>";
+		};
+		652BEE3D19A69B84007217BB /* CoreAudio */ = {
+			isa = PBXGroup;
+			children = (
+				652BEE5919A69B84007217BB /* AudioUnits */,
+				652BEE9A19A69B84007217BB /* PublicUtility */,
+			);
+			name = CoreAudio;
+			path = CoreAudioUtilityClasses/CoreAudio;
+			sourceTree = "<group>";
+		};
+		652BEE5919A69B84007217BB /* AudioUnits */ = {
+			isa = PBXGroup;
+			children = (
+				652BEE5A19A69B84007217BB /* AUPublic */,
+			);
+			path = AudioUnits;
+			sourceTree = "<group>";
+		};
+		652BEE5A19A69B84007217BB /* AUPublic */ = {
+			isa = PBXGroup;
+			children = (
+				652BEE5B19A69B84007217BB /* AUBase */,
+				652BEE8319A69B84007217BB /* OtherBases */,
+				652BEE9019A69B84007217BB /* Utility */,
+			);
+			path = AUPublic;
+			sourceTree = "<group>";
+		};
+		652BEE5B19A69B84007217BB /* AUBase */ = {
+			isa = PBXGroup;
+			children = (
+				652BEE5C19A69B84007217BB /* AUBase.cpp */,
+				652BEE5D19A69B84007217BB /* AUBase.h */,
+				652BEE6019A69B84007217BB /* AUInputElement.cpp */,
+				652BEE6119A69B84007217BB /* AUInputElement.h */,
+				652BEE6219A69B84007217BB /* AUOutputElement.cpp */,
+				652BEE6319A69B84007217BB /* AUOutputElement.h */,
+				652BEE6419A69B84007217BB /* AUPlugInDispatch.cpp */,
+				652BEE6519A69B84007217BB /* AUPlugInDispatch.h */,
+				652BEE6719A69B84007217BB /* AUScopeElement.cpp */,
+				652BEE6819A69B84007217BB /* AUScopeElement.h */,
+				652BEE6919A69B84007217BB /* ComponentBase.cpp */,
+				652BEE6A19A69B84007217BB /* ComponentBase.h */,
+			);
+			path = AUBase;
+			sourceTree = "<group>";
+		};
+		652BEE8319A69B84007217BB /* OtherBases */ = {
+			isa = PBXGroup;
+			children = (
+				652BEE8419A69B84007217BB /* AUEffectBase.cpp */,
+				652BEE8519A69B84007217BB /* AUEffectBase.h */,
+			);
+			path = OtherBases;
+			sourceTree = "<group>";
+		};
+		652BEE9019A69B84007217BB /* Utility */ = {
+			isa = PBXGroup;
+			children = (
+				65D754D419B789E100EE3C99 /* AUBaseHelper.h */,
+				65D754D319B789C500EE3C99 /* AUSilentTimeout.h */,
+				652BEE9319A69B84007217BB /* AUBuffer.cpp */,
+				652BEE9419A69B84007217BB /* AUBuffer.h */,
+			);
+			path = Utility;
+			sourceTree = "<group>";
+		};
+		652BEE9A19A69B84007217BB /* PublicUtility */ = {
+			isa = PBXGroup;
+			children = (
+				652BEE9F19A69B84007217BB /* CAAtomic.h */,
+				6548E54819C1050900CDAC55 /* CAAtomicStack.h */,
+				652BEEA319A69B84007217BB /* CAAudioChannelLayout.cpp */,
+				652BEEA419A69B84007217BB /* CAAudioChannelLayout.h */,
+				652BEEB719A69B84007217BB /* CAAutoDisposer.h */,
+				652BEEB819A69B84007217BB /* CABitOperations.h */,
+				65D754DC19B7BBC000EE3C99 /* CADebugMacros.h */,
+				6548E54A19C1070200CDAC55 /* CADebugPrintf.h */,
+				65D754DD19B7BEA600EE3C99 /* CAException.h */,
+				65D754E419B7BFD800EE3C99 /* CAHostTimeBase.h */,
+				65D754E019B7BF7100EE3C99 /* CAMath.h */,
+				65D754E319B7BFC700EE3C99 /* CAMutex.h */,
+				652BEEF719A69B84007217BB /* CAReferenceCounted.h */,
+				652BEEFE19A69B84007217BB /* CASpectralProcessor.cpp */,
+				652BEEFF19A69B84007217BB /* CASpectralProcessor.h */,
+				65D754E519B7BFFB00EE3C99 /* CAStreamBasicDescription.cpp */,
+				65D754DE19B7BF1700EE3C99 /* CAStreamBasicDescription.h */,
+				65D754E119B7BFA600EE3C99 /* CAThreadSafeList.h */,
+				65D754E619B7BFFB00EE3C99 /* CAVectorUnit.cpp */,
+				65D754E219B7BFB500EE3C99 /* CAVectorUnit.h */,
+				6548E54919C106E200CDAC55 /* CAVectorUnitTypes.h */,
+				65D754DF19B7BF5700EE3C99 /* CAXException.h */,
+			);
+			path = PublicUtility;
+			sourceTree = "<group>";
+		};
+		659896611991570800319296 /* jfxmedia */ = {
+			isa = PBXGroup;
+			children = (
+				659896621991570800319296 /* Common */,
+				659896651991570800319296 /* jni */,
+				659896751991570800319296 /* Locator */,
+				6598967A1991570800319296 /* MediaManagement */,
+				659896811991570800319296 /* PipelineManagement */,
+				659896941991570800319296 /* platform */,
+				659896DC1991570800319296 /* Utils */,
+			);
+			name = jfxmedia;
+			path = ../jfxmedia;
+			sourceTree = SOURCE_ROOT;
+		};
+		659896621991570800319296 /* Common */ = {
+			isa = PBXGroup;
+			children = (
+				659896631991570800319296 /* ProductFlags.h */,
+			);
+			path = Common;
+			sourceTree = "<group>";
+		};
+		659896651991570800319296 /* jni */ = {
+			isa = PBXGroup;
+			children = (
+				65D7941C19CA37B600C9F5F8 /* com_sun_media_jfxmediaimpl_NativeVideoConverter.cpp */,
+				659896661991570800319296 /* com_sun_media_jfxmedia_logging_Logger.cpp */,
+				659896681991570800319296 /* JavaBandsHolder.cpp */,
+				659896691991570800319296 /* JavaBandsHolder.h */,
+				6598966A1991570800319296 /* JavaInputStreamCallbacks.cpp */,
+				6598966B1991570800319296 /* JavaInputStreamCallbacks.h */,
+				6598966C1991570800319296 /* JavaMediaWarningListener.cpp */,
+				6598966D1991570800319296 /* JavaMediaWarningListener.h */,
+				6598966E1991570800319296 /* JavaPlayerEventDispatcher.cpp */,
+				6598966F1991570800319296 /* JavaPlayerEventDispatcher.h */,
+				659896701991570800319296 /* JniUtils.cpp */,
+				659896711991570800319296 /* JniUtils.h */,
+				659896721991570800319296 /* Logger.cpp */,
+				659896731991570800319296 /* Logger.h */,
+				659896741991570800319296 /* NativeVideoBuffer.cpp */,
+				652BECED199BDB28007217BB /* NativeAudioEqualizer.cpp */,
+				652BECF0199BDB4C007217BB /* NativeAudioSpectrum.cpp */,
+				652BECF6199D2919007217BB /* NativeEqualizerBand.cpp */,
+			);
+			path = jni;
+			sourceTree = "<group>";
+		};
+		659896751991570800319296 /* Locator */ = {
+			isa = PBXGroup;
+			children = (
+				659896761991570800319296 /* Locator.cpp */,
+				659896771991570800319296 /* Locator.h */,
+				659896781991570800319296 /* LocatorStream.cpp */,
+				659896791991570800319296 /* LocatorStream.h */,
+			);
+			path = Locator;
+			sourceTree = "<group>";
+		};
+		6598967A1991570800319296 /* MediaManagement */ = {
+			isa = PBXGroup;
+			children = (
+				6598967B1991570800319296 /* Media.cpp */,
+				6598967C1991570800319296 /* Media.h */,
+				6598967D1991570800319296 /* MediaManager.cpp */,
+				6598967E1991570800319296 /* MediaManager.h */,
+				6598967F1991570800319296 /* MediaTypes.h */,
+				659896801991570800319296 /* MediaWarningListener.h */,
+			);
+			path = MediaManagement;
+			sourceTree = "<group>";
+		};
+		659896811991570800319296 /* PipelineManagement */ = {
+			isa = PBXGroup;
+			children = (
+				659896821991570800319296 /* AudioEqualizer.h */,
+				659896831991570800319296 /* AudioSpectrum.h */,
+				659896841991570800319296 /* AudioTrack.cpp */,
+				659896851991570800319296 /* AudioTrack.h */,
+				659896861991570800319296 /* Pipeline.cpp */,
+				659896871991570800319296 /* Pipeline.h */,
+				659896881991570800319296 /* PipelineFactory.cpp */,
+				659896891991570800319296 /* PipelineFactory.h */,
+				6598968A1991570800319296 /* PipelineOptions.h */,
+				6598968B1991570800319296 /* PlayerEventDispatcher.h */,
+				6598968C1991570800319296 /* SubtitleTrack.cpp */,
+				6598968D1991570800319296 /* SubtitleTrack.h */,
+				6598968E1991570800319296 /* Track.cpp */,
+				6598968F1991570800319296 /* Track.h */,
+				659896901991570800319296 /* VideoFrame.cpp */,
+				659896911991570800319296 /* VideoFrame.h */,
+				659896921991570800319296 /* VideoTrack.cpp */,
+				659896931991570800319296 /* VideoTrack.h */,
+				652BECE8199BCFD4007217BB /* NullAudioEqualizer.h */,
+				652BECEB199BD515007217BB /* NullAudioSpectrum.h */,
+			);
+			path = PipelineManagement;
+			sourceTree = "<group>";
+		};
+		659896941991570800319296 /* platform */ = {
+			isa = PBXGroup;
+			children = (
+				659896951991570800319296 /* gstreamer */,
+				659896CA1991570800319296 /* osx */,
+			);
+			path = platform;
+			sourceTree = "<group>";
+		};
+		659896951991570800319296 /* gstreamer */ = {
+			isa = PBXGroup;
+			children = (
+				659896961991570800319296 /* GstAudioEqualizer.cpp */,
+				659896971991570800319296 /* GstAudioEqualizer.h */,
+				6598969A1991570800319296 /* GstAudioSpectrum.cpp */,
+				6598969B1991570800319296 /* GstAudioSpectrum.h */,
+				659896981991570800319296 /* GstAudioPlaybackPipeline.cpp */,
+				659896991991570800319296 /* GstAudioPlaybackPipeline.h */,
+				6598969C1991570800319296 /* GstAVPlaybackPipeline.cpp */,
+				6598969D1991570800319296 /* GstAVPlaybackPipeline.h */,
+				6598969E1991570800319296 /* GstElementContainer.cpp */,
+				6598969F1991570800319296 /* GstElementContainer.h */,
+				659896A11991570800319296 /* GstJniUtils.cpp */,
+				659896A21991570800319296 /* GstJniUtils.h */,
+				659896A31991570800319296 /* GstMedia.cpp */,
+				659896A41991570800319296 /* GstMediaManager.cpp */,
+				659896A51991570800319296 /* GstMediaManager.h */,
+				659896A61991570800319296 /* GstMediaPlayer.cpp */,
+				659896A71991570800319296 /* GstPipelineFactory.cpp */,
+				659896A81991570800319296 /* GstPipelineFactory.h */,
+				659896A91991570800319296 /* GstPlatform.cpp */,
+				659896AA1991570800319296 /* GstVideoFrame.cpp */,
+				659896AB1991570800319296 /* GstVideoFrame.h */,
+			);
+			path = gstreamer;
+			sourceTree = "<group>";
+		};
+		659896CA1991570800319296 /* osx */ = {
+			isa = PBXGroup;
+			children = (
+				652BEE3D19A69B84007217BB /* CoreAudio */,
+				652BECFB199EA77D007217BB /* avf */,
+				659896CD1991570800319296 /* CVVideoFrame.h */,
+				659896CE1991570800319296 /* CVVideoFrame.mm */,
+				659896CF1991570800319296 /* OSXMediaPlayer.h */,
+				659896D01991570800319296 /* OSXMediaPlayer.mm */,
+				659896D11991570800319296 /* OSXPlatform.mm */,
+				659896D21991570800319296 /* OSXPlayerProtocol.h */,
+				659896D31991570800319296 /* QTKMediaPlayer.h */,
+				659896D41991570800319296 /* QTKMediaPlayer.mm */,
+			);
+			path = osx;
+			sourceTree = "<group>";
+		};
+		659896DC1991570800319296 /* Utils */ = {
+			isa = PBXGroup;
+			children = (
+				659896DD1991570800319296 /* AutoLock.h */,
+				659896DE1991570800319296 /* ColorConverter.c */,
+				659896DF1991570800319296 /* ColorConverter.h */,
+				659896E01991570800319296 /* JavaUtils.h */,
+				659896E11991570800319296 /* JavaUtils.m */,
+				659896E21991570800319296 /* JfxCriticalSection.h */,
+				659896E31991570800319296 /* JObjectPeers.h */,
+				659896E41991570800319296 /* JObjectPeers.m */,
+				659896E51991570800319296 /* LowLevelPerf.cpp */,
+				659896E61991570800319296 /* LowLevelPerf.h */,
+				659896E71991570800319296 /* MediaWarningDispatcher.cpp */,
+				659896E81991570800319296 /* MediaWarningDispatcher.h */,
+				659896E91991570800319296 /* MTObjectProxy.h */,
+				659896EA1991570800319296 /* MTObjectProxy.m */,
+				659896EB1991570800319296 /* posix */,
+				659896ED1991570800319296 /* Singleton.h */,
+				659896EE1991570800319296 /* Thread.h */,
+			);
+			path = Utils;
+			sourceTree = "<group>";
+		};
+		659896EB1991570800319296 /* posix */ = {
+			isa = PBXGroup;
+			children = (
+				659896EC1991570800319296 /* posix_critical_section.cpp */,
+			);
+			path = posix;
+			sourceTree = "<group>";
+		};
+		65FF278A1991545E006BF9EE = {
+			isa = PBXGroup;
+			children = (
+				65989B121991823700319296 /* build_prereqs.sh */,
+				65989B131991823700319296 /* java_home.sh */,
+				65FF279E1991545E006BF9EE /* JFXMedia-Prefix.pch */,
+				659896611991570800319296 /* jfxmedia */,
+				65FF27951991545E006BF9EE /* Frameworks */,
+				65FF27941991545E006BF9EE /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		65FF27941991545E006BF9EE /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				65FF27931991545E006BF9EE /* libjfxmedia.dylib */,
+				65989AF4199160EC00319296 /* libjfxmedia_qtkit.dylib */,
+				65989B001991613700319296 /* libjfxmedia_avf.dylib */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		65FF27951991545E006BF9EE /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				652BEF6419A69C4C007217BB /* AudioToolbox.framework */,
+				652BEE3B19A69B50007217BB /* Accelerate.framework */,
+				652BEE3919A69B48007217BB /* CoreMIDI.framework */,
+				652BEE3719A69B3E007217BB /* AudioUnit.framework */,
+				652BED0519A444FB007217BB /* MediaToolbox.framework */,
+				653A2FF81991A0F800983DE9 /* CoreMedia.framework */,
+				65989ABB1991574B00319296 /* CoreVideo.framework */,
+				65989AB91991574400319296 /* QTKit.framework */,
+				65989AB71991573600319296 /* AVFoundation.framework */,
+				65FF27961991545E006BF9EE /* Cocoa.framework */,
+				65FF27A71991545E006BF9EE /* XCTest.framework */,
+				65FF27981991545E006BF9EE /* Other Frameworks */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		65FF27981991545E006BF9EE /* Other Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				65FF27991991545E006BF9EE /* Foundation.framework */,
+				65FF279A1991545E006BF9EE /* CoreData.framework */,
+				65FF279B1991545E006BF9EE /* AppKit.framework */,
+			);
+			name = "Other Frameworks";
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		65989ABD199160EC00319296 /* JFXMedia QTKit */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 65989AF1199160EC00319296 /* Build configuration list for PBXNativeTarget "JFXMedia QTKit" */;
+			buildPhases = (
+				65989ABE199160EC00319296 /* Sources */,
+				65989AEC199160EC00319296 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				65989B0D19917CC500319296 /* PBXTargetDependency */,
+			);
+			name = "JFXMedia QTKit";
+			productName = JFXMedia;
+			productReference = 65989AF4199160EC00319296 /* libjfxmedia_qtkit.dylib */;
+			productType = "com.apple.product-type.library.dynamic";
+		};
+		65989AF51991613700319296 /* JFXMedia AVFoundation */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 65989AFD1991613700319296 /* Build configuration list for PBXNativeTarget "JFXMedia AVFoundation" */;
+			buildPhases = (
+				65989AF61991613700319296 /* Sources */,
+				65989AF81991613700319296 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "JFXMedia AVFoundation";
+			productName = JFXMedia;
+			productReference = 65989B001991613700319296 /* libjfxmedia_avf.dylib */;
+			productType = "com.apple.product-type.library.dynamic";
+		};
+		65FF27921991545E006BF9EE /* JFXMedia */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 65FF27B71991545E006BF9EE /* Build configuration list for PBXNativeTarget "JFXMedia" */;
+			buildPhases = (
+				65989B1019917CD800319296 /* Set JAVA_HOME */,
+				65989B111991810700319296 /* Build prerequisites */,
+				65FF278F1991545E006BF9EE /* Sources */,
+				65FF27901991545E006BF9EE /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = JFXMedia;
+			productName = JFXMedia;
+			productReference = 65FF27931991545E006BF9EE /* libjfxmedia.dylib */;
+			productType = "com.apple.product-type.library.dynamic";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		65FF278B1991545E006BF9EE /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0510;
+				ORGANIZATIONNAME = "Oracle Corporation";
+			};
+			buildConfigurationList = 65FF278E1991545E006BF9EE /* Build configuration list for PBXProject "JFXMedia" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 65FF278A1991545E006BF9EE;
+			productRefGroup = 65FF27941991545E006BF9EE /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				65FF27921991545E006BF9EE /* JFXMedia */,
+				65989ABD199160EC00319296 /* JFXMedia QTKit */,
+				65989AF51991613700319296 /* JFXMedia AVFoundation */,
+				65989B02199161F900319296 /* All */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		65989B1019917CD800319296 /* Set JAVA_HOME */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Set JAVA_HOME";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/bash;
+			shellScript = ". ./java_home.sh\n";
+		};
+		65989B111991810700319296 /* Build prerequisites */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Build prerequisites";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/bash;
+			shellScript = ". ./build_prereqs.sh\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		65989ABE199160EC00319296 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				65989ACE199160EC00319296 /* QTKMediaPlayer.mm in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		65989AF61991613700319296 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				652BEE3619A66029007217BB /* AVFSoundLevelUnit.cpp in Sources */,
+				652BEF1C19A69B84007217BB /* AUInputElement.cpp in Sources */,
+				652BEF6819ABA566007217BB /* AVFAudioSpectrumUnit.cpp in Sources */,
+				65D754D219B7888C00EE3C99 /* AUBuffer.cpp in Sources */,
+				652BEF1D19A69B84007217BB /* AUOutputElement.cpp in Sources */,
+				652BEF7719AF87FE007217BB /* AVFKernelProcessor.cpp in Sources */,
+				652BEF1A19A69B84007217BB /* AUBase.cpp in Sources */,
+				65989B011991614C00319296 /* AVFMediaPlayer.mm in Sources */,
+				652BEF1F19A69B84007217BB /* AUScopeElement.cpp in Sources */,
+				652BEF1E19A69B84007217BB /* AUPlugInDispatch.cpp in Sources */,
+				652BEF2019A69B84007217BB /* ComponentBase.cpp in Sources */,
+				652BEF7819AF9DE4007217BB /* AVFAudioEqualizer.cpp in Sources */,
+				65D754E719B7BFFB00EE3C99 /* CAStreamBasicDescription.cpp in Sources */,
+				65D754E819B7BFFB00EE3C99 /* CAVectorUnit.cpp in Sources */,
+				652BEF5D19A69B84007217BB /* CASpectralProcessor.cpp in Sources */,
+				652BECFA199E620F007217BB /* AVFAudioProcessor.mm in Sources */,
+				65D754D819B78C1D00EE3C99 /* CAAudioChannelLayout.cpp in Sources */,
+				652BEF2A19A69B84007217BB /* AUEffectBase.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		65FF278F1991545E006BF9EE /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				65989A6C1991570800319296 /* GstElementContainer.cpp in Sources */,
+				65989A391991570800319296 /* com_sun_media_jfxmedia_logging_Logger.cpp in Sources */,
+				652BECF7199D2919007217BB /* NativeEqualizerBand.cpp in Sources */,
+				65D7941D19CA37B600C9F5F8 /* com_sun_media_jfxmediaimpl_NativeVideoConverter.cpp in Sources */,
+				65989A5E1991570800319296 /* Track.cpp in Sources */,
+				65989A541991570800319296 /* AudioTrack.cpp in Sources */,
+				652BECF2199BDB4C007217BB /* NativeAudioSpectrum.cpp in Sources */,
+				65989AA41991570800319296 /* ColorConverter.c in Sources */,
+				65989A9B1991570800319296 /* OSXMediaPlayer.mm in Sources */,
+				65989AB11991570800319296 /* posix_critical_section.cpp in Sources */,
+				65989A3F1991570800319296 /* JavaMediaWarningListener.cpp in Sources */,
+				65989A711991570800319296 /* GstMedia.cpp in Sources */,
+				65989A681991570800319296 /* GstAudioSpectrum.cpp in Sources */,
+				65989A411991570800319296 /* JavaPlayerEventDispatcher.cpp in Sources */,
+				65989A4E1991570800319296 /* MediaManager.cpp in Sources */,
+				65989A601991570800319296 /* VideoFrame.cpp in Sources */,
+				65989AA71991570800319296 /* JavaUtils.m in Sources */,
+				65989AAD1991570800319296 /* MediaWarningDispatcher.cpp in Sources */,
+				65989A6A1991570800319296 /* GstAVPlaybackPipeline.cpp in Sources */,
+				65989A6F1991570800319296 /* GstJniUtils.cpp in Sources */,
+				65989AAA1991570800319296 /* JObjectPeers.m in Sources */,
+				65989A581991570800319296 /* PipelineFactory.cpp in Sources */,
+				65989A5C1991570800319296 /* SubtitleTrack.cpp in Sources */,
+				652BECEF199BDB28007217BB /* NativeAudioEqualizer.cpp in Sources */,
+				65989A431991570800319296 /* JniUtils.cpp in Sources */,
+				65989A621991570800319296 /* VideoTrack.cpp in Sources */,
+				65989A661991570800319296 /* GstAudioPlaybackPipeline.cpp in Sources */,
+				65989A641991570800319296 /* GstAudioEqualizer.cpp in Sources */,
+				65989A751991570800319296 /* GstPipelineFactory.cpp in Sources */,
+				65989A4A1991570800319296 /* LocatorStream.cpp in Sources */,
+				65989A561991570800319296 /* Pipeline.cpp in Sources */,
+				65989A9C1991570800319296 /* OSXPlatform.mm in Sources */,
+				65989A451991570800319296 /* Logger.cpp in Sources */,
+				65989A991991570800319296 /* CVVideoFrame.mm in Sources */,
+				65989A3B1991570800319296 /* JavaBandsHolder.cpp in Sources */,
+				65989A771991570800319296 /* GstPlatform.cpp in Sources */,
+				65989A3D1991570800319296 /* JavaInputStreamCallbacks.cpp in Sources */,
+				65989A781991570800319296 /* GstVideoFrame.cpp in Sources */,
+				65989AB01991570800319296 /* MTObjectProxy.m in Sources */,
+				65989A741991570800319296 /* GstMediaPlayer.cpp in Sources */,
+				65989AAB1991570800319296 /* LowLevelPerf.cpp in Sources */,
+				65989A481991570800319296 /* Locator.cpp in Sources */,
+				65989A721991570800319296 /* GstMediaManager.cpp in Sources */,
+				65989A4C1991570800319296 /* Media.cpp in Sources */,
+				65989A471991570800319296 /* NativeVideoBuffer.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		65989B071991620500319296 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 65FF27921991545E006BF9EE /* JFXMedia */;
+			targetProxy = 65989B061991620500319296 /* PBXContainerItemProxy */;
+		};
+		65989B091991620500319296 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 65989ABD199160EC00319296 /* JFXMedia QTKit */;
+			targetProxy = 65989B081991620500319296 /* PBXContainerItemProxy */;
+		};
+		65989B0B1991620500319296 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 65989AF51991613700319296 /* JFXMedia AVFoundation */;
+			targetProxy = 65989B0A1991620500319296 /* PBXContainerItemProxy */;
+		};
+		65989B0D19917CC500319296 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 65FF27921991545E006BF9EE /* JFXMedia */;
+			targetProxy = 65989B0C19917CC500319296 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		65989AF2199160EC00319296 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_ARC = NO;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				EXECUTABLE_PREFIX = lib;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "JFXMedia-Prefix.pch";
+				GCC_WARN_ABOUT_DEPRECATED_FUNCTIONS = NO;
+				OTHER_LDFLAGS = (
+					"-ljfxmedia",
+					"-Wl,-install_name,@rpath/libjfxmedia_qtkit.dylib",
+				);
+				PRODUCT_NAME = jfxmedia_qtkit;
+			};
+			name = Debug;
+		};
+		65989AF3199160EC00319296 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_ARC = NO;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				EXECUTABLE_PREFIX = lib;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "JFXMedia-Prefix.pch";
+				GCC_WARN_ABOUT_DEPRECATED_FUNCTIONS = NO;
+				OTHER_LDFLAGS = (
+					"-ljfxmedia",
+					"-Wl,-install_name,@rpath/libjfxmedia_qtkit.dylib",
+				);
+				PRODUCT_NAME = jfxmedia_qtkit;
+			};
+			name = Release;
+		};
+		65989AFE1991613700319296 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_ARC = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				EXECUTABLE_PREFIX = lib;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "JFXMedia-Prefix.pch";
+				OTHER_CFLAGS = (
+					"-DCA_USE_AUDIO_PLUGIN_ONLY=1",
+					"-DCA_NO_AU_UI_FEATURES=1",
+					"-DCA_NO_AU_HOST_CALLBACKS=1",
+					"-DCA_BASIC_AU_FEATURES=1",
+					"-DCA_AU_USE_FAST_DISPATCH=1",
+				);
+				OTHER_LDFLAGS = (
+					"-ljfxmedia",
+					"-Wl,-install_name,@rpath/libjfxmedia_avf.dylib",
+				);
+				PRODUCT_NAME = jfxmedia_avf;
+			};
+			name = Debug;
+		};
+		65989AFF1991613700319296 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_ARC = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				EXECUTABLE_PREFIX = lib;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "JFXMedia-Prefix.pch";
+				OTHER_CFLAGS = (
+					"-DCA_USE_AUDIO_PLUGIN_ONLY=1",
+					"-DCA_NO_AU_UI_FEATURES=1",
+					"-DCA_NO_AU_HOST_CALLBACKS=1",
+					"-DCA_BASIC_AU_FEATURES=1",
+					"-DCA_AU_USE_FAST_DISPATCH=1",
+				);
+				OTHER_LDFLAGS = (
+					"-ljfxmedia",
+					"-Wl,-install_name,@rpath/libjfxmedia_avf.dylib",
+				);
+				PRODUCT_NAME = jfxmedia_avf;
+			};
+			name = Release;
+		};
+		65989B04199161F900319296 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		65989B05199161F900319296 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+		65FF27B51991545E006BF9EE /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				BUILD_DIR = "$(JFX_MEDIA_OUTPUT_DIR)";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CONFIGURATION_BUILD_DIR = "$(JFX_MEDIA_OUTPUT_DIR)/$(CONFIGURATION)";
+				COPY_PHASE_STRIP = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GLIB_LITE_DIR = "../gstreamer/3rd_party/glib/glib-2.28.8";
+				GSTREAMER_LITE_DIR = "../gstreamer/gstreamer-lite";
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(JFX_GENERATED_SRC_DIR)/headers",
+					"$(JDK_HOME)/include",
+					"$(JDK_HOME)/include/darwin",
+					../jfxmedia,
+					../jfxmedia/jni,
+				);
+				JDK_HOME = "$(SYMROOT)/jdk_home";
+				JFX_GENERATED_SRC_DIR = "$(JFX_MEDIA_BUILD_DIR)/generated-src";
+				JFX_MEDIA_BUILD_DIR = "$(JFX_MEDIA_DIR)/build";
+				JFX_MEDIA_DIR = ../../../..;
+				JFX_MEDIA_OUTPUT_DIR = "$(JFX_MEDIA_BUILD_DIR)/native/mac";
+				JFX_MEDIA_PRODUCT_DIR = "$(JFX_MEDIA_OUTPUT_DIR)/$(CONFIGURATION)";
+				LIBRARY_SEARCH_PATHS = "$(JFX_MEDIA_PRODUCT_DIR)";
+				MACOSX_DEPLOYMENT_TARGET = 10.7;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		65FF27B61991545E006BF9EE /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				BUILD_DIR = "$(JFX_MEDIA_OUTPUT_DIR)";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CONFIGURATION_BUILD_DIR = "$(JFX_MEDIA_OUTPUT_DIR)/$(CONFIGURATION)";
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GLIB_LITE_DIR = "../gstreamer/3rd_party/glib/glib-2.28.8";
+				GSTREAMER_LITE_DIR = "../gstreamer/gstreamer-lite";
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(JFX_GENERATED_SRC_DIR)/headers",
+					"$(JDK_HOME)/include",
+					"$(JDK_HOME)/include/darwin",
+					../jfxmedia,
+					../jfxmedia/jni,
+				);
+				JDK_HOME = "$(SYMROOT)/jdk_home";
+				JFX_GENERATED_SRC_DIR = "$(JFX_MEDIA_BUILD_DIR)/generated-src";
+				JFX_MEDIA_BUILD_DIR = "$(JFX_MEDIA_DIR)/build";
+				JFX_MEDIA_DIR = ../../../..;
+				JFX_MEDIA_OUTPUT_DIR = "$(JFX_MEDIA_BUILD_DIR)/native/mac";
+				JFX_MEDIA_PRODUCT_DIR = "$(JFX_MEDIA_OUTPUT_DIR)/$(CONFIGURATION)";
+				LIBRARY_SEARCH_PATHS = "$(JFX_MEDIA_PRODUCT_DIR)";
+				MACOSX_DEPLOYMENT_TARGET = 10.7;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		65FF27B81991545E006BF9EE /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_ARC = NO;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				EXECUTABLE_PREFIX = lib;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "JFXMedia-Prefix.pch";
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(GLIB_LITE_DIR)",
+					"$(GLIB_LITE_DIR)/glib",
+					"$(GLIB_LITE_DIR)/gmodule",
+					"$(GLIB_LITE_DIR)/build/osx",
+					"$(GSTREAMER_LITE_DIR)/gstreamer",
+					"$(GSTREAMER_LITE_DIR)/gst-plugins-base/gst-libs",
+					"$(GSTREAMER_LITE_DIR)/gstreamer/libs",
+				);
+				OTHER_CFLAGS = (
+					"-DGSTREAMER_LITE",
+					"-DGST_DISABLE_LOADSAVE",
+					"-DGST_REMOVE_DEPRECATED",
+					"-DGST_DISABLE_GST_DEBUG",
+					"-DGST_DISABLE_XML",
+					"-DJFXMEDIA_JNI_EXPORTS",
+					"-DHAVE_CONFIG_H",
+				);
+				OTHER_LDFLAGS = (
+					"-lglib-lite",
+					"-lgstreamer-lite",
+					"-Wl,-install_name,@rpath/libjfxmedia.dylib",
+				);
+				PRODUCT_NAME = jfxmedia;
+			};
+			name = Debug;
+		};
+		65FF27B91991545E006BF9EE /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_ARC = NO;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				EXECUTABLE_PREFIX = lib;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "JFXMedia-Prefix.pch";
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(GLIB_LITE_DIR)",
+					"$(GLIB_LITE_DIR)/glib",
+					"$(GLIB_LITE_DIR)/gmodule",
+					"$(GLIB_LITE_DIR)/build/osx",
+					"$(GSTREAMER_LITE_DIR)/gstreamer",
+					"$(GSTREAMER_LITE_DIR)/gst-plugins-base/gst-libs",
+					"$(GSTREAMER_LITE_DIR)/gstreamer/libs",
+				);
+				OTHER_CFLAGS = (
+					"-DGSTREAMER_LITE",
+					"-DGST_DISABLE_LOADSAVE",
+					"-DGST_REMOVE_DEPRECATED",
+					"-DGST_DISABLE_GST_DEBUG",
+					"-DGST_DISABLE_XML",
+					"-DJFXMEDIA_JNI_EXPORTS",
+					"-DHAVE_CONFIG_H",
+				);
+				OTHER_LDFLAGS = (
+					"-lglib-lite",
+					"-lgstreamer-lite",
+					"-Wl,-install_name,@rpath/libjfxmedia.dylib",
+				);
+				PRODUCT_NAME = jfxmedia;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		65989AF1199160EC00319296 /* Build configuration list for PBXNativeTarget "JFXMedia QTKit" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				65989AF2199160EC00319296 /* Debug */,
+				65989AF3199160EC00319296 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		65989AFD1991613700319296 /* Build configuration list for PBXNativeTarget "JFXMedia AVFoundation" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				65989AFE1991613700319296 /* Debug */,
+				65989AFF1991613700319296 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		65989B03199161F900319296 /* Build configuration list for PBXAggregateTarget "All" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				65989B04199161F900319296 /* Debug */,
+				65989B05199161F900319296 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		65FF278E1991545E006BF9EE /* Build configuration list for PBXProject "JFXMedia" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				65FF27B51991545E006BF9EE /* Debug */,
+				65FF27B61991545E006BF9EE /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		65FF27B71991545E006BF9EE /* Build configuration list for PBXNativeTarget "JFXMedia" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				65FF27B81991545E006BF9EE /* Debug */,
+				65FF27B91991545E006BF9EE /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 65FF278B1991545E006BF9EE /* Project object */;
+}

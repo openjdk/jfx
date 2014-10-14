@@ -25,6 +25,7 @@
 
 package com.sun.javafx.pgstub;
 
+import java.security.AccessControlContext;
 import com.sun.javafx.sg.prism.NGCamera;
 import com.sun.javafx.sg.prism.NGLightBase;
 import com.sun.javafx.sg.prism.NGNode;
@@ -132,5 +133,10 @@ public class StubScene implements TKScene {
 
     public NGCamera getCamera() {
         return camera;
+    }
+
+    @Override
+    public AccessControlContext getAccessControlContext() {
+        return null;
     }
 }

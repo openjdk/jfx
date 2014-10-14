@@ -35,9 +35,9 @@ import javafx.collections.ObservableList;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.event.ActionEvent;
-//import javafx.scene.accessibility.Action;
-//import javafx.scene.accessibility.Attribute;
-//import javafx.scene.accessibility.Role;
+import javafx.scene.AccessibleAction;
+import javafx.scene.AccessibleAttribute;
+import javafx.scene.AccessibleRole;
 import javafx.util.StringConverter;
 import javafx.css.PseudoClass;
 
@@ -100,6 +100,7 @@ public class ChoiceBox<T> extends Control {
      */
     public ChoiceBox(ObservableList<T> items) {
         getStyleClass().setAll("choice-box");
+        setAccessibleRole(AccessibleRole.COMBO_BOX);
         setItems(items);
         setSelectionModel(new ChoiceBoxSelectionModel<T>(this));
         
@@ -163,7 +164,7 @@ public class ChoiceBox<T> extends Control {
     private ReadOnlyBooleanWrapper showing = new ReadOnlyBooleanWrapper() {
         @Override protected void invalidated() {
             pseudoClassStateChanged(SHOWING_PSEUDOCLASS_STATE, get());
-//            accSendNotification(Attribute.EXPANDED);
+            notifyAccessibleAttributeChanged(AccessibleAttribute.EXPANDED);
         }
 
         @Override
@@ -280,7 +281,7 @@ public class ChoiceBox<T> extends Control {
             if (sm != null) {
                 sm.select(super.getValue());
             }
-//            accSendNotification(Attribute.TITLE);
+            notifyAccessibleAttributeChanged(AccessibleAttribute.TEXT);
         }
     };
     public final void setValue(T value) { valueProperty().set(value); }
@@ -414,32 +415,33 @@ public class ChoiceBox<T> extends Control {
      *                                                                         *
      **************************************************************************/
 
-//    /** @treatAsPrivate */
-//    @Override
-//    public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//        switch(attribute) {
-//            case ROLE: return Role.COMBOBOX;
-//            case TITLE:
-//                //let the skin first.
-//                Object title = super.accGetAttribute(attribute, parameters);
-//                if (title != null) return title;
-//                StringConverter<T> converter = getConverter();
-//                if (converter == null) {
-//                    return getValue() != null ? getValue().toString() : "";
-//                }
-//                return converter.toString(getValue());
-//            case EXPANDED: return isShowing();
-//            default: return super.accGetAttribute(attribute, parameters);
-//        }
-//    }
-//
-//    @Override
-//    public void accExecuteAction(Action action, Object... parameters) {
-//        switch (action) {
-//            case COLLAPSE: hide(); break;
-//            case EXPAND: show(); break;
-//            default: super.accExecuteAction(action); break;
-//        }
-//    }
+    @Override
+    public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
+        switch(attribute) {
+            case TEXT:
+                String accText = getAccessibleText();
+                if (accText != null && !accText.isEmpty()) return accText;
+
+                //let the skin first.
+                Object title = super.queryAccessibleAttribute(attribute, parameters);
+                if (title != null) return title;
+                StringConverter<T> converter = getConverter();
+                if (converter == null) {
+                    return getValue() != null ? getValue().toString() : "";
+                }
+                return converter.toString(getValue());
+            case EXPANDED: return isShowing();
+            default: return super.queryAccessibleAttribute(attribute, parameters);
+        }
+    }
+
+    @Override
+    public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
+        switch (action) {
+            case COLLAPSE: hide(); break;
+            case EXPAND: show(); break;
+            default: super.executeAccessibleAction(action); break;
+        }
+    }
 
 }

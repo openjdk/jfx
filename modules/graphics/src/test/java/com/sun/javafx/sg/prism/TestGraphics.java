@@ -159,6 +159,10 @@ public class TestGraphics extends BaseGraphics {
         }
 
         @Override
+        public void validateClearOp(BaseGraphics g) {
+        }
+
+        @Override
         public void validatePaintOp(BaseGraphics g, BaseTransform xform, Texture maskTex, float bx, float by, float bw, float bh) {
         }
 
@@ -176,11 +180,14 @@ public class TestGraphics extends BaseGraphics {
         @Override public boolean isDeviceReady() { return true; }
 
         @Override public TextureResourcePool getTextureResourcePool() { return null; }
-        @Override public Texture createTexture(Image image, Texture.Usage usageHint, Texture.WrapMode wrapMode) { return null; }
-        @Override public Texture createTexture(PixelFormat formatHint, Texture.Usage usageHint, Texture.WrapMode wrapMode, int w, int h) { return null; }
+        @Override public Texture createTexture(Image image, Texture.Usage usageHint, WrapMode wrapMode) { return null; }
+        @Override public Texture createTexture(Image image, Texture.Usage usageHint, Texture.WrapMode wrapMode, boolean useMipmap) { return null; }
+        @Override public Texture createTexture(PixelFormat formatHint, Texture.Usage usageHint, WrapMode wrapMode, int w, int h) { return null; }
+        @Override public Texture createTexture(PixelFormat formatHint, Texture.Usage usageHint, Texture.WrapMode wrapMode, int w, int h, boolean useMipmap) { return null; }
         @Override public Texture createTexture(MediaFrame frame) { return null; }
         @Override public boolean isCompatibleTexture(Texture tex) { return true; }
         @Override public Texture getCachedTexture(Image image, WrapMode wrapMode) { return null; }
+        @Override public Texture getCachedTexture(Image image, WrapMode wrapMode, boolean useMipmap) { return null; }
         @Override public boolean isFormatSupported(PixelFormat format) { return false; }
         @Override public int getMaximumTextureSize() { return 0; }
         @Override public Texture createMaskTexture(int width, int height, Texture.WrapMode wrapMode) { return null; }
@@ -237,6 +244,7 @@ public class TestGraphics extends BaseGraphics {
                 @Override public int getMaxContentHeight() { return getPhysicalHeight(); }
                 @Override public void setContentWidth(int contentWidth) { }
                 @Override public void setContentHeight(int contentHeight) { }
+                @Override public boolean getUseMipmap() { return false; }
             };
         }
         @Override public Presentable createPresentable(PresentableState pstate) { return null; }

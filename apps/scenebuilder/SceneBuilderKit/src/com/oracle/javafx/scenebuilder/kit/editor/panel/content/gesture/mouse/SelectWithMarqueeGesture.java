@@ -175,8 +175,8 @@ public class SelectWithMarqueeGesture extends AbstractMouseGesture {
         final double yMax = Math.max(yPressed, yCurrent);
         
         final Group rudderLayer = contentPanelController.getRudderLayer();
-        final Point2D p0 = rudderLayer.sceneToLocal(xMin, yMin);
-        final Point2D p1 = rudderLayer.sceneToLocal(xMax, yMax);
+        final Point2D p0 = rudderLayer.sceneToLocal(xMin, yMin, true /* rootScene */);
+        final Point2D p1 = rudderLayer.sceneToLocal(xMax, yMax, true /* rootScene */);
         
         marqueeRect.setX(p0.getX());
         marqueeRect.setY(p0.getY());

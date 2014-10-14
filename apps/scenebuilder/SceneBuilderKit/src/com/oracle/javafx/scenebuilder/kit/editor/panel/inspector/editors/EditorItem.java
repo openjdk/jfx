@@ -45,9 +45,9 @@ public interface EditorItem {
 
     public Node getNode();
 
-    public String getValue();
+    public Object getValue();
 
-    public void setValue(String value);
+    public void setValue(Object value);
 
     public void reset();
 
@@ -60,5 +60,7 @@ public interface EditorItem {
     public MenuItem getRemoveMenuItem();
     
     public Button getPlusButton();
+    
+    public Button getMinusButton();
     
 }

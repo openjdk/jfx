@@ -43,9 +43,9 @@ import javafx.css.StyleableObjectProperty;
 import javafx.css.StyleableProperty;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
+import javafx.scene.AccessibleAttribute;
+import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
-//import javafx.scene.accessibility.Attribute;
-//import javafx.scene.accessibility.Role;
 
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EnumConverter;
@@ -104,6 +104,7 @@ public class ScrollPane extends Control {
      */
     public ScrollPane() {
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
+        setAccessibleRole(AccessibleRole.SCROLL_PANE);
         // focusTraversable is styleable through css. Calling setFocusTraversable
         // makes it look to css like the user set the value and css will not 
         // override. Initializing focusTraversable by calling applyStyle with
@@ -512,6 +513,55 @@ public class ScrollPane extends Control {
         return prefViewportHeight;
     }
 
+
+    /**
+     * Specify the minimum width of the ScrollPane Viewport.
+     * This is the width that will be available to the content node.
+     *
+     * @since JavaFX 8u40
+     * @see #prefViewportWidthProperty()
+     */
+    private DoubleProperty minViewportWidth;
+
+    public final void setMinViewportWidth(double value) {
+        minViewportWidthProperty().set(value);
+    }
+
+    public final double getMinViewportWidth() {
+        return minViewportWidth == null ? 0.0F : minViewportWidth.get();
+    }
+
+    public final DoubleProperty minViewportWidthProperty() {
+        if (minViewportWidth == null) {
+            minViewportWidth = new SimpleDoubleProperty(this, "minViewportWidth");
+        }
+        return minViewportWidth;
+    }
+
+    /**
+     * Specify the minimum height of the ScrollPane Viewport.
+     * This is the height that will be available to the content node.
+     *
+     * @since JavaFX 8u40
+     * @see #prefViewportHeightProperty()
+     */
+    private DoubleProperty minViewportHeight;
+
+    public final void setMinViewportHeight(double value) {
+        minViewportHeightProperty().set(value);
+    }
+
+    public final double getMinViewportHeight() {
+        return minViewportHeight == null ? 0.0F : minViewportHeight.get();
+    }
+
+    public final DoubleProperty minViewportHeightProperty() {
+        if (minViewportHeight == null) {
+            minViewportHeight = new SimpleDoubleProperty(this, "minViewportHeight");
+        }
+        return minViewportHeight;
+    }
+
     /**
      * The actual Bounds of the ScrollPane Viewport.
      * This is the Bounds of the content node.
@@ -737,16 +787,13 @@ public class ScrollPane extends Control {
      *                                                                         *
      **************************************************************************/
 
-//    /** @treatAsPrivate */
-//    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//        switch (attribute) {
-//            case ROLE: return Role.SCROLL_PANE;
-//            case CONTENTS: return getContent();
-//            case VERTICAL_SCROLLBAR: //Skin
-//            case HORIZONTAL_SCROLLBAR: //Skin
-//            default: return super.accGetAttribute(attribute, parameters);
-//        }
-//    }
+    @Override
+    public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
+        switch (attribute) {
+            case CONTENTS: return getContent();
+            default: return super.queryAccessibleAttribute(attribute, parameters);
+        }
+    }
 
 
     /***************************************************************************

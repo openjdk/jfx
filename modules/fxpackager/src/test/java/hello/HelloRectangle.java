@@ -28,15 +28,18 @@ package hello;
 import javafx.application.Application;
 import javafx.scene.Group;
 import javafx.scene.Scene;
+import javafx.scene.control.Tooltip;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
+
+import java.util.Optional;
 
 /**
  */
 public class HelloRectangle extends Application {
     @Override public void start(Stage stage) {
-        stage.setTitle("Hello Rectangle");
+        stage.setTitle(Optional.of(System.getProperty("app.preferences.id")).orElse("Hello Rectangle").replace("/", " " ));
 
         Group root = new Group();
         Scene scene = new Scene(root, 600, 450);
@@ -49,6 +52,11 @@ public class HelloRectangle extends Application {
         rect.setFill(Color.RED);
 
         root.getChildren().addAll(rect);
+
+        Tooltip.install(rect, new Tooltip(
+                "Arguments:\n" +
+                String.join("\n", getParameters().getUnnamed())));
+
 
         stage.setScene(scene);
         stage.show();

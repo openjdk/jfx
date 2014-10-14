@@ -1226,8 +1226,9 @@ public class SplitPaneTest {
         assertEquals(10, spCenter.getLayoutBounds().getWidth(), 1e-100);
         assertEquals(30, spRight.getLayoutBounds().getWidth(), 1e-100);       
         
-        splitPane.setDividerPosition(0, 0.20);        
-        
+        splitPane.setDividerPosition(0, 0.20);
+        root.layout();
+
         pos = splitPane.getDividerPositions();
         p0 = convertDividerPostionToAbsolutePostion(pos[0], w);
         p1 = convertDividerPostionToAbsolutePostion(pos[1], w);       
@@ -1235,6 +1236,7 @@ public class SplitPaneTest {
         assertEquals(62, p1, 1e-100);
         
         splitPane.setDividerPosition(1, 0.25);
+        root.layout();
                 
         pos = splitPane.getDividerPositions();
         p0 = convertDividerPostionToAbsolutePostion(pos[0], w);

@@ -125,6 +125,7 @@ public class FloodGame extends Application {
             fadeOut.setFromValue(1);
             fadeOut.setToValue(0);
             fadeOut.setInterpolator(Interpolator.EASE_OUT);
+            // setFill
             fadeOut.setOnFinished( event -> cellf.setFill(newColor));
 
             // fade in
@@ -133,6 +134,8 @@ public class FloodGame extends Application {
             fadeIn.setToValue(1);
             fadeIn.setInterpolator(Interpolator.EASE_OUT);
             fadeIn.setOnFinished(event -> {
+                // TODO not the best place to put the win check, since
+                // this gets called once for EVERY cell that's changing color
                 if (gameWon()) {
                     doneLabel.setText("YOU WON!!");
                 } else {

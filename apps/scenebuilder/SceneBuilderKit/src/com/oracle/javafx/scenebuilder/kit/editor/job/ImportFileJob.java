@@ -33,8 +33,8 @@ package com.oracle.javafx.scenebuilder.kit.editor.job;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
-import com.oracle.javafx.scenebuilder.kit.editor.job.v2.CompositeJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.v2.UpdateSelectionJob;
+import com.oracle.javafx.scenebuilder.kit.editor.selection.AbstractSelectionGroup;
+import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMNodes;
@@ -48,13 +48,13 @@ import java.util.List;
 /**
  *
  */
-public class ImportFileJob extends CompositeJob {
+public class ImportFileJob extends BatchSelectionJob {
 
     private final File file;
-    private FXOMObject targetObject;
+    private FXOMObject newObject, targetObject;
 
     public ImportFileJob(File file, EditorController editorController) {
-        super(editorController, true /* shouldRefreshSceneGraph */, false /* shouldUpdateSelection */);
+        super(editorController);
 
         assert file != null;
         this.file = file;
@@ -64,15 +64,11 @@ public class ImportFileJob extends CompositeJob {
         return targetObject;
     }
 
-    /*
-     * CompositeJob
-     */
     @Override
     protected List<Job> makeSubJobs() {
         final List<Job> result = new ArrayList<>();
 
         final FXOMDocument targetDocument = getEditorController().getFxomDocument();
-        final FXOMObject newObject;
 
         try {
             newObject = FXOMNodes.newObject(targetDocument, file);
@@ -87,7 +83,6 @@ public class ImportFileJob extends CompositeJob {
 
                 if (rootObject == null) {
                     result.add(new SetDocumentRootJob(newObject, getEditorController()));
-                    result.add(new UpdateSelectionJob(newObject, getEditorController()));
                 } else {
                     final Selection selection = getEditorController().getSelection();
                     if (selection.isEmpty() || selection.isSelected(rootObject)) {
@@ -106,7 +101,6 @@ public class ImportFileJob extends CompositeJob {
                                 targetObject,
                                 targetMask.getSubComponentCount(),
                                 getEditorController()));
-                        result.add(new UpdateSelectionJob(newObject, getEditorController()));
                     }
                 }
             }
@@ -119,5 +113,12 @@ public class ImportFileJob extends CompositeJob {
     @Override
     protected String makeDescription() {
         return I18N.getString("import.from.file", file.getName());
+    }
+
+    @Override
+    protected AbstractSelectionGroup getNewSelectionGroup() {
+        final List<FXOMObject> fxomObjects = new ArrayList<>();
+        fxomObjects.add(newObject);
+        return new ObjectSelectionGroup(fxomObjects, newObject, null);
     }
 }

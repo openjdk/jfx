@@ -129,9 +129,6 @@ public final class BasicStroke {
 
     public void set(float dash[], float dashPhase) {
         if (dash != null) {
-            if (dashPhase < 0.0f) {
-                throw new IllegalArgumentException("negative dash phase");
-            }
             boolean allzero = true;
             for (int i = 0; i < dash.length; i++) {
                 float d = dash[i];
@@ -151,23 +148,21 @@ public final class BasicStroke {
 
     public void set(double dash[], float dashPhase) {
         if (dash != null) {
-            this.dash = new float[dash.length];
-            if (dashPhase < 0.0f) {
-                throw new IllegalArgumentException("negative dash phase");
-            }
+            float newdashes[] = new float[dash.length];
             boolean allzero = true;
             for (int i = 0; i < dash.length; i++) {
-                double d = dash[i];
+                float d = (float) dash[i];
                 if (d > 0.0) {
                     allzero = false;
                 } else if (d < 0.0) {
                     throw new IllegalArgumentException("negative dash length");
                 }
-                this.dash[i] = (float) d;
+                newdashes[i] = d;
             }
             if (allzero) {
                 throw new IllegalArgumentException("dash lengths all zero");
             }
+            this.dash = newdashes;
         } else {
             this.dash = null;
         }

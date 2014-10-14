@@ -70,11 +70,11 @@ def linkFlags = [
         "-framework", "ApplicationServices",
         "-framework", "OpenGL",
         "-framework", "QuartzCore",
+        "-framework", "Security",
         "-dynamiclib", "-lobjc"].flatten();
 
 
 def compiler = IS_COMPILE_PARFAIT ? "parfait-gcc" : "gcc";
-def cc_compiler = IS_COMPILE_PARFAIT ? "parfait-cc" : "cc";
 def linker = IS_COMPILE_PARFAIT ? "parfait-g++" : "g++";
 
 MAC.glass = [:]
@@ -99,7 +99,7 @@ MAC.decora.lib = "decora_sse"
 MAC.prism = [:]
 MAC.prism.javahInclude = ["com/sun/prism/impl/**/*", "com/sun/prism/PresentableState*"]
 MAC.prism.nativeSource = file("modules/graphics/src/main/native-prism")
-MAC.prism.compiler = cc_compiler
+MAC.prism.compiler = compiler
 MAC.prism.ccFlags = ["-O3", "-DINLINE=inline", "-c", ccBaseFlags].flatten()
 MAC.prism.linker = linker
 MAC.prism.linkFlags = ["-dynamiclib", commonParams].flatten()
@@ -108,7 +108,7 @@ MAC.prism.lib = "prism_common"
 MAC.prismSW = [:]
 MAC.prismSW.javahInclude = ["com/sun/pisces/**/*"]
 MAC.prismSW.nativeSource = file("modules/graphics/src/main/native-prism-sw")
-MAC.prismSW.compiler = cc_compiler
+MAC.prismSW.compiler = compiler
 MAC.prismSW.ccFlags = [MAC.prism.ccFlags].flatten()
 MAC.prismSW.linker = linker
 MAC.prismSW.linkFlags = [MAC.prism.linkFlags].flatten()
@@ -123,6 +123,21 @@ MAC.launcher.ccFlags = [
         IS_DEBUG_NATIVE ? ["-DDEBUG", "-O0"] : ["-O3", "-DNDEBUG"]].flatten()
 MAC.launcher.linker = linker
 MAC.launcher.linkFlags = ["-ldl"]
+
+MAC.launcherlibrary = [:]
+MAC.launcherlibrary.compiler = compiler
+MAC.launcherlibrary.ccFlags = [
+        "-c",
+        ccBaseFlags,
+        IS_DEBUG_NATIVE ? ["-DDEBUG", "-O0"] : ["-O3", "-DNDEBUG"]].flatten()
+// 10.7 doesn't have libstdc++ as an option for stdlib, so filter it out
+if (!(MACOSX_MIN_VERSION in ['10.7', '10.8'])) {
+    MAC.launcherlibrary.ccFlags += "-stdlib=libstdc++"
+}
+MAC.launcherlibrary.linker = linker
+MAC.launcherlibrary.linkFlags = ["-ldl", "-dynamiclib",
+        "-framework", "Cocoa",
+        "-stdlib=libstdc++"]
 
 MAC.iio = [:]
 MAC.iio.javahInclude = ["com/sun/javafx/iio/**/*"]

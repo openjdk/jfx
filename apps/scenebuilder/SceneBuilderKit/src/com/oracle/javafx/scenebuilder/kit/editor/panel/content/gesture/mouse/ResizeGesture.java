@@ -32,7 +32,7 @@
 package com.oracle.javafx.scenebuilder.kit.editor.panel.content.gesture.mouse;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
-import com.oracle.javafx.scenebuilder.kit.editor.job.BatchModifyObjectJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.ModifyObjectJob;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.ContentPanelController;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.HudWindowController;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.relocater.AbstractRelocater;
@@ -175,16 +175,19 @@ public class ResizeGesture extends AbstractMouseGesture {
         if (changeMap.isEmpty() == false) {
             final EditorController editorController 
                     = contentPanelController.getEditorController();
-            final BatchModifyObjectJob j = new BatchModifyObjectJob(
-                    fxomInstance, 
-                    "Resize", 
-                    metaValueMap, 
-                    editorController);
-            if (j.isExecutable()) {
-                editorController.getJobManager().push(j);
+            for (Map.Entry<ValuePropertyMetadata, Object> e : metaValueMap.entrySet()) {
+                final ModifyObjectJob job = new ModifyObjectJob(
+                        fxomInstance,
+                        e.getKey(),
+                        e.getValue(),
+                        editorController,
+                        "Resize");
+                if (job.isExecutable()) {
+                    editorController.getJobManager().push(job);
+                }
             }
         }
-        
+
     }
 
     @Override
@@ -255,8 +258,8 @@ public class ResizeGesture extends AbstractMouseGesture {
         final double startSceneY = getMousePressedEvent().getSceneY();
         final double currentSceneX = getLastMouseEvent().getSceneX();
         final double currentSceneY = getLastMouseEvent().getSceneY();
-        final Point2D start = sceneGraphObject.sceneToLocal(startSceneX, startSceneY);
-        final Point2D current = sceneGraphObject.sceneToLocal(currentSceneX, currentSceneY);
+        final Point2D start = sceneGraphObject.sceneToLocal(startSceneX, startSceneY, true /* rootScene */);
+        final Point2D current = sceneGraphObject.sceneToLocal(currentSceneX, currentSceneY, true /* rootScene */);
         final double rawDeltaX, rawDeltaY;
         if ((start != null) && (current != null)) {
             rawDeltaX = current.getX() - start.getX();

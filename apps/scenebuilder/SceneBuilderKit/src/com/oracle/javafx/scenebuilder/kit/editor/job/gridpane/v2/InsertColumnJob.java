@@ -33,8 +33,10 @@
 package com.oracle.javafx.scenebuilder.kit.editor.job.gridpane.v2;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
+import com.oracle.javafx.scenebuilder.kit.editor.job.BatchSelectionJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
-import com.oracle.javafx.scenebuilder.kit.editor.job.v2.CompositeJob;
+import com.oracle.javafx.scenebuilder.kit.editor.selection.AbstractSelectionGroup;
+import com.oracle.javafx.scenebuilder.kit.editor.selection.GridSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.list.ColumnConstraintsListPropertyMetadata;
@@ -48,7 +50,7 @@ import javafx.scene.layout.GridPane;
 /**
  *
  */
-public class InsertColumnJob extends CompositeJob {
+public class InsertColumnJob extends BatchSelectionJob {
 
     private static final ColumnConstraintsListPropertyMetadata columnContraintsMeta =
             new ColumnConstraintsListPropertyMetadata(
@@ -88,11 +90,14 @@ public class InsertColumnJob extends CompositeJob {
                 = new InsertColumnConstraintsJob(gridPaneObject, columnIndex, insertCount, getEditorController());
         result.add(insertJob);
         
-        final Job moveJob
-                = new MoveColumnContentJob(gridPaneObject, columnIndex, +insertCount, getEditorController());
-        if (moveJob.isExecutable()) {
-            result.add(moveJob);
-        } // else column is empty : no children to move
+        final int lastColumnIndex = columnContraintsMeta.getValue(gridPaneObject).size()-1;
+        for (int c = lastColumnIndex; c >= columnIndex; c--) {
+            final Job moveJob
+                    = new MoveColumnContentJob(gridPaneObject, c, +insertCount, getEditorController());
+            if (moveJob.isExecutable()) {
+                result.add(moveJob);
+            } // else column is empty : no children to move
+        }
         
         return result;
     }
@@ -101,5 +106,9 @@ public class InsertColumnJob extends CompositeJob {
     protected String makeDescription() {
         return getClass().getSimpleName();
     }
-    
+
+    @Override
+    protected AbstractSelectionGroup getNewSelectionGroup() {
+        return new GridSelectionGroup(gridPaneObject, GridSelectionGroup.Type.COLUMN, columnIndex);
+    }
 }

@@ -58,6 +58,7 @@ public class MultiTouchImageView extends StackPane {
             lastX = event.getX();
             lastY = event.getY();
             toFront();
+            //  postView.toFront();
         });
         setOnMouseDragged((MouseEvent event) -> {
             double layoutX = getLayoutX() + (event.getX() - lastX);

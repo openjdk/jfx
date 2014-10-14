@@ -163,6 +163,10 @@ public class BundleParams {
         putUnlessNullOrEmpty(JVM_PROPERTIES.getID(), jvmProperties);
     }
 
+    public void setArguments(List<String> arguments) {
+        putUnlessNullOrEmpty(ARGUMENTS.getID(), arguments);
+    }
+
     public String getApplicationID() {
         return fetchParam(IDENTIFIER);
     }
@@ -232,6 +236,8 @@ public class BundleParams {
     public void setServiceHint(Boolean b) {
         putUnlessNull(PARAM_SERVICE_HINT, b);
     }
+    
+    public void setSignBundle(Boolean b) { putUnlessNull(SIGN_BUNDLE.getID(), b); }
     
     public com.oracle.tools.packager.RelativeFileSet getRuntime() {
         return getRuntime(params);
@@ -306,6 +312,10 @@ public class BundleParams {
 
     public List<String> getJvmargs() {
         return JVM_OPTIONS.fetchFrom(params);
+    }
+
+    public List<String> getArguments() {
+        return ARGUMENTS.fetchFrom(params);
     }
 
     //Validation approach:

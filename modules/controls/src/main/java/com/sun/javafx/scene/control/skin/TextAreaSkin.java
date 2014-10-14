@@ -45,9 +45,9 @@ import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
 import javafx.geometry.VPos;
 import javafx.geometry.VerticalDirection;
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.Group;
 import javafx.scene.Node;
-//import javafx.scene.accessibility.Attribute;
 import javafx.scene.control.IndexRange;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextArea;
@@ -701,6 +701,11 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         }
     }
 
+    @Override
+    protected void layoutChildren(double contentX, double contentY, double contentWidth, double contentHeight) {
+        scrollPane.resizeRelocate(contentX, contentY, contentWidth, contentHeight);
+    }
+
     private void createPromptNode() {
         if (promptNode == null && usePromptText.get()) {
             promptNode = new Text();
@@ -985,11 +990,13 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
     private void updatePrefViewportWidth() {
         int columnCount = getSkinnable().getPrefColumnCount();
         scrollPane.setPrefViewportWidth(columnCount * characterWidth + contentView.snappedLeftInset() + contentView.snappedRightInset());
+        scrollPane.setMinViewportWidth(characterWidth + contentView.snappedLeftInset() + contentView.snappedRightInset());
     }
 
     private void updatePrefViewportHeight() {
         int rowCount = getSkinnable().getPrefRowCount();
         scrollPane.setPrefViewportHeight(rowCount * lineHeight + contentView.snappedTopInset() + contentView.snappedBottomInset());
+        scrollPane.setMinViewportHeight(lineHeight + contentView.snappedTopInset() + contentView.snappedBottomInset());
     }
 
     private void updateFontMetrics() {
@@ -1350,17 +1357,17 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea, TextAreaBehavio
         return getSkinnable().sceneToLocal(caretPath.localToScene(caretPath.getBoundsInLocal()));
     }
 
-//    @Override
-//    protected Object accGetAttribute(Attribute attribute, Object... parameters) {
-//        switch (attribute) {
-//            case LINE_FOR_OFFSET:
-//            case LINE_START:
-//            case LINE_END:
-//            case BOUNDS_FOR_RANGE:
-//            case OFFSET_AT_POINT:
-//                Text text = getTextNode();
-//                return text.accGetAttribute(attribute, parameters);
-//            default: return super.accGetAttribute(attribute, parameters);
-//        }
-//    }
+    @Override
+    protected Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
+        switch (attribute) {
+            case LINE_FOR_OFFSET:
+            case LINE_START:
+            case LINE_END:
+            case BOUNDS_FOR_RANGE:
+            case OFFSET_AT_POINT:
+                Text text = getTextNode();
+                return text.queryAccessibleAttribute(attribute, parameters);
+            default: return super.queryAccessibleAttribute(attribute, parameters);
+        }
+    }
 }

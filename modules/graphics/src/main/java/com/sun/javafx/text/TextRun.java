@@ -420,7 +420,7 @@ public class TextRun implements GlyphList {
             return getCharOffset(glyphIndex);
         }
         /* tab */
-        if (width != -1) {
+        if (width != -1 && length > 0) {
             if (trailing != null) {
                 if (x > width / 2) {
                     trailing[0] = 1;

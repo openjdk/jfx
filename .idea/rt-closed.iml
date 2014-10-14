@@ -166,6 +166,7 @@
       <sourceFolder url="file://$MODULE_DIR$/../rt-closed/toys/WebLauncher/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/../rt-closed/toys/ZBufferTest/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/../rt-closed/glass/glass-test/test" isTestSource="false" />
+      <excludeFolder url="file://$MODULE_DIR$/../rt-closed/toys/a11y" />
     </content>
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module" module-name="rt" exported="" />

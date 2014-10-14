@@ -25,18 +25,22 @@
 
 package hello;
 
+import java.util.Optional;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
 import javafx.application.Application;
 import javafx.scene.Group;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.TextInputDialog;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 import javafx.util.Duration;
-import alertdialog.Alert;
 
 public class HelloAlert extends Application {
 
@@ -54,8 +58,6 @@ public class HelloAlert extends Application {
         rect.setHeight(50);
         rect.setFill(Color.RED);
         root.getChildren().add(rect);
-        stage.setScene(scene);
-        stage.show();
 
         final Timeline timeline = new Timeline();
         timeline.setCycleCount(Timeline.INDEFINITE);
@@ -70,9 +72,12 @@ public class HelloAlert extends Application {
         button1.setLayoutX(25);
         button1.setLayoutY(40);
         button1.setOnAction(e -> {
-            boolean answer = Alert.confirm(stage, "Verify Change",
+            Alert alert = new Alert(AlertType.CONFIRMATION,
                     "Really toggle the color?");
-            if (answer) {
+            alert.setTitle("Verify Change");
+            alert.initOwner(stage);
+            ButtonType result = alert.showAndWait().orElse(ButtonType.CANCEL);
+            if (result == ButtonType.OK) {
                 Color newColor = Color.RED.equals(rect.getFill())
                         ? Color.GREEN : Color.RED;
                 rect.setFill(newColor);
@@ -88,9 +93,13 @@ public class HelloAlert extends Application {
         button2.setLayoutX(25);
         button2.setLayoutY(80);
         button2.setOnAction(e -> {
-            boolean answer = Alert.question(stage, "SF Giants",
-                    "How about those Giants?");
-            if (answer) {
+            Alert alert = new Alert(AlertType.CONFIRMATION,
+                    "How about those Giants?",
+                    ButtonType.YES, ButtonType.NO);
+            alert.setTitle("SF Giants");
+            alert.initOwner(stage);
+            ButtonType result = alert.showAndWait().get();
+            if (result == ButtonType.YES) {
                 System.err.println("Good answer");
             } else {
                 System.err.println("What do you mean 'NO' ???");
@@ -104,11 +113,57 @@ public class HelloAlert extends Application {
         button3.setLayoutX(25);
         button3.setLayoutY(120);
         button3.setOnAction(e -> {
-            Alert.inform(stage, "Hi, I'll be your modal dialog today");
+            Alert alert = new Alert(AlertType.INFORMATION,
+                    "Hi, I'll be your modal dialog today");
+            alert.initOwner(stage);
+            alert.showAndWait();
             System.err.println("Continue");
         });
 
         root.getChildren().add(button3);
+
+        final Button button4 = new Button();
+        button4.setText("Name");
+        button4.setLayoutX(25);
+        button4.setLayoutY(160);
+        button4.setOnAction(e -> {
+            TextInputDialog dlg = new TextInputDialog("Mud");
+            dlg.setTitle("What is your name?");
+            dlg.initOwner(stage);
+            Optional<String> result = dlg.showAndWait();
+            if (result.isPresent()) {
+                System.err.println("Your name is: " + result.get());
+            } else {
+                System.err.println("Canceled");
+            }
+        });
+
+        root.getChildren().add(button4);
+
+        final Button button5 = new Button();
+        button5.setText("Abort/Retry/Fail");
+        button5.setLayoutX(25);
+        button5.setLayoutY(200);
+        button5.setOnAction(e -> {
+            ButtonType abort = new ButtonType("Abort");
+            ButtonType retry = new ButtonType("Retry");
+            ButtonType fail = new ButtonType("Fail");
+            Alert alert = new Alert(AlertType.ERROR, "So sorry for you!",
+                    abort, retry, fail);
+            alert.setTitle("You lose");
+            alert.initOwner(stage);
+            ButtonType result = alert.showAndWait().orElse(fail);
+
+            if (result == abort) {
+                System.err.println("ABORT! This is very, very bad!");
+            } else if (result == retry) {
+                System.err.println("RETRY? You're joking, right?");
+            } else if (result == fail) {
+                System.err.println("FAIL! So what else is new?");
+            }
+        });
+
+        root.getChildren().add(button5);
 
         stage.setScene(scene);
         stage.show();

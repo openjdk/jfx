@@ -35,9 +35,7 @@ package com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.outline;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.ContentPanelController;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import javafx.geometry.Bounds;
-import javafx.geometry.Point2D;
 import javafx.scene.Node;
-import javafx.scene.transform.Transform;
 
 /**
  *
@@ -60,18 +58,8 @@ public class NodeOutline extends AbstractOutline<Node> {
     }
 
     @Override
-    public Transform getSceneGraphToSceneTransform() {
-        return getSceneGraphObject().getLocalToSceneTransform();
-    }
-
-    @Override
-    public Point2D sceneGraphObjectToScene(double x, double y) {
-        return getSceneGraphObject().localToScene(x, y);
-    }
-
-    @Override
-    public Point2D sceneToSceneGraphObject(double x, double y) {
-        return getSceneGraphObject().sceneToLocal(x, y);
+    public Node getSceneGraphObjectProxy() {
+        return getSceneGraphObject();
     }
 
     @Override

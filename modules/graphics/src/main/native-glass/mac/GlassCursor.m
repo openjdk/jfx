@@ -245,7 +245,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacCursor__1setVisible
 JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacCursor__1getBestSize
 (JNIEnv *env, jclass jCursorClass, jint width, jint height)
 {
-    LOG("Java_com_sun_glass_ui_mac_MacCursor__1setVisible");
+    LOG("Java_com_sun_glass_ui_mac_MacCursor__1getBestSize");
     
     jobject jsize = NULL;
     

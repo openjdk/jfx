@@ -252,8 +252,10 @@ public final class PrismSettings {
 
         allowHiDPIScaling = getBoolean(systemProperties, "prism.allowhidpi", true);
 
-        maxVram = getLong(systemProperties, "prism.maxvram", 256 * 1024 * 1024, null);
-        targetVram = getLong(systemProperties, "prism.targetvram", maxVram * 3 / 4, null);
+        maxVram = getLong(systemProperties, "prism.maxvram", 512 * 1024 * 1024,
+                          "Try -Dprism.maxvram=<long>[kKmMgG]");
+        targetVram = getLong(systemProperties, "prism.targetvram", maxVram / 8, maxVram,
+                             "Try -Dprism.targetvram=<long>[kKmMgG]|<double(0,100)>%");
         poolStats = getBoolean(systemProperties, "prism.poolstats", false);
         poolDebug = getBoolean(systemProperties, "prism.pooldebug", false);
 
@@ -366,9 +368,26 @@ public final class PrismSettings {
         return dflt;
     }
 
-    private static long parseLong(String s, long dflt, String errMsg) {
+    private static long parseLong(String s, long dflt, long rel, String errMsg) {
         if (s != null && s.length() > 0) {
             long mult = 1;
+            if (s.endsWith("%")) {
+                if (rel > 0) {
+                    try {
+                        s = s.substring(0, s.length() - 1);
+                        double percent = Double.parseDouble(s);
+                        if (percent >= 0 && percent <= 100) {
+                            return Math.round(rel * percent / 100.0);
+                        }
+                    } catch (Exception e) {
+                    }
+                }
+
+                if (errMsg != null) {
+                    System.err.println(errMsg);
+                }
+                return dflt;
+            }
             if (s.endsWith("k") || s.endsWith("K")) {
                 mult = 1024L;
             } else if (s.endsWith("m") || s.endsWith("M")) {
@@ -444,7 +463,17 @@ public final class PrismSettings {
                                 String errMsg)
     {
         return parseLong(properties.getProperty(key),
-                         dflt,
+                         dflt, 0,
+                         errMsg);
+    }
+
+    private static long getLong(Properties properties,
+                                String key,
+                                long dflt, long rel,
+                                String errMsg)
+    {
+        return parseLong(properties.getProperty(key),
+                         dflt, rel,
                          errMsg);
     }
 }

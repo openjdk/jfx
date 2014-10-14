@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,6 +33,8 @@
 #include <PipelineManagement/Pipeline.h>
 #include <jfxmedia_errors.h>
 #include <Utils/LowLevelPerf.h>
+
+#include "GstAudioEqualizer.h"
 
 using namespace std;
 
@@ -74,6 +76,38 @@ JNIEXPORT jint JNICALL Java_com_sun_media_jfxmediaimpl_platform_gstreamer_GSTMed
     LOWLEVELPERF_EXECTIMESTOP("gstInitPlayer()");
 
     return iRet;
+}
+
+/*
+ * Class:     com_sun_media_jfxmediaimpl_platform_gstreamer_GSTMediaPlayer
+ * Method:    gstGetAudioEqualizer
+ * Signature: (J)J
+ */
+JNIEXPORT jlong JNICALL Java_com_sun_media_jfxmediaimpl_platform_gstreamer_GSTMediaPlayer_gstGetAudioEqualizer
+(JNIEnv *env, jobject playerObject, jlong nativeRef)
+{
+    CMedia* pMedia = (CMedia*)jlong_to_ptr(nativeRef);
+    if (NULL == pMedia) {
+        return 0;
+    }
+    CAudioEqualizer *eq = pMedia->GetPipeline()->GetAudioEqualizer();
+    return ptr_to_jlong(eq);
+}
+
+/*
+ * Class:     com_sun_media_jfxmediaimpl_platform_gstreamer_GSTMediaPlayer
+ * Method:    gstGetAudioSpectrum
+ * Signature: (J)J
+ */
+JNIEXPORT jlong JNICALL Java_com_sun_media_jfxmediaimpl_platform_gstreamer_GSTMediaPlayer_gstGetAudioSpectrum
+(JNIEnv *env, jobject playerObject, jlong nativeRef)
+{
+    CMedia* pMedia = (CMedia*)jlong_to_ptr(nativeRef);
+    if (NULL == pMedia) {
+        return 0;
+    }
+    CAudioSpectrum *spectrum = pMedia->GetPipeline()->GetAudioSpectrum();
+    return ptr_to_jlong(spectrum);
 }
 
 /**

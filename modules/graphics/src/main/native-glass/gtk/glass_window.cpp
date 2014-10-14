@@ -132,6 +132,15 @@ void WindowContextBase::process_focus(GdkEventFocus* event) {
     if (!event->in && WindowContextBase::sm_grab_window == this) {
         ungrab_focus();
     }
+
+    if (xim.enabled && xim.ic) {
+        if (event->in) {
+            XSetICFocus(xim.ic);
+        } else {
+            XUnsetICFocus(xim.ic);
+        }
+    }
+
     if (jwindow) {
         if (!event->in || isEnabled()) {
             mainEnv->CallVoidMethod(jwindow, jWindowNotifyFocus,
@@ -603,9 +612,11 @@ void WindowContextBase::set_background(float r, float g, float b) {
 WindowContextBase::~WindowContextBase() {
     if (xim.ic) {
         XDestroyIC(xim.ic);
+        xim.ic = NULL;
     }
     if (xim.im) {
         XCloseIM(xim.im);
+        xim.im = NULL;
     }
 
     gtk_widget_destroy(gtk_widget);
@@ -952,13 +963,13 @@ void WindowContextTop::process_configure(GdkEventConfigure* event) {
     } else {
         --stale_config_notifications;
     }
-    if (jview) {
+    if (jview && map_received) {
         mainEnv->CallVoidMethod(jview, jViewNotifyResize,
                 event->width,
                 event->height);
         CHECK_JNI_EXCEPTION(mainEnv)
     }
-    if (jwindow) {
+    if (jwindow && map_received) {
         mainEnv->CallVoidMethod(jwindow, jWindowNotifyResize,
                 (is_maximized)
                     ? com_sun_glass_events_WindowEvent_MAXIMIZE
@@ -1128,7 +1139,7 @@ void WindowContextTop::window_configure(XWindowChanges *windowChanges,
         return;
     }
 
-    if (!gtk_widget_get_visible(gtk_widget)) {
+    if (!(gtk_widget_get_visible(gtk_widget) && map_received)) {
         // not visible yet, synchronize with gtk only
         if (windowChangesMask & (CWX | CWY)) {
             gint newX, newY;

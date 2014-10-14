@@ -40,14 +40,29 @@ public class IntArgb {
     public static final IntPixelSetter     setter = Accessor.instance;
     public static final IntPixelAccessor accessor = Accessor.instance;
 
-    public static final IntToBytePixelConverter ToByteBgraConverter =
-        new IntTo4ByteSameConverter(IntArgb.getter, ByteBgra.setter);
-    public static final IntToBytePixelConverter ToByteBgraPreConverter =
-        IntArgb.ToByteBgraPreConv.instance;
-    public static final IntToIntPixelConverter ToIntArgbConverter =
-        BaseIntToIntConverter.create(accessor);
-    public static final IntToIntPixelConverter ToIntArgbPreConverter =
-        IntArgb.ToIntArgbPreConv.instance;
+    private static IntToBytePixelConverter ToByteBgraObj;
+    public  static IntToBytePixelConverter ToByteBgraConverter() {
+        if (ToByteBgraObj == null) {
+            ToByteBgraObj = new IntTo4ByteSameConverter(IntArgb.getter, ByteBgra.setter);
+        }
+        return ToByteBgraObj;
+    }
+
+    public static IntToBytePixelConverter ToByteBgraPreConverter() {
+        return IntArgb.ToByteBgraPreConv.instance;
+    }
+
+    private static IntToIntPixelConverter ToIntArgbObj;
+    public  static IntToIntPixelConverter ToIntArgbConverter() {
+        if (ToIntArgbObj == null) {
+            ToIntArgbObj = BaseIntToIntConverter.create(accessor);
+        }
+        return ToIntArgbObj;
+    }
+
+    public static IntToIntPixelConverter ToIntArgbPreConverter() {
+        return IntArgb.ToIntArgbPreConv.instance;
+    }
 
     static class Accessor implements IntPixelAccessor {
         static final IntPixelAccessor instance = new Accessor();

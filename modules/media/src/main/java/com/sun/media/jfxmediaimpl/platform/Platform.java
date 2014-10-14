@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,15 +41,6 @@ public abstract class Platform {
         throw new UnsupportedOperationException("Invalid platform class.");
     }
 
-    /*
-     * Loading stages
-     * preloadPlatform gives the platform a chance to load or check dependencies
-     * before the main jfxmedia library is loaded. Then loadPlatform is called
-     * after jfxmedia library is loaded in case the platform has further
-     * dependencies.
-     */
-    public void preloadPlatform() {}
-
     /**
      * @return false if the platform cannot be loaded
      */
@@ -85,9 +76,7 @@ public abstract class Platform {
 
     /**
      * Prepare for playing the specified media. If the media stream is unsupported
-     * return null so other platforms may be used, otherwise return an Object
-     * that gets passed to createMediaPlayer to create the actual player.
+     * return null so other platforms may be used.
      */
-    public abstract Object prerollMediaPlayer(Locator source);
-    public abstract MediaPlayer createMediaPlayer(Locator source, Object cookie);
+    public abstract MediaPlayer createMediaPlayer(Locator source);
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,7 +34,6 @@ import com.sun.prism.PixelFormat;
 import com.sun.prism.impl.BaseTexture;
 import com.sun.prism.impl.BufferUtil;
 import com.sun.prism.impl.PrismSettings;
-import com.sun.prism.impl.PrismTrace;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -48,11 +47,11 @@ class ES2Texture<T extends ES2TextureData> extends BaseTexture<ES2TextureResourc
     ES2Texture(ES2Context context, ES2TextureResource<T> resource,
                PixelFormat format, WrapMode wrapMode,
                int physicalWidth, int physicalHeight,
-               int contentX, int contentY, int contentWidth, int contentHeight)
+               int contentX, int contentY, int contentWidth, int contentHeight, boolean useMipmap)
     {
         super(resource, format, wrapMode,
               physicalWidth, physicalHeight,
-              contentX, contentY, contentWidth, contentHeight);
+              contentX, contentY, contentWidth, contentHeight, useMipmap);
         this.context = context;
     }
     
@@ -60,17 +59,19 @@ class ES2Texture<T extends ES2TextureData> extends BaseTexture<ES2TextureResourc
                PixelFormat format, WrapMode wrapMode,
                int physicalWidth, int physicalHeight,
                int contentX, int contentY, int contentWidth, int contentHeight,
-               int maxContentWidth, int maxContentHeight)
+               int maxContentWidth, int maxContentHeight, boolean useMipmap)
     {
         super(resource, format, wrapMode,
               physicalWidth, physicalHeight,
               contentX, contentY, contentWidth, contentHeight, 
-              maxContentWidth, maxContentHeight);
+              maxContentWidth, maxContentHeight, useMipmap);
         this.context = context;
     }
 
+
+    // TODO: We don't handle mipmap in shared texture yet.
     private ES2Texture(ES2Texture sharedTex, WrapMode newMode) {
-        super(sharedTex, newMode);
+        super(sharedTex, newMode, false);
         this.context = sharedTex.context;
     }
 
@@ -96,9 +97,7 @@ class ES2Texture<T extends ES2TextureData> extends BaseTexture<ES2TextureResourc
     }
 
     static ES2Texture create(ES2Context context, PixelFormat format,
-                             WrapMode wrapMode,
-                             int w, int h)
-    {
+            WrapMode wrapMode, int w, int h, boolean useMipmap) {
         if (!context.getResourceFactory().isFormatSupported(format)) {
             throw new UnsupportedOperationException(
                     "Pixel format " + format
@@ -215,9 +214,8 @@ class ES2Texture<T extends ES2TextureData> extends BaseTexture<ES2TextureResourc
         boolean result = uploadPixels(glCtx, GLContext.GL_TEXTURE_2D, null, format,
                                       texWidth, texHeight,
                                       contentX, contentY,
-                                      0, 0, contentW, contentH, 0, true);
-
-        glCtx.texParamsMinMax(GLContext.GL_LINEAR);
+                                      0, 0, contentW, contentH, 0, true, useMipmap);
+        glCtx.texParamsMinMax(GLContext.GL_LINEAR, useMipmap);
 
         // restore previous texture objects
         glCtx.setBoundTexture(savedTex);
@@ -228,7 +226,7 @@ class ES2Texture<T extends ES2TextureData> extends BaseTexture<ES2TextureResourc
         return new ES2Texture(context, texRes, format, wrapMode,
                               texWidth, texHeight,
                               contentX, contentY,
-                              contentW, contentH);
+                              contentW, contentH, useMipmap);
 
     }
 
@@ -264,7 +262,7 @@ class ES2Texture<T extends ES2TextureData> extends BaseTexture<ES2TextureResourc
                 // Create using subWidth/subHeight then adjust content afterwards
                 ES2Texture subTex =
                     create(context, PixelFormat.BYTE_ALPHA, WrapMode.CLAMP_TO_EDGE,
-                           subWidth, subHeight);
+                           subWidth, subHeight, false);
                 if (subTex != null) {
                     tex.setTexture(subTex, index);
                 }
@@ -314,7 +312,7 @@ class ES2Texture<T extends ES2TextureData> extends BaseTexture<ES2TextureResourc
         boolean result = uploadPixels(context.getGLContext(), GLContext.GL_TEXTURE_2D,
                 frame, texWidth, texHeight, true);
 
-        glCtx.texParamsMinMax(GLContext.GL_LINEAR);
+        glCtx.texParamsMinMax(GLContext.GL_LINEAR, false);
 
         // restore previous texture objects
         glCtx.setBoundTexture(savedTex);
@@ -323,20 +321,16 @@ class ES2Texture<T extends ES2TextureData> extends BaseTexture<ES2TextureResourc
         if (result) {
             tex = new ES2Texture(context, texRes, format, WrapMode.CLAMP_TO_EDGE,
                                  texWidth, texHeight,
-                                 0, 0, frame.getWidth(), frame.getHeight());
+                                 0, 0, frame.getWidth(), frame.getHeight(), false);
         }
         frame.releaseFrame();
         return tex;
     }
 
     private static boolean uploadPixels(GLContext glCtx, int target,
-            Buffer pixels, PixelFormat format,
-            int texw, int texh,
-            int dstx, int dsty,
-            int srcx, int srcy,
-            int srcw, int srch,
-            int srcscan,
-            boolean create) {
+            Buffer pixels, PixelFormat format, int texw, int texh,
+            int dstx, int dsty, int srcx, int srcy, int srcw, int srch,
+            int srcscan, boolean create, boolean useMipmap) {
         int alignment = 1;
         int internalFormat;
         int pixelFormat;
@@ -433,7 +427,7 @@ class ES2Texture<T extends ES2TextureData> extends BaseTexture<ES2TextureResourc
                 // and pixelType dictate that this is a floating point texture.
                 result = glCtx.texImage2D(target, 0, GLContext.GL_RGBA,
                         texw, texh, 0,
-                        pixelFormat, pixelType, null);
+                        pixelFormat, pixelType, null, useMipmap);
             } else {
                 // Note that on desktop we can use the GL_ALPHA format to help
                 // minimize data transfer and storage costs (only 1 byte per
@@ -479,7 +473,7 @@ class ES2Texture<T extends ES2TextureData> extends BaseTexture<ES2TextureResourc
                 }
                 result = glCtx.texImage2D(target, 0, internalFormat,
                         texw, texh, 0,
-                        initPixelFormat, initPixelType, initBuf);
+                        initPixelFormat, initPixelType, initBuf, useMipmap);
             }
         }
         if (pixels != null) {
@@ -537,7 +531,7 @@ class ES2Texture<T extends ES2TextureData> extends BaseTexture<ES2TextureResourc
         int srcw = frame.getEncodedWidth();
         int srch = frame.getEncodedHeight();
         int adjHeight = srch;
-        ByteBuffer pixels = frame.getBuffer();
+        ByteBuffer pixels = frame.getBufferForPlane(0);
 
         switch (frame.getPixelFormat()) {
             case INT_ARGB_PRE:
@@ -574,17 +568,16 @@ class ES2Texture<T extends ES2TextureData> extends BaseTexture<ES2TextureResourc
             }
             result = glCtx.texImage2D(target, 0, internalFormat,
                     texw, texh, 0,
-                    GLContext.GL_ALPHA, GLContext.GL_UNSIGNED_BYTE, initBuf);
+                    GLContext.GL_ALPHA, GLContext.GL_UNSIGNED_BYTE, initBuf, false);
         }
 
         if (pixels != null) {
             glCtx.pixelStorei(GLContext.GL_UNPACK_ALIGNMENT, alignment);
             glCtx.pixelStorei(GLContext.GL_UNPACK_ROW_LENGTH,
                     frame.strideForPlane(0) / alignment);
-            pixels.position(frame.offsetForPlane(0));
             glCtx.texSubImage2D(target, 0,
                     0, 0, srcw, frame.getHeight(),
-                    pixelFormat, pixelType, pixels.slice());
+                    pixelFormat, pixelType, pixels);
         }
         frame.releaseFrame();
         return result;
@@ -687,11 +680,12 @@ class ES2Texture<T extends ES2TextureData> extends BaseTexture<ES2TextureResourc
             int contentH = getContentHeight();
             int texWidth = getPhysicalWidth();
             int texHeight = getPhysicalHeight();
+            boolean useMipmap = getUseMipmap();
             uploadPixels(glCtx, GLContext.GL_TEXTURE_2D,
                          pixels, format,
                          texWidth, texHeight,
                          contentX + dstx, contentY + dsty,
-                         srcx, srcy, srcw, srch, srcscan, false);
+                         srcx, srcy, srcw, srch, srcscan, false, useMipmap);
 
             switch (getWrapMode()) {
                 case CLAMP_TO_EDGE:
@@ -705,7 +699,7 @@ class ES2Texture<T extends ES2TextureData> extends BaseTexture<ES2TextureResourc
                                      pixels, format,
                                      texWidth, texHeight,
                                      contentX + contentW, contentY + dsty,
-                                     srcx + srcw-1, srcy, 1, srch, srcscan, false);
+                                     srcx + srcw-1, srcy, 1, srch, srcscan, false, useMipmap);
                     }
                     // Repeat bottom edge, if it was modified
                     if (copyL) {
@@ -713,14 +707,14 @@ class ES2Texture<T extends ES2TextureData> extends BaseTexture<ES2TextureResourc
                                      pixels, format,
                                      texWidth, texHeight,
                                      contentX + dstx, contentY + contentH,
-                                     srcx, srcy + srch-1, srcw, 1, srcscan, false);
+                                     srcx, srcy + srch-1, srcw, 1, srcscan, false, useMipmap);
                         // Repeat LR corner, if it was modified
                         if (copyR) {
                             uploadPixels(glCtx, GLContext.GL_TEXTURE_2D,
                                         pixels, format,
                                         texWidth, texHeight,
                                         contentX + contentW, contentY + contentH,
-                                        srcx + srcw-1, srcy + srch-1, 1, 1, srcscan, false);
+                                        srcx + srcw-1, srcy + srch-1, 1, 1, srcscan, false, useMipmap);
                         }
                     }
                     break;
@@ -736,7 +730,7 @@ class ES2Texture<T extends ES2TextureData> extends BaseTexture<ES2TextureResourc
                                      pixels, format,
                                      texWidth, texHeight,
                                      contentX + contentW, contentY + dsty,
-                                     srcx, srcy, 1, srch, srcscan, false);
+                                     srcx, srcy, 1, srch, srcscan, false, useMipmap);
                     }
                     // Repeat top edge on bottom, if it was modified
                     if (repeatT) {
@@ -744,14 +738,14 @@ class ES2Texture<T extends ES2TextureData> extends BaseTexture<ES2TextureResourc
                                      pixels, format,
                                      texWidth, texHeight,
                                      contentX + dstx, contentY + contentH,
-                                     srcx, srcy, srcw, 1, srcscan, false);
+                                     srcx, srcy, srcw, 1, srcscan, false, useMipmap);
                         // Repeat UL pixel at LR, if it was modified
                         if (repeatL) {
                             uploadPixels(glCtx, GLContext.GL_TEXTURE_2D,
                                          pixels, format,
                                          texWidth, texHeight,
                                          contentX + contentW, contentY + contentH,
-                                         srcx, srcy, 1, 1, srcscan, false);
+                                         srcx, srcy, 1, 1, srcscan, false, useMipmap);
                         }
                     }
                     break;

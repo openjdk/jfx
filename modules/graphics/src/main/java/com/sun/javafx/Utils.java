@@ -447,8 +447,6 @@ public class Utils {
             double anchorHeight, HPos hpos, VPos vpos, double dx, double dy,
             boolean reposition)
     {
-        double parentXOffset = getOffsetX(parent);
-        final double parentYOffset = getOffsetY(parent);
         final Bounds parentBounds = getBounds(parent);
         Scene scene = parent.getScene();
         NodeOrientation orientation = parent.getEffectiveNodeOrientation();
@@ -459,15 +457,16 @@ public class Utils {
             } else if (hpos == HPos.RIGHT) {
                 hpos = HPos.LEFT;
             }
+            dx *= -1;
         }
 
-        double layoutX = positionX(parentXOffset, parentBounds, anchorWidth, hpos) + dx;
-        final double layoutY = positionY(parentYOffset, parentBounds, anchorHeight, vpos) + dy;
+        double layoutX = positionX(parentBounds, anchorWidth, hpos) + dx;
+        final double layoutY = positionY(parentBounds, anchorHeight, vpos) + dy;
 
         if (orientation == NodeOrientation.RIGHT_TO_LEFT && hpos == HPos.CENTER) {
             //TODO - testing for an instance of Stage seems wrong but works for menus
             if (scene.getWindow() instanceof Stage) {
-                layoutX = layoutX + parentBounds.getWidth() - anchorWidth + (dx * 2);
+                layoutX = layoutX + parentBounds.getWidth() - anchorWidth;
             } else {
                 layoutX = layoutX - parentBounds.getWidth() - anchorWidth;
             }
@@ -498,8 +497,6 @@ public class Utils {
     {
         double finalScreenX = screenX;
         double finalScreenY = screenY;
-        final double parentOffsetX = getOffsetX(parent);
-        final double parentOffsetY = getOffsetY(parent);
         final Bounds parentBounds = getBounds(parent);
 
         // ...and then we get the bounds of this screen
@@ -516,24 +513,24 @@ public class Utils {
         if (hpos != null) {
             // Firstly we consider going off the right hand side
             if ((finalScreenX + width) > screenBounds.getMaxX()) {
-                finalScreenX = positionX(parentOffsetX, parentBounds, width, getHPosOpposite(hpos, vpos));
+                finalScreenX = positionX(parentBounds, width, getHPosOpposite(hpos, vpos));
             }
 
             // don't let the node go off to the left of the current screen
             if (finalScreenX < screenBounds.getMinX()) {
-                finalScreenX = positionX(parentOffsetX, parentBounds, width, getHPosOpposite(hpos, vpos));
+                finalScreenX = positionX(parentBounds, width, getHPosOpposite(hpos, vpos));
             }
         }
 
         if (vpos != null) {
             // don't let the node go off the bottom of the current screen
             if ((finalScreenY + height) > screenBounds.getMaxY()) {
-                finalScreenY = positionY(parentOffsetY, parentBounds, height, getVPosOpposite(hpos,vpos));
+                finalScreenY = positionY(parentBounds, height, getVPosOpposite(hpos,vpos));
             }
 
             // don't let the node out of the top of the current screen
             if (finalScreenY < screenBounds.getMinY()) {
-                finalScreenY = positionY(parentOffsetY, parentBounds, height, getVPosOpposite(hpos,vpos));
+                finalScreenY = positionY(parentBounds, height, getVPosOpposite(hpos,vpos));
             }
         }
 
@@ -558,58 +555,18 @@ public class Utils {
     }
 
     /**
-     * To facilitate multiple types of parent object, we unfortunately must allow for
-     * Objects to be passed in. This method handles determining the x-axis offset of the
-     * given Object from the screens (0,0) position. If the Object type is not supported,
-     * 0 will be returned.
-     */
-    private static double getOffsetX(Object obj) {
-        if (obj instanceof Node) {
-            Scene scene = ((Node)obj).getScene();
-            if ((scene == null) || (scene.getWindow() == null)) {
-                return 0;
-            }
-            return scene.getX() + scene.getWindow().getX();
-        } else if (obj instanceof Window) {
-            return ((Window)obj).getX();
-        } else {
-            return 0;
-        }
-    }
-
-    /**
-     * To facilitate multiple types of parent object, we unfortunately must allow for
-     * Objects to be passed in. This method handles determining the y-axis offset of the
-     * given Object from the screens (0,0) position. If the Object type is not supported,
-     * 0 will be returned.
-     */
-    private static double getOffsetY(Object obj) {
-        if (obj instanceof Node) {
-            Scene scene = ((Node)obj).getScene();
-            if ((scene == null) || (scene.getWindow() == null)) {
-                return 0;
-            }
-            return scene.getY() + scene.getWindow().getY();
-        } else if (obj instanceof Window) {
-            return ((Window)obj).getY();
-        } else {
-            return 0;
-        }
-    }
-
-    /**
      * Utility function that returns the x-axis position that an object should be positioned at,
-     * given the parent x-axis offset, the parents bounds, the width of the object, and
+     * given the parents screen bounds, the width of the object, and
      * the required HPos.
      */
-    private static double positionX(double parentXOffset, Bounds parentBounds, double width, HPos hpos) {
+    private static double positionX(Bounds parentBounds, double width, HPos hpos) {
         if (hpos == HPos.CENTER) {
             // this isn't right, but it is needed for root menus to show properly
-            return parentXOffset + parentBounds.getMinX();
+            return parentBounds.getMinX();
         } else if (hpos == HPos.RIGHT) {
-            return parentXOffset + parentBounds.getMaxX();
+            return parentBounds.getMaxX();
         } else if (hpos == HPos.LEFT) {
-            return parentXOffset + parentBounds.getMinX() - width;
+            return parentBounds.getMinX() - width;
         } else {
             return 0;
         }
@@ -617,18 +574,18 @@ public class Utils {
 
     /**
      * Utility function that returns the y-axis position that an object should be positioned at,
-     * given the parent y-axis offset, the parents bounds, the height of the object, and
+     * given the parents screen bounds, the height of the object, and
      * the required VPos.
      *
      * The BASELINE vpos doesn't make sense here, 0 is returned for it.
      */
-    private static double positionY(double parentYOffset, Bounds parentBounds, double height, VPos vpos) {
+    private static double positionY(Bounds parentBounds, double height, VPos vpos) {
         if (vpos == VPos.BOTTOM) {
-            return parentYOffset + parentBounds.getMaxY();
+            return parentBounds.getMaxY();
         } else if (vpos == VPos.CENTER) {
-            return parentYOffset + parentBounds.getMinY();
+            return parentBounds.getMinY();
         } else if (vpos == VPos.TOP) {
-            return parentYOffset + parentBounds.getMinY() - height;
+            return parentBounds.getMinY() - height;
         } else {
             return 0;
         }
@@ -642,10 +599,10 @@ public class Utils {
     private static Bounds getBounds(Object obj) {
         if (obj instanceof Node) {
             final Node n = (Node)obj;
-            return n.localToScene(n.getLayoutBounds());
+            return n.localToScreen(n.getLayoutBounds());
         } else if (obj instanceof Window) {
             final Window window = (Window)obj;
-            return new BoundingBox(0, 0, window.getWidth(), window.getHeight());
+            return new BoundingBox(window.getX(), window.getY(), window.getWidth(), window.getHeight());
         } else {
             return new BoundingBox(0, 0, 0, 0);
         }
@@ -723,15 +680,11 @@ public class Utils {
      * multiple monitor support.
      */
     public static Screen getScreen(Object obj) {
-        // handle dual monitors (be careful of minX/minY vs width/height).
-        // we create a rectangle representing the menubar menu item...
-        final double offsetX = getOffsetX(obj);
-        final double offsetY = getOffsetY(obj);
         final Bounds parentBounds = getBounds(obj);
 
         final Rectangle2D rect = new Rectangle2D(
-                offsetX + parentBounds.getMinX(),
-                offsetY + parentBounds.getMinY(),
+                parentBounds.getMinX(),
+                parentBounds.getMinY(),
                 parentBounds.getWidth(),
                 parentBounds.getHeight());
 

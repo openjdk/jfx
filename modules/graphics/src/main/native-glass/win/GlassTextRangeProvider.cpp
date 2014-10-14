@@ -102,17 +102,18 @@ IFACEMETHODIMP GlassTextRangeProvider::QueryInterface(REFIID riid, void** ppInte
 IFACEMETHODIMP GlassTextRangeProvider::Clone(ITextRangeProvider **pRetVal)
 {
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     jlong ptr = env->CallLongMethod(m_jTextRangeProvider, mid_Clone);
     if (CheckAndClearException(env)) return E_FAIL;
+    GlassTextRangeProvider* gtrp = reinterpret_cast<GlassTextRangeProvider*>(ptr);
 
     /* This code is intentionally commented.
      * JavaFX returns a new ITextRangeProvider instance each time.
      * The caller holds the only reference to this object.
      */
-//    ITextRangeProvider* iUnknown = reinterpret_cast<ITextRangeProvider*>(ptr);
-//    if (iUnknown) iUnknown->AddRef();
+//    if (gtrp) gtrp->AddRef();
 
-    *pRetVal = reinterpret_cast<ITextRangeProvider*>(ptr);
+    *pRetVal = static_cast<ITextRangeProvider*>(gtrp);
     return S_OK;
 }
 
@@ -124,6 +125,7 @@ IFACEMETHODIMP GlassTextRangeProvider::Compare(ITextRangeProvider *range, BOOL *
         return S_OK;
     }
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     *pRetVal = env->CallBooleanMethod(m_jTextRangeProvider, mid_Compare, glassRange->m_jTextRangeProvider);
     if (CheckAndClearException(env)) return E_FAIL;
     return S_OK;
@@ -138,6 +140,7 @@ IFACEMETHODIMP GlassTextRangeProvider::CompareEndpoints(TextPatternRangeEndpoint
         return S_OK;
     }
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     *pRetVal = env->CallIntMethod(m_jTextRangeProvider, mid_CompareEndpoints, endpoint, glassRange->m_jTextRangeProvider, targetEndpoint);
     if (CheckAndClearException(env)) return E_FAIL;
     return S_OK;
@@ -146,6 +149,7 @@ IFACEMETHODIMP GlassTextRangeProvider::CompareEndpoints(TextPatternRangeEndpoint
 IFACEMETHODIMP GlassTextRangeProvider::ExpandToEnclosingUnit(TextUnit unit)
 {
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     env->CallVoidMethod(m_jTextRangeProvider, mid_ExpandToEnclosingUnit, unit);
     if (CheckAndClearException(env)) return E_FAIL;
     return S_OK;
@@ -156,41 +160,44 @@ IFACEMETHODIMP GlassTextRangeProvider::FindAttribute(TEXTATTRIBUTEID attributeId
     //TODO VAL TO JVAL
     jobject jVal = NULL;
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     jlong ptr = env->CallLongMethod(m_jTextRangeProvider, mid_FindAttribute, attributeId, jVal, backward);
     if (CheckAndClearException(env)) return E_FAIL;
+    GlassTextRangeProvider* gtrp = reinterpret_cast<GlassTextRangeProvider*>(ptr);
 
     /* This code is intentionally commented.
      * JavaFX returns a new ITextRangeProvider instance each time.
      * The caller holds the only reference to this object.
      */
-//    ITextRangeProvider* iUnknown = reinterpret_cast<ITextRangeProvider*>(ptr);
-//    if (iUnknown) iUnknown->AddRef();
+//    if (gtrp) gtrp->AddRef();
 
-    *pRetVal = reinterpret_cast<ITextRangeProvider*>(ptr);
+    *pRetVal = static_cast<ITextRangeProvider*>(gtrp);
     return S_OK;
 }
 
 IFACEMETHODIMP GlassTextRangeProvider::FindText(BSTR text, BOOL backward, BOOL ignoreCase, ITextRangeProvider **pRetVal)
 {
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     jsize length = SysStringLen(text);
     jstring jText = env->NewString((const jchar *)text, length);
     jlong ptr = env->CallLongMethod(m_jTextRangeProvider, mid_FindText, jText, backward, ignoreCase);
     if (CheckAndClearException(env)) return E_FAIL;
+    GlassTextRangeProvider* gtrp = reinterpret_cast<GlassTextRangeProvider*>(ptr);
 
     /* This code is intentionally commented.
      * JavaFX returns a new ITextRangeProvider instance each time.
      * The caller holds the only reference to this object.
      */
-//    ITextRangeProvider* iUnknown = reinterpret_cast<ITextRangeProvider*>(ptr);
-//    if (iUnknown) iUnknown->AddRef();
+//    if (gtrp) gtrp->AddRef();
 
-    *pRetVal = reinterpret_cast<ITextRangeProvider*>(ptr);
+    *pRetVal = static_cast<ITextRangeProvider*>(gtrp);
     return S_OK;
 }
 IFACEMETHODIMP GlassTextRangeProvider::GetAttributeValue(TEXTATTRIBUTEID attributeId, VARIANT *pRetVal)
 {
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     jobject jVariant = env->CallObjectMethod(m_jTextRangeProvider, mid_GetAttributeValue, attributeId);
     if (CheckAndClearException(env)) return E_FAIL;
 
@@ -200,6 +207,7 @@ IFACEMETHODIMP GlassTextRangeProvider::GetAttributeValue(TEXTATTRIBUTEID attribu
 IFACEMETHODIMP GlassTextRangeProvider::GetBoundingRectangles(SAFEARRAY **pRetVal)
 {
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     jarray bounds = (jarray)env->CallObjectMethod(m_jTextRangeProvider, mid_GetBoundingRectangles);
     if (CheckAndClearException(env)) return E_FAIL;
 
@@ -209,20 +217,22 @@ IFACEMETHODIMP GlassTextRangeProvider::GetBoundingRectangles(SAFEARRAY **pRetVal
 IFACEMETHODIMP GlassTextRangeProvider::GetEnclosingElement(IRawElementProviderSimple **pRetVal)
 {
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     jlong ptr = env->CallLongMethod(m_jTextRangeProvider, mid_GetEnclosingElement);
     if (CheckAndClearException(env)) return E_FAIL;
+    GlassAccessible* acc = reinterpret_cast<GlassAccessible*>(ptr);
 
     /* AddRef the result */
-    IUnknown* iUnknown = reinterpret_cast<IUnknown*>(ptr);
-    if (iUnknown) iUnknown->AddRef();
+    if (acc) acc->AddRef();
 
-    *pRetVal = reinterpret_cast<IRawElementProviderSimple*>(ptr);
+    *pRetVal = static_cast<IRawElementProviderSimple*>(acc);
     return S_OK;
 }
 
 IFACEMETHODIMP GlassTextRangeProvider::GetText(int maxLength, BSTR *pRetVal)
 {
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     jstring string = (jstring)env->CallObjectMethod(m_jTextRangeProvider, mid_GetText, maxLength);
     if (CheckAndClearException(env)) return E_FAIL;
 
@@ -232,6 +242,7 @@ IFACEMETHODIMP GlassTextRangeProvider::GetText(int maxLength, BSTR *pRetVal)
 IFACEMETHODIMP GlassTextRangeProvider::Move(TextUnit unit, int count, int *pRetVal)
 {
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     *pRetVal = env->CallIntMethod(m_jTextRangeProvider, mid_Move, unit, count);
     if (CheckAndClearException(env)) return E_FAIL;
     return S_OK;
@@ -240,6 +251,7 @@ IFACEMETHODIMP GlassTextRangeProvider::Move(TextUnit unit, int count, int *pRetV
 IFACEMETHODIMP GlassTextRangeProvider::MoveEndpointByUnit(TextPatternRangeEndpoint endpoint, TextUnit unit, int count, int *pRetVal)
 {
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     *pRetVal = env->CallIntMethod(m_jTextRangeProvider, mid_MoveEndpointByUnit, endpoint, unit, count);
     if (CheckAndClearException(env)) return E_FAIL;
     return S_OK;
@@ -254,6 +266,7 @@ IFACEMETHODIMP GlassTextRangeProvider::MoveEndpointByRange(TextPatternRangeEndpo
         return S_OK;
     }
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     env->CallVoidMethod(m_jTextRangeProvider, mid_MoveEndpointByRange, endpoint, glassRange->m_jTextRangeProvider, targetEndpoint);
     if (CheckAndClearException(env)) return E_FAIL;
     return S_OK;
@@ -262,6 +275,7 @@ IFACEMETHODIMP GlassTextRangeProvider::MoveEndpointByRange(TextPatternRangeEndpo
 IFACEMETHODIMP GlassTextRangeProvider::Select()
 {
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     env->CallVoidMethod(m_jTextRangeProvider, mid_Select);
     if (CheckAndClearException(env)) return E_FAIL;
     return S_OK;
@@ -270,6 +284,7 @@ IFACEMETHODIMP GlassTextRangeProvider::Select()
 IFACEMETHODIMP GlassTextRangeProvider::AddToSelection()
 {
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     env->CallVoidMethod(m_jTextRangeProvider, mid_AddToSelection);
     if (CheckAndClearException(env)) return E_FAIL;
     return S_OK;
@@ -278,6 +293,7 @@ IFACEMETHODIMP GlassTextRangeProvider::AddToSelection()
 IFACEMETHODIMP GlassTextRangeProvider::RemoveFromSelection()
 {
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     env->CallVoidMethod(m_jTextRangeProvider, mid_RemoveFromSelection);
     if (CheckAndClearException(env)) return E_FAIL;
     return S_OK;
@@ -286,6 +302,7 @@ IFACEMETHODIMP GlassTextRangeProvider::RemoveFromSelection()
 IFACEMETHODIMP GlassTextRangeProvider::ScrollIntoView(BOOL alignToTop)
 {
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     env->CallVoidMethod(m_jTextRangeProvider, mid_ScrollIntoView, alignToTop);
     if (CheckAndClearException(env)) return E_FAIL;
     return S_OK;
@@ -294,6 +311,7 @@ IFACEMETHODIMP GlassTextRangeProvider::ScrollIntoView(BOOL alignToTop)
 IFACEMETHODIMP GlassTextRangeProvider::GetChildren(SAFEARRAY **pRetVal)
 {
     JNIEnv* env = GetEnv();
+    if (env == NULL) return E_FAIL;
     jarray children = (jarray)env->CallObjectMethod(m_jTextRangeProvider, mid_GetChildren);
     if (CheckAndClearException(env)) return E_FAIL;
 

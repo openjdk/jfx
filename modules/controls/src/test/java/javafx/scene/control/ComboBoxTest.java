@@ -98,6 +98,7 @@ public class ComboBoxTest {
     
     @Before public void setup() {
         comboBox = new ComboBox<String>();
+        comboBox.setSkin(new ComboBoxListViewSkin<>(comboBox));
         sm = comboBox.getSelectionModel();
     }
     

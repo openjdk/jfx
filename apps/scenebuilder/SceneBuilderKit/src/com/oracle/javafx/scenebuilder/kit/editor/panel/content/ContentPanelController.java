@@ -122,7 +122,7 @@ import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
-import com.oracle.javafx.scenebuilder.kit.util.Deprecation;
+import javafx.scene.SubScene;
 
 /**
  * This class creates and controls the <b>Content Panel</b> of Scene Builder Kit.
@@ -136,6 +136,7 @@ public class ContentPanelController extends AbstractFxmlPanelController
     @FXML private Rectangle extensionRect;
     @FXML private Label backgroundPane;
     @FXML private Group scalingGroup;
+    @FXML private SubScene contentSubScene;
     @FXML private Group contentGroup;
     @FXML private Pane glassLayer;
     @FXML private Group outlineLayer;
@@ -365,16 +366,23 @@ public class ContentPanelController extends AbstractFxmlPanelController
                 final FXOMObject nodeFxomObject = mask.getClosestFxNode();
                 if (nodeFxomObject != null) {
                     final Node node = (Node) nodeFxomObject.getSceneGraphObject();
-                    union.add(node.localToScene(node.getLayoutBounds()));
+                    assert node.getLayoutBounds() != null;
+                    final Bounds nodeBounds = node.localToScene(node.getLayoutBounds(), true /* rootScene */);
+                    assert nodeBounds != null;
+                    union.add(nodeBounds);
                 }
             }
         }
 
         if (union.getResult() != null) {
             final Node content = scrollPane.getContent();
-            final Bounds enclosing = content.sceneToLocal(union.getResult());
+            final Bounds sceneEnclosing = union.getResult();
+            assert sceneEnclosing.getMinZ() == 0.0; // Side effect of SubScene
+            assert sceneEnclosing.getMaxZ() == 0.0;
+            final Bounds localEnclosing = content.sceneToLocal(sceneEnclosing, true /* rootScene */);
+            assert localEnclosing != null;
             final ScrollPaneBooster spb = new ScrollPaneBooster(scrollPane);
-            spb.scrollTo(enclosing);
+            spb.scrollTo(localEnclosing);
         }
     }
 
@@ -613,6 +621,15 @@ public class ContentPanelController extends AbstractFxmlPanelController
 
     
     /**
+     * @treatAsPrivate Returns the sub scene holding the user scene graph.
+     * @return the sub scene holding the user scene graph.
+     */
+    public SubScene getContentSubScene() {
+        return contentSubScene;
+    }
+
+    
+    /**
      * Computes the transform that projects from local coordinates of a 
      * scene graph object to the rudder layer local coordinates.
      * @param sceneGraphObject a scene graph object
@@ -623,12 +640,13 @@ public class ContentPanelController extends AbstractFxmlPanelController
         assert sceneGraphObject.getScene() == rudderLayer.getScene();
         
         final Transform t1 = sceneGraphObject.getLocalToSceneTransform();
-        final Transform t2 = rudderLayer.getLocalToSceneTransform();
+        final Transform t2 = contentSubScene.getLocalToSceneTransform();
+        final Transform t3 = rudderLayer.getLocalToSceneTransform();
         final Transform result;
         
         try {
-            final Transform i2 = t2.createInverse();
-            result = i2.createConcatenation(t1);
+            final Transform i3 = t3.createInverse();
+            result = i3.createConcatenation(t2).createConcatenation(t1);
         } catch(NonInvertibleTransformException x) {
             throw new RuntimeException(x);
         }
@@ -760,7 +778,6 @@ public class ContentPanelController extends AbstractFxmlPanelController
     @Override
     protected void jobManagerRevisionDidChange() {
         getEditorController().setPickModeEnabled(false);
-        fxomDocumentDidRefreshSceneGraph(getEditorController().getFxomDocument());
     }
 
     /**
@@ -803,10 +820,13 @@ public class ContentPanelController extends AbstractFxmlPanelController
         assert backgroundPane.getMinWidth() == Region.USE_PREF_SIZE;
         assert backgroundPane.getMinHeight() == Region.USE_PREF_SIZE;
         assert scalingGroup != null;
-        assert contentGroup != null;
+        assert contentSubScene != null;
+        assert contentSubScene.getLayoutX() == 0.0;
+        assert contentSubScene.getLayoutY() == 0.0;
+        assert contentSubScene.getParent() == scalingGroup;
+        assert contentGroup == contentSubScene.getRoot();
         assert contentGroup.getLayoutX() == 0.0;
         assert contentGroup.getLayoutY() == 0.0;
-        assert contentGroup.getParent() == scalingGroup;
         assert glassLayer != null;
         assert glassLayer.isMouseTransparent() == false;
         assert glassLayer.isFocusTraversable();
@@ -828,17 +848,14 @@ public class ContentPanelController extends AbstractFxmlPanelController
         handleLayer.setManaged(false);
         rudderLayer.setManaged(false);
         
-        // Replace plain group in "contentGroup" by a custom one
-        // which isolates the user scene graph from SB owned styling.
-        installStylingIsolationGroup();
-        
         // Remove fake content used to help design
         backgroundPane.setText(""); //NOI18N
         
         // Setup our workspace controller
         workspaceController.panelControllerDidLoadFxml(
                 scrollPane,
-                scalingGroup, 
+                scalingGroup,
+                contentSubScene,
                 contentGroup, 
                 backgroundPane, 
                 extensionRect);
@@ -1007,8 +1024,8 @@ public class ContentPanelController extends AbstractFxmlPanelController
     private void themeDidChange() {
         if (contentGroup != null) {
             final EditorPlatform.Theme theme = getEditorController().getTheme();
-            final List<URL> themeStyleSheets = EditorPlatform.getThemeStylesheetURLs(theme);
-            workspaceController.setThemeStyleSheets(themeStyleSheets);
+            final String themeStyleSheet = EditorPlatform.getThemeStylesheetURL(theme);
+            workspaceController.setThemeStyleSheet(themeStyleSheet);
         }
     }
     
@@ -1033,45 +1050,6 @@ public class ContentPanelController extends AbstractFxmlPanelController
         }
         changeModeController(newModeController);
     }
-    
-    private void installStylingIsolationGroup() {
-        assert contentGroup.getParent() == scalingGroup;
-        
-        /*
-         * To isolate user content styling from SB's own styling we 
-         * insert two custom groups between scalingGroup and contentGroup:
-         * 
-         * 1) original layout loaded from FXML:
-         * 
-         *      ...
-         *          scalingGroup
-         *              contentGroup
-         *                  ... (user content)
-         * 
-         * 2) layout with isolation groups:
-         * 
-         *      ... 
-         *          scalingGroup
-         *              isolationGroupA     # impl_getAllParentStylesheets() overriden
-         *                  isolationGroupB     # getStyleableParent() overriden 
-         *                      contentGroup
-         *                          ... (user content)
-         *
-         * isolationGroupA prevents styling from SB to apply to user content
-         * isolationGroupB enables user content to have its own theme (modena, caspian...)
-         */
-        
-        final Group isolationGroupA = Deprecation.makeStylingIsolationGroupA();
-        final Group isolationGroupB = Deprecation.makeStylingIsolationGroupB();
-
-        final int contentGroupIndex = scalingGroup.getChildren().indexOf(contentGroup);
-        assert contentGroupIndex != -1;
-        scalingGroup.getChildren().remove(contentGroup);
-        scalingGroup.getChildren().add(contentGroupIndex, isolationGroupA);
-        isolationGroupA.getChildren().add(isolationGroupB);
-        isolationGroupB.getChildren().add(contentGroup);
-    }
-    
     
     /*
      * Private (outline layer)

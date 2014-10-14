@@ -94,14 +94,12 @@ class ViewScene extends GlassScene {
     @Override
     public void dispose() {
         if (platformView != null) {
-            ViewPainter.renderLock.lock();
-            try {
+            QuantumToolkit.runWithRenderLock(() -> {
                 platformView.close();
                 platformView = null;
                 updateSceneState();
-            } finally {
-                ViewPainter.renderLock.unlock();
-            }
+                return null;
+            });
         }
         super.dispose();
     }

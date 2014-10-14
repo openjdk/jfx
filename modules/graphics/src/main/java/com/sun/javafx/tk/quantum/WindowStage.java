@@ -245,18 +245,15 @@ class WindowStage extends GlassStage {
         if (scene != null) {
             GlassScene newScene = getViewScene();
             View view = newScene.getPlatformView();
-            ViewPainter.renderLock.lock();
-            try {
+            QuantumToolkit.runWithRenderLock(() -> {
                 platformWindow.setView(view);
                 if (oldScene != null) oldScene.updateSceneState();
                 newScene.updateSceneState();
-            } finally {
-                ViewPainter.renderLock.unlock();
-            }
+                return null;
+            });
             requestFocus();
         } else {
-            ViewPainter.renderLock.lock();
-            try {
+            QuantumToolkit.runWithRenderLock(() -> {
                 // platformWindow can be null here, if this window is owned,
                 // and its owner is being closed.
                 if (platformWindow != null) {
@@ -265,9 +262,8 @@ class WindowStage extends GlassStage {
                 if (oldScene != null) {
                     oldScene.updateSceneState();
                 }
-            } finally {
-                ViewPainter.renderLock.unlock();
-            }
+                return null;
+            });
         }
         if (oldScene != null) {
             ViewPainter painter = ((ViewScene)oldScene).getPainter();
@@ -447,17 +443,15 @@ class WindowStage extends GlassStage {
                 }
             }
         }
-        try {
-            ViewPainter.renderLock.lock();
+        QuantumToolkit.runWithRenderLock(() -> {
             // platformWindow can be null here, if this window is owned,
             // and its owner is being closed.
             if (platformWindow != null) {
                 platformWindow.setVisible(visible);
             }
             super.setVisible(visible);
-        } finally {
-            ViewPainter.renderLock.unlock();
-        }
+            return null;
+        });
         // After setting visible to true on the native window, we block
         // other windows.
         if (visible) {
@@ -710,8 +704,7 @@ class WindowStage extends GlassStage {
     
     @Override public void close() {
         super.close();
-        ViewPainter.renderLock.lock();
-        try {
+        QuantumToolkit.runWithRenderLock(() -> {
             // prevents closing a closed platform window
             if (platformWindow != null) {
                 platformWindows.remove(platformWindow);
@@ -722,9 +715,8 @@ class WindowStage extends GlassStage {
             if (oldScene != null) {
                 oldScene.updateSceneState();
             }
-        } finally {
-            ViewPainter.renderLock.unlock();
-        }
+            return null;
+        });
     }
 
     // setPlatformWindowClosed is only set upon receiving platform window has

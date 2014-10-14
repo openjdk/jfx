@@ -64,9 +64,11 @@ public class StringListPropertyMetadata extends ListValuePropertyMetadata<String
     }
     
    public static String assembleValue(List<String> valueItems) {
+        assert FXMLLoader.ARRAY_COMPONENT_DELIMITER.length() == 1;
+        
         final StringBuilder result = new StringBuilder();
         for (String s : valueItems) {
-            assert s.indexOf(FXMLLoader.ARRAY_COMPONENT_DELIMITER) == -1;
+            assert s.indexOf(FXMLLoader.ARRAY_COMPONENT_DELIMITER.charAt(0)) == -1;
             if (result.length() >= 1) {
                 result.append(FXMLLoader.ARRAY_COMPONENT_DELIMITER);
             }

@@ -177,8 +177,9 @@ public class TreeViewKeyInputTest {
      **************************************************************************/    
     
     @Test public void testInitialState() {
-        assertTrue(sm.getSelectedIndices().isEmpty());
-        assertTrue(sm.getSelectedItems().isEmpty());
+        assertEquals(-1, sm.getSelectedIndex());
+        assertEquals(0, sm.getSelectedIndices().size());
+        assertEquals(0, sm.getSelectedItems().size());
     }
     
     /***************************************************************************
@@ -1867,6 +1868,7 @@ public class TreeViewKeyInputTest {
         final MultipleSelectionModel sm = treeView.getSelectionModel();
 
         sm.clearAndSelect(0);
+        assertEquals(0, fm.getFocusedIndex());
         assertEquals(0, getAnchor());
 
         keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.getShortcutKey());
@@ -1880,7 +1882,7 @@ public class TreeViewKeyInputTest {
 
         keyboard.doKeyPress(KeyCode.SPACE,  KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
         Toolkit.getToolkit().firePulse();
-        assertTrue(isSelected(0,1,2,3));
+        assertTrue(debug(), isSelected(0,1,2,3));
         assertEquals(4, sm.getSelectedItems().size());
         assertTrue(fm.isFocused(3));
     }

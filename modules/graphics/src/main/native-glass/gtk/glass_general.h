@@ -241,6 +241,8 @@ private:
 
     gboolean check_and_clear_exception(JNIEnv *env);
 
+    jboolean is_display_valid();
+
     gsize get_files_count(gchar **uris);
 
     jobject uris_to_java(JNIEnv *env, gchar **uris, gboolean files);

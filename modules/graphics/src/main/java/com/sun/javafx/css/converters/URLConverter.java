@@ -26,6 +26,7 @@
 package com.sun.javafx.css.converters;
 
 import com.sun.javafx.css.StyleConverterImpl;
+import javafx.application.Application;
 import javafx.css.ParsedValue;
 import javafx.css.StyleConverter;
 import javafx.scene.text.Font;
@@ -35,6 +36,11 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.security.AccessController;
+import java.security.CodeSource;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
+import java.security.ProtectionDomain;
 
 /**
  * Convert url("<path>") a URL string resolved relative to the location of the stylesheet.
@@ -84,7 +90,9 @@ public final class URLConverter extends StyleConverterImpl<ParsedValue[], String
     // package for testing
     URL resolve(String stylesheetUrl, String resource) {
 
-        if (resource == null || resource.trim().isEmpty()) return null;
+
+        final String resourcePath = (resource != null) ? resource.trim() : null;
+        if (resourcePath == null || resourcePath.isEmpty()) return null;
 
         try {
 
@@ -92,15 +100,22 @@ public final class URLConverter extends StyleConverterImpl<ParsedValue[], String
 
             // if stylesheetUri is null, then we're dealing with an in-line style.
             // If there is no scheme part, then the url is interpreted as being relative to the application's class-loader.
-            URI resourceUri = new URI(resource.trim());
+            URI resourceUri = new URI(resourcePath);
 
             if (resourceUri.isAbsolute()) {
                 return resourceUri.toURL();
             }
 
-            if (stylesheetUrl != null && stylesheetUrl.trim().isEmpty() == false) {
+            URL rtJarUrl = resolveRuntimeImport(resourceUri);
+            if (rtJarUrl != null) {
+                return rtJarUrl;
+            }
 
-                URI stylesheetUri = new URI(stylesheetUrl.trim());
+            final String stylesheetPath = (stylesheetUrl != null) ?  stylesheetUrl.trim() : null;
+
+            if (stylesheetPath != null && stylesheetPath.isEmpty() == false) {
+
+                URI stylesheetUri = new URI(stylesheetPath);
 
                 if (stylesheetUri.isOpaque() == false) {
 
@@ -144,6 +159,81 @@ public final class URLConverter extends StyleConverterImpl<ParsedValue[], String
     }
 
 
+    //
+    // Resolve a path from an @import that implies jfxrt.jar,
+    // e.g., @import "com/sun/javafx/scene/control/skin/modena/modena.css".
+    //
+    // See also StyleSheet#loadStylesheet(String)
+    //
+    private URL resolveRuntimeImport(final URI resourceUri) {
+
+
+        final String path = resourceUri.getPath();
+        final String resourcePath = path.startsWith("/") ? path.substring(1) : path;
+
+        if ((resourcePath.startsWith("com/sun/javafx/scene/control/skin/modena/") ||
+             resourcePath.startsWith("com/sun/javafx/scene/control/skin/caspian/")) &&
+            (resourcePath.endsWith(".css") || resourcePath.endsWith(".bss"))) {
+
+            final SecurityManager sm = System.getSecurityManager();
+            if (sm == null) {
+                // If the SecurityManager is not null, then just look up the resource on the class-path.
+                // If there is a SecurityManager, the URLClassPath getResource call will return null,
+                // so fall through and create a URL from the code-source URI
+                final ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
+                final URL resolved = contextClassLoader.getResource(resourcePath);
+                return resolved;
+            }
+
+            // check whether the path is file from our runtime jar
+            try {
+                final URL rtJarURL = AccessController.doPrivileged((PrivilegedExceptionAction<URL>) () -> {
+                    // getProtectionDomain either throws a SecurityException or returns a non-null value
+                    final ProtectionDomain protectionDomain = Application.class.getProtectionDomain();
+                    // If we're running with a SecurityManager, then the ProtectionDomain will have a CodeSource
+                    final CodeSource codeSource = protectionDomain.getCodeSource();
+                    // The CodeSource location will be our runtime jar
+                    return codeSource.getLocation();
+                });
+
+                final URI rtJarURI = rtJarURL.toURI();
+
+                String scheme = rtJarURI.getScheme();
+                String rtJarPath = rtJarURI.getPath();
+
+                //
+                // Just because we're running with a SecurityManager doesn't mean the jfxrt jar path is
+                // a jar: URL. But the code in StyleManager wants it to be. So if we have
+                // file:/blah/rt/lib/ext/jfxrt.jar make it jar:file:/blah/rt/lib/ext/jfxrt.jar!/
+                //
+                // If the path doesn't end with .jar, then we are just dealing with a normal file: path
+                //
+                if ("file".equals(scheme) && rtJarPath.endsWith(".jar")) {
+                    if ("file".equals(scheme)) {
+                        scheme = "jar:file";
+                        rtJarPath = rtJarPath.concat("!/");
+                    }
+                }
+                rtJarPath = rtJarPath.concat(resourcePath);
+
+                final String rtJarUserInfo = rtJarURI.getUserInfo();
+                final String rtJarHost = rtJarURI.getHost();
+                final int rtJarPort = rtJarURI.getPort();
+
+                //
+                // Put together a new URI from the pieces of rtJarURI. We cannot use resolve here since
+                // the scheme and path may have been munged.
+                //
+                URI resolved = new URI(scheme, rtJarUserInfo, rtJarHost, rtJarPort, rtJarPath, null, null);
+                return resolved.toURL();
+
+            } catch (URISyntaxException | MalformedURLException | PrivilegedActionException ignored) {
+                // Allow this method to return null so the caller will try to further resolve the path.
+                // If nothing else, an error message will result when the converted URL is consumed.
+            }
+        }
+        return null;
+    }
 
     @Override
     public String toString() {

@@ -98,6 +98,9 @@ CPP_SOURCES = \
         jni/JniUtils.cpp \
         jni/Logger.cpp \
         jni/NativeVideoBuffer.cpp \
+        jni/NativeAudioEqualizer.cpp \
+        jni/NativeAudioSpectrum.cpp \
+        jni/NativeEqualizerBand.cpp \
         jni/JavaInputStreamCallbacks.cpp \
         PipelineManagement/AudioTrack.cpp \
         PipelineManagement/Pipeline.cpp \
@@ -110,7 +113,6 @@ CPP_SOURCES = \
         MediaManagement/MediaManager.cpp \
         Locator/Locator.cpp \
         Locator/LocatorStream.cpp \
-        platform/gstreamer/GstEqualizerBand.cpp \
         platform/gstreamer/GstMedia.cpp \
         platform/gstreamer/GstMediaPlayer.cpp \
         platform/gstreamer/GstPlatform.cpp \

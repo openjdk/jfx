@@ -40,7 +40,9 @@ import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import javafx.scene.layout.GridPane;
 
 /**
@@ -108,10 +110,10 @@ public class GridPaneJobUtils {
      *
      * @return the list of target indexes
      */
-    static List<Integer> getAddedIndexes(
-            final List<Integer> targetIndexes,
+    static Set<Integer> getAddedIndexes(
+            final Set<Integer> targetIndexes,
             final Position position) {
-        final List<Integer> result = new ArrayList<>();
+        final Set<Integer> result = new HashSet<>();
         int shiftIndex = 0;
         for (int targetIndex : targetIndexes) {
             int addedIndex = targetIndex + shiftIndex++;

@@ -28,7 +28,6 @@ package javafx.scene.text;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.geometry.HPos;
@@ -36,14 +35,13 @@ import javafx.geometry.Insets;
 import javafx.geometry.NodeOrientation;
 import javafx.geometry.Orientation;
 import javafx.geometry.VPos;
+import javafx.scene.AccessibleAttribute;
+import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
-//import javafx.scene.accessibility.Attribute;
-//import javafx.scene.accessibility.Role;
 import javafx.scene.layout.Pane;
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.StyleableObjectProperty;
 import javafx.css.CssMetaData;
-
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.geom.BaseBounds;
@@ -54,7 +52,6 @@ import com.sun.javafx.scene.text.TextLayout;
 import com.sun.javafx.scene.text.TextLayoutFactory;
 import com.sun.javafx.scene.text.TextSpan;
 import com.sun.javafx.tk.Toolkit;
-
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 
@@ -160,6 +157,7 @@ public class TextFlow extends Pane {
     public TextFlow() {
         super();
         effectiveNodeOrientationProperty().addListener(observable -> checkOrientation());
+        setAccessibleRole(AccessibleRole.TEXT);
     }
 
     /**
@@ -553,22 +551,23 @@ public class TextFlow extends Pane {
     }
     /* end of copied code */
 
-//    /** @treatAsPrivate */
-//    @Override
-//    public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//        switch (attribute) {
-//            case ROLE: return Role.TEXT;
-//            case TITLE: {
-//                StringBuilder title = new StringBuilder();
-//                for (Node node: getChildren()) {
-//                    Object text = node.accGetAttribute(Attribute.TITLE, parameters);
-//                    if (text != null) {
-//                        title.append(text.toString());
-//                    }
-//                }
-//                return title.toString();
-//            }
-//            default: return super.accGetAttribute(attribute, parameters);
-//        }
-//    }
+    @Override
+    public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
+        switch (attribute) {
+            case TEXT: {
+                String accText = getAccessibleText();
+                if (accText != null && !accText.isEmpty()) return accText;
+
+                StringBuilder title = new StringBuilder();
+                for (Node node: getChildren()) {
+                    Object text = node.queryAccessibleAttribute(AccessibleAttribute.TEXT, parameters);
+                    if (text != null) {
+                        title.append(text.toString());
+                    }
+                }
+                return title.toString();
+            }
+            default: return super.queryAccessibleAttribute(attribute, parameters);
+        }
+    }
 }

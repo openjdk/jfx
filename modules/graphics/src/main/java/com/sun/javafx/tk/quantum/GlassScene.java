@@ -94,7 +94,8 @@ abstract class GlassScene implements TKScene {
     }
 
     // To be used by subclasses to enforce context check
-    final AccessControlContext getAccessControlContext() {
+    @Override
+    public final AccessControlContext getAccessControlContext() {
         if (accessCtrlCtx == null) {
             throw new RuntimeException("Scene security context has not been set!");
         }

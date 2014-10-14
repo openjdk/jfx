@@ -93,8 +93,6 @@ public class SubScene extends Node {
      * @param width The width of the sub-scene
      * @param height The height of the sub-scene
      *
-     * @throws IllegalStateException if this constructor is called on a thread
-     * other than the JavaFX Application Thread.
      * @throws NullPointerException if root is null
      */
     public SubScene(@NamedArg("root") Parent root, @NamedArg("width") double width, @NamedArg("height") double height) {
@@ -118,8 +116,6 @@ public class SubScene extends Node {
      * See {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
      * for more information.
      *
-     * @throws IllegalStateException if this constructor is called on a thread
-     * other than the JavaFX Application Thread.
      * @throws NullPointerException if root is null
      *
      * @see javafx.scene.Node#setDepthTest(DepthTest)

@@ -41,15 +41,13 @@ class SWTexturePool extends BaseResourcePool<SWTexture>
         return Math.min(heapmax / 4, setmax);
     }
 
-    final long targetVram;
-
-    private SWTexturePool() {
-        super(null, maxVram());
-        targetVram = Math.min(max() / 2, PrismSettings.targetVram);
+    private static long targetVram() {
+        long max = maxVram();
+        return Math.min(max / 2, PrismSettings.targetVram);
     }
 
-    public long target() {
-        return targetVram;
+    private SWTexturePool() {
+        super(null, targetVram(), maxVram());
     }
 
     @Override
@@ -60,6 +58,7 @@ class SWTexturePool extends BaseResourcePool<SWTexture>
         return 0;
     }
 
+    @Override
     public long size(SWTexture resource) {
         long size = resource.getPhysicalWidth();
         size *= resource.getPhysicalHeight();
@@ -69,6 +68,7 @@ class SWTexturePool extends BaseResourcePool<SWTexture>
         return size;
     }
 
+    @Override
     public long estimateTextureSize(int width, int height, PixelFormat format) {
         switch (format) {
             case BYTE_ALPHA:
@@ -78,6 +78,7 @@ class SWTexturePool extends BaseResourcePool<SWTexture>
         }
     }
 
+    @Override
     public long estimateRTTextureSize(int width, int height, boolean hasDepth) {
         return ((long) width) * ((long) height) * 4L;
     }

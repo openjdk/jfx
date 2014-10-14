@@ -63,7 +63,7 @@ public class BorderPaneDriver extends AbstractNodeDriver {
         
         final FXOMInstance fxomInstance = (FXOMInstance) fxomObject;
         final BorderPane borderPane = (BorderPane) fxomInstance.getSceneGraphObject();
-        final Point2D hitPoint = borderPane.sceneToLocal(sceneX, sceneY);
+        final Point2D hitPoint = borderPane.sceneToLocal(sceneX, sceneY, true /* rootScene */);
         final double hitX = hitPoint.getX();
         final double hitY = hitPoint.getY();
         

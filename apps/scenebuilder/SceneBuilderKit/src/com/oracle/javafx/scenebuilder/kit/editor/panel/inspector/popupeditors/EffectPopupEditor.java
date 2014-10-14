@@ -52,7 +52,7 @@ public class EffectPopupEditor extends PopupEditor {
 
     private EffectPicker effectPicker;
     private List<MenuItem> effectMenuItems;
-    private final EditorController editorController;
+    private EditorController editorController;
 
     private final ChangeListener<Number> effectRevisionChangeListener = (ov, t, t1) -> {
         final Effect rootEffect = effectPicker.getRootEffectProperty();
@@ -79,9 +79,12 @@ public class EffectPopupEditor extends PopupEditor {
         }
     };
 
-    @SuppressWarnings("LeakingThisInConstructor")
     public EffectPopupEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses, EditorController editorController) {
         super(propMeta, selectedClasses);
+        initialize(editorController);
+    }
+    
+    private void initialize(EditorController editorController) {
         this.editorController = editorController;
     }
 
