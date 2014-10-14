@@ -25,21 +25,20 @@
 
 package com.sun.glass.ui.monocle.input.devices;
 
-/** The touch screen used in the Freescale i.MX6Q Sabre Device Platform,
- * extrapolated to five touch points. There is some guesswork here as to
- * whether the screen always resends stationary points. This class assumes that
- * it resends stationary points.
- * On release of the last point this device does not send a tracking ID.
- * Instead it sends:
+/** The touch screen used in the Fujitsu MB86S70 board. There is some
+ * guesswork here as to whether the screen always resends stationary points.
+ * This class assumes that it does not resend stationary points.
  *
- * EV_ABS ABS_MT_TOUCH_MAJOR 0
+ * The following sequence is sent on release of all touch points:
+ *
+ * EV_ABS ABS_MT_TRACKING_ID -1
  * EV_KEY BTN_TOUCH 0
- * EV_SYN SYN_MT_REPORT 0
+ * EV_SYN SYN_REPORT 0
  */
-public class EGalaxMultiTouchDevice4 extends EGalaxMultiTouchDeviceBase {
+public class EGalaxMultiTouchDevice5 extends EGalaxMultiTouchDeviceBase {
 
-    public EGalaxMultiTouchDevice4() {
-        super(true, true, true, SendIDOnRelease.DONT_SEND);
+    public EGalaxMultiTouchDevice5() {
+        super(false, true, false, SendIDOnRelease.SEND_MINUS_ONE);
     }
 
 }
