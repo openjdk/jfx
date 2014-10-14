@@ -67,8 +67,9 @@ PlatformString::PlatformString(void) {
 }
 
 PlatformString::~PlatformString(void) {
-    delete[] FData;
-    FLength = 0;
+    if (FData != NULL) {
+        delete[] FData;
+    }
 
     if (FWideTStringToFree != NULL) {
         delete[] FWideTStringToFree;
