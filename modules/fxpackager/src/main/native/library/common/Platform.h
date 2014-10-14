@@ -79,7 +79,6 @@
 #define TString std::wstring
 
 #define TRAILING_SLASH '\\'
-#define BAD_TRAILING_SLASH '/'
 #define PATH_SEPARATOR ';'
 #define BAD_PATH_SEPARATOR ':'
 
@@ -101,9 +100,7 @@
 #define TCHAR char
 #define TString std::string
 
-
 #define TRAILING_SLASH '/'
-#define BAD_TRAILING_SLASH '\\'
 #define PATH_SEPARATOR ':'
 #define BAD_PATH_SEPARATOR ';'
 #define MAX_PATH 1000

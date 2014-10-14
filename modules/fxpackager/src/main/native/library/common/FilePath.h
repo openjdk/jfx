@@ -55,7 +55,6 @@ public:
     static TString IncludeTrailingSlash(const TString value);
     static TString IncludeTrailingSlash(const char* value);
     static TString IncludeTrailingSlash(const wchar_t* value);
-    static TString FixPathForPlatform(TString Path);
     static TString FixPathSeparatorForPlatform(TString Path);
     static TString PathSeparator();
 

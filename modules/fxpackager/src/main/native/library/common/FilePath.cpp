@@ -183,12 +183,6 @@ TString FilePath::ChangeFileExt(TString Path, TString Extension) {
     return result;
 }
 
-TString FilePath::FixPathForPlatform(TString Path) {
-    TString result = Path;
-    std::replace(result.begin(), result.end(), BAD_TRAILING_SLASH, TRAILING_SLASH);
-    return result;
-}
-
 TString FilePath::FixPathSeparatorForPlatform(TString Path) {
     TString result = Path;
     std::replace(result.begin(), result.end(), ' ', PATH_SEPARATOR);
