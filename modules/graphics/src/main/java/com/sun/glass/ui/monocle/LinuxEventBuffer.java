@@ -32,10 +32,27 @@ import java.nio.ByteOrder;
  * A buffer holding raw Linux input events waiting to be processed
  */
 class LinuxEventBuffer {
-    static final int EVENT_STRUCT_SIZE = 16;
-    private static final int EVENT_STRUCT_TYPE_INDEX = 8;
-    private static final int EVENT_STRUCT_CODE_INDEX = 10;
-    private static final int EVENT_STRUCT_VALUE_INDEX = 12;
+
+    interface EventStruct {
+        int getTypeIndex();
+        int getCodeIndex();
+        int getValueIndex();
+        int getSize();
+    }
+
+    class EventStruct32Bit implements EventStruct {
+        public int getTypeIndex() { return 8; }
+        public int getCodeIndex() { return 10; }
+        public int getValueIndex() { return 12; }
+        public int getSize() { return 16; }
+    }
+
+    class EventStruct64Bit implements EventStruct {
+        public int getTypeIndex() { return 16; }
+        public int getCodeIndex() { return 18; }
+        public int getValueIndex() { return 20; }
+        public int getSize() { return 24; }
+    }
 
     /**
      * EVENT_BUFFER_SIZE controls the maximum number of event lines that can be
@@ -47,15 +64,19 @@ class LinuxEventBuffer {
     private static final int EVENT_BUFFER_SIZE = 1000;
 
     private final ByteBuffer bb;
-
+    private final EventStruct eventStruct;
     private int positionOfLastSync;
     private int currentPosition;
     private int mark;
 
-    LinuxEventBuffer() {
-        bb = ByteBuffer.allocate(EVENT_STRUCT_SIZE * EVENT_BUFFER_SIZE);
+    LinuxEventBuffer(int osArchBits) {
+        eventStruct = osArchBits == 64 ? new EventStruct64Bit() : new EventStruct32Bit();
+        bb = ByteBuffer.allocate(eventStruct.getSize() * EVENT_BUFFER_SIZE);
         bb.order(ByteOrder.nativeOrder());
+    }
 
+    int getEventSize() {
+        return eventStruct.getSize();
     }
 
     /**
@@ -69,8 +90,8 @@ class LinuxEventBuffer {
      */
     synchronized boolean put(ByteBuffer event) throws
             InterruptedException {
-        boolean isSync = event.getInt(EVENT_STRUCT_TYPE_INDEX) == 0
-                && event.getInt(EVENT_STRUCT_VALUE_INDEX) == 0;
+        boolean isSync = event.getInt(eventStruct.getTypeIndex()) == 0
+                && event.getInt(eventStruct.getValueIndex()) == 0;
         while (bb.limit() - bb.position() < event.limit()) {
             // Block if bb is full. This should be the
             // only time this thread waits for anything
@@ -88,7 +109,7 @@ class LinuxEventBuffer {
         }
         bb.put(event);
         if (MonocleSettings.settings.traceEventsVerbose) {
-            int index = bb.position() - EVENT_STRUCT_SIZE;
+            int index = bb.position() - eventStruct.getSize();
             MonocleTrace.traceEvent("Read %s [index=%d]",
                                     getEventDescription(index), index);
         }
@@ -123,7 +144,7 @@ class LinuxEventBuffer {
      * @return the type of the current event line
      */
     synchronized short getEventType() {
-        return bb.getShort(currentPosition + EVENT_STRUCT_TYPE_INDEX);
+        return bb.getShort(currentPosition + eventStruct.getTypeIndex());
     }
 
     /**
@@ -133,7 +154,7 @@ class LinuxEventBuffer {
      * @return the code of the event line
      */
     short getEventCode() {
-        return bb.getShort(currentPosition + EVENT_STRUCT_CODE_INDEX);
+        return bb.getShort(currentPosition + eventStruct.getCodeIndex());
     }
 
     /**
@@ -143,7 +164,7 @@ class LinuxEventBuffer {
      * @return the value of the current event line
      */
     synchronized int getEventValue() {
-        return bb.getInt(currentPosition + EVENT_STRUCT_VALUE_INDEX);
+        return bb.getInt(currentPosition + eventStruct.getValueIndex());
     }
 
     /**
@@ -157,9 +178,9 @@ class LinuxEventBuffer {
     }
 
     private synchronized String getEventDescription(int position) {
-        short type = bb.getShort(position + EVENT_STRUCT_TYPE_INDEX);
-        short code = bb.getShort(position + EVENT_STRUCT_CODE_INDEX);
-        int value = bb.getInt(position + EVENT_STRUCT_VALUE_INDEX);
+        short type = bb.getShort(position + eventStruct.getTypeIndex());
+        short code = bb.getShort(position + eventStruct.getCodeIndex());
+        int value = bb.getInt(position + eventStruct.getValueIndex());
         String typeStr = LinuxInput.typeToString(type);
         return typeStr + " " + LinuxInput.codeToString(typeStr, code) + " " + value;
     }
@@ -172,7 +193,7 @@ class LinuxEventBuffer {
             throw new IllegalStateException("Cannot advance past the last" +
                                                     " EV_SYN EV_SYN_REPORT 0");
         }
-        currentPosition += EVENT_STRUCT_SIZE;
+        currentPosition += eventStruct.getSize();
         if (MonocleSettings.settings.traceEventsVerbose && hasNextEvent()) {
             MonocleTrace.traceEvent("Processing %s [index=%d]",
                                     getEventDescription(), currentPosition);
