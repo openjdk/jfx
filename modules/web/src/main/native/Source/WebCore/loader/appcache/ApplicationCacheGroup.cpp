@@ -101,7 +101,7 @@ ApplicationCacheGroup::~ApplicationCacheGroup()
 #endif
 }
     
-ApplicationCache* ApplicationCacheGroup::cacheForMainRequest(const ResourceRequest& request, DocumentLoader*)
+ApplicationCache* ApplicationCacheGroup::cacheForMainRequest(const ResourceRequest& request, DocumentLoader* documentLoader) 
 {
     if (!ApplicationCache::requestIsHTTPOrHTTPSGet(request))
         return 0;
@@ -109,6 +109,10 @@ ApplicationCache* ApplicationCacheGroup::cacheForMainRequest(const ResourceReque
     KURL url(request.url());
     if (url.hasFragmentIdentifier())
         url.removeFragmentIdentifier();
+
+    if (documentLoader->frame() && documentLoader->frame()->settings()->privateBrowsingEnabled()) 
+        return 0; 
+
 #if !PLATFORM(JAVA)
     if (ApplicationCacheGroup* group = cacheStorage().cacheGroupForURL(url)) {
         ASSERT(group->newestCache());
@@ -157,6 +161,13 @@ void ApplicationCacheGroup::selectCache(Frame* frame, const KURL& passedManifest
         return;
     }
 
+    // Don't access anything on disk if private browsing is enabled.
+    if (frame->settings()->privateBrowsingEnabled()) {
+        postListenerTask(ApplicationCacheHost::CHECKING_EVENT, documentLoader);
+	postListenerTask(ApplicationCacheHost::ERROR_EVENT, documentLoader);
+	return;
+    }
+
     KURL manifestURL(passedManifestURL);
     if (manifestURL.hasFragmentIdentifier())
         manifestURL.removeFragmentIdentifier();
@@ -201,12 +212,6 @@ void ApplicationCacheGroup::selectCache(Frame* frame, const KURL& passedManifest
     if (!protocolHostAndPortAreEqual(manifestURL, request.url()))
         return;
 
-    // Don't change anything on disk if private browsing is enabled.
-    if (frame->settings()->privateBrowsingEnabled()) {
-        postListenerTask(ApplicationCacheHost::CHECKING_EVENT, documentLoader);
-        postListenerTask(ApplicationCacheHost::ERROR_EVENT, documentLoader);
-        return;
-    }
 #if !PLATFORM(JAVA)
     ApplicationCacheGroup* group = cacheStorage().findOrCreateCacheGroup(manifestURL);
 
@@ -454,7 +459,7 @@ void ApplicationCacheGroup::update(Frame* frame, ApplicationCacheUpdateOption up
         ASSERT(m_pendingEntries.isEmpty());
         ASSERT(!m_cacheBeingUpdated);
         postListenerTask(ApplicationCacheHost::CHECKING_EVENT, frame->loader()->documentLoader());
-        postListenerTask(ApplicationCacheHost::NOUPDATE_EVENT, frame->loader()->documentLoader());
+	postListenerTask(ApplicationCacheHost::ERROR_EVENT, frame->loader()->documentLoader());
         return;
     }
 

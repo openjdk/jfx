@@ -642,7 +642,9 @@ void AXObjectCache::notificationPostTimerFired(Timer<AXObjectCache>*)
         AccessibilityObject* obj = m_notificationsToPost[i].first.get();
         if (!obj->axObjectID())
             continue;
-
+        
+        if (!obj->axObjectCache()) 
+            continue; 
 #ifndef NDEBUG
         // Make sure none of the render views are in the process of being layed out.
         // Notifications should only be sent after the renderer has finished

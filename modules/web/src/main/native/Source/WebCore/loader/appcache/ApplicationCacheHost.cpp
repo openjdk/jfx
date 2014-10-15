@@ -471,8 +471,9 @@ void ApplicationCacheHost::abort()
 
 bool ApplicationCacheHost::isApplicationCacheEnabled()
 {
-    return m_documentLoader->frame() && m_documentLoader->frame()->settings()
-           && m_documentLoader->frame()->settings()->offlineWebApplicationCacheEnabled();
+  return m_documentLoader->frame() &&
+         m_documentLoader->frame()->settings()->offlineWebApplicationCacheEnabled() &&
+         !m_documentLoader->frame()->settings()->privateBrowsingEnabled();
 }
 
 }  // namespace WebCore

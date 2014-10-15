@@ -49,15 +49,17 @@ CSSImageGeneratorValue::~CSSImageGeneratorValue()
 void CSSImageGeneratorValue::addClient(RenderObject* renderer)
 {
     ASSERT(renderer);
-    ref();
+    if (m_clients.isEmpty())
+        ref();
     m_clients.add(renderer);
 }
 
 void CSSImageGeneratorValue::removeClient(RenderObject* renderer)
 {
     ASSERT(renderer);
-    m_clients.remove(renderer);
-    deref();
+    ASSERT(m_clients.contains(renderer));
+    if (m_clients.remove(renderer) && m_clients.isEmpty())
+        deref();
 }
 
 GeneratorGeneratedImage* CSSImageGeneratorValue::cachedImageForSize(IntSize size)
