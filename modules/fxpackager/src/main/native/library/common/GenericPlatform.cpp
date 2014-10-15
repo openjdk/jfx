@@ -69,7 +69,7 @@ TString GenericPlatform::GetPackageAppDirectory() {
     return FilePath::IncludeTrailingSlash(GetPackageRootDirectory()) + _T("app");
 #endif //WINDOWS || LINUX
 #ifdef MAC
-    return FilePath::IncludeTrailingSlash(GetPackageRootDirectory()) + _T("Contents/Java");
+    return FilePath::IncludeTrailingSlash(GetPackageRootDirectory()) + _T("Java");
 #endif
 }
 
@@ -78,7 +78,7 @@ TString GenericPlatform::GetPackageLauncherDirectory() {
     return GetPackageRootDirectory();
 #endif //WINDOWS || LINUX
 #ifdef MAC
-    return FilePath::IncludeTrailingSlash(GetPackageRootDirectory()) + _T("Contents/MacOS");
+    return FilePath::IncludeTrailingSlash(GetPackageRootDirectory()) + _T("MacOS");
 #endif
 }
 

@@ -79,7 +79,8 @@ void MacPlatform::SetCurrentDirectory(TString Value) {
 TString MacPlatform::GetPackageRootDirectory() {
     NSBundle *mainBundle = [NSBundle mainBundle];
     NSString *mainBundlePath = [mainBundle bundlePath];
-    TString result = [mainBundlePath UTF8String];
+    NSString *contentsPath = [mainBundlePath stringByAppendingString:@"/Contents"];
+    TString result = [contentsPath UTF8String];
     return result;
 }
 
