@@ -148,13 +148,11 @@ class HeavyweightDialog extends FXDialog {
     }
 
     @Override public void show() {
-        dialogPane.heightProperty().addListener(o -> stage.centerOnScreen());
         stage.centerOnScreen();
         stage.show();
     }
 
     @Override public void showAndWait() {
-        dialogPane.heightProperty().addListener(o -> stage.centerOnScreen());
         stage.centerOnScreen();
         stage.showAndWait();
     }
