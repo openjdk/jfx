@@ -31,7 +31,9 @@ import static javafx.scene.control.TableColumn.SortType.DESCENDING;
 import static org.junit.Assert.*;
 
 import java.util.*;
+import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Supplier;
 
 import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
 import com.sun.javafx.scene.control.SelectedCellsMap;
@@ -47,6 +49,7 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
+import javafx.collections.MockSetObserver;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.SortedList;
 import javafx.event.Event;
@@ -4118,5 +4121,114 @@ public class TableViewTest {
         assertEquals(0, rt_37853_commitCount);
 
         sl.dispose();
+    }
+
+
+    /**************************************************************************
+     *
+     * Tests (and related code) for RT-38892
+     *
+     *************************************************************************/
+
+    private final Supplier<TableColumn<Person,String>> columnCallable = () -> {
+        TableColumn<Person,String> column = new TableColumn<>("Last Name");
+        column.setCellValueFactory(new PropertyValueFactory<Person,String>("lastName"));
+        return column;
+    };
+
+    private TableColumn<Person, String> test_rt_38892_firstNameCol;
+    private TableColumn<Person, String> test_rt_38892_lastNameCol;
+
+    private TableView<Person> init_test_rt_38892() {
+        ObservableList<Person> data = FXCollections.observableArrayList(
+                new Person("Jacob", "Smith", ""),
+                new Person("Isabella", "Johnson", ""),
+                new Person("Ethan", "Williams", ""),
+                new Person("Emma", "Jones", ""),
+                new Person("Michael", "Brown", "")
+        );
+
+        TableView<Person> table = new TableView<>();
+        table.getSelectionModel().setCellSelectionEnabled(true);
+        table.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+        table.setItems(data);
+
+        test_rt_38892_firstNameCol = new TableColumn<>("First Name");
+        test_rt_38892_firstNameCol.setCellValueFactory(new PropertyValueFactory<>("firstName"));
+        test_rt_38892_lastNameCol = columnCallable.get();
+        table.getColumns().addAll(test_rt_38892_firstNameCol, test_rt_38892_lastNameCol);
+
+        return table;
+    }
+
+    @Test public void test_rt_38892_focusMovesToLeftWhenPossible() {
+        TableView<Person> table = init_test_rt_38892();
+
+        TableView.TableViewFocusModel<Person> fm = table.getFocusModel();
+        fm.focus(0, test_rt_38892_lastNameCol);
+
+        // assert pre-conditions
+        assertEquals(0, fm.getFocusedIndex());
+        assertEquals(0, fm.getFocusedCell().getRow());
+        assertEquals(test_rt_38892_lastNameCol, fm.getFocusedCell().getTableColumn());
+        assertEquals(1, fm.getFocusedCell().getColumn());
+
+        // now remove column where focus is and replace it with a new column.
+        // We expect focus to move to the left one cell.
+        table.getColumns().remove(1);
+        table.getColumns().add(columnCallable.get());
+
+        assertEquals(0, fm.getFocusedIndex());
+        assertEquals(0, fm.getFocusedCell().getRow());
+        assertEquals(test_rt_38892_firstNameCol, fm.getFocusedCell().getTableColumn());
+        assertEquals(0, fm.getFocusedCell().getColumn());
+    }
+
+    @Test public void test_rt_38892_removeLeftMostColumn() {
+        TableView<Person> table = init_test_rt_38892();
+
+        TableView.TableViewFocusModel<Person> fm = table.getFocusModel();
+        fm.focus(0, test_rt_38892_firstNameCol);
+
+        // assert pre-conditions
+        assertEquals(0, fm.getFocusedIndex());
+        assertEquals(0, fm.getFocusedCell().getRow());
+        assertEquals(test_rt_38892_firstNameCol, fm.getFocusedCell().getTableColumn());
+        assertEquals(0, fm.getFocusedCell().getColumn());
+
+        // now remove column where focus is and replace it with a new column.
+        // In the current (non-specified) behavior, this results in focus being
+        // shifted to a cell in the remaining column, even when we add a new column
+        // as we index based on the column, not on its index.
+        table.getColumns().remove(0);
+        TableColumn<Person,String> newColumn = columnCallable.get();
+        table.getColumns().add(0, newColumn);
+
+        assertEquals(0, fm.getFocusedIndex());
+        assertEquals(0, fm.getFocusedCell().getRow());
+        assertEquals(test_rt_38892_lastNameCol, fm.getFocusedCell().getTableColumn());
+        assertEquals(1, fm.getFocusedCell().getColumn());
+    }
+
+    @Test public void test_rt_38892_removeSelectionFromCellsInRemovedColumn() {
+        TableView<Person> table = init_test_rt_38892();
+
+        TableView.TableViewSelectionModel sm = table.getSelectionModel();
+        sm.select(0, test_rt_38892_firstNameCol);
+        sm.select(1, test_rt_38892_lastNameCol);    // this should go
+        sm.select(2, test_rt_38892_firstNameCol);
+        sm.select(3, test_rt_38892_lastNameCol);    // so should this
+        sm.select(4, test_rt_38892_firstNameCol);
+
+        assertEquals(5, sm.getSelectedCells().size());
+
+        table.getColumns().remove(1);
+
+        assertEquals(3, sm.getSelectedCells().size());
+        assertTrue(sm.isSelected(0, test_rt_38892_firstNameCol));
+        assertFalse(sm.isSelected(1, test_rt_38892_lastNameCol));
+        assertTrue(sm.isSelected(2, test_rt_38892_firstNameCol));
+        assertFalse(sm.isSelected(3, test_rt_38892_lastNameCol));
+        assertTrue(sm.isSelected(4, test_rt_38892_firstNameCol));
     }
 }

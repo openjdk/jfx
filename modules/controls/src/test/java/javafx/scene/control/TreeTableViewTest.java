@@ -35,6 +35,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Random;
+import java.util.function.Supplier;
 
 import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
@@ -4232,5 +4233,118 @@ public class TreeTableViewTest {
         assertEquals(0, rt_37853_commitCount);
 
         sl.dispose();
+    }
+
+
+    /**************************************************************************
+     *
+     * Tests (and related code) for RT-38892
+     *
+     *************************************************************************/
+
+    private final Supplier<TreeTableColumn<Person,String>> columnCallable = () -> {
+        TreeTableColumn<Person,String> column = new TreeTableColumn<>("Last Name");
+        column.setCellValueFactory(new TreeItemPropertyValueFactory<Person,String>("lastName"));
+        return column;
+    };
+
+    private TreeTableColumn<Person, String> test_rt_38892_firstNameCol;
+    private TreeTableColumn<Person, String> test_rt_38892_lastNameCol;
+
+    private TreeTableView<Person> init_test_rt_38892() {
+        ObservableList<TreeItem<Person>> persons = FXCollections.observableArrayList(
+                new TreeItem<>(new Person("Jacob", "Smith", "jacob.smith@example.com")),
+                new TreeItem<>(new Person("Isabella", "Johnson", "isabella.johnson@example.com")),
+                new TreeItem<>(new Person("Ethan", "Williams", "ethan.williams@example.com")),
+                new TreeItem<>(new Person("Emma", "Jones", "emma.jones@example.com")),
+                new TreeItem<>(new Person("Michael", "Brown", "michael.brown@example.com")));
+
+        TreeTableView<Person> table = new TreeTableView<>();
+        table.setShowRoot(false);
+        table.getSelectionModel().setCellSelectionEnabled(true);
+        table.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+
+        TreeItem<Person> root = new TreeItem<>(new Person("Root", null, null));
+        root.setExpanded(true);
+        root.getChildren().setAll(persons);
+        table.setRoot(root);
+
+        test_rt_38892_firstNameCol = new TreeTableColumn<>("First Name");
+        test_rt_38892_firstNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<>("firstName"));
+        test_rt_38892_lastNameCol = columnCallable.get();
+        table.getColumns().addAll(test_rt_38892_firstNameCol, test_rt_38892_lastNameCol);
+
+        return table;
+    }
+
+    @Test public void test_rt_38892_focusMovesToLeftWhenPossible() {
+        TreeTableView<Person> table = init_test_rt_38892();
+
+        TreeTableView.TreeTableViewFocusModel<Person> fm = table.getFocusModel();
+        fm.focus(0, test_rt_38892_lastNameCol);
+
+        // assert pre-conditions
+        assertEquals(0, fm.getFocusedIndex());
+        assertEquals(0, fm.getFocusedCell().getRow());
+        assertEquals(test_rt_38892_lastNameCol, fm.getFocusedCell().getTableColumn());
+        assertEquals(1, fm.getFocusedCell().getColumn());
+
+        // now remove column where focus is and replace it with a new column.
+        // We expect focus to move to the left one cell.
+        table.getColumns().remove(1);
+        table.getColumns().add(columnCallable.get());
+
+        assertEquals(0, fm.getFocusedIndex());
+        assertEquals(0, fm.getFocusedCell().getRow());
+        assertEquals(test_rt_38892_firstNameCol, fm.getFocusedCell().getTableColumn());
+        assertEquals(0, fm.getFocusedCell().getColumn());
+    }
+
+    @Test public void test_rt_38892_removeLeftMostColumn() {
+        TreeTableView<Person> table = init_test_rt_38892();
+
+        TreeTableView.TreeTableViewFocusModel<Person> fm = table.getFocusModel();
+        fm.focus(0, test_rt_38892_firstNameCol);
+
+        // assert pre-conditions
+        assertEquals(0, fm.getFocusedIndex());
+        assertEquals(0, fm.getFocusedCell().getRow());
+        assertEquals(test_rt_38892_firstNameCol, fm.getFocusedCell().getTableColumn());
+        assertEquals(0, fm.getFocusedCell().getColumn());
+
+        // now remove column where focus is and replace it with a new column.
+        // In the current (non-specified) behavior, this results in focus being
+        // shifted to a cell in the remaining column, even when we add a new column
+        // as we index based on the column, not on its index.
+        table.getColumns().remove(0);
+        TreeTableColumn<Person,String> newColumn = columnCallable.get();
+        table.getColumns().add(0, newColumn);
+
+        assertEquals(0, fm.getFocusedIndex());
+        assertEquals(0, fm.getFocusedCell().getRow());
+        assertEquals(test_rt_38892_lastNameCol, fm.getFocusedCell().getTableColumn());
+        assertEquals(1, fm.getFocusedCell().getColumn());
+    }
+
+    @Test public void test_rt_38892_removeSelectionFromCellsInRemovedColumn() {
+        TreeTableView<Person> table = init_test_rt_38892();
+
+        TreeTableView.TreeTableViewSelectionModel sm = table.getSelectionModel();
+        sm.select(0, test_rt_38892_firstNameCol);
+        sm.select(1, test_rt_38892_lastNameCol);    // this should go
+        sm.select(2, test_rt_38892_firstNameCol);
+        sm.select(3, test_rt_38892_lastNameCol);    // so should this
+        sm.select(4, test_rt_38892_firstNameCol);
+
+        assertEquals(5, sm.getSelectedCells().size());
+
+        table.getColumns().remove(1);
+
+        assertEquals(3, sm.getSelectedCells().size());
+        assertTrue(sm.isSelected(0, test_rt_38892_firstNameCol));
+        assertFalse(sm.isSelected(1, test_rt_38892_lastNameCol));
+        assertTrue(sm.isSelected(2, test_rt_38892_firstNameCol));
+        assertFalse(sm.isSelected(3, test_rt_38892_lastNameCol));
+        assertTrue(sm.isSelected(4, test_rt_38892_firstNameCol));
     }
 }
