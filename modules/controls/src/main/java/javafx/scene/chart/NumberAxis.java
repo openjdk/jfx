@@ -364,7 +364,7 @@ public final class NumberAxis extends ValueAxis<Number> {
             paddedMax = 0;
         }
         // calculate the number of tick-marks we can fit in the given length
-        int numOfTickMarks = (int)Math.floor(Math.abs(length)/labelSize);
+        int numOfTickMarks = (int)Math.floor(length/labelSize);
         // can never have less than 2 tick marks one for each end
         numOfTickMarks = Math.max(numOfTickMarks, 2);
         // calculate tick unit for the number of ticks can have in the given data range

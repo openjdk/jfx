@@ -677,9 +677,15 @@ public abstract class XYChart<X,Y> extends Chart {
         double yAxisWidth = 0;
         double yAxisHeight = 0;
         for (int count=0; count<5; count ++) {
-            yAxisHeight = snapSize(height-xAxisHeight);
+            yAxisHeight = snapSize(height - xAxisHeight);
+            if (yAxisHeight < 0) {
+                yAxisHeight = 0;
+            }
             yAxisWidth = ya.prefWidth(yAxisHeight);
             xAxisWidth = snapSize(width - yAxisWidth);
+            if (xAxisWidth < 0) {
+                xAxisWidth = 0;
+            }
             double newXAxisHeight = xa.prefHeight(xAxisWidth);
             if (newXAxisHeight == xAxisHeight) break;
             xAxisHeight = newXAxisHeight;
