@@ -278,8 +278,12 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         
         // This ensure that the selection remains accurate when a shift occurs.
         final int selectedIndex = getSelectedIndex();
-        if (selectedIndex >= position && selectedIndex > -1 && selectedIndex + shift > -1) {
-            final int newSelectionLead = selectedIndex + shift;
+        if (selectedIndex >= position && selectedIndex > -1) {
+            // Fix for RT-38787: we used to not enter this block if
+            // selectedIndex + shift resulted in a value less than zero, whereas
+            // now we just set the newSelectionLead to zero in that instance.
+            // There exists unit tests that cover this.
+            final int newSelectionLead = Math.max(0, selectedIndex + shift);
             setSelectedIndex(newSelectionLead);
 
             // added for RT-30356

@@ -1084,4 +1084,55 @@ public class ListViewTest {
 
         sl.dispose();
     }
+
+    @Test public void test_rt_38787_remove_b() {
+        // selection moves to "a"
+        test_rt_38787("a", 0, "b");
+    }
+
+    @Test public void test_rt_38787_remove_b_c() {
+        // selection moves to "a"
+        test_rt_38787("a", 0, "b", "c");
+    }
+
+    @Test public void test_rt_38787_remove_c_d() {
+        // selection moves to "b"
+        test_rt_38787("b", 1, "c", "d");
+    }
+
+    @Test public void test_rt_38787_remove_a() {
+        // selection moves to "b", now in index 0
+        test_rt_38787("b", 0, "a");
+    }
+
+    @Test public void test_rt_38787_remove_z() {
+        // selection shouldn't move as 'z' doesn't exist
+        test_rt_38787("b", 1, "z");
+    }
+
+    private void test_rt_38787(String expectedItem, int expectedIndex, String... itemsToRemove) {
+        ListView<String> stringListView = new ListView<>();
+        stringListView.getItems().addAll("a","b","c","d");
+
+        MultipleSelectionModel<String> sm = stringListView.getSelectionModel();
+        sm.select("b");
+
+        // test pre-conditions
+        assertEquals(1, sm.getSelectedIndex());
+        assertEquals(1, (int)sm.getSelectedIndices().get(0));
+        assertEquals("b", sm.getSelectedItem());
+        assertEquals("b", sm.getSelectedItems().get(0));
+        assertFalse(sm.isSelected(0));
+        assertTrue(sm.isSelected(1));
+        assertFalse(sm.isSelected(2));
+
+        // removing items
+        stringListView.getItems().removeAll(itemsToRemove);
+
+        // testing against expectations
+        assertEquals(expectedIndex, sm.getSelectedIndex());
+        assertEquals(expectedIndex, (int)sm.getSelectedIndices().get(0));
+        assertEquals(expectedItem, sm.getSelectedItem());
+        assertEquals(expectedItem, sm.getSelectedItems().get(0));
+    }
 }

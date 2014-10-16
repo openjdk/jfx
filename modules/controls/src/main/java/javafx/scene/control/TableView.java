@@ -2193,7 +2193,7 @@ public class TableView<S> extends Control {
                     for (int i = 0; i < selectedCellsMap.size(); i++) {
                         final TablePosition<S,?> old = selectedCellsMap.get(i);
                         final int oldRow = old.getRow();
-                        final int newRow = oldRow < startRow ? oldRow : oldRow + shift;
+                        final int newRow = Math.max(0, oldRow < startRow ? oldRow : oldRow + shift);
 
                         if (oldRow < startRow) {
                             continue;
@@ -2207,13 +2207,12 @@ public class TableView<S> extends Control {
                             continue;
                         }
 
-                        if (newRow < 0) continue;
                         newIndices.add(new TablePosition<>(getTableView(), newRow, old.getTableColumn()));
                     }
 
                     final int newIndicesSize = newIndices.size();
 
-                    if (c.wasRemoved() || (c.wasAdded() && newIndicesSize > 0)) {
+                    if ((c.wasRemoved() || c.wasAdded()) && newIndicesSize > 0) {
                         quietClearSelection();
 
                         // Fix for RT-22079

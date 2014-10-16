@@ -2417,6 +2417,13 @@ public class TreeTableView<S> extends Control {
                 } else if (e.wasRemoved()) {
                     // shuffle selection by the number of removed items
                     shift = treeItem.isExpanded() ? -e.getRemovedSize() : 0;
+
+                    // the start row is incorrect - it is _not_ the index of the
+                    // TreeItem in which the children were removed from (which is
+                    // what it currently represents). We need to take the 'from'
+                    // value out of the event and make use of that to understand
+                    // what actually changed inside the children list.
+                    startRow += e.getFrom() + 1;
                     
                     // whilst we are here, we should check if the removed items
                     // are part of the selectedItems list - and remove them

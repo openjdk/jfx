@@ -4231,4 +4231,59 @@ public class TableViewTest {
         assertFalse(sm.isSelected(3, test_rt_38892_lastNameCol));
         assertTrue(sm.isSelected(4, test_rt_38892_firstNameCol));
     }
+
+    @Test public void test_rt_38787_remove_b() {
+        // selection moves to "a"
+        test_rt_38787("a", 0, "b");
+    }
+
+    @Test public void test_rt_38787_remove_b_c() {
+        // selection moves to "a"
+        test_rt_38787("a", 0, "b", "c");
+    }
+
+    @Test public void test_rt_38787_remove_c_d() {
+        // selection stays on "b"
+        test_rt_38787("b", 1, "c", "d");
+    }
+
+    @Test public void test_rt_38787_remove_a() {
+        // selection moves to "b", now in index 0
+        test_rt_38787("b", 0, "a");
+    }
+
+    @Test public void test_rt_38787_remove_z() {
+        // selection shouldn't move as 'z' doesn't exist
+        test_rt_38787("b", 1, "z");
+    }
+
+    private void test_rt_38787(String expectedItem, int expectedIndex, String... itemsToRemove) {
+        TableView<String> stringTableView = new TableView<>();
+        stringTableView.getItems().addAll("a","b","c","d");
+
+        TableColumn<String,String> column = new TableColumn<>("Column");
+        column.setCellValueFactory(cdf -> new ReadOnlyStringWrapper(cdf.getValue()));
+        stringTableView.getColumns().add(column);
+
+        MultipleSelectionModel<String> sm = stringTableView.getSelectionModel();
+        sm.select("b");
+
+        // test pre-conditions
+        assertEquals(1, sm.getSelectedIndex());
+        assertEquals(1, (int)sm.getSelectedIndices().get(0));
+        assertEquals("b", sm.getSelectedItem());
+        assertEquals("b", sm.getSelectedItems().get(0));
+        assertFalse(sm.isSelected(0));
+        assertTrue(sm.isSelected(1));
+        assertFalse(sm.isSelected(2));
+
+        // removing items
+        stringTableView.getItems().removeAll(itemsToRemove);
+
+        // testing against expectations
+        assertEquals(expectedIndex, sm.getSelectedIndex());
+        assertEquals(expectedIndex, (int)sm.getSelectedIndices().get(0));
+        assertEquals(expectedItem, sm.getSelectedItem());
+        assertEquals(expectedItem, sm.getSelectedItems().get(0));
+    }
 }

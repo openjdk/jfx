@@ -4347,4 +4347,68 @@ public class TreeTableViewTest {
         assertFalse(sm.isSelected(3, test_rt_38892_lastNameCol));
         assertTrue(sm.isSelected(4, test_rt_38892_firstNameCol));
     }
+
+    @Test public void test_rt_38787_remove_b() {
+        // Remove 'b', selection moves to 'a'
+        test_rt_38787("a", 0, 1);
+    }
+
+    @Test public void test_rt_38787_remove_b_c() {
+        // Remove 'b' and 'c', selection moves to 'a'
+        test_rt_38787("a", 0, 1, 2);
+    }
+
+    @Test public void test_rt_38787_remove_c_d() {
+        // Remove 'c' and 'd', selection moves to 'b'
+        test_rt_38787("b", 1, 2, 3);
+    }
+
+    @Test public void test_rt_38787_remove_a() {
+        // Remove 'a', selection moves to 'b', now in index 0
+        test_rt_38787("b", 0, 0);
+    }
+
+    private void test_rt_38787(String expectedItem, int expectedIndex, int... indicesToRemove) {
+        TreeItem<String> a, b, c, d;
+        TreeItem<String> root = new TreeItem<>("Root");
+        root.setExpanded(true);
+        root.getChildren().addAll(
+                a = new TreeItem<String>("a"),
+                b = new TreeItem<String>("b"),
+                c = new TreeItem<String>("c"),
+                d = new TreeItem<String>("d")
+        );
+
+        TreeTableView<String> stringTreeTableView = new TreeTableView<>(root);
+        stringTreeTableView.setShowRoot(false);
+
+        TreeTableColumn<String,String> column = new TreeTableColumn<>("Column");
+        column.setCellValueFactory(cdf -> new ReadOnlyStringWrapper(cdf.getValue().getValue()));
+        stringTreeTableView.getColumns().add(column);
+
+        MultipleSelectionModel<TreeItem<String>> sm = stringTreeTableView.getSelectionModel();
+        sm.select(b);
+
+        // test pre-conditions
+        assertEquals(1, sm.getSelectedIndex());
+        assertEquals(1, (int)sm.getSelectedIndices().get(0));
+        assertEquals(b, sm.getSelectedItem());
+        assertEquals(b, sm.getSelectedItems().get(0));
+        assertFalse(sm.isSelected(0));
+        assertTrue(sm.isSelected(1));
+        assertFalse(sm.isSelected(2));
+
+        // removing items
+        List<TreeItem<String>> itemsToRemove = new ArrayList<>(indicesToRemove.length);
+        for (int index : indicesToRemove) {
+            itemsToRemove.add(root.getChildren().get(index));
+        }
+        root.getChildren().removeAll(itemsToRemove);
+
+        // testing against expectations
+        assertEquals(expectedIndex, sm.getSelectedIndex());
+        assertEquals(expectedIndex, (int)sm.getSelectedIndices().get(0));
+        assertEquals(expectedItem, sm.getSelectedItem().getValue());
+        assertEquals(expectedItem, sm.getSelectedItems().get(0).getValue());
+    }
 }
