@@ -73,6 +73,7 @@ import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.control.CheckMenuItem;
+import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
@@ -1323,7 +1324,10 @@ public class MenuBarController {
                 sectionItems = new TreeSet<>(new LibraryItemNameComparator());
                 sectionMap.put(li.getSection(), sectionItems);
             }
-            sectionItems.add(li);
+            // Add all builtin Library items except the ContextMenu (see DTL-6831)
+            if (!ContextMenu.class.getSimpleName().equals(li.getName())) {
+                sectionItems.add(li);
+            }
         }
 
         for (Map.Entry<String, Set<LibraryItem>> e : sectionMap.entrySet()) {
