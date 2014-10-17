@@ -43,6 +43,8 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class SwingFXUtilsTest {
+    static final boolean verbose = false;
+
     // Used to launch the application before running any test
     private static final CountDownLatch launchLatch = new CountDownLatch(1);
 
@@ -96,13 +98,19 @@ public class SwingFXUtilsTest {
         boolean rgbrequired = (img.getPixelReader().getPixelFormat().getType() == PixelFormat.Type.BYTE_RGB);
         BufferedImage bimg = SwingFXUtils.fromFXImage(img, null);
         checkBimg(img, bimg);
-        System.out.println(imgfilename+" type = "+img.getPixelReader().getPixelFormat());
-        System.out.println(imgfilename+" bimg type = "+bimg.getType());
-        System.out.println(imgfilename+" reuses own bimg = "+reusesBimg(img, bimg, true));
-        System.out.println(imgfilename+" reuses rgb bimg = "+reusesBimg(img, BufferedImage.TYPE_INT_RGB, rgbrequired));
-        System.out.println(imgfilename+" reuses argb bimg = "+reusesBimg(img, BufferedImage.TYPE_INT_ARGB, true));
-        System.out.println(imgfilename+" reuses argb pre bimg = "+reusesBimg(img, BufferedImage.TYPE_INT_ARGB_PRE, true));
-        System.out.println();
+        boolean reusesitself = reusesBimg(img, bimg, true);
+        boolean reusesxrgb = reusesBimg(img, BufferedImage.TYPE_INT_RGB, rgbrequired);
+        boolean reusesargb = reusesBimg(img, BufferedImage.TYPE_INT_ARGB, true);
+        boolean reusesargbpre = reusesBimg(img, BufferedImage.TYPE_INT_ARGB_PRE, true);
+        if (verbose) {
+            System.out.println(imgfilename+" type = "+img.getPixelReader().getPixelFormat());
+            System.out.println(imgfilename+" bimg type = "+bimg.getType());
+            System.out.println(imgfilename+" reuses own bimg = "+reusesitself);
+            System.out.println(imgfilename+" reuses rgb bimg = "+reusesxrgb);
+            System.out.println(imgfilename+" reuses argb bimg = "+reusesargb);
+            System.out.println(imgfilename+" reuses argb pre bimg = "+reusesargbpre);
+            System.out.println();
+        }
     }
 
     static boolean reusesBimg(Image img, int type, boolean required) {
