@@ -23,23 +23,28 @@
  * questions.
  */
 
-package com.sun.glass.ui.monocle.input.devices;
+package com.sun.glass.ui.monocle;
 
-/** The touch screen used in the Freescale i.MX6Q Sabre Device Platform,
- * extrapolated to five touch points. There is some guesswork here as to
- * whether the screen always resends stationary points. This class assumes that
- * it resends stationary points.
- * On release of the last point this device does not send a tracking ID.
- * Instead it sends:
- *
- * EV_ABS ABS_MT_TOUCH_MAJOR 0
- * EV_KEY BTN_TOUCH 0
- * EV_SYN SYN_MT_REPORT 0
- */
-public class EGalaxMultiTouchDevice4 extends EGalaxMultiTouchDeviceBase {
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 
-    public EGalaxMultiTouchDevice4() {
-        super(true, true, true, SendIDOnRelease.DONT_SEND);
+public class LinuxArch {
+
+    private static final int bits;
+
+    static {
+        bits = AccessController.doPrivileged((PrivilegedAction<Integer>) () -> {
+            LinuxSystem system = LinuxSystem.getLinuxSystem();
+            return (int) system.sysconf(LinuxSystem._SC_LONG_BIT);
+        });
+    }
+
+    static boolean is64Bit() {
+        return bits == 64;
+    }
+
+    static int getBits() {
+        return bits;
     }
 
 }

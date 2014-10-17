@@ -234,6 +234,44 @@ public class SingleTouchTest extends ParameterizedTestBase {
                             .filter(s -> s.startsWith("Touch points count"))
                             .filter(s -> !s.startsWith("Touch points count: [1]")).count());
     }
+
+    /**
+     * Touch down, drag, release, tap again
+     */
+    @Test
+    public void tapDragReleaseTapAgain() throws Exception {
+        Assume.assumeTrue(device.getTapRadius() < width * 0.2);
+        final int x1 = (int) Math.round(width * 0.5);
+        final int y1 = (int) Math.round(height * 0.5);
+        final int x2 = (int) Math.round(width * 0.7);
+        final int y2 = (int) Math.round(height * 0.7);
+        // tap
+        int p = device.addPoint(x1, y1);
+        device.sync();
+        // drag
+        device.setPoint(p, x2, y2);
+        device.sync();
+        // release
+        device.removePoint(p);
+        device.sync();
+        TestLog.waitForLog("Mouse pressed: %d, %d", x1, y1);
+        TestLog.waitForLog("Mouse released: %d, %d", x2, y2);
+        TestLog.waitForLog("Mouse clicked: %d, %d", x2, y2);
+        TestLog.waitForLog("Touch pressed: %d, %d", x1, y1);
+        TestLog.waitForLog("Touch released: %d, %d", x2, y2);
+        TestLog.clear();
+        // tap again and release
+        p = device.addPoint(x1, y1);
+        device.sync();
+        TestLog.waitForLog("Mouse pressed: %d, %d", x1, y1);
+        TestLog.waitForLog("Touch pressed: %d, %d", x1, y1);
+        TestLog.clear();
+        device.removePoint(p);
+        device.sync();
+        TestLog.waitForLog("Mouse released: %d, %d", x1, y1);
+        TestLog.waitForLog("Mouse clicked: %d, %d", x1, y1);
+        TestLog.waitForLog("Touch released: %d, %d", x1, y1);
+    }
 	
     /**
      * Touch down, change scene, release finger.

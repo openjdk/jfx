@@ -251,7 +251,7 @@ public:
         for (std::list<JavaOptionItem>::const_iterator iterator = FItems.begin();
              iterator != FItems.end(); iterator++) {
             TString key = iterator->name;
-            TString value = FilePath::FixPathForPlatform(iterator->value);
+            TString value = iterator->value;
             TString option = Helpers::NameValueToString(key, value);
             option = macros.ExpandMacros(option);
 #ifdef DEBUG
@@ -272,7 +272,7 @@ public:
         for (std::list<JavaOptionItem>::const_iterator iterator = FItems.begin();
              iterator != FItems.end(); iterator++) {
             TString key = iterator->name;
-            TString value = FilePath::FixPathForPlatform(iterator->value);
+            TString value = iterator->value;
             TString option = Helpers::NameValueToString(key, value);
             option = macros.ExpandMacros(option);
             result.push_back(option);
@@ -384,28 +384,29 @@ bool JavaVirtualMachine::StartJVM() {
             package.FreeBootFields();
             
             mainMethod.CallVoidMethod(1, largs.GetData());
+
+            // If application main() exits quickly but application is run on some other thread
+            //  (e.g. Swing app performs invokeLater() in main and exits)
+            // then if we return execution to tWinMain it will exit.
+            // This will cause process to exit and application will not actually run.
+            //
+            // To avoid this we are trying to detach jvm from current thread (java.exe does the same)
+            // Because we are doing this on the main JVM thread (i.e. one that was used to create JVM)
+            // this call will spawn "Destroy Java VM" java thread that will shut JVM once there are
+            // no non-daemon threads running, and then return control here.
+            // I.e. this will happen when EDT and other app thread will exit.
+            if (jvm->DetachCurrentThread() != JNI_OK) {
+                platform.ShowError(_T("Detach failed."));
+            }
+
+            jvm->DestroyJavaVM();
+
+            return true;
         }
         catch (JavaException& exception) {
             platform.ShowError(PlatformString(exception.what()).toString());
             return false;
         }
-
-        // If application main() exits quickly but application is run on some other thread
-        //  (e.g. Swing app performs invokeLater() in main and exits)
-        // then if we return execution to tWinMain it will exit.
-        // This will cause process to exit and application will not actually run.
-        //
-        // To avoid this we are trying to detach jvm from current thread (java.exe does the same)
-        // Because we are doing this on the main JVM thread (i.e. one that was used to create JVM)
-        // this call will spawn "Destroy Java VM" java thread that will shut JVM once there are
-        // no non-daemon threads running, and then return control here.
-        // I.e. this will happen when EDT and other app thread will exit.
-        if (jvm->DetachCurrentThread() != 0) {
-            platform.ShowError(_T("Detach failed."));
-        }
-
-        jvm->DestroyJavaVM();
-        return true;
     }
 
     return false;

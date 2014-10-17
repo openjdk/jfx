@@ -139,7 +139,7 @@ std::map<TString, TString> Helpers::GetConfigFromJVMUserArgs(std::map<TString, T
          iterator != OrderedMap.end();
          iterator++) {
         size_t index = iterator->second.index;
-        TString prefix = TString(_T("jvmuserarg.")) + PlatformString(index).toString();
+        TString prefix = TString(_T("jvmuserarg.")) + PlatformString(index + 1).toString();
         TString argname = prefix + _T(".name");
         TString argvalue = prefix + _T(".value");
         TString name = iterator->first;

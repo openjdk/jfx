@@ -110,7 +110,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
      * Specifies whether we ought to show handles. We should do it on touch platforms, but not
      * iOS (and maybe not Android either?)
      */
-    protected static boolean SHOW_HANDLES = IS_TOUCH_SUPPORTED && !PlatformUtil.isIOS();
+    protected static final boolean SHOW_HANDLES = IS_TOUCH_SUPPORTED && !PlatformUtil.isIOS();
 
     protected final ObservableObjectValue<FontMetrics> fontMetrics;
 

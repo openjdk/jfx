@@ -4092,6 +4092,17 @@ to the top and bottom -fx-padding values of the parent toolbar. */
     -fx-shape: "M 0 0 h 7 l -3.5 4 z";
 }
 
+/* Spinner - Horizontal arrows */
+.spinner.split-arrows-horizontal .increment-arrow-button .increment-arrow,
+.spinner.arrows-on-right-horizontal .increment-arrow-button .increment-arrow,
+.spinner.arrows-on-left-horizontal .increment-arrow-button .increment-arrow,
+.spinner.split-arrows-horizontal .decrement-arrow-button .decrement-arrow,
+.spinner.arrows-on-right-horizontal .decrement-arrow-button .decrement-arrow,
+.spinner.arrows-on-left-horizontal .decrement-arrow-button .decrement-arrow{
+    -fx-padding: 0.333em 0.166em 0.333em 0.166em; /* 4 2 4 2 */
+    -fx-shape: "M 4 0 v 7 l -4 -3.5 z";
+}
+
 /* Spinner - STYLE_CLASS_ARROWS_ON_RIGHT_HORIZONTAL */
 .spinner.arrows-on-right-horizontal .increment-arrow-button {
     -fx-background-insets: 0 0 1 0, 1 1 2 0, 2 2 3 1;

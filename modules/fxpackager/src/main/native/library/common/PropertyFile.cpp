@@ -166,7 +166,7 @@ bool PropertyFile::RemoveKey(const TString Key) {
         }
     }
 
-    return false;
+    return result;
 }
 
 size_t PropertyFile::GetCount() {

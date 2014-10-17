@@ -238,32 +238,51 @@ std::map<TString, TValueIndex> Package::GetJVMUserArgOverrides() {
 }
 
 void Package::SetJVMUserArgOverrides(std::map<TString, TValueIndex> Value) {
-    // Overwrite JVM user config overrides with provided key/value pair.
-    FJVMUserConfig->Assign(Helpers::GetConfigFromJVMUserArgs(Value));
-
-    // Iterate over all new values and remove any that are the same as the defaults.
     std::map<TString, TValueIndex> defaults = GetDefaultJVMUserArgs();
-    std::map<TString, TValueIndex> overrides = GetJVMUserArgOverrides();
+    std::map<TString, TValueIndex> overrides = Value;
+    std::list<TString> overrideKeys = Helpers::GetOrderedKeysFromMap(overrides);
 
-    // Remove entries that are in the overrides that are the same as the defaults.
+    // Remove entries in the overrides that are the same as the defaults.
     for (std::map<TString, TValueIndex>::iterator iterator = overrides.begin();
         iterator != overrides.end();
         iterator++) {
 
-        if (defaults.find(iterator->first) != defaults.end()) {
-            TValueIndex defaultValue = defaults[iterator->first];
+        TString overridesKey = iterator->first;
+        TString overridesValue = iterator->second.value;
 
-            if (defaultValue.value == iterator->second.value) {
-                FJVMUserConfig->RemoveKey(iterator->first);
+        if (defaults.find(overridesKey) != defaults.end()) {
+            TString defaultValue = defaults[overridesKey].value;
+
+            if (defaultValue == overridesValue) {
+                overrideKeys.remove(overridesKey);
             }
         }
     }
+
+    std::map<TString, TValueIndex> orderedOverrides;
+    size_t index = 1;
+
+    for (std::list<TString>::const_iterator iterator = overrideKeys.begin();
+         iterator != overrideKeys.end(); iterator++) {
+        TString key = *iterator;
+        TValueIndex item;
+        item.value = overrides[key].value;
+        item.index = index;
+
+        orderedOverrides.insert(std::map<TString, TValueIndex>::value_type(key, item));
+        index++;
+    }
+
+    // Overwrite JVM user config overrides with provided key/value pair.
+    FJVMUserConfig->Assign(Helpers::GetConfigFromJVMUserArgs(orderedOverrides));
 
     MergeJVMDefaultsWithOverrides();
     if (FJVMUserConfig->IsModified()) {
         Platform& platform = Platform::GetInstance();
         FJVMUserConfig->SaveToFile(platform.GetJVMUserArgsConfigFileName());
     }
+
+    MergeJVMDefaultsWithOverrides();
 }
 
 std::map<TString, TValueIndex> Package::GetJVMUserArgs() {
@@ -273,7 +292,7 @@ std::map<TString, TValueIndex> Package::GetJVMUserArgs() {
     // 2. If the key is in the java.user.preferences then the vaue from the java.user.preferences is used.
     //    The config file value is ignored.
     // 3. If the key is not in the config file but it is in the java.user.preferences then it is added anyway.
-    //    And if it is removed it won�t show back up.
+    //    And if it is removed it won't show back up.
     if (FJVMUserConfig->IsModified() == true) {
         MergeJVMDefaultsWithOverrides();
     }
@@ -300,7 +319,7 @@ void Package::MergeJVMDefaultsWithOverrides() {
         if (FJVMUserArgs.find(name) != FJVMUserArgs.end()) {
             item = FJVMUserArgs[name];
             item.value = iterator->second.value;
-
+            item.index = iterator->second.index;
         }
         else {
             item.value = iterator->second.value;

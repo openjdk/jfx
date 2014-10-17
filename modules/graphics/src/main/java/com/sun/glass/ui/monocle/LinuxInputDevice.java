@@ -58,10 +58,10 @@ class LinuxInputDevice implements Runnable, InputDevice {
     private Map<String, BitSet> capabilities;
     private Map<Integer, LinuxAbsoluteInputCapabilities> absCaps;
     private Map<String, String> udevManifest;
-    private ByteBuffer event = ByteBuffer.allocateDirect(LinuxEventBuffer.EVENT_STRUCT_SIZE);
+    private final ByteBuffer event;
     private RunnableProcessor runnableProcessor;
     private EventProcessor processor = new EventProcessor();
-    private LinuxEventBuffer buffer = new LinuxEventBuffer();
+    private final LinuxEventBuffer buffer;
     private Map<String,String> uevent;
     private static LinuxSystem system = LinuxSystem.getLinuxSystem();
 
@@ -77,6 +77,8 @@ class LinuxInputDevice implements Runnable, InputDevice {
             File devNode,
             File sysPath,
             Map<String, String> udevManifest) throws IOException {
+        this.buffer = new LinuxEventBuffer(LinuxArch.getBits());
+        this.event = ByteBuffer.allocateDirect(buffer.getEventSize());
         this.devNode = devNode;
         this.sysPath = sysPath;
         this.udevManifest = udevManifest;
@@ -109,6 +111,8 @@ class LinuxInputDevice implements Runnable, InputDevice {
             ReadableByteChannel in,
             Map<String, String> udevManifest,
             Map<String, String> uevent) {
+        this.buffer = new LinuxEventBuffer(32);
+        this.event = ByteBuffer.allocateDirect(buffer.getEventSize());
         this.capabilities = capabilities;
         this.absCaps = absCaps;
         this.in = in;

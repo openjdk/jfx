@@ -27,8 +27,8 @@ package jdk.packager.services.userjvmoptions;
 
 import jdk.packager.services.UserJvmOptionsService;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.TreeMap;
 import java.util.prefs.BackingStoreException;
 import java.util.prefs.Preferences;
 
@@ -47,7 +47,7 @@ public class PreferencesUserJvmOptions implements UserJvmOptionsService {
 
     @Override
     public Map<String, String> getUserJVMOptions() {
-        Map<String, String> result = new TreeMap<>();
+        Map<String, String> result = new LinkedHashMap<>();
         try {
             for (String s : node.childrenNames()) {
                 String o = node.get(s, null);
