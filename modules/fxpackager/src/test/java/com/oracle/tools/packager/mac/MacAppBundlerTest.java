@@ -549,33 +549,43 @@ public class MacAppBundlerTest {
     public void testJRE() throws IOException, ConfigException, UnsupportedPlatformException {
         String jre = runtimeJre == null ? "/Library/Internet Plug-Ins/JavaAppletPlugin.plugin/" : runtimeJre;
         Assume.assumeTrue(new File(jre).isDirectory());
-        
+
         try {
             Bundler bundler = new MacAppBundler();
-    
+
             Map<String, Object> bundleParams = new HashMap<>();
-    
+
             // not part of the typical setup, for testing
             bundleParams.put(BUILD_ROOT.getID(), tmpBase);
-    
+
             bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
             bundleParams.put(MAC_RUNTIME.getID(), jre);
-    
+
             boolean valid = bundler.validate(bundleParams);
             assertTrue(valid);
-    
+
             File output = bundler.execute(bundleParams, new File(workDir, "JRETest"));
             System.err.println("Bundle at - " + output);
             assertNotNull(output);
             assertTrue(output.exists());
-         
+
             // if we get here we fail
             assertTrue("ConfigException should have been thrown", false);
         } catch (ConfigException ignore) {
             // expected
         }
-
     }
+
+    /**
+     * Verify a match on too many keys doesn't blow things up
+     */
+    @Test
+    public void testTooManyKeyMatches() {
+        Assume.assumeTrue(MacBaseInstallerBundler.findKey("Developer ID Application:", true) != null);
+        assertTrue(MacBaseInstallerBundler.findKey("Developer", true) == null);
+        assertTrue(MacBaseInstallerBundler.findKey("A completely bogus key that should never realistically exist unless we are attempting to falsely break the tests", true) == null);
+    }
+    
 
 
 }
