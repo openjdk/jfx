@@ -197,7 +197,7 @@ public abstract class MacBaseInstallerBundler extends AbstractBundler {
         return APP_BUNDLER.fetchFrom(p).doBundle(p, appImageRoot, true);
     }
 
-    protected File prepareDaemonBundle(Map<String, ? super Object> p) throws ConfigException {
+    protected File prepareDaemonBundle(Map<String, ? super Object> p) {
         File daemonImageRoot = DAEMON_IMAGE_BUILD_ROOT.fetchFrom(p);
         return DAEMON_BUNDLER.fetchFrom(p).doBundle(p, daemonImageRoot, true);
     }
