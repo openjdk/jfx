@@ -3377,7 +3377,7 @@ public class Metadata {
     private final ValuePropertyMetadata scalePropertyMetadata =
             new DoublePropertyMetadata(
                 scaleName,
-                com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.SIZE,
+                com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.COORDINATE,
                 false, /* readWrite */
                 null, /* No defaultValue for R/O property */
                 new InspectorPath("Properties", "Specific", 82));
@@ -3390,21 +3390,21 @@ public class Metadata {
     private final ValuePropertyMetadata scaleXPropertyMetadata =
             new DoublePropertyMetadata(
                 scaleXName,
-                com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.SIZE,
+                com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.COORDINATE,
                 true, /* readWrite */
                 1.0, /* defaultValue */
                 new InspectorPath("Layout", "Transforms", 2));
     private final ValuePropertyMetadata scaleYPropertyMetadata =
             new DoublePropertyMetadata(
                 scaleYName,
-                com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.SIZE,
+                com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.COORDINATE,
                 true, /* readWrite */
                 1.0, /* defaultValue */
                 new InspectorPath("Layout", "Transforms", 3));
     private final ValuePropertyMetadata scaleZPropertyMetadata =
             new DoublePropertyMetadata(
                 scaleZName,
-                com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.SIZE,
+                com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.COORDINATE,
                 true, /* readWrite */
                 1.0, /* defaultValue */
                 new InspectorPath("Layout", "Transforms", 4));
