@@ -59,7 +59,10 @@ int APIENTRY _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 
     if (start(argc, argv) == true) {
         result = 0;
-        stop();
+
+        if (stop != NULL) {
+            stop();
+        }
     }
 
     ::FreeLibrary(library);

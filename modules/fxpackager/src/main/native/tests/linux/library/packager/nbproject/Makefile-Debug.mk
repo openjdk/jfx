@@ -74,106 +74,106 @@ LDLIBSOPTIONS=-lpthread -ldl
 
 # Build Targets
 .build-conf: ${BUILD_SUBPROJECTS}
-	"${MAKE}"  -f nbproject/Makefile-${CND_CONF}.mk /home/cbensen/src/projects/packager/JavaFXSceneBuilder2.0/libpackager.so
+	"${MAKE}"  -f nbproject/Makefile-${CND_CONF}.mk ../../../../../../../build/dev/DevTest/libpackager.so
 
-/home/cbensen/src/projects/packager/JavaFXSceneBuilder2.0/libpackager.so: ${OBJECTFILES}
-	${MKDIR} -p /home/cbensen/src/projects/packager/JavaFXSceneBuilder2.0
-	${LINK.cc} -o /home/cbensen/src/projects/packager/JavaFXSceneBuilder2.0/libpackager.so ${OBJECTFILES} ${LDLIBSOPTIONS} -shared -fPIC
+../../../../../../../build/dev/DevTest/libpackager.so: ${OBJECTFILES}
+	${MKDIR} -p ../../../../../../../build/dev/DevTest
+	${LINK.cc} -o ../../../../../../../build/dev/DevTest/libpackager.so ${OBJECTFILES} ${LDLIBSOPTIONS} -shared -fPIC
 
 ${OBJECTDIR}/_ext/839896833/Exports.o: ../../../../library/common/Exports.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/839896833
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -DDEBUG -DJAVAARCH=\"i386\" -I/home/cbensen/java/jdk1.8.0/include -I/home/cbensen/java/jdk1.8.0/include/linux -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/839896833/Exports.o ../../../../library/common/Exports.cpp
+	$(COMPILE.cc) -g -DDEBUG -DJAVAARCH=\"i386\" -I/java/include -I/java/include/linux -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/839896833/Exports.o ../../../../library/common/Exports.cpp
 
 ${OBJECTDIR}/_ext/839896833/FilePath.o: ../../../../library/common/FilePath.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/839896833
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -DDEBUG -DJAVAARCH=\"i386\" -I/home/cbensen/java/jdk1.8.0/include -I/home/cbensen/java/jdk1.8.0/include/linux -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/839896833/FilePath.o ../../../../library/common/FilePath.cpp
+	$(COMPILE.cc) -g -DDEBUG -DJAVAARCH=\"i386\" -I/java/include -I/java/include/linux -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/839896833/FilePath.o ../../../../library/common/FilePath.cpp
 
 ${OBJECTDIR}/_ext/839896833/GenericPlatform.o: ../../../../library/common/GenericPlatform.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/839896833
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -DDEBUG -DJAVAARCH=\"i386\" -I/home/cbensen/java/jdk1.8.0/include -I/home/cbensen/java/jdk1.8.0/include/linux -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/839896833/GenericPlatform.o ../../../../library/common/GenericPlatform.cpp
+	$(COMPILE.cc) -g -DDEBUG -DJAVAARCH=\"i386\" -I/java/include -I/java/include/linux -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/839896833/GenericPlatform.o ../../../../library/common/GenericPlatform.cpp
 
 ${OBJECTDIR}/_ext/839896833/Helpers.o: ../../../../library/common/Helpers.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/839896833
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -DDEBUG -DJAVAARCH=\"i386\" -I/home/cbensen/java/jdk1.8.0/include -I/home/cbensen/java/jdk1.8.0/include/linux -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/839896833/Helpers.o ../../../../library/common/Helpers.cpp
+	$(COMPILE.cc) -g -DDEBUG -DJAVAARCH=\"i386\" -I/java/include -I/java/include/linux -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/839896833/Helpers.o ../../../../library/common/Helpers.cpp
 
 ${OBJECTDIR}/_ext/839896833/Java.o: ../../../../library/common/Java.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/839896833
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -DDEBUG -DJAVAARCH=\"i386\" -I/home/cbensen/java/jdk1.8.0/include -I/home/cbensen/java/jdk1.8.0/include/linux -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/839896833/Java.o ../../../../library/common/Java.cpp
+	$(COMPILE.cc) -g -DDEBUG -DJAVAARCH=\"i386\" -I/java/include -I/java/include/linux -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/839896833/Java.o ../../../../library/common/Java.cpp
 
 ${OBJECTDIR}/_ext/839896833/JavaUserPreferences.o: ../../../../library/common/JavaUserPreferences.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/839896833
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -DDEBUG -DJAVAARCH=\"i386\" -I/home/cbensen/java/jdk1.8.0/include -I/home/cbensen/java/jdk1.8.0/include/linux -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/839896833/JavaUserPreferences.o ../../../../library/common/JavaUserPreferences.cpp
+	$(COMPILE.cc) -g -DDEBUG -DJAVAARCH=\"i386\" -I/java/include -I/java/include/linux -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/839896833/JavaUserPreferences.o ../../../../library/common/JavaUserPreferences.cpp
 
 ${OBJECTDIR}/_ext/839896833/JavaVirtualMachine.o: ../../../../library/common/JavaVirtualMachine.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/839896833
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -DDEBUG -DJAVAARCH=\"i386\" -I/home/cbensen/java/jdk1.8.0/include -I/home/cbensen/java/jdk1.8.0/include/linux -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/839896833/JavaVirtualMachine.o ../../../../library/common/JavaVirtualMachine.cpp
+	$(COMPILE.cc) -g -DDEBUG -DJAVAARCH=\"i386\" -I/java/include -I/java/include/linux -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/839896833/JavaVirtualMachine.o ../../../../library/common/JavaVirtualMachine.cpp
 
 ${OBJECTDIR}/_ext/839896833/LinuxPlatform.o: ../../../../library/common/LinuxPlatform.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/839896833
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -DDEBUG -DJAVAARCH=\"i386\" -I/home/cbensen/java/jdk1.8.0/include -I/home/cbensen/java/jdk1.8.0/include/linux -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/839896833/LinuxPlatform.o ../../../../library/common/LinuxPlatform.cpp
+	$(COMPILE.cc) -g -DDEBUG -DJAVAARCH=\"i386\" -I/java/include -I/java/include/linux -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/839896833/LinuxPlatform.o ../../../../library/common/LinuxPlatform.cpp
 
 ${OBJECTDIR}/_ext/839896833/Lock.o: ../../../../library/common/Lock.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/839896833
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -DDEBUG -DJAVAARCH=\"i386\" -I/home/cbensen/java/jdk1.8.0/include -I/home/cbensen/java/jdk1.8.0/include/linux -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/839896833/Lock.o ../../../../library/common/Lock.cpp
+	$(COMPILE.cc) -g -DDEBUG -DJAVAARCH=\"i386\" -I/java/include -I/java/include/linux -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/839896833/Lock.o ../../../../library/common/Lock.cpp
 
 ${OBJECTDIR}/_ext/839896833/Macros.o: ../../../../library/common/Macros.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/839896833
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -DDEBUG -DJAVAARCH=\"i386\" -I/home/cbensen/java/jdk1.8.0/include -I/home/cbensen/java/jdk1.8.0/include/linux -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/839896833/Macros.o ../../../../library/common/Macros.cpp
+	$(COMPILE.cc) -g -DDEBUG -DJAVAARCH=\"i386\" -I/java/include -I/java/include/linux -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/839896833/Macros.o ../../../../library/common/Macros.cpp
 
 ${OBJECTDIR}/_ext/839896833/Messages.o: ../../../../library/common/Messages.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/839896833
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -DDEBUG -DJAVAARCH=\"i386\" -I/home/cbensen/java/jdk1.8.0/include -I/home/cbensen/java/jdk1.8.0/include/linux -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/839896833/Messages.o ../../../../library/common/Messages.cpp
+	$(COMPILE.cc) -g -DDEBUG -DJAVAARCH=\"i386\" -I/java/include -I/java/include/linux -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/839896833/Messages.o ../../../../library/common/Messages.cpp
 
 ${OBJECTDIR}/_ext/839896833/Package.o: ../../../../library/common/Package.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/839896833
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -DDEBUG -DJAVAARCH=\"i386\" -I/home/cbensen/java/jdk1.8.0/include -I/home/cbensen/java/jdk1.8.0/include/linux -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/839896833/Package.o ../../../../library/common/Package.cpp
+	$(COMPILE.cc) -g -DDEBUG -DJAVAARCH=\"i386\" -I/java/include -I/java/include/linux -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/839896833/Package.o ../../../../library/common/Package.cpp
 
 ${OBJECTDIR}/_ext/839896833/Platform.o: ../../../../library/common/Platform.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/839896833
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -DDEBUG -DJAVAARCH=\"i386\" -I/home/cbensen/java/jdk1.8.0/include -I/home/cbensen/java/jdk1.8.0/include/linux -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/839896833/Platform.o ../../../../library/common/Platform.cpp
+	$(COMPILE.cc) -g -DDEBUG -DJAVAARCH=\"i386\" -I/java/include -I/java/include/linux -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/839896833/Platform.o ../../../../library/common/Platform.cpp
 
 ${OBJECTDIR}/_ext/839896833/PlatformString.o: ../../../../library/common/PlatformString.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/839896833
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -DDEBUG -DJAVAARCH=\"i386\" -I/home/cbensen/java/jdk1.8.0/include -I/home/cbensen/java/jdk1.8.0/include/linux -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/839896833/PlatformString.o ../../../../library/common/PlatformString.cpp
+	$(COMPILE.cc) -g -DDEBUG -DJAVAARCH=\"i386\" -I/java/include -I/java/include/linux -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/839896833/PlatformString.o ../../../../library/common/PlatformString.cpp
 
 ${OBJECTDIR}/_ext/839896833/PlatformThread.o: ../../../../library/common/PlatformThread.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/839896833
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -DDEBUG -DJAVAARCH=\"i386\" -I/home/cbensen/java/jdk1.8.0/include -I/home/cbensen/java/jdk1.8.0/include/linux -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/839896833/PlatformThread.o ../../../../library/common/PlatformThread.cpp
+	$(COMPILE.cc) -g -DDEBUG -DJAVAARCH=\"i386\" -I/java/include -I/java/include/linux -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/839896833/PlatformThread.o ../../../../library/common/PlatformThread.cpp
 
 ${OBJECTDIR}/_ext/839896833/PosixPlatform.o: ../../../../library/common/PosixPlatform.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/839896833
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -DDEBUG -DJAVAARCH=\"i386\" -I/home/cbensen/java/jdk1.8.0/include -I/home/cbensen/java/jdk1.8.0/include/linux -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/839896833/PosixPlatform.o ../../../../library/common/PosixPlatform.cpp
+	$(COMPILE.cc) -g -DDEBUG -DJAVAARCH=\"i386\" -I/java/include -I/java/include/linux -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/839896833/PosixPlatform.o ../../../../library/common/PosixPlatform.cpp
 
 ${OBJECTDIR}/_ext/839896833/PropertyFile.o: ../../../../library/common/PropertyFile.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/839896833
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -DDEBUG -DJAVAARCH=\"i386\" -I/home/cbensen/java/jdk1.8.0/include -I/home/cbensen/java/jdk1.8.0/include/linux -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/839896833/PropertyFile.o ../../../../library/common/PropertyFile.cpp
+	$(COMPILE.cc) -g -DDEBUG -DJAVAARCH=\"i386\" -I/java/include -I/java/include/linux -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/839896833/PropertyFile.o ../../../../library/common/PropertyFile.cpp
 
 ${OBJECTDIR}/_ext/839896833/WindowsPlatform.o: ../../../../library/common/WindowsPlatform.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/839896833
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -DDEBUG -DJAVAARCH=\"i386\" -I/home/cbensen/java/jdk1.8.0/include -I/home/cbensen/java/jdk1.8.0/include/linux -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/839896833/WindowsPlatform.o ../../../../library/common/WindowsPlatform.cpp
+	$(COMPILE.cc) -g -DDEBUG -DJAVAARCH=\"i386\" -I/java/include -I/java/include/linux -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/839896833/WindowsPlatform.o ../../../../library/common/WindowsPlatform.cpp
 
 ${OBJECTDIR}/_ext/839896833/main.o: ../../../../library/common/main.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/839896833
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -DDEBUG -DJAVAARCH=\"i386\" -I/home/cbensen/java/jdk1.8.0/include -I/home/cbensen/java/jdk1.8.0/include/linux -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/839896833/main.o ../../../../library/common/main.cpp
+	$(COMPILE.cc) -g -DDEBUG -DJAVAARCH=\"i386\" -I/java/include -I/java/include/linux -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/839896833/main.o ../../../../library/common/main.cpp
 
 # Subprojects
 .build-subprojects:
@@ -181,7 +181,7 @@ ${OBJECTDIR}/_ext/839896833/main.o: ../../../../library/common/main.cpp
 # Clean Targets
 .clean-conf: ${CLEAN_SUBPROJECTS}
 	${RM} -r ${CND_BUILDDIR}/${CND_CONF}
-	${RM} /home/cbensen/src/projects/packager/JavaFXSceneBuilder2.0/libpackager.so
+	${RM} ../../../../../../../build/dev/DevTest/libpackager.so
 
 # Subprojects
 .clean-subprojects:

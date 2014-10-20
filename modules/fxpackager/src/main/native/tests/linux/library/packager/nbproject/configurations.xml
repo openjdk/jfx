@@ -89,8 +89,8 @@
       <compileType>
         <ccTool>
           <incDir>
-            <pElem>/home/cbensen/java/jdk1.8.0/include</pElem>
-            <pElem>/home/cbensen/java/jdk1.8.0/include/linux</pElem>
+            <pElem>/java/include</pElem>
+            <pElem>/java/include/linux</pElem>
           </incDir>
           <preprocessorList>
             <Elem>DEBUG</Elem>
@@ -98,7 +98,7 @@
           </preprocessorList>
         </ccTool>
         <linkerTool>
-          <output>/home/cbensen/src/projects/packager/JavaFXSceneBuilder2.0/libpackager.so</output>
+          <output>../../../../../../../build/dev/DevTest/libpackager.so</output>
           <linkerLibItems>
             <linkerLibStdlibItem>PosixThreads</linkerLibStdlibItem>
             <linkerLibStdlibItem>DynamicLinking</linkerLibStdlibItem>

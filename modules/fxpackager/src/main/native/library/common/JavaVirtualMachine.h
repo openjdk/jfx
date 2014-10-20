@@ -39,13 +39,32 @@
 #include "Platform.h"
 
 
-class JavaVirtualMachine
-{
+#ifdef WINDOWS
+//#define USE_JLI_LAUNCH
+#endif //WINDOWS
+
+#ifdef MAC
+#define USE_JLI_LAUNCH
+#endif //MAC
+
+#ifdef LINUX
+//#define USE_JLI_LAUNCH
+#endif //LINUX
+
+
+class JavaVirtualMachine {
+#ifndef USE_JLI_LAUNCH
+private:
+    JNIEnv* FEnv;
+    JavaVM* FJvm;
+#endif //USE_JLI_LAUNCH
+
 public:
     JavaVirtualMachine();
     ~JavaVirtualMachine(void);
 
     bool StartJVM();
+    void ShutdownJVM();
 };
 
 #endif //JAVAVIRTUALMACHINE_H
