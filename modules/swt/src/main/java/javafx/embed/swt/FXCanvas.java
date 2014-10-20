@@ -883,6 +883,7 @@ public class FXCanvas extends Canvas {
                     }
                 };
                 public void dragEnter(DropTargetEvent event) {
+                    ignoreLeave = false;
                     dropTarget.setTransfer(getAllTransfers());
                     detail = event.detail;
                     operations = event.operations;
