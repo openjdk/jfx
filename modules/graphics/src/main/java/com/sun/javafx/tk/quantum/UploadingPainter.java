@@ -48,6 +48,9 @@ final class UploadingPainter extends ViewPainter implements Runnable {
     private IntBuffer   pixBits; // Users for RTTs that are backed by a SW array
     private final AtomicInteger uploadCount = new AtomicInteger(0);
     private RTTexture   rttexture;
+    // resolveRTT is a temporary render target to "resolve" a msaa render buffer
+    // into a normal color render target.
+    private RTTexture   resolveRTT = null;
     
     private volatile float pixScaleFactor = 1.0f;
 
@@ -59,6 +62,10 @@ final class UploadingPainter extends ViewPainter implements Runnable {
         if (rttexture != null) {
             rttexture.dispose();
             rttexture = null;
+        }
+        if (resolveRTT != null) {
+            resolveRTT.dispose();
+            resolveRTT = null;
         }
     }
     
@@ -114,7 +121,8 @@ final class UploadingPainter extends ViewPainter implements Runnable {
             
             if (needsReset) {
                 disposeRTTexture();
-                rttexture = factory.createRTTexture(bufWidth, bufHeight, WrapMode.CLAMP_NOT_NEEDED);
+                rttexture = factory.createRTTexture(bufWidth, bufHeight, WrapMode.CLAMP_NOT_NEEDED,
+                        sceneState.isAntiAliasing());
                 if (rttexture == null) {
                     return;
                 }
@@ -148,7 +156,10 @@ final class UploadingPainter extends ViewPainter implements Runnable {
                 }
                 
                 if (textureBits != null) {
-                    if (rttexture.readPixels(textureBits)) {
+                    RTTexture rtt = rttexture.isAntiAliasing() ?
+                        resolveRenderTarget(g) : rttexture;
+
+                    if (rtt.readPixels(textureBits)) {
                         pix = app.createPixels(bufWidth, bufHeight, textureBits, scale);
                     } else {
                         /* device lost */
@@ -178,6 +189,9 @@ final class UploadingPainter extends ViewPainter implements Runnable {
             if (rttexture != null && rttexture.isLocked()) {
                 rttexture.unlock();
             }
+            if (resolveRTT != null && resolveRTT.isLocked()) {
+                resolveRTT.unlock();
+            }
 
             Disposer.cleanUp();
 
@@ -189,5 +203,27 @@ final class UploadingPainter extends ViewPainter implements Runnable {
 
             renderLock.unlock();
         }
+    }
+
+    private RTTexture resolveRenderTarget(Graphics g) {
+        int width = rttexture.getContentWidth();
+        int height = rttexture.getContentHeight();
+        if (resolveRTT != null &&
+                (resolveRTT.getContentWidth() != width ||
+                (resolveRTT.getContentHeight() != height)))
+        {
+            // If msaa rtt is not the same size than resolve buffer, then dispose
+            resolveRTT.dispose();
+            resolveRTT = null;
+        }
+        if (resolveRTT == null || resolveRTT.isSurfaceLost()) {
+            resolveRTT = g.getResourceFactory().createRTTexture(
+                    width, height,
+                    WrapMode.CLAMP_NOT_NEEDED, false);
+        } else {
+            resolveRTT.lock();
+        }
+        g.blit(rttexture, resolveRTT, 0, 0, width, height, 0, 0, width, height);
+        return resolveRTT;
     }
 }
