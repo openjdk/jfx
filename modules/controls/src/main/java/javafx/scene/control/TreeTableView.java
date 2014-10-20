@@ -2437,11 +2437,6 @@ public class TreeTableView<S> extends Control {
                         int index = selectedIndices.get(i);
                         if (index > selectedItems.size()) break;
 
-                        // Removed as part of RT-30356 consistency effort
-//                        TreeItem<S> item = selectedItems.get(index);
-//                        if (item == null || removedChildren.contains(item)) {
-//                            clearSelection(index);
-//                        } else
                         if (removedChildren.size() == 1 &&
                                 selectedItems.size() == 1 && 
                                 selectedItem != null && 
@@ -2451,7 +2446,7 @@ public class TreeTableView<S> extends Control {
                                 final int previousRow = oldSelectedIndex == 0 ? 0 : oldSelectedIndex - 1;
                                 TreeItem<S> newSelectedItem = getModelItem(previousRow);
                                 if (! selectedItem.equals(newSelectedItem)) {
-                                    setSelectedItem(newSelectedItem);
+                                    clearAndSelect(previousRow);
                                 }
                             }
                         }
@@ -2875,11 +2870,13 @@ public class TreeTableView<S> extends Control {
                 focus(-1);
             }
 
-            quietClearSelection();
+            selectedCellsMap.clear();
         }
 
         private void quietClearSelection() {
+            startAtomic();
             selectedCellsMap.clear();
+            stopAtomic();
         }
 
         @Override public boolean isSelected(int index) {

@@ -1331,11 +1331,6 @@ public class TreeView<T> extends Control {
                     int index = selectedIndices1.get(i);
                     if (index > selectedItems.size()) break;
 
-                    // Removed as part of RT-30356 consistency effort
-//                        TreeItem<T> item = selectedItems.get(index);
-//                        if (item == null || removedChildren.contains(item)) {
-//                            clearSelection(index);
-//                        } else
                     if (removedChildren.size() == 1 &&
                             selectedItems.size() == 1 &&
                             selectedItem != null &&
@@ -1345,7 +1340,7 @@ public class TreeView<T> extends Control {
                             final int previousRow = selectedIndex == 0 ? 0 : selectedIndex - 1;
                             TreeItem<T> newSelectedItem = getModelItem(previousRow);
                             if (! selectedItem.equals(newSelectedItem)) {
-                                setSelectedItem(newSelectedItem);
+                                select(newSelectedItem);
                             }
                         }
                     }

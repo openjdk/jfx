@@ -4411,4 +4411,63 @@ public class TreeTableViewTest {
         assertEquals(expectedItem, sm.getSelectedItem().getValue());
         assertEquals(expectedItem, sm.getSelectedItems().get(0).getValue());
     }
+
+    private int rt_38341_indices_count = 0;
+    private int rt_38341_items_count = 0;
+    @Test public void test_rt_38341() {
+        Callback<Integer, TreeItem<String>> callback = number -> {
+            final TreeItem<String> root = new TreeItem<>("Root " + number);
+            final TreeItem<String> child = new TreeItem<>("Child " + number);
+
+            root.getChildren().add(child);
+            return root;
+        };
+
+        final TreeItem<String> root = new TreeItem<String>();
+        root.setExpanded(true);
+        root.getChildren().addAll(callback.call(1), callback.call(2));
+
+        final TreeTableView<String> treeTableView = new TreeTableView<>(root);
+        treeTableView.setShowRoot(false);
+
+        TreeTableColumn<String,String> column = new TreeTableColumn<>("Column");
+        column.setCellValueFactory(cdf -> new ReadOnlyStringWrapper(cdf.getValue().getValue()));
+        treeTableView.getColumns().add(column);
+
+        MultipleSelectionModel<TreeItem<String>> sm = treeTableView.getSelectionModel();
+        sm.getSelectedIndices().addListener((ListChangeListener<Integer>) c -> rt_38341_indices_count++);
+        sm.getSelectedItems().addListener((ListChangeListener<TreeItem<String>>) c -> rt_38341_items_count++);
+
+        assertEquals(0, rt_38341_indices_count);
+        assertEquals(0, rt_38341_items_count);
+
+        // expand the first child of root, and select it (note: root isn't visible)
+        root.getChildren().get(0).setExpanded(true);
+        sm.select(1);
+        assertEquals(1, sm.getSelectedIndex());
+        assertEquals(1, sm.getSelectedIndices().size());
+        assertEquals(1, (int)sm.getSelectedIndices().get(0));
+        assertEquals(1, sm.getSelectedItems().size());
+        assertEquals("Child 1", sm.getSelectedItem().getValue());
+        assertEquals("Child 1", sm.getSelectedItems().get(0).getValue());
+
+        assertEquals(1, rt_38341_indices_count);
+        assertEquals(1, rt_38341_items_count);
+
+        // now delete it
+        root.getChildren().get(0).getChildren().remove(0);
+
+        // selection should move to the childs parent in index 0
+        assertEquals(0, sm.getSelectedIndex());
+        assertEquals(1, sm.getSelectedIndices().size());
+        assertEquals(0, (int)sm.getSelectedIndices().get(0));
+        assertEquals(1, sm.getSelectedItems().size());
+        assertEquals("Root 1", sm.getSelectedItem().getValue());
+        assertEquals("Root 1", sm.getSelectedItems().get(0).getValue());
+
+        // we also expect there to be an event in the selection model for
+        // selected indices and selected items
+        assertEquals(2, rt_38341_indices_count);
+        assertEquals(2, rt_38341_items_count);
+    }
 }

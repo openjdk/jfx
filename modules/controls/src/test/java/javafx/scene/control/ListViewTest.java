@@ -42,6 +42,7 @@ import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import javafx.application.Platform;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
+import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
@@ -1134,5 +1135,47 @@ public class ListViewTest {
         assertEquals(expectedIndex, (int)sm.getSelectedIndices().get(0));
         assertEquals(expectedItem, sm.getSelectedItem());
         assertEquals(expectedItem, sm.getSelectedItems().get(0));
+    }
+
+    private int rt_38341_indices_count = 0;
+    private int rt_38341_items_count = 0;
+    @Test public void test_rt_38341() {
+        ListView<String> stringListView = new ListView<>();
+        stringListView.getItems().addAll("a","b","c","d");
+
+        MultipleSelectionModel<String> sm = stringListView.getSelectionModel();
+        sm.getSelectedIndices().addListener((ListChangeListener<Integer>) c -> rt_38341_indices_count++);
+        sm.getSelectedItems().addListener((ListChangeListener<String>) c -> rt_38341_items_count++);
+
+        assertEquals(0, rt_38341_indices_count);
+        assertEquals(0, rt_38341_items_count);
+
+        // expand the first child of root, and select it (note: root isn't visible)
+        sm.select(1);
+        assertEquals(1, sm.getSelectedIndex());
+        assertEquals(1, sm.getSelectedIndices().size());
+        assertEquals(1, (int)sm.getSelectedIndices().get(0));
+        assertEquals(1, sm.getSelectedItems().size());
+        assertEquals("b", sm.getSelectedItem());
+        assertEquals("b", sm.getSelectedItems().get(0));
+
+        assertEquals(1, rt_38341_indices_count);
+        assertEquals(1, rt_38341_items_count);
+
+        // now delete it
+        stringListView.getItems().remove(1);
+
+        // selection should move to the childs parent in index 0
+        assertEquals(0, sm.getSelectedIndex());
+        assertEquals(1, sm.getSelectedIndices().size());
+        assertEquals(0, (int)sm.getSelectedIndices().get(0));
+        assertEquals(1, sm.getSelectedItems().size());
+        assertEquals("a", sm.getSelectedItem());
+        assertEquals("a", sm.getSelectedItems().get(0));
+
+        // we also expect there to be an event in the selection model for
+        // selected indices and selected items
+        assertEquals(sm.getSelectedIndices() +"", 2, rt_38341_indices_count);
+        assertEquals(2, rt_38341_items_count);
     }
 }

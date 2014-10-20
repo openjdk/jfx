@@ -2104,9 +2104,10 @@ public class TableView<S> extends Control {
                         selectedItem.equals(c.getRemoved().get(0))) {
                     // Bug fix for RT-28637
                     if (getSelectedIndex() < getItemCount()) {
-                        S newSelectedItem = getModelItem(selectedIndex);
+                        final int previousRow = selectedIndex == 0 ? 0 : selectedIndex - 1;
+                        S newSelectedItem = getModelItem(previousRow);
                         if (! selectedItem.equals(newSelectedItem)) {
-                            setSelectedItem(newSelectedItem);
+                            clearAndSelect(previousRow);
                         }
                     }
                 }
@@ -2628,11 +2629,13 @@ public class TableView<S> extends Control {
                 focus(-1);
             }
 
-            quietClearSelection();
+            selectedCellsMap.clear();
         }
 
         private void quietClearSelection() {
+            startAtomic();
             selectedCellsMap.clear();
+            stopAtomic();
         }
 
         @Override public boolean isSelected(int index) {
