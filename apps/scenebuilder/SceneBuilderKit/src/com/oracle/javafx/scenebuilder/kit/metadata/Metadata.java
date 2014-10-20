@@ -538,6 +538,8 @@ public class Metadata {
             new PropertyName("autoRanging");
     private final PropertyName autoSizeChildrenName = 
             new PropertyName("autoSizeChildren");
+    private final PropertyName axisSortingPolicyName = 
+            new PropertyName("axisSortingPolicy");
     private final PropertyName barGapName = 
             new PropertyName("barGap");
     private final PropertyName baselineOffsetName = 
@@ -1636,6 +1638,13 @@ public class Metadata {
                 true, /* readWrite */
                 true, /* defaultValue */
                 new InspectorPath("Layout", "Extras", 0));
+    private final ValuePropertyMetadata axisSortingPolicyPropertyMetadata =
+            new EnumerationPropertyMetadata(
+                axisSortingPolicyName,
+                javafx.scene.chart.LineChart.SortingPolicy.class,
+                true, /* readWrite */
+                javafx.scene.chart.LineChart.SortingPolicy.X_AXIS, /* defaultValue */
+                new InspectorPath("Properties", "Specific", 130));
     private final ValuePropertyMetadata barGapPropertyMetadata =
             new DoublePropertyMetadata(
                 barGapName,
@@ -5063,6 +5072,7 @@ public class Metadata {
         LineMetadata.getProperties().add(startYPropertyMetadata);
         LineMetadata.getProperties().add(stroke_BLACK_PropertyMetadata);
 
+        LineChartMetadata.getProperties().add(axisSortingPolicyPropertyMetadata);
         LineChartMetadata.getProperties().add(createSymbolsPropertyMetadata);
         LineChartMetadata.getProperties().add(styleClass_c37_PropertyMetadata);
 
@@ -5934,7 +5944,6 @@ public class Metadata {
 
 
     // The following properties are uncertified:
-    //     axisSortingPolicy
     //     redoable
     //     undoable
 
