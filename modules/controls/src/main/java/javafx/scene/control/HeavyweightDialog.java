@@ -32,7 +32,7 @@ import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
-import javafx.scene.layout.StackPane;
+import javafx.scene.layout.Pane;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
@@ -50,7 +50,7 @@ class HeavyweightDialog extends FXDialog {
     private final Dialog<?> dialog;
     private final Stage stage;
     private final Scene scene;
-    private final StackPane sceneRoot;
+    private final Pane sceneRoot;
     
     private DialogPane dialogPane;
 
@@ -97,7 +97,18 @@ class HeavyweightDialog extends FXDialog {
             }
         });
 
-        sceneRoot = new StackPane();
+        sceneRoot = new Pane() {
+            @Override protected void layoutChildren() {
+                // we only attempt to layout the dialogPane
+                if (dialogPane == null) return;
+
+                // TODO There is still more work to be done here:
+                // 1) DONE: Handling when the dialog pane pref sizes change dynamically (and resizing the stage)
+                // 2) Animating the resize (if deemed desirable)
+                dialogPane.autosize();
+                stage.sizeToScene();
+            }
+        };
         sceneRoot.getStyleClass().setAll("dialog");
         
         scene = new Scene(sceneRoot);
@@ -138,13 +149,7 @@ class HeavyweightDialog extends FXDialog {
 
     @Override public void setDialogPane(DialogPane dialogPane) {
         this.dialogPane = dialogPane;
-//        root.setCenter(dialogPane);
         sceneRoot.getChildren().setAll(dialogPane);
-        
-        // TODO There is still more work to be done here:
-        // 1) Handling when the dialog pane pref sizes change dynamically (and resizing the stage)
-        // 2) Animating the resize (if deemed desirable)
-        stage.sizeToScene();
     }
 
     @Override public void show() {
