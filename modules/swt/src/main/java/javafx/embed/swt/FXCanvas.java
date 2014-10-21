@@ -26,6 +26,7 @@
 package javafx.embed.swt;
 
 import java.lang.reflect.Field;
+import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
@@ -37,6 +38,7 @@ import java.util.Map;
 import java.util.Set;
 
 import com.sun.glass.ui.Application;
+import com.sun.glass.ui.Pixels;
 import com.sun.javafx.cursor.CursorFrame;
 import com.sun.javafx.cursor.CursorType;
 
@@ -736,6 +738,58 @@ public class FXCanvas extends Canvas {
             if ((bits & DND.DROP_LINK) != 0) set.add(TransferMode.LINK);
             return set;
         }
+        
+        ImageData createImageData(Pixels pixels) {
+            if (pixels == null) return null;
+            int width = pixels.getWidth();
+            int height = pixels.getHeight();
+            int bpr = width * 4;
+            int dataSize = bpr * height;
+            byte[] buffer = new byte[dataSize];
+            byte[] alphaData = new byte[width * height];
+            if (pixels.getBytesPerComponent() == 1) {
+                // ByteBgraPre
+                ByteBuffer pixbuf = (ByteBuffer) pixels.getPixels();
+                for (int y = 0, offset = 0, alphaOffset = 0; y < height; y++) {
+                    for (int x = 0; x < width; x++, offset += 4) {
+                        byte b = pixbuf.get();
+                        byte g = pixbuf.get();
+                        byte r = pixbuf.get();
+                        byte a = pixbuf.get();
+                        // non premultiplied ?
+                        alphaData[alphaOffset++] = a;
+                        buffer[offset] = b;
+                        buffer[offset + 1] = g;
+                        buffer[offset + 2] = r;
+                        buffer[offset + 3] = 0;// alpha
+                    }
+                }
+            } else if (pixels.getBytesPerComponent() == 4) {
+                // IntArgbPre
+                IntBuffer pixbuf = (IntBuffer) pixels.getPixels();
+                for (int y = 0, offset = 0, alphaOffset = 0; y < height; y++) {
+                    for (int x = 0; x < width; x++, offset += 4) {
+                        int pixel = pixbuf.get();
+                        byte b = (byte) (pixel & 0xFF);
+                        byte g = (byte) ((pixel >> 8) & 0xFF);
+                        byte r = (byte) ((pixel >> 16) & 0xFF);
+                        byte a = (byte) ((pixel >> 24) & 0xFF);
+                        // non premultiplied ?
+                        alphaData[alphaOffset++] = a;
+                        buffer[offset] = b;
+                        buffer[offset + 1] = g;
+                        buffer[offset + 2] = r;
+                        buffer[offset + 3] = 0;// alpha
+                    }
+                }
+            } else {
+                return null;
+            }
+            PaletteData palette = new PaletteData(0xFF00, 0xFF0000, 0xFF000000);
+            ImageData imageData = new ImageData(width, height, 32, palette, 4, buffer);
+            imageData.alphaData = alphaData;
+            return imageData;
+        }
 
         // Consider using dragAction
         private DragSource createDragSource(final EmbeddedSceneDSInterface fxDragSource, TransferMode dragAction) {
@@ -757,6 +811,9 @@ public class FXCanvas extends Canvas {
                             if (mime != null) {
                                 event.doit = true;
                                 event.data = fxDragSource.getData(mime);
+                                if (event.data instanceof Pixels) {
+                                    event.data = createImageData((Pixels)event.data);
+                                }
                                 return;
                             }
                         }
