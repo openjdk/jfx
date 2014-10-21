@@ -4822,7 +4822,7 @@ public class Metadata {
         ButtonBarMetadata.getProperties().add(focusTraversable_true_PropertyMetadata);
         ButtonBarMetadata.getProperties().add(styleClass_c35_PropertyMetadata);
 
-        ButtonBaseMetadata.getProperties().add(accessibleRole_TOGGLE_BUTTON_PropertyMetadata);
+        ButtonBaseMetadata.getProperties().add(accessibleRole_RADIO_BUTTON_PropertyMetadata);
         ButtonBaseMetadata.getProperties().add(focusTraversable_true_PropertyMetadata);
         ButtonBaseMetadata.getProperties().add(onActionPropertyMetadata);
         ButtonBaseMetadata.getProperties().add(styleClass_c41_PropertyMetadata);
@@ -5844,6 +5844,7 @@ public class Metadata {
         hiddenProperties.add(new PropertyName("pressed"));
         hiddenProperties.add(new PropertyName("properties"));
         hiddenProperties.add(new PropertyName("pseudoClassStates"));
+        hiddenProperties.add(new PropertyName("redoable"));
         hiddenProperties.add(new PropertyName("root"));
         hiddenProperties.add(new PropertyName("rowFactory"));
         hiddenProperties.add(new PropertyName("scene"));
@@ -5861,6 +5862,7 @@ public class Metadata {
         hiddenProperties.add(new PropertyName("treeTableView"));
         hiddenProperties.add(new PropertyName("typeInternal"));
         hiddenProperties.add(new PropertyName("typeSelector"));
+        hiddenProperties.add(new PropertyName("undoable"));
         hiddenProperties.add(new PropertyName("userData"));
         hiddenProperties.add(new PropertyName("useSystemMenuBar"));
         hiddenProperties.add(new PropertyName("valueChanging"));
@@ -5943,9 +5945,7 @@ public class Metadata {
     //     javafx.scene.control.TableView -> items : Property items has no section/subsection assigned
 
 
-    // The following properties are uncertified:
-    //     redoable
-    //     undoable
+    // No uncertified properties have been found
 
 }
 
