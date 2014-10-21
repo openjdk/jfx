@@ -62,7 +62,10 @@ int main(int argc, char *argv[]) {
 
         if (start(argc, argv) == true) {
             result = 0;
-            stop();
+
+            if (stop != NULL) {
+                stop();
+            }
         }
 
         dlclose(library);

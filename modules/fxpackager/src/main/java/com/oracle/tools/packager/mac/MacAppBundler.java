@@ -215,15 +215,7 @@ public class MacAppBundler extends AbstractBundler {
             I18N.getString("param.signing-key-developer-id-app.description"),
             "mac.signing-key-developer-id-app",
             String.class,
-            params -> {
-                String key = "Developer ID Application: " + SIGNING_KEY_USER.fetchFrom(params);
-                try {
-                    IOUtils.exec(new ProcessBuilder("security", "find-certificate", "-c", key), VERBOSE.fetchFrom(params));
-                    return key;
-                } catch (IOException ioe) {
-                    return null;
-                }
-            },
+            params -> MacBaseInstallerBundler.findKey("Developer ID Application: " + SIGNING_KEY_USER.fetchFrom(params), VERBOSE.fetchFrom(params)),
             (s, p) -> s);
 
     public static final BundlerParamInfo<String> BUNDLE_ID_SIGNING_PREFIX = new StandardBundlerParam<>(

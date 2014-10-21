@@ -13,8 +13,8 @@ CND_BUILDDIR=build
 CND_DLIB_EXT=so
 NBTMPDIR=${CND_BUILDDIR}/${CND_CONF}/${CND_PLATFORM}/tmp-packaging
 TMPDIRNAME=tmp-packaging
-OUTPUT_PATH=/home/cbensen/src/projects/packager/JavaFXSceneBuilder2.0/launcher
-OUTPUT_BASENAME=launcher
+OUTPUT_PATH=../../../../../../../build/dev/DevTest/DevTest
+OUTPUT_BASENAME=DevTest
 PACKAGE_TOP_DIR=launcher/
 
 # Functions

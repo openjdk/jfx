@@ -140,13 +140,16 @@ public final class QuantumToolkit extends Toolkit {
     public static final boolean pulseDebug =
             AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("quantum.pulse"));
 
-    public static final boolean multithreaded =
+    private static boolean userSetMultithreaded = false;
+    private static final boolean multithreaded =
             AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
                 // If it is not specified, or it is true, then it should
                 // be true. Otherwise it should be false.
                 String value = System.getProperty("quantum.multithreaded");
-                value = value == null ? "" : value.trim();
-                final boolean result = "".equals(value) || Boolean.parseBoolean(value);
+                if (value == null) return true;
+
+                userSetMultithreaded = true;
+                final boolean result = Boolean.parseBoolean(value);
                 if (verbose) {
                     System.out.println(result ? "Multi-Threading Enabled" : "Multi-Threading Disabled");
                 }
@@ -214,6 +217,9 @@ public final class QuantumToolkit extends Toolkit {
 
     private final PerformanceTracker perfTracker = new PerformanceTrackerImpl();
 
+    // This is a workaround fix for Mac to serialize the access to Prism context when EmbeddedStage is used.
+    private static boolean hasEmbeddedStage = false;
+
     @Override public boolean init() {
         /*
          * Glass Mac, X11 need Application.setDeviceDetails to happen prior to Glass Application.Run
@@ -277,6 +283,19 @@ public final class QuantumToolkit extends Toolkit {
     // restart the toolkit if previously terminated
     private void assertToolkitRunning() {
         // not implemented
+    }
+
+    static void setHasEmbeddedStage(boolean embeddedStage) {
+        hasEmbeddedStage = embeddedStage;
+    }
+
+    // Called by PaintCollector as a workaround to RT-15195 and RT-38808.
+    boolean shouldWaitForRenderingToComplete() {
+        if (userSetMultithreaded) return !multithreaded;
+        // Work around for RT-38808, crash on Mac
+        // This is to serialize the access to Prism context when EmbeddedStage is used.
+        if ((PlatformUtil.isMac()) && hasEmbeddedStage) return true;
+        return !multithreaded; 
     }
 
     /**

@@ -40,21 +40,6 @@
 #include <sys/stat.h>
 #endif //POSIX
 
-//#ifdef LINUX
-//#include <libgen.h>
-//#endif //LINUX
-
-/*
-bool FilePath::FileExists(const TCHAR* FileName) {
-#ifdef WINDOWS
-    struct _stat buf;
-    return _tstat(FileName, &buf) == 0;
-#endif //WINDOWS
-#ifdef POSIX
-    struct stat buf;
-    return stat(FileName, &buf) == 0;
-#endif //POSIX
-}*/
 
 bool FilePath::FileExists(const TString FileName) {
     bool result = false;

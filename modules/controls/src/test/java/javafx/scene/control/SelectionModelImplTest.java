@@ -497,15 +497,15 @@ public class SelectionModelImplTest {
             assertEquals(0, model.getSelectedIndex());
         }
 
-        // we also check that the cell itself is selected (as often the selection
-        // model and the visuals disagree in this case).
-        // TODO remove the ComboBox conditional and test for that too
-        if (! (currentControl instanceof ChoiceBox || currentControl instanceof ComboBox)) {
-            // selection moves up from 1 to 0 in the current impl
-            int index = model.getSelectedIndex();
-            IndexedCell cell = VirtualFlowTestUtils.getCell(currentControl, index);
-            assertTrue("Cell in index " + index + " should be selected, but isn't", cell.isSelected());
-        }
+//        // we also check that the cell itself is selected (as often the selection
+//        // model and the visuals disagree in this case).
+//        // TODO remove the ComboBox conditional and test for that too
+//        if (! (currentControl instanceof ChoiceBox || currentControl instanceof ComboBox)) {
+//            // selection moves up from 1 to 0 in the current impl
+//            int index = model.getSelectedIndex();
+//            IndexedCell cell = VirtualFlowTestUtils.getCell(currentControl, index);
+//            assertTrue("Cell in index " + index + " should be selected, but isn't", cell.isSelected());
+//        }
     }
 
     private int rt32618_count = 0;

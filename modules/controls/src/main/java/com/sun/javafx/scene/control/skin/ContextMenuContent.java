@@ -315,10 +315,15 @@ public class ContextMenuContent extends Region {
     }
 
     public void disposeContextMenu(ContextMenu menu) {
-        if (menu != null) {
-            ContextMenuContent cmContent = (ContextMenuContent)menu.getSkin().getNode();
-            cmContent.dispose(); // recursive call to dispose submenus.
-        }
+        if (menu == null) return;
+
+        Skin<?> skin = menu.getSkin();
+        if (skin == null) return;
+
+        ContextMenuContent cmContent = (ContextMenuContent)skin.getNode();
+        if (cmContent == null) return;
+
+        cmContent.dispose(); // recursive call to dispose submenus.
     }
 
     @Override protected void layoutChildren() {

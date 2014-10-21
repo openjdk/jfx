@@ -35,6 +35,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Random;
+import java.util.function.Supplier;
 
 import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
@@ -4232,5 +4233,241 @@ public class TreeTableViewTest {
         assertEquals(0, rt_37853_commitCount);
 
         sl.dispose();
+    }
+
+
+    /**************************************************************************
+     *
+     * Tests (and related code) for RT-38892
+     *
+     *************************************************************************/
+
+    private final Supplier<TreeTableColumn<Person,String>> columnCallable = () -> {
+        TreeTableColumn<Person,String> column = new TreeTableColumn<>("Last Name");
+        column.setCellValueFactory(new TreeItemPropertyValueFactory<Person,String>("lastName"));
+        return column;
+    };
+
+    private TreeTableColumn<Person, String> test_rt_38892_firstNameCol;
+    private TreeTableColumn<Person, String> test_rt_38892_lastNameCol;
+
+    private TreeTableView<Person> init_test_rt_38892() {
+        ObservableList<TreeItem<Person>> persons = FXCollections.observableArrayList(
+                new TreeItem<>(new Person("Jacob", "Smith", "jacob.smith@example.com")),
+                new TreeItem<>(new Person("Isabella", "Johnson", "isabella.johnson@example.com")),
+                new TreeItem<>(new Person("Ethan", "Williams", "ethan.williams@example.com")),
+                new TreeItem<>(new Person("Emma", "Jones", "emma.jones@example.com")),
+                new TreeItem<>(new Person("Michael", "Brown", "michael.brown@example.com")));
+
+        TreeTableView<Person> table = new TreeTableView<>();
+        table.setShowRoot(false);
+        table.getSelectionModel().setCellSelectionEnabled(true);
+        table.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+
+        TreeItem<Person> root = new TreeItem<>(new Person("Root", null, null));
+        root.setExpanded(true);
+        root.getChildren().setAll(persons);
+        table.setRoot(root);
+
+        test_rt_38892_firstNameCol = new TreeTableColumn<>("First Name");
+        test_rt_38892_firstNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<>("firstName"));
+        test_rt_38892_lastNameCol = columnCallable.get();
+        table.getColumns().addAll(test_rt_38892_firstNameCol, test_rt_38892_lastNameCol);
+
+        return table;
+    }
+
+    @Test public void test_rt_38892_focusMovesToLeftWhenPossible() {
+        TreeTableView<Person> table = init_test_rt_38892();
+
+        TreeTableView.TreeTableViewFocusModel<Person> fm = table.getFocusModel();
+        fm.focus(0, test_rt_38892_lastNameCol);
+
+        // assert pre-conditions
+        assertEquals(0, fm.getFocusedIndex());
+        assertEquals(0, fm.getFocusedCell().getRow());
+        assertEquals(test_rt_38892_lastNameCol, fm.getFocusedCell().getTableColumn());
+        assertEquals(1, fm.getFocusedCell().getColumn());
+
+        // now remove column where focus is and replace it with a new column.
+        // We expect focus to move to the left one cell.
+        table.getColumns().remove(1);
+        table.getColumns().add(columnCallable.get());
+
+        assertEquals(0, fm.getFocusedIndex());
+        assertEquals(0, fm.getFocusedCell().getRow());
+        assertEquals(test_rt_38892_firstNameCol, fm.getFocusedCell().getTableColumn());
+        assertEquals(0, fm.getFocusedCell().getColumn());
+    }
+
+    @Test public void test_rt_38892_removeLeftMostColumn() {
+        TreeTableView<Person> table = init_test_rt_38892();
+
+        TreeTableView.TreeTableViewFocusModel<Person> fm = table.getFocusModel();
+        fm.focus(0, test_rt_38892_firstNameCol);
+
+        // assert pre-conditions
+        assertEquals(0, fm.getFocusedIndex());
+        assertEquals(0, fm.getFocusedCell().getRow());
+        assertEquals(test_rt_38892_firstNameCol, fm.getFocusedCell().getTableColumn());
+        assertEquals(0, fm.getFocusedCell().getColumn());
+
+        // now remove column where focus is and replace it with a new column.
+        // In the current (non-specified) behavior, this results in focus being
+        // shifted to a cell in the remaining column, even when we add a new column
+        // as we index based on the column, not on its index.
+        table.getColumns().remove(0);
+        TreeTableColumn<Person,String> newColumn = columnCallable.get();
+        table.getColumns().add(0, newColumn);
+
+        assertEquals(0, fm.getFocusedIndex());
+        assertEquals(0, fm.getFocusedCell().getRow());
+        assertEquals(test_rt_38892_lastNameCol, fm.getFocusedCell().getTableColumn());
+        assertEquals(1, fm.getFocusedCell().getColumn());
+    }
+
+    @Test public void test_rt_38892_removeSelectionFromCellsInRemovedColumn() {
+        TreeTableView<Person> table = init_test_rt_38892();
+
+        TreeTableView.TreeTableViewSelectionModel sm = table.getSelectionModel();
+        sm.select(0, test_rt_38892_firstNameCol);
+        sm.select(1, test_rt_38892_lastNameCol);    // this should go
+        sm.select(2, test_rt_38892_firstNameCol);
+        sm.select(3, test_rt_38892_lastNameCol);    // so should this
+        sm.select(4, test_rt_38892_firstNameCol);
+
+        assertEquals(5, sm.getSelectedCells().size());
+
+        table.getColumns().remove(1);
+
+        assertEquals(3, sm.getSelectedCells().size());
+        assertTrue(sm.isSelected(0, test_rt_38892_firstNameCol));
+        assertFalse(sm.isSelected(1, test_rt_38892_lastNameCol));
+        assertTrue(sm.isSelected(2, test_rt_38892_firstNameCol));
+        assertFalse(sm.isSelected(3, test_rt_38892_lastNameCol));
+        assertTrue(sm.isSelected(4, test_rt_38892_firstNameCol));
+    }
+
+    @Test public void test_rt_38787_remove_b() {
+        // Remove 'b', selection moves to 'a'
+        test_rt_38787("a", 0, 1);
+    }
+
+    @Test public void test_rt_38787_remove_b_c() {
+        // Remove 'b' and 'c', selection moves to 'a'
+        test_rt_38787("a", 0, 1, 2);
+    }
+
+    @Test public void test_rt_38787_remove_c_d() {
+        // Remove 'c' and 'd', selection moves to 'b'
+        test_rt_38787("b", 1, 2, 3);
+    }
+
+    @Test public void test_rt_38787_remove_a() {
+        // Remove 'a', selection moves to 'b', now in index 0
+        test_rt_38787("b", 0, 0);
+    }
+
+    private void test_rt_38787(String expectedItem, int expectedIndex, int... indicesToRemove) {
+        TreeItem<String> a, b, c, d;
+        TreeItem<String> root = new TreeItem<>("Root");
+        root.setExpanded(true);
+        root.getChildren().addAll(
+                a = new TreeItem<String>("a"),
+                b = new TreeItem<String>("b"),
+                c = new TreeItem<String>("c"),
+                d = new TreeItem<String>("d")
+        );
+
+        TreeTableView<String> stringTreeTableView = new TreeTableView<>(root);
+        stringTreeTableView.setShowRoot(false);
+
+        TreeTableColumn<String,String> column = new TreeTableColumn<>("Column");
+        column.setCellValueFactory(cdf -> new ReadOnlyStringWrapper(cdf.getValue().getValue()));
+        stringTreeTableView.getColumns().add(column);
+
+        MultipleSelectionModel<TreeItem<String>> sm = stringTreeTableView.getSelectionModel();
+        sm.select(b);
+
+        // test pre-conditions
+        assertEquals(1, sm.getSelectedIndex());
+        assertEquals(1, (int)sm.getSelectedIndices().get(0));
+        assertEquals(b, sm.getSelectedItem());
+        assertEquals(b, sm.getSelectedItems().get(0));
+        assertFalse(sm.isSelected(0));
+        assertTrue(sm.isSelected(1));
+        assertFalse(sm.isSelected(2));
+
+        // removing items
+        List<TreeItem<String>> itemsToRemove = new ArrayList<>(indicesToRemove.length);
+        for (int index : indicesToRemove) {
+            itemsToRemove.add(root.getChildren().get(index));
+        }
+        root.getChildren().removeAll(itemsToRemove);
+
+        // testing against expectations
+        assertEquals(expectedIndex, sm.getSelectedIndex());
+        assertEquals(expectedIndex, (int)sm.getSelectedIndices().get(0));
+        assertEquals(expectedItem, sm.getSelectedItem().getValue());
+        assertEquals(expectedItem, sm.getSelectedItems().get(0).getValue());
+    }
+
+    private int rt_38341_indices_count = 0;
+    private int rt_38341_items_count = 0;
+    @Test public void test_rt_38341() {
+        Callback<Integer, TreeItem<String>> callback = number -> {
+            final TreeItem<String> root = new TreeItem<>("Root " + number);
+            final TreeItem<String> child = new TreeItem<>("Child " + number);
+
+            root.getChildren().add(child);
+            return root;
+        };
+
+        final TreeItem<String> root = new TreeItem<String>();
+        root.setExpanded(true);
+        root.getChildren().addAll(callback.call(1), callback.call(2));
+
+        final TreeTableView<String> treeTableView = new TreeTableView<>(root);
+        treeTableView.setShowRoot(false);
+
+        TreeTableColumn<String,String> column = new TreeTableColumn<>("Column");
+        column.setCellValueFactory(cdf -> new ReadOnlyStringWrapper(cdf.getValue().getValue()));
+        treeTableView.getColumns().add(column);
+
+        MultipleSelectionModel<TreeItem<String>> sm = treeTableView.getSelectionModel();
+        sm.getSelectedIndices().addListener((ListChangeListener<Integer>) c -> rt_38341_indices_count++);
+        sm.getSelectedItems().addListener((ListChangeListener<TreeItem<String>>) c -> rt_38341_items_count++);
+
+        assertEquals(0, rt_38341_indices_count);
+        assertEquals(0, rt_38341_items_count);
+
+        // expand the first child of root, and select it (note: root isn't visible)
+        root.getChildren().get(0).setExpanded(true);
+        sm.select(1);
+        assertEquals(1, sm.getSelectedIndex());
+        assertEquals(1, sm.getSelectedIndices().size());
+        assertEquals(1, (int)sm.getSelectedIndices().get(0));
+        assertEquals(1, sm.getSelectedItems().size());
+        assertEquals("Child 1", sm.getSelectedItem().getValue());
+        assertEquals("Child 1", sm.getSelectedItems().get(0).getValue());
+
+        assertEquals(1, rt_38341_indices_count);
+        assertEquals(1, rt_38341_items_count);
+
+        // now delete it
+        root.getChildren().get(0).getChildren().remove(0);
+
+        // selection should move to the childs parent in index 0
+        assertEquals(0, sm.getSelectedIndex());
+        assertEquals(1, sm.getSelectedIndices().size());
+        assertEquals(0, (int)sm.getSelectedIndices().get(0));
+        assertEquals(1, sm.getSelectedItems().size());
+        assertEquals("Root 1", sm.getSelectedItem().getValue());
+        assertEquals("Root 1", sm.getSelectedItems().get(0).getValue());
+
+        // we also expect there to be an event in the selection model for
+        // selected indices and selected items
+        assertEquals(2, rt_38341_indices_count);
+        assertEquals(2, rt_38341_items_count);
     }
 }
