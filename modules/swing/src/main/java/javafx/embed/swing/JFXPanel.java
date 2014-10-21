@@ -851,6 +851,8 @@ public class JFXPanel extends JComponent {
             if (pWidth > 0 && pHeight > 0) {
                 scenePeer.setSize(pWidth, pHeight);
             }
+            scenePeer.setPixelScaleFactor(scaleFactor);
+            
             SwingUtilities.invokeLater(() -> {
                 dnd = new SwingDnD(JFXPanel.this, scenePeer);
                 dnd.addNotify();
