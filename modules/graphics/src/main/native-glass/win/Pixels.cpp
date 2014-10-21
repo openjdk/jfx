@@ -107,7 +107,7 @@ HICON Pixels::CreateIcon(JNIEnv *env, jobject jPixels, BOOL fIcon, jint x, jint 
     Pixels pixels(env, jPixels);
 
     Bitmap mask(pixels.GetWidth(), pixels.GetHeight());
-    Bitmap bitmap(pixels);
+    DIBitmap bitmap(pixels);
 
     ICONINFO iconInfo;
     memset(&iconInfo, 0, sizeof(ICONINFO));
