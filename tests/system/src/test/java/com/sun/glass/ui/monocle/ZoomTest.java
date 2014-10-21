@@ -49,12 +49,23 @@ public class ZoomTest extends ParameterizedTestBase {
         Assume.assumeTrue(Boolean.getBoolean("com.sun.javafx.gestures.zoom"));
     }
 
+    private void tapToStopInertia() throws Exception {
+        int point1X = (int) Math.round(width * 0.1);
+        int point1Y = (int) Math.round(height * 0.3);
+        Assert.assertEquals(0, device.getPressedPoints());
+        TestLog.reset();
+        int p = device.addPoint(point1X, point1Y);
+        device.sync();
+        device.removePoint(p);
+        device.sync();
+        TestLog.waitForLog("Mouse clicked: %d, %d", point1X, point1Y);
+    }
+
     /**
      * Touch down two fingers,
      * drag upper finger up in order move but not enough for zooming,
      * drag again to zoom in (make it twice bigger)
      */
-    @Ignore("RT-37942")
     @Test
     public void testZoomInSmallStepBigStep() throws Exception {
         int x1 = (int) Math.round(width / 2);
@@ -142,15 +153,14 @@ public class ZoomTest extends ParameterizedTestBase {
         TestLog.waitForLogContaining("TouchPoint: RELEASED %d, %d", x2, newy2);
         TestLog.waitForLog("Mouse released: %d, %d", x2, newy2);
         TestLog.waitForLog("Mouse clicked: %d, %d", x2, newy2);
-        TestLog.waitForLogContainingSubstrings("Zoom", "inertia value: true");
         Assert.assertEquals(1, TestLog.countLogContaining("Mouse clicked: "
                 + x2 +", " + newy2));
+        tapToStopInertia();
     }
 
     /**
      * Touch down two fingers, zoom in (make it twice bigger)
      */
-    @Ignore("RT-37942")
     @Test
     public void testZoomIn() throws Exception {
         int x1 = (int) Math.round(width / 2);
@@ -222,15 +232,14 @@ public class ZoomTest extends ParameterizedTestBase {
                 x2, newy2);
         TestLog.waitForLog("Mouse released: %d, %d", x2, newy2);
         TestLog.waitForLog("Mouse clicked: %d, %d", x2, newy2);
-        TestLog.waitForLogContainingSubstrings("Zoom", "inertia value: true");
         Assert.assertEquals(1, TestLog.countLogContaining("Mouse clicked: "
                 + x2 +", " + newy2));
+        tapToStopInertia();
     }
 
     /**
      * Touch down two fingers, zoom out (make it quarter of original size)
      */
-    @Ignore("RT-37942")
     @Test
     public void testZoomOut() throws Exception {
         int x1 = (int) Math.round(width / 2);
@@ -321,9 +330,9 @@ public class ZoomTest extends ParameterizedTestBase {
                 x2, newy2);
         TestLog.waitForLog("Mouse released: %d, %d", x2, newy2);
         TestLog.waitForLog("Mouse clicked: %d, %d", x2, newy2);
-        TestLog.waitForLogContainingSubstrings("Zoom", "inertia value: true");
         Assert.assertEquals(1, TestLog.countLogContaining("Mouse clicked: "
                 + x2 +", " + newy2));
+        tapToStopInertia();
     }
 
     /**
@@ -331,7 +340,6 @@ public class ZoomTest extends ParameterizedTestBase {
      * drag upper finger down in order move but not enough for zooming,
      * drag again to zoom out (quarter of original size)
      */
-    @Ignore("RT-37942")
     @Test
     public void testZoomOutSmallStepBigStep() throws Exception {
         int x1 = (int) Math.round(width / 2);
@@ -440,8 +448,8 @@ public class ZoomTest extends ParameterizedTestBase {
                 x2, newy2);
         TestLog.waitForLog("Mouse released: %d, %d", x2, newy2);
         TestLog.waitForLog("Mouse clicked: %d, %d", x2, newy2);
-        TestLog.waitForLogContainingSubstrings("Zoom", "inertia value: true");
         Assert.assertEquals(1, TestLog.countLogContaining("Mouse clicked: "
                 + x2 +", " + newy2));
+        tapToStopInertia();
     }
 }
