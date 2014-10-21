@@ -404,7 +404,7 @@ public class WinMsiBundlerTest {
     public void testFileAssociation()
         throws IOException, ConfigException, UnsupportedPlatformException
     {
-        testFileAssociation("Bogus File", "bogus", "application/x-vnd.test-bogus",
+        testFileAssociation("FASmoke 1", "Bogus File", "bogus", "application/x-vnd.test-bogus",
     	                    new File(appResourcesDir, "small.ico"));
     }
 
@@ -413,11 +413,11 @@ public class WinMsiBundlerTest {
         throws IOException, ConfigException, UnsupportedPlatformException
     {
         // association with no extension is still valid case (see RT-38625)
-        testFileAssociation("Bogus File", null, "application/x-vnd.test-bogus",
+        testFileAssociation("FASmoke null", "Bogus File", null, "application/x-vnd.test-bogus",
                             new File(appResourcesDir, "small.ico"));
     }
     
-    private void testFileAssociation(String description, String extensions,
+    private void testFileAssociation(String appName, String description, String extensions,
                                      String contentType, File icon)
         throws IOException, ConfigException, UnsupportedPlatformException
     {
@@ -432,7 +432,7 @@ public class WinMsiBundlerTest {
 
         bundleParams.put(BUILD_ROOT.getID(), tmpBase);
 
-        bundleParams.put(APP_NAME.getID(), "File Association Test App");
+        bundleParams.put(APP_NAME.getID(), appName);
         bundleParams.put(MAIN_CLASS.getID(), "hello.HelloRectangle");
         bundleParams.put(MAIN_JAR.getID(),
                 new RelativeFileSet(fakeMainJar.getParentFile(),
@@ -455,7 +455,7 @@ public class WinMsiBundlerTest {
         boolean valid = bundler.validate(bundleParams);
         assertTrue(valid);
 
-        File result = bundler.execute(bundleParams, new File(workDir, "FASmoke"));
+        File result = bundler.execute(bundleParams, new File(workDir, APP_FS_NAME.fetchFrom(bundleParams)));
         System.err.println("Bundle at - " + result);
         assertNotNull(result);
         assertTrue(result.exists());    	
