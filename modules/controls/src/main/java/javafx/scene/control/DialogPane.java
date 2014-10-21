@@ -838,7 +838,7 @@ public class DialogPane extends Pane {
         final double expandableContentPrefHeight = isExpanded() ? expandableContent.prefHeight(w) : 0;
         final double graphicPrefHeight = hasHeader || graphic == null ? 0 : graphic.prefHeight(w);
         final double contentAreaHeight = h - 
-                (topPadding + headerPrefHeight + expandableContentPrefHeight + buttonBarPrefHeight + bottomPadding);
+                (headerPrefHeight + expandableContentPrefHeight + buttonBarPrefHeight);
         
         double x = leftPadding;
         double y = topPadding;
