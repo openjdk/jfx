@@ -460,17 +460,12 @@ public class LinuxRpmBundler extends AbstractBundler {
                     for (String ext : extensions) {
                         mimeInfo.append("    <glob pattern='*.")
                                 .append(ext)
-                                .append("'/>");
+                                .append("'/>\n");
                     }
                 }
 
                 mimeInfo.append("  </mime-type>\n");
                 if (!addedEntry) {
-                    registrations.append("xdg-mime install /opt/")
-                            .append(data.get("APPLICATION_FS_NAME"))
-                            .append("/")
-                            .append(mimeInfoFile)
-                            .append("\n");
                     registrations.append("xdg-mime install /opt/")
                             .append(data.get("APPLICATION_FS_NAME"))
                             .append("/")
@@ -496,7 +491,7 @@ public class LinuxRpmBundler extends AbstractBundler {
                         IOUtils.copyFile(faIcon, target);
 
                         //xdg-icon-resource install --context mimetypes --size 64 awesomeapp_fa_1.png application-x.vnd-awesome
-                        registrations.append("        xdg-icon-resource install --context mimetypes --size ")
+                        registrations.append("xdg-icon-resource install --context mimetypes --size ")
                                 .append(size)
                                 .append(" /opt/")
                                 .append(data.get("APPLICATION_FS_NAME"))
@@ -507,7 +502,7 @@ public class LinuxRpmBundler extends AbstractBundler {
                                 .append("\n");
 
                         //xdg-icon-resource uninstall --context mimetypes --size 64 awesomeapp_fa_1.png application-x.vnd-awesome
-                        deregistrations.append("        xdg-icon-resource uninstall --context mimetypes --size ")
+                        deregistrations.append("xdg-icon-resource uninstall --context mimetypes --size ")
                                 .append(size)
                                 .append(" /opt/")
                                 .append(data.get("APPLICATION_FS_NAME"))

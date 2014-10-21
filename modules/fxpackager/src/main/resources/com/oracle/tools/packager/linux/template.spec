@@ -50,7 +50,7 @@ fi
 
 %preun
 SECONDARY_LAUNCHERS_REMOVE
-xdg-desktop-menu install --novendor /opt/APPLICATION_FS_NAME/APPLICATION_LAUNCHER_FILENAME.desktop
+xdg-desktop-menu uninstall --novendor /opt/APPLICATION_FS_NAME/APPLICATION_LAUNCHER_FILENAME.desktop
 FILE_ASSOCIATION_REMOVE
 if [ "SERVICE_HINT" = "true" ]; then
     if [ -x "/etc/init.d/APPLICATION_PACKAGE" ]; then

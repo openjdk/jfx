@@ -577,17 +577,12 @@ public class LinuxDebBundler extends AbstractBundler {
                     for (String ext : extensions) {
                         mimeInfo.append("    <glob pattern='*.")
                                 .append(ext)
-                                .append("'/>");
+                                .append("'/>\n");
                     }
                 }
 
                 mimeInfo.append("  </mime-type>\n");
                 if (!addedEntry) {
-                    registrations.append("        xdg-mime install /opt/")
-                            .append(data.get("APPLICATION_FS_NAME"))
-                            .append("/")
-                            .append(mimeInfoFile)
-                            .append("\n");
                     registrations.append("        xdg-mime install /opt/")
                             .append(data.get("APPLICATION_FS_NAME"))
                             .append("/")
