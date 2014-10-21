@@ -393,7 +393,6 @@ public abstract class MacBaseInstallerBundler extends AbstractBundler {
 
             IOUtils.exec(pb, verbose, false, ps);
             Pattern p = Pattern.compile("\"alis\"<blob>=\"([^\"]+)\"");
-            System.out.println(baos.toString());
             Matcher m = p.matcher(baos.toString());
             if (!m.find()) {
                 Log.info("Did not find a key matching '" + key + "'");
