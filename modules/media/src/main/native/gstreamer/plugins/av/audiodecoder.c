@@ -582,19 +582,22 @@ static gboolean audiodecoder_open_init(AudioDecoder *decoder, GstBuffer *buffer)
         return FALSE;
     }
 
+    // Limit the number of output channels to 2 because audiopanorama element accepts only up to 2 channels
+    if (decoder->num_channels > AUDIODECODER_OUT_NUM_CHANNELS)
+        decoder->num_channels = AUDIODECODER_OUT_NUM_CHANNELS;
+    
     // Source caps: PCM audio.
     caps = gst_caps_new_simple("audio/x-raw-int",
                                "rate", G_TYPE_INT,
                                decoder->sample_rate,
-                               "channels", G_TYPE_INT,
-                               AUDIODECODER_OUT_NUM_CHANNELS,
+                               "channels", G_TYPE_INT, decoder->num_channels,
                                "endianness", G_TYPE_INT, G_LITTLE_ENDIAN,
                                "width", G_TYPE_INT, AUDIODECODER_BITS_PER_SAMPLE,
                                "depth", G_TYPE_INT, AUDIODECODER_BITS_PER_SAMPLE,
                                "signed", G_TYPE_BOOLEAN, TRUE,
                                NULL);
 
-    decoder->bytes_per_sample = (AUDIODECODER_BITS_PER_SAMPLE/8)*AUDIODECODER_OUT_NUM_CHANNELS;
+    decoder->bytes_per_sample = (AUDIODECODER_BITS_PER_SAMPLE/8) * decoder->num_channels;
     decoder->initial_offset = GST_BUFFER_OFFSET_IS_VALID(buffer) ?  GST_BUFFER_OFFSET(buffer) : 0;
 
     // Set the source caps.
@@ -700,7 +703,7 @@ static GstFlowReturn audiodecoder_chain(GstPad *pad, GstBuffer *buf)
         goto _exit;
     }
     
-    int outbuf_size = av_samples_get_buffer_size(NULL, base->context->channels, base->frame->nb_samples, AV_SAMPLE_FMT_S16, 1);
+    int outbuf_size = av_samples_get_buffer_size(NULL, decoder->num_channels, base->frame->nb_samples, AV_SAMPLE_FMT_S16, 1);
     if (outbuf_size < 0) {
         goto _exit;
     }
@@ -721,28 +724,37 @@ static GstFlowReturn audiodecoder_chain(GstPad *pad, GstBuffer *buf)
     }
 
 #if DECODE_AUDIO4
-    if (base->frame->format == AV_SAMPLE_FMT_S16P)
+    if (base->frame->format == AV_SAMPLE_FMT_S16P || base->frame->format == AV_SAMPLE_FMT_FLTP)
     {
         // Reformat the output frame into single buffer.
         int16_t *buffer = (int16_t*)GST_BUFFER_DATA(outbuf);
         for (sample = 0; sample < base->frame->nb_samples; sample++)
         {
-            for (ci = 0; ci < base->context->channels && ci < AV_NUM_DATA_POINTERS; ci++)
-                buffer[2*sample + ci] = ((int16_t*)base->frame->data[ci])[sample];
+            int cc = decoder->num_channels;
+            for (ci = 0; ci < cc && ci < AUDIODECODER_OUT_NUM_CHANNELS; ci++) 
+            {
+                switch (base->frame->format) 
+                {
+                    case AV_SAMPLE_FMT_S16P:
+                        buffer[cc * sample + ci] = ((int16_t*)base->frame->data[ci])[sample];
+                        break;
+                    case AV_SAMPLE_FMT_FLTP:
+                        buffer[cc * sample + ci] = float_to_int(((float*)base->frame->data[ci])[sample]);
+                        break;
+                }
+            }
         }
     } 
-    else if (base->frame->format == AV_SAMPLE_FMT_FLTP)
-    {
-        // Reformat the output frame into single buffer and convert float [-1.0;1.0] to int16
-        int16_t *buffer = (int16_t*)GST_BUFFER_DATA(outbuf);
-        for (sample = 0; sample < base->frame->nb_samples; sample++)
-        {
-            for (ci = 0; ci < base->context->channels && ci < AV_NUM_DATA_POINTERS; ci++)
-                buffer[2*sample + ci] = float_to_int(((float*)base->frame->data[ci])[sample]);
-        }
-    }
     else if (base->frame->format == AV_SAMPLE_FMT_S16)
         memcpy(GST_BUFFER_DATA(outbuf), base->frame->data[0], GST_BUFFER_SIZE(outbuf));
+    else 
+    {
+        gst_element_message_full(GST_ELEMENT(decoder), GST_MESSAGE_ERROR, GST_RESOURCE_ERROR, GST_RESOURCE_ERROR_NO_SPACE_LEFT,
+                                 g_strdup("Unsupported decoder output format"), NULL, ("audiodecoder.c"), ("audiodecoder_chain"), 0);
+        ret = GST_FLOW_ERROR;
+        goto _exit;
+    }    
+        
 #else
     memcpy(GST_BUFFER_DATA(outbuf), decoder->samples, GST_BUFFER_SIZE(outbuf));
 #endif

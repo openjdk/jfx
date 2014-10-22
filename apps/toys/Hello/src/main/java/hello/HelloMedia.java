@@ -44,8 +44,12 @@ import javafx.scene.media.Track;
 import javafx.stage.Stage;
 
 public class HelloMedia extends Application {
-    private static final String DEFAULT_SOURCE = 
-        "http://download.oracle.com/otndocs/products/javafx/oow2010-2.flv";
+//    private static final String DEFAULT_SOURCE = "http://localhost:8000/big_buck_bunny.mp4";
+//    private static final String DEFAULT_SOURCE = "http://localhost:8000/138.mp3";
+//    private static final String DEFAULT_SOURCE = "http://localhost:8080/doorbell.mp3";
+    private static final String DEFAULT_SOURCE = "http://localhost:8080/05-Sleeping%20In%20My%20Car.mp3";
+
+    
     private static String argSource = null;
 
     @Override
