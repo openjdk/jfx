@@ -48,7 +48,7 @@ class HeavyweightDialog extends FXDialog {
      **************************************************************************/
 
     private final Dialog<?> dialog;
-    private final Stage stage;
+    final Stage stage;
     private final Scene scene;
     private final Pane sceneRoot;
     
@@ -73,7 +73,9 @@ class HeavyweightDialog extends FXDialog {
                 if (owner != null) {
                     positionStage();
                 } else {
-                    super.centerOnScreen();
+                    if (getWidth() > 0 && getHeight() > 0) {
+                        super.centerOnScreen();
+                    }
                 }
             }
         };
