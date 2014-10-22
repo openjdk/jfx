@@ -3323,7 +3323,6 @@ is being used to size a border should also be in pixels.
     -fx-background-insets: 1 0 1 0, 1 0 1 0, 3 2 3 2;
 }
 
-
 /*******************************************************************************
  *                                                                             *
  * Dialog                                                                      *
@@ -3335,62 +3334,53 @@ is being used to size a border should also be in pixels.
 }
 
 .dialog > .dialog-pane {
-    -fx-background-color: linear-gradient(#ffffff,#f3f3f4);
-    -fx-border-width: 1px;
-    -fx-border-color: #b4b4b4 transparent #b4b4b4 transparent;
-    -fx-font-size: 1em; /*12px;*/
-    -fx-text-fill: #292929;
-}
-
-.dialog > .dialog-pane > .button-bar {
-    -fx-font-size: 1em;
-}
-
-.dialog > .dialog-pane {
+    -fx-background-color: -fx-background;
     -fx-padding: 0;
 }
 
 .dialog > .dialog-pane > .expandable-content {
-    -fx-padding: 0.666667em; /* 8px */
+    -fx-padding: 0.666em; /* 8px */
 }
 
 .dialog > .dialog-pane > .button-bar > .container {
-    -fx-padding: 0.833333em; /* 10px */
+    -fx-padding: 0.833em; /* 10px */
 }
 
 .dialog > .dialog-pane > .content.label {
     -fx-alignment: top-left;
-    -fx-padding: 0.833333em 0.833333em 0 0.833333em; /* 0 10 0 10 */
+    -fx-padding: 1.333em 0.833em 0 0.833em; /* 16px 10px 0px 10px */
 }
+
 .dialog > .dialog-pane > .content {
-    -fx-padding: 0.833333em; /* 10 */
+    -fx-padding: 0.833em; /* 10 */
 }
 
 .dialog:no-header > .dialog-pane .graphic-container {
-    -fx-padding: 0.833333em 0 0 0.833333em; /* 10px 0px 0px 10px */
+    -fx-padding: 0.833em 0 0 0.833em; /* 10px 0px 0px 10px */
 }
 
 .dialog:header > .dialog-pane .header-panel {
-    -fx-padding: 0.833333em 1.166667em 0.833333em 1.166667em; /* 10px 14px 10px 14px */
-    -fx-background-insets: 0 -1 0 -1, 0 -1 1 -1;
-    -fx-background-color: #b4b4b4, linear-gradient(#e2e2e2,#e2e2e2,#eeeeee);
+    /*-fx-padding: 0.833em 1.166em 0.833em 1.166em; *//* 10px 14px 10px 14px */
+    -fx-padding: 0.833em; /* 10px */
+    -fx-background-color: -fx-box-border, linear-gradient(-fx-background, derive(-fx-background, 30%));
+    -fx-background-insets: 0, 0 0 1 0;
 }
 
 .dialog:header > .dialog-pane .header-panel .label {
-    -fx-font-size: 1.249999em; 
+    -fx-font-size: 1.167em; /* 14px */
     -fx-wrap-text: true;
 }
 
 .dialog:header > .dialog-pane .header-panel .graphic-container {
     /* This prevents the text in the header running directly into the graphic */
-    -fx-padding: 0 0 0 0.833333em; /* 0px 0px 0px 10px */
+    -fx-padding: 0 0 0 0.833em; /* 0px 0px 0px 10px */
 }
 
-.dialog > .dialog-pane > .button-bar > .container > .details-button  {
+.dialog > .dialog-pane > .button-bar > .container > .details-button {
   -fx-alignment: baseline-left;
   -fx-focus-traversable: false;
-  -fx-padding: 0.416667em; /* 5px */
-  -fx-font-size: 1em;
+  -fx-padding: 0.416em; /* 5px */
+  -fx-font-size: 0.833em; /* 10px */
 }
 
 .dialog > .dialog-pane > .button-bar > .container > .details-button.more {
