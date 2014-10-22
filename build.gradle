@@ -1763,10 +1763,6 @@ project(":systemTests") {
             exclude("**/com/sun/javafx/application/Swing*.*");
         }
         
-        // AlertTest is run indirectly, so whilst the code is needed
-        // we do not want it to be run directly as part of the 
-        // test suite.
-        exclude("**/javafx/scene/control/AlertTest.java");
         forkEvery = 1
     }
 }
