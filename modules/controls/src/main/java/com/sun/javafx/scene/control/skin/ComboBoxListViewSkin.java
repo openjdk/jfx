@@ -220,16 +220,6 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     
     /** {@inheritDoc} */
     @Override protected void handleControlPropertyChanged(String p) {
-        // Fix for RT-21207
-        if ("SHOWING".equals(p)) {
-            if (getSkinnable().isShowing()) {
-                this.listView.setManaged(true);
-            } else {
-                this.listView.setManaged(false);
-            }
-        }
-        // -- end of fix
-        
         super.handleControlPropertyChanged(p);
         
         if ("ITEMS".equals(p)) {
