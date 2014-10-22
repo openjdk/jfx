@@ -362,7 +362,12 @@ public class ImageStorage {
             try {
                 image = loader.load(imageIndex++, width, height, preserveAspectRatio, smooth);
             } catch (Exception e) {
-                throw new ImageStorageException(e.getMessage(), e);
+                // allow partially loaded animated images
+                if (imageIndex > 1) {
+                    break;
+                } else {
+                    throw new ImageStorageException(e.getMessage(), e);
+                }
             }
             if (image != null) {
                 image.setPixelScale(pixelScale);
