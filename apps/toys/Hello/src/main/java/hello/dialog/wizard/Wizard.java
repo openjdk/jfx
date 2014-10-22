@@ -220,10 +220,10 @@ public class Wizard {
      * Convenience method for setting a single Object property that can be
      * retrieved at a later date. This is functionally equivalent to calling
      * the getProperties().put(Object key, Object value) method. This can later
-     * be retrieved by calling {@link helloworld.dialog.wizard.Wizard#getUserData()}.
+     * be retrieved by calling {@link hello.dialog.wizard.Wizard#getUserData()}.
      *
      * @param value The value to be stored - this can later be retrieved by calling
-     *          {@link helloworld.dialog.wizard.Wizard#getUserData()}.
+     *          {@link hello.dialog.wizard.Wizard#getUserData()}.
      */
     public void setUserData(Object value) {
         getProperties().put(USER_DATA_KEY, value);
@@ -231,7 +231,7 @@ public class Wizard {
 
     /**
      * Returns a previously set Object property, or null if no such property
-     * has been set using the {@link helloworld.dialog.wizard.Wizard#setUserData(Object)} method.
+     * has been set using the {@link hello.dialog.wizard.Wizard#setUserData(Object)} method.
      *
      * @return The Object that was previously set, or null if no property
      *          has been set or if null was set.
