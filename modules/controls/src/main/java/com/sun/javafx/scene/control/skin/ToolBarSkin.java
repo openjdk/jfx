@@ -632,20 +632,6 @@ public class ToolBarSkin extends BehaviorSkinBase<ToolBar, ToolBarBehavior> {
                 }
             });
 
-            focusedProperty().addListener((observable, oldValue, newValue) -> {
-                if (newValue) {
-                    if (!popup.isShowing()) {
-                        popup.getItems().clear();
-                        popup.getItems().addAll(menuItems);
-                        popup.show(downArrow, Side.BOTTOM, 0, 0);
-                    }
-                } else {
-                    if (popup.isShowing()) {
-                        popup.hide();
-                    }
-                }
-            });
-
             visibleProperty().addListener((observable, oldValue, newValue) -> {
                     if (newValue) {
                         if (box.getChildren().isEmpty()) {
