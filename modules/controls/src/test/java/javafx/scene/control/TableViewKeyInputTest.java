@@ -30,6 +30,7 @@ import javafx.beans.Observable;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.scene.input.KeyCode;
@@ -3858,6 +3859,60 @@ public class TableViewKeyInputTest {
         keyboard.doKeyPress(moveUp ? KeyCode.UP : KeyCode.DOWN, KeyModifier.getShortcutKey());
         assertEquals(moveUp ? startRow-1 : startRow+1, tableView.getFocusModel().getFocusedCell().getRow());
         assertEquals(col, tableView.getFocusModel().getFocusedCell().getTableColumn());
+
+        sl.dispose();
+    }
+
+    private int rt_39088_indices_event_count = 0;
+    private int rt_39088_items_event_count = 0;
+    @Test public void test_rt_39088() {
+        ObservableList<String> itemsList = FXCollections.observableArrayList();
+        for (int i = 0; i < 4; i++) {
+            itemsList.add("Row " + i);
+        }
+
+        tableView.setItems(itemsList);
+
+        TableColumn<String, String> col = new TableColumn<>("Column");
+        col.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue()));
+
+        tableView.getColumns().setAll(col);
+
+        TableView.TableViewSelectionModel<String> sm = tableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.setCellSelectionEnabled(false);
+
+        ObservableList<Integer> indices = sm.getSelectedIndices();
+        ObservableList<String> items = sm.getSelectedItems();
+
+        indices.addListener((ListChangeListener<Integer>) change -> rt_39088_indices_event_count++);
+        items.addListener((ListChangeListener<String>) change -> rt_39088_items_event_count++);
+
+        StageLoader sl = new StageLoader(tableView);
+
+        assertEquals(0, rt_39088_indices_event_count);
+        assertEquals(0, rt_39088_items_event_count);
+        assertEquals(0, indices.size());
+        assertEquals(0, items.size());
+
+        sm.select(3);
+        assertEquals(1, rt_39088_indices_event_count);
+        assertEquals(1, rt_39088_items_event_count);
+        assertEquals(1, indices.size());
+        assertEquals(1, items.size());
+
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT);
+        assertEquals(2, rt_39088_indices_event_count);
+        assertEquals(2, rt_39088_items_event_count);
+        assertEquals(2, indices.size());
+        assertEquals(2, items.size());
+
+        // this is where the test fails...
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT);
+        assertEquals(3, rt_39088_indices_event_count);
+        assertEquals(3, rt_39088_items_event_count);
+        assertEquals(3, indices.size());
+        assertEquals(3, items.size());
 
         sl.dispose();
     }

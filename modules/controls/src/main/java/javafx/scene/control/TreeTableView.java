@@ -2691,16 +2691,16 @@ public class TreeTableView<S> extends Control {
                         for (int column = 0; column < columns.size(); column++) {
                             if (! selectedCellsMap.isSelected(row, column)) {
                                 positions.add(new TreeTablePosition<>(getTreeTableView(), row, columns.get(column)));
-                                lastIndex = row;
                             }
                         }
                     } else {
                         boolean match = selectedCellsMap.isSelected(row, -1);
                         if (!match) {
                             positions.add(new TreeTablePosition<>(getTreeTableView(), row, null));
-                            lastIndex = row;
                         }
                     }
+
+                    lastIndex = row;
                 }
 
                 // --- now we iterate through all varargs values

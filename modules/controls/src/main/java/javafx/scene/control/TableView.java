@@ -2457,9 +2457,10 @@ public class TableView<S> extends Control {
                         boolean match = selectedCellsMap.isSelected(row, -1);
                         if (!match) {
                             positions.add(new TablePosition<>(getTableView(), row, null));
-                            lastIndex = row;
                         }
                     }
+
+                    lastIndex = row;
                 }
 
                 // --- now we iterate through all varargs values

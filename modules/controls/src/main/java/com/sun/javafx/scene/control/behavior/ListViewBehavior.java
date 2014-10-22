@@ -539,7 +539,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         selectionChanging = true;
         for (int i = 0; i < indices.size(); i++) {
             int index = indices.get(i);
-            if (index < min || index >= max) {
+            if (index < min || index > max) {
                 sm.clearSelection(index);
             }
         }

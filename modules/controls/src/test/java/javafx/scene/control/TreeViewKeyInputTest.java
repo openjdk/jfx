@@ -28,7 +28,9 @@ package javafx.scene.control;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.property.ReadOnlyStringWrapper;
+import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
+import javafx.collections.ObservableList;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.scene.input.KeyCode;
@@ -2305,6 +2307,55 @@ public class TreeViewKeyInputTest {
         sm.select(95);
         keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.SHIFT);
         keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.SHIFT);
+
+        sl.dispose();
+    }
+
+    private int rt_39088_indices_event_count = 0;
+    private int rt_39088_items_event_count = 0;
+    @Test public void test_rt_39088() {
+        ObservableList<TreeItem<String>> itemsList = FXCollections.observableArrayList();
+        for (int i = 0; i < 4; i++) {
+            itemsList.add(new TreeItem<>("Row " + i));
+        }
+
+        root.setExpanded(true);
+        root.getChildren().setAll(itemsList);
+
+        MultipleSelectionModel<TreeItem<String>> sm = treeView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        ObservableList<Integer> indices = sm.getSelectedIndices();
+        ObservableList<TreeItem<String>> items = sm.getSelectedItems();
+
+        indices.addListener((ListChangeListener<Integer>) change -> rt_39088_indices_event_count++);
+        items.addListener((ListChangeListener<TreeItem<String>>) change -> rt_39088_items_event_count++);
+
+        StageLoader sl = new StageLoader(treeView);
+
+        assertEquals(0, rt_39088_indices_event_count);
+        assertEquals(0, rt_39088_items_event_count);
+        assertEquals(0, indices.size());
+        assertEquals(0, items.size());
+
+        sm.select(3);
+        assertEquals(1, rt_39088_indices_event_count);
+        assertEquals(1, rt_39088_items_event_count);
+        assertEquals(1, indices.size());
+        assertEquals(1, items.size());
+
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT);
+        assertEquals(2, rt_39088_indices_event_count);
+        assertEquals(2, rt_39088_items_event_count);
+        assertEquals(2, indices.size());
+        assertEquals(2, items.size());
+
+        // this is where the test fails...
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT);
+        assertEquals(3, rt_39088_indices_event_count);
+        assertEquals(3, rt_39088_items_event_count);
+        assertEquals(3, indices.size());
+        assertEquals(3, items.size());
 
         sl.dispose();
     }
