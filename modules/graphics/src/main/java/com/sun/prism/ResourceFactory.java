@@ -25,6 +25,7 @@
 
 package com.sun.prism;
 
+import com.sun.prism.Texture.WrapMode;
 import com.sun.prism.impl.TextureResourcePool;
 import com.sun.prism.impl.VertexBuffer;
 import com.sun.prism.shape.ShapeRep;
@@ -202,6 +203,15 @@ public interface ResourceFactory extends GraphicsResource {
      * @return true if the given format is supported; false otherwise
      */
     public boolean isFormatSupported(PixelFormat format);
+
+    /**
+     * Returns true iff the indicated {@link WrapMode wrap mode} is directly
+     * supported (i.e. not simulated) by the underlying pipeline and platform.
+     * 
+     * @param mode the desired {@code WrapMode}
+     * @return true iff the wrap mode is supported and not simulated
+     */
+    public boolean isWrapModeSupported(WrapMode mode);
 
     /**
      * Returns the maximum supported texture dimension for this device.

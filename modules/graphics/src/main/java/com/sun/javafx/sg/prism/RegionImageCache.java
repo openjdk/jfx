@@ -58,7 +58,16 @@ class RegionImageCache {
 
     RegionImageCache(final ResourceFactory factory) {
         imageMap = new HashMap<>();
-        backingStore = factory.createRTTexture(WIDTH + WIDTH, HEIGHT, WrapMode.CLAMP_TO_ZERO);
+        WrapMode mode;
+        int pad;
+        if (factory.isWrapModeSupported(WrapMode.CLAMP_TO_ZERO)) {
+            mode = WrapMode.CLAMP_TO_ZERO;
+            pad = 0;
+        } else {
+            mode = WrapMode.CLAMP_NOT_NEEDED;
+            pad = 1;
+        }
+        backingStore = factory.createRTTexture(WIDTH + WIDTH, HEIGHT, mode);
         backingStore.contentsUseful();
         backingStore.makePermanent();
         factory.setRegionTexture(backingStore);
@@ -66,8 +75,11 @@ class RegionImageCache {
         // horizontal regions and the other vertical regions. Otherwise, mixing
         // horizontal and vertical regions on the same area, would result in
         // a lot of waste texture space.
-        hPacker = new RectanglePacker(backingStore, 0, 0, WIDTH, HEIGHT, false);
-        vPacker = new RectanglePacker(backingStore, WIDTH, 0, WIDTH, HEIGHT, true);
+        // Note that requests are already padded on the right and bottom edges
+        // (and that includes the gap between the caches) so we only have to
+        // pad top and left edges if CLAMP_TO_ZERO needs to be simulated.
+        hPacker = new RectanglePacker(backingStore, pad, pad, WIDTH-pad, HEIGHT-pad, false);
+        vPacker = new RectanglePacker(backingStore, WIDTH, pad, WIDTH, HEIGHT-pad, true);
     }
 
     /**

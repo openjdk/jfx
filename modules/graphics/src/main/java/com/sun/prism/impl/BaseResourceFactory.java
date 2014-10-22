@@ -284,4 +284,35 @@ public abstract class BaseResourceFactory implements ResourceFactory {
         return superShaderAllowed;
     }
 
+    protected boolean canClampToZero() {
+        return true;
+    }
+
+    protected boolean canClampToEdge() {
+        return true;
+    }
+
+    protected boolean canRepeat() {
+        return true;
+    }
+
+    @Override
+    public boolean isWrapModeSupported(WrapMode mode) {
+        switch (mode) {
+            case CLAMP_NOT_NEEDED:
+                return true;
+            case CLAMP_TO_EDGE:
+                return canClampToEdge();
+            case REPEAT:
+                return canRepeat();
+            case CLAMP_TO_ZERO:
+                return canClampToZero();
+            case CLAMP_TO_EDGE_SIMULATED:
+            case CLAMP_TO_ZERO_SIMULATED:
+            case REPEAT_SIMULATED:
+                throw new InternalError("Cannot test support for simulated wrap modes");
+            default:
+                throw new InternalError("Unrecognized wrap mode: "+mode);
+        }
+    }
 }

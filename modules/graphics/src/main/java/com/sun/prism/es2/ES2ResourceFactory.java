@@ -101,6 +101,23 @@ public class ES2ResourceFactory extends BaseShaderFactory {
         return tex instanceof ES2Texture;
     }
 
+    @Override
+    protected boolean canClampToZero() {
+        return context.getGLContext().canClampToZero();
+    }
+
+    @Override
+    protected boolean canRepeat() {
+        // Actually, this depends on the size.  It works for pow2 textures...
+        return context.getGLContext().canCreateNonPowTwoTextures();
+    }
+
+    @Override
+    protected boolean canClampToEdge() {
+        // Actually, this depends on the size.  It works for pow2 textures...
+        return context.getGLContext().canCreateNonPowTwoTextures();
+    }
+
     public Texture createTexture(PixelFormat formatHint,
                                  Usage usageHint,
                                  WrapMode wrapMode,
