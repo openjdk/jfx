@@ -683,8 +683,33 @@ public class Cell<T> extends Labeled {
         if (selected && isEmpty()) return;
         setSelected(selected);
     }
-    
-    
+
+    /**
+     * This method is called by Cell subclasses so that certain CPU-intensive
+     * actions (specifically, calling {@link #updateItem(Object, boolean)}) are
+     * only performed when necessary (that is, they are only performed
+     * when the currently set {@link #itemProperty() item} is considered to be
+     * different than the proposed new item that could be set).
+     *
+     * <p>The default implementation of this method tests against equality, but
+     * developers are able to override this method to perform checks in other ways
+     * that are specific to their domain.</p>
+     *
+     * @param oldItem The currently-set item contained within the cell (i.e. it is
+     *                the same as what is available via {@link #getItem()}).
+     * @param newItem The item that will be set in the cell, if this method
+     *                returns true. If this method returns false, it may not be
+     *                set.
+     * @return Returns true if the new item is considered to be different than
+     *         the old item. By default this method tests against equality, but
+     *         subclasses may alter the implementation to test appropriate to
+     *         their needs.
+     */
+    protected boolean isItemChanged(T oldItem, T newItem) {
+        return oldItem != null ? !oldItem.equals(newItem) : newItem != null;
+    }
+
+
     /***************************************************************************
      *                                                                         *
      * Stylesheet Handling                                                     *
