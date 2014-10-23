@@ -59,6 +59,10 @@ public:
 
     virtual void ShowError(TString title, TString description);
     virtual void ShowError(TString description);
+    
+    virtual TCHAR* ConvertStringToFileSystemString(TCHAR* Source, bool &release);
+    virtual TCHAR* ConvertFileSystemStringToString(TCHAR* Source, bool &release);
+
     virtual void SetCurrentDirectory(TString Value);
     virtual TString GetPackageRootDirectory();
     virtual TString GetAppDataDirectory();
@@ -90,4 +94,4 @@ public:
 
 #endif //LINUXPLATFORM_H
 
-#endif // LINUX
+#endif //LINUX

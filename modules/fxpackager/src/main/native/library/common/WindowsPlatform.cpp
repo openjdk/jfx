@@ -38,7 +38,6 @@
 #include "WindowsPlatform.h"
 #include "Package.h"
 #include "Helpers.h"
-#include "PlatformString.h"
 
 #include <map>
 #include <vector>
@@ -186,8 +185,18 @@ WindowsPlatform::~WindowsPlatform(void) {
         delete FMSVCRTDLL;
 }
 
+TCHAR* WindowsPlatform::ConvertStringToFileSystemString(TCHAR* Source, bool &release) {
+    // Not Implemented.
+    return NULL;
+}
+
+TCHAR* WindowsPlatform::ConvertFileSystemStringToString(TCHAR* Source, bool &release) {
+    // Not Implemented.
+    return NULL;
+}
+
 void WindowsPlatform::SetCurrentDirectory(TString Value) {
-    _wchdir(PlatformString(Value));
+    _wchdir(Value.data());
 }
 
 TString WindowsPlatform::GetPackageRootDirectory() {
@@ -236,13 +245,13 @@ TString WindowsPlatform::GetSystemJRE() {
 }
 
 void WindowsPlatform::ShowError(TString title, TString description) {
-    MessageBox(NULL, PlatformString(description), !title.empty() ? PlatformString(title) : PlatformString(description), MB_ICONERROR | MB_OK);
+    MessageBox(NULL, description.data(), !title.empty() ? title.data() : description.data(), MB_ICONERROR | MB_OK);
 }
 
 void WindowsPlatform::ShowError(TString description) {
     TString appname = GetModuleFileName();
     appname = FilePath::ExtractFileName(appname);
-    MessageBox(NULL, PlatformString(appname), PlatformString(description), MB_ICONERROR | MB_OK);
+    MessageBox(NULL, appname.data(), description.data(), MB_ICONERROR | MB_OK);
 }
 
 TString WindowsPlatform::GetJvmPath() {
@@ -293,7 +302,7 @@ TString WindowsPlatform::GetModuleFileName() {
 }
 
 Module WindowsPlatform::LoadLibrary(TString FileName) {
-    return ::LoadLibrary(PlatformString(FileName));
+    return ::LoadLibrary(FileName.data());
 }
 
 void WindowsPlatform::FreeLibrary(Module AModule) {

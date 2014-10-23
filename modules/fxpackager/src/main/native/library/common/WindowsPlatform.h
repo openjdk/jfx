@@ -56,6 +56,9 @@ private:
 public:
     WindowsPlatform(void);
     virtual ~WindowsPlatform(void);
+    
+    virtual TCHAR* ConvertStringToFileSystemString(TCHAR* Source, bool &release);
+    virtual TCHAR* ConvertFileSystemStringToString(TCHAR* Source, bool &release);
 
     virtual void ShowError(TString title, TString description);
     virtual void ShowError(TString description);

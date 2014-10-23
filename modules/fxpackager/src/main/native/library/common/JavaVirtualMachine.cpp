@@ -243,7 +243,7 @@ public:
 #ifdef DEBUG
             printf("%s\n", PlatformString(option).c_str());
 #endif //DEBUG
-            FOptions[index].optionString = PlatformString::duplicate(PlatformString(option));
+            FOptions[index].optionString = PlatformString::duplicate(PlatformString(option).c_str());
             FOptions[index].extraInfo = iterator->extraInfo;
             index++;
         }

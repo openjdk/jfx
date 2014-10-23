@@ -69,10 +69,10 @@ public:
 
         Package& package = Package::GetInstance();
         std::map<TString, TValueIndex> defaultuserargs = package.GetDefaultJVMUserArgs();
+        TString loption = PlatformString(env, option).toString();
+        PlatformString value = defaultuserargs[loption].value;
 
         try {
-            TString loption = PlatformString(env, option).toString();
-            PlatformString value = defaultuserargs[loption].value;
             result = value.toJString(env);
         }
         catch (const JavaException&) {

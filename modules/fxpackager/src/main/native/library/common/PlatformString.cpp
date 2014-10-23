@@ -45,6 +45,50 @@
 
 #include "jni.h"
 
+//--------------------------------------------------------------------------------------------------
+
+#ifdef MAC
+StringToFileSystemString::StringToFileSystemString(const TString &value) {
+    FRelease = false;
+    PlatformString lvalue = PlatformString(value);
+    Platform& platform = Platform::GetInstance();
+    FData = platform.ConvertStringToFileSystemString(lvalue, FRelease);
+}
+
+StringToFileSystemString::~StringToFileSystemString() {
+    if (FRelease == true) {
+        delete[] FData;
+    }
+}
+
+StringToFileSystemString::operator TCHAR* () {
+    return FData;
+}
+#endif //MAC
+
+//--------------------------------------------------------------------------------------------------
+
+#ifdef MAC
+FileSystemStringToString::FileSystemStringToString(const TCHAR* value) {
+    bool release = false;
+    PlatformString lvalue = PlatformString(value);
+    Platform& platform = Platform::GetInstance();
+    TCHAR* buffer = platform.ConvertFileSystemStringToString(lvalue, release);
+    FData = buffer;
+    
+    if (buffer != NULL && release == true) {
+        delete[] buffer;
+    }
+}
+
+FileSystemStringToString::operator TString () {
+    return FData;
+}
+#endif //MAC
+
+
+//--------------------------------------------------------------------------------------------------
+
 
 void PlatformString::initialize() {
     FWideTStringToFree = NULL;
@@ -58,6 +102,16 @@ void PlatformString::CopyString(char *Destination, size_t NumberOfElements, cons
 #endif //WINDOWS
 #ifdef POSIX
     strncpy(Destination, Source, NumberOfElements);
+#endif //POSIX
+    Destination[NumberOfElements - 1] = '\0';
+}
+
+void PlatformString::CopyString(wchar_t *Destination, size_t NumberOfElements, const wchar_t *Source) {
+#ifdef WINDOWS
+    wcscpy_s(Destination, NumberOfElements, Source);
+#endif //WINDOWS
+#ifdef POSIX
+    wcsncpy(Destination, Source, NumberOfElements);
 #endif //POSIX
     Destination[NumberOfElements - 1] = '\0';
 }
@@ -331,6 +385,13 @@ PlatformString::operator std::wstring () {
 char* PlatformString::duplicate(const char* Value) {
     size_t length = strlen(Value);
     char* result = new char[length + 1];
+    PlatformString::CopyString(result, length + 1, Value);
+    return result;
+}
+
+wchar_t* PlatformString::duplicate(const wchar_t* Value) {
+    size_t length = wcslen(Value);
+    wchar_t* result = new wchar_t[length + 1];
     PlatformString::CopyString(result, length + 1, Value);
     return result;
 }

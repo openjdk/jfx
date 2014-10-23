@@ -47,27 +47,27 @@ int main(int argc, char *argv[]) {
     
     @try {
         setlocale(LC_ALL, "en_US.utf8");
+
+        NSBundle *mainBundle = [NSBundle mainBundle];
+        NSString *mainBundlePath = [mainBundle bundlePath];
+        NSString *libraryName = [mainBundlePath stringByAppendingPathComponent:@"Contents/MacOS/libpackager.dylib"];
         
-        void* library;
+        void* library = dlopen([libraryName UTF8String], RTLD_LAZY);
         
-        {
-            NSBundle *mainBundle = [NSBundle mainBundle];
-            NSString *mainBundlePath = [mainBundle bundlePath];
-            NSString *libraryName = [mainBundlePath stringByAppendingPathComponent:@"Contents/MacOS/libpackager.dylib"];
+        if (library != NULL) {
+            start_launcher start = (start_launcher)dlsym(library, "start_launcher");
+            stop_launcher stop = (stop_launcher)dlsym(library, "stop_launcher");
             
-            library = dlopen([libraryName UTF8String], RTLD_LAZY);
+            if (start(argc, argv) == true) {
+                result = 0;
+                
+                if (stop != NULL) {
+                    stop();
+                }
+            }
+     
+            dlclose(library);
         }
-        
-        start_launcher start = (start_launcher)dlsym(library, "start_launcher");
-        stop_launcher stop = (stop_launcher)dlsym(library, "stop_launcher");
-        
-        if (start(argc, argv) == true) {
-            result = 0;
-            stop();
-        }
- 
-        dlclose(library);
- 
     } @catch (NSException *exception) {
         NSLog(@"%@: %@", exception, [exception callStackSymbols]);
         result = 1;

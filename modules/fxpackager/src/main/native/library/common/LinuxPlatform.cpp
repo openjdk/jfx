@@ -36,6 +36,7 @@
 #ifdef LINUX
 
 #include "LinuxPlatform.h"
+#include "PlatformString.h"
 
 
 #include <stdlib.h>
@@ -70,6 +71,16 @@ void LinuxPlatform::ShowError(TString description) {
     TString appname = GetModuleFileName();
     appname = FilePath::ExtractFileName(appname);
     ShowError(PlatformString(appname).toPlatformString(), PlatformString(description).toPlatformString());
+}
+
+TCHAR* LinuxPlatform::ConvertStringToFileSystemString(TCHAR* Source, bool &release) {
+    // Not Implemented.
+    return NULL;
+}
+
+TCHAR* LinuxPlatform::ConvertFileSystemStringToString(TCHAR* Source, bool &release) {
+    // Not Implemented.
+    return NULL;
 }
 
 TString LinuxPlatform::GetModuleFileName() {

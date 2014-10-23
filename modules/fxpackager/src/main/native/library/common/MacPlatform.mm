@@ -41,6 +41,11 @@
 #include <sys/sysctl.h>
 #include <pthread.h>
 
+#import <Foundation/Foundation.h>
+
+#include <CoreFoundation/CoreFoundation.h>
+#include <CoreFoundation/CFString.h>
+
 #ifdef __OBJC__
 #import <Cocoa/Cocoa.h>
 #endif //__OBJC__
@@ -70,6 +75,64 @@ void MacPlatform::ShowError(TString Description) {
     TString appname = GetModuleFileName();
     appname = FilePath::ExtractFileName(appname);
     ShowError(appname, Description);
+}
+
+
+TCHAR* MacPlatform::ConvertStringToFileSystemString(TCHAR* Source, bool &release) {
+    TCHAR* result = NULL;
+    release = false;
+    CFStringRef StringRef = CFStringCreateWithCString(kCFAllocatorDefault, Source, kCFStringEncodingUTF8);
+    
+    if (StringRef != NULL) {
+        @try {
+            CFIndex length = CFStringGetMaximumSizeOfFileSystemRepresentation(StringRef);
+            result = new char[length + 1];
+            
+            if (CFStringGetFileSystemRepresentation(StringRef, result, length)) {
+                release = true;
+            }
+            else {
+                delete[] result;
+                result = NULL;
+            }
+        }
+        @finally {
+            CFRelease(StringRef);
+        }
+    }
+    
+    return result;
+}
+
+TCHAR* MacPlatform::ConvertFileSystemStringToString(TCHAR* Source, bool &release) {
+    TCHAR* result = NULL;
+    release = false;
+    CFStringRef StringRef = CFStringCreateWithFileSystemRepresentation(kCFAllocatorDefault, Source);
+    
+    if (StringRef != NULL) {
+        @try {
+            CFIndex length = CFStringGetLength(StringRef);
+            
+            if (length > 0) {
+                CFIndex maxSize = CFStringGetMaximumSizeForEncoding(length, kCFStringEncodingUTF8);
+                
+                result = new char[maxSize + 1];
+                
+                if (CFStringGetCString(StringRef, result, maxSize, kCFStringEncodingUTF8) == true) {
+                    release = true;
+                }
+                else {
+                    delete[] result;
+                    result = NULL;
+                }
+            }
+        }
+        @finally {
+            CFRelease(StringRef);
+        }
+    }
+    
+    return result;
 }
 
 void MacPlatform::SetCurrentDirectory(TString Value) {
