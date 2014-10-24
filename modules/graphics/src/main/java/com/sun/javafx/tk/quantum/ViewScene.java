@@ -98,6 +98,8 @@ class ViewScene extends GlassScene {
                 platformView.close();
                 platformView = null;
                 updateSceneState();
+                painter = null;
+                paintRenderJob = null;
                 return null;
             });
         }
