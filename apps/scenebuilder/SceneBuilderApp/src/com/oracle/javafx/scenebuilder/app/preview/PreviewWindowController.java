@@ -190,7 +190,19 @@ public final class PreviewWindowController extends AbstractWindowController {
     public void openDialog() {
         final FXOMDocument fxomDocument = editorController.getFxomDocument();
         assert fxomDocument != null;
-        final Object sceneGraphRoot = fxomDocument.getSceneGraphRoot();
+        // We clone the FXOMDocument
+        FXOMDocument clone;
+        try {
+            clone = new FXOMDocument(fxomDocument.getFxmlText(),
+                    fxomDocument.getLocation(),
+                    fxomDocument.getClassLoader(),
+                    fxomDocument.getResources());
+            clone.setSampleDataEnabled(fxomDocument.isSampleDataEnabled());
+        } catch (IOException ex) {
+            throw new RuntimeException("Bug in PreviewWindowController::openDialog", ex); //NOI18N
+        }
+
+        final Object sceneGraphRoot = clone.getSceneGraphRoot();
         assert sceneGraphRoot instanceof DialogPane;
         final DialogPane dialogPane = (DialogPane) sceneGraphRoot;
         final Dialog<? extends Object> dialog = new Dialog<>();
