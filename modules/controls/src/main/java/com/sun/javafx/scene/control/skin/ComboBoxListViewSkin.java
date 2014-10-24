@@ -26,6 +26,7 @@
 package com.sun.javafx.scene.control.skin;
 
 import com.sun.javafx.scene.control.behavior.ComboBoxListViewBehavior;
+import com.sun.javafx.scene.input.ExtendedInputMethodRequests;
 import java.util.List;
 
 import com.sun.javafx.scene.traversal.Algorithm;
@@ -40,6 +41,7 @@ import javafx.css.PseudoClass;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.event.EventTarget;
+import javafx.geometry.Point2D;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
@@ -180,6 +182,17 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             }
         });
 
+        // RT-38978: Forward input method events to TextField if editable.
+        if (comboBox.getOnInputMethodTextChanged() == null) {
+            comboBox.setOnInputMethodTextChanged(event -> {
+                if (textField != null && comboBox.isEditable() && comboBox.getScene().getFocusOwner() == comboBox) {
+                    if (textField.getOnInputMethodTextChanged() != null) {
+                        textField.getOnInputMethodTextChanged().handle(event);
+                    }
+                }
+            });
+        }
+
         updateEditable();
         
         // Fix for RT-19431 (also tested via ComboBoxListViewSkinTest)
@@ -255,6 +268,8 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                 textField.removeEventFilter(KeyEvent.ANY, textFieldKeyEventHandler);
                 textField.removeEventFilter(MouseEvent.DRAG_DETECTED, textFieldMouseEventHandler);
                 textField.removeEventFilter(DragEvent.ANY, textFieldDragEventHandler);
+
+                comboBox.setInputMethodRequests(null);
             }
         } else if (newTextField != null) {
             // add event filters
@@ -264,6 +279,37 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             // properly for the ComboBox.
             newTextField.addEventFilter(MouseEvent.DRAG_DETECTED, textFieldMouseEventHandler);
             newTextField.addEventFilter(DragEvent.ANY, textFieldDragEventHandler);
+
+            // RT-38978: Forward input method requests to TextField.
+            comboBox.setInputMethodRequests(new ExtendedInputMethodRequests() {
+                @Override public Point2D getTextLocation(int offset) {
+                    return newTextField.getInputMethodRequests().getTextLocation(offset);
+                }
+
+                @Override public int getLocationOffset(int x, int y) {
+                    return newTextField.getInputMethodRequests().getLocationOffset(x, y);
+                }
+
+                @Override public void cancelLatestCommittedText() {
+                    newTextField.getInputMethodRequests().cancelLatestCommittedText();
+                }
+
+                @Override public String getSelectedText() {
+                    return newTextField.getInputMethodRequests().getSelectedText();
+                }
+
+                @Override public int getInsertPositionOffset() {
+                    return ((ExtendedInputMethodRequests)newTextField.getInputMethodRequests()).getInsertPositionOffset();
+                }
+
+                @Override public String getCommittedText(int begin, int end) {
+                    return ((ExtendedInputMethodRequests)newTextField.getInputMethodRequests()).getCommittedText(begin, end);
+                }
+
+                @Override public int getCommittedTextLength() {
+                    return ((ExtendedInputMethodRequests)newTextField.getInputMethodRequests()).getCommittedTextLength();
+                }
+            });
         }
 
         textField = newTextField;

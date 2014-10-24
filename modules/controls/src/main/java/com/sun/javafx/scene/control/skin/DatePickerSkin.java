@@ -32,6 +32,7 @@ import java.time.YearMonth;
 import java.time.chrono.HijrahChronology;
 import java.time.format.DateTimeParseException;
 
+import com.sun.javafx.scene.input.ExtendedInputMethodRequests;
 import com.sun.javafx.scene.traversal.Algorithm;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.scene.traversal.ParentTraversalEngine;
@@ -41,6 +42,7 @@ import javafx.beans.Observable;
 import javafx.css.PseudoClass;
 import javafx.event.ActionEvent;
 import javafx.geometry.Insets;
+import javafx.geometry.Point2D;
 import javafx.scene.Node;
 import javafx.scene.control.DatePicker;
 import javafx.scene.control.TextField;
@@ -140,6 +142,17 @@ public class DatePickerSkin extends ComboBoxPopupControl<LocalDate> {
             }
         });
 
+        // RT-38978: Forward input method events to TextField.
+        if (datePicker.getOnInputMethodTextChanged() == null) {
+            datePicker.setOnInputMethodTextChanged(event -> {
+                if (datePicker.getScene().getFocusOwner() == datePicker) {
+                    if (textField.getOnInputMethodTextChanged() != null) {
+                        textField.getOnInputMethodTextChanged().handle(event);
+                    }
+                }
+            });
+        }
+
         // Fix for RT-31093 - drag events from the textfield were not surfacing
         // properly for the DatePicker.
         if (textField != null) {
@@ -152,6 +165,37 @@ public class DatePickerSkin extends ComboBoxPopupControl<LocalDate> {
                 if (event.getTarget().equals(datePicker)) return;
                 datePicker.fireEvent(event.copyFor(datePicker, datePicker));
                 event.consume();
+            });
+
+            // RT-38978: Forward input method requests to TextField.
+            datePicker.setInputMethodRequests(new ExtendedInputMethodRequests() {
+                @Override public Point2D getTextLocation(int offset) {
+                    return textField.getInputMethodRequests().getTextLocation(offset);
+                }
+
+                @Override public int getLocationOffset(int x, int y) {
+                    return textField.getInputMethodRequests().getLocationOffset(x, y);
+                }
+
+                @Override public void cancelLatestCommittedText() {
+                    textField.getInputMethodRequests().cancelLatestCommittedText();
+                }
+
+                @Override public String getSelectedText() {
+                    return textField.getInputMethodRequests().getSelectedText();
+                }
+
+                @Override public int getInsertPositionOffset() {
+                    return ((ExtendedInputMethodRequests)textField.getInputMethodRequests()).getInsertPositionOffset();
+                }
+
+                @Override public String getCommittedText(int begin, int end) {
+                    return ((ExtendedInputMethodRequests)textField.getInputMethodRequests()).getCommittedText(begin, end);
+                }
+
+                @Override public int getCommittedTextLength() {
+                    return ((ExtendedInputMethodRequests)textField.getInputMethodRequests()).getCommittedTextLength();
+                }
             });
         }
 
