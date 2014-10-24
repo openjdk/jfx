@@ -208,9 +208,11 @@ WIN.launcher = [:]
 WIN.launcher.compiler = compiler
 WIN.launcher.ccFlags = ["/nologo", "/W3", "/EHsc", "/D_WINDOWS", "/DUNICODE", "/D_UNICODE", "/DWIN32",
         "/D_LITTLE_ENDIAN", "/DWIN32_LEAN_AND_MEAN", "/I$JDK_HOME/include", "/I$JDK_HOME/include/win32",
-        "/arch:SSE", "/fp:fast", "/O2", "/MD"];
+        "/arch:SSE", "/fp:fast",
+        IS_DEBUG_NATIVE ? ["/MDd", "/Od", "/Zi", "/DDEBUG"] : ["/O2", "/MD", "/DNDEBUG"]].flatten();
 WIN.launcher.linker = linker
 WIN.launcher.linkFlags = ["/link", "/nologo", "/WX", "/SUBSYSTEM:WINDOWS", "user32.lib", "shell32.lib", "advapi32.lib"]
+if (IS_DEBUG_NATIVE) WIN.launcher.linkFlags.add("/debug");
 
 WIN.launcherlibrary = [:]
 WIN.launcherlibrary.compiler = compiler
@@ -218,9 +220,11 @@ WIN.launcherlibrary.ccFlags = ["/nologo", "/W3",
         // "/WX",
         "/EHsc", "/c", "/D_WINDOWS", "/DUNICODE", "/D_UNICODE", "/DWIN32",
         "/D_LITTLE_ENDIAN", "/DWIN32_LEAN_AND_MEAN", "/I$JDK_HOME/include", "/I$JDK_HOME/include/win32",
-        "/arch:SSE", "/fp:fast", "/O2", "/MD"];
+        "/arch:SSE", "/fp:fast",
+        IS_DEBUG_NATIVE ? ["/MDd", "/Od", "/Zi", "/DDEBUG"] : ["/O2", "/MD", "/DNDEBUG"]].flatten();
 WIN.launcherlibrary.linker = linker
 WIN.launcherlibrary.linkFlags = ["/nologo", "/WX", "/DLL", "/SUBSYSTEM:WINDOWS", "user32.lib", "shell32.lib", "advapi32.lib", "ole32.lib"]
+if (IS_DEBUG_NATIVE) WIN.launcherlibrary.linkFlags.add("/debug");
 
 WIN.iconLauncher = [:]
 WIN.iconLauncher.compiler = compiler
