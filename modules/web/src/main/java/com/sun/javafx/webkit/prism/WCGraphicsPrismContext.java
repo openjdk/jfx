@@ -48,6 +48,8 @@ import com.sun.webkit.graphics.*;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
@@ -60,6 +62,9 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
 
     private final static Logger log =
         Logger.getLogger(WCGraphicsPrismContext.class.getName());
+    private final static boolean DEBUG_DRAW_CLIP_SHAPE = Boolean.valueOf(
+            AccessController.doPrivileged((PrivilegedAction<String>) () ->
+            System.getProperty("com.sun.webkit.debugDrawClipShape", "false")));
 
     private Graphics baseGraphics;
     private BaseTransform baseTransform;
@@ -361,6 +366,8 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
             state.clip(transformClip(shape));
             if (log.isLoggable(Level.FINE)) {
                 log.log(Level.FINE, "setClip({0})", shape);
+            }
+            if (DEBUG_DRAW_CLIP_SHAPE) {
                 //Draw clip shape
                 Rectangle rc = state.getClipNoClone();
                 if (rc != null && rc.width >= 2 && rc.height >= 2) {

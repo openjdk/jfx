@@ -1229,9 +1229,13 @@ public class ListView<T> extends Control {
                             selectedItem.equals(c.getRemoved().get(0))) {
                         // Bug fix for RT-28637
                         if (getSelectedIndex() < getItemCount()) {
-                            T newSelectedItem = getModelItem(selectedIndex);
+                            final int previousRow = selectedIndex == 0 ? 0 : selectedIndex - 1;
+                            T newSelectedItem = getModelItem(previousRow);
                             if (! selectedItem.equals(newSelectedItem)) {
-                                setSelectedItem(newSelectedItem);
+                                startAtomic();
+                                clearSelection(selectedIndex);
+                                select(newSelectedItem);
+                                stopAtomic();
                             }
                         }
                     }

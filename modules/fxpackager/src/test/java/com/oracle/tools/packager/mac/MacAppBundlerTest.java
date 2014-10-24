@@ -255,13 +255,13 @@ public class MacAppBundlerTest {
     }
 
     /**
-     * See File Associaiton
+     * Set File Association
      */
     @Test
     public void testFileAssociation()
         throws IOException, ConfigException, UnsupportedPlatformException
     {
-        testFileAssociation("Bogus File", "bogus", "application/x-vnd.test-bogus",
+        testFileAssociation("FASmoke 1", "Bogus File", "bogus", "application/x-vnd.test-bogus",
                             new File(appResourcesDir, "test.icns"));        
     }
     
@@ -270,11 +270,11 @@ public class MacAppBundlerTest {
         throws IOException, ConfigException, UnsupportedPlatformException
     {
         // association with no extension is still valid case (see RT-38625)
-        testFileAssociation("Bogus File", null, "application/x-vnd.test-bogus",
+        testFileAssociation("FASmoke null", "Bogus File", null, "application/x-vnd.test-bogus",
                             new File(appResourcesDir, "test.icns"));
     }
 
-    private void testFileAssociation(String description, String extensions,
+    private void testFileAssociation(String appName, String description, String extensions,
                                      String contentType, File icon)
         throws IOException, ConfigException, UnsupportedPlatformException
     {
@@ -293,8 +293,7 @@ public class MacAppBundlerTest {
             bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
         }
 
-        bundleParams.put(APP_NAME.getID(), "File Association Test App");
-        bundleParams.put(MAC_CF_BUNDLE_NAME.getID(), "FASmoke");
+        bundleParams.put(APP_NAME.getID(), appName);
         bundleParams.put(MAIN_CLASS.getID(), "hello.HelloRectangle");
         bundleParams.put(MAIN_JAR.getID(),
                 new RelativeFileSet(fakeMainJar.getParentFile(),
@@ -316,7 +315,7 @@ public class MacAppBundlerTest {
         boolean valid = bundler.validate(bundleParams);
         assertTrue(valid);
 
-        File result = bundler.execute(bundleParams, new File(workDir, "FASmoke"));
+        File result = bundler.execute(bundleParams, new File(workDir, APP_FS_NAME.fetchFrom(bundleParams)));
         System.err.println("Bundle at - " + result);
         assertNotNull(result);
         assertTrue(result.exists());
@@ -549,33 +548,43 @@ public class MacAppBundlerTest {
     public void testJRE() throws IOException, ConfigException, UnsupportedPlatformException {
         String jre = runtimeJre == null ? "/Library/Internet Plug-Ins/JavaAppletPlugin.plugin/" : runtimeJre;
         Assume.assumeTrue(new File(jre).isDirectory());
-        
+
         try {
             Bundler bundler = new MacAppBundler();
-    
+
             Map<String, Object> bundleParams = new HashMap<>();
-    
+
             // not part of the typical setup, for testing
             bundleParams.put(BUILD_ROOT.getID(), tmpBase);
-    
+
             bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
             bundleParams.put(MAC_RUNTIME.getID(), jre);
-    
+
             boolean valid = bundler.validate(bundleParams);
             assertTrue(valid);
-    
+
             File output = bundler.execute(bundleParams, new File(workDir, "JRETest"));
             System.err.println("Bundle at - " + output);
             assertNotNull(output);
             assertTrue(output.exists());
-         
+
             // if we get here we fail
             assertTrue("ConfigException should have been thrown", false);
         } catch (ConfigException ignore) {
             // expected
         }
-
     }
+
+    /**
+     * Verify a match on too many keys doesn't blow things up
+     */
+    @Test
+    public void testTooManyKeyMatches() {
+        Assume.assumeTrue(MacBaseInstallerBundler.findKey("Developer ID Application:", true) != null);
+        assertTrue(MacBaseInstallerBundler.findKey("Developer", true) == null);
+        assertTrue(MacBaseInstallerBundler.findKey("A completely bogus key that should never realistically exist unless we are attempting to falsely break the tests", true) == null);
+    }
+    
 
 
 }

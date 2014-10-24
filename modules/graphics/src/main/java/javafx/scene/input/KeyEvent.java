@@ -106,9 +106,10 @@ public final class KeyEvent extends InputEvent {
             new EventType<KeyEvent>(KeyEvent.ANY, "KEY_RELEASED");
 
     /**
-     * This event occurs when a key has been typed (pressed and released).
-     * This event contains the {@code character} field containing the typed
-     * string, the {@code code} and {@code text} fields are not used.
+     * This event occurs when a character-generating key was typed
+     * (pressed and released).  The event contains the {@code character}
+     * field containing the typed string, the {@code code} and {@code text}
+     * fields are not used.
      */
     public static final EventType<KeyEvent> KEY_TYPED =
             new EventType<KeyEvent>(KeyEvent.ANY, "KEY_TYPED");

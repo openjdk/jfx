@@ -1762,6 +1762,7 @@ project(":systemTests") {
             exclude("**/javafx/embed/swing/*.*");
             exclude("**/com/sun/javafx/application/Swing*.*");
         }
+        
         forkEvery = 1
     }
 }

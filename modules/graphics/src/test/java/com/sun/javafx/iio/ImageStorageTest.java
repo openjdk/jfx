@@ -26,14 +26,18 @@
 package com.sun.javafx.iio;
 
 import com.sun.javafx.iio.common.ImageTools;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.*;
 import org.junit.ComparisonFailure;
 import org.junit.Test;
 
 public class ImageStorageTest {
+    private String getResourcePath(String path) {
+        return this.getClass().getResource(path).toString();
+    }
+
     @Test
     public void createImageFromNoExtensionURL() throws ImageStorageException {
-        String path = this.getClass().getResource("testpngnoextension").toString();
+        String path = getResourcePath("testpngnoextension");
         assertNotNull(ImageStorage.loadAll(path, null, 0, 0, true, 2.0f, true));
     }
 
@@ -56,5 +60,25 @@ public class ImageStorageTest {
             if (name2x.equals(names[1])) continue;
             throw new ComparisonFailure("Scaled image names don't match", names[1], name2x);
         }
+    }
+
+    @Test
+    public void testCompleteAnimation() throws ImageStorageException {
+        String path = getResourcePath("gif/animation/test3Frames.gif");
+        ImageFrame[] frames = ImageStorage.loadAll(path, null, 0, 0, true, 1.0f, true);
+        assertEquals(frames.length, 3);
+    }
+
+    @Test
+    public void testIncompleteAnimation() throws ImageStorageException {
+        String path = getResourcePath("gif/animation/test3rdFrameIncomplete.gif");
+        ImageFrame[] frames = ImageStorage.loadAll(path, null, 0, 0, true, 1.0f, true);
+        assertEquals(frames.length, 2);
+    }
+
+    @Test(expected = ImageStorageException.class)
+    public void testCorruptFirstFrame() throws ImageStorageException  {
+        String path = getResourcePath("gif/animation/testBad.gif");
+        ImageStorage.loadAll(path, null, 0, 0, false, 1.0f, false);
     }
 }

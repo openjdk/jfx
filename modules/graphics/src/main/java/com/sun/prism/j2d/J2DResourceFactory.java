@@ -145,7 +145,12 @@ class J2DResourceFactory extends BaseResourceFactory
     public boolean isCompatibleTexture(Texture tex) {
         return tex instanceof J2DTexture;
     }
-    
+
+    @Override
+    protected boolean canClampToZero() {
+        return false;
+    }
+
     public int getMaximumTextureSize() {
         return Integer.MAX_VALUE;
     }

@@ -85,7 +85,7 @@ public class TablePosition<S,T> extends TablePositionBase<TableColumn<S,T>> {
 
     private final WeakReference<TableView<S>> controlRef;
     private final WeakReference<S> itemRef;
-
+    int fixedColumnIndex = -1;
 
     /***************************************************************************
      *                                                                         *
@@ -98,6 +98,10 @@ public class TablePosition<S,T> extends TablePositionBase<TableColumn<S,T>> {
      * is -1 if the TableView or TableColumn instances are null.
      */
     @Override public int getColumn() {
+        if (fixedColumnIndex > -1) {
+            return fixedColumnIndex;
+        }
+
         TableView<S> tableView = getTableView();
         TableColumn<S,T> tableColumn = getTableColumn();
         return tableView == null || tableColumn == null ? -1 : 

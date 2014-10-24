@@ -597,7 +597,7 @@ public class TableView<S> extends Control {
             
             // Fix for RT-15194: Need to remove removed columns from the 
             // sortOrder list.
-            List<TableColumn<S,?>> toRemove = new ArrayList<TableColumn<S,?>>();
+            List<TableColumn<S,?>> toRemove = new ArrayList<>();
             while (c.next()) {
                 final List<? extends TableColumn<S, ?>> removed = c.getRemoved();
                 final List<? extends TableColumn<S, ?>> added = c.getAddedSubList();
@@ -633,8 +633,90 @@ public class TableView<S> extends Control {
             }
             
             sortOrder.removeAll(toRemove);
+
+            // Fix for RT-38892.
+            final TableViewFocusModel<S> fm = getFocusModel();
+            final TableViewSelectionModel<S> sm = getSelectionModel();
+            c.reset();
+            while (c.next()) {
+                if (! c.wasRemoved()) continue;
+
+                List<? extends TableColumn<S,?>> removed = c.getRemoved();
+
+                // Fix for focus - we simply move focus to a cell to the left
+                // of the focused cell if the focused cell was located within
+                // a column that has been removed.
+                if (fm != null) {
+                    TablePosition<S, ?> focusedCell = fm.getFocusedCell();
+                    boolean match = false;
+                    for (TableColumn<S, ?> tc : removed) {
+                        match = focusedCell != null && focusedCell.getTableColumn() == tc;
+                        if (match) {
+                            break;
+                        }
+                    }
+
+                    if (match) {
+                        int matchingColumnIndex = lastKnownColumnIndex.getOrDefault(focusedCell.getTableColumn(), 0);
+                        int newFocusColumnIndex =
+                                matchingColumnIndex == 0 ? 0 :
+                                Math.min(getVisibleLeafColumns().size() - 1, matchingColumnIndex - 1);
+                        fm.focus(focusedCell.getRow(), getVisibleLeafColumn(newFocusColumnIndex));
+                    }
+                }
+
+                // Fix for selection - we remove selection from all cells that
+                // were within the removed column.
+                if (sm != null) {
+                    List<TablePosition> selectedCells = new ArrayList<>(sm.getSelectedCells());
+                    for (TablePosition selectedCell : selectedCells) {
+                        boolean match = false;
+                        for (TableColumn<S, ?> tc : removed) {
+                            match = selectedCell != null && selectedCell.getTableColumn() == tc;
+                            if (match) break;
+                        }
+
+                        if (match) {
+                            // we can't just use the selectedCell.getTableColumn(), as that
+                            // column no longer exists and therefore its index is not correct.
+                            int matchingColumnIndex = lastKnownColumnIndex.getOrDefault(selectedCell.getTableColumn(), -1);
+                            if (matchingColumnIndex == -1) continue;
+
+                            if (sm instanceof TableViewArrayListSelectionModel) {
+                                // Also, because the table column no longer exists in the columns
+                                // list at this point, we can't just call:
+                                // sm.clearSelection(selectedCell.getRow(), selectedCell.getTableColumn());
+                                // as the tableColumn would map to an index of -1, which means that
+                                // selection will not be cleared. Instead, we have to create
+                                // a new TablePosition with a fixed column index and use that.
+                                TablePosition<S,?> fixedTablePosition =
+                                        new TablePosition<S,Object>(TableView.this,
+                                                selectedCell.getRow(),
+                                                selectedCell.getTableColumn());
+                                fixedTablePosition.fixedColumnIndex = matchingColumnIndex;
+
+                                ((TableViewArrayListSelectionModel)sm).clearSelection(fixedTablePosition);
+                            } else {
+                                sm.clearSelection(selectedCell.getRow(), selectedCell.getTableColumn());
+                            }
+                        }
+                    }
+                }
+            }
+
+
+            // update the lastKnownColumnIndex map
+            lastKnownColumnIndex.clear();
+            for (TableColumn<S,?> tc : getColumns()) {
+                int index = getVisibleLeafIndex(tc);
+                if (index > -1) {
+                    lastKnownColumnIndex.put(tc, index);
+                }
+            }
         }
     };
+
+    private final WeakHashMap<TableColumn<S,?>, Integer> lastKnownColumnIndex = new WeakHashMap<>();
     
     private final InvalidationListener columnVisibleObserver = valueModel -> {
         updateVisibleLeafColumns();
@@ -2022,9 +2104,10 @@ public class TableView<S> extends Control {
                         selectedItem.equals(c.getRemoved().get(0))) {
                     // Bug fix for RT-28637
                     if (getSelectedIndex() < getItemCount()) {
-                        S newSelectedItem = getModelItem(selectedIndex);
+                        final int previousRow = selectedIndex == 0 ? 0 : selectedIndex - 1;
+                        S newSelectedItem = getModelItem(previousRow);
                         if (! selectedItem.equals(newSelectedItem)) {
-                            setSelectedItem(newSelectedItem);
+                            clearAndSelect(previousRow);
                         }
                     }
                 }
@@ -2111,7 +2194,7 @@ public class TableView<S> extends Control {
                     for (int i = 0; i < selectedCellsMap.size(); i++) {
                         final TablePosition<S,?> old = selectedCellsMap.get(i);
                         final int oldRow = old.getRow();
-                        final int newRow = oldRow < startRow ? oldRow : oldRow + shift;
+                        final int newRow = Math.max(0, oldRow < startRow ? oldRow : oldRow + shift);
 
                         if (oldRow < startRow) {
                             continue;
@@ -2125,13 +2208,12 @@ public class TableView<S> extends Control {
                             continue;
                         }
 
-                        if (newRow < 0) continue;
                         newIndices.add(new TablePosition<>(getTableView(), newRow, old.getTableColumn()));
                     }
 
                     final int newIndicesSize = newIndices.size();
 
-                    if (c.wasRemoved() || (c.wasAdded() && newIndicesSize > 0)) {
+                    if ((c.wasRemoved() || c.wasAdded()) && newIndicesSize > 0) {
                         quietClearSelection();
 
                         // Fix for RT-22079
@@ -2375,9 +2457,10 @@ public class TableView<S> extends Control {
                         boolean match = selectedCellsMap.isSelected(row, -1);
                         if (!match) {
                             positions.add(new TablePosition<>(getTableView(), row, null));
-                            lastIndex = row;
                         }
                     }
+
+                    lastIndex = row;
                 }
 
                 // --- now we iterate through all varargs values
@@ -2519,14 +2602,24 @@ public class TableView<S> extends Control {
 
         @Override
         public void clearSelection(int row, TableColumn<S,?> column) {
-            TablePosition<S,?> tp = new TablePosition<>(getTableView(), row, column);
+            clearSelection(new TablePosition<>(getTableView(), row, column));
+        }
 
-            boolean csMode = isCellSelectionEnabled();
-            
+        private void clearSelection(TablePosition<S,?> tp) {
+            final boolean csMode = isCellSelectionEnabled();
+            final int row = tp.getRow();
+
             for (TablePosition pos : getSelectedCells()) {
-                if ((! csMode && pos.getRow() == row) || (csMode && pos.equals(tp))) {
-                    selectedCellsMap.remove(pos);
-                    return;
+                if (! csMode) {
+                    if (pos.getRow() == row) {
+                        selectedCellsMap.remove(pos);
+                        return;
+                    }
+                } else {
+                    if (pos.equals(tp)) {
+                        selectedCellsMap.remove(tp);
+                        return;
+                    }
                 }
             }
         }
@@ -2537,11 +2630,13 @@ public class TableView<S> extends Control {
                 focus(-1);
             }
 
-            quietClearSelection();
+            selectedCellsMap.clear();
         }
 
         private void quietClearSelection() {
+            startAtomic();
             selectedCellsMap.clear();
+            stopAtomic();
         }
 
         @Override public boolean isSelected(int index) {

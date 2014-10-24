@@ -33,8 +33,10 @@ import com.oracle.tools.packager.ConfigException;
 import com.oracle.tools.packager.IOUtils;
 import com.oracle.tools.packager.UnsupportedPlatformException;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermission;
@@ -49,6 +51,8 @@ import java.util.ResourceBundle;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static com.oracle.tools.packager.StandardBundlerParam.*;
 
@@ -197,7 +201,7 @@ public abstract class MacBaseInstallerBundler extends AbstractBundler {
         return APP_BUNDLER.fetchFrom(p).doBundle(p, appImageRoot, true);
     }
 
-    protected File prepareDaemonBundle(Map<String, ? super Object> p) throws ConfigException {
+    protected File prepareDaemonBundle(Map<String, ? super Object> p) {
         File daemonImageRoot = DAEMON_IMAGE_BUILD_ROOT.fetchFrom(p);
         return DAEMON_BUNDLER.fetchFrom(p).doBundle(p, daemonImageRoot, true);
     }
@@ -230,7 +234,7 @@ public abstract class MacBaseInstallerBundler extends AbstractBundler {
                         args.add("--entitlements");
                         args.add(entitlementsFile); // entitlements
                     }
-                    args.add("-vvvv"); // super verbose output
+                    args.add("-vvvv"); // super verbo1se output
                     args.add(p.toString());
 
 
@@ -377,5 +381,34 @@ public abstract class MacBaseInstallerBundler extends AbstractBundler {
     @Override
     public String getBundleType() {
         return "INSTALLER";
+    }
+    
+    public static String findKey(String key, boolean verbose) {
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream(); PrintStream ps = new PrintStream(baos)) {
+            ProcessBuilder pb = new ProcessBuilder(
+                    "security", "find-certificate", 
+                    "-c", key, // look for key in common name
+                    "-a" // return all matches, not just the first
+            );
+
+            IOUtils.exec(pb, verbose, false, ps);
+            Pattern p = Pattern.compile("\"alis\"<blob>=\"([^\"]+)\"");
+            Matcher m = p.matcher(baos.toString());
+            if (!m.find()) {
+                Log.info("Did not find a key matching '" + key + "'");
+                return null;
+            }
+            String matchedKey = m.group(1);
+            if (m.find()) {
+                Log.info("Found more than one key matching '"  + key + "'");
+                return null;
+            }
+            Log.debug("Using key '" + matchedKey + "'");
+            return matchedKey;
+        } catch (IOException ioe) {
+            ioe.printStackTrace();
+            Log.verbose(ioe);
+            return null;
+        }
     }
 }

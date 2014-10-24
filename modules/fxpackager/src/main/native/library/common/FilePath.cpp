@@ -40,27 +40,12 @@
 #include <sys/stat.h>
 #endif //POSIX
 
-//#ifdef LINUX
-//#include <libgen.h>
-//#endif //LINUX
-
-/*
-bool FilePath::FileExists(const TCHAR* FileName) {
-#ifdef WINDOWS
-    struct _stat buf;
-    return _tstat(FileName, &buf) == 0;
-#endif //WINDOWS
-#ifdef POSIX
-    struct stat buf;
-    return stat(FileName, &buf) == 0;
-#endif //POSIX
-}*/
 
 bool FilePath::FileExists(const TString FileName) {
     bool result = false;
 #ifdef WINDOWS
     WIN32_FIND_DATA FindFileData;
-    HANDLE handle = FindFirstFile(FileName.c_str(), &FindFileData);
+    HANDLE handle = FindFirstFile(FileName.data(), &FindFileData);
 
     if (handle != INVALID_HANDLE_VALUE) {
         if (FILE_ATTRIBUTE_DIRECTORY & FindFileData.dwFileAttributes) {
@@ -76,7 +61,7 @@ bool FilePath::FileExists(const TString FileName) {
 #ifdef POSIX
     struct stat buf;
 
-    if ((stat(PlatformString(FileName), &buf) == 0) && (S_ISREG(buf.st_mode) != 0)) {
+    if ((stat(StringToFileSystemString(FileName), &buf) == 0) && (S_ISREG(buf.st_mode) != 0)) {
         result = true;
     }
 #endif //POSIX
@@ -87,7 +72,7 @@ bool FilePath::DirectoryExists(const TString DirectoryName) {
     bool result = false;
 #ifdef WINDOWS
     WIN32_FIND_DATA FindFileData;
-    HANDLE handle = FindFirstFile(DirectoryName.c_str(), &FindFileData);
+    HANDLE handle = FindFirstFile(DirectoryName.data(), &FindFileData);
 
     if (handle != INVALID_HANDLE_VALUE) {
         if (FILE_ATTRIBUTE_DIRECTORY & FindFileData.dwFileAttributes) {
@@ -100,7 +85,7 @@ bool FilePath::DirectoryExists(const TString DirectoryName) {
 #ifdef POSIX
     struct stat buf;
 
-    if ((stat(PlatformString(DirectoryName), &buf) == 0) && (S_ISDIR(buf.st_mode) != 0)) {
+    if ((stat(StringToFileSystemString(DirectoryName), &buf) == 0) && (S_ISDIR(buf.st_mode) != 0)) {
         result = true;
     }
 #endif //POSIX
@@ -138,7 +123,7 @@ TString FilePath::ExtractFilePath(TString Path) {
     return result;
 #endif //WINDOWS
 #ifdef POSIX
-    return dirname(PlatformString(Path));
+    return dirname(StringToFileSystemString(Path));
 #endif //POSIX
 }
 
@@ -164,7 +149,7 @@ TString FilePath::ExtractFileName(TString Path) {
     return result;
 #endif // WINDOWS
 #ifdef POSIX
-    return basename(PlatformString(Path));
+    return basename(StringToFileSystemString(Path));
 #endif //POSIX
 }
 
@@ -211,11 +196,11 @@ bool FilePath::CreateDirectory(TString Path) {
         lpath = *iterator;
 
 #ifdef WINDOWS
-        if (_wmkdir(PlatformString(lpath)) == 0) {
+        if (_wmkdir(lpath.data()) == 0) {
 #endif // WINDOWS
 #ifdef POSIX
         //TODO Is this the correct permissions?
-        if (mkdir(PlatformString(lpath), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) == 0) {
+        if (mkdir(StringToFileSystemString(lpath), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) == 0) {
 #endif //POSIX
             result = true;
         }

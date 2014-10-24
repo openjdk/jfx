@@ -108,6 +108,7 @@ extern "C" {
 
         if (javavm.StartJVM() == true) {
             result = true;
+            javavm.ShutdownJVM();
         }
         else {
             platform.ShowError(_T("Failed to launch JVM\n"));

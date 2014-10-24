@@ -504,6 +504,10 @@ public class Metadata {
             new PropertyName("accelerator");
     private final PropertyName accessibleHelpName = 
             new PropertyName("accessibleHelp");
+    private final PropertyName accessibleRoleName = 
+            new PropertyName("accessibleRole");
+    private final PropertyName accessibleRoleDescriptionName = 
+            new PropertyName("accessibleRoleDescription");
     private final PropertyName accessibleTextName = 
             new PropertyName("accessibleText");
     private final PropertyName alignmentName = 
@@ -534,6 +538,8 @@ public class Metadata {
             new PropertyName("autoRanging");
     private final PropertyName autoSizeChildrenName = 
             new PropertyName("autoSizeChildren");
+    private final PropertyName axisSortingPolicyName = 
+            new PropertyName("axisSortingPolicy");
     private final PropertyName barGapName = 
             new PropertyName("barGap");
     private final PropertyName baselineOffsetName = 
@@ -1004,10 +1010,6 @@ public class Metadata {
             new PropertyName("resizable");
     private final PropertyName rightName = 
             new PropertyName("right");
-    private final PropertyName roleName = 
-            new PropertyName("role");
-    private final PropertyName roleDescriptionName = 
-            new PropertyName("roleDescription");
     private final PropertyName rotateName = 
             new PropertyName("rotate");
     private final PropertyName rotateGraphicName = 
@@ -1304,6 +1306,222 @@ public class Metadata {
                 true, /* readWrite */
                 "", /* defaultValue */
                 new InspectorPath("Properties", "Accessibility", 1));
+    private final ValuePropertyMetadata accessibleRole_NODE_PropertyMetadata =
+            new EnumerationPropertyMetadata(
+                accessibleRoleName,
+                javafx.scene.AccessibleRole.class,
+                true, /* readWrite */
+                javafx.scene.AccessibleRole.NODE, /* defaultValue */
+                new InspectorPath("Properties", "Accessibility", 2));
+    private final ValuePropertyMetadata accessibleRole_BUTTON_PropertyMetadata =
+            new EnumerationPropertyMetadata(
+                accessibleRoleName,
+                javafx.scene.AccessibleRole.class,
+                true, /* readWrite */
+                javafx.scene.AccessibleRole.BUTTON, /* defaultValue */
+                new InspectorPath("Properties", "Accessibility", 2));
+    private final ValuePropertyMetadata accessibleRole_TOGGLE_BUTTON_PropertyMetadata =
+            new EnumerationPropertyMetadata(
+                accessibleRoleName,
+                javafx.scene.AccessibleRole.class,
+                true, /* readWrite */
+                javafx.scene.AccessibleRole.TOGGLE_BUTTON, /* defaultValue */
+                new InspectorPath("Properties", "Accessibility", 2));
+    private final ValuePropertyMetadata accessibleRole_CHECK_BOX_PropertyMetadata =
+            new EnumerationPropertyMetadata(
+                accessibleRoleName,
+                javafx.scene.AccessibleRole.class,
+                true, /* readWrite */
+                javafx.scene.AccessibleRole.CHECK_BOX, /* defaultValue */
+                new InspectorPath("Properties", "Accessibility", 2));
+    private final ValuePropertyMetadata accessibleRole_COMBO_BOX_PropertyMetadata =
+            new EnumerationPropertyMetadata(
+                accessibleRoleName,
+                javafx.scene.AccessibleRole.class,
+                true, /* readWrite */
+                javafx.scene.AccessibleRole.COMBO_BOX, /* defaultValue */
+                new InspectorPath("Properties", "Accessibility", 2));
+    private final ValuePropertyMetadata accessibleRole_DATE_PICKER_PropertyMetadata =
+            new EnumerationPropertyMetadata(
+                accessibleRoleName,
+                javafx.scene.AccessibleRole.class,
+                true, /* readWrite */
+                javafx.scene.AccessibleRole.DATE_PICKER, /* defaultValue */
+                new InspectorPath("Properties", "Accessibility", 2));
+    private final ValuePropertyMetadata accessibleRole_HYPERLINK_PropertyMetadata =
+            new EnumerationPropertyMetadata(
+                accessibleRoleName,
+                javafx.scene.AccessibleRole.class,
+                true, /* readWrite */
+                javafx.scene.AccessibleRole.HYPERLINK, /* defaultValue */
+                new InspectorPath("Properties", "Accessibility", 2));
+    private final ValuePropertyMetadata accessibleRole_IMAGE_VIEW_PropertyMetadata =
+            new EnumerationPropertyMetadata(
+                accessibleRoleName,
+                javafx.scene.AccessibleRole.class,
+                true, /* readWrite */
+                javafx.scene.AccessibleRole.IMAGE_VIEW, /* defaultValue */
+                new InspectorPath("Properties", "Accessibility", 2));
+    private final ValuePropertyMetadata accessibleRole_TEXT_PropertyMetadata =
+            new EnumerationPropertyMetadata(
+                accessibleRoleName,
+                javafx.scene.AccessibleRole.class,
+                true, /* readWrite */
+                javafx.scene.AccessibleRole.TEXT, /* defaultValue */
+                new InspectorPath("Properties", "Accessibility", 2));
+    private final ValuePropertyMetadata accessibleRole_LIST_VIEW_PropertyMetadata =
+            new EnumerationPropertyMetadata(
+                accessibleRoleName,
+                javafx.scene.AccessibleRole.class,
+                true, /* readWrite */
+                javafx.scene.AccessibleRole.LIST_VIEW, /* defaultValue */
+                new InspectorPath("Properties", "Accessibility", 2));
+    private final ValuePropertyMetadata accessibleRole_MENU_BAR_PropertyMetadata =
+            new EnumerationPropertyMetadata(
+                accessibleRoleName,
+                javafx.scene.AccessibleRole.class,
+                true, /* readWrite */
+                javafx.scene.AccessibleRole.MENU_BAR, /* defaultValue */
+                new InspectorPath("Properties", "Accessibility", 2));
+    private final ValuePropertyMetadata accessibleRole_MENU_BUTTON_PropertyMetadata =
+            new EnumerationPropertyMetadata(
+                accessibleRoleName,
+                javafx.scene.AccessibleRole.class,
+                true, /* readWrite */
+                javafx.scene.AccessibleRole.MENU_BUTTON, /* defaultValue */
+                new InspectorPath("Properties", "Accessibility", 2));
+    private final ValuePropertyMetadata accessibleRole_PARENT_PropertyMetadata =
+            new EnumerationPropertyMetadata(
+                accessibleRoleName,
+                javafx.scene.AccessibleRole.class,
+                true, /* readWrite */
+                javafx.scene.AccessibleRole.PARENT, /* defaultValue */
+                new InspectorPath("Properties", "Accessibility", 2));
+    private final ValuePropertyMetadata accessibleRole_PAGINATION_PropertyMetadata =
+            new EnumerationPropertyMetadata(
+                accessibleRoleName,
+                javafx.scene.AccessibleRole.class,
+                true, /* readWrite */
+                javafx.scene.AccessibleRole.PAGINATION, /* defaultValue */
+                new InspectorPath("Properties", "Accessibility", 2));
+    private final ValuePropertyMetadata accessibleRole_PASSWORD_FIELD_PropertyMetadata =
+            new EnumerationPropertyMetadata(
+                accessibleRoleName,
+                javafx.scene.AccessibleRole.class,
+                true, /* readWrite */
+                javafx.scene.AccessibleRole.PASSWORD_FIELD, /* defaultValue */
+                new InspectorPath("Properties", "Accessibility", 2));
+    private final ValuePropertyMetadata accessibleRole_PROGRESS_INDICATOR_PropertyMetadata =
+            new EnumerationPropertyMetadata(
+                accessibleRoleName,
+                javafx.scene.AccessibleRole.class,
+                true, /* readWrite */
+                javafx.scene.AccessibleRole.PROGRESS_INDICATOR, /* defaultValue */
+                new InspectorPath("Properties", "Accessibility", 2));
+    private final ValuePropertyMetadata accessibleRole_RADIO_BUTTON_PropertyMetadata =
+            new EnumerationPropertyMetadata(
+                accessibleRoleName,
+                javafx.scene.AccessibleRole.class,
+                true, /* readWrite */
+                javafx.scene.AccessibleRole.RADIO_BUTTON, /* defaultValue */
+                new InspectorPath("Properties", "Accessibility", 2));
+    private final ValuePropertyMetadata accessibleRole_SCROLL_BAR_PropertyMetadata =
+            new EnumerationPropertyMetadata(
+                accessibleRoleName,
+                javafx.scene.AccessibleRole.class,
+                true, /* readWrite */
+                javafx.scene.AccessibleRole.SCROLL_BAR, /* defaultValue */
+                new InspectorPath("Properties", "Accessibility", 2));
+    private final ValuePropertyMetadata accessibleRole_SCROLL_PANE_PropertyMetadata =
+            new EnumerationPropertyMetadata(
+                accessibleRoleName,
+                javafx.scene.AccessibleRole.class,
+                true, /* readWrite */
+                javafx.scene.AccessibleRole.SCROLL_PANE, /* defaultValue */
+                new InspectorPath("Properties", "Accessibility", 2));
+    private final ValuePropertyMetadata accessibleRole_SLIDER_PropertyMetadata =
+            new EnumerationPropertyMetadata(
+                accessibleRoleName,
+                javafx.scene.AccessibleRole.class,
+                true, /* readWrite */
+                javafx.scene.AccessibleRole.SLIDER, /* defaultValue */
+                new InspectorPath("Properties", "Accessibility", 2));
+    private final ValuePropertyMetadata accessibleRole_SPINNER_PropertyMetadata =
+            new EnumerationPropertyMetadata(
+                accessibleRoleName,
+                javafx.scene.AccessibleRole.class,
+                true, /* readWrite */
+                javafx.scene.AccessibleRole.SPINNER, /* defaultValue */
+                new InspectorPath("Properties", "Accessibility", 2));
+    private final ValuePropertyMetadata accessibleRole_SPLIT_MENU_BUTTON_PropertyMetadata =
+            new EnumerationPropertyMetadata(
+                accessibleRoleName,
+                javafx.scene.AccessibleRole.class,
+                true, /* readWrite */
+                javafx.scene.AccessibleRole.SPLIT_MENU_BUTTON, /* defaultValue */
+                new InspectorPath("Properties", "Accessibility", 2));
+    private final ValuePropertyMetadata accessibleRole_TAB_PANE_PropertyMetadata =
+            new EnumerationPropertyMetadata(
+                accessibleRoleName,
+                javafx.scene.AccessibleRole.class,
+                true, /* readWrite */
+                javafx.scene.AccessibleRole.TAB_PANE, /* defaultValue */
+                new InspectorPath("Properties", "Accessibility", 2));
+    private final ValuePropertyMetadata accessibleRole_TABLE_VIEW_PropertyMetadata =
+            new EnumerationPropertyMetadata(
+                accessibleRoleName,
+                javafx.scene.AccessibleRole.class,
+                true, /* readWrite */
+                javafx.scene.AccessibleRole.TABLE_VIEW, /* defaultValue */
+                new InspectorPath("Properties", "Accessibility", 2));
+    private final ValuePropertyMetadata accessibleRole_TEXT_AREA_PropertyMetadata =
+            new EnumerationPropertyMetadata(
+                accessibleRoleName,
+                javafx.scene.AccessibleRole.class,
+                true, /* readWrite */
+                javafx.scene.AccessibleRole.TEXT_AREA, /* defaultValue */
+                new InspectorPath("Properties", "Accessibility", 2));
+    private final ValuePropertyMetadata accessibleRole_TEXT_FIELD_PropertyMetadata =
+            new EnumerationPropertyMetadata(
+                accessibleRoleName,
+                javafx.scene.AccessibleRole.class,
+                true, /* readWrite */
+                javafx.scene.AccessibleRole.TEXT_FIELD, /* defaultValue */
+                new InspectorPath("Properties", "Accessibility", 2));
+    private final ValuePropertyMetadata accessibleRole_TITLED_PANE_PropertyMetadata =
+            new EnumerationPropertyMetadata(
+                accessibleRoleName,
+                javafx.scene.AccessibleRole.class,
+                true, /* readWrite */
+                javafx.scene.AccessibleRole.TITLED_PANE, /* defaultValue */
+                new InspectorPath("Properties", "Accessibility", 2));
+    private final ValuePropertyMetadata accessibleRole_TOOL_BAR_PropertyMetadata =
+            new EnumerationPropertyMetadata(
+                accessibleRoleName,
+                javafx.scene.AccessibleRole.class,
+                true, /* readWrite */
+                javafx.scene.AccessibleRole.TOOL_BAR, /* defaultValue */
+                new InspectorPath("Properties", "Accessibility", 2));
+    private final ValuePropertyMetadata accessibleRole_TREE_TABLE_VIEW_PropertyMetadata =
+            new EnumerationPropertyMetadata(
+                accessibleRoleName,
+                javafx.scene.AccessibleRole.class,
+                true, /* readWrite */
+                javafx.scene.AccessibleRole.TREE_TABLE_VIEW, /* defaultValue */
+                new InspectorPath("Properties", "Accessibility", 2));
+    private final ValuePropertyMetadata accessibleRole_TREE_VIEW_PropertyMetadata =
+            new EnumerationPropertyMetadata(
+                accessibleRoleName,
+                javafx.scene.AccessibleRole.class,
+                true, /* readWrite */
+                javafx.scene.AccessibleRole.TREE_VIEW, /* defaultValue */
+                new InspectorPath("Properties", "Accessibility", 2));
+    private final ValuePropertyMetadata accessibleRoleDescriptionPropertyMetadata =
+            new StringPropertyMetadata(
+                accessibleRoleDescriptionName,
+                true, /* readWrite */
+                "", /* defaultValue */
+                new InspectorPath("Properties", "Accessibility", 3));
     private final ValuePropertyMetadata accessibleTextPropertyMetadata =
             new StringPropertyMetadata(
                 accessibleTextName,
@@ -1420,6 +1638,13 @@ public class Metadata {
                 true, /* readWrite */
                 true, /* defaultValue */
                 new InspectorPath("Layout", "Extras", 0));
+    private final ValuePropertyMetadata axisSortingPolicyPropertyMetadata =
+            new EnumerationPropertyMetadata(
+                axisSortingPolicyName,
+                javafx.scene.chart.LineChart.SortingPolicy.class,
+                true, /* readWrite */
+                javafx.scene.chart.LineChart.SortingPolicy.X_AXIS, /* defaultValue */
+                new InspectorPath("Properties", "Specific", 130));
     private final ValuePropertyMetadata barGapPropertyMetadata =
             new DoublePropertyMetadata(
                 barGapName,
@@ -3118,222 +3343,6 @@ public class Metadata {
                 rightName,
                 NodeMetadata,
                 false); /* collection */
-    private final ValuePropertyMetadata role_NODE_PropertyMetadata =
-            new EnumerationPropertyMetadata(
-                roleName,
-                javafx.scene.AccessibleRole.class,
-                true, /* readWrite */
-                javafx.scene.AccessibleRole.NODE, /* defaultValue */
-                new InspectorPath("Properties", "Accessibility", 2));
-    private final ValuePropertyMetadata role_BUTTON_PropertyMetadata =
-            new EnumerationPropertyMetadata(
-                roleName,
-                javafx.scene.AccessibleRole.class,
-                true, /* readWrite */
-                javafx.scene.AccessibleRole.BUTTON, /* defaultValue */
-                new InspectorPath("Properties", "Accessibility", 2));
-    private final ValuePropertyMetadata role_CHECK_BOX_PropertyMetadata =
-            new EnumerationPropertyMetadata(
-                roleName,
-                javafx.scene.AccessibleRole.class,
-                true, /* readWrite */
-                javafx.scene.AccessibleRole.CHECK_BOX, /* defaultValue */
-                new InspectorPath("Properties", "Accessibility", 2));
-    private final ValuePropertyMetadata role_COMBO_BOX_PropertyMetadata =
-            new EnumerationPropertyMetadata(
-                roleName,
-                javafx.scene.AccessibleRole.class,
-                true, /* readWrite */
-                javafx.scene.AccessibleRole.COMBO_BOX, /* defaultValue */
-                new InspectorPath("Properties", "Accessibility", 2));
-    private final ValuePropertyMetadata role_DATE_PICKER_PropertyMetadata =
-            new EnumerationPropertyMetadata(
-                roleName,
-                javafx.scene.AccessibleRole.class,
-                true, /* readWrite */
-                javafx.scene.AccessibleRole.DATE_PICKER, /* defaultValue */
-                new InspectorPath("Properties", "Accessibility", 2));
-    private final ValuePropertyMetadata role_HYPERLINK_PropertyMetadata =
-            new EnumerationPropertyMetadata(
-                roleName,
-                javafx.scene.AccessibleRole.class,
-                true, /* readWrite */
-                javafx.scene.AccessibleRole.HYPERLINK, /* defaultValue */
-                new InspectorPath("Properties", "Accessibility", 2));
-    private final ValuePropertyMetadata role_IMAGE_VIEW_PropertyMetadata =
-            new EnumerationPropertyMetadata(
-                roleName,
-                javafx.scene.AccessibleRole.class,
-                true, /* readWrite */
-                javafx.scene.AccessibleRole.IMAGE_VIEW, /* defaultValue */
-                new InspectorPath("Properties", "Accessibility", 2));
-    private final ValuePropertyMetadata role_TEXT_PropertyMetadata =
-            new EnumerationPropertyMetadata(
-                roleName,
-                javafx.scene.AccessibleRole.class,
-                true, /* readWrite */
-                javafx.scene.AccessibleRole.TEXT, /* defaultValue */
-                new InspectorPath("Properties", "Accessibility", 2));
-    private final ValuePropertyMetadata role_LIST_VIEW_PropertyMetadata =
-            new EnumerationPropertyMetadata(
-                roleName,
-                javafx.scene.AccessibleRole.class,
-                true, /* readWrite */
-                javafx.scene.AccessibleRole.LIST_VIEW, /* defaultValue */
-                new InspectorPath("Properties", "Accessibility", 2));
-    private final ValuePropertyMetadata role_MENU_BAR_PropertyMetadata =
-            new EnumerationPropertyMetadata(
-                roleName,
-                javafx.scene.AccessibleRole.class,
-                true, /* readWrite */
-                javafx.scene.AccessibleRole.MENU_BAR, /* defaultValue */
-                new InspectorPath("Properties", "Accessibility", 2));
-    private final ValuePropertyMetadata role_MENU_BUTTON_PropertyMetadata =
-            new EnumerationPropertyMetadata(
-                roleName,
-                javafx.scene.AccessibleRole.class,
-                true, /* readWrite */
-                javafx.scene.AccessibleRole.MENU_BUTTON, /* defaultValue */
-                new InspectorPath("Properties", "Accessibility", 2));
-    private final ValuePropertyMetadata role_PARENT_PropertyMetadata =
-            new EnumerationPropertyMetadata(
-                roleName,
-                javafx.scene.AccessibleRole.class,
-                true, /* readWrite */
-                javafx.scene.AccessibleRole.PARENT, /* defaultValue */
-                new InspectorPath("Properties", "Accessibility", 2));
-    private final ValuePropertyMetadata role_PAGINATION_PropertyMetadata =
-            new EnumerationPropertyMetadata(
-                roleName,
-                javafx.scene.AccessibleRole.class,
-                true, /* readWrite */
-                javafx.scene.AccessibleRole.PAGINATION, /* defaultValue */
-                new InspectorPath("Properties", "Accessibility", 2));
-    private final ValuePropertyMetadata role_PASSWORD_FIELD_PropertyMetadata =
-            new EnumerationPropertyMetadata(
-                roleName,
-                javafx.scene.AccessibleRole.class,
-                true, /* readWrite */
-                javafx.scene.AccessibleRole.PASSWORD_FIELD, /* defaultValue */
-                new InspectorPath("Properties", "Accessibility", 2));
-    private final ValuePropertyMetadata role_PROGRESS_INDICATOR_PropertyMetadata =
-            new EnumerationPropertyMetadata(
-                roleName,
-                javafx.scene.AccessibleRole.class,
-                true, /* readWrite */
-                javafx.scene.AccessibleRole.PROGRESS_INDICATOR, /* defaultValue */
-                new InspectorPath("Properties", "Accessibility", 2));
-    private final ValuePropertyMetadata role_RADIO_BUTTON_PropertyMetadata =
-            new EnumerationPropertyMetadata(
-                roleName,
-                javafx.scene.AccessibleRole.class,
-                true, /* readWrite */
-                javafx.scene.AccessibleRole.RADIO_BUTTON, /* defaultValue */
-                new InspectorPath("Properties", "Accessibility", 2));
-    private final ValuePropertyMetadata role_SCROLL_BAR_PropertyMetadata =
-            new EnumerationPropertyMetadata(
-                roleName,
-                javafx.scene.AccessibleRole.class,
-                true, /* readWrite */
-                javafx.scene.AccessibleRole.SCROLL_BAR, /* defaultValue */
-                new InspectorPath("Properties", "Accessibility", 2));
-    private final ValuePropertyMetadata role_SCROLL_PANE_PropertyMetadata =
-            new EnumerationPropertyMetadata(
-                roleName,
-                javafx.scene.AccessibleRole.class,
-                true, /* readWrite */
-                javafx.scene.AccessibleRole.SCROLL_PANE, /* defaultValue */
-                new InspectorPath("Properties", "Accessibility", 2));
-    private final ValuePropertyMetadata role_SLIDER_PropertyMetadata =
-            new EnumerationPropertyMetadata(
-                roleName,
-                javafx.scene.AccessibleRole.class,
-                true, /* readWrite */
-                javafx.scene.AccessibleRole.SLIDER, /* defaultValue */
-                new InspectorPath("Properties", "Accessibility", 2));
-    private final ValuePropertyMetadata role_SPINNER_PropertyMetadata =
-            new EnumerationPropertyMetadata(
-                roleName,
-                javafx.scene.AccessibleRole.class,
-                true, /* readWrite */
-                javafx.scene.AccessibleRole.SPINNER, /* defaultValue */
-                new InspectorPath("Properties", "Accessibility", 2));
-    private final ValuePropertyMetadata role_SPLIT_MENU_BUTTON_PropertyMetadata =
-            new EnumerationPropertyMetadata(
-                roleName,
-                javafx.scene.AccessibleRole.class,
-                true, /* readWrite */
-                javafx.scene.AccessibleRole.SPLIT_MENU_BUTTON, /* defaultValue */
-                new InspectorPath("Properties", "Accessibility", 2));
-    private final ValuePropertyMetadata role_TAB_PANE_PropertyMetadata =
-            new EnumerationPropertyMetadata(
-                roleName,
-                javafx.scene.AccessibleRole.class,
-                true, /* readWrite */
-                javafx.scene.AccessibleRole.TAB_PANE, /* defaultValue */
-                new InspectorPath("Properties", "Accessibility", 2));
-    private final ValuePropertyMetadata role_TABLE_VIEW_PropertyMetadata =
-            new EnumerationPropertyMetadata(
-                roleName,
-                javafx.scene.AccessibleRole.class,
-                true, /* readWrite */
-                javafx.scene.AccessibleRole.TABLE_VIEW, /* defaultValue */
-                new InspectorPath("Properties", "Accessibility", 2));
-    private final ValuePropertyMetadata role_TEXT_AREA_PropertyMetadata =
-            new EnumerationPropertyMetadata(
-                roleName,
-                javafx.scene.AccessibleRole.class,
-                true, /* readWrite */
-                javafx.scene.AccessibleRole.TEXT_AREA, /* defaultValue */
-                new InspectorPath("Properties", "Accessibility", 2));
-    private final ValuePropertyMetadata role_TEXT_FIELD_PropertyMetadata =
-            new EnumerationPropertyMetadata(
-                roleName,
-                javafx.scene.AccessibleRole.class,
-                true, /* readWrite */
-                javafx.scene.AccessibleRole.TEXT_FIELD, /* defaultValue */
-                new InspectorPath("Properties", "Accessibility", 2));
-    private final ValuePropertyMetadata role_TITLED_PANE_PropertyMetadata =
-            new EnumerationPropertyMetadata(
-                roleName,
-                javafx.scene.AccessibleRole.class,
-                true, /* readWrite */
-                javafx.scene.AccessibleRole.TITLED_PANE, /* defaultValue */
-                new InspectorPath("Properties", "Accessibility", 2));
-    private final ValuePropertyMetadata role_TOGGLE_BUTTON_PropertyMetadata =
-            new EnumerationPropertyMetadata(
-                roleName,
-                javafx.scene.AccessibleRole.class,
-                true, /* readWrite */
-                javafx.scene.AccessibleRole.TOGGLE_BUTTON, /* defaultValue */
-                new InspectorPath("Properties", "Accessibility", 2));
-    private final ValuePropertyMetadata role_TOOL_BAR_PropertyMetadata =
-            new EnumerationPropertyMetadata(
-                roleName,
-                javafx.scene.AccessibleRole.class,
-                true, /* readWrite */
-                javafx.scene.AccessibleRole.TOOL_BAR, /* defaultValue */
-                new InspectorPath("Properties", "Accessibility", 2));
-    private final ValuePropertyMetadata role_TREE_TABLE_VIEW_PropertyMetadata =
-            new EnumerationPropertyMetadata(
-                roleName,
-                javafx.scene.AccessibleRole.class,
-                true, /* readWrite */
-                javafx.scene.AccessibleRole.TREE_TABLE_VIEW, /* defaultValue */
-                new InspectorPath("Properties", "Accessibility", 2));
-    private final ValuePropertyMetadata role_TREE_VIEW_PropertyMetadata =
-            new EnumerationPropertyMetadata(
-                roleName,
-                javafx.scene.AccessibleRole.class,
-                true, /* readWrite */
-                javafx.scene.AccessibleRole.TREE_VIEW, /* defaultValue */
-                new InspectorPath("Properties", "Accessibility", 2));
-    private final ValuePropertyMetadata roleDescriptionPropertyMetadata =
-            new StringPropertyMetadata(
-                roleDescriptionName,
-                true, /* readWrite */
-                "", /* defaultValue */
-                new InspectorPath("Properties", "Accessibility", 3));
     private final ValuePropertyMetadata rotatePropertyMetadata =
             new DoublePropertyMetadata(
                 rotateName,
@@ -3368,7 +3377,7 @@ public class Metadata {
     private final ValuePropertyMetadata scalePropertyMetadata =
             new DoublePropertyMetadata(
                 scaleName,
-                com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.SIZE,
+                com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.COORDINATE,
                 false, /* readWrite */
                 null, /* No defaultValue for R/O property */
                 new InspectorPath("Properties", "Specific", 82));
@@ -3381,21 +3390,21 @@ public class Metadata {
     private final ValuePropertyMetadata scaleXPropertyMetadata =
             new DoublePropertyMetadata(
                 scaleXName,
-                com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.SIZE,
+                com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.COORDINATE,
                 true, /* readWrite */
                 1.0, /* defaultValue */
                 new InspectorPath("Layout", "Transforms", 2));
     private final ValuePropertyMetadata scaleYPropertyMetadata =
             new DoublePropertyMetadata(
                 scaleYName,
-                com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.SIZE,
+                com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.COORDINATE,
                 true, /* readWrite */
                 1.0, /* defaultValue */
                 new InspectorPath("Layout", "Transforms", 3));
     private final ValuePropertyMetadata scaleZPropertyMetadata =
             new DoublePropertyMetadata(
                 scaleZName,
-                com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.SIZE,
+                com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata.DoubleKind.COORDINATE,
                 true, /* readWrite */
                 1.0, /* defaultValue */
                 new InspectorPath("Layout", "Transforms", 4));
@@ -4743,16 +4752,16 @@ public class Metadata {
         AccordionMetadata.getProperties().add(panesPropertyMetadata);
         AccordionMetadata.getProperties().add(styleClass_c4_PropertyMetadata);
 
+        AmbientLightMetadata.getProperties().add(accessibleRole_NODE_PropertyMetadata);
         AmbientLightMetadata.getProperties().add(pickOnBounds_false_PropertyMetadata);
-        AmbientLightMetadata.getProperties().add(role_NODE_PropertyMetadata);
 
+        ArcMetadata.getProperties().add(accessibleRole_NODE_PropertyMetadata);
         ArcMetadata.getProperties().add(centerXPropertyMetadata);
         ArcMetadata.getProperties().add(centerYPropertyMetadata);
         ArcMetadata.getProperties().add(length_Double_PropertyMetadata);
         ArcMetadata.getProperties().add(pickOnBounds_false_PropertyMetadata);
         ArcMetadata.getProperties().add(radiusXPropertyMetadata);
         ArcMetadata.getProperties().add(radiusYPropertyMetadata);
-        ArcMetadata.getProperties().add(role_NODE_PropertyMetadata);
         ArcMetadata.getProperties().add(startAnglePropertyMetadata);
         ArcMetadata.getProperties().add(typePropertyMetadata);
 
@@ -4793,18 +4802,18 @@ public class Metadata {
         BorderPaneMetadata.getProperties().add(rightPropertyMetadata);
         BorderPaneMetadata.getProperties().add(topPropertyMetadata);
 
+        BoxMetadata.getProperties().add(accessibleRole_NODE_PropertyMetadata);
         BoxMetadata.getProperties().add(depthPropertyMetadata);
         BoxMetadata.getProperties().add(height_Double_200_PropertyMetadata);
         BoxMetadata.getProperties().add(pickOnBounds_false_PropertyMetadata);
-        BoxMetadata.getProperties().add(role_NODE_PropertyMetadata);
         BoxMetadata.getProperties().add(width_Double_200_PropertyMetadata);
 
         BubbleChartMetadata.getProperties().add(styleClass_c37_PropertyMetadata);
 
+        ButtonMetadata.getProperties().add(accessibleRole_BUTTON_PropertyMetadata);
         ButtonMetadata.getProperties().add(cancelButtonPropertyMetadata);
         ButtonMetadata.getProperties().add(defaultButtonPropertyMetadata);
         ButtonMetadata.getProperties().add(focusTraversable_true_PropertyMetadata);
-        ButtonMetadata.getProperties().add(role_BUTTON_PropertyMetadata);
         ButtonMetadata.getProperties().add(styleClass_c17_PropertyMetadata);
 
         ButtonBarMetadata.getProperties().add(buttonMinWidthPropertyMetadata);
@@ -4813,20 +4822,20 @@ public class Metadata {
         ButtonBarMetadata.getProperties().add(focusTraversable_true_PropertyMetadata);
         ButtonBarMetadata.getProperties().add(styleClass_c35_PropertyMetadata);
 
+        ButtonBaseMetadata.getProperties().add(accessibleRole_RADIO_BUTTON_PropertyMetadata);
         ButtonBaseMetadata.getProperties().add(focusTraversable_true_PropertyMetadata);
         ButtonBaseMetadata.getProperties().add(onActionPropertyMetadata);
-        ButtonBaseMetadata.getProperties().add(role_RADIO_BUTTON_PropertyMetadata);
         ButtonBaseMetadata.getProperties().add(styleClass_c41_PropertyMetadata);
 
+        CameraMetadata.getProperties().add(accessibleRole_NODE_PropertyMetadata);
         CameraMetadata.getProperties().add(farClipPropertyMetadata);
         CameraMetadata.getProperties().add(nearClipPropertyMetadata);
         CameraMetadata.getProperties().add(pickOnBounds_false_PropertyMetadata);
-        CameraMetadata.getProperties().add(role_NODE_PropertyMetadata);
 
+        CanvasMetadata.getProperties().add(accessibleRole_NODE_PropertyMetadata);
         CanvasMetadata.getProperties().add(height_Double_0_PropertyMetadata);
         CanvasMetadata.getProperties().add(nodeOrientation_LEFT_TO_RIGHT_PropertyMetadata);
         CanvasMetadata.getProperties().add(pickOnBounds_false_PropertyMetadata);
-        CanvasMetadata.getProperties().add(role_NODE_PropertyMetadata);
         CanvasMetadata.getProperties().add(width_Double_0_PropertyMetadata);
 
         CategoryAxisMetadata.getProperties().add(categoriesPropertyMetadata);
@@ -4844,26 +4853,26 @@ public class Metadata {
         ChartMetadata.getProperties().add(titlePropertyMetadata);
         ChartMetadata.getProperties().add(titleSidePropertyMetadata);
 
+        CheckBoxMetadata.getProperties().add(accessibleRole_CHECK_BOX_PropertyMetadata);
         CheckBoxMetadata.getProperties().add(allowIndeterminatePropertyMetadata);
         CheckBoxMetadata.getProperties().add(focusTraversable_true_PropertyMetadata);
         CheckBoxMetadata.getProperties().add(indeterminate_Boolean_PropertyMetadata);
-        CheckBoxMetadata.getProperties().add(role_CHECK_BOX_PropertyMetadata);
         CheckBoxMetadata.getProperties().add(selected_Boolean_PropertyMetadata);
         CheckBoxMetadata.getProperties().add(styleClass_c10_PropertyMetadata);
 
         CheckMenuItemMetadata.getProperties().add(selected_Boolean_PropertyMetadata);
         CheckMenuItemMetadata.getProperties().add(styleClass_c28_PropertyMetadata);
 
+        ChoiceBoxMetadata.getProperties().add(accessibleRole_COMBO_BOX_PropertyMetadata);
         ChoiceBoxMetadata.getProperties().add(focusTraversable_true_PropertyMetadata);
-        ChoiceBoxMetadata.getProperties().add(role_COMBO_BOX_PropertyMetadata);
         ChoiceBoxMetadata.getProperties().add(styleClass_c43_PropertyMetadata);
         ChoiceBoxMetadata.getProperties().add(value_Object_PropertyMetadata);
 
+        CircleMetadata.getProperties().add(accessibleRole_NODE_PropertyMetadata);
         CircleMetadata.getProperties().add(centerXPropertyMetadata);
         CircleMetadata.getProperties().add(centerYPropertyMetadata);
         CircleMetadata.getProperties().add(pickOnBounds_false_PropertyMetadata);
         CircleMetadata.getProperties().add(radius_0_PropertyMetadata);
-        CircleMetadata.getProperties().add(role_NODE_PropertyMetadata);
 
         ColorPickerMetadata.getProperties().add(focusTraversable_true_PropertyMetadata);
         ColorPickerMetadata.getProperties().add(styleClass_c5_PropertyMetadata);
@@ -4877,13 +4886,14 @@ public class Metadata {
         ColumnConstraintsMetadata.getProperties().add(percentWidthPropertyMetadata);
         ColumnConstraintsMetadata.getProperties().add(prefWidth_COMPUTED_PropertyMetadata);
 
+        ComboBoxMetadata.getProperties().add(accessibleRole_COMBO_BOX_PropertyMetadata);
         ComboBoxMetadata.getProperties().add(buttonCellPropertyMetadata);
         ComboBoxMetadata.getProperties().add(focusTraversable_true_PropertyMetadata);
         ComboBoxMetadata.getProperties().add(placeholderPropertyMetadata);
-        ComboBoxMetadata.getProperties().add(role_COMBO_BOX_PropertyMetadata);
         ComboBoxMetadata.getProperties().add(styleClass_c11_PropertyMetadata);
         ComboBoxMetadata.getProperties().add(visibleRowCountPropertyMetadata);
 
+        ComboBoxBaseMetadata.getProperties().add(accessibleRole_DATE_PICKER_PropertyMetadata);
         ComboBoxBaseMetadata.getProperties().add(editable_false_PropertyMetadata);
         ComboBoxBaseMetadata.getProperties().add(focusTraversable_true_PropertyMetadata);
         ComboBoxBaseMetadata.getProperties().add(onActionPropertyMetadata);
@@ -4917,6 +4927,7 @@ public class Metadata {
         ControlMetadata.getProperties().add(styleClass_c25_PropertyMetadata);
         ControlMetadata.getProperties().add(tooltipPropertyMetadata);
 
+        CubicCurveMetadata.getProperties().add(accessibleRole_NODE_PropertyMetadata);
         CubicCurveMetadata.getProperties().add(controlX1PropertyMetadata);
         CubicCurveMetadata.getProperties().add(controlX2PropertyMetadata);
         CubicCurveMetadata.getProperties().add(controlY1PropertyMetadata);
@@ -4924,7 +4935,6 @@ public class Metadata {
         CubicCurveMetadata.getProperties().add(endXPropertyMetadata);
         CubicCurveMetadata.getProperties().add(endYPropertyMetadata);
         CubicCurveMetadata.getProperties().add(pickOnBounds_false_PropertyMetadata);
-        CubicCurveMetadata.getProperties().add(role_NODE_PropertyMetadata);
         CubicCurveMetadata.getProperties().add(startXPropertyMetadata);
         CubicCurveMetadata.getProperties().add(startYPropertyMetadata);
 
@@ -4939,15 +4949,15 @@ public class Metadata {
         CustomMenuItemMetadata.getProperties().add(hideOnClick_true_PropertyMetadata);
         CustomMenuItemMetadata.getProperties().add(styleClass_c27_PropertyMetadata);
 
+        CylinderMetadata.getProperties().add(accessibleRole_NODE_PropertyMetadata);
         CylinderMetadata.getProperties().add(divisionsPropertyMetadata);
         CylinderMetadata.getProperties().add(height_Double_200_PropertyMetadata);
         CylinderMetadata.getProperties().add(pickOnBounds_false_PropertyMetadata);
         CylinderMetadata.getProperties().add(radius_100_PropertyMetadata);
-        CylinderMetadata.getProperties().add(role_NODE_PropertyMetadata);
 
+        DatePickerMetadata.getProperties().add(accessibleRole_DATE_PICKER_PropertyMetadata);
         DatePickerMetadata.getProperties().add(editable_true_PropertyMetadata);
         DatePickerMetadata.getProperties().add(focusTraversable_true_PropertyMetadata);
-        DatePickerMetadata.getProperties().add(role_DATE_PICKER_PropertyMetadata);
         DatePickerMetadata.getProperties().add(showWeekNumbersPropertyMetadata);
         DatePickerMetadata.getProperties().add(styleClass_c9_PropertyMetadata);
 
@@ -4962,12 +4972,12 @@ public class Metadata {
         DialogPaneMetadata.getProperties().add(headerTextPropertyMetadata);
         DialogPaneMetadata.getProperties().add(styleClass_c30_PropertyMetadata);
 
+        EllipseMetadata.getProperties().add(accessibleRole_NODE_PropertyMetadata);
         EllipseMetadata.getProperties().add(centerXPropertyMetadata);
         EllipseMetadata.getProperties().add(centerYPropertyMetadata);
         EllipseMetadata.getProperties().add(pickOnBounds_false_PropertyMetadata);
         EllipseMetadata.getProperties().add(radiusXPropertyMetadata);
         EllipseMetadata.getProperties().add(radiusYPropertyMetadata);
-        EllipseMetadata.getProperties().add(role_NODE_PropertyMetadata);
 
         FlowPaneMetadata.getProperties().add(alignment_TOP_LEFT_PropertyMetadata);
         FlowPaneMetadata.getProperties().add(columnHalignmentPropertyMetadata);
@@ -5002,31 +5012,32 @@ public class Metadata {
         HTMLEditorMetadata.getProperties().add(htmlTextPropertyMetadata);
         HTMLEditorMetadata.getProperties().add(styleClass_c21_PropertyMetadata);
 
+        HyperlinkMetadata.getProperties().add(accessibleRole_HYPERLINK_PropertyMetadata);
         HyperlinkMetadata.getProperties().add(cursor_HAND_PropertyMetadata);
         HyperlinkMetadata.getProperties().add(focusTraversable_true_PropertyMetadata);
         HyperlinkMetadata.getProperties().add(mnemonicParsing_false_PropertyMetadata);
-        HyperlinkMetadata.getProperties().add(role_HYPERLINK_PropertyMetadata);
         HyperlinkMetadata.getProperties().add(styleClass_c25_PropertyMetadata);
         HyperlinkMetadata.getProperties().add(visitedPropertyMetadata);
 
+        ImageViewMetadata.getProperties().add(accessibleRole_IMAGE_VIEW_PropertyMetadata);
         ImageViewMetadata.getProperties().add(fitHeightPropertyMetadata);
         ImageViewMetadata.getProperties().add(fitWidthPropertyMetadata);
         ImageViewMetadata.getProperties().add(imagePropertyMetadata);
         ImageViewMetadata.getProperties().add(nodeOrientation_LEFT_TO_RIGHT_PropertyMetadata);
         ImageViewMetadata.getProperties().add(pickOnBounds_false_PropertyMetadata);
         ImageViewMetadata.getProperties().add(preserveRatio_false_PropertyMetadata);
-        ImageViewMetadata.getProperties().add(role_IMAGE_VIEW_PropertyMetadata);
         ImageViewMetadata.getProperties().add(smoothPropertyMetadata);
         ImageViewMetadata.getProperties().add(styleClass_c20_PropertyMetadata);
         ImageViewMetadata.getProperties().add(viewportPropertyMetadata);
         ImageViewMetadata.getProperties().add(x_0_PropertyMetadata);
         ImageViewMetadata.getProperties().add(y_0_PropertyMetadata);
 
+        LabelMetadata.getProperties().add(accessibleRole_TEXT_PropertyMetadata);
         LabelMetadata.getProperties().add(labelForPropertyMetadata);
         LabelMetadata.getProperties().add(mnemonicParsing_false_PropertyMetadata);
-        LabelMetadata.getProperties().add(role_TEXT_PropertyMetadata);
         LabelMetadata.getProperties().add(styleClass_c3_PropertyMetadata);
 
+        LabeledMetadata.getProperties().add(accessibleRole_TOGGLE_BUTTON_PropertyMetadata);
         LabeledMetadata.getProperties().add(alignment_CENTER_LEFT_PropertyMetadata);
         LabeledMetadata.getProperties().add(contentBiasPropertyMetadata);
         LabeledMetadata.getProperties().add(contentDisplayPropertyMetadata);
@@ -5038,7 +5049,6 @@ public class Metadata {
         LabeledMetadata.getProperties().add(labelPaddingPropertyMetadata);
         LabeledMetadata.getProperties().add(lineSpacingPropertyMetadata);
         LabeledMetadata.getProperties().add(mnemonicParsing_true_PropertyMetadata);
-        LabeledMetadata.getProperties().add(role_TITLED_PANE_PropertyMetadata);
         LabeledMetadata.getProperties().add(styleClass_c41_PropertyMetadata);
         LabeledMetadata.getProperties().add(textPropertyMetadata);
         LabeledMetadata.getProperties().add(textAlignmentPropertyMetadata);
@@ -5047,27 +5057,29 @@ public class Metadata {
         LabeledMetadata.getProperties().add(underlinePropertyMetadata);
         LabeledMetadata.getProperties().add(wrapTextPropertyMetadata);
 
+        LightBaseMetadata.getProperties().add(accessibleRole_NODE_PropertyMetadata);
         LightBaseMetadata.getProperties().add(colorPropertyMetadata);
         LightBaseMetadata.getProperties().add(lightOnPropertyMetadata);
         LightBaseMetadata.getProperties().add(pickOnBounds_false_PropertyMetadata);
-        LightBaseMetadata.getProperties().add(role_NODE_PropertyMetadata);
         LightBaseMetadata.getProperties().add(scopePropertyMetadata);
 
+        LineMetadata.getProperties().add(accessibleRole_NODE_PropertyMetadata);
         LineMetadata.getProperties().add(endXPropertyMetadata);
         LineMetadata.getProperties().add(endYPropertyMetadata);
         LineMetadata.getProperties().add(fill_NULL_PropertyMetadata);
         LineMetadata.getProperties().add(pickOnBounds_false_PropertyMetadata);
-        LineMetadata.getProperties().add(role_NODE_PropertyMetadata);
         LineMetadata.getProperties().add(startXPropertyMetadata);
         LineMetadata.getProperties().add(startYPropertyMetadata);
         LineMetadata.getProperties().add(stroke_BLACK_PropertyMetadata);
 
+        LineChartMetadata.getProperties().add(axisSortingPolicyPropertyMetadata);
         LineChartMetadata.getProperties().add(createSymbolsPropertyMetadata);
         LineChartMetadata.getProperties().add(styleClass_c37_PropertyMetadata);
 
         LineToMetadata.getProperties().add(x_0_PropertyMetadata);
         LineToMetadata.getProperties().add(y_0_PropertyMetadata);
 
+        ListViewMetadata.getProperties().add(accessibleRole_LIST_VIEW_PropertyMetadata);
         ListViewMetadata.getProperties().add(editable_false_PropertyMetadata);
         ListViewMetadata.getProperties().add(fixedCellSizePropertyMetadata);
         ListViewMetadata.getProperties().add(focusTraversable_true_PropertyMetadata);
@@ -5077,16 +5089,15 @@ public class Metadata {
         ListViewMetadata.getProperties().add(onScrollToPropertyMetadata);
         ListViewMetadata.getProperties().add(orientation_VERTICAL_PropertyMetadata);
         ListViewMetadata.getProperties().add(placeholderPropertyMetadata);
-        ListViewMetadata.getProperties().add(role_LIST_VIEW_PropertyMetadata);
         ListViewMetadata.getProperties().add(styleClass_c34_PropertyMetadata);
 
+        MediaViewMetadata.getProperties().add(accessibleRole_NODE_PropertyMetadata);
         MediaViewMetadata.getProperties().add(fitHeightPropertyMetadata);
         MediaViewMetadata.getProperties().add(fitWidthPropertyMetadata);
         MediaViewMetadata.getProperties().add(nodeOrientation_LEFT_TO_RIGHT_PropertyMetadata);
         MediaViewMetadata.getProperties().add(onErrorPropertyMetadata);
         MediaViewMetadata.getProperties().add(pickOnBounds_false_PropertyMetadata);
         MediaViewMetadata.getProperties().add(preserveRatio_true_PropertyMetadata);
-        MediaViewMetadata.getProperties().add(role_NODE_PropertyMetadata);
         MediaViewMetadata.getProperties().add(smoothPropertyMetadata);
         MediaViewMetadata.getProperties().add(styleClass_c46_PropertyMetadata);
         MediaViewMetadata.getProperties().add(viewportPropertyMetadata);
@@ -5100,14 +5111,14 @@ public class Metadata {
         MenuMetadata.getProperties().add(onShownPropertyMetadata);
         MenuMetadata.getProperties().add(styleClass_c29_PropertyMetadata);
 
+        MenuBarMetadata.getProperties().add(accessibleRole_MENU_BAR_PropertyMetadata);
         MenuBarMetadata.getProperties().add(menusPropertyMetadata);
-        MenuBarMetadata.getProperties().add(role_MENU_BAR_PropertyMetadata);
         MenuBarMetadata.getProperties().add(styleClass_c18_PropertyMetadata);
 
+        MenuButtonMetadata.getProperties().add(accessibleRole_MENU_BUTTON_PropertyMetadata);
         MenuButtonMetadata.getProperties().add(focusTraversable_true_PropertyMetadata);
         MenuButtonMetadata.getProperties().add(items_MenuItem_PropertyMetadata);
         MenuButtonMetadata.getProperties().add(popupSidePropertyMetadata);
-        MenuButtonMetadata.getProperties().add(role_MENU_BUTTON_PropertyMetadata);
         MenuButtonMetadata.getProperties().add(styleClass_c52_PropertyMetadata);
 
         MenuItemMetadata.getProperties().add(acceleratorPropertyMetadata);
@@ -5122,14 +5133,16 @@ public class Metadata {
         MenuItemMetadata.getProperties().add(textPropertyMetadata);
         MenuItemMetadata.getProperties().add(visiblePropertyMetadata);
 
+        MeshViewMetadata.getProperties().add(accessibleRole_NODE_PropertyMetadata);
         MeshViewMetadata.getProperties().add(meshPropertyMetadata);
         MeshViewMetadata.getProperties().add(pickOnBounds_false_PropertyMetadata);
-        MeshViewMetadata.getProperties().add(role_NODE_PropertyMetadata);
 
         MoveToMetadata.getProperties().add(x_0_PropertyMetadata);
         MoveToMetadata.getProperties().add(y_0_PropertyMetadata);
 
         NodeMetadata.getProperties().add(accessibleHelpPropertyMetadata);
+        NodeMetadata.getProperties().add(accessibleRole_PARENT_PropertyMetadata);
+        NodeMetadata.getProperties().add(accessibleRoleDescriptionPropertyMetadata);
         NodeMetadata.getProperties().add(accessibleTextPropertyMetadata);
         NodeMetadata.getProperties().add(baselineOffsetPropertyMetadata);
         NodeMetadata.getProperties().add(blendModePropertyMetadata);
@@ -5193,8 +5206,6 @@ public class Metadata {
         NodeMetadata.getProperties().add(opacityPropertyMetadata);
         NodeMetadata.getProperties().add(pickOnBounds_true_PropertyMetadata);
         NodeMetadata.getProperties().add(resizable_Boolean_ro_PropertyMetadata);
-        NodeMetadata.getProperties().add(role_PARENT_PropertyMetadata);
-        NodeMetadata.getProperties().add(roleDescriptionPropertyMetadata);
         NodeMetadata.getProperties().add(rotatePropertyMetadata);
         NodeMetadata.getProperties().add(rotationAxisPropertyMetadata);
         NodeMetadata.getProperties().add(scaleXPropertyMetadata);
@@ -5236,38 +5247,38 @@ public class Metadata {
         NumberAxisMetadata.getProperties().add(styleClass_c45_PropertyMetadata);
         NumberAxisMetadata.getProperties().add(tickUnitPropertyMetadata);
 
+        PaginationMetadata.getProperties().add(accessibleRole_PAGINATION_PropertyMetadata);
         PaginationMetadata.getProperties().add(currentPageIndexPropertyMetadata);
         PaginationMetadata.getProperties().add(focusTraversable_true_PropertyMetadata);
         PaginationMetadata.getProperties().add(maxPageIndicatorCountPropertyMetadata);
         PaginationMetadata.getProperties().add(pageCountPropertyMetadata);
-        PaginationMetadata.getProperties().add(role_PAGINATION_PropertyMetadata);
         PaginationMetadata.getProperties().add(styleClass_c39_PropertyMetadata);
 
         PaneMetadata.getProperties().add(children_empty_PropertyMetadata);
 
+        ParallelCameraMetadata.getProperties().add(accessibleRole_NODE_PropertyMetadata);
         ParallelCameraMetadata.getProperties().add(pickOnBounds_false_PropertyMetadata);
-        ParallelCameraMetadata.getProperties().add(role_NODE_PropertyMetadata);
 
         ParentMetadata.getProperties().add(baselineOffsetPropertyMetadata);
         ParentMetadata.getProperties().add(stylesheetsPropertyMetadata);
 
+        PasswordFieldMetadata.getProperties().add(accessibleRole_PASSWORD_FIELD_PropertyMetadata);
         PasswordFieldMetadata.getProperties().add(focusTraversable_true_PropertyMetadata);
-        PasswordFieldMetadata.getProperties().add(role_PASSWORD_FIELD_PropertyMetadata);
         PasswordFieldMetadata.getProperties().add(styleClass_c53_PropertyMetadata);
 
+        PathMetadata.getProperties().add(accessibleRole_NODE_PropertyMetadata);
         PathMetadata.getProperties().add(elementsPropertyMetadata);
         PathMetadata.getProperties().add(fill_NULL_PropertyMetadata);
         PathMetadata.getProperties().add(fillRulePropertyMetadata);
         PathMetadata.getProperties().add(pickOnBounds_false_PropertyMetadata);
-        PathMetadata.getProperties().add(role_NODE_PropertyMetadata);
         PathMetadata.getProperties().add(stroke_BLACK_PropertyMetadata);
 
         PathElementMetadata.getProperties().add(absolutePropertyMetadata);
 
+        PerspectiveCameraMetadata.getProperties().add(accessibleRole_NODE_PropertyMetadata);
         PerspectiveCameraMetadata.getProperties().add(fieldOfViewPropertyMetadata);
         PerspectiveCameraMetadata.getProperties().add(fixedEyeAtCameraZeroPropertyMetadata);
         PerspectiveCameraMetadata.getProperties().add(pickOnBounds_false_PropertyMetadata);
-        PerspectiveCameraMetadata.getProperties().add(role_NODE_PropertyMetadata);
         PerspectiveCameraMetadata.getProperties().add(verticalFieldOfViewPropertyMetadata);
 
         PieChartMetadata.getProperties().add(clockwisePropertyMetadata);
@@ -5276,17 +5287,17 @@ public class Metadata {
         PieChartMetadata.getProperties().add(startAnglePropertyMetadata);
         PieChartMetadata.getProperties().add(styleClass_c37_PropertyMetadata);
 
+        PointLightMetadata.getProperties().add(accessibleRole_NODE_PropertyMetadata);
         PointLightMetadata.getProperties().add(pickOnBounds_false_PropertyMetadata);
-        PointLightMetadata.getProperties().add(role_NODE_PropertyMetadata);
 
+        PolygonMetadata.getProperties().add(accessibleRole_NODE_PropertyMetadata);
         PolygonMetadata.getProperties().add(pickOnBounds_false_PropertyMetadata);
         PolygonMetadata.getProperties().add(pointsPropertyMetadata);
-        PolygonMetadata.getProperties().add(role_NODE_PropertyMetadata);
 
+        PolylineMetadata.getProperties().add(accessibleRole_NODE_PropertyMetadata);
         PolylineMetadata.getProperties().add(fill_NULL_PropertyMetadata);
         PolylineMetadata.getProperties().add(pickOnBounds_false_PropertyMetadata);
         PolylineMetadata.getProperties().add(pointsPropertyMetadata);
-        PolylineMetadata.getProperties().add(role_NODE_PropertyMetadata);
         PolylineMetadata.getProperties().add(stroke_BLACK_PropertyMetadata);
 
         PopupControlMetadata.getProperties().add(height_Double_0_PropertyMetadata);
@@ -5328,20 +5339,20 @@ public class Metadata {
         PopupWindowMetadata.getProperties().add(x_NaN_PropertyMetadata);
         PopupWindowMetadata.getProperties().add(y_NaN_PropertyMetadata);
 
-        ProgressBarMetadata.getProperties().add(role_PROGRESS_INDICATOR_PropertyMetadata);
+        ProgressBarMetadata.getProperties().add(accessibleRole_PROGRESS_INDICATOR_PropertyMetadata);
         ProgressBarMetadata.getProperties().add(styleClass_c13_PropertyMetadata);
 
+        ProgressIndicatorMetadata.getProperties().add(accessibleRole_PROGRESS_INDICATOR_PropertyMetadata);
         ProgressIndicatorMetadata.getProperties().add(indeterminate_Boolean_ro_PropertyMetadata);
         ProgressIndicatorMetadata.getProperties().add(progressPropertyMetadata);
-        ProgressIndicatorMetadata.getProperties().add(role_PROGRESS_INDICATOR_PropertyMetadata);
         ProgressIndicatorMetadata.getProperties().add(styleClass_c50_PropertyMetadata);
 
+        QuadCurveMetadata.getProperties().add(accessibleRole_NODE_PropertyMetadata);
         QuadCurveMetadata.getProperties().add(controlXPropertyMetadata);
         QuadCurveMetadata.getProperties().add(controlYPropertyMetadata);
         QuadCurveMetadata.getProperties().add(endXPropertyMetadata);
         QuadCurveMetadata.getProperties().add(endYPropertyMetadata);
         QuadCurveMetadata.getProperties().add(pickOnBounds_false_PropertyMetadata);
-        QuadCurveMetadata.getProperties().add(role_NODE_PropertyMetadata);
         QuadCurveMetadata.getProperties().add(startXPropertyMetadata);
         QuadCurveMetadata.getProperties().add(startYPropertyMetadata);
 
@@ -5350,19 +5361,19 @@ public class Metadata {
         QuadCurveToMetadata.getProperties().add(x_0_PropertyMetadata);
         QuadCurveToMetadata.getProperties().add(y_0_PropertyMetadata);
 
+        RadioButtonMetadata.getProperties().add(accessibleRole_RADIO_BUTTON_PropertyMetadata);
         RadioButtonMetadata.getProperties().add(focusTraversable_true_PropertyMetadata);
-        RadioButtonMetadata.getProperties().add(role_RADIO_BUTTON_PropertyMetadata);
         RadioButtonMetadata.getProperties().add(styleClass_c41_PropertyMetadata);
 
         RadioMenuItemMetadata.getProperties().add(selected_Boolean_PropertyMetadata);
         RadioMenuItemMetadata.getProperties().add(styleClass_c7_PropertyMetadata);
         RadioMenuItemMetadata.getProperties().add(toggleGroupPropertyMetadata);
 
+        RectangleMetadata.getProperties().add(accessibleRole_NODE_PropertyMetadata);
         RectangleMetadata.getProperties().add(arcHeightPropertyMetadata);
         RectangleMetadata.getProperties().add(arcWidthPropertyMetadata);
         RectangleMetadata.getProperties().add(height_Double_0_PropertyMetadata);
         RectangleMetadata.getProperties().add(pickOnBounds_false_PropertyMetadata);
-        RectangleMetadata.getProperties().add(role_NODE_PropertyMetadata);
         RectangleMetadata.getProperties().add(width_Double_0_PropertyMetadata);
         RectangleMetadata.getProperties().add(x_0_PropertyMetadata);
         RectangleMetadata.getProperties().add(y_0_PropertyMetadata);
@@ -5393,23 +5404,24 @@ public class Metadata {
         RowConstraintsMetadata.getProperties().add(valignment_NULL_PropertyMetadata);
         RowConstraintsMetadata.getProperties().add(vgrowPropertyMetadata);
 
+        SVGPathMetadata.getProperties().add(accessibleRole_NODE_PropertyMetadata);
         SVGPathMetadata.getProperties().add(content_String_PropertyMetadata);
         SVGPathMetadata.getProperties().add(fillRulePropertyMetadata);
         SVGPathMetadata.getProperties().add(pickOnBounds_false_PropertyMetadata);
-        SVGPathMetadata.getProperties().add(role_NODE_PropertyMetadata);
 
         ScatterChartMetadata.getProperties().add(styleClass_c37_PropertyMetadata);
 
+        ScrollBarMetadata.getProperties().add(accessibleRole_SCROLL_BAR_PropertyMetadata);
         ScrollBarMetadata.getProperties().add(blockIncrementPropertyMetadata);
         ScrollBarMetadata.getProperties().add(maxPropertyMetadata);
         ScrollBarMetadata.getProperties().add(minPropertyMetadata);
         ScrollBarMetadata.getProperties().add(orientation_HORIZONTAL_PropertyMetadata);
-        ScrollBarMetadata.getProperties().add(role_SCROLL_BAR_PropertyMetadata);
         ScrollBarMetadata.getProperties().add(styleClass_c33_PropertyMetadata);
         ScrollBarMetadata.getProperties().add(unitIncrementPropertyMetadata);
         ScrollBarMetadata.getProperties().add(value_Double_PropertyMetadata);
         ScrollBarMetadata.getProperties().add(visibleAmountPropertyMetadata);
 
+        ScrollPaneMetadata.getProperties().add(accessibleRole_SCROLL_PANE_PropertyMetadata);
         ScrollPaneMetadata.getProperties().add(content_Node_NULL_PropertyMetadata);
         ScrollPaneMetadata.getProperties().add(fitToHeightPropertyMetadata);
         ScrollPaneMetadata.getProperties().add(fitToWidthPropertyMetadata);
@@ -5422,7 +5434,6 @@ public class Metadata {
         ScrollPaneMetadata.getProperties().add(pannablePropertyMetadata);
         ScrollPaneMetadata.getProperties().add(prefViewportHeightPropertyMetadata);
         ScrollPaneMetadata.getProperties().add(prefViewportWidthPropertyMetadata);
-        ScrollPaneMetadata.getProperties().add(role_SCROLL_PANE_PropertyMetadata);
         ScrollPaneMetadata.getProperties().add(styleClass_c38_PropertyMetadata);
         ScrollPaneMetadata.getProperties().add(vbarPolicyPropertyMetadata);
         ScrollPaneMetadata.getProperties().add(viewportBoundsPropertyMetadata);
@@ -5439,9 +5450,9 @@ public class Metadata {
         SeparatorMenuItemMetadata.getProperties().add(hideOnClick_false_PropertyMetadata);
         SeparatorMenuItemMetadata.getProperties().add(styleClass_c23_PropertyMetadata);
 
+        ShapeMetadata.getProperties().add(accessibleRole_NODE_PropertyMetadata);
         ShapeMetadata.getProperties().add(fill_BLACK_PropertyMetadata);
         ShapeMetadata.getProperties().add(pickOnBounds_false_PropertyMetadata);
-        ShapeMetadata.getProperties().add(role_NODE_PropertyMetadata);
         ShapeMetadata.getProperties().add(smoothPropertyMetadata);
         ShapeMetadata.getProperties().add(stroke_NULL_PropertyMetadata);
         ShapeMetadata.getProperties().add(strokeDashOffsetPropertyMetadata);
@@ -5451,12 +5462,13 @@ public class Metadata {
         ShapeMetadata.getProperties().add(strokeTypePropertyMetadata);
         ShapeMetadata.getProperties().add(strokeWidthPropertyMetadata);
 
+        Shape3DMetadata.getProperties().add(accessibleRole_NODE_PropertyMetadata);
         Shape3DMetadata.getProperties().add(cullFacePropertyMetadata);
         Shape3DMetadata.getProperties().add(drawModePropertyMetadata);
         Shape3DMetadata.getProperties().add(materialPropertyMetadata);
         Shape3DMetadata.getProperties().add(pickOnBounds_false_PropertyMetadata);
-        Shape3DMetadata.getProperties().add(role_NODE_PropertyMetadata);
 
+        SliderMetadata.getProperties().add(accessibleRole_SLIDER_PropertyMetadata);
         SliderMetadata.getProperties().add(blockIncrementPropertyMetadata);
         SliderMetadata.getProperties().add(focusTraversable_true_PropertyMetadata);
         SliderMetadata.getProperties().add(labelFormatterPropertyMetadata);
@@ -5465,26 +5477,25 @@ public class Metadata {
         SliderMetadata.getProperties().add(minPropertyMetadata);
         SliderMetadata.getProperties().add(minorTickCount_3_PropertyMetadata);
         SliderMetadata.getProperties().add(orientation_HORIZONTAL_PropertyMetadata);
-        SliderMetadata.getProperties().add(role_SLIDER_PropertyMetadata);
         SliderMetadata.getProperties().add(showTickLabelsPropertyMetadata);
         SliderMetadata.getProperties().add(showTickMarksPropertyMetadata);
         SliderMetadata.getProperties().add(snapToTicksPropertyMetadata);
         SliderMetadata.getProperties().add(styleClass_c40_PropertyMetadata);
         SliderMetadata.getProperties().add(value_Double_PropertyMetadata);
 
+        SphereMetadata.getProperties().add(accessibleRole_NODE_PropertyMetadata);
         SphereMetadata.getProperties().add(divisionsPropertyMetadata);
         SphereMetadata.getProperties().add(pickOnBounds_false_PropertyMetadata);
         SphereMetadata.getProperties().add(radius_100_PropertyMetadata);
-        SphereMetadata.getProperties().add(role_NODE_PropertyMetadata);
 
+        SpinnerMetadata.getProperties().add(accessibleRole_SPINNER_PropertyMetadata);
         SpinnerMetadata.getProperties().add(editable_false_PropertyMetadata);
         SpinnerMetadata.getProperties().add(focusTraversable_true_PropertyMetadata);
-        SpinnerMetadata.getProperties().add(role_SPINNER_PropertyMetadata);
         SpinnerMetadata.getProperties().add(styleClass_c24_PropertyMetadata);
         SpinnerMetadata.getProperties().add(value_Object_ro_PropertyMetadata);
 
+        SplitMenuButtonMetadata.getProperties().add(accessibleRole_SPLIT_MENU_BUTTON_PropertyMetadata);
         SplitMenuButtonMetadata.getProperties().add(focusTraversable_true_PropertyMetadata);
-        SplitMenuButtonMetadata.getProperties().add(role_SPLIT_MENU_BUTTON_PropertyMetadata);
         SplitMenuButtonMetadata.getProperties().add(styleClass_c2_PropertyMetadata);
 
         SplitPaneMetadata.getProperties().add(dividerPositionsPropertyMetadata);
@@ -5501,17 +5512,16 @@ public class Metadata {
         StackedBarChartMetadata.getProperties().add(categoryGapPropertyMetadata);
         StackedBarChartMetadata.getProperties().add(styleClass_c12_PropertyMetadata);
 
+        SubSceneMetadata.getProperties().add(accessibleRole_NODE_PropertyMetadata);
         SubSceneMetadata.getProperties().add(fill_NULL_PropertyMetadata);
         SubSceneMetadata.getProperties().add(height_Double_0_PropertyMetadata);
         SubSceneMetadata.getProperties().add(pickOnBounds_false_PropertyMetadata);
-        SubSceneMetadata.getProperties().add(role_NODE_PropertyMetadata);
-        SubSceneMetadata.getProperties().add(userAgentStylesheetPropertyMetadata);
         SubSceneMetadata.getProperties().add(width_Double_0_PropertyMetadata);
 
+        SwingNodeMetadata.getProperties().add(accessibleRole_NODE_PropertyMetadata);
         SwingNodeMetadata.getProperties().add(focusTraversable_true_PropertyMetadata);
         SwingNodeMetadata.getProperties().add(pickOnBounds_false_PropertyMetadata);
         SwingNodeMetadata.getProperties().add(resizable_Boolean_ro_PropertyMetadata);
-        SwingNodeMetadata.getProperties().add(role_NODE_PropertyMetadata);
 
         TabMetadata.getProperties().add(closablePropertyMetadata);
         TabMetadata.getProperties().add(content_Node_NULL_PropertyMetadata);
@@ -5528,8 +5538,8 @@ public class Metadata {
         TabMetadata.getProperties().add(textPropertyMetadata);
         TabMetadata.getProperties().add(tooltipPropertyMetadata);
 
+        TabPaneMetadata.getProperties().add(accessibleRole_TAB_PANE_PropertyMetadata);
         TabPaneMetadata.getProperties().add(focusTraversable_true_PropertyMetadata);
-        TabPaneMetadata.getProperties().add(role_TAB_PANE_PropertyMetadata);
         TabPaneMetadata.getProperties().add(rotateGraphicPropertyMetadata);
         TabPaneMetadata.getProperties().add(side_TOP_PropertyMetadata);
         TabPaneMetadata.getProperties().add(styleClass_c6_PropertyMetadata);
@@ -5562,6 +5572,7 @@ public class Metadata {
         TableColumnBaseMetadata.getProperties().add(visiblePropertyMetadata);
         TableColumnBaseMetadata.getProperties().add(width_Double_ro_PropertyMetadata);
 
+        TableViewMetadata.getProperties().add(accessibleRole_TABLE_VIEW_PropertyMetadata);
         TableViewMetadata.getProperties().add(columnResizePolicy_TABLEVIEW_UNCONSTRAINED_PropertyMetadata);
         TableViewMetadata.getProperties().add(columns_TableColumn_PropertyMetadata);
         TableViewMetadata.getProperties().add(editable_false_PropertyMetadata);
@@ -5571,17 +5582,16 @@ public class Metadata {
         TableViewMetadata.getProperties().add(onScrollToColumnPropertyMetadata);
         TableViewMetadata.getProperties().add(onSortPropertyMetadata);
         TableViewMetadata.getProperties().add(placeholderPropertyMetadata);
-        TableViewMetadata.getProperties().add(role_TABLE_VIEW_PropertyMetadata);
         TableViewMetadata.getProperties().add(sortOrderPropertyMetadata);
         TableViewMetadata.getProperties().add(styleClass_c49_PropertyMetadata);
         TableViewMetadata.getProperties().add(tableMenuButtonVisiblePropertyMetadata);
 
+        TextMetadata.getProperties().add(accessibleRole_TEXT_PropertyMetadata);
         TextMetadata.getProperties().add(baselineOffsetPropertyMetadata);
         TextMetadata.getProperties().add(boundsTypePropertyMetadata);
         TextMetadata.getProperties().add(fontPropertyMetadata);
         TextMetadata.getProperties().add(fontSmoothingType_GRAY_PropertyMetadata);
         TextMetadata.getProperties().add(lineSpacingPropertyMetadata);
-        TextMetadata.getProperties().add(role_TEXT_PropertyMetadata);
         TextMetadata.getProperties().add(strikethroughPropertyMetadata);
         TextMetadata.getProperties().add(textPropertyMetadata);
         TextMetadata.getProperties().add(textAlignmentPropertyMetadata);
@@ -5591,36 +5601,36 @@ public class Metadata {
         TextMetadata.getProperties().add(x_0_PropertyMetadata);
         TextMetadata.getProperties().add(y_0_PropertyMetadata);
 
+        TextAreaMetadata.getProperties().add(accessibleRole_TEXT_AREA_PropertyMetadata);
         TextAreaMetadata.getProperties().add(focusTraversable_true_PropertyMetadata);
         TextAreaMetadata.getProperties().add(prefColumnCount_40_PropertyMetadata);
         TextAreaMetadata.getProperties().add(prefRowCountPropertyMetadata);
-        TextAreaMetadata.getProperties().add(role_TEXT_AREA_PropertyMetadata);
         TextAreaMetadata.getProperties().add(scrollLeftPropertyMetadata);
         TextAreaMetadata.getProperties().add(scrollTopPropertyMetadata);
         TextAreaMetadata.getProperties().add(styleClass_c51_PropertyMetadata);
         TextAreaMetadata.getProperties().add(wrapTextPropertyMetadata);
 
+        TextFieldMetadata.getProperties().add(accessibleRole_TEXT_FIELD_PropertyMetadata);
         TextFieldMetadata.getProperties().add(alignment_CENTER_LEFT_PropertyMetadata);
         TextFieldMetadata.getProperties().add(focusTraversable_true_PropertyMetadata);
         TextFieldMetadata.getProperties().add(onActionPropertyMetadata);
         TextFieldMetadata.getProperties().add(prefColumnCount_12_PropertyMetadata);
-        TextFieldMetadata.getProperties().add(role_TEXT_FIELD_PropertyMetadata);
         TextFieldMetadata.getProperties().add(styleClass_c47_PropertyMetadata);
 
+        TextFlowMetadata.getProperties().add(accessibleRole_TEXT_PropertyMetadata);
         TextFlowMetadata.getProperties().add(baselineOffsetPropertyMetadata);
         TextFlowMetadata.getProperties().add(contentBiasPropertyMetadata);
         TextFlowMetadata.getProperties().add(lineSpacingPropertyMetadata);
-        TextFlowMetadata.getProperties().add(role_TEXT_PropertyMetadata);
         TextFlowMetadata.getProperties().add(textAlignmentPropertyMetadata);
 
         TextFormatterMetadata.getProperties().add(value_Object_PropertyMetadata);
 
+        TextInputControlMetadata.getProperties().add(accessibleRole_TEXT_FIELD_PropertyMetadata);
         TextInputControlMetadata.getProperties().add(editable_true_PropertyMetadata);
         TextInputControlMetadata.getProperties().add(focusTraversable_true_PropertyMetadata);
         TextInputControlMetadata.getProperties().add(fontPropertyMetadata);
         TextInputControlMetadata.getProperties().add(length_Integer_ro_PropertyMetadata);
         TextInputControlMetadata.getProperties().add(promptTextPropertyMetadata);
-        TextInputControlMetadata.getProperties().add(role_TEXT_AREA_PropertyMetadata);
         TextInputControlMetadata.getProperties().add(styleClass_c51_PropertyMetadata);
         TextInputControlMetadata.getProperties().add(textPropertyMetadata);
         TextInputControlMetadata.getProperties().add(textFormatterPropertyMetadata);
@@ -5638,6 +5648,7 @@ public class Metadata {
         TilePaneMetadata.getProperties().add(tileWidthPropertyMetadata);
         TilePaneMetadata.getProperties().add(vgapPropertyMetadata);
 
+        TitledPaneMetadata.getProperties().add(accessibleRole_TITLED_PANE_PropertyMetadata);
         TitledPaneMetadata.getProperties().add(animatedPropertyMetadata);
         TitledPaneMetadata.getProperties().add(collapsiblePropertyMetadata);
         TitledPaneMetadata.getProperties().add(content_Node_NULL_PropertyMetadata);
@@ -5645,19 +5656,18 @@ public class Metadata {
         TitledPaneMetadata.getProperties().add(expanded_true_PropertyMetadata);
         TitledPaneMetadata.getProperties().add(focusTraversable_true_PropertyMetadata);
         TitledPaneMetadata.getProperties().add(mnemonicParsing_false_PropertyMetadata);
-        TitledPaneMetadata.getProperties().add(role_TITLED_PANE_PropertyMetadata);
         TitledPaneMetadata.getProperties().add(styleClass_c26_PropertyMetadata);
 
+        ToggleButtonMetadata.getProperties().add(accessibleRole_TOGGLE_BUTTON_PropertyMetadata);
         ToggleButtonMetadata.getProperties().add(alignment_CENTER_PropertyMetadata);
         ToggleButtonMetadata.getProperties().add(focusTraversable_true_PropertyMetadata);
-        ToggleButtonMetadata.getProperties().add(role_TOGGLE_BUTTON_PropertyMetadata);
         ToggleButtonMetadata.getProperties().add(selected_Boolean_PropertyMetadata);
         ToggleButtonMetadata.getProperties().add(styleClass_c44_PropertyMetadata);
         ToggleButtonMetadata.getProperties().add(toggleGroupPropertyMetadata);
 
+        ToolBarMetadata.getProperties().add(accessibleRole_TOOL_BAR_PropertyMetadata);
         ToolBarMetadata.getProperties().add(items_Node_PropertyMetadata);
         ToolBarMetadata.getProperties().add(orientation_HORIZONTAL_PropertyMetadata);
-        ToolBarMetadata.getProperties().add(role_TOOL_BAR_PropertyMetadata);
         ToolBarMetadata.getProperties().add(styleClass_c16_PropertyMetadata);
 
         TooltipMetadata.getProperties().add(contentDisplayPropertyMetadata);
@@ -5686,6 +5696,7 @@ public class Metadata {
         TreeTableColumnMetadata.getProperties().add(onEditStartPropertyMetadata);
         TreeTableColumnMetadata.getProperties().add(sortType_SortType_PropertyMetadata);
 
+        TreeTableViewMetadata.getProperties().add(accessibleRole_TREE_TABLE_VIEW_PropertyMetadata);
         TreeTableViewMetadata.getProperties().add(columnResizePolicy_TREETABLEVIEW_UNCONSTRAINED_PropertyMetadata);
         TreeTableViewMetadata.getProperties().add(columns_TreeTableColumn_PropertyMetadata);
         TreeTableViewMetadata.getProperties().add(editable_false_PropertyMetadata);
@@ -5696,7 +5707,6 @@ public class Metadata {
         TreeTableViewMetadata.getProperties().add(onScrollToColumnPropertyMetadata);
         TreeTableViewMetadata.getProperties().add(onSortPropertyMetadata);
         TreeTableViewMetadata.getProperties().add(placeholderPropertyMetadata);
-        TreeTableViewMetadata.getProperties().add(role_TREE_TABLE_VIEW_PropertyMetadata);
         TreeTableViewMetadata.getProperties().add(showRootPropertyMetadata);
         TreeTableViewMetadata.getProperties().add(sortModePropertyMetadata);
         TreeTableViewMetadata.getProperties().add(sortOrderPropertyMetadata);
@@ -5704,6 +5714,7 @@ public class Metadata {
         TreeTableViewMetadata.getProperties().add(tableMenuButtonVisiblePropertyMetadata);
         TreeTableViewMetadata.getProperties().add(treeColumnPropertyMetadata);
 
+        TreeViewMetadata.getProperties().add(accessibleRole_TREE_VIEW_PropertyMetadata);
         TreeViewMetadata.getProperties().add(editable_false_PropertyMetadata);
         TreeViewMetadata.getProperties().add(expandedItemCountPropertyMetadata);
         TreeViewMetadata.getProperties().add(fixedCellSizePropertyMetadata);
@@ -5712,7 +5723,6 @@ public class Metadata {
         TreeViewMetadata.getProperties().add(onEditCommitPropertyMetadata);
         TreeViewMetadata.getProperties().add(onEditStartPropertyMetadata);
         TreeViewMetadata.getProperties().add(onScrollToPropertyMetadata);
-        TreeViewMetadata.getProperties().add(role_TREE_VIEW_PropertyMetadata);
         TreeViewMetadata.getProperties().add(showRootPropertyMetadata);
         TreeViewMetadata.getProperties().add(styleClass_c22_PropertyMetadata);
 
@@ -5834,6 +5844,7 @@ public class Metadata {
         hiddenProperties.add(new PropertyName("pressed"));
         hiddenProperties.add(new PropertyName("properties"));
         hiddenProperties.add(new PropertyName("pseudoClassStates"));
+        hiddenProperties.add(new PropertyName("redoable"));
         hiddenProperties.add(new PropertyName("root"));
         hiddenProperties.add(new PropertyName("rowFactory"));
         hiddenProperties.add(new PropertyName("scene"));
@@ -5851,6 +5862,7 @@ public class Metadata {
         hiddenProperties.add(new PropertyName("treeTableView"));
         hiddenProperties.add(new PropertyName("typeInternal"));
         hiddenProperties.add(new PropertyName("typeSelector"));
+        hiddenProperties.add(new PropertyName("undoable"));
         hiddenProperties.add(new PropertyName("userData"));
         hiddenProperties.add(new PropertyName("useSystemMenuBar"));
         hiddenProperties.add(new PropertyName("valueChanging"));
@@ -5933,10 +5945,7 @@ public class Metadata {
     //     javafx.scene.control.TableView -> items : Property items has no section/subsection assigned
 
 
-    // The following properties are uncertified:
-    //     axisSortingPolicy
-    //     redoable
-    //     undoable
+    // No uncertified properties have been found
 
 }
 

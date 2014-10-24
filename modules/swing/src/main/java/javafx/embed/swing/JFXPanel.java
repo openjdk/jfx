@@ -152,7 +152,7 @@ public class JFXPanel extends JComponent {
 
     // Preferred size set from FX
     private volatile int pPreferredWidth = -1;
-    private volatile int pPreferredHeight = -1;
+    private volatile int pPreferredHeight = -1;    
 
     // Cached copy of this component's location on screen to avoid
     // calling getLocationOnScreen() under the tree lock on FX thread
@@ -851,6 +851,8 @@ public class JFXPanel extends JComponent {
             if (pWidth > 0 && pHeight > 0) {
                 scenePeer.setSize(pWidth, pHeight);
             }
+            scenePeer.setPixelScaleFactor(scaleFactor);
+            
             SwingUtilities.invokeLater(() -> {
                 dnd = new SwingDnD(JFXPanel.this, scenePeer);
                 dnd.addNotify();
@@ -878,16 +880,18 @@ public class JFXPanel extends JComponent {
 
         @Override
         public void setPreferredSize(final int width, final int height) {
-            JFXPanel.this.pPreferredWidth = width;
-            JFXPanel.this.pPreferredHeight = height;
-            JFXPanel.this.revalidate();
+            SwingUtilities.invokeLater(() -> {
+                JFXPanel.this.pPreferredWidth = width;
+                JFXPanel.this.pPreferredHeight = height;
+                JFXPanel.this.revalidate();
+            });
         }
 
         @Override
         public void repaint() {
             SwingUtilities.invokeLater(() -> {
-        JFXPanel.this.repaint();
-    });
+                JFXPanel.this.repaint();
+            });
         }
 
         @Override

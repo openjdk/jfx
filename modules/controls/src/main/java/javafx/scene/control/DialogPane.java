@@ -528,10 +528,8 @@ public class DialogPane extends Pane {
             }
             
             Node newContent = getContent();
-            contentRef = new WeakReference<Node>(newContent);
-            if (newContent != null) {
-                updateContentArea();
-            }
+            contentRef = new WeakReference<>(newContent);
+            updateContentArea();
         }
     };
 
@@ -776,7 +774,9 @@ public class DialogPane extends Pane {
         button.setCancelButton(buttonType != null && buttonData.isCancelButton());
         button.addEventHandler(ActionEvent.ACTION, ae -> {
             if (ae.isConsumed()) return;
-            dialog.impl_setResultAndClose(buttonType, true);
+            if (dialog != null) {
+                dialog.impl_setResultAndClose(buttonType, true);
+            }
         });
         
         return button;
@@ -838,7 +838,7 @@ public class DialogPane extends Pane {
         final double expandableContentPrefHeight = isExpanded() ? expandableContent.prefHeight(w) : 0;
         final double graphicPrefHeight = hasHeader || graphic == null ? 0 : graphic.prefHeight(w);
         final double contentAreaHeight = h - 
-                (topPadding + headerPrefHeight + expandableContentPrefHeight + buttonBarPrefHeight + bottomPadding);
+                (headerPrefHeight + expandableContentPrefHeight + buttonBarPrefHeight);
         
         double x = leftPadding;
         double y = topPadding;
@@ -974,7 +974,9 @@ public class DialogPane extends Pane {
     private void updateHeaderArea() {
         Node header = getHeader();
         if (header != null) {
-            getChildren().add(header);
+            if (! getChildren().contains(header)) {
+                getChildren().add(header);
+            }
             
             headerTextPanel.setVisible(false);
             headerTextPanel.setManaged(false);
@@ -1041,11 +1043,10 @@ public class DialogPane extends Pane {
             contentLabel.setManaged(false);
         } else {
             final String contentText = getContentText();
-            if (contentText != null && !contentText.isEmpty()) {
-                contentLabel.setText(contentText);
-                contentLabel.setVisible(true);
-                contentLabel.setManaged(true);
-            }
+            final boolean visible = contentText != null && !contentText.isEmpty();
+            contentLabel.setText(visible ? contentText : "");
+            contentLabel.setVisible(visible);
+            contentLabel.setManaged(visible);
         }
     }
     

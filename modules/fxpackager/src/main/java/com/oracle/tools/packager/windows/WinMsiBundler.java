@@ -387,7 +387,7 @@ public class WinMsiBundler  extends AbstractBundler {
             appDir = SERVICE_BUNDLER.fetchFrom(p).doBundle(p, appDir, true);
         }
 
-        // copy file associaiton icons
+        // copy file association icons
         List<Map<String, ? super Object>> fileAssociations = FILE_ASSOCIATIONS.fetchFrom(p);
         for (Map<String, ? super Object> fileAssociation : fileAssociations) {
             File icon = FA_ICON.fetchFrom(fileAssociation); //TODO FA_ICON_ICO

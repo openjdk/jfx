@@ -53,11 +53,11 @@ PosixPlatform::~PosixPlatform(void) {
 }
 
 void PosixPlatform::SetCurrentDirectory(TString Value) {
-    chdir(PlatformString(Value));
+    chdir(StringToFileSystemString(Value));
 }
 
 Module PosixPlatform::LoadLibrary(TString FileName) {
-    return dlopen(PlatformString(FileName), RTLD_LAZY);
+    return dlopen(StringToFileSystemString(FileName), RTLD_LAZY);
 }
 
 void PosixPlatform::FreeLibrary(Module AModule) {

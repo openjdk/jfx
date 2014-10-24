@@ -53,7 +53,11 @@ public final class PrismPrintGraphics
         @Override
         J2DPrismGraphics createJ2DPrismGraphics(J2DPresentable target,
                                                 java.awt.Graphics2D g2d) {
-            return new PrismPrintGraphics(target, g2d);
+            J2DPrismGraphics pg = new PrismPrintGraphics(target, g2d);
+            Rectangle cr = new Rectangle(0, 0, target.getContentWidth(),
+                                         target.getContentHeight());
+            pg.setClipRect(cr);
+            return pg;
         }
 
         @Override
@@ -157,6 +161,7 @@ public final class PrismPrintGraphics
 
     public PrismPrintGraphics(java.awt.Graphics2D g2d, int width, int height) {
         super(new PagePresentable(width, height), g2d);
+        setClipRect(new Rectangle(0,0,width,height));
     }
 
     PrismPrintGraphics(J2DPresentable target, java.awt.Graphics2D g2d) {

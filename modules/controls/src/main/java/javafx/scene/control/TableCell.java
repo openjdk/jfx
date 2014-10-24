@@ -647,7 +647,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
             // RT-35864 - if the index didn't change, then avoid calling updateItem
             // unless the item has changed.
             if (oldIndex == index) {
-                if (oldValue != null ? oldValue.equals(newValue) : newValue == null) {
+                if (!isItemChanged(oldValue, newValue)) {
                     // RT-36670: we need to check the row item here to prevent
                     // the issue where the cell value and index doesn't change,
                     // but the backing row object does.

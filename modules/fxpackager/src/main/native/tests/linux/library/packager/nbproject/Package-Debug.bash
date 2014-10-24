@@ -13,7 +13,7 @@ CND_BUILDDIR=build
 CND_DLIB_EXT=so
 NBTMPDIR=${CND_BUILDDIR}/${CND_CONF}/${CND_PLATFORM}/tmp-packaging
 TMPDIRNAME=tmp-packaging
-OUTPUT_PATH=/home/cbensen/src/projects/packager/JavaFXSceneBuilder2.0/libpackager.so
+OUTPUT_PATH=../../../../../../../build/dev/DevTest/libpackager.so
 OUTPUT_BASENAME=libpackager.so
 PACKAGE_TOP_DIR=libpackager.so/
 

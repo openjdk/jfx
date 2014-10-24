@@ -49,20 +49,6 @@
 #include <algorithm>
 
 
-#ifdef WINDOWS
-//#define USE_JLI_LAUNCH
-#endif //WINDOWS
-
-#ifdef MAC
-#define USE_JLI_LAUNCH
-#endif //MAC
-
-#ifdef LINUX
-//#define USE_JLI_LAUNCH
-#endif //LINUX
-
-
-
 // Private typedef for function pointer casting
 #ifndef USE_JLI_LAUNCH
 #define LAUNCH_FUNC "JNI_CreateJavaVM"
@@ -257,7 +243,7 @@ public:
 #ifdef DEBUG
             printf("%s\n", PlatformString(option).c_str());
 #endif //DEBUG
-            FOptions[index].optionString = PlatformString::duplicate(PlatformString(option));
+            FOptions[index].optionString = PlatformString::duplicate(PlatformString(option).c_str());
             FOptions[index].extraInfo = iterator->extraInfo;
             index++;
         }
@@ -325,6 +311,10 @@ std::map<TString, TValueIndex> RemoveTrailingEquals(std::map<TString, TValueInde
 //--------------------------------------------------------------------------------------------------
 
 JavaVirtualMachine::JavaVirtualMachine() {
+#ifndef USE_JLI_LAUNCH
+    FEnv = NULL;
+    FJvm = NULL;
+#endif //USE_JLI_LAUNCH
 }
 
 JavaVirtualMachine::~JavaVirtualMachine(void) {
@@ -370,37 +360,18 @@ bool JavaVirtualMachine::StartJVM() {
     jvmArgs.nOptions = (jint)options.GetCount();
     jvmArgs.ignoreUnrecognized = JNI_TRUE;
 
-    JNIEnv* env = NULL;
-    JavaVM* jvm = NULL;
     JavaLibrary javaLibrary(package.GetJVMPath());
 
-    if (javaLibrary.JavaVMCreate(&jvm, &env, &jvmArgs) == true) {
+    if (javaLibrary.JavaVMCreate(&FJvm, &FEnv, &jvmArgs) == true) {
         try {
-            JavaClass mainClass(env, Helpers::ConvertIdToJavaPath(mainClassName));
+            JavaClass mainClass(FEnv, Helpers::ConvertIdToJavaPath(mainClassName));
             JavaStaticMethod mainMethod = mainClass.GetStaticMethod(_T("main"), _T("([Ljava/lang/String;)V"));
             std::list<TString> appargs = package.GetArgs();
-            JavaStringArray largs(env, appargs);
+            JavaStringArray largs(FEnv, appargs);
             
             package.FreeBootFields();
             
             mainMethod.CallVoidMethod(1, largs.GetData());
-
-            // If application main() exits quickly but application is run on some other thread
-            //  (e.g. Swing app performs invokeLater() in main and exits)
-            // then if we return execution to tWinMain it will exit.
-            // This will cause process to exit and application will not actually run.
-            //
-            // To avoid this we are trying to detach jvm from current thread (java.exe does the same)
-            // Because we are doing this on the main JVM thread (i.e. one that was used to create JVM)
-            // this call will spawn "Destroy Java VM" java thread that will shut JVM once there are
-            // no non-daemon threads running, and then return control here.
-            // I.e. this will happen when EDT and other app thread will exit.
-            if (jvm->DetachCurrentThread() != JNI_OK) {
-                platform.ShowError(_T("Detach failed."));
-            }
-
-            jvm->DestroyJavaVM();
-
             return true;
         }
         catch (JavaException& exception) {
@@ -478,3 +449,26 @@ bool JavaVirtualMachine::StartJVM() {
     return false;
 }
 #endif //USE_JLI_LAUNCH
+
+void JavaVirtualMachine::ShutdownJVM() {
+#ifndef USE_JLI_LAUNCH
+    if (FJvm != NULL) {
+        // If application main() exits quickly but application is run on some other thread
+        //  (e.g. Swing app performs invokeLater() in main and exits)
+        // then if we return execution to tWinMain it will exit.
+        // This will cause process to exit and application will not actually run.
+        //
+        // To avoid this we are trying to detach jvm from current thread (java.exe does the same)
+        // Because we are doing this on the main JVM thread (i.e. one that was used to create JVM)
+        // this call will spawn "Destroy Java VM" java thread that will shut JVM once there are
+        // no non-daemon threads running, and then return control here.
+        // I.e. this will happen when EDT and other app thread will exit.
+        if (FJvm->DetachCurrentThread() != JNI_OK) {
+            Platform& platform = Platform::GetInstance();
+            platform.ShowError(_T("Detach failed."));
+        }
+
+        FJvm->DestroyJavaVM();
+    }
+#endif //USE_JLI_LAUNCH
+}

@@ -153,6 +153,11 @@ final class SWResourceFactory
         }
     }
 
+    @Override
+    protected boolean canClampToZero() {
+        return false;
+    }
+
     @Override public Texture createTexture(MediaFrame vdb) {
         return new SWArgbPreTexture(this, WrapMode.CLAMP_TO_EDGE, vdb.getWidth(), vdb.getHeight());
     }

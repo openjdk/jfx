@@ -54,16 +54,22 @@ int APIENTRY _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     argv = CommandLineToArgvW(GetCommandLine(), &argc);
 
     HMODULE library = ::LoadLibrary(TEXT("packager.dll"));
-    start_launcher start = (start_launcher)GetProcAddress(library, "start_launcher");
-    stop_launcher stop = (stop_launcher)GetProcAddress(library, "stop_launcher");
+    
+    if (library != NULL) {
+        start_launcher start = (start_launcher)GetProcAddress(library, "start_launcher");
+        stop_launcher stop = (stop_launcher)GetProcAddress(library, "stop_launcher");
 
-    if (start(argc, argv) == true) {
-        result = 0;
-        stop();
+        if (start(argc, argv) == true) {
+            result = 0;
+
+            if (stop != NULL) {
+                stop();
+            }
+        }
+
+        ::FreeLibrary(library);
     }
 
-    ::FreeLibrary(library);
-    
     if (argv != NULL) {
         LocalFree(argv);
     }

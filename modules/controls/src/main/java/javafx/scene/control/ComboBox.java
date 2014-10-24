@@ -449,10 +449,11 @@ public class ComboBox<T> extends ComboBoxBase<T> {
                 // selecting a new value from the ComboBox would end up in here,
                 // when we really should go into the updateValue(t1) call below.
                 // We should only ever go into this clause if t1 is null.
-                wasSetAllCalled = false;
             } else {
                 updateValue(t1);
             }
+
+            wasSetAllCalled = false;
         }
     };
 

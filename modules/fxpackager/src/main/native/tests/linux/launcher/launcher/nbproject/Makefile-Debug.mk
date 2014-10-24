@@ -56,11 +56,11 @@ LDLIBSOPTIONS=-ldl
 
 # Build Targets
 .build-conf: ${BUILD_SUBPROJECTS}
-	"${MAKE}"  -f nbproject/Makefile-${CND_CONF}.mk /home/cbensen/src/projects/packager/JavaFXSceneBuilder2.0/launcher
+	"${MAKE}"  -f nbproject/Makefile-${CND_CONF}.mk ../../../../../../../build/dev/DevTest/DevTest
 
-/home/cbensen/src/projects/packager/JavaFXSceneBuilder2.0/launcher: ${OBJECTFILES}
-	${MKDIR} -p /home/cbensen/src/projects/packager/JavaFXSceneBuilder2.0
-	${LINK.cc} -o /home/cbensen/src/projects/packager/JavaFXSceneBuilder2.0/launcher ${OBJECTFILES} ${LDLIBSOPTIONS}
+../../../../../../../build/dev/DevTest/DevTest: ${OBJECTFILES}
+	${MKDIR} -p ../../../../../../../build/dev/DevTest
+	${LINK.cc} -o ../../../../../../../build/dev/DevTest/DevTest ${OBJECTFILES} ${LDLIBSOPTIONS}
 
 ${OBJECTDIR}/_ext/404549893/launcher.o: ../../../../launcher/linux/launcher.cpp 
 	${MKDIR} -p ${OBJECTDIR}/_ext/404549893
@@ -73,7 +73,7 @@ ${OBJECTDIR}/_ext/404549893/launcher.o: ../../../../launcher/linux/launcher.cpp
 # Clean Targets
 .clean-conf: ${CLEAN_SUBPROJECTS}
 	${RM} -r ${CND_BUILDDIR}/${CND_CONF}
-	${RM} /home/cbensen/src/projects/packager/JavaFXSceneBuilder2.0/launcher
+	${RM} ../../../../../../../build/dev/DevTest/DevTest
 
 # Subprojects
 .clean-subprojects:

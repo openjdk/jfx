@@ -1605,8 +1605,20 @@ final public class StyleManager {
         final boolean hasSubSceneUserAgentStylesheet =
                 subSceneUserAgentStylesheet != null && subSceneUserAgentStylesheet.trim().isEmpty() == false;
 
-        final String regionUserAgentStylesheet =
-                (node instanceof Region) ? ((Region)node).getUserAgentStylesheet() : null;
+        String regionUserAgentStylesheet = null;
+        // is this node in a region that has its own stylesheet?
+        Node region = node;
+        while (region != null) {
+            regionUserAgentStylesheet = (region instanceof Region) ? ((Region) region).getUserAgentStylesheet() : null;
+            if (regionUserAgentStylesheet != null) {
+                // We want 'region' to be the node that has the user agent stylesheet.
+                // 'region' is used below - look for if (hasRegionUserAgentStylesheet) block
+                break;
+            }
+            region = region.getParent();
+        }
+
+
         final boolean hasRegionUserAgentStylesheet =
                 regionUserAgentStylesheet != null && regionUserAgentStylesheet.trim().isEmpty() == false;
 
@@ -1728,8 +1740,8 @@ final public class StyleManager {
 
                 if (container.selectorPartitioning != null) {
 
-                    // I know node is a Region...
-                    container.parentUsers.add((Parent)node);
+                    // Depending on RefList add method not allowing duplicates.
+                    container.parentUsers.add((Parent)region);
 
                     final List<Selector> matchingRules =
                             container.selectorPartitioning.match(id, cname, key.styleClasses);

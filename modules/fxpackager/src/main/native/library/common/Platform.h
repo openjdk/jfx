@@ -156,6 +156,12 @@ public:
     virtual void ShowError(TString description) = 0;
 
     virtual void SetCurrentDirectory(TString Value) = 0;
+    
+    // Caller must free result using delete[].
+    virtual TCHAR* ConvertStringToFileSystemString(TCHAR* Source, bool &release) = 0;
+    
+    // Caller must free result using delete[].
+    virtual TCHAR* ConvertFileSystemStringToString(TCHAR* Source, bool &release) = 0;
 
     // Returns:
     // Windows=C:\Users\<username>\AppData\Local\$(app.company)\$(app.id)\packager\jvmuserargs.cfg

@@ -247,15 +247,45 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
             final TabHeaderSkin tabRegion = tabHeaderArea.getTabHeaderSkin(tab);
             if (tabRegion != null) {
                 tabRegion.isClosing = true;
+
+                tabRegion.removeListeners(tab);
+                removeTabContent(tab);
+
+                // remove the menu item from the popup menu
+                ContextMenu popupMenu = tabHeaderArea.controlButtons.popup;
+                TabMenuItem tabItem = null;
+                if (popupMenu != null) {
+                    for (MenuItem item : popupMenu.getItems()) {
+                        tabItem = (TabMenuItem) item;
+                        if (tab == tabItem.getTab()) {
+                            break;
+                        }
+                        tabItem = null;
+                    }
+                }
+                if (tabItem != null) {
+                    tabItem.dispose();
+                    popupMenu.getItems().remove(tabItem);
+                }
+                // end of removing menu item
+
+                EventHandler<ActionEvent> cleanup = ae -> {
+                    tabRegion.animating = false;
+
+                    tabHeaderArea.removeTab(tab);
+                    tabHeaderArea.requestLayout();
+                    if (getSkinnable().getTabs().isEmpty()) {
+                        tabHeaderArea.setVisible(false);
+                    }
+                };
+
                 if (closeTabAnimation.get() == TabAnimation.GROW) {
                     tabRegion.animating = true;
                     Timeline closedTabTimeline = tabRegion.currentAnimation =
-                            createTimeline(tabRegion, Duration.millis(ANIMATION_SPEED), 0.0F, event -> {
-                        handleClosedTab(tab);
-                    });
+                            createTimeline(tabRegion, Duration.millis(ANIMATION_SPEED), 0.0F, cleanup);
                     closedTabTimeline.play();    
                 } else {
-                    handleClosedTab(tab);
+                    cleanup.handle(null);
                 }
             }
         }
@@ -271,12 +301,6 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
         }
     }
 
-    private void handleClosedTab(Tab tab) {
-        removeTab(tab);
-        if (getSkinnable().getTabs().isEmpty()) {
-            tabHeaderArea.setVisible(false);
-        }
-    }
     private void addTabs(List<? extends Tab> addedList, int from) {
         int i = 0;
         for (final Tab tab : addedList) {
@@ -394,39 +418,6 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
                 break;
             }
         }
-    }
-
-    private void removeTab(Tab tab) {
-        final TabHeaderSkin tabRegion = tabHeaderArea.getTabHeaderSkin(tab);
-
-        if (tabRegion != null) {
-            tabRegion.removeListeners(tab);
-        }
-        tabHeaderArea.removeTab(tab);
-        removeTabContent(tab);
-
-        // remove the menu item from the popup menu
-        ContextMenu popupMenu = tabHeaderArea.controlButtons.popup;
-        TabMenuItem tabItem = null;
-        if (popupMenu != null) {
-            for (MenuItem item : popupMenu.getItems()) {
-                tabItem = (TabMenuItem) item;
-                if (tab == tabItem.getTab()) {
-                    break;
-                }
-                tabItem = null;
-            }
-        }
-        if (tabItem != null) {
-            tabItem.dispose();
-            popupMenu.getItems().remove(tabItem);
-        }
-        // end of removing menu item
-
-        if (tabRegion != null) {
-            tabRegion.animating = false;
-        }
-        tabHeaderArea.requestLayout();
     }
 
     private void updateTabPosition() {

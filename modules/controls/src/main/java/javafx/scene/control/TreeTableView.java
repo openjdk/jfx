@@ -695,8 +695,90 @@ public class TreeTableView<S> extends Control {
             }
             
             sortOrder.removeAll(toRemove);
+
+            // Fix for RT-38892.
+            final TreeTableViewFocusModel<S> fm = getFocusModel();
+            final TreeTableViewSelectionModel<S> sm = getSelectionModel();
+            c.reset();
+            while (c.next()) {
+                if (! c.wasRemoved()) continue;
+
+                List<? extends TreeTableColumn<S,?>> removed = c.getRemoved();
+
+                // Fix for focus - we simply move focus to a cell to the left
+                // of the focused cell if the focused cell was located within
+                // a column that has been removed.
+                if (fm != null) {
+                    TreeTablePosition<S, ?> focusedCell = fm.getFocusedCell();
+                    boolean match = false;
+                    for (TreeTableColumn<S, ?> tc : removed) {
+                        match = focusedCell != null && focusedCell.getTableColumn() == tc;
+                        if (match) {
+                            break;
+                        }
+                    }
+
+                    if (match) {
+                        int matchingColumnIndex = lastKnownColumnIndex.getOrDefault(focusedCell.getTableColumn(), 0);
+                        int newFocusColumnIndex =
+                                matchingColumnIndex == 0 ? 0 :
+                                        Math.min(getVisibleLeafColumns().size() - 1, matchingColumnIndex - 1);
+                        fm.focus(focusedCell.getRow(), getVisibleLeafColumn(newFocusColumnIndex));
+                    }
+                }
+
+                // Fix for selection - we remove selection from all cells that
+                // were within the removed column.
+                if (sm != null) {
+                    List<TreeTablePosition> selectedCells = new ArrayList<>(sm.getSelectedCells());
+                    for (TreeTablePosition selectedCell : selectedCells) {
+                        boolean match = false;
+                        for (TreeTableColumn<S, ?> tc : removed) {
+                            match = selectedCell != null && selectedCell.getTableColumn() == tc;
+                            if (match) break;
+                        }
+
+                        if (match) {
+                            // we can't just use the selectedCell.getTableColumn(), as that
+                            // column no longer exists and therefore its index is not correct.
+                            int matchingColumnIndex = lastKnownColumnIndex.getOrDefault(selectedCell.getTableColumn(), -1);
+                            if (matchingColumnIndex == -1) continue;
+
+                            if (sm instanceof TreeTableViewArrayListSelectionModel) {
+                                // Also, because the table column no longer exists in the columns
+                                // list at this point, we can't just call:
+                                // sm.clearSelection(selectedCell.getRow(), selectedCell.getTableColumn());
+                                // as the tableColumn would map to an index of -1, which means that
+                                // selection will not be cleared. Instead, we have to create
+                                // a new TablePosition with a fixed column index and use that.
+                                TreeTablePosition<S,?> fixedTablePosition =
+                                        new TreeTablePosition<S,Object>(TreeTableView.this,
+                                                selectedCell.getRow(),
+                                                selectedCell.getTableColumn());
+                                fixedTablePosition.fixedColumnIndex = matchingColumnIndex;
+
+                                ((TreeTableViewArrayListSelectionModel)sm).clearSelection(fixedTablePosition);
+                            } else {
+                                sm.clearSelection(selectedCell.getRow(), selectedCell.getTableColumn());
+                            }
+                        }
+                    }
+                }
+            }
+
+
+            // update the lastKnownColumnIndex map
+            lastKnownColumnIndex.clear();
+            for (TreeTableColumn<S,?> tc : getColumns()) {
+                int index = getVisibleLeafIndex(tc);
+                if (index > -1) {
+                    lastKnownColumnIndex.put(tc, index);
+                }
+            }
         }
     };
+
+    private final WeakHashMap<TreeTableColumn<S,?>, Integer> lastKnownColumnIndex = new WeakHashMap<>();
     
     private final InvalidationListener columnVisibleObserver = valueModel -> {
         updateVisibleLeafColumns();
@@ -2335,6 +2417,13 @@ public class TreeTableView<S> extends Control {
                 } else if (e.wasRemoved()) {
                     // shuffle selection by the number of removed items
                     shift = treeItem.isExpanded() ? -e.getRemovedSize() : 0;
+
+                    // the start row is incorrect - it is _not_ the index of the
+                    // TreeItem in which the children were removed from (which is
+                    // what it currently represents). We need to take the 'from'
+                    // value out of the event and make use of that to understand
+                    // what actually changed inside the children list.
+                    startRow += e.getFrom() + 1;
                     
                     // whilst we are here, we should check if the removed items
                     // are part of the selectedItems list - and remove them
@@ -2348,11 +2437,6 @@ public class TreeTableView<S> extends Control {
                         int index = selectedIndices.get(i);
                         if (index > selectedItems.size()) break;
 
-                        // Removed as part of RT-30356 consistency effort
-//                        TreeItem<S> item = selectedItems.get(index);
-//                        if (item == null || removedChildren.contains(item)) {
-//                            clearSelection(index);
-//                        } else
                         if (removedChildren.size() == 1 &&
                                 selectedItems.size() == 1 && 
                                 selectedItem != null && 
@@ -2362,7 +2446,7 @@ public class TreeTableView<S> extends Control {
                                 final int previousRow = oldSelectedIndex == 0 ? 0 : oldSelectedIndex - 1;
                                 TreeItem<S> newSelectedItem = getModelItem(previousRow);
                                 if (! selectedItem.equals(newSelectedItem)) {
-                                    setSelectedItem(newSelectedItem);
+                                    clearAndSelect(previousRow);
                                 }
                             }
                         }
@@ -2607,16 +2691,16 @@ public class TreeTableView<S> extends Control {
                         for (int column = 0; column < columns.size(); column++) {
                             if (! selectedCellsMap.isSelected(row, column)) {
                                 positions.add(new TreeTablePosition<>(getTreeTableView(), row, columns.get(column)));
-                                lastIndex = row;
                             }
                         }
                     } else {
                         boolean match = selectedCellsMap.isSelected(row, -1);
                         if (!match) {
                             positions.add(new TreeTablePosition<>(getTreeTableView(), row, null));
-                            lastIndex = row;
                         }
                     }
+
+                    lastIndex = row;
                 }
 
                 // --- now we iterate through all varargs values
@@ -2756,15 +2840,26 @@ public class TreeTableView<S> extends Control {
             clearSelection(index, null);
         }
 
-        @Override public void clearSelection(int row, TableColumnBase<TreeItem<S>,?> column) {
-            TreeTablePosition<S,?> tp = new TreeTablePosition<S,Object>(getTreeTableView(), row, (TreeTableColumn)column);
+        @Override
+        public void clearSelection(int row, TableColumnBase<TreeItem<S>,?> column) {
+            clearSelection(new TreeTablePosition<S,Object>(getTreeTableView(), row, (TreeTableColumn)column));
+        }
 
-            boolean csMode = isCellSelectionEnabled();
-            
+        private void clearSelection(TreeTablePosition<S,?> tp) {
+            final boolean csMode = isCellSelectionEnabled();
+            final int row = tp.getRow();
+
             for (TreeTablePosition<S,?> pos : getSelectedCells()) {
-                if ((! csMode && pos.getRow() == row) || (csMode && pos.equals(tp))) {
-                    selectedCellsMap.remove(pos);
-                    return;
+                if (! csMode) {
+                    if (pos.getRow() == row) {
+                        selectedCellsMap.remove(pos);
+                        return;
+                    }
+                } else {
+                    if (pos.equals(tp)) {
+                        selectedCellsMap.remove(tp);
+                        return;
+                    }
                 }
             }
         }
@@ -2775,11 +2870,13 @@ public class TreeTableView<S> extends Control {
                 focus(-1);
             }
 
-            quietClearSelection();
+            selectedCellsMap.clear();
         }
 
         private void quietClearSelection() {
+            startAtomic();
             selectedCellsMap.clear();
+            stopAtomic();
         }
 
         @Override public boolean isSelected(int index) {

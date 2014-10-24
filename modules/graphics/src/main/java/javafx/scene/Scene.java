@@ -3421,7 +3421,7 @@ public class Scene implements EventTarget {
                 pressedTargets.clear();
                 releasedTargets.clear();
 
-                if (clickedTarget != null) {
+                if (clickedTarget != null && lastPress != null) {
                     MouseEvent click = new MouseEvent(null, clickedTarget,
                             MouseEvent.MOUSE_CLICKED, e.getSceneX(), e.getSceneY(),
                             e.getScreenX(), e.getScreenY(), e.getButton(),

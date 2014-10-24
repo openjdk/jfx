@@ -114,7 +114,7 @@ void Package::Initialize() {
     TString runtime;
     config->GetValue(keys[JVM_RUNTIME_KEY], runtime);
     runtime = FilePath::IncludeTrailingSlash(GetPackageRootDirectory()) +
-        FilePath::IncludeTrailingSlash(_T("Contents/Plugins")) + runtime;
+        FilePath::IncludeTrailingSlash(_T("Plugins")) + runtime;
 #endif //MAC
 
     FBootFields->FIsRuntimeBundled = FilePath::DirectoryExists(runtime);

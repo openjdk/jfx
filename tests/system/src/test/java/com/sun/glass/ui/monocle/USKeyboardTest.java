@@ -30,9 +30,19 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class USKeyboardTest {
 
     private UInput ui;
+    private Character [] bigChars;
+    private Character [] smallChars;
+    private Character [] digits;
+    private Character [] digitsShift;
+    private Character [] signs;
+    private Character [] signsShift;
+    private String [] signsKeyNames;
 
     @Before
     public void initDevice() {
@@ -48,6 +58,42 @@ public class USKeyboardTest {
         } catch (RuntimeException e) { }
         ui.processLine("CLOSE");
         ui.dispose();
+    }
+
+    private void createUSKeyboard() {
+        bigChars = new Character[26];
+        for(int i = 65; i < 91; i++) {
+            bigChars[i-65] = (char) i;
+        }
+        smallChars = new Character[26];
+        for(int i = 97; i < 123; i++) {
+            smallChars[i-97] = (char) i;
+        }
+        digits = new Character [] {'1','2','3','4','5','6','7','8','9','0'};
+        digitsShift = new Character [] {'!','@','#','$','%','^','&','*','(',')'};
+
+        signs =  new Character [] {'`','-','=','[',']',';','\'','\\',',','.','/'};
+        signsShift = new Character [] {'~','_','+','{','}',':','"','|','<','>','?'};
+        signsKeyNames = new String [] {"GRAVE", "MINUS","EQUAL","LEFTBRACE",
+                                        "RIGHTBRACE","SEMICOLON","APOSTROPHE",
+                                        "BACKSLASH","COMMA","DOT","SLASH"};
+        ui.processLine("OPEN");
+        ui.processLine("EVBIT EV_KEY");
+        ui.processLine("EVBIT EV_SYN");
+        for(int i = 0; i < 26; i++) {
+            ui.processLine("KEYBIT KEY_" + bigChars[i]);
+        }
+        for(int i = 0; i < 10; i++) {
+            ui.processLine("KEYBIT KEY_" + digits[i]);
+        }
+        for(int i = 0; i < 11; i++) {
+            ui.processLine("KEYBIT KEY_" + signsKeyNames[i]);
+        }
+        ui.processLine("KEYBIT 0x0033");
+        ui.processLine("KEYBIT KEY_LEFTSHIFT");
+        ui.processLine("KEYBIT KEY_CAPSLOCK");
+        ui.processLine("PROPERTY ID_INPUT_KEYBOARD 1");
+        ui.processLine("CREATE");
     }
 
     private void checkShift(String key, char unShifted, char shifted) throws Exception {
@@ -72,80 +118,52 @@ public class USKeyboardTest {
         TestLog.waitForLog("Key typed: %0$c", new Object[] { c });
     }
 
+    /**
+     * The test is checking the lookup of each key on board,
+     * at first with Shift button unpressed and then with Shift button pressed.
+     */
     @Test
     public void testShift() throws Exception {
         TestApplication.showFullScreenScene();
         TestApplication.addKeyListeners();
-        ui.processLine("OPEN");
-        ui.processLine("EVBIT EV_KEY");
-        ui.processLine("EVBIT EV_SYN");
-        ui.processLine("KEYBIT KEY_A");
-        ui.processLine("KEYBIT KEY_1");
-        ui.processLine("KEYBIT KEY_2");
-        ui.processLine("KEYBIT KEY_3");
-        ui.processLine("KEYBIT KEY_4");
-        ui.processLine("KEYBIT KEY_5");
-        ui.processLine("KEYBIT KEY_6");
-        ui.processLine("KEYBIT KEY_7");
-        ui.processLine("KEYBIT KEY_8");
-        ui.processLine("KEYBIT KEY_9");
-        ui.processLine("KEYBIT KEY_0");
-        ui.processLine("KEYBIT KEY_LEFTSHIFT");
-        ui.processLine("PROPERTY ID_INPUT_KEYBOARD 1");
-        ui.processLine("CREATE");
+        createUSKeyboard();
 
-        checkShift("KEY_A", 'a', 'A');
-        checkShift("KEY_1", '1', '!');
-        checkShift("KEY_2", '2', '@');
-        checkShift("KEY_3", '3', '#');
-        checkShift("KEY_4", '4', '$');
-        checkShift("KEY_5", '5', '%');
-        checkShift("KEY_6", '6', '^');
-        checkShift("KEY_7", '7', '&');
-        checkShift("KEY_8", '8', '*');
-        checkShift("KEY_9", '9', '(');
-        checkShift("KEY_0", '0', ')');
+        for(int i = 0; i < 26; i++) {
+            checkShift("KEY_"+ bigChars[i], smallChars[i], bigChars[i]);
+        }
+        for(int i = 0; i < 10; i++) {
+            checkShift("KEY_"+ digits[i], digits[i], digitsShift[i]);
+        }
+        for(int i = 0; i < 11; i++) {
+            checkShift("KEY_"+ signsKeyNames[i], signs[i], signsShift[i]);
+        }
     }
 
+    /**
+     * The test is checking the lookup of each key on board,
+     * when Caps Lock only is pressed and then with both Shift
+     * and Caps Lock buttons are pressed.
+     */
     @Test
     public void testCapsLock() throws Exception {
         TestApplication.showFullScreenScene();
         TestApplication.addKeyListeners();
-        ui.processLine("OPEN");
-        ui.processLine("EVBIT EV_KEY");
-        ui.processLine("EVBIT EV_SYN");
-        ui.processLine("KEYBIT KEY_A");
-        ui.processLine("KEYBIT KEY_1");
-        ui.processLine("KEYBIT KEY_2");
-        ui.processLine("KEYBIT KEY_3");
-        ui.processLine("KEYBIT KEY_4");
-        ui.processLine("KEYBIT KEY_5");
-        ui.processLine("KEYBIT KEY_6");
-        ui.processLine("KEYBIT KEY_7");
-        ui.processLine("KEYBIT KEY_8");
-        ui.processLine("KEYBIT KEY_9");
-        ui.processLine("KEYBIT KEY_0");
-        ui.processLine("KEYBIT KEY_LEFTSHIFT");
-        ui.processLine("KEYBIT KEY_CAPSLOCK");
-        ui.processLine("PROPERTY ID_INPUT_KEYBOARD 1");
-        ui.processLine("CREATE");
+        createUSKeyboard();
 
         ui.processLine("EV_KEY KEY_CAPSLOCK 1");
         ui.processLine("EV_SYN");
         ui.processLine("EV_KEY KEY_CAPSLOCK 0");
         ui.processLine("EV_SYN");
 
-        checkShift("KEY_A", 'A', 'a');
-        checkShift("KEY_1", '1', '!');
-        checkShift("KEY_2", '2', '@');
-        checkShift("KEY_3", '3', '#');
-        checkShift("KEY_4", '4', '$');
-        checkShift("KEY_5", '5', '%');
-        checkShift("KEY_6", '6', '^');
-        checkShift("KEY_7", '7', '&');
-        checkShift("KEY_8", '8', '*');
-        checkShift("KEY_9", '9', '(');
-        checkShift("KEY_0", '0', ')');
+        for(int i = 0; i < 26; i++) {
+            checkShift("KEY_"+ bigChars[i], bigChars[i], smallChars[i]);
+        }
+        for(int i = 0; i < 10; i++) {
+            checkShift("KEY_"+ digits[i], digits[i], digitsShift[i]);
+        }
+        for(int i = 0; i < 11; i++) {
+            checkShift("KEY_"+ signsKeyNames[i], signs[i], signsShift[i]);
+        }
 
         ui.processLine("EV_KEY KEY_CAPSLOCK 1");
         ui.processLine("EV_SYN");
@@ -272,5 +290,4 @@ public class USKeyboardTest {
         TestLog.waitForLog("Key released: BACK_SPACE");
         Assert.assertEquals(0l, TestLog.countLogContaining("Key typed"));
     }
-
 }
