@@ -704,6 +704,7 @@ public class Cell<T> extends Labeled {
      *         the old item. By default this method tests against equality, but
      *         subclasses may alter the implementation to test appropriate to
      *         their needs.
+     * @since JavaFX 8u40
      */
     protected boolean isItemChanged(T oldItem, T newItem) {
         return oldItem != null ? !oldItem.equals(newItem) : newItem != null;
