@@ -2120,6 +2120,12 @@ is being used to size a border should also be in pixels.
     -fx-alignment: bottom-right;
 }
 
+/* The fix for RT-37494 forces the web color text's major direction to
+ * LTR. The following keeps the text right-aligned when in RTL mode. */
+.custom-color-dialog .webcolor-field:dir(rtl) > .text-field:dir(ltr) {
+    -fx-alignment: baseline-right;
+}
+
 /*******************************************************************************
  *                                                                             *
  * Pagination                                                                  *

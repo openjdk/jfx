@@ -3388,6 +3388,14 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-padding: 1.25em;
     -fx-spacing: 1.25em;
 }
+
+/* The fix for RT-37494 forces the web color text's major direction to
+ * LTR. The following keeps the text right-aligned when in RTL mode. */
+.custom-color-dialog .webcolor-field:dir(rtl) > .text-field:dir(ltr) {
+    -fx-alignment: baseline-right;
+}
+
+
 /* -------- Toggle Button ---------------- */
 .custom-color-dialog .controls-pane .toggle-button {
     -fx-background-radius: 0.333333em, 0.333333em, 0.25em, 0.1666667em;
