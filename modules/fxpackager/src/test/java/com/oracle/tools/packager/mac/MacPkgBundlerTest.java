@@ -270,6 +270,10 @@ public class MacPkgBundlerTest {
         bundleParams.put(VENDOR.getID(), "Оракл девелопмент");
         bundleParams.put(DESCRIPTION.getID(), "крайне большое описание со странными символами");
 
+        if (runtimeJdk != null) {
+            bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
+        }
+
         bundler.validate(bundleParams);
 
         File output = bundler.execute(bundleParams, new File(workDir, "Unicode"));
