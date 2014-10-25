@@ -44,6 +44,7 @@ public class CLITest {
     @BeforeClass
     public static void prepareApp() {
         Log.setLogger(new Log.Logger(true));
+        Log.setDebug(true);
 
         String tmpBasePath = System.getProperty("tmpBase");
         if (tmpBasePath != null) {

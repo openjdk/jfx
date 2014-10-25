@@ -72,6 +72,7 @@ public class MacDaemonBundlerTest {
         Assume.assumeTrue(runtimeJdk != null || jre.endsWith("/contents/home/jre") || jre.endsWith("/contents/home/jre"));
 
         Log.setLogger(new Log.Logger(true));
+        Log.setDebug(true);
 
         retain = Boolean.parseBoolean(System.getProperty("RETAIN_PACKAGER_TESTS"));
         workDir = new File("build/tmp/tests", "macdaemon");

@@ -111,7 +111,7 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     (s, p) -> s
             );
 
-    private static Pattern TO_FS_NAME = Pattern.compile("[^-a-zA-Z0-9.]");
+    private static Pattern TO_FS_NAME = Pattern.compile("\\s|[\\/?:*<>|]"); // keep out invalid/undesireable filename characters
 
     public static final StandardBundlerParam<String> APP_FS_NAME =
             new StandardBundlerParam<>(

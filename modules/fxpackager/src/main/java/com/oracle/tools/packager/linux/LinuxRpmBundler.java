@@ -75,6 +75,17 @@ public class LinuxRpmBundler extends AbstractBundler {
             params ->  new File(BUILD_ROOT.fetchFrom(params), "linux"),
             (s, p) -> new File(s));
 
+    // Fedora rules for package naming are used here
+    // https://fedoraproject.org/wiki/Packaging:NamingGuidelines?rd=Packaging/NamingGuidelines
+    //
+    // all Fedora packages must be named using only the following ASCII characters.
+    // These characters are displayed here:
+    //
+    // abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._+
+    //
+    private static final Pattern RPM_BUNDLE_NAME_PATTERN =
+            Pattern.compile("[a-z\\d\\+\\-\\.\\_]+", Pattern.CASE_INSENSITIVE);
+
     public static final BundlerParamInfo<String> BUNDLE_NAME = new StandardBundlerParam<> (
             I18N.getString("param.bundle-name.name"), 
             I18N.getString("param.bundle-name.description"),
@@ -84,17 +95,22 @@ public class LinuxRpmBundler extends AbstractBundler {
                 String nm = APP_NAME.fetchFrom(params);
                 if (nm == null) return null;
 
-                // Fedora rules are used here
-                // https://fedoraproject.org/wiki/Packaging:NamingGuidelines?rd=Packaging/NamingGuidelines
-                // The net effect is to lowercase the app name,
-                // change spaces and underscores to dashes,
-                // and to remove all alphanum+dashes
-                nm = nm.toLowerCase()
-                        .replaceAll("[ _]", "-")
-                        .replaceAll("[^-abcdefghijklmnopqrstuvwxyz0123456789]", "");
+                // make sure to lower case and spaces become dashes
+                nm = nm.toLowerCase().replaceAll("[ ]", "-");
+
                 return nm;
             },
-            (s, p) -> s);
+            (s, p) -> {
+                if (!RPM_BUNDLE_NAME_PATTERN.matcher(s).matches()) {
+                    throw new IllegalArgumentException(
+                            new ConfigException(
+                                MessageFormat.format(I18N.getString("error.invalid-value-for-package-name"), s),
+                                                     I18N.getString("error.invalid-value-for-package-name.advice")));
+                }
+
+                return s;
+            }
+        );
 
     public static final BundlerParamInfo<String> XDG_FILE_PREFIX = new StandardBundlerParam<> (
             I18N.getString("param.xdg-prefix.name"),
@@ -217,6 +233,10 @@ public class LinuxRpmBundler extends AbstractBundler {
                     }
                 }
             }
+
+            // bundle name has some restrictions
+            // the string converter will throw an exception if invalid
+            BUNDLE_NAME.getStringConverter().apply(BUNDLE_NAME.fetchFrom(p), p);
 
             return true;
         } catch (RuntimeException re) {

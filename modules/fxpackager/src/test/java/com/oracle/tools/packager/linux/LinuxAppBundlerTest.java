@@ -70,6 +70,7 @@ public class LinuxAppBundlerTest {
         Assume.assumeTrue(System.getProperty("os.name").toLowerCase().startsWith("linux"));
 
         Log.setLogger(new Log.Logger(true));
+        Log.setDebug(true);
 
         retain = Boolean.parseBoolean(System.getProperty("RETAIN_PACKAGER_TESTS"));
 
@@ -173,6 +174,32 @@ public class LinuxAppBundlerTest {
         File output = bundler.execute(bundleParams, new File(workDir, "BareMinimum"));
         validatePackageCfg(output, bundleParams);
         assertTrue(output.isDirectory());
+    }
+
+    /**
+     * Test with unicode in places we expect it to be
+     */
+    @Test
+    public void unicodeConfig() throws IOException, ConfigException, UnsupportedPlatformException {
+        Bundler bundler = new LinuxAppBundler();
+
+        Map<String, Object> bundleParams = new HashMap<>();
+
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+
+        bundleParams.put(APP_NAME.getID(), "хелловорлд");
+        bundleParams.put(TITLE.getID(), "ХеллоВорлд аппликейшн");
+        bundleParams.put(VENDOR.getID(), "Оракл девелопмент");
+        bundleParams.put(DESCRIPTION.getID(), "крайне большое описание со странными символами");
+
+        bundler.validate(bundleParams);
+
+        File output = bundler.execute(bundleParams, new File(workDir, "Unicode"));
+        System.err.println("Bundle at - " + output);
+        assertNotNull(output);
+        assertTrue(output.exists());
     }
 
     public void validatePackageCfg(File root, Map<String, ? super Object> params) throws IOException {

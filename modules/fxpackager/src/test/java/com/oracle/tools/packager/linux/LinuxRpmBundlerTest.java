@@ -28,9 +28,11 @@ package com.oracle.tools.packager.linux;
 import com.oracle.tools.packager.AbstractBundler;
 import com.oracle.tools.packager.Bundler;
 import com.oracle.tools.packager.BundlerParamInfo;
+import com.oracle.tools.packager.BundlersTest;
 import com.oracle.tools.packager.ConfigException;
 import com.oracle.tools.packager.Log;
 import com.oracle.tools.packager.RelativeFileSet;
+import com.oracle.tools.packager.StandardBundlerParam;
 import com.oracle.tools.packager.UnsupportedPlatformException;
 import org.junit.After;
 import org.junit.Assume;
@@ -54,6 +56,7 @@ import static com.oracle.tools.packager.StandardBundlerParam.*;
 import static com.oracle.tools.packager.linux.LinuxAppBundler.ICON_PNG;
 import static com.oracle.tools.packager.linux.LinuxRpmBundler.BUNDLE_NAME;
 import static org.junit.Assert.*;
+import static org.junit.Assume.assumeTrue;
 
 public class LinuxRpmBundlerTest {
 
@@ -72,6 +75,7 @@ public class LinuxRpmBundlerTest {
         Assume.assumeTrue(LinuxRpmBundler.testTool(LinuxRpmBundler.TOOL_RPMBUILD, LinuxRpmBundler.TOOL_RPMBUILD_MIN_VERSION));
 
         Log.setLogger(new Log.Logger(true));
+        Log.setDebug(true);
 
         retain = Boolean.parseBoolean(System.getProperty("RETAIN_PACKAGER_TESTS"));
 
@@ -188,6 +192,53 @@ public class LinuxRpmBundlerTest {
         assertTrue(output.exists());
     }
 
+    /**
+     * Test with unicode in places we expect it to be
+     */
+    @Test
+    public void unicodeConfig() throws IOException, ConfigException, UnsupportedPlatformException {
+        Bundler bundler = new LinuxRpmBundler();
+
+        Map<String, Object> bundleParams = new HashMap<>();
+
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+
+        bundleParams.put(APP_NAME.getID(), "хелловорлд");
+        bundleParams.put(TITLE.getID(), "ХеллоВорлд аппликейшн");
+        bundleParams.put(VENDOR.getID(), "Оракл девелопмент");
+        bundleParams.put(DESCRIPTION.getID(), "крайне большое описание со странными символами");
+
+        // mandatory re-names
+        bundleParams.put(LinuxDebBundler.BUNDLE_NAME.getID(), "helloworld");
+
+        bundler.validate(bundleParams);
+
+        File output = bundler.execute(bundleParams, new File(workDir, "Unicode"));
+        System.err.println("Bundle at - " + output);
+        assertNotNull(output);
+        assertTrue(output.exists());
+    }
+
+    /**
+     * prove we fail when bundlename inherited from appname is bad
+     */
+    @Test(expected = ConfigException.class)
+    public void badUnicodeAppName() throws IOException, ConfigException, UnsupportedPlatformException {
+        Bundler bundler = new LinuxRpmBundler();
+
+        Map<String, Object> bundleParams = new HashMap<>();
+
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+
+        bundleParams.put(APP_NAME.getID(), "хелловорлд");
+
+        bundler.validate(bundleParams);
+    }
+
     @Test(expected = ConfigException.class)
     public void invalidLicenseFile() throws ConfigException, UnsupportedPlatformException {
         Bundler bundler = new LinuxRpmBundler();
@@ -280,7 +331,7 @@ public class LinuxRpmBundlerTest {
         bundleParams.put(STOP_ON_UNINSTALL.getID(), true);
         bundleParams.put(RUN_AT_STARTUP.getID(), true);
 
-        bundleParams.put(APP_NAME.getID(), "Java Packager Service Test #1");
+        bundleParams.put(APP_NAME.getID(), "Java Packager Service Test");
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
         bundleParams.put(MAIN_CLASS.getID(), "hello.HelloService");
         bundleParams.put(MAIN_JAR.getID(), "mainApp.jar");
@@ -446,5 +497,15 @@ public class LinuxRpmBundlerTest {
         bundleParams.put(SYSTEM_WIDE.getID(), true);
 
         bundler.validate(bundleParams);
+    }
+
+    @Test
+    public void testAppNameForRpmBundler() {
+        // valid names for rpm package
+        BundlersTest.testValidValueForBaseParam(StandardBundlerParam.APP_NAME, "test", LinuxRpmBundler.BUNDLE_NAME);
+        BundlersTest.testValidValueForBaseParam(StandardBundlerParam.APP_NAME, "te", LinuxRpmBundler.BUNDLE_NAME);
+
+        // invalid name with cyrillic characters
+        BundlersTest.testInvalidValueForBaseParam(StandardBundlerParam.APP_NAME, "\u0442\u0435\u0441\u0442", LinuxRpmBundler.BUNDLE_NAME);
     }
 }

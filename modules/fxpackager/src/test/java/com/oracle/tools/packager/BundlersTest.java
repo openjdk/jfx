@@ -265,4 +265,32 @@ public class BundlersTest {
         }
     }
 
+    public static void testValidValueForBaseParam(BundlerParamInfo baseParam, String baseParamValue,
+                                                  BundlerParamInfo derivedParam)
+    {
+        Map<String, ? super Object> params;        
+        params = new TreeMap<>();
+
+        params.put(baseParam.getID(), baseParamValue);
+        // shouldn't trigger exception
+        assertEquals(derivedParam.fetchFrom(params), baseParamValue);
+    }
+    
+    public static void testInvalidValueForBaseParam(BundlerParamInfo baseParam, String baseParamValue,
+                                                    BundlerParamInfo derivedParam)
+    {
+        try {
+            Map<String, ? super Object> params;
+            params = new TreeMap<>();
+
+            params.put(baseParam.getID(), baseParamValue);
+            // should trigger exception
+            derivedParam.getStringConverter().apply(derivedParam.fetchFrom(params), params);        
+
+            fail("An exception should have been thrown");
+        } catch(IllegalArgumentException ex) {
+            assertTrue("IllegalArgumentException wraps a ConfigException",
+                       ex.getCause() instanceof ConfigException);
+        }
+    }
 }

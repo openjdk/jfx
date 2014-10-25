@@ -104,6 +104,7 @@ public class MacAppStoreBundlerTest {
 
 
         Log.setLogger(new Log.Logger(true));
+        Log.setDebug(true);
 
         retain = Boolean.parseBoolean(System.getProperty("RETAIN_PACKAGER_TESTS"));
 

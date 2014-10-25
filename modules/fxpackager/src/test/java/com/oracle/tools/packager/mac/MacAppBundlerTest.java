@@ -79,6 +79,7 @@ public class MacAppBundlerTest {
         Assume.assumeTrue(runtimeJdk != null || jre.endsWith("/contents/home/jre") || jre.endsWith("/contents/home/jre"));
 
         Log.setLogger(new Log.Logger(true));
+        Log.setDebug(true);
 
         retain = Boolean.parseBoolean(System.getProperty("RETAIN_PACKAGER_TESTS"));
 
@@ -389,6 +390,32 @@ public class MacAppBundlerTest {
         }
 
         File output = bundler.execute(bundleParams, new File(workDir, "BareMinimum"));
+        System.err.println("Bundle at - " + output);
+        assertNotNull(output);
+        assertTrue(output.exists());
+    }
+
+    /**
+     * Test with unicode in places we expect it to be
+     */
+    @Test
+    public void unicodeConfig() throws IOException, ConfigException, UnsupportedPlatformException {
+        Bundler bundler = new MacAppBundler();
+
+        Map<String, Object> bundleParams = new HashMap<>();
+
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+
+        bundleParams.put(APP_NAME.getID(), "хелловорлд");
+        bundleParams.put(TITLE.getID(), "ХеллоВорлд аппликейшн");
+        bundleParams.put(VENDOR.getID(), "Оракл девелопмент");
+        bundleParams.put(DESCRIPTION.getID(), "крайне большое описание со странными символами");
+
+        bundler.validate(bundleParams);
+
+        File output = bundler.execute(bundleParams, new File(workDir, "Unicode"));
         System.err.println("Bundle at - " + output);
         assertNotNull(output);
         assertTrue(output.exists());

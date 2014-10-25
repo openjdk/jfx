@@ -26,7 +26,6 @@
 package com.oracle.tools.packager.linux;
 
 import com.oracle.tools.packager.*;
-import com.oracle.tools.packager.IOUtils;
 import com.sun.javafx.tools.packager.bundlers.BundleParams;
 
 import javax.imageio.ImageIO;
@@ -39,6 +38,7 @@ import java.text.MessageFormat;
 import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Pattern;
 
 import static com.oracle.tools.packager.StandardBundlerParam.*;
 import static com.oracle.tools.packager.linux.LinuxAppBundler.ICON_PNG;
@@ -56,6 +56,16 @@ public class LinuxDebBundler extends AbstractBundler {
             params -> new LinuxAppBundler(),
             (s, p) -> null);
 
+    // Debian rules for package naming are used here
+    // https://www.debian.org/doc/debian-policy/ch-controlfields.html#s-f-Source
+    // 
+    // Package names must consist only of lower case letters (a-z), digits (0-9),
+    // plus (+) and minus (-) signs, and periods (.).
+    // They must be at least two characters long and must start with an alphanumeric character.
+    //
+    private static final Pattern DEB_BUNDLE_NAME_PATTERN =
+            Pattern.compile("^[a-z][a-z\\d\\+\\-\\.]+");
+
     public static final BundlerParamInfo<String> BUNDLE_NAME = new StandardBundlerParam<> (
             I18N.getString("param.bundle-name.name"),
             I18N.getString("param.bundle-name.description"),
@@ -63,19 +73,24 @@ public class LinuxDebBundler extends AbstractBundler {
             String.class,
             params -> {
                 String nm = APP_NAME.fetchFrom(params);
+
                 if (nm == null) return null;
 
-                // only lower-alphanumeric and -+. are allowed
-                // so to lower case,
-                // spaces and underscores become dashes
-                // and drop all other bad characters
-                nm = nm.toLowerCase()
-                       .replaceAll("[ _]", "-")
-                       .replaceAll("[^-+.a-z0-9]", "");
+                // make sure to lower case and spaces/underscores become dashes
+                nm = nm.toLowerCase().replaceAll("[ _]", "-");
                 return nm;
             },
-            (s, p) -> s);
-
+            (s, p) -> {
+                if (!DEB_BUNDLE_NAME_PATTERN.matcher(s).matches()) {
+                    throw new IllegalArgumentException(
+                            new ConfigException(
+                                MessageFormat.format(I18N.getString("error.invalid-value-for-package-name"), s),
+                                                     I18N.getString("error.invalid-value-for-package-name.advice")));
+                }
+                
+                return s;
+            });
+    
     public static final BundlerParamInfo<String> FULL_PACKAGE_NAME = new StandardBundlerParam<> (
             I18N.getString("param.full-package-name.name"),
             I18N.getString("param.full-package-name.description"),
@@ -285,6 +300,10 @@ public class LinuxDebBundler extends AbstractBundler {
                 }
             }
 
+            // bundle name has some restrictions
+            // the string converter will throw an exception if invalid
+            BUNDLE_NAME.getStringConverter().apply(BUNDLE_NAME.fetchFrom(p), p);
+
             return true;
         } catch (RuntimeException re) {
             if (re.getCause() instanceof ConfigException) {
@@ -329,7 +348,6 @@ public class LinuxDebBundler extends AbstractBundler {
 
             imageDir.mkdirs();
             configDir.mkdirs();
-
             if (prepareProto(p) && prepareProjectConfig(p)) {
                 return buildDeb(p, outdir);
             }
