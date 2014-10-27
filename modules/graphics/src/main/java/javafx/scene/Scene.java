@@ -976,9 +976,18 @@ public class Scene implements EventTarget {
 
     /**
      * Defines the background fill of this {@code Scene}. Both a {@code null}
-     * value meaning paint no background and a {@link javafx.scene.paint.Paint}
-     * with transparency are supported, but what is painted behind it will
-     * depend on the platform.  The default value is the color white.
+     * value meaning 'paint no background' and a {@link javafx.scene.paint.Paint}
+     * with transparency are supported. The default fill of the Scene is
+     * {@link Color#WHITE}, but it is more commonly the case that the initial
+     * color shown to users is the background fill of the
+     * {@link #rootProperty() root node} of the {@code Scene}, as it typically is
+     * stretched to take up all available space in the {@code Scene}. The
+     * root node of the {@code Scene} is given the CSS style class 'root', and
+     * the default user agent stylesheets that ship with JavaFX (presently
+     * Caspian and Modena) apply styling on to this root style class. In the
+     * case of Caspian this does not impact the background fill color of the
+     * root node, but in the case of Modena the default fill is set to be a
+     * light gray color.
      *
      * @defaultValue WHITE
      */
