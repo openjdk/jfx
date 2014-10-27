@@ -120,7 +120,8 @@ public class MacDaemonBundler extends AbstractBundler {
         w.write(preprocessTextResource(
                 MAC_BUNDLER_PREFIX + getConfig_LaunchdPlist(params).getName(),
                 I18N.getString("resource.launchd-config"), TEMPLATE_LAUNCHD_PLIST, data,
-                VERBOSE.fetchFrom(params)));
+                VERBOSE.fetchFrom(params),
+                DROP_IN_RESOURCES_ROOT.fetchFrom(params)));
         w.close();
     }
 
@@ -151,8 +152,6 @@ public class MacDaemonBundler extends AbstractBundler {
         File rootDirectory = null;
 
         try {
-            File file = BUILD_ROOT.fetchFrom(params);
-
             //prepare config resources (we will copy them to the bundle later)
             // NB: explicitly saving them to simplify customization
             prepareConfigFiles(params);

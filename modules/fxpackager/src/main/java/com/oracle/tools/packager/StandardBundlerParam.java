@@ -468,6 +468,16 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     // valueOf(null) is false, and we actually do want null in some cases
                     (s, p) -> (s == null || "null".equalsIgnoreCase(s))? true : Boolean.valueOf(s)
             );
+    
+    public static final StandardBundlerParam<File> DROP_IN_RESOURCES_ROOT =
+            new StandardBundlerParam<>(
+                    I18N.getString("param.drop-in-resources-root.name"),
+                    I18N.getString("param.drop-in-resources-root.description"),
+                    "dropinResourcesRoot",
+                    File.class,
+                    params -> null,
+                    (s, p) -> new File(s)
+            );
 
     @SuppressWarnings("unchecked")
     public static final StandardBundlerParam<List<Map<String, ? super Object>>> SECONDARY_LAUNCHERS =

@@ -235,13 +235,15 @@ public class WinAppBundler extends AbstractBundler {
                     I18N.getString("resource.application-icon"),
                     icon,
                     iconTarget,
-                    VERBOSE.fetchFrom(params));
+                    VERBOSE.fetchFrom(params),
+                    DROP_IN_RESOURCES_ROOT.fetchFrom(params));
         } else {
             fetchResource(WIN_BUNDLER_PREFIX + iconTarget.getName(),
                     I18N.getString("resource.application-icon"),
                     WinAppBundler.TEMPLATE_APP_ICON,
                     iconTarget,
-                    VERBOSE.fetchFrom(params));
+                    VERBOSE.fetchFrom(params),
+                    DROP_IN_RESOURCES_ROOT.fetchFrom(params));
         }
     }
 

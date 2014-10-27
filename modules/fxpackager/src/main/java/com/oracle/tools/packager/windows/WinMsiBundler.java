@@ -494,7 +494,8 @@ public class WinMsiBundler  extends AbstractBundler {
                 I18N.getString("resource.post-install-script"),
                 (String) null,
                 getConfig_Script(params),
-                VERBOSE.fetchFrom(params));
+                VERBOSE.fetchFrom(params),
+                DROP_IN_RESOURCES_ROOT.fetchFrom(params));
         return true;
     }
 
@@ -579,7 +580,8 @@ public class WinMsiBundler  extends AbstractBundler {
         w.write(preprocessTextResource(
                 WinAppBundler.WIN_BUNDLER_PREFIX + getConfig_ProjectFile(params).getName(),
                 I18N.getString("resource.wix-config-file"), 
-                MSI_PROJECT_TEMPLATE, data, VERBOSE.fetchFrom(params)));
+                MSI_PROJECT_TEMPLATE, data, VERBOSE.fetchFrom(params),
+                DROP_IN_RESOURCES_ROOT.fetchFrom(params)));
         w.close();
         return true;
     }

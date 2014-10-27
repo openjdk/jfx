@@ -187,19 +187,22 @@ public class MacAppStoreBundler extends MacBaseInstallerBundler {
                     I18N.getString("resource.mac-app-store-entitlements"),
                     DEFAULT_ENTITLEMENTS,
                     getConfig_Entitlements(params),
-                    VERBOSE.fetchFrom(params));
+                    VERBOSE.fetchFrom(params),
+                    DROP_IN_RESOURCES_ROOT.fetchFrom(params));
         } else {
             fetchResource(getEntitlementsFileName(params),
                     I18N.getString("resource.mac-app-store-entitlements"),
                     entitlements,
                     getConfig_Entitlements(params),
-                    VERBOSE.fetchFrom(params));
+                    VERBOSE.fetchFrom(params),
+                    DROP_IN_RESOURCES_ROOT.fetchFrom(params));
         }
         fetchResource(getInheritEntitlementsFileName(params),
                 I18N.getString("resource.mac-app-store-inherit-entitlements"),
                 DEFAULT_INHERIT_ENTITLEMENTS,
                 getConfig_Inherit_Entitlements(params),
-                VERBOSE.fetchFrom(params));
+                VERBOSE.fetchFrom(params),
+                DROP_IN_RESOURCES_ROOT.fetchFrom(params));
     }
 
     private String getEntitlementsFileName(Map<String, ? super Object> params) {

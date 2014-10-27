@@ -62,7 +62,7 @@ public class SimpleBundle {
 
         File output = new File(".");
         Set<String> bundlerIDs = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
-        Map<String, String> params = new TreeMap<>();
+        Map<String, ? super Object> params = new TreeMap<>();
 
         Queue<String> argsQ = new LinkedList<>(Arrays.asList(args));
         while (!argsQ.isEmpty()) {
@@ -101,11 +101,11 @@ public class SimpleBundle {
             System.out.println(" attempting all bundlers");
         } else {
             for (String b : bundlerIDs) {
-                System.out.println(" attemting bundlers with ID or type " + b);
+                System.out.println(" attempting bundlers with ID or type " + b);
             }
         }
 
-        Log.setDebug(true);
+        Log.setLogger(new Log.Logger(VERBOSE.fetchFrom(params)));
 
         Bundlers bundlers = Bundlers.createBundlersInstance();
 

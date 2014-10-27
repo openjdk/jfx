@@ -573,13 +573,15 @@ public class MacAppBundler extends AbstractBundler {
                     "icon",
                     DEFAULT_ICNS_ICON.fetchFrom(params),
                     getConfig_Icon(params),
-                    VERBOSE.fetchFrom(params));
+                    VERBOSE.fetchFrom(params),
+                    DROP_IN_RESOURCES_ROOT.fetchFrom(params));
         } else {
             fetchResource(MAC_BUNDLER_PREFIX+ APP_NAME.fetchFrom(params) +".icns",
                     "icon",
                     icon,
                     getConfig_Icon(params),
-                    VERBOSE.fetchFrom(params));
+                    VERBOSE.fetchFrom(params),
+                    DROP_IN_RESOURCES_ROOT.fetchFrom(params));
         }
     }
 
@@ -826,7 +828,8 @@ public class MacAppBundler extends AbstractBundler {
         w.write(preprocessTextResource(
                 MAC_BUNDLER_PREFIX + getConfig_InfoPlist(params).getName(),
                 I18N.getString("resource.bundle-config-file"), TEMPLATE_INFO_PLIST, data,
-                VERBOSE.fetchFrom(params)));
+                VERBOSE.fetchFrom(params),
+                DROP_IN_RESOURCES_ROOT.fetchFrom(params)));
         w.close();
 
     }

@@ -154,7 +154,8 @@ public class MacDmgBundler extends MacBaseInstallerBundler {
         Writer w = new BufferedWriter(new FileWriter(dmgSetup));
         w.write(preprocessTextResource(
                 MacAppBundler.MAC_BUNDLER_PREFIX + dmgSetup.getName(),
-                I18N.getString("resource.dmg-setup-script"), DEFAULT_DMG_SETUP_SCRIPT, data, VERBOSE.fetchFrom(p)));
+                I18N.getString("resource.dmg-setup-script"), DEFAULT_DMG_SETUP_SCRIPT, data, VERBOSE.fetchFrom(p),
+                DROP_IN_RESOURCES_ROOT.fetchFrom(p)));
         w.close();
     }
 
@@ -193,7 +194,8 @@ public class MacDmgBundler extends MacBaseInstallerBundler {
             Writer w = new BufferedWriter(new FileWriter(getConfig_LicenseFile(params)));
             w.write(preprocessTextResource(
                     MacAppBundler.MAC_BUNDLER_PREFIX + getConfig_LicenseFile(params).getName(),
-                    I18N.getString("resource.license-setup"), DEFAULT_LICENSE_PLIST, data, VERBOSE.fetchFrom(params)));
+                    I18N.getString("resource.license-setup"), DEFAULT_LICENSE_PLIST, data, VERBOSE.fetchFrom(params),
+                    DROP_IN_RESOURCES_ROOT.fetchFrom(params)));
             w.close();
 
         } catch (IOException ex) {
@@ -208,7 +210,8 @@ public class MacDmgBundler extends MacBaseInstallerBundler {
                 I18N.getString("resource.dmg-background"),
                 DEFAULT_BACKGROUND_IMAGE,
                 bgTarget,
-                VERBOSE.fetchFrom(params));
+                VERBOSE.fetchFrom(params),
+                DROP_IN_RESOURCES_ROOT.fetchFrom(params));
 
         File iconTarget = getConfig_VolumeIcon(params);
         if (MacAppBundler.ICON_ICNS.fetchFrom(params) == null || !MacAppBundler.ICON_ICNS.fetchFrom(params).exists()) {
@@ -216,13 +219,15 @@ public class MacDmgBundler extends MacBaseInstallerBundler {
                     I18N.getString("resource.volume-icon"),
                     TEMPLATE_BUNDLE_ICON,
                     iconTarget,
-                    VERBOSE.fetchFrom(params));
+                    VERBOSE.fetchFrom(params),
+                    DROP_IN_RESOURCES_ROOT.fetchFrom(params));
         } else {
             fetchResource(MacAppBundler.MAC_BUNDLER_PREFIX + iconTarget.getName(),
                     I18N.getString("resource.volume-icon"),
                     MacAppBundler.ICON_ICNS.fetchFrom(params),
                     iconTarget,
-                    VERBOSE.fetchFrom(params));
+                    VERBOSE.fetchFrom(params),
+                    DROP_IN_RESOURCES_ROOT.fetchFrom(params));
         }
 
 
@@ -230,7 +235,8 @@ public class MacDmgBundler extends MacBaseInstallerBundler {
                 I18N.getString("resource.post-install-script"),
                 (String) null,
                 getConfig_Script(params),
-                VERBOSE.fetchFrom(params));
+                VERBOSE.fetchFrom(params),
+                DROP_IN_RESOURCES_ROOT.fetchFrom(params));
 
         prepareLicense(params);
 

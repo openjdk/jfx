@@ -234,7 +234,8 @@ public class MacPkgBundler extends MacBaseInstallerBundler {
                 I18N.getString("resource.pkg-preinstall-script"),
                 TEMPLATE_PREINSTALL_SCRIPT,
                 data,
-                VERBOSE.fetchFrom(params));
+                VERBOSE.fetchFrom(params),
+                DROP_IN_RESOURCES_ROOT.fetchFrom(params));
         w.write(content);
         w.close();
         getScripts_PreinstallFile(params).setExecutable(true, false);
@@ -245,7 +246,8 @@ public class MacPkgBundler extends MacBaseInstallerBundler {
                 I18N.getString("resource.pkg-postinstall-script"),
                 TEMPLATE_POSTINSTALL_SCRIPT,
                 data,
-                VERBOSE.fetchFrom(params));
+                VERBOSE.fetchFrom(params),
+                DROP_IN_RESOURCES_ROOT.fetchFrom(params));
         w.write(content);
         w.close();
         getScripts_PostinstallFile(params).setExecutable(true, false);
@@ -330,7 +332,8 @@ public class MacPkgBundler extends MacBaseInstallerBundler {
                 I18N.getString("resource.pkg-background-image"),
                 DEFAULT_BACKGROUND_IMAGE,
                 imageTarget,
-                VERBOSE.fetchFrom(params));
+                VERBOSE.fetchFrom(params),
+                DROP_IN_RESOURCES_ROOT.fetchFrom(params));
 
         prepareDistributionXMLFile(params);
 
@@ -338,7 +341,8 @@ public class MacPkgBundler extends MacBaseInstallerBundler {
                 I18N.getString("resource.post-install-script"),
                 (String) null,
                 getConfig_Script(params),
-                VERBOSE.fetchFrom(params));
+                VERBOSE.fetchFrom(params),
+                DROP_IN_RESOURCES_ROOT.fetchFrom(params));
         
         return true;
     }

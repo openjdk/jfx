@@ -76,9 +76,9 @@ public abstract class AbstractBundler implements Bundler {
 
     protected void fetchResource(
             String publicName, String category,
-            String defaultName, File result, boolean verbose)
+            String defaultName, File result, boolean verbose, File publicRoot)
             throws IOException {
-        URL u = locateResource(publicName, category, defaultName, verbose);
+        URL u = locateResource(publicName, category, defaultName, verbose, publicRoot);
         if (u != null) {
             IOUtils.copyFromURL(u, result);
         } else {
@@ -90,25 +90,32 @@ public abstract class AbstractBundler implements Bundler {
 
     protected void fetchResource(
             String publicName, String category,
-            File defaultFile, File result, boolean verbose)
+            File defaultFile, File result, boolean verbose, File publicRoot)
             throws IOException {
-        URL u = locateResource(publicName, category, null, verbose);
+        URL u = locateResource(publicName, category, null, verbose, publicRoot);
         if (u != null) {
             IOUtils.copyFromURL(u, result);
         } else {
             IOUtils.copyFile(defaultFile, result);
             if (verbose) {
-                Log.info(MessageFormat.format(I18N.getString("message.using-default-resource-from-file"), category == null ? "" : "[" + category + "] ", defaultFile.getAbsoluteFile()));
+                Log.info(MessageFormat.format(I18N.getString("message.using-custom-resource-from-file"), category == null ? "" : "[" + category + "] ", defaultFile.getAbsoluteFile()));
             }
         }
     }
 
     private URL locateResource(String publicName, String category,
-                               String defaultName, boolean verbose) throws IOException {
+                               String defaultName, boolean verbose, File publicRoot) throws IOException {
         URL u = null;
         boolean custom = false;
         if (publicName != null) {
-            u = baseResourceLoader.getClassLoader().getResource(publicName);
+            if (publicRoot != null) {
+                File publicResource = new File(publicRoot, publicName);
+                if (publicResource.exists() && publicResource.isFile()) {
+                    u = publicResource.toURI().toURL();
+                }
+            } else {
+                u = baseResourceLoader.getClassLoader().getResource(publicName);
+            }
             custom = (u != null);
         }
         if (u == null && defaultName != null) {
@@ -128,8 +135,8 @@ public abstract class AbstractBundler implements Bundler {
 
     protected String preprocessTextResource(String publicName, String category,
                                             String defaultName, Map<String, String> pairs,
-                                            boolean verbose) throws IOException {
-        URL u = locateResource(publicName, category, defaultName, verbose);
+                                            boolean verbose, File publicRoot) throws IOException {
+        URL u = locateResource(publicName, category, defaultName, verbose, publicRoot);
         InputStream inp = u.openStream();
         if (inp == null) {
             throw new RuntimeException("Jar corrupt? No "+defaultName+" resource!");
