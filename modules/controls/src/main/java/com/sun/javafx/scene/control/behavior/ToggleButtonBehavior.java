@@ -98,6 +98,8 @@ public class ToggleButtonBehavior<C extends ToggleButton> extends ButtonBehavior
                         ((Control)toggle).requestFocus();
                     }
                 }
+                break;
+            default: super.callAction(name);
         }
     }
 
