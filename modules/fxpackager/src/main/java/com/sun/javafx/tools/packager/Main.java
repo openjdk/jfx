@@ -301,7 +301,7 @@ public class Main {
                         } else if (arg.equalsIgnoreCase("-embedJNLP")) {
                             deployParams.setEmbedJNLP(true);
                         } else if (arg.equalsIgnoreCase("-embedCertificates")) {
-                            deployParams.setEmbedCertifcates(true);
+                            System.out.println("-embedCertificates is deprecated");
                         } else if (arg.equalsIgnoreCase("-allpermissions")) {
                             deployParams.setAllPermissions(true);
                         } else if (arg.equalsIgnoreCase("-updatemode")) {

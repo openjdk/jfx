@@ -78,7 +78,7 @@ public class DeployParams extends CommonParams {
     String codebase;
 
     boolean embedJNLP = true;
-    boolean embedCertificates = false;
+    @Deprecated final boolean embedCertificates = false;
     boolean allPermissions = false;
     String updateMode = "background";
     boolean isExtension = false;
@@ -241,7 +241,9 @@ public class DeployParams extends CommonParams {
     }
 
     public void setEmbedCertifcates(boolean v) {
-        embedCertificates = v;
+        if (v) {
+            System.out.println("JavaFX Packager no longer supports embedding certificates in JNLP files.  Setting will be ignored.");
+        }
     }
 
     public void setPlaceholder(String p) {

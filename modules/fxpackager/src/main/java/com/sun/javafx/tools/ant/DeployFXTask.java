@@ -163,7 +163,6 @@ public class DeployFXTask extends Task implements DynamicAttribute {
 
         deployParams.setEmbedJNLP(embedJNLP);
         if (perms != null) {
-           deployParams.setEmbedCertifcates(perms.embed);
            deployParams.setAllPermissions(perms.elevated);
         }
 
@@ -551,7 +550,7 @@ public class DeployFXTask extends Task implements DynamicAttribute {
      * @ant.type name="Permissions" category="javafx"
      */
     public static class Permissions extends DataType {
-        boolean embed = false;
+        @Deprecated final boolean embed = false;
         boolean elevated = true;
 
         /**
@@ -573,7 +572,9 @@ public class DeployFXTask extends Task implements DynamicAttribute {
          * @ant.not-required By default is false.
          */
         public void setCacheCertificates(boolean v) {
-            embed = v;
+            if (v) {
+                Log.info("JavaFX Ant Tasks no longer support caching certificates in JNLP.  Setting ignored.");
+            }
         }
     }
 
