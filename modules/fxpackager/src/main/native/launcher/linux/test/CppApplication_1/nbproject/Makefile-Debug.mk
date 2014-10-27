@@ -75,111 +75,111 @@ LDLIBSOPTIONS=-lpthread -ldl
 
 # Build Targets
 .build-conf: ${BUILD_SUBPROJECTS}
-	"${MAKE}"  -f nbproject/Makefile-${CND_CONF}.mk /home/cbensen/src/projects/packager/JavaFXSceneBuilder2.0/launcher
+	"${MAKE}"  -f nbproject/Makefile-${CND_CONF}.mk ../../../../../../build/dev/DevTest
 
-/home/cbensen/src/projects/packager/JavaFXSceneBuilder2.0/launcher: ${OBJECTFILES}
-	${MKDIR} -p /home/cbensen/src/projects/packager/JavaFXSceneBuilder2.0
-	${LINK.cc} -o /home/cbensen/src/projects/packager/JavaFXSceneBuilder2.0/launcher ${OBJECTFILES} ${LDLIBSOPTIONS}
+../../../../../../build/dev/DevTest: ${OBJECTFILES}
+	${MKDIR} -p ../../../../../../build/dev/DevTest
+	${LINK.cc} -o ../../../../../../build/dev/DevTest ${OBJECTFILES} ${LDLIBSOPTIONS}
 
-${OBJECTDIR}/_ext/1944146143/Exports.o: ../../../win/windows/Exports.cpp 
+${OBJECTDIR}/_ext/1944146143/Exports.o: ../../../win/windows/Exports.cpp
 	${MKDIR} -p ${OBJECTDIR}/_ext/1944146143
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -I/home/cbensen/java/jdk1.8.0/include -I/home/cbensen/java/jdk1.8.0/include/linux -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1944146143/Exports.o ../../../win/windows/Exports.cpp
+	$(COMPILE.cc) -g -I${HOME}/jdk/include -I${HOME}/jdk/include/linux -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1944146143/Exports.o ../../../win/windows/Exports.cpp
 
-${OBJECTDIR}/_ext/1944146143/FilePath.o: ../../../win/windows/FilePath.cpp 
+${OBJECTDIR}/_ext/1944146143/FilePath.o: ../../../win/windows/FilePath.cpp
 	${MKDIR} -p ${OBJECTDIR}/_ext/1944146143
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -I/home/cbensen/java/jdk1.8.0/include -I/home/cbensen/java/jdk1.8.0/include/linux -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1944146143/FilePath.o ../../../win/windows/FilePath.cpp
+	$(COMPILE.cc) -g -I${HOME}/jdk/include -I${HOME}/jdk/include/linux -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1944146143/FilePath.o ../../../win/windows/FilePath.cpp
 
-${OBJECTDIR}/_ext/1944146143/GenericPlatform.o: ../../../win/windows/GenericPlatform.cpp 
+${OBJECTDIR}/_ext/1944146143/GenericPlatform.o: ../../../win/windows/GenericPlatform.cpp
 	${MKDIR} -p ${OBJECTDIR}/_ext/1944146143
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -I/home/cbensen/java/jdk1.8.0/include -I/home/cbensen/java/jdk1.8.0/include/linux -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1944146143/GenericPlatform.o ../../../win/windows/GenericPlatform.cpp
+	$(COMPILE.cc) -g -I${HOME}/jdk/include -I${HOME}/jdk/include/linux -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1944146143/GenericPlatform.o ../../../win/windows/GenericPlatform.cpp
 
-${OBJECTDIR}/_ext/1944146143/Helpers.o: ../../../win/windows/Helpers.cpp 
+${OBJECTDIR}/_ext/1944146143/Helpers.o: ../../../win/windows/Helpers.cpp
 	${MKDIR} -p ${OBJECTDIR}/_ext/1944146143
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -I/home/cbensen/java/jdk1.8.0/include -I/home/cbensen/java/jdk1.8.0/include/linux -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1944146143/Helpers.o ../../../win/windows/Helpers.cpp
+	$(COMPILE.cc) -g -I${HOME}/jdk/include -I${HOME}/jdk/include/linux -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1944146143/Helpers.o ../../../win/windows/Helpers.cpp
 
-${OBJECTDIR}/_ext/1944146143/Java.o: ../../../win/windows/Java.cpp 
+${OBJECTDIR}/_ext/1944146143/Java.o: ../../../win/windows/Java.cpp
 	${MKDIR} -p ${OBJECTDIR}/_ext/1944146143
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -I/home/cbensen/java/jdk1.8.0/include -I/home/cbensen/java/jdk1.8.0/include/linux -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1944146143/Java.o ../../../win/windows/Java.cpp
+	$(COMPILE.cc) -g -I${HOME}/jdk/include -I${HOME}/jdk/include/linux -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1944146143/Java.o ../../../win/windows/Java.cpp
 
-${OBJECTDIR}/_ext/1944146143/JavaUserPreferences.o: ../../../win/windows/JavaUserPreferences.cpp 
+${OBJECTDIR}/_ext/1944146143/JavaUserPreferences.o: ../../../win/windows/JavaUserPreferences.cpp
 	${MKDIR} -p ${OBJECTDIR}/_ext/1944146143
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -I/home/cbensen/java/jdk1.8.0/include -I/home/cbensen/java/jdk1.8.0/include/linux -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1944146143/JavaUserPreferences.o ../../../win/windows/JavaUserPreferences.cpp
+	$(COMPILE.cc) -g -I${HOME}/jdk/include -I${HOME}/jdk/include/linux -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1944146143/JavaUserPreferences.o ../../../win/windows/JavaUserPreferences.cpp
 
-${OBJECTDIR}/_ext/1944146143/JavaVirtualMachine.o: ../../../win/windows/JavaVirtualMachine.cpp 
+${OBJECTDIR}/_ext/1944146143/JavaVirtualMachine.o: ../../../win/windows/JavaVirtualMachine.cpp
 	${MKDIR} -p ${OBJECTDIR}/_ext/1944146143
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -I/home/cbensen/java/jdk1.8.0/include -I/home/cbensen/java/jdk1.8.0/include/linux -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1944146143/JavaVirtualMachine.o ../../../win/windows/JavaVirtualMachine.cpp
+	$(COMPILE.cc) -g -I${HOME}/jdk/include -I${HOME}/jdk/include/linux -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1944146143/JavaVirtualMachine.o ../../../win/windows/JavaVirtualMachine.cpp
 
-${OBJECTDIR}/_ext/1944146143/LinuxPlatform.o: ../../../win/windows/LinuxPlatform.cpp 
+${OBJECTDIR}/_ext/1944146143/LinuxPlatform.o: ../../../win/windows/LinuxPlatform.cpp
 	${MKDIR} -p ${OBJECTDIR}/_ext/1944146143
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -I/home/cbensen/java/jdk1.8.0/include -I/home/cbensen/java/jdk1.8.0/include/linux -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1944146143/LinuxPlatform.o ../../../win/windows/LinuxPlatform.cpp
+	$(COMPILE.cc) -g -I${HOME}/jdk/include -I${HOME}/jdk/include/linux -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1944146143/LinuxPlatform.o ../../../win/windows/LinuxPlatform.cpp
 
-${OBJECTDIR}/_ext/1944146143/Lock.o: ../../../win/windows/Lock.cpp 
+${OBJECTDIR}/_ext/1944146143/Lock.o: ../../../win/windows/Lock.cpp
 	${MKDIR} -p ${OBJECTDIR}/_ext/1944146143
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -I/home/cbensen/java/jdk1.8.0/include -I/home/cbensen/java/jdk1.8.0/include/linux -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1944146143/Lock.o ../../../win/windows/Lock.cpp
+	$(COMPILE.cc) -g -I${HOME}/jdk/include -I${HOME}/jdk/include/linux -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1944146143/Lock.o ../../../win/windows/Lock.cpp
 
-${OBJECTDIR}/_ext/1944146143/Macros.o: ../../../win/windows/Macros.cpp 
+${OBJECTDIR}/_ext/1944146143/Macros.o: ../../../win/windows/Macros.cpp
 	${MKDIR} -p ${OBJECTDIR}/_ext/1944146143
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -I/home/cbensen/java/jdk1.8.0/include -I/home/cbensen/java/jdk1.8.0/include/linux -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1944146143/Macros.o ../../../win/windows/Macros.cpp
+	$(COMPILE.cc) -g -I${HOME}/jdk/include -I${HOME}/jdk/include/linux -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1944146143/Macros.o ../../../win/windows/Macros.cpp
 
-${OBJECTDIR}/_ext/1944146143/Messages.o: ../../../win/windows/Messages.cpp 
+${OBJECTDIR}/_ext/1944146143/Messages.o: ../../../win/windows/Messages.cpp
 	${MKDIR} -p ${OBJECTDIR}/_ext/1944146143
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -I/home/cbensen/java/jdk1.8.0/include -I/home/cbensen/java/jdk1.8.0/include/linux -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1944146143/Messages.o ../../../win/windows/Messages.cpp
+	$(COMPILE.cc) -g -I${HOME}/jdk/include -I${HOME}/jdk/include/linux -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1944146143/Messages.o ../../../win/windows/Messages.cpp
 
-${OBJECTDIR}/_ext/1944146143/Package.o: ../../../win/windows/Package.cpp 
+${OBJECTDIR}/_ext/1944146143/Package.o: ../../../win/windows/Package.cpp
 	${MKDIR} -p ${OBJECTDIR}/_ext/1944146143
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -I/home/cbensen/java/jdk1.8.0/include -I/home/cbensen/java/jdk1.8.0/include/linux -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1944146143/Package.o ../../../win/windows/Package.cpp
+	$(COMPILE.cc) -g -I${HOME}/jdk/include -I${HOME}/jdk/include/linux -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1944146143/Package.o ../../../win/windows/Package.cpp
 
-${OBJECTDIR}/_ext/1944146143/Platform.o: ../../../win/windows/Platform.cpp 
+${OBJECTDIR}/_ext/1944146143/Platform.o: ../../../win/windows/Platform.cpp
 	${MKDIR} -p ${OBJECTDIR}/_ext/1944146143
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -I/home/cbensen/java/jdk1.8.0/include -I/home/cbensen/java/jdk1.8.0/include/linux -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1944146143/Platform.o ../../../win/windows/Platform.cpp
+	$(COMPILE.cc) -g -I${HOME}/jdk/include -I${HOME}/jdk/include/linux -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1944146143/Platform.o ../../../win/windows/Platform.cpp
 
-${OBJECTDIR}/_ext/1944146143/PlatformString.o: ../../../win/windows/PlatformString.cpp 
+${OBJECTDIR}/_ext/1944146143/PlatformString.o: ../../../win/windows/PlatformString.cpp
 	${MKDIR} -p ${OBJECTDIR}/_ext/1944146143
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -I/home/cbensen/java/jdk1.8.0/include -I/home/cbensen/java/jdk1.8.0/include/linux -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1944146143/PlatformString.o ../../../win/windows/PlatformString.cpp
+	$(COMPILE.cc) -g -I${HOME}/jdk/include -I${HOME}/jdk/include/linux -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1944146143/PlatformString.o ../../../win/windows/PlatformString.cpp
 
-${OBJECTDIR}/_ext/1944146143/PlatformThread.o: ../../../win/windows/PlatformThread.cpp 
+${OBJECTDIR}/_ext/1944146143/PlatformThread.o: ../../../win/windows/PlatformThread.cpp
 	${MKDIR} -p ${OBJECTDIR}/_ext/1944146143
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -I/home/cbensen/java/jdk1.8.0/include -I/home/cbensen/java/jdk1.8.0/include/linux -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1944146143/PlatformThread.o ../../../win/windows/PlatformThread.cpp
+	$(COMPILE.cc) -g -I${HOME}/jdk/include -I${HOME}/jdk/include/linux -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1944146143/PlatformThread.o ../../../win/windows/PlatformThread.cpp
 
-${OBJECTDIR}/_ext/1944146143/PosixPlatform.o: ../../../win/windows/PosixPlatform.cpp 
+${OBJECTDIR}/_ext/1944146143/PosixPlatform.o: ../../../win/windows/PosixPlatform.cpp
 	${MKDIR} -p ${OBJECTDIR}/_ext/1944146143
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -I/home/cbensen/java/jdk1.8.0/include -I/home/cbensen/java/jdk1.8.0/include/linux -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1944146143/PosixPlatform.o ../../../win/windows/PosixPlatform.cpp
+	$(COMPILE.cc) -g -I${HOME}/jdk/include -I${HOME}/jdk/include/linux -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1944146143/PosixPlatform.o ../../../win/windows/PosixPlatform.cpp
 
-${OBJECTDIR}/_ext/1944146143/PropertyFile.o: ../../../win/windows/PropertyFile.cpp 
+${OBJECTDIR}/_ext/1944146143/PropertyFile.o: ../../../win/windows/PropertyFile.cpp
 	${MKDIR} -p ${OBJECTDIR}/_ext/1944146143
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -I/home/cbensen/java/jdk1.8.0/include -I/home/cbensen/java/jdk1.8.0/include/linux -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1944146143/PropertyFile.o ../../../win/windows/PropertyFile.cpp
+	$(COMPILE.cc) -g -I${HOME}/jdk/include -I${HOME}/jdk/include/linux -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1944146143/PropertyFile.o ../../../win/windows/PropertyFile.cpp
 
-${OBJECTDIR}/_ext/1944146143/WinLauncher.o: ../../../win/windows/WinLauncher.cpp 
+${OBJECTDIR}/_ext/1944146143/WinLauncher.o: ../../../win/windows/WinLauncher.cpp
 	${MKDIR} -p ${OBJECTDIR}/_ext/1944146143
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -I/home/cbensen/java/jdk1.8.0/include -I/home/cbensen/java/jdk1.8.0/include/linux -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1944146143/WinLauncher.o ../../../win/windows/WinLauncher.cpp
+	$(COMPILE.cc) -g -I${HOME}/jdk/include -I${HOME}/jdk/include/linux -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1944146143/WinLauncher.o ../../../win/windows/WinLauncher.cpp
 
-${OBJECTDIR}/_ext/1944146143/WindowsPlatform.o: ../../../win/windows/WindowsPlatform.cpp 
+${OBJECTDIR}/_ext/1944146143/WindowsPlatform.o: ../../../win/windows/WindowsPlatform.cpp
 	${MKDIR} -p ${OBJECTDIR}/_ext/1944146143
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -I/home/cbensen/java/jdk1.8.0/include -I/home/cbensen/java/jdk1.8.0/include/linux -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1944146143/WindowsPlatform.o ../../../win/windows/WindowsPlatform.cpp
+	$(COMPILE.cc) -g -I${HOME}/jdk/include -I${HOME}/jdk/include/linux -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1944146143/WindowsPlatform.o ../../../win/windows/WindowsPlatform.cpp
 
-${OBJECTDIR}/main.o: main.cpp 
+${OBJECTDIR}/main.o: main.cpp
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -I/home/cbensen/java/jdk1.8.0/include -I/home/cbensen/java/jdk1.8.0/include/linux -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/main.o main.cpp
+	$(COMPILE.cc) -g -I${HOME}/jdk/include -I${HOME}/jdk/include/linux -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/main.o main.cpp
 
 # Subprojects
 .build-subprojects:
@@ -187,7 +187,7 @@ ${OBJECTDIR}/main.o: main.cpp
 # Clean Targets
 .clean-conf: ${CLEAN_SUBPROJECTS}
 	${RM} -r ${CND_BUILDDIR}/${CND_CONF}
-	${RM} /home/cbensen/src/projects/packager/JavaFXSceneBuilder2.0/launcher
+	${RM} ../../../../../../build/dev/DevTest
 
 # Subprojects
 .clean-subprojects:

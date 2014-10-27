@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<configurationDescriptor version="94">
+<configurationDescriptor version="95">
   <logicalFolder name="root" displayName="root" projectFiles="true" kind="ROOT">
     <logicalFolder name="HeaderFiles"
                    displayName="Header Files"
@@ -41,7 +41,7 @@
           </preprocessorList>
         </ccTool>
         <linkerTool>
-          <output>/home/cbensen/src/projects/packager/JavaFXSceneBuilder2.0/launcher</output>
+          <output>../../../../../../../build/dev/DevTest/DevTest</output>
           <linkerLibItems>
             <linkerLibStdlibItem>DynamicLinking</linkerLibStdlibItem>
           </linkerLibItems>
