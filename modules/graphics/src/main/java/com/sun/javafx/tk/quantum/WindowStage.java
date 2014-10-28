@@ -296,39 +296,17 @@ class WindowStage extends GlassStage {
         platformWindow.setMaximumSize(maxWidth, maxHeight);
     }
 
-    @Override public void setIcons(java.util.List icons) {
-
-        int SMALL_ICON_HEIGHT = 32;
-        int SMALL_ICON_WIDTH = 32;
-        if (PlatformUtil.isMac()) { //Mac Sized Icons
-            SMALL_ICON_HEIGHT = 128;
-            SMALL_ICON_WIDTH = 128;
-        } else if (PlatformUtil.isWindows()) { //Windows Sized Icons
-            SMALL_ICON_HEIGHT = 32;
-            SMALL_ICON_WIDTH = 32;
-        } else if (PlatformUtil.isLinux()) { //Linux icons
-            SMALL_ICON_HEIGHT = 128;
-            SMALL_ICON_WIDTH = 128;
-        }
-
-        if (icons == null || icons.size() < 1) { //no icons passed in
-            platformWindow.setIcon(null);
-            return;
-        }
-
-        int width = platformWindow.getWidth();
-        int height = platformWindow.getHeight();
-
+    static Image findBestImage(java.util.List icons, int width, int height) {
         Image image = null;
         double bestSimilarity = 3; //Impossibly high value
-        for (int i = 0; i < icons.size(); i++) {
+        for (Object icon : icons) {
             //Iterate imageList looking for best matching image.
             //'Similarity' measure is defined as good scale factor and small insets.
             //best possible similarity is 0 (no scale, no insets).
             //It's found by experimentation that good-looking results are achieved
             //with scale factors x1, x3/4, x2/3, xN, x1/N.
             //Check to make sure the image/image format is correct.
-            Image im = (Image)icons.get(i);
+            Image im = (Image)icon;
             if (im == null || !(im.getPixelFormat() == PixelFormat.BYTE_RGB ||
                 im.getPixelFormat() == PixelFormat.BYTE_BGRA_PRE ||
                 im.getPixelFormat() == PixelFormat.BYTE_GRAY))
@@ -341,8 +319,8 @@ class WindowStage extends GlassStage {
 
             if (iw > 0 && ih > 0) {
                 //Calc scale factor
-                double scaleFactor = Math.min((double)SMALL_ICON_WIDTH / (double)iw,
-                                              (double)SMALL_ICON_HEIGHT / (double)ih);
+                double scaleFactor = Math.min((double)width / (double)iw,
+                                              (double)height / (double)ih);
                 //Calculate scaled image dimensions
                 //adjusting scale factor to nearest "good" value
                 int adjw;
@@ -387,12 +365,36 @@ class WindowStage extends GlassStage {
                     ((double)height - (double)adjh) / (double)height + //Large padding is bad
                     scaleMeasure; //Large rescale is bad
                 if (similarity < bestSimilarity) {
+                    bestSimilarity = similarity;
                     image = im;
                 }
                 if (similarity == 0) break;
             }
         }
+        return image;
+    }
 
+    @Override public void setIcons(java.util.List icons) {
+
+        int SMALL_ICON_HEIGHT = 32;
+        int SMALL_ICON_WIDTH = 32;
+        if (PlatformUtil.isMac()) { //Mac Sized Icons
+            SMALL_ICON_HEIGHT = 128;
+            SMALL_ICON_WIDTH = 128;
+        } else if (PlatformUtil.isWindows()) { //Windows Sized Icons
+            SMALL_ICON_HEIGHT = 32;
+            SMALL_ICON_WIDTH = 32;
+        } else if (PlatformUtil.isLinux()) { //Linux icons
+            SMALL_ICON_HEIGHT = 128;
+            SMALL_ICON_WIDTH = 128;
+        }
+
+        if (icons == null || icons.size() < 1) { //no icons passed in
+            platformWindow.setIcon(null);
+            return;
+        }
+
+        Image image = findBestImage(icons, SMALL_ICON_WIDTH, SMALL_ICON_HEIGHT);
         if (image == null) {
             //No images were found, possibly all are broken
             return;
