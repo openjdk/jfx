@@ -105,7 +105,7 @@ TString LinuxPlatform::GetPackageRootDirectory() {
 
 TString LinuxPlatform::GetAppDataDirectory() {
     TString result;
-    TString home = GetEnv(_T("$HOME"));
+    TString home = GetEnv(_T("HOME"));
 
     if (home.empty() == false) {
         result += FilePath::IncludeTrailingSlash(home) +

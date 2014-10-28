@@ -151,6 +151,7 @@ TString MacPlatform::GetAppDataDirectory() {
     NSArray *paths = NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory, NSUserDomainMask, YES);
     NSString *applicationSupportDirectory = [paths firstObject];
     TString result = [applicationSupportDirectory UTF8String];
+    result = FilePath::IncludeTrailingSlash(result) + GetAppName();
     return result;
 }
 

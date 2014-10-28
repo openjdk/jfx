@@ -206,12 +206,12 @@ TString WindowsPlatform::GetPackageRootDirectory() {
 
 TString WindowsPlatform::GetAppDataDirectory() {
     TString result;
-    TCHAR temp[MAX_PATH];
-
-    if (SHGetFolderPath(NULL, CSIDL_APPDATA, NULL, 0, temp) == S_OK) {
-        result = temp;
+    TCHAR path[MAX_PATH];
+    
+    if (SHGetFolderPath(NULL, CSIDL_APPDATA, NULL, 0, path) == S_OK) {
+        result = FilePath::IncludeTrailingSlash(path) + GetAppName();
     }
-
+    
     return result;
 }
 

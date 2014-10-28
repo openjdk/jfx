@@ -134,11 +134,11 @@ std::map<TString, TValueIndex> Helpers::GetJVMUserArgsFromConfig(PropertyFile* c
 
 std::map<TString, TString> Helpers::GetConfigFromJVMUserArgs(std::map<TString, TValueIndex> OrderedMap) {
     std::map<TString, TString> result;
+    size_t index = 0;
     
     for (std::map<TString, TValueIndex>::iterator iterator = OrderedMap.begin();
          iterator != OrderedMap.end();
          iterator++) {
-        size_t index = iterator->second.index;
         TString prefix = TString(_T("jvmuserarg.")) + PlatformString(index + 1).toString();
         TString argname = prefix + _T(".name");
         TString argvalue = prefix + _T(".value");
@@ -147,6 +147,7 @@ std::map<TString, TString> Helpers::GetConfigFromJVMUserArgs(std::map<TString, T
         
         result.insert(std::map<TString, TString>::value_type(argname, name));
         result.insert(std::map<TString, TString>::value_type(argvalue, value));
+        index++;
     }
     
     return result;

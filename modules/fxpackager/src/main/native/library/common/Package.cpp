@@ -242,23 +242,24 @@ void Package::SetJVMUserArgOverrides(std::map<TString, TValueIndex> Value) {
     std::map<TString, TValueIndex> overrides = Value;
     std::list<TString> overrideKeys = Helpers::GetOrderedKeysFromMap(overrides);
 
-    // Remove entries in the overrides that are the same as the defaults.
-    for (std::map<TString, TValueIndex>::iterator iterator = overrides.begin();
+    // 1. Remove entries in the overrides that are the same as the defaults.
+    for (std::map<TString, TValueIndex>::const_iterator iterator = overrides.begin();
         iterator != overrides.end();
         iterator++) {
 
         TString overridesKey = iterator->first;
         TString overridesValue = iterator->second.value;
-
+        
         if (defaults.find(overridesKey) != defaults.end()) {
             TString defaultValue = defaults[overridesKey].value;
-
+            
             if (defaultValue == overridesValue) {
                 overrideKeys.remove(overridesKey);
             }
         }
     }
 
+    // 2. Create an ordered map from the overrides that weren't removed.
     std::map<TString, TValueIndex> orderedOverrides;
     size_t index = 1;
 
@@ -273,15 +274,12 @@ void Package::SetJVMUserArgOverrides(std::map<TString, TValueIndex> Value) {
         index++;
     }
 
-    // Overwrite JVM user config overrides with provided key/value pair.
+    // 3. Overwrite JVM user config overrides with provided key/value pair.
     FJVMUserConfig->Assign(Helpers::GetConfigFromJVMUserArgs(orderedOverrides));
+    Platform& platform = Platform::GetInstance();
+    FJVMUserConfig->SaveToFile(platform.GetJVMUserArgsConfigFileName());
 
-    MergeJVMDefaultsWithOverrides();
-    if (FJVMUserConfig->IsModified()) {
-        Platform& platform = Platform::GetInstance();
-        FJVMUserConfig->SaveToFile(platform.GetJVMUserArgsConfigFileName());
-    }
-
+    // 4. Merge defaults and overrides to produce FJVMUserArgs.
     MergeJVMDefaultsWithOverrides();
 }
 
@@ -307,27 +305,35 @@ void Package::MergeJVMDefaultsWithOverrides() {
     std::map<TString, TValueIndex> overrides = GetJVMUserArgOverrides();
     std::list<TString> indexedKeys = Helpers::GetOrderedKeysFromMap(overrides);
 
-    size_t index = overrides.size() + 1;
-
+    // 1. Iterate over all elements in overrides to see if any items
+    //    override a default value.
     for (std::map<TString, TValueIndex>::iterator iterator = overrides.begin();
-        iterator != overrides.end();
-        iterator++) {
+         iterator != overrides.end();
+         iterator++) {
 
         TString name = iterator->first;
+        TString value = iterator->second.value;
         TValueIndex item;
 
         if (FJVMUserArgs.find(name) != FJVMUserArgs.end()) {
             item = FJVMUserArgs[name];
-            item.value = iterator->second.value;
-            item.index = iterator->second.index;
+            item.value = value;
+            FJVMUserArgs[name] = item;
+            indexedKeys.remove(name);
         }
-        else {
-            item.value = iterator->second.value;
-            item.index = index;
-        }
-
-        FJVMUserArgs[name] = item;
+    }
+    
+    // 2. All remaining items in overrides are appended to the end.
+    size_t index = FDefaultJVMUserArgs.size();
+    
+    for (std::list<TString>::const_iterator iterator = indexedKeys.begin();
+         iterator != indexedKeys.end(); iterator++) {
+        
+        TString name = *iterator;
+        TValueIndex item = overrides[name];
+        item.index = index;
         index++;
+        FJVMUserArgs[name] = item;
     }
 }
 

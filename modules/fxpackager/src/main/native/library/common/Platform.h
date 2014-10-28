@@ -164,9 +164,9 @@ public:
     virtual TCHAR* ConvertFileSystemStringToString(TCHAR* Source, bool &release) = 0;
 
     // Returns:
-    // Windows=C:\Users\<username>\AppData\Local\$(app.company)\$(app.id)\packager\jvmuserargs.cfg
-    // Linux=~/.local/$(app.company)/$(app.id)/packager/jvmuserargs.cfg
-    // Mac=~/Library/Containers/<CFBundleIdentifier>/Library/Application Support/<CFBundleIdentifier>/packager/jvmuserargs.cfg
+    // Windows=C:\Users\<username>\AppData\Local\<App Name>\packager\jvmuserargs.cfg
+    // Linux=~/.local/<App Name>/packager/jvmuserargs.cfg
+    // Mac=~/Library/Application Support/<App Name>/packager/jvmuserargs.cfg
     virtual TString GetAppDataDirectory() = 0;
     virtual TString GetPackageAppDirectory() = 0;
     virtual TString GetPackageLauncherDirectory() = 0;
