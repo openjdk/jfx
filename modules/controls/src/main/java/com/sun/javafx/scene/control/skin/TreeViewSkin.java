@@ -296,7 +296,8 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
                 } else {
                     // update the graphic if one is set in the TreeItem
                     TreeItem<T> treeItem = getTreeItem();
-                    if (treeItem != null && treeItem.getGraphic() != null) {
+                    Node graphic = treeItem == null ? null : treeItem.getGraphic();
+                    if (graphic != null) {
                         if (item instanceof Node) {
                             setText(null);
                             
@@ -306,12 +307,12 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
                             if (hbox == null) {
                                 hbox = new HBox(3);
                             }
-                            hbox.getChildren().setAll(treeItem.getGraphic(), (Node)item);
+                            hbox.getChildren().setAll(graphic, (Node)item);
                             setGraphic(hbox);
                         } else {
                             hbox = null;
                             setText(item.toString());
-                            setGraphic(treeItem.getGraphic());
+                            setGraphic(graphic);
                         }
                     } else {
                         hbox = null;

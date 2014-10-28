@@ -253,6 +253,13 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>, TreeCellBehavior<
         x += disclosureWidth + padding;
         w -= (leftMargin + disclosureWidth + padding);
 
+        // Rather ugly fix for RT-38519, where graphics are disappearing in
+        // certain circumstances
+        Node graphic = getSkinnable().getGraphic();
+        if (graphic != null && !getChildren().contains(graphic)) {
+            getChildren().add(graphic);
+        }
+
         layoutLabelInArea(x, y, w, h);
     }
     
