@@ -285,13 +285,8 @@ public class LinuxAppBundler extends AbstractBundler {
         out.println("app.version=" + VERSION.fetchFrom(params));
 
         //use '/' in the clas name (instead of '.' to simplify native code
-        if (USE_FX_PACKAGING.fetchFrom(params)) {
-            out.println("app.mainclass=" +
-                    JAVAFX_LAUNCHER_CLASS.replaceAll("\\.", "/"));
-        } else {
-            out.println("app.mainclass=" +
-                    MAIN_CLASS.fetchFrom(params).replaceAll("\\.", "/"));
-        }
+        out.println("app.mainclass=" +
+                MAIN_CLASS.fetchFrom(params).replaceAll("\\.", "/"));
 
         StringBuilder macroedPath = new StringBuilder();
         for (String s : CLASSPATH.fetchFrom(params).split("[ ;:]+")) {
@@ -314,6 +309,11 @@ public class LinuxAppBundler extends AbstractBundler {
             idx++;
         }
 
+        String preloader = PRELOADER_CLASS.fetchFrom(params);
+        if (preloader != null) {
+            out.println("jvmarg."+idx+"=-Djavafx.preloader="+preloader);
+        }
+        
         //app.id required for setting user preferences (Java Preferences API)
         out.println("app.preferences.id=" + PREFERENCES_ID.fetchFrom(params));
 
@@ -388,13 +388,14 @@ public class LinuxAppBundler extends AbstractBundler {
                 APP_NAME,
                 APP_RESOURCES,
                 ARGUMENTS,
+                CLASSPATH,
                 JVM_OPTIONS,
                 JVM_PROPERTIES,
                 LINUX_RUNTIME,
                 MAIN_CLASS,
                 MAIN_JAR,
-                CLASSPATH,
                 PREFERENCES_ID,
+                PRELOADER_CLASS,
                 USER_JVM_OPTIONS,
                 VERSION
         );

@@ -380,13 +380,8 @@ public class WinAppBundler extends AbstractBundler {
         out.println("app.id=" + IDENTIFIER.fetchFrom(params));
         out.println("app.preferences.id=" + PREFERENCES_ID.fetchFrom(params));
 
-        if (USE_FX_PACKAGING.fetchFrom(params)) {
-            out.println("app.mainclass=" +
-                    JAVAFX_LAUNCHER_CLASS.replaceAll("\\.", "/"));
-        } else {
-            out.println("app.mainclass=" +
-                    MAIN_CLASS.fetchFrom(params).replaceAll("\\.", "/"));
-        }
+        out.println("app.mainclass=" +
+                MAIN_CLASS.fetchFrom(params).replaceAll("\\.", "/"));
         out.println("app.classpath=" + CLASSPATH.fetchFrom(params));
 
         List<String> jvmargs = JVM_OPTIONS.fetchFrom(params);
@@ -399,6 +394,11 @@ public class WinAppBundler extends AbstractBundler {
         for (Map.Entry<String, String> entry : jvmProps.entrySet()) {
             out.println("jvmarg."+idx+"=-D"+entry.getKey()+"="+entry.getValue());
             idx++;
+        }
+
+        String preloader = PRELOADER_CLASS.fetchFrom(params);
+        if (preloader != null) {
+            out.println("jvmarg."+idx+"=-Djavafx.preloader="+preloader);
         }
 
         Map<String, String> overridableJVMOptions = USER_JVM_OPTIONS.fetchFrom(params);
@@ -472,13 +472,14 @@ public class WinAppBundler extends AbstractBundler {
                 APP_NAME,
                 APP_RESOURCES,
                 ARGUMENTS,
+                CLASSPATH,
                 ICON_ICO,
                 JVM_OPTIONS,
                 JVM_PROPERTIES,
                 MAIN_CLASS,
                 MAIN_JAR,
-                CLASSPATH,
                 PREFERENCES_ID,
+                PRELOADER_CLASS,
                 USER_JVM_OPTIONS,
                 VERSION,
                 WIN_RUNTIME

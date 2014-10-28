@@ -26,6 +26,7 @@
 package hello;
 
 import javafx.application.Application;
+import javafx.application.Preloader;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.Tooltip;
@@ -38,8 +39,38 @@ import java.util.Optional;
 /**
  */
 public class HelloRectangle extends Application {
+
+    private static class MessagePreloaderNotification implements Preloader.PreloaderNotification {
+        String message;
+
+        private MessagePreloaderNotification(String message) {
+            this.message = message;
+        }
+        
+        public String toString() {
+            return message;
+        }
+    }
+    
+    @Override
+    public void init() throws Exception {
+        if (System.getProperty("javafx.preloader") != null) {
+            notifyPreloader(new MessagePreloaderNotification("5..."));
+            Thread.sleep(1000);
+            notifyPreloader(new MessagePreloaderNotification("4..."));
+            Thread.sleep(1000);
+            notifyPreloader(new MessagePreloaderNotification("3..."));
+            Thread.sleep(1000);
+            notifyPreloader(new MessagePreloaderNotification("2..."));
+            Thread.sleep(1000);
+            notifyPreloader(new MessagePreloaderNotification("1..."));
+            Thread.sleep(1000);
+            notifyPreloader(new MessagePreloaderNotification("GO!"));
+        }
+    }
+
     @Override public void start(Stage stage) {
-        stage.setTitle(Optional.of(System.getProperty("app.preferences.id")).orElse("Hello Rectangle").replace("/", " " ));
+        stage.setTitle(Optional.ofNullable(System.getProperty("app.preferences.id")).orElse("Hello Rectangle").replace("/", " " ));
 
         Group root = new Group();
         Scene scene = new Scene(root, 600, 450);

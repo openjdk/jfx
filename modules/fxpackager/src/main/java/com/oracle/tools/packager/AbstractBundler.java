@@ -53,8 +53,6 @@ public abstract class AbstractBundler implements Bundler {
     // we use it for classpath lookup and there / are not platform specific
     public final static String BUNDLER_PREFIX = "package/";
 
-    protected static final String JAVAFX_LAUNCHER_CLASS = "com.javafx.main.Main";
-
     protected Class baseResourceLoader = null;
     
     //helper method to test if required files are present in the runtime

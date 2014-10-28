@@ -534,6 +534,7 @@ public class DeployParams extends CommonParams {
                 bundleParams.setRuntime(javaRuntimeToUse);
             }
             bundleParams.setApplicationClass(applicationClass);
+            bundleParams.setPrelaoderClass(preloader);
             bundleParams.setName(this.appName);
             bundleParams.setAppVersion(version);
             bundleParams.setType(bundleType);

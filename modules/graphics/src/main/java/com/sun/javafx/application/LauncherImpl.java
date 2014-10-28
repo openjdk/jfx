@@ -39,6 +39,8 @@ import java.lang.reflect.Method;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -112,10 +114,28 @@ public class LauncherImpl {
      * @param appClass application class
      * @param args command line arguments
      */
+    @SuppressWarnings("unchecked")
     public static void launchApplication(final Class<? extends Application> appClass,
             final String[] args) {
-
-        launchApplication(appClass, savedPreloaderClass, args);
+        
+        Class<? extends Preloader> preloaderClass = savedPreloaderClass;
+        
+        if (preloaderClass == null) {
+            String preloaderByProperty = AccessController.doPrivileged((PrivilegedAction<String>) () ->
+                    System.getProperty("javafx.preloader"));
+            if (preloaderByProperty != null) {
+                try {
+                    preloaderClass = (Class<? extends Preloader>) Class.forName(preloaderByProperty, 
+                            false, appClass.getClassLoader());
+                } catch (Exception e) {
+                    System.err.printf("Could not load preloader class '" + preloaderByProperty + 
+                            "', continuing without preloader.");
+                    e.printStackTrace();
+                }
+            }
+        }
+        
+        launchApplication(appClass, preloaderClass, args);
     }
 
     /**

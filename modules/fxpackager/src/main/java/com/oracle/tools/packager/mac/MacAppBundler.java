@@ -664,6 +664,15 @@ public class MacAppBundler extends AbstractBundler {
             newline = "\n";
         }
 
+        String preloader = PRELOADER_CLASS.fetchFrom(params);
+        if (preloader != null) {
+            sb.append(newline)
+                    .append("    <string>-Djavafx.preloader=")
+                    .append(preloader)
+                    .append("</string>");
+            //newline = "\n";
+        }
+
         data.put("DEPLOY_JVM_OPTIONS", sb.toString());
 
         sb = new StringBuilder();
@@ -1018,6 +1027,7 @@ public class MacAppBundler extends AbstractBundler {
                 APP_RESOURCES,
                 ARGUMENTS,
                 BUNDLE_ID_SIGNING_PREFIX,
+                CLASSPATH,
                 DEVELOPER_ID_APP_SIGNING_KEY,
                 ICON_ICNS,
                 JVM_OPTIONS,
@@ -1029,8 +1039,8 @@ public class MacAppBundler extends AbstractBundler {
                 MAC_RUNTIME,
                 MAIN_CLASS,
                 MAIN_JAR,
-                CLASSPATH,
                 PREFERENCES_ID,
+                PRELOADER_CLASS,
                 USER_JVM_OPTIONS,
                 VERSION
         );

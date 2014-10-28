@@ -89,6 +89,7 @@ public class CLITest {
                 "-outfile", "SmokeParams",
                 "-appclass", "hello.HelloRectangle",
                 "-nosign",
+                "-preloader", "hello.HelloPreloader",
                 "-native", "image",
                 "-name", "SmokeParams",
                 "-BOptionThatWillNeverExist=true",
