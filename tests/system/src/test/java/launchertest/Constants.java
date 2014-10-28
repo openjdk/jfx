@@ -58,4 +58,7 @@ public class Constants {
     static final int ERROR_PRELOADER_STOP_WRONG_THREAD = 22;
 
     static final int ERROR_LAUNCH_SUCCEEDED = 23;
+
+    static final int ERROR_CONSTRUCTOR_WRONG_CCL = 24;
+    static final int ERROR_START_WRONG_CCL = 25;
 }
