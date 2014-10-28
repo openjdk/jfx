@@ -1756,6 +1756,7 @@ project(":systemTests") {
             exclude("**/javafx/scene/layout/*.*");
             exclude("**/test3d/*.*");
             exclude("**/painttest/*.*");
+            exclude("**/renderlock/*.*");
         }
         if (!IS_AWT_TEST) {
             // Disable all AWT-based tests
