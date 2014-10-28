@@ -87,9 +87,9 @@ public class MainLauncherTest {
         new TestData("TestNotApplicationThreadCheck", ERROR_NONE),
         new TestData("TestAppThreadCheck", "TestPreloader", ERROR_NONE),
         new TestData("TestAppNoMainThreadCheck", "TestPreloader", ERROR_NONE),
-        // Disabled due to RT-38936
-        //new TestData("TestAppCCL", ERROR_NONE),
+        new TestData("TestAppCCL", ERROR_NONE),
         new TestData("TestAppCCL1", ERROR_NONE),
+        new TestData("TestAppCCL2", ERROR_NONE),
         new TestData("TestAppNoMainCCL", ERROR_NONE),
         new TestData("TestAppNoMainCCL2", ERROR_NONE),
         new TestData("TestAppNoMainCCL3", ERROR_NONE),

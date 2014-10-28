@@ -104,6 +104,11 @@ public class LauncherImpl {
     // which is turn calls into launchApplication.
     private static Class<? extends Preloader> savedPreloaderClass = null;
 
+    // The following is used to determine whether the main() method
+    // has set the CCL in the case where main is called after the FX toolkit
+    // is started.
+    private static ClassLoader savedMainCcl = null;
+
     /**
      * This method is called by the Application.launch method.
      * It must not be called more than once or an exception will be thrown.
@@ -380,6 +385,7 @@ public class LauncherImpl {
             if (verbose) {
                 System.err.println("Calling main(String[]) method");
             }
+            savedMainCcl = Thread.currentThread().getContextClassLoader();
             mainMethod.invoke(null, new Object[] { args });
             return;
         } catch (NoSuchMethodException | IllegalAccessException ex) {
@@ -687,6 +693,22 @@ public class LauncherImpl {
             final String[] args) throws Exception {
 
         startToolkit();
+
+        if (savedMainCcl != null) {
+            /*
+             * The toolkit was already started by the java launcher, and the
+             * main method of the application class was called. Check to see
+             * whether the CCL has been changed. If so, then we need
+             * to pass the context class loader to the FX app thread so that it
+             * correctly picks up the current setting.
+             */
+            final ClassLoader ccl = Thread.currentThread().getContextClassLoader();
+            if (ccl != null && ccl != savedMainCcl) {
+                PlatformImpl.runLater(() -> {
+                    Thread.currentThread().setContextClassLoader(ccl);
+                });
+            }
+        }
 
         final AtomicBoolean pStartCalled = new AtomicBoolean(false);
         final AtomicBoolean startCalled = new AtomicBoolean(false);
