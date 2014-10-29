@@ -66,7 +66,7 @@ public:
     bool SetValue(const TString Key, TString Value);
     bool RemoveKey(const TString Key);
 
-    size_t GetCount();
+    virtual size_t GetCount();
     std::map<TString, TString> GetData();
 };
 

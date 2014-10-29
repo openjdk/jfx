@@ -46,10 +46,10 @@ public:
     GenericPlatform(void);
     virtual ~GenericPlatform(void);
 
-    virtual TString GetJVMUserArgsConfigFileName();
     virtual Platform::DebugState GetDebugState();
     virtual TString GetPackageAppDirectory();
     virtual TString GetPackageLauncherDirectory();
+    
     virtual TString GetConfigFileName();
 
     virtual std::list<TString> LoadFromFile(TString FileName);

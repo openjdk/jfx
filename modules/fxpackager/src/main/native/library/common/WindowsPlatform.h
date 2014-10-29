@@ -68,7 +68,7 @@ public:
     virtual TString GetJvmPath();
     virtual TString GetSystemJvmPath();
 
-    virtual PropertyContainer* GetConfigFile();
+    virtual PropertyContainer* GetConfigFile(TString FileName);
 
     virtual TString GetModuleFileName();
     virtual Module LoadLibrary(TString FileName);

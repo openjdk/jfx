@@ -148,10 +148,10 @@ TString MacPlatform::GetPackageRootDirectory() {
 }
 
 TString MacPlatform::GetAppDataDirectory() {
+    TString result;
     NSArray *paths = NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory, NSUserDomainMask, YES);
     NSString *applicationSupportDirectory = [paths firstObject];
-    TString result = [applicationSupportDirectory UTF8String];
-    result = FilePath::IncludeTrailingSlash(result) + GetAppName();
+    result = [applicationSupportDirectory UTF8String];
     return result;
 }
 
@@ -204,9 +204,9 @@ TString MacPlatform::GetAppName() {
 
 // Convert parts of the info.plist to the INI format the rest of the packager uses unless
 // a packager config file exists.
-PropertyContainer* MacPlatform::GetConfigFile() {
+PropertyContainer* MacPlatform::GetConfigFile(TString FileName) {
     if (UsePListForConfigFile() == false) {
-        return new PropertyFile(GetConfigFileName());
+        return new PropertyFile(FileName);
     }
 
     NSBundle *mainBundle = [NSBundle mainBundle];
@@ -306,6 +306,7 @@ std::map<TString, TString> MacPlatform::GetKeys() {
         keys.insert(std::map<TString, TString>::value_type(CONFIG_SPLASH_KEY,         _T("app.splash")));
         keys.insert(std::map<TString, TString>::value_type(CONFIG_APP_ID_KEY,         _T("JVMPreferencesID")));
         keys.insert(std::map<TString, TString>::value_type(JVM_RUNTIME_KEY,           _T("JVMRuntime")));
+        keys.insert(std::map<TString, TString>::value_type(PACKAGER_APP_DATA_DIR,     _T("CFBundleIdentifier")));
     }
 
     return keys;

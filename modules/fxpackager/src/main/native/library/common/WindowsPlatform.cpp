@@ -209,7 +209,7 @@ TString WindowsPlatform::GetAppDataDirectory() {
     TCHAR path[MAX_PATH];
     
     if (SHGetFolderPath(NULL, CSIDL_APPDATA, NULL, 0, path) == S_OK) {
-        result = FilePath::IncludeTrailingSlash(path) + GetAppName();
+        result = path;
     }
     
     return result;
@@ -283,8 +283,8 @@ TString WindowsPlatform::GetSystemJvmPath() {
     return result;
 }
 
-PropertyContainer* WindowsPlatform::GetConfigFile() {
-    return new PropertyFile(GetConfigFileName());
+PropertyContainer* WindowsPlatform::GetConfigFile(TString FileName) {
+    return new PropertyFile(FileName);
 }
 
 TString WindowsPlatform::GetModuleFileName() {

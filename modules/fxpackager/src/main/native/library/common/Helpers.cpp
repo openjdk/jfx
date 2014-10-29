@@ -90,7 +90,7 @@ TString Helpers::ConvertPathToId(TString Value) {
     return result;
 }
 
-std::map<TString, TValueIndex> Helpers::GetJVMArgsFromConfig(PropertyFile* config) {
+std::map<TString, TValueIndex> Helpers::GetJVMArgsFromConfig(PropertyContainer* config) {
     std::map<TString, TValueIndex> result;
 
     for (unsigned int index = 0; index < config->GetCount(); index++) {
@@ -111,7 +111,7 @@ std::map<TString, TValueIndex> Helpers::GetJVMArgsFromConfig(PropertyFile* confi
     return result;
 }
 
-std::map<TString, TValueIndex> Helpers::GetJVMUserArgsFromConfig(PropertyFile* config) {
+std::map<TString, TValueIndex> Helpers::GetJVMUserArgsFromConfig(PropertyContainer* config) {
     std::map<TString, TValueIndex> result;
 
     for (unsigned int index = 0; index < config->GetCount(); index++) {
@@ -153,7 +153,7 @@ std::map<TString, TString> Helpers::GetConfigFromJVMUserArgs(std::map<TString, T
     return result;
 }
 
-std::list<TString> Helpers::GetArgsFromConfig(PropertyFile* config) {
+std::list<TString> Helpers::GetArgsFromConfig(PropertyContainer* config) {
     std::list<TString> result;
 
     for (unsigned int index = 0; index < config->GetCount(); index++) {

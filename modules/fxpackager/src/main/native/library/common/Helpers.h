@@ -51,14 +51,52 @@ public:
     static TString ConvertIdToJavaPath(TString Value);
     static TString ConvertPathToId(TString Value);
 
-    static std::map<TString, TValueIndex> GetJVMArgsFromConfig(PropertyFile* config);
-    static std::map<TString, TValueIndex> GetJVMUserArgsFromConfig(PropertyFile* config);
+    static std::map<TString, TValueIndex> GetJVMArgsFromConfig(PropertyContainer* config);
+    static std::map<TString, TValueIndex> GetJVMUserArgsFromConfig(PropertyContainer* config);
     static std::map<TString, TString> GetConfigFromJVMUserArgs(std::map<TString, TValueIndex> OrderedMap);
-    static std::list<TString> GetArgsFromConfig(PropertyFile* config);
+    static std::list<TString> GetArgsFromConfig(PropertyContainer* config);
     
     static std::list<TString> GetOrderedKeysFromMap(std::map<TString, TValueIndex> OrderedMap);
     
     static TString NameValueToString(TString name, TString value);
+};
+
+template <typename T>
+class AutoFreePtr {
+private:
+    T* FObject;
+    
+public:
+    AutoFreePtr(T* Value) {
+        FObject = Value;
+    }
+    
+    ~AutoFreePtr() {
+        if (FObject != NULL) {
+            delete FObject;
+        }
+    }
+    
+    operator T* () const {
+        return FObject;
+    }
+    
+    T& operator* () const {
+        return *FObject;
+    }
+    
+    T* operator->() const {
+        return FObject;
+    }
+    
+    T** operator&() {
+        return &FObject;
+    }
+    
+    T* operator=(const T * rhs) {
+        FObject = rhs;
+        return FObject;
+    }
 };
 
 #endif //HELPERS_H

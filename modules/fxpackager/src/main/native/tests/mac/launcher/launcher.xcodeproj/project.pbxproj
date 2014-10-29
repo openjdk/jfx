@@ -133,9 +133,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		DE2D9A5819A4E4C70082A0F2 /* launcher */ = {
+		DE2D9A5819A4E4C70082A0F2 /* DevTest */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = DE2D9A8A19A4E4C70082A0F2 /* Build configuration list for PBXNativeTarget "launcher" */;
+			buildConfigurationList = DE2D9A8A19A4E4C70082A0F2 /* Build configuration list for PBXNativeTarget "DevTest" */;
 			buildPhases = (
 				DE2D9A5519A4E4C70082A0F2 /* Sources */,
 				DE2D9A5619A4E4C70082A0F2 /* Frameworks */,
@@ -145,7 +145,7 @@
 			);
 			dependencies = (
 			);
-			name = launcher;
+			name = DevTest;
 			productName = launcher;
 			productReference = DE2D9A5919A4E4C70082A0F2 /* launcher.app */;
 			productType = "com.apple.product-type.application";
@@ -194,7 +194,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				DE2D9A5819A4E4C70082A0F2 /* launcher */,
+				DE2D9A5819A4E4C70082A0F2 /* DevTest */,
 				DE2D9A7919A4E4C70082A0F2 /* launcherTests */,
 			);
 		};
@@ -239,7 +239,7 @@
 /* Begin PBXTargetDependency section */
 		DE2D9A7F19A4E4C70082A0F2 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = DE2D9A5819A4E4C70082A0F2 /* launcher */;
+			target = DE2D9A5819A4E4C70082A0F2 /* DevTest */;
 			targetProxy = DE2D9A7E19A4E4C70082A0F2 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -261,6 +261,7 @@
 				CLANG_WARN_INT_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CONFIGURATION_BUILD_DIR = ../../../../../../build/dev/DevTest.app/Contents/MacOS;
 				COPY_PHASE_STRIP = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_DYNAMIC_NO_PIC = NO;
@@ -404,7 +405,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		DE2D9A8A19A4E4C70082A0F2 /* Build configuration list for PBXNativeTarget "launcher" */ = {
+		DE2D9A8A19A4E4C70082A0F2 /* Build configuration list for PBXNativeTarget "DevTest" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				DE2D9A8B19A4E4C70082A0F2 /* Debug */,

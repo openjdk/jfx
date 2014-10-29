@@ -72,7 +72,7 @@ public:
     virtual TString GetJvmPath();
     virtual TString GetSystemJvmPath();
 
-    virtual PropertyContainer* GetConfigFile();
+    virtual PropertyContainer* GetConfigFile(TString FileName);
     virtual int GetProcessID();
 
     virtual bool IsMainThread();

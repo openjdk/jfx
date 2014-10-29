@@ -108,15 +108,14 @@ TString LinuxPlatform::GetAppDataDirectory() {
     TString home = GetEnv(_T("HOME"));
 
     if (home.empty() == false) {
-        result += FilePath::IncludeTrailingSlash(home) +
-            FilePath::IncludeTrailingSlash(_T(".local")) + GetAppName();
+        result += FilePath::IncludeTrailingSlash(home) + _T(".local");
     }
 
     return result;
 }
 
-PropertyContainer* LinuxPlatform::GetConfigFile() {
-    return new PropertyFile(GetConfigFileName());
+PropertyContainer* LinuxPlatform::GetConfigFile(TString FileName) {
+    return new PropertyFile(FileName);
 }
 
 int LinuxPlatform::GetProcessID() {

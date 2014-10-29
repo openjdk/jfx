@@ -65,7 +65,7 @@ public:
     virtual TString GetSystemJvmPath();
     virtual TString GetAppName();
 
-    virtual PropertyContainer* GetConfigFile();
+    virtual PropertyContainer* GetConfigFile(TString FileName);
     virtual TString GetModuleFileName();
     virtual int GetProcessID();
 

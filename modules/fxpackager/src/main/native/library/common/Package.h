@@ -55,6 +55,7 @@ public:
     TString FPackageAppDirectory;
     TString FPackageLauncherDirectory;
     TString FAppID;
+    TString FPackageAppDataDir;
     TString FClassPath;
     TString FMainJar;
     TString FMainClassName;
@@ -75,6 +76,7 @@ private:
 
 private:
     PackageBootFields* FBootFields;
+    TString FJVMUserArgsConfigFileName;
     
     bool FDebugging;
 
@@ -108,8 +110,11 @@ public:
     TString GetPackageRootDirectory();
     TString GetPackageAppDirectory();
     TString GetPackageLauncherDirectory();
+    
+    TString GetJVMUserArgsConfigFileName();
 
     TString GetAppID();
+    TString GetPackageAppDataDir();
     TString GetClassPath();
     TString GetMainClassName();
     bool IsRuntimeBundled();

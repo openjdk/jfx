@@ -36,6 +36,8 @@
 #include "Helpers.h"
 #include "JavaUserPreferences.h"
 
+#include <assert.h>
+
 
 Package::Package(void) {
     Initialize();
@@ -55,8 +57,10 @@ void Package::Initialize() {
     FBootFields->FPackageLauncherDirectory = platform.GetPackageLauncherDirectory();
 
     // Read from configure.cfg/Info.plist
-    PropertyFile* config = (PropertyFile*)platform.GetConfigFile();
+
+    AutoFreePtr<PropertyContainer> config = platform.GetConfigFile(platform.GetConfigFileName());
     config->GetValue(keys[CONFIG_APP_ID_KEY], FBootFields->FAppID);
+    config->GetValue(keys[PACKAGER_APP_DATA_DIR], FBootFields->FPackageAppDataDir);
     
     // Auto Memory.
     TString temp;
@@ -142,13 +146,15 @@ void Package::Initialize() {
     FJVMUserConfig = NULL;
 
     // Load user JVM overrides.
-    if (FilePath::FileExists(platform.GetJVMUserArgsConfigFileName()) == true) {
+    TString jvmUserArgsConfigFileName = GetJVMUserArgsConfigFileName();
+
+    if (FilePath::FileExists(jvmUserArgsConfigFileName) == true) {
         // Load new location for user VM overrides.
-        FJVMUserConfig = new PropertyFile(platform.GetJVMUserArgsConfigFileName());
+        FJVMUserConfig = new PropertyFile(jvmUserArgsConfigFileName);
     }
     else {
         // Attemp to load java.util.prefs for VM overrides.
-        JavaUserPreferences* javaPreferences = JavaUserPreferences::CreateInstance(); //TODO implement for Mac
+        JavaUserPreferences* javaPreferences = JavaUserPreferences::CreateInstance();
 
         if (javaPreferences->Load(GetAppID()) == true) {
             FJVMUserConfig = new PropertyFile(javaPreferences->GetData());
@@ -160,7 +166,6 @@ void Package::Initialize() {
         delete javaPreferences;
     }
 
-    delete config;
     FJVMUserConfig->SetReadOnly(false);
     MergeJVMDefaultsWithOverrides();
 }
@@ -178,7 +183,6 @@ void Package::SetCommandLineArguments(int argc, TCHAR* argv[]) {
 
             if (arg == _T("/Debug")) {
 #ifdef DEBUG
-                //TODO setup for debugging.
                 FDebugging = true;
 #endif //DEBUG
                 continue;
@@ -226,6 +230,7 @@ void Package::FreeBootFields() {
 }
 
 std::map<TString, TValueIndex> Package::GetJVMArgs() {
+    assert(FBootFields != NULL);
     return FBootFields->FJVMArgs;
 }
 
@@ -276,8 +281,8 @@ void Package::SetJVMUserArgOverrides(std::map<TString, TValueIndex> Value) {
 
     // 3. Overwrite JVM user config overrides with provided key/value pair.
     FJVMUserConfig->Assign(Helpers::GetConfigFromJVMUserArgs(orderedOverrides));
-    Platform& platform = Platform::GetInstance();
-    FJVMUserConfig->SaveToFile(platform.GetJVMUserArgsConfigFileName());
+    //Platform& platform = Platform::GetInstance();
+    FJVMUserConfig->SaveToFile(GetJVMUserArgsConfigFileName());
 
     // 4. Merge defaults and overrides to produce FJVMUserArgs.
     MergeJVMDefaultsWithOverrides();
@@ -338,61 +343,94 @@ void Package::MergeJVMDefaultsWithOverrides() {
 }
 
 std::list<TString> Package::GetArgs() {
+    assert(FBootFields != NULL);
     return FBootFields->FArgs;
 }
 
 TString Package::GetPackageRootDirectory() {
+    assert(FBootFields != NULL);
     return FBootFields->FPackageRootDirectory;
 }
 
 TString Package::GetPackageAppDirectory() {
+    assert(FBootFields != NULL);
     return FBootFields->FPackageAppDirectory;
 }
 
 TString Package::GetPackageLauncherDirectory() {
+    assert(FBootFields != NULL);
     return FBootFields->FPackageLauncherDirectory;
 }
 
+TString Package::GetJVMUserArgsConfigFileName() {
+    if (FJVMUserArgsConfigFileName.empty()) {
+        Platform& platform = Platform::GetInstance();
+
+        FJVMUserArgsConfigFileName = FilePath::IncludeTrailingSlash(platform.GetAppDataDirectory()) +
+                                        FilePath::IncludeTrailingSlash(GetPackageAppDataDir()) +
+                                        FilePath::IncludeTrailingSlash(_T("packager")) +
+                                        _T("jvmuserargs.cfg");
+    }
+    
+    return FJVMUserArgsConfigFileName;
+}
+
 TString Package::GetAppID() {
+    assert(FBootFields != NULL);
     return FBootFields->FAppID;
 }
 
+TString Package::GetPackageAppDataDir() {
+    assert(FBootFields != NULL);
+    return FBootFields->FPackageAppDataDir;
+}
+
 TString Package::GetClassPath() {
+    assert(FBootFields != NULL);
     return FBootFields->FClassPath;
 }
 
 TString Package::GetMainJar() {
+    assert(FBootFields != NULL);
     return FBootFields->FMainJar;
 }
 
 TString Package::GetMainClassName() {
+    assert(FBootFields != NULL);
     return FBootFields->FMainClassName;
 }
 
 bool Package::IsRuntimeBundled() {
+    assert(FBootFields != NULL);
     return FBootFields->FIsRuntimeBundled;
 }
 
 TString Package::GetJVMPath() {
+    assert(FBootFields != NULL);
     return FBootFields->FJVMPath;
 }
 
 TString Package::GetSplashScreenFileName() {
+    assert(FBootFields != NULL);
     return FBootFields->FSplashScreenFileName;
 }
 
 bool Package::HasSplashScreen() {
+    assert(FBootFields != NULL);
     return FilePath::FileExists(FBootFields->FSplashScreenFileName);
 }
 
 TString Package::GetCommandName() {
+    assert(FBootFields != NULL);
     return FBootFields->FCommandName;
 }
 
 size_t Package::GetMemorySize() {
+    assert(FBootFields != NULL);
     return FBootFields->FMemorySize;
 }
 
 PackageBootFields::MemoryState Package::GetMemoryState() {
+    assert(FBootFields != NULL);
     return FBootFields->FMemoryState;
 }
