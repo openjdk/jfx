@@ -2789,6 +2789,7 @@ public class TableView<S> extends Control {
                 oldList.removeListener(weakItemsContentListener);
             }
             if (newList != null) {
+                newList.removeListener(weakItemsContentListener);
                 newList.addListener(weakItemsContentListener);
             }
 
@@ -3075,7 +3076,10 @@ public class TableView<S> extends Control {
             // the tableview items list has changed, we need to observe
             // the new list, and remove any observer we had from the old list
             if (oldList != null) oldList.removeListener(weakItemsContentListener);
-            if (newList != null) newList.addListener(weakItemsContentListener);
+            if (newList != null) {
+                newList.removeListener(weakItemsContentListener);
+                newList.addListener(weakItemsContentListener);
+            }
 
             updateDefaultFocus();
         }

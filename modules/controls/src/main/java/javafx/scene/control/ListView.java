@@ -1438,6 +1438,7 @@ public class ListView<T> extends Control {
                 oldList.removeListener(weakItemsContentObserver);
             }
             if (newList != null) {
+                newList.removeListener(weakItemsContentObserver);
                 newList.addListener(weakItemsContentObserver);
             }
 
@@ -1507,8 +1508,13 @@ public class ListView<T> extends Control {
             // the listview items list has changed, we need to observe
             // the new list, and remove any observer we had from the old list
             if (oldList != null) oldList.removeListener(weakItemsContentListener);
-            if (newList != null) newList.addListener(weakItemsContentListener);
-            
+
+            // Make sure its only once even on the first list see RT-39132
+            if (newList != null) {
+                newList.removeListener(weakItemsContentListener);
+                newList.addListener(weakItemsContentListener);
+            }
+
             updateItemCount();
         }
         

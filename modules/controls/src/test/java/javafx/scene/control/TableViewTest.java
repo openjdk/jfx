@@ -4334,4 +4334,25 @@ public class TableViewTest {
         assertEquals(2, rt_38341_indices_count);
         assertEquals(2, rt_38341_items_count);
     }
+
+    @Test public void test_rt_39132() {
+        TableView<String> tableView = new TableView<>();
+
+        ObservableList items = FXCollections.observableArrayList("one", "two", "three");
+        tableView.setItems(items);
+
+        TableColumn<String,String> column = new TableColumn<>("Column");
+        column.setCellValueFactory(cdf -> new ReadOnlyStringWrapper(cdf.getValue()));
+        tableView.getColumns().add(column);
+
+        MultipleSelectionModel sm = tableView.getSelectionModel();
+        sm.select(0);
+
+        assertEquals(0, sm.getSelectedIndex());
+        assertEquals("one", sm.getSelectedItem());
+
+        items.add(0, "new item");
+        assertEquals(1, sm.getSelectedIndex());
+        assertEquals("one", sm.getSelectedItem());
+    }
 }
