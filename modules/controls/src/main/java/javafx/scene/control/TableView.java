@@ -2613,14 +2613,19 @@ public class TableView<S> extends Control {
                 if (! csMode) {
                     if (pos.getRow() == row) {
                         selectedCellsMap.remove(pos);
-                        return;
+                        break;
                     }
                 } else {
                     if (pos.equals(tp)) {
                         selectedCellsMap.remove(tp);
-                        return;
+                        break;
                     }
                 }
+            }
+
+            if (isEmpty() && ! isAtomic()) {
+                updateSelectedIndex(-1);
+                selectedCellsMap.clear();
             }
         }
 

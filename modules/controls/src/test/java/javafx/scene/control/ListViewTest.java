@@ -1197,4 +1197,32 @@ public class ListViewTest {
         assertEquals(1, sm.getSelectedIndex());
         assertEquals("one", sm.getSelectedItem());
     }
+
+    private int rt_38943_index_count = 0;
+    private int rt_38943_item_count = 0;
+    @Test public void test_rt_38943() {
+        ListView<String> listView = new ListView<>(FXCollections.observableArrayList("one", "two", "three"));
+
+        MultipleSelectionModel sm = listView.getSelectionModel();
+
+        sm.selectedIndexProperty().addListener((observable, oldValue, newValue) -> rt_38943_index_count++);
+        sm.selectedItemProperty().addListener((observable, oldValue, newValue) -> rt_38943_item_count++);
+
+        assertEquals(-1, sm.getSelectedIndex());
+        assertNull(sm.getSelectedItem());
+        assertEquals(0, rt_38943_index_count);
+        assertEquals(0, rt_38943_item_count);
+
+        sm.select(0);
+        assertEquals(0, sm.getSelectedIndex());
+        assertEquals("one", sm.getSelectedItem());
+        assertEquals(1, rt_38943_index_count);
+        assertEquals(1, rt_38943_item_count);
+
+        sm.clearSelection(0);
+        assertEquals(-1, sm.getSelectedIndex());
+        assertNull(sm.getSelectedItem());
+        assertEquals(2, rt_38943_index_count);
+        assertEquals(2, rt_38943_item_count);
+    }
 }

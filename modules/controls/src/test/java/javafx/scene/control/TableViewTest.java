@@ -4355,4 +4355,36 @@ public class TableViewTest {
         assertEquals(1, sm.getSelectedIndex());
         assertEquals("one", sm.getSelectedItem());
     }
+
+    private int rt_38943_index_count = 0;
+    private int rt_38943_item_count = 0;
+    @Test public void test_rt_38943() {
+        TableView<String> tableView = new TableView<>(FXCollections.observableArrayList("one", "two", "three"));
+
+        TableColumn<String,String> column = new TableColumn<>("Column");
+        column.setCellValueFactory(cdf -> new ReadOnlyStringWrapper(cdf.getValue()));
+        tableView.getColumns().add(column);
+
+        MultipleSelectionModel sm = tableView.getSelectionModel();
+
+        sm.selectedIndexProperty().addListener((observable, oldValue, newValue) -> rt_38943_index_count++);
+        sm.selectedItemProperty().addListener((observable, oldValue, newValue) -> rt_38943_item_count++);
+
+        assertEquals(-1, sm.getSelectedIndex());
+        assertNull(sm.getSelectedItem());
+        assertEquals(0, rt_38943_index_count);
+        assertEquals(0, rt_38943_item_count);
+
+        sm.select(0);
+        assertEquals(0, sm.getSelectedIndex());
+        assertEquals("one", sm.getSelectedItem());
+        assertEquals(1, rt_38943_index_count);
+        assertEquals(1, rt_38943_item_count);
+
+        sm.clearSelection(0);
+        assertEquals(-1, sm.getSelectedIndex());
+        assertNull(sm.getSelectedItem());
+        assertEquals(2, rt_38943_index_count);
+        assertEquals(2, rt_38943_item_count);
+    }
 }

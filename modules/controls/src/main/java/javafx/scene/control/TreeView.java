@@ -952,6 +952,8 @@ public class TreeView<T> extends Control {
      * @return The TreeItem in the given index, or null if it is out of bounds.
      */
     public TreeItem<T> getTreeItem(int row) {
+        if (row < 0) return null;
+
         // normalize the requested row based on whether showRoot is set
         final int _row = isShowRoot() ? row : (row + 1);
 
