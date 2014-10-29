@@ -38,6 +38,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Locale;
 
 import com.sun.glass.ui.Screen;
@@ -1564,10 +1565,11 @@ public abstract class PrismFontFactory implements FontFactory {
         // the font referenced via some lookup name that applies a style
         // or used the family name, we need to find it and remove all
         // references to it, so it can be collected.
-        for (String key : compResourceMap.keySet()) {
-            CompositeFontResource compFont =  compResourceMap.get(key);
+        Iterator<CompositeFontResource> fi = compResourceMap.values().iterator();
+            while (fi.hasNext()) {
+            CompositeFontResource compFont = fi.next();
             if (compFont.getSlotResource(0) == font) {
-                compResourceMap.remove(key);
+                fi.remove();
             }
         }
     }
