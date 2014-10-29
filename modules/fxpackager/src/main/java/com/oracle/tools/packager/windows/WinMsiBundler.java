@@ -391,12 +391,18 @@ public class WinMsiBundler  extends AbstractBundler {
         List<Map<String, ? super Object>> fileAssociations = FILE_ASSOCIATIONS.fetchFrom(p);
         for (Map<String, ? super Object> fileAssociation : fileAssociations) {
             File icon = FA_ICON.fetchFrom(fileAssociation); //TODO FA_ICON_ICO
+            if (icon == null) {
+                continue;
+            }
+            
             File faIconFile = new File(appDir, icon.getName());
 
-            try {
-                IOUtils.copyFile(icon, faIconFile);
-            } catch (IOException e) {
-                e.printStackTrace();
+            if (icon.exists()) {
+                try {
+                    IOUtils.copyFile(icon, faIconFile);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
         }
 
@@ -717,7 +723,11 @@ public class WinMsiBundler  extends AbstractBundler {
                     entryName += "." + i;
                 }
 
-                out.println(prefix + "   <ProgId Id='" + entryName + "' Description='" + description + "' Icon='" + idToFileMap.get(icon.getName()) + "' IconIndex='0'>");
+                out.println(prefix + "   <ProgId Id='" + entryName + "' Description='" + description + "'");
+                if (icon != null && icon.exists()) {
+                    out.println("Icon='" + idToFileMap.get(icon.getName()) + "' IconIndex='0'");
+                }
+                out.println(">");
 
                 List<String> extensions = FA_EXTENSIONS.fetchFrom(fileAssociation);
                 List<String> mimeTypes = FA_CONTENT_TYPE.fetchFrom(fileAssociation);
