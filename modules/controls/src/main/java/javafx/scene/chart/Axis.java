@@ -91,6 +91,7 @@ public abstract class Axis<T> extends Region {
     /** True when the current range invalid and all dependent calculations need to be updated */
     boolean rangeValid = false;
     boolean measureInvalid = false;
+    boolean tickLabelsVisibleInvalid = false;
 
     private BitSet labelsToSkip = new BitSet();
 
@@ -204,6 +205,7 @@ public abstract class Axis<T> extends Region {
             for (TickMark<T> tick : tickMarks) {
                 tick.setTextVisible(get());
             }
+            tickLabelsVisibleInvalid = true;
             requestAxisLayout();
         }
 
@@ -706,8 +708,9 @@ public abstract class Axis<T> extends Region {
             rangeValid = true;
         }
 
-        if (lengthDiffers || rangeInvalid || measureInvalid) {
+        if (lengthDiffers || rangeInvalid || measureInvalid || tickLabelsVisibleInvalid) {
             measureInvalid = false;
+            tickLabelsVisibleInvalid = false;
             // RT-12272 : tick labels overlapping
             labelsToSkip.clear();
             double prevEnd = -Double.MAX_VALUE;
