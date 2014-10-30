@@ -41,7 +41,7 @@ import java.util.prefs.Preferences;
  *
  * @since 8u40
  */
-public class PreferencesUserJvmOptions implements UserJvmOptionsService {
+final public class PreferencesUserJvmOptions implements UserJvmOptionsService {
 
     Preferences node = Preferences.userRoot().node(System.getProperty("app.preferences.id"));
 
