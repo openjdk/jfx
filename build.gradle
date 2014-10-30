@@ -1066,13 +1066,7 @@ task checkJfxrtJar {
     doLast {
         def jfxrtFile = new File("$JDK_HOME/jre/lib/ext/jfxrt.jar");
         if (jfxrtFile.exists()) {
-            if (BUILD_CLOSED) {
-                fail("$jfxrtFile must be removed before building closed sdk")
-            } else {
-                logger.warn("****************************************************************")
-                logger.warn("$jfxrtFile may interfere with testing or running applications against locally build jfxrt.jar")
-                logger.warn("****************************************************************")
-            }
+            fail("$jfxrtFile must be removed before building sdk")
         }
     }
 }
