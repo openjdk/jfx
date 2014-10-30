@@ -36,10 +36,28 @@
 #include <string>
 #include <libgen.h>
 #include <stdio.h>
+#include <unistd.h>
 
 
 typedef bool (*start_launcher)(int argc, char* argv[]);
 typedef void (*stop_launcher)();
+
+#define PATH_MAX 1024
+
+std::string GetProgramPath() {
+    std::string result;
+    char *buffer = new char[PATH_MAX];
+    
+    if (buffer != NULL) {
+        if (readlink("/proc/self/exe", buffer, PATH_MAX) != -1) {
+            result = buffer;
+        }
+        
+        delete[] buffer;
+    }
+    
+    return result;
+}
 
 int main(int argc, char *argv[]) {
     int result = 1;
@@ -47,7 +65,8 @@ int main(int argc, char *argv[]) {
     void* library = NULL;
     
     {
-        std::string libraryName = dirname(argv[0]);
+        std::string programPath = GetProgramPath();
+        std::string libraryName = dirname((char*)programPath.c_str());
         libraryName += "/libpackager.so";
         library = dlopen(libraryName.c_str(), RTLD_LAZY);
         
@@ -59,18 +78,18 @@ int main(int argc, char *argv[]) {
     if (library != NULL) {
         start_launcher start = (start_launcher)dlsym(library, "start_launcher");
         stop_launcher stop = (stop_launcher)dlsym(library, "stop_launcher");
-
+        
         if (start(argc, argv) == true) {
             result = 0;
-
+            
             if (stop != NULL) {
                 stop();
             }
         }
-
+        
         dlclose(library);
     }
-
+    
     
     return result;
 }
