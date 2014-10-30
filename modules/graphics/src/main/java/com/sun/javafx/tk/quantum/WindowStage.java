@@ -177,7 +177,12 @@ class WindowStage extends GlassStage {
                             // fall through
                         case DECORATED:
                             windowMask |=
-                                    Window.TITLED | Window.CLOSABLE | Window.MINIMIZABLE | Window.MAXIMIZABLE;
+                                Window.TITLED | Window.CLOSABLE | 
+                                Window.MINIMIZABLE | Window.MAXIMIZABLE;
+                            if (ownerWindow != null || modality != Modality.NONE) {
+                                windowMask &= 
+                                    ~(Window.MINIMIZABLE | Window.MAXIMIZABLE);
+                            }
                             resizable = true;
                             break;
                         case UTILITY:
