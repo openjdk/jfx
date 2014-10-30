@@ -35,6 +35,8 @@
 static GSList* setup_GtkFileFilters(GtkFileChooser*, JNIEnv*, jobjectArray, int default_filter_index);
 
 static void free_fname(char* fname, gpointer unused) {
+    (void)unused;
+
     g_free(fname);
 }
 
@@ -84,6 +86,7 @@ extern "C" {
 JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_gtk_GtkCommonDialogs__1showFileChooser
   (JNIEnv *env, jclass clazz, jlong parent, jstring folder, jstring name, jstring title,
    jint type, jboolean multiple, jobjectArray jFilters, jint default_filter_index) {
+    (void)clazz;
 
     jobjectArray jFileNames = NULL;
     char* filename;
@@ -179,6 +182,8 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_gtk_GtkCommonDialogs__1showFileC
 
 JNIEXPORT jstring JNICALL Java_com_sun_glass_ui_gtk_GtkCommonDialogs__1showFolderChooser
   (JNIEnv *env, jclass clazz, jlong parent, jstring folder, jstring title) {
+    (void)clazz;
+
     jstring jfilename = NULL;
     const char *chooser_folder;
     const char *chooser_title;

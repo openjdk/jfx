@@ -324,6 +324,9 @@ extern "C" {
 JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1getKeyCodeForChar
   (JNIEnv *env, jobject jApplication, jchar character)
 {
+    (void)env;
+    (void)jApplication;
+
     gunichar *ucs_char = g_utf16_to_ucs4(&character, 1, NULL, NULL, NULL);
     if (ucs_char == NULL) {
         return com_sun_glass_events_KeyEvent_VK_UNDEFINED;

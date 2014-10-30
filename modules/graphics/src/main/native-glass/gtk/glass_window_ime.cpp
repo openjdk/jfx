@@ -123,17 +123,26 @@ bool WindowContextBase::filterIME(GdkEvent * event) {
 //Note: this function must return int, despite the fact it doesn't conform to XIMProc type.
 // This is required in documentation of XIM
 static int im_preedit_start(XIM im_xim, XPointer client, XPointer call) {
+    (void)im_xim;
+    (void)call;
+
     mainEnv->CallVoidMethod((jobject) client, jViewNotifyPreeditMode, JNI_TRUE);
     CHECK_JNI_EXCEPTION_RET(mainEnv, -1);
     return -1; // No restrictions
 }
 
 static void im_preedit_done(XIM im_xim, XPointer client, XPointer call) {
+    (void)im_xim;
+    (void)call;
+
     mainEnv->CallVoidMethod((jobject) client, jViewNotifyPreeditMode, JNI_FALSE);
     CHECK_JNI_EXCEPTION(mainEnv);
 }
 
 static void im_preedit_draw(XIM im_xim, XPointer client, XPointer call) {
+    (void)im_xim;
+    (void)call;
+
     XIMPreeditDrawCallbackStruct *data = (XIMPreeditDrawCallbackStruct*) call;
     jstring text = NULL;
     if (data->text != NULL && data->text->string.multi_byte != NULL) {
@@ -156,6 +165,8 @@ static void im_preedit_draw(XIM im_xim, XPointer client, XPointer call) {
 }
 
 static void im_preedit_caret(XIM im_xim, XPointer client, XPointer call) {
+    (void)im_xim;
+
     XIMPreeditCaretCallbackStruct *data = (XIMPreeditCaretCallbackStruct*) call;
     mainEnv->CallVoidMethod((jobject)client, jViewNotifyInputMethodCaret,
             data->position, data->direction, data->style);

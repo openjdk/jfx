@@ -850,7 +850,7 @@ void WindowContextTop::process_net_wm_property() {
 
         bool is_hidden = false;
         bool is_above = false;
-        for (gint i = 0; i < length / sizeof(glong); i++) {
+        for (gint i = 0; i < (gint)(length / sizeof(glong)); i++) {
             if (atom_net_wm_state_hidden == (GdkAtom)atoms[i]) {
                 is_hidden = true;
             } else if (atom_net_wm_state_above == (GdkAtom)atoms[i]) {
@@ -1418,6 +1418,8 @@ void WindowContextTop::process_destroy() {
 ////////////////////////////// WindowContextPlug ////////////////////////////////
 
 static gboolean plug_configure(GtkWidget *widget, GdkEvent *event, gpointer user_data) {
+    (void)widget;
+
     if (event->type == GDK_CONFIGURE) {
         ((WindowContextPlug*)user_data)->process_gtk_configure(&event->configure);
     }
@@ -1455,6 +1457,8 @@ GtkWindow *WindowContextPlug::get_gtk_window() {
 }
 
 void WindowContextPlug::process_configure(GdkEventConfigure* event) {
+    (void)event;
+
     //Note: process_gtk_configure is used, so there's no need to handle GDK events
 }
 
@@ -1572,6 +1576,8 @@ void WindowContextChild::process_mouse_button(GdkEventButton* event) {
 
 static gboolean child_focus_callback(GtkWidget *widget, GdkEvent *event, gpointer user_data)
 {
+    (void)widget;
+
     WindowContext *ctx = (WindowContext *)user_data;
     ctx->process_focus(&event->focus_change);
     return TRUE;
@@ -1586,6 +1592,8 @@ WindowContextChild::WindowContextChild(jobject _jwindow,
         full_screen_window(),
         view()
 {
+    (void)_owner;
+
     jwindow = mainEnv->NewGlobalRef(_jwindow);
     gtk_widget = gtk_drawing_area_new();
     parent = parent_ctx;
