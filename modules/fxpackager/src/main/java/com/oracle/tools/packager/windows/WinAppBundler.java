@@ -67,8 +67,10 @@ public class WinAppBundler extends AbstractBundler {
 
     private final static String EXECUTABLE_NAME = "WinLauncher.exe";
     private final static String LIBRARY_NAME = "packager.dll";
-    private final static String REDIST_MSVCR = "msvcr100.dll";
-    private final static String REDIST_MSVCP = "msvcp100.dll";
+
+    private final static String[] VS_VERS = {"100", "110", "120"};
+    private final static String REDIST_MSVCR = "msvcrVS_VER.dll";
+    private final static String REDIST_MSVCP = "msvcpVS_VER.dll";
 
     private static final String TOOL_ICON_SWAP="IconSwap.exe";
 
@@ -280,12 +282,8 @@ public class WinAppBundler extends AbstractBundler {
             IOUtils.copyFromURL(
                     WinResources.class.getResource(LIBRARY_NAME),
                     new File(rootDirectory, LIBRARY_NAME));
-            IOUtils.copyFromURL(
-                    WinResources.class.getResource(REDIST_MSVCR),
-                    new File(rootDirectory, REDIST_MSVCR));
-            IOUtils.copyFromURL(
-                    WinResources.class.getResource(REDIST_MSVCP),
-                    new File(rootDirectory, REDIST_MSVCP));
+
+            copyMSVCDLLs(rootDirectory);
 
             // create the secondary launchers, if any
             List<Map<String, ? super Object>> entryPoints = StandardBundlerParam.SECONDARY_LAUNCHERS.fetchFrom(p);
@@ -316,6 +314,34 @@ public class WinAppBundler extends AbstractBundler {
             }
         }
 
+    }
+
+    private void copyMSVCDLLs(File rootDirectory) throws IOException {
+        for (String VS_VER : VS_VERS) {
+             if (copyMSVCDLLs(rootDirectory, VS_VER))
+                 return; // found and copied
+        }
+
+        throw new RuntimeException("Not found MSVC dlls");
+    }
+
+    private boolean copyMSVCDLLs(File rootDirectory, String VS_VER) throws IOException {
+        final URL REDIST_MSVCR_URL = WinResources.class.getResource(
+                                              REDIST_MSVCR.replaceAll("VS_VER", VS_VER));
+        final URL REDIST_MSVCP_URL = WinResources.class.getResource(
+                                              REDIST_MSVCP.replaceAll("VS_VER", VS_VER));
+
+        if (REDIST_MSVCR_URL != null && REDIST_MSVCP_URL != null) {
+            IOUtils.copyFromURL(
+                    REDIST_MSVCR_URL,
+                    new File(rootDirectory, REDIST_MSVCR.replaceAll("VS_VER", VS_VER)));
+            IOUtils.copyFromURL(
+                    REDIST_MSVCP_URL,
+                    new File(rootDirectory, REDIST_MSVCP.replaceAll("VS_VER", VS_VER)));
+            return true;
+        }
+
+        return false; // not found
     }
 
     private void createLauncherForEntryPoint(Map<String, ? super Object> p, File rootDirectory) throws IOException {
