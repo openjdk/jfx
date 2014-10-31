@@ -2218,6 +2218,8 @@ project(":media") {
         def nativeOutputDir = file("${buildDir}/native/${t.name}")
         def projectDir = t.name.startsWith("arm") ? "linux" : t.name
         def mediaProperties = targetProperties.media
+        // Makefile for OSX needs to know if we're building for parfait
+        def compileParfait = IS_COMPILE_PARFAIT ? "true" : "false"
         
         def buildNative = task("build${t.capital}Native", dependsOn: [generateHeaders, generateMediaErrorHeader]) {
             enabled = targetProperties.compileMediaNative
@@ -2229,7 +2231,8 @@ project(":media") {
                 exec {
                     commandLine ("make", "${makeJobsFlag}", "-C", "${nativeSrcDir}/jfxmedia/projects/${projectDir}")
                     args("JAVA_HOME=${JDK_HOME}", "GENERATED_HEADERS_DIR=${generatedHeadersDir}",
-                         "OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}", "BASE_NAME=jfxmedia")
+                         "OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}", "BASE_NAME=jfxmedia",
+                         "COMPILE_PARFAIT=${compileParfait}")
 
                     if (t.name == "win") {
                         environment(WINDOWS_NATIVE_COMPILE_ENVIRONMENT)
