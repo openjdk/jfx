@@ -1561,6 +1561,8 @@ public class TreeTableView<S> extends Control {
      * @return The TreeItem in the given index, or null if it is out of bounds.
      */
     public TreeItem<S> getTreeItem(int row) {
+        if (row < 0) return null;
+
         // normalize the requested row based on whether showRoot is set
         final int _row = isShowRoot() ? row : (row + 1);
 
@@ -2853,14 +2855,19 @@ public class TreeTableView<S> extends Control {
                 if (! csMode) {
                     if (pos.getRow() == row) {
                         selectedCellsMap.remove(pos);
-                        return;
+                        break;
                     }
                 } else {
                     if (pos.equals(tp)) {
                         selectedCellsMap.remove(tp);
-                        return;
+                        break;
                     }
                 }
+            }
+
+            if (isEmpty() && ! isAtomic()) {
+                updateSelectedIndex(-1);
+                selectedCellsMap.clear();
             }
         }
 

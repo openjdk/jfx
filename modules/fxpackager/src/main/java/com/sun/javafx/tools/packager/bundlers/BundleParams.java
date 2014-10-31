@@ -190,6 +190,10 @@ public class BundleParams {
     public void setApplicationClass(String applicationClass) {
         putUnlessNull(PARAM_APPLICATION_CLASS, applicationClass);
     }
+    
+    public void setPrelaoderClass(String preloaderClass) {
+        putUnlessNull(PRELOADER_CLASS.getID(), preloaderClass);
+    }
 
     public String getAppVersion() {
         return fetchParam(VERSION);

@@ -25,11 +25,9 @@
 
 package com.sun.javafx.tk.quantum;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 import com.sun.glass.ui.Application;
-import com.sun.glass.ui.Pixels;
 import com.sun.javafx.sg.prism.NGCamera;
+import com.sun.prism.PixelSource;
 import com.sun.prism.PresentableState;
 import com.sun.prism.paint.Color;
 import com.sun.prism.paint.Paint;
@@ -116,17 +114,15 @@ class SceneState extends PresentableState {
     /**
      * Put the pixels on the screen.
      * 
-     * @param pixels - the pixels to draw
-     * @param uploadCount - the number of uploads (can be null)
+     * @param source - the source for the Pixels object to be uploaded
      */
-    public void uploadPixels(final Pixels pixels, final AtomicInteger uploadCount) {
+    @Override
+    public void uploadPixels(PixelSource source) {
         Application.invokeLater(() -> {
             if (isValid()) {
-                SceneState.super.uploadPixels(pixels, uploadCount);
+                SceneState.super.uploadPixels(source);
             } else {
-                if (uploadCount != null) {
-                    uploadCount.decrementAndGet();
-                }
+                source.skipLatestPixels();
             }
        });
     }

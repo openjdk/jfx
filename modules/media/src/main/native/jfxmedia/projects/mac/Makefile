@@ -192,13 +192,19 @@ endif
 
 # The AVFoundation code uses ARC which is only supported by the clang compiler, so we'll
 # force the use of clang for this module.
-# We use --sdk macosx to force it to use the latest macosx SDK, which should be 10.8 or later
-# add -l to show the full command line used to invoke clang++
-AVF_CPP = xcrun -l $(AVF_XCRUN_FLAGS) clang++
+ifeq ($(COMPILE_PARFAIT), true)
+  # call xcrun so we wrap the correct clang++ executable
+  CLANG_PATH = $(shell xcrun -find clang++)
+  AVF_CPP = parfait-clang++ --nativecxx "$(CLANG_PATH)"
+else
+  # add -l to show the full command line used to invoke clang++ (for debugging purposes)
+  AVF_CPP = xcrun -l $(AVF_XCRUN_FLAGS) clang++
+endif
 
 AVF_OBJBASE = $(OBJBASE_DIR)/avf
 
 # We need a full path to the right SDK
+# We use --sdk macosx to force it to use the latest macosx SDK, which should be 10.8 or later
 AVF_SYSROOT = $(shell xcodebuild -sdk macosx -version | grep '^Path: ' | sed 's/Path: //')
 
 # we have to remove -mmacosx-version-min=% from CFLAGS and LDFLAGS and set it to

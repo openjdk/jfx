@@ -582,7 +582,8 @@ public class WinExeBundler extends AbstractBundler {
         String content = preprocessTextResource(
                 WinAppBundler.WIN_BUNDLER_PREFIX + getConfig_ExeProjectFile(params).getName(),
                 I18N.getString("resource.inno-setup-project-file"), DEFAULT_EXE_PROJECT_TEMPLATE, data,
-                VERBOSE.fetchFrom(params));
+                VERBOSE.fetchFrom(params),
+                DROP_IN_RESOURCES_ROOT.fetchFrom(params));
         w.write(content);
         w.close();
         return true;
@@ -599,13 +600,15 @@ public class WinExeBundler extends AbstractBundler {
                 I18N.getString("resource.setup-icon"),
                 DEFAULT_INNO_SETUP_ICON,
                 iconTarget,
-                VERBOSE.fetchFrom(params));
+                VERBOSE.fetchFrom(params),
+                DROP_IN_RESOURCES_ROOT.fetchFrom(params));
 
         fetchResource(WinAppBundler.WIN_BUNDLER_PREFIX + getConfig_Script(params).getName(),
                 I18N.getString("resource.post-install-script"),
                 (String) null,
                 getConfig_Script(params),
-                VERBOSE.fetchFrom(params));
+                VERBOSE.fetchFrom(params),
+                DROP_IN_RESOURCES_ROOT.fetchFrom(params));
         return true;
     }
 

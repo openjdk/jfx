@@ -30,16 +30,14 @@ import com.sun.glass.ui.Pixels;
 import com.sun.javafx.geom.Rectangle;
 import com.sun.prism.Presentable;
 import com.sun.prism.PresentableState;
-import com.sun.prism.impl.PrismSettings;
+import com.sun.prism.impl.QueuedPixelSource;
 import java.nio.IntBuffer;
-import java.util.concurrent.atomic.AtomicInteger;
 
 final class SWPresentable extends SWRTTexture implements Presentable {
 
     private final PresentableState pState;
     private Pixels pixels;
-    private IntBuffer pixBuf;
-    private final AtomicInteger uploadCount = new AtomicInteger(0);
+    private QueuedPixelSource pixelSource = new QueuedPixelSource();
 
     public SWPresentable(PresentableState pState, SWResourceFactory factory) {
         super(factory, pState.getWidth(), pState.getHeight());
@@ -60,7 +58,12 @@ final class SWPresentable extends SWRTTexture implements Presentable {
              */
             int w = getPhysicalWidth();
             int h = getPhysicalHeight();
-            if (pixels == null || uploadCount.get() > 0) {
+            pixelSource.validate(w, h, 1.0f);
+            pixels = pixelSource.getUnusedPixels();
+            IntBuffer pixBuf;
+            if (pixels != null) {
+                pixBuf = (IntBuffer) pixels.getPixels();
+            } else {
                 pixBuf = IntBuffer.allocate(w*h);
                 pixels = Application.GetApplication().createPixels(w, h, pixBuf);
             }
@@ -74,8 +77,8 @@ final class SWPresentable extends SWRTTexture implements Presentable {
     }
 
     public boolean present() {
-        uploadCount.incrementAndGet();
-        pState.uploadPixels(pixels, uploadCount);
+        pixelSource.enqueuePixels(pixels);
+        pState.uploadPixels(pixelSource);
         return true;
     }
 

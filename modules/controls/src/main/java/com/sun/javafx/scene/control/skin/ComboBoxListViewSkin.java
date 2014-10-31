@@ -614,6 +614,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                 comboBox.getButtonCell() : getDefaultCellFactory().call(listView);
         buttonCell.setMouseTransparent(true);
         buttonCell.updateListView(listView);
+        updateDisplayArea();
         // As long as the screen-reader is concerned this node is not a list item.
         // This matters because the screen-reader counts the number of list item
         // within combo and speaks it to the user.

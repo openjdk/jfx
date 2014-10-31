@@ -474,6 +474,7 @@ public class MacAppBundlerTest {
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
         bundleParams.put(ARGUMENTS.getID(), Arrays.asList("He Said", "She Said"));
         bundleParams.put(BUNDLE_ID_SIGNING_PREFIX.getID(), "everything.signing.prefix.");
+        bundleParams.put(CLASSPATH.getID(), "mainApp.jar");
         bundleParams.put(DEVELOPER_ID_APP_SIGNING_KEY.getID(), "Developer ID Application");
         bundleParams.put(ICON_ICNS.getID(), hdpiIcon);
         bundleParams.put(JVM_OPTIONS.getID(), "-Xms128M");
@@ -485,8 +486,8 @@ public class MacAppBundlerTest {
         bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk == null ? System.getProperty("java.home") : runtimeJdk);
         bundleParams.put(MAIN_CLASS.getID(), "hello.HelloRectangle");
         bundleParams.put(MAIN_JAR.getID(), "mainApp.jar");
-        bundleParams.put(CLASSPATH.getID(), "mainApp.jar");
         bundleParams.put(PREFERENCES_ID.getID(), "everything/preferences/id");
+        bundleParams.put(PRELOADER_CLASS.getID(), "hello.HelloPreloader");
         bundleParams.put(USER_JVM_OPTIONS.getID(), "-Xmx=256M\n");
         bundleParams.put(VERSION.getID(), "1.2.3.4");
 
@@ -514,6 +515,7 @@ public class MacAppBundlerTest {
         // add verbose now that we are done scoping out parameters
         bundleParams.put(BUILD_ROOT.getID(), tmpBase);
         bundleParams.put(VERBOSE.getID(), true);
+        bundleParams.put(SIGN_BUNDLE.getID(), false);
 
         // assert it validates
         boolean valid = bundler.validate(bundleParams);

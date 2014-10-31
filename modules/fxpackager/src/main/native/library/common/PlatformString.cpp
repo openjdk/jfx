@@ -103,7 +103,10 @@ void PlatformString::CopyString(char *Destination, size_t NumberOfElements, cons
 #ifdef POSIX
     strncpy(Destination, Source, NumberOfElements);
 #endif //POSIX
-    Destination[NumberOfElements - 1] = '\0';
+
+    if (NumberOfElements > 0) {
+        Destination[NumberOfElements - 1] = '\0';
+    }
 }
 
 void PlatformString::CopyString(wchar_t *Destination, size_t NumberOfElements, const wchar_t *Source) {
@@ -113,7 +116,10 @@ void PlatformString::CopyString(wchar_t *Destination, size_t NumberOfElements, c
 #ifdef POSIX
     wcsncpy(Destination, Source, NumberOfElements);
 #endif //POSIX
-    Destination[NumberOfElements - 1] = '\0';
+    
+    if (NumberOfElements > 0) {
+        Destination[NumberOfElements - 1] = '\0';
+    }
 }
 
 PlatformString::PlatformString(void) {

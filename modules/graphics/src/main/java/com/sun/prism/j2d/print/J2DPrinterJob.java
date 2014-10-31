@@ -730,6 +730,7 @@ public class J2DPrinterJob implements PrinterJobImpl {
 
             try {
                 pJob2D.print(printReqAttrSet);
+                jobDone = true;
             } catch (Throwable t) { /* subsumes declared PrinterException */
                 if (com.sun.prism.impl.PrismSettings.debug) {
                     System.err.println("print caught exception.");

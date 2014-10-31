@@ -43,6 +43,8 @@ import java.util.regex.Pattern;
 public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
 
     public static final String MANIFEST_JAVAFX_MAIN ="JavaFX-Application-Class";
+    public static final String MANIFEST_PRELOADER = "JavaFX-Preloader-Class";
+
     private static final ResourceBundle I18N =
             ResourceBundle.getBundle(StandardBundlerParam.class.getName());
 
@@ -457,6 +459,16 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     p -> Optional.ofNullable(IDENTIFIER.fetchFrom(p)).orElse("").replace('.', '/'),
                     (s, p) -> s
             );
+    
+    public static final StandardBundlerParam<String> PRELOADER_CLASS = 
+            new StandardBundlerParam<>(
+                    I18N.getString("param.preloader.name"),
+                    I18N.getString("param.preloader.description"),
+                    "preloader",
+                    String.class,
+                    p -> null,
+                    null
+            );
 
     public static final StandardBundlerParam<Boolean> VERBOSE  =
             new StandardBundlerParam<>(
@@ -467,6 +479,16 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     params -> false,
                     // valueOf(null) is false, and we actually do want null in some cases
                     (s, p) -> (s == null || "null".equalsIgnoreCase(s))? true : Boolean.valueOf(s)
+            );
+    
+    public static final StandardBundlerParam<File> DROP_IN_RESOURCES_ROOT =
+            new StandardBundlerParam<>(
+                    I18N.getString("param.drop-in-resources-root.name"),
+                    I18N.getString("param.drop-in-resources-root.description"),
+                    "dropinResourcesRoot",
+                    File.class,
+                    params -> null,
+                    (s, p) -> new File(s)
             );
 
     @SuppressWarnings("unchecked")
@@ -539,6 +561,7 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
         boolean hasMainClass = params.containsKey(MAIN_CLASS.getID());
         boolean hasMainJar = params.containsKey(MAIN_JAR.getID());
         boolean hasMainJarClassPath = params.containsKey(CLASSPATH.getID());
+        boolean hasPreloader = params.containsKey(PRELOADER_CLASS.getID());
 
         if (hasMainClass && hasMainJar && hasMainJarClassPath) {
             return;
@@ -581,6 +604,7 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                 if (attrs != null) {
                     String mainClass = attrs.getValue(Attributes.Name.MAIN_CLASS);
                     String fxMain = attrs.getValue(MANIFEST_JAVAFX_MAIN);
+                    String preloaderClass = attrs.getValue(MANIFEST_PRELOADER);
                     if (hasMainClass) {
                         if (declaredMainClass.equals(fxMain)) {
                             params.put(USE_FX_PACKAGING.getID(), true);
@@ -605,6 +629,9 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                         } else {
                             continue;
                         }
+                    }
+                    if (!hasPreloader && preloaderClass != null) {
+                        params.put(PRELOADER_CLASS.getID(), preloaderClass);
                     }
                     if (!hasMainJar) {
                         if (srcdir == null) {

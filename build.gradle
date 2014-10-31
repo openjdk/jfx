@@ -1066,13 +1066,7 @@ task checkJfxrtJar {
     doLast {
         def jfxrtFile = new File("$JDK_HOME/jre/lib/ext/jfxrt.jar");
         if (jfxrtFile.exists()) {
-            if (BUILD_CLOSED) {
-                fail("$jfxrtFile must be removed before building closed sdk")
-            } else {
-                logger.warn("****************************************************************")
-                logger.warn("$jfxrtFile may interfere with testing or running applications against locally build jfxrt.jar")
-                logger.warn("****************************************************************")
-            }
+            fail("$jfxrtFile must be removed before building sdk")
         }
     }
 }
@@ -1756,6 +1750,7 @@ project(":systemTests") {
             exclude("**/javafx/scene/layout/*.*");
             exclude("**/test3d/*.*");
             exclude("**/painttest/*.*");
+            exclude("**/renderlock/*.*");
         }
         if (!IS_AWT_TEST) {
             // Disable all AWT-based tests
@@ -2223,6 +2218,8 @@ project(":media") {
         def nativeOutputDir = file("${buildDir}/native/${t.name}")
         def projectDir = t.name.startsWith("arm") ? "linux" : t.name
         def mediaProperties = targetProperties.media
+        // Makefile for OSX needs to know if we're building for parfait
+        def compileParfait = IS_COMPILE_PARFAIT ? "true" : "false"
         
         def buildNative = task("build${t.capital}Native", dependsOn: [generateHeaders, generateMediaErrorHeader]) {
             enabled = targetProperties.compileMediaNative
@@ -2234,7 +2231,8 @@ project(":media") {
                 exec {
                     commandLine ("make", "${makeJobsFlag}", "-C", "${nativeSrcDir}/jfxmedia/projects/${projectDir}")
                     args("JAVA_HOME=${JDK_HOME}", "GENERATED_HEADERS_DIR=${generatedHeadersDir}",
-                         "OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}", "BASE_NAME=jfxmedia")
+                         "OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}", "BASE_NAME=jfxmedia",
+                         "COMPILE_PARFAIT=${compileParfait}")
 
                     if (t.name == "win") {
                         environment(WINDOWS_NATIVE_COMPILE_ENVIRONMENT)

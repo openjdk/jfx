@@ -120,7 +120,7 @@ public class DeployParams extends CommonParams {
     // raw arguments to the bundler
     Map<String, ? super Object> bundlerArguments = new HashMap<>();
 
-    String fallbackApp = "com.javafx.main.NoJavaFXFallback";
+    String fallbackApp = null;
 
     public void setJavaRuntimeSource(File src) {
         javaRuntimeToUse = src;
@@ -534,6 +534,7 @@ public class DeployParams extends CommonParams {
                 bundleParams.setRuntime(javaRuntimeToUse);
             }
             bundleParams.setApplicationClass(applicationClass);
+            bundleParams.setPrelaoderClass(preloader);
             bundleParams.setName(this.appName);
             bundleParams.setAppVersion(version);
             bundleParams.setType(bundleType);

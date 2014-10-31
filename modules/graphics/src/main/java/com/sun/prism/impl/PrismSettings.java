@@ -89,6 +89,8 @@ public final class PrismSettings {
     public static final boolean superShader;
     public static final boolean skipMeshNormalComputation;
     public static final boolean forceUploadingPainter;
+    public static final boolean forceAlphaTestShader;
+    
 
     private PrismSettings() {
     }
@@ -345,6 +347,10 @@ public final class PrismSettings {
 
         // Force uploading painter (e.g., to avoid Linux live-resize jittering)
         forceUploadingPainter = getBoolean(systemProperties, "prism.forceUploadingPainter", false);
+
+        // Force the use of fragment shader that does alpha testing (i.e. discard if alpha == 0.0)
+        forceAlphaTestShader = getBoolean(systemProperties, "prism.forceAlphaTestShader", false);
+
     }
 
     private static int parseInt(String s, int dflt, int trueDflt,

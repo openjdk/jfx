@@ -148,34 +148,20 @@ TString MacPlatform::GetPackageRootDirectory() {
 }
 
 TString MacPlatform::GetAppDataDirectory() {
+    TString result;
     NSArray *paths = NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory, NSUserDomainMask, YES);
     NSString *applicationSupportDirectory = [paths firstObject];
-    TString result = [applicationSupportDirectory UTF8String];
+    result = [applicationSupportDirectory UTF8String];
     return result;
 }
 
-TString MacPlatform::GetJvmPath() {
+TString MacPlatform::GetBundledJVMLibraryFileName(TString RuntimePath) {
     TString result;
-    TString runtimePath;
 
-    @try {
-        NSBundle *mainBundle = [NSBundle mainBundle];
-        NSDictionary *infoDictionary = [mainBundle infoDictionary];
-        NSString *runtime = [infoDictionary objectForKey:@"JVMRuntime"];
-
-        if ([runtime length] != 0) {
-            TString libjliPath = [[[NSBundle mainBundle] builtInPlugInsPath] UTF8String];
-            runtimePath = FilePath::IncludeTrailingSlash(libjliPath) + [runtime UTF8String];
-        }
-    } @catch (NSException *exception) {
-        NSLog(@"%@: %@", exception, [exception callStackSymbols]);
-        return _T("");
-    }
-
-    result = FilePath::IncludeTrailingSlash(runtimePath) + _T("Contents/Home/jre/lib/jli/libjli.dylib");
+    result = FilePath::IncludeTrailingSlash(RuntimePath) + _T("Contents/Home/jre/lib/jli/libjli.dylib");
 
     if (FilePath::FileExists(result) == false) {
-        result = FilePath::IncludeTrailingSlash(runtimePath) + _T("Contents/Home/lib/jli/libjli.dylib");
+        result = FilePath::IncludeTrailingSlash(RuntimePath) + _T("Contents/Home/lib/jli/libjli.dylib");
 
         if (FilePath::FileExists(result) == false) {
             result = _T("");
@@ -185,8 +171,13 @@ TString MacPlatform::GetJvmPath() {
     return result;
 }
 
-TString MacPlatform::GetSystemJvmPath() {
-    TString result = _T("/Library/Internet Plug-Ins/JavaAppletPlugin.plugin/Contents/Home/lib/jli/libjli.dylib");
+
+TString MacPlatform::GetSystemJRE() {
+    return _T("/Library/Internet Plug-Ins/JavaAppletPlugin.plugin/Contents/Home/lib/jli/libjli.dylib");
+}
+
+TString MacPlatform::GetSystemJVMLibraryFileName() {
+    TString result = GetSystemJRE();
 
     if (FilePath::FileExists(result) == false) {
         result = _T("");
@@ -203,9 +194,9 @@ TString MacPlatform::GetAppName() {
 
 // Convert parts of the info.plist to the INI format the rest of the packager uses unless
 // a packager config file exists.
-PropertyContainer* MacPlatform::GetConfigFile() {
+PropertyContainer* MacPlatform::GetConfigFile(TString FileName) {
     if (UsePListForConfigFile() == false) {
-        return new PropertyFile(GetConfigFileName());
+        return new PropertyFile(FileName);
     }
 
     NSBundle *mainBundle = [NSBundle mainBundle];
@@ -305,6 +296,7 @@ std::map<TString, TString> MacPlatform::GetKeys() {
         keys.insert(std::map<TString, TString>::value_type(CONFIG_SPLASH_KEY,         _T("app.splash")));
         keys.insert(std::map<TString, TString>::value_type(CONFIG_APP_ID_KEY,         _T("JVMPreferencesID")));
         keys.insert(std::map<TString, TString>::value_type(JVM_RUNTIME_KEY,           _T("JVMRuntime")));
+        keys.insert(std::map<TString, TString>::value_type(PACKAGER_APP_DATA_DIR,     _T("CFBundleIdentifier")));
     }
 
     return keys;

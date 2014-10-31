@@ -48,12 +48,15 @@ import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.control.cell.CheckBoxListCell;
 import javafx.scene.control.cell.ComboBoxListCell;
 import javafx.scene.control.cell.TextFieldListCell;
 import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
@@ -1177,5 +1180,49 @@ public class ListViewTest {
         // selected indices and selected items
         assertEquals(sm.getSelectedIndices() +"", 2, rt_38341_indices_count);
         assertEquals(2, rt_38341_items_count);
+    }
+
+    @Test public void test_rt_39132() {
+        ObservableList items = FXCollections.observableArrayList("one", "two", "three");
+        ListView listView = new ListView<>();
+        listView.setItems(items);
+
+        MultipleSelectionModel sm = listView.getSelectionModel();
+        sm.select(0);
+
+        assertEquals(0, sm.getSelectedIndex());
+        assertEquals("one", sm.getSelectedItem());
+
+        items.add(0, "new item");
+        assertEquals(1, sm.getSelectedIndex());
+        assertEquals("one", sm.getSelectedItem());
+    }
+
+    private int rt_38943_index_count = 0;
+    private int rt_38943_item_count = 0;
+    @Test public void test_rt_38943() {
+        ListView<String> listView = new ListView<>(FXCollections.observableArrayList("one", "two", "three"));
+
+        MultipleSelectionModel sm = listView.getSelectionModel();
+
+        sm.selectedIndexProperty().addListener((observable, oldValue, newValue) -> rt_38943_index_count++);
+        sm.selectedItemProperty().addListener((observable, oldValue, newValue) -> rt_38943_item_count++);
+
+        assertEquals(-1, sm.getSelectedIndex());
+        assertNull(sm.getSelectedItem());
+        assertEquals(0, rt_38943_index_count);
+        assertEquals(0, rt_38943_item_count);
+
+        sm.select(0);
+        assertEquals(0, sm.getSelectedIndex());
+        assertEquals("one", sm.getSelectedItem());
+        assertEquals(1, rt_38943_index_count);
+        assertEquals(1, rt_38943_item_count);
+
+        sm.clearSelection(0);
+        assertEquals(-1, sm.getSelectedIndex());
+        assertNull(sm.getSelectedItem());
+        assertEquals(2, rt_38943_index_count);
+        assertEquals(2, rt_38943_item_count);
     }
 }

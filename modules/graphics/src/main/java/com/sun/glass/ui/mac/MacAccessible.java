@@ -1348,6 +1348,7 @@ final class MacAccessible extends Accessible {
             }
             case NSAccessibilityParentAttribute: {
                 if (getView() != null) {
+                    if (getView().getWindow() == null) return null;
                     result = getView().getWindow().getNativeWindow();
                 } else if (result != null) {
                     if (role == AccessibleRole.CONTEXT_MENU) {

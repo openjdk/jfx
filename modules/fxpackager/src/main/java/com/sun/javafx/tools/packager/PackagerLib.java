@@ -889,16 +889,18 @@ public class PackagerLib {
         if (deployParams.offlineAllowed && !deployParams.isExtension) {
             out.println("    <offline-allowed/>");
         }
-        out.println("  </information>");
 
-        if (!deployParams.isExtension) {
-            //FX is platfrom specific (soon will be available for Mac and Linux too)
-            out.println("  <resources>");
-            out.println("    <jfx:javafx-runtime version=\"" +
-                    deployParams.fxPlatform +
-                    "\" href=\"http://javadl.sun.com/webapps/download/GetFile/javafx-latest/windows-i586/javafx2.jnlp\"/>");
-            out.println("  </resources>");
+        if (Boolean.TRUE.equals(deployParams.needShortcut)) {
+            out.println("  <shortcut><desktop/></shortcut>");
+
+//            //TODO: Add support for a more sophisticated shortcut tag.
+//  <shortcut/> // install no shortcuts, and do not consider "installed"
+//  <shortcut installed="true"/> // install no shortcuts, but consider "installed"
+//  <shortcut installed="false"><desktop/></shortcut> // install desktop shortcut, but do not consider the app "installed"
+//  <shortcut installed="true"><menu/></shortcut> // install menu shortcut, and consider app "installed"
         }
+
+        out.println("  </information>");
 
         boolean needToCloseResourceTag = false;
         //jre is available for all platforms
@@ -985,16 +987,6 @@ public class PackagerLib {
             out.println("</security>");
         }
 
-        if (Boolean.TRUE.equals(deployParams.needShortcut)) {
-            out.println("  <shortcut><desktop/></shortcut>");
-
-//            //TODO: Add support for a more sophisticated shortcut tag.
-//  <shortcut/> // install no shortcuts, and do not consider "installed"
-//  <shortcut installed="true"/> // install no shortcuts, but consider "installed"
-//  <shortcut installed="false"><desktop/></shortcut> // install desktop shortcut, but do not consider the app "installed"
-//  <shortcut installed="true"><menu/></shortcut> // install menu shortcut, and consider app "installed"
-        }
-
         if (!deployParams.isExtension) {
             if (m == Mode.APPLET) {
                 out.print("  <applet-desc  width=\"" + deployParams.width
@@ -1063,8 +1055,6 @@ public class PackagerLib {
                     out.println("  </jfx:javafx-desc>");
                 }
             }
-        } else {
-            out.println("<component-desc/>");
         }
 
         out.println("  <update check=\"" + deployParams.updateMode + "\"/>");

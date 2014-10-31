@@ -92,12 +92,12 @@
       <compileType>
         <ccTool>
           <incDir>
-            <pElem>/home/cbensen/java/jdk1.8.0/include</pElem>
-            <pElem>/home/cbensen/java/jdk1.8.0/include/linux</pElem>
+            <pElem>${HOME}/jdk/include</pElem>
+            <pElem>${HOME}/jdk/include/linux</pElem>
           </incDir>
         </ccTool>
         <linkerTool>
-          <output>/home/cbensen/src/projects/packager/JavaFXSceneBuilder2.0/launcher</output>
+          <output>../../../../../../build/dev/DevTest</output>
           <linkerLibItems>
             <linkerLibStdlibItem>PosixThreads</linkerLibStdlibItem>
             <linkerLibStdlibItem>DynamicLinking</linkerLibStdlibItem>

@@ -31,6 +31,7 @@ import org.junit.*;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.PrintStream;
 import java.util.ResourceBundle;
 
@@ -82,21 +83,34 @@ public class CLITest {
                 ? System.getProperty("java.home")
                 : packagerJdkRoot;
 
-        com.sun.javafx.tools.packager.Main.main("-deploy",
-                "-verbose", // verbose is required or test will call System.exit() on failures and break the build
-                "-srcfiles", fakeMainJar.getCanonicalPath(),
-                "-outdir", workDir.getCanonicalPath(),
-                "-outfile", "SmokeParams",
-                "-appclass", "hello.HelloRectangle",
-                "-nosign",
-                "-native", "image",
-                "-name", "SmokeParams",
-                "-BOptionThatWillNeverExist=true",
-                "-BuserJvmOptions=-Xmx=1g",
-                "-BuserJvmOptions=-Xms=512m",
-                "-BdesktopHint=false",
-                "-BshortcutHint=true",
-                "-Bruntime=" + runtime);
+        
+        File f = File.createTempFile("fx-param-test", ".properties");
+        try (FileOutputStream fos = new FileOutputStream(f);
+            PrintStream ps = new PrintStream(fos)) 
+        {
+            ps.println("param1=foo");
+            ps.println("param2=bar");
+            
+            com.sun.javafx.tools.packager.Main.main("-deploy",
+                    "-verbose", // verbose is required or test will call System.exit() on failures and break the build
+                    "-srcfiles", fakeMainJar.getCanonicalPath(),
+                    "-outdir", workDir.getCanonicalPath(),
+                    "-outfile", "SmokeParams",
+                    "-appclass", "hello.HelloRectangle",
+                    "-nosign",
+                    "-preloader", "hello.HelloPreloader",
+                    "-argument", "argument1",
+                    "-argument", "argument2",
+                    "-paramFile", f.getPath(),
+                    "-native", "image",
+                    "-name", "SmokeParams",
+                    "-BOptionThatWillNeverExist=true",
+                    "-BuserJvmOptions=-Xmx=1g",
+                    "-BuserJvmOptions=-Xms=512m",
+                    "-BdesktopHint=false",
+                    "-BshortcutHint=true",
+                    "-Bruntime=" + runtime);
+        }
     }
 
     @Test

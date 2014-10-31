@@ -484,13 +484,15 @@ public class LinuxDebBundler extends AbstractBundler {
                     I18N.getString("resource.menu-icon"),
                     DEFAULT_ICON,
                     iconTarget,
-                    VERBOSE.fetchFrom(params));
+                    VERBOSE.fetchFrom(params),
+                    DROP_IN_RESOURCES_ROOT.fetchFrom(params));
         } else {
             fetchResource(LinuxAppBundler.LINUX_BUNDLER_PREFIX + iconTarget.getName(),
                     I18N.getString("resource.menu-icon"),
                     icon,
                     iconTarget,
-                    VERBOSE.fetchFrom(params));
+                    VERBOSE.fetchFrom(params),
+                    DROP_IN_RESOURCES_ROOT.fetchFrom(params));
         }
 
         StringBuilder installScripts = new StringBuilder();
@@ -507,7 +509,8 @@ public class LinuxDebBundler extends AbstractBundler {
                     I18N.getString("resource.menu-shortcut-descriptor"),
                     DEFAULT_DESKTOP_FILE_TEMPLATE,
                     secondaryLauncherData,
-                    VERBOSE.fetchFrom(params));
+                    VERBOSE.fetchFrom(params),
+                    DROP_IN_RESOURCES_ROOT.fetchFrom(params));
             w.write(content);
             w.close();
 
@@ -519,13 +522,15 @@ public class LinuxDebBundler extends AbstractBundler {
                         I18N.getString("resource.menu-icon"),
                         DEFAULT_ICON,
                         iconTarget,
-                        VERBOSE.fetchFrom(params));
+                        VERBOSE.fetchFrom(params),
+                        DROP_IN_RESOURCES_ROOT.fetchFrom(params));
             } else {
                 fetchResource(LinuxAppBundler.LINUX_BUNDLER_PREFIX + iconTarget.getName(),
                         I18N.getString("resource.menu-icon"),
                         icon,
                         iconTarget,
-                        VERBOSE.fetchFrom(params));
+                        VERBOSE.fetchFrom(params),
+                        DROP_IN_RESOURCES_ROOT.fetchFrom(params));
             }
 
             //postinst copying of desktop icon
@@ -668,7 +673,8 @@ public class LinuxDebBundler extends AbstractBundler {
                 I18N.getString("resource.menu-shortcut-descriptor"),
                 DEFAULT_DESKTOP_FILE_TEMPLATE,
                 data,
-                VERBOSE.fetchFrom(params));
+                VERBOSE.fetchFrom(params),
+                DROP_IN_RESOURCES_ROOT.fetchFrom(params));
         w.write(content);
         w.close();
 
@@ -679,7 +685,8 @@ public class LinuxDebBundler extends AbstractBundler {
                 I18N.getString("resource.deb-control-file"),
                 DEFAULT_CONTROL_TEMPLATE,
                 data,
-                VERBOSE.fetchFrom(params));
+                VERBOSE.fetchFrom(params),
+                DROP_IN_RESOURCES_ROOT.fetchFrom(params));
         w.write(content);
         w.close();
 
@@ -689,7 +696,8 @@ public class LinuxDebBundler extends AbstractBundler {
                 I18N.getString("resource.deb-preinstall-script"),
                 DEFAULT_PREINSTALL_TEMPLATE,
                 data,
-                VERBOSE.fetchFrom(params));
+                VERBOSE.fetchFrom(params),
+                DROP_IN_RESOURCES_ROOT.fetchFrom(params));
         w.write(content);
         w.close();
         setPermissions(getConfig_PreinstallFile(params), "rwxr-xr-x");
@@ -700,7 +708,8 @@ public class LinuxDebBundler extends AbstractBundler {
                 I18N.getString("resource.deb-prerm-script"),
                 DEFAULT_PRERM_TEMPLATE,
                 data,
-                VERBOSE.fetchFrom(params));
+                VERBOSE.fetchFrom(params),
+                DROP_IN_RESOURCES_ROOT.fetchFrom(params));
         w.write(content);
         w.close();
         setPermissions(getConfig_PrermFile(params), "rwxr-xr-x");
@@ -711,7 +720,8 @@ public class LinuxDebBundler extends AbstractBundler {
                 I18N.getString("resource.deb-postinstall-script"),
                 DEFAULT_POSTINSTALL_TEMPLATE,
                 data,
-                VERBOSE.fetchFrom(params));
+                VERBOSE.fetchFrom(params),
+                DROP_IN_RESOURCES_ROOT.fetchFrom(params));
         w.write(content);
         w.close();
         setPermissions(getConfig_PostinstallFile(params), "rwxr-xr-x");
@@ -722,7 +732,8 @@ public class LinuxDebBundler extends AbstractBundler {
                 I18N.getString("resource.deb-postrm-script"),
                 DEFAULT_POSTRM_TEMPLATE,
                 data,
-                VERBOSE.fetchFrom(params));
+                VERBOSE.fetchFrom(params),
+                DROP_IN_RESOURCES_ROOT.fetchFrom(params));
         w.write(content);
         w.close();
         setPermissions(getConfig_PostrmFile(params), "rwxr-xr-x");
@@ -733,7 +744,8 @@ public class LinuxDebBundler extends AbstractBundler {
                 I18N.getString("resource.deb-copyright-file"),
                 DEFAULT_COPYRIGHT_TEMPLATE,
                 data,
-                VERBOSE.fetchFrom(params));
+                VERBOSE.fetchFrom(params),
+                DROP_IN_RESOURCES_ROOT.fetchFrom(params));
         w.write(content);
         w.close();
 
@@ -745,7 +757,8 @@ public class LinuxDebBundler extends AbstractBundler {
                     I18N.getString("resource.deb-init-script"),
                     DEFAULT_INIT_SCRIPT_TEMPLATE,
                     data,
-                    VERBOSE.fetchFrom(params));
+                    VERBOSE.fetchFrom(params),
+                    DROP_IN_RESOURCES_ROOT.fetchFrom(params));
             w.write(content);
             w.close();
             setPermissions(getConfig_InitScriptFile(params), "rwxr-xr-x");

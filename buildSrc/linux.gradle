@@ -135,7 +135,7 @@ LINUX.glass.javahInclude = [
     "com/sun/glass/ui/gtk/*"]
 LINUX.glass.nativeSource = file("modules/graphics/src/main/native-glass/gtk")
 LINUX.glass.compiler = compiler
-LINUX.glass.ccFlags = [ccFlags].flatten()
+LINUX.glass.ccFlags = [ccFlags, "-Werror"].flatten()
 LINUX.glass.linker = linker
 LINUX.glass.linkFlags = [linkFlags].flatten()
 LINUX.glass.lib = "glass"

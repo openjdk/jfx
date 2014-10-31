@@ -49,9 +49,6 @@
 class WindowsPlatform : virtual public Platform, GenericPlatform {
 private:
     DWORD FMainThread;
-    Library* FMSVCRTDLL;
-
-    TString GetSystemJRE();
 
 public:
     WindowsPlatform(void);
@@ -65,10 +62,11 @@ public:
     virtual void SetCurrentDirectory(TString Value);
     virtual TString GetPackageRootDirectory();
     virtual TString GetAppDataDirectory();
-    virtual TString GetJvmPath();
-    virtual TString GetSystemJvmPath();
+    virtual TString GetBundledJVMLibraryFileName(TString RuntimePath);
+    virtual TString GetSystemJVMLibraryFileName();
+    virtual TString GetSystemJRE();
 
-    virtual PropertyContainer* GetConfigFile();
+    virtual PropertyContainer* GetConfigFile(TString FileName);
 
     virtual TString GetModuleFileName();
     virtual Module LoadLibrary(TString FileName);

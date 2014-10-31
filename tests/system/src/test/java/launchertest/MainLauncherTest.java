@@ -87,6 +87,13 @@ public class MainLauncherTest {
         new TestData("TestNotApplicationThreadCheck", ERROR_NONE),
         new TestData("TestAppThreadCheck", "TestPreloader", ERROR_NONE),
         new TestData("TestAppNoMainThreadCheck", "TestPreloader", ERROR_NONE),
+        new TestData("TestAppCCL", ERROR_NONE),
+        new TestData("TestAppCCL1", ERROR_NONE),
+        new TestData("TestAppCCL2", ERROR_NONE),
+        new TestData("TestAppNoMainCCL", ERROR_NONE),
+        new TestData("TestAppNoMainCCL2", ERROR_NONE),
+        new TestData("TestAppNoMainCCL3", ERROR_NONE),
+        new TestData("TestNotApplicationCCL", ERROR_NONE),
         new TestData("TestHeadlessApp", true, ERROR_NONE),
     };
 
@@ -210,6 +217,13 @@ public class MainLauncherTest {
             case ERROR_PRELOADER_STOP_WRONG_THREAD:
                 throw new AssertionFailedError(testAppName
                         + ": preloader stop called on wrong thread");
+
+            case ERROR_CONSTRUCTOR_WRONG_CCL:
+                throw new AssertionFailedError(testAppName
+                        + ": constructor has wrong CCL");
+            case ERROR_START_WRONG_CCL:
+                throw new AssertionFailedError(testAppName
+                        + ": start has wrong CCL");
 
             case ERROR_UNEXPECTED_EXCEPTION:
                 throw new AssertionFailedError(testAppName

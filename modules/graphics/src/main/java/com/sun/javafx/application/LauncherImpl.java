@@ -39,6 +39,8 @@ import java.lang.reflect.Method;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -102,6 +104,11 @@ public class LauncherImpl {
     // which is turn calls into launchApplication.
     private static Class<? extends Preloader> savedPreloaderClass = null;
 
+    // The following is used to determine whether the main() method
+    // has set the CCL in the case where main is called after the FX toolkit
+    // is started.
+    private static ClassLoader savedMainCcl = null;
+
     /**
      * This method is called by the Application.launch method.
      * It must not be called more than once or an exception will be thrown.
@@ -112,10 +119,28 @@ public class LauncherImpl {
      * @param appClass application class
      * @param args command line arguments
      */
+    @SuppressWarnings("unchecked")
     public static void launchApplication(final Class<? extends Application> appClass,
             final String[] args) {
-
-        launchApplication(appClass, savedPreloaderClass, args);
+        
+        Class<? extends Preloader> preloaderClass = savedPreloaderClass;
+        
+        if (preloaderClass == null) {
+            String preloaderByProperty = AccessController.doPrivileged((PrivilegedAction<String>) () ->
+                    System.getProperty("javafx.preloader"));
+            if (preloaderByProperty != null) {
+                try {
+                    preloaderClass = (Class<? extends Preloader>) Class.forName(preloaderByProperty, 
+                            false, appClass.getClassLoader());
+                } catch (Exception e) {
+                    System.err.printf("Could not load preloader class '" + preloaderByProperty + 
+                            "', continuing without preloader.");
+                    e.printStackTrace();
+                }
+            }
+        }
+        
+        launchApplication(appClass, preloaderClass, args);
     }
 
     /**
@@ -360,6 +385,7 @@ public class LauncherImpl {
             if (verbose) {
                 System.err.println("Calling main(String[]) method");
             }
+            savedMainCcl = Thread.currentThread().getContextClassLoader();
             mainMethod.invoke(null, new Object[] { args });
             return;
         } catch (NoSuchMethodException | IllegalAccessException ex) {
@@ -667,6 +693,22 @@ public class LauncherImpl {
             final String[] args) throws Exception {
 
         startToolkit();
+
+        if (savedMainCcl != null) {
+            /*
+             * The toolkit was already started by the java launcher, and the
+             * main method of the application class was called. Check to see
+             * whether the CCL has been changed. If so, then we need
+             * to pass the context class loader to the FX app thread so that it
+             * correctly picks up the current setting.
+             */
+            final ClassLoader ccl = Thread.currentThread().getContextClassLoader();
+            if (ccl != null && ccl != savedMainCcl) {
+                PlatformImpl.runLater(() -> {
+                    Thread.currentThread().setContextClassLoader(ccl);
+                });
+            }
+        }
 
         final AtomicBoolean pStartCalled = new AtomicBoolean(false);
         final AtomicBoolean startCalled = new AtomicBoolean(false);

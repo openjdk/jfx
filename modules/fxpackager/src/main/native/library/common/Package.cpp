@@ -1,4 +1,4 @@
-/*
+ /*
  * Copyright (c) 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
@@ -35,6 +35,9 @@
 #include "Lock.h"
 #include "Helpers.h"
 #include "JavaUserPreferences.h"
+#include "Macros.h"
+
+#include <assert.h>
 
 
 Package::Package(void) {
@@ -55,8 +58,10 @@ void Package::Initialize() {
     FBootFields->FPackageLauncherDirectory = platform.GetPackageLauncherDirectory();
 
     // Read from configure.cfg/Info.plist
-    PropertyFile* config = (PropertyFile*)platform.GetConfigFile();
+
+    AutoFreePtr<PropertyContainer> config = platform.GetConfigFile(platform.GetConfigFileName());
     config->GetValue(keys[CONFIG_APP_ID_KEY], FBootFields->FAppID);
+    config->GetValue(keys[PACKAGER_APP_DATA_DIR], FBootFields->FPackageAppDataDirectory);
     
     // Auto Memory.
     TString temp;
@@ -106,25 +111,12 @@ void Package::Initialize() {
         }
     }
 
-    // Is a runtime bundled or is a system runtime being used.
-#if defined(WINDOWS) || defined(LINUX)
-    TString runtime = FilePath::IncludeTrailingSlash(GetPackageRootDirectory()) + _T("runtime");
-#endif //WINDOWS || LINUX
-#ifdef MAC
-    TString runtime;
-    config->GetValue(keys[JVM_RUNTIME_KEY], runtime);
-    runtime = FilePath::IncludeTrailingSlash(GetPackageRootDirectory()) +
-        FilePath::IncludeTrailingSlash(_T("Plugins")) + runtime;
-#endif //MAC
-
-    FBootFields->FIsRuntimeBundled = FilePath::DirectoryExists(runtime);
-
-    // Get JVMPath.
-    if (IsRuntimeBundled() == true) {
-        FBootFields->FJVMPath = platform.GetJvmPath();
-    }
-    else {
-        FBootFields->FJVMPath = platform.GetSystemJvmPath();
+    FBootFields->FIsRuntimeBundled = true;
+    config->GetValue(keys[JVM_RUNTIME_KEY], FBootFields->FJVMRuntimeDirectory);
+    
+    if (FBootFields->FJVMRuntimeDirectory.empty()) {
+        FBootFields->FIsRuntimeBundled = false;
+        FBootFields->FJVMRuntimeDirectory = platform.GetSystemJRE();
     }
 
     // Read args if none were passed in.
@@ -142,13 +134,15 @@ void Package::Initialize() {
     FJVMUserConfig = NULL;
 
     // Load user JVM overrides.
-    if (FilePath::FileExists(platform.GetJVMUserArgsConfigFileName()) == true) {
+    TString jvmUserArgsConfigFileName = GetJVMUserArgsConfigFileName();
+
+    if (FilePath::FileExists(jvmUserArgsConfigFileName) == true) {
         // Load new location for user VM overrides.
-        FJVMUserConfig = new PropertyFile(platform.GetJVMUserArgsConfigFileName());
+        FJVMUserConfig = new PropertyFile(jvmUserArgsConfigFileName);
     }
     else {
         // Attemp to load java.util.prefs for VM overrides.
-        JavaUserPreferences* javaPreferences = JavaUserPreferences::CreateInstance(); //TODO implement for Mac
+        JavaUserPreferences* javaPreferences = JavaUserPreferences::CreateInstance();
 
         if (javaPreferences->Load(GetAppID()) == true) {
             FJVMUserConfig = new PropertyFile(javaPreferences->GetData());
@@ -160,7 +154,6 @@ void Package::Initialize() {
         delete javaPreferences;
     }
 
-    delete config;
     FJVMUserConfig->SetReadOnly(false);
     MergeJVMDefaultsWithOverrides();
 }
@@ -178,7 +171,6 @@ void Package::SetCommandLineArguments(int argc, TCHAR* argv[]) {
 
             if (arg == _T("/Debug")) {
 #ifdef DEBUG
-                //TODO setup for debugging.
                 FDebugging = true;
 #endif //DEBUG
                 continue;
@@ -226,6 +218,7 @@ void Package::FreeBootFields() {
 }
 
 std::map<TString, TValueIndex> Package::GetJVMArgs() {
+    assert(FBootFields != NULL);
     return FBootFields->FJVMArgs;
 }
 
@@ -242,23 +235,24 @@ void Package::SetJVMUserArgOverrides(std::map<TString, TValueIndex> Value) {
     std::map<TString, TValueIndex> overrides = Value;
     std::list<TString> overrideKeys = Helpers::GetOrderedKeysFromMap(overrides);
 
-    // Remove entries in the overrides that are the same as the defaults.
-    for (std::map<TString, TValueIndex>::iterator iterator = overrides.begin();
+    // 1. Remove entries in the overrides that are the same as the defaults.
+    for (std::map<TString, TValueIndex>::const_iterator iterator = overrides.begin();
         iterator != overrides.end();
         iterator++) {
 
         TString overridesKey = iterator->first;
         TString overridesValue = iterator->second.value;
-
+        
         if (defaults.find(overridesKey) != defaults.end()) {
             TString defaultValue = defaults[overridesKey].value;
-
+            
             if (defaultValue == overridesValue) {
                 overrideKeys.remove(overridesKey);
             }
         }
     }
 
+    // 2. Create an ordered map from the overrides that weren't removed.
     std::map<TString, TValueIndex> orderedOverrides;
     size_t index = 1;
 
@@ -273,15 +267,12 @@ void Package::SetJVMUserArgOverrides(std::map<TString, TValueIndex> Value) {
         index++;
     }
 
-    // Overwrite JVM user config overrides with provided key/value pair.
+    // 3. Overwrite JVM user config overrides with provided key/value pair.
     FJVMUserConfig->Assign(Helpers::GetConfigFromJVMUserArgs(orderedOverrides));
+    //Platform& platform = Platform::GetInstance();
+    FJVMUserConfig->SaveToFile(GetJVMUserArgsConfigFileName());
 
-    MergeJVMDefaultsWithOverrides();
-    if (FJVMUserConfig->IsModified()) {
-        Platform& platform = Platform::GetInstance();
-        FJVMUserConfig->SaveToFile(platform.GetJVMUserArgsConfigFileName());
-    }
-
+    // 4. Merge defaults and overrides to produce FJVMUserArgs.
     MergeJVMDefaultsWithOverrides();
 }
 
@@ -307,86 +298,145 @@ void Package::MergeJVMDefaultsWithOverrides() {
     std::map<TString, TValueIndex> overrides = GetJVMUserArgOverrides();
     std::list<TString> indexedKeys = Helpers::GetOrderedKeysFromMap(overrides);
 
-    size_t index = overrides.size() + 1;
-
+    // 1. Iterate over all elements in overrides to see if any items
+    //    override a default value.
     for (std::map<TString, TValueIndex>::iterator iterator = overrides.begin();
-        iterator != overrides.end();
-        iterator++) {
+         iterator != overrides.end();
+         iterator++) {
 
         TString name = iterator->first;
+        TString value = iterator->second.value;
         TValueIndex item;
 
         if (FJVMUserArgs.find(name) != FJVMUserArgs.end()) {
             item = FJVMUserArgs[name];
-            item.value = iterator->second.value;
-            item.index = iterator->second.index;
+            item.value = value;
+            FJVMUserArgs[name] = item;
+            indexedKeys.remove(name);
         }
-        else {
-            item.value = iterator->second.value;
-            item.index = index;
-        }
-
-        FJVMUserArgs[name] = item;
+    }
+    
+    // 2. All remaining items in overrides are appended to the end.
+    size_t index = FDefaultJVMUserArgs.size();
+    
+    for (std::list<TString>::const_iterator iterator = indexedKeys.begin();
+         iterator != indexedKeys.end(); iterator++) {
+        
+        TString name = *iterator;
+        TValueIndex item = overrides[name];
+        item.index = index;
         index++;
+        FJVMUserArgs[name] = item;
     }
 }
 
 std::list<TString> Package::GetArgs() {
+    assert(FBootFields != NULL);
     return FBootFields->FArgs;
 }
 
 TString Package::GetPackageRootDirectory() {
+    assert(FBootFields != NULL);
     return FBootFields->FPackageRootDirectory;
 }
 
 TString Package::GetPackageAppDirectory() {
+    assert(FBootFields != NULL);
     return FBootFields->FPackageAppDirectory;
 }
 
 TString Package::GetPackageLauncherDirectory() {
+    assert(FBootFields != NULL);
     return FBootFields->FPackageLauncherDirectory;
 }
 
+TString Package::GetJVMUserArgsConfigFileName() {
+    if (FJVMUserArgsConfigFileName.empty()) {
+        Platform& platform = Platform::GetInstance();
+
+        FJVMUserArgsConfigFileName = FilePath::IncludeTrailingSlash(platform.GetAppDataDirectory()) +
+                                        FilePath::IncludeTrailingSlash(GetPackageAppDataDirectory()) +
+                                        FilePath::IncludeTrailingSlash(_T("packager")) +
+                                        _T("jvmuserargs.cfg");
+    }
+    
+    return FJVMUserArgsConfigFileName;
+}
+
 TString Package::GetAppID() {
+    assert(FBootFields != NULL);
     return FBootFields->FAppID;
 }
 
+TString Package::GetPackageAppDataDirectory() {
+    assert(FBootFields != NULL);
+    return FBootFields->FPackageAppDataDirectory;
+}
+
 TString Package::GetClassPath() {
+    assert(FBootFields != NULL);
     return FBootFields->FClassPath;
 }
 
 TString Package::GetMainJar() {
+    assert(FBootFields != NULL);
     return FBootFields->FMainJar;
 }
 
 TString Package::GetMainClassName() {
+    assert(FBootFields != NULL);
     return FBootFields->FMainClassName;
 }
 
 bool Package::IsRuntimeBundled() {
+    assert(FBootFields != NULL);
     return FBootFields->FIsRuntimeBundled;
 }
 
-TString Package::GetJVMPath() {
-    return FBootFields->FJVMPath;
+TString Package::GetJVMLibraryFileName() {
+    assert(FBootFields != NULL);
+    
+    if (FBootFields->FJVMLibraryFileName.empty() == true) {
+        Platform& platform = Platform::GetInstance();
+        if (IsRuntimeBundled() == true) {
+            Macros& macros = Macros::GetInstance();
+            TString jvmRuntimePath = macros.ExpandMacros(FBootFields->FJVMRuntimeDirectory);
+            FBootFields->FJVMLibraryFileName = platform.GetBundledJVMLibraryFileName(jvmRuntimePath);
+        }
+        else {
+            FBootFields->FJVMLibraryFileName = platform.GetSystemJVMLibraryFileName();
+        }
+    }
+
+    return FBootFields->FJVMLibraryFileName;
+}
+
+TString Package::GetJVMRuntimeDirectory() {
+    assert(FBootFields != NULL);
+    return FBootFields->FJVMRuntimeDirectory;
 }
 
 TString Package::GetSplashScreenFileName() {
+    assert(FBootFields != NULL);
     return FBootFields->FSplashScreenFileName;
 }
 
 bool Package::HasSplashScreen() {
+    assert(FBootFields != NULL);
     return FilePath::FileExists(FBootFields->FSplashScreenFileName);
 }
 
 TString Package::GetCommandName() {
+    assert(FBootFields != NULL);
     return FBootFields->FCommandName;
 }
 
 size_t Package::GetMemorySize() {
+    assert(FBootFields != NULL);
     return FBootFields->FMemorySize;
 }
 
 PackageBootFields::MemoryState Package::GetMemoryState() {
+    assert(FBootFields != NULL);
     return FBootFields->FMemoryState;
 }

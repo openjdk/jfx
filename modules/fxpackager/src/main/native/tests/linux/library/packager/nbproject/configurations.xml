@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<configurationDescriptor version="94">
+<configurationDescriptor version="95">
   <logicalFolder name="root" displayName="root" projectFiles="true" kind="ROOT">
     <logicalFolder name="HeaderFiles"
                    displayName="Header Files"
@@ -89,8 +89,8 @@
       <compileType>
         <ccTool>
           <incDir>
-            <pElem>/java/include</pElem>
-            <pElem>/java/include/linux</pElem>
+            <pElem>${HOME}/jdk/include</pElem>
+            <pElem>${HOME}/jdk/include/linux</pElem>
           </incDir>
           <preprocessorList>
             <Elem>DEBUG</Elem>

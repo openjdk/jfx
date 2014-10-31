@@ -36,17 +36,17 @@ import java.util.Map;
 /**
  *
  * Access the UserJVMOptions via a native library provided by the launcher.
- * 
- * Do not instantiate this class directly, instead use 
+ *
+ * Do not instantiate this class directly, instead use
  * {@see jdk.packager.services.UserJvmOptionsService#getUserJVMDefaults()}
  * to get an instance.
  *
  * @since 8u40
  */
-public class LauncherUserJvmOptions implements UserJvmOptionsService {
+final public class LauncherUserJvmOptions implements UserJvmOptionsService {
 
     private static final Object semaphore = new Object();
-    
+
     static {
         try {
             checkAllPermissions();

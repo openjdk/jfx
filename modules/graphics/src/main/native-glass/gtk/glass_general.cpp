@@ -112,9 +112,11 @@ jmethodID jApplicationGetApplication;
 jmethodID jApplicationGetName;
 
 void init_threads() {
+#if !GLIB_CHECK_VERSION(2,31,0)
     if (!g_thread_supported()) {
         g_thread_init(NULL);
     }
+#endif
     gdk_threads_init();
 }
 
@@ -128,6 +130,8 @@ is_display_valid() {
 JNIEXPORT jint JNICALL
 JNI_OnLoad(JavaVM *jvm, void *reserved)
 {
+    (void)reserved;
+
     JNIEnv *env;
     jclass clazz;
     Display* display;

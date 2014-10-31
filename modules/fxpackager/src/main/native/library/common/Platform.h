@@ -117,8 +117,14 @@
 #define CONFIG_APP_ID_KEY         _T("CONFIG_APP_ID_KEY")
 #define CONFIG_APP_MEMORY         _T("CONFIG_APP_MEMORY")
 
+#if defined(WINDOWS) || defined(LINUX)
+#define JVM_RUNTIME_KEY           _T("JVM_RUNTIME_KEY")
+#define PACKAGER_APP_DATA_DIR     _T("CONFIG_APP_ID_KEY")
+#endif //WINDOWS || LINUX
+
 #ifdef MAC
 #define JVM_RUNTIME_KEY           _T("JVMRuntime")
+#define PACKAGER_APP_DATA_DIR     _T("CFBundleIdentifier")
 #endif //MAC
 
 
@@ -137,6 +143,7 @@ public:
     virtual ~PropertyContainer(void) {}
 
     virtual bool GetValue(const TString Key, TString& Value) = 0;
+    virtual size_t GetCount() = 0;
 };
 
 
@@ -164,24 +171,25 @@ public:
     virtual TCHAR* ConvertFileSystemStringToString(TCHAR* Source, bool &release) = 0;
 
     // Returns:
-    // Windows=C:\Users\<username>\AppData\Local\$(app.company)\$(app.id)\packager\jvmuserargs.cfg
-    // Linux=~/.local/$(app.company)/$(app.id)/packager/jvmuserargs.cfg
-    // Mac=~/Library/Containers/<CFBundleIdentifier>/Library/Application Support/<CFBundleIdentifier>/packager/jvmuserargs.cfg
+    // Windows=C:\Users\<username>\AppData\Local\<App Name>\packager\jvmuserargs.cfg
+    // Linux=~/.local/<App Name>/packager/jvmuserargs.cfg
+    // Mac=~/Library/Application Support/<App Name>/packager/jvmuserargs.cfg
     virtual TString GetAppDataDirectory() = 0;
+
     virtual TString GetPackageAppDirectory() = 0;
     virtual TString GetPackageLauncherDirectory() = 0;
     virtual TString GetAppName() = 0;
+    
     virtual TString GetConfigFileName() = 0;
 
-    virtual TString GetJvmPath() = 0;
-    virtual TString GetSystemJvmPath() = 0;
+    virtual TString GetBundledJVMLibraryFileName(TString RuntimePath) = 0;
+    virtual TString GetSystemJVMLibraryFileName() = 0;
+    virtual TString GetSystemJRE() = 0;
 
-    virtual PropertyContainer* GetConfigFile() = 0;
+    virtual PropertyContainer* GetConfigFile(TString FileName) = 0;
 
     virtual TString GetModuleFileName() = 0;
     virtual TString GetPackageRootDirectory() = 0;
-
-    virtual TString GetJVMUserArgsConfigFileName() = 0;
 
     virtual Module LoadLibrary(TString FileName) = 0;
     virtual void FreeLibrary(Module Module) = 0;

@@ -48,10 +48,27 @@ GenericPlatform::GenericPlatform(void) {
 GenericPlatform::~GenericPlatform(void) {
 }
 
-TString GenericPlatform::GetJVMUserArgsConfigFileName() {
-    return FilePath::IncludeTrailingSlash(GetAppDataDirectory()) +
-        FilePath::IncludeTrailingSlash(_T("packager")) +
-        _T("jvmuserargs.cfg");
+TString GenericPlatform::GetConfigFileName() {
+    TString result;
+    TString basedir = GetPackageAppDirectory();
+    
+    if (basedir.empty() == false) {
+        basedir = FilePath::IncludeTrailingSlash(basedir);
+        TString appConfig = basedir + GetAppName() + _T(".cfg");
+        
+        if (FilePath::FileExists(appConfig) == true) {
+            result = appConfig;
+        }
+        else {
+            result = basedir + _T("package.cfg");
+            
+            if (FilePath::FileExists(result) == false) {
+                result = _T("");
+            }
+        }
+    }
+    
+    return result;
 }
 
 Platform::DebugState GenericPlatform::GetDebugState() {
@@ -82,37 +99,12 @@ TString GenericPlatform::GetPackageLauncherDirectory() {
 #endif
 }
 
-TString GenericPlatform::GetConfigFileName() {
-    TString result;
-    Platform& platform = Platform::GetInstance();
-    TString basedir = platform.GetPackageAppDirectory();
-
-    if (basedir.empty() == false) {
-        basedir = FilePath::IncludeTrailingSlash(basedir);
-        TString appConfig = basedir + GetAppName() + _T(".cfg");
-
-        if (FilePath::FileExists(appConfig) == true) {
-            result = appConfig;
-        }
-        else {
-            result = basedir + _T("package.cfg");
-
-            if (FilePath::FileExists(result) == false) {
-                result = _T("");
-            }
-        }
-    }
-
-    return result;
-}
-
 std::list<TString> GenericPlatform::LoadFromFile(TString FileName) {
     std::list<TString> result;
 
     if (FilePath::FileExists(FileName) == true) {
         std::wifstream stream(FileName.data());
 
-        //TODO make sure this works on all platforms correctly.
 #ifdef WINDOWS
         const std::locale empty_locale = std::locale::empty();
 #endif //WINDOWS
@@ -148,7 +140,6 @@ void GenericPlatform::SaveToFile(TString FileName, std::list<TString> Contents) 
 
     std::wofstream stream(FileName.data());
 
-    //TODO make sure this works on all platforms correctly.
 #ifdef WINDOWS
     const std::locale empty_locale = std::locale::empty();
 #endif //WINDOWS
@@ -186,5 +177,7 @@ std::map<TString, TString> GenericPlatform::GetKeys() {
     keys.insert(std::map<TString, TString>::value_type(CONFIG_SPLASH_KEY,        _T("app.splash")));
     keys.insert(std::map<TString, TString>::value_type(CONFIG_APP_ID_KEY,        _T("app.preferences.id")));
     keys.insert(std::map<TString, TString>::value_type(CONFIG_APP_MEMORY,        _T("app.memory")));
+    keys.insert(std::map<TString, TString>::value_type(JVM_RUNTIME_KEY,          _T("app.runtime")));
+    keys.insert(std::map<TString, TString>::value_type(PACKAGER_APP_DATA_DIR,    _T("app.preferences.id")));
     return keys;
 }

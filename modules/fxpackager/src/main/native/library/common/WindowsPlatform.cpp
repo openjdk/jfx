@@ -140,8 +140,7 @@ public:
         length = 0;
 
         dwRet = RegQueryValueEx(FOpenKey, Name.data(), NULL, NULL, NULL, &length);
-
-        if (dwRet == ERROR_MORE_DATA) {
+        if (dwRet == ERROR_MORE_DATA || dwRet == 0) {
             buffer.Resize(length + 1);
             dwRet = RegQueryValueEx(FOpenKey, Name.data(), NULL, NULL, (LPBYTE)buffer.GetData(), &length);
             result = buffer.GetData();
@@ -153,36 +152,11 @@ public:
 
 //--------------------------------------------------------------------------------------------------
 
-//TODO is this needed?
-Library* LoadMSVCRTDLL(Platform* platform, TString PackageRoot) {
-    Library* result = NULL;
-    Package& package = Package::GetInstance();
-
-    if (package.IsRuntimeBundled() == true) {
-        TString msvcr100FileName = FilePath::IncludeTrailingSlash(PackageRoot) + _T("runtime\\jre\\bin\\msvcr100.dll");
-        result = new Library(msvcr100FileName);
-    }
-    else {
-        //TODO: We need to do a better job finding msvcr100.dll. Possibly use FindFirst and FindNext
-        // to search recursivly?
-        TString jvmPath = FilePath::ExtractFilePath(FilePath::ExtractFilePath(platform->GetSystemJvmPath()));
-        TString msvcr100FileName = FilePath::IncludeTrailingSlash(jvmPath) + _T("msvcr100.dll");
-        result = new Library(msvcr100FileName);
-    }
-
-    return result;
-}
-
-//--------------------------------------------------------------------------------------------------
-
 WindowsPlatform::WindowsPlatform(void) : Platform(), GenericPlatform() {
     FMainThread = ::GetCurrentThreadId();
-    FMSVCRTDLL = LoadMSVCRTDLL(this, GetPackageRootDirectory());
 }
 
 WindowsPlatform::~WindowsPlatform(void) {
-    if (FMSVCRTDLL != NULL)
-        delete FMSVCRTDLL;
 }
 
 TCHAR* WindowsPlatform::ConvertStringToFileSystemString(TCHAR* Source, bool &release) {
@@ -206,12 +180,12 @@ TString WindowsPlatform::GetPackageRootDirectory() {
 
 TString WindowsPlatform::GetAppDataDirectory() {
     TString result;
-    TCHAR temp[MAX_PATH];
-
-    if (SHGetFolderPath(NULL, CSIDL_APPDATA, NULL, 0, temp) == S_OK) {
-        result = temp;
+    TCHAR path[MAX_PATH];
+    
+    if (SHGetFolderPath(NULL, CSIDL_APPDATA, NULL, 0, path) == S_OK) {
+        result = path;
     }
-
+    
     return result;
 }
 
@@ -231,7 +205,7 @@ TString WindowsPlatform::GetSystemJRE() {
         TString version = registry.ReadString(_T("CurrentVersion"));
 
         if (version.empty() == false) {
-            if (registry.Open(JAVA_RUNTIME_SUBKEY + TString(version)) == true) {
+            if (registry.Open(JAVA_RUNTIME_SUBKEY + TString(_T("\\")) + TString(version)) == true) {
                 TString javaHome = registry.ReadString(_T("JavaHome"));
 
                 if (FilePath::DirectoryExists(javaHome) == true) {
@@ -254,37 +228,42 @@ void WindowsPlatform::ShowError(TString description) {
     MessageBox(NULL, appname.data(), description.data(), MB_ICONERROR | MB_OK);
 }
 
-TString WindowsPlatform::GetJvmPath() {
-    TString result = FilePath::IncludeTrailingSlash(GetPackageRootDirectory()) +
-        _T("runtime\\jre\\bin\\client\\jvm.dll");
+TString WindowsPlatform::GetBundledJVMLibraryFileName(TString RuntimePath) {
+
+    TString result = FilePath::IncludeTrailingSlash(RuntimePath) +
+        _T("jre\\bin\\client\\jvm.dll");
 
     if (FilePath::FileExists(result) == false) {
-        result = FilePath::IncludeTrailingSlash(GetPackageRootDirectory()) +
-            _T("runtime\\jre\\bin\\server\\jvm.dll");
+        result = FilePath::IncludeTrailingSlash(RuntimePath) +
+            _T("jre\\bin\\server\\jvm.dll");
+    }
+
+    if (FilePath::FileExists(result) == false) {
+        result = FilePath::IncludeTrailingSlash(RuntimePath) +
+            _T("bin\\client\\jvm.dll");
+    }
+
+    if (FilePath::FileExists(result) == false) {
+        result = FilePath::IncludeTrailingSlash(RuntimePath) +
+            _T("bin\\server\\jvm.dll");
     }
 
     return result;
 }
 
-TString WindowsPlatform::GetSystemJvmPath() {
+TString WindowsPlatform::GetSystemJVMLibraryFileName() {
     TString result;
     TString jvmPath = GetSystemJRE();
 
     if (jvmPath.empty() == false) {
-        result = FilePath::IncludeTrailingSlash(jvmPath) +
-            _T("jre\\bin\\client\\jvm.dll");
-
-        if (FilePath::FileExists(result) == false) {
-            result = FilePath::IncludeTrailingSlash(jvmPath) +
-                _T("jre\\bin\\server\\jvm.dll");
-        }
+        result = GetBundledJVMLibraryFileName(jvmPath);
     }
 
     return result;
 }
 
-PropertyContainer* WindowsPlatform::GetConfigFile() {
-    return new PropertyFile(GetConfigFileName());
+PropertyContainer* WindowsPlatform::GetConfigFile(TString FileName) {
+    return new PropertyFile(FileName);
 }
 
 TString WindowsPlatform::GetModuleFileName() {

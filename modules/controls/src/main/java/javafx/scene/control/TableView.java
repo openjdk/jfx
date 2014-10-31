@@ -2613,14 +2613,19 @@ public class TableView<S> extends Control {
                 if (! csMode) {
                     if (pos.getRow() == row) {
                         selectedCellsMap.remove(pos);
-                        return;
+                        break;
                     }
                 } else {
                     if (pos.equals(tp)) {
                         selectedCellsMap.remove(tp);
-                        return;
+                        break;
                     }
                 }
+            }
+
+            if (isEmpty() && ! isAtomic()) {
+                updateSelectedIndex(-1);
+                selectedCellsMap.clear();
             }
         }
 
@@ -2789,6 +2794,7 @@ public class TableView<S> extends Control {
                 oldList.removeListener(weakItemsContentListener);
             }
             if (newList != null) {
+                newList.removeListener(weakItemsContentListener);
                 newList.addListener(weakItemsContentListener);
             }
 
@@ -3075,7 +3081,10 @@ public class TableView<S> extends Control {
             // the tableview items list has changed, we need to observe
             // the new list, and remove any observer we had from the old list
             if (oldList != null) oldList.removeListener(weakItemsContentListener);
-            if (newList != null) newList.addListener(weakItemsContentListener);
+            if (newList != null) {
+                newList.removeListener(weakItemsContentListener);
+                newList.addListener(weakItemsContentListener);
+            }
 
             updateDefaultFocus();
         }

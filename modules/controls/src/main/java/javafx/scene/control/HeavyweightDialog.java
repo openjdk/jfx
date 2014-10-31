@@ -24,6 +24,7 @@
  */
 package javafx.scene.control;
 
+import javafx.beans.binding.Bindings;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyDoubleProperty;
@@ -133,8 +134,18 @@ class HeavyweightDialog extends FXDialog {
         return stage.getStyle();
     }
     
-    @Override public void initOwner(Window window) {
-        stage.initOwner(window);
+    @Override public void initOwner(Window newOwner) {
+        Window oldOwner = stage.getOwner();
+        if (oldOwner != null && oldOwner instanceof Stage) {
+            Bindings.unbindContent(stage.getIcons(), ((Stage)oldOwner).getIcons());
+        }
+
+        stage.initOwner(newOwner);
+
+        // put the icons of the owner window into the dialog
+        if (newOwner instanceof Stage) {
+            Bindings.bindContent(stage.getIcons(), ((Stage)newOwner).getIcons());
+        }
     }
     
     @Override public Window getOwner() {

@@ -127,6 +127,4 @@ public class SpinnerApp extends Application {
         group.getChildren().addAll(intBlock, doubleBlock, stringBlock);
         return group;
     }
-
-
 }

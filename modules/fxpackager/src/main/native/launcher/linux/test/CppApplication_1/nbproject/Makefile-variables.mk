@@ -8,9 +8,9 @@ CND_BUILDDIR=build
 CND_DISTDIR=dist
 # Debug configuration
 CND_PLATFORM_Debug=GNU-Linux-x86
-CND_ARTIFACT_DIR_Debug=/home/cbensen/src/projects/packager/JavaFXSceneBuilder2.0
+CND_ARTIFACT_DIR_Debug=../../../../../../build/dev/DevTest
 CND_ARTIFACT_NAME_Debug=launcher
-CND_ARTIFACT_PATH_Debug=/home/cbensen/src/projects/packager/JavaFXSceneBuilder2.0/launcher
+CND_ARTIFACT_PATH_Debug=../../../../../../build/dev/DevTest/DevTest
 CND_PACKAGE_DIR_Debug=dist/Debug/GNU-Linux-x86/package
 CND_PACKAGE_NAME_Debug=cppapplication1.tar
 CND_PACKAGE_PATH_Debug=dist/Debug/GNU-Linux-x86/package/cppapplication1.tar

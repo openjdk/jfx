@@ -54,6 +54,10 @@ int main(int argc, char *argv[]) {
         
         void* library = dlopen([libraryName UTF8String], RTLD_LAZY);
         
+        if (library == NULL) {
+            NSLog(@"%@ not found.\n", libraryName);
+        }
+        
         if (library != NULL) {
             start_launcher start = (start_launcher)dlsym(library, "start_launcher");
             stop_launcher stop = (stop_launcher)dlsym(library, "stop_launcher");

@@ -573,13 +573,15 @@ public class MacAppBundler extends AbstractBundler {
                     "icon",
                     DEFAULT_ICNS_ICON.fetchFrom(params),
                     getConfig_Icon(params),
-                    VERBOSE.fetchFrom(params));
+                    VERBOSE.fetchFrom(params),
+                    DROP_IN_RESOURCES_ROOT.fetchFrom(params));
         } else {
             fetchResource(MAC_BUNDLER_PREFIX+ APP_NAME.fetchFrom(params) +".icns",
                     "icon",
                     icon,
                     getConfig_Icon(params),
-                    VERBOSE.fetchFrom(params));
+                    VERBOSE.fetchFrom(params),
+                    DROP_IN_RESOURCES_ROOT.fetchFrom(params));
         }
     }
 
@@ -626,7 +628,7 @@ public class MacAppBundler extends AbstractBundler {
         data.put("DEPLOY_LAUNCHER_NAME", getLauncherName(params));
         if (MAC_RUNTIME.fetchFrom(params) != null) {
             data.put("DEPLOY_JAVA_RUNTIME_NAME",
-                    MAC_RUNTIME.fetchFrom(params).getBaseDirectory().getName());
+                "$APPDIR/plugins/" + MAC_RUNTIME.fetchFrom(params).getBaseDirectory().getName());
         } else {
             data.put("DEPLOY_JAVA_RUNTIME_NAME", "");
         }
@@ -660,6 +662,15 @@ public class MacAppBundler extends AbstractBundler {
                     .append(entry.getValue())
                     .append("</string>");
             newline = "\n";
+        }
+
+        String preloader = PRELOADER_CLASS.fetchFrom(params);
+        if (preloader != null) {
+            sb.append(newline)
+                    .append("    <string>-Djavafx.preloader=")
+                    .append(preloader)
+                    .append("</string>");
+            //newline = "\n";
         }
 
         data.put("DEPLOY_JVM_OPTIONS", sb.toString());
@@ -826,7 +837,8 @@ public class MacAppBundler extends AbstractBundler {
         w.write(preprocessTextResource(
                 MAC_BUNDLER_PREFIX + getConfig_InfoPlist(params).getName(),
                 I18N.getString("resource.bundle-config-file"), TEMPLATE_INFO_PLIST, data,
-                VERBOSE.fetchFrom(params)));
+                VERBOSE.fetchFrom(params),
+                DROP_IN_RESOURCES_ROOT.fetchFrom(params)));
         w.close();
 
     }
@@ -1015,6 +1027,7 @@ public class MacAppBundler extends AbstractBundler {
                 APP_RESOURCES,
                 ARGUMENTS,
                 BUNDLE_ID_SIGNING_PREFIX,
+                CLASSPATH,
                 DEVELOPER_ID_APP_SIGNING_KEY,
                 ICON_ICNS,
                 JVM_OPTIONS,
@@ -1026,8 +1039,8 @@ public class MacAppBundler extends AbstractBundler {
                 MAC_RUNTIME,
                 MAIN_CLASS,
                 MAIN_JAR,
-                CLASSPATH,
                 PREFERENCES_ID,
+                PRELOADER_CLASS,
                 USER_JVM_OPTIONS,
                 VERSION
         );
