@@ -38,6 +38,7 @@
 #include "JavaVirtualMachine.h"
 #include "Package.h"
 #include "PlatformThread.h"
+#include "Macros.h"
 
 #include "jni.h"
 
@@ -101,7 +102,7 @@ extern "C" {
 #endif //DEBUG
 
         Package& package = Package::GetInstance();
-
+        Macros::Initialize();
         package.SetCommandLineArguments(argc, argv);
         platform.SetCurrentDirectory(package.GetPackageAppDirectory());
         JavaVirtualMachine javavm;

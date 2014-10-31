@@ -628,7 +628,7 @@ public class MacAppBundler extends AbstractBundler {
         data.put("DEPLOY_LAUNCHER_NAME", getLauncherName(params));
         if (MAC_RUNTIME.fetchFrom(params) != null) {
             data.put("DEPLOY_JAVA_RUNTIME_NAME",
-                    MAC_RUNTIME.fetchFrom(params).getBaseDirectory().getName());
+                "$APPDIR/plugins/" + MAC_RUNTIME.fetchFrom(params).getBaseDirectory().getName());
         } else {
             data.put("DEPLOY_JAVA_RUNTIME_NAME", "");
         }

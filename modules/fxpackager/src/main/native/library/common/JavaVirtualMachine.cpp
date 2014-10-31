@@ -68,8 +68,41 @@ typedef int (JNICALL *JVM_CREATE)(int argc, char ** argv,
                                     jint ergo);
 #endif //USE_JLI_LAUNCH
 
+#ifdef WINDOWS
+class MicrosoftRuntimeLibrary {
+private:
+    Library* FLibrary;
+
+public:
+    MicrosoftRuntimeLibrary() {
+        Package& package = Package::GetInstance();
+        TString runtimeDir = package.GetJVMRuntimeDirectory();
+    
+        Macros& macros = Macros::GetInstance();
+        TString msvcr100FileName = FilePath::IncludeTrailingSlash(runtimeDir) + _T("jre\\bin\\msvcr100.dll");
+        msvcr100FileName = macros.ExpandMacros(msvcr100FileName);
+        if (FilePath::FileExists(msvcr100FileName) == false) {
+            msvcr100FileName = FilePath::IncludeTrailingSlash(runtimeDir) + _T("bin\\msvcr100.dll");
+            msvcr100FileName = macros.ExpandMacros(msvcr100FileName);
+        }
+    
+        FLibrary = new Library(msvcr100FileName);
+    }
+
+    ~MicrosoftRuntimeLibrary() {
+        if (FLibrary != NULL) {
+            delete FLibrary;
+        }
+    }
+};
+#endif //WINDOWS
+
 class JavaLibrary : public Library {
 private:
+#ifdef WINDOWS
+    MicrosoftRuntimeLibrary microsoftRuntime;
+#endif //WINDOWS
+
     JVM_CREATE FCreateProc;
 
 public:
@@ -347,6 +380,8 @@ bool JavaVirtualMachine::StartJVM() {
         return false;
     }
 
+    JavaLibrary javaLibrary(package.GetJVMLibraryFileName());
+    
 #ifndef USE_JLI_LAUNCH
     if (package.HasSplashScreen() == true) {
         options.AppendValue(TString(_T("-splash:")) + package.GetSplashScreenFileName(), _T(""));
@@ -359,8 +394,6 @@ bool JavaVirtualMachine::StartJVM() {
     jvmArgs.options = options.ToJavaOptions();
     jvmArgs.nOptions = (jint)options.GetCount();
     jvmArgs.ignoreUnrecognized = JNI_TRUE;
-
-    JavaLibrary javaLibrary(package.GetJVMPath());
 
     if (javaLibrary.JavaVMCreate(&FJvm, &FEnv, &jvmArgs) == true) {
         try {
@@ -425,9 +458,8 @@ bool JavaVirtualMachine::StartJVM() {
         argv[index] = PlatformString::duplicate(arg.c_str());
         index++;
     }
-    argv[argc] = NULL;
 
-    JavaLibrary javaLibrary(package.GetJVMPath());
+    argv[argc] = NULL;
 
     // On Mac we can only free the boot fields if the calling thread is not the main thread.
 #ifdef MAC

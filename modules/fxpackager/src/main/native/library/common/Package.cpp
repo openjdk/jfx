@@ -1,4 +1,4 @@
-/*
+ /*
  * Copyright (c) 2014, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
@@ -35,6 +35,7 @@
 #include "Lock.h"
 #include "Helpers.h"
 #include "JavaUserPreferences.h"
+#include "Macros.h"
 
 #include <assert.h>
 
@@ -60,7 +61,7 @@ void Package::Initialize() {
 
     AutoFreePtr<PropertyContainer> config = platform.GetConfigFile(platform.GetConfigFileName());
     config->GetValue(keys[CONFIG_APP_ID_KEY], FBootFields->FAppID);
-    config->GetValue(keys[PACKAGER_APP_DATA_DIR], FBootFields->FPackageAppDataDir);
+    config->GetValue(keys[PACKAGER_APP_DATA_DIR], FBootFields->FPackageAppDataDirectory);
     
     // Auto Memory.
     TString temp;
@@ -110,25 +111,12 @@ void Package::Initialize() {
         }
     }
 
-    // Is a runtime bundled or is a system runtime being used.
-#if defined(WINDOWS) || defined(LINUX)
-    TString runtime = FilePath::IncludeTrailingSlash(GetPackageRootDirectory()) + _T("runtime");
-#endif //WINDOWS || LINUX
-#ifdef MAC
-    TString runtime;
-    config->GetValue(keys[JVM_RUNTIME_KEY], runtime);
-    runtime = FilePath::IncludeTrailingSlash(GetPackageRootDirectory()) +
-        FilePath::IncludeTrailingSlash(_T("Plugins")) + runtime;
-#endif //MAC
-
-    FBootFields->FIsRuntimeBundled = FilePath::DirectoryExists(runtime);
-
-    // Get JVMPath.
-    if (IsRuntimeBundled() == true) {
-        FBootFields->FJVMPath = platform.GetJvmPath();
-    }
-    else {
-        FBootFields->FJVMPath = platform.GetSystemJvmPath();
+    FBootFields->FIsRuntimeBundled = true;
+    config->GetValue(keys[JVM_RUNTIME_KEY], FBootFields->FJVMRuntimeDirectory);
+    
+    if (FBootFields->FJVMRuntimeDirectory.empty()) {
+        FBootFields->FIsRuntimeBundled = false;
+        FBootFields->FJVMRuntimeDirectory = platform.GetSystemJRE();
     }
 
     // Read args if none were passed in.
@@ -367,7 +355,7 @@ TString Package::GetJVMUserArgsConfigFileName() {
         Platform& platform = Platform::GetInstance();
 
         FJVMUserArgsConfigFileName = FilePath::IncludeTrailingSlash(platform.GetAppDataDirectory()) +
-                                        FilePath::IncludeTrailingSlash(GetPackageAppDataDir()) +
+                                        FilePath::IncludeTrailingSlash(GetPackageAppDataDirectory()) +
                                         FilePath::IncludeTrailingSlash(_T("packager")) +
                                         _T("jvmuserargs.cfg");
     }
@@ -380,9 +368,9 @@ TString Package::GetAppID() {
     return FBootFields->FAppID;
 }
 
-TString Package::GetPackageAppDataDir() {
+TString Package::GetPackageAppDataDirectory() {
     assert(FBootFields != NULL);
-    return FBootFields->FPackageAppDataDir;
+    return FBootFields->FPackageAppDataDirectory;
 }
 
 TString Package::GetClassPath() {
@@ -405,9 +393,27 @@ bool Package::IsRuntimeBundled() {
     return FBootFields->FIsRuntimeBundled;
 }
 
-TString Package::GetJVMPath() {
+TString Package::GetJVMLibraryFileName() {
     assert(FBootFields != NULL);
-    return FBootFields->FJVMPath;
+    
+    if (FBootFields->FJVMLibraryFileName.empty() == true) {
+        Platform& platform = Platform::GetInstance();
+        if (IsRuntimeBundled() == true) {
+            Macros& macros = Macros::GetInstance();
+            TString jvmRuntimePath = macros.ExpandMacros(FBootFields->FJVMRuntimeDirectory);
+            FBootFields->FJVMLibraryFileName = platform.GetBundledJVMLibraryFileName(jvmRuntimePath);
+        }
+        else {
+            FBootFields->FJVMLibraryFileName = platform.GetSystemJVMLibraryFileName();
+        }
+    }
+
+    return FBootFields->FJVMLibraryFileName;
+}
+
+TString Package::GetJVMRuntimeDirectory() {
+    assert(FBootFields != NULL);
+    return FBootFields->FJVMRuntimeDirectory;
 }
 
 TString Package::GetSplashScreenFileName() {

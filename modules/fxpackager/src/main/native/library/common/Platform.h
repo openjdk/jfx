@@ -118,6 +118,7 @@
 #define CONFIG_APP_MEMORY         _T("CONFIG_APP_MEMORY")
 
 #if defined(WINDOWS) || defined(LINUX)
+#define JVM_RUNTIME_KEY           _T("JVM_RUNTIME_KEY")
 #define PACKAGER_APP_DATA_DIR     _T("CONFIG_APP_ID_KEY")
 #endif //WINDOWS || LINUX
 
@@ -180,10 +181,10 @@ public:
     virtual TString GetAppName() = 0;
     
     virtual TString GetConfigFileName() = 0;
-    //virtual TString GetJVMUserArgsConfigFileName() = 0;
 
-    virtual TString GetJvmPath() = 0;
-    virtual TString GetSystemJvmPath() = 0;
+    virtual TString GetBundledJVMLibraryFileName(TString RuntimePath) = 0;
+    virtual TString GetSystemJVMLibraryFileName() = 0;
+    virtual TString GetSystemJRE() = 0;
 
     virtual PropertyContainer* GetConfigFile(TString FileName) = 0;
 

@@ -155,28 +155,13 @@ TString MacPlatform::GetAppDataDirectory() {
     return result;
 }
 
-TString MacPlatform::GetJvmPath() {
+TString MacPlatform::GetBundledJVMLibraryFileName(TString RuntimePath) {
     TString result;
-    TString runtimePath;
 
-    @try {
-        NSBundle *mainBundle = [NSBundle mainBundle];
-        NSDictionary *infoDictionary = [mainBundle infoDictionary];
-        NSString *runtime = [infoDictionary objectForKey:@"JVMRuntime"];
-
-        if ([runtime length] != 0) {
-            TString libjliPath = [[[NSBundle mainBundle] builtInPlugInsPath] UTF8String];
-            runtimePath = FilePath::IncludeTrailingSlash(libjliPath) + [runtime UTF8String];
-        }
-    } @catch (NSException *exception) {
-        NSLog(@"%@: %@", exception, [exception callStackSymbols]);
-        return _T("");
-    }
-
-    result = FilePath::IncludeTrailingSlash(runtimePath) + _T("Contents/Home/jre/lib/jli/libjli.dylib");
+    result = FilePath::IncludeTrailingSlash(RuntimePath) + _T("Contents/Home/jre/lib/jli/libjli.dylib");
 
     if (FilePath::FileExists(result) == false) {
-        result = FilePath::IncludeTrailingSlash(runtimePath) + _T("Contents/Home/lib/jli/libjli.dylib");
+        result = FilePath::IncludeTrailingSlash(RuntimePath) + _T("Contents/Home/lib/jli/libjli.dylib");
 
         if (FilePath::FileExists(result) == false) {
             result = _T("");
@@ -186,8 +171,13 @@ TString MacPlatform::GetJvmPath() {
     return result;
 }
 
-TString MacPlatform::GetSystemJvmPath() {
-    TString result = _T("/Library/Internet Plug-Ins/JavaAppletPlugin.plugin/Contents/Home/lib/jli/libjli.dylib");
+
+TString MacPlatform::GetSystemJRE() {
+    return _T("/Library/Internet Plug-Ins/JavaAppletPlugin.plugin/Contents/Home/lib/jli/libjli.dylib");
+}
+
+TString MacPlatform::GetSystemJVMLibraryFileName() {
+    TString result = GetSystemJRE();
 
     if (FilePath::FileExists(result) == false) {
         result = _T("");

@@ -47,9 +47,11 @@ private:
 
 public:
     static Macros& GetInstance();
+    static void Initialize();
     ~Macros(void);
 
     TString ExpandMacros(TString Value);
+    void AddMacro(TString Key, TString Value);
 };
 
 #endif //MACROS_H

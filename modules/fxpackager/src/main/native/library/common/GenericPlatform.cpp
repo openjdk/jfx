@@ -177,6 +177,7 @@ std::map<TString, TString> GenericPlatform::GetKeys() {
     keys.insert(std::map<TString, TString>::value_type(CONFIG_SPLASH_KEY,        _T("app.splash")));
     keys.insert(std::map<TString, TString>::value_type(CONFIG_APP_ID_KEY,        _T("app.preferences.id")));
     keys.insert(std::map<TString, TString>::value_type(CONFIG_APP_MEMORY,        _T("app.memory")));
+    keys.insert(std::map<TString, TString>::value_type(JVM_RUNTIME_KEY,          _T("app.runtime")));
     keys.insert(std::map<TString, TString>::value_type(PACKAGER_APP_DATA_DIR,    _T("app.preferences.id")));
     return keys;
 }

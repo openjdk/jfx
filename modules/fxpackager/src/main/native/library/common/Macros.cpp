@@ -37,25 +37,26 @@
 
 
 Macros::Macros(void) {
-    Platform& platform = Platform::GetInstance();
-    Package& package = Package::GetInstance();
-
-    // Public macros.
-    FData.insert(std::map<TString, TString>::value_type(_T("$APPDIR"), package.GetPackageRootDirectory()));
-
-    FData.insert(std::map<TString, TString>::value_type(_T("$PACKAGEDIR"), package.GetPackageAppDirectory()));
-    
-    FData.insert(std::map<TString, TString>::value_type(_T("$LAUNCHERDIR"), package.GetPackageLauncherDirectory()));
-
-    TString javaHome = FilePath::ExtractFilePath(platform.GetJvmPath());
-    FData.insert(std::map<TString, TString>::value_type(_T("$JREHOME"), javaHome));
-
-    // Private macros.
-    TString javaVMLibraryName = FilePath::ExtractFileName(platform.GetJvmPath());
-    FData.insert(std::map<TString, TString>::value_type(_T("$JAVAVMLIBRARYNAME"), javaVMLibraryName));
 }
 
 Macros::~Macros(void) {
+}
+
+void Macros::Initialize() {
+    Package& package = Package::GetInstance();
+    Macros& macros = Macros::GetInstance();
+    
+    // Public macros.
+    macros.AddMacro(_T("$APPDIR"), package.GetPackageRootDirectory());
+    macros.AddMacro(_T("$PACKAGEDIR"), package.GetPackageAppDirectory());
+    macros.AddMacro(_T("$LAUNCHERDIR"), package.GetPackageLauncherDirectory());
+    
+    TString javaHome = FilePath::ExtractFilePath(package.GetJVMLibraryFileName());
+    macros.AddMacro(_T("$JREHOME"), javaHome);
+    
+    // Private macros.
+    TString javaVMLibraryName = FilePath::ExtractFileName(javaHome);
+    macros.AddMacro(_T("$JAVAVMLIBRARYNAME"), javaVMLibraryName);
 }
 
 Macros& Macros::GetInstance() {
@@ -75,9 +76,14 @@ TString Macros::ExpandMacros(TString Value) {
         if (Value.find(name) != TString::npos) {
             TString lvalue = iterator->second;
             result = Helpers::ReplaceString(Value, name, lvalue);
+            result = ExpandMacros(result);
             break;
         }
     }
 
     return result;
+}
+
+void Macros::AddMacro(TString Key, TString Value) {
+    FData.insert(std::map<TString, TString>::value_type(Key, Value));
 }

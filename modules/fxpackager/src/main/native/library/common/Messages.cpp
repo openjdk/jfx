@@ -40,17 +40,8 @@
 
 
 Messages::Messages(void) {
-    /* TODO
-    Java I18N standards, i.e. message_en_US.properties, falling back to _en
-    and then just the messages.properties - Makes it easier on the translations toolchain.
-    Platform& platform = Platform::GetInstance();
-    TString filename = FilePath::includeTrailingSlash(platform.getAppFolder()) +
-        FilePath::includeTrailingSlash("messages");
-    FMessages.LoadFromFile()*/
-
-
     FMessages.SetReadOnly(false);
-    FMessages.SetValue(LIBRARY_NOT_FOUND, _T("Failed to find system library"));
+    FMessages.SetValue(LIBRARY_NOT_FOUND, _T("Failed to find library"));
     FMessages.SetValue(FAILED_CREATING_JVM, _T("Failed to create JVM"));
     FMessages.SetValue(FAILED_LOCATING_JVM_ENTRY_POINT, _T("Failed to locate JNI_CreateJavaVM"));
     FMessages.SetValue(NO_MAIN_CLASS_SPECIFIED, _T("No main class specified"));

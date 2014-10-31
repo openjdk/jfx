@@ -208,6 +208,7 @@ public class LinuxAppBundlerTest {
             p.load(fis);
 
             // - verify we have app.mainjar, app.version, app.preferences, app.mainclass, and app.classpath
+            assertNotNull(p.getProperty("app.runtime"));
             assertNotNull(p.getProperty("app.mainjar"));
             assertNotNull(p.getProperty("app.version"));
             assertNotNull(p.getProperty("app.preferences.id"));

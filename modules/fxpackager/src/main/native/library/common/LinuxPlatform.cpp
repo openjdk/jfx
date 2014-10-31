@@ -123,13 +123,13 @@ int LinuxPlatform::GetProcessID() {
     return pid;
 }
 
-TString LinuxPlatform::GetJvmPath() {
-    TString result = FilePath::IncludeTrailingSlash(GetPackageRootDirectory()) +
-        "runtime/jre/lib/"JAVAARCH"/client/libjvm.so";
+TString LinuxPlatform::GetBundledJVMLibraryFileName(TString RuntimePath) {
+    TString result = FilePath::IncludeTrailingSlash(RuntimePath) +
+        "jre/lib/"JAVAARCH"/client/libjvm.so";
 
     if (FilePath::FileExists(result) == false) {
-        result = FilePath::IncludeTrailingSlash(GetPackageRootDirectory()) +
-            "runtime/jre/lib/"JAVAARCH"/server/libjvm.so";
+        result = FilePath::IncludeTrailingSlash(RuntimePath) +
+            "jre/lib/"JAVAARCH"/server/libjvm.so";
     }
 
     return result;
@@ -140,12 +140,12 @@ TString LinuxPlatform::GetSystemJRE() {
     TString jreHome = GetEnv("JRE_HOME");
 
     if (jreHome.empty() == false) {
-        result = FilePath::IncludeTrailingSlash(jreHome) + _T("/lib/rt.jar");
+        result = FilePath::IncludeTrailingSlash(jreHome);
 
-        if (FilePath::FileExists(result) == false) {
-            result = FilePath::IncludeTrailingSlash(jreHome) + _T("/jre/lib/rt.jar");
+        if (FilePath::FileExists(result + _T("lib/rt.jar")) == false) {
+            result = FilePath::IncludeTrailingSlash(jreHome) + _T("jre");
 
-            if (FilePath::FileExists(result) == false) {
+            if (FilePath::FileExists(result + _T("/lib/rt.jar")) == false) {
                 //check redhat location
                 if (FilePath::FileExists(_T("/usr/java/latest/jre/lib/rt.jar")) == true) {
                     result = _T("/usr/java/latest/jre");
@@ -160,14 +160,10 @@ TString LinuxPlatform::GetSystemJRE() {
         }
     }
 
-    if (result.empty() == false) {
-        result = FilePath::ExtractFilePath(result);
-    }
-
     return result;
 }
 
-TString LinuxPlatform::GetSystemJvmPath() {
+TString LinuxPlatform::GetSystemJVMLibraryFileName() {
     TString result;
     TString jreHome = GetSystemJRE();
 

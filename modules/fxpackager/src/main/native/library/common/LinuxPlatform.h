@@ -51,7 +51,6 @@ class LinuxPlatform : virtual public Platform, GenericPlatform, PosixPlatform
 {
 private:
     pthread_t FMainThread;
-    TString GetSystemJRE();
 
 public:
     LinuxPlatform(void);
@@ -69,8 +68,9 @@ public:
 
     virtual TString GetModuleFileName();
 
-    virtual TString GetJvmPath();
-    virtual TString GetSystemJvmPath();
+    virtual TString GetBundledJVMLibraryFileName(TString RuntimePath);
+    virtual TString GetSystemJVMLibraryFileName();
+    virtual TString GetSystemJRE();
 
     virtual PropertyContainer* GetConfigFile(TString FileName);
     virtual int GetProcessID();

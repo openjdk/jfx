@@ -281,6 +281,11 @@ public class LinuxAppBundler extends AbstractBundler {
 
         pkgInfoFile.delete();
         PrintStream out = new PrintStream(pkgInfoFile);
+        if (LINUX_RUNTIME.fetchFrom(params) == null) {
+            out.println("app.runtime=");                    
+        } else {
+            out.println("app.runtime=$APPDIR/runtime");
+        }
         out.println("app.mainjar=" + MAIN_JAR.fetchFrom(params).getIncludedFiles().iterator().next());
         out.println("app.version=" + VERSION.fetchFrom(params));
 

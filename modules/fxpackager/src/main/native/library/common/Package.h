@@ -55,12 +55,13 @@ public:
     TString FPackageAppDirectory;
     TString FPackageLauncherDirectory;
     TString FAppID;
-    TString FPackageAppDataDir;
+    TString FPackageAppDataDirectory;
     TString FClassPath;
     TString FMainJar;
     TString FMainClassName;
     bool FIsRuntimeBundled;
-    TString FJVMPath;
+    TString FJVMRuntimeDirectory;
+    TString FJVMLibraryFileName;
     TString FSplashScreenFileName;
     bool FUseJavaPreferences;
     TString FCommandName;
@@ -68,6 +69,7 @@ public:
     size_t FMemorySize;
     MemoryState FMemoryState;
 };
+
 
 class Package {
 private:
@@ -114,11 +116,12 @@ public:
     TString GetJVMUserArgsConfigFileName();
 
     TString GetAppID();
-    TString GetPackageAppDataDir();
+    TString GetPackageAppDataDirectory();
     TString GetClassPath();
     TString GetMainClassName();
     bool IsRuntimeBundled();
-    TString GetJVMPath();
+    TString GetJVMLibraryFileName();
+    TString GetJVMRuntimeDirectory();
     TString GetSplashScreenFileName();
     bool HasSplashScreen();
     TString GetCommandName();
