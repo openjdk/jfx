@@ -211,6 +211,13 @@ final class SWGraphics implements ReadbackGraphics {
         return false;
     }
 
+    public boolean isAlphaTestShader() {
+        if (PrismSettings.verbose && PrismSettings.forceAlphaTestShader) {
+            System.out.println("SW pipe doesn't support shader with alpha testing");
+        }
+        return false;
+    }
+
     public Rectangle getClipRect() {
         return (clip == null) ? null : new Rectangle(clip);
     }

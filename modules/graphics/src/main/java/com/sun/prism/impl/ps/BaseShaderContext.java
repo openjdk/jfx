@@ -298,7 +298,7 @@ public abstract class BaseShaderContext extends BaseContext {
 
     private Shader getSpecialShader(BaseGraphics g, SpecialShaderType sst) {
         // We do alpha test if depth test is enabled
-        boolean alphaTest = g.isDepthTest() && g.isDepthBuffer();
+        boolean alphaTest = g.isAlphaTestShader();
         Shader shaders[] = alphaTest ? specialATShaders : specialShaders;
         Shader shader = shaders[sst.ordinal()];
         if (shader != null && !shader.isValid()) {
@@ -476,7 +476,7 @@ public abstract class BaseShaderContext extends BaseContext {
                     tex1 = null;
                 }
                 // We do alpha test if depth test is enabled
-                shader = getPaintShader(g.isDepthTest() && g.isDepthBuffer(), maskType, paint);
+                shader = getPaintShader(g.isAlphaTestShader(), maskType, paint);
             }
             checkState(g, CHECK_PAINT_OP_MASK, xform, shader);
             setTexture(0, tex0);
