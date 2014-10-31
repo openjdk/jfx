@@ -175,7 +175,7 @@ public class WinServiceBundlerTest {
         bundleParams.put(STOP_ON_UNINSTALL.getID(), true);
         bundleParams.put(RUN_AT_STARTUP.getID(), true);
 
-        bundleParams.put(APP_NAME.getID(), "Java Packager EXE Service Test #1");
+        bundleParams.put(APP_NAME.getID(), "Java Packager EXE Service Test");
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
         bundleParams.put(MAIN_CLASS.getID(), "hello.HelloService");
         bundleParams.put(MAIN_JAR.getID(), "mainApp.jar");
@@ -266,7 +266,7 @@ public class WinServiceBundlerTest {
         bundleParams.put(STOP_ON_UNINSTALL.getID(), true);
         bundleParams.put(RUN_AT_STARTUP.getID(), true);
 
-        bundleParams.put(APP_NAME.getID(), "Java Packager MSI Service Test #1");
+        bundleParams.put(APP_NAME.getID(), "Java Packager MSI Service Test");
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
         bundleParams.put(MAIN_CLASS.getID(), "hello.HelloService");
         bundleParams.put(MAIN_JAR.getID(), "mainApp.jar");
