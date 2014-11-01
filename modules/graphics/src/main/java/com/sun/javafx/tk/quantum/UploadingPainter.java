@@ -26,13 +26,11 @@
 package com.sun.javafx.tk.quantum;
 
 import java.nio.IntBuffer;
-import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Pixels;
 import com.sun.prism.Graphics;
 import com.sun.prism.GraphicsPipeline;
 import com.sun.prism.RTTexture;
 import com.sun.prism.Texture.WrapMode;
-import com.sun.prism.impl.BufferUtil;
 import com.sun.prism.impl.Disposer;
 import com.sun.prism.impl.QueuedPixelSource;
 
@@ -42,13 +40,13 @@ import com.sun.prism.impl.QueuedPixelSource;
  */
 final class UploadingPainter extends ViewPainter implements Runnable {
 
-    private Application app = Application.GetApplication();
     private RTTexture   rttexture;
     // resolveRTT is a temporary render target to "resolve" a msaa render buffer
     // into a normal color render target.
     private RTTexture   resolveRTT = null;
 
-    private QueuedPixelSource pixelSource = new QueuedPixelSource();
+    private QueuedPixelSource pixelSource = new QueuedPixelSource(true);
+    private float penScale;
     private volatile float pixScaleFactor = 1.0f;
 
     UploadingPainter(GlassScene view) {
@@ -99,7 +97,7 @@ final class UploadingPainter extends ViewPainter implements Runnable {
             int bufWidth = Math.round(viewWidth * scale);
             int bufHeight = Math.round(viewHeight * scale);
 
-            boolean needsReset = (pixelSource.validate(bufWidth, bufHeight, scale) ||
+            boolean needsReset = (penScale != scale ||
                                   penWidth != viewWidth ||
                                   penHeight != viewHeight ||
                                   rttexture == null);
@@ -120,6 +118,7 @@ final class UploadingPainter extends ViewPainter implements Runnable {
                 if (rttexture == null) {
                     return;
                 }
+                penScale    = scale;
                 penWidth    = viewWidth;
                 penHeight   = viewHeight;
                 freshBackBuffer = true;
@@ -134,14 +133,8 @@ final class UploadingPainter extends ViewPainter implements Runnable {
             paintImpl(g);
             freshBackBuffer = false;
 
-            Pixels pix = pixelSource.getUnusedPixels();
-            IntBuffer bits;
-            if (pix != null) {
-                bits = (IntBuffer) pix.getPixels();
-            } else {
-                bits = BufferUtil.newIntBuffer(bufWidth * bufHeight);
-                pix = app.createPixels(bufWidth, bufHeight, bits, scale);
-            }
+            Pixels pix = pixelSource.getUnusedPixels(bufWidth, bufHeight, scale);
+            IntBuffer bits = (IntBuffer) pix.getPixels();
 
             int rawbits[] = rttexture.getPixels();
             

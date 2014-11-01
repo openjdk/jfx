@@ -25,7 +25,6 @@
 
 package com.sun.prism.j2d;
 
-import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.Screen;
 import com.sun.javafx.geom.Rectangle;
@@ -59,7 +58,7 @@ public abstract class J2DPresentable implements Presentable {
         private final PresentableState pState;
         private final int theFormat;
         private Pixels pixels;
-        private QueuedPixelSource pixelSource = new QueuedPixelSource();
+        private QueuedPixelSource pixelSource = new QueuedPixelSource(false);
         private boolean opaque;
 
         Glass(PresentableState pState, J2DResourceFactory factory) {
@@ -95,8 +94,6 @@ public abstract class J2DPresentable implements Presentable {
             }
         }
 
-        private final Application app = Application.GetApplication();
-
         @Override
         public boolean lockResources(PresentableState pState) {
             if (this.pState != pState || this.theFormat != pState.getPixelFormat()) {
@@ -117,15 +114,8 @@ public abstract class J2DPresentable implements Presentable {
                  */
                 int w = getPhysicalWidth();
                 int h = getPhysicalHeight();
-                pixelSource.validate(w, h, 1.0f);
-                pixels = pixelSource.getUnusedPixels();
-                IntBuffer pixBuf;
-                if (pixels != null) {
-                    pixBuf = (IntBuffer) pixels.getPixels();
-                } else {
-                    pixBuf = IntBuffer.allocate(w*h);
-                    pixels = app.createPixels(w, h, pixBuf);
-                }
+                pixels = pixelSource.getUnusedPixels(w, h, 1.0f);
+                IntBuffer pixBuf = (IntBuffer) pixels.getPixels();
                 assert ib.hasArray();
                 System.arraycopy(ib.array(), 0, pixBuf.array(), 0, w*h);
                 return true;

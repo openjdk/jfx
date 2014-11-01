@@ -25,7 +25,6 @@
 
 package com.sun.prism.sw;
 
-import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Pixels;
 import com.sun.javafx.geom.Rectangle;
 import com.sun.prism.Presentable;
@@ -37,7 +36,7 @@ final class SWPresentable extends SWRTTexture implements Presentable {
 
     private final PresentableState pState;
     private Pixels pixels;
-    private QueuedPixelSource pixelSource = new QueuedPixelSource();
+    private QueuedPixelSource pixelSource = new QueuedPixelSource(false);
 
     public SWPresentable(PresentableState pState, SWResourceFactory factory) {
         super(factory, pState.getWidth(), pState.getHeight());
@@ -58,15 +57,8 @@ final class SWPresentable extends SWRTTexture implements Presentable {
              */
             int w = getPhysicalWidth();
             int h = getPhysicalHeight();
-            pixelSource.validate(w, h, 1.0f);
-            pixels = pixelSource.getUnusedPixels();
-            IntBuffer pixBuf;
-            if (pixels != null) {
-                pixBuf = (IntBuffer) pixels.getPixels();
-            } else {
-                pixBuf = IntBuffer.allocate(w*h);
-                pixels = Application.GetApplication().createPixels(w, h, pixBuf);
-            }
+            pixels = pixelSource.getUnusedPixels(w, h, 1.0f);
+            IntBuffer pixBuf = (IntBuffer) pixels.getPixels();
             IntBuffer buf = getSurface().getDataIntBuffer();
             assert buf.hasArray();
             System.arraycopy(buf.array(), 0, pixBuf.array(), 0, w*h);

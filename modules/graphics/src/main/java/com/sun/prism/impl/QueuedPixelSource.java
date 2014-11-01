@@ -25,9 +25,11 @@
 
 package com.sun.prism.impl;
 
+import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Pixels;
 import com.sun.prism.PixelSource;
 import java.lang.ref.WeakReference;
+import java.nio.IntBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -61,9 +63,11 @@ public class QueuedPixelSource implements PixelSource {
     private volatile Pixels enqueued;
     private final List<WeakReference<Pixels>> saved =
          new ArrayList<WeakReference<Pixels>>(3);
-    private int pixelW;
-    private int pixelH;
-    private float pixelScale;
+    private final boolean useDirectBuffers;
+
+    public QueuedPixelSource(boolean useDirectBuffers) {
+        this.useDirectBuffers = useDirectBuffers;
+    }
 
     @Override
     public synchronized Pixels getLatestPixels() {
@@ -93,43 +97,28 @@ public class QueuedPixelSource implements PixelSource {
         enqueued = null;
     }
 
-    /**
-     * Validates the saved pixels objects against the specified dimensions
-     * and pixel scale and returns a boolean indicating if the pixel buffers
-     * are still valid.
-     * This method may free old saved buffers so that they will not be reused,
-     * but it will leave the existing enqueued buffers alone until they are
-     * eventually replaced.
-     * 
-     * @param w the intended width of the {@code Pixels} objects
-     * @param h the intended height of the {@code Pixels} objects
-     * @param scale the intended pixel scale of the {@code Pixels} objects
-     * @return 
-     */
-    public synchronized boolean validate(int w, int h, float scale) {
-        if (w != pixelW || h != pixelH || scale != pixelScale) {
-            saved.clear();
-            pixelW = w;
-            pixelH = h;
-            pixelScale = scale;
-            return false;
-        }
-        return true;
+    private boolean usesSameBuffer(Pixels p1, Pixels p2) {
+        if (p1 == p2) return true;
+        if (p1 == null || p2 == null) return false;
+        return (p1.getPixels() == p2.getPixels());
     }
 
     /**
-     * Return an unused Pixels object previously used with this
-     * {@code PixelSource}, or null if there are none.
-     * The caller should create a new {@code Pixels} object if
-     * this method returns null and register it with a call
-     * to {@link #enqueuePixels(com.sun.glass.ui.Pixels) enqueuePixels()}
-     * when it is filled with data.
+     * Return an unused Pixels with the indicated dimensions and scale.
+     * The returned object may either be saved from a previous use, but
+     * currently not being consumed or in the queue.
+     * Or it may be an object that reuses a buffer from a previously
+     * used (but not active) {@code Pixels} object.
+     * Or it may be a brand new object.
      * 
-     * @return an unused {@code Pixels} object or null if the caller
-     *         should create a new one
+     * @param w the width of the desired Pixels object
+     * @param h the height of the desired Pixels object
+     * @param scale the scale of the desired Pixels object
+     * @return an unused {@code Pixels} object
      */
-    public synchronized Pixels getUnusedPixels() {
+    public synchronized Pixels getUnusedPixels(int w, int h, float scale) {
         int i = 0;
+        IntBuffer reuseBuffer = null;
         while (i < saved.size()) {
             WeakReference<Pixels> ref = saved.get(i);
             Pixels p = ref.get();
@@ -137,55 +126,48 @@ public class QueuedPixelSource implements PixelSource {
                 saved.remove(i);
                 continue;
             }
-            if (p != beingConsumed && p != enqueued) {
-                assert(p.getWidthUnsafe() == pixelW &&
-                       p.getHeightUnsafe() == pixelH &&
-                       p.getScaleUnsafe() == pixelScale);
+            if (usesSameBuffer(p, beingConsumed) || usesSameBuffer(p, enqueued)) {
+                i++;
+                continue;
+            }
+            if (p.getWidthUnsafe() == w &&
+                p.getHeightUnsafe() == h &&
+                p.getScaleUnsafe() == scale)
+            {
                 return p;
             }
-            i++;
+            // Whether or not we reuse its buffer, this Pixels object is going away.
+            saved.remove(i);
+            reuseBuffer = (IntBuffer) p.getPixels();
+            if (reuseBuffer.capacity() >= w * h) {
+                break;
+            }
+            reuseBuffer = null;
+            // Loop around and see if there are any other buffers to reuse,
+            // or get rid of all of the buffers that are too small before
+            // we proceed on to the allocation code.
         }
-        return null;
+        if (reuseBuffer == null) {
+            int bufsize = w * h;
+            if (useDirectBuffers) {
+                reuseBuffer = BufferUtil.newIntBuffer(bufsize);
+            } else {
+                reuseBuffer = IntBuffer.allocate(bufsize);
+            }
+        }
+        Pixels p = Application.GetApplication().createPixels(w, h, reuseBuffer, scale);
+        saved.add(new WeakReference<>(p));
+        return p;
     }
 
     /**
      * Place the indicated {@code Pixels} object into the enqueued state,
      * replacing any other objects that are currently enqueued but not yet
-     * being used by the consumer, and register the object for later
-     * reuse.
+     * being used by the consumer.
      * 
-     * @param pixels the {@code Pixels} object to be enqueued (and saved for reuse)
+     * @param pixels the {@code Pixels} object to be enqueued
      */
     public synchronized void enqueuePixels(Pixels pixels) {
-        if (pixels.getWidthUnsafe() != pixelW ||
-            pixels.getHeightUnsafe() != pixelH ||
-            pixels.getScaleUnsafe() != pixelScale)
-        {
-            throw new IllegalArgumentException("Pixels object: "+pixels+
-                                               "does not match validated parameters: "+
-                                               pixelW+" x "+pixelH+" @ "+pixelScale+"x");
-        }
         enqueued = pixels;
-        // Now make sure it is in our saved array since this could be
-        // the first time we have seen this particular storage object.
-        int i = 0;
-        while (i < saved.size()) {
-            WeakReference<Pixels> ref = saved.get(i);
-            Pixels p = ref.get();
-            if (p == null) {
-                saved.remove(i);
-                continue;
-            }
-            if (p == pixels) {
-                // Found it - already known.
-                return;
-            }
-            i++;
-        }
-        // Did not find it, this must be a new storage object.
-        if (saved.size() >= 3) {
-            throw new InternalError("too many Pixels objects saved");
-        }
-        saved.add(new WeakReference<Pixels>(pixels));
     }
 }
