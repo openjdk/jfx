@@ -108,9 +108,7 @@ public class CompileJSL {
         FILL_ROUNDRECT ("FillRoundRect",  InputParam.TEXCOORD0, InputParam.TEXCOORD1),
         DRAW_ROUNDRECT ("DrawRoundRect",  InputParam.TEXCOORD0, InputParam.TEXCOORD1),
         DRAW_SEMIROUNDRECT
-                       ("DrawSemiRoundRect", InputParam.TEXCOORD0, InputParam.TEXCOORD1),
-        //FILL_QUADCURVE ("FillQuadCurve",  InputParam.TEXCOORD0, InputParam.TEXCOORD1),
-        FILL_CUBICCURVE("FillCubicCurve", InputParam.TEXCOORD0, InputParam.TEXCOORD1);
+                       ("DrawSemiRoundRect", InputParam.TEXCOORD0, InputParam.TEXCOORD1);
 
         private String name;
         private InputParam[] inputParams;

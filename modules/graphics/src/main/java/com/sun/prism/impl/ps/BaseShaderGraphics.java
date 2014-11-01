@@ -1604,35 +1604,6 @@ public abstract class BaseShaderGraphics
         vb.addQuad(bx, by, bx+bw, by+bh);
     }
 
-    @Override
-    public void fillTriangles(VertexBuffer tris, int numVerts,
-                              float bx, float by, float bw, float bh)
-    {
-        if (isComplexPaint) {
-            throw new AssertionError("fillTriangles() not supported for complex paints");
-        }
-
-        BaseTransform xform = getTransformNoClone();
-        context.validatePaintOp(this, xform, MaskType.SOLID, bx, by, bw, bh);
-
-        VertexBuffer vb = context.getVertexBuffer();
-        vb.addVerts(tris, numVerts);
-    }
-
-    void fillCubicCurves(VertexBuffer tris, int numVerts,
-                         float bx, float by, float bw, float bh)
-    {
-        if (isComplexPaint) {
-            throw new AssertionError("fillCubicCurves() not supported for complex paints");
-        }
-
-        BaseTransform xform = getTransformNoClone();
-        context.validatePaintOp(this, xform, MaskType.FILL_CUBICCURVE, bx, by, bw, bh);
-
-        VertexBuffer vb = context.getVertexBuffer();
-        vb.addVerts(tris, numVerts);
-    }
-
     private static final double SQRT_2 = Math.sqrt(2.0);
     private static boolean canUseStrokeShader(BasicStroke bs) {
         // RT-27378

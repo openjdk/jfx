@@ -327,9 +327,6 @@ public abstract class BaseGraphics implements RectShadowGraphics {
         clear(Color.TRANSPARENT);
     }
 
-    public abstract void fillTriangles(VertexBuffer tris, int numVerts,
-                                       float bx, float by, float bw, float bh);
-
     protected abstract void renderShape(Shape shape, BasicStroke stroke,
                                         float bx, float by, float bw, float bh);
 

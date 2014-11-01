@@ -96,8 +96,7 @@ public abstract class BaseShaderContext extends BaseContext {
         DRAW_ELLIPSE   ("DrawEllipse", FILL_ELLIPSE),
         FILL_ROUNDRECT ("FillRoundRect"),
         DRAW_ROUNDRECT ("DrawRoundRect", FILL_ROUNDRECT),
-        DRAW_SEMIROUNDRECT("DrawSemiRoundRect"),
-        FILL_CUBICCURVE("FillCubicCurve");
+        DRAW_SEMIROUNDRECT("DrawSemiRoundRect");
 
         private String name;
         private MaskType filltype;
@@ -124,7 +123,7 @@ public abstract class BaseShaderContext extends BaseContext {
         }
     }
 
-    // mask type     4 bits (12 types)
+    // mask type     4 bits (14 types)
     // paint type    2 bits
     // paint opts    2 bits
     private static final int NUM_STOCK_SHADER_SLOTS =

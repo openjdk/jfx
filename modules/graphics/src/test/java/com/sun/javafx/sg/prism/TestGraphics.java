@@ -68,10 +68,6 @@ public class TestGraphics extends BaseGraphics {
     }
 
     @Override
-    public void fillTriangles(VertexBuffer tris, int numVerts, float bx, float by, float bw, float bh) {
-    }
-
-    @Override
     protected void renderShape(Shape shape, BasicStroke stroke, float bx, float by, float bw, float bh) {
     }
 
