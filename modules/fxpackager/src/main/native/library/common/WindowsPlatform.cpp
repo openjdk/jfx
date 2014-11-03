@@ -292,21 +292,6 @@ Procedure WindowsPlatform::GetProcAddress(Module AModule, std::string MethodName
     return ::GetProcAddress((HMODULE)AModule, MethodName.c_str());
 }
 
-bool WindowsPlatform::IsNativeDebuggerPresent() {
-    bool result = false;
-#ifdef DEBUG
-    if (IsDebuggerPresent() == TRUE) {
-        result = true;
-    }
-#endif //DEBUG
-    return result;
-}
-
-int WindowsPlatform::GetProcessID() {
-    int pid = GetProcessId(GetCurrentProcess());
-    return pid;
-}
-
 bool WindowsPlatform::IsMainThread() {
     bool result = (FMainThread == ::GetCurrentThreadId());
     return result;
@@ -322,6 +307,23 @@ size_t WindowsPlatform::GetMemorySize() {
     return (size_t)status.ullTotalPhys;*/
     return 0;
 }
+
+#ifdef DEBUG
+bool WindowsPlatform::IsNativeDebuggerPresent() {
+    bool result = false;
+    
+    if (IsDebuggerPresent() == TRUE) {
+        result = true;
+    }
+    
+    return result;
+}
+
+int WindowsPlatform::GetProcessID() {
+    int pid = GetProcessId(GetCurrentProcess());
+    return pid;
+}
+#endif //DEBUG
 
 //--------------------------------------------------------------------------------------------------
 

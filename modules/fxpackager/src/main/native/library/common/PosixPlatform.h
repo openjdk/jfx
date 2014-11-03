@@ -50,7 +50,6 @@ public:
     virtual Module LoadLibrary(TString FileName);
     virtual void FreeLibrary(Module AModule);
     virtual Procedure GetProcAddress(Module AModule, std::string MethodName);
-    virtual bool IsNativeDebuggerPresent();
 };
 
 #endif //POSIXPLATFORM_H

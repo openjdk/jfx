@@ -68,29 +68,4 @@ Procedure PosixPlatform::GetProcAddress(Module AModule, std::string MethodName) 
     return dlsym(AModule, PlatformString(MethodName));
 }
 
-bool PosixPlatform::IsNativeDebuggerPresent() {
-#ifdef MAC
-    int state;
-    int mib[4];
-    struct kinfo_proc info;
-    size_t size;
-
-    info.kp_proc.p_flag = 0;
-
-    mib[0] = CTL_KERN;
-    mib[1] = KERN_PROC;
-    mib[2] = KERN_PROC_PID;
-    mib[3] = getpid();
-
-    size = sizeof(info);
-    state = sysctl(mib, sizeof(mib) / sizeof(*mib), &info, &size, NULL, 0);
-    assert(state == 0);
-    return ((info.kp_proc.p_flag & P_TRACED) != 0);
-#endif //MAC
-#ifdef LINUX
-    //TODO implement
-    return false;
-#endif //LINUX
-}
-
 #endif //POSIX

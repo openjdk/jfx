@@ -46,7 +46,6 @@ public:
     GenericPlatform(void);
     virtual ~GenericPlatform(void);
 
-    virtual Platform::DebugState GetDebugState();
     virtual TString GetPackageAppDirectory();
     virtual TString GetPackageLauncherDirectory();
     
@@ -60,6 +59,10 @@ public:
 #endif //WINDOWS || LINUX
 
     virtual std::map<TString, TString> GetKeys();
+    
+#ifdef DEBUG
+    virtual Platform::DebugState GetDebugState();
+#endif //DEBUG
 };
 
 #pragma warning( pop ) // C4250
