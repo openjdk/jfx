@@ -2689,6 +2689,15 @@ task clean() {
     }
 }
 
+task cleanAll() {
+    group = "Basic"
+    description = "Scrubs the repo of build artifacts"
+    dependsOn(clean)
+    doLast {
+        //delete(".gradle"); This causes problems on windows.
+        delete("buildSrc/build");
+    }
+}
 
 task javadoc(type: Javadoc) {
     enabled = IS_BUILD_JAVADOC
