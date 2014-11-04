@@ -1803,7 +1803,13 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             // First check the cells that have already been created and are
             // in use. If this call returns a value, then we can use it
             cell = getVisibleCell(index);
-            if (cell != null) return cell;
+            if (cell != null) {
+                // Force the underlying text inside the cell to be updated
+                // so that when the screen reader runs, it will match the
+                // text in the cell (force updateDisplayedText())
+                cell.layout();
+                return cell;
+            }
         }
 
         // check the existing sheet children
