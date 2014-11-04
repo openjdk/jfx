@@ -68,12 +68,16 @@ public:
 
     virtual PropertyContainer* GetConfigFile(TString FileName);
     virtual TString GetModuleFileName();
-    virtual int GetProcessID();
 
     virtual bool IsMainThread();
     virtual size_t GetMemorySize();
     
     virtual std::map<TString, TString> GetKeys();
+    
+#ifdef DEBUG
+    virtual bool IsNativeDebuggerPresent();
+    virtual int GetProcessID();
+#endif //DEBUG
 };
 
 

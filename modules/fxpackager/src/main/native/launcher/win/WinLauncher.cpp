@@ -35,11 +35,26 @@
 #include <Shellapi.h>
 #include <locale.h>
 #include <tchar.h>
+#include <string>
 
+#define PACKAGER_LIBRARY TEXT("packager.dll")
 
 typedef bool (*start_launcher)(int argc, TCHAR* argv[]);
 typedef void (*stop_launcher)();
 
+std::wstring GetTitle() {
+    std::wstring result;
+    wchar_t buffer[MAX_PATH];
+    GetModuleFileName(NULL, buffer, MAX_PATH - 1);
+    buffer[MAX_PATH - 1] = '\0';
+    result = buffer;
+    size_t slash = result.find_last_of('\\');
+    
+    if (slash != std::wstring::npos)
+        result = result.substr(slash + 1, result.size() - slash - 1);
+    
+    return result;
+}
 
 int APIENTRY _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
                        LPTSTR lpCmdLine, int nCmdShow) {
@@ -53,9 +68,14 @@ int APIENTRY _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     ::setlocale(LC_ALL, "en_US.utf8");
     argv = CommandLineToArgvW(GetCommandLine(), &argc);
 
-    HMODULE library = ::LoadLibrary(TEXT("packager.dll"));
+    HMODULE library = ::LoadLibrary(PACKAGER_LIBRARY);
     
-    if (library != NULL) {
+    if (library == NULL) {
+        std::wstring title = GetTitle();
+        std::wstring description = std::wstring(PACKAGER_LIBRARY) + std::wstring(TEXT(" not found."));
+        MessageBox(NULL, description.data(), title.data(), MB_ICONERROR | MB_OK);
+    }
+    else {
         start_launcher start = (start_launcher)GetProcAddress(library, "start_launcher");
         stop_launcher stop = (stop_launcher)GetProcAddress(library, "stop_launcher");
 

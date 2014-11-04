@@ -71,16 +71,6 @@ TString GenericPlatform::GetConfigFileName() {
     return result;
 }
 
-Platform::DebugState GenericPlatform::GetDebugState() {
-    Platform::DebugState result = Platform::dsNone;
-
-    if (IsNativeDebuggerPresent() == true) {
-        result = Platform::dsNative;
-    }
-
-    return result;
-}
-
 TString GenericPlatform::GetPackageAppDirectory() {
 #if defined(WINDOWS) || defined(LINUX)
     return FilePath::IncludeTrailingSlash(GetPackageRootDirectory()) + _T("app");
@@ -181,3 +171,15 @@ std::map<TString, TString> GenericPlatform::GetKeys() {
     keys.insert(std::map<TString, TString>::value_type(PACKAGER_APP_DATA_DIR,    _T("app.preferences.id")));
     return keys;
 }
+
+#ifdef DEBUG
+Platform::DebugState GenericPlatform::GetDebugState() {
+    Platform::DebugState result = Platform::dsNone;
+    
+    if (IsNativeDebuggerPresent() == true) {
+        result = Platform::dsNative;
+    }
+    
+    return result;
+}
+#endif //DEBUG

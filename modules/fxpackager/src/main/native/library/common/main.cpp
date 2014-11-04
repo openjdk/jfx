@@ -85,9 +85,9 @@ extern "C" {
         Platform& platform = Platform::GetInstance();
 
 #ifdef DEBUG
-        if (argc > 1 && TString(argv[1]) == _T("/Debug")) {
+        if (argc > 1 && TString(argv[1]) == _T("-debug")) {
 #ifdef WINDOWS
-            if (::MessageBox(NULL, PlatformString(platform.GetProcessID()), _T("Debug?"), MB_OKCANCEL) != IDCANCEL) {
+            if (::MessageBox(NULL, PlatformString(platform.GetProcessID()), _T("Would you like to debug?"), MB_OKCANCEL) != IDCANCEL) {
 #endif //WINDOWS
 #ifdef POSIX
             printf("%s\n", PlatformString(platform.GetProcessID()).c_str());
