@@ -327,35 +327,6 @@ int WindowsPlatform::GetProcessID() {
 
 //--------------------------------------------------------------------------------------------------
 
-//TODO This needs a rewrite.
-TString convertKeyToWinReg(TString key) {
-    TCHAR* lkey = (TCHAR*)key.data();
-    TCHAR* windowsName = (TCHAR*) calloc((wcslen(lkey) + 1)*2, sizeof (TCHAR)); //All caps could double size
-    *windowsName = '\0';
-    TCHAR *returnValue = windowsName;
-
-    TCHAR ch = *lkey;
-    int index = 0;
-    while (ch != 0) {
-        if (ch == '\\') {
-            *windowsName = '//';
-        } else if (ch == '/') {
-            *windowsName = '\\';
-        } else if ((ch >= 'A') && (ch <= 'Z')) {
-            *windowsName++ = '/';
-            *windowsName = ch;
-        } else {
-            *windowsName = ch;
-        }
-        lkey++;
-        ch = *lkey;
-        windowsName++;
-    }
-    *windowsName = '\0';
-    TString result = returnValue;
-    return result;
-}
-
 WindowsJavaUserPreferences::WindowsJavaUserPreferences(void) : JavaUserPreferences() {
 }
 
