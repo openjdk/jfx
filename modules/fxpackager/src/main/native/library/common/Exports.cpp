@@ -180,19 +180,6 @@ JNIEXPORT jobjectArray JNICALL Java_jdk_packager_services_userjvmoptions_Launche
 }
 
 #ifdef DEBUG
-// Build with debug info, then use the following in Java in the main or somewhere else:
-//
-// static native boolean isdebugged();
-// 
-// if (Arrays.asList(args).contains("-debug")) {
-//   System.out.println("pid=" + getpid());
-//
-//   while (true) {
-//     if (isdebugged() == true) {
-//       break;
-//     }
-//   }
-// }
 class DebugExports {
 private:
     // This is not a class to create an instance of.
@@ -218,4 +205,20 @@ JNIEXPORT jint JNICALL Java_someclass__getpid(JNIEnv *env) {
 JNIEXPORT jboolean JNICALL Java_someclass__isdebugged(JNIEnv *env) {
     return DebugExports::_isdebugged(env);
 }
+
+/* Use the following in Java in the main or somewhere else:
+    static native boolean isdebugged();
+
+    if (Arrays.asList(args).contains("-debug")) {
+        System.out.println("pid=" + getpid());
+
+
+        while (true) {
+            if (isdebugged() == true) {
+                break;
+            }
+        }
+    }
+*/
+
 #endif //DEBUG

@@ -87,7 +87,7 @@ TString LinuxPlatform::GetModuleFileName() {
     TString result;
     DynamicBuffer<TCHAR> buffer(MAX_PATH);
 
-    if (readlink("/proc/self/exe", buffer.GetData(), MAX_PATH - 1) != -1) {
+    if (readlink("/proc/self/exe", buffer.GetData(), MAX_PATH) != -1) {
         result = buffer.GetData();
     }
 
@@ -116,6 +116,11 @@ TString LinuxPlatform::GetAppDataDirectory() {
 
 PropertyContainer* LinuxPlatform::GetConfigFile(TString FileName) {
     return new PropertyFile(FileName);
+}
+
+int LinuxPlatform::GetProcessID() {
+    int pid = getpid();
+    return pid;
 }
 
 TString LinuxPlatform::GetBundledJVMLibraryFileName(TString RuntimePath) {
@@ -183,27 +188,6 @@ bool LinuxPlatform::IsMainThread() {
 size_t LinuxPlatform::GetMemorySize() {
     return 0;
 }
-
-#ifdef DEBUG
-bool LinuxPlatform::IsNativeDebuggerPresent() {
-    // gdb opens file descriptors stdin=3, stdout=4, stderr=5 whereas
-    // a typical prog uses only stdin=0, stdout=1, stderr=2.
-    bool result = false;
-    FILE *fd = fopen("/tmp", "r");
-    
-    if (fileno(fd) > 5) {
-        result = true;
-    }
-    
-    fclose(fd);
-    return result;
-}
-
-int LinuxPlatform::GetProcessID() {
-    int pid = getpid();
-    return pid;
-}
-#endif //DEBUG
 
 //--------------------------------------------------------------------------------------------------
 

@@ -73,14 +73,10 @@ public:
     virtual TString GetSystemJRE();
 
     virtual PropertyContainer* GetConfigFile(TString FileName);
+    virtual int GetProcessID();
 
     virtual bool IsMainThread();
     virtual size_t GetMemorySize();
-
-#ifdef DEBUG
-    virtual bool IsNativeDebuggerPresent();
-    virtual int GetProcessID();
-#endif //DEBUG
 };
 #pragma warning( pop ) // C4250
 
