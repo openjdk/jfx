@@ -33,7 +33,6 @@ import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
-import javafx.scene.layout.Pane;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
@@ -48,11 +47,22 @@ class HeavyweightDialog extends FXDialog {
      * 
      **************************************************************************/
 
+    final Stage stage = new Stage() {
+        @Override public void centerOnScreen() {
+            Window owner = getOwner();
+            if (owner != null) {
+                positionStage();
+            } else {
+                if (getWidth() > 0 && getHeight() > 0) {
+                    super.centerOnScreen();
+                }
+            }
+        }
+    };
+
+    private Scene scene;
+
     private final Dialog<?> dialog;
-    final Stage stage;
-    private final Scene scene;
-    private final Pane sceneRoot;
-    
     private DialogPane dialogPane;
 
     private double prefX = Double.NaN;
@@ -68,18 +78,7 @@ class HeavyweightDialog extends FXDialog {
 
     HeavyweightDialog(Dialog<?> dialog) {
         this.dialog = dialog;
-        this.stage = new Stage() {
-            @Override public void centerOnScreen() {
-                Window owner = getOwner();
-                if (owner != null) {
-                    positionStage();
-                } else {
-                    if (getWidth() > 0 && getHeight() > 0) {
-                        super.centerOnScreen();
-                    }
-                }
-            }
-        };
+
         stage.setResizable(false);
         
         stage.setOnCloseRequest(windowEvent -> {
@@ -99,23 +98,6 @@ class HeavyweightDialog extends FXDialog {
                 }
             }
         });
-
-        sceneRoot = new Pane() {
-            @Override protected void layoutChildren() {
-                // we only attempt to layout the dialogPane
-                if (dialogPane == null) return;
-
-                // TODO There is still more work to be done here:
-                // 1) DONE: Handling when the dialog pane pref sizes change dynamically (and resizing the stage)
-                // 2) Animating the resize (if deemed desirable)
-                dialogPane.autosize();
-                stage.sizeToScene();
-            }
-        };
-        sceneRoot.getStyleClass().setAll("dialog");
-        
-        scene = new Scene(sceneRoot);
-        stage.setScene(scene);
     }
 
 
@@ -162,7 +144,16 @@ class HeavyweightDialog extends FXDialog {
 
     @Override public void setDialogPane(DialogPane dialogPane) {
         this.dialogPane = dialogPane;
-        sceneRoot.getChildren().setAll(dialogPane);
+
+        if (scene == null) {
+            scene = new Scene(dialogPane);
+            stage.setScene(scene);
+        } else {
+            scene.setRoot(dialogPane);
+        }
+
+        dialogPane.autosize();
+        stage.sizeToScene();
     }
 
     @Override public void show() {
@@ -286,8 +277,8 @@ class HeavyweightDialog extends FXDialog {
 
         // because Stage does not seem to centre itself over its owner, we
         // do it here.
-        final double dialogWidth = sceneRoot.prefWidth(-1);
-        final double dialogHeight = sceneRoot.prefHeight(-1);
+        final double dialogWidth = dialogPane.prefWidth(-1);
+        final double dialogHeight = dialogPane.prefHeight(-1);
 
         x = owner.getX() + (scene.getWidth() / 2.0) - (dialogWidth / 2.0);
         y = owner.getY() +  titleBarHeight + (scene.getHeight() / 2.0) - (dialogHeight / 2.0);

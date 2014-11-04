@@ -50,14 +50,11 @@ import javafx.css.StyleableObjectProperty;
 import javafx.css.StyleableProperty;
 import javafx.css.StyleableStringProperty;
 import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
-import javafx.geometry.HPos;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.ButtonBar.ButtonData;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Pane;
@@ -818,9 +815,9 @@ public class DialogPane extends Pane {
     @Override protected void layoutChildren() {
         final boolean hasHeader = hasHeader();
 
-        final double w = getWidth() - (snappedLeftInset() + snappedRightInset()); 
-        final double h = getHeight() - (snappedTopInset() + snappedBottomInset());
-        
+        final double w = Math.max(minWidth(-1), getWidth()) - (snappedLeftInset() + snappedRightInset());
+        final double h = Math.max(minHeight(w), getHeight()) - (snappedTopInset() + snappedBottomInset());
+
         final double leftPadding = snappedLeftInset();
         final double topPadding = snappedTopInset();
         final double rightPadding = snappedRightInset();
@@ -835,10 +832,20 @@ public class DialogPane extends Pane {
         final double graphicPrefWidth = hasHeader || graphic == null ? 0 : graphic.prefWidth(h);
         final double headerPrefHeight = hasHeader ? header.prefHeight(w) : 0;
         final double buttonBarPrefHeight = buttonBar == null ? 0 : buttonBar.prefHeight(w);
-        final double expandableContentPrefHeight = isExpanded() ? expandableContent.prefHeight(w) : 0;
         final double graphicPrefHeight = hasHeader || graphic == null ? 0 : graphic.prefHeight(w);
-        final double contentAreaHeight = h - 
-                (headerPrefHeight + expandableContentPrefHeight + buttonBarPrefHeight);
+
+        final double expandableContentPrefHeight;
+        final double contentAreaHeight;
+
+        if (isExpanded()) {
+            // precedence goes to content and then expandable content
+            contentAreaHeight = isExpanded() ? content.prefHeight(w) : 0;
+            expandableContentPrefHeight = h - (headerPrefHeight + contentAreaHeight + buttonBarPrefHeight);
+        } else {
+            // content gets the lowest precedence
+            expandableContentPrefHeight = isExpanded() ? expandableContent.prefHeight(w) : 0;
+            contentAreaHeight = h - (headerPrefHeight + expandableContentPrefHeight + buttonBarPrefHeight);
+        }
         
         double x = leftPadding;
         double y = topPadding;
@@ -864,6 +871,58 @@ public class DialogPane extends Pane {
         if (buttonBar != null) {
             buttonBar.resizeRelocate(leftPadding, (h - buttonBarPrefHeight - bottomPadding), w - rightPadding, buttonBarPrefHeight);
         }
+    }
+
+    /** {@inheritDoc} */
+    @Override protected double computeMinWidth(double height) {
+        double headerMinWidth = hasHeader() ? getActualHeader().minWidth(height) + 10 : 0;
+        double contentMinWidth = getActualContent().minWidth(height);
+        double buttonBarMinWidth = buttonBar == null ? 0 : buttonBar.minWidth(height);
+        double graphicMinWidth = getActualGraphic().minWidth(height);
+
+        double expandableContentMinWidth = 0;
+        final Node expandableContent = getExpandableContent();
+        if (isExpanded() && expandableContent != null) {
+            expandableContentMinWidth = expandableContent.minWidth(height);
+        }
+
+        double minWidth = snappedLeftInset() +
+                (hasHeader() ? 0 : graphicMinWidth) +
+                Math.max(Math.max(headerMinWidth, expandableContentMinWidth), Math.max(contentMinWidth, buttonBarMinWidth)) +
+                snappedRightInset();
+
+        return minWidth;
+    }
+
+    /** {@inheritDoc} */
+    @Override protected double computeMinHeight(double width) {
+        final boolean hasHeader = hasHeader();
+
+        double headerMinHeight = hasHeader ? getActualHeader().minHeight(width) : 0;
+        double buttonBarMinHeight = buttonBar == null ? 0 : buttonBar.minHeight(width);
+
+        Node graphic = getActualGraphic();
+        double graphicMinWidth = graphic.minWidth(-1);
+        double graphicMinHeight = graphic.minHeight(width);
+
+        double contentAvailableWidth = width == Region.USE_COMPUTED_SIZE ? Region.USE_COMPUTED_SIZE :
+                hasHeader ? width : (width - graphicMinWidth);
+        double contentMinHeight = getActualContent().minHeight(contentAvailableWidth);
+
+        double expandableContentMinHeight = 0;
+        final Node expandableContent = getExpandableContent();
+        if (isExpanded() && expandableContent != null) {
+            expandableContentMinHeight = expandableContent.minHeight(width);
+        }
+
+        double minHeight = snappedTopInset() +
+                headerMinHeight +
+                Math.max(graphicMinHeight, contentMinHeight) +
+                expandableContentMinHeight +
+                buttonBarMinHeight +
+                snappedBottomInset();
+
+        return minHeight;
     }
     
     /** {@inheritDoc} */
