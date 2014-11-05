@@ -59,7 +59,10 @@ public class HelloSpinner extends Application {
         ComboBox<String> spinnerValueFactoryOptions =
                 new ComboBox<>(FXCollections.observableArrayList("Integer", "Double", "List<String>", "LocalDate", "LocalTime"));
         spinnerValueFactoryOptions.getSelectionModel().selectedItemProperty().addListener((o, oldValue, newValue) -> {
+            if (newValue == null) return;
+            
             switch (newValue) {
+                default:
                 case "Integer": {
                     spinner.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(5, 10));
                     break;
@@ -106,6 +109,7 @@ public class HelloSpinner extends Application {
                     Spinner.STYLE_CLASS_SPLIT_ARROWS_HORIZONTAL);
 
             switch (newValue) {
+                default:
                 case "Default (Arrows on right (Vertical))": break;
 
                 case "Arrows on right (Horizontal)": {

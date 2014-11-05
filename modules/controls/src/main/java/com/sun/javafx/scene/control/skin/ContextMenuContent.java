@@ -492,8 +492,6 @@ public class ContextMenuContent extends Region {
         // we get the issue shown in RT-34429
         setOnKeyPressed(new EventHandler<KeyEvent>() {
             @Override public void handle(KeyEvent ke) {
-                final Node ownerNode = contextMenu.getOwnerNode();
-
                 switch (ke.getCode()) {
                     case LEFT:
                         if (getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
@@ -518,6 +516,7 @@ public class ContextMenuContent extends Region {
                         // as required. In the case of the parent being a
                         // menubar button we special case in the conditional code
                         // beneath this switch statement. See RT-34429 for more context.
+                        final Node ownerNode = contextMenu.getOwnerNode();
                         if (! (ownerNode instanceof MenuBarSkin.MenuBarButton)) {
                             contextMenu.hide();
                             ke.consume();
@@ -544,6 +543,7 @@ public class ContextMenuContent extends Region {
                 }
 
                 if (!ke.isConsumed()) {
+                    final Node ownerNode = contextMenu.getOwnerNode();
                     if (ownerNode instanceof MenuItemContainer) {
                         // Forward to parent menu
                         Parent parent = ownerNode.getParent();

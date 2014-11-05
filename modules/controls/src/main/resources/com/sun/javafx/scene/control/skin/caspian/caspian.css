@@ -4188,69 +4188,65 @@ to the top and bottom -fx-padding values of the parent toolbar. */
  *                                                                             *
  ******************************************************************************/
 
-.dialog {
-    -fx-padding: 0;
-}
-
-.dialog > .dialog-pane {
+.dialog-pane {
     -fx-background-color: -fx-background;
     -fx-padding: 0;
 }
 
-.dialog > .dialog-pane > .expandable-content {
+.dialog-pane > .expandable-content {
     -fx-padding: 0.666em; /* 8px */
 }
 
-.dialog > .dialog-pane > .button-bar > .container {
+.dialog-pane > .button-bar > .container {
     -fx-padding: 0.833em; /* 10px */
 }
 
-.dialog > .dialog-pane > .content.label {
+.dialog-pane > .content.label {
     -fx-alignment: top-left;
     -fx-padding: 1.333em 0.833em 0 0.833em; /* 16px 10px 0px 10px */
 }
 
-.dialog > .dialog-pane > .content {
+.dialog-pane > .content {
     -fx-padding: 0.833em; /* 10 */
 }
 
-.dialog:no-header > .dialog-pane .graphic-container {
+.dialog-pane:no-header .graphic-container {
     -fx-padding: 0.833em 0 0 0.833em; /* 10px 0px 0px 10px */
 }
 
-.dialog:header > .dialog-pane .header-panel {
+.dialog-pane:header .header-panel {
     /*-fx-padding: 0.833em 1.166em 0.833em 1.166em; *//* 10px 14px 10px 14px */
     -fx-padding: 0.833em; /* 10px */
     -fx-background-color: -fx-box-border, linear-gradient(-fx-background, derive(-fx-background, 30%));
     -fx-background-insets: 0, 0 0 1 0;
 }
 
-.dialog:header > .dialog-pane .header-panel .label {
+.dialog-pane:header .header-panel .label {
     -fx-font-size: 1.167em; /* 14px */
     -fx-wrap-text: true;
 }
 
-.dialog:header > .dialog-pane .header-panel .graphic-container {
+.dialog-pane:header .header-panel .graphic-container {
     /* This prevents the text in the header running directly into the graphic */
     -fx-padding: 0 0 0 0.833em; /* 0px 0px 0px 10px */
 }
 
-.dialog > .dialog-pane > .button-bar > .container > .details-button {
+.dialog-pane > .button-bar > .container > .details-button {
     -fx-alignment: baseline-left;
     -fx-focus-traversable: false;
     -fx-padding: 0.416em; /* 5px */
     -fx-font-size: 0.833em; /* 10px */
 }
 
-.dialog > .dialog-pane > .button-bar > .container > .details-button.more {
+.dialog-pane > .button-bar > .container > .details-button.more {
     -fx-graphic: url("dialog-more-details.png");
 }
 
-.dialog > .dialog-pane > .button-bar > .container > .details-button.less {
+.dialog-pane > .button-bar > .container > .details-button.less {
     -fx-graphic: url("dialog-fewer-details.png");
 }
 
-.dialog > .dialog-pane > .button-bar > .container > .details-button:hover {
+.dialog-pane > .button-bar > .container > .details-button:hover {
     -fx-underline: true;
 }
 

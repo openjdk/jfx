@@ -203,9 +203,11 @@ public:
     virtual std::list<TString> LoadFromFile(TString FileName) = 0;
     virtual void SaveToFile(TString FileName, std::list<TString> Contents) = 0;
 
+#ifdef DEBUG
     virtual Platform::DebugState GetDebugState() = 0;
     virtual int GetProcessID() = 0;
     virtual bool IsNativeDebuggerPresent() = 0;
+#endif //DEBUG
 };
 
 

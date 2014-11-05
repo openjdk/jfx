@@ -76,8 +76,10 @@ public:
     virtual bool IsMainThread();
     virtual size_t GetMemorySize();
 
-    virtual int GetProcessID();
+#ifdef DEBUG
     virtual bool IsNativeDebuggerPresent();
+    virtual int GetProcessID();
+#endif //DEBUG
 };
 #pragma warning( pop ) // C4250
 

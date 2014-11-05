@@ -62,7 +62,9 @@ public class ControlAcceleratorSupport {
     }
 
     public static void addAcceleratorsIntoScene(ObservableList<MenuItem> items, Node anchor) {
-        if (items == null || items.isEmpty()) {
+        // we allow an empty items list as we install listeners later on - if
+        // we return on empty, the listener is never installed (leading to RT-39249)
+        if (items == null/* || items.isEmpty()*/) {
             return;
         }
 

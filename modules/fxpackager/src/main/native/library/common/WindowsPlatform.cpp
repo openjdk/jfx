@@ -292,21 +292,6 @@ Procedure WindowsPlatform::GetProcAddress(Module AModule, std::string MethodName
     return ::GetProcAddress((HMODULE)AModule, MethodName.c_str());
 }
 
-bool WindowsPlatform::IsNativeDebuggerPresent() {
-    bool result = false;
-#ifdef DEBUG
-    if (IsDebuggerPresent() == TRUE) {
-        result = true;
-    }
-#endif //DEBUG
-    return result;
-}
-
-int WindowsPlatform::GetProcessID() {
-    int pid = GetProcessId(GetCurrentProcess());
-    return pid;
-}
-
 bool WindowsPlatform::IsMainThread() {
     bool result = (FMainThread == ::GetCurrentThreadId());
     return result;
@@ -323,36 +308,24 @@ size_t WindowsPlatform::GetMemorySize() {
     return 0;
 }
 
-//--------------------------------------------------------------------------------------------------
-
-//TODO This needs a rewrite.
-TString convertKeyToWinReg(TString key) {
-    TCHAR* lkey = (TCHAR*)key.data();
-    TCHAR* windowsName = (TCHAR*) calloc((wcslen(lkey) + 1)*2, sizeof (TCHAR)); //All caps could double size
-    *windowsName = '\0';
-    TCHAR *returnValue = windowsName;
-
-    TCHAR ch = *lkey;
-    int index = 0;
-    while (ch != 0) {
-        if (ch == '\\') {
-            *windowsName = '//';
-        } else if (ch == '/') {
-            *windowsName = '\\';
-        } else if ((ch >= 'A') && (ch <= 'Z')) {
-            *windowsName++ = '/';
-            *windowsName = ch;
-        } else {
-            *windowsName = ch;
-        }
-        lkey++;
-        ch = *lkey;
-        windowsName++;
+#ifdef DEBUG
+bool WindowsPlatform::IsNativeDebuggerPresent() {
+    bool result = false;
+    
+    if (IsDebuggerPresent() == TRUE) {
+        result = true;
     }
-    *windowsName = '\0';
-    TString result = returnValue;
+    
     return result;
 }
+
+int WindowsPlatform::GetProcessID() {
+    int pid = GetProcessId(GetCurrentProcess());
+    return pid;
+}
+#endif //DEBUG
+
+//--------------------------------------------------------------------------------------------------
 
 WindowsJavaUserPreferences::WindowsJavaUserPreferences(void) : JavaUserPreferences() {
 }

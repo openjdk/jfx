@@ -264,12 +264,7 @@ public class Dialog<R> implements EventTarget {
      */
     public final void show() {
         Event.fireEvent(this, new DialogEvent(this, DialogEvent.DIALOG_SHOWING));
-        dialog.setDialogPane(getDialogPane());
         dialog.sizeToScene();
-        Node root = dialog.getRoot();
-        root.pseudoClassStateChanged(HEADER_PSEUDO_CLASS,      getDialogPane().hasHeader());
-        root.pseudoClassStateChanged(NO_HEADER_PSEUDO_CLASS,   !getDialogPane().hasHeader());
-        
         dialog.show();
         
         Event.fireEvent(this, new DialogEvent(this, DialogEvent.DIALOG_SHOWN));
@@ -284,13 +279,7 @@ public class Dialog<R> implements EventTarget {
      */
     public final Optional<R> showAndWait() {
         Event.fireEvent(this, new DialogEvent(this, DialogEvent.DIALOG_SHOWING));
-        
-        final DialogPane dialogPane = getDialogPane();
-        dialog.setDialogPane(dialogPane);
         dialog.sizeToScene();
-        Node root = dialog.getRoot();
-        root.pseudoClassStateChanged(HEADER_PSEUDO_CLASS,      getDialogPane().hasHeader());
-        root.pseudoClassStateChanged(NO_HEADER_PSEUDO_CLASS,   !getDialogPane().hasHeader());
 
         // this is slightly odd - we fire the SHOWN event before the show()
         // call, so that users get the event before the dialog blocks
@@ -474,11 +463,7 @@ public class Dialog<R> implements EventTarget {
         };
 
         final InvalidationListener headerListener = o -> {
-            final Node root = Dialog.this.dialog.getRoot();
-            if (root == null) return;
-            final boolean hasHeader = getDialogPane().hasHeader();
-            root.pseudoClassStateChanged(HEADER_PSEUDO_CLASS,      hasHeader);
-            root.pseudoClassStateChanged(NO_HEADER_PSEUDO_CLASS,   !hasHeader);
+            updatePseudoClassState();
         };
 
         WeakReference<DialogPane> dialogPaneRef = new WeakReference<>(null);
@@ -505,6 +490,8 @@ public class Dialog<R> implements EventTarget {
                 newDialogPane.expandedProperty().addListener(expandedListener);
                 newDialogPane.headerProperty().addListener(headerListener);
                 newDialogPane.headerTextProperty().addListener(headerListener);
+
+                updatePseudoClassState();
                 newDialogPane.requestLayout();
             }
             
@@ -1009,4 +996,13 @@ public class Dialog<R> implements EventTarget {
             PseudoClass.getPseudoClass("header"); //$NON-NLS-1$
     private static final PseudoClass NO_HEADER_PSEUDO_CLASS = 
             PseudoClass.getPseudoClass("no-header"); //$NON-NLS-1$
+
+    private void updatePseudoClassState() {
+        DialogPane dialogPane = getDialogPane();
+        if (dialogPane != null) {
+            final boolean hasHeader = getDialogPane().hasHeader();
+            dialogPane.pseudoClassStateChanged(HEADER_PSEUDO_CLASS,     hasHeader);
+            dialogPane.pseudoClassStateChanged(NO_HEADER_PSEUDO_CLASS, !hasHeader);
+        }
+    }
 }
