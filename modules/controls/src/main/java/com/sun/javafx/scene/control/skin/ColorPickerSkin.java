@@ -463,7 +463,6 @@ public class ColorPickerSkin extends ComboBoxPopupControl<Color> {
         super.show();
         final ColorPicker colorPicker = (ColorPicker)getSkinnable();
         popupContent.updateSelection(colorPicker.getValue());
-        popupContent.clearFocus();
     }
     
     @Override protected void handleControlPropertyChanged(String p) {
