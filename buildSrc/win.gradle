@@ -171,7 +171,7 @@ WIN.glass.lib = "glass"
 
 WIN.decora = [:]
 WIN.decora.compiler = compiler
-WIN.decora.ccFlags = ["/arch:SSE", "/fp:fast", ccFlags].flatten()
+WIN.decora.ccFlags = [IS_64 ? [] : ["/arch:SSE"], "/fp:fast", ccFlags].flatten()
 WIN.decora.linker = linker
 WIN.decora.linkFlags = [linkFlags].flatten()
 WIN.decora.lib = "decora_sse"
@@ -221,7 +221,6 @@ WIN.launcher = [:]
 WIN.launcher.compiler = compiler
 WIN.launcher.ccFlags = ["/nologo", "/W3", "/EHsc", "/D_WINDOWS", "/DUNICODE", "/D_UNICODE", "/DWIN32",
         "/D_LITTLE_ENDIAN", "/DWIN32_LEAN_AND_MEAN", "/I$JDK_HOME/include", "/I$JDK_HOME/include/win32",
-        "/arch:SSE", "/fp:fast",
         IS_DEBUG_NATIVE ? ["/MDd", "/Od", "/Zi", "/FS", "/DDEBUG"] : ["/O2", "/MD", "/DNDEBUG"]].flatten();
 WIN.launcher.linker = linker
 WIN.launcher.linkFlags = ["/link", "/nologo", "/WX", "/SUBSYSTEM:WINDOWS", "user32.lib", "shell32.lib", "advapi32.lib"]
@@ -233,7 +232,6 @@ WIN.launcherlibrary.ccFlags = ["/nologo", "/W3",
         // "/WX",
         "/EHsc", "/c", "/D_WINDOWS", "/DUNICODE", "/D_UNICODE", "/DWIN32",
         "/D_LITTLE_ENDIAN", "/DWIN32_LEAN_AND_MEAN", "/I$JDK_HOME/include", "/I$JDK_HOME/include/win32",
-        "/arch:SSE", "/fp:fast",
         IS_DEBUG_NATIVE ? ["/MDd", "/Od", "/Zi", "/FS", "/DDEBUG"] : ["/O2", "/MD", "/DNDEBUG"]].flatten();
 WIN.launcherlibrary.linker = linker
 WIN.launcherlibrary.linkFlags = ["/nologo", "/WX", "/DLL", "/SUBSYSTEM:WINDOWS", "user32.lib", "shell32.lib", "advapi32.lib", "ole32.lib"]
@@ -242,7 +240,7 @@ if (IS_DEBUG_NATIVE) WIN.launcherlibrary.linkFlags.add("/debug");
 WIN.iconLauncher = [:]
 WIN.iconLauncher.compiler = compiler
 WIN.iconLauncher.ccFlags = ["/nologo", "/W3", "/EHsc", "/D_WINDOWS", "/DUNICODE", "/D_UNICODE",
-        "/arch:SSE", "/fp:fast", "/O2"]
+        "/O2"]
 WIN.iconLauncher.linker = linker
 WIN.iconLauncher.linkFlags = ["/link", "/nologo", "/SUBSYSTEM:CONSOLE"];
 
@@ -253,7 +251,7 @@ WIN.fxpackager.compiler = compiler
 WIN.fxpackager.ccFlags = ["/nologo", "/W3", "/EHsc", "/MT", "/GS",
                     "/DWIN32", "/D_LITTLE_ENDIAN", "/DWIN32_LEAN_AND_MEAN",
                     "/D_WIN32_WINDOWS=0X0500", "/D_WIN32_WINNT=0X0500",
-                    "/I$JDK_HOME/include", "/I$JDK_HOME/include/win32", "/arch:SSE", "/fp:fast",
+                    "/I$JDK_HOME/include", "/I$JDK_HOME/include/win32",
                     "/O2", "-c"]
 WIN.fxpackager.linker = linker
 
