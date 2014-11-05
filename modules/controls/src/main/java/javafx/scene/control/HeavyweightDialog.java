@@ -269,19 +269,26 @@ class HeavyweightDialog extends FXDialog {
         }
 
         final Window owner = getOwner();
-        final Scene scene = owner.getScene();
+        final Scene ownerScene = owner.getScene();
 
         // scene.getY() seems to represent the y-offset from the top of the titlebar to the
         // start point of the scene, so it is the titlebar height
-        final double titleBarHeight = scene.getY();
+        final double titleBarHeight = ownerScene.getY();
 
         // because Stage does not seem to centre itself over its owner, we
         // do it here.
+
+        // Firstly we need to force CSS and layout to happen, as the dialogPane
+        // may not have been shown yet (so it has no dimensions)
+        dialogPane.applyCss();
+        dialogPane.layout();
+
+        // then we can get the dimensions and position the dialog appropriately.
         final double dialogWidth = dialogPane.prefWidth(-1);
         final double dialogHeight = dialogPane.prefHeight(-1);
 
-        x = owner.getX() + (scene.getWidth() / 2.0) - (dialogWidth / 2.0);
-        y = owner.getY() +  titleBarHeight + (scene.getHeight() / 2.0) - (dialogHeight / 2.0);
+        x = owner.getX() + (ownerScene.getWidth() / 2.0) - (dialogWidth / 2.0);
+        y = owner.getY() +  titleBarHeight / 2.0 + (ownerScene.getHeight() / 2.0) - (dialogHeight / 2.0);
 
         prefX = x;
         prefY = y;
