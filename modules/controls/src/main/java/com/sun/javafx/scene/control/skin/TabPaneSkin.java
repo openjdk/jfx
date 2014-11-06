@@ -1400,10 +1400,6 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
 
         private void removeListeners(Tab tab) {
             listener.dispose();
-            ContextMenu menu = tab.getContextMenu();
-            if (menu != null) {
-                menu.getItems().clear();
-            }
             inner.getChildren().clear();
             getChildren().clear();
         }
