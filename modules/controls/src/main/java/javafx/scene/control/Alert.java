@@ -81,7 +81,7 @@ import javafx.scene.image.ImageView;
  * 
  * <p><strong>Option 1: The 'traditional' approach</strong>
  * <pre>{@code Optional<ButtonType> result = alert.showAndWait();
- * if (result.get() == ButtonType.OK) {
+ * if (result.isPresent() && result.get() == ButtonType.OK) {
  *     formatSystem();
  * }}</pre>
  * 
