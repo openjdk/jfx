@@ -523,7 +523,7 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     "fileAssociation.extension",
                     (Class<List<String>>) (Object) List.class,
                     params -> null, // null means not matched to an extension
-                    (s, p) -> Arrays.asList(s.split("(,\\s)+"))
+                    (s, p) -> Arrays.asList(s.split("(,|\\s)+"))
             );
 
     @SuppressWarnings("unchecked")
@@ -534,7 +534,7 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     "fileAssociation.contentType",
                     (Class<List<String>>) (Object) List.class,
                     params -> null, // null means not matched to a content/mime type
-                    (s, p) -> Arrays.asList(s.split("(,\\s)+"))
+                    (s, p) -> Arrays.asList(s.split("(,|\\s)+"))
             );
 
     public static final StandardBundlerParam<String> FA_DESCRIPTION =

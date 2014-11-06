@@ -43,6 +43,7 @@ import java.util.TreeMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import static com.oracle.tools.packager.StandardBundlerParam.*;
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeTrue;
 
@@ -240,12 +241,12 @@ public class BundlersTest {
         assertFalse(WinExeBundler.EXE_SYSTEM_WIDE.fetchFrom(params));
 
         params = new TreeMap<>();
-        params.put(StandardBundlerParam.SYSTEM_WIDE.getID(), "false");
+        params.put(SYSTEM_WIDE.getID(), "false");
         assertFalse(WinMsiBundler.MSI_SYSTEM_WIDE.fetchFrom(params));
         assertFalse(WinExeBundler.EXE_SYSTEM_WIDE.fetchFrom(params));
 
         params = new TreeMap<>();
-        params.put(StandardBundlerParam.SYSTEM_WIDE.getID(), "true");
+        params.put(SYSTEM_WIDE.getID(), "true");
         assertTrue(WinMsiBundler.MSI_SYSTEM_WIDE.fetchFrom(params));
         assertTrue(WinExeBundler.EXE_SYSTEM_WIDE.fetchFrom(params));
     }
@@ -254,15 +255,49 @@ public class BundlersTest {
     public void badMainJar() {
         try {
             Map<String, ? super Object> params = new TreeMap<>();
-            params.put(StandardBundlerParam.APP_RESOURCES.getID(), new RelativeFileSet(new File("."), Collections.emptySet()));
-            params.put(StandardBundlerParam.MAIN_JAR.getID(), "this_jar_must_not_exist.jar");
+            params.put(APP_RESOURCES.getID(), new RelativeFileSet(new File("."), Collections.emptySet()));
+            params.put(MAIN_JAR.getID(), "this_jar_must_not_exist.jar");
 
-            StandardBundlerParam.MAIN_JAR.fetchFrom(params);
+            MAIN_JAR.fetchFrom(params);
 
             fail("An exception should have been thrown");
         } catch (RuntimeException re) {
             assertTrue("RuntimeException wraps a ConfigException", re.getCause() instanceof ConfigException);
         }
+    }
+    
+    @Test
+    public void fileAssociationExtensions() {
+        Map<String, ? super Object> params = new TreeMap<>();
+
+        assertEquals(FA_EXTENSIONS.fetchFrom(params), null);
+
+        params.put(FA_EXTENSIONS.getID(), "foo");
+        assertEquals(Arrays.asList("foo"), FA_EXTENSIONS.fetchFrom(params));
+        
+        params.put(FA_EXTENSIONS.getID(), "foo bar");
+        assertEquals(Arrays.asList("foo", "bar"), FA_EXTENSIONS.fetchFrom(params));
+        
+        params.put(FA_EXTENSIONS.getID(), "foo,bar,baz");
+        assertEquals(Arrays.asList("foo", "bar", "baz"), FA_EXTENSIONS.fetchFrom(params));
+        
+    }
+
+    @Test
+    public void fileAssociationContentTypes() {
+        Map<String, ? super Object> params = new TreeMap<>();
+
+        assertEquals(null, FA_EXTENSIONS.fetchFrom(params));
+        
+        params.put(FA_EXTENSIONS.getID(), "application/foo");
+        assertEquals(Arrays.asList("application/foo"), FA_EXTENSIONS.fetchFrom(params));
+
+        params.put(FA_EXTENSIONS.getID(), "application/foo application/bar");
+        assertEquals(Arrays.asList("application/foo", "application/bar"), FA_EXTENSIONS.fetchFrom(params));
+        
+        params.put(FA_EXTENSIONS.getID(), "application/foo,application/bar,application/baz");
+        assertEquals(Arrays.asList("application/foo", "application/bar", "application/baz"), FA_EXTENSIONS.fetchFrom(params));
+        
     }
 
     public static void testValidValueForBaseParam(BundlerParamInfo baseParam, String baseParamValue,
