@@ -30,6 +30,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javafx.beans.InvalidationListener;
+import javafx.beans.property.ObjectProperty;
 import javafx.collections.ListChangeListener;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -72,6 +74,8 @@ public class ButtonBarSkin extends BehaviorSkinBase<ButtonBar, BehaviorBase<Butt
      **************************************************************************/
     
     private HBox layout;
+
+    private InvalidationListener buttonDataListener = o -> layoutButtons();
     
     
     
@@ -97,14 +101,37 @@ public class ButtonBarSkin extends BehaviorSkinBase<ButtonBar, BehaviorBase<Butt
         getChildren().add(layout);
         
         layoutButtons();
-        
-        control.getButtons().addListener((ListChangeListener<Node>) c -> layoutButtons());
+
+        updateButtonListeners(control.getButtons(), true);
+        control.getButtons().addListener((ListChangeListener<Node>) c -> {
+            updateButtonListeners(c.getRemoved(), false);
+            updateButtonListeners(c.getAddedSubList(), true);
+            layoutButtons();
+        });
         
         registerChangeListener(control.buttonOrderProperty(), "BUTTON_ORDER"); //$NON-NLS-1$
         registerChangeListener(control.buttonMinWidthProperty(), "BUTTON_MIN_WIDTH"); //$NON-NLS-1$
     }
-    
-    
+
+    private void updateButtonListeners(List<? extends Node> list, boolean buttonsAdded) {
+        if (list != null) {
+            for (Node n : list) {
+                final Map<Object, Object> properties = n.getProperties();
+                if (properties.containsKey(ButtonBarSkin.BUTTON_DATA_PROPERTY)) {
+                    ObjectProperty<ButtonData> property = (ObjectProperty<ButtonData>) properties.get(ButtonBarSkin.BUTTON_DATA_PROPERTY);
+                    if (property != null) {
+                        if (buttonsAdded) {
+                            property.addListener(buttonDataListener);
+                        } else {
+                            property.removeListener(buttonDataListener);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+
     /**************************************************************************
      * 
      * Overriding public API
@@ -234,7 +261,7 @@ public class ButtonBarSkin extends BehaviorSkinBase<ButtonBar, BehaviorBase<Butt
     }
     
     private String getButtonType(Node btn) {
-        ButtonData buttonType =  (ButtonData) btn.getProperties().get(BUTTON_DATA_PROPERTY);
+        ButtonData buttonType = ButtonBar.getButtonData(btn);
         
         if (buttonType == null) {
             // just assume it is ButtonType.OTHER

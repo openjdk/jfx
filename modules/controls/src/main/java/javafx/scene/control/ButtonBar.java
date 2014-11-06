@@ -27,7 +27,9 @@ package javafx.scene.control;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleDoubleProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.collections.FXCollections;
@@ -43,6 +45,8 @@ import com.sun.javafx.scene.traversal.ParentTraversalEngine;
 import com.sun.javafx.scene.traversal.TraversalContext;
 import javafx.beans.value.WritableValue;
 import javafx.css.StyleableProperty;
+
+import java.util.Map;
 
 /**
  * A ButtonBar is essentially a {@link HBox}, with the additional functionality
@@ -360,7 +364,14 @@ public class ButtonBar extends Control {
      * @param buttonData The ButtonData to designate the button as.
      */
     public static void setButtonData(Node button, ButtonData buttonData) {
-        button.getProperties().put(ButtonBarSkin.BUTTON_DATA_PROPERTY, buttonData);
+        final Map<Object,Object> properties = button.getProperties();
+        final ObjectProperty<ButtonData> property =
+                (ObjectProperty<ButtonData>) properties.getOrDefault(
+                        ButtonBarSkin.BUTTON_DATA_PROPERTY,
+                        new SimpleObjectProperty<>(button, "buttonData", buttonData));
+
+        property.set(buttonData);
+        properties.putIfAbsent(ButtonBarSkin.BUTTON_DATA_PROPERTY, property);
     }
     
     /**
@@ -370,7 +381,12 @@ public class ButtonBar extends Control {
      * @param button The button to return the previously set ButtonData for.
      */
     public static ButtonData getButtonData(Node button) {
-        return (ButtonData) button.getProperties().get(ButtonBarSkin.BUTTON_DATA_PROPERTY);
+        final Map<Object,Object> properties = button.getProperties();
+        if (properties.containsKey(ButtonBarSkin.BUTTON_DATA_PROPERTY)) {
+            ObjectProperty<ButtonData> property = (ObjectProperty<ButtonData>) properties.get(ButtonBarSkin.BUTTON_DATA_PROPERTY);
+            return property == null ? null : property.get();
+        }
+        return null;
     }
 
     /**
