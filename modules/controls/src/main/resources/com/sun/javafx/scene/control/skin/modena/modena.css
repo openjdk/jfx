@@ -2512,6 +2512,11 @@ is being used to size a border should also be in pixels.
     -fx-background-color: -fx-outer-border, -fx-background;
     -fx-background-insets: 0,1;
 }
+.check-box-table-cell > .check-box:focused > .box {
+    -fx-background-color: -fx-focus-color, -fx-outer-border, -fx-background;
+    -fx-background-insets: -0.2, 1, 1.6;
+    -fx-background-radius: 3, 2, 1;
+}
 .check-box-table-cell > .check-box:selected > .box > .mark {
     -fx-background-color: -fx-text-background-color;
     -fx-background-insets: 0;
