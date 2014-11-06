@@ -112,11 +112,11 @@ import javafx.css.StyleableProperty;
  * <pre><code>
  * SplitPane sp = new SplitPane();
  * final StackPane sp1 = new StackPane();
- * sp1.getChildren().add(new Button("Button One"));
+ * sp1.getItems().add(new Button("Button One"));
  * final StackPane sp2 = new StackPane();
- * sp2.getChildren().add(new Button("Button Two"));
+ * sp2.getItems().add(new Button("Button Two"));
  * final StackPane sp3 = new StackPane();
- * sp3.getChildren().add(new Button("Button Three"));
+ * sp3.getItems().add(new Button("Button Three"));
  * sp.getItems().addAll(sp1, sp2, sp3);
  * sp.setDividerPositions(0.3f, 0.6f, 0.9f);
  * </code></pre>
@@ -250,9 +250,10 @@ public class SplitPane extends Control {
 
     /**
      * <p>This property controls how the SplitPane should be displayed to the
-     * user: if set to {@code true}, the SplitPane will be 'horizontal', resulting in
-     * the two nodes being placed next to each other, whilst being
-     * set to {@code false} will result in the nodes being stacked vertically.</p>
+     * user. {@link javafx.geometry.Orientation#HORIZONTAL} will result in
+     * two (or more) nodes being placed next to each other horizontally, whilst
+     * {@link javafx.geometry.Orientation#VERTICAL} will result in the nodes being
+     * stacked vertically.</p>
      *
      */
     public final void setOrientation(Orientation value) {
