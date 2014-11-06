@@ -40,15 +40,6 @@ WIN.library = { name -> return "${name}.dll" as String }
 
 WIN.libDest = "bin"
 
-def ccFlags = ["/nologo", "/W3", "/EHsc", "/c",
-        "/D_STATIC_CPPLIB", "/D_DISABLE_DEPRECATE_STATIC_CPPLIB", "/DINLINE=__inline",
-        "/DUNICODE", "/D_UNICODE", "/DWIN32", "/DIAL", "/D_LITTLE_ENDIAN", "/DWIN32_LEAN_AND_MEAN",
-        "/I$JDK_HOME/include", "/I$JDK_HOME/include/win32",
-        IS_DEBUG_NATIVE ? ["/MDd", "/Od", "/Zi", "/FS", "/DDEBUG"] : ["/O2", "/MD", "/DNDEBUG"]].flatten();
-
-def linkFlags = ["/nologo", "/dll", "/manifest", "/opt:REF", "/incremental:no"];
-if (IS_DEBUG_NATIVE) linkFlags.add("/debug");
-
 setupTools("windows_tools",
     { propFile ->
         // Create the properties file
@@ -95,6 +86,27 @@ setupTools("windows_tools",
                 System.getenv().get("PATH"))
     }
 )
+
+// Define set of flags shared for all targets that support debug compilation
+def ccDebugFlags =
+    IS_DEBUG_NATIVE ? ["/MDd", "/Od", "/Zi", "/DDEBUG"] : ["/O2", "/MD", "/DNDEBUG"]
+
+def winVsVer = Integer.parseInt(WINDOWS_VS_VER)
+if (winVsVer >= 120) {
+    // Serialize access to PDB file for debug builds if on VS2013 or later
+    if (IS_DEBUG_NATIVE) ccDebugFlags += "/FS"
+}
+
+
+// Common set of flags for all modules except fxpackager
+def ccFlags = ["/nologo", "/W3", "/EHsc", "/c",
+        "/D_STATIC_CPPLIB", "/D_DISABLE_DEPRECATE_STATIC_CPPLIB", "/DINLINE=__inline",
+        "/DUNICODE", "/D_UNICODE", "/DWIN32", "/DIAL", "/D_LITTLE_ENDIAN", "/DWIN32_LEAN_AND_MEAN",
+        "/I$JDK_HOME/include", "/I$JDK_HOME/include/win32",
+        ccDebugFlags].flatten();
+
+def linkFlags = ["/nologo", "/dll", "/manifest", "/opt:REF", "/incremental:no"];
+if (IS_DEBUG_NATIVE) linkFlags.add("/debug");
 
 // Remove C++ static linking if not on VS2010
 if (WINDOWS_VS_VER != "100") {
@@ -221,7 +233,7 @@ WIN.launcher = [:]
 WIN.launcher.compiler = compiler
 WIN.launcher.ccFlags = ["/nologo", "/W3", "/EHsc", "/D_WINDOWS", "/DUNICODE", "/D_UNICODE", "/DWIN32",
         "/D_LITTLE_ENDIAN", "/DWIN32_LEAN_AND_MEAN", "/I$JDK_HOME/include", "/I$JDK_HOME/include/win32",
-        IS_DEBUG_NATIVE ? ["/MDd", "/Od", "/Zi", "/FS", "/DDEBUG"] : ["/O2", "/MD", "/DNDEBUG"]].flatten();
+        ccDebugFlags].flatten();
 WIN.launcher.linker = linker
 WIN.launcher.linkFlags = ["/link", "/nologo", "/WX", "/SUBSYSTEM:WINDOWS", "user32.lib", "shell32.lib", "advapi32.lib"]
 if (IS_DEBUG_NATIVE) WIN.launcher.linkFlags.add("/debug");
@@ -232,7 +244,7 @@ WIN.launcherlibrary.ccFlags = ["/nologo", "/W3",
         // "/WX",
         "/EHsc", "/c", "/D_WINDOWS", "/DUNICODE", "/D_UNICODE", "/DWIN32",
         "/D_LITTLE_ENDIAN", "/DWIN32_LEAN_AND_MEAN", "/I$JDK_HOME/include", "/I$JDK_HOME/include/win32",
-        IS_DEBUG_NATIVE ? ["/MDd", "/Od", "/Zi", "/FS", "/DDEBUG"] : ["/O2", "/MD", "/DNDEBUG"]].flatten();
+        ccDebugFlags].flatten();
 WIN.launcherlibrary.linker = linker
 WIN.launcherlibrary.linkFlags = ["/nologo", "/WX", "/DLL", "/SUBSYSTEM:WINDOWS", "user32.lib", "shell32.lib", "advapi32.lib", "ole32.lib"]
 if (IS_DEBUG_NATIVE) WIN.launcherlibrary.linkFlags.add("/debug");
