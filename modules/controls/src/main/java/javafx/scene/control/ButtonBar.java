@@ -41,6 +41,8 @@ import com.sun.javafx.scene.traversal.Algorithm;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.scene.traversal.ParentTraversalEngine;
 import com.sun.javafx.scene.traversal.TraversalContext;
+import javafx.beans.value.WritableValue;
+import javafx.css.StyleableProperty;
 
 /**
  * A ButtonBar is essentially a {@link HBox}, with the additional functionality
@@ -442,7 +444,11 @@ public class ButtonBar extends Control {
 
         // we allow for the buttons inside the ButtonBar to be focus traversable,
         // but the ButtonBar itself is not.
-        setFocusTraversable(false);
+        // focusTraversable is styleable through css. Calling setFocusTraversable
+        // makes it look to css like the user set the value and css will not 
+        // override. Initializing focusTraversable by calling set on the 
+        // CssMetaData ensures that css will be able to override the value.
+        ((StyleableProperty<Boolean>)(WritableValue<Boolean>)focusTraversableProperty()).applyStyle(null, Boolean.FALSE);
 
         final boolean buttonOrderEmpty = buttonOrder == null || buttonOrder.isEmpty();
         
@@ -559,6 +565,17 @@ public class ButtonBar extends Control {
      * 
      **************************************************************************/
 
+    /**
+      * Most Controls return true for focusTraversable, so Control overrides
+      * this method to return true, but ButtonBar returns false for
+      * focusTraversable's initial value; hence the override of the override. 
+      * This method is called from CSS code to get the correct initial value.
+      * @treatAsPrivate implementation detail
+      */
+    @Deprecated @Override
+    protected /*do not make final*/ Boolean impl_cssGetFocusTraversableInitialValue() {
+        return Boolean.FALSE;
+    }
 
 
 
