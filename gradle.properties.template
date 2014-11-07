@@ -264,11 +264,6 @@
 #PROMOTED_BUILD_NUMBER = 00
 #PRODUCT_NAME = OpenJFX
 
-# Variables used when building on the Mac. These should need to be rarely, if ever set. The
-# default value for MACOSX_SDK_PATH is based on the MACOSX_MIN_VERSION, so if you wanted to
-# build with 10.8 instead of 10.7 you could just specify MACOSX_MIN_VERSION and the other
-# settings should not need to be specified.
+# Define the default SDK path on Mac. This should need to be rarely, if ever set.
 
-# MACOSX_MIN_VERSION = 10.7
 # MACOSX_SDK_PATH = /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.7.sdk
-# MACOSX_JDK_FRAMEWORK = /System/Library/Frameworks/JavaVM.framework

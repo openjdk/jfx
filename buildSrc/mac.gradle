@@ -41,11 +41,64 @@ MAC.library = { name -> return "lib${name}.dylib" as String }
 
 MAC.libDest = "lib"
 
-// Define settings for Mac compilation. This is much easier than Windows because we know what version we're
-// compiling against and Mac always puts it in the same place. In extreme cases you can provide your own
-// properties in your home dir to override these settings or pass them on the command line via -P
+/*
+ * Define settings for Mac compilation. If we don't find the preferred SDK
+ * in the default location then we will use "xcodebuild" to locate a suitable SDK.
+ * In extreme cases you can provide your own properties in your home dir to
+ * override these settings or pass them on the command line.
+ */
+def prefSdkVersion = "10.7"
+def defaultSdkPath = "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX${prefSdkVersion}.sdk";
+
+// Set the minimum API version that we require (developers do not need to override this)
+// Note that this is not necessarily the same as the preferred SDK version
 defineProperty("MACOSX_MIN_VERSION", "10.7");
-defineProperty("MACOSX_SDK_PATH", "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX${MACOSX_MIN_VERSION}.sdk");
+
+// Create $buildDir/mac_tools.properties file and load props from it
+setupTools("mac_tools",
+    { propFile ->
+        propFile << ""
+        if (!file(defaultSdkPath).isDirectory()) {
+            // Get list of all macosx sdks
+            ByteArrayOutputStream results = new ByteArrayOutputStream();
+            exec {
+                commandLine("xcodebuild", "-version", "-showsdks");
+                setStandardOutput(results);
+            }
+
+            BufferedReader reader = new BufferedReader(new StringReader(results.toString().trim()));
+            // If our preferred SDK is in the list use it, else use the default
+            String sdk = "macosx"
+            String prefSdk = sdk + prefSdkVersion
+            while (true) {
+                def line = reader.readLine();
+                if (line == null) break;
+                if (line.contains("-sdk ${prefSdk}")) {
+                    sdk = prefSdk
+                    break;
+                }
+            }
+
+            results = new ByteArrayOutputStream();
+            exec {
+                commandLine("xcodebuild", "-version", "-sdk", sdk, "Path");
+                setStandardOutput(results);
+            }
+            String sdkPath = results.toString().trim();
+            propFile << "MACOSX_SDK_PATH=" << sdkPath << "\n";
+        }
+    },
+    { properties ->
+        defineProperty("MACOSX_SDK_PATH", properties, defaultSdkPath)
+    }
+)
+
+println "MACOSX_MIN_VERSION = $MACOSX_MIN_VERSION"
+println "MACOSX_SDK_PATH = $MACOSX_SDK_PATH"
+
+if (!file(MACOSX_SDK_PATH).isDirectory()) {
+    throw new GradleException("FAIL: Cannot find $MACOSX_SDK_PATH")
+}
 
 def commonParams = [
         "-mmacosx-version-min=$MACOSX_MIN_VERSION",
