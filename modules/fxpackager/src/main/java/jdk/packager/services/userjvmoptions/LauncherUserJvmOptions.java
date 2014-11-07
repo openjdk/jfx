@@ -140,6 +140,12 @@ final public class LauncherUserJvmOptions implements UserJvmOptionsService {
             List<String> values = new LinkedList<>();
 
             for (Map.Entry<String, String> option : options.entrySet()) {
+                if (option.getKey() == null) {
+                    throw new IllegalArgumentException("For Launcher Backed UserJVMOptions keys in the UserJVMOptions map cannot be null.");
+                }
+                if (option.getValue() == null) {
+                    throw new IllegalArgumentException("For Launcher Backed UserJVMOptions values in the UserJVMOptions map cannot be null.  Keys are removed by absence, not by setting keys to null.");
+                }
                 keys.add(option.getKey());
                 values.add(option.getValue());
             }
