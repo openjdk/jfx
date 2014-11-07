@@ -111,6 +111,12 @@ public final class URLConverter extends StyleConverterImpl<ParsedValue[], String
                 return rtJarUrl;
             }
 
+            final String path = resourceUri.getPath();
+            if (path.startsWith("/")) {
+                final ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
+                return contextClassLoader.getResource(path.substring(1));
+            }
+
             final String stylesheetPath = (stylesheetUrl != null) ?  stylesheetUrl.trim() : null;
 
             if (stylesheetPath != null && stylesheetPath.isEmpty() == false) {
@@ -126,7 +132,6 @@ public final class URLConverter extends StyleConverterImpl<ParsedValue[], String
 
                     // stylesheet URI is something like jar:file:
                     URL url = stylesheetUri.toURL();
-                    final String path = resourceUri.getPath();
                     return new URL(url, resourceUri.getPath());
                 }
             }
@@ -134,17 +139,7 @@ public final class URLConverter extends StyleConverterImpl<ParsedValue[], String
 
             // URL doesn't have scheme or stylesheetUrl is null
             final ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
-            final String path = resourceUri.getPath();
-
-            URL resolved = null;
-
-            if (path.startsWith("/")) {
-                resolved = contextClassLoader.getResource(path.substring(1));
-            } else {
-                resolved = contextClassLoader.getResource(path);
-            }
-
-            return resolved;
+            return contextClassLoader.getResource(path);
 
 
         } catch (final MalformedURLException|URISyntaxException e) {

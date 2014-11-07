@@ -860,11 +860,15 @@
     <p class="example">
         url(http://example.com/images/Duke.png)<br>
         url(/com/example/javafx/app/images/Duke.png)<br>
+    </p>
     <p>If the <span class="grammar">&lt;address&gt;</span> does not have a [scheme:] component, the <span class="grammar">&lt;address&gt;</span>
-        is considered to be the [path] component only. Any leading '/' character of the [path] is ignored and the
-        [path] is treated as a relative path. If the style appears in a stylesheet, the path is relative to the base
-        URI of the stylesheet. If the style appears in an inline style, the path is relative to the root of the
-        classpath.
+        is considered to be the [path] component only.
+        A leading '/' character indicates that the [path] is relative to the
+        root of the classpath. If the the style appears in a stylesheet and
+        has no leading '/' character, the path is relative to the base URI of
+        the stylesheet. If the style appears in an inline style, the path is
+        relative to the root of the classpath (regardless of whether or not
+        there is a leading '/').
     </p>
     <table class="csspropertytable" cellspacing="3" cellpadding="4">
             <caption>Examples of Resolving URLs in Stylesheets</caption>
