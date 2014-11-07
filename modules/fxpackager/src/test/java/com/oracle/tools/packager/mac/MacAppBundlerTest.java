@@ -42,10 +42,12 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
@@ -262,6 +264,9 @@ public class MacAppBundlerTest {
     public void testFileAssociation()
         throws IOException, ConfigException, UnsupportedPlatformException
     {
+        // only run the bundle with full tests
+        Assume.assumeTrue(Boolean.parseBoolean(System.getProperty("FULL_TEST")));
+
         testFileAssociation("FASmoke 1", "Bogus File", "bogus", "application/x-vnd.test-bogus",
                             new File(appResourcesDir, "test.icns"));        
     }
@@ -275,10 +280,59 @@ public class MacAppBundlerTest {
                             new File(appResourcesDir, "test.icns"));
     }
 
+    @Test
+    public void testFileAssociationWithMultipleExtension()
+            throws IOException, ConfigException, UnsupportedPlatformException
+    {
+        // only run the bundle with full tests
+        Assume.assumeTrue(Boolean.parseBoolean(System.getProperty("FULL_TEST")));
+
+        testFileAssociation("FASmoke ME", "Bogus File", "bogus fake", "application/x-vnd.test-bogus",
+                new File(appResourcesDir, "test.icns"));
+    }
+
+    @Test
+    public void testMultipleFileAssociation()
+            throws IOException, ConfigException, UnsupportedPlatformException
+    {
+        // only run the bundle with full tests
+        Assume.assumeTrue(Boolean.parseBoolean(System.getProperty("FULL_TEST")));
+
+        testFileAssociationMultiples("FASmoke MA",
+                new String[]{"Bogus File", "Fake file"},
+                new String[]{"bogus", "fake"},
+                new String[]{"application/x-vnd.test-bogus", "application/x-vnd.test-fake"},
+                new File[]{new File(appResourcesDir, "test.icns"), new File(appResourcesDir, "test.icns")});
+    }
+
+    @Test
+    public void testMultipleFileAssociationWithMultipleExtension()
+            throws IOException, ConfigException, UnsupportedPlatformException
+    {
+        // association with no extension is still valid case (see RT-38625)
+        testFileAssociationMultiples("FASmoke MAME",
+                new String[]{"Bogus File", "Fake file"},
+                new String[]{"bogus boguser", "fake faker"},
+                new String[]{"application/x-vnd.test-bogus", "application/x-vnd.test-fake"},
+                new File[]{new File(appResourcesDir, "test.icns"), new File(appResourcesDir, "test.icns")});
+    }
+
     private void testFileAssociation(String appName, String description, String extensions,
                                      String contentType, File icon)
-        throws IOException, ConfigException, UnsupportedPlatformException
+            throws IOException, ConfigException, UnsupportedPlatformException
     {
+        testFileAssociationMultiples(appName, new String[] {description}, new String[] {extensions},
+                new String[] {contentType}, new File[] {icon});
+    }
+
+    private void testFileAssociationMultiples(String appName, String[] description, String[] extensions,
+                                              String[] contentType, File[] icon)
+            throws IOException, ConfigException, UnsupportedPlatformException
+    {
+        assertEquals("Sanity: description same length as extensions", description.length, extensions.length);
+        assertEquals("Sanity: extensions same length as contentType", extensions.length, contentType.length);
+        assertEquals("Sanity: contentType same length as icon", contentType.length, icon.length);
+
         AbstractBundler bundler = new MacAppBundler();
 
         assertNotNull(bundler.getName());
@@ -305,13 +359,19 @@ public class MacAppBundlerTest {
         bundleParams.put(VERBOSE.getID(), true);
         bundleParams.put(DEVELOPER_ID_APP_SIGNING_KEY.getID(), null); // force no signing
 
-        Map<String, Object> fileAssociation = new HashMap<>();
-        fileAssociation.put(FA_DESCRIPTION.getID(), description);
-        fileAssociation.put(FA_EXTENSIONS.getID(), extensions);
-        fileAssociation.put(FA_CONTENT_TYPE.getID(), contentType);
-        fileAssociation.put(FA_ICON.getID(), icon);
+        List<Map<String, Object>> associations = new ArrayList<>();
 
-        bundleParams.put(FILE_ASSOCIATIONS.getID(), Arrays.asList(fileAssociation));
+        for (int i = 0; i < description.length; i++) {
+            Map<String, Object> fileAssociation = new HashMap<>();
+            fileAssociation.put(FA_DESCRIPTION.getID(), description[i]);
+            fileAssociation.put(FA_EXTENSIONS.getID(), extensions[i]);
+            fileAssociation.put(FA_CONTENT_TYPE.getID(), contentType[i]);
+            fileAssociation.put(FA_ICON.getID(), icon[i]);
+
+            associations.add(fileAssociation);
+        }
+
+        bundleParams.put(FILE_ASSOCIATIONS.getID(), associations);
 
         boolean valid = bundler.validate(bundleParams);
         assertTrue(valid);

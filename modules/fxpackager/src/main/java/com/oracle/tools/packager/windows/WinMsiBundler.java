@@ -320,6 +320,20 @@ public class WinMsiBundler  extends AbstractBundler {
                         MessageFormat.format(I18N.getString("error.version-string-wrong-format.advice"), PRODUCT_VERSION.getID()));
             }
 
+            // only one mime type per association, at least one file extension
+            List<Map<String, ? super Object>> associations = FILE_ASSOCIATIONS.fetchFrom(p);
+            if (associations != null) {
+                for (int i = 0; i < associations.size(); i++) {
+                    Map<String, ? super Object> assoc = associations.get(i);
+                    List<String> mimes = FA_CONTENT_TYPE.fetchFrom(assoc);
+                    if (mimes.size() > 1) {
+                        throw new ConfigException(
+                                MessageFormat.format(I18N.getString("error.too-many-content-types-for-file-association"), i),
+                                I18N.getString("error.too-many-content-types-for-file-association.advice"));
+                    }
+                }
+            }
+
             return true;
         } catch (RuntimeException re) {
             if (re.getCause() instanceof ConfigException) {
@@ -714,41 +728,63 @@ public class WinMsiBundler  extends AbstractBundler {
         if (launcherSet) {
             List<Map<String, ? super Object>> fileAssociations = FILE_ASSOCIATIONS.fetchFrom(params);
             String regName = APP_REGISTRY_NAME.fetchFrom(params);
+            Set<String> defaultedMimes = new TreeSet<String>();
+            int count = 0;
             for (int i = 0; i < fileAssociations.size(); i++) {
                 Map<String, ? super Object> fileAssociation = fileAssociations.get(i);
                 String description = FA_DESCRIPTION.fetchFrom(fileAssociation);
-                File icon = FA_ICON.fetchFrom(fileAssociation); //TODO FA_ICON_ICO
-                String entryName = regName + "File";
-                if (i > 0) {
-                    entryName += "." + i;
-                }
-
-                out.println(prefix + "   <ProgId Id='" + entryName + "' Description='" + description + "'");
-                if (icon != null && icon.exists()) {
-                    out.println("Icon='" + idToFileMap.get(icon.getName()) + "' IconIndex='0'");
-                }
-                out.println(">");
-
                 List<String> extensions = FA_EXTENSIONS.fetchFrom(fileAssociation);
                 List<String> mimeTypes = FA_CONTENT_TYPE.fetchFrom(fileAssociation);
-
+                File icon = FA_ICON.fetchFrom(fileAssociation); //TODO FA_ICON_ICO
+                
+                String mime = (mimeTypes == null || mimeTypes.isEmpty()) ? null : mimeTypes.get(0);
+                
                 if (extensions == null) {
                     Log.info(I18N.getString("message.creating-association-with-null-extension"));
+
+                    String entryName = regName + "File";
+                    if (count > 0) {
+                        entryName += "." + count;
+                    }
+                    count++;
+                    out.print(prefix + "   <ProgId Id='" + entryName + "' Description='" + description + "'");
+                    if (icon != null && icon.exists()) {
+                        out.print(" Icon='" + idToFileMap.get(icon.getName()) + "' IconIndex='0'");
+                    }
+                    out.println(" />");
                 } else {
                     for (String ext : extensions) {
-                        out.println(prefix + "    <Extension Id='" + ext + "' Advertise='no'>");
-                        out.println(prefix + "      <Verb Id='open' Command='Open' TargetFile='" + LAUNCHER_ID + "' Argument='\"%1\"'/>");
-                        boolean defaultSet = false;
-                        for (String mime : mimeTypes) {
-                            out.println(prefix + "      <MIME ContentType='" + mime + "'" + (defaultSet
-                                    ? ">"
-                                    : " Default='yes'/>"));
-                            defaultSet = true;
+                        String entryName = regName + "File";
+                        if (count > 0) {
+                            entryName += "." + count;
                         }
-                        out.println(prefix + "    </Extension>");
+                        count++;
+
+                        out.print(prefix + "   <ProgId Id='" + entryName + "' Description='" + description + "'");
+                        if (icon != null && icon.exists()) {
+                            out.print(" Icon='" + idToFileMap.get(icon.getName()) + "' IconIndex='0'");
+                        }
+                        out.println(">");
+
+                        if (extensions == null) {
+                            Log.info(I18N.getString("message.creating-association-with-null-extension"));
+                        } else {
+                            out.print(prefix + "    <Extension Id='" + ext + "' Advertise='no'");
+                            if (mime == null) {
+                                out.println(">");
+                            } else {
+                                out.println(" ContentType='" + mime + "'>");
+                                if (!defaultedMimes.contains(mime)) {
+                                    out.println(prefix + "      <MIME ContentType='" + mime + "' Default='yes' />");
+                                    defaultedMimes.add(mime);
+                                }
+                            }
+                            out.println(prefix + "      <Verb Id='open' Command='Open' TargetFile='" + LAUNCHER_ID + "' Argument='\"%1\"' />");
+                            out.println(prefix + "    </Extension>");
+                        }
+                        out.println(prefix + "   </ProgId>");
                     }
                 }
-                out.println(prefix + "   </ProgId>");
             }
         }
 

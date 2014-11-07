@@ -28,11 +28,9 @@ package com.oracle.tools.packager.linux;
 import com.oracle.tools.packager.AbstractBundler;
 import com.oracle.tools.packager.Bundler;
 import com.oracle.tools.packager.BundlerParamInfo;
-import com.oracle.tools.packager.BundlersTest;
 import com.oracle.tools.packager.ConfigException;
 import com.oracle.tools.packager.Log;
 import com.oracle.tools.packager.RelativeFileSet;
-import com.oracle.tools.packager.StandardBundlerParam;
 import com.oracle.tools.packager.UnsupportedPlatformException;
 import org.junit.After;
 import org.junit.Assume;
@@ -56,7 +54,6 @@ import static com.oracle.tools.packager.StandardBundlerParam.*;
 import static com.oracle.tools.packager.linux.LinuxAppBundler.ICON_PNG;
 import static com.oracle.tools.packager.linux.LinuxRpmBundler.BUNDLE_NAME;
 import static org.junit.Assert.*;
-import static org.junit.Assume.assumeTrue;
 
 public class LinuxRpmBundlerTest {
 
@@ -410,6 +407,9 @@ public class LinuxRpmBundlerTest {
     public void testFileAssociation()
         throws IOException, ConfigException, UnsupportedPlatformException
     {
+        // only run the bundle with full tests
+        Assume.assumeTrue(Boolean.parseBoolean(System.getProperty("FULL_TEST")));
+
         testFileAssociation("FASmoke 1", "Bogus File", "bogus", "application/x-vnd.test-bogus",
                             new File(appResourcesDir, "javalogo_white_48.png"));        
     }
@@ -423,10 +423,59 @@ public class LinuxRpmBundlerTest {
                             new File(appResourcesDir, "javalogo_white_48.png"));
     }
 
+    @Test
+    public void testFileAssociationWithMultipleExtension()
+            throws IOException, ConfigException, UnsupportedPlatformException
+    {
+        // only run the bundle with full tests
+        Assume.assumeTrue(Boolean.parseBoolean(System.getProperty("FULL_TEST")));
+
+        testFileAssociation("FASmoke ME", "Bogus File", "bogus fake", "application/x-vnd.test-bogus",
+                new File(appResourcesDir, "javalogo_white_48.png"));
+    }
+
+    @Test
+    public void testMultipleFileAssociation()
+            throws IOException, ConfigException, UnsupportedPlatformException
+    {
+        // only run the bundle with full tests
+        Assume.assumeTrue(Boolean.parseBoolean(System.getProperty("FULL_TEST")));
+
+        testFileAssociationMultiples("FASmoke MA",
+                new String[]{"Bogus File", "Fake file"},
+                new String[]{"bogus", "fake"},
+                new String[]{"application/x-vnd.test-bogus", "application/x-vnd.test-fake"},
+                new File[]{new File(appResourcesDir, "javalogo_white_48.png"), new File(appResourcesDir, "javalogo_white_48.png")});
+    }
+
+    @Test
+    public void testMultipleFileAssociationWithMultipleExtension()
+            throws IOException, ConfigException, UnsupportedPlatformException
+    {
+        // association with no extension is still valid case (see RT-38625)
+        testFileAssociationMultiples("FASmoke MAME",
+                new String[]{"Bogus File", "Fake file"},
+                new String[]{"bogus boguser", "fake faker"},
+                new String[]{"application/x-vnd.test-bogus", "application/x-vnd.test-fake"},
+                new File[]{new File(appResourcesDir, "javalogo_white_48.png"), new File(appResourcesDir, "javalogo_white_48.png")});
+    }
+
     private void testFileAssociation(String appName, String description, String extensions,
                                      String contentType, File icon)
-        throws IOException, ConfigException, UnsupportedPlatformException
+            throws IOException, ConfigException, UnsupportedPlatformException
     {
+        testFileAssociationMultiples(appName, new String[]{description}, new String[]{extensions},
+                new String[]{contentType}, new File[]{icon});
+    }
+
+    private void testFileAssociationMultiples(String appName, String[] description, String[] extensions,
+                                              String[] contentType, File[] icon)
+            throws IOException, ConfigException, UnsupportedPlatformException
+    {
+        assertEquals("Sanity: description same length as extensions", description.length, extensions.length);
+        assertEquals("Sanity: extensions same length as contentType", extensions.length, contentType.length);
+        assertEquals("Sanity: contentType same length as icon", contentType.length, icon.length);
+
         AbstractBundler bundler = new LinuxRpmBundler();
 
         assertNotNull(bundler.getName());
@@ -450,13 +499,19 @@ public class LinuxRpmBundlerTest {
         bundleParams.put(SYSTEM_WIDE.getID(), true);
         bundleParams.put(VENDOR.getID(), "Packager Tests");
 
-        Map<String, Object> fileAssociation = new HashMap<>();
-        fileAssociation.put(FA_DESCRIPTION.getID(), description);
-        fileAssociation.put(FA_EXTENSIONS.getID(), extensions);
-        fileAssociation.put(FA_CONTENT_TYPE.getID(), contentType);
-        fileAssociation.put(FA_ICON.getID(), icon);
+        List<Map<String, Object>> associations = new ArrayList<>();
 
-        bundleParams.put(FILE_ASSOCIATIONS.getID(), Arrays.asList(fileAssociation));
+        for (int i = 0; i < description.length; i++) {
+            Map<String, Object> fileAssociation = new HashMap<>();
+            fileAssociation.put(FA_DESCRIPTION.getID(), description[i]);
+            fileAssociation.put(FA_EXTENSIONS.getID(), extensions[i]);
+            fileAssociation.put(FA_CONTENT_TYPE.getID(), contentType[i]);
+            fileAssociation.put(FA_ICON.getID(), icon[i]);
+
+            associations.add(fileAssociation);
+        }
+
+        bundleParams.put(FILE_ASSOCIATIONS.getID(), associations);
 
         boolean valid = bundler.validate(bundleParams);
         assertTrue(valid);
@@ -465,48 +520,5 @@ public class LinuxRpmBundlerTest {
         System.err.println("Bundle at - " + result);
         assertNotNull(result);
         assertTrue(result.exists());
-    }
-    
-    /*
-     * Test that bundler doesn't support per-user daemons (RT-37985)
-     */
-    @Test(expected = ConfigException.class)
-    public void perUserDaemonTest() throws ConfigException, UnsupportedPlatformException {
-        AbstractBundler bundler = new LinuxRpmBundler();
-
-        Map<String, Object> bundleParams = new HashMap<>();
-        
-        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
-        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
-
-        bundleParams.put(SERVICE_HINT.getID(), true);
-        bundleParams.put(SYSTEM_WIDE.getID(), false);
-
-        bundler.validate(bundleParams);
-    }
-
-    @Test
-    public void perSystemDaemonTest() throws ConfigException, UnsupportedPlatformException {
-        AbstractBundler bundler = new LinuxRpmBundler();
-
-        Map<String, Object> bundleParams = new HashMap<>();
-        
-        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
-        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
-
-        bundleParams.put(SERVICE_HINT.getID(), true);
-        bundleParams.put(SYSTEM_WIDE.getID(), true);
-
-        bundler.validate(bundleParams);
-    }
-
-    @Test
-    public void testAppNameForRpmBundler() {
-        // valid names for rpm package
-        BundlersTest.testValidValueForBaseParam(StandardBundlerParam.APP_NAME, "test", LinuxRpmBundler.BUNDLE_NAME);
-        BundlersTest.testValidValueForBaseParam(StandardBundlerParam.APP_NAME, "te", LinuxRpmBundler.BUNDLE_NAME);
-
-        // invalid name with cyrillic characters
-        BundlersTest.testInvalidValueForBaseParam(StandardBundlerParam.APP_NAME, "\u0442\u0435\u0441\u0442", LinuxRpmBundler.BUNDLE_NAME);
     }
 }
