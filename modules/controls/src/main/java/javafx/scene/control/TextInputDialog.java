@@ -24,15 +24,11 @@
  */
 package javafx.scene.control;
 
-import com.sun.javafx.scene.control.skin.AccordionSkin;
 import com.sun.javafx.scene.control.skin.resources.ControlResources;
 import javafx.application.Platform;
 import javafx.beans.NamedArg;
 import javafx.geometry.Pos;
-import javafx.scene.control.Label;
-import javafx.scene.control.TextField;
-import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
+import javafx.scene.control.ButtonBar.ButtonData;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -106,7 +102,10 @@ public class TextInputDialog extends Dialog<String> {
         
         updateGrid();
         
-        setResultConverter((dialogButton) -> dialogButton == ButtonType.OK ? textField.getText() : null);
+        setResultConverter((dialogButton) -> {
+            ButtonData data = dialogButton == null ? null : dialogButton.getButtonData();
+            return data == ButtonData.OK_DONE ? textField.getText() : null;
+        });
     }
     
     

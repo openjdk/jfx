@@ -28,14 +28,12 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 
-import com.sun.javafx.scene.control.skin.AccordionSkin;
 import com.sun.javafx.scene.control.skin.resources.ControlResources;
 import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.collections.ObservableList;
 import javafx.geometry.Pos;
-import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
+import javafx.scene.control.ButtonBar.ButtonData;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -152,7 +150,10 @@ public class ChoiceDialog<T> extends Dialog<T> {
         
         updateGrid();
         
-        setResultConverter(dialogButton -> dialogButton == ButtonType.OK ? getSelectedItem() : null);
+        setResultConverter((dialogButton) -> {
+            ButtonData data = dialogButton == null ? null : dialogButton.getButtonData();
+            return data == ButtonData.OK_DONE ? getSelectedItem() : null;
+        });
     }
     
     
