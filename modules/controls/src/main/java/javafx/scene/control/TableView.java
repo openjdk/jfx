@@ -1427,6 +1427,9 @@ public class TableView<S> extends Control {
      * Causes the cell at the given row/column view indexes to switch into
      * its editing state, if it is not already in it, and assuming that the 
      * TableView and column are also editable.
+     *
+     * <p><strong>Note:</strong> This method will cancel editing if the given row
+     * value is less than zero and the given column is null.</p>
      */
     public void edit(int row, TableColumn<S,?> column) {
         if (!isEditable() || (column != null && ! column.isEditable())) {
