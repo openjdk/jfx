@@ -330,8 +330,6 @@ public abstract class TableRowSkinBase<T,
             R tableCell = cells.get(column);
             TableColumnBase<T, ?> tableColumn = getTableColumnBase(tableCell);
 
-            width = snapSize(tableCell.prefWidth(-1)) - snapSize(horizontalPadding);
-
             boolean isVisible = true;
             if (fixedCellSizeEnabled) {
                 // we determine if the cell is visible, and if not we have the
@@ -355,6 +353,8 @@ public abstract class TableRowSkinBase<T,
                 if (fixedCellSizeEnabled && tableCell.getParent() == null) {
                     getChildren().add(tableCell);
                 }
+
+                width = snapSize(tableCell.prefWidth(-1)) - snapSize(horizontalPadding);
 
                 // Added for RT-32700, and then updated for RT-34074.
                 // We change the alignment from CENTER_LEFT to TOP_LEFT if the
@@ -433,6 +433,8 @@ public abstract class TableRowSkinBase<T,
                     // TableCells in the scenegraph
                     getChildren().remove(tableCell);
                 }
+
+                width = snapSize(tableCell.prefWidth(-1)) - snapSize(horizontalPadding);
             }
 
             x += width;
