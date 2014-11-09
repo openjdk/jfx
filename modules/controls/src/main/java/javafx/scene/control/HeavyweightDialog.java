@@ -117,19 +117,10 @@ class HeavyweightDialog extends FXDialog {
     }
     
     @Override public void initOwner(Window newOwner) {
-        Window oldOwner = stage.getOwner();
-        if (oldOwner != null && oldOwner instanceof Stage) {
-            Bindings.unbindContent(stage.getIcons(), ((Stage)oldOwner).getIcons());
-        }
-
+        updateStageBindings(stage.getOwner(), newOwner);
         stage.initOwner(newOwner);
-
-        // put the icons of the owner window into the dialog
-        if (newOwner instanceof Stage) {
-            Bindings.bindContent(stage.getIcons(), ((Stage)newOwner).getIcons());
-        }
     }
-    
+
     @Override public Window getOwner() {
         return stage.getOwner();
     }
@@ -295,5 +286,32 @@ class HeavyweightDialog extends FXDialog {
 
         setX(x);
         setY(y);
+    }
+
+    // this method ensures the internal dialog stage is bound to the owner window
+    // properties as appropriate
+    private void updateStageBindings(Window oldOwner, Window newOwner) {
+        final Scene dialogScene = stage.getScene();
+
+        if (oldOwner != null && oldOwner instanceof Stage) {
+            Stage oldStage = (Stage) oldOwner;
+            Bindings.unbindContent(stage.getIcons(), oldStage.getIcons());
+
+            Scene oldScene = oldStage.getScene();
+            if (scene != null && dialogScene != null) {
+                Bindings.unbindContent(dialogScene.getStylesheets(), oldScene.getStylesheets());
+            }
+        }
+
+        // put the icons and stylesheets of the owner window into the dialog
+        if (newOwner instanceof Stage) {
+            Stage newStage = (Stage) newOwner;
+            Bindings.bindContent(stage.getIcons(), newStage.getIcons());
+
+            Scene newScene = newStage.getScene();
+            if (scene != null && dialogScene != null) {
+                Bindings.bindContent(dialogScene.getStylesheets(), newScene.getStylesheets());
+            }
+        }
     }
 }
