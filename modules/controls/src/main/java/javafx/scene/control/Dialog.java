@@ -145,7 +145,32 @@ import com.sun.javafx.event.EventHandlerManager;
  * are encouraged to work to their own style preferences. The purpose of showing
  * the above is to help introduce developers to the {@link Optional} API, which
  * is new in Java 8 and may be foreign to many developers.
- * 
+ *
+ * <h3>Dialog Validation / Intercepting Button Actions</h3>
+ *
+ * <p>In some circumstances it is desirable to prevent a dialog from closing
+ * until some aspect of the dialog becomes internally consistent (e.g. a form
+ * inside the dialog has all fields in a valid state). To do this, users of the
+ * dialogs API should become familiar with the
+ * {@link DialogPane#lookupButton(ButtonType)} method. By passing in a
+ * {@link javafx.scene.control.ButtonType ButtonType} (that has already been set
+ * in the {@link DialogPane#getButtonTypes() button types} list), users will be
+ * returned a Node that is typically of type {@link Button} (but this depends
+ * on if the {@link DialogPane#createButton(ButtonType)} method has been
+ * overridden). With this button, users may add an event filter that is called
+ * before the button does its usual event handling, and as such users may
+ * prevent the event handling by {@code consuming} the event. Here's a simplified
+ * example:
+ *
+ * <pre>{@code final Button btOk = (Button) dlg.getDialogPane().lookupButton(ButtonType.OK);
+ * btOk.addEventFilter(ActionEvent.ACTION, event -> {
+ *     if (!validateAndStore()) {
+ *         event.consume();
+ *     }
+ * });}</pre>
+ *
+ * <h3>Dialog Closing Rules</h3>
+ *
  * <p>It is important to understand what happens when a Dialog is closed, and 
  * also how a Dialog can be closed, especially in abnormal closing situations
  * (such as when the 'X' button is clicked in a dialogs title bar, or when
