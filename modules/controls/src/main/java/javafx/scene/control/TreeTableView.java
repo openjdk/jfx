@@ -2127,7 +2127,8 @@ public class TreeTableView<S> extends Control {
      
      /**
      * A simple extension of the {@link SelectionModel} abstract class to
-     * allow for special support for TableView controls.
+     * allow for special support for TreeTableView controls.
+      *
      * @since JavaFX 8.0
      */
     public static abstract class TreeTableViewSelectionModel<S> extends
@@ -2149,11 +2150,11 @@ public class TreeTableView<S> extends Control {
          **********************************************************************/
 
         /**
-         * Builds a default TableViewSelectionModel instance with the provided
-         * TableView.
-         * @param treeTableView The TableView upon which this selection model should
+         * Builds a default TreeTableViewSelectionModel instance with the provided
+         * TreeTableView.
+         * @param treeTableView The TreeTableView upon which this selection model should
          *      operate.
-         * @throws NullPointerException TableView can not be null.
+         * @throws NullPointerException TreeTableView can not be null.
          */
         public TreeTableViewSelectionModel(final TreeTableView<S> treeTableView) {
             if (treeTableView == null) {
@@ -2173,8 +2174,8 @@ public class TreeTableView<S> extends Control {
 
          /**
          * A read-only ObservableList representing the currently selected cells 
-         * in this TableView. Rather than directly modify this list, please
-         * use the other methods provided in the TableViewSelectionModel.
+         * in this TreeTableView. Rather than directly modify this list, please
+         * use the other methods provided in the TreeTableViewSelectionModel.
          */
         public abstract ObservableList<TreeTablePosition<S,?>> getSelectedCells();
 
@@ -2187,7 +2188,7 @@ public class TreeTableView<S> extends Control {
          **********************************************************************/
 
          /**
-          * Returns the TableView instance that this selection model is installed in.
+          * Returns the TreeTableView instance that this selection model is installed in.
           */
          public TreeTableView<S> getTreeTableView() {
              return treeTableView;
