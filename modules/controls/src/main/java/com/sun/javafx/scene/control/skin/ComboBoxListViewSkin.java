@@ -329,7 +329,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         return displayNode;
     }
     
-    private void updateComboBoxItems() {
+    public void updateComboBoxItems() {
         comboBoxItems = comboBox.getItems();
         comboBoxItems = comboBoxItems == null ? FXCollections.<T>emptyObservableList() : comboBoxItems;
     }

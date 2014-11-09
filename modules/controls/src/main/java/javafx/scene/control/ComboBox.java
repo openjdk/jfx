@@ -286,6 +286,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
             }
             if (getSkin() instanceof ComboBoxListViewSkin) {
                 ComboBoxListViewSkin<?> skin = (ComboBoxListViewSkin<?>) getSkin();
+                skin.updateComboBoxItems();
                 skin.updateListViewItems();
             }
         }
