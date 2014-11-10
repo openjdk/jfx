@@ -2560,14 +2560,15 @@ public class TableView<S> extends Control {
             final int _minRow = Math.min(minRow, maxRow);
             final int _maxRow = Math.max(minRow, maxRow);
 
+            List<TablePosition<S,?>> cellsToSelect = new ArrayList<>();
+
             for (int _row = _minRow; _row <= _maxRow; _row++) {
                 // begin copy/paste of select(int, column) method (with some
                 // slight modifications)
                 if (_row < 0 || _row >= itemCount) continue;
 
                 if (! isCellSelectionEnabled) {
-                    TablePosition<S, ?> pos = new TablePosition<>(tableView, _row, (TableColumn<S,?>)minColumn);
-                    selectedCellsMap.add(pos);
+                    cellsToSelect.add(new TablePosition<>(tableView, _row, (TableColumn<S,?>)minColumn));
                 } else {
                     for (int _col = _minColumnIndex; _col <= _maxColumnIndex; _col++) {
                         final TableColumn<S, ?> column = tableView.getVisibleLeafColumn(_col);
@@ -2576,13 +2577,13 @@ public class TableView<S> extends Control {
                         // to select the whole row instead...
                         if (column == null && isCellSelectionEnabled) continue;
 
-                        TablePosition<S, ?> pos = new TablePosition<>(tableView, _row, column);
-
-                        selectedCellsMap.add(pos);
+                        cellsToSelect.add(new TablePosition<>(tableView, _row, column));
                         // end copy/paste
                     }
                 }
             }
+
+            selectedCellsMap.addAll(cellsToSelect);
             stopAtomic();
 
             // fire off events.

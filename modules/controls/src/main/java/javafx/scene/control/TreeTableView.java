@@ -2801,14 +2801,15 @@ public class TreeTableView<S> extends Control {
             final int _minRow = Math.min(minRow, maxRow);
             final int _maxRow = Math.max(minRow, maxRow);
 
+            List<TreeTablePosition<S,?>> cellsToSelect = new ArrayList<>();
+
             for (int _row = _minRow; _row <= _maxRow; _row++) {
                 // begin copy/paste of select(int, column) method (with some
                 // slight modifications)
                 if (_row < 0 || _row >= itemCount) continue;
 
                 if (! isCellSelectionEnabled) {
-                    TreeTablePosition<S, ?> pos = new TreeTablePosition<>(treeTableView, _row, (TreeTableColumn<S,?>)minColumn);
-                    selectedCellsMap.add(pos);
+                    cellsToSelect.add(new TreeTablePosition<>(treeTableView, _row, (TreeTableColumn<S,?>)minColumn));
                 } else {
                     for (int _col = _minColumnIndex; _col <= _maxColumnIndex; _col++) {
                         final TreeTableColumn<S, ?> column = treeTableView.getVisibleLeafColumn(_col);
@@ -2817,13 +2818,13 @@ public class TreeTableView<S> extends Control {
                         // to select the whole row instead...
                         if (column == null && isCellSelectionEnabled) continue;
 
-                        TreeTablePosition<S, ?> pos = new TreeTablePosition<>(treeTableView, _row, column);
-
-                        selectedCellsMap.add(pos);
+                        cellsToSelect.add(new TreeTablePosition<>(treeTableView, _row, column));
                         // end copy/paste
                     }
                 }
             }
+
+            selectedCellsMap.addAll(cellsToSelect);
             stopAtomic();
 
             // fire off events
