@@ -1151,9 +1151,6 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
         initViewport();
 
-        // added in to prevent RT-39104
-        updateScrollBarsAndCells(recreatedOrRebuilt);
-
         // Get the index of the "current" cell
         int currentIndex = computeCurrentIndex();
         if (lastCellCount != cellCount) {

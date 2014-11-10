@@ -3888,7 +3888,7 @@ public class TreeTableViewTest {
                         Platform.runLater(() -> {
                             Toolkit.getToolkit().firePulse();
 
-                            int expected = useFixedCellSize ? 17 : 62;
+                            int expected = useFixedCellSize ? 17 : 59;
                             assertEquals(expected, rt_35395_counter);
                             sl.dispose();
                         });

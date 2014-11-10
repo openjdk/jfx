@@ -1026,7 +1026,7 @@ public class ListViewTest {
                                 listView.scrollTo(55);
                                 Platform.runLater(() -> {
                                     Toolkit.getToolkit().firePulse();
-                                    assertEquals(useFixedCellSize ? 17 : 55, rt_35395_counter);
+                                    assertEquals(useFixedCellSize ? 17 : 53, rt_35395_counter);
                                     sl.dispose();
                                 });
                             });
