@@ -112,6 +112,9 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeItem<S>, Tree
         super.handleControlPropertyChanged(p);
         
         if ("ROOT".equals(p)) {
+            // fix for RT-37853
+            getSkinnable().edit(-1, null);
+
             setRoot(getSkinnable().getRoot());
         } else if ("SHOW_ROOT".equals(p)) {
             // if we turn off showing the root, then we must ensure the root

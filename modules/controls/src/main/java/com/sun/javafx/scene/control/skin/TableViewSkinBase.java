@@ -272,7 +272,9 @@ public abstract class TableViewSkinBase<M, S, C extends Control, B extends Behav
         }
 
         // fix for RT-37853
-        edit(-1, null);
+        if (getSkinnable() instanceof TableView) {
+            edit(-1, null);
+        }
 
         rowCountDirty = true;
         getSkinnable().requestLayout();
