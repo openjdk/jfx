@@ -1953,7 +1953,7 @@ public class TableView<S> extends Control {
 
         /** {@inheritDoc} */
         @Override protected S getModelItem(int index) {
-            if (index < 0 || index > getItemCount()) return null;
+            if (index < 0 || index >= getItemCount()) return null;
             return tableView.getItems().get(index);
         }
 
@@ -2086,7 +2086,9 @@ public class TableView<S> extends Control {
 
             while (c.next()) {
                 if (c.wasReplaced() || c.getAddedSize() == getItemCount()) {
+                    this.selectedItemChange = c;
                     updateDefaultSelection();
+                    this.selectedItemChange = null;
                     return;
                 }
 
@@ -2960,9 +2962,13 @@ public class TableView<S> extends Control {
             }
 
             if (fireChangeEvent) {
-                // create an on-demand list of the removed objects contained in the
-                // given rows.
-                selectedItems.callObservers(new MappingChange<>(c, cellToItemsMap, selectedItems));
+                if (selectedItemChange != null) {
+                    selectedItems.callObservers(selectedItemChange);
+                } else {
+                    // create an on-demand list of the removed objects contained in the
+                    // given rows.
+                    selectedItems.callObservers(new MappingChange<>(c, cellToItemsMap, selectedItems));
+                }
             }
             c.reset();
 

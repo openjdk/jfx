@@ -2345,4 +2345,35 @@ public class TreeViewTest {
         assertEquals(2, rt_38943_index_count);
         assertEquals(2, rt_38943_item_count);
     }
+
+    @Test public void test_rt_38884() {
+        final TreeItem<String> root = new TreeItem<>("Root");
+        final TreeItem<String> foo = new TreeItem<>("foo");
+
+        TreeView<String> treeView = new TreeView<>(root);
+        treeView.setShowRoot(false);
+        root.setExpanded(true);
+
+        treeView.getSelectionModel().getSelectedItems().addListener((ListChangeListener.Change<? extends TreeItem<String>> c) -> {
+            while (c.next()) {
+                if (c.wasRemoved()) {
+                    assertTrue(c.getRemovedSize() > 0);
+
+                    List<? extends TreeItem<String>> removed = c.getRemoved();
+                    TreeItem<String> removedItem = null;
+                    try {
+                        removedItem = removed.get(0);
+                    } catch (Exception e) {
+                        fail();
+                    }
+
+                    assertEquals(foo, removedItem);
+                }
+            }
+        });
+
+        root.getChildren().add(foo);
+        treeView.getSelectionModel().select(0);
+        root.getChildren().clear();
+    }
 }

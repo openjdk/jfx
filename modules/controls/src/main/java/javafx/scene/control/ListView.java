@@ -1216,7 +1216,9 @@ public class ListView<T> extends Control {
                     final int selectedIndex = getSelectedIndex();
                     
                     if (listView.getItems() == null || listView.getItems().isEmpty()) {
+                        selectedItemChange = c;
                         clearSelection();
+                        selectedItemChange = null;
                     } else if (selectedIndex == -1 && selectedItem != null) {
                         int newIndex = listView.getItems().indexOf(selectedItem);
                         if (newIndex != -1) {

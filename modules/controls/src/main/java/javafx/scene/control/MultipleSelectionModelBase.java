@@ -90,8 +90,12 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
                 }
 
                 if (hasRealChangeOccurred) {
-                    c.reset();
-                    selectedItemsSeq.callObservers(new MappingChange<Integer, T>(c, map, selectedItemsSeq));
+                    if (selectedItemChange != null) {
+                        selectedItemsSeq.callObservers(selectedItemChange);
+                    } else {
+                        c.reset();
+                        selectedItemsSeq.callObservers(new MappingChange<Integer, T>(c, map, selectedItemsSeq));
+                    }
                 }
                 c.reset();
             }
@@ -159,6 +163,8 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
      * Internal field                                                      *
      *                                                                     *
      **********************************************************************/
+
+    ListChangeListener.Change selectedItemChange;
 
     // Fix for RT-20945 (and numerous other issues!)
     private int atomicityCount = 0;

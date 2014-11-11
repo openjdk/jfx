@@ -4387,4 +4387,31 @@ public class TableViewTest {
         assertEquals(2, rt_38943_index_count);
         assertEquals(2, rt_38943_item_count);
     }
+
+    @Test public void test_rt_38884() {
+        TableView<String> table = new TableView<>();
+        ObservableList<String> items = table.getItems();
+
+        table.getSelectionModel().getSelectedItems().addListener((ListChangeListener.Change<? extends String> c) -> {
+            while (c.next()) {
+                if (c.wasRemoved()) {
+                    assertTrue(c.getRemovedSize() > 0);
+
+                    List<? extends String> removed = c.getRemoved();
+                    String removedItem = null;
+                    try {
+                        removedItem = removed.get(0);
+                    } catch (Exception e) {
+                        fail();
+                    }
+
+                    assertEquals("foo", removedItem);
+                }
+            }
+        });
+
+        items.add("foo");
+        table.getSelectionModel().select(0);
+        items.clear();
+    }
 }
