@@ -192,7 +192,10 @@ public abstract class NGShape3D extends NGNode {
 
     @Override
     protected void renderContent(Graphics g) {
-        if (!Platform.isSupported(ConditionalFeature.SCENE3D) || material == null) {
+        if (!Platform.isSupported(ConditionalFeature.SCENE3D) ||
+             material == null ||
+             g instanceof com.sun.prism.PrinterGraphics)
+        {
             return;
         }
         renderMeshView(g);
