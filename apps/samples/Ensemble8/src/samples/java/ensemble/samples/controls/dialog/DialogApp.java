@@ -82,7 +82,7 @@ public class DialogApp extends Application {
         stage = primaryStage;
     }
     
-    private AlertType type;
+    private AlertType type = AlertType.INFORMATION;
     private Stage     stage;
     
     public void setAlertType(AlertType at) {
