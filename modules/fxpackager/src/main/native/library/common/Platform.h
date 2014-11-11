@@ -82,9 +82,9 @@
 #define PATH_SEPARATOR ';'
 #define BAD_PATH_SEPARATOR ':'
 
-#ifdef _DEBUG
-#define DEBUG
-#endif //_DEBUG
+#if defined _DEBUG && !defined DEBUG
+    #define DEBUG
+#endif
 
 #endif //WINDOWS
 
