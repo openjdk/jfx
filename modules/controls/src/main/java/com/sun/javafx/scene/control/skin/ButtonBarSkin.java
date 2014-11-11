@@ -104,8 +104,10 @@ public class ButtonBarSkin extends BehaviorSkinBase<ButtonBar, BehaviorBase<Butt
 
         updateButtonListeners(control.getButtons(), true);
         control.getButtons().addListener((ListChangeListener<Node>) c -> {
-            updateButtonListeners(c.getRemoved(), false);
-            updateButtonListeners(c.getAddedSubList(), true);
+            while (c.next()) {
+                updateButtonListeners(c.getRemoved(), false);
+                updateButtonListeners(c.getAddedSubList(), true);
+            }
             layoutButtons();
         });
         
