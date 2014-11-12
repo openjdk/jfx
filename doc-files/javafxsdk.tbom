@@ -15,27 +15,27 @@
 </file-set>
 
 <file-set name="Java Property Resource Bundles" languages="Japanese +Simplified_Chinese">
-    <file source="rt/modules/fxpackager/src/main/resources/com/oracle/tools/packager/linux/LinuxDebBundler.properties"
+    <file source="rt/modules/fxpackager/src/main/resources/com/oracle/tools/packager/linux/LinuxDebBundler%j.properties"
           file-type="JavaProperties"/>
 </file-set>
 
 <file-set name="Java Property Resource Bundles" languages="Japanese +Simplified_Chinese">
-    <file source="rt/modules/fxpackager/src/main/resources/com/oracle/tools/packager/linux/LinuxRpmBundler.properties"
+    <file source="rt/modules/fxpackager/src/main/resources/com/oracle/tools/packager/linux/LinuxRpmBundler%j.properties"
           file-type="JavaProperties"/>
 </file-set>
 
 <file-set name="Java Property Resource Bundles" languages="Japanese +Simplified_Chinese">
-    <file source="rt/modules/fxpackager/src/main/resources/com/oracle/tools/packager/mac/MacAppBundler.properties"
+    <file source="rt/modules/fxpackager/src/main/resources/com/oracle/tools/packager/mac/MacAppBundler%j.properties"
           file-type="JavaProperties"/>
 </file-set>
 
 <file-set name="Java Property Resource Bundles" languages="Japanese +Simplified_Chinese">
-    <file source="rt/modules/fxpackager/src/main/resources/com/oracle/tools/packager/windows/WinExeBundler.properties"
+    <file source="rt/modules/fxpackager/src/main/resources/com/oracle/tools/packager/windows/WinExeBundler%j.properties"
           file-type="JavaProperties"/>
 </file-set>
 
 <file-set name="Java Property Resource Bundles" languages="Japanese +Simplified_Chinese">
-    <file source="rt/modules/fxpackager/src/main/resources/com/oracle/tools/packager/windows/WinMsiBundler.properties"
+    <file source="rt/modules/fxpackager/src/main/resources/com/oracle/tools/packager/windows/WinMsiBundler%j.properties"
           file-type="JavaProperties"/>
 </file-set>
 
