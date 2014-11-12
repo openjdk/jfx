@@ -3799,11 +3799,15 @@ public class TreeTableViewTest {
 
         two.setExpanded(true);
 
-        // this line would create a NPE
-        VirtualFlowTestUtils.clickOnRow(treeTableView, 4);
-
         // we should end up with the selection being on index 4, which is the
         // final location of the 'one' tree item, after sorting and expanding 'two'
+        assertEquals(one, sm.getSelectedItem());
+        assertTrue(debug(), sm.isSelected(4));
+
+        // this line would create a NPE
+        VirtualFlowTestUtils.clickOnRow(treeTableView, 4, true);
+
+        // The mouse click should not change selection at all
         assertEquals(one, sm.getSelectedItem());
         assertTrue(debug(), sm.isSelected(4));
     }
@@ -4542,5 +4546,55 @@ public class TreeTableViewTest {
         root.getChildren().add(foo);
         treeView.getSelectionModel().select(0);
         root.getChildren().clear();
+    }
+
+    private int rt_37360_add_count = 0;
+    private int rt_37360_remove_count = 0;
+    @Test public void test_rt_37360() {
+        TreeItem<String> root = new TreeItem<>("Root");
+        root.setExpanded(true);
+        root.getChildren().addAll(
+                new TreeItem<>("a"),
+                new TreeItem<>("b")
+        );
+
+        TreeTableView<String> stringTreeTableView = new TreeTableView<>(root);
+        stringTreeTableView.setShowRoot(false);
+
+        TreeTableColumn<String,String> column = new TreeTableColumn<>("Column");
+        column.setCellValueFactory(cdf -> new ReadOnlyStringWrapper(cdf.getValue().getValue()));
+        stringTreeTableView.getColumns().add(column);
+
+        MultipleSelectionModel<TreeItem<String>> sm = stringTreeTableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.getSelectedItems().addListener((ListChangeListener<TreeItem<String>>) c -> {
+            while (c.next()) {
+                if (c.wasAdded()) {
+                    rt_37360_add_count += c.getAddedSize();
+                }
+                if (c.wasRemoved()) {
+                    rt_37360_remove_count += c.getRemovedSize();
+                }
+            }
+        });
+
+        assertEquals(0, sm.getSelectedItems().size());
+        assertEquals(0, rt_37360_add_count);
+        assertEquals(0, rt_37360_remove_count);
+
+        sm.select(0);
+        assertEquals(1, sm.getSelectedItems().size());
+        assertEquals(1, rt_37360_add_count);
+        assertEquals(0, rt_37360_remove_count);
+
+        sm.select(1);
+        assertEquals(2, sm.getSelectedItems().size());
+        assertEquals(2, rt_37360_add_count);
+        assertEquals(0, rt_37360_remove_count);
+
+        sm.clearAndSelect(1);
+        assertEquals(1, sm.getSelectedItems().size());
+        assertEquals(2, rt_37360_add_count);
+        assertEquals(1, rt_37360_remove_count);
     }
 }

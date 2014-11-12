@@ -547,11 +547,14 @@ public class TreeTableViewMouseInputTest {
             }
         });
 
+        Cell cell = VirtualFlowTestUtils.getCell(tableView, 1, 0);
+        MouseEventFirer mouse = new MouseEventFirer(cell);
+
         assertEquals(0, rt_30626_count);
-        VirtualFlowTestUtils.clickOnRow(tableView, 1);
+        mouse.fireMousePressAndRelease();
         assertEquals(1, rt_30626_count);
 
-        VirtualFlowTestUtils.clickOnRow(tableView, 1);
+        mouse.fireMousePressAndRelease();
         assertEquals(1, rt_30626_count);
     }
 

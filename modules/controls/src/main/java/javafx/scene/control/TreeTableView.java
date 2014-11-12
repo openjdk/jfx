@@ -2554,15 +2554,28 @@ public class TreeTableView<S> extends Control {
                 return;
             }
 
+            final boolean wasSelected = isSelected(row, column);
+
+            // firstly we make a copy of the selection, so that we can send out
+            // the correct details in the selection change event.
+            List<TreeTablePosition<S,?>> previousSelection = new ArrayList<>(selectedCellsMap.getSelectedCells());
+
+            if (wasSelected && previousSelection.size() == 1) {
+                // before we return, we double-check that the selected item
+                // is equal to the item in the given index
+                TreeTablePosition<S,?> selectedCell = getSelectedCells().get(0);
+                if (getSelectedItem() == getModelItem(row)) {
+                    if (selectedCell.getRow() == row && selectedCell.getTableColumn() == column) {
+                        return;
+                    }
+                }
+            }
+
             // RT-32411: We used to call quietClearSelection() here, but this
             // resulted in the selectedItems and selectedIndices lists never
             // reporting that they were empty.
             // makeAtomic toggle added to resolve RT-32618
             startAtomic();
-
-            // firstly we make a copy of the selection, so that we can send out
-            // the correct details in the selection change event
-            List<TreeTablePosition<S,?>> previousSelection = new ArrayList<>(selectedCellsMap.getSelectedCells());
 
             // then clear the current selection
             clearSelection();
@@ -2574,9 +2587,35 @@ public class TreeTableView<S> extends Control {
 
             // fire off a single add/remove/replace notification (rather than
             // individual remove and add notifications) - see RT-33324
-            int changeIndex = selectedCellsSeq.indexOf(newTablePosition);
-            ListChangeListener.Change<TreeTablePosition<S,?>> change = new NonIterableChange.GenericAddRemoveChange<>(
-                    changeIndex, changeIndex + 1, previousSelection, selectedCellsSeq);
+            ListChangeListener.Change change;
+
+            // We remove the new selection from the list seeing as it is not removed.
+            previousSelection.remove(newTablePosition);
+
+            /*
+             * getFrom() documentation:
+             *   If wasAdded is true, the interval contains all the values that were added.
+             *   If wasPermutated is true, the interval marks the values that were permutated.
+             *   If wasRemoved is true and wasAdded is false, getFrom() and getTo() should
+             *   return the same number - the place where the removed elements were positioned in the list.
+             */
+            if (wasSelected) {
+                change = new NonIterableChange.GenericAddRemoveChange<TreeTablePosition<S,?>>(
+                        0, 0, previousSelection, selectedCellsSeq) {
+                    @Override public boolean wasAdded() {
+                        return false;
+                    }
+
+                    @Override public boolean wasRemoved() {
+                        return true;
+                    }
+                };
+            } else {
+                final int changeIndex = selectedCellsSeq.indexOf(newTablePosition);
+                change = new NonIterableChange.GenericAddRemoveChange<>(
+                        changeIndex, changeIndex + 1, previousSelection, selectedCellsSeq);
+            }
+
             handleSelectedCellsListChangeEvent(change);
         }
 

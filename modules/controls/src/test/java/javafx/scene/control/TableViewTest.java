@@ -4414,4 +4414,47 @@ public class TableViewTest {
         table.getSelectionModel().select(0);
         items.clear();
     }
+
+    private int rt_37360_add_count = 0;
+    private int rt_37360_remove_count = 0;
+    @Test public void test_rt_37360() {
+        TableView<String> stringTableView = new TableView<>();
+        stringTableView.getItems().addAll("a","b");
+
+        TableColumn<String,String> column = new TableColumn<>("Column");
+        column.setCellValueFactory(cdf -> new ReadOnlyStringWrapper(cdf.getValue()));
+        stringTableView.getColumns().add(column);
+
+        MultipleSelectionModel<String> sm = stringTableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.getSelectedItems().addListener((ListChangeListener<String>) c -> {
+            while (c.next()) {
+                if (c.wasAdded()) {
+                    rt_37360_add_count += c.getAddedSize();
+                }
+                if (c.wasRemoved()) {
+                    rt_37360_remove_count += c.getRemovedSize();
+                }
+            }
+        });
+
+        assertEquals(0, sm.getSelectedItems().size());
+        assertEquals(0, rt_37360_add_count);
+        assertEquals(0, rt_37360_remove_count);
+
+        sm.select(0);
+        assertEquals(1, sm.getSelectedItems().size());
+        assertEquals(1, rt_37360_add_count);
+        assertEquals(0, rt_37360_remove_count);
+
+        sm.select(1);
+        assertEquals(2, sm.getSelectedItems().size());
+        assertEquals(2, rt_37360_add_count);
+        assertEquals(0, rt_37360_remove_count);
+
+        sm.clearAndSelect(1);
+        assertEquals(1, sm.getSelectedItems().size());
+        assertEquals(2, rt_37360_add_count);
+        assertEquals(1, rt_37360_remove_count);
+    }
 }
