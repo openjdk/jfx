@@ -1133,6 +1133,20 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
                 @Override protected double computePrefHeight(double w) {
                     return CLOSE_BTN_SIZE;
                 }
+                @Override
+                public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
+                    switch (action) {
+                        case FIRE: {
+                            Tab tab = getTab();
+                            TabPaneBehavior behavior = getBehavior();
+                            if (behavior.canCloseTab(tab)) {
+                                behavior.closeTab(tab);
+                                setOnMousePressed(null);
+                            }
+                        }
+                        default: super.executeAccessibleAction(action, parameters);
+                    }
+                }
             };
             closeBtn.setAccessibleRole(AccessibleRole.BUTTON);
             closeBtn.setAccessibleText(getString("Accessibility.title.TabPane.CloseButton"));
