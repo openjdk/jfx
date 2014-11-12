@@ -1235,6 +1235,11 @@ final class MacAccessible extends Accessible {
                     return null;
                 }
                 case AXDateTimeComponents: {
+                    /* Mac Yosemite crashes if AXDateTimeComponents set
+                     * and NULL is returned for AXValue.
+                     */
+                    if (getAttribute(DATE) == null) return null;
+
                     /* 
                      * AXDateTimeComponents is an undocumented attribute which
                      * is used by native DateTime controls in Cocoa.
