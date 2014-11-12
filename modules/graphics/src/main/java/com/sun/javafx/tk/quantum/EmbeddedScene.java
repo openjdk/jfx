@@ -65,8 +65,8 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
     private volatile int        texLineStride; // pre-scaled
     private volatile float      texScaleFactor = 1.0f;
  
-    public EmbeddedScene(HostInterface host, boolean depthBuffer, boolean antiAliasing) {
-        super(depthBuffer, antiAliasing);
+    public EmbeddedScene(HostInterface host, boolean depthBuffer, boolean msaa) {
+        super(depthBuffer, msaa);
         sceneState = new EmbeddedState(this);
 
         this.host = host;

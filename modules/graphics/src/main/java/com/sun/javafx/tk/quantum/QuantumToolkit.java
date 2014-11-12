@@ -1172,8 +1172,8 @@ public final class QuantumToolkit extends Toolkit {
     }
 
     @Override
-    public boolean isAntiAliasingSupported() {
-        return  GraphicsPipeline.getPipeline().isAntiAliasingSupported();
+    public boolean isMSAASupported() {
+        return  GraphicsPipeline.getPipeline().isMSAASupported();
     }
 
     static TransferMode clipboardActionToTransferMode(final int action) {

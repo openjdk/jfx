@@ -114,7 +114,7 @@ final class UploadingPainter extends ViewPainter implements Runnable {
             if (needsReset) {
                 disposeRTTexture();
                 rttexture = factory.createRTTexture(bufWidth, bufHeight, WrapMode.CLAMP_NOT_NEEDED,
-                        sceneState.isAntiAliasing());
+                        sceneState.isMSAA());
                 if (rttexture == null) {
                     return;
                 }
@@ -141,7 +141,7 @@ final class UploadingPainter extends ViewPainter implements Runnable {
             if (rawbits != null) {
                 bits.put(rawbits, 0, bufWidth * bufHeight);
             } else {
-                RTTexture rtt = rttexture.isAntiAliasing() ?
+                RTTexture rtt = rttexture.isMSAA() ?
                     resolveRenderTarget(g) : rttexture;
 
                 if (!rtt.readPixels(bits)) {

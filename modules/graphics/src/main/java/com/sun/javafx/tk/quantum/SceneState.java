@@ -56,8 +56,8 @@ class SceneState extends PresentableState {
     }
 
     @Override
-    public boolean isAntiAliasing() {
-        return scene.isAntiAliasing();
+    public boolean isMSAA() {
+        return scene.isMSAA();
     }
 
     /**

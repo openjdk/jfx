@@ -1956,7 +1956,7 @@ public abstract class BaseShaderGraphics
         boolean lcdSupported = blendMode == CompositeMode.SRC_OVER &&
                                textColor != null &&
                                xform.is2D() &&
-                               !getRenderTarget().isAntiAliasing();
+                               !getRenderTarget().isMSAA();
 
         /* If the surface can't support LCD text we need to replace an
          * LCD mode strike with the equivalent grey scale one.

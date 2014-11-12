@@ -161,7 +161,7 @@ class D3DRTTexture extends D3DTexture
         return getContext().isRTTVolatile();
     }
 
-    public boolean isAntiAliasing() {
+    public boolean isMSAA() {
         return resource.getResource().getSamples() != 0;
     }
 }

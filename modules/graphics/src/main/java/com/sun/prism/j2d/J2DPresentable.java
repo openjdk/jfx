@@ -273,7 +273,7 @@ public abstract class J2DPresentable implements Presentable {
         return (buffer == null) ? getContentHeight() : buffer.getHeight();
     }
 
-    @Override public boolean isAntiAliasing() {
+    @Override public boolean isMSAA() {
         return false;
     }
 }

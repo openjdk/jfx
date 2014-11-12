@@ -194,7 +194,7 @@ public class TestGraphics extends BaseGraphics {
         @Override public RTTexture createRTTexture(final int width, final int height, Texture.WrapMode wrapMode) {
             return createRTTexture(width, height, wrapMode, false);
         }
-        @Override public RTTexture createRTTexture(final int width, final int height, Texture.WrapMode wrapMode, boolean antiAliasing) {
+        @Override public RTTexture createRTTexture(final int width, final int height, Texture.WrapMode wrapMode, boolean msaa) {
             return new RTTexture() {
                 @Override public int[] getPixels() { return new int[0]; }
                 @Override public boolean readPixels(Buffer pixels, int x, int y, int width, int height) { return false; }
@@ -236,7 +236,7 @@ public class TestGraphics extends BaseGraphics {
                 @Override public void contentsUseful() { }
                 @Override public void contentsNotUseful() { }
                 @Override public void setOpaque(boolean opaque) { }
-                @Override public boolean isAntiAliasing() { return false; }
+                @Override public boolean isMSAA() { return false; }
                 @Override public int getMaxContentWidth() { return getPhysicalWidth(); }
                 @Override public int getMaxContentHeight() { return getPhysicalHeight(); }
                 @Override public void setContentWidth(int contentWidth) { }
@@ -306,7 +306,7 @@ public class TestGraphics extends BaseGraphics {
             return 0;
         }
 
-        public boolean isAntiAliasing() {
+        public boolean isMSAA() {
             return false;
         }
 

@@ -506,7 +506,7 @@ abstract class GLContext {
         if (maxSampleSize > -1) {
             return maxSampleSize;
         }
-        maxSampleSize = ES2Pipeline.antiAliasingSupported ? nGetMaxSampleSize() : 0;
+        maxSampleSize = ES2Pipeline.msaa ? nGetMaxSampleSize() : 0;
         return maxSampleSize;
     }
 

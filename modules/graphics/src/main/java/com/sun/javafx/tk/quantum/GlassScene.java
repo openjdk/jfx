@@ -76,14 +76,14 @@ abstract class GlassScene implements TKScene {
     private final AtomicBoolean painting = new AtomicBoolean(false);
 
     private final boolean depthBuffer;
-    private final boolean antiAliasing;
+    private final boolean msaa;
 
     SceneState sceneState;
 
     private AccessControlContext accessCtrlCtx = null;
 
-    protected GlassScene(boolean depthBuffer, boolean antiAliasing) {
-        this.antiAliasing = antiAliasing;
+    protected GlassScene(boolean depthBuffer, boolean msaa) {
+        this.msaa = msaa;
         this.depthBuffer = depthBuffer;
         sceneState = new SceneState(this);
     }
@@ -149,8 +149,8 @@ abstract class GlassScene implements TKScene {
         return depthBuffer;
     }
 
-    boolean isAntiAliasing() {
-        return antiAliasing;
+    boolean isMSAA() {
+        return msaa;
     }
 
     protected abstract boolean isSynchronous();

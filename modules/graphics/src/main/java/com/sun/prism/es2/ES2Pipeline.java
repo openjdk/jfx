@@ -41,7 +41,7 @@ public class ES2Pipeline extends GraphicsPipeline {
     public static final GLFactory glFactory;
     public static final GLPixelFormat.Attributes
             pixelFormatAttributes = new GLPixelFormat.Attributes();
-    static final boolean antiAliasingSupported;
+    static final boolean msaa;
     static final boolean npotSupported;
     private static boolean es2Enabled;
     private static boolean isEglfb = false;
@@ -87,11 +87,11 @@ public class ES2Pipeline extends GraphicsPipeline {
         if (es2Enabled) {
             theInstance = new ES2Pipeline();
             factories = new ES2ResourceFactory[glFactory.getAdapterCount()];
-            antiAliasingSupported = glFactory.isGLExtensionSupported("GL_ARB_multisample");
+            msaa = glFactory.isGLExtensionSupported("GL_ARB_multisample");
             npotSupported = glFactory.isNPOTSupported();
         } else {
             theInstance = null;
-            antiAliasingSupported = false;
+            msaa = false;
             npotSupported = false;
         }
 
@@ -206,8 +206,8 @@ public class ES2Pipeline extends GraphicsPipeline {
     }
 
     @Override
-    public final boolean isAntiAliasingSupported() {
-        return antiAliasingSupported;
+    public final boolean isMSAASupported() {
+        return msaa;
     }
 
     @Override

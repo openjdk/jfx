@@ -69,7 +69,7 @@ public abstract class NGShape extends NGNode {
         return mode;
     }
 
-    public void setAntialiased(boolean aa) {
+    public void setSmooth(boolean smooth) {
         // We don't support aliased shapes at this time
     }
 
@@ -262,7 +262,7 @@ public abstract class NGShape extends NGNode {
         ShapeRep localShapeRep = printing ? null : this.shapeRep;
         if (localShapeRep == null) {
             localShapeRep = createShapeRep(g);
-        }
+        }        
         Shape shape = getShape();
         if (mode != Mode.STROKE) {
             g.setPaint(fillPaint);
