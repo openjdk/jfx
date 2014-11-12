@@ -2422,4 +2422,49 @@ public class TreeViewTest {
         assertEquals(2, rt_37360_add_count);
         assertEquals(1, rt_37360_remove_count);
     }
+
+    private int rt_37366_count = 0;
+    @Test public void test_rt_37366() {
+        final TreeItem<String> treeItem2 = new TreeItem<>("Item 2");
+        treeItem2.getChildren().addAll(new TreeItem<>("Item 21"), new TreeItem<>("Item 22"));
+
+        final TreeItem<String> root1 = new TreeItem<>("Root Node 1");
+        root1.getChildren().addAll(new TreeItem<>("Item 1"), treeItem2, new TreeItem<>("Item 3"));
+        root1.setExpanded(true);
+
+        final TreeItem<String> root2 = new TreeItem<>("Root Node 2");
+
+        final TreeItem<String> hiddenRoot = new TreeItem<>("Hidden Root Node");
+        hiddenRoot.getChildren().add(root1);
+        hiddenRoot.getChildren().add(root2);
+
+        final TreeView<String> treeView = new TreeView<>(hiddenRoot);
+        treeView.setShowRoot(false);
+
+        MultipleSelectionModel<TreeItem<String>> sm = treeView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.getSelectedItems().addListener((ListChangeListener.Change<? extends TreeItem<String>> c) -> {
+            rt_37366_count++;
+        });
+
+        assertEquals(0, rt_37366_count);
+
+        sm.select(1);
+        assertEquals(1, rt_37366_count);
+        assertFalse(sm.isSelected(0));
+        assertTrue(sm.isSelected(1));
+        assertFalse(sm.isSelected(2));
+
+        sm.select(2);
+        assertEquals(2, rt_37366_count);
+        assertFalse(sm.isSelected(0));
+        assertTrue(sm.isSelected(1));
+        assertTrue(sm.isSelected(2));
+
+        root1.setExpanded(false);
+        assertEquals(3, rt_37366_count);
+        assertTrue(sm.isSelected(0));
+        assertFalse(sm.isSelected(1));
+        assertFalse(sm.isSelected(2));
+    }
 }

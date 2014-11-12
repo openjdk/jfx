@@ -146,7 +146,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
 
 
     final BitSet selectedIndices;
-    private final ReadOnlyUnbackedObservableList<Integer> selectedIndicesSeq;
+    final ReadOnlyUnbackedObservableList<Integer> selectedIndicesSeq;
     @Override public ObservableList<Integer> getSelectedIndices() {
         return selectedIndicesSeq;
     }
@@ -656,11 +656,13 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
             clearSelection();
         }
 
-        // we pass in (index, index) here to represent that nothing was added
-        // in this change.
-        selectedIndicesSeq.callObservers(
-                new NonIterableChange.GenericAddRemoveChange<>(index, index,
-                Collections.singletonList(index), selectedIndicesSeq));
+        if (!isAtomic()) {
+            // we pass in (index, index) here to represent that nothing was added
+            // in this change.
+            selectedIndicesSeq.callObservers(
+                    new NonIterableChange.GenericAddRemoveChange<>(index, index,
+                            Collections.singletonList(index), selectedIndicesSeq));
+        }
     }
 
     @Override public void clearSelection() {

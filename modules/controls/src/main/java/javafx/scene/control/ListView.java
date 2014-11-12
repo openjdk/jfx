@@ -1236,8 +1236,8 @@ public class ListView<T> extends Control {
                             if (! selectedItem.equals(newSelectedItem)) {
                                 startAtomic();
                                 clearSelection(selectedIndex);
-                                select(newSelectedItem);
                                 stopAtomic();
+                                select(newSelectedItem);
                             }
                         }
                     }

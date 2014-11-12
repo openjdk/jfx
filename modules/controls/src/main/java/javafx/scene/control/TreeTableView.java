@@ -2369,7 +2369,15 @@ public class TreeTableView<S> extends Control {
                     boolean wasAnyChildSelected = false;
                     final boolean isCellSelectionMode = isCellSelectionEnabled();
                     ObservableList<TreeTableColumn<S,?>> columns = getTreeTableView().getVisibleLeafColumns();
-                    for (int i = startRow + 1; i < startRow + count; i++) {
+
+                    if (!isCellSelectionMode) {
+                        startAtomic();
+                    }
+
+                    final int from = startRow + 1;
+                    final int to = startRow + count;
+                    final List<Integer> removed = new ArrayList<>();
+                    for (int i = from; i < to; i++) {
                         // we have to handle cell selection mode differently than
                         // row selection mode. Refer to RT-34103 for the bug report
                         // that drove this change, but in short the issue was that
@@ -2388,13 +2396,24 @@ public class TreeTableView<S> extends Control {
                             if (isSelected(i)) {
                                 wasAnyChildSelected = true;
                                 clearSelection(i);
+                                removed.add(i);
                             }
                         }
+                    }
+
+                    if (!isCellSelectionMode) {
+                        stopAtomic();
                     }
 
                     // put selection onto the newly-collapsed tree item
                     if (wasPrimarySelectionInChild && wasAnyChildSelected) {
                         select(startRow);
+                    } else if (! isCellSelectionMode) {
+                        // we pass in (index, index) here to represent that nothing was added
+                        // in this change.
+                        ListChangeListener.Change change = new NonIterableChange.GenericAddRemoveChange<>(from, from,
+                                removed, selectedIndicesSeq);
+                        selectedIndicesSeq.callObservers(change);
                     }
 
                     shift = - count + 1;

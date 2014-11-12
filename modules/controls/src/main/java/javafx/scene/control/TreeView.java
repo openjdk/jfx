@@ -25,6 +25,7 @@
 
 package javafx.scene.control;
 
+import com.sun.javafx.collections.NonIterableChange;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.behavior.TreeCellBehavior;
 import com.sun.javafx.scene.control.skin.TreeViewSkin;
@@ -45,6 +46,7 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.WeakChangeListener;
 import javafx.beans.value.WritableValue;
+import javafx.collections.ListChangeListener;
 import javafx.css.CssMetaData;
 import javafx.css.Styleable;
 import javafx.css.StyleableDoubleProperty;
@@ -1282,16 +1284,29 @@ public class TreeView<T> extends Control {
                         selectedIndex < (startRow + count);
 
                 boolean wasAnyChildSelected = false;
-                for (int i = startRow + 1; i < startRow + count; i++) {
+
+                startAtomic();
+                final int from = startRow + 1;
+                final int to = startRow + count;
+                final List<Integer> removed = new ArrayList<>();
+                for (int i = from; i < to; i++) {
                     if (isSelected(i)) {
                         wasAnyChildSelected = true;
                         clearSelection(i);
+                        removed.add(i);
                     }
                 }
+                stopAtomic();
 
                 // put selection onto the newly-collapsed tree item
                 if (wasPrimarySelectionInChild && wasAnyChildSelected) {
                     select(startRow);
+                } else {
+                    // we pass in (index, index) here to represent that nothing was added
+                    // in this change.
+                    ListChangeListener.Change change = new NonIterableChange.GenericAddRemoveChange<>(from, from,
+                            removed, selectedIndicesSeq);
+                    selectedIndicesSeq.callObservers(change);
                 }
 
                 shift = - count + 1;
