@@ -111,7 +111,7 @@ public class CLITest {
                     "-BuserJvmOptions=-Xms=512m",
                     "-BdesktopHint=false",
                     "-BshortcutHint=true",
-                    "-Bruntime=" + runtimeJdk);
+                    "-Bruntime=" + (runtimeJdk == null ? System.getProperty("java.home") : runtimeJdk));
         }
     }
 

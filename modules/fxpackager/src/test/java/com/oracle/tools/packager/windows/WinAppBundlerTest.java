@@ -359,7 +359,7 @@ public class WinAppBundlerTest {
      */
     @Test
     public void testJRE() throws IOException, ConfigException, UnsupportedPlatformException {
-        Assume.assumeTrue(new File(runtimeJre).isDirectory());
+        Assume.assumeTrue(runtimeJre != null && new File(runtimeJre).isDirectory());
 
         Bundler bundler = new WinAppBundler();
 
