@@ -366,8 +366,8 @@ public class MacAppBundler extends AbstractBundler {
 
         //validate required inputs
         testRuntime(MAC_RUNTIME.fetchFrom(p), new String[] {
-                "Contents/Home/jre/lib/[^/]+/libjvm.dylib", // most reliable
-                "Contents/Home/jre/lib/rt.jar", // fallback canary for JDK 8
+                "Contents/Home/[jre/]?lib/[^/]+/libjvm.dylib", // most reliable
+                "Contents/Home/[jre/]?lib/rt.jar", // fallback canary for JDK 8
         });
         if (USE_FX_PACKAGING.fetchFrom(p)) {
             testRuntime(MAC_RUNTIME.fetchFrom(p), new String[] {"Contents/Home/jre/lib/ext/jfxrt.jar", "Contents/Home/jre/lib/jfxrt.jar"});
@@ -557,7 +557,7 @@ public class MacAppBundler extends AbstractBundler {
         plugInsDirectory.mkdirs();
 
         File srcdir = runTime.getBaseDirectory();
-        File destDir = new File(plugInsDirectory, srcdir.getName());
+        File destDir = new File(plugInsDirectory, "Java");
         Set<String> filesToCopy = runTime.getIncludedFiles();
 
         for (String fname : filesToCopy) {
@@ -627,8 +627,7 @@ public class MacAppBundler extends AbstractBundler {
                 COPYRIGHT.fetchFrom(params) != null ? COPYRIGHT.fetchFrom(params) : "Unknown");
         data.put("DEPLOY_LAUNCHER_NAME", getLauncherName(params));
         if (MAC_RUNTIME.fetchFrom(params) != null) {
-            data.put("DEPLOY_JAVA_RUNTIME_NAME",
-                "$APPDIR/plugins/" + MAC_RUNTIME.fetchFrom(params).getBaseDirectory().getName());
+            data.put("DEPLOY_JAVA_RUNTIME_NAME", "$APPDIR/plugins/Java");
         } else {
             data.put("DEPLOY_JAVA_RUNTIME_NAME", "");
         }
@@ -983,11 +982,6 @@ public class MacAppBundler extends AbstractBundler {
 
         // strip out flight recorder
         rules.add(Rule.suffixNeg("lib/jfr.jar"));
-
-        // for now the JRE breaks things.  Should be fixed soonish.
-        if (isJRE) {
-            throw new IllegalArgumentException(I18N.getString("message.no-mac-jre-support"));
-        }
 
         return rules.toArray(new Rule[rules.size()]);
     }

@@ -355,11 +355,10 @@ public class LinuxAppBundler extends AbstractBundler {
         runtimeDirectory.mkdirs();
 
         File srcdir = runtime.getBaseDirectory();
-        File destDir = new File(runtimeDirectory, srcdir.getName());
         Set<String> filesToCopy = runtime.getIncludedFiles();
         for (String fname : filesToCopy) {
             IOUtils.copyFile(
-                    new File(srcdir, fname), new File(destDir, fname));
+                    new File(srcdir, fname), new File(runtimeDirectory, fname));
         }
     }
 

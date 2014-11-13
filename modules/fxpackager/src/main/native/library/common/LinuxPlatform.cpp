@@ -127,6 +127,16 @@ TString LinuxPlatform::GetBundledJVMLibraryFileName(TString RuntimePath) {
             "jre/lib/"JAVAARCH"/server/libjvm.so";
     }
 
+    if (FilePath::FileExists(result) == false) {
+        result = FilePath::IncludeTrailingSlash(RuntimePath) +
+            "lib/"JAVAARCH"/server/libjvm.so";
+    }
+
+    if (FilePath::FileExists(result) == false) {
+        result = FilePath::IncludeTrailingSlash(RuntimePath) +
+            "lib/"JAVAARCH"/server/libjvm.so";
+    }
+
     return result;
 }
 

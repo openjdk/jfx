@@ -41,6 +41,8 @@ public class CLITest {
     static File workDir;
     static File appResourcesDir;
     static File fakeMainJar;
+    static String runtimeJdk;
+    static String runtimeJre;
 
     @BeforeClass
     public static void prepareApp() {
@@ -58,6 +60,13 @@ public class CLITest {
         workDir = new File(tmpBase, "cliapp");
         appResourcesDir = new File(tmpBase, "appResources");
         fakeMainJar = new File(appResourcesDir, "mainApp.jar");
+
+        String packagerJdkRoot = System.getenv("PACKAGER_JDK_ROOT");
+        String packagerJreRoot = System.getenv("PACKAGER_JRE_ROOT");
+
+        runtimeJdk = System.getenv("PACKAGER_JDK_ROOT");
+        runtimeJre = System.getenv("PACKAGER_JRE_ROOT");
+
     }
 
     @Test
@@ -77,13 +86,6 @@ public class CLITest {
 
     @Test
     public void smokeParams() throws Exception {
-
-        String packagerJdkRoot = System.getenv("PACKAGER_JDK_ROOT");
-        String runtime = packagerJdkRoot == null
-                ? System.getProperty("java.home")
-                : packagerJdkRoot;
-
-        
         File f = File.createTempFile("fx-param-test", ".properties");
         try (FileOutputStream fos = new FileOutputStream(f);
             PrintStream ps = new PrintStream(fos)) 
@@ -109,7 +111,7 @@ public class CLITest {
                     "-BuserJvmOptions=-Xms=512m",
                     "-BdesktopHint=false",
                     "-BshortcutHint=true",
-                    "-Bruntime=" + runtime);
+                    "-Bruntime=" + runtimeJdk);
         }
     }
 
@@ -125,7 +127,8 @@ public class CLITest {
                 "-name", "PropsViaBundlerArgs",
                 "-BjvmOptions=-Dsqe.foo.bar=baz -Dsqe.qux.corge=grault",
                 "-BuserJvmOptions=-Xmx=1g\n-Xms=512m",
-                "-BjvmProperties=sqe.aba.caba=dabacaba"
+                "-BjvmProperties=sqe.aba.caba=dabacaba",
+                "-Bruntime=" + runtimeJre
         );
     }
 
