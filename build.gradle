@@ -1549,7 +1549,9 @@ project(":graphics") {
     processResources.dependsOn processDecoraShaders, processPrismShaders
 
     test {
-        jvmArgs "-Djava.ext.dirs=", "-Djavafx.toolkit=com.sun.javafx.pgstub.StubToolkit", "-DCSS_META_DATA_TEST_DIR=${file('$buildDir/classes/main/javafx')}"
+        def cssDir = file("$buildDir/classes/main/javafx")
+        jvmArgs "-Djava.ext.dirs=", "-Djavafx.toolkit=com.sun.javafx.pgstub.StubToolkit",
+            "-DCSS_META_DATA_TEST_DIR=$cssDir"
         enableAssertions = true
         testLogging.exceptionFormat = "full"
         scanForTestClasses = false
@@ -1608,7 +1610,9 @@ project(":controls") {
     }
 
     test {
-        jvmArgs "-Djavafx.toolkit=com.sun.javafx.pgstub.StubToolkit"
+        def cssDir = file("$buildDir/classes/main/javafx")
+        jvmArgs "-Djavafx.toolkit=com.sun.javafx.pgstub.StubToolkit",
+            "-DCSS_META_DATA_TEST_DIR=$cssDir"        
     }
 
     // TODO Css2Bin really should be moved out and put into buildSrc if it can be
