@@ -366,11 +366,11 @@ public class MacAppBundler extends AbstractBundler {
 
         //validate required inputs
         testRuntime(MAC_RUNTIME.fetchFrom(p), new String[] {
-                "Contents/Home/[jre/]?lib/[^/]+/libjvm.dylib", // most reliable
-                "Contents/Home/[jre/]?lib/rt.jar", // fallback canary for JDK 8
+                "Contents/Home/(jre/)?lib/[^/]+/libjvm.dylib", // most reliable
+                "Contents/Home/(jre/)?lib/rt.jar", // fallback canary for JDK 8
         });
         if (USE_FX_PACKAGING.fetchFrom(p)) {
-            testRuntime(MAC_RUNTIME.fetchFrom(p), new String[] {"Contents/Home/jre/lib/ext/jfxrt.jar", "Contents/Home/jre/lib/jfxrt.jar"});
+            testRuntime(MAC_RUNTIME.fetchFrom(p), new String[] {"Contents/Home/(jre/)?lib/ext/jfxrt.jar", "Contents/Home/(jre/)?lib/jfxrt.jar"});
         }
 
         // validate short version
