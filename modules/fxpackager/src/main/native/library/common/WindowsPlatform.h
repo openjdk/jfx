@@ -74,7 +74,7 @@ public:
     virtual Procedure GetProcAddress(Module AModule, std::string MethodName);
 
     virtual bool IsMainThread();
-    virtual size_t GetMemorySize();
+    virtual TPlatformNumber GetMemorySize();
 
 #ifdef DEBUG
     virtual bool IsNativeDebuggerPresent();

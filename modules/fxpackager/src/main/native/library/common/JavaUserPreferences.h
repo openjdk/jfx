@@ -43,14 +43,14 @@
 class JavaUserPreferences {
 protected:
     TString FAppid;
-    std::map<TString, TString> FMap;
+    TOrderedMap FMap;
 
 public:
     static JavaUserPreferences* CreateInstance(void);
     JavaUserPreferences(void);
     virtual ~JavaUserPreferences(void);
 
-    std::map<TString, TString> GetData();
+    TOrderedMap GetData();
 
 public:
     virtual bool Load(TString Appid) = 0;

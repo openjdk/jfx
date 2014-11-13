@@ -272,9 +272,10 @@ bool MacPlatform::IsMainThread() {
     return result;
 }
 
-size_t MacPlatform::GetMemorySize() {
+TPlatformNumber MacPlatform::GetMemorySize() {
     unsigned long long memory = [[NSProcessInfo processInfo] physicalMemory];
-    return memory;
+    TPlatformNumber result = memory / 1048576; // Convert from bytes to megabytes.
+    return result;
 }
 
 std::map<TString, TString> MacPlatform::GetKeys() {
@@ -292,6 +293,7 @@ std::map<TString, TString> MacPlatform::GetKeys() {
         keys.insert(std::map<TString, TString>::value_type(CONFIG_APP_ID_KEY,         _T("JVMPreferencesID")));
         keys.insert(std::map<TString, TString>::value_type(JVM_RUNTIME_KEY,           _T("JVMRuntime")));
         keys.insert(std::map<TString, TString>::value_type(PACKAGER_APP_DATA_DIR,     _T("CFBundleIdentifier")));
+        keys.insert(std::map<TString, TString>::value_type(CONFIG_APP_MEMORY,         _T("app.memory")));
     }
 
     return keys;

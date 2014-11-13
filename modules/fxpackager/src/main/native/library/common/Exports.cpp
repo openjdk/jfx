@@ -46,11 +46,11 @@ private:
     // This is not a class to create an instance of.
     UserJVMArgsExports();
 
-    static jobjectArray MapKeysToJObjectArray(JNIEnv *env, std::map<TString, TValueIndex> map) {
+    static jobjectArray MapKeysToJObjectArray(JNIEnv *env, TOrderedMap map) {
         JavaStringArray result(env, map.size());
         unsigned int index = 0;
 
-        for (std::map<TString, TValueIndex>::iterator iterator = map.begin();
+        for (TOrderedMap::iterator iterator = map.begin();
             iterator != map.end();
             iterator++) {
 
@@ -68,7 +68,7 @@ public:
         jstring result;
 
         Package& package = Package::GetInstance();
-        std::map<TString, TValueIndex> defaultuserargs = package.GetDefaultJVMUserArgs();
+        TOrderedMap defaultuserargs = package.GetDefaultJVMUserArgs();
         TString loption = PlatformString(env, option).toString();
         PlatformString value = defaultuserargs[loption].value;
 
@@ -101,7 +101,7 @@ public:
         jstring result;
 
         Package& package = Package::GetInstance();
-        std::map<TString, TValueIndex> userargs = package.GetJVMUserArgs();
+        TOrderedMap userargs = package.GetJVMUserArgs();
 
         try {
             TString loption = PlatformString(env, option).toString();
@@ -117,7 +117,7 @@ public:
 
     static void _setUserJvmKeysAndValues(JNIEnv *env, jobjectArray options, jobjectArray values) {
         Package& package = Package::GetInstance();
-        std::map<TString, TValueIndex> newMap;
+        TOrderedMap newMap;
 
         try {
             JavaStringArray loptions(env, options);
@@ -128,7 +128,7 @@ public:
                 TValueIndex value;
                 value.value = PlatformString(env, lvalues.GetValue(index)).toString();
                 value.index = index;
-                newMap.insert(std::map<TString, TValueIndex>::value_type(name, value));
+                newMap.insert(TOrderedMap::value_type(name, value));
             }
         }
         catch (const JavaException&) {
@@ -156,34 +156,40 @@ public:
 
 
 extern "C" {
+    JNIEXPORT jstring JNICALL Java_jdk_packager_services_userjvmoptions_LauncherUserJvmOptions__1getUserJvmOptionDefaultValue(JNIEnv *env, jclass klass, jstring option) {
+        return UserJVMArgsExports::_getUserJvmOptionDefaultValue(env, option);
+    }
 
-JNIEXPORT jstring JNICALL Java_jdk_packager_services_userjvmoptions_LauncherUserJvmOptions__1getUserJvmOptionDefaultValue(JNIEnv *env, jclass klass, jstring option) {
-    return UserJVMArgsExports::_getUserJvmOptionDefaultValue(env, option);
-}
+    JNIEXPORT jobjectArray JNICALL Java_jdk_packager_services_userjvmoptions_LauncherUserJvmOptions__1getUserJvmOptionDefaultKeys(JNIEnv *env, jclass klass) {
+        return UserJVMArgsExports::_getUserJvmOptionDefaultKeys(env);
+    }
 
-JNIEXPORT jobjectArray JNICALL Java_jdk_packager_services_userjvmoptions_LauncherUserJvmOptions__1getUserJvmOptionDefaultKeys(JNIEnv *env, jclass klass) {
-    return UserJVMArgsExports::_getUserJvmOptionDefaultKeys(env);
-}
+    JNIEXPORT jstring JNICALL Java_jdk_packager_services_userjvmoptions_LauncherUserJvmOptions__1getUserJvmOptionValue(JNIEnv *env, jclass klass, jstring option) {
+        return UserJVMArgsExports::_getUserJvmOptionValue(env, option);
+    }
 
-JNIEXPORT jstring JNICALL Java_jdk_packager_services_userjvmoptions_LauncherUserJvmOptions__1getUserJvmOptionValue(JNIEnv *env, jclass klass, jstring option) {
-    return UserJVMArgsExports::_getUserJvmOptionValue(env, option);
-}
+    JNIEXPORT void JNICALL Java_jdk_packager_services_userjvmoptions_LauncherUserJvmOptions__1setUserJvmKeysAndValues(JNIEnv *env, jclass klass, jobjectArray options, jobjectArray values) {
+        UserJVMArgsExports::_setUserJvmKeysAndValues(env, options, values);
+    }
 
-JNIEXPORT void JNICALL Java_jdk_packager_services_userjvmoptions_LauncherUserJvmOptions__1setUserJvmKeysAndValues(JNIEnv *env, jclass klass, jobjectArray options, jobjectArray values) {
-    UserJVMArgsExports::_setUserJvmKeysAndValues(env, options, values);
-}
-
-JNIEXPORT jobjectArray JNICALL Java_jdk_packager_services_userjvmoptions_LauncherUserJvmOptions__1getUserJvmOptionKeys(JNIEnv *env, jclass klass) {
-    return UserJVMArgsExports::_getUserJvmOptionKeys(env);
-}
-
+    JNIEXPORT jobjectArray JNICALL Java_jdk_packager_services_userjvmoptions_LauncherUserJvmOptions__1getUserJvmOptionKeys(JNIEnv *env, jclass klass) {
+        return UserJVMArgsExports::_getUserJvmOptionKeys(env);
+    }
 }
 
 #ifdef DEBUG
-// Build with debug info, then use the following in Java in the main or somewhere else:
+// Build with debug info. Create a class:
 //
-// static native boolean isdebugged();
-// 
+// class DebugExports {
+//   public static native boolean isdebugged();
+//
+//   public static native int getpid();
+// }
+//
+// Use the following in Java in the main or somewhere else:
+//
+// uses DebugExports;
+//
 // if (Arrays.asList(args).contains("-debug")) {
 //   System.out.println("pid=" + getpid());
 //
@@ -193,29 +199,18 @@ JNIEXPORT jobjectArray JNICALL Java_jdk_packager_services_userjvmoptions_Launche
 //     }
 //   }
 // }
-class DebugExports {
-private:
-    // This is not a class to create an instance of.
-    DebugExports();
-
-public:
-    static jint _getpid(JNIEnv *env) {
+//
+// The call to isdebugger() will wait until a native debugger is attached. The process
+// identifier (pid) will be printed to the console for you to attach your debugger to.
+extern "C" {
+    JNIEXPORT jint JNICALL Java_debugexports__getpid(JNIEnv *env) {
         Platform& platform = Platform::GetInstance();
         return platform.GetProcessID();
     }
 
-    static jboolean _isdebugged(JNIEnv *env) {
+    JNIEXPORT jboolean JNICALL Java_debugexports__isdebugged(JNIEnv *env) {
         Platform& platform = Platform::GetInstance();
         return platform.GetDebugState() != Platform::dsNone;
     }
-};
-
-JNIEXPORT jint JNICALL Java_someclass__getpid(JNIEnv *env) {
-    return DebugExports::_getpid(env);
-}
-
-
-JNIEXPORT jboolean JNICALL Java_someclass__isdebugged(JNIEnv *env) {
-    return DebugExports::_isdebugged(env);
 }
 #endif //DEBUG

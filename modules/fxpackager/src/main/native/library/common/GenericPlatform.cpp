@@ -111,7 +111,8 @@ std::list<TString> GenericPlatform::LoadFromFile(TString FileName) {
                 std::wstring line;
                 std::getline(stream, line);
 
-                if (line.empty() == false) {
+                // # at the first character will comment out the line.
+                if (line.empty() == false && line[0] != '#') {
                     result.push_back(PlatformString(line).toString());
                 }
             }

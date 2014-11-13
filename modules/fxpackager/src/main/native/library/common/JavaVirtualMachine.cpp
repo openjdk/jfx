@@ -234,7 +234,7 @@ public:
         FItems.push_back(item);
     }
 
-    void AppendValues(std::map<TString, TValueIndex> Values) {
+    void AppendValues(TOrderedMap Values) {
         std::list<TString> orderedKeys = Helpers::GetOrderedKeysFromMap(Values);
         
         for (std::list<TString>::const_iterator iterator = orderedKeys.begin(); iterator != orderedKeys.end(); iterator++) {
@@ -259,7 +259,7 @@ public:
             }
         }
     }
-    
+
 #ifndef USE_JLI_LAUNCH
     JavaVMOption* ToJavaOptions() {
         FOptions = new JavaVMOption[FItems.size()];
@@ -308,10 +308,10 @@ public:
 
 // jvmuserargs can have a trailing equals in the key. This needs to be removed to use
 // other parts of the launcher.
-std::map<TString, TValueIndex> RemoveTrailingEquals(std::map<TString, TValueIndex> Map) {
-    std::map<TString, TValueIndex> result;
+TOrderedMap RemoveTrailingEquals(TOrderedMap Map) {
+    TOrderedMap result;
 
-    for (std::map<TString, TValueIndex>::const_iterator iterator = Map.begin(); iterator != Map.end(); iterator++) {
+    for (TOrderedMap::const_iterator iterator = Map.begin(); iterator != Map.end(); iterator++) {
         TString name = iterator->first;
         TValueIndex value = iterator->second;
 
@@ -335,7 +335,7 @@ std::map<TString, TValueIndex> RemoveTrailingEquals(std::map<TString, TValueInde
             }
         }
 
-        result.insert(std::map<TString, TValueIndex>::value_type(name, value));
+        result.insert(TOrderedMap::value_type(name, value));
     }
 
     return result;
@@ -366,10 +366,22 @@ bool JavaVirtualMachine::StartJVM() {
     options.AppendValue(_T("-Dapp.preferences.id"), package.GetAppID());
     options.AppendValues(package.GetJVMArgs());
     options.AppendValues(RemoveTrailingEquals(package.GetJVMUserArgs()));
-    
+ 
+    TString maxHeapSizeOption;
+    TString minHeapSizeOption;
+
     if (package.GetMemoryState() == PackageBootFields::msAuto) {
-        options.ReplaceValue(_T("-Xms"), _T("256m"));
-        options.ReplaceValue(_T("-Xmx"), PlatformString(package.GetMemorySize()).toString());
+        TPlatformNumber memorySize = package.GetMemorySize();
+        TString memory = PlatformString((size_t)memorySize).toString() + _T("m");
+        maxHeapSizeOption = TString(_T("-Xmx")) + memory;
+        options.AppendValue(maxHeapSizeOption, _T(""));
+
+        if (memorySize > 256)
+            minHeapSizeOption = _T("-Xms256m");
+        else
+            minHeapSizeOption = _T("-Xms") + memory;
+
+        options.AppendValue(minHeapSizeOption, _T(""));
     }
 
     TString mainClassName = package.GetMainClassName();

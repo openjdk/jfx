@@ -44,6 +44,17 @@ Package::Package(void) {
     Initialize();
 }
 
+TPlatformNumber StringToPercentageOfNumber(TString Value, TPlatformNumber Number) {
+    TPlatformNumber result = 0;
+    size_t percentage = atoi(PlatformString(Value.c_str()));
+
+    if (percentage > 0 && Number > 0) {
+        result = Number * percentage / 100;
+    }
+
+    return result;
+}
+
 void Package::Initialize() {
     Platform& platform = Platform::GetInstance();
 
@@ -67,9 +78,17 @@ void Package::Initialize() {
     TString temp;
     config->GetValue(keys[CONFIG_APP_MEMORY], temp);
     
-    if (temp == _T("auto")) {
+    if (temp == _T("auto") || temp == _T("100%")) {
         FBootFields->FMemoryState = PackageBootFields::msAuto;
         FBootFields->FMemorySize = platform.GetMemorySize();
+    }
+    else if (temp.length() == 2 && isdigit(temp[0]) && temp[1] == '%') {
+        FBootFields->FMemoryState = PackageBootFields::msAuto;
+        FBootFields->FMemorySize = StringToPercentageOfNumber(temp.substr(0, 1), platform.GetMemorySize());
+    }
+    else if (temp.length() == 3 && isdigit(temp[0]) && isdigit(temp[1]) && temp[2] == '%') {
+        FBootFields->FMemoryState = PackageBootFields::msAuto;
+        FBootFields->FMemorySize = StringToPercentageOfNumber(temp.substr(0, 2), platform.GetMemorySize());
     }
     else {
         FBootFields->FMemoryState = PackageBootFields::msManual;
@@ -130,31 +149,23 @@ void Package::Initialize() {
     // Read all jvmuserarg defaults.
     FDefaultJVMUserArgs = Helpers::GetJVMUserArgsFromConfig(config);
 
-    // Read jvmuserarg overrides.
-    FJVMUserConfig = NULL;
-
-    // Load user JVM overrides.
+    // Load JVM user overrides.
     TString jvmUserArgsConfigFileName = GetJVMUserArgsConfigFileName();
 
     if (FilePath::FileExists(jvmUserArgsConfigFileName) == true) {
         // Load new location for user VM overrides.
-        FJVMUserConfig = new PropertyFile(jvmUserArgsConfigFileName);
+        AutoFreePtr<PropertyFile> userConfig = new PropertyFile(jvmUserArgsConfigFileName);
+        FJVMUserArgsOverrides = Helpers::GetJVMArgsFromConfig(userConfig);
     }
     else {
-        // Attemp to load java.util.prefs for VM overrides.
-        JavaUserPreferences* javaPreferences = JavaUserPreferences::CreateInstance();
+        // Attemp to load java.util.prefs for legacy JVM user overrides.
+        AutoFreePtr<JavaUserPreferences> javaPreferences = JavaUserPreferences::CreateInstance();
 
         if (javaPreferences->Load(GetAppID()) == true) {
-            FJVMUserConfig = new PropertyFile(javaPreferences->GetData());
+            FJVMUserArgsOverrides = javaPreferences->GetData();
         }
-        else {
-            FJVMUserConfig = new PropertyFile();
-        }
-
-        delete javaPreferences;
     }
 
-    FJVMUserConfig->SetReadOnly(false);
     MergeJVMDefaultsWithOverrides();
 }
 
@@ -209,7 +220,6 @@ Package& Package::GetInstance() {
 }
 
 Package::~Package(void) {
-    delete FJVMUserConfig;
 }
 
 void Package::FreeBootFields() {
@@ -217,26 +227,26 @@ void Package::FreeBootFields() {
     FBootFields = NULL;
 }
 
-std::map<TString, TValueIndex> Package::GetJVMArgs() {
+TOrderedMap Package::GetJVMArgs() {
     assert(FBootFields != NULL);
     return FBootFields->FJVMArgs;
 }
 
-std::map<TString, TValueIndex> Package::GetDefaultJVMUserArgs() {
+TOrderedMap Package::GetDefaultJVMUserArgs() {
     return FDefaultJVMUserArgs;
 }
 
-std::map<TString, TValueIndex> Package::GetJVMUserArgOverrides() {
-    return Helpers::GetJVMUserArgsFromConfig(FJVMUserConfig);
+TOrderedMap Package::GetJVMUserArgOverrides() {
+    return FJVMUserArgsOverrides;//Helpers::GetJVMUserArgsFromConfig(FJVMUserConfig);
 }
 
-void Package::SetJVMUserArgOverrides(std::map<TString, TValueIndex> Value) {
-    std::map<TString, TValueIndex> defaults = GetDefaultJVMUserArgs();
-    std::map<TString, TValueIndex> overrides = Value;
+void Package::SetJVMUserArgOverrides(TOrderedMap Value) {
+    TOrderedMap defaults = GetDefaultJVMUserArgs();
+    TOrderedMap overrides = Value;
     std::list<TString> overrideKeys = Helpers::GetOrderedKeysFromMap(overrides);
 
     // 1. Remove entries in the overrides that are the same as the defaults.
-    for (std::map<TString, TValueIndex>::const_iterator iterator = overrides.begin();
+    for (TOrderedMap::const_iterator iterator = overrides.begin();
         iterator != overrides.end();
         iterator++) {
 
@@ -253,7 +263,7 @@ void Package::SetJVMUserArgOverrides(std::map<TString, TValueIndex> Value) {
     }
 
     // 2. Create an ordered map from the overrides that weren't removed.
-    std::map<TString, TValueIndex> orderedOverrides;
+    TOrderedMap orderedOverrides;
     size_t index = 1;
 
     for (std::list<TString>::const_iterator iterator = overrideKeys.begin();
@@ -263,20 +273,22 @@ void Package::SetJVMUserArgOverrides(std::map<TString, TValueIndex> Value) {
         item.value = overrides[key].value;
         item.index = index;
 
-        orderedOverrides.insert(std::map<TString, TValueIndex>::value_type(key, item));
+        orderedOverrides.insert(TOrderedMap::value_type(key, item));
         index++;
     }
 
     // 3. Overwrite JVM user config overrides with provided key/value pair.
-    FJVMUserConfig->Assign(Helpers::GetConfigFromJVMUserArgs(orderedOverrides));
-    //Platform& platform = Platform::GetInstance();
-    FJVMUserConfig->SaveToFile(GetJVMUserArgsConfigFileName());
+    AutoFreePtr<PropertyFile> userConfig = new PropertyFile();
+    userConfig->Assign(Helpers::GetConfigFromJVMUserArgs(orderedOverrides));
+    userConfig->SetReadOnly(false);
+    userConfig->SaveToFile(GetJVMUserArgsConfigFileName());
+    FJVMUserArgsOverrides = orderedOverrides;
 
     // 4. Merge defaults and overrides to produce FJVMUserArgs.
     MergeJVMDefaultsWithOverrides();
 }
 
-std::map<TString, TValueIndex> Package::GetJVMUserArgs() {
+TOrderedMap Package::GetJVMUserArgs() {
     // Merge jvmuserarg defaults and jvmuserarg overrides to populate FJVMUserArgs.
     // 1. If the key is in the config file and not the java.user.preferences the default value is used,
     //    the one from the config file.
@@ -284,9 +296,9 @@ std::map<TString, TValueIndex> Package::GetJVMUserArgs() {
     //    The config file value is ignored.
     // 3. If the key is not in the config file but it is in the java.user.preferences then it is added anyway.
     //    And if it is removed it won't show back up.
-    if (FJVMUserConfig->IsModified() == true) {
-        MergeJVMDefaultsWithOverrides();
-    }
+//    if (FJVMUserConfig->IsModified() == true) {
+//        MergeJVMDefaultsWithOverrides();
+//    }
 
     return FJVMUserArgs;
 }
@@ -295,12 +307,12 @@ void Package::MergeJVMDefaultsWithOverrides() {
     FJVMUserArgs.clear();
     FJVMUserArgs.insert(FDefaultJVMUserArgs.begin(), FDefaultJVMUserArgs.end());
 
-    std::map<TString, TValueIndex> overrides = GetJVMUserArgOverrides();
+    TOrderedMap overrides = GetJVMUserArgOverrides();
     std::list<TString> indexedKeys = Helpers::GetOrderedKeysFromMap(overrides);
 
     // 1. Iterate over all elements in overrides to see if any items
     //    override a default value.
-    for (std::map<TString, TValueIndex>::iterator iterator = overrides.begin();
+    for (TOrderedMap::iterator iterator = overrides.begin();
          iterator != overrides.end();
          iterator++) {
 
@@ -431,7 +443,7 @@ TString Package::GetCommandName() {
     return FBootFields->FCommandName;
 }
 
-size_t Package::GetMemorySize() {
+TPlatformNumber Package::GetMemorySize() {
     assert(FBootFields != NULL);
     return FBootFields->FMemorySize;
 }

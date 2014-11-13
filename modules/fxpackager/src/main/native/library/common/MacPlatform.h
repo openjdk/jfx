@@ -70,7 +70,7 @@ public:
     virtual TString GetModuleFileName();
 
     virtual bool IsMainThread();
-    virtual size_t GetMemorySize();
+    virtual TPlatformNumber GetMemorySize();
     
     virtual std::map<TString, TString> GetKeys();
     
