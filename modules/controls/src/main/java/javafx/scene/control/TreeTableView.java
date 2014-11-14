@@ -2436,6 +2436,15 @@ public class TreeTableView<S> extends Control {
                     // The 'if (e.getAddedSize() == 1)' condition here was
                     // subsequently commented out due to RT-33894.
                     startRow = treeTableView.getRow(e.getAddedChildren().get(0));
+
+                    TreeTablePosition<S,?> anchor = TreeTableCellBehavior.getAnchor(treeTableView, null);
+                    if (anchor != null) {
+                        boolean isAnchorSelected = isSelected(anchor.getRow(), anchor.getTableColumn());
+                        if (isAnchorSelected) {
+                            TreeTablePosition<S,?> newAnchor = new TreeTablePosition<>(treeTableView, anchor.getRow() + shift, anchor.getTableColumn());
+                            TreeTableCellBehavior.setAnchor(treeTableView, newAnchor, false);
+                        }
+                    }
                 } else if (e.wasRemoved()) {
                     // shuffle selection by the number of removed items
                     shift = treeItem.isExpanded() ? -e.getRemovedSize() : 0;
@@ -3319,6 +3328,13 @@ public class TreeTableView<S> extends Control {
             setFocusedCell(pos);
 
             EMPTY_CELL = new TreeTablePosition<>(treeTableView, -1, null);
+
+            treeTableView.showRootProperty().addListener(o -> {
+                if (isFocused(0)) {
+                    focus(-1);
+                    focus(0);
+                }
+            });
         }
         
         private final ChangeListener<TreeItem<S>> rootPropertyListener = (observable, oldValue, newValue) -> {
@@ -3389,11 +3405,10 @@ public class TreeTableView<S> extends Control {
                 }
                 
                 if(shift != 0) {
-                    final int newFocus = getFocusedIndex() + shift;
+                    TreeTablePosition<S,?> focusedCell = getFocusedCell();
+                    final int newFocus = focusedCell.getRow() + shift;
                     if (newFocus >= 0) {
-                        Platform.runLater(() -> {
-                            focus(newFocus);
-                        });
+                        Platform.runLater(() -> focus(newFocus, focusedCell.getTableColumn()));
                     }
                 } 
             }

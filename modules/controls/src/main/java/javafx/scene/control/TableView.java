@@ -1820,6 +1820,8 @@ public class TableView<S> extends Control {
 
         private final TableView<S> tableView;
 
+        boolean blockFocusCall = false;
+
 
 
         /***********************************************************************
@@ -1986,6 +1988,7 @@ public class TableView<S> extends Control {
         }
 
         void focus(TablePosition<S,?> pos) {
+            if (blockFocusCall) return;
             if (getTableView().getFocusModel() == null) return;
 
             getTableView().getFocusModel().focus(pos.getRow(), pos.getTableColumn());
@@ -2219,13 +2222,24 @@ public class TableView<S> extends Control {
                     final int newIndicesSize = newIndices.size();
 
                     if ((c.wasRemoved() || c.wasAdded()) && newIndicesSize > 0) {
+                        TablePosition<S,?> anchor = TableCellBehavior.getAnchor(tableView, null);
+                        if (anchor != null) {
+                            boolean isAnchorSelected = isSelected(anchor.getRow(), anchor.getTableColumn());
+                            if (isAnchorSelected) {
+                                TablePosition<S,?> newAnchor = new TablePosition<>(tableView, anchor.getRow() + shift, anchor.getTableColumn());
+                                TableCellBehavior.setAnchor(tableView, newAnchor, false);
+                            }
+                        }
+
                         quietClearSelection();
 
                         // Fix for RT-22079
+                        blockFocusCall = true;
                         for (int i = 0; i < newIndicesSize; i++) {
                             TablePosition<S, ?> tp = newIndices.get(i);
                             select(tp.getRow(), tp.getTableColumn());
                         }
+                        blockFocusCall = false;
                     }
                 } else if (c.wasPermutated()) {
                     // General approach:
@@ -3059,7 +3073,6 @@ public class TableView<S> extends Control {
         private final TableView<S> tableView;
 
         private final TablePosition<S,?> EMPTY_CELL;
-        private boolean isDefaultFocus = false;
 
         /**
          * Creates a default TableViewFocusModel instance that will be used to
@@ -3106,10 +3119,7 @@ public class TableView<S> extends Control {
             }
 
             if (added && ! removed) {
-                if (isDefaultFocus) {
-                    focus(0, focusedCell.getTableColumn());
-                    isDefaultFocus = false;
-                } else {
+                if (addedSize < c.getList().size()) {
                     final int newFocusIndex = getFocusedIndex() + addedSize;
                     focus(newFocusIndex, focusedCell.getTableColumn());
                 }
@@ -3343,7 +3353,6 @@ public class TableView<S> extends Control {
                focusedCell.getTableColumn() : tableView.getVisibleLeafColumn(0);
 
             focus(newValueIndex, focusColumn);
-            isDefaultFocus = true;
         }
 
         private int getColumnCount() {

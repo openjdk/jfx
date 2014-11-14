@@ -38,6 +38,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import com.sun.javafx.scene.control.behavior.ListCellBehavior;
+import com.sun.javafx.scene.control.behavior.TableCellBehavior;
 import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import javafx.application.Platform;
 import javafx.beans.property.ObjectProperty;
@@ -1290,5 +1292,47 @@ public class ListViewTest {
         assertEquals(1, sm.getSelectedItems().size());
         assertEquals(2, rt_37360_add_count);
         assertEquals(1, rt_37360_remove_count);
+    }
+
+    @Test public void test_rt_38491() {
+        ListView<String> stringListView = new ListView<>();
+        stringListView.getItems().addAll("a", "b");
+
+        MultipleSelectionModel<String> sm = stringListView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        FocusModel<String> fm = stringListView.getFocusModel();
+
+        // click on row 0
+        VirtualFlowTestUtils.clickOnRow(stringListView, 0);
+        assertTrue(sm.isSelected(0));
+        assertEquals("a", sm.getSelectedItem());
+        assertTrue(fm.isFocused(0));
+        assertEquals("a", fm.getFocusedItem());
+        assertEquals(0, fm.getFocusedIndex());
+
+        int anchor = ListCellBehavior.getAnchor(stringListView, null);
+        assertTrue(ListCellBehavior.hasNonDefaultAnchor(stringListView));
+        assertEquals(0, anchor);
+
+        // now add a new item at row 0. This has the effect of pushing down
+        // the selected item into row 1.
+        stringListView.getItems().add(0, "z");
+
+        // The first bug was that selection and focus were not moving down to
+        // be on row 1, so we test that now
+        assertFalse(sm.isSelected(0));
+        assertFalse(fm.isFocused(0));
+        assertTrue(sm.isSelected(1));
+        assertEquals("a", sm.getSelectedItem());
+        assertTrue(fm.isFocused(1));
+        assertEquals("a", fm.getFocusedItem());
+        assertEquals(1, fm.getFocusedIndex());
+
+        // The second bug was that the anchor was not being pushed down as well
+        // (when it should).
+        anchor = ListCellBehavior.getAnchor(stringListView, null);
+        assertTrue(ListCellBehavior.hasNonDefaultAnchor(stringListView));
+        assertEquals(1, anchor);
     }
 }

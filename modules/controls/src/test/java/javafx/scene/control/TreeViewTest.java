@@ -26,6 +26,8 @@
 package javafx.scene.control;
 
 import com.sun.javafx.application.PlatformImpl;
+import com.sun.javafx.scene.control.behavior.ListCellBehavior;
+import com.sun.javafx.scene.control.behavior.TreeCellBehavior;
 import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import com.sun.javafx.scene.control.infrastructure.StageLoader;
 import com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
@@ -2466,5 +2468,66 @@ public class TreeViewTest {
         assertTrue(sm.isSelected(0));
         assertFalse(sm.isSelected(1));
         assertFalse(sm.isSelected(2));
+    }
+
+    @Test public void test_rt_38491() {
+        TreeItem<String> a;
+        TreeItem<String> root = new TreeItem<>("Root");
+        root.setExpanded(true);
+        root.getChildren().addAll(
+                a = new TreeItem<>("a"),
+                new TreeItem<>("b")
+        );
+
+        TreeView<String> stringTreeView = new TreeView<>(root);
+        stringTreeView.setShowRoot(false);
+
+        MultipleSelectionModel<TreeItem<String>> sm = stringTreeView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        FocusModel<TreeItem<String>> fm = stringTreeView.getFocusModel();
+
+        StageLoader sl = new StageLoader(stringTreeView);
+
+        // test pre-conditions
+        assertTrue(sm.isEmpty());
+        assertEquals(a, fm.getFocusedItem());
+        assertEquals(0, fm.getFocusedIndex());
+
+        // click on row 0
+        VirtualFlowTestUtils.clickOnRow(stringTreeView, 0);
+        assertTrue(sm.isSelected(0));
+        assertEquals(a, sm.getSelectedItem());
+        assertTrue(fm.isFocused(0));
+        assertEquals(a, fm.getFocusedItem());
+        assertEquals(0, fm.getFocusedIndex());
+
+        Integer anchor = TreeCellBehavior.getAnchor(stringTreeView, null);
+        assertNotNull(anchor);
+        assertTrue(TreeCellBehavior.hasNonDefaultAnchor(stringTreeView));
+        assertEquals(0, (int)anchor);
+
+        // now add a new item at row 0. This has the effect of pushing down
+        // the selected item into row 1.
+        root.getChildren().add(0, new TreeItem("z"));
+
+        // The first bug was that selection and focus were not moving down to
+        // be on row 1, so we test that now
+        assertFalse(sm.isSelected(0));
+        assertFalse(fm.isFocused(0));
+        assertTrue(sm.isSelected(1));
+        assertEquals(a, sm.getSelectedItem());
+        assertTrue(fm.isFocused(1));
+        assertEquals(a, fm.getFocusedItem());
+        assertEquals(1, fm.getFocusedIndex());
+
+        // The second bug was that the anchor was not being pushed down as well
+        // (when it should).
+        anchor = TreeCellBehavior.getAnchor(stringTreeView, null);
+        assertNotNull(anchor);
+        assertTrue(TreeCellBehavior.hasNonDefaultAnchor(stringTreeView));
+        assertEquals(1, (int)anchor);
+
+        sl.dispose();
     }
 }

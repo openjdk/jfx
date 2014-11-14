@@ -32,7 +32,6 @@ import com.sun.javafx.scene.control.skin.TreeViewSkin;
 
 import javafx.application.Platform;
 import javafx.beans.DefaultProperty;
-import javafx.beans.InvalidationListener;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
@@ -1365,6 +1364,13 @@ public class TreeView<T> extends Control {
             }
 
             shiftSelection(startRow, shift, null);
+
+            if (e.wasAdded() || e.wasRemoved()) {
+                Integer anchor = TreeCellBehavior.getAnchor(treeView, null);
+                if (anchor != null && isSelected(anchor + shift)) {
+                    TreeCellBehavior.setAnchor(treeView, anchor + shift, false);
+                }
+            }
         };
         
         private WeakChangeListener<TreeItem<T>> weakRootPropertyListener =
@@ -1501,6 +1507,13 @@ public class TreeView<T> extends Control {
             if (treeView.getExpandedItemCount() > 0) {
                 focus(0);
             }
+
+            treeView.showRootProperty().addListener(o -> {
+                if (isFocused(0)) {
+                    focus(-1);
+                    focus(0);
+                }
+            });
         }
         
         private final ChangeListener<TreeItem<T>> rootPropertyListener = (observable, oldValue, newValue) -> {

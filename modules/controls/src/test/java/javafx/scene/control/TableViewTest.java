@@ -37,6 +37,7 @@ import java.util.function.Supplier;
 
 import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
 import com.sun.javafx.scene.control.SelectedCellsMap;
+import com.sun.javafx.scene.control.behavior.TableCellBehavior;
 import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
 import com.sun.javafx.scene.control.infrastructure.StageLoader;
@@ -60,6 +61,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.cell.*;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
@@ -4456,5 +4458,61 @@ public class TableViewTest {
         assertEquals(1, sm.getSelectedItems().size());
         assertEquals(2, rt_37360_add_count);
         assertEquals(1, rt_37360_remove_count);
+    }
+
+    @Test public void test_rt_38491() {
+        TableView<String> stringTableView = new TableView<>();
+        stringTableView.getItems().addAll("a","b", "c", "d");
+
+        TableColumn<String,String> column = new TableColumn<>("Column");
+        column.setCellValueFactory(cdf -> new ReadOnlyStringWrapper(cdf.getValue()));
+        stringTableView.getColumns().add(column);
+
+        TableSelectionModel<String> sm = stringTableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        TableView.TableViewFocusModel fm = stringTableView.getFocusModel();
+
+        StageLoader sl = new StageLoader(stringTableView);
+
+        // click on row 0
+        sm.select(0, column);
+        assertTrue(sm.isSelected(0));
+        assertEquals("a", sm.getSelectedItem());
+        assertTrue(fm.isFocused(0));
+        assertEquals("a", fm.getFocusedItem());
+        assertEquals(0, fm.getFocusedCell().getRow());
+        assertEquals(column, fm.getFocusedCell().getTableColumn());
+
+        TablePosition anchor = TableCellBehavior.getAnchor(stringTableView, null);
+        assertTrue(TableCellBehavior.hasNonDefaultAnchor(stringTableView));
+        assertEquals(0, anchor.getRow());
+        assertEquals(column, anchor.getTableColumn());
+
+        // now add a new item at row 0. This has the effect of pushing down
+        // the selected item into row 1.
+        stringTableView.getItems().add(0, "z");
+
+        Toolkit.getToolkit().firePulse();
+
+        // The first bug was that selection and focus were not moving down to
+        // be on row 1, so we test that now
+        assertFalse(sm.isSelected(0));
+        assertFalse(fm.isFocused(0));
+        assertTrue(sm.isSelected(1));
+        assertEquals("a", sm.getSelectedItem());
+        assertTrue(fm.isFocused(1));
+        assertEquals("a", fm.getFocusedItem());
+        assertEquals(1, fm.getFocusedCell().getRow());
+        assertEquals(column, fm.getFocusedCell().getTableColumn());
+
+        // The second bug was that the anchor was not being pushed down as well
+        // (when it should).
+        anchor = TableCellBehavior.getAnchor(stringTableView, null);
+        assertTrue(TableCellBehavior.hasNonDefaultAnchor(stringTableView));
+        assertEquals(1, anchor.getRow());
+        assertEquals(column, anchor.getTableColumn());
+
+        sl.dispose();
     }
 }
