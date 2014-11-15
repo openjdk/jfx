@@ -46,9 +46,9 @@ import javafx.css.StyleableProperty;
 import javafx.geometry.NodeOrientation;
 import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
+import javafx.scene.AccessibleAction;
 import javafx.scene.Node;
 import javafx.scene.Scene;
-//import javafx.scene.accessibility.Action;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.IndexRange;
 import javafx.scene.control.MenuItem;
@@ -110,7 +110,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
      * Specifies whether we ought to show handles. We should do it on touch platforms, but not
      * iOS (and maybe not Android either?)
      */
-    protected static boolean SHOW_HANDLES = IS_TOUCH_SUPPORTED && !PlatformUtil.isIOS();
+    protected static final boolean SHOW_HANDLES = IS_TOUCH_SUPPORTED && !PlatformUtil.isIOS();
 
     protected final ObservableObjectValue<FontMetrics> fontMetrics;
 
@@ -717,8 +717,8 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
             } else {
                 items.setAll(copyMI, separatorMI, selectAllMI);
             }
-            undoMI.setDisable(!getBehavior().canUndo());
-            redoMI.setDisable(!getBehavior().canRedo());
+            undoMI.setDisable(!getSkinnable().isUndoable());
+            redoMI.setDisable(!getSkinnable().isRedoable());
             cutMI.setDisable(maskText || !hasSelection);
             copyMI.setDisable(maskText || !hasSelection);
             pasteMI.setDisable(!Clipboard.getSystemClipboard().hasString());
@@ -842,20 +842,19 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
         return getClassCssMetaData();
     }
 
-//    /** @treatAsPrivate */
-//    protected void accExecuteAction(Action action, Object... parameters) {
-//        switch (action) {
-//            case SCROLL_TO_INDEX: {
-//                Integer start = (Integer)parameters[0];
-//                Integer end = (Integer)parameters[1];
-//                if (start != null && end != null) {
-//                    scrollCharacterToVisible(end);
-//                    scrollCharacterToVisible(start);
-//                    scrollCharacterToVisible(end);
-//                }
-//                break;
-//            } 
-//            default: super.accExecuteAction(action, parameters);
-//        }
-//    }
+    protected void executeAccessibleAction(AccessibleAction action, Object... parameters) {
+        switch (action) {
+            case SHOW_TEXT_RANGE: {
+                Integer start = (Integer)parameters[0];
+                Integer end = (Integer)parameters[1];
+                if (start != null && end != null) {
+                    scrollCharacterToVisible(end);
+                    scrollCharacterToVisible(start);
+                    scrollCharacterToVisible(end);
+                }
+                break;
+            } 
+            default: super.executeAccessibleAction(action, parameters);
+        }
+    }
 }

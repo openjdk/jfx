@@ -34,9 +34,9 @@ import javafx.beans.value.WeakChangeListener;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
+import javafx.scene.AccessibleAttribute;
+import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
-//import javafx.scene.accessibility.Attribute;
-//import javafx.scene.accessibility.Role;
 import javafx.util.Callback;
 import javafx.util.StringConverter;
 
@@ -227,6 +227,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
      */
     public ComboBox(ObservableList<T> items) {
         getStyleClass().add(DEFAULT_STYLE_CLASS);
+        setAccessibleRole(AccessibleRole.COMBO_BOX);
         setItems(items);
         setSelectionModel(new ComboBoxSelectionModel<T>(this));
         
@@ -448,10 +449,11 @@ public class ComboBox<T> extends ComboBoxBase<T> {
                 // selecting a new value from the ComboBox would end up in here,
                 // when we really should go into the updateValue(t1) call below.
                 // We should only ever go into this clause if t1 is null.
-                wasSetAllCalled = false;
             } else {
                 updateValue(t1);
             }
+
+            wasSetAllCalled = false;
         }
     };
 
@@ -592,22 +594,23 @@ public class ComboBox<T> extends ComboBoxBase<T> {
      *                                                                         *
      **************************************************************************/
 
-//    /** @treatAsPrivate */
-//    @Override
-//    public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//        switch(attribute) {
-//            case ROLE: return Role.COMBOBOX;
-//            case TITLE:
-//                //let the skin first.
-//                Object title = super.accGetAttribute(attribute, parameters);
-//                if (title != null) return title;
-//                StringConverter<T> converter = getConverter();
-//                if (converter == null) {
-//                    return getValue() != null ? getValue().toString() : "";
-//                }
-//                return converter.toString(getValue());
-//            default: return super.accGetAttribute(attribute, parameters);
-//        }
-//    }
+    @Override
+    public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
+        switch(attribute) {
+            case TEXT:
+                String accText = getAccessibleText();
+                if (accText != null && !accText.isEmpty()) return accText;
+
+                //let the skin first.
+                Object title = super.queryAccessibleAttribute(attribute, parameters);
+                if (title != null) return title;
+                StringConverter<T> converter = getConverter();
+                if (converter == null) {
+                    return getValue() != null ? getValue().toString() : "";
+                }
+                return converter.toString(getValue());
+            default: return super.queryAccessibleAttribute(attribute, parameters);
+        }
+    }
 
 }

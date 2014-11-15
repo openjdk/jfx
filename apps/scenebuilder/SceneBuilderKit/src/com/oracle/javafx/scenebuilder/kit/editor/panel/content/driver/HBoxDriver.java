@@ -64,7 +64,7 @@ public class HBoxDriver extends AbstractNodeDriver {
         final HBox hbox = (HBox) fxomObject.getSceneGraphObject();
         assert hbox.getScene() != null;
         
-        final double localX = hbox.sceneToLocal(sceneX, sceneY).getX();
+        final double localX = hbox.sceneToLocal(sceneX, sceneY, true /* rootScene */).getX();
         final int childCount = hbox.getChildrenUnmodifiable().size();
         
         final int targetIndex;

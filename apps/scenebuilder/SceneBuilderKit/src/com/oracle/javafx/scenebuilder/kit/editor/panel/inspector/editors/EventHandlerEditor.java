@@ -34,9 +34,11 @@ package com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.util.JavaLanguage;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Pos;
@@ -63,9 +65,12 @@ public class EventHandlerEditor extends AutoSuggestEditor {
     private HBox hbox = null;
     private List<String> suggestedMethods;
 
-    @SuppressWarnings("LeakingThisInConstructor")
     public EventHandlerEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses, List<String> suggestedMethods) {
         super(propMeta, selectedClasses, suggestedMethods); //NOI18N
+        initialize(suggestedMethods);
+    }
+
+    private void initialize(List<String> suggestedMethods) {
         this.suggestedMethods = suggestedMethods;
 
         // text field events handling
@@ -106,7 +111,7 @@ public class EventHandlerEditor extends AutoSuggestEditor {
         // methodeName mode by default
         switchToMethodNameMode();
     }
-
+    
     @Override
     public Object getValue() {
         String valueTf = getTextField().getText();

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -131,13 +131,12 @@ class SWArgbPreTexture extends SWTexture {
             frame = f;
         }
 
-        final int off = frame.offsetForPlane(0) / 4;
         final int stride = frame.strideForPlane(0) / 4;
 
-        IntBuffer ib = frame.getBuffer().asIntBuffer();
+        IntBuffer ib = frame.getBufferForPlane(0).asIntBuffer();
         if (ib.hasArray()) {
             this.allocated = false;
-            this.offset = off;
+            this.offset = 0;
             this.physicalWidth = stride;
             this.data = ib.array();
         } else {

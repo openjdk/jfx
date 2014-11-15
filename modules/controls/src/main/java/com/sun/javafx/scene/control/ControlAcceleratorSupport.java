@@ -188,7 +188,10 @@ public class ControlAcceleratorSupport {
     // --- Remove
 
     public static void removeAcceleratorsFromScene(List<? extends MenuItem> items, Tab anchor) {
-        Scene scene = anchor.getTabPane().getScene();
+        TabPane tabPane = anchor.getTabPane();
+        if (tabPane == null) return;
+
+        Scene scene = tabPane.getScene();
         removeAcceleratorsFromScene(items, scene);
     }
 

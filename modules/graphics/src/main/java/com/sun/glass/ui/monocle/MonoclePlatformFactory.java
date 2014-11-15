@@ -30,7 +30,6 @@ import com.sun.glass.ui.Menu;
 import com.sun.glass.ui.MenuBar;
 import com.sun.glass.ui.MenuItem;
 import com.sun.glass.ui.PlatformFactory;
-import com.sun.glass.ui.Window;
 import com.sun.glass.ui.delegate.ClipboardDelegate;
 import com.sun.glass.ui.delegate.MenuBarDelegate;
 import com.sun.glass.ui.delegate.MenuDelegate;

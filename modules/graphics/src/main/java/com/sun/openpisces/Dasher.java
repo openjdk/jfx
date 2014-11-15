@@ -79,19 +79,50 @@ public final class Dasher implements PathConsumer2D {
         curCurvepts = new float[8 * 2];
     }
 
+    // More than 24 bits of mantissa means we can no longer accurately
+    // measure the number of times cycled through the dash array so we
+    // punt and override the phase to just be 0 past that point.
+    static float MAX_CYCLES = 16000000f;
     public void reset(float[] dash, float phase) {
-        if (phase < 0) {
-            throw new IllegalArgumentException("phase < 0 !");
-        }
-
         // Normalize so 0 <= phase < dash[0]
         int sidx = 0;
         dashOn = true;
-        float d;
-        while (phase >= (d = dash[sidx])) {
-            phase -= d;
-            sidx = (sidx + 1) % dash.length;
-            dashOn = !dashOn;
+        float sum = 0f;
+        for (float d : dash) {
+            sum += d;
+        }
+        float cycles = phase / sum;
+        if (phase < 0) {
+            if (-cycles >= MAX_CYCLES) {
+                phase = 0;
+            } else {
+                int fullcycles = (int) Math.floor(-cycles);
+                if ((fullcycles & dash.length & 1) != 0) {
+                    dashOn = !dashOn;
+                }
+                phase += fullcycles * sum;
+                while (phase < 0) {
+                    if (--sidx < 0) sidx = dash.length-1;
+                    phase += dash[sidx];
+                    dashOn = !dashOn;
+                }
+            }
+        } else if (phase > 0) {
+            if (cycles >= MAX_CYCLES) {
+                phase = 0;
+            } else {
+                int fullcycles = (int) Math.floor(cycles);
+                if ((fullcycles & dash.length & 1) != 0) {
+                    dashOn = !dashOn;
+                }
+                phase -= fullcycles * sum;
+                float d;
+                while (phase >= (d = dash[sidx])) {
+                    phase -= d;
+                    sidx = (sidx + 1) % dash.length;
+                    dashOn = !dashOn;
+                }
+            }
         }
 
         this.dash = dash;

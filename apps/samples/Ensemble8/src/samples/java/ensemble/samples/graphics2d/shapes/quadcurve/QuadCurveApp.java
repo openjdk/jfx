@@ -48,14 +48,14 @@ import javafx.stage.Stage;
  * @see javafx.scene.shape.QuadCurve
  * @see javafx.scene.shape.Shape
  * @see javafx.scene.paint.Color
- * @playground quadCurve.fill (name="Cubic Curve Fill")
- * @playground quadCurve.stroke (name="Cubic Curve Stroke")
- * @playground quadCurve.startX (name="Cubic Curve Start X", min=0, max=170)
- * @playground quadCurve.startY (name="Cubic Curve Start Y", min=10, max=80)
- * @playground quadCurve.controlX (name="Cubic Curve Control X", min=0, max=180)
- * @playground quadCurve.controlY (name="Cubic Curve Control Y", min=0, max=90)
- * @playground quadCurve.endX (name="Cubic Curve End X", min=10, max=180)
- * @playground quadCurve.endY (name="Cubic Curve End Y", min=10, max=80)
+ * @playground quadCurve.fill (name="Quad Curve Fill")
+ * @playground quadCurve.stroke (name="Quad Curve Stroke")
+ * @playground quadCurve.startX (name="Quad Curve Start X", min=0, max=170)
+ * @playground quadCurve.startY (name="Quad Curve Start Y", min=10, max=80)
+ * @playground quadCurve.controlX (name="Quad Curve Control X", min=0, max=180)
+ * @playground quadCurve.controlY (name="Quad Curve Control Y", min=0, max=90)
+ * @playground quadCurve.endX (name="Quad Curve End X", min=10, max=180)
+ * @playground quadCurve.endY (name="Quad Curve End Y", min=10, max=80)
  * @embedded
  */
 public class QuadCurveApp extends Application {

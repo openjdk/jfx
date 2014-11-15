@@ -43,11 +43,11 @@ import javafx.css.Styleable;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.*;
+import javafx.scene.AccessibleAction;
+import javafx.scene.AccessibleAttribute;
+import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 import javafx.scene.Parent;
-//import javafx.scene.accessibility.Action;
-//import javafx.scene.accessibility.Attribute;
-//import javafx.scene.accessibility.Role;
 import javafx.scene.control.*;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
@@ -56,6 +56,7 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Rectangle;
+import javafx.stage.Window;
 import javafx.util.Duration;
 
 import java.util.ArrayList;
@@ -79,6 +80,7 @@ public class ContextMenuContent extends Region {
     private double maxLabelWidth = 0;
     private double maxRowHeight = 0;
     private double maxLeftWidth = 0;
+    private double oldWidth = 0;
 
     private Rectangle clipRect;
     MenuBox itemsContainer;
@@ -208,6 +210,33 @@ public class ContextMenuContent extends Region {
                 }
             }
         }
+
+        // Fix for RT-38838.
+        // This fixes the issue where CSS is applied to a menu after it has been
+        // showing, resulting in its bounds changing. In this case, we need to
+        // shift the submenu such that it is properly aligned with its parent menu.
+        //
+        // To do this, we must firstly determine if the open submenu is shifted
+        // horizontally to appear on the other side of this menu, as this is the
+        // only situation where shifting has to happen. If so, we need to check
+        // if we should shift the submenu due to changes in width.
+        //
+        // We need to get the parent menu of this contextMenu, so that we only
+        // modify the X value in the following conditions:
+        // 1) There exists a parent menu
+        // 2) The parent menu is in the correct position (i.e. to the left of this
+        //    menu in normal LTR systems).
+        final double newWidth = maxRightWidth + maxLabelWidth + maxGraphicWidth + maxLeftWidth;
+        Window ownerWindow = contextMenu.getOwnerWindow();
+        if (ownerWindow instanceof ContextMenu) {
+            if (contextMenu.getX() < ownerWindow.getX()) {
+                if (oldWidth != newWidth) {
+                    contextMenu.setX(contextMenu.getX() + oldWidth - newWidth);
+                }
+            }
+        }
+
+        oldWidth = newWidth;
     }
     
     private void updateVisualItems() {
@@ -286,10 +315,15 @@ public class ContextMenuContent extends Region {
     }
 
     public void disposeContextMenu(ContextMenu menu) {
-        if (menu != null) {
-            ContextMenuContent cmContent = (ContextMenuContent)menu.getSkin().getNode();
-            cmContent.dispose(); // recursive call to dispose submenus.
-        }
+        if (menu == null) return;
+
+        Skin<?> skin = menu.getSkin();
+        if (skin == null) return;
+
+        ContextMenuContent cmContent = (ContextMenuContent)skin.getNode();
+        if (cmContent == null) return;
+
+        cmContent.dispose(); // recursive call to dispose submenus.
     }
 
     @Override protected void layoutChildren() {
@@ -961,6 +995,9 @@ public class ContextMenuContent extends Region {
      * timeline when mouse is over up/down arrow.
      */
     class MenuBox extends VBox {
+        MenuBox() {
+            setAccessibleRole(AccessibleRole.CONTEXT_MENU);
+        }
 
         @Override protected void layoutChildren() {
             double yOffset = ty;
@@ -974,15 +1011,14 @@ public class ContextMenuContent extends Region {
             }
         }
 
-//        @Override
-//        public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//            switch (attribute) {
-//                case ROLE: return Role.CONTEXT_MENU;
-//                case VISIBLE: return contextMenu.isShowing();
-//                case MENU_FOR: return contextMenu.getOwnerNode();
-//                default: return super.accGetAttribute(attribute, parameters); 
-//            }
-//        }
+        @Override
+        public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
+            switch (attribute) {
+                case VISIBLE: return contextMenu.isShowing();
+                case PARENT_MENU: return contextMenu.getOwnerNode();
+                default: return super.queryAccessibleAttribute(attribute, parameters); 
+            }
+        }
     }
 
     class ArrowMenuItem extends StackPane {
@@ -1113,14 +1149,19 @@ public class ContextMenuContent extends Region {
                 pseudoProperty = ((Menu)item).showingProperty();
                 listener.registerChangeListener(pseudoProperty, "MENU_SHOWING");
                 pseudoClassStateChanged(SELECTED_PSEUDOCLASS_STATE, pseudoProperty.get());
+                setAccessibleRole(AccessibleRole.MENU);
             } else if (item instanceof RadioMenuItem) {
                 pseudoProperty = ((RadioMenuItem)item).selectedProperty();
                 listener.registerChangeListener(pseudoProperty, "RADIO_ITEM_SELECTED");
                 pseudoClassStateChanged(CHECKED_PSEUDOCLASS_STATE, pseudoProperty.get());
+                setAccessibleRole(AccessibleRole.RADIO_MENU_ITEM);
             } else if (item instanceof CheckMenuItem) {
                 pseudoProperty = ((CheckMenuItem)item).selectedProperty();
                 listener.registerChangeListener(pseudoProperty, "CHECK_ITEM_SELECTED");
                 pseudoClassStateChanged(CHECKED_PSEUDOCLASS_STATE, pseudoProperty.get());
+                setAccessibleRole(AccessibleRole.CHECK_MENU_ITEM);
+            } else {
+                setAccessibleRole(AccessibleRole.MENU_ITEM);
             }
             
             pseudoClassStateChanged(DISABLED_PSEUDOCLASS_STATE, item.disableProperty().get());
@@ -1362,7 +1403,15 @@ public class ContextMenuContent extends Region {
 
             // fire the action before hiding the menu
             item.fire();
-            hideAllMenus(item);
+
+            if (item instanceof CustomMenuItem) {
+                CustomMenuItem customMenuItem = (CustomMenuItem) item;
+                if (customMenuItem.isHideOnClick()) {
+                    hideAllMenus(item);
+                }
+            } else {
+                hideAllMenus(item);
+            }
         }
 
         private EventHandler<MouseEvent> customMenuItemMouseClickedHandler;
@@ -1469,82 +1518,80 @@ public class ContextMenuContent extends Region {
             return null;
         }
 
-//        @Override
-//        public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//            switch (attribute) {
-//                case ROLE: return Role.MENU_ITEM;
-//                case MENU_ITEM_TYPE:
-//                    if (item instanceof RadioMenuItem) return Role.RADIO_BUTTON;
-//                    if (item instanceof CheckMenuItem) return Role.CHECKBOX;
-//                    if (item instanceof Menu) return Role.CONTEXT_MENU;
-//                    return Role.MENU_ITEM;
-//                case SELECTED:
-//                    if (item instanceof CheckMenuItem) {
-//                        return ((CheckMenuItem)item).isSelected();
-//                    }
-//                    if (item instanceof RadioMenuItem) {
-//                        return ((RadioMenuItem) item).isSelected();
-//                    }
-//                    return false;
-//                case ACCELERATOR: return item.getAccelerator();
-//                case TITLE: {
-//                    String title = "";
-//                    if (graphic != null) {
-//                        String t = (String)graphic.accGetAttribute(Attribute.TITLE);
-//                        if (t != null) title += t;
-//                    }                  
-//                    final Label label = getLabel();
-//                    if (label != null) {
-//                        String t = (String)label.accGetAttribute(Attribute.TITLE);
-//                        if (t != null) title += t;
-//                    }
-//                    if (item instanceof CustomMenuItem) {
-//                        Node content = ((CustomMenuItem) item).getContent();
-//                        if (content != null) {
-//                            String t = (String)content.accGetAttribute(Attribute.TITLE);
-//                            if (t != null) title += t;
-//                        }
-//                    }
-//                    return title;
-//                }
-//                case MNEMONIC: {
-//                    final Label label = getLabel();
-//                    if (label != null) {
-//                        String mnemonic = (String)label.accGetAttribute(Attribute.MNEMONIC);
-//                        if (mnemonic != null) return mnemonic;
-//                    }
-//                    return null;
-//                }
-//                case ENABLED: return !item.isDisable();
-//                case MENU:
-//                    createSubmenu();
-//                    // Accessibility might need to see the menu node before the window
-//                    // is visible (i.e. before the skin is applied).
-//                    if (submenu.getSkin() == null) {
-//                        submenu.impl_styleableGetNode().impl_processCSS(true);
-//                    }
-//                    ContextMenuContent cmContent = (ContextMenuContent)submenu.getSkin().getNode();
-//                    return cmContent.itemsContainer;
-//                default: return super.accGetAttribute(attribute, parameters); 
-//            }
-//        }
-//
-//        @Override
-//        public void accExecuteAction(Action action, Object... parameters) {
-//            switch (action) {
-//                case SHOW_MENU:{
-//                    if (item instanceof Menu) {
-//                        final Menu menuItem = (Menu) item;
-//                        menuItem.hide();
-//                    }
-//                    break;
-//                }
-//                case FIRE: 
-//                    doSelect();
-//                    break;
-//                default: super.accExecuteAction(action);
-//            }
-//        }
+        @Override
+        public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
+            switch (attribute) {
+                case SELECTED:
+                    if (item instanceof CheckMenuItem) {
+                        return ((CheckMenuItem)item).isSelected();
+                    }
+                    if (item instanceof RadioMenuItem) {
+                        return ((RadioMenuItem) item).isSelected();
+                    }
+                    return false;
+                case ACCELERATOR: return item.getAccelerator();
+                case TEXT: {
+                    String title = "";
+                    if (graphic != null) {
+                        String t = (String)graphic.queryAccessibleAttribute(AccessibleAttribute.TEXT);
+                        if (t != null) title += t;
+                    }                  
+                    final Label label = getLabel();
+                    if (label != null) {
+                        String t = (String)label.queryAccessibleAttribute(AccessibleAttribute.TEXT);
+                        if (t != null) title += t;
+                    }
+                    if (item instanceof CustomMenuItem) {
+                        Node content = ((CustomMenuItem) item).getContent();
+                        if (content != null) {
+                            String t = (String)content.queryAccessibleAttribute(AccessibleAttribute.TEXT);
+                            if (t != null) title += t;
+                        }
+                    }
+                    return title;
+                }
+                case MNEMONIC: {
+                    final Label label = getLabel();
+                    if (label != null) {
+                        String mnemonic = (String)label.queryAccessibleAttribute(AccessibleAttribute.MNEMONIC);
+                        if (mnemonic != null) return mnemonic;
+                    }
+                    return null;
+                }
+                case DISABLED: return item.isDisable();
+                case SUBMENU:
+                    createSubmenu();
+                    // Accessibility might need to see the menu node before the window
+                    // is visible (i.e. before the skin is applied).
+                    if (submenu.getSkin() == null) {
+                        submenu.impl_styleableGetNode().impl_processCSS(true);
+                    }
+                    ContextMenuContent cmContent = (ContextMenuContent)submenu.getSkin().getNode();
+                    return cmContent.itemsContainer;
+                default: return super.queryAccessibleAttribute(attribute, parameters); 
+            }
+        }
+
+        @Override
+        public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
+            switch (action) {
+                case SHOW_MENU:{
+                    if (item instanceof Menu) {
+                        final Menu menuItem = (Menu) item;
+                        if (menuItem.isShowing()) {
+                            menuItem.hide();
+                        } else {
+                            menuItem.show();
+                        }
+                    }
+                    break;
+                }
+                case FIRE: 
+                    doSelect();
+                    break;
+                default: super.executeAccessibleAction(action);
+            }
+        }
     }
 
 

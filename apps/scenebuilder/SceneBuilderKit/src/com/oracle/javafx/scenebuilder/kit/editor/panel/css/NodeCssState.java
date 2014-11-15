@@ -59,6 +59,7 @@ import javafx.scene.control.Skinnable;
 
 /**
  *
+ * @treatAsPrivate
  */
 public class NodeCssState {
 
@@ -95,6 +96,10 @@ public class NodeCssState {
         getAllStyleables();
     }
 
+    /**
+     *
+     * @treatAsPrivate
+     */
     @SuppressWarnings("rawtypes")
     public static class CssProperty implements Comparable<CssProperty> {
 
@@ -415,12 +420,16 @@ public class NodeCssState {
         return userAgent;
     }
 
+    /**
+     *
+     * @treatAsPrivate
+     */
     public static class RuleComparator implements Comparator<MatchingRule> {
 
         @Override
         public int compare(MatchingRule t, MatchingRule t1) {
             int originComparaison = compareOrigin(
-                    CssInternal.getOrigin(t.getRule()), CssInternal.getOrigin(t1.rule));
+                    t.getRule().getOrigin(), t1.rule.getOrigin());
             int tnotApplied = countNotApplied(t.declarations);
             int t1notApplied = countNotApplied(t1.declarations);
             int notAppliedComparaisons = tnotApplied - t1notApplied;
@@ -451,6 +460,10 @@ public class NodeCssState {
         return count;
     }
 
+    /**
+     *
+     * @treatAsPrivate
+     */
     public static class MatchingRule {
 
         private final Rule rule;
@@ -500,6 +513,10 @@ public class NodeCssState {
         }
     }
 
+    /**
+     *
+     * @treatAsPrivate
+     */
     public static class MatchingDeclaration {
 
         private final CssContentMaker.CssPropertyState.CssStyle style;
@@ -580,7 +597,7 @@ public class NodeCssState {
             for (Map.Entry<MatchingRule, List<MatchingDeclaration>> entry : matchingRules.entrySet()) {
                 MatchingRule rule = entry.getKey();
                 // Filterout the Inline
-                if (CssInternal.getOrigin(rule.getRule()) != StyleOrigin.INLINE) {
+                if (rule.getRule().getOrigin() != StyleOrigin.INLINE) {
                     rule.addDeclarations(entry.getValue());
                     sortedMatchingRules.add(rule);
                 }

@@ -25,15 +25,13 @@
 
 package com.sun.glass.ui.monocle;
 
-import com.sun.glass.events.ViewEvent;
 import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
 
-import java.nio.Buffer;
 import java.util.Map;
 
-public final class MonocleView extends View {
+final class MonocleView extends View {
 
     MonocleView() {
     }
@@ -50,15 +48,15 @@ public final class MonocleView extends View {
     private int x;
     private int y;
 
-    protected static long _getMultiClickTime() {
+    static long _getMultiClickTime() {
         return multiClickTime;
     }
 
-    protected static int _getMultiClickMaxX() {
+    static int _getMultiClickMaxX() {
         return multiClickMaxX;
     }
 
-    protected static int _getMultiClickMaxY() {
+    static int _getMultiClickMaxY() {
         return multiClickMaxY;
     }
 
@@ -106,13 +104,13 @@ public final class MonocleView extends View {
      */
 
     @Override
-    public void notifyKey(int type, int keyCode, char[] keyChars,
+    protected void notifyKey(int type, int keyCode, char[] keyChars,
                           int modifiers) {
         super.notifyKey(type, keyCode, keyChars, modifiers);
     }
 
     @Override
-    public void notifyMouse(int type, int button,
+    protected void notifyMouse(int type, int button,
                             int x, int y, int xAbs, int yAbs, int modifiers,
                             boolean isPopupTrigger, boolean isSynthesized) {
         super.notifyMouse(type, button, x, y, xAbs, yAbs, modifiers,
@@ -121,7 +119,7 @@ public final class MonocleView extends View {
     }
 
     @Override
-    public void notifyScroll(int x, int y, int xAbs, int yAbs,
+    protected void notifyScroll(int x, int y, int xAbs, int yAbs,
                              double deltaX, double deltaY, int modifiers,
                              int lines, int chars,
                              int defaultLines, int defaultChars,
@@ -132,7 +130,7 @@ public final class MonocleView extends View {
                            yMultiplier);
     }
 
-    protected void notifyRepaint() {
+    void notifyRepaint() {
         super.notifyRepaint(x, y, getWidth(), getHeight());
     }
 
@@ -148,27 +146,27 @@ public final class MonocleView extends View {
 
     //DnD
     @Override
-    public int notifyDragEnter(int x, int y, int absx, int absy, int recommendedDropAction) {
+    protected int notifyDragEnter(int x, int y, int absx, int absy, int recommendedDropAction) {
         return super.notifyDragEnter(x, y, absx, absy, recommendedDropAction);
     }
 
     @Override
-    public void notifyDragLeave() {
+    protected void notifyDragLeave() {
         super.notifyDragLeave();
     }
 
     @Override
-    public int notifyDragDrop(int x, int y, int absx, int absy, int recommendedDropAction) {
+    protected int notifyDragDrop(int x, int y, int absx, int absy, int recommendedDropAction) {
         return super.notifyDragDrop(x, y, absx, absy, recommendedDropAction);
     }
 
     @Override
-    public int notifyDragOver(int x, int y, int absx, int absy, int recommendedDropAction) {
+    protected int notifyDragOver(int x, int y, int absx, int absy, int recommendedDropAction) {
         return super.notifyDragOver(x, y, absx, absy, recommendedDropAction);
     }
 
     @Override
-    public void notifyDragEnd(int performedAction) {
+    protected void notifyDragEnd(int performedAction) {
         super.notifyDragEnd(performedAction);
     }
 

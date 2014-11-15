@@ -55,4 +55,6 @@
 
 + (BOOL)syncRenderingDisabled;
 
++ (BOOL)isSandboxed;
+
 @end

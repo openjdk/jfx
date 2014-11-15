@@ -26,6 +26,7 @@
 package com.sun.javafx.scene.control.skin;
 
 import com.sun.javafx.scene.control.behavior.ComboBoxListViewBehavior;
+import com.sun.javafx.scene.input.ExtendedInputMethodRequests;
 import java.util.List;
 
 import com.sun.javafx.scene.traversal.Algorithm;
@@ -37,11 +38,14 @@ import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.WeakListChangeListener;
 import javafx.css.PseudoClass;
+import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.event.EventTarget;
+import javafx.geometry.Point2D;
+import javafx.scene.AccessibleAttribute;
+import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 import javafx.scene.Parent;
-//import javafx.scene.accessibility.Attribute;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.ComboBoxBase;
 import javafx.scene.control.ListCell;
@@ -178,6 +182,17 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             }
         });
 
+        // RT-38978: Forward input method events to TextField if editable.
+        if (comboBox.getOnInputMethodTextChanged() == null) {
+            comboBox.setOnInputMethodTextChanged(event -> {
+                if (textField != null && comboBox.isEditable() && comboBox.getScene().getFocusOwner() == comboBox) {
+                    if (textField.getOnInputMethodTextChanged() != null) {
+                        textField.getOnInputMethodTextChanged().handle(event);
+                    }
+                }
+            });
+        }
+
         updateEditable();
         
         // Fix for RT-19431 (also tested via ComboBoxListViewSkinTest)
@@ -218,16 +233,6 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
     
     /** {@inheritDoc} */
     @Override protected void handleControlPropertyChanged(String p) {
-        // Fix for RT-21207
-        if ("SHOWING".equals(p)) {
-            if (getSkinnable().isShowing()) {
-                this.listView.setManaged(true);
-            } else {
-                this.listView.setManaged(false);
-            }
-        }
-        // -- end of fix
-        
         super.handleControlPropertyChanged(p);
         
         if ("ITEMS".equals(p)) {
@@ -239,7 +244,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             updateCellFactory();
         } else if ("VISIBLE_ROW_COUNT".equals(p)) {
             if (listView == null) return;
-            listView.setPrefHeight(getListViewPrefHeight());
+            listView.requestLayout();
         } else if ("CONVERTER".equals(p)) {
             updateListViewItems();
         } else if ("EDITOR".equals(p)) {
@@ -248,6 +253,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             updateButtonCell();
         } else if ("VALUE".equals(p)) {
             updateValue();
+            comboBox.fireEvent(new ActionEvent());
         } else if ("EDITABLE".equals(p)) {
             updateEditable();
         }
@@ -262,6 +268,8 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                 textField.removeEventFilter(KeyEvent.ANY, textFieldKeyEventHandler);
                 textField.removeEventFilter(MouseEvent.DRAG_DETECTED, textFieldMouseEventHandler);
                 textField.removeEventFilter(DragEvent.ANY, textFieldDragEventHandler);
+
+                comboBox.setInputMethodRequests(null);
             }
         } else if (newTextField != null) {
             // add event filters
@@ -271,6 +279,37 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             // properly for the ComboBox.
             newTextField.addEventFilter(MouseEvent.DRAG_DETECTED, textFieldMouseEventHandler);
             newTextField.addEventFilter(DragEvent.ANY, textFieldDragEventHandler);
+
+            // RT-38978: Forward input method requests to TextField.
+            comboBox.setInputMethodRequests(new ExtendedInputMethodRequests() {
+                @Override public Point2D getTextLocation(int offset) {
+                    return newTextField.getInputMethodRequests().getTextLocation(offset);
+                }
+
+                @Override public int getLocationOffset(int x, int y) {
+                    return newTextField.getInputMethodRequests().getLocationOffset(x, y);
+                }
+
+                @Override public void cancelLatestCommittedText() {
+                    newTextField.getInputMethodRequests().cancelLatestCommittedText();
+                }
+
+                @Override public String getSelectedText() {
+                    return newTextField.getInputMethodRequests().getSelectedText();
+                }
+
+                @Override public int getInsertPositionOffset() {
+                    return ((ExtendedInputMethodRequests)newTextField.getInputMethodRequests()).getInsertPositionOffset();
+                }
+
+                @Override public String getCommittedText(int begin, int end) {
+                    return ((ExtendedInputMethodRequests)newTextField.getInputMethodRequests()).getCommittedText(begin, end);
+                }
+
+                @Override public int getCommittedTextLength() {
+                    return ((ExtendedInputMethodRequests)newTextField.getInputMethodRequests()).getCommittedTextLength();
+                }
+            });
         }
 
         textField = newTextField;
@@ -575,7 +614,12 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
                 comboBox.getButtonCell() : getDefaultCellFactory().call(listView);
         buttonCell.setMouseTransparent(true);
         buttonCell.updateListView(listView);
-    } 
+        updateDisplayArea();
+        // As long as the screen-reader is concerned this node is not a list item.
+        // This matters because the screen-reader counts the number of list item
+        // within combo and speaks it to the user.
+        buttonCell.setAccessibleRole(AccessibleRole.NODE);
+    }
 
     private void updateCellFactory() {
         Callback<ListView<T>, ListCell<T>> cf = comboBox.getCellFactory();
@@ -600,10 +644,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         final ListView<T> _listView = new ListView<T>() {
 
             {
-                // disable selecting the first item on focus gain - this is
-                // not what is expected in the ComboBox control (unlike the
-                // ListView control, which does this).
-                getProperties().put("selectOnFocusGain", false);
+                getProperties().put("selectFirstRowByDefault", false);
             }
 
             @Override protected double computeMinHeight(double width) {
@@ -653,7 +694,7 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             int index = listView.getSelectionModel().getSelectedIndex();
             comboBox.getSelectionModel().select(index);
             updateDisplayNode();
-//            comboBox.accSendNotification(Attribute.TITLE);
+            comboBox.notifyAccessibleAttributeChanged(AccessibleAttribute.TEXT);
         });
          
         comboBox.getSelectionModel().selectedItemProperty().addListener(o -> {
@@ -751,45 +792,47 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             setFocused(b);
         }
 
-//        @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//            switch (attribute) {
-//                case FOCUS_ITEM: 
-//                    /* Internally comboBox reassign its focus the text field.
-//                     * For the accessibility perspective it is more meaningful
-//                     * if the focus stays with the comboBox control.
-//                     */
-//                    return getParent();
-//                default: return super.accGetAttribute(attribute, parameters);
-//            }
-//        }
+        @Override
+        public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
+            switch (attribute) {
+                case FOCUS_ITEM: 
+                    /* Internally comboBox reassign its focus the text field.
+                     * For the accessibility perspective it is more meaningful
+                     * if the focus stays with the comboBox control.
+                     */
+                    return getParent();
+                default: return super.queryAccessibleAttribute(attribute, parameters);
+            }
+        }
     }
 
-//    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//        switch (attribute) {
-//            case FOCUS_ITEM: {
-//                if (comboBox.isShowing()) {
-//                    /* On Mac, for some reason, changing the selection on the list is not
-//                     * reported by VoiceOver the first time it shows.
-//                     * Note that this fix returns a child of the PopupWindow back to the main
-//                     * Stage, which doesn't seem to cause problems.
-//                     */
-//                    return listView.accGetAttribute(attribute, parameters);
-//                }
-//                return null;
-//            }
-//            case TITLE: {
-//                String title = comboBox.isEditable() ? textField.getText() : buttonCell.getText();
-//                if (title == null || title.isEmpty()) {
-//                    title = comboBox.getPromptText();
-//                }
-//                return title;
-//            }
-//            case SELECTION_START: return textField.getSelection().getStart();
-//            case SELECTION_END: return textField.getSelection().getEnd();
-//
-//            //fall through
-//            default: return super.accGetAttribute(attribute, parameters);
-//        }
-//    }
+    @Override
+    public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
+        switch (attribute) {
+            case FOCUS_ITEM: {
+                if (comboBox.isShowing()) {
+                    /* On Mac, for some reason, changing the selection on the list is not
+                     * reported by VoiceOver the first time it shows.
+                     * Note that this fix returns a child of the PopupWindow back to the main
+                     * Stage, which doesn't seem to cause problems.
+                     */
+                    return listView.queryAccessibleAttribute(attribute, parameters);
+                }
+                return null;
+            }
+            case TEXT: {
+                String accText = comboBox.getAccessibleText();
+                if (accText != null && !accText.isEmpty()) return accText;
+                String title = comboBox.isEditable() ? textField.getText() : buttonCell.getText();
+                if (title == null || title.isEmpty()) {
+                    title = comboBox.getPromptText();
+                }
+                return title;
+            }
+            case SELECTION_START: return textField.getSelection().getStart();
+            case SELECTION_END: return textField.getSelection().getEnd();
+            default: return super.queryAccessibleAttribute(attribute, parameters);
+        }
+    }
 }
 

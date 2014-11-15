@@ -83,7 +83,7 @@ public abstract class ReadOnlyFloatProperty extends FloatExpression implements
      * @return A {@code ReadOnlyFloatProperty} that wraps the
      *         {@code ReadOnlyProperty} if necessary
      * @throws NullPointerException
-     *             if {@code value} is {@code null}
+     *             if {@code property} is {@code null}
      * @since JavaFX 8.0
      */
     public static <T extends Number> ReadOnlyFloatProperty readOnlyFloatProperty(final ReadOnlyProperty<T> property) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -65,9 +65,6 @@ public final class IOSPlatform extends Platform {
     private IOSPlatform() {
     }
 
-    @Override
-    public void preloadPlatform() {}
-
     /**
      * @return false if the platform cannot be loaded
      */
@@ -102,22 +99,15 @@ public final class IOSPlatform extends Platform {
     }
 
     @Override
-    public Object prerollMediaPlayer(Locator source) {
-        // attempt the actual player creation, then preroll here
-        // on success we return a reference to the native player as the cookie
-        return new IOSMediaPlayer(source);
-    }
-
-    @Override
-    public MediaPlayer createMediaPlayer(Locator source, Object cookie) {
-        if (cookie == null) {
-            throw new NullPointerException("null player!");
+    public MediaPlayer createMediaPlayer(Locator source) {
+        try {
+            return new IOSMediaPlayer(source);
+        } catch (Exception e) {
+            if (Logger.canLog(Logger.DEBUG)) {
+                Logger.logMsg(Logger.DEBUG, "IOSPlatform caught exception while creating media player: "+e);
+            }
         }
-        else if (!(cookie instanceof IOSMediaPlayer)) {
-            throw new IllegalArgumentException("cookie is not an instance of IOSMediaPlayer");
-        }
-
-        return (MediaPlayer) cookie;
+        return null;
     }
 
     private static native void iosPlatformInit();

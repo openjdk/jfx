@@ -25,7 +25,7 @@
 
 package com.sun.glass.ui.monocle.input.devices;
 
-import com.sun.glass.ui.monocle.input.UInput;
+import com.sun.glass.ui.monocle.UInput;
 
 import java.util.Random;
 

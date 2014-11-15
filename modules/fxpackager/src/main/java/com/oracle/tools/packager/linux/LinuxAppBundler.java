@@ -56,6 +56,7 @@ public class LinuxAppBundler extends AbstractBundler {
     protected static final String LINUX_BUNDLER_PREFIX =
             BUNDLER_PREFIX + "linux" + File.separator;
     private static final String EXECUTABLE_NAME = "JavaAppLauncher";
+    private static final String LIBRARY_NAME    = "libpackager.so";
 
     public static final BundlerParamInfo<File> ICON_PNG = new StandardBundlerParam<>(
             I18N.getString("param.icon-png.name"),
@@ -89,7 +90,7 @@ public class LinuxAppBundler extends AbstractBundler {
 
     //Subsetting of JRE is restricted.
     //JRE README defines what is allowed to strip:
-    //   ﻿http://www.oracle.com/technetwork/java/javase/jre-7-readme-430162.html //TODO update when 8 goes GA
+    //   http://www.oracle.com/technetwork/java/javase/jre-8-readme-2095710.html
     //
     public static final BundlerParamInfo<Rule[]> LINUX_JRE_RULES = new StandardBundlerParam<>(
             "",
@@ -143,6 +144,17 @@ public class LinuxAppBundler extends AbstractBundler {
 
         StandardBundlerParam.validateMainClassInfoFromAppResources(p);
 
+        Map<String, String> userJvmOptions = USER_JVM_OPTIONS.fetchFrom(p);
+        if (userJvmOptions != null) {
+            for (Map.Entry<String, String> entry : userJvmOptions.entrySet()) {
+                if (entry.getValue() == null || entry.getValue().isEmpty()) {
+                    throw new ConfigException(
+                            MessageFormat.format(I18N.getString("error.empty-user-jvm-option-value"), entry.getKey()),
+                            I18N.getString("error.empty-user-jvm-option-value.advice"));
+                }
+            }
+        }
+
         if (RAW_EXECUTABLE_URL.fetchFrom(p) == null) {
             throw new ConfigException(
                     I18N.getString("error.no-linux-resources"),
@@ -173,7 +185,16 @@ public class LinuxAppBundler extends AbstractBundler {
         return new File(outDir, APP_FS_NAME.fetchFrom(p));
     }
 
+    public static String getLauncherName(Map<String, ? super Object> p) {
+        return APP_FS_NAME.fetchFrom(p);
+    }
+
+    public static String getLauncherCfgName(Map<String, ? super Object> p) {
+        return "app/" + APP_FS_NAME.fetchFrom(p) +".cfg";
+    }
+
     File doBundle(Map<String, ? super Object> p, File outputDirectory, boolean dependentTask) {
+        Map<String, ? super Object> originalParams = new HashMap<>(p);
         try {
             if (!outputDirectory.isDirectory() && !outputDirectory.mkdirs()) {
                 throw new RuntimeException(MessageFormat.format(I18N.getString("error.cannot-create-output-dir"), outputDirectory.getAbsolutePath()));
@@ -183,7 +204,7 @@ public class LinuxAppBundler extends AbstractBundler {
             }
 
             // Create directory structure
-            File rootDirectory = new File(outputDirectory, APP_FS_NAME.fetchFrom(p));
+            File rootDirectory = getRootDir(outputDirectory, p);
             IOUtils.deleteRecursive(rootDirectory);
             rootDirectory.mkdirs();
 
@@ -196,19 +217,21 @@ public class LinuxAppBundler extends AbstractBundler {
             File appDirectory = new File(rootDirectory, "app");
             appDirectory.mkdirs();
 
-            // Copy executable to Linux folder
-            File executableFile = new File(getRootDir(outputDirectory, p), APP_FS_NAME.fetchFrom(p));
+            // create the primary launcher
+            createLauncherForEntryPoint(p, rootDirectory);
+
+            // Copy library to the launcher folder
             IOUtils.copyFromURL(
-                    RAW_EXECUTABLE_URL.fetchFrom(p),
-                    executableFile);
+                    LinuxResources.class.getResource(LIBRARY_NAME),
+                    new File(rootDirectory, LIBRARY_NAME));
 
-            executableFile.setExecutable(true, false);
-            executableFile.setWritable(true, true); //for str
-
-            // Generate PkgInfo
-            File pkgInfoFile = new File(appDirectory, "package.cfg");
-            pkgInfoFile.createNewFile();
-            writePkgInfo(p, pkgInfoFile);
+            // create the secondary launchers, if any
+            List<Map<String, ? super Object>> entryPoints = StandardBundlerParam.SECONDARY_LAUNCHERS.fetchFrom(p);
+            for (Map<String, ? super Object> entryPoint : entryPoints) {
+                Map<String, ? super Object> tmp = new HashMap<>(originalParams);
+                tmp.putAll(entryPoint);
+                createLauncherForEntryPoint(tmp, rootDirectory);
+            }
 
             // Copy runtime to PlugIns folder
             copyRuntime(p, runtimeDirectory);
@@ -227,6 +250,20 @@ public class LinuxAppBundler extends AbstractBundler {
         }
     }
 
+    private void createLauncherForEntryPoint(Map<String, ? super Object> p, File rootDir) throws IOException {
+        // Copy executable to Linux folder
+        File executableFile = new File(rootDir, getLauncherName(p));
+        IOUtils.copyFromURL(
+                RAW_EXECUTABLE_URL.fetchFrom(p),
+                executableFile);
+
+        executableFile.setExecutable(true, false);
+        executableFile.setWritable(true, true); //for str
+
+        // Generate PkgInfo
+        writePkgInfo(p, rootDir);
+    }
+
     private void copyApplication(Map<String, ? super Object> params, File appDirectory) throws IOException {
         RelativeFileSet appResources = APP_RESOURCES.fetchFrom(params);
         if (appResources == null) {
@@ -239,21 +276,31 @@ public class LinuxAppBundler extends AbstractBundler {
         }
     }
 
-    private void writePkgInfo(Map<String, ? super Object> params, File pkgInfoFile) throws FileNotFoundException {
+    private void writePkgInfo(Map<String, ? super Object> params, File rootDir) throws FileNotFoundException {
+        File pkgInfoFile = new File(rootDir, getLauncherCfgName(params));
+
         pkgInfoFile.delete();
         PrintStream out = new PrintStream(pkgInfoFile);
+        if (LINUX_RUNTIME.fetchFrom(params) == null) {
+            out.println("app.runtime=");                    
+        } else {
+            out.println("app.runtime=$APPDIR/runtime");
+        }
         out.println("app.mainjar=" + MAIN_JAR.fetchFrom(params).getIncludedFiles().iterator().next());
         out.println("app.version=" + VERSION.fetchFrom(params));
 
         //use '/' in the clas name (instead of '.' to simplify native code
-        if (USE_FX_PACKAGING.fetchFrom(params)) {
-            out.println("app.mainclass=" +
-                    JAVAFX_LAUNCHER_CLASS.replaceAll("\\.", "/"));
-        } else {
-            out.println("app.mainclass=" +
-                    MAIN_CLASS.fetchFrom(params).replaceAll("\\.", "/"));
+        out.println("app.mainclass=" +
+                MAIN_CLASS.fetchFrom(params).replaceAll("\\.", "/"));
+
+        StringBuilder macroedPath = new StringBuilder();
+        for (String s : CLASSPATH.fetchFrom(params).split("[ ;:]+")) {
+            macroedPath.append("$PACKAGEDIR/");
+            macroedPath.append(s);
+            macroedPath.append(":");
         }
-        out.println("app.classpath=" + CLASSPATH.fetchFrom(params));
+        macroedPath.deleteCharAt(macroedPath.length() - 1);
+        out.println("app.classpath=" + macroedPath.toString());
 
         List<String> jvmargs = JVM_OPTIONS.fetchFrom(params);
         int idx = 1;
@@ -267,6 +314,11 @@ public class LinuxAppBundler extends AbstractBundler {
             idx++;
         }
 
+        String preloader = PRELOADER_CLASS.fetchFrom(params);
+        if (preloader != null) {
+            out.println("jvmarg."+idx+"=-Djavafx.preloader="+preloader);
+        }
+        
         //app.id required for setting user preferences (Java Preferences API)
         out.println("app.preferences.id=" + PREFERENCES_ID.fetchFrom(params));
 
@@ -282,6 +334,15 @@ public class LinuxAppBundler extends AbstractBundler {
             }
             idx++;
         }
+
+        // add command line args
+        List<String> args = ARGUMENTS.fetchFrom(params);
+        idx = 1;
+        for (String a : args) {
+            out.println("arg."+idx+"="+a);
+            idx++;
+        }
+
         out.close();
     }
 
@@ -331,13 +392,15 @@ public class LinuxAppBundler extends AbstractBundler {
         return Arrays.asList(
                 APP_NAME,
                 APP_RESOURCES,
+                ARGUMENTS,
+                CLASSPATH,
                 JVM_OPTIONS,
                 JVM_PROPERTIES,
                 LINUX_RUNTIME,
                 MAIN_CLASS,
                 MAIN_JAR,
-                CLASSPATH,
                 PREFERENCES_ID,
+                PRELOADER_CLASS,
                 USER_JVM_OPTIONS,
                 VERSION
         );

@@ -25,7 +25,6 @@
 
 package com.sun.prism.j2d;
 
-import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.Screen;
 import com.sun.javafx.geom.Rectangle;
@@ -35,12 +34,12 @@ import com.sun.prism.PresentableState;
 import com.sun.prism.ResourceFactory;
 import com.sun.prism.Texture.WrapMode;
 import com.sun.prism.impl.PrismSettings;
+import com.sun.prism.impl.QueuedPixelSource;
 
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.nio.ByteOrder;
 import java.nio.IntBuffer;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public abstract class J2DPresentable implements Presentable {
     static J2DPresentable create(PresentableState pState,
@@ -59,8 +58,7 @@ public abstract class J2DPresentable implements Presentable {
         private final PresentableState pState;
         private final int theFormat;
         private Pixels pixels;
-        private IntBuffer pixBuf;
-        private final AtomicInteger uploadCount = new AtomicInteger(0);
+        private QueuedPixelSource pixelSource = new QueuedPixelSource(false);
         private boolean opaque;
 
         Glass(PresentableState pState, J2DResourceFactory factory) {
@@ -72,8 +70,6 @@ public abstract class J2DPresentable implements Presentable {
 
         @Override
         public BufferedImage createBuffer(int w, int h) {
-            pixels = null;
-            pixBuf = null;
             if (PrismSettings.verbose) {
                 System.out.println("Glass native format: "+theFormat);
             }
@@ -98,8 +94,6 @@ public abstract class J2DPresentable implements Presentable {
             }
         }
 
-        private final Application app = Application.GetApplication();
-
         @Override
         public boolean lockResources(PresentableState pState) {
             if (this.pState != pState || this.theFormat != pState.getPixelFormat()) {
@@ -120,10 +114,8 @@ public abstract class J2DPresentable implements Presentable {
                  */
                 int w = getPhysicalWidth();
                 int h = getPhysicalHeight();
-                if (pixels == null || uploadCount.get() > 0) {
-                    pixBuf = IntBuffer.allocate(w*h);
-                    pixels = Application.GetApplication().createPixels(w, h, pixBuf);
-                }
+                pixels = pixelSource.getUnusedPixels(w, h, 1.0f);
+                IntBuffer pixBuf = (IntBuffer) pixels.getPixels();
                 assert ib.hasArray();
                 System.arraycopy(ib.array(), 0, pixBuf.array(), 0, w*h);
                 return true;
@@ -133,8 +125,8 @@ public abstract class J2DPresentable implements Presentable {
         }
 
         public boolean present() {
-            uploadCount.incrementAndGet();
-            pState.uploadPixels(pixels, uploadCount);
+            pixelSource.enqueuePixels(pixels);
+            pState.uploadPixels(pixelSource);
             return true;
         }
 

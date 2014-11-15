@@ -427,6 +427,23 @@ public class ImageTools {
         return output;
     }
 
+    public static String getScaledImageName(String path) {
+        StringBuilder result = new StringBuilder();
+        int slash = path.lastIndexOf('/');
+        String name = (slash < 0) ? path : path.substring(slash + 1);
+        int dot = name.lastIndexOf(".");
+        if (dot < 0) {
+            dot = name.length();
+        }
+        if (slash >= 0) {
+            result.append(path.substring(0, slash + 1));
+        }
+        result.append(name.substring(0, dot));
+        result.append("@2x");
+        result.append(name.substring(dot));
+        return result.toString();
+    }
+
     public static InputStream createInputStream(String input) throws IOException {
         InputStream stream = null;
 

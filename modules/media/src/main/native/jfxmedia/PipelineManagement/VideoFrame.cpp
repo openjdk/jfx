@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,13 +32,17 @@
 CVideoFrame::CVideoFrame()
 :   m_iWidth(0),
     m_iHeight(0),
+    m_iEncodedWidth(0),
+    m_iEncodedHeight(0),
     m_typeFrame(UNKNOWN),
     m_bHasAlpha(false),
     m_dTime(0.0),
-    m_ulSize(0),
-    m_pvData(0),
-    m_ulFrameNumber(0)
+    m_FrameDirty(false),
+    m_iPlaneCount(1)
 {
+    m_piPlaneStrides[0] = m_piPlaneStrides[1] = m_piPlaneStrides[2] = m_piPlaneStrides[3] = 0;
+    m_pulPlaneSize[0] = m_pulPlaneSize[1] = m_pulPlaneSize[2] = m_pulPlaneSize[3] = 0;
+    m_pvPlaneData[0] = m_pvPlaneData[1] = m_pvPlaneData[2] = m_pvPlaneData[3] = NULL;
 }
 
 CVideoFrame::~CVideoFrame()
@@ -75,15 +79,28 @@ bool CVideoFrame::HasAlpha()
     return m_bHasAlpha;
 }
 
+double CVideoFrame::GetTime()
+{
+    return m_dTime;
+}
+
 int CVideoFrame::GetPlaneCount()
 {
     return m_iPlaneCount;
 }
 
-int CVideoFrame::GetOffsetForPlane(int planeIndex)
+void* CVideoFrame::GetDataForPlane(int planeIndex)
 {
     if (planeIndex < 4 && planeIndex >= 0) {
-        return m_piPlaneOffsets[planeIndex];
+        return m_pvPlaneData[planeIndex];
+    }
+    return NULL;
+}
+
+unsigned long CVideoFrame::GetSizeForPlane(int planeIndex)
+{
+    if (planeIndex < 4 && planeIndex >= 0) {
+        return m_pulPlaneSize[planeIndex];
     }
     return 0;
 }
@@ -96,27 +113,24 @@ int CVideoFrame::GetStrideForPlane(int planeIndex)
     return 0;
 }
 
-double CVideoFrame::GetTime()
-{
-    return m_dTime;
-}
-
-unsigned long CVideoFrame::GetSize()
-{
-    return m_ulSize;
-}
-
-void* CVideoFrame::GetData()
-{
-    return m_pvData;
-}
-
-unsigned long CVideoFrame::GetFrameNumber()
-{
-    return m_ulFrameNumber;
-}
-
 CVideoFrame *CVideoFrame::ConvertToFormat(FrameType type)
 {
     return NULL;
+}
+
+void CVideoFrame::SwapPlanes(int aa, int bb)
+{
+    if (aa != bb && aa >= 0 && aa < m_iPlaneCount && bb >= 0 && bb < m_iPlaneCount) {
+        int stride = m_piPlaneStrides[aa];
+        m_piPlaneStrides[aa] = m_piPlaneStrides[bb];
+        m_piPlaneStrides[bb] = stride;
+
+        unsigned long size = m_pulPlaneSize[aa];
+        m_pulPlaneSize[aa] = m_pulPlaneSize[bb];
+        m_pulPlaneSize[bb] = size;
+
+        void *vptr = m_pvPlaneData[aa];
+        m_pvPlaneData[aa] = m_pvPlaneData[bb];
+        m_pvPlaneData[bb] = vptr;
+    }
 }

@@ -210,7 +210,7 @@ public class PerspectiveCamera extends Camera {
 
         return PickRay.computePerspectivePickRay(x, y, fixedEyeAtCameraZero,
                 getViewWidth(), getViewHeight(),
-                getFieldOfView(), isVerticalFieldOfView(),
+                Math.toRadians(getFieldOfView()), isVerticalFieldOfView(),
                 getCameraTransform(),
                 getNearClip(), getFarClip(),
                 pickRay);

@@ -88,7 +88,7 @@ class MeshVertex {
      * return current number of points (last index +1)
      */
     static int weldWithTB(MeshVertex v, int index) {
-        Vec3f[] nSum = MeshTempState.getInstance().norm;
+        Vec3f[] nSum = MeshTempState.getInstance().triNormals;
         for (; v != null; v = v.next) {
             if (v.index < 0) {
                 int nuLocal = 0;

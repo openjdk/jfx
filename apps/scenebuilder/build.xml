@@ -1,14 +1,28 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project default="jar" basedir=".">
 
-    <target name="jar">
+    <target name="jar" depends="jar-sb, jar-sb-samples">
+    </target>
+
+    <target name="clean" depends="clean-sb, clean-sb-samples">
+    </target>
+
+    <target name="jar-sb-samples">
         <ant dir="samples" target="jar" inheritAll="true"/>
     </target>
 
-    <target name="clean">
+    <target name="clean-sb-samples">
         <ant dir="samples" target="clean" inheritAll="true"/>
     </target>
 
+    <target name="jar-sb">
+        <ant dir="SceneBuilderKit" target="jar" inheritAll="true"/>
+        <ant dir="SceneBuilderApp" target="jar" inheritAll="true"/>
+    </target>
+
+    <target name="clean-sb">
+        <ant dir="SceneBuilderApp" target="clean" inheritAll="true"/>
+        <ant dir="SceneBuilderKit" target="clean" inheritAll="true"/>
+    </target>
+
 </project>
-
-

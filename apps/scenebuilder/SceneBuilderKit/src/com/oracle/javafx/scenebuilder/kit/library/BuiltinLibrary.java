@@ -123,6 +123,9 @@ public class BuiltinLibrary extends Library {
                 "AccordionEmpty", "Accordion", EMPTY_QUALIFIER); //NOI18N
         addRegionItem200x200(javafx.scene.layout.AnchorPane.class, TAG_CONTAINERS);
         addRegionItem200x200(javafx.scene.layout.BorderPane.class, TAG_CONTAINERS);
+        addCustomizedItem(javafx.scene.control.ButtonBar.class, TAG_CONTAINERS, FX8_QUALIFIER);
+        addCustomizedItem(javafx.scene.control.DialogPane.class, TAG_CONTAINERS, FX8_QUALIFIER);
+        addDefaultItem(javafx.scene.control.DialogPane.class, TAG_CONTAINERS, EMPTY_QUALIFIER, FX8_QUALIFIER);
         addRegionItem200x200(javafx.scene.layout.FlowPane.class, TAG_CONTAINERS);
         addCustomizedItem(javafx.scene.layout.GridPane.class, TAG_CONTAINERS);
         addRegionItem200x100(javafx.scene.layout.HBox.class, TAG_CONTAINERS);
@@ -179,6 +182,7 @@ public class BuiltinLibrary extends Library {
                 "SliderH", "Slider-h", HORIZONTAL_QUALIFIER); //NOI18N
         addCustomizedItem(javafx.scene.control.Slider.class, TAG_CONTROLS,
                 "SliderV", "Slider-v", VERTICAL_QUALIFIER); //NOI18N
+        addDefaultItem(javafx.scene.control.Spinner.class, TAG_CONTROLS, FX8_QUALIFIER);
         addCustomizedItem(javafx.scene.control.SplitMenuButton.class, TAG_CONTROLS);
         addCustomizedItem(javafx.scene.control.TableColumn.class, TAG_CONTROLS);
         addCustomizedItem(javafx.scene.control.TableView.class, TAG_CONTROLS);
@@ -253,12 +257,12 @@ public class BuiltinLibrary extends Library {
     
     private void addDefaultItem(Class<?> componentClass, String section, String... qualifiers) {
         final String name = componentClass.getSimpleName();
-        String nameWithQualifier = name;
-        if (qualifiers.length > 0) {
-            nameWithQualifier += qualifiers[0];
+        StringBuilder nameWithQualifier = new StringBuilder(name);
+        for (String qualifier : qualifiers) {
+            nameWithQualifier.append(qualifier);
         }
         final String fxmlText = makeFxmlText(componentClass);
-        addItem(nameWithQualifier, fxmlText, section, name);
+        addItem(nameWithQualifier.toString(), fxmlText, section, name);
     }
     
     
@@ -272,16 +276,16 @@ public class BuiltinLibrary extends Library {
     
     private void addRegionItem200x200(Class<? extends Region> componentClass, String section, String qualifier, String iconName) {
         final String name = componentClass.getSimpleName();
-        String nameWithQualifier = name;
+        StringBuilder nameWithQualifier = new StringBuilder(name);
         if (qualifier != null) {
-            nameWithQualifier += qualifier;
+            nameWithQualifier.append(qualifier);
         }
         final String fxmlText = makeRegionFxmlText(componentClass, 200.0, 200.0);
         String theIconName = name;
         if (iconName != null) {
             theIconName = iconName;
         }
-        addItem(nameWithQualifier, fxmlText, section, theIconName);
+        addItem(nameWithQualifier.toString(), fxmlText, section, theIconName);
     }
     
     

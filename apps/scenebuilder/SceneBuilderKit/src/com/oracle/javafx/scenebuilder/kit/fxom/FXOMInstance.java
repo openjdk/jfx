@@ -32,15 +32,17 @@
 package com.oracle.javafx.scenebuilder.kit.fxom;
 
 import com.oracle.javafx.scenebuilder.kit.fxom.glue.GlueElement;
+import com.oracle.javafx.scenebuilder.kit.metadata.util.PrefixedValue;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
+import com.oracle.javafx.scenebuilder.kit.util.JavaLanguage;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
 import javafx.fxml.FXMLLoader;
 
 /**
@@ -49,7 +51,7 @@ import javafx.fxml.FXMLLoader;
  */
 public class FXOMInstance extends FXOMObject {
     
-    private final Map<PropertyName, FXOMProperty> properties = new TreeMap<>();
+    private final Map<PropertyName, FXOMProperty> properties = new LinkedHashMap<>();
     private Class<?> declaredClass;
     
     
@@ -131,40 +133,6 @@ public class FXOMInstance extends FXOMObject {
     
     public String getType() {
         return getGlueElement().getAttributes().get(FXMLLoader.ROOT_TYPE_ATTRIBUTE);
-    }
-        
-    
-    public static FXOMInstance newInstance(FXOMInstance source, FXOMDocument targetDocument) {
-        final FXOMInstance result;
-        
-        assert source != null;
-        assert targetDocument != null;
-        assert source.getFxomDocument() != targetDocument;
-        
-        if (source.getDeclaredClass() == null) {
-            assert source.getSceneGraphObject() == null; // source is unresolved
-            result = new FXOMInstance(
-                    targetDocument,
-                    source.getGlueElement().getTagName());
-        } else {
-            result = new FXOMInstance(
-                    targetDocument,
-                    source.getDeclaredClass());
-        }
-        
-        for (Map.Entry<PropertyName, FXOMProperty> e : source.getProperties().entrySet()) {
-            final FXOMProperty newProperty
-                    = FXOMNodes.newProperty(e.getValue(), targetDocument);
-            newProperty.addToParentInstance(-1, result);
-        }
-        
-        result.setFxConstant(source.getFxConstant());
-        result.setFxController(source.getFxController());
-        result.setFxFactory(source.getFxFactory());
-        result.setFxId(source.getFxId());
-        result.setFxValue(source.getFxValue());
-        
-        return result;
     }
     
     /*
@@ -330,6 +298,30 @@ public class FXOMInstance extends FXOMObject {
     }
 
     @Override
+    protected void collectReferences(String source, FXOMObject scope, List<FXOMNode> result) {
+        if ((scope == null) || (scope != this)) {
+            for (FXOMProperty p : properties.values()) {
+                if (p instanceof FXOMPropertyC) {
+                    for (FXOMObject v : ((FXOMPropertyC)p).getValues()) {
+                        v.collectReferences(source, scope, result);
+                    }
+                } else if (p instanceof FXOMPropertyT) {
+                    final FXOMPropertyT pt = (FXOMPropertyT) p;
+                    final PrefixedValue pv = new PrefixedValue(pt.getValue());
+                    if (pv.isExpression()) {
+                        final String suffix = pv.getSuffix();
+                        if (JavaLanguage.isIdentifier(suffix)) {
+                            if ((source == null) || source.equals(suffix)) {
+                                result.add(pt);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @Override
     protected void collectIncludes(String source, List<FXOMIntrinsic> result) {
         for (FXOMProperty p : properties.values()) {
             if (p instanceof FXOMPropertyC) {
@@ -378,7 +370,7 @@ public class FXOMInstance extends FXOMObject {
             for (FXOMProperty p : properties.values()) {
                 if (p instanceof FXOMPropertyT) {
                     final FXOMPropertyT pt = (FXOMPropertyT) p;
-                    if (pt.getValue().startsWith("#")) {
+                    if (pt.getName().getName().startsWith("on") && pt.getValue().startsWith("#")) {
                         result.add(pt);
                     }
                 }

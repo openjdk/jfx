@@ -115,6 +115,11 @@ class J2DResourceFactory extends BaseResourceFactory
         return J2DTexture.create(formatHint, wrapMode, w, h);
     }
 
+    public Texture createTexture(PixelFormat formatHint,
+            Usage usageHint, WrapMode wrapMode, int w, int h, boolean useMipmap) {
+        return createTexture(formatHint, usageHint, wrapMode, w, h);
+    }
+
     public Texture createTexture(MediaFrame vdb) {
         Texture tex;
 
@@ -140,7 +145,12 @@ class J2DResourceFactory extends BaseResourceFactory
     public boolean isCompatibleTexture(Texture tex) {
         return tex instanceof J2DTexture;
     }
-    
+
+    @Override
+    protected boolean canClampToZero() {
+        return false;
+    }
+
     public int getMaximumTextureSize() {
         return Integer.MAX_VALUE;
     }

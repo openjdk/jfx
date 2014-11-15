@@ -433,6 +433,13 @@ public final class WCGraphicsPerfLogger extends WCGraphicsContext {
     }
 
     @Override
+    public void flush() {
+        logger.resumeCount("FLUSH");
+        gc.flush();
+        logger.suspendCount("FLUSH");
+    }
+
+    @Override
     public void setTransform(WCTransform t) {
         logger.resumeCount("SETTRANSFORM");
         gc.setTransform(t);

@@ -65,11 +65,11 @@ JNIEXPORT jlong JNICALL
 Java_com_sun_prism_d3d_D3DResourceFactory_nCreateTexture
   (JNIEnv *env, jclass klass,
         jlong ctx, jint formatHint, jint usageHint, jboolean isRTT,
-        jint width, jint height, jint samples)
+        jint width, jint height, jint samples, jboolean useMipmap)
 {
-    TraceLn5(NWT_TRACE_INFO,
-             "nCreateTexture formatHint=%d usageHint=%d isRTT=%d w=%d h=%d",
-             formatHint, usageHint, isRTT, width, height);
+    TraceLn6(NWT_TRACE_INFO,
+             "nCreateTexture formatHint=%d usageHint=%d isRTT=%d w=%d h=%d useMipmap=%d",
+             formatHint, usageHint, isRTT, width, height, useMipmap);
 
     D3DContext *pCtx = (D3DContext *)jlong_to_ptr(ctx);
     RETURN_STATUS_IF_NULL(pCtx, 0L);
@@ -121,7 +121,7 @@ Java_com_sun_prism_d3d_D3DResourceFactory_nCreateTexture
         res = pMgr->CreateRenderTarget(width, height, isOpaque,
                 &format, msType, &pTexResource);
     } else {
-        res = pMgr->CreateTexture(width, height, isRTT, isOpaque,
+        res = pMgr->CreateTexture(width, height, isRTT, isOpaque, useMipmap,
                 &format, dwUsage, &pTexResource);
     }
     if (SUCCEEDED(res)) {

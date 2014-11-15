@@ -58,6 +58,7 @@ import com.sun.prism.RenderTarget;
 import com.sun.prism.ResourceFactory;
 import com.sun.prism.Texture;
 import com.sun.prism.Texture.WrapMode;
+import com.sun.prism.impl.PrismSettings;
 import com.sun.prism.j2d.paint.MultipleGradientPaint.ColorSpaceType;
 import com.sun.prism.j2d.paint.RadialGradientPaint;
 import com.sun.prism.paint.Color;
@@ -1273,6 +1274,13 @@ public class J2DPrismGraphics
     }
 
     public boolean isDepthTest() {
+        return false;
+    }
+
+    public boolean isAlphaTestShader() {
+        if (PrismSettings.verbose && PrismSettings.forceAlphaTestShader) {
+            System.out.println("J2D pipe doesn't support shader with alpha testing");
+        }
         return false;
     }
 

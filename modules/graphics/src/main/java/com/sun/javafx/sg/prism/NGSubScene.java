@@ -28,6 +28,7 @@ import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.prism.CompositeMode;
 import com.sun.prism.Graphics;
 import com.sun.prism.RTTexture;
+import com.sun.prism.RenderTarget;
 import com.sun.prism.ResourceFactory;
 import com.sun.prism.Texture;
 import com.sun.prism.paint.Color;
@@ -38,7 +39,10 @@ import com.sun.prism.paint.Paint;
  */
 public class NGSubScene extends NGNode {
 
-    private int rtWidth, rtHeight;
+    // The Scene logical dimensions (pre-pixel scaling)
+    private float slWidth, slHeight;
+    // The scaled dimensions last used in the rtt
+    private double lastScaledW, lastScaledH;
     private RTTexture rtt;
     // ressolveRTT is a temporary render target to "resolve" a msaa render buffer
     // into a normal color render target.
@@ -74,18 +78,16 @@ public class NGSubScene extends NGNode {
     }
 
     public void setWidth(float width) {
-        int iWidth = (int)Math.ceil(width);
-        if (this.rtWidth != iWidth) {
-            this.rtWidth = iWidth;
+        if (this.slWidth != width) {
+            this.slWidth = width;
             geometryChanged();
             invalidateRTT();
         }
     }
 
     public void setHeight(float height) {
-        int iHeight = (int)Math.ceil(height);
-        if (this.rtHeight != iHeight) {
-            this.rtHeight = iHeight;
+        if (this.slHeight != height) {
+            this.slHeight = height;
             geometryChanged();
             invalidateRTT();
         }
@@ -158,9 +160,36 @@ public class NGSubScene extends NGNode {
         root.renderForcedContent(gOptional);
     }
 
+    private static double hypot(double x, double y, double z) {
+        return Math.sqrt(x * x + y * y + z * z);
+    }
+
+    // Allow the scaled size in pixels to vary by a distance approximately
+    // large enough to affect the sampling result in a LINEAR interpolation.
+    // If we move by 1/256th of a pixel from one color to the opposite color
+    // then in the worst case the sample value might change by +/- 1 bit.
+    static final double THRESHOLD = 1.0 / 256.0;
     @Override
     protected void renderContent(Graphics g) {
-        if (rtWidth <= 0.0 || rtHeight <= 0.0) { return; }
+        if (slWidth <= 0.0 || slHeight <= 0.0) { return; }
+        BaseTransform txform = g.getTransformNoClone();
+        double scaleX = hypot(txform.getMxx(), txform.getMyx(), txform.getMzx());
+        double scaleY = hypot(txform.getMxy(), txform.getMyy(), txform.getMzy());
+        double scaledW = slWidth * scaleX;
+        double scaledH = slHeight * scaleY;
+        int rtWidth = (int) Math.ceil(scaledW - THRESHOLD);
+        int rtHeight = (int) Math.ceil(scaledH - THRESHOLD);
+        if (Math.max(Math.abs(scaledW - lastScaledW), Math.abs(scaledH - lastScaledH)) > THRESHOLD) {
+            if (rtt != null &&
+                (rtWidth != rtt.getContentWidth() ||
+                 rtHeight != rtt.getContentHeight()))
+            {
+                invalidateRTT();
+            }
+            renderSG = true;
+            lastScaledW = scaledW;
+            lastScaledH = scaledH;
+        }
         if (rtt != null) {
             rtt.lock();
             if (rtt.isSurfaceLost()) {
@@ -173,10 +202,11 @@ public class NGSubScene extends NGNode {
             if (rtt == null) {
                 ResourceFactory factory = g.getResourceFactory();
                 rtt = factory.createRTTexture(rtWidth, rtHeight,
-                                              Texture.WrapMode.CLAMP_NOT_NEEDED,
+                                              Texture.WrapMode.CLAMP_TO_ZERO,
                                               antiAliasing);
             }
             Graphics rttGraphics = rtt.createGraphics();
+            rttGraphics.scale((float) scaleX, (float) scaleY);
             rttGraphics.setLights(lights);
 
             rttGraphics.setDepthBuffer(depthBuffer);
@@ -184,7 +214,6 @@ public class NGSubScene extends NGNode {
                 rttGraphics.setCamera(camera);
             }
             applyBackgroundFillPaint(rttGraphics);
-            rttGraphics.setTransform(BaseTransform.IDENTITY_TRANSFORM);
 
             root.render(rttGraphics);
             root.clearDirtyTree();
@@ -193,55 +222,72 @@ public class NGSubScene extends NGNode {
         if (antiAliasing) {
             int x0 = rtt.getContentX();
             int y0 = rtt.getContentY();
-            int x1 = x0 + rtt.getContentWidth();
-            int y1 = y0 + rtt.getContentHeight();
-            if ((isOpaque || g.getCompositeMode() == CompositeMode.SRC)
-                    && g.getTransformNoClone().isTranslateOrIdentity() &&
-                    !g.isDepthTest()) {
+            int x1 = x0 + rtWidth;
+            int y1 = y0 + rtHeight;
+            if ((isOpaque || g.getCompositeMode() == CompositeMode.SRC) &&
+                    isDirectBlitTransform(txform, scaleX, scaleY) &&
+                    !g.isDepthTest())
+            {
                 // Round translation to closest pixel
-                int tx = (int)(g.getTransformNoClone().getMxt() + 0.5);
-                int ty = (int)(g.getTransformNoClone().getMyt() + 0.5);
+                int tx = (int)(txform.getMxt() + 0.5);
+                int ty = (int)(txform.getMyt() + 0.5);
                 // Blit SubScene directly to scene surface
 
                 // Intersect src and dst boundaries.
                 // On D3D if blit is called outside boundary it will draw
                 // nothing. Using intersect prevents that from occurring.
-                int dstX0 = x0 + tx;
-                int dstY0 = y0 + ty;
-                int dstX1 = x1 + tx;
-                int dstY1 = y1 + ty;
-                int dstW = g.getRenderTarget().getContentWidth();
-                int dstH = g.getRenderTarget().getContentHeight();
+                RenderTarget target = g.getRenderTarget();
+                int dstX0 = target.getContentX() + tx;
+                int dstY0 = target.getContentY() + ty;
+                int dstX1 = dstX0 + rtWidth;
+                int dstY1 = dstY0 + rtHeight;
+                int dstW = target.getContentWidth();
+                int dstH = target.getContentHeight();
                 int dX = dstX1 > dstW ? dstW - dstX1 : 0;
                 int dY = dstY1 > dstH ? dstH - dstY1 : 0;
                 g.blit(rtt, null, x0, y0, x1 + dX, y1 + dY,
                             dstX0, dstY0, dstX1 + dX, dstY1 + dY);
             } else {
                 if (resolveRTT != null &&
-                        (resolveRTT.getContentWidth() < rtt.getContentWidth() ||
-                        (resolveRTT.getContentHeight() < rtt.getContentHeight())))
+                        (resolveRTT.getContentWidth() < rtWidth ||
+                        (resolveRTT.getContentHeight() < rtHeight)))
                 {
                     // If msaa rtt is larger than resolve buffer, then dispose
                     resolveRTT.dispose();
                     resolveRTT = null;
                 }
-                if (resolveRTT == null || resolveRTT.isSurfaceLost()) {
-                    resolveRTT = g.getResourceFactory().createRTTexture(rtWidth, rtHeight,
-                            Texture.WrapMode.CLAMP_NOT_NEEDED, false);
-                } else {
+                if (resolveRTT != null) {
                     resolveRTT.lock();
+                    if (resolveRTT.isSurfaceLost()) {
+                        resolveRTT = null;
+                    }
                 }
-                g.blit(rtt, resolveRTT, x0, y0, x1, y1,
-                        x0, y0, x1, y1);
-                g.drawTexture(resolveRTT, rtt.getContentX(), rtt.getContentY(),
-                        rtt.getContentWidth(), rtt.getContentHeight());
+                if (resolveRTT == null) {
+                    resolveRTT = g.getResourceFactory().createRTTexture(rtWidth, rtHeight,
+                            Texture.WrapMode.CLAMP_TO_ZERO, false);
+                }
+                // We could potentially reuse g, but any transform in g would
+                // affect the blit...
+                resolveRTT.createGraphics().blit(rtt, resolveRTT, x0, y0, x1, y1,
+                                                 x0, y0, x1, y1);
+                g.drawTexture(resolveRTT, 0, 0, (float) (rtWidth / scaleX), (float) (rtHeight / scaleY),
+                              0, 0, rtWidth, rtHeight);
                 resolveRTT.unlock();
             }
         } else {
-            g.drawTexture(rtt, rtt.getContentX(), rtt.getContentY(),
-                          rtt.getContentWidth(), rtt.getContentHeight());
+            g.drawTexture(rtt, 0, 0, (float) (rtWidth / scaleX), (float) (rtHeight / scaleY),
+                          0, 0, rtWidth, rtHeight);
         }
         rtt.unlock();
+    }
+
+    private static boolean isDirectBlitTransform(BaseTransform tx, double sx, double sy) {
+        if (sx == 1.0 && sy == 1.0) return tx.isTranslateOrIdentity();
+        if (!tx.is2D()) return false;
+        return (tx.getMxx() == sx &&
+                tx.getMxy() == 0.0 &&
+                tx.getMyx() == 0.0 &&
+                tx.getMyy() == sy);
     }
 
     public NGCamera getCamera() {

@@ -69,6 +69,7 @@ import javafx.scene.text.Font;
 
 /**
  *
+ * @treatAsPrivate
  */
 public class CssValueConverter {
 
@@ -925,7 +926,7 @@ public class CssValueConverter {
         }
     }
 
-    @SuppressWarnings({"BroadCatchBlock", "TooBroadCatch"}) //NOI18N
+//    @SuppressWarnings({"BroadCatchBlock", "TooBroadCatch"}) //NOI18N
     private static Effect getEffectInput(Effect effect) {
         Effect found = null;
         try {

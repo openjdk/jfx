@@ -321,6 +321,11 @@ public abstract class Camera extends Node {
         }
     }
 
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
     @Override
     protected void impl_markDirty(DirtyBits dirtyBit) {
         super.impl_markDirty(dirtyBit);

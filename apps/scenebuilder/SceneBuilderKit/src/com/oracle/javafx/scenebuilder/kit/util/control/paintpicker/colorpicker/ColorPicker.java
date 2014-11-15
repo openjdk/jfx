@@ -280,41 +280,49 @@ public class ColorPicker extends VBox {
     @FXML
     void onActionHue(ActionEvent event) {
         onHSBChange(event);
+        event.consume();
     }
 
     @FXML
     void onActionSaturation(ActionEvent event) {
         onHSBChange(event);
+        event.consume();
     }
 
     @FXML
     void onActionBrightness(ActionEvent event) {
         onHSBChange(event);
+        event.consume();
     }
 
     @FXML
     void onActionAlpha(ActionEvent event) {
         onHSBChange(event);
+        event.consume();
     }
 
     @FXML
     void onActionRed(ActionEvent event) {
         onRGBChange(event);
+        event.consume();
     }
 
     @FXML
     void onActionGreen(ActionEvent event) {
         onRGBChange(event);
+        event.consume();
     }
 
     @FXML
     void onActionBlue(ActionEvent event) {
         onRGBChange(event);
+        event.consume();
     }
 
     @FXML
     void onActionHexa(ActionEvent event) {
         onHexaChange(event);
+        event.consume();
     }
 
     private void onHSBChange(ActionEvent event) {

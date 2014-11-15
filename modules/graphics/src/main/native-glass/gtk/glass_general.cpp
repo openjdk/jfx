@@ -112,17 +112,29 @@ jmethodID jApplicationGetApplication;
 jmethodID jApplicationGetName;
 
 void init_threads() {
+#if !GLIB_CHECK_VERSION(2,31,0)
     if (!g_thread_supported()) {
         g_thread_init(NULL);
     }
+#endif
     gdk_threads_init();
+}
+
+static jboolean displayValid = JNI_FALSE;
+
+jboolean
+is_display_valid() {
+    return displayValid;
 }
 
 JNIEXPORT jint JNICALL
 JNI_OnLoad(JavaVM *jvm, void *reserved)
 {
+    (void)reserved;
+
     JNIEnv *env;
     jclass clazz;
+    Display* display;
 
     if (jvm->GetEnv((void **)&env, JNI_VERSION_1_6)) {
          return JNI_ERR; /* JNI version not supported */
@@ -314,6 +326,16 @@ JNI_OnLoad(JavaVM *jvm, void *reserved)
     if (env->ExceptionCheck()) return JNI_ERR;
     jApplicationGetName = env->GetMethodID(jApplicationCls, "getName", "()Ljava/lang/String;");
     if (env->ExceptionCheck()) return JNI_ERR;
+
+    // Before doing anything with GTK we validate that the DISPLAY can be opened
+    display = XOpenDisplay(NULL);
+    if (display != NULL) {
+        XCloseDisplay(display);
+        displayValid = JNI_TRUE;
+    } else {
+        // Invalid DISPLAY, skip initialization
+        return JNI_VERSION_1_6;
+    }
 
     clazz = env->FindClass("sun/misc/GThreadHelper");    
     if (env->ExceptionCheck()) return JNI_ERR;

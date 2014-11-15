@@ -174,6 +174,17 @@ public class SplitPane extends Control {
      * Creates a new SplitPane with no content.
      */
     public SplitPane() {
+        this((Node[])null);
+    }
+
+    /**
+     * Creates a new SplitPane with the given items set as the content to split
+     * between one or more dividers.
+     *
+     * @param items The items to place inside the SplitPane.
+     * @since JavaFX 8u40
+     */
+    public SplitPane(Node... items) {
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
         // focusTraversable is styleable through css. Calling setFocusTraversable
         // makes it look to css like the user set the value and css will not 
@@ -181,7 +192,7 @@ public class SplitPane extends Control {
         // null StyleOrigin ensures that css will be able to override the value.
         ((StyleableProperty<Boolean>)(WritableValue<Boolean>)focusTraversableProperty()).applyStyle(null, Boolean.FALSE); 
 
-        items.addListener(new ListChangeListener<Node>() {
+        getItems().addListener(new ListChangeListener<Node>() {
             @Override public void onChanged(Change<? extends Node> c) {
                 while (c.next()) {
                     int from = c.getFrom();
@@ -207,7 +218,7 @@ public class SplitPane extends Control {
                     }
                 }
                 dividers.clear();
-                for (int i = 0; i < items.size() - 1; i++) {
+                for (int i = 0; i < getItems().size() - 1; i++) {
                     if (dividerCache.containsKey(i) && dividerCache.get(i) != Double.MAX_VALUE) {
                         Divider d = new Divider();
                         d.setPosition(dividerCache.get(i));
@@ -219,6 +230,10 @@ public class SplitPane extends Control {
                 }
             }
         });
+
+        if (items != null) {
+            getItems().addAll(items);
+        }
         
         // initialize pseudo-class state
         pseudoClassStateChanged(HORIZONTAL_PSEUDOCLASS_STATE, true);

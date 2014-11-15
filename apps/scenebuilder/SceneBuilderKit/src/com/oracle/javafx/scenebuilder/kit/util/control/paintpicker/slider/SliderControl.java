@@ -110,6 +110,7 @@ public class SliderControl extends GridPane {
             slider_textfield.setText(Double.toString(rounded));
         }
         slider_textfield.selectAll();
+        event.consume();
     }
 
     @FXML

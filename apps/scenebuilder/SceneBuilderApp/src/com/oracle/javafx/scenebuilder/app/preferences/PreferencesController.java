@@ -105,7 +105,7 @@ public class PreferencesController {
         // Cleanup document preferences at start time : 
         // We keep only document preferences for the documents defined in RECENT_ITEMS
         final String items = applicationRootPreferences.get(RECENT_ITEMS, null); //NOI18N
-        if (items != null) {
+        if (items != null && items.isEmpty() == false) {
             // Remove document preferences node if needed
             try {
                 final String[] childrenNames = documentsRootPreferences.childrenNames();
@@ -123,7 +123,7 @@ public class PreferencesController {
                     }
                 }
             } catch (BackingStoreException ex) {
-                Logger.getLogger(PreferencesRecordGlobal.class.getName()).log(Level.SEVERE, null, ex);
+                Logger.getLogger(PreferencesController.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
     }
@@ -149,5 +149,24 @@ public class PreferencesController {
             recordDocuments.put(dwc, recordDocument);
         }
         return recordDocument;
+    }
+
+    public void clearRecentItems() {
+        // Clear RECENT ITEMS global preferences
+        getRecordGlobal().clearRecentItems();
+        // Clear individual DOCUMENTS preferences
+        try {
+            // Remove nodes from the DOCUMENTS root preference
+            for (String child : documentsRootPreferences.childrenNames()) {
+                final Preferences documentPreferences = documentsRootPreferences.node(child);
+                documentPreferences.removeNode();
+            }
+            // Reset the PreferencesRecordDocuments
+            for (PreferencesRecordDocument prd : recordDocuments.values()) {
+                prd.resetDocumentPreferences();
+            }
+        } catch (BackingStoreException ex) {
+            Logger.getLogger(PreferencesController.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 }

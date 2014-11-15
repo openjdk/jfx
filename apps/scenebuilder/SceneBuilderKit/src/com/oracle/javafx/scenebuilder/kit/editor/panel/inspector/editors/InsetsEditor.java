@@ -32,7 +32,9 @@
 package com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors;
 
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
+
 import java.util.Set;
+
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
@@ -51,7 +53,7 @@ import javafx.scene.input.KeyEvent;
  */
 public class InsetsEditor extends PropertyEditor {
 
-    private final Parent root;
+    private Parent root;
     @FXML
     private Button linkBt;
     @FXML
@@ -65,17 +67,14 @@ public class InsetsEditor extends PropertyEditor {
     TextField[] textFields = new TextField[4];
     TextField errorTf;
 
-    @SuppressWarnings("LeakingThisInConstructor")
     public InsetsEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses) {
         super(propMeta, selectedClasses);
-        root = EditorUtils.loadFxml("InsetsEditor.fxml", this);
-
         initialize();
-        setLayoutFormat(LayoutFormat.SIMPLE_LINE_BOTTOM);
     }
 
     //Method to please FindBugs
     private void initialize() {
+        root = EditorUtils.loadFxml("InsetsEditor.fxml", this);
         textFields[0] = topTf;
         textFields[1] = rightTf;
         textFields[2] = bottomTf;
@@ -92,6 +91,7 @@ public class InsetsEditor extends PropertyEditor {
             setNumericEditorBehavior(this, tf, valueListener, false);
         }
         linkBt.disableProperty().bind(disableProperty());
+        setLayoutFormat(LayoutFormat.SIMPLE_LINE_BOTTOM);
     }
 
     @Override
@@ -115,7 +115,7 @@ public class InsetsEditor extends PropertyEditor {
                 handleInvalidValue(val);
                 return null;
             }
-            values[index] = new Double(val);
+            values[index] = Double.valueOf(val);
             index++;
         }
         return new Insets(values[0], values[1], values[2], values[3]);

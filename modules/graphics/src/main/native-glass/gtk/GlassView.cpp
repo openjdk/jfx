@@ -46,6 +46,9 @@ extern "C" {
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkView_enableInputMethodEventsImpl
   (JNIEnv * env, jobject obj, jlong ptr, jboolean enable)
 {
+    (void)env;
+    (void)obj;
+
     GlassView* view = JLONG_TO_GLASSVIEW(ptr);
     if (view->current_window) {
         if (enable) {
@@ -64,6 +67,10 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkView_enableInputMethodEvents
 JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_gtk_GtkView__1create
   (JNIEnv * env, jobject obj, jobject caps)
 {
+    (void)env;
+    (void)obj;
+    (void)caps;
+
     GlassView *view = new GlassView();
     return PTR_TO_JLONG(view);
 }
@@ -76,6 +83,10 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_gtk_GtkView__1create
 JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_gtk_GtkView__1getNativeView
   (JNIEnv * env, jobject obj, jlong ptr)
 {
+    (void)env;
+    (void)obj;
+    (void)ptr;
+
     return 0;
 }
 
@@ -87,6 +98,9 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_gtk_GtkView__1getNativeView
 JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkView__1getX
   (JNIEnv * env, jobject obj, jlong ptr)
 {
+    (void)env;
+    (void)obj;
+
     GlassView* view = JLONG_TO_GLASSVIEW(ptr);
     if (view && view->current_window) {
         return view->current_window->get_frame_extents().left;
@@ -102,6 +116,9 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkView__1getX
 JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkView__1getY
   (JNIEnv * env, jobject obj, jlong ptr)
 {
+    (void)env;
+    (void)obj;
+
     GlassView* view = JLONG_TO_GLASSVIEW(ptr);
     if (view && view->current_window) {
         return view->current_window->get_frame_extents().top;
@@ -138,6 +155,9 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkView__1setParent
 JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_GtkView__1close
   (JNIEnv * env, jobject obj, jlong ptr)
 {
+    (void)env;
+    (void)obj;
+
     delete JLONG_TO_GLASSVIEW(ptr);
     return JNI_TRUE;
 }
@@ -151,6 +171,9 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkView__1scheduleRepaint
   (JNIEnv * env, jobject obj, jlong ptr)
 {
     // Seems to be unused
+    (void)env;
+    (void)obj;
+    (void)ptr;
 }
 
 /*
@@ -161,6 +184,8 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkView__1scheduleRepaint
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkView__1uploadPixelsDirect
 (JNIEnv *env, jobject jView, jlong ptr, jobject buffer, jint width, jint height)
 {
+    (void)jView;
+
     GlassView* view = JLONG_TO_GLASSVIEW(ptr);
     if (view->current_window) {
         void *data = env->GetDirectBufferAddress(buffer);
@@ -177,6 +202,8 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkView__1uploadPixelsDirect
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkView__1uploadPixelsIntArray
   (JNIEnv * env, jobject obj, jlong ptr, jintArray array, jint offset, jint width, jint height)
 {
+    (void)obj;
+
     GlassView* view = JLONG_TO_GLASSVIEW(ptr);
     if (view->current_window) {
         int *data = NULL;
@@ -197,6 +224,8 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkView__1uploadPixelsIntArray
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkView__1uploadPixelsByteArray
   (JNIEnv * env, jobject obj, jlong ptr, jbyteArray array, jint offset, jint width, jint height)
 {
+    (void)obj;
+
     GlassView* view = JLONG_TO_GLASSVIEW(ptr);
     if (view->current_window) {
         unsigned char *data = NULL;
@@ -218,6 +247,10 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkView__1uploadPixelsByteArray
 JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_GtkView__1enterFullscreen
   (JNIEnv * env, jobject obj, jlong ptr, jboolean animate, jboolean keepRation, jboolean hideCursor)
 {
+    (void)animate;
+    (void)keepRation;
+    (void)hideCursor;
+
     GlassView* view = JLONG_TO_GLASSVIEW(ptr);
     if (view->current_window) {
         view->current_window->enter_fullscreen();
@@ -235,6 +268,8 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_GtkView__1enterFullscreen
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkView__1exitFullscreen
   (JNIEnv * env, jobject obj, jlong ptr, jboolean animate)
 {
+    (void)animate;
+
     GlassView* view = JLONG_TO_GLASSVIEW(ptr);
     if (view->current_window) {
         if (view->embedded_window) {

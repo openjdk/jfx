@@ -38,6 +38,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Locale;
 
 import com.sun.glass.ui.Screen;
@@ -60,6 +61,7 @@ public abstract class PrismFontFactory implements FontFactory {
     public static final int SUB_PIXEL_ON = 1;
     public static final int SUB_PIXEL_Y = 2;
     public static final int SUB_PIXEL_NATIVE = 4;
+    private static float fontSizeLimit = 80f;
 
     private static boolean lcdEnabled;
     private static float lcdContrast = -1;
@@ -121,7 +123,19 @@ public abstract class PrismFontFactory implements FontFactory {
                         subPixelMode |= SUB_PIXEL_Y | SUB_PIXEL_NATIVE | SUB_PIXEL_ON;
                     }
 
-                    useNativeRasterizer = isMacOSX || isWindows || (isLinux && !isEmbedded);
+                    s = System.getProperty("prism.fontSizeLimit");
+                    if (s != null) {
+                        try {
+                            fontSizeLimit = Float.parseFloat(s);
+                            if (fontSizeLimit <= 0) {
+                                fontSizeLimit = Float.POSITIVE_INFINITY;
+                            }
+                        } catch (NumberFormatException nfe) {
+                            System.err.println("Cannot parse fontSizeLimit '" + s + "'");
+                        }
+                    }
+
+                    useNativeRasterizer = isMacOSX || isWindows || isLinux;
                     String defPrismText = useNativeRasterizer ? "native" : "t2k";
                     String prismText = System.getProperty("prism.text", defPrismText);
                     if (useNativeRasterizer) {
@@ -157,6 +171,10 @@ public abstract class PrismFontFactory implements FontFactory {
         if (isMacOSX || isIOS) return CT_FACTORY;
         if (isLinux || isAndroid) return FT_FACTORY;
         return null;
+    }
+
+    public static float getFontSizeLimit() {
+        return fontSizeLimit;
     }
 
     private static PrismFontFactory theFontFactory = null;
@@ -1547,10 +1565,11 @@ public abstract class PrismFontFactory implements FontFactory {
         // the font referenced via some lookup name that applies a style
         // or used the family name, we need to find it and remove all
         // references to it, so it can be collected.
-        for (String key : compResourceMap.keySet()) {
-            CompositeFontResource compFont =  compResourceMap.get(key);
+        Iterator<CompositeFontResource> fi = compResourceMap.values().iterator();
+            while (fi.hasNext()) {
+            CompositeFontResource compFont = fi.next();
             if (compFont.getSlotResource(0) == font) {
-                compResourceMap.remove(key);
+                fi.remove();
             }
         }
     }

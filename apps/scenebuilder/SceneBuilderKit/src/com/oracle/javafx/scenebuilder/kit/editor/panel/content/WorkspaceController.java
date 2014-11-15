@@ -34,7 +34,6 @@ package com.oracle.javafx.scenebuilder.kit.editor.panel.content;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 
-import java.net.URL;
 import java.util.List;
 
 import javafx.animation.FadeTransition;
@@ -47,6 +46,7 @@ import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.SubScene;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.Region;
@@ -63,6 +63,7 @@ class WorkspaceController {
     
     private ScrollPane scrollPane;
     private Group scalingGroup;
+    private SubScene contentSubScene;
     private Group contentGroup;
     private Label backgroundPane;
     private Rectangle extensionRect;
@@ -73,16 +74,18 @@ class WorkspaceController {
     private FXOMDocument fxomDocument;
 
     public void panelControllerDidLoadFxml(ScrollPane scrollPane, 
-            Group scalingGroup, Group contentGroup, Label backgroundPane, 
+            Group scalingGroup, SubScene contentSubScene, Group contentGroup, Label backgroundPane, 
             Rectangle extensionRect) {
         assert scrollPane != null;
         assert backgroundPane != null;
         assert scalingGroup != null;
+        assert contentSubScene != null;
         assert contentGroup != null;
         assert extensionRect != null;
         
         this.scrollPane = scrollPane;
         this.scalingGroup = scalingGroup;
+        this.contentSubScene = contentSubScene;
         this.contentGroup = contentGroup;
         this.backgroundPane = backgroundPane;
         this.extensionRect = extensionRect;
@@ -146,16 +149,9 @@ class WorkspaceController {
         return result;
     }
     
-    public void setThemeStyleSheets(List<URL> themeStyleSheets) {
-        assert contentGroup.getParent() instanceof Group;
-        final Group isolationGroup = (Group) contentGroup.getParent();
-        assert isolationGroup.getStyleClass().contains("root");
-        
-        isolationGroup.getStylesheets().clear();
-        for (URL url : themeStyleSheets) {
-            isolationGroup.getStylesheets().add(url.toString());
-        }
-        isolationGroup.applyCss();
+    public void setThemeStyleSheet(String themeStyleSheet) {
+        assert themeStyleSheet != null;
+        contentSubScene.setUserAgentStylesheet(themeStyleSheet);
     }
     
     public void setPreviewStyleSheets(List<String> previewStyleSheets) {
@@ -168,7 +164,7 @@ class WorkspaceController {
         if (scrollPane != null) {
             try {
                 if (applyCSS) {
-                    scrollPane.getContent().applyCss();
+                    contentSubScene.getRoot().applyCss();
                 }
                 scrollPane.layout();
                 layoutException = null;
@@ -389,6 +385,9 @@ class WorkspaceController {
         extensionRect.setY(extensionBounds.getMinY());
         extensionRect.setWidth(extensionBounds.getWidth());
         extensionRect.setHeight(extensionBounds.getHeight());
+        
+        contentSubScene.setWidth(contentGroup.getLayoutBounds().getWidth());
+        contentSubScene.setHeight(contentGroup.getLayoutBounds().getHeight());
     }
     
     private static Bounds computeUnclippedBounds(Node node) {

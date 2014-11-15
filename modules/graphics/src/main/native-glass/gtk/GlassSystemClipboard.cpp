@@ -261,6 +261,9 @@ static void set_data(GdkAtom target, GtkSelectionData *selection_data, jobject d
 static void set_data_func(GtkClipboard *clipboard, GtkSelectionData *selection_data,
         guint info, gpointer user_data)
 {
+    (void)clipboard;
+    (void)info;
+
     jobject data = (jobject) user_data; //HashMap
     GdkAtom target;
     target = gtk_selection_data_get_target(selection_data);
@@ -271,6 +274,8 @@ static void set_data_func(GtkClipboard *clipboard, GtkSelectionData *selection_d
 
 static void clear_data_func(GtkClipboard *clipboard, gpointer user_data)
 {
+    (void)clipboard;
+
     jobject data =(jobject) user_data;
     mainEnv->DeleteGlobalRef(data);
 }
@@ -364,6 +369,10 @@ static gulong owner_change_handler_id = 0;
 
 static void clipboard_owner_changed_callback(GtkClipboard *clipboard, GdkEventOwnerChange *event, jobject obj)
 {
+    (void)clipboard;
+    (void)event;
+    (void)obj;
+
     is_clipboard_owner = is_clipboard_updated_by_glass;
     is_clipboard_updated_by_glass = FALSE;
     mainEnv->CallVoidMethod(obj, jClipboardContentChanged);
@@ -397,6 +406,8 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkSystemClipboard_init
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkSystemClipboard_dispose
   (JNIEnv *env, jobject obj)
 {
+    (void)obj;
+
     g_signal_handler_disconnect(G_OBJECT(get_clipboard()), owner_change_handler_id);
     env->DeleteGlobalRef(jclipboard);
     
@@ -412,6 +423,9 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkSystemClipboard_dispose
 JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_GtkSystemClipboard_isOwner
   (JNIEnv *env, jobject obj)
 {
+    (void)env;
+    (void)obj;
+
     return is_clipboard_owner ? JNI_TRUE : JNI_FALSE;
 }
 
@@ -423,6 +437,9 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_GtkSystemClipboard_isOwner
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkSystemClipboard_pushToSystem
   (JNIEnv * env, jobject obj, jobject data, jint supported)
 {
+    (void)obj;
+    (void)supported;
+
     GtkTargetEntry* targets = NULL;
     gint ntargets;
     data = env->NewGlobalRef(data);
@@ -452,6 +469,9 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkSystemClipboard_pushTargetAc
   (JNIEnv * env, jobject obj, jint action)
 {
     //Not used for clipboard. DnD only
+    (void)env;
+    (void)obj;
+    (void)action;
 }
 
 /*
@@ -462,6 +482,9 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkSystemClipboard_pushTargetAc
 JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_gtk_GtkSystemClipboard_popFromSystem
   (JNIEnv * env, jobject obj, jstring mime)
 {
+    (void)env;
+    (void)obj;
+
     const char* cmime = env->GetStringUTFChars(mime, NULL);
     jobject result;
 
@@ -494,6 +517,8 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkSystemClipboard_supportedSou
   (JNIEnv *env, jobject obj)
 {
     //Not used for clipboard. DnD only
+    (void)env;
+    (void)obj;
     return 0;
 }
 
@@ -505,6 +530,8 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkSystemClipboard_supportedSou
 JNIEXPORT jobjectArray JNICALL Java_com_sun_glass_ui_gtk_GtkSystemClipboard_mimesFromSystem
   (JNIEnv * env, jobject obj)
 {
+    (void)obj;
+
     GdkAtom *targets;
     gint ntargets;
     gint i;

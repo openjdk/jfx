@@ -31,10 +31,14 @@
  */
 package com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors;
 
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
+import com.oracle.javafx.scenebuilder.kit.metadata.Metadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata;
+import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -89,9 +93,10 @@ public class BoundedDoubleEditor extends AutoSuggestEditor {
         initialize();
     }
 
-    public BoundedDoubleEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses, Map<String, Object> constantsMap) {
+    public BoundedDoubleEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses, Set<FXOMInstance> selectedInstances, Map<String, Object> constantsMap) {
         super(propMeta, selectedClasses, new ArrayList<>(constantsMap.keySet()), AutoSuggestEditor.Type.DOUBLE);
         this.constants = constantsMap;
+        handleSpecificCases(propMeta, selectedInstances);
         initialize();
     }
 
@@ -192,7 +197,7 @@ public class BoundedDoubleEditor extends AutoSuggestEditor {
         if (val.isEmpty()) {
             val = "0"; //NOI18N
             getTextField().setText(val);
-            return new Double(val);
+            return Double.valueOf(val);
         }
         Object constantValue = constants.get(val.toUpperCase(Locale.ROOT));
         if (constantValue != null) {
@@ -223,10 +228,11 @@ public class BoundedDoubleEditor extends AutoSuggestEditor {
         getTextField().setText(EditorUtils.valAsStr(value));
     }
 
-    public void reset(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses,
+    public void reset(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses, Set<FXOMInstance> selectedInstances,
             Map<String, Object> constants) {
         super.reset(propMeta, selectedClasses, new ArrayList<>(constants.keySet()));
         this.constants = constants;
+        handleSpecificCases(propMeta, selectedInstances);
         configureSlider(propMeta);
     }
 
@@ -244,7 +250,13 @@ public class BoundedDoubleEditor extends AutoSuggestEditor {
                     || (kind == DoublePropertyMetadata.DoubleKind.PROGRESS)) {
                 min = 0;
                 max = 1;
+            }
+            if (max <= 1) {
                 roundingFactor = 100; // 2 decimals
+            } else if (max <= 10) {
+                roundingFactor = 10; // 1 decimal
+            } else {
+                roundingFactor = 1; // no decimal
             }
         }
         slider.setMin(min);
@@ -255,5 +267,49 @@ public class BoundedDoubleEditor extends AutoSuggestEditor {
     @Override
     public void requestFocus() {
         EditorUtils.doNextFrame(() -> getTextField().requestFocus());
+    }
+    
+    private void handleSpecificCases(ValuePropertyMetadata propMeta, Set<FXOMInstance> selectedInstances) {
+        // Specific case for ScrollPane hValue/vValue, that have their bounds
+        // related to properties (hMin/hMax, vMin/Vmax)
+        // Since we only have one case of this, the generic case
+        // (bounds=properties) has not been implemented.
+        // (to avoid to add complexity for a single case)
+        String[] scrollBarPropsArray = { Editor.hValuePropName, Editor.vValuePropName };
+        String[] scrollBarHprops = { Editor.hMinPropName, Editor.hMaxPropName };
+        String[] scrollBarVprops = { Editor.vMinPropName, Editor.vMaxPropName };
+        List<String> scrollBarProps = Arrays.asList(scrollBarPropsArray);
+        if (!scrollBarProps.contains(propMeta.getName().toString())) {
+            return;
+        }
+        String[] minMaxProps;
+        if (propMeta.getName().toString().equals(Editor.hValuePropName)) {
+            minMaxProps = scrollBarHprops;
+        } else {
+            minMaxProps = scrollBarVprops;
+        }
+
+        for (String minMaxProp : minMaxProps) {
+            // Set min and max
+            Object propValue = null;
+            boolean different = false;
+            for (FXOMInstance instance : selectedInstances) {
+                Object valueCurr = Metadata.getMetadata().queryValueProperty(instance, new PropertyName(minMaxProp))
+                        .getValueInSceneGraphObject(instance);
+                if (propValue != null && valueCurr != propValue) {
+                    different = true;
+                    break;
+                }
+                propValue = valueCurr;
+            }
+            if (!different) {
+                assert propValue instanceof Double;
+                if (minMaxProp.contains("min")) { //NOI18N
+                    this.min = (Double) propValue;
+                } else {
+                    this.max = (Double) propValue;
+                }
+            }
+        }
     }
 }

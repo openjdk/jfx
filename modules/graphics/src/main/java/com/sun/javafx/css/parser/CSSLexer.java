@@ -77,6 +77,9 @@ final class CSSLexer {
     final static int FONT_FACE = 42;
     final static int URL = 43;
     final static int IMPORT = 44;
+    final static int SECONDS = 45;
+    final static int MS = 46;
+    final static int AT_KEYWORD = 47;
 
     private final Recognizer A = (c) -> c == 'a' || c == 'A';
     private final Recognizer B = (c) -> c == 'b' || c == 'B';
@@ -604,17 +607,18 @@ final class CSSLexer {
             { G, R, A, D },
             { I, N },
             { M, M },
+            { M, S },
             { P, C },
             { P, T },
             { P, X },
             { R, A, D },
+            { S },
             { T, U, R, N },
             { (c) -> c == '%'}
-            
         };
         
         // One bit per unit
-        private int unitsMask = 0x1FFF;
+        private int unitsMask = 0x7FFF;
 
         // Offset into inner array of units
         private int index = -1;
@@ -638,17 +642,19 @@ final class CSSLexer {
                 case 0x10: type = GRAD; break;
                 case 0x20: type = IN; break;
                 case 0x40: type = MM; break;
-                case 0x80: type = PC; break;
-                case 0x100: type = PT; break;
-                case 0x200: type = PX; break;
-                case 0x400: type = RAD; break;
-                case 0x800: type = TURN; break;
-                case 0x1000: type = PERCENTAGE; break;
+                case 0x80: type = MS; break;
+                case 0x100: type = PC; break;
+                case 0x200: type = PT; break;
+                case 0x400: type = PX; break;
+                case 0x800: type = RAD; break;
+                case 0x1000: type = SECONDS; break;
+                case 0x2000: type = TURN; break;
+                case 0x4000: type = PERCENTAGE; break;
                 default: type = Token.INVALID;
             }
              
             // reset
-            unitsMask = 0x1fff;
+            unitsMask = 0x7fff;
             index = -1;
             
             return type;
@@ -670,22 +676,22 @@ final class CSSLexer {
             if (unitsMask == 0) return true;
             
             index += 1;
-            
+
             for (int n=0 ; n < units.length; n++) {
                 
                 final int u = 1 << n;
                 
                 // the unit at this index already failed. Move on.
                 if ((unitsMask & u) == 0) continue;
-                
+
                 if ((index >= units[n].length) || !(units[n][index].recognize(c))) {
                     // not a match, turn off this bit
-                    unitsMask &= ~u; 
+                    unitsMask &= ~u;
                 }
                     
             }
 
-            
+
             return true;
         }
 
@@ -961,31 +967,8 @@ final class CSSLexer {
                         return tok;
 
                     case '@':
-                        // read word after '@' symbol
-                        StringBuilder keywordSB = new StringBuilder();
-                        do {
-                            ch = readChar();
-                            keywordSB.append((char)ch);
-                        } while (!WS_CHARS.recognize(ch) && ch != Token.EOF);
-                        String keyword = keywordSB.substring(0,keywordSB.length()-1);
-                        if ("font-face".equalsIgnoreCase(keyword)) {
-                            token = new Token(FONT_FACE,"@font-face", line, offset);
-                            offset = pos;
-                        } else if ("import".equalsIgnoreCase(keyword)) {
-                            token = new Token(IMPORT,"@import", line, offset);
-                            offset = pos;
-                        } else {
-                            // Skip over other at-rules
-                            do {
-                                ch = readChar();
-                            } while (ch != ';' &&
-                                     ch != Token.EOF);
-                            if (ch == ';') {
-                                ch = readChar();
-                                token = Token.SKIP_TOKEN;
-                                offset = pos;
-                            }
-                        }
+                        token = new Token(AT_KEYWORD, "@", line, offset);
+                        offset = pos;
                         break;
 
                     default:

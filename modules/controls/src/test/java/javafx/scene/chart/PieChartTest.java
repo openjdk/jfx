@@ -25,6 +25,7 @@
 
 package javafx.scene.chart;
 
+import com.sun.javafx.charts.Legend;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -47,7 +48,7 @@ public class PieChartTest extends ChartTestBase {
     @Override
     protected Chart createChart() {
         data = FXCollections.observableArrayList();
-        pc = new PieChart();
+        pc = new PieChart(data);
         return pc;
     }
     
@@ -59,7 +60,6 @@ public class PieChartTest extends ChartTestBase {
         data.add(new PieChart.Data("Dell", 22));
         data.add(new PieChart.Data("Apple", 30));
         pc.setLabelsVisible(false);
-        pc.getData().addAll(data);
         assertEquals(false, pc.getLabelsVisible());
     }
     
@@ -67,7 +67,6 @@ public class PieChartTest extends ChartTestBase {
     public void testLegendUpdateAfterPieNameChange_RT26854() {
         startApp();
         data.add(new PieChart.Data("Sun", 20));
-        pc.getData().addAll(data);
         for(Node n : pc.getChartChildren()) {
             if (n instanceof Text) {
                 assertEquals("Sun", pc.getData().get(0).getName());
@@ -90,17 +89,15 @@ public class PieChartTest extends ChartTestBase {
     @Test
     public void testDataItemRemovedWithAnimation() {
         startApp();
+        pc.setAnimated(true);
         data.add(new PieChart.Data("Sun", 20));
         data.add(new PieChart.Data("IBM", 12));
         data.add(new PieChart.Data("HP", 25));
         data.add(new PieChart.Data("Dell", 22));
         data.add(new PieChart.Data("Apple", 30));
-        pc.setAnimated(true);
-        pc.getData().addAll(data);
         pc.getData().remove(0);
         assertEquals(4, pc.getData().size());
     }
-
 
     @Test
     public void testDataNodeChangeReported() {
@@ -112,5 +109,58 @@ public class PieChartTest extends ChartTestBase {
 
         assertTrue(called.get());
     }
-    
+
+    private void checkStyleClass(int i, String styleClass) {
+        Node item = pc.getData().get(i).getNode();
+        assertTrue(item.getStyleClass().toString(),
+                item.getStyleClass().contains(styleClass));
+        Node legendItem = ((Legend)pc.getLegend()).getItems().get(i).getSymbol();
+        assertTrue(legendItem.getStyleClass().toString(),
+                legendItem.getStyleClass().contains(styleClass));
+    }
+
+    @Test
+    public void testCSSStyleClass_DataClear() {
+        for (int i = 0; i < 10; i++) {
+            data.add(new PieChart.Data(String.valueOf(i), i));
+        }
+        for (int i = 0; i < 10; i++) {
+            checkStyleClass(i, "data"+i);
+            checkStyleClass(i, "default-color"+i%8);
+        }
+        data.clear();
+        for (int i = 0; i < 10; i++) {
+            data.add(new PieChart.Data(String.valueOf(i), i));
+        }
+        for (int i = 0; i < 10; i++) {
+            checkStyleClass(i, "data"+i);
+            checkStyleClass(i, "default-color"+i%8);
+        }
+    }
+
+    @Test
+    public void testCSSStyleClass_DataModify() {
+        for (int i = 0; i < 10; i++) {
+            data.add(new PieChart.Data(String.valueOf(i), i));
+        }
+        data.remove(2); // 0, 1, 3, 4, ...
+        data.add(3, new PieChart.Data(String.valueOf(7.5), 7.5)); // 0, 1, 3, 7.5, 4
+        for (int i = 0; i < 10; i++) {
+            checkStyleClass(i, "data"+i);
+        }
+        checkStyleClass(2, "default-color3");
+        checkStyleClass(3, "default-color2");
+        checkStyleClass(4, "default-color4");
+
+        data.sort((PieChart.Data d1, PieChart.Data d2) ->
+                Double.compare(d1.getPieValue(), d2.getPieValue())
+        ); // 0, 1, 3, 4, 5, 6, 7, 7.5, ...
+        for (int i = 0; i < 10; i++) {
+            checkStyleClass(i, "data"+i);
+        }
+        checkStyleClass(2, "default-color3");
+        checkStyleClass(3, "default-color4");
+        checkStyleClass(6, "default-color7");
+        checkStyleClass(7, "default-color2");
+    }
 }

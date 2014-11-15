@@ -25,11 +25,14 @@
 
 package com.oracle.tools.packager.linux;
 
+import com.oracle.tools.packager.AbstractBundler;
 import com.oracle.tools.packager.Bundler;
 import com.oracle.tools.packager.BundlerParamInfo;
+import com.oracle.tools.packager.BundlersTest;
 import com.oracle.tools.packager.ConfigException;
 import com.oracle.tools.packager.Log;
 import com.oracle.tools.packager.RelativeFileSet;
+import com.oracle.tools.packager.StandardBundlerParam;
 import com.oracle.tools.packager.UnsupportedPlatformException;
 import org.junit.After;
 import org.junit.Assume;
@@ -39,10 +42,12 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
@@ -51,6 +56,7 @@ import static com.oracle.tools.packager.StandardBundlerParam.*;
 import static com.oracle.tools.packager.linux.LinuxAppBundler.ICON_PNG;
 import static com.oracle.tools.packager.linux.LinuxRpmBundler.BUNDLE_NAME;
 import static org.junit.Assert.*;
+import static org.junit.Assume.assumeTrue;
 
 public class LinuxRpmBundlerTest {
 
@@ -69,6 +75,7 @@ public class LinuxRpmBundlerTest {
         Assume.assumeTrue(LinuxRpmBundler.testTool(LinuxRpmBundler.TOOL_RPMBUILD, LinuxRpmBundler.TOOL_RPMBUILD_MIN_VERSION));
 
         Log.setLogger(new Log.Logger(true));
+        Log.setDebug(true);
 
         retain = Boolean.parseBoolean(System.getProperty("RETAIN_PACKAGER_TESTS"));
 
@@ -137,18 +144,18 @@ public class LinuxRpmBundlerTest {
 
         bundleParams.put(APP_NAME.getID(), "Smoke Test");
         bundleParams.put(LinuxRpmBundler.BUNDLE_NAME.getID(), "smokeybundlename");
-        bundleParams.put(MAIN_CLASS.getID(), "hello.TestPackager");
+        bundleParams.put(MAIN_CLASS.getID(), "hello.HelloRectangle");
         bundleParams.put(PREFERENCES_ID.getID(), "the/really/long/preferences/id");
         bundleParams.put(MAIN_JAR.getID(),
                 new RelativeFileSet(fakeMainJar.getParentFile(),
                         new HashSet<>(Arrays.asList(fakeMainJar)))
         );
-        bundleParams.put(CLASSPATH.getID(), fakeMainJar.toString());
+        bundleParams.put(CLASSPATH.getID(), "mainApp.jar");
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
         bundleParams.put(LICENSE_FILE.getID(), Arrays.asList("LICENSE", "LICENSE2"));
         bundleParams.put(LICENSE_TYPE.getID(), "GPL2 + Classpath Exception");
         bundleParams.put(VERBOSE.getID(), true);
-        bundleParams.put(ICON.getID(), "java-logo2.gif"); // force no signing
+        bundleParams.put(ICON.getID(), "java-logo2.gif");
 
         boolean valid = bundler.validate(bundleParams);
         assertTrue(valid);
@@ -185,6 +192,53 @@ public class LinuxRpmBundlerTest {
         assertTrue(output.exists());
     }
 
+    /**
+     * Test with unicode in places we expect it to be
+     */
+    @Test
+    public void unicodeConfig() throws IOException, ConfigException, UnsupportedPlatformException {
+        Bundler bundler = new LinuxRpmBundler();
+
+        Map<String, Object> bundleParams = new HashMap<>();
+
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+
+        bundleParams.put(APP_NAME.getID(), "хелловорлд");
+        bundleParams.put(TITLE.getID(), "ХеллоВорлд аппликейшн");
+        bundleParams.put(VENDOR.getID(), "Оракл девелопмент");
+        bundleParams.put(DESCRIPTION.getID(), "крайне большое описание со странными символами");
+
+        // mandatory re-names
+        bundleParams.put(LinuxDebBundler.BUNDLE_NAME.getID(), "helloworld");
+
+        bundler.validate(bundleParams);
+
+        File output = bundler.execute(bundleParams, new File(workDir, "Unicode"));
+        System.err.println("Bundle at - " + output);
+        assertNotNull(output);
+        assertTrue(output.exists());
+    }
+
+    /**
+     * prove we fail when bundlename inherited from appname is bad
+     */
+    @Test(expected = ConfigException.class)
+    public void badUnicodeAppName() throws IOException, ConfigException, UnsupportedPlatformException {
+        Bundler bundler = new LinuxRpmBundler();
+
+        Map<String, Object> bundleParams = new HashMap<>();
+
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+
+        bundleParams.put(APP_NAME.getID(), "хелловорлд");
+
+        bundler.validate(bundleParams);
+    }
+
     @Test(expected = ConfigException.class)
     public void invalidLicenseFile() throws ConfigException, UnsupportedPlatformException {
         Bundler bundler = new LinuxRpmBundler();
@@ -208,13 +262,15 @@ public class LinuxRpmBundlerTest {
 
         bundleParams.put(APP_NAME.getID(), "EverythingAppName");
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        bundleParams.put(ARGUMENTS.getID(), Arrays.asList("He Said", "She Said"));
+        bundleParams.put(CLASSPATH.getID(), "mainApp.jar");
         bundleParams.put(LinuxAppBundler.LINUX_RUNTIME.getID(), System.getProperty("java.home"));
         bundleParams.put(JVM_OPTIONS.getID(), "-Xms128M");
         bundleParams.put(JVM_PROPERTIES.getID(), "everything.jvm.property=everything.jvm.property.value");
-        bundleParams.put(MAIN_CLASS.getID(), "hello.TestPackager");
+        bundleParams.put(MAIN_CLASS.getID(), "hello.HelloRectangle");
         bundleParams.put(MAIN_JAR.getID(), "mainApp.jar");
-        bundleParams.put(CLASSPATH.getID(), "mainApp.jar");
-        bundleParams.put(PREFERENCES_ID.getID(), "everything.preferences.id");
+        bundleParams.put(PREFERENCES_ID.getID(), "everything/preferences/id");
+        bundleParams.put(PRELOADER_CLASS.getID(), "hello.HelloPreloader");
         bundleParams.put(USER_JVM_OPTIONS.getID(), "-Xmx=256M\n");
         bundleParams.put(VERSION.getID(), "1.2.3.4");
 
@@ -268,7 +324,6 @@ public class LinuxRpmBundlerTest {
     @Test
     public void servicePackage() throws Exception {
         Bundler bundler = new LinuxRpmBundler();
-        Collection<BundlerParamInfo<?>> parameters = bundler.getBundleParameters();
 
         Map<String, Object> bundleParams = new HashMap<>();
 
@@ -277,7 +332,7 @@ public class LinuxRpmBundlerTest {
         bundleParams.put(STOP_ON_UNINSTALL.getID(), true);
         bundleParams.put(RUN_AT_STARTUP.getID(), true);
 
-        bundleParams.put(APP_NAME.getID(), "Java Packager Service Test #1");
+        bundleParams.put(APP_NAME.getID(), "Java Packager Service Test");
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
         bundleParams.put(MAIN_CLASS.getID(), "hello.HelloService");
         bundleParams.put(MAIN_JAR.getID(), "mainApp.jar");
@@ -299,5 +354,159 @@ public class LinuxRpmBundlerTest {
         System.err.println("Bundle at - " + result);
         assertNotNull(result);
         assertTrue(result.exists());
+    }
+
+
+    /**
+     * multiple launchers
+     */
+    @Test
+    public void twoLaunchersTest() throws IOException, ConfigException, UnsupportedPlatformException {
+        Bundler bundler = new LinuxRpmBundler();
+
+        assertNotNull(bundler.getName());
+        assertNotNull(bundler.getID());
+        assertNotNull(bundler.getDescription());
+        //assertNotNull(bundler.getBundleParameters());
+
+        Map<String, Object> bundleParams = new HashMap<>();
+
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+
+        bundleParams.put(APP_NAME.getID(), "Two Launchers Test");
+        bundleParams.put(MAIN_CLASS.getID(), "hello.HelloRectangle");
+        bundleParams.put(PREFERENCES_ID.getID(), "the/really/long/preferences/id");
+        bundleParams.put(MAIN_JAR.getID(),
+                new RelativeFileSet(fakeMainJar.getParentFile(),
+                        new HashSet<>(Arrays.asList(fakeMainJar)))
+        );
+        bundleParams.put(CLASSPATH.getID(), "mainApp.jar");
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        bundleParams.put(VERBOSE.getID(), true);
+
+        List<Map<String, ? super Object>> secondaryLaunchers = new ArrayList<>();
+        for (String name : new String[] {"Fire", "More Fire"}) {
+            Map<String, ? super Object> launcher = new HashMap<>();
+            launcher.put(APP_NAME.getID(), name);
+            launcher.put(PREFERENCES_ID.getID(), "secondary/launcher/" + name);
+            secondaryLaunchers.add(launcher);
+        }
+        bundleParams.put(SECONDARY_LAUNCHERS.getID(), secondaryLaunchers);
+
+        boolean valid = bundler.validate(bundleParams);
+        assertTrue(valid);
+
+        File output = bundler.execute(bundleParams, new File(workDir, "launchers"));
+        assertNotNull(output);
+        assertTrue(output.exists());
+        assertTrue(output.isFile());
+        assertTrue(output.length() > 1_000_000);
+    }
+
+    /**
+     * See File Association
+     */
+    @Test
+    public void testFileAssociation()
+        throws IOException, ConfigException, UnsupportedPlatformException
+    {
+        testFileAssociation("FASmoke 1", "Bogus File", "bogus", "application/x-vnd.test-bogus",
+                            new File(appResourcesDir, "javalogo_white_48.png"));        
+    }
+
+    @Test
+    public void testFileAssociationWithNullExtension()
+        throws IOException, ConfigException, UnsupportedPlatformException
+    {
+        // association with no extension is still valid case (see RT-38625)
+        testFileAssociation("FASmoke null", "Bogus File", null, "application/x-vnd.test-bogus",
+                            new File(appResourcesDir, "javalogo_white_48.png"));
+    }
+
+    private void testFileAssociation(String appName, String description, String extensions,
+                                     String contentType, File icon)
+        throws IOException, ConfigException, UnsupportedPlatformException
+    {
+        AbstractBundler bundler = new LinuxRpmBundler();
+
+        assertNotNull(bundler.getName());
+        assertNotNull(bundler.getID());
+        assertNotNull(bundler.getDescription());
+        //assertNotNull(bundler.getBundleParameters());
+
+        Map<String, Object> bundleParams = new HashMap<>();
+
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+
+        bundleParams.put(APP_NAME.getID(), appName);
+        bundleParams.put(MAIN_CLASS.getID(), "hello.HelloRectangle");
+        bundleParams.put(MAIN_JAR.getID(),
+                new RelativeFileSet(fakeMainJar.getParentFile(),
+                        new HashSet<>(Arrays.asList(fakeMainJar)))
+        );
+        bundleParams.put(CLASSPATH.getID(), "mainApp.jar");
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        bundleParams.put(VERBOSE.getID(), true);
+        bundleParams.put(SYSTEM_WIDE.getID(), true);
+        bundleParams.put(VENDOR.getID(), "Packager Tests");
+
+        Map<String, Object> fileAssociation = new HashMap<>();
+        fileAssociation.put(FA_DESCRIPTION.getID(), description);
+        fileAssociation.put(FA_EXTENSIONS.getID(), extensions);
+        fileAssociation.put(FA_CONTENT_TYPE.getID(), contentType);
+        fileAssociation.put(FA_ICON.getID(), icon);
+
+        bundleParams.put(FILE_ASSOCIATIONS.getID(), Arrays.asList(fileAssociation));
+
+        boolean valid = bundler.validate(bundleParams);
+        assertTrue(valid);
+
+        File result = bundler.execute(bundleParams, new File(workDir, APP_FS_NAME.fetchFrom(bundleParams)));
+        System.err.println("Bundle at - " + result);
+        assertNotNull(result);
+        assertTrue(result.exists());
+    }
+    
+    /*
+     * Test that bundler doesn't support per-user daemons (RT-37985)
+     */
+    @Test(expected = ConfigException.class)
+    public void perUserDaemonTest() throws ConfigException, UnsupportedPlatformException {
+        AbstractBundler bundler = new LinuxRpmBundler();
+
+        Map<String, Object> bundleParams = new HashMap<>();
+        
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+
+        bundleParams.put(SERVICE_HINT.getID(), true);
+        bundleParams.put(SYSTEM_WIDE.getID(), false);
+
+        bundler.validate(bundleParams);
+    }
+
+    @Test
+    public void perSystemDaemonTest() throws ConfigException, UnsupportedPlatformException {
+        AbstractBundler bundler = new LinuxRpmBundler();
+
+        Map<String, Object> bundleParams = new HashMap<>();
+        
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+
+        bundleParams.put(SERVICE_HINT.getID(), true);
+        bundleParams.put(SYSTEM_WIDE.getID(), true);
+
+        bundler.validate(bundleParams);
+    }
+
+    @Test
+    public void testAppNameForRpmBundler() {
+        // valid names for rpm package
+        BundlersTest.testValidValueForBaseParam(StandardBundlerParam.APP_NAME, "test", LinuxRpmBundler.BUNDLE_NAME);
+        BundlersTest.testValidValueForBaseParam(StandardBundlerParam.APP_NAME, "te", LinuxRpmBundler.BUNDLE_NAME);
+
+        // invalid name with cyrillic characters
+        BundlersTest.testInvalidValueForBaseParam(StandardBundlerParam.APP_NAME, "\u0442\u0435\u0441\u0442", LinuxRpmBundler.BUNDLE_NAME);
     }
 }

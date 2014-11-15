@@ -106,26 +106,6 @@ public class FXOMPropertyC extends FXOMProperty {
     public GlueElement getGlueElement() {
         return glueElement;
     }
-
-    public static FXOMPropertyC newInstance(FXOMPropertyC source, FXOMDocument targetDocument) {
-        final FXOMPropertyC result;
-        
-        assert source != null;
-        assert targetDocument != null;
-        assert source.getFxomDocument() != targetDocument;
-        
-        
-        result = new FXOMPropertyC(
-                targetDocument,
-                source.getName());
-        
-        for (FXOMObject sourceValue : source.getValues()) {
-            final FXOMObject newValue = FXOMNodes.newObject(sourceValue, targetDocument);
-            newValue.addToParentProperty(-1, result);
-        }
-        
-        return result;
-    }
     
     
     

@@ -1996,6 +1996,7 @@
 
 .progress-indicator {
     -fx-indeterminate-segment-count: 8;
+    -fx-spin-enabled: true;
 }
 
 .progress-indicator > .determinate-indicator > .indicator {
@@ -3387,6 +3388,14 @@ Only the properties with values that are different from the TextBox are specifie
     -fx-padding: 1.25em;
     -fx-spacing: 1.25em;
 }
+
+/* The fix for RT-37494 forces the web color text's major direction to
+ * LTR. The following keeps the text right-aligned when in RTL mode. */
+.custom-color-dialog .webcolor-field:dir(rtl) > .text-field:dir(ltr) {
+    -fx-alignment: baseline-right;
+}
+
+
 /* -------- Toggle Button ---------------- */
 .custom-color-dialog .controls-pane .toggle-button {
     -fx-background-radius: 0.333333em, 0.333333em, 0.25em, 0.1666667em;
@@ -4036,4 +4045,229 @@ to the top and bottom -fx-padding values of the parent toolbar. */
 
 .html-editor > * > * > .font-menu-button .label{
     -fx-padding: 0.166667em 0.5em 0.25em 0.5em; /* 2 6 3 6 */
+}
+
+/*******************************************************************************
+ *                                                                             *
+ * Spinner                                                                     *
+ *                                                                             *
+ ******************************************************************************/
+
+.spinner {
+    -fx-background-color: -fx-shadow-highlight-color, -fx-text-box-border, -fx-control-inner-background;
+    -fx-background-insets: 0, 0 0 1 0, 1 1 2 1;
+    -fx-background-radius: 3, 3, 2;
+}
+.spinner:focused,
+.spinner:contains-focus {
+    -fx-background-color: -fx-focus-color, -fx-text-box-border, -fx-control-inner-background;
+    -fx-background-insets: -1.4 -1.4 -0.4 -1.4, 0 0 1 0, 1 1 2 1;
+    -fx-background-radius: 4, 3, 2;
+}
+.spinner:disabled {
+    -fx-opacity: -fx-disabled-opacity;
+}
+.spinner > .text-field {
+    -fx-background-color: -fx-text-box-border, -fx-control-inner-background;
+    -fx-background-insets: 0 0 1 0, 1 0 2 1;
+    -fx-background-radius: 3 0 0 3, 2 0 0 2;
+}
+
+.spinner .increment-arrow-button {
+    -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color;
+    -fx-background-insets: 0, 1, 2;
+    -fx-background-radius: 0 3 0 0, 0 2 0 0, 0 1 0 0;
+    -fx-padding: 0.333em 0.666em 0.333em 0.666em; /* 4 8 4 8 */
+}
+.spinner .decrement-arrow-button {
+    -fx-background-color: -fx-outer-border, -fx-inner-border, -fx-body-color;
+    -fx-background-insets: -1 0 1 0, 0 1 2 1, 0 2 3 2;
+    -fx-background-radius: 0 0 3 0, 0 0 2 0, 0 0 1 0;
+    -fx-padding: 0.250em 0.666em 0.5em 0.666em; /* 3 8 6 8 */
+}
+
+.spinner .increment-arrow-button .increment-arrow {
+    -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
+    -fx-background-insets: -0.6 0 1 0, 0;
+    -fx-padding: 0.167em 0.333em 0.167em 0.333em; /* 2 4 2 4 */
+    -fx-shape: "M 0 0 h 7 l -3.5 4 z";
+    -fx-rotate: 180;
+}
+.spinner .decrement-arrow-button .decrement-arrow {
+    -fx-background-color: -fx-mark-highlight-color, -fx-mark-color;
+    -fx-background-insets: 1 0 -1 0, 0;
+    -fx-padding: 0.167em 0.333em 0.167em 0.333em; /* 2 4 2 4 */
+    -fx-shape: "M 0 0 h 7 l -3.5 4 z";
+}
+
+/* Spinner - Horizontal arrows */
+.spinner.split-arrows-horizontal .increment-arrow-button .increment-arrow,
+.spinner.arrows-on-right-horizontal .increment-arrow-button .increment-arrow,
+.spinner.arrows-on-left-horizontal .increment-arrow-button .increment-arrow,
+.spinner.split-arrows-horizontal .decrement-arrow-button .decrement-arrow,
+.spinner.arrows-on-right-horizontal .decrement-arrow-button .decrement-arrow,
+.spinner.arrows-on-left-horizontal .decrement-arrow-button .decrement-arrow{
+    -fx-padding: 0.333em 0.166em 0.333em 0.166em; /* 4 2 4 2 */
+    -fx-shape: "M 4 0 v 7 l -4 -3.5 z";
+}
+
+/* Spinner - STYLE_CLASS_ARROWS_ON_RIGHT_HORIZONTAL */
+.spinner.arrows-on-right-horizontal .increment-arrow-button {
+    -fx-background-insets: 0 0 1 0, 1 1 2 0, 2 2 3 1;
+    -fx-background-radius: 0 3 3 0, 0 2 2 0, 0 1 1 0;
+    -fx-padding: 0.333em 0.666em 0.333em 0.583em; /* 4 8 4 7 */
+
+}
+.spinner.arrows-on-right-horizontal .decrement-arrow-button {
+    -fx-background-insets: 0 0 1 0, 1 1 2 1, 2 2 3 2;
+    -fx-background-radius: 0, 0, 0;
+    -fx-padding: 0.333em 0.666em 0.333em 0.666em; /* 4 8 4 8 */
+}
+
+/* Spinner - STYLE_CLASS_ARROWS_ON_LEFT_VERTICAL */
+.spinner.arrows-on-left-vertical > .text-field {
+    -fx-background-insets: 0 0 1 0, 1 1 2 0;
+    -fx-background-radius: 0 3 3 0, 0 2 2 0;
+}
+.spinner.arrows-on-left-vertical .increment-arrow-button {
+    -fx-background-radius: 3 0 0 0, 2 0 0 0, 1 0 0 0;
+}
+.spinner.arrows-on-left-vertical .decrement-arrow-button {
+    -fx-background-radius: 0 0 0 3, 0 0 0 2, 0 0 0 1;
+}
+
+/* Spinner - STYLE_CLASS_ARROWS_ON_LEFT_HORIZONTAL */
+.spinner.arrows-on-left-horizontal > .text-field {
+    -fx-background-insets: 0 0 1 -1, 1 1 2 -1;
+    -fx-background-radius: 0 3 3 0, 0 2 2 0;
+}
+.spinner.arrows-on-left-horizontal .increment-arrow-button {
+    -fx-background-insets: 0 0 1 0, 1 1 2 0, 2 2 3 1;
+    -fx-background-radius: 0, 0, 0;
+    -fx-padding: 0.333em 0.666em 0.333em 0.583em; /* 4 8 4 7 */
+}
+.spinner.arrows-on-left-horizontal .decrement-arrow-button {
+    -fx-background-insets: 0 0 1 0, 1 1 2 1, 2 2 3 2;
+    -fx-background-radius: 3 0 0 3, 2 0 0 2, 1 0 0 1;
+    -fx-padding: 0.333em 0.666em 0.333em 0.666em; /* 4 8 4 8 */
+}
+
+/* Spinner - STYLE_CLASS_SPLIT_ARROWS_VERTICAL */
+.spinner.split-arrows-vertical > .text-field {
+    -fx-background-insets: 0, 0 1 0 1;
+    -fx-background-radius: 0, 0;
+}
+.spinner.split-arrows-vertical .increment-arrow-button {
+    -fx-background-radius: 3 3 0 0, 2 2 0 0, 1 1 0 0;
+}
+.spinner.split-arrows-vertical .decrement-arrow-button {
+    -fx-background-insets: -1 0 1 0, 0 1 2 1, 1 2 3 2;
+    -fx-background-radius: 0 0 3 3, 0 0 2 2, 0 0 1 1;
+    -fx-padding: 0.25em 0.666em 0.417em 0.666em; /* 3 8 5 8 */
+}
+
+/* Spinner - STYLE_CLASS_SPLIT_ARROWS_HORIZONTAL */
+.spinner.split-arrows-horizontal > .text-field {
+    -fx-background-insets: 0 0 1 0, 1 0 2 0;
+    -fx-background-radius: 0, 0;
+}
+.spinner.split-arrows-horizontal .increment-arrow-button {
+    -fx-background-insets: 0 0 1 0, 1 1 2 1, 2 2 3 2;
+    -fx-background-radius: 0 3 3 0, 0 2 2 0, 0 1 1 0;
+    -fx-padding: 0.333em 0.666em 0.333em 0.666em; /* 4 8 4 8 */
+}
+.spinner.split-arrows-horizontal .decrement-arrow-button {
+    -fx-background-insets: 0 0 1 0, 1 1 2 1, 2 2 3 2;
+    -fx-background-radius: 3 0 0 3, 2 0 0 2, 1 0 0 1;
+    -fx-padding: 0.333em 0.666em 0.333em 0.666em; /* 4 8 4 8 */
+}
+
+/*******************************************************************************
+ *                                                                             *
+ * Dialog                                                                      *
+ *                                                                             *
+ ******************************************************************************/
+
+.dialog {
+    -fx-padding: 0;
+}
+
+.dialog > .dialog-pane {
+    -fx-background-color: -fx-background;
+    -fx-padding: 0;
+}
+
+.dialog > .dialog-pane > .expandable-content {
+    -fx-padding: 0.666em; /* 8px */
+}
+
+.dialog > .dialog-pane > .button-bar > .container {
+    -fx-padding: 0.833em; /* 10px */
+}
+
+.dialog > .dialog-pane > .content.label {
+    -fx-alignment: top-left;
+    -fx-padding: 1.333em 0.833em 0 0.833em; /* 16px 10px 0px 10px */
+}
+
+.dialog > .dialog-pane > .content {
+    -fx-padding: 0.833em; /* 10 */
+}
+
+.dialog:no-header > .dialog-pane .graphic-container {
+    -fx-padding: 0.833em 0 0 0.833em; /* 10px 0px 0px 10px */
+}
+
+.dialog:header > .dialog-pane .header-panel {
+    /*-fx-padding: 0.833em 1.166em 0.833em 1.166em; *//* 10px 14px 10px 14px */
+    -fx-padding: 0.833em; /* 10px */
+    -fx-background-color: -fx-box-border, linear-gradient(-fx-background, derive(-fx-background, 30%));
+    -fx-background-insets: 0, 0 0 1 0;
+}
+
+.dialog:header > .dialog-pane .header-panel .label {
+    -fx-font-size: 1.167em; /* 14px */
+    -fx-wrap-text: true;
+}
+
+.dialog:header > .dialog-pane .header-panel .graphic-container {
+    /* This prevents the text in the header running directly into the graphic */
+    -fx-padding: 0 0 0 0.833em; /* 0px 0px 0px 10px */
+}
+
+.dialog > .dialog-pane > .button-bar > .container > .details-button {
+    -fx-alignment: baseline-left;
+    -fx-focus-traversable: false;
+    -fx-padding: 0.416em; /* 5px */
+    -fx-font-size: 0.833em; /* 10px */
+}
+
+.dialog > .dialog-pane > .button-bar > .container > .details-button.more {
+    -fx-graphic: url("dialog-more-details.png");
+}
+
+.dialog > .dialog-pane > .button-bar > .container > .details-button.less {
+    -fx-graphic: url("dialog-fewer-details.png");
+}
+
+.dialog > .dialog-pane > .button-bar > .container > .details-button:hover {
+    -fx-underline: true;
+}
+
+.alert.confirmation.dialog-pane,
+.text-input-dialog.dialog-pane,
+.choice-dialog.dialog-pane {
+    -fx-graphic: url("dialog-confirm.png");
+}
+
+.alert.information.dialog-pane {
+    -fx-graphic: url("dialog-information.png");
+}
+
+.alert.error.dialog-pane {
+    -fx-graphic: url("dialog-error.png");
+}
+
+.alert.warning.dialog-pane {
+    -fx-graphic: url("dialog-warning.png");
 }

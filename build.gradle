@@ -103,7 +103,7 @@ void defineProperty(String name, Properties props, String defaultValue) {
  * cygwin is installed, as I hope one day to remove the requirement to build
  * with cygwin, but at present (due to GStreamer / Webkit) cygwin is needed
  * anyway.
- * 
+ *
  * @param path the path to convert
  * @return the path converted to windows style, if on windows, otherwise it
  *         is the supplied path.
@@ -149,7 +149,7 @@ class CompileTarget {
 /**
  * Iterates over each of the compile targets, passing the given closure
  * a CompileTarget instance.
- * 
+ *
  * @param c The closure to call
  */
 void compileTargets(Closure c) {
@@ -170,11 +170,11 @@ void compileTargets(Closure c) {
  * content for a properties file built at build time and stored in the
  * root project's $buildDir, and then loading that properties file and
  * passing it to the processor closure.
- * 
+ *
  * This is used on windows to produce a properties file containing all the
  * windows visual studio paths and environment variables, and on Linux
  * for storing the results of pkg-config calls.
- * 
+ *
  * @param name the name of the file to produce
  * @param loader a closure which is invoked, given the properties file. This
  *        closure is invoked only if the properties file needs to be created
@@ -331,6 +331,11 @@ ext.IS_COMPILE_JFR = Boolean.parseBoolean(COMPILE_JFR)
 defineProperty("RETAIN_PACKAGER_TESTS", "false")
 ext.IS_RETAIN_PACKAGER_TESTS = Boolean.parseBoolean(RETAIN_PACKAGER_TESTS)
 
+// TEST_PACKAGER_DMG whether tests that create DMG files via hdiutil
+// should be run.  On OSX 10.7 this tends to hang automated builds
+defineProperty("TEST_PACKAGER_DMG", "false")
+ext.IS_TEST_PACKAGER_DMG = Boolean.parseBoolean(TEST_PACKAGER_DMG)
+
 // Define the SWT.jar that we are going to have to download during the build process based
 // on what platform we are compiling from (not based on our target).
 ext.SWT_FILE_NAME = IS_MAC ? "org.eclipse.swt.cocoa.macosx.x86_64_3.7.2.v3740f" :
@@ -437,11 +442,37 @@ if (!importCrossTools && hasProperty("IMPORT_CROSS_TOOLS")) {
 ext.IS_IMPORT_CROSS_TOOLS = importCrossTools
 
 // Location of the cross compile tools
-def crossToolsDir = "../crosslibs" 
+def crossToolsDir = "../crosslibs"
 if (hasProperty("CROSS_TOOLS_DIR")) {
     crossToolsDir = CROSS_TOOLS_DIR
 }
 ext.CROSS_TOOLS_DIR = file(crossToolsDir)
+
+// Specifies whether to run tests with the present jfxrt.jar instead of compiling the new one
+defineProperty("BUILD_SDK_FOR_TEST", "true")
+ext.DO_BUILD_SDK_FOR_TEST = Boolean.parseBoolean(BUILD_SDK_FOR_TEST)
+
+// Specifies the location to point at SDK build when DO_BUILD_SDK_FOR_TEST set to false
+// Used to get location of jfxrt.jar, ant-javafx.jar and javafx-mx.jar
+defineProperty("TEST_SDK", JDK_HOME)
+ext.TEST_SDK_DIR = file(TEST_SDK)
+
+def rtDir = new File(TEST_SDK_DIR, "rt")
+if (!rtDir.directory) {
+    rtDir = new File(TEST_SDK_DIR, "jre")
+}
+ext.jfxrtJarFromSdk = new File(rtDir, "lib/ext/jfxrt.jar").absolutePath
+if (!DO_BUILD_SDK_FOR_TEST && !file(jfxrtJarFromSdk).exists()) {
+    fail ("BUILD_SDK_FOR_TEST is set to false, but there\'s no jfxrt.jar at the expected paths in TEST_SDK($TEST_SDK_DIR)\n"
+            + "TEST_SDK should point at either JavaFX SDK location or JDK location\n"
+            + "Please, set the correct TEST_SDK")
+}
+
+// These tasks would be disabled when running with DO_BUILD_SDK_FOR_TEST=false as they're unneeded for running tests
+def disabledTasks = DO_BUILD_SDK_FOR_TEST ? [] : ["compileJava", "processResources", "classes", // all projects
+         "generateDecoraShaders", "generatePrismShaders",
+         "compilePrismCompilers", "compilePrismJavaShaders", "compileDecoraCompilers", // :graphics
+         "processDecoraShaders", "processPrismShaders"]
 
 /**
  * Fetch/Check that external tools are present for the build. This method
@@ -631,6 +662,7 @@ compileTargets { t ->
     if (!targetProperties.containsKey('includeSwing')) targetProperties.includeSwing = true
     if (!targetProperties.containsKey('includeNull3d')) targetProperties.includeNull3d = true
     if (!targetProperties.containsKey('includeLens')) targetProperties.includeLens = false
+    if (!targetProperties.containsKey('includeMonocle')) targetProperties.includeMonocle = false
     if (!targetProperties.containsKey('includeEGL')) targetProperties.includeEGL = false
 
     if (!targetProperties.containsKey('includeGTK')) targetProperties.includeGTK = IS_LINUX
@@ -638,7 +670,7 @@ compileTargets { t ->
     // This value is used to under ./build/${sdkDirName} to allow for
     // a common name for the hosted build (for use when building apps)
     // and a unique name for cross builds.
-    if (rootProject.defaultHostTarget.equals(t.name)) { 
+    if (rootProject.defaultHostTarget.equals(t.name)) {
         // use a simple common default for the "host" build
         targetProperties.sdkDirName="sdk"
     } else {
@@ -713,7 +745,9 @@ if (!project.hasProperty("jdkRuntimeVersion")) throw new Exception("Unable to de
 
 
 // Verify that CONF is something useful
-if (CONF != "Release" && CONF != "Debug") logger.warn("Unknown configuration CONF='$CONF'. Treating as 'Release'")
+if (CONF != "Release" && CONF != "Debug" && CONF != "DebugNative") {
+    logger.warn("Unknown configuration CONF='$CONF'. Treating as 'Release'")
+}
 
 // If the number of compile threads is less than 1 then we have a problem!
 if (Integer.parseInt(NUM_COMPILE_THREADS.toString()) < 1) {
@@ -772,6 +806,7 @@ logger.quiet("jdk.runtime.version: ${jdkRuntimeVersion}")
 logger.quiet("jdk version: ${jdkVersion}")
 logger.quiet("jdk build number: ${jdkBuildNumber}")
 logger.quiet("minimum java build number: ${jfxBuildJdkBuildnumMin}")
+logger.quiet("CONF: $CONF")
 logger.quiet("NUM_COMPILE_THREADS: $NUM_COMPILE_THREADS")
 logger.quiet("COMPILE_TARGETS: $COMPILE_TARGETS")
 logger.quiet("COMPILE_FLAGS_FILES: $COMPILE_FLAGS_FILES")
@@ -811,7 +846,7 @@ ext.BUILD_SRC = rootProject.files("buildSrc/build/libs/buildSrc.jar")
  * Convenience method for creating javah, cc, link, and "native" tasks in the given project. These
  * tasks are parameterized by name, so that we can produce, for example, javahGlass, ccGlass, etc
  * named tasks.
- * 
+ *
  * @param project The project to add tasks to
  * @param name The name of the project, such as "prism-common". This name is used
  *        in the name of the generated task, such as ccPrismCommon, and also
@@ -830,7 +865,7 @@ void addNative(Project project, String name) {
     if (project.hasProperty("nativeAllTask")) project.nativeAllTask.dependsOn nativeTask
     project.assemble.dependsOn(nativeTask)
     if (project.hasProperty("cleanNativeAllTask")) project.cleanNativeAllTask.dependsOn cleanTask
-    
+
     // Each of the different compile targets will be placed in a sub directory
     // of these root dirs, with the name of the dir being the name of the target
     def headerRootDir = project.file("$project.buildDir/generated-src/headers/$name")
@@ -857,7 +892,7 @@ void addNative(Project project, String name) {
             println("Native library ${name} disabled in ${t.name} project properties");
             return
         }
-        
+
         def javahTask = project.task("javah${t.capital}${capitalName}", type: JavaHeaderTask, dependsOn: project.classes, group: "Build") {
             description = "Generates JNI Headers for ${name} for ${t.name}"
             if (properties.javahSource == null) {
@@ -1031,13 +1066,7 @@ task checkJfxrtJar {
     doLast {
         def jfxrtFile = new File("$JDK_HOME/jre/lib/ext/jfxrt.jar");
         if (jfxrtFile.exists()) {
-            if (BUILD_CLOSED) {
-                fail("$jfxrtFile must be removed before building closed sdk")
-            } else {
-                logger.warn("****************************************************************")
-                logger.warn("$jfxrtFile may interfere with testing or running applications against locally build jfxrt.jar")
-                logger.warn("****************************************************************")
-            }
+            fail("$jfxrtFile must be removed before building sdk")
         }
     }
 }
@@ -1137,6 +1166,7 @@ allprojects {
     // Compile and run tests against the jfxrt.jar in the built sdk of the host machine
     def sdkDir = "${rootProject.buildDir}/sdk"
     def jfxrtJar = "$sdkDir/rt/lib/ext/jfxrt.jar"
+    def testJfxrtJar = DO_BUILD_SDK_FOR_TEST ? jfxrtJar : jfxrtJarFromSdk
 
     // At the moment the ASM library shipped with Gradle that is used to
     // discover the different test classes fails on Java 8, so in order
@@ -1154,7 +1184,7 @@ allprojects {
         if (BUILD_CLOSED && DO_JCOV) {
             addJCov(project, test)
         }
-        classpath = files("$jfxrtJar") + classpath
+        classpath = files(testJfxrtJar) + classpath
         if (IS_HEADLESS_TEST) {
             systemProperty 'glass.platform', 'Monocle'
             systemProperty 'monocle.platform', 'Headless'
@@ -1166,7 +1196,7 @@ allprojects {
     }
 
     compileTestJava {
-        classpath = files("$jfxrtJar") + classpath
+        classpath = files(testJfxrtJar) + classpath
     }
 
     // Exclude any non-public-API classes from having javadoc generated. This block is used
@@ -1676,6 +1706,14 @@ project(":designTime") {
     dependencies {
         compile project(":graphics")
     }
+    // impossible to run tests on designTime when not compiling SDK and designTime subproject
+    // need to disable test and compileTestJava tasks and remove their dependencies
+    if (!DO_BUILD_SDK_FOR_TEST) {
+        [test, compileTestJava].each {
+            it.dependsOn = []
+            it.enabled = false
+        }
+    }
 }
 
 project(":jmx") {
@@ -1688,6 +1726,13 @@ project(":jmx") {
 
     // Tests are disabled until RT-33926 can be fixed
     test.enabled = false
+
+    if (!DO_BUILD_SDK_FOR_TEST) {
+       def javafxMxJar = new File(TEST_SDK_DIR, "lib/javafx-mx.jar")
+       [test, compileTestJava].each {
+           it.classpath = files(javafxMxJar) + it.classpath
+       }
+    }
 }
 
 // This project is for system tests that need to run with a full SDK.
@@ -1705,12 +1750,14 @@ project(":systemTests") {
             exclude("**/javafx/scene/layout/*.*");
             exclude("**/test3d/*.*");
             exclude("**/painttest/*.*");
+            exclude("**/renderlock/*.*");
         }
         if (!IS_AWT_TEST) {
             // Disable all AWT-based tests
             exclude("**/javafx/embed/swing/*.*");
             exclude("**/com/sun/javafx/application/Swing*.*");
         }
+        
         forkEvery = 1
     }
 }
@@ -1758,10 +1805,9 @@ project(":fxpackager") {
     }
     processResources.dependsOn man
 
-    // Compile the native launchers. These are included in ant-javafx.jar
-    // TODO should teach this to know 32 / 64 bit
+    // Compile the native launchers. These are included in ant-javafx.jar.
     if (IS_WINDOWS && COMPILE_FXPACKAGER) {
-        task compileWinLauncher(type: CCTask, group: "Build") {
+        task buildWinLauncher(type: CCTask, group: "Build") {
             description = "Compiles native sources for the application co-bundle launcher";
             matches = "WinLauncher\\.cpp";
             params.addAll(WIN.launcher.ccFlags);
@@ -1773,16 +1819,39 @@ project(":fxpackager") {
             doLast {
                 copy {
                     from "$buildDir/native/WinLauncher/WinLauncher.exe"
+                    from "$MSVCR"
+                    from "$MSVCP"
                     into "$buildDir/classes/main/com/oracle/tools/packager/windows"
                 }
             }
         }
-        task compileWinLauncherSvc(type: CCTask, group: "Build") {
+        task compileWinLibrary(type: CCTask, group: "Build") {
+            description = "Compiles native sources for the application co-bundle launcher library";
+            matches = ".*\\.cpp"
+            source(file("src/main/native/library/common"));
+            params.addAll(WIN.launcherlibrary.ccFlags)
+            output(file("$buildDir/native/WinLauncher/obj"));
+            compiler = WIN.launcherlibrary.compiler
+        }
+        task linkWinLibrary(type: LinkTask, group: "Build", dependsOn: compileWinLibrary) {
+            description = "Links native sources for the application co-bundle launcher library";
+            objectDir = file("$buildDir/native/WinLauncher/obj")
+            linkParams.addAll(WIN.launcherlibrary.linkFlags);
+            lib = file("$buildDir/native/WinLauncher/packager.dll")
+            linker = WIN.launcherlibrary.linker
+            doLast {
+                copy {
+                    from "$buildDir/native/WinLauncher/packager.dll"
+                    into "$buildDir/classes/main/com/oracle/tools/packager/windows"
+                }
+            }
+        }
+        task buildWinLauncherSvc(type: CCTask, group: "Build") {
             description = "Compiles native sources for the application co-bundle launcher";
             matches = "WinLauncherSvc\\.cpp";
             params.addAll(WIN.launcher.ccFlags);
             output(file("$buildDir/native/WinLauncherSvc"));
-            source(file("src/main/native/launcher/win"));
+            source(file("src/main/native/service/win"));
             compiler = WIN.launcher.compiler
             exe = true;
             linkerOptions.addAll(WIN.launcher.linkFlags);
@@ -1793,12 +1862,12 @@ project(":fxpackager") {
                 }
             }
         }
-        task compileIconSwap(type: CCTask, group: "Build") {
+        task buildIconSwap(type: CCTask, group: "Build") {
             description = "Compiles native sources for the application co-bundle launcher"
             matches = "IconSwap\\.cpp"
             params.addAll(WIN.iconLauncher.ccFlags)
             output(file("$buildDir/native/IconSwap"))
-            source file("src/main/native/launcher/win")
+            source file("src/main/native/tools/win")
             compiler = WIN.launcher.compiler
             exe = true
             linkerOptions.addAll(WIN.iconLauncher.linkFlags)
@@ -1809,40 +1878,70 @@ project(":fxpackager") {
                 }
             }
         }
-        task compileLauncher(dependsOn: [compileWinLauncher, compileWinLauncherSvc, compileIconSwap])
+        task compileLauncher(dependsOn: [buildWinLauncher, linkWinLibrary, buildWinLauncherSvc, buildIconSwap])
         jar.dependsOn compileLauncher;
-    } else if (COMPILE_FXPACKAGER) {
-        if (IS_MAC) {
-            task compileLauncher(type: CCTask, group: "Build") {
-                description = "Compiles native sources for the application co-bundle launcher"
-                matches = ".*\\.m"
-                output(file("$buildDir/classes/main/com/oracle/tools/packager/mac"))
-                params.addAll(MAC.launcher.ccFlags)
-                source file("src/main/native/launcher/mac")
-                compiler = MAC.launcher.compiler
-                eachOutputFile = { f ->
-                    return new File(f.getParent(), "JavaAppLauncher")
-                }
+    } else if (IS_MAC && COMPILE_FXPACKAGER) {
+        task buildMacLauncher(type: CCTask, group: "Build") {
+            description = "Compiles native sources for the application co-bundle launcher"
+            matches = ".*\\.m"
+            source file("src/main/native/launcher/mac")
+            params.addAll(MAC.launcher.ccFlags)
+            compiler = MAC.launcher.compiler
+            output(file("$buildDir/classes/main/com/oracle/tools/packager/mac"))
+            eachOutputFile = { f ->
+                return new File(f.getParent(), "JavaAppLauncher")
             }
-            jar.dependsOn compileLauncher;
-        } else {
-            def ccTask = project.task("compileLauncher", type: CCTask, group: "Build") {
-                description = "Compiles native sources for the application co-bundle launcher"
-                matches = ".*\\.c"
-                output(file("$buildDir/native/launcher"))
-                params.addAll(LINUX.launcher.ccFlags)
-                compiler = LINUX.launcher.compiler
-                source file("src/main/native/launcher/linux")
-            }
-            def linkTask = project.task("linkLauncher", type: LinkTask, dependsOn: ccTask, group: "Build") {
-                description = "Creates native dynamic library for the application co-bundle launcher"
-                linker = LINUX.launcher.linker
-                linkParams.addAll(LINUX.launcher.linkFlags)
-                objectDir = file("$buildDir/native/launcher")
-                lib = file("$buildDir/classes/main/com/oracle/tools/packager/linux/JavaAppLauncher")
-            }
-            jar.dependsOn linkTask;
         }
+        task compileMacLibrary(type: CCTask, group: "Build") {
+            description = "Compiles native sources for the application co-bundle launcher library"
+            matches = ".*\\.cpp|.*\\.mm"
+            source file("src/main/native/library/common");
+            params.addAll(MAC.launcherlibrary.ccFlags)
+            compiler = MAC.launcherlibrary.compiler
+            output(file("$buildDir/native/maclauncher/obj"))
+        }
+        task linkMacLibrary(type: LinkTask, group: "Build", dependsOn: compileMacLibrary) {
+            description = "Links native sources for the application co-bundle launcher library"
+            objectDir = file("$buildDir/native/maclauncher/obj")
+            linkParams.addAll(MAC.launcherlibrary.linkFlags)
+            linker = MAC.launcherlibrary.linker
+            lib = file("$buildDir/classes/main/com/oracle/tools/packager/mac/libpackager.dylib")
+        }
+        task compileLauncher(dependsOn: [buildMacLauncher, linkMacLibrary])
+        jar.dependsOn compileLauncher;
+    } else if (IS_LINUX && COMPILE_FXPACKAGER) {
+        task compileLinuxLauncher(type: CCTask, group: "Build") {
+            description = "Compiles native sources for the application co-bundle launcher"
+            matches = ".*\\.cpp"
+            source file("src/main/native/launcher/linux")
+            params.addAll(LINUX.launcher.ccFlags)
+            compiler = LINUX.launcher.compiler
+            output(file("$buildDir/native/linuxlauncher/launcherobj"))
+        }
+        task linkLinuxLauncher(type: LinkTask, dependsOn: compileLinuxLauncher, group: "Build") {
+            description = "Links native dynamic library for the application co-bundle launcher"
+            objectDir = file("$buildDir/native/linuxlauncher/launcherobj")
+            linkParams.addAll(LINUX.launcher.linkFlags)
+            linker = LINUX.launcher.linker
+            lib = file("$buildDir/classes/main/com/oracle/tools/packager/linux/JavaAppLauncher")
+        }
+        task compileLinuxLibrary(type: CCTask, group: "Build") {
+            description = "Compiles native sources for the application co-bundle launcher library"
+            matches = ".*\\.cpp"
+            source file("src/main/native/library/common")
+            params.addAll(LINUX.launcherlibrary.ccFlags)
+            compiler = LINUX.launcherlibrary.compiler
+            output(file("$buildDir/native/linuxlauncher/obj"))
+        }
+        task linkLinuxLibrary(type: LinkTask, dependsOn: compileLinuxLibrary, group: "Build") {
+            description = "Links native dynamic library for the application co-bundle launcher library"
+            objectDir = file("$buildDir/native/linuxlauncher/obj")
+            linkParams.addAll(LINUX.launcherlibrary.linkFlags)
+            linker = LINUX.launcherlibrary.linker
+            lib = file("$buildDir/classes/main/com/oracle/tools/packager/linux/libpackager.so")
+        }
+        task compileLauncher(dependsOn: [linkLinuxLauncher, linkLinuxLibrary])
+        jar.dependsOn compileLauncher;
     }
 
     // Builds the javapackager executable. For everything other than windows,
@@ -1923,7 +2022,20 @@ project(":fxpackager") {
         }
     }
 
+    task packagerJar(type: Jar) {
+        group = "Basic"
+        description = "Creates the packager.jar"
+        archiveName = "packager.jar";
+        includeEmptyDirs = false
+        from("$buildDir/classes/main");
+        from("$buildDir/resources/main");
+        include('jdk/packager/**')
+
+        dependsOn(buildJavaPackager);
+    }
+
     jar.dependsOn buildJavaPackager
+    jar.dependsOn packagerJar
 
     classes << {
         // Copy all of the download libraries to libs directory for the sake of the IDEs
@@ -1947,10 +2059,10 @@ project(":fxpackager") {
 
         destinationDir project.file("build/tmp/tests/appResources")
         archiveName "mainApp.jar"
-        
+
         manifest {
             attributes(
-                    "Main-Class": "hello.TestPackager",
+                    "Main-Class": "hello.HelloRectangle",
                     "Custom-Attribute": " Is it stripped?"
             )
         }
@@ -1961,7 +2073,10 @@ project(":fxpackager") {
                 from "$projectDir/src/main/resources/com/oracle/tools/packager/mac/GenericAppHiDPI.icns"
                 from "$projectDir/src/main/resources/com/oracle/tools/packager/windows/javalogo_white_48.ico"
                 from "$projectDir/src/test/resources/hello/java-logo2.gif"
+                from "$projectDir/src/test/resources/hello/small.ico"
+                from "$projectDir/src/test/resources/hello/test.icns"
                 from "$projectDir/../../LICENSE"
+                from "$projectDir/build/libs/packager.jar"
                 into project.file("$projectDir/build/tmp/tests/appResources")
             }
             copy {
@@ -1971,11 +2086,52 @@ project(":fxpackager") {
             }
         }
     }
-    
-    test {
+
+    task packagerFXPackagedJar(type: Jar) {
         dependsOn packagerFakeJar
+        from compileTestJava.destinationDir
+        include "hello/**"
+
+        destinationDir project.file("build/tmp/tests/appResources")
+        archiveName "packagedMainApp.jar"
+
+        manifest {
+            attributes(
+                "JavaFX-Application-Class": "hello.TestPackager",
+            )
+        }
+    }
+
+    if (!DO_BUILD_SDK_FOR_TEST) {
+        def antJavafxJar = new File(TEST_SDK_DIR, "lib/ant-javafx.jar")
+        [compileTestJava, test].each {
+            it.classpath = files(antJavafxJar) + it.classpath
+        }
+    }
+
+    test {
+        dependsOn packagerFXPackagedJar
         systemProperty "RETAIN_PACKAGER_TESTS", RETAIN_PACKAGER_TESTS
+        systemProperty "TEST_PACKAGER_DMG", TEST_PACKAGER_DMG
         systemProperty "FULL_TEST", FULL_TEST
+    }
+
+    def packagerDevOpts = []
+    try {
+        packagerDevOpts.addAll(PACKAGER_DEV_OPTS.split(' '))
+    } catch (MissingPropertyException ignore) {
+        packagerDevOpts.addAll("image")
+    }
+    
+    task packagerDev(dependsOn: [jar, packagerFakeJar], type:JavaExec) {
+        workingDir = project.file("build/tmp/tests/appResources/")
+        classpath = project.files("build/libs/ant-javafx.jar", "build/classes/test", "build/resources/test")
+        main = "hello.SimpleBundle"
+        args = [
+                "-o", "$projectDir/build/dev",
+                "-all",
+                packagerDevOpts
+        ].flatten()
     }
 }
 
@@ -2021,9 +2177,9 @@ project(":media") {
                              "com.sun.media.jfxmediaimpl.platform.gstreamer.GSTPlatform",
                              "com.sun.media.jfxmediaimpl.platform.gstreamer.GSTMedia",
                              "com.sun.media.jfxmediaimpl.platform.gstreamer.GSTMediaPlayer",
-                             "com.sun.media.jfxmediaimpl.platform.gstreamer.GSTAudioEqualizer",
-                             "com.sun.media.jfxmediaimpl.platform.gstreamer.GSTEqualizerBand",
-                             "com.sun.media.jfxmediaimpl.platform.gstreamer.GSTAudioSpectrum"]
+                             "com.sun.media.jfxmediaimpl.NativeAudioEqualizer",
+                             "com.sun.media.jfxmediaimpl.NativeEqualizerBand",
+                             "com.sun.media.jfxmediaimpl.NativeAudioSpectrum"]
             if (IS_MAC) {
                 classesList.addAll( ["com.sun.media.jfxmediaimpl.platform.osx.OSXPlatform",
                                      "com.sun.media.jfxmediaimpl.platform.osx.OSXMedia",
@@ -2062,6 +2218,8 @@ project(":media") {
         def nativeOutputDir = file("${buildDir}/native/${t.name}")
         def projectDir = t.name.startsWith("arm") ? "linux" : t.name
         def mediaProperties = targetProperties.media
+        // Makefile for OSX needs to know if we're building for parfait
+        def compileParfait = IS_COMPILE_PARFAIT ? "true" : "false"
         
         def buildNative = task("build${t.capital}Native", dependsOn: [generateHeaders, generateMediaErrorHeader]) {
             enabled = targetProperties.compileMediaNative
@@ -2073,7 +2231,8 @@ project(":media") {
                 exec {
                     commandLine ("make", "${makeJobsFlag}", "-C", "${nativeSrcDir}/jfxmedia/projects/${projectDir}")
                     args("JAVA_HOME=${JDK_HOME}", "GENERATED_HEADERS_DIR=${generatedHeadersDir}",
-                         "OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}", "BASE_NAME=jfxmedia")
+                         "OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}", "BASE_NAME=jfxmedia",
+                         "COMPILE_PARFAIT=${compileParfait}")
 
                     if (t.name == "win") {
                         environment(WINDOWS_NATIVE_COMPILE_ENVIRONMENT)
@@ -2081,10 +2240,11 @@ project(":media") {
                     } else {
                         args ("CC=${mediaProperties.compiler}", "LINK=${mediaProperties.linker}", "LIB=${mediaProperties.lib}")
 
-                        if (t.name.startsWith("arm"))
+                        if (t.name.startsWith("arm")) {
                             args("EXTRA_CFLAGS=${mediaProperties.extra_cflags}", "EXTRA_LDFLAGS=${mediaProperties.extra_ldflags}")
-                        else
+                        } else {
                             args("HOST_COMPILE=1")
+                        }
                     }
                 }
             }
@@ -2113,11 +2273,13 @@ project(":media") {
             def buildPlugins = task("build${t.capital}Plugins", dependsOn: buildGStreamer) {
                 enabled = IS_COMPILE_MEDIA
 
-                if (!project.ext.properties.containsKey("ON2_SRCDIR"))
+                if (!project.ext.properties.containsKey("ON2_SRCDIR")) {
                     project.ext.ON2_SRCDIR = "";
+                }
 
-                if (!project.ext.properties.containsKey("ON2_LIB"))
+                if (!project.ext.properties.containsKey("ON2_LIB")) {
                     project.ext.ON2_LIB = "";
+                }
 
                 doLast {
                     exec {
@@ -2129,8 +2291,7 @@ project(":media") {
                             Map winEnv = new HashMap(WINDOWS_NATIVE_COMPILE_ENVIRONMENT)
 
                             String sdkDir = System.getenv("BASECLASSES_SDK_DIR");
-                            if (sdkDir == null)
-                            {
+                            if (sdkDir == null) {
                                 sdkDir = "C:/Program Files/Microsoft SDKs/Windows/v7.1" // Default value
                                 winEnv["BASECLASSES_SDK_DIR"] = sdkDir
                             }
@@ -2149,15 +2310,26 @@ project(":media") {
                 def buildAVPlugin = task( "buildAVPlugin", dependsOn: [buildPlugins]) {
                     enabled = IS_COMPILE_MEDIA
 
-                    if (!project.ext.properties.containsKey("LIBAV"))
-                        project.ext.LIBAV = "";
-
                     doLast {
-                        // Building fxavcodec plugin (libav plugin)
-                        exec {
-                            commandLine ("make", "${makeJobsFlag}", "-C", "${nativeSrcDir}/gstreamer/projects/linux/avplugin")
-                            args("CC=${mediaProperties.compiler}", "OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}", 
-                                     "BASE_NAME=avplugin", "LIBAV_DIR=${project.ext.LIBAV}")
+                        if (project.ext.properties.containsKey("libav")) {
+                            project.ext.libav.versions.each { version ->
+                                def libavDir = "${project.ext.libav.basedir}-${version}"
+                                File dir = file(libavDir)
+                                if (dir.exists()) {
+                                    exec {
+                                        commandLine ("make", "${makeJobsFlag}", "-C", "${nativeSrcDir}/gstreamer/projects/linux/avplugin")
+                                        args("CC=${mediaProperties.compiler}", "OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}", 
+                                             "BASE_NAME=avplugin", "VERSION=${version}", "LIBAV_DIR=${libavDir}")
+                                    }
+                                }
+                            }
+                        } else {
+                            // Building fxavcodec plugin (libav plugin)
+                            exec {
+                                commandLine ("make", "${makeJobsFlag}", "-C", "${nativeSrcDir}/gstreamer/projects/linux/avplugin")
+                                args("CC=${mediaProperties.compiler}", "OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}", 
+                                     "BASE_NAME=avplugin")
+                            }
                         }
                     }
                 }
@@ -2232,8 +2404,9 @@ project(":media") {
         exclude("headergen/**")
 
         dependsOn compileJava
-        if (IS_COMPILE_MEDIA)
+        if (IS_COMPILE_MEDIA) {
             dependsOn buildNativeTargets
+        }
     }
 }
 
@@ -2477,6 +2650,9 @@ allprojects {
         compile.options.warnings = IS_LINT
         compile.options.useDepend = IS_USE_DEPEND
         compile.options.compilerArgs = ["-Djava.ext.dirs=", "-XDignore.symbol.file", "-encoding", "UTF-8"]
+        if (!DO_BUILD_SDK_FOR_TEST) {
+            compile.classpath = files(jfxrtJarFromSdk) + compile.classpath
+        }
 
         // Add in the -Xlint options
         if (IS_LINT) {
@@ -2484,6 +2660,11 @@ allprojects {
                 compile.options.compilerArgs += "-Xlint:$s"
             }
         }
+    }
+
+    // Some tasks should be disabled not to compile SDK, when running only the tests
+    disabledTasks.each {
+        project.getTasksByName(it, false)*.enabled = false
     }
 }
 
@@ -2554,16 +2735,20 @@ task javadoc(type: Javadoc) {
 }
 
 task jfxrt() {
-    rootProject.getTasksByName("compileTestJava", true).each { t ->
-        if (t.enabled) t.dependsOn(jfxrt)
+    if (DO_BUILD_SDK_FOR_TEST) {
+        rootProject.getTasksByName("compileTestJava", true).each { t ->
+            if (t.enabled) t.dependsOn(jfxrt)
+        }
     }
 }
 
 task sdk() {
     dependsOn(checkJfxrtJar)
 
-    rootProject.getTasksByName("test", true).each { t ->
-        if (t.enabled) t.dependsOn(sdk)
+    if (DO_BUILD_SDK_FOR_TEST) {
+        rootProject.getTasksByName("test", true).each { t ->
+            if (t.enabled) t.dependsOn(sdk)
+        }
     }
 }
 
@@ -2587,10 +2772,9 @@ task apps() {
 task findbugs() {
     dependsOn(sdk)
 
-    // TODO: implement this
     doLast {
         if (!BUILD_CLOSED) {
-            println "findbugs task is not implemented"
+            println "findbugs task is only run for a closed build"
         }
     }
 }
@@ -2740,6 +2924,12 @@ compileTargets { t ->
         if (!targetProperties.includeLens) {
             exclude ("com/sun/glass/ui/lens")
         }
+        /* Note: Monocle is used in the test harness, and so should
+         * not be excluded until the deploy phase
+        if (!targetProperties.includeMonocle) {
+            exclude ("com/sun/glass/ui/monocle")
+        }
+        */
         if (!targetProperties.includeNull3d) {
             // "com/sun/prism/null3d", // TODO This is used in dev builds but not the final sdk
             exclude ("com/sun/prism/null3d")
@@ -2869,14 +3059,25 @@ compileTargets { t ->
                 if (IS_COMPILE_MEDIA) {
                     [ "fxplugins", "gstreamer-lite", "jfxmedia" ].each { name ->
                         from ("modules/media/build/native/${t.name}/${mediaBuildType}/${library(name)}") }
-                    
-                    if (t.name == "linux") from ("modules/media/build/native/${t.name}/${mediaBuildType}/${library("avplugin")}")
-                    else from ("modules/media/build/native/${t.name}/${mediaBuildType}/${library("glib-lite")}")                        
+
+                    if (t.name == "mac") {
+                        // OSX media natives
+                        [ "jfxmedia_qtkit", "jfxmedia_avf", "glib-lite" ].each { name ->
+                            from ("modules/media/build/native/${t.name}/${mediaBuildType}/${library(name)}") }
+                    } else if (t.name == "linux") {
+                        from("modules/media/build/native/${t.name}/${mediaBuildType}") { include "libavplugin*.so" }
+                    } else from ("modules/media/build/native/${t.name}/${mediaBuildType}/${library("glib-lite")}")
                 } else {
                     [ "fxplugins", "gstreamer-lite", "jfxmedia" ].each { name ->
                         from ("$LIBRARY_STUB/${library(name)}") }
 
-                    if (t.name == "linux") from ("$LIBRARY_STUB/${library("avplugin")}")
+                    if (t.name == "mac") {
+                        // copy libjfxmedia_{avf,qtkit}.dylib if they exist
+                        [ "jfxmedia_qtkit", "jfxmedia_avf", "glib-lite" ].each { name ->
+                            from ("$LIBRARY_STUB/${library(name)}") }
+                    } else if (t.name == "linux") {
+                        from(LIBRARY_STUB) { include "libavplugin*.so" }
+                    }
                     else from ("$LIBRARY_STUB/${library("glib-lite")}")
                 }
                 
@@ -2888,11 +3089,12 @@ compileTargets { t ->
             final File javafxProperties = file("build/${sdkDirName}/rt/lib/javafx.properties")
             javafxProperties.delete()
             javafxProperties << "javafx.runtime.version=$RAW_VERSION";
+            javafxProperties << "\n"
             // Include any properties that have been defined (most likely in
             // one of the various platform gradle files)
             if (targetProperties.containsKey("javafxProperties")) {
-                javafxProperties << "\n"
                 javafxProperties << targetProperties.javafxProperties
+                javafxProperties << "\n"
             }
 
             // Embedded builds define this file as well
@@ -2900,6 +3102,7 @@ compileTargets { t ->
                 final File javafxPlatformProperties = file("build/${sdkDirName}/rt/lib/javafx.platform.properties")
                 javafxPlatformProperties.delete()
                 javafxPlatformProperties << targetProperties.javafxPlatformProperties
+                javafxPlatformProperties << "\n"
             }
 
             // Copy over the javadocs that were generated. This is done rather than just generating
@@ -3014,6 +3217,9 @@ project(":apps") {
               ant.properties['platforms.JDK_1.8.home'] = "${rootProject.ext.JDK_HOME}"
               ant.project.executeTarget("sampleAppsJar")
               ant.project.executeTarget("scenebuilderSampleAppsJar")
+              if (!t.name.startsWith("arm")) {
+                ant.project.executeTarget("scenebuilderAppJar")
+              }
             }
         }
         rootProject.appsjar.dependsOn(appsJar)
@@ -3024,6 +3230,9 @@ project(":apps") {
               ant.properties['platforms.JDK_1.8.home'] = "${rootProject.ext.JDK_HOME}"
               ant.project.executeTarget("sampleAppsClean")
               ant.project.executeTarget("scenebuilderSampleAppsClean")
+              if (!t.name.startsWith("arm")) {
+                ant.project.executeTarget("scenebuilderAppClean")
+              }
             }
         }
         rootProject.clean.dependsOn(appsClean)

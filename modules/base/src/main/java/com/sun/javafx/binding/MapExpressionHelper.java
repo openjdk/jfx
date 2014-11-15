@@ -413,6 +413,7 @@ public abstract class MapExpressionHelper<K, V> extends ExpressionHelperBase {
                             if (numMoved > 0) {
                                 System.arraycopy(oldListeners, index+1, invalidationListeners, index, numMoved);
                             }
+                            invalidationSize--;
                             if (!locked) {
                                 invalidationListeners[--invalidationSize] = null; // Let gc do its work
                             }
@@ -472,6 +473,7 @@ public abstract class MapExpressionHelper<K, V> extends ExpressionHelperBase {
                             if (numMoved > 0) {
                                 System.arraycopy(oldListeners, index+1, changeListeners, index, numMoved);
                             }
+                            changeSize--;
                             if (!locked) {
                                 changeListeners[--changeSize] = null; // Let gc do its work
                             }
@@ -531,6 +533,7 @@ public abstract class MapExpressionHelper<K, V> extends ExpressionHelperBase {
                             if (numMoved > 0) {
                                 System.arraycopy(oldListeners, index+1, mapChangeListeners, index, numMoved);
                             }
+                            mapChangeSize--;
                             if (!locked) {
                                 mapChangeListeners[--mapChangeSize] = null; // Let gc do its work
                             }

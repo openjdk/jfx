@@ -1,0 +1,71 @@
+/*******************************************************************************
+ *                                                                             *
+ * Command Link                                                                *
+ *                                                                             *
+ ******************************************************************************/
+ /* For the text displayed above command-link buttons (but below the header) */
+.dialog > .dialog-pane > .content-pane .command-link-message {
+    -fx-font-size: 1.25em; 
+}
+
+.dialog .command-link-button {
+    -fx-padding: 10 10 10 10;
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-color: transparent;
+    -fx-border-width: 1;
+    -fx-border-radius: 3px;
+}
+
+.dialog .command-link-button:hover {
+    -fx-border-color: -fx-box-border;
+    -fx-background-color: linear-gradient(to bottom, 
+        white, 
+        derive(-fx-box-border, 60%)
+    );
+}
+
+.dialog .command-link-button:armed  {
+    -fx-background-color: linear-gradient(to bottom, 
+        white, 
+        derive(-fx-box-border, 40%)
+    );
+}
+
+.dialog .command-link-button:default {
+    -fx-border-color: -fx-default-button;
+    -fx-background-color: linear-gradient(to bottom, 
+        white, 
+        derive(-fx-default-button, 80%)
+    );
+}
+
+.dialog .command-link-button:default:hover {
+    -fx-border-color: -fx-default-button;
+    -fx-background-color: linear-gradient(to bottom, 
+        white, 
+        derive(-fx-default-button, 60%)
+    );
+}
+
+.dialog .command-link-button:default:armed {
+    -fx-border-color: -fx-default-button;
+    -fx-background-color: linear-gradient(to bottom, 
+        white, 
+        derive(-fx-default-button, 40%)
+    );
+}
+
+.dialog .command-link-button > .container > .line-1 {
+    -fx-font-size: 1.25em;
+    -fx-padding: -5 0 0 5;
+}
+
+.dialog .command-link-button > .container > .line-2 {
+    -fx-font-size: 1em; 
+    -fx-padding: 0 0 0 5;
+}
+
+.dialog .command-link-button > .container > .graphic-container {
+    -fx-padding: 10 10 0 0
+}

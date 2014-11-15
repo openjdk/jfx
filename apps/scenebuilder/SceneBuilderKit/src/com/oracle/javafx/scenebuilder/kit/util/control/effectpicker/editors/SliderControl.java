@@ -43,6 +43,7 @@ import java.net.URL;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.value.ChangeListener;
+import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -179,6 +180,10 @@ public class SliderControl extends GridPane {
                 // Then notify the controller a change occured
                 effectPickerController.incrementRevision();
             }
+        });
+        
+        editor_textfield.setOnAction((ActionEvent e) -> {
+            e.consume();
         });
     }
 }

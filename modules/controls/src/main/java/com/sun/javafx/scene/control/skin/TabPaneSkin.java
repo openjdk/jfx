@@ -26,7 +26,6 @@
 package com.sun.javafx.scene.control.skin;
 
 import com.sun.javafx.Utils;
-
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
@@ -53,9 +52,10 @@ import javafx.geometry.HPos;
 import javafx.geometry.Pos;
 import javafx.geometry.Side;
 import javafx.geometry.VPos;
+import javafx.scene.AccessibleAction;
+import javafx.scene.AccessibleAttribute;
+import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
-//import javafx.scene.accessibility.Attribute;
-//import javafx.scene.accessibility.Role;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
@@ -242,38 +242,75 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
     }
     private void removeTabs(List<? extends Tab> removedList) {
         for (final Tab tab : removedList) {
+            stopCurrentAnimation(tab);
             // Animate the tab removal
             final TabHeaderSkin tabRegion = tabHeaderArea.getTabHeaderSkin(tab);
             if (tabRegion != null) {
                 tabRegion.isClosing = true;
+
+                tabRegion.removeListeners(tab);
+                removeTabContent(tab);
+
+                // remove the menu item from the popup menu
+                ContextMenu popupMenu = tabHeaderArea.controlButtons.popup;
+                TabMenuItem tabItem = null;
+                if (popupMenu != null) {
+                    for (MenuItem item : popupMenu.getItems()) {
+                        tabItem = (TabMenuItem) item;
+                        if (tab == tabItem.getTab()) {
+                            break;
+                        }
+                        tabItem = null;
+                    }
+                }
+                if (tabItem != null) {
+                    tabItem.dispose();
+                    popupMenu.getItems().remove(tabItem);
+                }
+                // end of removing menu item
+
+                EventHandler<ActionEvent> cleanup = ae -> {
+                    tabRegion.animating = false;
+
+                    tabHeaderArea.removeTab(tab);
+                    tabHeaderArea.requestLayout();
+                    if (getSkinnable().getTabs().isEmpty()) {
+                        tabHeaderArea.setVisible(false);
+                    }
+                };
+
                 if (closeTabAnimation.get() == TabAnimation.GROW) {
                     tabRegion.animating = true;
-                    Timeline closedTabTimeline = createTimeline(tabRegion, Duration.millis(ANIMATION_SPEED), 0.0F, event -> {
-                        handleClosedTab(tab);
-                    });
+                    Timeline closedTabTimeline = tabRegion.currentAnimation =
+                            createTimeline(tabRegion, Duration.millis(ANIMATION_SPEED), 0.0F, cleanup);
                     closedTabTimeline.play();    
                 } else {
-                    handleClosedTab(tab);
+                    cleanup.handle(null);
                 }
             }
         }
     }
-    
-    private void handleClosedTab(Tab tab) {
-        removeTab(tab);
-        if (getSkinnable().getTabs().isEmpty()) {
-            tabHeaderArea.setVisible(false);
+
+    private void stopCurrentAnimation(Tab tab) {
+        final TabHeaderSkin tabRegion = tabHeaderArea.getTabHeaderSkin(tab);
+        if (tabRegion != null && tabRegion.currentAnimation != null) {
+            // Execute the code immediately, don't wait for the animation to finish.
+            tabRegion.currentAnimation.getKeyFrames().get(0).getOnFinished().handle(null);
+            tabRegion.currentAnimation.stop();
+            tabRegion.currentAnimation = null;
         }
     }
+
     private void addTabs(List<? extends Tab> addedList, int from) {
         int i = 0;
         for (final Tab tab : addedList) {
+            stopCurrentAnimation(tab); // Note that this must happen before addTab() call below
             // A new tab was added - animate it out
             if (!tabHeaderArea.isVisible()) {
                 tabHeaderArea.setVisible(true);
             }
             int index = from + i++;
-            tabHeaderArea.addTab(tab, index, false);
+            tabHeaderArea.addTab(tab, index);
             addTabContent(tab);
             final TabHeaderSkin tabRegion = tabHeaderArea.getTabHeaderSkin(tab);
             if (tabRegion != null) {
@@ -281,10 +318,12 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
                     tabRegion.animating = true;
                     tabRegion.animationTransition.setValue(0.0);
                     tabRegion.setVisible(true);
-                    createTimeline(tabRegion, Duration.millis(ANIMATION_SPEED), 1.0, event -> {
+                    tabRegion.currentAnimation = createTimeline(tabRegion, Duration.millis(ANIMATION_SPEED), 1.0, event -> {
                         tabRegion.animating = false;
+                        tabRegion.setVisible(true);
                         tabRegion.inner.requestLayout();
-                    }).play();
+                    });
+                    tabRegion.currentAnimation.play();
                 } else {
                     tabRegion.setVisible(true);
                     tabRegion.inner.requestLayout();
@@ -379,39 +418,6 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
                 break;
             }
         }
-    }
-
-    private void removeTab(Tab tab) {
-        final TabHeaderSkin tabRegion = tabHeaderArea.getTabHeaderSkin(tab);
-
-        if (tabRegion != null) {
-            tabRegion.removeListeners(tab);
-        }
-        tabHeaderArea.removeTab(tab);
-        removeTabContent(tab);
-
-        // remove the menu item from the popup menu
-        ContextMenu popupMenu = tabHeaderArea.controlButtons.popup;
-        TabMenuItem tabItem = null;
-        if (popupMenu != null) {
-            for (MenuItem item : popupMenu.getItems()) {
-                tabItem = (TabMenuItem) item;
-                if (tab == tabItem.getTab()) {
-                    break;
-                }
-                tabItem = null;
-            }
-        }
-        if (tabItem != null) {
-            tabItem.dispose();
-            popupMenu.getItems().remove(tabItem);
-        }
-        // end of removing menu item
-
-        if (tabRegion != null) {
-            tabRegion.animating = false;
-        }
-        tabHeaderArea.requestLayout();
     }
 
     private void updateTabPosition() {
@@ -768,7 +774,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
 
             int i = 0;
             for (Tab tab: tabPane.getTabs()) {
-                addTab(tab, i++, true);
+                addTab(tab, i++);
             }
 
             controlButtons = new TabControlButtons();
@@ -848,9 +854,8 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
             headerClip.setHeight(clipHeight);
         }
 
-        private void addTab(Tab tab, int addToIndex, boolean visible) {
+        private void addTab(Tab tab, int addToIndex) {
             TabHeaderSkin tabHeaderSkin = new TabHeaderSkin(tab);
-            tabHeaderSkin.setVisible(visible);
             headersRegion.getChildren().add(addToIndex, tabHeaderSkin);
         }
 
@@ -888,7 +893,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
 
         private void ensureSelectedTabIsVisible() {
             // work out the visible width of the tab header
-            double tabPaneWidth = snapSize(getSkinnable().getWidth());
+            double tabPaneWidth = snapSize(isHorizontal() ? getSkinnable().getWidth() : getSkinnable().getHeight());
             double controlTabWidth = snapSize(controlButtons.getWidth());
             double visibleWidth = tabPaneWidth - controlTabWidth - firstTabIndent() - SPACER;
 
@@ -931,7 +936,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
 
         private void setScrollOffset(double newScrollOffset) {
             // work out the visible width of the tab header
-            double tabPaneWidth = snapSize(getSkinnable().getWidth());
+            double tabPaneWidth = snapSize(isHorizontal() ? getSkinnable().getWidth() : getSkinnable().getHeight());
             double controlTabWidth = snapSize(controlButtons.getWidth());
             double visibleWidth = tabPaneWidth - controlTabWidth - firstTabIndent() - SPACER;
 
@@ -1112,6 +1117,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
             getStyleClass().setAll(tab.getStyleClass());
             setId(tab.getId());
             setStyle(tab.getStyle());
+            setAccessibleRole(AccessibleRole.TAB_ITEM);
 
             this.tab = tab;
             clip = new Rectangle();
@@ -1127,14 +1133,9 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
                 @Override protected double computePrefHeight(double w) {
                     return CLOSE_BTN_SIZE;
                 }
-//                @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//                    switch (attribute) {
-//                        case ROLE: return Role.BUTTON;
-//                        case TITLE: return getString("Accessibility.title.TabPane.CloseButton");
-//                        default: return super.accGetAttribute(attribute, parameters);
-//                    }
-//                }
             };
+            closeBtn.setAccessibleRole(AccessibleRole.BUTTON);
+            closeBtn.setAccessibleText(getString("Accessibility.title.TabPane.CloseButton"));
             closeBtn.getStyleClass().setAll("tab-close-button");
             closeBtn.setOnMousePressed(new EventHandler<MouseEvent>() {
                 @Override public void handle(MouseEvent me) {
@@ -1408,6 +1409,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
         }
 
         private boolean animating = false;
+        private Timeline currentAnimation;
 
         @Override protected double computePrefWidth(double height) {
 //            if (animating) {
@@ -1466,14 +1468,25 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
             clip.setHeight(value);
         }
     
-//        @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//            switch (attribute) {
-//                case ROLE: return Role.TAB_ITEM;
-//                case TITLE: return getTab().getText();
-//                case SELECTED: return selectedTab == getTab();
-//                default: return super.accGetAttribute(attribute, parameters);
-//            }
-//        }
+        @Override
+        public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
+            switch (attribute) {
+                case TEXT: return getTab().getText();
+                case SELECTED: return selectedTab == getTab();
+                default: return super.queryAccessibleAttribute(attribute, parameters);
+            }
+        }
+
+        @Override
+        public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
+            switch (action) {
+                case REQUEST_FOCUS:
+                    getSkinnable().getSelectionModel().select(getTab());
+                    break;
+                default: super.executeAccessibleAction(action, parameters);
+            }
+        }
+
     } /* End TabHeaderSkin */
 
     private static final PseudoClass SELECTED_PSEUDOCLASS_STATE =
@@ -1761,6 +1774,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
             this.tab = tab;
             setDisable(tab.isDisable());
             tab.disableProperty().addListener(weakDisableListener);
+            textProperty().bind(tab.textProperty());
         }
 
         public Tab getTab() {
@@ -1772,13 +1786,17 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
         }
     }
 
-//    @Override
-//    public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//        switch (attribute) {
-//            case FOCUS_ITEM: return tabHeaderArea.getTabHeaderSkin(selectedTab);
-//            case SELECTED_TAB: return tabHeaderArea.getTabHeaderSkin(selectedTab);
-//            case TABS: return tabHeaderArea.headersRegion.getChildren();
-//            default: return super.accGetAttribute(attribute, parameters);
-//        }
-//    }
+    @Override
+    public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
+        switch (attribute) {
+            case FOCUS_ITEM: return tabHeaderArea.getTabHeaderSkin(selectedTab);
+            case ITEM_COUNT: return tabHeaderArea.headersRegion.getChildren().size();
+            case ITEM_AT_INDEX: {
+                Integer index = (Integer)parameters[0];
+                if (index == null) return null;
+                return tabHeaderArea.headersRegion.getChildren().get(index);
+            }
+            default: return super.queryAccessibleAttribute(attribute, parameters);
+        }
+    }
 }

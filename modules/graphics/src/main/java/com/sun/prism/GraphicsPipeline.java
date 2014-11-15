@@ -160,6 +160,18 @@ public abstract class GraphicsPipeline {
                                             installedPipeline);
         }
         for (String prefix : PrismSettings.tryOrder) {
+            // Warn if j2d pipeline is specified
+            if ("j2d".equals(prefix)) {
+                System.err.println(
+                    "WARNING: The prism-j2d pipeline should not be used as the software");
+                System.err.println(
+                    "fallback pipeline. It is no longer tested nor intended to be used for");
+                System.err.println(
+                    "on-screen rendering. Please use the prism-sw pipeline instead by setting");
+                System.err.println(
+                    "the \"prism.order\" system property to \"sw\" rather than \"j2d\".");
+            }
+
             if (PrismSettings.verbose) {
                 if ("j2d".equals(prefix) || "sw".equals(prefix)) {
                     System.err.println("*** Fallback to Prism SW pipeline");

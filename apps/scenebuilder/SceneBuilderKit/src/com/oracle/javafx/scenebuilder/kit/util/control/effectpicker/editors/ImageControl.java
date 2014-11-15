@@ -121,6 +121,8 @@ public class ImageControl extends GridPane {
         } catch (URISyntaxException | MalformedURLException ex) {
             effectPickerController.getEffectPickerDelegate().handleError(
                     "log.warning.image.location.does.not.exist", location);
+        } finally {
+            e.consume();
         }
     }
 
@@ -146,6 +148,8 @@ public class ImageControl extends GridPane {
             effectPickerController.incrementRevision();
         } catch (MalformedURLException ex) {
             Logger.getLogger(ImageControl.class.getName()).log(Level.SEVERE, null, ex);
+        } finally {
+            e.consume();
         }
     }
 

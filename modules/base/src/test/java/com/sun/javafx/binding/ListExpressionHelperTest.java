@@ -45,6 +45,8 @@ import javafx.collections.WeakListChangeListenerMock;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.Arrays;
+
 public class ListExpressionHelperTest {
 
     private static final ObservableList<Object> UNDEFINED = FXCollections.observableArrayList();
@@ -53,6 +55,7 @@ public class ListExpressionHelperTest {
     private Object listItem;
     private ObservableList<Object> data1;
     private ObservableList<Object> data2;
+    private ObservableList<Object> data3;
 //    private ListChangeListener.Change change_1_2;
 //    private ListChangeListener.Change change_2_1;
 
@@ -68,6 +71,7 @@ public class ListExpressionHelperTest {
         listItem = new Object();
         data1 = FXCollections.observableArrayList();
         data2 = FXCollections.observableArrayList(listItem);
+        data3 = FXCollections.observableArrayList(listItem);
 //        change_1_2 = new NonIterableChange.SimpleAddChange(0, 1, data2);
 //        change_2_1 = new NonIterableChange.SimpleRemovedChange(0, 1, listItem, data1);
         helper = null;
@@ -151,6 +155,10 @@ public class ListExpressionHelperTest {
         invalidationListener[0].check(observable, 1);
         data2.add(listItem);
 
+        observable.set(data3);
+        ListExpressionHelper.fireValueChangedEvent(helper);
+        invalidationListener[0].check(observable, 1);
+
         helper = ListExpressionHelper.removeListener(helper, invalidationListener[1]);
         observable.set(data1);
         ListExpressionHelper.fireValueChangedEvent(helper);
@@ -223,6 +231,10 @@ public class ListExpressionHelperTest {
         ListExpressionHelper.fireValueChangedEvent(helper, new NonIterableChange.SimpleRemovedChange(0, 1, listItem, data2));
         changeListener[0].check(observable, data2, data2, 1);
         data2.add(listItem);
+
+        observable.set(data3);
+        ListExpressionHelper.fireValueChangedEvent(helper);
+        changeListener[0].check(observable, data2, data3, 1);
 
         helper = ListExpressionHelper.removeListener(helper, invalidationListener[1]);
         observable.set(data1);
@@ -866,9 +878,25 @@ public class ListExpressionHelperTest {
         listChangeListener[0].check1AddRemove(observable, FXCollections.emptyObservableList(), 0, 0);
         listChangeListener[0].clear();
 
+        observable.set(data2);
+        ListExpressionHelper.fireValueChangedEvent(helper);
+        invalidationListener[0].check(observable, 1);
+        changeListener[0].check(observable, data1, data2, 1);
+        listChangeListener[0].check1AddRemove(observable, FXCollections.emptyObservableList(), 0, 1);
+        listChangeListener[0].clear();
+
+        observable.set(data3);
+        ListExpressionHelper.fireValueChangedEvent(helper);
+        invalidationListener[0].check(observable, 1);
+        changeListener[0].check(observable, data2, data3, 1);
+        listChangeListener[0].check1AddRemove(observable, Arrays.asList(listItem), 0, 1);
+        listChangeListener[0].clear();
+
         ListExpressionHelper.fireValueChangedEvent(helper);
         invalidationListener[0].check(observable, 1);
         changeListener[0].check(null, UNDEFINED, UNDEFINED, 0);
         listChangeListener[0].check0();
+
+
     }
 }

@@ -120,6 +120,7 @@ public class TreeTableViewSelectionModelImplTest {
     @Test public void selectRowWhenInSingleCellSelectionMode() {
         model.setSelectionMode(SelectionMode.SINGLE);
         model.setCellSelectionEnabled(true);
+        model.clearSelection();
         assertFalse(model.isSelected(3, col0));
         model.select(1);  // put in another selection to make sure it is wiped out
         model.select(3);
@@ -127,12 +128,13 @@ public class TreeTableViewSelectionModelImplTest {
         assertFalse(model.isSelected(3, col0));
         assertFalse(cells(model), model.isSelected(3, null));
         assertFalse(model.isSelected(3));
-        assertEquals(0, model.getSelectedCells().size());
+        assertEquals(1, model.getSelectedCells().size());
     }
 
     @Test public void selectRowWhenInSingleCellSelectionMode2() {
         model.setSelectionMode(SelectionMode.SINGLE);
         model.setCellSelectionEnabled(true);
+        model.clearSelection();
         model.select(1, null);  // put in another selection to make sure it is wiped out
         model.select(3, null);
 
@@ -140,20 +142,21 @@ public class TreeTableViewSelectionModelImplTest {
         assertFalse(model.isSelected(3, col0));
         assertFalse(cells(model), model.isSelected(3, null));
         assertFalse(model.isSelected(3));
-        assertEquals(0, model.getSelectedCells().size());
+        assertEquals(1, model.getSelectedCells().size());
     }
 
     @Test public void selectRowWhenInMultipleCellSelectionMode() {
         model.setSelectionMode(SelectionMode.MULTIPLE);
         model.setCellSelectionEnabled(true);
+        model.clearSelection();
         model.select(1);
         model.select(3);
 
-        assertFalse(model.isSelected(1, col0));
-        assertFalse(model.isSelected(3, col0));
+        assertTrue(model.isSelected(1, col0));
+        assertTrue(model.isSelected(3, col0));
         assertFalse(model.isSelected(3, null));
         assertFalse(model.isSelected(3));
-        assertEquals(0, model.getSelectedCells().size());
+        assertEquals(6, model.getSelectedCells().size());
     }
 
     @Test public void selectCellWhenInSingleCellSelectionMode() {
@@ -172,6 +175,7 @@ public class TreeTableViewSelectionModelImplTest {
         model.setSelectionMode(SelectionMode.MULTIPLE);
         model.setCellSelectionEnabled(true);
         assertFalse(model.isSelected(3, col0));
+        model.clearSelection();
         model.select(1, col0);
         model.select(3, col0);
         assertTrue(model.isSelected(1, col0));
@@ -286,6 +290,7 @@ public class TreeTableViewSelectionModelImplTest {
     @Test public void selectPreviousCellWithMultipleSelection() {
         model.setSelectionMode(SelectionMode.MULTIPLE);
         model.setCellSelectionEnabled(true);
+        model.clearSelection();
         model.select(2, col1);
         model.selectAboveCell();
         assertTrue(model.isSelected(2, col1));
@@ -296,6 +301,7 @@ public class TreeTableViewSelectionModelImplTest {
     @Test public void selectNextCellWithMultipleSelection() {
         model.setSelectionMode(SelectionMode.MULTIPLE);
         model.setCellSelectionEnabled(true);
+        model.clearSelection();
         model.select(2, col1);
         model.selectBelowCell();
         assertTrue(model.isSelected(2, col1));
@@ -306,6 +312,7 @@ public class TreeTableViewSelectionModelImplTest {
     @Test public void selectLeftCellWithMultipleSelection() {
         model.setSelectionMode(SelectionMode.MULTIPLE);
         model.setCellSelectionEnabled(true);
+        model.clearSelection();
         model.select(2, col1);
         model.selectLeftCell();
         assertTrue(cells(model), model.isSelected(2, col1));
@@ -316,6 +323,7 @@ public class TreeTableViewSelectionModelImplTest {
     @Test public void selectRightCellWithMultipleSelection() {
         model.setSelectionMode(SelectionMode.MULTIPLE);
         model.setCellSelectionEnabled(true);
+        model.clearSelection();
         model.select(2, col1);
         model.selectRightCell();
         assertTrue(cells(model), model.isSelected(2, col1));
@@ -329,7 +337,7 @@ public class TreeTableViewSelectionModelImplTest {
 
         model.select(10);
         assertFalse(cells(model), model.isSelected(10, null));
-        assertEquals(0, model.getSelectedCells().size());
+        assertEquals(1, model.getSelectedCells().size());
     }
 
     @Test public void ensureCellSelectionIsNoOpWhenDisabled() {
@@ -411,6 +419,7 @@ public class TreeTableViewSelectionModelImplTest {
     @Test public void selectFirstRowInMultipleSelectionCellMode() {
         model.setSelectionMode(SelectionMode.MULTIPLE);
         model.setCellSelectionEnabled(true);
+        model.clearSelection();
         model.select(4, col1);
         model.selectFirst();
         assertTrue(cells(model), model.isSelected(0, col1));
@@ -441,6 +450,7 @@ public class TreeTableViewSelectionModelImplTest {
     @Test public void selectLastRowInMultipleSelectionRowMode() {
         model.setSelectionMode(SelectionMode.MULTIPLE);
         model.setCellSelectionEnabled(false);
+        model.clearSelection();
         model.select(4);
         model.selectLast();
         assertTrue(cells(model), model.isSelected(tableView.getExpandedItemCount() - 1));
@@ -451,6 +461,7 @@ public class TreeTableViewSelectionModelImplTest {
     @Test public void selectLastRowInMultipleSelectionCellMode() {
         model.setSelectionMode(SelectionMode.MULTIPLE);
         model.setCellSelectionEnabled(true);
+        model.clearSelection();
         model.select(4, col1);
         model.selectLast();
         assertTrue(cells(model), model.isSelected(tableView.getExpandedItemCount() - 1, col1));
@@ -529,13 +540,13 @@ public class TreeTableViewSelectionModelImplTest {
     }
 
     @Test public void focusNextRowImmediately() {
-        assertEquals(new TreeTablePosition(tableView, -1, null), focusModel.getFocusedCell());
+        assertEquals(new TreeTablePosition(tableView, 0, null), focusModel.getFocusedCell());
 
         focusModel.focusNext();
 
-        assertEquals(new TreeTablePosition(tableView, 0, null), focusModel.getFocusedCell());
-        assertTrue(focusedCell(), focusModel.isFocused(0));
-        assertTrue(focusedCell(), focusModel.isFocused(0, null));
+        assertEquals(new TreeTablePosition(tableView, 1, null), focusModel.getFocusedCell());
+        assertTrue(focusedCell(), focusModel.isFocused(1));
+        assertTrue(focusedCell(), focusModel.isFocused(1, null));
     }
 
     @Test public void focusNextRowFromLastRow() {
@@ -654,6 +665,7 @@ public class TreeTableViewSelectionModelImplTest {
     @Test public void test_rt33442_changeSelectionModeClearsSelection() {
         model.setSelectionMode(SelectionMode.MULTIPLE);
         model.setCellSelectionEnabled(true);
+        model.clearSelection();
 
         assertTrue(model.getSelectedCells().isEmpty());
 
@@ -664,7 +676,12 @@ public class TreeTableViewSelectionModelImplTest {
         model.setSelectionMode(SelectionMode.SINGLE);
         for (int row = 0; row <= 4; row++) {
             for (int column = 0; column <= 2; column++) {
-                assertFalse(model.isSelected(row, tableView.getVisibleLeafColumn(column)));
+                // the last item will be selected
+                if (row == 4 && column == 2) {
+                    assertTrue(model.isSelected(row, tableView.getVisibleLeafColumn(column)));
+                } else {
+                    assertFalse(model.isSelected(row, tableView.getVisibleLeafColumn(column)));
+                }
             }
         }
     }
@@ -685,15 +702,15 @@ public class TreeTableViewSelectionModelImplTest {
 
         TreeTableColumn name = new TreeTableColumn("Name");
         name.setCellValueFactory(new Callback<TreeTableColumn.CellDataFeatures, ObservableValue>() {
-            @Override
-            public ObservableValue call(TreeTableColumn.CellDataFeatures p) {
+            @Override public ObservableValue call(TreeTableColumn.CellDataFeatures p) {
                 return new ReadOnlyStringWrapper((String)p.getValue().getValue());
             }
         });
 
-        tableView.getColumns().addAll(name);
+        tableView.getColumns().setAll(name);
         model.setSelectionMode(SelectionMode.MULTIPLE);
         model.setCellSelectionEnabled(true);
+        model.clearSelection();
 
         TreeItem item0 = tableView.getTreeItem(1);
         assertEquals("item - 0", item0.getValue());
@@ -737,6 +754,7 @@ public class TreeTableViewSelectionModelImplTest {
         assertEquals("item - 0", item0.getValue());
         item0.setExpanded(true);
 
+        model.clearSelection();
         model.selectIndices(1,2,3);
         assertEquals(3, model.getSelectedCells().size());
 

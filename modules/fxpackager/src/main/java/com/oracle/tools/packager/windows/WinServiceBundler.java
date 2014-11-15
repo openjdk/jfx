@@ -115,7 +115,16 @@ public class WinServiceBundler extends AbstractBundler {
                     I18N.getString("error.no-windows-resources"),
                     I18N.getString("error.no-windows-resources.advice"));
         }
-        
+
+        //treat default null as "system wide install"
+        boolean systemWide = SYSTEM_WIDE.fetchFrom(p) == null || SYSTEM_WIDE.fetchFrom(p);
+
+        if (!systemWide) {
+            throw new ConfigException(
+                    I18N.getString("error.no-support-for-peruser-services"),
+                    I18N.getString("error.no-support-for-peruser-services.advice"));
+        }
+
         return true;
     }
     

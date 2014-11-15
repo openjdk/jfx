@@ -178,8 +178,7 @@ public class PlayerPane extends BorderPane {
 
         // Play label
         playTime = new Label();
-        playTime.setPrefWidth(130);
-        playTime.setMinWidth(50);
+        playTime.setMinWidth(Control.USE_PREF_SIZE);
         playTime.setTextFill(Color.WHITE);
         mediaTopBar.getChildren().add(playTime);
 
@@ -193,8 +192,7 @@ public class PlayerPane extends BorderPane {
         volumeSlider = new Slider();
         volumeSlider.setId("media-slider");
         volumeSlider.setPrefWidth(120);
-        volumeSlider.setMinWidth(30);
-        volumeSlider.setMaxWidth(Region.USE_PREF_SIZE);
+        volumeSlider.setMaxWidth(Double.MAX_VALUE);
         volumeSlider.valueProperty().addListener((Observable ov) -> {
         });
         volumeSlider.valueProperty().addListener((ObservableValue<? extends Number> observable, Number oldValue, Number newValue) -> {
@@ -202,6 +200,7 @@ public class PlayerPane extends BorderPane {
                 mp.setVolume(volumeSlider.getValue() / 100.0);
             }
         });
+        HBox.setHgrow(volumeSlider, Priority.ALWAYS);
         mediaTopBar.getChildren().add(volumeSlider);
 
         setTop(mediaTopBar);

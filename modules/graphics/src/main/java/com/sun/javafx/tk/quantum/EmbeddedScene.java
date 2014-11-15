@@ -61,9 +61,9 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
     
     private final EmbeddedSceneDnD embeddedDnD;
 
-    volatile IntBuffer  texBits;
-    volatile int        texLineStride; // pre-scaled
-    volatile float      texScaleFactor = 1.0f;
+    private volatile IntBuffer  texBits;
+    private volatile int        texLineStride; // pre-scaled
+    private volatile float      texScaleFactor = 1.0f;
  
     public EmbeddedScene(HostInterface host, boolean depthBuffer, boolean antiAliasing) {
         super(depthBuffer, antiAliasing);
@@ -80,14 +80,15 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
     @Override
     public void dispose() {
         assert host != null;
-        ViewPainter.renderLock.lock();
-        try {
+        QuantumToolkit.runWithRenderLock(() -> {
             host.setEmbeddedScene(null);
             host = null;
             updateSceneState();
-        } finally {
-            ViewPainter.renderLock.unlock();
-        }
+            painter = null;
+            paintRenderJob = null;
+            texBits = null;
+            return null;
+        });
         super.dispose();
     }
 
@@ -181,22 +182,24 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
      * @return 
      */
     @Override
-    public boolean getPixels(IntBuffer dest, int width, int height) {
-        ViewPainter.renderLock.lock();
-        try {
+    public boolean getPixels(final IntBuffer dest, final int width, final int height) {
+        return QuantumToolkit.runWithRenderLock(() -> {
+            int scaledWidth = width;
+            int scaledHeight = height;
+
             // The dest buffer scale factor is expected to match painter.getPixelScaleFactor().
             if (painter.getPixelScaleFactor() != texScaleFactor || texBits == null) {
                 return false;
             }
-            width = (int)Math.round(width * texScaleFactor);
-            height = (int)Math.round(height * texScaleFactor);
+            scaledWidth = (int)Math.round(scaledWidth * texScaleFactor);
+            scaledHeight = (int)Math.round(scaledHeight * texScaleFactor);
         
             dest.rewind();
             texBits.rewind();
             if (dest.capacity() != texBits.capacity()) {
                 // Calculate the intersection of the dest & src images.
-                int w = Math.min(width, texLineStride);
-                int h = Math.min(height, texBits.capacity() / texLineStride);
+                int w = Math.min(scaledWidth, texLineStride);
+                int h = Math.min(scaledHeight, texBits.capacity() / texLineStride);
 
                 // Copy the intersection to the dest.
                 // The backed array of the textureBits may not be available,
@@ -205,16 +208,14 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
                 for (int i = 0; i < h; i++) {
                     texBits.position(i * texLineStride);
                     texBits.get(linebuf, 0, w);
-                    dest.position(i * width);
+                    dest.position(i * scaledWidth);
                     dest.put(linebuf);
                 }
                 return true;
             }
             dest.put(texBits);
             return true;
-        } finally {
-            ViewPainter.renderLock.unlock();
-        }
+        });
     }
     
     @Override

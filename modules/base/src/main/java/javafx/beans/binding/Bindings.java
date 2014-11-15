@@ -6102,7 +6102,7 @@ public final class Bindings {
                 try {
                     return op.get(index);
                 } catch (IndexOutOfBoundsException ex) {
-                    Logging.getLogger().warning("Exception while evaluating binding", ex);
+                    Logging.getLogger().fine("Exception while evaluating binding", ex);
                 }
                 return null;
             }
@@ -6163,7 +6163,7 @@ public final class Bindings {
                 try {
                     return op.get(index.intValue());
                 } catch (IndexOutOfBoundsException ex) {
-                    Logging.getLogger().warning("Exception while evaluating binding", ex);
+                    Logging.getLogger().fine("Exception while evaluating binding", ex);
                 }
                 return null;
             }
@@ -6216,7 +6216,7 @@ public final class Bindings {
                         return value;
                     }
                 } catch (IndexOutOfBoundsException ex) {
-                    Logging.getLogger().warning("Exception while evaluating binding", ex);
+                    Logging.getLogger().fine("Exception while evaluating binding", ex);
                 }
                 return false;
             }
@@ -6280,7 +6280,7 @@ public final class Bindings {
                         return value;
                     }
                 } catch (IndexOutOfBoundsException ex) {
-                    Logging.getLogger().warning("Exception while evaluating binding", ex);
+                    Logging.getLogger().fine("Exception while evaluating binding", ex);
                 }
                 return false;
             }
@@ -6333,7 +6333,7 @@ public final class Bindings {
                         return value.doubleValue();
                     }
                 } catch (IndexOutOfBoundsException ex) {
-                    Logging.getLogger().warning("Exception while evaluating binding", ex);
+                    Logging.getLogger().fine("Exception while evaluating binding", ex);
                 }
                 return 0.0;
             }
@@ -6397,7 +6397,7 @@ public final class Bindings {
                         return value.doubleValue();
                     }
                 } catch (IndexOutOfBoundsException ex) {
-                    Logging.getLogger().warning("Exception while evaluating binding", ex);
+                    Logging.getLogger().fine("Exception while evaluating binding", ex);
                 }
                 return 0.0;
             }
@@ -6450,7 +6450,7 @@ public final class Bindings {
                         return value.floatValue();
                     }
                 } catch (IndexOutOfBoundsException ex) {
-                    Logging.getLogger().warning("Exception while evaluating binding", ex);
+                    Logging.getLogger().fine("Exception while evaluating binding", ex);
                 }
                 return 0.0f;
             }
@@ -6514,7 +6514,7 @@ public final class Bindings {
                         return value.floatValue();
                     }
                 } catch (IndexOutOfBoundsException ex) {
-                    Logging.getLogger().warning("Exception while evaluating binding", ex);
+                    Logging.getLogger().fine("Exception while evaluating binding", ex);
                 }
                 return 0.0f;
             }
@@ -6567,7 +6567,7 @@ public final class Bindings {
                         return value.intValue();
                     }
                 } catch (IndexOutOfBoundsException ex) {
-                    Logging.getLogger().warning("Exception while evaluating binding", ex);
+                    Logging.getLogger().fine("Exception while evaluating binding", ex);
                 }
                 return 0;
             }
@@ -6631,7 +6631,7 @@ public final class Bindings {
                         return value.intValue();
                     }
                 } catch (IndexOutOfBoundsException ex) {
-                    Logging.getLogger().warning("Exception while evaluating binding", ex);
+                    Logging.getLogger().fine("Exception while evaluating binding", ex);
                 }
                 return 0;
             }
@@ -6684,7 +6684,7 @@ public final class Bindings {
                         return value.longValue();
                     }
                 } catch (IndexOutOfBoundsException ex) {
-                    Logging.getLogger().warning("Exception while evaluating binding", ex);
+                    Logging.getLogger().fine("Exception while evaluating binding", ex);
                 }
                 return 0L;
             }
@@ -6748,7 +6748,7 @@ public final class Bindings {
                         return value.longValue();
                     }
                 } catch (IndexOutOfBoundsException ex) {
-                    Logging.getLogger().warning("Exception while evaluating binding", ex);
+                    Logging.getLogger().fine("Exception while evaluating binding", ex);
                 }
                 return 0L;
             }
@@ -6796,7 +6796,7 @@ public final class Bindings {
                 try {
                     return op.get(index);
                 } catch (IndexOutOfBoundsException ex) {
-                    Logging.getLogger().warning("Exception while evaluating binding", ex);
+                    Logging.getLogger().fine("Exception while evaluating binding", ex);
                 }
                 return null;
             }
@@ -6855,7 +6855,7 @@ public final class Bindings {
                 try {
                     return op.get(index.intValue());
                 } catch (IndexOutOfBoundsException ex) {
-                    Logging.getLogger().warning("Exception while evaluating binding", ex);
+                    Logging.getLogger().fine("Exception while evaluating binding", ex);
                 }
                 return null;
             }
@@ -7067,7 +7067,7 @@ public final class Bindings {
                 try {
                     return op.get(index);
                 } catch (IndexOutOfBoundsException ex) {
-                    Logging.getLogger().warning("Exception while evaluating binding", ex);
+                    Logging.getLogger().fine("Exception while evaluating binding", ex);
                 }
                 return 0.0f;
             }
@@ -7126,7 +7126,7 @@ public final class Bindings {
                 try {
                     return op.get(index.intValue());
                 } catch (IndexOutOfBoundsException ex) {
-                    Logging.getLogger().warning("Exception while evaluating binding", ex);
+                    Logging.getLogger().fine("Exception while evaluating binding", ex);
                 }
                 return 0.0f;
             }
@@ -7174,7 +7174,7 @@ public final class Bindings {
                 try {
                     return op.get(index);
                 } catch (IndexOutOfBoundsException ex) {
-                    Logging.getLogger().warning("Exception while evaluating binding", ex);
+                    Logging.getLogger().fine("Exception while evaluating binding", ex);
                 }
                 return 0;
             }
@@ -7233,7 +7233,7 @@ public final class Bindings {
                 try {
                     return op.get(index.intValue());
                 } catch (IndexOutOfBoundsException ex) {
-                    Logging.getLogger().warning("Exception while evaluating binding", ex);
+                    Logging.getLogger().fine("Exception while evaluating binding", ex);
                 }
                 return 0;
             }

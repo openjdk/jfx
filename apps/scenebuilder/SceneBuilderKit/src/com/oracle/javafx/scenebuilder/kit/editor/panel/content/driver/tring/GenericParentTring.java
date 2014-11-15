@@ -35,6 +35,7 @@ import com.oracle.javafx.scenebuilder.kit.editor.panel.content.ContentPanelContr
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
+import com.oracle.javafx.scenebuilder.kit.util.Deprecation;
 import com.oracle.javafx.scenebuilder.kit.util.MathUtils;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
@@ -72,7 +73,7 @@ public class GenericParentTring extends AbstractNodeTring<Parent> {
         
         final DesignHierarchyMask m = new DesignHierarchyMask(fxomObject);
         final Parent parent = (Parent) m.getFxomObject().getSceneGraphObject();
-        final Point2D hitPoint = parent.sceneToLocal(sceneX, sceneY);
+        final Point2D hitPoint = parent.sceneToLocal(sceneX, sceneY, true /* rootScene */);
         final int childCount = m.getSubComponentCount();
         
         final int targetIndex;
@@ -261,8 +262,8 @@ public class GenericParentTring extends AbstractNodeTring<Parent> {
             // m.getFxomObject() is a skinned component : so its fxom children
             // are not the direct Node children.
             if (skinParent != null) {
-                final Point2D p0 = parent.sceneToLocal(skinParent.localToScene(crackX, crackY0));
-                final Point2D p1 = parent.sceneToLocal(skinParent.localToScene(crackX, crackY1));
+                final Point2D p0 = Deprecation.localToLocal(skinParent, crackX, crackY0, parent);
+                final Point2D p1 = Deprecation.localToLocal(skinParent, crackX, crackY1, parent);
                 assert MathUtils.equals(p0.getX(), p1.getX());
                 pCrackX = p0.getX();
                 pCrackY0 = p0.getY();

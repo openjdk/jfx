@@ -26,14 +26,17 @@
 package javafx.scene.chart;
 
 import com.sun.javafx.collections.NonIterableChange;
+
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
+import javafx.beans.binding.StringBinding;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ObjectPropertyBase;
@@ -42,6 +45,7 @@ import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.property.StringPropertyBase;
+import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ListChangeListener.Change;
@@ -58,12 +62,18 @@ import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.Path;
 import javafx.scene.shape.Rectangle;
 import javafx.util.Duration;
+
 import java.util.BitSet;
+
 import javafx.css.StyleableBooleanProperty;
 import javafx.css.CssMetaData;
+
 import com.sun.javafx.css.converters.BooleanConverter;
+
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
+
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 
@@ -103,68 +113,57 @@ public abstract class XYChart<X,Y> extends Chart {
     };
     private final Group plotContent = new Group();
     private final Rectangle plotAreaClip = new Rectangle();
-    /* start pointer of a series linked list. */
-    Series<X,Y> begin = null;
+
+    private final List<Series<X, Y>> displayedSeries = new ArrayList<>();
+
     /** This is called when a series is added or removed from the chart */
     private final ListChangeListener<Series<X,Y>> seriesChanged = c -> {
+        ObservableList<? extends Series<X, Y>> series = c.getList();
         while (c.next()) {
-            if (c.getRemoved().size() > 0) updateLegend();
-            for (Series<X,Y> series : c.getRemoved()) {
-                series.setToRemove = true;
-                series.setChart(null);
-                seriesRemoved(series);
-                int idx = seriesColorMap.remove(series);
-                colorBits.clear(idx);
-//                    seriesDefaultColorIndex --;
+            // RT-12069, linked list pointers should update when list is permutated.
+            if (c.wasPermutated()) {
+                displayedSeries.sort((o1, o2) -> series.indexOf(o2) - series.indexOf(o1));
+
             }
+
+            if (c.getRemoved().size() > 0) updateLegend();
+
+            Set<Series<X, Y>> dupCheck = new HashSet<>(displayedSeries);
+            dupCheck.removeAll(c.getRemoved());
+            for (Series<X, Y> d : c.getAddedSubList()) {
+                if (!dupCheck.add(d)) {
+                    throw new IllegalArgumentException("Duplicate series added");
+                }
+            }
+
+            for (Series<X,Y> s : c.getRemoved()) {
+                s.setToRemove = true;
+                seriesRemoved(s);
+                int idx = seriesColorMap.remove(s);
+                colorBits.clear(idx);
+            }
+
             for(int i=c.getFrom(); i<c.getTo() && !c.wasPermutated(); i++) {
-                final Series<X,Y> series = c.getList().get(i);
+                final Series<X,Y> s = c.getList().get(i);
                 // add new listener to data
-                series.setChart(XYChart.this);
-                if (series.setToRemove) {
-                    series.setToRemove = false;
-                    series.getChart().seriesBeingRemovedIsAdded(series);
+                s.setChart(XYChart.this);
+                if (s.setToRemove) {
+                    s.setToRemove = false;
+                    s.getChart().seriesBeingRemovedIsAdded(s);
                 }
                 // update linkedList Pointers for series
-                if (XYChart.this.begin == null) {
-                    XYChart.this.begin = getData().get(i);
-                    XYChart.this.begin.next = null;
-                } else {
-                    if (i == 0) {
-                        getData().get(0).next = XYChart.this.begin;
-                        begin = getData().get(0);
-                    } else {
-                        Series<X,Y> ptr = begin;
-                        for (int j = 0; j < i -1 && ptr!=null ; j++) {
-                            ptr = ptr.next;
-                        }
-                        if (ptr != null) {
-                            getData().get(i).next = ptr.next;
-                            ptr.next = getData().get(i);
-                        }
-
-                    }
-                }
+                displayedSeries.add(s);
                 // update default color style class
                 int nextClearBit = colorBits.nextClearBit(0);
                 colorBits.set(nextClearBit, true);
-                series.defaultColorStyleClass = DEFAULT_COLOR+(nextClearBit%8);
-                seriesColorMap.put(series, nextClearBit%8);
+                s.defaultColorStyleClass = DEFAULT_COLOR+(nextClearBit%8);
+                seriesColorMap.put(s, nextClearBit%8);
                 // inform sub-classes of series added
-                seriesAdded(series, i);
+                seriesAdded(s, i);
             }
             if (c.getFrom() < c.getTo()) updateLegend();
             seriesChanged(c);
-            // RT-12069, linked list pointers should update when list is permutated.
-            if (c.wasPermutated() && getData().size() > 0) {
-                XYChart.this.begin = getData().get(0);
-                Series<X,Y> ptr = begin;
-                for(int k = 1; k < getData().size() && ptr != null; k++) {
-                    ptr.next = getData().get(k);
-                    ptr = ptr.next;
-                }
-                ptr.next = null;
-            }
+
         }
         // update axis ranges
         invalidateRange();
@@ -678,9 +677,15 @@ public abstract class XYChart<X,Y> extends Chart {
         double yAxisWidth = 0;
         double yAxisHeight = 0;
         for (int count=0; count<5; count ++) {
-            yAxisHeight = snapSize(height-xAxisHeight);
+            yAxisHeight = snapSize(height - xAxisHeight);
+            if (yAxisHeight < 0) {
+                yAxisHeight = 0;
+            }
             yAxisWidth = ya.prefWidth(yAxisHeight);
             xAxisWidth = snapSize(width - yAxisWidth);
+            if (xAxisWidth < 0) {
+                xAxisWidth = 0;
+            }
             double newXAxisHeight = xa.prefHeight(xAxisWidth);
             if (newXAxisHeight == xAxisHeight) break;
             xAxisHeight = newXAxisHeight;
@@ -887,12 +892,7 @@ public abstract class XYChart<X,Y> extends Chart {
      * @return index of the series in series list
      */
     int getSeriesIndex(Series<X,Y> series) {
-        int itemIndex = 0;
-        for (Series<X,Y> s = XYChart.this.begin; s != null; s = s.next) {
-            if (s == series) break;
-            itemIndex++;
-        }
-        return itemIndex;
+        return displayedSeries.indexOf(series);
     }
 
     /**
@@ -900,11 +900,7 @@ public abstract class XYChart<X,Y> extends Chart {
      * @return size of series linked list
      */
     int getSeriesSize() {
-        int count = 0;
-        for (Series<X,Y> d = XYChart.this.begin; d != null; d = d.next) {
-            count++;
-        }
-        return count;
+        return displayedSeries.size();
     }
 
     /**
@@ -915,16 +911,8 @@ public abstract class XYChart<X,Y> extends Chart {
      */
     protected final void removeSeriesFromDisplay(Series<X, Y> series) {
         if (series != null) series.setToRemove = false;
-        if (begin == series) {
-            begin = series.next;
-        } else {
-            Series<X,Y> ptr = begin;
-            while(ptr != null && ptr.next != series) {
-                ptr = ptr.next;
-            }
-            if (ptr != null)
-            ptr.next = series.next;
-        }
+        series.setChart(null);
+        displayedSeries.remove(series);
     }
 
     /**
@@ -935,28 +923,7 @@ public abstract class XYChart<X,Y> extends Chart {
      * @return iterator over currently displayed series
      */
     protected final Iterator<Series<X,Y>> getDisplayedSeriesIterator() {
-        return new Iterator<Series<X, Y>>() {
-            private boolean start = true;
-            private Series<X,Y> current = begin;
-            @Override public boolean hasNext() {
-                if (start) {
-                    return current != null;
-                } else {
-                    return current.next != null;
-                }
-            }
-            @Override public Series<X, Y> next() {
-                if (start) {
-                    start = false;
-                } else if (current!=null) {
-                    current = current.next;
-                }
-                return current;
-            }
-            @Override public void remove() {
-                throw new UnsupportedOperationException("We don't support removing items from the displayed series list.");
-            }
-        };
+        return Collections.unmodifiableList(displayedSeries).iterator();
     }
 
     /**
@@ -1039,28 +1006,7 @@ public abstract class XYChart<X,Y> extends Chart {
      * @return iterator over currently displayed items from this series
      */
     protected final Iterator<Data<X,Y>> getDisplayedDataIterator(final Series<X,Y> series) {
-        return new Iterator<Data<X, Y>>() {
-            private boolean start = true;
-            private Data<X,Y> current = series.begin;
-            @Override public boolean hasNext() {
-                if (start) {
-                    return current != null;
-                } else {
-                    return current.next != null;
-                }
-            }
-            @Override public Data<X, Y> next() {
-                if (start) {
-                    start = false;
-                } else if (current!=null) {
-                    current = current.next;
-                }
-                return current;
-            }
-            @Override public void remove() {
-                throw new UnsupportedOperationException("We don't support removing items from the displayed data list.");
-            }
-        };
+        return Collections.unmodifiableList(series.displayedData).iterator();
     }
 
     /**
@@ -1089,7 +1035,7 @@ public abstract class XYChart<X,Y> extends Chart {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(XYChart<?,?> node) {
-                return (StyleableProperty<Boolean>)node.horizontalGridLinesVisibleProperty();
+                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)node.horizontalGridLinesVisibleProperty();
             }
         };
 
@@ -1105,7 +1051,7 @@ public abstract class XYChart<X,Y> extends Chart {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(XYChart<?,?> node) {
-                return (StyleableProperty<Boolean>)node.horizontalZeroLineVisibleProperty();
+                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)node.horizontalZeroLineVisibleProperty();
             }
         };
 
@@ -1121,7 +1067,7 @@ public abstract class XYChart<X,Y> extends Chart {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(XYChart<?,?> node) {
-                return (StyleableProperty<Boolean>)node.alternativeRowFillVisibleProperty();
+                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)node.alternativeRowFillVisibleProperty();
             }
         };
 
@@ -1137,7 +1083,7 @@ public abstract class XYChart<X,Y> extends Chart {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(XYChart<?,?> node) {
-                return (StyleableProperty<Boolean>)node.verticalGridLinesVisibleProperty();
+                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)node.verticalGridLinesVisibleProperty();
             }
         };
 
@@ -1153,7 +1099,7 @@ public abstract class XYChart<X,Y> extends Chart {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(XYChart<?,?> node) {
-                return (StyleableProperty<Boolean>)node.verticalZeroLineVisibleProperty();
+                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)node.verticalZeroLineVisibleProperty();
             }
         };
 
@@ -1169,7 +1115,7 @@ public abstract class XYChart<X,Y> extends Chart {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(XYChart<?,?> node) {
-                return (StyleableProperty<Boolean>)node.alternativeColumnFillVisibleProperty();
+                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)node.alternativeColumnFillVisibleProperty();
             }
         };
 
@@ -1352,7 +1298,21 @@ public abstract class XYChart<X,Y> extends Chart {
          * appropriately, for example on a Line or Scatter chart this node will be positioned centered on the data
          * values position. For a bar chart this is positioned and resized as the bar for this data item.
          */
-        private ObjectProperty<Node> node = new SimpleObjectProperty<Node>(this, "node");
+        private ObjectProperty<Node> node = new SimpleObjectProperty<Node>(this, "node") {
+            protected void invalidated() {
+                Node node = get();
+                if (node != null) {
+                    node.accessibleTextProperty().unbind();
+                    node.accessibleTextProperty().bind(new StringBinding() {
+                        {bind(currentXProperty(), currentYProperty());}
+                        @Override protected String computeValue() {
+                            String seriesName = series != null ? series.getName() : "";
+                            return seriesName + " X Axis is " + getCurrentX() + " Y Axis is " + getCurrentY();
+                        }
+                    });
+                }
+            };
+        };
         public final Node getNode() { return node.get(); }
         public final void setNode(Node value) { node.set(value); }
         public final ObjectProperty<Node> nodeProperty() { return node; }
@@ -1388,13 +1348,6 @@ public abstract class XYChart<X,Y> extends Chart {
         final Object getCurrentExtraValue() { return currentExtraValue.getValue(); }
         final void setCurrentExtraValue(Object value) { currentExtraValue.setValue(value); }
         final ObjectProperty<Object> currentExtraValueProperty() { return currentExtraValue; }
-
-        /**
-         * Next pointer for the next data item. We maintain a linkedlist of the
-         * data items so even after the data is deleted from the list,
-         * we have a reference to it
-         */
-         protected Data<X,Y> next = null;
 
         // -------------- CONSTRUCTOR -------------------------------------------------
 
@@ -1457,125 +1410,84 @@ public abstract class XYChart<X,Y> extends Chart {
         /** the style class for default color for this series */
         String defaultColorStyleClass;
         boolean setToRemove = false;
-        Data<X,Y> begin = null; // start pointer of a data linked list.
-        /*
-         * Next pointer for the next series. We maintain a linkedlist of the
-         * serieses  so even after the series is deleted from the list,
-         * we have a reference to it - needed by BarChart e.g.
-         */
-        Series<X,Y> next = null;
+
+        private List<Data<X, Y>> displayedData = new ArrayList<>();
 
         private final ListChangeListener<Data<X,Y>> dataChangeListener = new ListChangeListener<Data<X, Y>>() {
             @Override public void onChanged(Change<? extends Data<X, Y>> c) {
+                ObservableList<? extends Data<X, Y>> data = c.getList();
                 final XYChart<X, Y> chart = getChart();
                 while (c.next()) {
-                    // RT-25187 Probably a sort happened, just reorder the pointers and return.
-                    if (c.wasPermutated()) {
-                        Series<X,Y> series = Series.this;
-                        if (series == null || series.getData() == null) return;
-                        Data<X,Y> ptr = begin;
-                        for(int i = 0; i < series.getData().size(); i++) {
-                            Data<X,Y> item = series.getData().get(i);
-                            if (i == 0) {
-                                begin = item;
-                                ptr = begin;
-                                begin.next = null;
-                            } else {
-                                ptr.next = item;
-                                item.next = null;
-                                ptr = item;
+                    if (chart != null) {
+                        // RT-25187 Probably a sort happened, just reorder the pointers and return.
+                        if (c.wasPermutated()) {
+                            displayedData.sort((o1, o2) -> data.indexOf(o2) - data.indexOf(o1));
+                            return;
+                        }
+
+                        Set<Data<X, Y>> dupCheck = new HashSet<>(displayedData);
+                        dupCheck.removeAll(c.getRemoved());
+                        for (Data<X, Y> d : c.getAddedSubList()) {
+                            if (!dupCheck.add(d)) {
+                                throw new IllegalArgumentException("Duplicate data added");
                             }
                         }
-                        return;
-                    }
-                    // update data items reference to series
-                    for (Data<X,Y> item : c.getRemoved()) {
-                        item.setToRemove = true;
-                    }
-                    if (c.getAddedSize() > 0) {
-                        for (Data<X,Y> itemPtr = begin; itemPtr != null; itemPtr = itemPtr.next) {
-                            if (itemPtr.setToRemove) {
-                                if (chart != null) chart.dataBeingRemovedIsAdded(itemPtr, Series.this);
-                                itemPtr.setToRemove = false;
-                            }
+
+                        // update data items reference to series
+                        for (Data<X, Y> item : c.getRemoved()) {
+                            item.setToRemove = true;
                         }
-                    }
-                    for(int i=c.getFrom(); i<c.getTo(); i++) {
-                        getData().get(i).setSeries(Series.this);
-                        // update linkedList Pointers for data in this series
-                        if (begin == null) {
-                            begin = getData().get(i);
-                            begin.next = null;
-                        } else {
-                            if (i == 0) {
-                                getData().get(0).next = begin;
-                                begin = getData().get(0);
-                            } else {
-                                Data<X,Y> ptr = begin;
-                                for (int j = 0; j < i -1 ; j++) {
-                                    ptr = ptr.next;
+
+                        if (c.getAddedSize() > 0) {
+                            for (Data<X, Y> itemPtr : c.getAddedSubList()) {
+                                if (itemPtr.setToRemove) {
+                                    if (chart != null) chart.dataBeingRemovedIsAdded(itemPtr, Series.this);
+                                    itemPtr.setToRemove = false;
                                 }
-                                getData().get(i).next = ptr.next;
-                                ptr.next = getData().get(i);
+                            }
+
+                            for (Data<X, Y> d : c.getAddedSubList()) {
+                                d.setSeries(Series.this);
+                            }
+                            if (c.getFrom() == 0) {
+                                displayedData.addAll(0, c.getAddedSubList());
+                            } else {
+                                displayedData.addAll(displayedData.indexOf(data.get(c.getFrom() - 1)) + 1, c.getAddedSubList());
                             }
                         }
-                    }
-                    // check cycle in the data list
-                    // if cycle exists, and the data is not set to be removed,
-                    // eliminate loop and throw exception stating operation not permitted.
-                    // RT-28880 : infinite loop when same data is added to two charts.
-                    Data<X,Y> cycle = checkCycleInList();
-                    if ( cycle != null) {
-                        if (!cycle.setToRemove) {
-                            eliminateLoop(cycle);
-                            throw new IllegalArgumentException(
-                                    "Duplicate data added or same data added to more than one chart ");
+                        // inform chart
+                        chart.dataItemsChanged(Series.this,
+                                (List<Data<X, Y>>) c.getRemoved(), c.getFrom(), c.getTo(), c.wasPermutated());
+                    } else {
+                        Set<Data<X, Y>> dupCheck = new HashSet<>();
+                        for (Data<X, Y> d : data) {
+                            if (!dupCheck.add(d)) {
+                                throw new IllegalArgumentException("Duplicate data added");
+                            }
                         }
+
+                        for (Data<X, Y> d : c.getAddedSubList()) {
+                            d.setSeries(Series.this);
+                        }
+
                     }
-                    // inform chart
-                    if(chart!=null) chart.dataItemsChanged(Series.this,
-                            (List<Data<X,Y>>)c.getRemoved(), c.getFrom(), c.getTo(), c.wasPermutated());
                 }
             }
         };
 
-        private Data<X,Y> checkCycleInList() {
-            Data<X,Y> slow = null;
-            Data<X,Y> fast = null;
-            slow = fast = begin;
-            while (slow != null && fast != null) {
-                fast = fast.next;
-                if (fast == slow) return slow;
-                if (fast == null) return null;
-                fast = fast.next;
-                if (fast == slow) return fast;
-                slow = slow.next;
-            }
-            return null;
-        }
-
-        private void eliminateLoop(Data<X,Y> cycle) {
-            Data<X,Y> slow = cycle;
-            // Identify the data that is the start of the loop
-            Data<X,Y> fast = begin;
-            //until both the refs are one short of the common element which is the start of the loop
-            while(fast.next != slow.next) {
-                fast = fast.next;
-                slow = slow.next;
-            }
-            Data<X,Y>start = fast.next;
-            //Eliminate loop by setting next pointer of last element to null
-            fast = start;
-            while(fast.next != start) {
-                fast = fast.next;
-            }
-            fast.next = null; //break the loop
-        }
-
         // -------------- PUBLIC PROPERTIES ----------------------------------------
 
         /** Reference to the chart this series belongs to */
-        private final ReadOnlyObjectWrapper<XYChart<X,Y>> chart = new ReadOnlyObjectWrapper<XYChart<X,Y>>(this, "chart");
+        private final ReadOnlyObjectWrapper<XYChart<X,Y>> chart = new ReadOnlyObjectWrapper<XYChart<X,Y>>(this, "chart") {
+            @Override
+            protected void invalidated() {
+                if (get() == null) {
+                    displayedData.clear();
+                } else {
+                    displayedData.addAll(getData());
+                }
+            }
+        };
         public final XYChart<X,Y> getChart() { return chart.get(); }
         private void setChart(XYChart<X,Y> value) { chart.set(value); }
         public final ReadOnlyObjectProperty<XYChart<X,Y>> chartProperty() { return chart.getReadOnlyProperty(); }
@@ -1707,32 +1619,19 @@ public abstract class XYChart<X,Y> extends Chart {
          */
         private void removeDataItemRef(Data<X,Y> item) {
             if (item != null) item.setToRemove = false;
-            if (begin == item) {
-                begin = item.next;
-            } else {
-                Data<X,Y> ptr = begin;
-                while(ptr != null && ptr.next != item) {
-                    ptr = ptr.next;
-                }
-                if(ptr != null) ptr.next = item.next;
-            }
+            displayedData.remove(item);
         }
 
         int getItemIndex(Data<X,Y> item) {
-            int itemIndex = 0;
-            for (Data<X,Y> d = begin; d != null; d = d.next) {
-                if (d == item) break;
-                itemIndex++;
-            }
-            return itemIndex;
+            return displayedData.indexOf(item);
+        }
+
+        Data<X, Y> getItem(int i) {
+            return displayedData.get(i);
         }
 
         int getDataSize() {
-            int count = 0;
-            for (Data<X,Y> d = begin; d != null; d = d.next) {
-                count++;
-            }
-            return count;
+            return displayedData.size();
         }
     }
     

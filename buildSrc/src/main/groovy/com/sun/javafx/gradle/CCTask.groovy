@@ -55,7 +55,7 @@ class CCTask extends NativeCompileTask {
             // Add in any additional compilation params
             if (params != null) {
                 // A little hack. Only use the -std=c99 flag if compiling .c or .m
-                if (sourceFile.name.endsWith(".cpp") || sourceFile.name.endsWith(".cc")) {
+                if (sourceFile.name.endsWith(".cpp") || sourceFile.name.endsWith(".cc") || sourceFile.name.endsWith(".mm")) {
                     def stripped = params;
                     stripped.remove("-std=c99");
                     args(stripped)

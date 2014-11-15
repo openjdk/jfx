@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<translation>
+<meta>
+    <source-control>HgForest</source-control>
+</meta>
+
+<file-set name="Java Property Resource Bundles" languages="Japanese +Simplified_Chinese">
+    <file source="rt/modules/fxpackager/src/main/resources/com/sun/javafx/tools/packager/Bundle%j.properties"
+          file-type="JavaProperties"/>
+</file-set>
+
+<file-set name="Java Property Resource Bundles" languages="Japanese +Simplified_Chinese">
+    <file source="rt/modules/jmx/src/main/resources/com/oracle/javafx/jmx/json/impl/JSONMessagesBundle%j.properties"
+          file-type="JavaProperties"/>
+</file-set>
+
+</translation>

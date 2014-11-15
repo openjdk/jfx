@@ -116,7 +116,7 @@ public enum FontWeight {
     }
 
     /**
-     * Returns the closest @code FontWeight} for a weight
+     * Returns the closest {@code FontWeight} for a weight
      * value as defined by the CSS and OpenType specifications.
      * Where the specified value  is equidistant between two
      * {@code FontWeight} values, then the implementation may

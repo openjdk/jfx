@@ -124,7 +124,7 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
         if (obj2 == null) return 1;
 
         if (obj1 instanceof Comparable && (obj1.getClass() == obj2.getClass() || obj1.getClass().isAssignableFrom(obj2.getClass()))) {
-            return ((Comparable)obj1).compareTo(obj2);
+            return (obj1 instanceof String) ? Collator.getInstance().compare(obj1, obj2) : ((Comparable)obj1).compareTo(obj2);
         }
 
         return Collator.getInstance().compare(obj1.toString(), obj2.toString());

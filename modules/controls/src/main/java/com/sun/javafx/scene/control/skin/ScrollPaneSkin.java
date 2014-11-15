@@ -41,9 +41,9 @@ import javafx.event.EventHandler;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
 import javafx.geometry.Orientation;
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.Cursor;
 import javafx.scene.Node;
-//import javafx.scene.accessibility.Attribute;
 import javafx.scene.control.ScrollBar;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.ScrollPane.ScrollBarPolicy;
@@ -135,8 +135,10 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
         registerChangeListener(scrollpane.vvalueProperty(), "VVALUE");
         registerChangeListener(scrollpane.vmaxProperty(), "VMAX");
         registerChangeListener(scrollpane.vminProperty(), "VMIN");
-        registerChangeListener(scrollpane.prefViewportWidthProperty(), "PREF_VIEWPORT_WIDTH");
-        registerChangeListener(scrollpane.prefViewportHeightProperty(), "PREF_VIEWPORT_HEIGHT");
+        registerChangeListener(scrollpane.prefViewportWidthProperty(), "VIEWPORT_SIZE_HINT");
+        registerChangeListener(scrollpane.prefViewportHeightProperty(), "VIEWPORT_SIZE_HINT");
+        registerChangeListener(scrollpane.minViewportWidthProperty(), "VIEWPORT_SIZE_HINT");
+        registerChangeListener(scrollpane.minViewportHeightProperty(), "VIEWPORT_SIZE_HINT");
     }
 
     private final InvalidationListener nodeListener = new InvalidationListener() {
@@ -184,7 +186,7 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
             */
             double oldHeight = oldBounds.getHeight();
             double newHeight = newBounds.getHeight();
-            if (oldHeight != newHeight) {
+            if (oldHeight > 0 && oldHeight != newHeight) {
                 double oldPositionY = (snapPosition(snappedTopInset() - posY / (vsb.getMax() - vsb.getMin()) * (oldHeight - contentHeight)));
                 double newPositionY = (snapPosition(snappedTopInset() - posY / (vsb.getMax() - vsb.getMin()) * (newHeight - contentHeight)));
                 
@@ -208,7 +210,7 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
             */
             double oldWidth = oldBounds.getWidth();
             double newWidth = newBounds.getWidth();
-            if (oldWidth != newWidth) {
+            if (oldWidth > 0 && oldWidth != newWidth) {
                 double oldPositionX = (snapPosition(snappedLeftInset() - posX / (hsb.getMax() - hsb.getMin()) * (oldWidth - contentWidth)));
                 double newPositionX = (snapPosition(snappedLeftInset() - posX / (hsb.getMax() - hsb.getMin()) * (newWidth - contentWidth)));
 
@@ -450,6 +452,7 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
         ** In a ScrollPane a vertical scroll should scroll on the vertical only,
         ** whereas in a horizontal ScrollBar it can scroll horizontally.
         */ 
+        // block the event from being passed down to children
         final EventDispatcher blockEventDispatcher = (event, tail) -> event;
         // block ScrollEvent from being passed down to scrollbar's skin
         final EventDispatcher oldHsbEventDispatcher = hsb.getEventDispatcher();
@@ -621,7 +624,7 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
             vsb.setMax(getSkinnable().getVmax());
         } else if ("VMIN".equals(p)) {
             vsb.setMin(getSkinnable().getVmin());
-        } else if ("PREF_VIEWPORT_WIDTH".equals(p) || "PREF_VIEWPORT_HEIGHT".equals(p)) {
+        } else if ("VIEWPORT_SIZE_HINT".equals(p)) {
             // change affects pref size, so requestLayout on control
             getSkinnable().requestLayout();
         }
@@ -710,11 +713,7 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
     @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         final ScrollPane sp = getSkinnable();
 
-        double vsbWidth =
-                ((sp.getVbarPolicy() == ScrollBarPolicy.ALWAYS) ||
-                 (sp.getVbarPolicy() == ScrollBarPolicy.AS_NEEDED && sp.getPrefViewportWidth() > 0))
-                ? vsb.prefWidth(ScrollBar.USE_COMPUTED_SIZE)
-                : 0;
+        double vsbWidth = computeVsbSizeHint(sp);
         double minWidth = vsbWidth + snappedLeftInset() + snappedRightInset();
 
         if (sp.getPrefViewportWidth() > 0) {
@@ -731,11 +730,7 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
     @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         final ScrollPane sp = getSkinnable();
 
-        double hsbHeight =
-                ((sp.getHbarPolicy() == ScrollBarPolicy.ALWAYS) ||
-                 (sp.getHbarPolicy() == ScrollBarPolicy.AS_NEEDED && sp.getPrefViewportHeight() > 0))
-                ? hsb.prefHeight(ScrollBar.USE_COMPUTED_SIZE)
-                : 0;
+        double hsbHeight = computeHsbSizeHint(sp);
         double minHeight = hsbHeight + snappedTopInset() + snappedBottomInset();
 
         if (sp.getPrefViewportHeight() > 0) {
@@ -750,13 +745,53 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
     }
 
     @Override protected double computeMinWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
-        double w = corner.minWidth(-1);
-        return (w > 0) ? (3 * w) : (DEFAULT_MIN_SIZE);
+        final ScrollPane sp = getSkinnable();
+
+        double vsbWidth = computeVsbSizeHint(sp);
+        double minWidth = vsbWidth + snappedLeftInset() + snappedRightInset();
+
+        if (sp.getMinViewportWidth() > 0) {
+            return (sp.getMinViewportWidth() + minWidth);
+        } else {
+            double w = corner.minWidth(-1);
+            return (w > 0) ? (3 * w) : (DEFAULT_MIN_SIZE);
+        }
+
     }
 
     @Override protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
-        double h = corner.minHeight(-1);
-        return (h > 0) ? (3 * h) : (DEFAULT_MIN_SIZE);
+        final ScrollPane sp = getSkinnable();
+
+        double hsbHeight = computeHsbSizeHint(sp);
+        double minHeight = hsbHeight + snappedTopInset() + snappedBottomInset();
+
+        if (sp.getMinViewportHeight() > 0) {
+            return (sp.getMinViewportHeight() + minHeight);
+        } else {
+            double h = corner.minHeight(-1);
+            return (h > 0) ? (3 * h) : (DEFAULT_MIN_SIZE);
+        }
+    }
+
+    /**
+     * Computes the size that should be reserved for horizontal scrollbar in size hints (min/pref height)
+     */
+    private double computeHsbSizeHint(ScrollPane sp) {
+        return ((sp.getHbarPolicy() == ScrollBarPolicy.ALWAYS) ||
+                (sp.getHbarPolicy() == ScrollBarPolicy.AS_NEEDED && (sp.getPrefViewportHeight() > 0 || sp.getMinViewportHeight() > 0)))
+                ? hsb.prefHeight(ScrollBar.USE_COMPUTED_SIZE)
+                : 0;
+    }
+
+    /**
+     * Computes the size that should be reserved for vertical scrollbar in size hints (min/pref width)
+     */
+    private double computeVsbSizeHint(ScrollPane sp) {
+        return ((sp.getVbarPolicy() == ScrollBarPolicy.ALWAYS) ||
+                (sp.getVbarPolicy() == ScrollBarPolicy.AS_NEEDED && (sp.getPrefViewportWidth() > 0
+                        || sp.getMinViewportWidth() > 0)))
+                ? vsb.prefWidth(ScrollBar.USE_COMPUTED_SIZE)
+                : 0;
     }
 
     @Override protected void layoutChildren(final double x, final double y,
@@ -1190,11 +1225,12 @@ public class ScrollPaneSkin extends BehaviorSkinBase<ScrollPane, ScrollPaneBehav
         return contentPosY;
     }
 
-//    @Override protected Object accGetAttribute(Attribute attribute, Object... parameters) {
-//        switch (attribute) {
-//            case VERTICAL_SCROLLBAR: return vsb;
-//            case HORIZONTAL_SCROLLBAR: return hsb;
-//            default: return super.accGetAttribute(attribute, parameters);
-//        }
-//    }
+    @Override
+    protected Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
+        switch (attribute) {
+            case VERTICAL_SCROLLBAR: return vsb;
+            case HORIZONTAL_SCROLLBAR: return hsb;
+            default: return super.queryAccessibleAttribute(attribute, parameters);
+        }
+    }
 }

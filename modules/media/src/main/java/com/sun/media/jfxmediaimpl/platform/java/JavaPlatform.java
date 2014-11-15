@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -48,6 +48,7 @@ public final class JavaPlatform extends Platform {
 
     JavaPlatform() {}
 
+    @Override
     public boolean loadPlatform() {
         return true;
     }
@@ -72,12 +73,7 @@ public final class JavaPlatform extends Platform {
     }
 
     @Override
-    public Object prerollMediaPlayer(Locator source) {
-        return null;
-    }
-
-    @Override
-    public MediaPlayer createMediaPlayer(Locator source, Object cookie) {
+    public MediaPlayer createMediaPlayer(Locator source) {
         return null;
     }
 }

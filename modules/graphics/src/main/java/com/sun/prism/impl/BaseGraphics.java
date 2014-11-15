@@ -258,6 +258,12 @@ public abstract class BaseGraphics implements RectShadowGraphics {
         return depthBuffer;
     }
 
+    // If true use fragment shader that does alpha testing (i.e. discard if alpha == 0.0)
+    // Currently it is required when depth testing is in use. 
+    public boolean isAlphaTestShader() {
+        return (PrismSettings.forceAlphaTestShader || (isDepthTest() && isDepthBuffer()));
+    }
+
     public void setCamera(NGCamera camera) {
         this.camera = camera;
     }
@@ -320,9 +326,6 @@ public abstract class BaseGraphics implements RectShadowGraphics {
     public void clear() {
         clear(Color.TRANSPARENT);
     }
-
-    public abstract void fillTriangles(VertexBuffer tris, int numVerts,
-                                       float bx, float by, float bw, float bh);
 
     protected abstract void renderShape(Shape shape, BasicStroke stroke,
                                         float bx, float by, float bw, float bh);

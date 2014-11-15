@@ -77,9 +77,12 @@ public class StyleEditor extends InlineListEditor {
     private Set<Class<?>> selectedClasses;
     private EditorController editorController;
 
-    @SuppressWarnings("LeakingThisInConstructor")
     public StyleEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses, EditorController editorController) {
         super(propMeta, selectedClasses);
+        initialize(selectedClasses, editorController);
+    }
+    
+    private void initialize(Set<Class<?>> selectedClasses, EditorController editorController) {
         this.selectedClasses = selectedClasses;
         this.editorController = editorController;
         setLayoutFormat(LayoutFormat.DOUBLE_LINE);
@@ -108,7 +111,7 @@ public class StyleEditor extends InlineListEditor {
         // Concatenate all the item values
         String value = null;
         for (EditorItem styleItem : getEditorItems()) {
-            String itemValue = styleItem.getValue();
+            String itemValue = EditorUtils.toString(styleItem.getValue());
             if (itemValue.isEmpty()) {
                 continue;
             }
@@ -227,26 +230,25 @@ public class StyleEditor extends InlineListEditor {
         @FXML
         private StackPane propertySp;
 
-        private final Parent root;
+        private Parent root;
         private TextField propertyTf;
         private String currentValue;
-        private final EditorItemDelegate editor;
+        private EditorItemDelegate editor;
         private boolean parsingError = false;
         private ListChangeListener<CssError> errorListener;
 
-        @SuppressWarnings("LeakingThisInConstructor")
         public StyleItem(EditorItemDelegate editor, List<String> suggestedList) {
 //            System.out.println("New StyleItem.");
             // It is an AutoSuggestEditor without MenuButton
             super("", "", suggestedList, false);
-            this.editor = editor;
-            root = EditorUtils.loadFxml("StyleEditorItem.fxml", this);
-
-            initialize();
+            initialize(editor);
         }
 
         // Method to please FindBugs
-        private void initialize() {
+        private void initialize(EditorItemDelegate editor) {
+            this.editor = editor;
+            root = EditorUtils.loadFxml("StyleEditorItem.fxml", this);
+
             // Add the AutoSuggest text field in the scene graph
             propertySp.getChildren().add(super.getRoot());
 
@@ -269,7 +271,7 @@ public class StyleEditor extends InlineListEditor {
                 }
 
                 updateButtons();
-                currentValue = getValue();
+                currentValue = EditorUtils.toString(getValue());
             };
 
             ChangeListener<String> textPropertyChange = (ov, prevText, newText) -> {
@@ -325,7 +327,7 @@ public class StyleEditor extends InlineListEditor {
         }
 
         @Override
-        public String getValue() {
+        public Object getValue() {
             String value;
             if (propertyTf.getText().isEmpty() && valueTf.getText().isEmpty()) {
                 return ""; //NOI18N
@@ -338,7 +340,7 @@ public class StyleEditor extends InlineListEditor {
             // Parse the style, and set the parsingError boolean if any error
             parsingError = false;
             StyleManager.errorsProperty().addListener(errorListener);
-            CSSParser.getInstance().parseInlineStyle(new StyleableStub(value));
+            new CSSParser().parseInlineStyle(new StyleableStub(value));
             StyleManager.errorsProperty().removeListener(errorListener);
 
             return value;
@@ -349,25 +351,26 @@ public class StyleEditor extends InlineListEditor {
         }
 
         @Override
-        public void setValue(String style) {
+        public void setValue(Object style) {
+            String styleStr = EditorUtils.toString(style);
             // remove last ';' if any
-            if (style.endsWith(";")) { //NOI18N
-                style = style.substring(0, style.length() - 1);
+            if (styleStr.endsWith(";")) { //NOI18N
+                styleStr = styleStr.substring(0, styleStr.length() - 1);
             }
             // split in property and value
-            int dotIndex = style.indexOf(":");
+            int dotIndex = styleStr.indexOf(':');
             String propertyStr;
             String valueStr = ""; //NOI18N
             if (dotIndex != -1) {
-                propertyStr = style.substring(0, dotIndex);
-                valueStr = style.substring(dotIndex + 1);
+                propertyStr = styleStr.substring(0, dotIndex);
+                valueStr = styleStr.substring(dotIndex + 1);
             } else {
-                propertyStr = style;
+                propertyStr = styleStr;
             }
             propertyTf.setText(propertyStr);
             valueTf.setText(valueStr);
             updateButtons();
-            currentValue = getValue();
+            currentValue = EditorUtils.toString(getValue());
         }
 
         @Override
@@ -408,6 +411,12 @@ public class StyleEditor extends InlineListEditor {
         @Override
         public Button getPlusButton() {
             return plusBt;
+        }
+
+        @Override
+        public Button getMinusButton() {
+            // Not used here
+            return null;
         }
 
         @FXML

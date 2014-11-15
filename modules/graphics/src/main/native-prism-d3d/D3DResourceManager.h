@@ -192,7 +192,7 @@ public:
     HRESULT ReleaseResource(IManagedResource* pResource);
 
     HRESULT CreateTexture(UINT width, UINT height,
-                          BOOL isRTT, BOOL isOpaque, /* BOOL autoMipMap, */
+                          BOOL isRTT, BOOL isOpaque, BOOL useMipmap,
                           D3DFORMAT *pFormat/*in/out*/,
                           DWORD dwUsage,
                           D3DResource **ppTextureResource/*out*/);

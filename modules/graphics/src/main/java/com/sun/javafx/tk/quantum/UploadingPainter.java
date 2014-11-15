@@ -26,16 +26,13 @@
 package com.sun.javafx.tk.quantum;
 
 import java.nio.IntBuffer;
-import java.util.concurrent.atomic.AtomicInteger;
-import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Pixels;
 import com.sun.prism.Graphics;
 import com.sun.prism.GraphicsPipeline;
 import com.sun.prism.RTTexture;
 import com.sun.prism.Texture.WrapMode;
-import com.sun.prism.impl.BufferUtil;
 import com.sun.prism.impl.Disposer;
-import com.sun.prism.impl.ManagedResource;
+import com.sun.prism.impl.QueuedPixelSource;
 
 /**
  * UploadingPainter is used when we need to render into an offscreen buffer.
@@ -43,13 +40,13 @@ import com.sun.prism.impl.ManagedResource;
  */
 final class UploadingPainter extends ViewPainter implements Runnable {
 
-    private Application app = Application.GetApplication();
-    private Pixels      pix;
-    private IntBuffer   textureBits; // Used for RTTs that are not backed by a SW array
-    private IntBuffer   pixBits; // Users for RTTs that are backed by a SW array
-    private final AtomicInteger uploadCount = new AtomicInteger(0);
     private RTTexture   rttexture;
-    
+    // resolveRTT is a temporary render target to "resolve" a msaa render buffer
+    // into a normal color render target.
+    private RTTexture   resolveRTT = null;
+
+    private QueuedPixelSource pixelSource = new QueuedPixelSource(true);
+    private float penScale;
     private volatile float pixScaleFactor = 1.0f;
 
     UploadingPainter(GlassScene view) {
@@ -60,6 +57,10 @@ final class UploadingPainter extends ViewPainter implements Runnable {
         if (rttexture != null) {
             rttexture.dispose();
             rttexture = null;
+        }
+        if (resolveRTT != null) {
+            resolveRTT.dispose();
+            resolveRTT = null;
         }
     }
     
@@ -75,12 +76,9 @@ final class UploadingPainter extends ViewPainter implements Runnable {
     @Override public void run() {
         renderLock.lock();
 
-        boolean valid = false;
         boolean errored = false;
         try {
-            valid = validateStageGraphics();
-
-            if (!valid) {
+            if (!validateStageGraphics()) {
                 if (QuantumToolkit.verbose) {
                     System.err.println("UploadingPainter: validateStageGraphics failed");
                 }
@@ -94,13 +92,16 @@ final class UploadingPainter extends ViewPainter implements Runnable {
             if (factory == null || !factory.isDeviceReady()) {
                 return;
             }
-            
+
             float scale = pixScaleFactor;
-            
-            boolean needsReset = (pix == null) ||
-                                 (scale != pix.getScaleUnsafe()) ||
-                                 (viewWidth != penWidth) || (viewHeight != penHeight);
-            
+            int bufWidth = Math.round(viewWidth * scale);
+            int bufHeight = Math.round(viewHeight * scale);
+
+            boolean needsReset = (penScale != scale ||
+                                  penWidth != viewWidth ||
+                                  penHeight != viewHeight ||
+                                  rttexture == null);
+
             if (!needsReset) {
                 rttexture.lock();
                 if (rttexture.isSurfaceLost()) {
@@ -109,20 +110,17 @@ final class UploadingPainter extends ViewPainter implements Runnable {
                     needsReset = true;
                 }
             }
-            
-            int bufWidth = (int)Math.round(viewWidth * scale);
-            int bufHeight = (int)Math.round(viewHeight * scale);
-            
+
             if (needsReset) {
                 disposeRTTexture();
-                rttexture = factory.createRTTexture(bufWidth, bufHeight, WrapMode.CLAMP_NOT_NEEDED);
+                rttexture = factory.createRTTexture(bufWidth, bufHeight, WrapMode.CLAMP_NOT_NEEDED,
+                        sceneState.isAntiAliasing());
                 if (rttexture == null) {
                     return;
                 }
+                penScale    = scale;
                 penWidth    = viewWidth;
                 penHeight   = viewHeight;
-                textureBits = null;
-                pixBits = null;
                 freshBackBuffer = true;
             }
             Graphics g = rttexture.createGraphics();
@@ -135,28 +133,22 @@ final class UploadingPainter extends ViewPainter implements Runnable {
             paintImpl(g);
             freshBackBuffer = false;
 
+            Pixels pix = pixelSource.getUnusedPixels(bufWidth, bufHeight, scale);
+            IntBuffer bits = (IntBuffer) pix.getPixels();
+
             int rawbits[] = rttexture.getPixels();
             
             if (rawbits != null) {
-                if (pixBits == null || uploadCount.get() > 0) {
-                    pixBits = IntBuffer.allocate(bufWidth * bufHeight);
-                }
-                System.arraycopy(rawbits, 0, pixBits.array(), 0, bufWidth * bufHeight);
-                pix = app.createPixels(bufWidth, bufHeight, pixBits, scale);
+                bits.put(rawbits, 0, bufWidth * bufHeight);
             } else {
-                if (textureBits == null || uploadCount.get() > 0) {
-                    textureBits = BufferUtil.newIntBuffer(bufWidth * bufHeight);
-                }
-                
-                if (textureBits != null) {
-                    if (rttexture.readPixels(textureBits)) {
-                        pix = app.createPixels(bufWidth, bufHeight, textureBits, scale);
-                    } else {
-                        /* device lost */
-                        sceneState.getScene().entireSceneNeedsRepaint();
-                        disposeRTTexture();
-                        pix = null;
-                    }
+                RTTexture rtt = rttexture.isAntiAliasing() ?
+                    resolveRenderTarget(g) : rttexture;
+
+                if (!rtt.readPixels(bits)) {
+                    /* device lost */
+                    sceneState.getScene().entireSceneNeedsRepaint();
+                    disposeRTTexture();
+                    pix = null;
                 }
             }
 
@@ -168,8 +160,8 @@ final class UploadingPainter extends ViewPainter implements Runnable {
                 /* transparent pixels created and ready for upload */
                 // Copy references, which are volatile, used by upload. Thus
                 // ensure they still exist once event queue is consumed.
-                uploadCount.incrementAndGet();
-                sceneState.uploadPixels(pix, uploadCount);
+                pixelSource.enqueuePixels(pix);
+                sceneState.uploadPixels(pixelSource);
             }
                 
         } catch (Throwable th) {
@@ -179,14 +171,41 @@ final class UploadingPainter extends ViewPainter implements Runnable {
             if (rttexture != null && rttexture.isLocked()) {
                 rttexture.unlock();
             }
+            if (resolveRTT != null && resolveRTT.isLocked()) {
+                resolveRTT.unlock();
+            }
 
             Disposer.cleanUp();
 
             sceneState.getScene().setPainting(false);
 
-            ManagedResource.freeDisposalRequestedAndCheckResources(errored);
+            if (factory != null) {
+                factory.getTextureResourcePool().freeDisposalRequestedAndCheckResources(errored);
+            }
 
             renderLock.unlock();
         }
+    }
+
+    private RTTexture resolveRenderTarget(Graphics g) {
+        int width = rttexture.getContentWidth();
+        int height = rttexture.getContentHeight();
+        if (resolveRTT != null &&
+                (resolveRTT.getContentWidth() != width ||
+                (resolveRTT.getContentHeight() != height)))
+        {
+            // If msaa rtt is not the same size than resolve buffer, then dispose
+            resolveRTT.dispose();
+            resolveRTT = null;
+        }
+        if (resolveRTT == null || resolveRTT.isSurfaceLost()) {
+            resolveRTT = g.getResourceFactory().createRTTexture(
+                    width, height,
+                    WrapMode.CLAMP_NOT_NEEDED, false);
+        } else {
+            resolveRTT.lock();
+        }
+        g.blit(rttexture, resolveRTT, 0, 0, width, height, 0, 0, width, height);
+        return resolveRTT;
     }
 }

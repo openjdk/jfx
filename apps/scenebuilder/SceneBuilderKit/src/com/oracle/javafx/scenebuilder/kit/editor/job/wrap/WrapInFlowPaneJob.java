@@ -32,11 +32,6 @@
 package com.oracle.javafx.scenebuilder.kit.editor.job.wrap;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
-import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
 import javafx.scene.layout.FlowPane;
 
 /**
@@ -47,14 +42,5 @@ public class WrapInFlowPaneJob extends AbstractWrapInSubComponentJob {
     public WrapInFlowPaneJob(EditorController editorController) {
         super(editorController);
         newContainerClass = FlowPane.class;
-    }
-
-    @Override
-    protected List<Job> modifyChildrenJobs(final Set<FXOMObject> children) {
-        return Collections.emptyList();
-    }
-
-    @Override
-    protected void modifyContainer(final Set<FXOMObject> children) {
     }
 }

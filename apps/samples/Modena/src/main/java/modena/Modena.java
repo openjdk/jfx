@@ -109,7 +109,7 @@ public class Modena extends Application {
             // change release to release. Just used here for testing.
             File caspianCssFile = new File("../../../modules/controls/src/main/resources/com/sun/javafx/scene/control/skin/caspian/caspian.css");
             if (!caspianCssFile.exists()) {
-                caspianCssFile = new File("modules/controls/src/main/resources/com/sun/javafx/scene/control/skin/caspian/caspian.css");
+                caspianCssFile = new File("rt/modules/controls/src/main/resources/com/sun/javafx/scene/control/skin/caspian/caspian.css");
             }
             CASPIAN_STYLESHEET_URL = caspianCssFile.exists() ? 
                     caspianCssFile.toURI().toURL().toExternalForm() :
@@ -242,6 +242,9 @@ public class Modena extends Application {
     
     private void updateUserAgentStyleSheet(boolean modena) {
         final SamplePage.Section scrolledSection = samplePageNavigation==null? null : samplePageNavigation.getCurrentSection();
+        styleSheetContent = modena ?
+                loadUrl(MODENA_STYLESHEET_URL) :
+                loadUrl(CASPIAN_STYLESHEET_URL);
         if (!modena &&
             (baseColor == null || baseColor == Color.TRANSPARENT) &&
             (backgroundColor == null || backgroundColor == Color.TRANSPARENT) &&
@@ -249,12 +252,14 @@ public class Modena extends Application {
             (fontName == null)) {
             // no customizations
             System.out.println("USING NO CUSTIMIZATIONS TO CSS, stylesheet = "+(modena?"modena":"caspian"));
-            setUserAgentStylesheet(modena ? Application.STYLESHEET_MODENA : Application.STYLESHEET_CASPIAN);
+
+            // load theme
+            setUserAgentStylesheet("internal:stylesheet"+Math.random()+".css");
+            if (root != null) root.requestLayout();
+            // restore scrolled section
+            Platform.runLater(() -> samplePageNavigation.setCurrentSection(scrolledSection));
             return;
         }
-        styleSheetContent = modena ? 
-                loadUrl(MODENA_STYLESHEET_URL) : 
-                loadUrl(CASPIAN_STYLESHEET_URL);
         if (modena && embeddedPerformanceMode) styleSheetContent += loadUrl(MODENA_EMBEDDED_STYLESHEET_URL);
         styleSheetBase = modena ? MODENA_STYLESHEET_BASE : CASPIAN_STYLESHEET_BASE;
         styleSheetContent += "\n.root {\n";

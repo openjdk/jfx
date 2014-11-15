@@ -34,7 +34,7 @@ package com.oracle.javafx.scenebuilder.kit.editor.panel.content.gesture.mouse;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
-import com.oracle.javafx.scenebuilder.kit.editor.job.BatchModifyObjectJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.ModifyObjectJob;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.gridpane.GridPaneHandles;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.driver.resizer.GridPaneColumnResizer;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
@@ -45,9 +45,7 @@ import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 import com.oracle.javafx.scenebuilder.kit.util.Deprecation;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import javafx.geometry.Point2D;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.ColumnConstraints;
@@ -114,8 +112,8 @@ public class ResizeColumnGesture extends AbstractMouseGesture {
         final double startSceneY = getMousePressedEvent().getSceneY();
         final double currentSceneX = getLastMouseEvent().getSceneX();
         final double currentSceneY = getLastMouseEvent().getSceneY();
-        final Point2D start = gridPane.sceneToLocal(startSceneX, startSceneY);
-        final Point2D current = gridPane.sceneToLocal(currentSceneX, currentSceneY);
+        final Point2D start = gridPane.sceneToLocal(startSceneX, startSceneY, true /* rootScene */);
+        final Point2D current = gridPane.sceneToLocal(currentSceneX, currentSceneY, true /* rootScene */);
         final double dx = current.getX() - start.getX();
         
         resizer.updateWidth(dx);
@@ -144,16 +142,14 @@ public class ResizeColumnGesture extends AbstractMouseGesture {
         userDidCancel();
         
         // Step #3
-        final Map<ValuePropertyMetadata, Object> metaValueMap = new HashMap<>();
-        metaValueMap.put(columnConstraintsMeta, newConstraints);
-        
         final EditorController editorController 
                 = contentPanelController.getEditorController();
-        final BatchModifyObjectJob j = new BatchModifyObjectJob(
-                fxomInstance, 
-                I18N.getString("label.action.edit.resize.column"), 
-                metaValueMap, 
-                editorController);
+        final ModifyObjectJob j = new ModifyObjectJob(
+                fxomInstance,
+                columnConstraintsMeta,
+                newConstraints,
+                editorController,
+                I18N.getString("label.action.edit.resize.column"));
         editorController.getJobManager().push(j);
         
         gridPaneHandles.layoutDecoration();

@@ -41,6 +41,7 @@ import com.oracle.javafx.scenebuilder.kit.metadata.property.value.ImagePropertyM
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignImage;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PrefixedValue;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
+import com.oracle.javafx.scenebuilder.kit.util.JavaLanguage;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
@@ -142,38 +143,6 @@ public class FXOMNodes {
     
     
     
-    public static FXOMNode newNode(FXOMNode source, FXOMDocument targetDocument) {
-        final FXOMNode result;
-        
-        if (source instanceof FXOMObject) {
-            result = newObject((FXOMObject) source, targetDocument);
-        } else if (source instanceof FXOMProperty) {
-            result = newProperty((FXOMProperty) source, targetDocument);
-        } else {
-            throw new IllegalArgumentException(FXOMNodes.class.getSimpleName()
-                    + " needs some additional implementation"); //NOI18N
-        }
-        
-        return result;
-    }
-    
-    public static FXOMObject newObject(FXOMObject source, FXOMDocument targetDocument) {
-        final FXOMObject result;
-        
-        if (source instanceof FXOMCollection) {
-            result = FXOMCollection.newInstance((FXOMCollection) source, targetDocument);
-        } else if (source instanceof FXOMInstance) {
-            result = FXOMInstance.newInstance((FXOMInstance) source, targetDocument);
-        } else if (source instanceof FXOMIntrinsic) {
-            result = FXOMIntrinsic.newInstance((FXOMIntrinsic) source, targetDocument);
-        } else {
-            throw new IllegalArgumentException(FXOMNodes.class.getSimpleName()
-                    + " needs some additional implementation"); //NOI18N
-        }
-        
-        return result;
-    }
-    
     public static FXOMObject newObject(FXOMDocument targetDocument, File file)
             throws IOException {
         assert targetDocument != null;
@@ -252,27 +221,17 @@ public class FXOMNodes {
 
         return result;
     }
-
-    public static FXOMProperty newProperty(FXOMProperty source, FXOMDocument targetDocument) {
-        final FXOMProperty result;
-        
-        if (source instanceof FXOMPropertyC) {
-            result = FXOMPropertyC.newInstance((FXOMPropertyC) source, targetDocument);
-        } else if (source instanceof FXOMPropertyT) {
-            result = FXOMPropertyT.newInstance((FXOMPropertyT) source, targetDocument);
-        }else {
-            throw new IllegalArgumentException(FXOMNodes.class.getSimpleName()
-                    + " needs some additional implementation");
-        }
-        
-        return result;
-    }
     
     public static FXOMDocument newDocument(FXOMObject source) {
         assert source != null;
         
         final FXOMDocument result = new FXOMDocument();
         
+        /*
+         * If source's document contains unresolved objects,
+         * then clones import instructions from the source document
+         * to the new document.
+         */
         final FXOMDocument sourceDocument 
                 = source.getFxomDocument();
         assert sourceDocument.getFxomRoot() != null; // contains at least source
@@ -288,10 +247,20 @@ public class FXOMNodes {
             }
         }
         
+        /*
+         * Clones source to the new document
+         */
+        final FXOMCloner cloner = new FXOMCloner(result);
+        final FXOMObject sourceClone = cloner.clone(source);
+        
+        /*
+         * Setup new document : sourceClone is the root, 
+         * same location, same class loader.
+         */
         result.beginUpdate();
         result.setLocation(sourceDocument.getLocation());
         result.setClassLoader(sourceDocument.getClassLoader());
-        result.setFxomRoot(FXOMNodes.newObject(source, result));
+        result.setFxomRoot(sourceClone);
         if (result.getFxomRoot() instanceof FXOMInstance) {
             trimStaticProperties((FXOMInstance) result.getFxomRoot());
         }
@@ -520,35 +489,6 @@ public class FXOMNodes {
     }
     
     
-    public static List<FXOMPropertyT> collectToggleGroupReferences(FXOMObject fxomRoot, String toggleGroupId) {
-        assert fxomRoot != null;
-        assert toggleGroupId != null;
-        
-        final PropertyName toggleGroupName = new PropertyName("toggleGroup");
-        final List<FXOMPropertyT> result = new ArrayList<>();
-        
-        for (FXOMProperty p : fxomRoot.collectProperties(toggleGroupName)) {
-            if (p instanceof FXOMPropertyT) {
-                final FXOMPropertyT pt = (FXOMPropertyT) p;
-                final PrefixedValue pv = new PrefixedValue(pt.getValue());
-                if (pv.isExpression()) {
-                    /*
-                     * p is an FXOMPropertyT like this:
-                     * 
-                     * <.... toggleGroup="$id" .... />
-                     */
-                    final String id = pv.getSuffix();
-                    if (id.equals(toggleGroupId)) {
-                        result.add(pt);
-                    }
-                }
-            }
-        }
-        
-        return result;
-    }
-    
-    
     public static List<FXOMObject> collectUnresolvedObjects(FXOMObject fxomObject) {
         final List<FXOMObject> result = new ArrayList<>();
         
@@ -581,6 +521,128 @@ public class FXOMNodes {
                 fxIdMap.remove(fxId);
             }
         }
+    }
+    
+    
+    public static String extractReferenceSource(FXOMNode node) {
+        final String result;
+        
+        if (node instanceof FXOMIntrinsic) {
+            final FXOMIntrinsic intrinsic = (FXOMIntrinsic) node;
+            switch(intrinsic.getType()) {
+                case FX_REFERENCE:
+                case FX_COPY:
+                    result = intrinsic.getSource();
+                    break;
+                default:
+                    result = null;
+            }
+        } else if (node instanceof FXOMPropertyT) {
+            final FXOMPropertyT property = (FXOMPropertyT) node;
+            final PrefixedValue pv = new PrefixedValue(property.getValue());
+            if (pv.isExpression() && JavaLanguage.isIdentifier(pv.getSuffix())) {
+                result = pv.getSuffix();
+            } else {
+                result = null;
+            }
+        } else {
+            result = null;
+        }
+        
+        return result;
+    }
+    
+    
+    private static final PropertyName toggleGroupName = new PropertyName("toggleGroup");
+    
+    public static boolean isToggleGroupReference(FXOMNode node) {
+        final boolean result;
+        
+        if (extractReferenceSource(node) == null) {
+            result = false;
+        } else {
+            if (node instanceof FXOMIntrinsic) {
+                final FXOMIntrinsic intrinsic = (FXOMIntrinsic) node;
+                final FXOMProperty parentProperty = intrinsic.getParentProperty();
+                if (parentProperty == null) {
+                    result = false;
+                } else {
+                    result = parentProperty.getName().equals(toggleGroupName);
+                }
+            } else if (node instanceof FXOMPropertyT) {
+                final FXOMPropertyT property = (FXOMPropertyT) node;
+                result = property.getName().equals(toggleGroupName);
+            } else {
+                result = false;
+            }
+        }
+        
+        return result;
+    }
+    
+    
+    public static FXOMPropertyC makeToggleGroup(FXOMDocument fxomDocument, String fxId) {
+        final FXOMInstance toggleGroup = new FXOMInstance(fxomDocument, ToggleGroup.class);
+        toggleGroup.setFxId(fxId);
+        return new FXOMPropertyC(fxomDocument, toggleGroupName, toggleGroup);
+    }
+    
+    
+    public static boolean isWeakReference(FXOMNode node) {
+        final boolean result;
+        
+        if (node instanceof FXOMIntrinsic) {
+            final FXOMIntrinsic intrinsic = (FXOMIntrinsic) node;
+            switch(intrinsic.getType()) {
+                case FX_REFERENCE:
+                case FX_COPY:
+                    if (intrinsic.getParentProperty() != null) {
+                        final PropertyName propertyName = intrinsic.getParentProperty().getName();
+                        if (propertyName.getResidenceClass() == null) {
+                            result = getWeakPropertyNames().contains(propertyName.getName());
+                        } else {
+                            result = false;
+                        }
+                    } else {
+                        result = false;
+                    }
+                    break;
+                default:
+                    result = false;
+            }
+        } else if (node instanceof FXOMPropertyT) {
+            final FXOMPropertyT property = (FXOMPropertyT) node;
+            final PrefixedValue pv = new PrefixedValue(property.getValue());
+            if (pv.isExpression() && JavaLanguage.isIdentifier(pv.getSuffix())) {
+                final PropertyName propertyName = property.getName();
+                if (propertyName.getResidenceClass() == null) {
+                    result = getWeakPropertyNames().contains(propertyName.getName());
+                } else {
+                    result = false;
+                }
+            } else {
+                result = false;
+            }
+        } else {
+            result = false;
+        }
+        
+        return result;
+    }
+    
+    
+    private static Set<String> weakPropertyNames;
+    
+    public static synchronized Set<String> getWeakPropertyNames() {
+        
+        if (weakPropertyNames == null) {
+            weakPropertyNames = new HashSet<>();
+            weakPropertyNames.add("labelFor");
+            weakPropertyNames.add("expandedPane");
+            weakPropertyNames.add("clip");
+        }
+        
+        return weakPropertyNames;
     }
     
     

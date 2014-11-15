@@ -64,7 +64,7 @@ public class VBoxDriver extends AbstractNodeDriver {
         final VBox hbox = (VBox) fxomObject.getSceneGraphObject();
         assert hbox.getScene() != null;
         
-        final double localY = hbox.sceneToLocal(sceneX, sceneY).getY();
+        final double localY = hbox.sceneToLocal(sceneX, sceneY, true /* rootScene */).getY();
         final int childCount = hbox.getChildrenUnmodifiable().size();
         
         final int targetIndex;

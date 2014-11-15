@@ -171,7 +171,8 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
             LOG.warning("Uncaught throwable in " + THREAD_GROUP.getName(), throwable);
         }
     };
-    
+
+    // Addition of doPrivileged added due to RT-19580
     private static final ThreadFactory THREAD_FACTORY = run -> AccessController.doPrivileged((PrivilegedAction<Thread>) () -> {
         final Thread th = new Thread(THREAD_GROUP, run);
         th.setUncaughtExceptionHandler(UNCAUGHT_HANDLER);

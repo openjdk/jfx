@@ -121,6 +121,8 @@ public class TestBuilder {
 
     //Variable used by "RobotTest" section
     private final Rectangle rec1 = new Rectangle(50, 50, 40, 160);
+
+    private boolean playing = false;
     
     private static TestBuilder instance;
 
@@ -1877,56 +1879,76 @@ public class TestBuilder {
     public void GestureTest(final Scene globalScene, final VBox mainBox){
 
         final Rectangle rect;
-        final boolean playing = false;
-
         Label l = new Label("Gesture demo: Swipe, Scroll, Rotate and Zoom");
+        CheckBox swipebtn = new CheckBox("swipe");
+        swipebtn.setSelected(true);
+        CheckBox scrollbtn = new CheckBox("scroll");
+        scrollbtn.setSelected(true);
+        CheckBox zoombtn = new CheckBox("zoom");
+        zoombtn.setSelected(true);
+        CheckBox rotatebtn = new CheckBox("rotate");
+        rotatebtn.setSelected(true);
 
         Button btn = new Button("Back");
         btn.setOnAction(event -> {
                 globalScene.setRoot(mainBox);
-        });
-        
+        });   
         rect = new Rectangle(200, 200, 200, 200);
         rect.setFill(Color.RED);
         rect.setOnSwipeLeft(event -> {
-            rotate(event.getTouchCount(), Rotate.Z_AXIS, rect, playing);
-            event.consume();
+            if (swipebtn.isSelected()) {
+                rotate(-event.getTouchCount(), Rotate.Z_AXIS, rect);
+                event.consume();
+            }
         });
         rect.setOnSwipeRight(event -> {
-            rotate(event.getTouchCount(), Rotate.Z_AXIS, rect, playing);
-            event.consume();
+            if (swipebtn.isSelected()) {
+                rotate(event.getTouchCount(), Rotate.Z_AXIS, rect);
+                event.consume();
+            }
         });
         rect.setOnSwipeUp(event -> {
-            yTranslate(event.getTouchCount(), 0f, -100f, rect, playing);
-            event.consume();
+            if (swipebtn.isSelected()) {
+                yTranslate(event.getTouchCount(), 0f, -100f, rect);
+                event.consume();
+            }
         });
         rect.setOnSwipeDown(event -> {
-            yTranslate(event.getTouchCount(), 0f, 100f, rect, playing);
-            event.consume();
+            if (swipebtn.isSelected()) {
+                yTranslate(event.getTouchCount(), 0f, 100f, rect);
+                event.consume();
+            }
         });
         rect.setOnRotate(event -> {
-            rect.setRotate(rect.getRotate() + event.getAngle());
-            event.consume();
+            if (rotatebtn.isSelected()) {
+                rect.setRotate(rect.getRotate() + event.getAngle());
+                event.consume();
+            }
         });
-
         rect.setOnScroll(event -> {
-            rect.setTranslateX(rect.getTranslateX() + event.getDeltaX());
-            rect.setTranslateY(rect.getTranslateY() + event.getDeltaY());
-            event.consume();
+            if (scrollbtn.isSelected()) {
+                rect.setTranslateX(rect.getTranslateX() + event.getDeltaX());
+                rect.setTranslateY(rect.getTranslateY() + event.getDeltaY());
+                event.consume();
+            }
         });
-
         rect.setOnZoom(event -> {
-            rect.setScaleX(rect.getScaleX() * event.getZoomFactor());
-            rect.setScaleY(rect.getScaleY() * event.getZoomFactor());
-            event.consume();
+            if (zoombtn.isSelected()) {
+                rect.setScaleX(rect.getScaleX() * event.getZoomFactor());
+                rect.setScaleY(rect.getScaleY() * event.getZoomFactor());
+                event.consume();
+            }
         });
-		VBox vb = new VBox(40);
+        VBox vb = new VBox(80);
+        HBox checkBoxes = new HBox(40);
+        checkBoxes.getChildren().addAll(swipebtn, scrollbtn, zoombtn, rotatebtn);
+        checkBoxes.setAlignment(Pos.CENTER);
         vb.setAlignment(Pos.CENTER);
-        vb.getChildren().addAll( l, rect, btn);
+        vb.getChildren().addAll( l, checkBoxes, rect, btn);
         globalScene.setRoot(vb);
     }
 
-    private void rotate(double count, Point3D axis, Rectangle localRect, boolean playing) {
+    private void rotate(double count, Point3D axis, Rectangle localRect) {
         if (playing) {
             return;
         }
@@ -1936,10 +1958,13 @@ public class TestBuilder {
         rt.setAxis(axis);
         rt.setFromAngle(0);
         rt.setToAngle(count * 180);
+        rt.setOnFinished(event -> {
+            playing = false;
+        });
         rt.play();
     }
 
-    private void yTranslate(double count, double fromY, double toY, Rectangle localRect, boolean playing) {
+    private void yTranslate(double count, double fromY, double toY, Rectangle localRect) {
         if (playing) {
             return;
         }
@@ -1950,6 +1975,9 @@ public class TestBuilder {
         tt.setToY(toY);
         tt.setCycleCount(2);
         tt.setAutoReverse(true);
+        tt.setOnFinished(event -> {
+            playing = false;
+        });
         tt.play();
     }   
 }

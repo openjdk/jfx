@@ -26,22 +26,9 @@
 #import <Cocoa/Cocoa.h>
 #import <jni.h>
 
-// used during fullscreen animation for fading in/out the screen
-@interface GlassBackgroundWindow : NSWindow
-{
-        NSWindow                                *trackWindow;
-        CGFloat                                        startingTrackingSize;
-}
-
-- (id)initWithWindow:(NSWindow *)window;
-
-@end
-
 @interface GlassFullscreenWindow : NSWindow
 {
         NSPoint                                        point;
-@public
-        CGDirectDisplayID                displayID;
 }
 
 - (id)initWithContentRect:(NSRect)contentRect withHostView:(NSView *)hostView withView:(NSView *)view withScreen:(NSScreen *)screen withPoint:(NSPoint)point;

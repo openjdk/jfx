@@ -61,14 +61,9 @@ static inline void *_GenerateNoise(int width, int height)
 
 static inline NSView<GlassView>* getGlassView(JNIEnv *env, jlong jPtr)
 {
-    if (jPtr != 0L)
-    {
-        return (NSView<GlassView>*)jlong_to_ptr(jPtr);
-    }
-    else
-    {
-        return nil;
-    }
+    assert(jPtr != 0L);
+
+    return (NSView<GlassView>*)jlong_to_ptr(jPtr);
 }
 
 #pragma mark --- JNI
@@ -347,6 +342,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacView__1getNativeLayer
 {
     LOG("Java_com_sun_glass_ui_mac_MacView__1_getNativeLayer");
     LOG("   view: %p", jPtr);
+    if (!jPtr) return 0L;
     
     jlong ptr = 0L;
     
@@ -372,6 +368,7 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacView__1getNativeRemoteLayerI
 {
     LOG("Java_com_sun_glass_ui_mac_MacView__1_getNativeLayerId");
     LOG("   layer: %p", jPtr);
+    if (!jPtr) return 0;
     
     jint layerId = 0;
     
@@ -397,6 +394,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacView__1hostRemoteLayerId
 (JNIEnv *env, jobject jView, jlong jPtr, jint jRemoteLayerId)
 {
     LOG("Java_com_sun_glass_ui_mac_MacView__1hostRemoteLayerId");
+    if (!jPtr) return;
     
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
@@ -420,6 +418,7 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacView__1getX
 (JNIEnv *env, jobject jView, jlong jPtr)
 {
     LOG("Java_com_sun_glass_ui_mac_MacView__1getX");
+    if (!jPtr) return 0;
     
     jint x = 0;
     
@@ -450,6 +449,7 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacView__1getY
 (JNIEnv *env, jobject jView, jlong jPtr)
 {
     LOG("Java_com_sun_glass_ui_mac_MacView__1getY");
+    if (!jPtr) return 0;
     
     jint y = 0;
     
@@ -484,6 +484,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacView__1setParent
     LOG("Java_com_sun_glass_ui_mac_MacView__1setParent");
     LOG("   view: %p", jPtr);
     LOG("   parent: %p", parentPtr);
+    if (!jPtr) return;
     
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     // TODO: Java_com_sun_glass_ui_mac_MacView__1setParent
@@ -498,6 +499,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacView__1close
 (JNIEnv *env, jobject jView, jlong jPtr)
 {
     LOG("Java_com_sun_glass_ui_mac_MacView__1close");
+    if (!jPtr) return JNI_FALSE;
 
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
@@ -525,6 +527,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacView__1begin
 (JNIEnv *env, jobject jView, jlong jPtr)
 {
     LOG("Java_com_sun_glass_ui_mac_MacView__1begin");
+    if (!jPtr) return;
     
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     NSView<GlassView> *view = getGlassView(env, jPtr);
@@ -545,6 +548,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacView__1end
 (JNIEnv *env, jobject jView, jlong jPtr)
 {
     LOG("Java_com_sun_glass_ui_mac_MacView__1end");
+    if (!jPtr) return;
     
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     NSView<GlassView> *view = getGlassView(env, jPtr);
@@ -565,6 +569,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacView__1scheduleRepaint
 (JNIEnv *env, jobject jView, jlong jPtr)
 {
     LOG("Java_com_sun_glass_ui_mac_MacView__1scheduleRepaint");
+    if (!jPtr) return;
     
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
@@ -585,6 +590,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacView__1enterFullscreen
 (JNIEnv *env, jobject jView, jlong jPtr, jboolean jAnimate, jboolean jKeepRatio, jboolean jHideCursor)
 {
     LOG("Java_com_sun_glass_ui_mac_MacView__1enterFullscreen");
+    if (!jPtr) return JNI_FALSE;
     
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
@@ -607,6 +613,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacView__1exitFullscreen
 (JNIEnv *env, jobject jView, jlong jPtr, jboolean jAnimate)
 {
     LOG("Java_com_sun_glass_ui_mac_MacView__1exitFullscreen");
+    if (!jPtr) return;
     
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
@@ -627,6 +634,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacView__1uploadPixelsDirect
 (JNIEnv *env, jobject jView, jlong jPtr, jobject jBuffer, jint jWidth, jint jHeight)
 {
     LOG("Java_com_sun_glass_ui_mac_MacView__1uploadPixelsDirect");
+    if (!jPtr) return;
     
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     NSView<GlassView> *view = getGlassView(env, jPtr);
@@ -653,6 +661,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacView__1uploadPixelsByteArray
 (JNIEnv *env, jobject jView, jlong jPtr, jbyteArray jArray, jint jOffset, jint jWidth, jint jHeight)
 {
     LOG("Java_com_sun_glass_ui_mac_MacView__1uploadPixelsByteArray");
+    if (!jPtr) return;
     
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     
@@ -687,6 +696,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacView__1uploadPixelsIntArray
 (JNIEnv *env, jobject jView, jlong jPtr, jintArray jArray, jint jOffset, jint jWidth, jint jHeight)
 {
     LOG("Java_com_sun_glass_ui_mac_MacView__1uploadPixelsIntArray");
+    if (!jPtr) return;
     
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     
@@ -725,6 +735,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacView__1enableInputMethodEven
 (JNIEnv *env, jobject jView, jlong ptr, jboolean enable)
 {
     LOG("Java_com_sun_glass_ui_mac_MacView__1enableInputMethodEvents");
+    if (!ptr) return;
 
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;

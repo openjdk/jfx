@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -89,19 +89,19 @@ public abstract class NativeMediaPlayer implements MediaPlayer, MarkerStateListe
      */
     private NativeMedia media;
     private VideoRenderControl videoRenderControl;
-    private final List<WeakReference<MediaErrorListener>> errorListeners = new ArrayList<WeakReference<MediaErrorListener>>();
-    private final List<WeakReference<PlayerStateListener>> playerStateListeners = new ArrayList<WeakReference<PlayerStateListener>>();
-    private final List<WeakReference<PlayerTimeListener>> playerTimeListeners = new ArrayList<WeakReference<PlayerTimeListener>>();
-    private final List<WeakReference<VideoTrackSizeListener>> videoTrackSizeListeners = new ArrayList<WeakReference<VideoTrackSizeListener>>();
-    private final List<WeakReference<VideoRendererListener>> videoUpdateListeners = new ArrayList<WeakReference<VideoRendererListener>>();
-    private final List<WeakReference<VideoFrameRateListener>> videoFrameRateListeners = new ArrayList<WeakReference<VideoFrameRateListener>>();
-    private final List<WeakReference<MarkerListener>> markerListeners = new ArrayList<WeakReference<MarkerListener>>();
-    private final List<WeakReference<BufferListener>> bufferListeners = new ArrayList<WeakReference<BufferListener>>();
-    private final List<WeakReference<AudioSpectrumListener>> audioSpectrumListeners = new ArrayList<WeakReference<AudioSpectrumListener>>();
-    private final List<PlayerStateEvent> cachedStateEvents = new ArrayList<PlayerStateEvent>();
-    private final List<PlayerTimeEvent> cachedTimeEvents = new ArrayList<PlayerTimeEvent>();
-    private final List<BufferProgressEvent> cachedBufferEvents = new ArrayList<BufferProgressEvent>();
-    private final List<MediaErrorEvent> cachedErrorEvents = new ArrayList<MediaErrorEvent>();
+    private final List<WeakReference<MediaErrorListener>> errorListeners = new ArrayList<>();
+    private final List<WeakReference<PlayerStateListener>> playerStateListeners = new ArrayList<>();
+    private final List<WeakReference<PlayerTimeListener>> playerTimeListeners = new ArrayList<>();
+    private final List<WeakReference<VideoTrackSizeListener>> videoTrackSizeListeners = new ArrayList<>();
+    private final List<WeakReference<VideoRendererListener>> videoUpdateListeners = new ArrayList<>();
+    private final List<WeakReference<VideoFrameRateListener>> videoFrameRateListeners = new ArrayList<>();
+    private final List<WeakReference<MarkerListener>> markerListeners = new ArrayList<>();
+    private final List<WeakReference<BufferListener>> bufferListeners = new ArrayList<>();
+    private final List<WeakReference<AudioSpectrumListener>> audioSpectrumListeners = new ArrayList<>();
+    private final List<PlayerStateEvent> cachedStateEvents = new ArrayList<>();
+    private final List<PlayerTimeEvent> cachedTimeEvents = new ArrayList<>();
+    private final List<BufferProgressEvent> cachedBufferEvents = new ArrayList<>();
+    private final List<MediaErrorEvent> cachedErrorEvents = new ArrayList<>();
     private boolean isFirstFrame = true;
     private NewFrameEvent firstFrameEvent = null;
     private double firstFrameTime;
@@ -109,10 +109,10 @@ public abstract class NativeMediaPlayer implements MediaPlayer, MarkerStateListe
     private EventQueueThread eventLoop = new EventQueueThread();
     private int frameWidth = -1;
     private int frameHeight = -1;
-    private AtomicBoolean isMediaPulseEnabled = new AtomicBoolean(false);
+    private final AtomicBoolean isMediaPulseEnabled = new AtomicBoolean(false);
     private final Lock mediaPulseLock = new ReentrantLock();
     private Timer mediaPulseTimer;
-    private Lock markerLock = new ReentrantLock();
+    private final Lock markerLock = new ReentrantLock();
     private boolean checkSeek = false;
     private double timeBeforeSeek = 0.0;
     private double timeAfterSeek = 0.0;
@@ -132,7 +132,7 @@ public abstract class NativeMediaPlayer implements MediaPlayer, MarkerStateListe
     private double decodedFrameRate;
     // --- End decoded frame rate fields
     private PlayerState playerState = PlayerState.UNKNOWN;
-    private Lock disposeLock = new ReentrantLock();
+    private final Lock disposeLock = new ReentrantLock();
     private boolean isDisposed = false;
     private Runnable onDispose;
 
@@ -187,8 +187,8 @@ public abstract class NativeMediaPlayer implements MediaPlayer, MarkerStateListe
      */
     private static class WarningEvent extends PlayerEvent {
 
-        private Object source;
-        private String message;
+        private final Object source;
+        private final String message;
 
         WarningEvent(Object source, String message) {
             this.source = source;
@@ -209,8 +209,8 @@ public abstract class NativeMediaPlayer implements MediaPlayer, MarkerStateListe
      */
     public static class MediaErrorEvent extends PlayerEvent {
 
-        private Object source;
-        private MediaError error;
+        private final Object source;
+        private final MediaError error;
 
         public MediaErrorEvent(Object source, MediaError error) {
             this.source = source;
@@ -232,7 +232,7 @@ public abstract class NativeMediaPlayer implements MediaPlayer, MarkerStateListe
 
     private static class PlayerTimeEvent extends PlayerEvent {
 
-        private double time;
+        private final double time;
 
         public PlayerTimeEvent(double time) {
             this.time = time;
@@ -248,7 +248,7 @@ public abstract class NativeMediaPlayer implements MediaPlayer, MarkerStateListe
      */
     private static class TrackEvent extends PlayerEvent {
 
-        private Track track;
+        private final Track track;
 
         TrackEvent(Track track) {
             this.track = track;
@@ -264,8 +264,8 @@ public abstract class NativeMediaPlayer implements MediaPlayer, MarkerStateListe
      */
     private static class FrameSizeChangedEvent extends PlayerEvent {
 
-        private int width;
-        private int height;
+        private final int width;
+        private final int height;
 
         public FrameSizeChangedEvent(int width, int height) {
             if (width > 0) {
@@ -305,6 +305,7 @@ public abstract class NativeMediaPlayer implements MediaPlayer, MarkerStateListe
          * @param listener the object which provides the VideoUpdateListener
          * callback interface
          */
+        @Override
         public void addVideoRendererListener(VideoRendererListener listener) {
             if (listener != null) {
                 synchronized (firstFrameLock) {
@@ -316,7 +317,7 @@ public abstract class NativeMediaPlayer implements MediaPlayer, MarkerStateListe
                         listener.videoFrameUpdated(firstFrameEvent);
                     }
                 }
-                videoUpdateListeners.add(new WeakReference<VideoRendererListener>(listener));
+                videoUpdateListeners.add(new WeakReference<>(listener));
             }
         }
 
@@ -325,6 +326,7 @@ public abstract class NativeMediaPlayer implements MediaPlayer, MarkerStateListe
          *
          * @param listener to be removed from the player
          */
+        @Override
         public void removeVideoRendererListener(VideoRendererListener listener) {
             if (listener != null) {
                 for (ListIterator<WeakReference<VideoRendererListener>> it = videoUpdateListeners.listIterator(); it.hasNext();) {
@@ -336,12 +338,14 @@ public abstract class NativeMediaPlayer implements MediaPlayer, MarkerStateListe
             }
         }
 
+        @Override
         public void addVideoFrameRateListener(VideoFrameRateListener listener) {
             if (listener != null) {
-                videoFrameRateListeners.add(new WeakReference<VideoFrameRateListener>(listener));
+                videoFrameRateListeners.add(new WeakReference<>(listener));
             }
         }
 
+        @Override
         public void removeVideoFrameRateListener(VideoFrameRateListener listener) {
             if (listener != null) {
                 for (ListIterator<WeakReference<VideoFrameRateListener>> it = videoFrameRateListeners.listIterator(); it.hasNext();) {
@@ -353,10 +357,12 @@ public abstract class NativeMediaPlayer implements MediaPlayer, MarkerStateListe
             }
         }
 
+        @Override
         public int getFrameWidth() {
             return frameWidth;
         }
 
+        @Override
         public int getFrameHeight() {
             return frameHeight;
         }
@@ -373,8 +379,8 @@ public abstract class NativeMediaPlayer implements MediaPlayer, MarkerStateListe
      */
     private class EventQueueThread extends Thread {
 
-        private BlockingQueue<PlayerEvent> eventQueue =
-                new LinkedBlockingQueue<PlayerEvent>();
+        private final BlockingQueue<PlayerEvent> eventQueue =
+                new LinkedBlockingQueue<>();
         private volatile boolean stopped = false;
 
         EventQueueThread() {
@@ -738,7 +744,7 @@ public abstract class NativeMediaPlayer implements MediaPlayer, MarkerStateListe
                 eventQueue.put(new PlayerEvent());
             } catch(InterruptedException ex) {}
         }
-        
+
         private void sendFakeBufferProgressEvent() {
             // Send fake 100% buffer progress event for HLS or !http protcol
             String contentType = media.getLocator().getContentType();
@@ -765,23 +771,23 @@ public abstract class NativeMediaPlayer implements MediaPlayer, MarkerStateListe
     //***** MediaPlayer implementation
     //**************************************************************************
     //***** Listener (un)registration.
+    @Override
     public void addMediaErrorListener(MediaErrorListener listener) {
         if (listener != null) {
-            this.errorListeners.add(new WeakReference<MediaErrorListener>(listener));
+            this.errorListeners.add(new WeakReference<>(listener));
 
             synchronized (cachedErrorEvents) {
                 if (!cachedErrorEvents.isEmpty() && !errorListeners.isEmpty()) {
-                    for (MediaErrorEvent evt : cachedErrorEvents) {
-                        // re-queue this event so the new listener picks it up,
-                        // but it must be done in the event queue thread
+                    cachedErrorEvents.stream().forEach((evt) -> {
                         sendPlayerEvent(evt);
-                    }
+                    });
                     cachedErrorEvents.clear();
                 }
             }
         }
     }
 
+    @Override
     public void removeMediaErrorListener(MediaErrorListener listener) {
         if (listener != null) {
             for (ListIterator<WeakReference<MediaErrorListener>> it = errorListeners.listIterator(); it.hasNext();) {
@@ -793,6 +799,7 @@ public abstract class NativeMediaPlayer implements MediaPlayer, MarkerStateListe
         }
     }
 
+    @Override
     public void addMediaPlayerListener(PlayerStateListener listener) {
         if (listener != null) {
             synchronized (cachedStateEvents) {
@@ -829,11 +836,12 @@ public abstract class NativeMediaPlayer implements MediaPlayer, MarkerStateListe
                     cachedStateEvents.clear();
                 }
 
-                playerStateListeners.add(new WeakReference<PlayerStateListener>(listener));
+                playerStateListeners.add(new WeakReference(listener));
             }
         }
     }
 
+    @Override
     public void removeMediaPlayerListener(PlayerStateListener listener) {
         if (listener != null) {
             for (ListIterator<WeakReference<PlayerStateListener>> it = playerStateListeners.listIterator(); it.hasNext();) {
@@ -845,6 +853,7 @@ public abstract class NativeMediaPlayer implements MediaPlayer, MarkerStateListe
         }
     }
 
+    @Override
     public void addMediaTimeListener(PlayerTimeListener listener) {
         if (listener != null) {
             synchronized (cachedTimeEvents) {
@@ -866,11 +875,12 @@ public abstract class NativeMediaPlayer implements MediaPlayer, MarkerStateListe
                     }
                 }
 
-                playerTimeListeners.add(new WeakReference<PlayerTimeListener>(listener));
+                playerTimeListeners.add(new WeakReference(listener));
             }
         }
     }
 
+    @Override
     public void removeMediaTimeListener(PlayerTimeListener listener) {
         if (listener != null) {
             for (ListIterator<WeakReference<PlayerTimeListener>> it = playerTimeListeners.listIterator(); it.hasNext();) {
@@ -882,15 +892,17 @@ public abstract class NativeMediaPlayer implements MediaPlayer, MarkerStateListe
         }
     }
 
+    @Override
     public void addVideoTrackSizeListener(VideoTrackSizeListener listener) {
         if (listener != null) {
             if (frameWidth != -1 && frameHeight != -1) {
                 listener.onSizeChanged(frameWidth, frameHeight);
             }
-            videoTrackSizeListeners.add(new WeakReference<VideoTrackSizeListener>(listener));
+            videoTrackSizeListeners.add(new WeakReference(listener));
         }
     }
 
+    @Override
     public void removeVideoTrackSizeListener(VideoTrackSizeListener listener) {
         if (listener != null) {
             for (ListIterator<WeakReference<VideoTrackSizeListener>> it = videoTrackSizeListeners.listIterator(); it.hasNext();) {
@@ -902,12 +914,14 @@ public abstract class NativeMediaPlayer implements MediaPlayer, MarkerStateListe
         }
     }
 
+    @Override
     public void addMarkerListener(MarkerListener listener) {
         if (listener != null) {
-            markerListeners.add(new WeakReference<MarkerListener>(listener));
+            markerListeners.add(new WeakReference(listener));
         }
     }
 
+    @Override
     public void removeMarkerListener(MarkerListener listener) {
         if (listener != null) {
             for (ListIterator<WeakReference<MarkerListener>> it = markerListeners.listIterator(); it.hasNext();) {
@@ -919,24 +933,24 @@ public abstract class NativeMediaPlayer implements MediaPlayer, MarkerStateListe
         }
     }
 
+    @Override
     public void addBufferListener(BufferListener listener) {
         if (listener != null) {
             synchronized (cachedBufferEvents) {
                 if (!cachedBufferEvents.isEmpty() && bufferListeners.isEmpty()) {
-                    // Forward all cached state events to first listener to register.
-                    for (Iterator<BufferProgressEvent> it = cachedBufferEvents.iterator(); it.hasNext();) {
-                        BufferProgressEvent evt = it.next();
+                    cachedBufferEvents.stream().forEach((evt) -> {
                         listener.onBufferProgress(evt);
-                    }
+                    });
                     // Clear buffer event cache.
                     cachedBufferEvents.clear();
                 }
 
-                bufferListeners.add(new WeakReference<BufferListener>(listener));
+                bufferListeners.add(new WeakReference(listener));
             }
         }
     }
 
+    @Override
     public void removeBufferListener(BufferListener listener) {
         if (listener != null) {
             for (ListIterator<WeakReference<BufferListener>> it = bufferListeners.listIterator(); it.hasNext();) {
@@ -948,12 +962,14 @@ public abstract class NativeMediaPlayer implements MediaPlayer, MarkerStateListe
         }
     }
 
+    @Override
     public void addAudioSpectrumListener(AudioSpectrumListener listener) {
         if (listener != null) {
-            audioSpectrumListeners.add(new WeakReference<AudioSpectrumListener>(listener));
+            audioSpectrumListeners.add(new WeakReference(listener));
         }
     }
 
+    @Override
     public void removeAudioSpectrumListener(AudioSpectrumListener listener) {
         if (listener != null) {
             for (ListIterator<WeakReference<AudioSpectrumListener>> it = audioSpectrumListeners.listIterator(); it.hasNext();) {
@@ -966,14 +982,17 @@ public abstract class NativeMediaPlayer implements MediaPlayer, MarkerStateListe
     }
 
     //***** Control functions
+    @Override
     public VideoRenderControl getVideoRenderControl() {
         return videoRenderControl;
     }
 
+    @Override
     public Media getMedia() {
         return media;
     }
 
+    @Override
     public void setAudioSyncDelay(long delay) {
         try {
             playerSetAudioSyncDelay(delay);
@@ -982,6 +1001,7 @@ public abstract class NativeMediaPlayer implements MediaPlayer, MarkerStateListe
         }
     }
 
+    @Override
     public long getAudioSyncDelay() {
         try {
             return playerGetAudioSyncDelay();
@@ -991,6 +1011,7 @@ public abstract class NativeMediaPlayer implements MediaPlayer, MarkerStateListe
         return 0;
     }
 
+    @Override
     public void play() {
         try {
             if (isStartTimeUpdated) {
@@ -1003,6 +1024,7 @@ public abstract class NativeMediaPlayer implements MediaPlayer, MarkerStateListe
         }
     }
 
+    @Override
     public void stop() {
         try {
             playerStop();
@@ -1013,6 +1035,7 @@ public abstract class NativeMediaPlayer implements MediaPlayer, MarkerStateListe
         }
     }
 
+    @Override
     public void pause() {
         try {
             playerPause();
@@ -1021,6 +1044,7 @@ public abstract class NativeMediaPlayer implements MediaPlayer, MarkerStateListe
         }
     }
 
+    @Override
     public float getRate() {
         try {
             return playerGetRate();
@@ -1031,6 +1055,7 @@ public abstract class NativeMediaPlayer implements MediaPlayer, MarkerStateListe
     }
 
     //***** Public properties
+    @Override
     public void setRate(float rate) {
         try {
             playerSetRate(rate);
@@ -1040,6 +1065,7 @@ public abstract class NativeMediaPlayer implements MediaPlayer, MarkerStateListe
         }
     }
 
+    @Override
     public double getPresentationTime() {
         try {
             return playerGetPresentationTime();
@@ -1049,6 +1075,7 @@ public abstract class NativeMediaPlayer implements MediaPlayer, MarkerStateListe
         return -1.0;
     }
 
+    @Override
     public float getVolume() {
         try {
             return playerGetVolume();
@@ -1058,6 +1085,7 @@ public abstract class NativeMediaPlayer implements MediaPlayer, MarkerStateListe
         return 0;
     }
 
+    @Override
     public void setVolume(float vol) {
         if (vol < 0.0F) {
             vol = 0.0F;
@@ -1072,6 +1100,7 @@ public abstract class NativeMediaPlayer implements MediaPlayer, MarkerStateListe
         }
     }
 
+    @Override
     public boolean getMute() {
         try {
             return playerGetMute();
@@ -1085,6 +1114,7 @@ public abstract class NativeMediaPlayer implements MediaPlayer, MarkerStateListe
      * Enables/disable mute. If mute is enabled then disabled, the previous
      * volume goes into effect.
      */
+    @Override
     public void setMute(boolean enable) {
         try {
             playerSetMute(enable);
@@ -1093,6 +1123,7 @@ public abstract class NativeMediaPlayer implements MediaPlayer, MarkerStateListe
         }
     }
 
+    @Override
     public float getBalance() {
         try {
             return playerGetBalance();
@@ -1102,6 +1133,7 @@ public abstract class NativeMediaPlayer implements MediaPlayer, MarkerStateListe
         return 0;
     }
 
+    @Override
     public void setBalance(float bal) {
         if (bal < -1.0F) {
             bal = -1.0F;
@@ -1116,10 +1148,13 @@ public abstract class NativeMediaPlayer implements MediaPlayer, MarkerStateListe
         }
     }
 
+    @Override
     public abstract AudioEqualizer getEqualizer();
 
+    @Override
     public abstract AudioSpectrum getAudioSpectrum();
 
+    @Override
     public double getDuration() {
         try {
             return playerGetDuration();
@@ -1132,6 +1167,7 @@ public abstract class NativeMediaPlayer implements MediaPlayer, MarkerStateListe
     /**
      * Gets the time within the duration of the media to start playing.
      */
+    @Override
     public double getStartTime() {
         return startTime;
     }
@@ -1139,6 +1175,7 @@ public abstract class NativeMediaPlayer implements MediaPlayer, MarkerStateListe
     /**
      * Sets the start time within the media to play.
      */
+    @Override
     public void setStartTime(double startTime) {
         try {
             markerLock.lock();
@@ -1156,6 +1193,7 @@ public abstract class NativeMediaPlayer implements MediaPlayer, MarkerStateListe
     /**
      * Gets the time within the duration of the media to stop playing.
      */
+    @Override
     public double getStopTime() {
         return stopTime;
     }
@@ -1163,6 +1201,7 @@ public abstract class NativeMediaPlayer implements MediaPlayer, MarkerStateListe
     /**
      * Sets the stop time within the media to stop playback.
      */
+    @Override
     public void setStopTime(double stopTime) {
         try {
             markerLock.lock();
@@ -1174,6 +1213,7 @@ public abstract class NativeMediaPlayer implements MediaPlayer, MarkerStateListe
         }
     }
 
+    @Override
     public void seek(double streamTime) {
         if (playerState == PlayerState.STOPPED) {
             return; // No seek in stopped state
@@ -1261,10 +1301,12 @@ public abstract class NativeMediaPlayer implements MediaPlayer, MarkerStateListe
      *
      * @return the current player state.
      */
+    @Override
     public PlayerState getState() {
         return playerState;
     }
 
+    @Override
     final public void dispose() {
         disposeLock.lock();
         try {
@@ -1451,7 +1493,7 @@ public abstract class NativeMediaPlayer implements MediaPlayer, MarkerStateListe
         if (!language.equals("und")) {
             locale = new Locale(language);
         }
-        
+
         Track track = new AudioTrack(enabled, trackID, name,
                 locale, Encoding.toEncoding(encoding),
                 numChannels, channelMask, sampleRate);
@@ -1503,6 +1545,7 @@ public abstract class NativeMediaPlayer implements MediaPlayer, MarkerStateListe
         sendPlayerEvent(new AudioSpectrumEvent(getAudioSpectrum(), timestamp, duration));
     }
 
+    @Override
     public void markerStateChanged(boolean hasMarkers) {
         if (hasMarkers) {
             markerLock.lock();
@@ -1546,16 +1589,16 @@ public abstract class NativeMediaPlayer implements MediaPlayer, MarkerStateListe
     }
 
     boolean doMediaPulseTask() {
-        if (this.isMediaPulseEnabled.get()) {            
+        if (this.isMediaPulseEnabled.get()) {
             disposeLock.lock();
 
             if (isDisposed) {
                 disposeLock.unlock();
                 return false;
             }
-            
+
             double thisTime = getPresentationTime();
-            
+
             markerLock.lock();
 
             try {
@@ -1626,6 +1669,15 @@ public abstract class NativeMediaPlayer implements MediaPlayer, MarkerStateListe
 
         return true;
     }
+
+    /* Audio EQ and spectrum creation, used by sub-classes */
+    protected AudioEqualizer createNativeAudioEqualizer(long nativeRef) {
+        return new NativeAudioEqualizer(nativeRef);
+    }
+
+    protected AudioSpectrum createNativeAudioSpectrum(long nativeRef) {
+        return new NativeAudioSpectrum(nativeRef);
+    }
 }
 
 class MediaPulseTask extends TimerTask {
@@ -1633,7 +1685,7 @@ class MediaPulseTask extends TimerTask {
     WeakReference<NativeMediaPlayer> playerRef;
 
     MediaPulseTask(NativeMediaPlayer player) {
-        playerRef = new WeakReference<NativeMediaPlayer>(player);
+        playerRef = new WeakReference<>(player);
     }
 
     @Override

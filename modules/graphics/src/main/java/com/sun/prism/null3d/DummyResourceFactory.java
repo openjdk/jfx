@@ -69,6 +69,12 @@ class DummyResourceFactory extends BaseShaderFactory {
         return new DummyTexture(context, format, wrapMode, w, h);
     }
 
+    @Override
+    public DummyTexture createTexture(PixelFormat format, Usage usagehint,
+            WrapMode wrapMode, int w, int h, boolean useMipmap) {
+        return createTexture(format, usagehint, wrapMode, w, h);
+    }
+
     public int getRTTWidth(int w, WrapMode wrapMode) {
         return w;
     }

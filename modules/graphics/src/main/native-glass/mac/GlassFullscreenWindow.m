@@ -25,102 +25,11 @@
 
 #import "GlassFullscreenWindow.h"
 
-@implementation GlassBackgroundWindow : NSWindow
-
-- (id)initWithWindow:(NSWindow *)window
-{
-    self = [super initWithContentRect:[[window screen] frame] styleMask:NSBorderlessWindowMask backing:NSBackingStoreBuffered defer:NO screen:[window screen]];
-    if (self != nil)
-    {
-        self->trackWindow = [window retain];
-        //[self->trackWindow setDelegate:self];
-        [self setAlphaValue:0.0f];
-        
-        CGFloat ratioWidth = ([self->trackWindow frame].size.width/[[self->trackWindow screen] frame].size.width);
-        CGFloat ratioHeight = ([self->trackWindow frame].size.height/[[self->trackWindow screen] frame].size.height);
-        if (ratioWidth > ratioHeight)
-        {
-            self->startingTrackingSize = [window frame].size.width;
-        }
-        else
-        {
-            self->startingTrackingSize = [window frame].size.height;
-        }
-        
-        [self useOptimizedDrawing:NO];
-    }
-    return self;
-}
-
-- (void)dealloc
-{
-    [self->trackWindow release];
-    
-    [super dealloc];
-}
-
-- (void)windowDidResize:(NSNotification *)notification
-{
-    CGFloat alpha = 0.0f;
-    
-    CGFloat ratioWidth = ([self->trackWindow frame].size.width/[[self->trackWindow screen] frame].size.width);
-    CGFloat ratioHeight = ([self->trackWindow frame].size.height/[[self->trackWindow screen] frame].size.height);
-    if (ratioWidth > ratioHeight)
-    {
-        CGFloat currentTrackingWindowSize = [self->trackWindow frame].size.width - self->startingTrackingSize;
-        alpha = (currentTrackingWindowSize / ([[self->trackWindow screen] frame].size.width - self->startingTrackingSize));
-    }
-    else
-    {
-        CGFloat currentTrackingWindowSize = [self->trackWindow frame].size.height - self->startingTrackingSize;
-        alpha = (currentTrackingWindowSize / ([[self->trackWindow screen] frame].size.height - self->startingTrackingSize));
-    }
-    
-    [self setAlphaValue:(alpha*alpha)]; // linear
-}
-
-- (BOOL)isReleasedWhenClosed
-{
-    return YES;
-}
-
-- (BOOL)isOpaque
-{
-    return NO;
-}
-
-- (BOOL)hasShadow
-{
-    return NO;
-}
-
-- (BOOL)canBecomeMainWindow
-{
-    return NO;
-}
-
-- (BOOL)canBecomeKeyWindow
-{
-    return NO;
-}
-
-- (BOOL)showsResizeIndicator
-{
-    return NO;
-}
-
-- (NSColor *)backgroundColor
-{
-    return [NSColor blackColor];
-}
-
-@end
-
 @implementation GlassFullscreenWindow : NSWindow
 
 - (id)initWithContentRect:(NSRect)contentRect withHostView:(NSView *)hostView withView:(NSView *)view withScreen:(NSScreen *)screen withPoint:(NSPoint)p
 {
-    self = [super initWithContentRect:contentRect styleMask:NSBorderlessWindowMask backing:NSBackingStoreBuffered defer:NO screen:screen];
+    self = [super initWithContentRect:contentRect styleMask:(NSBorderlessWindowMask|NSResizableWindowMask) backing:NSBackingStoreBuffered defer:NO screen:screen];
     if (self != nil)
     {
         self->point = p;
@@ -129,7 +38,7 @@
         [self setContentView:hostView];
         [self setInitialFirstResponder:view];
         [self makeFirstResponder:view];
-        [self setLevel:NSScreenSaverWindowLevel];
+        [self setCollectionBehavior:NSWindowCollectionBehaviorFullScreenPrimary];
         
         [self setBackgroundColor:[NSColor colorWithCalibratedRed:0.0f green:0.0f blue:0.0f alpha:0.0f]];
         
@@ -166,11 +75,6 @@
 - (BOOL)canBecomeKeyWindow
 {
     return YES;
-}
-
-- (BOOL)showsResizeIndicator
-{
-    return NO;
 }
 
 - (NSPoint)point

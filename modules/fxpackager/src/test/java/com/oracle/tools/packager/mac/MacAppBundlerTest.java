@@ -37,6 +37,7 @@ import org.junit.After;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -60,6 +61,8 @@ public class MacAppBundlerTest {
     static File appResourcesDir;
     static File fakeMainJar;
     static File hdpiIcon;
+    static String runtimeJdk;
+    static String runtimeJre;
     static Set<File> appResources;
     static boolean retain = false;
 
@@ -68,11 +71,15 @@ public class MacAppBundlerTest {
         // only run on mac
         Assume.assumeTrue(System.getProperty("os.name").toLowerCase().contains("os x"));
 
+        runtimeJdk = System.getenv("PACKAGER_JDK_ROOT");
+        runtimeJre = System.getenv("PACKAGER_JRE_ROOT");
+
         // and only if we have the correct JRE settings
         String jre = System.getProperty("java.home").toLowerCase();
-        Assume.assumeTrue(jre.endsWith("/contents/home/jre") || jre.endsWith("/contents/home/jre"));
+        Assume.assumeTrue(runtimeJdk != null || jre.endsWith("/contents/home/jre") || jre.endsWith("/contents/home/jre"));
 
         Log.setLogger(new Log.Logger(true));
+        Log.setDebug(true);
 
         retain = Boolean.parseBoolean(System.getProperty("RETAIN_PACKAGER_TESTS"));
 
@@ -121,6 +128,91 @@ public class MacAppBundlerTest {
         }
     }
 
+
+    @Test
+    public void testValidateVersion() {
+        MacAppBundler b = new MacAppBundler();
+        String validVersions[] = {"1", "255", "1.0", "1.0.0", "255.255.0", "255.255.6000"};
+        String invalidVersions[] = {null, "alpha", "1.0-alpha", "0.300", "-300", "1.-1", "1.1.-1"};
+
+        for(String v: validVersions) {
+            assertTrue("Expect to be valid ["+v+"]",
+                    MacAppBundler.validCFBundleVersion(v));
+            try {
+                Map<String, Object> params = new HashMap<>();
+                params.put(BUILD_ROOT.getID(), tmpBase);
+                params.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+
+                if (runtimeJdk != null) {
+                    params.put(MAC_RUNTIME.getID(), runtimeJdk);
+                }
+
+                params.put(VERSION.getID(), v);
+                b.validate(params);
+            } catch (ConfigException ce) {
+                ce.printStackTrace();
+                assertTrue("Expect to be valid via '" + VERSION.getID() + "' ["+v+"]",
+                        false);
+            } catch (UnsupportedPlatformException ignore) {
+            }
+            try {
+                Map<String, Object> params = new HashMap<>();
+                params.put(BUILD_ROOT.getID(), tmpBase);
+                params.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+
+                if (runtimeJdk != null) {
+                    params.put(MAC_RUNTIME.getID(), runtimeJdk);
+                }
+
+                params.put(MAC_CF_BUNDLE_VERSION.getID(), v);
+                b.validate(params);
+            } catch (ConfigException ce) {
+                assertTrue("Expect to be valid via '" + VERSION.getID() + "' ["+v+"]",
+                        false);
+            } catch (UnsupportedPlatformException ignore) {
+            }
+        }
+
+        for(String v: invalidVersions) {
+            assertFalse("Expect to be invalid ["+v+"]",
+                    MacAppBundler.validCFBundleVersion(v));
+            try {
+                Map<String, Object> params = new HashMap<>();
+                params.put(BUILD_ROOT.getID(), tmpBase);
+                params.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+
+                if (runtimeJdk != null) {
+                    params.put(MAC_RUNTIME.getID(), runtimeJdk);
+                }
+
+                params.put(VERSION.getID(), v);
+                b.validate(params);
+                assertFalse("Invalid appVersion is not the mac.CFBundleVersion", MAC_CF_BUNDLE_VERSION.fetchFrom(params).equals(VERSION.fetchFrom(params)));
+            } catch (ConfigException ce) {
+                ce.printStackTrace();
+                assertTrue("Expect to be ignored when invalid via '" + VERSION.getID() + "' ["+v+"]",
+                        false);
+            } catch (UnsupportedPlatformException ignore) {
+            }
+            try {
+                Map<String, Object> params = new HashMap<>();
+                params.put(BUILD_ROOT.getID(), tmpBase);
+                params.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+
+                if (runtimeJdk != null) {
+                    params.put(MAC_RUNTIME.getID(), runtimeJdk);
+                }
+
+                params.put(MAC_CF_BUNDLE_VERSION.getID(), v);
+                b.validate(params);
+                assertTrue("Expect to be invalid via '" + VERSION.getID() + "' ["+v+"]",
+                        false);
+            } catch (ConfigException | UnsupportedPlatformException ignore) {
+            }
+        }
+    }
+
+
     /**
      * See if smoke comes out
      */
@@ -139,22 +231,92 @@ public class MacAppBundlerTest {
 
         bundleParams.put(APP_NAME.getID(), "Smoke Test App");
         bundleParams.put(MAC_CF_BUNDLE_NAME.getID(), "Smoke");
-        bundleParams.put(MAIN_CLASS.getID(), "hello.TestPackager");
+        bundleParams.put(MAIN_CLASS.getID(), "hello.HelloRectangle");
         bundleParams.put(PREFERENCES_ID.getID(), "the/really/long/preferences/id");
         bundleParams.put(MAIN_JAR.getID(),
                 new RelativeFileSet(fakeMainJar.getParentFile(),
                         new HashSet<>(Arrays.asList(fakeMainJar)))
         );
-        bundleParams.put(CLASSPATH.getID(), fakeMainJar.toString());
+        bundleParams.put(CLASSPATH.getID(), "mainApp.jar");
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
         bundleParams.put(VERBOSE.getID(), true);
         bundleParams.put(DEVELOPER_ID_APP_SIGNING_KEY.getID(), null); // force no signing
-        bundleParams.put(ICON.getID(), "java-logo2.gif"); // force no signing
+
+        if (runtimeJdk != null) {
+            bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
+        }
 
         boolean valid = bundler.validate(bundleParams);
         assertTrue(valid);
 
         File result = bundler.execute(bundleParams, new File(workDir, "smoke"));
+        System.err.println("Bundle at - " + result);
+        assertNotNull(result);
+        assertTrue(result.exists());
+    }
+
+    /**
+     * Set File Association
+     */
+    @Test
+    public void testFileAssociation()
+        throws IOException, ConfigException, UnsupportedPlatformException
+    {
+        testFileAssociation("FASmoke 1", "Bogus File", "bogus", "application/x-vnd.test-bogus",
+                            new File(appResourcesDir, "test.icns"));        
+    }
+    
+    @Test
+    public void testFileAssociationWithNullExtension()
+        throws IOException, ConfigException, UnsupportedPlatformException
+    {
+        // association with no extension is still valid case (see RT-38625)
+        testFileAssociation("FASmoke null", "Bogus File", null, "application/x-vnd.test-bogus",
+                            new File(appResourcesDir, "test.icns"));
+    }
+
+    private void testFileAssociation(String appName, String description, String extensions,
+                                     String contentType, File icon)
+        throws IOException, ConfigException, UnsupportedPlatformException
+    {
+        AbstractBundler bundler = new MacAppBundler();
+
+        assertNotNull(bundler.getName());
+        assertNotNull(bundler.getID());
+        assertNotNull(bundler.getDescription());
+        //assertNotNull(bundler.getBundleParameters());
+
+        Map<String, Object> bundleParams = new HashMap<>();
+
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+
+        if (runtimeJdk != null) {
+            bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
+        }
+
+        bundleParams.put(APP_NAME.getID(), appName);
+        bundleParams.put(MAIN_CLASS.getID(), "hello.HelloRectangle");
+        bundleParams.put(MAIN_JAR.getID(),
+                new RelativeFileSet(fakeMainJar.getParentFile(),
+                        new HashSet<>(Arrays.asList(fakeMainJar)))
+        );
+        bundleParams.put(CLASSPATH.getID(), "mainApp.jar");
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        bundleParams.put(VERBOSE.getID(), true);
+        bundleParams.put(DEVELOPER_ID_APP_SIGNING_KEY.getID(), null); // force no signing
+
+        Map<String, Object> fileAssociation = new HashMap<>();
+        fileAssociation.put(FA_DESCRIPTION.getID(), description);
+        fileAssociation.put(FA_EXTENSIONS.getID(), extensions);
+        fileAssociation.put(FA_CONTENT_TYPE.getID(), contentType);
+        fileAssociation.put(FA_ICON.getID(), icon);
+
+        bundleParams.put(FILE_ASSOCIATIONS.getID(), Arrays.asList(fileAssociation));
+
+        boolean valid = bundler.validate(bundleParams);
+        assertTrue(valid);
+
+        File result = bundler.execute(bundleParams, new File(workDir, APP_FS_NAME.fetchFrom(bundleParams)));
         System.err.println("Bundle at - " + result);
         assertNotNull(result);
         assertTrue(result.exists());
@@ -178,10 +340,14 @@ public class MacAppBundlerTest {
 
         bundleParams.put(APP_NAME.getID(), "Quarantined Test App");
         bundleParams.put(MAC_CF_BUNDLE_NAME.getID(), "Quarantine");
-        bundleParams.put(MAIN_CLASS.getID(), "hello.TestPackager");
+        bundleParams.put(MAIN_CLASS.getID(), "hello.HelloRectangle");
         bundleParams.put(PREFERENCES_ID.getID(), "the/really/long/preferences/id");
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
         bundleParams.put(VERBOSE.getID(), true);
+
+        if (runtimeJdk != null) {
+            bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
+        }
 
         boolean valid = bundler.validate(bundleParams);
         assertTrue(valid);
@@ -219,12 +385,45 @@ public class MacAppBundlerTest {
 
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
 
+        if (runtimeJdk != null) {
+            bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
+        }
+
         File output = bundler.execute(bundleParams, new File(workDir, "BareMinimum"));
         System.err.println("Bundle at - " + output);
         assertNotNull(output);
         assertTrue(output.exists());
     }
 
+    /**
+     * Test with unicode in places we expect it to be
+     */
+    @Test
+    public void unicodeConfig() throws IOException, ConfigException, UnsupportedPlatformException {
+        Bundler bundler = new MacAppBundler();
+
+        Map<String, Object> bundleParams = new HashMap<>();
+
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+
+        bundleParams.put(APP_NAME.getID(), "хелловорлд");
+        bundleParams.put(TITLE.getID(), "ХеллоВорлд аппликейшн");
+        bundleParams.put(VENDOR.getID(), "Оракл девелопмент");
+        bundleParams.put(DESCRIPTION.getID(), "крайне большое описание со странными символами");
+
+        if (runtimeJdk != null) {
+            bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
+        }
+
+        bundler.validate(bundleParams);
+
+        File output = bundler.execute(bundleParams, new File(workDir, "Unicode"));
+        System.err.println("Bundle at - " + output);
+        assertNotNull(output);
+        assertTrue(output.exists());
+    }
 
     /**
      * Test a misconfiguration where the runtime is misconfigured.
@@ -244,6 +443,26 @@ public class MacAppBundlerTest {
         bundler.validate(bundleParams);
     }
 
+    /**
+     * Test a misconfiguration where signature is requested but no key is kept.
+     */
+    @Test(expected = ConfigException.class)
+    public void signButNoCert() throws IOException, ConfigException, UnsupportedPlatformException {
+        Bundler bundler = new MacAppBundler();
+
+        Map<String, Object> bundleParams = new HashMap<>();
+
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+        bundleParams.put(VERBOSE.getID(), true);
+
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+
+        bundleParams.put(SIGN_BUNDLE.getID(), true);
+        bundleParams.put(DEVELOPER_ID_APP_SIGNING_KEY.getID(), null);
+
+        bundler.validate(bundleParams);
+    }
+
     @Test
     public void configureEverything() throws Exception {
         AbstractBundler bundler = new MacAppBundler();
@@ -253,7 +472,9 @@ public class MacAppBundlerTest {
 
         bundleParams.put(APP_NAME.getID(), "Everything App Name");
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        bundleParams.put(ARGUMENTS.getID(), Arrays.asList("He Said", "She Said"));
         bundleParams.put(BUNDLE_ID_SIGNING_PREFIX.getID(), "everything.signing.prefix.");
+        bundleParams.put(CLASSPATH.getID(), "mainApp.jar");
         bundleParams.put(DEVELOPER_ID_APP_SIGNING_KEY.getID(), "Developer ID Application");
         bundleParams.put(ICON_ICNS.getID(), hdpiIcon);
         bundleParams.put(JVM_OPTIONS.getID(), "-Xms128M");
@@ -261,11 +482,12 @@ public class MacAppBundlerTest {
         bundleParams.put(MAC_CATEGORY.getID(), "public.app-category.developer-tools");
         bundleParams.put(MAC_CF_BUNDLE_IDENTIFIER.getID(), "com.example.everything.cf-bundle-identifier");
         bundleParams.put(MAC_CF_BUNDLE_NAME.getID(), "Everything CF Bundle Name");
-        bundleParams.put(MAC_RUNTIME.getID(), System.getProperty("java.home"));
-        bundleParams.put(MAIN_CLASS.getID(), "hello.TestPackager");
+        bundleParams.put(MAC_CF_BUNDLE_VERSION.getID(), "8.2.0");
+        bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk == null ? System.getProperty("java.home") : runtimeJdk);
+        bundleParams.put(MAIN_CLASS.getID(), "hello.HelloRectangle");
         bundleParams.put(MAIN_JAR.getID(), "mainApp.jar");
-        bundleParams.put(CLASSPATH.getID(), "mainApp.jar");
-        bundleParams.put(PREFERENCES_ID.getID(), "everything.preferences.id");
+        bundleParams.put(PREFERENCES_ID.getID(), "everything/preferences/id");
+        bundleParams.put(PRELOADER_CLASS.getID(), "hello.HelloPreloader");
         bundleParams.put(USER_JVM_OPTIONS.getID(), "-Xmx=256M\n");
         bundleParams.put(VERSION.getID(), "1.2.3.4");
 
@@ -293,6 +515,7 @@ public class MacAppBundlerTest {
         // add verbose now that we are done scoping out parameters
         bundleParams.put(BUILD_ROOT.getID(), tmpBase);
         bundleParams.put(VERBOSE.getID(), true);
+        bundleParams.put(SIGN_BUNDLE.getID(), false);
 
         // assert it validates
         boolean valid = bundler.validate(bundleParams);
@@ -309,4 +532,92 @@ public class MacAppBundlerTest {
         assertNotNull(result);
         assertTrue(result.exists());
     }
+
+    @Ignore // this test is noisy and only valid for by-hand validation
+    @Test
+    public void jvmUserOptionsTest() throws IOException, ConfigException, UnsupportedPlatformException {
+
+        for (String name : Arrays.asList("", "example", "com.example", "com.example.helloworld", "com.example.hello.world", "com.example.hello.world.app")) {
+
+            AbstractBundler bundler = new MacAppBundler();
+
+            Map<String, Object> bundleParams = new HashMap<>();
+
+            bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+
+            bundleParams.put(APP_NAME.getID(), "User JVM Options App - " + name);
+            bundleParams.put(MAC_CF_BUNDLE_NAME.getID(), name + ".application");
+            bundleParams.put(MAIN_CLASS.getID(), "hello.HelloRectangle");
+            bundleParams.put(IDENTIFIER.getID(), name);
+            bundleParams.put(PREFERENCES_ID.getID(), name.replace(".", "/"));
+            bundleParams.put(MAIN_JAR.getID(),
+                    new RelativeFileSet(fakeMainJar.getParentFile(),
+                            new HashSet<>(Arrays.asList(fakeMainJar)))
+            );
+            bundleParams.put(CLASSPATH.getID(), "mainApp.jar");
+            bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+            bundleParams.put(VERBOSE.getID(), true);
+            bundleParams.put(DEVELOPER_ID_APP_SIGNING_KEY.getID(), null); // force no signing
+
+            if (runtimeJdk != null) {
+                bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
+            }
+
+            boolean valid = bundler.validate(bundleParams);
+            assertTrue(valid);
+
+            File result = bundler.execute(bundleParams, new File(workDir, "UserOpts-" + name.replace(".", "-")));
+            System.err.println("Bundle at - " + result);
+            assertNotNull(result);
+            assertTrue(result.exists());
+        }
+    }
+
+
+    /**
+     * User a JRE instead of a JDK
+     */
+    @Test
+    public void testJRE() throws IOException, ConfigException, UnsupportedPlatformException {
+        String jre = runtimeJre == null ? "/Library/Internet Plug-Ins/JavaAppletPlugin.plugin/" : runtimeJre;
+        Assume.assumeTrue(new File(jre).isDirectory());
+
+        try {
+            Bundler bundler = new MacAppBundler();
+
+            Map<String, Object> bundleParams = new HashMap<>();
+
+            // not part of the typical setup, for testing
+            bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+
+            bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+            bundleParams.put(MAC_RUNTIME.getID(), jre);
+
+            boolean valid = bundler.validate(bundleParams);
+            assertTrue(valid);
+
+            File output = bundler.execute(bundleParams, new File(workDir, "JRETest"));
+            System.err.println("Bundle at - " + output);
+            assertNotNull(output);
+            assertTrue(output.exists());
+
+            // if we get here we fail
+            assertTrue("ConfigException should have been thrown", false);
+        } catch (ConfigException ignore) {
+            // expected
+        }
+    }
+
+    /**
+     * Verify a match on too many keys doesn't blow things up
+     */
+    @Test
+    public void testTooManyKeyMatches() {
+        Assume.assumeTrue(MacBaseInstallerBundler.findKey("Developer ID Application:", true) != null);
+        assertTrue(MacBaseInstallerBundler.findKey("Developer", true) == null);
+        assertTrue(MacBaseInstallerBundler.findKey("A completely bogus key that should never realistically exist unless we are attempting to falsely break the tests", true) == null);
+    }
+    
+
+
 }

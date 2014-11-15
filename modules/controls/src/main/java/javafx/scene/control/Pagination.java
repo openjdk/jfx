@@ -39,9 +39,8 @@ import javafx.css.CssMetaData;
 import javafx.css.StyleableIntegerProperty;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
+import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
-//import javafx.scene.accessibility.Attribute;
-//import javafx.scene.accessibility.Role;
 import javafx.util.Callback;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.skin.PaginationSkin;
@@ -127,6 +126,7 @@ public class Pagination extends Control {
      */
     public Pagination(int pageCount, int pageIndex) {
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
+        setAccessibleRole(AccessibleRole.PAGINATION);
         setPageCount(pageCount);
         setCurrentPageIndex(pageIndex);
     }
@@ -376,20 +376,4 @@ public class Pagination extends Control {
         return getClassCssMetaData();
     }
 
-
-    /***************************************************************************
-     *                                                                         *
-     * Accessibility handling                                                  *
-     *                                                                         *
-     **************************************************************************/
-
-//    /** @treatAsPrivate */
-//    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//        switch (attribute) {
-//            case ROLE: return Role.PAGINATION;
-//            case PAGES: // Skin
-//            case SELECTED_PAGE: // Skin
-//            default: return super.accGetAttribute(attribute, parameters);
-//        }
-//    }
 }

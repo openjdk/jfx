@@ -117,7 +117,7 @@ public class TableColumnDriver extends AbstractDriver {
         final TableColumn<?,?> tc = (TableColumn<?,?>) fxomObject.getSceneGraphObject();
         final TableView<?> tv = tc.getTableView();
         final TableViewDesignInfoX di = new TableViewDesignInfoX();
-        final Bounds tcBounds = tv.localToScene(di.getColumnBounds(tc));
+        final Bounds tcBounds = tv.localToScene(di.getColumnBounds(tc), true /* rootScene */);
         
         return tcBounds.intersects(bounds);
     }

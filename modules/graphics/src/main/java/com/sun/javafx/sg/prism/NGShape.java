@@ -51,6 +51,7 @@ public abstract class NGShape extends NGNode {
      * this NGShape changes either in geometry or visuals.
      */
     private RTTexture cached3D;
+    private double cachedW, cachedH;
     protected Paint fillPaint;
     protected Paint drawPaint;
     protected BasicStroke drawStroke;
@@ -166,6 +167,15 @@ public abstract class NGShape extends NGNode {
         }
     }
 
+    private static double hypot(double x, double y, double z) {
+        return Math.sqrt(x * x + y * y + z * z);
+    }
+
+    // Allow the scaled size in pixels to vary by a distance approximately
+    // large enough to affect the sampling result in a LINEAR interpolation.
+    // If we move by 1/256th of a pixel from one color to the opposite color
+    // then in the worst case the sample value might change by +/- 1 bit.
+    static final double THRESHOLD = 1.0 / 256.0;
     @Override
     protected void renderContent(Graphics g) {
         if (mode == Mode.EMPTY) {
@@ -177,30 +187,35 @@ public abstract class NGShape extends NGNode {
 
         // If a 3D transform is being used, then we're going to render to
         // an intermediate texture before we then do the final render operation.
-        final boolean needs3D = !g.getTransformNoClone().is2D();
+        final BaseTransform tx = g.getTransformNoClone();
+        final boolean needs3D = !tx.is2D();
 
         // If there is already a cached image, then we need to check that
         // the surface is not lost, and that we haven't switched from a 3D
         // rendering situation to a 2D one. In either case we need to throw
         // away this cached image and build up a new one.
-        if (cached3D != null) {
-            cached3D.lock();
-            if (cached3D.isSurfaceLost() || !needs3D) {
-                cached3D.unlock();
-                cached3D.dispose();
-                cached3D = null;
-            }
-        }
-
         if (needs3D) {
+            final double scaleX = hypot(tx.getMxx(), tx.getMyx(), tx.getMzx());
+            final double scaleY = hypot(tx.getMxy(), tx.getMyy(), tx.getMzy());
+            final double scaledW = scaleX * contentBounds.getWidth();
+            final double scaledH = scaleY * contentBounds.getHeight();
+            if (cached3D != null) {
+                cached3D.lock();
+                if (cached3D.isSurfaceLost() ||
+                    Math.max(Math.abs(scaledW - cachedW), Math.abs(scaledH - cachedH)) > THRESHOLD)
+                {
+                    cached3D.unlock();
+                    cached3D.dispose();
+                    cached3D = null;
+                }
+            }
             // For rendering the shape in 3D, we need to first render to the cached
             // image, and then render that image in 3D
             if (cached3D == null) {
-                final BaseTransform tx = g.getTransformNoClone();
-                final double scaleX = Math.hypot(tx.getMxx(), tx.getMyx());
-                final double scaleY = Math.hypot(tx.getMxy(), tx.getMyy());
-                final int w = (int) Math.ceil(contentBounds.getWidth() * scaleX);
-                final int h = (int) Math.ceil(contentBounds.getHeight() * scaleY);
+                final int w = (int) Math.ceil(scaledW);
+                final int h = (int) Math.ceil(scaledH);
+                cachedW = scaledW;
+                cachedH = scaledH;
                 // Nothing to do if the scaled bounds is 0 in either dimension;
                 // attempting to allocate a texture would fail so we just return
                 if (w <= 0 || h <= 0) {
@@ -218,14 +233,19 @@ public abstract class NGShape extends NGNode {
                 renderContent2D(textureGraphics, printing);
             }
             // Now render the cached image in 3D
-            g.drawTexture(cached3D,
-                    contentBounds.getMinX(), contentBounds.getMinY(),
-                    contentBounds.getMaxX(), contentBounds.getMaxY(),
-                    cached3D.getContentX(), cached3D.getContentY(),
-                    cached3D.getContentX() + cached3D.getContentWidth(),
-                    cached3D.getContentY() + cached3D.getContentHeight());
+            final int rtWidth = cached3D.getContentWidth();
+            final int rtHeight = cached3D.getContentHeight();
+            final float dx0 = contentBounds.getMinX();
+            final float dy0 = contentBounds.getMinY();
+            final float dx1 = dx0 + (float) (rtWidth / scaleX);
+            final float dy1 = dy0 + (float) (rtHeight / scaleY);
+            g.drawTexture(cached3D, dx0, dy0, dx1, dy1, 0, 0, rtWidth, rtHeight);
             cached3D.unlock();
         } else {
+            if (cached3D != null) {
+                cached3D.dispose();
+                cached3D = null;
+            }
             // Just render in 2D like normal
             renderContent2D(g, printing);
         }

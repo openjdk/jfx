@@ -72,7 +72,22 @@ public class Accordion extends Control {
      * Creates a new Accordion with no TitledPanes.
      */
     public Accordion() {
+        this((TitledPane[])null);
+    }
+
+    /**
+     * Creates a new Accordion with the given TitledPanes showing within it.
+     *
+     * @param titledPanes The TitledPanes to show inside the Accordion.
+     * @since JavaFX 8u40
+     */
+    public Accordion(TitledPane... titledPanes) {
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
+
+        if (titledPanes != null) {
+            getPanes().addAll(titledPanes);
+        }
+
         // focusTraversable is styleable through css. Calling setFocusTraversable
         // makes it look to css like the user set the value and css will not 
         // override. Initializing focusTraversable by calling applyStyle with null

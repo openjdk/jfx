@@ -71,15 +71,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
      */
     private KeyEvent lastEvent;
 
-    private UndoManager undoManager = new UndoManager();
-
-    private BreakIterator charIterator;
-
     private InvalidationListener textListener = observable -> {
-        if (!isEditing()) {
-            // Text changed, but not by user action
-            undoManager.reset();
-        }
         invalidateBidi();
     };
 
@@ -153,8 +145,8 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
             else if ("DeletePreviousWord".equals(name)) deletePreviousWord();
             else if ("DeleteNextWord".equals(name)) deleteNextWord();
             else if ("DeleteSelection".equals(name)) deleteSelection();
-            else if ("Undo".equals(name)) undoManager.undo();
-            else if ("Redo".equals(name)) undoManager.redo();
+            else if ("Undo".equals(name)) textInputControl.undo();
+            else if ("Redo".equals(name)) textInputControl.redo();
             else {
                 done = false;
             }
@@ -184,6 +176,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
             else if ("Right".equals(name)) nextCharacterVisually(true);
             else if ("Left".equals(name)) nextCharacterVisually(false);
             else if ("Fire".equals(name)) fire(lastEvent);
+            else if ("Cancel".equals(name)) cancelEdit(lastEvent);
             else if ("Unselect".equals(name)) textInputControl.deselect();
             else if ("SelectHome".equals(name)) selectHome();
             else if ("SelectEnd".equals(name)) selectEnd();
@@ -205,10 +198,6 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
 
         }
         // Note, I don't have to worry about "Consume" here.
-    }
-
-    protected UndoManager getUndoManager() {
-        return undoManager;
     }
 
     /**
@@ -246,7 +235,6 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
 //                + character.length() > textInput.getMaximumLength()) {
 //                // TODO Beep?
 //            } else {
-                undoManager.addChange(start, textInput.textProperty().getValueSafe().substring(start, end), character, true);
                 replaceText(start, end, character);
 //            }
 
@@ -320,49 +308,10 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
     }
 
     private void deletePreviousChar() {
-        TextInputControl textInputControl = getControl();
-        IndexRange selection = textInputControl.getSelection();
-        int start = selection.getStart();
-        int end = selection.getEnd();
-
-        if (start > 0 || end > start) {
-            if (selection.getLength() == 0) {
-                end = start;
-                // Note: This can handle the case of a surrogate pair
-                // which requires two chars to be deleted. However it
-                // does not, and should not, delete any other kind of
-                // cluster as a whole, just the last char. Compare
-                // with how deleteNextChar() behaves. See also the
-                // comment in TextInputControl.deletePreviousChar().
-                // So, do not use charIterator here.
-                start = Character.offsetByCodePoints(textInputControl.getText(), end, -1);
-            }
-            undoManager.addChange(start, textInputControl.getText().substring(start, end), null);
-        }
         deleteChar(true);
     }
 
     private void deleteNextChar() {
-        TextInputControl textInputControl = getControl();
-        IndexRange selection = textInputControl.getSelection();
-        int start = selection.getStart();
-        int end = selection.getEnd();
-
-        if (start < textInputControl.getLength() || end > start) {
-            if (selection.getLength() == 0) {
-                // Note: This can handle the case of a surrogate
-                // pair which requires two chars to be deleted.
-                // It will also delete any kind of cluster or ligature as
-                // a whole, not just the first char. Compare with
-                // deletePreviousChar().
-                if (charIterator == null) {
-                    charIterator = BreakIterator.getCharacterInstance();
-                }
-                charIterator.setText(textInputControl.getText());
-                end = charIterator.following(start);
-            }
-            undoManager.addChange(start, textInputControl.getText().substring(start, end), null);
-        }
         deleteChar(false);
     }
 
@@ -373,7 +322,6 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         if (end > 0) {
             textInputControl.previousWord();
             int start = textInputControl.getCaretPosition();
-            undoManager.addChange(start, textInputControl.getText().substring(start, end), null);
             replaceText(start, end, "");
         }
     }
@@ -385,7 +333,6 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         if (start < textInputControl.getLength()) {
             nextWord();
             int end = textInputControl.getCaretPosition();
-            undoManager.addChange(start, textInputControl.getText().substring(start, end), null);
             replaceText(start, end, "");
         }
     }
@@ -395,38 +342,18 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
         IndexRange selection = textInputControl.getSelection();
 
         if (selection.getLength() > 0) {
-            int start = selection.getStart();
-            int end = selection.getEnd();
-            undoManager.addChange(start, textInputControl.getText().substring(start, end), null);
             deleteChar(false);
         }
     }
 
     private void cut() {
         TextInputControl textInputControl = getControl();
-        IndexRange selection = textInputControl.getSelection();
-
-        if (selection.getLength() > 0) {
-            int start = selection.getStart();
-            int end = selection.getEnd();
-            undoManager.addChange(start, textInputControl.getText().substring(start, end), null);
-        }
         textInputControl.cut();
     }
 
     private void paste() {
         TextInputControl textInputControl = getControl();
-        IndexRange selection = textInputControl.getSelection();
-        int start = selection.getStart();
-        int end = selection.getEnd();
-        String text = textInputControl.textProperty().getValueSafe();
-        String deleted = text.substring(start, end);
-        int tail = text.length() - end;
-
         textInputControl.paste();
-
-        text = textInputControl.textProperty().getValueSafe();
-        undoManager.addChange(start, deleted, text.substring(start, text.length() - tail));
     }
 
     protected void selectPreviousWord() {
@@ -498,6 +425,7 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
     }
 
     protected void fire(KeyEvent event) { } // TODO move to TextFieldBehavior
+    protected void cancelEdit(KeyEvent event) { forwardToParent(event);}
 
     protected void forwardToParent(KeyEvent event) {
         if (getControl().getParent() != null) {
@@ -528,105 +456,5 @@ public abstract class TextInputControlBehavior<T extends TextInputControl> exten
     }
     public boolean isEditing() {
         return editing;
-    }
-
-    public boolean canUndo() {
-        return undoManager.canUndo();
-    }
-
-    public boolean canRedo() {
-        return undoManager.canRedo();
-    }
-
-    static class Change {
-        int start;
-        String oldText;
-        String newText;
-        boolean appendable;
-
-        Change(int start, String oldText, String newText) {
-            this(start, oldText, newText, false);
-        }
-
-        Change(int start, String oldText, String newText, boolean appendable) {
-            this.start = start;
-            this.oldText = oldText;
-            this.newText = newText;
-            this.appendable = appendable;
-        }
-    }
-
-    class UndoManager {
-        private ArrayList<Change> chain = new ArrayList<Change>();
-        private int currentIndex = 0;
-
-        public void addChange(int start, String oldText, String newText) {
-            addChange(start, oldText, newText, false);
-        }
-
-        public void addChange(int start, String oldText, String newText, boolean appendable) {
-            truncate();
-            if (appendable && currentIndex > 0 && (oldText == null || oldText.length() == 0)) {
-                Change change = chain.get(currentIndex - 1);
-                if (change.appendable && start == change.start + change.newText.length()) {
-                    // Append text to previous Change
-                    change.newText += newText;
-                    return;
-                }
-            }
-            chain.add(new Change(start, oldText, newText, appendable));
-            currentIndex++;
-        }
-
-        public void undo() {
-            if (currentIndex > 0) {
-                // Apply reverse change here
-                Change change = chain.get(currentIndex - 1);
-                replaceText(change.start,
-                            change.start + ((change.newText != null) ? change.newText.length() : 0),
-                            (change.oldText != null) ? change.oldText : "");
-                currentIndex--;
-                if (currentIndex > 0) {
-                    chain.get(currentIndex - 1).appendable = false;
-                }
-            }
-            // else beep ?
-        }
-
-        public void redo() {
-            if (currentIndex < chain.size()) {
-                // Apply change here
-                Change change = chain.get(currentIndex);
-                replaceText(change.start,
-                            change.start + ((change.oldText != null) ? change.oldText.length() : 0),
-                            (change.newText != null) ? change.newText : "");
-                change.appendable = false;
-                currentIndex++;
-            }
-            // else beep ?
-        }
-
-        public boolean canUndo() {
-            return (currentIndex > 0);
-        }
-
-        public boolean canRedo() {
-            return (currentIndex < chain.size());
-        }
-
-        public void reset() {
-            chain.clear();
-            currentIndex = 0;
-        }
-
-        private void truncate() {
-            if (currentIndex > 0 && chain.size() > currentIndex) {
-                chain.get(currentIndex - 1).appendable = false;
-            }
-
-            while (chain.size() > currentIndex) {
-                chain.remove(chain.size() - 1);
-            }
-        }
     }
 }

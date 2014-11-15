@@ -97,6 +97,7 @@ public class ChangeListenerApp extends Application {
         Button buttonAdd = new Button("Add listener");
         buttonAdd.setPrefSize(140, 18);
         buttonAdd.setOnAction((ActionEvent t) -> {
+            //add the listener on property hover
             rect.hoverProperty().addListener(hoverListener);
             text.setText("listener added");
         });
@@ -104,6 +105,7 @@ public class ChangeListenerApp extends Application {
         Button buttonRemove = new Button("Remove listener");
         buttonRemove.setPrefSize(140, 18);
         buttonRemove.setOnAction((ActionEvent t) -> {
+            //remove the listener
             rect.hoverProperty().removeListener(hoverListener);
             text.setText("listener removed");
         });

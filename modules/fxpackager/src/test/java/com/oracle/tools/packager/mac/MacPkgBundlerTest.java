@@ -64,6 +64,7 @@ public class MacPkgBundlerTest {
     static File appResourcesDir;
     static File fakeMainJar;
     static File hdpiIcon;
+    static String runtimeJdk;
     static Set<File> appResources;
     static boolean retain = false;
 
@@ -72,11 +73,14 @@ public class MacPkgBundlerTest {
         // only run on mac
         Assume.assumeTrue(System.getProperty("os.name").toLowerCase().contains("os x"));
 
+        runtimeJdk = System.getenv("PACKAGER_JDK_ROOT");
+
         // and only if we have the correct JRE settings
         String jre = System.getProperty("java.home").toLowerCase();
-        Assume.assumeTrue(jre.endsWith("/contents/home/jre") || jre.endsWith("/contents/home/jre"));
+        Assume.assumeTrue(runtimeJdk != null || jre.endsWith("/contents/home/jre") || jre.endsWith("/contents/home/jre"));
 
         Log.setLogger(new Log.Logger(true));
+        Log.setDebug(true);
 
         retain = Boolean.parseBoolean(System.getProperty("RETAIN_PACKAGER_TESTS"));
 
@@ -145,18 +149,22 @@ public class MacPkgBundlerTest {
         bundleParams.put(BUILD_ROOT.getID(), tmpBase);
 
         bundleParams.put(APP_NAME.getID(), "Smoke Test");
-        bundleParams.put(MAIN_CLASS.getID(), "hello.TestPackager");
+        bundleParams.put(MAIN_CLASS.getID(), "hello.HelloRectangle");
         bundleParams.put(PREFERENCES_ID.getID(), "the/really/long/preferences/id");
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
         bundleParams.put(MAIN_JAR.getID(),
                 new RelativeFileSet(fakeMainJar.getParentFile(),
                         new HashSet<>(Arrays.asList(fakeMainJar)))
         );
-        bundleParams.put(CLASSPATH.getID(), fakeMainJar.toString());
+        bundleParams.put(CLASSPATH.getID(), "mainApp.jar");
         bundleParams.put(VERBOSE.getID(), true);
         bundleParams.put(LICENSE_FILE.getID(), Arrays.asList("LICENSE", "LICENSE2"));
         bundleParams.put(DEVELOPER_ID_APP_SIGNING_KEY.getID(), null); // force no signing
         bundleParams.put(DEVELOPER_ID_INSTALLER_SIGNING_KEY.getID(), null); // force no signing
+
+        if (runtimeJdk != null) {
+            bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
+        }
 
         boolean valid = bundler.validate(bundleParams);
         assertTrue(valid);
@@ -185,10 +193,14 @@ public class MacPkgBundlerTest {
         bundleParams.put(BUILD_ROOT.getID(), tmpBase);
 
         bundleParams.put(APP_NAME.getID(), "Quarantine App");
-        bundleParams.put(MAIN_CLASS.getID(), "hello.TestPackager");
+        bundleParams.put(MAIN_CLASS.getID(), "hello.HelloRectangle");
         bundleParams.put(PREFERENCES_ID.getID(), "the/really/long/preferences/id");
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
         bundleParams.put(VERBOSE.getID(), true);
+
+        if (runtimeJdk != null) {
+            bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
+        }
 
         boolean valid = bundler.validate(bundleParams);
         assertTrue(valid);
@@ -226,11 +238,48 @@ public class MacPkgBundlerTest {
 
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
 
+        if (runtimeJdk != null) {
+            bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
+        }
+
+        boolean valid = bundler.validate(bundleParams);
+        assertTrue(valid);
+
         File output = bundler.execute(bundleParams, new File(workDir, "BareMinimum"));
         System.err.println("Bundle at - " + output);
         assertNotNull(output);
         assertTrue(output.exists());
         assertTrue(output.length() > MIN_SIZE);
+    }
+
+    /**
+     * Test with unicode in places we expect it to be
+     */
+    @Test
+    public void unicodeConfig() throws IOException, ConfigException, UnsupportedPlatformException {
+        Bundler bundler = new MacPkgBundler();
+
+        Map<String, Object> bundleParams = new HashMap<>();
+
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+
+        bundleParams.put(APP_NAME.getID(), "хелловорлд");
+        bundleParams.put(TITLE.getID(), "ХеллоВорлд аппликейшн");
+        bundleParams.put(VENDOR.getID(), "Оракл девелопмент");
+        bundleParams.put(DESCRIPTION.getID(), "крайне большое описание со странными символами");
+
+        if (runtimeJdk != null) {
+            bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
+        }
+
+        bundler.validate(bundleParams);
+
+        File output = bundler.execute(bundleParams, new File(workDir, "Unicode"));
+        System.err.println("Bundle at - " + output);
+        assertNotNull(output);
+        assertTrue(output.exists());
     }
 
     /**
@@ -253,7 +302,13 @@ public class MacPkgBundlerTest {
         appBundleParams.put(IDENTIFIER.getID(), "com.example.pkg.external");
         appBundleParams.put(VERBOSE.getID(), true);
 
-        appBundler.validate(appBundleParams);
+        if (runtimeJdk != null) {
+            appBundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
+        }
+
+        boolean valid = appBundler.validate(appBundleParams);
+        assertTrue(valid);
+
         File appOutput = appBundler.execute(appBundleParams, new File(workDir, "PKGExternalApp1"));
         System.err.println("App at - " + appOutput);
         assertNotNull(appOutput);
@@ -272,7 +327,13 @@ public class MacPkgBundlerTest {
 
         pkgBundleParams.put(VERBOSE.getID(), true);
 
-        pkgBundler.validate(pkgBundleParams);
+        if (runtimeJdk != null) {
+            pkgBundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
+        }
+
+        valid = pkgBundler.validate(pkgBundleParams);
+        assertTrue(valid);
+
         File pkgOutput = pkgBundler.execute(pkgBundleParams, new File(workDir, "PKGExternalApp2"));
         System.err.println(".pkg at - " + pkgOutput);
         assertNotNull(pkgOutput);
@@ -324,6 +385,62 @@ public class MacPkgBundlerTest {
         bundler.validate(bundleParams);
     }
 
+    /**
+     * Test a misconfiguration where signature is requested but no key is specified.
+     */
+    @Test
+    public void signButNoCert() throws IOException, ConfigException, UnsupportedPlatformException {
+        // only run with full tests
+        Assume.assumeTrue(Boolean.parseBoolean(System.getProperty("FULL_TEST")));
+
+        try {
+            // first create the external app
+            Bundler appBundler = new MacAppBundler();
+    
+            Map<String, Object> appBundleParams = new HashMap<>();
+    
+            appBundleParams.put(BUILD_ROOT.getID(), tmpBase);
+    
+            appBundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+            appBundleParams.put(APP_NAME.getID(), "External APP PKG Negative Signature Test");
+            appBundleParams.put(IDENTIFIER.getID(), "com.example.pkg.external");
+            appBundleParams.put(VERBOSE.getID(), true);
+    
+            if (runtimeJdk != null) {
+                appBundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
+            }
+    
+            boolean valid = appBundler.validate(appBundleParams);
+            assertTrue(valid);
+    
+            File appOutput = appBundler.execute(appBundleParams, new File(workDir, "PKGExternalAppSignTest"));
+            System.err.println("App at - " + appOutput);
+            assertNotNull(appOutput);
+            assertTrue(appOutput.exists());
+    
+            // now create the PKG referencing this external app
+            Bundler pkgBundler = new MacPkgBundler();
+    
+            Map<String, Object> pkgBundleParams = new HashMap<>();
+    
+            pkgBundleParams.put(BUILD_ROOT.getID(), tmpBase);
+    
+            pkgBundleParams.put(MAC_APP_IMAGE.getID(), appOutput);
+            pkgBundleParams.put(APP_NAME.getID(), "Negative Signature Test");
+            pkgBundleParams.put(IDENTIFIER.getID(), "com.example.pkg.external");
+    
+            pkgBundleParams.put(SIGN_BUNDLE.getID(), true);
+            pkgBundleParams.put(DEVELOPER_ID_INSTALLER_SIGNING_KEY.getID(), null);
+    
+            pkgBundler.validate(pkgBundleParams);
+
+            // if we get here we fail
+            assertTrue("ConfigException should have been thrown", false);
+        } catch (ConfigException ignore) {
+            // expected
+        }            
+    }
+
     @Test
     public void configureEverything() throws Exception {
         AbstractBundler bundler = new MacPkgBundler();
@@ -333,18 +450,20 @@ public class MacPkgBundlerTest {
 
         bundleParams.put(APP_NAME.getID(), "Everything App Name");
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        bundleParams.put(ARGUMENTS.getID(), Arrays.asList("He Said", "She Said"));
         bundleParams.put(BUNDLE_ID_SIGNING_PREFIX.getID(), "everything.signing.prefix.");
+        bundleParams.put(CLASSPATH.getID(), "mainApp.jar");
         bundleParams.put(ICON_ICNS.getID(), hdpiIcon);
         bundleParams.put(JVM_OPTIONS.getID(), "-Xms128M");
         bundleParams.put(JVM_PROPERTIES.getID(), "everything.jvm.property=everything.jvm.property.value");
         bundleParams.put(MAC_CATEGORY.getID(), "public.app-category.developer-tools");
         bundleParams.put(MAC_CF_BUNDLE_IDENTIFIER.getID(), "com.example.everything.cf-bundle-identifier");
         bundleParams.put(MAC_CF_BUNDLE_NAME.getID(), "Everything CF Bundle Name");
-        bundleParams.put(MAC_RUNTIME.getID(), System.getProperty("java.home"));
-        bundleParams.put(MAIN_CLASS.getID(), "hello.TestPackager");
+        bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk == null ? System.getProperty("java.home") : runtimeJdk);
+        bundleParams.put(MAIN_CLASS.getID(), "hello.HelloRectangle");
         bundleParams.put(MAIN_JAR.getID(), "mainApp.jar");
-        bundleParams.put(CLASSPATH.getID(), "mainApp.jar");
-        bundleParams.put(PREFERENCES_ID.getID(), "everything.preferences.id");
+        bundleParams.put(PREFERENCES_ID.getID(), "everything/preferences/id");
+        bundleParams.put(PRELOADER_CLASS.getID(), "hello.HelloPreloader");
         bundleParams.put(USER_JVM_OPTIONS.getID(), "-Xmx=256M\n");
         bundleParams.put(VERSION.getID(), "1.2.3.4");
 

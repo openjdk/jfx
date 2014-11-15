@@ -186,7 +186,7 @@ public abstract class Transition extends Animation {
     protected abstract void interpolate(double frac);
 
     private double calculateFraction(long currentTicks, long cycleTicks) {
-        final double frac = (double) currentTicks / cycleTicks;
+        final double frac = cycleTicks <= 0 ? 1.0 : (double) currentTicks / cycleTicks;
         return cachedInterpolator.interpolate(0.0, 1.0, frac);
     }
 

@@ -37,11 +37,9 @@ import com.oracle.javafx.scenebuilder.kit.editor.panel.content.gesture.AbstractG
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.gesture.SelectWithPringGesture;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import javafx.geometry.Bounds;
-import javafx.geometry.Point2D;
 import javafx.scene.Node;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
-import javafx.scene.transform.Transform;
 
 /**
  *
@@ -72,20 +70,8 @@ public class TableColumnPring extends AbstractGenericPring<Object> {
     }
 
     @Override
-    public Transform getSceneGraphToSceneTransform() {
-        return getTableColumn().getTableView().getLocalToSceneTransform();
-    }
-
-    @Override
-    public Point2D sceneGraphObjectToScene(double x, double y) {
-        final TableView<?> tv = getTableColumn().getTableView();
-        return tv.localToScene(x, y);
-    }
-
-    @Override
-    public Point2D sceneToSceneGraphObject(double x, double y) {
-        final TableView<?> tv = getTableColumn().getTableView();
-        return tv.sceneToLocal(x, y);
+    public Node getSceneGraphObjectProxy() {
+        return getTableColumn().getTableView();
     }
 
     @Override

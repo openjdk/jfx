@@ -33,9 +33,9 @@ import javafx.collections.ObservableList;
 import javafx.collections.WeakListChangeListener;
 import javafx.event.EventHandler;
 import javafx.geometry.Orientation;
+import javafx.scene.AccessibleAction;
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
-//import javafx.scene.accessibility.Action;
-//import javafx.scene.accessibility.Attribute;
 import javafx.scene.control.FocusModel;
 import javafx.scene.control.IndexedCell;
 import javafx.scene.control.Label;
@@ -174,6 +174,9 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
                     break;
                 }
             }
+
+            // fix for RT-37853
+            getSkinnable().edit(-1);
             
             rowCountDirty = true;
             getSkinnable().requestLayout();
@@ -484,57 +487,80 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
         return newSelectionIndex;
     }
 
-//    @Override
-//    public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//        switch (attribute) {
-//            case FOCUS_ITEM: {
-//                FocusModel<?> fm = getSkinnable().getFocusModel();
-//                int focusedIndex = fm.getFocusedIndex();
-//                if (focusedIndex == -1) {
-//                    if (placeholderRegion != null && placeholderRegion.isVisible()) {
-//                        return placeholderRegion.getChildren().get(0);
-//                    }
-//                    if (getItemCount() > 0) {
-//                        focusedIndex = 0;
-//                    } else {
-//                        return null;
-//                    }
-//                }
-//                return flow.getPrivateCell(focusedIndex);
-//            }
-//            case ROW_AT_INDEX: {
-//                Integer rowIndex = (Integer)parameters[0];
-//                if (rowIndex == null) return null;
-//                if (0 <= rowIndex && rowIndex < getItemCount()) {
-//                    return flow.getPrivateCell(rowIndex);
-//                }
-//                return null;
-//            }
-//            case SELECTED_ROWS: {
-//                MultipleSelectionModel<T> sm = getSkinnable().getSelectionModel();
-//                ObservableList<Integer> indices = sm.getSelectedIndices();
-//                List<Node> selection = new ArrayList<>(indices.size());
-//                for (int i : indices) {
-//                    ListCell<T> row = flow.getPrivateCell(i);
-//                    if (row != null) selection.add(row);
-//                }
-//                return FXCollections.observableArrayList(selection);
-//            }
-//            case VERTICAL_SCROLLBAR: return flow.getVbar();
-//            case HORIZONTAL_SCROLLBAR: return flow.getHbar();
-//            default: return super.accGetAttribute(attribute, parameters);
-//        }
-//    }
-//
-//    @Override
-//    public void accExecuteAction(Action action, Object... parameters) {
-//        switch (action) {
-//            case SCROLL_TO_INDEX: {
-//                Integer index = (Integer)parameters[0];
-//                if (index != null) flow.show(index);
-//                break;
-//            }
-//            default: super.accExecuteAction(action, parameters);
-//        }
-//    }
+    @Override
+    protected Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
+        switch (attribute) {
+            case FOCUS_ITEM: {
+                FocusModel<?> fm = getSkinnable().getFocusModel();
+                int focusedIndex = fm.getFocusedIndex();
+                if (focusedIndex == -1) {
+                    if (placeholderRegion != null && placeholderRegion.isVisible()) {
+                        return placeholderRegion.getChildren().get(0);
+                    }
+                    if (getItemCount() > 0) {
+                        focusedIndex = 0;
+                    } else {
+                        return null;
+                    }
+                }
+                return flow.getPrivateCell(focusedIndex);
+            }
+            case ITEM_COUNT: return getItemCount();
+            case ITEM_AT_INDEX: {
+                Integer rowIndex = (Integer)parameters[0];
+                if (rowIndex == null) return null;
+                if (0 <= rowIndex && rowIndex < getItemCount()) {
+                    return flow.getPrivateCell(rowIndex);
+                }
+                return null;
+            }
+            case SELECTED_ITEMS: {
+                MultipleSelectionModel<T> sm = getSkinnable().getSelectionModel();
+                ObservableList<Integer> indices = sm.getSelectedIndices();
+                List<Node> selection = new ArrayList<>(indices.size());
+                for (int i : indices) {
+                    ListCell<T> row = flow.getPrivateCell(i);
+                    if (row != null) selection.add(row);
+                }
+                return FXCollections.observableArrayList(selection);
+            }
+            case VERTICAL_SCROLLBAR: return flow.getVbar();
+            case HORIZONTAL_SCROLLBAR: return flow.getHbar();
+            default: return super.queryAccessibleAttribute(attribute, parameters);
+        }
+    }
+
+    @Override
+    protected void executeAccessibleAction(AccessibleAction action, Object... parameters) {
+        switch (action) {
+            case SHOW_ITEM: {
+                Node item = (Node)parameters[0];
+                if (item instanceof ListCell) {
+                    @SuppressWarnings("unchecked")
+                    ListCell<T> cell = (ListCell<T>)item;
+                    flow.show(cell.getIndex());
+                }
+                break;
+            }
+            case SET_SELECTED_ITEMS: {
+                @SuppressWarnings("unchecked")
+                ObservableList<Node> items = (ObservableList<Node>)parameters[0];
+                if (items != null) {
+                    MultipleSelectionModel<T> sm = getSkinnable().getSelectionModel();
+                    if (sm != null) {
+                        sm.clearSelection();
+                        for (Node item : items) {
+                            if (item instanceof ListCell) {
+                                @SuppressWarnings("unchecked")
+                                ListCell<T> cell = (ListCell<T>)item;
+                                sm.select(cell.getIndex());
+                            }
+                        }
+                    }
+                }
+                break;
+            }
+            default: super.executeAccessibleAction(action, parameters);
+        }
+    }
 }
