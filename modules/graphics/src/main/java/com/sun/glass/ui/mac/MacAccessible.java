@@ -785,7 +785,11 @@ final class MacAccessible extends Accessible {
                 break;
             }
             case TEXT:
-                macNotification = MacNotification.NSAccessibilityTitleChangedNotification;
+                if (getAttribute(ROLE) == AccessibleRole.SPINNER) {
+                    macNotification = MacNotification.NSAccessibilityTitleChangedNotification;
+                } else {
+                    macNotification = MacNotification.NSAccessibilityValueChangedNotification;
+                }
                 break;
             case PARENT:
                 ignoreInnerText = null;
