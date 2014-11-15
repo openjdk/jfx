@@ -50,7 +50,7 @@ class ES2SwapChain implements ES2RenderTarget, Presentable, GraphicsResource {
     // a value of zero corresponds to the windowing system-provided
     // framebuffer object
     int nativeDestHandle = 0;
-    private final boolean antiAliasing;
+    private final boolean msaa;
     /**
      * An offscreen surface that acts as a persistent backbuffer, currently
      * only used when dirty region optimizations are enabled in the scenegraph.
@@ -94,7 +94,7 @@ class ES2SwapChain implements ES2RenderTarget, Presentable, GraphicsResource {
         this.context = context;
         this.pState = pState;
         this.pixelScaleFactor = getScale(pState);
-        this.antiAliasing = pState.isAntiAliasing();
+        this.msaa = pState.isMSAA();
         long nativeWindow = pState.getNativeWindow();
         drawable = ES2Pipeline.glFactory.createGLDrawable(
                 nativeWindow, context.getPixelFormat());
@@ -142,7 +142,7 @@ class ES2SwapChain implements ES2RenderTarget, Presentable, GraphicsResource {
                 int y0 = rectDST.y;
                 int x1 = x0 + rectDST.width;
                 int y1 = y0 + rectDST.height;
-                if (isAntiAliasing()) {
+                if (isMSAA()) {
                     context.flushVertexBuffer();
                     // Note must flip the z axis during blit
                     g.blit(stableBackbuffer, null, x0, y0, x1, y1,
@@ -216,7 +216,7 @@ class ES2SwapChain implements ES2RenderTarget, Presentable, GraphicsResource {
             ResourceFactory factory = context.getResourceFactory();
             stableBackbuffer = factory.createRTTexture(w, h,
                                                        WrapMode.CLAMP_NOT_NEEDED,
-                                                       antiAliasing);
+                                                       msaa);
             if (PrismSettings.dirtyOptsEnabled) {
                 stableBackbuffer.contentsUseful();
             }
@@ -284,8 +284,8 @@ class ES2SwapChain implements ES2RenderTarget, Presentable, GraphicsResource {
         }
     }
 
-    public boolean isAntiAliasing() {
-        return stableBackbuffer != null ? stableBackbuffer.isAntiAliasing() :
-                antiAliasing;
+    public boolean isMSAA() {
+        return stableBackbuffer != null ? stableBackbuffer.isMSAA() :
+                msaa;
     }
 }

@@ -63,9 +63,9 @@ TString Helpers::ReplaceString(TString subject, const TString& search,
 
 TString Helpers::ConvertIdToFilePath(TString Value) {
     TString search;
-    search = '/';
+    search = '.';
     TString replace;
-    replace = '\\';
+    replace = '/';
     TString result = ReplaceString(Value, search, replace);
     return result;
 }
@@ -83,15 +83,15 @@ TString Helpers::ConvertIdToJavaPath(TString Value) {
 
 TString Helpers::ConvertPathToId(TString Value) {
     TString search;
-    search = '/';
+    search = TRAILING_SLASH;
     TString replace;
     replace = '.';
     TString result = ReplaceString(Value, search, replace);
     return result;
 }
 
-std::map<TString, TValueIndex> Helpers::GetJVMArgsFromConfig(PropertyContainer* config) {
-    std::map<TString, TValueIndex> result;
+TOrderedMap Helpers::GetJVMArgsFromConfig(PropertyContainer* config) {
+    TOrderedMap result;
 
     for (unsigned int index = 0; index < config->GetCount(); index++) {
         TString argname = TString(_T("jvmarg.")) + PlatformString(index + 1).toString();
@@ -104,15 +104,15 @@ std::map<TString, TValueIndex> Helpers::GetJVMArgsFromConfig(PropertyContainer* 
             TString name;
             TValueIndex value;
             Helpers::SplitOptionIntoNameValue(argvalue, name, value.value);
-            result.insert(std::map<TString, TValueIndex>::value_type(name, value));
+            result.insert(TOrderedMap::value_type(name, value));
         }
     }
 
     return result;
 }
 
-std::map<TString, TValueIndex> Helpers::GetJVMUserArgsFromConfig(PropertyContainer* config) {
-    std::map<TString, TValueIndex> result;
+TOrderedMap Helpers::GetJVMUserArgsFromConfig(PropertyContainer* config) {
+    TOrderedMap result;
 
     for (unsigned int index = 0; index < config->GetCount(); index++) {
         TString prefix = TString(_T("jvmuserarg.")) + PlatformString(index + 1).toString();
@@ -125,18 +125,18 @@ std::map<TString, TValueIndex> Helpers::GetJVMUserArgsFromConfig(PropertyContain
             break;
         }
         else if ((name.empty() == false) && (value.value.empty() == false)) {
-            result.insert(std::map<TString, TValueIndex>::value_type(name, value));
+            result.insert(TOrderedMap::value_type(name, value));
         }
     }
 
     return result;
 }
 
-std::map<TString, TString> Helpers::GetConfigFromJVMUserArgs(std::map<TString, TValueIndex> OrderedMap) {
+std::map<TString, TString> Helpers::GetConfigFromJVMUserArgs(TOrderedMap OrderedMap) {
     std::map<TString, TString> result;
     size_t index = 0;
     
-    for (std::map<TString, TValueIndex>::iterator iterator = OrderedMap.begin();
+    for (TOrderedMap::iterator iterator = OrderedMap.begin();
          iterator != OrderedMap.end();
          iterator++) {
         TString prefix = TString(_T("jvmuserarg.")) + PlatformString(index + 1).toString();
@@ -175,11 +175,11 @@ bool comp(const TValueIndex& a, const TValueIndex& b) {
     return a.index < b.index;
 }
 
-std::list<TString> Helpers::GetOrderedKeysFromMap(std::map<TString, TValueIndex> OrderedMap) {
+std::list<TString> Helpers::GetOrderedKeysFromMap(TOrderedMap OrderedMap) {
     std::list<TString> result;
     std::list<TValueIndex> indexedList;
     
-    for (std::map<TString, TValueIndex>::iterator iterator = OrderedMap.begin();
+    for (TOrderedMap::iterator iterator = OrderedMap.begin();
          iterator != OrderedMap.end();
          iterator++) {
         TValueIndex item;

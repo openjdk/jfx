@@ -154,7 +154,7 @@ class J2DRTTexture extends J2DTexture implements RTTexture {
         return false;
     }
 
-    @Override public boolean isAntiAliasing() {
+    @Override public boolean isMSAA() {
         return false;
     }
 }

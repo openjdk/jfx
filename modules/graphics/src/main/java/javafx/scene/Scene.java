@@ -290,7 +290,7 @@ public class Scene implements EventTarget {
         this(root, width, height, Color.WHITE, depthBuffer, antiAliasing);
 
         if (antiAliasing != null && antiAliasing != SceneAntialiasing.DISABLED &&
-                !Toolkit.getToolkit().isAntiAliasingSupported())
+                !Toolkit.getToolkit().isMSAASupported())
         {
             String logname = Scene.class.getName();
             PlatformLogger.getLogger(logname).warning("System can't support "
@@ -575,7 +575,7 @@ public class Scene implements EventTarget {
 
     private boolean getAntiAliasingInternal() {
         return (antiAliasing != null &&
-                Toolkit.getToolkit().isAntiAliasingSupported() &&
+                Toolkit.getToolkit().isMSAASupported() &&
                 Platform.isSupported(ConditionalFeature.SCENE3D)) ?
                 antiAliasing != SceneAntialiasing.DISABLED : false;
     }

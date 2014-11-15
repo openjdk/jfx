@@ -50,13 +50,13 @@ public class NGSubScene extends NGNode {
     private RTTexture resolveRTT = null;
     private NGNode root = null;
     private boolean renderSG = true;
-    // Depth and antiAliasing are immutable states
+    // Depth and msaa are immutable states
     private final boolean depthBuffer;
-    private final boolean antiAliasing;
+    private final boolean msaa;
 
-    public NGSubScene(boolean depthBuffer, boolean antiAliasing) {
+    public NGSubScene(boolean depthBuffer, boolean msaa) {
         this.depthBuffer = depthBuffer;
-        this.antiAliasing = antiAliasing;
+        this.msaa = msaa;
     }
 
     private NGSubScene() {
@@ -203,7 +203,7 @@ public class NGSubScene extends NGNode {
                 ResourceFactory factory = g.getResourceFactory();
                 rtt = factory.createRTTexture(rtWidth, rtHeight,
                                               Texture.WrapMode.CLAMP_TO_ZERO,
-                                              antiAliasing);
+                                              msaa);
             }
             Graphics rttGraphics = rtt.createGraphics();
             rttGraphics.scale((float) scaleX, (float) scaleY);
@@ -219,7 +219,7 @@ public class NGSubScene extends NGNode {
             root.clearDirtyTree();
             renderSG = false;
         }
-        if (antiAliasing) {
+        if (msaa) {
             int x0 = rtt.getContentX();
             int y0 = rtt.getContentY();
             int x1 = x0 + rtWidth;

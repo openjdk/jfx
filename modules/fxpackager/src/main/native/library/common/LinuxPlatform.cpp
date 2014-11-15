@@ -127,6 +127,16 @@ TString LinuxPlatform::GetBundledJVMLibraryFileName(TString RuntimePath) {
             "jre/lib/"JAVAARCH"/server/libjvm.so";
     }
 
+    if (FilePath::FileExists(result) == false) {
+        result = FilePath::IncludeTrailingSlash(RuntimePath) +
+            "lib/"JAVAARCH"/server/libjvm.so";
+    }
+
+    if (FilePath::FileExists(result) == false) {
+        result = FilePath::IncludeTrailingSlash(RuntimePath) +
+            "lib/"JAVAARCH"/server/libjvm.so";
+    }
+
     return result;
 }
 
@@ -180,8 +190,12 @@ bool LinuxPlatform::IsMainThread() {
     return result;
 }
 
-size_t LinuxPlatform::GetMemorySize() {
-    return 0;
+TPlatformNumber LinuxPlatform::GetMemorySize() {
+    long pages = sysconf(_SC_PHYS_PAGES);
+    long page_size = sysconf(_SC_PAGE_SIZE);
+    TPlatformNumber result = pages * page_size;
+    result = result / 1048576; // Convert from bytes to megabytes.
+    return result;
 }
 
 #ifdef DEBUG
@@ -348,29 +362,29 @@ typedef struct _xmlNode XMLNode;
 typedef struct _xmlAttribute XMLAttribute;
 
 struct _xmlNode {
-    int           _type;        /* Type of node: tag, pcdata, cdate */
-    TCHAR*         _name;        /* Contents of node */
-    XMLNode*      _next;        /* Next node at same level */
-    XMLNode*      _sub;         /* First sub-node */
-    XMLAttribute* _attributes;  /* List of attributes */
+    int           _type;        // Type of node: tag, pcdata, cdate
+    TCHAR*         _name;       // Contents of node
+    XMLNode*      _next;        // Next node at same level
+    XMLNode*      _sub;         // First sub-node
+    XMLAttribute* _attributes;  // List of attributes
 };
 
 struct _xmlAttribute {
-    TCHAR* _name;              /* Name of attribute */
-    TCHAR* _value;             /* Value of attribute */
-    XMLAttribute* _next;      /* Next attribute for this tag */
+    TCHAR* _name;               // Name of attribute
+    TCHAR* _value;              // Value of attribute
+    XMLAttribute* _next;        // Next attribute for this tag
 };
 
-/* Public interface */
+// Public interface
 static void     RemoveNonAsciiUTF8FromBuffer(char *buf);
 XMLNode* ParseXMLDocument    (TCHAR* buf);
 void     FreeXMLDocument     (XMLNode* root);
 
-/* Utility methods for parsing document */
+// Utility methods for parsing document
 XMLNode* FindXMLChild        (XMLNode* root,      const TCHAR* name);
 TCHAR*    FindXMLAttribute    (XMLAttribute* attr, const TCHAR* name);
 
-/* Debugging */
+// Debugging
 void PrintXMLDocument(XMLNode* node, int indt);
 
 
@@ -385,7 +399,7 @@ void PrintXMLDocument(XMLNode* node, int indt);
     if (!(s)) { Abort(msg); }
 
 
-/* Internal declarations */
+// Internal declarations
 static XMLNode*      ParseXMLElement(void);
 static XMLAttribute* ParseXMLAttribute(void);
 static TCHAR*         SkipWhiteSpace(TCHAR *p);
@@ -1014,32 +1028,39 @@ TString LinuxJavaUserPreferences::GetUserPrefFileName(TString Appid) {
     TString userOverrideFileName = FilePath::IncludeTrailingSlash(homedir) +
         FilePath::IncludeTrailingSlash(_T(".java/.userPrefs")) +
         FilePath::IncludeTrailingSlash(Appid) +
-        FilePath::IncludeTrailingSlash(_T("JVMUserOptions")) +
-        _T("prefs.xml");
+        _T("JVMUserOptions/prefs.xml");
 
-    if (FilePath::DirectoryExists(result) == true) {
+    if (FilePath::FileExists(userOverrideFileName) == true) {
         result = userOverrideFileName;
     }
 
     return result;
 }
 
-std::map<TString, TString> ReadNode(XMLNode* node) {
-    std::map<TString, TString> result;
-    XMLNode* keyNode = FindXMLChild(node->_sub, "entry");
+TOrderedMap ReadNode(XMLNode* node) {
+    TOrderedMap result;
+    XMLNode* keyNode = FindXMLChild(node->_sub, _T("entry"));
+    int index = 1;
 
     while (keyNode != NULL) {
-        TString key = FindXMLAttribute(keyNode->_attributes, "key");
-        TString value = FindXMLAttribute(keyNode->_attributes, "value");
-        result.insert(std::map<TString, TString>::value_type(key, value));
+        TString key = FindXMLAttribute(keyNode->_attributes, _T("key"));
+        TString value = FindXMLAttribute(keyNode->_attributes, _T("value"));
         keyNode = keyNode->_next;
+
+        if (key.empty() == false) {
+            TValueIndex item;
+            item.value = value;
+            item.index = index;
+            result.insert(TOrderedMap::value_type(key, item));
+            index++;
+        }
     }
 
     return result;
 }
 
-std::map<TString, TString> getJvmUserArgs(TString filename) {
-    std::map<TString, TString> result;
+TOrderedMap GetJvmUserArgs(TString filename) {
+    TOrderedMap result;
 
     if (FilePath::FileExists(filename) == true) {
         //scan file for the key
@@ -1049,22 +1070,21 @@ std::map<TString, TString> getJvmUserArgs(TString filename) {
             fseek(fp, 0, SEEK_END);
             long fsize = ftell(fp);
             rewind(fp);
-            char *buf = (char*)malloc(fsize + 1);
-            fread(buf, fsize, 1, fp);
+            DynamicBuffer<char> buffer(fsize + 1);
+            fread(buffer.GetData(), fsize, 1, fp);
             fclose(fp);
-            buf[fsize] = 0;
+            buffer[fsize] = 0;
 
             XMLNode* node = NULL;
-            XMLNode* doc = ParseXMLDocument(buf);
+            XMLNode* doc = ParseXMLDocument(buffer.GetData());
 
             if (doc != NULL) {
-                node = FindXMLChild(doc, "map");
+                node = FindXMLChild(doc, _T("map"));
 
                 if (node != NULL) {
                     result = ReadNode(node);
                 }
             }
-            free(buf);
         }
     }
 
@@ -1076,7 +1096,7 @@ bool LinuxJavaUserPreferences::Load(TString Appid) {
     TString filename = GetUserPrefFileName(Appid);
 
     if (FilePath::FileExists(filename) == true) {
-        FMap = getJvmUserArgs(filename);
+        FMap = GetJvmUserArgs(filename);
         result = true;
     }
 

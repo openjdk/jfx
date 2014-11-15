@@ -86,7 +86,7 @@ final class SWPresentable extends SWRTTexture implements Presentable {
         return pState.getHeight();
     }
 
-    @Override public boolean isAntiAliasing() {
-        return super.isAntiAliasing();
+    @Override public boolean isMSAA() {
+        return super.isMSAA();
     }
 }

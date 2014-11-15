@@ -228,7 +228,7 @@ public interface ResourceFactory extends GraphicsResource {
     public Texture createMaskTexture(int width, int height, Texture.WrapMode wrapMode);
     public Texture createFloatTexture(int width, int height);
     public RTTexture createRTTexture(int width, int height, Texture.WrapMode wrapMode);
-    public RTTexture createRTTexture(int width, int height, Texture.WrapMode wrapMode, boolean antiAliasing);
+    public RTTexture createRTTexture(int width, int height, Texture.WrapMode wrapMode, boolean msaa);
     
     /**
      * A Texture may have been obtained from a different resource factory.

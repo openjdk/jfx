@@ -102,7 +102,7 @@ public class SpinnerApp extends Application {
             sp = new Spinner();
             sp.setValueFactory(svf);
             sp.getStyleClass().add(styles[i]);
-            sp.setPrefWidth(80);
+            sp.setPrefWidth(90);
             doubleSpinners[i] = sp;
 
             /* String spinners */

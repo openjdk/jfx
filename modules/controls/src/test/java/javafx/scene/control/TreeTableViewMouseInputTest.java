@@ -240,7 +240,7 @@ public class TreeTableViewMouseInputTest {
     }
 
     private int rt30394_count = 0;
-    @Ignore("Ignoring due to RT-37166")
+//    @Ignore("Ignoring due to RT-37166")
     @Test public void test_rt30394() {
         sm.setCellSelectionEnabled(false);
         sm.setSelectionMode(SelectionMode.MULTIPLE);
@@ -547,11 +547,14 @@ public class TreeTableViewMouseInputTest {
             }
         });
 
+        Cell cell = VirtualFlowTestUtils.getCell(tableView, 1, 0);
+        MouseEventFirer mouse = new MouseEventFirer(cell);
+
         assertEquals(0, rt_30626_count);
-        VirtualFlowTestUtils.clickOnRow(tableView, 1);
+        mouse.fireMousePressAndRelease();
         assertEquals(1, rt_30626_count);
 
-        VirtualFlowTestUtils.clickOnRow(tableView, 1);
+        mouse.fireMousePressAndRelease();
         assertEquals(1, rt_30626_count);
     }
 

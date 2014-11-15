@@ -247,13 +247,13 @@ public final class D3DPipeline extends GraphicsPipeline {
 
     int getMaxSamples() {
         if (maxSamples < 0) {
-            isAntiAliasingSupported();
+            isMSAASupported();
         }
         return maxSamples;
     }
 
     @Override
-    public boolean isAntiAliasingSupported() {
+    public boolean isMSAASupported() {
         if (maxSamples < 0) {
             //TODO: 3D - consider different adapters
             maxSamples = nGetMaxSampleSupport(0);

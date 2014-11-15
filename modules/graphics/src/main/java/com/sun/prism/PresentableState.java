@@ -209,7 +209,7 @@ public class PresentableState {
         return window;
     }
 
-    public boolean isAntiAliasing() { return false; }
+    public boolean isMSAA() { return false; }
 
     /**
      * @return the underlying View

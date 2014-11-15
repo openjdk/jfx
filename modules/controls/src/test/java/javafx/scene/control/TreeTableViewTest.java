@@ -37,6 +37,9 @@ import java.util.List;
 import java.util.Random;
 import java.util.function.Supplier;
 
+import com.sun.javafx.scene.control.behavior.TableCellBehavior;
+import com.sun.javafx.scene.control.behavior.TreeCellBehavior;
+import com.sun.javafx.scene.control.behavior.TreeTableCellBehavior;
 import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
 import com.sun.javafx.scene.control.skin.TreeTableCellSkin;
@@ -2658,7 +2661,7 @@ public class TreeTableViewTest {
         assertEquals(3, treeTableView.getFocusModel().getFocusedIndex());
     }
 
-    @Ignore("Test started intermittently failing, most probably due to RT-36855 changeset")
+//    @Ignore("Test started intermittently failing, most probably due to RT-36855 changeset")
     @Test public void test_rt_34493() {
         ObservableList<TreeItem<Person>> persons = FXCollections.observableArrayList(
             new TreeItem<Person>(new Person("Jacob", "Smith", "jacob.smith@example.com"))
@@ -3799,11 +3802,15 @@ public class TreeTableViewTest {
 
         two.setExpanded(true);
 
-        // this line would create a NPE
-        VirtualFlowTestUtils.clickOnRow(treeTableView, 4);
-
         // we should end up with the selection being on index 4, which is the
         // final location of the 'one' tree item, after sorting and expanding 'two'
+        assertEquals(one, sm.getSelectedItem());
+        assertTrue(debug(), sm.isSelected(4));
+
+        // this line would create a NPE
+        VirtualFlowTestUtils.clickOnRow(treeTableView, 4, true);
+
+        // The mouse click should not change selection at all
         assertEquals(one, sm.getSelectedItem());
         assertTrue(debug(), sm.isSelected(4));
     }
@@ -4511,5 +4518,202 @@ public class TreeTableViewTest {
         assertNull(sm.getSelectedItem());
         assertEquals(2, rt_38943_index_count);
         assertEquals(2, rt_38943_item_count);
+    }
+
+    @Test public void test_rt_38884() {
+        final TreeItem<String> root = new TreeItem<>("Root");
+        final TreeItem<String> foo = new TreeItem<>("foo");
+
+        TreeTableView<String> treeView = new TreeTableView<>(root);
+        treeView.setShowRoot(false);
+        root.setExpanded(true);
+
+        treeView.getSelectionModel().getSelectedItems().addListener((ListChangeListener.Change<? extends TreeItem<String>> c) -> {
+            while (c.next()) {
+                if (c.wasRemoved()) {
+                    assertTrue(c.getRemovedSize() > 0);
+
+                    List<? extends TreeItem<String>> removed = c.getRemoved();
+                    TreeItem<String> removedItem = null;
+                    try {
+                        removedItem = removed.get(0);
+                    } catch (Exception e) {
+                        fail();
+                    }
+
+                    assertEquals(foo, removedItem);
+                }
+            }
+        });
+
+        root.getChildren().add(foo);
+        treeView.getSelectionModel().select(0);
+        root.getChildren().clear();
+    }
+
+    private int rt_37360_add_count = 0;
+    private int rt_37360_remove_count = 0;
+    @Test public void test_rt_37360() {
+        TreeItem<String> root = new TreeItem<>("Root");
+        root.setExpanded(true);
+        root.getChildren().addAll(
+                new TreeItem<>("a"),
+                new TreeItem<>("b")
+        );
+
+        TreeTableView<String> stringTreeTableView = new TreeTableView<>(root);
+        stringTreeTableView.setShowRoot(false);
+
+        TreeTableColumn<String,String> column = new TreeTableColumn<>("Column");
+        column.setCellValueFactory(cdf -> new ReadOnlyStringWrapper(cdf.getValue().getValue()));
+        stringTreeTableView.getColumns().add(column);
+
+        MultipleSelectionModel<TreeItem<String>> sm = stringTreeTableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.getSelectedItems().addListener((ListChangeListener<TreeItem<String>>) c -> {
+            while (c.next()) {
+                if (c.wasAdded()) {
+                    rt_37360_add_count += c.getAddedSize();
+                }
+                if (c.wasRemoved()) {
+                    rt_37360_remove_count += c.getRemovedSize();
+                }
+            }
+        });
+
+        assertEquals(0, sm.getSelectedItems().size());
+        assertEquals(0, rt_37360_add_count);
+        assertEquals(0, rt_37360_remove_count);
+
+        sm.select(0);
+        assertEquals(1, sm.getSelectedItems().size());
+        assertEquals(1, rt_37360_add_count);
+        assertEquals(0, rt_37360_remove_count);
+
+        sm.select(1);
+        assertEquals(2, sm.getSelectedItems().size());
+        assertEquals(2, rt_37360_add_count);
+        assertEquals(0, rt_37360_remove_count);
+
+        sm.clearAndSelect(1);
+        assertEquals(1, sm.getSelectedItems().size());
+        assertEquals(2, rt_37360_add_count);
+        assertEquals(1, rt_37360_remove_count);
+    }
+
+    private int rt_37366_count = 0;
+    @Test public void test_rt_37366() {
+        final TreeItem<String> treeItem2 = new TreeItem<>("Item 2");
+        treeItem2.getChildren().addAll(new TreeItem<>("Item 21"), new TreeItem<>("Item 22"));
+
+        final TreeItem<String> root1 = new TreeItem<>("Root Node 1");
+        root1.getChildren().addAll(new TreeItem<>("Item 1"), treeItem2, new TreeItem<>("Item 3"));
+        root1.setExpanded(true);
+
+        final TreeItem<String> root2 = new TreeItem<>("Root Node 2");
+
+        final TreeItem<String> hiddenRoot = new TreeItem<>("Hidden Root Node");
+        hiddenRoot.getChildren().add(root1);
+        hiddenRoot.getChildren().add(root2);
+
+        final TreeTableView<String> treeView = new TreeTableView<>(hiddenRoot);
+        treeView.setShowRoot(false);
+
+        MultipleSelectionModel<TreeItem<String>> sm = treeView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.getSelectedItems().addListener((ListChangeListener.Change<? extends TreeItem<String>> c) -> {
+            rt_37366_count++;
+        });
+
+        assertEquals(0, rt_37366_count);
+
+        sm.select(1);
+        assertEquals(1, rt_37366_count);
+        assertFalse(sm.isSelected(0));
+        assertTrue(sm.isSelected(1));
+        assertFalse(sm.isSelected(2));
+
+        sm.select(2);
+        assertEquals(2, rt_37366_count);
+        assertFalse(sm.isSelected(0));
+        assertTrue(sm.isSelected(1));
+        assertTrue(sm.isSelected(2));
+
+        root1.setExpanded(false);
+        assertEquals(3, rt_37366_count);
+        assertTrue(sm.isSelected(0));
+        assertFalse(sm.isSelected(1));
+        assertFalse(sm.isSelected(2));
+    }
+
+    @Test public void test_rt_38491() {
+        TreeItem<String> a;
+        TreeItem<String> root = new TreeItem<>("Root");
+        root.setExpanded(true);
+        root.getChildren().addAll(
+                a = new TreeItem<>("a"),
+                new TreeItem<>("b")
+        );
+
+        TreeTableView<String> stringTreeView = new TreeTableView<>(root);
+        stringTreeView.setShowRoot(false);
+
+        TreeTableColumn<String,String> column = new TreeTableColumn<>("Column");
+        column.setCellValueFactory(cdf -> new ReadOnlyStringWrapper(cdf.getValue().getValue()));
+        stringTreeView.getColumns().add(column);
+
+        TreeTableView.TreeTableViewSelectionModel<String> sm = stringTreeView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        TreeTableViewFocusModel<String> fm = stringTreeView.getFocusModel();
+
+        StageLoader sl = new StageLoader(stringTreeView);
+
+        // test pre-conditions
+        assertTrue(sm.isEmpty());
+        assertEquals(a, fm.getFocusedItem());
+        assertEquals(0, fm.getFocusedIndex());
+
+        // click on row 0
+//        VirtualFlowTestUtils.clickOnRow(stringTreeView, 0);
+        sm.select(0, column);
+        assertTrue(sm.isSelected(0));
+        assertEquals(a, sm.getSelectedItem());
+        assertTrue(fm.isFocused(0));
+        assertEquals(a, fm.getFocusedItem());
+        assertEquals(0, fm.getFocusedIndex());
+        assertEquals(0, fm.getFocusedCell().getRow());
+        assertEquals(column, fm.getFocusedCell().getTableColumn());
+
+        TreeTablePosition<String, ?> anchor = TreeTableCellBehavior.getAnchor(stringTreeView, null);
+        assertNotNull(anchor);
+        assertTrue(TreeTableCellBehavior.hasNonDefaultAnchor(stringTreeView));
+        assertEquals(0, anchor.getRow());
+
+        // now add a new item at row 0. This has the effect of pushing down
+        // the selected item into row 1.
+        root.getChildren().add(0, new TreeItem("z"));
+
+        // The first bug was that selection and focus were not moving down to
+        // be on row 1, so we test that now
+        assertFalse(sm.isSelected(0));
+        assertFalse(fm.isFocused(0));
+        assertTrue(sm.isSelected(1));
+        assertEquals(a, sm.getSelectedItem());
+        assertTrue(fm.isFocused(1));
+        assertEquals(a, fm.getFocusedItem());
+        assertEquals(1, fm.getFocusedIndex());
+        assertEquals(1, fm.getFocusedCell().getRow());
+        assertEquals(column, fm.getFocusedCell().getTableColumn());
+
+        // The second bug was that the anchor was not being pushed down as well
+        // (when it should).
+        anchor = TreeTableCellBehavior.getAnchor(stringTreeView, null);
+        assertNotNull(anchor);
+        assertTrue(TreeTableCellBehavior.hasNonDefaultAnchor(stringTreeView));
+        assertEquals(1, anchor.getRow());
+        assertEquals(column, anchor.getTableColumn());
+
+        sl.dispose();
     }
 }

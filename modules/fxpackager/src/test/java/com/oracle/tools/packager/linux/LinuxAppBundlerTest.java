@@ -61,6 +61,8 @@ public class LinuxAppBundlerTest {
     static File workDir;
     static File appResourcesDir;
     static File fakeMainJar;
+    static String runtimeJdk;
+    static String runtimeJre;
     static Set<File> appResources;
     static boolean retain = false;
 
@@ -68,6 +70,9 @@ public class LinuxAppBundlerTest {
     public static void prepareApp() {
         // only run on linux
         Assume.assumeTrue(System.getProperty("os.name").toLowerCase().startsWith("linux"));
+
+        runtimeJdk = System.getenv("PACKAGER_JDK_ROOT");
+        runtimeJre = System.getenv("PACKAGER_JRE_ROOT");
 
         Log.setLogger(new Log.Logger(true));
         Log.setDebug(true);
@@ -249,7 +254,13 @@ public class LinuxAppBundlerTest {
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
         bundleParams.put(ARGUMENTS.getID(), Arrays.asList("He Said", "She Said"));
         bundleParams.put(CLASSPATH.getID(), "mainApp.jar");
-        bundleParams.put(LinuxAppBundler.LINUX_RUNTIME.getID(), System.getProperty("java.home"));
+
+        if (runtimeJdk != null) {
+            bundleParams.put(LINUX_RUNTIME.getID(), runtimeJdk);
+        } else {
+            bundleParams.put(LINUX_RUNTIME.getID(), System.getProperty("java.home"));
+        }
+
         bundleParams.put(JVM_OPTIONS.getID(), "-Xms128M");
         bundleParams.put(JVM_PROPERTIES.getID(), "everything.jvm.property=everything.jvm.property.value");
         bundleParams.put(MAIN_CLASS.getID(), "hello.HelloRectangle");
@@ -338,5 +349,31 @@ public class LinuxAppBundlerTest {
 
         File output = bundler.execute(bundleParams, new File(workDir, "launchers"));
         validatePackageCfg(output, bundleParams);
+    }
+    
+    /**
+     * User a JRE instead of a JDK
+     */
+    @Test
+    public void testJRE() throws IOException, ConfigException, UnsupportedPlatformException {
+        Assume.assumeTrue(runtimeJre != null && new File(runtimeJre).isDirectory());
+
+        Bundler bundler = new LinuxAppBundler();
+
+        Map<String, Object> bundleParams = new HashMap<>();
+
+        // not part of the typical setup, for testing
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        bundleParams.put(LINUX_RUNTIME.getID(), runtimeJre);
+
+        boolean valid = bundler.validate(bundleParams);
+        assertTrue(valid);
+
+        File output = bundler.execute(bundleParams, new File(workDir, "JRETest"));
+        System.err.println("Bundle at - " + output);
+        assertNotNull(output);
+        assertTrue(output.exists());
     }
 }

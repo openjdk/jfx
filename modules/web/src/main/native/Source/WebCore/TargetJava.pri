@@ -1334,7 +1334,7 @@ SOURCES += \
     platform/java/SharedTimerJava.cpp \
     platform/java/SoundJava.cpp \
     platform/java/StringJava.cpp \
-    platform/java/TemporaryLinkStubs.cpp \
+    platform/java/TemporaryLinkStubsJava.cpp \
     platform/java/TouchEventJava.cpp \
     platform/java/WebPage.cpp \
     platform/java/WheelEventJava.cpp \

@@ -244,22 +244,8 @@ public class Text extends Shape {
     private boolean spanBoundsInvalid = true;
 
     void layoutSpan(GlyphList[] runs) {
-        /* Sometimes a property change in the text node will causes layout in
-         * text flow. In this case all the dirty bits are already clear and no
-         * extra work is necessary. Other times the layout is caused by changes
-         * in the text flow object (wrapping width and text alignment for example).
-         * In the second case the dirty bits must be set here using
-         * geomChanged() and impl_markDirty().
-         * This is a special case where a shape is resized by the parent during
-         * layoutChildren(). See TextFlow#requestLayout() for information how
-         * text flow deals with this situation.
-         */
-        geomChanged();
-        impl_markDirty(DirtyBits.NODE_CONTENTS);
-
-        spanBoundsInvalid = true;
-        int count = 0;
         TextSpan span = getTextSpan();
+        int count = 0;
         for (int i = 0; i < runs.length; i++) {
             GlyphList run = runs[i];
             if (run.getTextSpan() == span) {
@@ -274,6 +260,23 @@ public class Text extends Shape {
                 textRuns[count++] = run;
             }
         }
+        spanBoundsInvalid = true;
+
+        /* Sometimes a property change in the text node will causes layout in
+         * text flow. In this case all the dirty bits are already clear and no
+         * extra work is necessary. Other times the layout is caused by changes
+         * in the text flow object (wrapping width and text alignment for example).
+         * In the second case the dirty bits must be set here using
+         * impl_geomChanged() and impl_markDirty(). Note that impl_geomChanged()
+         * causes another (undesired) layout request in the parent.
+         * In general this is not a problem because shapes are not resizable and
+         * region objects do not propagate layout changes to the parent.
+         * This is a special case where a shape is resized by the parent during
+         * layoutChildren(). See TextFlow#requestLayout() for information how
+         * text flow deals with this situation.
+         */
+        impl_geomChanged();
+        impl_markDirty(DirtyBits.NODE_CONTENTS);
     }
 
     BaseBounds getSpanBounds() {
@@ -761,10 +764,6 @@ public class Text extends Shape {
     @Override
     protected final void impl_geomChanged() {
         super.impl_geomChanged();
-        geomChanged();
-    }
-
-    private void geomChanged() {
         if (attributes != null) {
             if (attributes.impl_caretBinding != null) {
                 attributes.impl_caretBinding.invalidate();

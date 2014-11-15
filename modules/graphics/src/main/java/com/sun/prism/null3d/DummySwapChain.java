@@ -111,7 +111,7 @@ class DummySwapChain extends DummyResource implements Presentable {
     }
 
     @Override
-    public boolean isAntiAliasing() {
+    public boolean isMSAA() {
         return false;
     }
 }

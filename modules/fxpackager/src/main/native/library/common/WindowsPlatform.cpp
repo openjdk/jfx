@@ -38,6 +38,7 @@
 #include "WindowsPlatform.h"
 #include "Package.h"
 #include "Helpers.h"
+#include "PlatformString.h"
 
 #include <map>
 #include <vector>
@@ -78,54 +79,32 @@ public:
         return result;
     }
 
-    //TODO cleanup GetKeys.
-#define MAX_KEY_LENGTH 255
-#define MAX_VALUE_NAME 16383
-
     std::list<TString> GetKeys() {
         std::list<TString> result;
+        DWORD count;
 
-        TCHAR    achKey[MAX_KEY_LENGTH];   // buffer for subkey name
-        DWORD    cbName;                   // size of name string
-        TCHAR    achClass[MAX_PATH] = TEXT("");  // buffer for class name
-        DWORD    cchClassName = MAX_PATH;  // size of class string
-        DWORD    cSubKeys=0;               // number of subkeys
-        DWORD    cbMaxSubKey;              // longest subkey size
-        DWORD    cchMaxClass;              // longest class string
-        DWORD    cValues;              // number of values for key
-        DWORD    cchMaxValue;          // longest value name
-        DWORD    cbMaxValueData;       // longest value data
-        DWORD    cbSecurityDescriptor; // size of security descriptor
-        FILETIME ftLastWriteTime;      // last write time
+        if (RegQueryInfoKey(FOpenKey, NULL, NULL, NULL, NULL, NULL, NULL,
+                            &count, NULL, NULL, NULL, NULL) == ERROR_SUCCESS) {
 
-        DWORD retCode;
+            DWORD length = 255;
+            DynamicBuffer<TCHAR> buffer(length);
 
-        retCode = RegQueryInfoKey(
-            FOpenKey,                    // key handle
-            achClass,                // buffer for class name
-            &cchClassName,           // size of class string
-            NULL,                    // reserved
-            &cSubKeys,               // number of subkeys
-            &cbMaxSubKey,            // longest subkey size
-            &cchMaxClass,            // longest class string
-            &cValues,                // number of values for this key
-            &cchMaxValue,            // longest value name
-            &cbMaxValueData,         // longest value data
-            &cbSecurityDescriptor,   // security descriptor
-            &ftLastWriteTime);       // last write time
+            for (unsigned int index = 0; index < count; index++) {
+                buffer.Zero();
+                DWORD status = RegEnumValue(FOpenKey, index, buffer.GetData(),
+                                            &length, NULL, NULL, NULL, NULL);
 
-        for (unsigned int index = 0; index < cSubKeys; index++) {
-            cbName = MAX_KEY_LENGTH;
-            retCode = RegEnumKeyEx(FOpenKey, index,
-                     achKey,
-                     &cbName,
-                     NULL,
-                     NULL,
-                     NULL,
-                     &ftLastWriteTime);
+                while (status == ERROR_MORE_DATA) {
+                    length = length * 2;
+                    buffer.Resize(length);
+                    status = RegEnumValue(FOpenKey, index, buffer.GetData(),
+                                          &length, NULL, NULL, NULL, NULL);
+                }
 
-            if (retCode == ERROR_SUCCESS) {
-                result.push_back(achKey);
+                if (status == ERROR_SUCCESS) {
+                    TString value = buffer.GetData();
+                    result.push_back(value);
+                }
             }
         }
 
@@ -297,15 +276,12 @@ bool WindowsPlatform::IsMainThread() {
     return result;
 }
 
-size_t WindowsPlatform::GetMemorySize() {
-    /*
-    TODO implement
-     
-    MEMORYSTATUSEX status;
-    status.dwLength = sizeof(status);
-    GlobalMemoryStatusEx( &status );
-    return (size_t)status.ullTotalPhys;*/
-    return 0;
+TPlatformNumber WindowsPlatform::GetMemorySize() {
+    SYSTEM_INFO si;
+    GetSystemInfo(&si);
+    size_t result = (size_t)si.lpMaximumApplicationAddress;
+    result = result / 1048576; // Convert from bytes to megabytes.
+    return result;
 }
 
 #ifdef DEBUG
@@ -333,21 +309,101 @@ WindowsJavaUserPreferences::WindowsJavaUserPreferences(void) : JavaUserPreferenc
 WindowsJavaUserPreferences::~WindowsJavaUserPreferences(void) {
 }
 
+// Java Preferences API encodes it's strings, so we need to match what Java does to work with Java.
+// CAVEAT: Java also does unicode encoding which this doesn't do yet. Should be sufficient for jvm args.
+// See WindowsPreferences.java toWindowsName()
+TString ConvertStringToJavaEcodedString(TString Value) {
+    TString result;
+    TCHAR* p = (TCHAR*)Value.c_str();
+    TCHAR c = *p;
+
+    while (c != 0) {
+        switch (c) {
+            case '\\':
+                result += _T("//");
+                break;
+        
+            case '/':
+                result += '\\';
+                break;
+            default:
+                if ((c >= 'A') && (c <= 'Z')) {
+                    result += '/';
+                    result += c;
+                }
+                else
+                    result += c;
+                break;
+        }
+
+        p++;
+        c = *p;
+    }
+
+    return result;
+}
+
+// Java Preferences API encodes it's strings, so we need to match what Java does to work with Java.
+// CAVEAT: Java also does unicode encoding which this doesn't do yet. Should be sufficient for jvm args.
+// See WindowsPreferences.java toJavaName()
+TString ConvertJavaEcodedStringToString(TString Value) {
+    TString result;
+    
+    for (size_t index = 0; index < Value.length(); index++) {
+        TCHAR c = Value[index];
+        
+        switch (c) {
+            case '/':
+                if ((index + 1) < Value.length()) {
+                    index++;
+                    TCHAR nextc = Value[index];
+                    
+                    if (nextc >= 'A' && nextc <= 'Z') {
+                        result += nextc;
+                    }
+                    else if (nextc == '/') {
+                        result += '\\';
+                    }
+                }
+                break;
+            case '\\':
+                result += '/';
+                break;
+            default:
+                result += c;
+                break;
+        }
+    }
+    
+    return result;
+}
+
 bool WindowsJavaUserPreferences::Load(TString Appid) {
     bool result = false;
-    TString key = TString(_T("SOFTWARE\\JavaSoft\\Prefs\\")) + Helpers::ConvertIdToFilePath(Appid) + TString(_T("\\JVMOptions"));
+    TString lappid = Helpers::ConvertIdToFilePath(Appid);
+    lappid = ConvertStringToJavaEcodedString(Appid);
+    TString registryKey = TString(_T("SOFTWARE\\JavaSoft\\Prefs\\")) + lappid + TString(_T("\\/J/V/M/User/Options"));
     Registry registry(HKEY_CURRENT_USER);
 
-    if (registry.Open(key) == true) {
+    if (registry.Open(registryKey) == true) {
         std::list<TString> keys = registry.GetKeys();
-        std::map<TString, TString> mapOfKeysAndValues;
+        TOrderedMap mapOfKeysAndValues;
+        int index = 1;
 
         for (std::list<TString>::const_iterator iterator = keys.begin(); iterator != keys.end(); iterator++) {
-            TString name = *iterator;
-            TString value = registry.ReadString(name);
+            TString key = *iterator;
+            TString value = registry.ReadString(key);
+            key = ConvertJavaEcodedStringToString(key);
+            value = ConvertJavaEcodedStringToString(value);
 
-            if (value.empty() == false) {
-                mapOfKeysAndValues.insert(std::map<TString, TString>::value_type(name, value));
+            if (key.empty() == false) {
+                TValueIndex item;
+                item.value = value;
+                item.index = index;
+
+                mapOfKeysAndValues.insert(TOrderedMap::value_type(key, item));
+                result = true;
+                index++;
             }
         }
 

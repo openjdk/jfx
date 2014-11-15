@@ -64,6 +64,8 @@ public class WinAppBundlerTest {
     static File appResourcesDir;
     static File fakeMainJar;
     static File packagedMainJar;
+    static String runtimeJdk;
+    static String runtimeJre;
     static Set<File> appResources;
     static Set<File> packagedAppResources;
     static boolean retain = false;
@@ -72,6 +74,9 @@ public class WinAppBundlerTest {
     public static void prepareApp() {
         // only run on windows
         Assume.assumeTrue(System.getProperty("os.name").toLowerCase().startsWith("win"));
+
+        runtimeJdk = System.getenv("PACKAGER_JDK_ROOT");
+        runtimeJre = System.getenv("PACKAGER_JRE_ROOT");
 
         Log.setLogger(new Log.Logger(true));
 
@@ -261,7 +266,12 @@ public class WinAppBundlerTest {
         bundleParams.put(PRELOADER_CLASS.getID(), "hello.HelloPreloader");
         bundleParams.put(USER_JVM_OPTIONS.getID(), "-Xmx=256M\n");
         bundleParams.put(VERSION.getID(), "1.2.3.4");
-        bundleParams.put(WIN_RUNTIME.getID(), System.getProperty("java.home"));
+        
+        if (runtimeJdk != null) {
+            bundleParams.put(WIN_RUNTIME.getID(), runtimeJdk);
+        } else {
+            bundleParams.put(WIN_RUNTIME.getID(), System.getProperty("java.home"));
+        }
 
         // assert they are set
         for (BundlerParamInfo bi :parameters) {
@@ -343,4 +353,30 @@ public class WinAppBundlerTest {
         File output = bundler.execute(bundleParams, new File(workDir, "launchers"));
         validatePackageCfg(output, bundleParams);
     }
+
+    /**
+     * User a JRE instead of a JDK
+     */
+    @Test
+    public void testJRE() throws IOException, ConfigException, UnsupportedPlatformException {
+        Assume.assumeTrue(runtimeJre != null && new File(runtimeJre).isDirectory());
+
+        Bundler bundler = new WinAppBundler();
+
+        Map<String, Object> bundleParams = new HashMap<>();
+
+        // not part of the typical setup, for testing
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        bundleParams.put(WIN_RUNTIME.getID(), runtimeJre);
+
+        boolean valid = bundler.validate(bundleParams);
+        assertTrue(valid);
+
+        File output = bundler.execute(bundleParams, new File(workDir, "JRETest"));
+        System.err.println("Bundle at - " + output);
+        assertNotNull(output);
+        assertTrue(output.exists());
+    }    
 }

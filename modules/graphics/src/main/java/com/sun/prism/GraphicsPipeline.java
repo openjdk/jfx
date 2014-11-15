@@ -77,7 +77,7 @@ public abstract class GraphicsPipeline {
 
     public abstract boolean is3DSupported();
 
-    public boolean isAntiAliasingSupported() { return false; }
+    public boolean isMSAASupported() { return false; }
 
     public abstract boolean isVsyncSupported();
 

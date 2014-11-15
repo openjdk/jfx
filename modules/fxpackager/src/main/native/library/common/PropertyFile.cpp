@@ -40,7 +40,7 @@
 
 
 PropertyFile::PropertyFile(void) : PropertyContainer() {
-    FReadOnly = true;
+    FReadOnly = false;
     FModified = false;
 }
 

@@ -70,8 +70,8 @@ public class TestPackager {
         long t = Runtime.getRuntime().totalMemory();
         Long total = t / 1048576;
 
-        JLabel label = new JLabel("Max (bytes) " + value.toString()
-                + "  Total (bytes) " + total.toString());
+        JLabel label = new JLabel("Max: " + value.toString() + "m"
+                                  + "  Total: " + total.toString() + "m");
 
         RuntimeMXBean RuntimemxBean = ManagementFactory.getRuntimeMXBean();
         List<String> arguments = RuntimemxBean.getInputArguments();

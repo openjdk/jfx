@@ -135,7 +135,7 @@ public class SubScene extends Node {
             PlatformLogger.getLogger(logname).warning("System can't support "
                     + "ConditionalFeature.SCENE3D");
         }
-        if (isAntiAliasing && !Toolkit.getToolkit().isAntiAliasingSupported()) {
+        if (isAntiAliasing && !Toolkit.getToolkit().isMSAASupported()) {
             String logname = SubScene.class.getName();
             PlatformLogger.getLogger(logname).warning("System can't support "
                     + "antiAliasing");
@@ -640,7 +640,7 @@ public class SubScene extends Node {
             return new NGSubScene(false, false);
         }
         boolean aa = !(antiAliasing == null || antiAliasing == SceneAntialiasing.DISABLED);
-        return new NGSubScene(depthBuffer, aa && Toolkit.getToolkit().isAntiAliasingSupported());
+        return new NGSubScene(depthBuffer, aa && Toolkit.getToolkit().isMSAASupported());
     }
 
     /**

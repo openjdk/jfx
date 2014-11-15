@@ -118,7 +118,7 @@ final class SWResourceFactory
         return tex instanceof SWTexture;
     }
 
-    @Override public RTTexture createRTTexture(int width, int height, WrapMode wrapMode, boolean antiAliasing) {
+    @Override public RTTexture createRTTexture(int width, int height, WrapMode wrapMode, boolean msaa) {
         return createRTTexture(width, height, wrapMode);
     }
 

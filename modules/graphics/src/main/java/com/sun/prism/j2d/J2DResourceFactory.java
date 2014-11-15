@@ -95,7 +95,7 @@ class J2DResourceFactory extends BaseResourceFactory
     }
 
     @Override
-    public RTTexture createRTTexture(int width, int height, Texture.WrapMode wrapMode, boolean antiAliasing) {
+    public RTTexture createRTTexture(int width, int height, Texture.WrapMode wrapMode, boolean msaa) {
         return createRTTexture(width, height, wrapMode);
     }
 

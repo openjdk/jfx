@@ -337,8 +337,6 @@ public final class QuantumToolkit extends Toolkit {
                     QuantumToolkit.this.postPulse();
                 } catch (Throwable th) {
                     th.printStackTrace(System.err);
-                    // } catch (RuntimeException re) {
-                    // ignore spurious Glass timer events while exiting...
                 }
             };
             pulseTimer = Application.GetApplication().createTimer(timerRunnable);
@@ -749,6 +747,9 @@ public final class QuantumToolkit extends Toolkit {
     @Override public void exit() {
         // This method must run on the FX application thread
         checkFxUserThread();
+
+        // Turn off pulses so no extraneous runnables are submitted
+        pulseTimer.stop();
 
         // We need to wait for the last frame to finish so that the renderer
         // is not running while we are shutting down glass.
@@ -1171,8 +1172,8 @@ public final class QuantumToolkit extends Toolkit {
     }
 
     @Override
-    public boolean isAntiAliasingSupported() {
-        return  GraphicsPipeline.getPipeline().isAntiAliasingSupported();
+    public boolean isMSAASupported() {
+        return  GraphicsPipeline.getPipeline().isMSAASupported();
     }
 
     static TransferMode clipboardActionToTransferMode(final int action) {

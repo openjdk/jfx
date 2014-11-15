@@ -206,7 +206,7 @@ class D3DContext extends BaseShaderContext {
     protected State updateRenderTarget(RenderTarget target, NGCamera camera,
                                        boolean depthTest)  {
         long resourceHandle = ((D3DRenderTarget)target).getResourceHandle();
-        int res = nSetRenderTarget(pContext, resourceHandle, depthTest, target.isAntiAliasing());
+        int res = nSetRenderTarget(pContext, resourceHandle, depthTest, target.isMSAA());
         validate(res);
         // resetLastClip should be called only if render target was changed
         // return value is S_FALSE (success with negative result)

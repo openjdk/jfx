@@ -296,7 +296,7 @@ public abstract class TableRowSkinBase<T,
                         final int thisIndex = getSkinnable().getIndex();
                         for (int i = 0; i < flow.cells.size(); i++) {
                             C cell = flow.cells.get(i);
-                            if (cell == null || cell.isEmpty() || cell.getIndex() >= thisIndex) continue;
+                            if (cell == null || cell.isEmpty()) continue;
                             cell.requestLayout();
                             cell.layout();
                         }

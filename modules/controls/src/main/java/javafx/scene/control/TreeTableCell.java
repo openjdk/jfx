@@ -457,6 +457,7 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
             updateItem(oldIndex);
             updateSelection();
             updateFocus();
+            updateEditing();
         }
     }
     

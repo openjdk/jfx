@@ -396,11 +396,14 @@ public class TableViewMouseInputTest {
             }
         });
 
+        Cell cell = VirtualFlowTestUtils.getCell(tableView, 1, 0);
+        MouseEventFirer mouse = new MouseEventFirer(cell);
+
         assertEquals(0, rt_30626_count);
-        VirtualFlowTestUtils.clickOnRow(tableView, 1);
+        mouse.fireMousePressAndRelease();
         assertEquals(1, rt_30626_count);
 
-        VirtualFlowTestUtils.clickOnRow(tableView, 1);
+        mouse.fireMousePressAndRelease();
         assertEquals(1, rt_30626_count);
     }
 
@@ -812,7 +815,7 @@ public class TableViewMouseInputTest {
             assertEquals(1, sm.getSelectedCells().size());
             TablePosition<?,?> cell = sm.getSelectedCells().get(0);
             assertEquals(0, cell.getRow());
-            assertEquals(lastNameCol, cell.getTableColumn());
+            assertEquals("Expected Last Name column, but got " + cell.getTableColumn().getText(), lastNameCol, cell.getTableColumn());
         }
     }
 }

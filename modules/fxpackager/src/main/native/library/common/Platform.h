@@ -76,15 +76,17 @@
 #include <process.h>
 #include <malloc.h>
 
-#define TString std::wstring
+typedef std::wstring TString;
 
 #define TRAILING_SLASH '\\'
 #define PATH_SEPARATOR ';'
 #define BAD_PATH_SEPARATOR ':'
 
-#ifdef _DEBUG
-#define DEBUG
-#endif //_DEBUG
+typedef ULONGLONG TPlatformNumber;
+
+#if defined _DEBUG && !defined DEBUG
+    #define DEBUG
+#endif
 
 #endif //WINDOWS
 
@@ -97,13 +99,16 @@
 #include <libgen.h>
 
 #define _T(x) x
-#define TCHAR char
-#define TString std::string
+
+typedef char TCHAR;
+typedef std::string TString;
 
 #define TRAILING_SLASH '/'
 #define PATH_SEPARATOR ':'
 #define BAD_PATH_SEPARATOR ';'
 #define MAX_PATH 1000
+
+typedef long TPlatformNumber;
 
 #define HMODULE void*
 #endif //POSIX
@@ -135,6 +140,8 @@ struct TValueIndex {
     TString value;
     size_t index;
 };
+
+typedef std::map<TString, TValueIndex> TOrderedMap;
 
 
 class PropertyContainer {
@@ -171,9 +178,9 @@ public:
     virtual TCHAR* ConvertFileSystemStringToString(TCHAR* Source, bool &release) = 0;
 
     // Returns:
-    // Windows=C:\Users\<username>\AppData\Local\<App Name>\packager\jvmuserargs.cfg
-    // Linux=~/.local/<App Name>/packager/jvmuserargs.cfg
-    // Mac=~/Library/Application Support/<App Name>/packager/jvmuserargs.cfg
+    // Windows=C:\Users\<username>\AppData\Local\<app.preferences.id>\packager\jvmuserargs.cfg
+    // Linux=~/.local/<app.preferences.id>/packager/jvmuserargs.cfg
+    // Mac=~/Library/Application Support/<app.preferences.id>/packager/jvmuserargs.cfg
     virtual TString GetAppDataDirectory() = 0;
 
     virtual TString GetPackageAppDirectory() = 0;
@@ -196,7 +203,9 @@ public:
     virtual Procedure GetProcAddress(Module Module, std::string MethodName) = 0;
     
     virtual bool IsMainThread() = 0;
-    virtual size_t GetMemorySize() = 0;
+
+    // Returns megabytes.
+    virtual TPlatformNumber GetMemorySize() = 0;
     
     virtual std::map<TString, TString> GetKeys() = 0;
 

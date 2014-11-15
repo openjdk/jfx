@@ -227,7 +227,10 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
             if (animate) {
                 animate(
                     new KeyFrame(Duration.ZERO,
-                            (e) -> { if (!getPlotChildren().contains(symbol)) getPlotChildren().add(symbol); },
+                            (e) -> {
+                                if (symbol != null && !getPlotChildren().contains(symbol)) {
+                                    getPlotChildren().add(symbol);
+                                } },
                             new KeyValue(item.currentYProperty(),
                                     item.getCurrentY()),
                             new KeyValue(item.currentXProperty(),

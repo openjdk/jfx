@@ -785,7 +785,11 @@ final class MacAccessible extends Accessible {
                 break;
             }
             case TEXT:
-                macNotification = MacNotification.NSAccessibilityTitleChangedNotification;
+                if (getAttribute(ROLE) == AccessibleRole.SPINNER) {
+                    macNotification = MacNotification.NSAccessibilityTitleChangedNotification;
+                } else {
+                    macNotification = MacNotification.NSAccessibilityValueChangedNotification;
+                }
                 break;
             case PARENT:
                 ignoreInnerText = null;
@@ -1235,6 +1239,11 @@ final class MacAccessible extends Accessible {
                     return null;
                 }
                 case AXDateTimeComponents: {
+                    /* Mac Yosemite crashes if AXDateTimeComponents set
+                     * and NULL is returned for AXValue.
+                     */
+                    if (getAttribute(DATE) == null) return null;
+
                     /* 
                      * AXDateTimeComponents is an undocumented attribute which
                      * is used by native DateTime controls in Cocoa.

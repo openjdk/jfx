@@ -48,7 +48,7 @@ public:
     enum MemoryState {msManual, msAuto};
     
 public:
-    std::map<TString, TValueIndex> FJVMArgs;
+    TOrderedMap FJVMArgs;
     std::list<TString> FArgs;
     
     TString FPackageRootDirectory;
@@ -66,7 +66,7 @@ public:
     bool FUseJavaPreferences;
     TString FCommandName;
     
-    size_t FMemorySize;
+    TPlatformNumber FMemorySize;
     MemoryState FMemoryState;
 };
 
@@ -82,9 +82,10 @@ private:
     
     bool FDebugging;
 
-    PropertyFile* FJVMUserConfig; // Contains JVM user overrides
-    std::map<TString, TValueIndex> FDefaultJVMUserArgs; // Contains JVM user defaults
-    std::map<TString, TValueIndex> FJVMUserArgs; // Contains a merge of JVM defaults and user overrides
+    //PropertyFile* FJVMUserConfig; // Contains JVM user overrides
+    TOrderedMap FJVMUserArgsOverrides;
+    TOrderedMap FDefaultJVMUserArgs; // Contains JVM user defaults
+    TOrderedMap FJVMUserArgs; // Contains a merge of JVM defaults and user overrides
 
 
     Package(void);
@@ -101,11 +102,11 @@ public:
 
     void SetCommandLineArguments(int argc, TCHAR* argv[]);
 
-    std::map<TString, TValueIndex> GetJVMArgs();
-    std::map<TString, TValueIndex> GetDefaultJVMUserArgs();
-    std::map<TString, TValueIndex> GetJVMUserArgOverrides();
-    void SetJVMUserArgOverrides(std::map<TString, TValueIndex> Value);
-    std::map<TString, TValueIndex> GetJVMUserArgs();
+    TOrderedMap GetJVMArgs();
+    TOrderedMap GetDefaultJVMUserArgs();
+    TOrderedMap GetJVMUserArgOverrides();
+    void SetJVMUserArgOverrides(TOrderedMap Value);
+    TOrderedMap GetJVMUserArgs();
 
     std::list<TString> GetArgs();
 
@@ -126,7 +127,7 @@ public:
     bool HasSplashScreen();
     TString GetCommandName();
     
-    size_t GetMemorySize();
+    TPlatformNumber GetMemorySize();
     PackageBootFields::MemoryState GetMemoryState();
 };
 

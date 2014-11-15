@@ -1820,6 +1820,8 @@ public class TableView<S> extends Control {
 
         private final TableView<S> tableView;
 
+        boolean blockFocusCall = false;
+
 
 
         /***********************************************************************
@@ -1953,7 +1955,7 @@ public class TableView<S> extends Control {
 
         /** {@inheritDoc} */
         @Override protected S getModelItem(int index) {
-            if (index < 0 || index > getItemCount()) return null;
+            if (index < 0 || index >= getItemCount()) return null;
             return tableView.getItems().get(index);
         }
 
@@ -1986,6 +1988,7 @@ public class TableView<S> extends Control {
         }
 
         void focus(TablePosition<S,?> pos) {
+            if (blockFocusCall) return;
             if (getTableView().getFocusModel() == null) return;
 
             getTableView().getFocusModel().focus(pos.getRow(), pos.getTableColumn());
@@ -2086,7 +2089,9 @@ public class TableView<S> extends Control {
 
             while (c.next()) {
                 if (c.wasReplaced() || c.getAddedSize() == getItemCount()) {
+                    this.selectedItemChange = c;
                     updateDefaultSelection();
+                    this.selectedItemChange = null;
                     return;
                 }
 
@@ -2217,13 +2222,24 @@ public class TableView<S> extends Control {
                     final int newIndicesSize = newIndices.size();
 
                     if ((c.wasRemoved() || c.wasAdded()) && newIndicesSize > 0) {
+                        TablePosition<S,?> anchor = TableCellBehavior.getAnchor(tableView, null);
+                        if (anchor != null) {
+                            boolean isAnchorSelected = isSelected(anchor.getRow(), anchor.getTableColumn());
+                            if (isAnchorSelected) {
+                                TablePosition<S,?> newAnchor = new TablePosition<>(tableView, anchor.getRow() + shift, anchor.getTableColumn());
+                                TableCellBehavior.setAnchor(tableView, newAnchor, false);
+                            }
+                        }
+
                         quietClearSelection();
 
                         // Fix for RT-22079
+                        blockFocusCall = true;
                         for (int i = 0; i < newIndicesSize; i++) {
                             TablePosition<S, ?> tp = newIndices.get(i);
                             select(tp.getRow(), tp.getTableColumn());
                         }
+                        blockFocusCall = false;
                     }
                 } else if (c.wasPermutated()) {
                     // General approach:
@@ -2313,15 +2329,28 @@ public class TableView<S> extends Control {
                 return;
             }
 
+            final boolean wasSelected = isSelected(row, column);
+
+            // firstly we make a copy of the selection, so that we can send out
+            // the correct details in the selection change event.
+            List<TablePosition<S,?>> previousSelection = new ArrayList<>(selectedCellsMap.getSelectedCells());
+
+            if (wasSelected && previousSelection.size() == 1) {
+                // before we return, we double-check that the selected item
+                // is equal to the item in the given index
+                TablePosition<S,?> selectedCell = getSelectedCells().get(0);
+                if (getSelectedItem() == getModelItem(row)) {
+                    if (selectedCell.getRow() == row && selectedCell.getTableColumn() == column) {
+                        return;
+                    }
+                }
+            }
+
             // RT-32411 We used to call quietClearSelection() here, but this
             // resulted in the selectedItems and selectedIndices lists never
             // reporting that they were empty.
             // makeAtomic toggle added to resolve RT-32618
             startAtomic();
-
-            // firstly we make a copy of the selection, so that we can send out
-            // the correct details in the selection change event
-            List<TablePosition<S,?>> previousSelection = new ArrayList<>(selectedCellsMap.getSelectedCells());
 
             // then clear the current selection
             clearSelection();
@@ -2333,9 +2362,35 @@ public class TableView<S> extends Control {
 
             // fire off a single add/remove/replace notification (rather than
             // individual remove and add notifications) - see RT-33324
-            int changeIndex = selectedCellsSeq.indexOf(newTablePosition);
-            ListChangeListener.Change change = new NonIterableChange.GenericAddRemoveChange<>(
-                    changeIndex, changeIndex + 1, previousSelection, selectedCellsSeq);
+            ListChangeListener.Change change;
+
+            // We remove the new selection from the list seeing as it is not removed.
+            previousSelection.remove(newTablePosition);
+
+            /*
+             * getFrom() documentation:
+             *   If wasAdded is true, the interval contains all the values that were added.
+             *   If wasPermutated is true, the interval marks the values that were permutated.
+             *   If wasRemoved is true and wasAdded is false, getFrom() and getTo() should
+             *   return the same number - the place where the removed elements were positioned in the list.
+             */
+            if (wasSelected) {
+                change = new NonIterableChange.GenericAddRemoveChange<TablePosition<S,?>>(
+                        0, 0, previousSelection, selectedCellsSeq) {
+                    @Override public boolean wasAdded() {
+                        return false;
+                    }
+
+                    @Override public boolean wasRemoved() {
+                        return true;
+                    }
+                };
+            } else {
+                final int changeIndex = selectedCellsSeq.indexOf(newTablePosition);
+                change = new NonIterableChange.GenericAddRemoveChange<>(
+                        changeIndex, changeIndex + 1, previousSelection, selectedCellsSeq);
+            }
+
             handleSelectedCellsListChangeEvent(change);
         }
 
@@ -2560,14 +2615,15 @@ public class TableView<S> extends Control {
             final int _minRow = Math.min(minRow, maxRow);
             final int _maxRow = Math.max(minRow, maxRow);
 
+            List<TablePosition<S,?>> cellsToSelect = new ArrayList<>();
+
             for (int _row = _minRow; _row <= _maxRow; _row++) {
                 // begin copy/paste of select(int, column) method (with some
                 // slight modifications)
                 if (_row < 0 || _row >= itemCount) continue;
 
                 if (! isCellSelectionEnabled) {
-                    TablePosition<S, ?> pos = new TablePosition<>(tableView, _row, (TableColumn<S,?>)minColumn);
-                    selectedCellsMap.add(pos);
+                    cellsToSelect.add(new TablePosition<>(tableView, _row, (TableColumn<S,?>)minColumn));
                 } else {
                     for (int _col = _minColumnIndex; _col <= _maxColumnIndex; _col++) {
                         final TableColumn<S, ?> column = tableView.getVisibleLeafColumn(_col);
@@ -2576,13 +2632,13 @@ public class TableView<S> extends Control {
                         // to select the whole row instead...
                         if (column == null && isCellSelectionEnabled) continue;
 
-                        TablePosition<S, ?> pos = new TablePosition<>(tableView, _row, column);
-
-                        selectedCellsMap.add(pos);
+                        cellsToSelect.add(new TablePosition<>(tableView, _row, column));
                         // end copy/paste
                     }
                 }
             }
+
+            selectedCellsMap.addAll(cellsToSelect);
             stopAtomic();
 
             // fire off events.
@@ -2959,9 +3015,13 @@ public class TableView<S> extends Control {
             }
 
             if (fireChangeEvent) {
-                // create an on-demand list of the removed objects contained in the
-                // given rows.
-                selectedItems.callObservers(new MappingChange<>(c, cellToItemsMap, selectedItems));
+                if (selectedItemChange != null) {
+                    selectedItems.callObservers(selectedItemChange);
+                } else {
+                    // create an on-demand list of the removed objects contained in the
+                    // given rows.
+                    selectedItems.callObservers(new MappingChange<>(c, cellToItemsMap, selectedItems));
+                }
             }
             c.reset();
 
@@ -3013,7 +3073,6 @@ public class TableView<S> extends Control {
         private final TableView<S> tableView;
 
         private final TablePosition<S,?> EMPTY_CELL;
-        private boolean isDefaultFocus = false;
 
         /**
          * Creates a default TableViewFocusModel instance that will be used to
@@ -3060,10 +3119,7 @@ public class TableView<S> extends Control {
             }
 
             if (added && ! removed) {
-                if (isDefaultFocus) {
-                    focus(0, focusedCell.getTableColumn());
-                    isDefaultFocus = false;
-                } else {
+                if (addedSize < c.getList().size()) {
                     final int newFocusIndex = getFocusedIndex() + addedSize;
                     focus(newFocusIndex, focusedCell.getTableColumn());
                 }
@@ -3297,7 +3353,6 @@ public class TableView<S> extends Control {
                focusedCell.getTableColumn() : tableView.getVisibleLeafColumn(0);
 
             focus(newValueIndex, focusColumn);
-            isDefaultFocus = true;
         }
 
         private int getColumnCount() {

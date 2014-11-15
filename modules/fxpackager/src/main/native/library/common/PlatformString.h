@@ -89,8 +89,12 @@ public:
 
         if (FSize != 0) {
             FData = new T[FSize];
-            memset(FData, 0, FSize * sizeof(T));
+            Zero();
         }
+    }
+
+    void Zero() {
+        memset(FData, 0, FSize * sizeof(T));
     }
 
     T& operator[](size_t index) {
