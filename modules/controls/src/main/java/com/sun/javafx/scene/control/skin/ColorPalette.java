@@ -344,12 +344,12 @@ public class ColorPalette extends Region {
 
             @Override
             public Node selectFirst(TraversalContext context) {
-                return context.selectFirstInParent(context.getRoot());
+                return colorPickerGrid.getChildren().get(0);
             }
 
             @Override
             public Node selectLast(TraversalContext context) {
-                return context.selectLastInParent(context.getRoot());
+                return customColorLink;
             }
         }));
     }
