@@ -353,6 +353,11 @@ public class JFXPanel extends JComponent {
             // Don't send click events to FX, as they are generated in Scene
             return;
         }
+        // A workaround until JDK-8065131 is fixed.
+        boolean popupTrigger = false;
+        if (e.getID() == MouseEvent.MOUSE_PRESSED || e.getID() == MouseEvent.MOUSE_RELEASED) {
+            popupTrigger = e.isPopupTrigger();
+        }
         scenePeer.mouseEvent(
                 SwingEvents.mouseIDToEmbedMouseType(e.getID()),
                 SwingEvents.mouseButtonToEmbedMouseButton(e.getButton(), extModifiers),
@@ -362,7 +367,7 @@ public class JFXPanel extends JComponent {
                 (extModifiers & MouseEvent.CTRL_DOWN_MASK) != 0,
                 (extModifiers & MouseEvent.ALT_DOWN_MASK) != 0,
                 (extModifiers & MouseEvent.META_DOWN_MASK) != 0,
-                SwingEvents.getWheelRotation(e), e.isPopupTrigger());
+                SwingEvents.getWheelRotation(e), popupTrigger);
         if (e.isPopupTrigger()) {
             scenePeer.menuEvent(e.getX(), e.getY(), e.getXOnScreen(), e.getYOnScreen(), false);
         }
