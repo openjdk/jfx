@@ -816,7 +816,22 @@ public class DialogPane extends Pane {
         final boolean hasHeader = hasHeader();
 
         final double w = Math.max(minWidth(-1), getWidth()) - (snappedLeftInset() + snappedRightInset());
-        final double h = Math.max(minHeight(w), getHeight()) - (snappedTopInset() + snappedBottomInset());
+
+        final double minHeight = minHeight(w);
+        final double prefHeight = prefHeight(w);
+        final double currentHeight = getHeight();
+        final double dialogHeight = dialog == null ? 0 : dialog.dialog.getSceneHeight();
+        double h;
+
+        if (prefHeight > currentHeight && prefHeight > minHeight && (prefHeight <= dialogHeight || dialogHeight == 0)) {
+            h = prefHeight;
+            resize(w, h);
+        } else if (dialogHeight <= currentHeight && dialogHeight > 0) {
+            h = Math.max(dialogHeight, minHeight);
+            resize(w, h);
+        } else {
+            h = Math.max(minHeight, Math.max(currentHeight, prefHeight));
+        }
 
         final double leftPadding = snappedLeftInset();
         final double topPadding = snappedTopInset();
@@ -902,12 +917,14 @@ public class DialogPane extends Pane {
         double buttonBarMinHeight = buttonBar == null ? 0 : buttonBar.minHeight(width);
 
         Node graphic = getActualGraphic();
-        double graphicMinWidth = graphic.minWidth(-1);
-        double graphicMinHeight = graphic.minHeight(width);
+        double graphicMinWidth = hasHeader ? 0 : graphic.minWidth(-1);
+        double graphicMinHeight = hasHeader ? 0 : graphic.minHeight(width);
 
+        // min height of a label is based on one line (wrapping is ignored)
+        Node content = getActualContent();
         double contentAvailableWidth = width == Region.USE_COMPUTED_SIZE ? Region.USE_COMPUTED_SIZE :
                 hasHeader ? width : (width - graphicMinWidth);
-        double contentMinHeight = getActualContent().minHeight(contentAvailableWidth);
+        double contentMinHeight = content.minHeight(contentAvailableWidth);
 
         double expandableContentMinHeight = 0;
         final Node expandableContent = getExpandableContent();
@@ -954,13 +971,14 @@ public class DialogPane extends Pane {
         double buttonBarPrefHeight = buttonBar == null ? 0 : buttonBar.prefHeight(width);
 
         Node graphic = getActualGraphic();
-        double graphicPrefWidth = graphic.prefWidth(-1);
-        double graphicPrefHeight = graphic.prefHeight(width);
+        double graphicPrefWidth = hasHeader ? 0 : graphic.prefWidth(-1);
+        double graphicPrefHeight = hasHeader ? 0 : graphic.prefHeight(width);
 
+        Node content = getActualContent();
         double contentAvailableWidth = width == Region.USE_COMPUTED_SIZE ? Region.USE_COMPUTED_SIZE :
-                                       hasHeader ? width : (width - graphicPrefWidth);
-        double contentPrefHeight = getActualContent().prefHeight(contentAvailableWidth);
-        
+                hasHeader ? width : (width - graphicPrefWidth);
+        double contentPrefHeight = content.prefHeight(contentAvailableWidth);
+
         double expandableContentPrefHeight = 0;
         final Node expandableContent = getExpandableContent();
         if (isExpanded() && expandableContent != null) {
