@@ -122,14 +122,16 @@ std::list<TString> GenericPlatform::LoadFromFile(TString FileName) {
     return result;
 }
 
-void GenericPlatform::SaveToFile(TString FileName, std::list<TString> Contents) {
+void GenericPlatform::SaveToFile(TString FileName, std::list<TString> Contents, bool ownerOnly) {
     TString path = FilePath::ExtractFilePath(FileName);
 
     if (FilePath::DirectoryExists(path) == false) {
-        FilePath::CreateDirectory(path);
+        FilePath::CreateDirectory(path, ownerOnly);
     }
 
     std::wofstream stream(FileName.data());
+
+    FilePath::ChangePermissions(FileName.data(), ownerOnly);
 
 #ifdef WINDOWS
     const std::locale empty_locale = std::locale::empty();

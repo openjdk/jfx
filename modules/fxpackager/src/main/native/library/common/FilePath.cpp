@@ -181,7 +181,7 @@ TString FilePath::PathSeparator() {
     return result;
 }
 
-bool FilePath::CreateDirectory(TString Path) {
+bool FilePath::CreateDirectory(TString Path, bool ownerOnly) {
     bool result = false;
 
     std::list<TString> paths;
@@ -199,8 +199,11 @@ bool FilePath::CreateDirectory(TString Path) {
         if (_wmkdir(lpath.data()) == 0) {
 #endif // WINDOWS
 #ifdef POSIX
-        //TODO Is this the correct permissions?
-        if (mkdir(StringToFileSystemString(lpath), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) == 0) {
+        mode_t mode = S_IRWXU;
+        if (!ownerOnly) {
+            mode |= S_IRWXG | S_IROTH | S_IXOTH;
+        }
+        if (mkdir(StringToFileSystemString(lpath), mode) == 0) {
 #endif //POSIX
             result = true;
         }
@@ -211,4 +214,16 @@ bool FilePath::CreateDirectory(TString Path) {
     }
 
     return result;
+}
+
+void FilePath::ChangePermissions(TString FileName, bool ownerOnly) {
+
+#ifdef POSIX
+    mode_t mode = S_IRWXU;
+    if (!ownerOnly) {
+        mode |= S_IRWXG | S_IROTH | S_IXOTH;
+    }
+    chmod(FileName.data(), mode);
+#endif // POSIX
+
 }

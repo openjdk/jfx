@@ -281,7 +281,7 @@ void Package::SetJVMUserArgOverrides(TOrderedMap Value) {
     AutoFreePtr<PropertyFile> userConfig = new PropertyFile();
     userConfig->Assign(Helpers::GetConfigFromJVMUserArgs(orderedOverrides));
     userConfig->SetReadOnly(false);
-    userConfig->SaveToFile(GetJVMUserArgsConfigFileName());
+    userConfig->SaveToFile(GetJVMUserArgsConfigFileName(), true);
     FJVMUserArgsOverrides = orderedOverrides;
 
     // 4. Merge defaults and overrides to produce FJVMUserArgs.

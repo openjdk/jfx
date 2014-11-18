@@ -60,7 +60,7 @@ public:
     void Assign(std::map<TString, TString> Value);
 
     bool LoadFromFile(const TString FileName);
-    bool SaveToFile(const TString FileName);
+    bool SaveToFile(const TString FileName, bool ownerOnly);
 
     virtual bool GetValue(const TString Key, TString& Value);
     bool SetValue(const TString Key, TString Value);

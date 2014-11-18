@@ -210,7 +210,7 @@ public:
     virtual std::map<TString, TString> GetKeys() = 0;
 
     virtual std::list<TString> LoadFromFile(TString FileName) = 0;
-    virtual void SaveToFile(TString FileName, std::list<TString> Contents) = 0;
+    virtual void SaveToFile(TString FileName, std::list<TString> Contents, bool ownerOnly) = 0;
 
 #ifdef DEBUG
     virtual Platform::DebugState GetDebugState() = 0;

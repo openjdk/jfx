@@ -58,7 +58,8 @@ public:
     static TString FixPathSeparatorForPlatform(TString Path);
     static TString PathSeparator();
 
-    static bool CreateDirectory(TString Path);
+    static bool CreateDirectory(TString Path, bool ownerOnly);
+    static void ChangePermissions(TString FileName, bool ownerOnly);
 };
 
 #endif //FILEPATH_H
