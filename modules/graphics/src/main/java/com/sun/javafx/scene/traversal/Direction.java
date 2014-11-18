@@ -45,4 +45,16 @@ public enum Direction {
     public boolean isForward() {
         return forward;
     }
+
+    public Direction getDirectionForNodeOrientation(NodeOrientation orientation) {
+        if (orientation == NodeOrientation.RIGHT_TO_LEFT) {
+            switch (this) {
+                case LEFT:
+                    return RIGHT;
+                case RIGHT:
+                    return LEFT;
+            }
+        }
+        return this;
+    }
 }
