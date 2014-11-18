@@ -1236,6 +1236,11 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         // first cell, then we must quit.
         T cell = null;
 
+        // special case for the position == 1.0, skip adding last invisible cell
+        if (index == cellCount && offset == getViewportLength()) {
+            index--;
+            first = false;
+        }
         while (index >= 0 && (offset > 0 || first)) {
             cell = getAvailableCell(index);
             setCellIndex(cell, index);
@@ -1702,7 +1707,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             double cellSize = getCellLength(cell);
             double cellStart = getCellPosition(cell);
             double cellEnd = cellStart + cellSize;
-            if (cellStart > viewportLength || cellEnd < 0) {
+            if (cellStart >= viewportLength || cellEnd < 0) {
                 addToPile(cells.remove(i));
             }
         }
@@ -2339,6 +2344,8 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 layoutY += getCellLength(cell);
             }
             // end of fix for RT-32908
+            cull();
+            firstCell = cells.getFirst();
 
             // Add any necessary leading cells
             if (firstCell != null) {
@@ -2380,6 +2387,11 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                         positionCell(cell, getCellPosition(cell) + emptySize);
                     }
                     setPosition(1.0f);
+                    // fill the leading empty space
+                    firstCell = cells.getFirst();
+                    int firstIndex = getCellIndex(firstCell);
+                    double prevIndexSize = getCellLength(firstIndex - 1);
+                    addLeadingCells(firstIndex - 1, getCellPosition(firstCell) - prevIndexSize);
                 }
             }
         }
