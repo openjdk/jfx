@@ -25,13 +25,16 @@
 
 package javafx.scene.chart;
 
-import com.sun.javafx.collections.NonIterableChange;
 
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
@@ -50,6 +53,10 @@ import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
+import javafx.css.CssMetaData;
+import javafx.css.Styleable;
+import javafx.css.StyleableBooleanProperty;
+import javafx.css.StyleableProperty;
 import javafx.geometry.Orientation;
 import javafx.geometry.Side;
 import javafx.scene.Group;
@@ -63,19 +70,10 @@ import javafx.scene.shape.Path;
 import javafx.scene.shape.Rectangle;
 import javafx.util.Duration;
 
-import java.util.BitSet;
-
-import javafx.css.StyleableBooleanProperty;
-import javafx.css.CssMetaData;
-
+import com.sun.javafx.collections.NonIterableChange;
 import com.sun.javafx.css.converters.BooleanConverter;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
 
-import javafx.css.Styleable;
-import javafx.css.StyleableProperty;
 
 /**
  * Chart base class for all 2 axis charts. It is responsible for drawing the two
