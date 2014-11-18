@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
 
+import com.sun.javafx.scene.control.skin.Utils;
 import com.sun.javafx.scene.control.skin.resources.ControlResources;
 import javafx.beans.DefaultProperty;
 import javafx.beans.property.BooleanProperty;
@@ -810,6 +811,8 @@ public class DialogPane extends Pane {
         detailsButton.setOnAction(ae -> setExpanded(!isExpanded()));
         return detailsButton;
     }
+
+    private double oldHeight = -1;
     
     /** {@inheritDoc} */
     @Override protected void layoutChildren() {
@@ -819,6 +822,7 @@ public class DialogPane extends Pane {
 
         final double minHeight = minHeight(w);
         final double prefHeight = prefHeight(w);
+        final double maxHeight = maxHeight(w);
         final double currentHeight = getHeight();
         final double dialogHeight = dialog == null ? 0 : dialog.dialog.getSceneHeight();
         double h;
@@ -826,12 +830,22 @@ public class DialogPane extends Pane {
         if (prefHeight > currentHeight && prefHeight > minHeight && (prefHeight <= dialogHeight || dialogHeight == 0)) {
             h = prefHeight;
             resize(w, h);
-        } else if (dialogHeight <= currentHeight && dialogHeight > 0) {
-            h = Math.max(dialogHeight, minHeight);
-            resize(w, h);
         } else {
-            h = Math.max(minHeight, Math.max(currentHeight, prefHeight));
+            boolean isDialogGrowing = currentHeight > oldHeight;
+
+            if (isDialogGrowing) {
+                double _h = currentHeight < prefHeight ?
+                        Math.min(prefHeight, currentHeight) : Math.max(prefHeight, dialogHeight);
+                h = Utils.boundedSize(_h, minHeight, maxHeight);
+            } else {
+                h = Utils.boundedSize(Math.min(currentHeight, dialogHeight), minHeight, maxHeight);
+            }
+            resize(w, h);
         }
+
+        h -= (snappedTopInset() + snappedBottomInset());
+
+        oldHeight = h;
 
         final double leftPadding = snappedLeftInset();
         final double topPadding = snappedTopInset();
@@ -844,22 +858,27 @@ public class DialogPane extends Pane {
         final Node graphic = getActualGraphic();
         final Node expandableContent = getExpandableContent();
 
-        final double graphicPrefWidth = hasHeader || graphic == null ? 0 : graphic.prefWidth(h);
+        final double graphicPrefWidth = hasHeader || graphic == null ? 0 : graphic.prefWidth(-1);
         final double headerPrefHeight = hasHeader ? header.prefHeight(w) : 0;
         final double buttonBarPrefHeight = buttonBar == null ? 0 : buttonBar.prefHeight(w);
-        final double graphicPrefHeight = hasHeader || graphic == null ? 0 : graphic.prefHeight(w);
+        final double graphicPrefHeight = hasHeader || graphic == null ? 0 : graphic.prefHeight(-1);
 
         final double expandableContentPrefHeight;
         final double contentAreaHeight;
+        final double contentAndGraphicHeight;
+
+        final double availableContentWidth = w - graphicPrefWidth - leftPadding - rightPadding;
 
         if (isExpanded()) {
             // precedence goes to content and then expandable content
-            contentAreaHeight = isExpanded() ? content.prefHeight(w) : 0;
-            expandableContentPrefHeight = h - (headerPrefHeight + contentAreaHeight + buttonBarPrefHeight);
+            contentAreaHeight = isExpanded() ? content.prefHeight(availableContentWidth) : 0;
+            contentAndGraphicHeight = hasHeader ? contentAreaHeight : Math.max(graphicPrefHeight, contentAreaHeight);
+            expandableContentPrefHeight = h - (headerPrefHeight + contentAndGraphicHeight + buttonBarPrefHeight);
         } else {
             // content gets the lowest precedence
             expandableContentPrefHeight = isExpanded() ? expandableContent.prefHeight(w) : 0;
             contentAreaHeight = h - (headerPrefHeight + expandableContentPrefHeight + buttonBarPrefHeight);
+            contentAndGraphicHeight = hasHeader ? contentAreaHeight : Math.max(graphicPrefHeight, contentAreaHeight);
         }
         
         double x = leftPadding;
@@ -875,8 +894,8 @@ public class DialogPane extends Pane {
             y += headerPrefHeight;
         }
         
-        content.resizeRelocate(x, y, w - graphicPrefWidth, contentAreaHeight);
-        y += contentAreaHeight;
+        content.resizeRelocate(x, y, availableContentWidth, contentAreaHeight);
+        y += hasHeader ? contentAreaHeight : contentAndGraphicHeight;
         
         if (expandableContent != null) {
             expandableContent.resizeRelocate(leftPadding, y, w - rightPadding, expandableContentPrefHeight);
