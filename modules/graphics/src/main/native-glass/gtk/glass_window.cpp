@@ -728,6 +728,28 @@ WindowContextTop::request_frame_extents() {
     }
 }
 
+void WindowContextTop::activate_window() {
+    Display *display = GDK_WINDOW_XDISPLAY(gdk_window);
+    Atom navAtom = XInternAtom(display, "_NET_ACTIVE_WINDOW", True);
+    if (navAtom != None) {
+        XClientMessageEvent clientMessage;
+        memset(&clientMessage, 0, sizeof(clientMessage));
+
+        clientMessage.type = ClientMessage;
+        clientMessage.window = GDK_WINDOW_XID(gdk_window);
+        clientMessage.message_type = navAtom;
+        clientMessage.format = 32;
+        clientMessage.data.l[0] = 1;
+        clientMessage.data.l[1] = gdk_x11_get_server_time(gdk_window);
+        clientMessage.data.l[2] = 0;
+
+        XSendEvent(display, XDefaultRootWindow(display), False,
+                   SubstructureRedirectMask | SubstructureNotifyMask,
+                   (XEvent *) &clientMessage);
+        XFlush(display);
+    }
+}
+
 void
 WindowContextTop::initialize_frame_extents() {
     int top, left, bottom, right;
@@ -1251,6 +1273,7 @@ void WindowContextTop::set_minimized(bool minimize) {
         gtk_window_iconify(GTK_WINDOW(gtk_widget));
     } else {
         gtk_window_deiconify(GTK_WINDOW(gtk_widget));
+        activate_window();
     }
 }
 void WindowContextTop::set_maximized(bool maximize) {
