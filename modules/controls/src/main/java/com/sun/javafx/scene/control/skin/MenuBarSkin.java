@@ -363,14 +363,20 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
         ** pressing f10 will select the first menu button on a menubar
         */
         final KeyCombination acceleratorKeyCombo;
-        final String os = System.getProperty("os.name");
-        if (os != null && os.startsWith("Mac")) {
+        if (com.sun.javafx.Utils.isMac()) {
            acceleratorKeyCombo = KeyCombination.keyCombination("ctrl+F10");
         } else {
            acceleratorKeyCombo = KeyCombination.keyCombination("F10");
         }
         Utils.executeOnceWhenPropertyIsNonNull(control.sceneProperty(), (Scene scene) -> {
             scene.getAccelerators().put(acceleratorKeyCombo, firstMenuRunnable);
+
+            // put focus on the first menu when the alt key is pressed
+            scene.addEventHandler(KeyEvent.KEY_PRESSED, e -> {
+                if (e.isAltDown()  && !e.isConsumed()) {
+                    firstMenuRunnable.run();
+                }
+            });
         });
 
         ParentTraversalEngine engine = new ParentTraversalEngine(getSkinnable());
