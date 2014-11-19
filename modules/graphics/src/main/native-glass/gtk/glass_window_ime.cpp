@@ -22,6 +22,8 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
+#include "com_sun_glass_ui_View.h"
 #include "glass_window.h"
 #include "glass_general.h"
 #include "glass_gtkcompat.h"
@@ -145,22 +147,45 @@ static void im_preedit_draw(XIM im_xim, XPointer client, XPointer call) {
 
     XIMPreeditDrawCallbackStruct *data = (XIMPreeditDrawCallbackStruct*) call;
     jstring text = NULL;
-    if (data->text != NULL && data->text->string.multi_byte != NULL) {
-        if (data->text->encoding_is_wchar) {
-            size_t csize = wcstombs(NULL, data->text->string.wide_char, 0);
-            char *ctext = new char[csize + 1];
-            wcstombs(ctext, data->text->string.wide_char, csize + 1);
-            text = mainEnv->NewStringUTF(ctext);
-            EXCEPTION_OCCURED(mainEnv);
-            delete[] ctext;
-        } else {
-            text = mainEnv->NewStringUTF(data->text->string.multi_byte);
-            EXCEPTION_OCCURED(mainEnv);
+    jbyteArray attr = NULL;
+
+    if (data->text != NULL) {
+        if (data->text->string.multi_byte) {
+            if (data->text->encoding_is_wchar) {
+                size_t csize = wcstombs(NULL, data->text->string.wide_char, 0);
+                char *ctext = new char[csize + 1];
+                wcstombs(ctext, data->text->string.wide_char, csize + 1);
+                text = mainEnv->NewStringUTF(ctext);
+                delete[] ctext;
+                CHECK_JNI_EXCEPTION(mainEnv);
+            } else {
+                text = mainEnv->NewStringUTF(data->text->string.multi_byte);
+                CHECK_JNI_EXCEPTION(mainEnv);
+            }
+        }
+
+        if (XIMFeedback* fb = data->text->feedback) {
+            attr = mainEnv->NewByteArray(data->text->length);
+            CHECK_JNI_EXCEPTION(mainEnv)
+            jbyte v[data->text->length];
+            for (int i = 0; i < data->text->length; i++) {
+                if (fb[i] & XIMReverse) {
+                    v[i] = com_sun_glass_ui_View_IME_ATTR_TARGET_NOTCONVERTED;
+                } else if (fb[i] & XIMHighlight) {
+                    v[i] = com_sun_glass_ui_View_IME_ATTR_TARGET_CONVERTED;
+                } else if (fb[i] & XIMUnderline) {
+                    v[i] = com_sun_glass_ui_View_IME_ATTR_CONVERTED;
+                } else {
+                    v[i] = com_sun_glass_ui_View_IME_ATTR_INPUT;
+                }
+            }
+            mainEnv->SetByteArrayRegion(attr, 0, data->text->length, v);
+            CHECK_JNI_EXCEPTION(mainEnv)
         }
     }
 
     mainEnv->CallVoidMethod((jobject)client, jViewNotifyInputMethodDraw,
-            text, data->chg_first, data->chg_length, data->caret);
+            text, data->chg_first, data->chg_length, data->caret, attr);
     CHECK_JNI_EXCEPTION(mainEnv)
 }
 

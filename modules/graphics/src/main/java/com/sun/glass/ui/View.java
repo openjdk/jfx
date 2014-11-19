@@ -37,6 +37,12 @@ public abstract class View {
     public final static int GESTURE_NO_VALUE = Integer.MAX_VALUE;
     public final static double GESTURE_NO_DOUBLE_VALUE = Double.NaN;
 
+    public final static byte IME_ATTR_INPUT                 = 0x00;
+    public final static byte IME_ATTR_TARGET_CONVERTED      = 0x01;
+    public final static byte IME_ATTR_CONVERTED             = 0x02;
+    public final static byte IME_ATTR_TARGET_NOTCONVERTED   = 0x03;
+    public final static byte IME_ATTR_INPUT_ERROR           = 0x04;
+
     final static boolean accessible = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
         String force = System.getProperty("glass.accessible.force");
         if (force != null) return Boolean.parseBoolean(force);

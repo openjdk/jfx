@@ -90,7 +90,7 @@
 - (void)exitFullscreenWithAnimate:(BOOL)animate;
 - (void)sendJavaFullScreenEvent:(BOOL)entered withNativeWidget:(BOOL)isNative;
 
-- (void)notifyInputMethod:(id)aString attr:(int)attr length:(int)length cursor:(int)cursor;
+- (void)notifyInputMethod:(id)aString attr:(int)attr length:(int)length cursor:(int)cursor selectedRange:(NSRange)selectionRange;
 - (NSRect)getInputMethodCandidatePosRequest:(int)pos;
 
 - (void)setFrameOrigin:(NSPoint)newOrigin;

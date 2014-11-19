@@ -983,13 +983,13 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
     return YES;
 }
 
-- (void)notifyInputMethod:(id) aString attr:(int)attr length:(int)length cursor:(int)cursor
+- (void)notifyInputMethod:(id) aString attr:(int)attr length:(int)length cursor:(int)cursor  selectedRange:(NSRange)selectionRange
 {
     if ([NSThread isMainThread] == YES)
     {
         GET_MAIN_JENV;
         jstring jStr = (*env)->NewStringUTF(env, [aString UTF8String]);
-        (*env)->CallVoidMethod(env, self->jView, jViewNotifyInputMethodMac, jStr, attr, length, cursor);
+        (*env)->CallVoidMethod(env, self->jView, jViewNotifyInputMethodMac, jStr, attr, length, cursor, selectionRange.location, selectionRange.length);
         GLASS_CHECK_EXCEPTION(env);
     }
 }
