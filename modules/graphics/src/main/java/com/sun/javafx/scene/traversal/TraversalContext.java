@@ -39,7 +39,8 @@ public interface TraversalContext {
     List<Node> getAllTargetNodes();
 
     /**
-     * Returns layout bounds of the Node in the relevant (Sub)Scene
+     * Returns layout bounds of the Node in the relevant (Sub)Scene. Note that these bounds are the most important for traversal
+     * as they define the final position within the scene.
      */
     Bounds getSceneLayoutBounds(Node node);
 

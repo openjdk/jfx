@@ -28,6 +28,9 @@ package com.sun.javafx.scene.traversal;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 
+/**
+ * Traversal engine for Scene.
+ */
 public final class SceneTraversalEngine extends TopMostTraversalEngine{
 
     private final Scene scene;
