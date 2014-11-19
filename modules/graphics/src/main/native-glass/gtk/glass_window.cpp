@@ -626,7 +626,7 @@ WindowContextBase::~WindowContextBase() {
 
 
 WindowContextTop::WindowContextTop(jobject _jwindow, WindowContext* _owner, long _screen,
-        WindowFrameType _frame_type, WindowType type) :
+        WindowFrameType _frame_type, WindowType type, GdkWMFunction wmf) :
             WindowContextBase(),
             screen(_screen),
             frame_type(_frame_type),
@@ -684,6 +684,10 @@ WindowContextTop::WindowContextTop(jobject _jwindow, WindowContext* _owner, long
     g_object_set_data_full(G_OBJECT(gdk_window), GDK_WINDOW_DATA_CONTEXT, this, NULL);
 
     gdk_window_register_dnd(gdk_window);
+
+    if (wmf) {
+        gdk_window_set_functions(gdk_window, wmf);
+    }
 
     if (frame_type == TITLED) {
         request_frame_extents();
@@ -1773,7 +1777,8 @@ void WindowContextChild::enter_fullscreen() {
         return;
     }
 
-    full_screen_window = new WindowContextTop(jwindow, NULL, 0L, UNTITLED, NORMAL);
+    full_screen_window = new WindowContextTop(jwindow, NULL, 0L, UNTITLED,
+                                                NORMAL, (GdkWMFunction) 0);
     int x, y, w, h;
     gdk_window_get_origin(gdk_window, &x, &y);
     gdk_window_get_geometry(gdk_window, NULL, NULL, &w, &h, NULL);

@@ -382,7 +382,7 @@ class WindowContextTop: public WindowContextBase {
     bool size_assigned;
     bool on_top;
 public:
-    WindowContextTop(jobject, WindowContext*, long, WindowFrameType, WindowType);
+    WindowContextTop(jobject, WindowContext*, long, WindowFrameType, WindowType, GdkWMFunction);
     void process_map();
     void process_property_notify(GdkEventProperty*);
     void process_configure(GdkEventConfigure*);
