@@ -92,6 +92,23 @@ bool FilePath::DirectoryExists(const TString DirectoryName) {
     return result;
 }
 
+bool FilePath::DeleteFile(const TString FileName) {
+    bool result = false;
+
+    if (FileExists(FileName) == true) {
+#ifdef WINDOWS
+        result = DeleteFile(FileName.data());
+#endif //WINDOWS
+#ifdef POSIX
+        if (unlink(StringToFileSystemString(FileName)) == 0) {
+            result = true;
+        }
+#endif //POSIX
+    }
+
+    return result;
+}
+
 TString FilePath::IncludeTrailingSlash(const TString value) {
     TString result = value;
     TString::iterator i = result.end();

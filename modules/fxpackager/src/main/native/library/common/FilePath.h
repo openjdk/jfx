@@ -47,6 +47,8 @@ public:
     static bool FileExists(const TString FileName);
     static bool DirectoryExists(const TString DirectoryName);
 
+    static bool DeleteFile(const TString FileName);
+
     static TString ExtractFilePath(TString Path);
     static TString ExtractFileExt(TString Path);
     static TString ExtractFileName(TString Path);
