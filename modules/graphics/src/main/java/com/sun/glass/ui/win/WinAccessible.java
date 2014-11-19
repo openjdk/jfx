@@ -690,7 +690,7 @@ final class WinAccessible extends Accessible {
                 if (mnemonic != null) {
                     variant = new WinVariant();
                     variant.vt = WinVariant.VT_BSTR;
-                    variant.bstrVal = "Alt"+mnemonic.toLowerCase();
+                    variant.bstrVal = "Alt " + mnemonic.toLowerCase();
                 }
                 break;
             }
