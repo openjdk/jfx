@@ -1014,7 +1014,6 @@ public class ContextMenuContent extends Region {
         @Override
         public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
             switch (attribute) {
-                case TEXT: return "Context";
                 case VISIBLE: return contextMenu.isShowing();
                 case PARENT_MENU: return contextMenu.getOwnerNode();
                 default: return super.queryAccessibleAttribute(attribute, parameters); 
