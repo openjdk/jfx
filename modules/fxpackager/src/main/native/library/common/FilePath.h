@@ -47,6 +47,8 @@ public:
     static bool FileExists(const TString FileName);
     static bool DirectoryExists(const TString DirectoryName);
 
+    static bool DeleteFile(const TString FileName);
+
     static TString ExtractFilePath(TString Path);
     static TString ExtractFileExt(TString Path);
     static TString ExtractFileName(TString Path);
@@ -58,7 +60,8 @@ public:
     static TString FixPathSeparatorForPlatform(TString Path);
     static TString PathSeparator();
 
-    static bool CreateDirectory(TString Path);
+    static bool CreateDirectory(TString Path, bool ownerOnly);
+    static void ChangePermissions(TString FileName, bool ownerOnly);
 };
 
 #endif //FILEPATH_H

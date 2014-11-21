@@ -192,7 +192,7 @@ abstract class FXDialog {
     abstract StageStyle getStyle();
 
 
-
+    abstract double getSceneHeight();
 
     /***************************************************************************
      *                                                                         

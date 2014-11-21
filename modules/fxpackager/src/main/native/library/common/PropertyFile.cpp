@@ -103,7 +103,7 @@ bool PropertyFile::LoadFromFile(const TString FileName) {
     return result;
 }
 
-bool PropertyFile::SaveToFile(const TString FileName) {
+bool PropertyFile::SaveToFile(const TString FileName, bool ownerOnly) {
     bool result = false;
 
     if (GetReadOnly() == false && IsModified()) {
@@ -120,7 +120,7 @@ bool PropertyFile::SaveToFile(const TString FileName) {
         }
 
         Platform& platform = Platform::GetInstance();
-        platform.SaveToFile(FileName, contents);
+        platform.SaveToFile(FileName, contents, ownerOnly);
 
         SetModified(false);
         result = true;

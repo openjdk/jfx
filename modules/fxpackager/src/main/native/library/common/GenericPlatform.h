@@ -52,7 +52,7 @@ public:
     virtual TString GetConfigFileName();
 
     virtual std::list<TString> LoadFromFile(TString FileName);
-    virtual void SaveToFile(TString FileName, std::list<TString> Contents);
+    virtual void SaveToFile(TString FileName, std::list<TString> Contents, bool ownerOnly);
 
 #if defined(WINDOWS) || defined(LINUX)
     virtual TString GetAppName();

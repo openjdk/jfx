@@ -218,7 +218,7 @@ JNI_OnLoad(JavaVM *jvm, void *reserved)
 
     clazz = env->FindClass("com/sun/glass/ui/gtk/GtkView");
     if (env->ExceptionCheck()) return JNI_ERR;
-    jViewNotifyInputMethodDraw = env->GetMethodID(clazz, "notifyInputMethodDraw", "(Ljava/lang/String;III)V");
+    jViewNotifyInputMethodDraw = env->GetMethodID(clazz, "notifyInputMethodDraw", "(Ljava/lang/String;III[B)V");
     if (env->ExceptionCheck()) return JNI_ERR;
     jViewNotifyInputMethodCaret = env->GetMethodID(clazz, "notifyInputMethodCaret", "(III)V");
     if (env->ExceptionCheck()) return JNI_ERR;

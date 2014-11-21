@@ -57,7 +57,6 @@ import javafx.stage.Stage;
  * @related /Charts/Area/Area Chart
  * @docUrl http://docs.oracle.com/javafx/2/charts/jfxpub-charts.htm Using JavaFX Charts Tutorial
  * @playground chart.data
- * 
  * @playground - (name="xAxis")
  * @playground xAxis.autoRanging
  * @playground xAxis.forceZeroInRange
@@ -67,7 +66,6 @@ import javafx.stage.Stage;
  * @playground xAxis.minorTickCount (max=16)
  * @playground xAxis.minorTickLength (max=15)
  * @playground xAxis.minorTickVisible
- * 
  * @playground xAxis.animated
  * @playground xAxis.label
  * @playground xAxis.side
@@ -77,7 +75,6 @@ import javafx.stage.Stage;
  * @playground xAxis.tickLabelsVisible
  * @playground xAxis.tickLength
  * @playground xAxis.tickMarkVisible
- * 
  * @playground - (name="yAxis")
  * @playground yAxis.autoRanging
  * @playground yAxis.forceZeroInRange
@@ -87,7 +84,6 @@ import javafx.stage.Stage;
  * @playground yAxis.minorTickCount (max=16)
  * @playground yAxis.minorTickLength (max=15)
  * @playground yAxis.minorTickVisible
- * 
  * @playground yAxis.animated
  * @playground yAxis.label
  * @playground yAxis.side
@@ -97,13 +93,11 @@ import javafx.stage.Stage;
  * @playground yAxis.tickLabelsVisible
  * @playground yAxis.tickLength
  * @playground yAxis.tickMarkVisible
- * 
  * @playground - (name="chart")
  * @playground chart.horizontalGridLinesVisible
  * @playground chart.horizontalZeroLineVisible
  * @playground chart.verticalGridLinesVisible
  * @playground chart.verticalZeroLineVisible
- * 
  * @playground chart.animated
  * @playground chart.legendSide
  * @playground chart.legendVisible

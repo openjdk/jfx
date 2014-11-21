@@ -688,7 +688,7 @@
 {
     IMLOG("insertText called with string: %s", [aString UTF8String]);
     if ([self->nsAttrBuffer length] > 0 || [aString length] > 1) { 
-        [self->_delegate notifyInputMethod:aString attr:4 length:(int)[aString length] cursor:(int)[aString length] ];
+        [self->_delegate notifyInputMethod:aString attr:4 length:(int)[aString length] cursor:(int)[aString length] selectedRange: NSMakeRange(NSNotFound, 0)];
         self->shouldProcessKeyEvent = NO;
     } else {
         self->shouldProcessKeyEvent = YES;
@@ -706,7 +706,7 @@
     NSAttributedString *attrString = (isAttributedString ? (NSAttributedString *)aString : nil);
     NSString *incomingString = (isAttributedString ? [aString string] : aString);
     IMLOG("setMarkedText called, attempt to set string to %s", [incomingString UTF8String]);
-    [self->_delegate notifyInputMethod:incomingString attr:1 length:0 cursor:(int)[incomingString length] ];
+    [self->_delegate notifyInputMethod:incomingString attr:1 length:0 cursor:(int)[incomingString length] selectedRange:selectionRange ];
     self->nsAttrBuffer = (attrString == nil ? [self->nsAttrBuffer initWithString:incomingString] 
                                             : [self->nsAttrBuffer initWithAttributedString: attrString]);
     self->shouldProcessKeyEvent = NO;
@@ -717,7 +717,7 @@
     IMLOG("unmarkText called\n");
     if (self->nsAttrBuffer != nil && self->nsAttrBuffer.length != 0) {
         self->nsAttrBuffer = [self->nsAttrBuffer initWithString:@""];
-        [self->_delegate notifyInputMethod:@"" attr:4 length:0 cursor:0 ];
+        [self->_delegate notifyInputMethod:@"" attr:4 length:0 cursor:0 selectedRange: NSMakeRange(NSNotFound, 0)];
     }
     self->shouldProcessKeyEvent = YES;
 }

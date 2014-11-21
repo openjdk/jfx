@@ -49,12 +49,10 @@ import javafx.stage.Stage;
  * @preview preview.png
  * @see javafx.scene.chart.PieChart
  * @playground chart.data
- * 
  * @playground chart.clockwise
  * @playground chart.labelLineLength
  * @playground chart.labelsVisible
  * @playground chart.startAngle (max=360)
- * 
  * @playground chart.animated
  * @playground chart.legendSide
  * @playground chart.legendVisible

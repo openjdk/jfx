@@ -149,7 +149,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacView__1initIDs
     if (jViewNotifyInputMethodMac == NULL)
     {
         jclass jMacViewClass = [GlassHelper ClassForName:"com.sun.glass.ui.mac.MacView" withEnv:env];
-        jViewNotifyInputMethodMac = (*env)->GetMethodID(env, jMacViewClass, "notifyInputMethodMac", "(Ljava/lang/String;III)V");
+        jViewNotifyInputMethodMac = (*env)->GetMethodID(env, jMacViewClass, "notifyInputMethodMac", "(Ljava/lang/String;IIIII)V");
         if ((*env)->ExceptionCheck(env)) return;
     }
     

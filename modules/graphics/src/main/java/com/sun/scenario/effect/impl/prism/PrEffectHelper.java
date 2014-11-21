@@ -122,10 +122,12 @@ public class PrEffectHelper {
             float y1 = rclip.y + 0.5f;
             float x2 = rclip.x + rclip.width - 0.5f;
             float y2 = rclip.y + rclip.height - 0.5f;
-            Point2D cul = project(x1, y1, cam, inv, ray, tmpvec, null);
-            Point2D cur = project(x2, y1, cam, inv, ray, tmpvec, null);
-            Point2D cll = project(x1, y2, cam, inv, ray, tmpvec, null);
-            Point2D clr = project(x2, y2, cam, inv, ray, tmpvec, null);
+            double rtw = g.getRenderTarget().getContentWidth();
+            double rth = g.getRenderTarget().getContentHeight();
+            Point2D cul = project(x1, y1, rtw, rth, cam, inv, ray, tmpvec, null);
+            Point2D cur = project(x2, y1, rtw, rth, cam, inv, ray, tmpvec, null);
+            Point2D cll = project(x1, y2, rtw, rth, cam, inv, ray, tmpvec, null);
+            Point2D clr = project(x2, y2, rtw, rth, cam, inv, ray, tmpvec, null);
             rclip = clipbounds(cul, cur, cll, clr);
         }
 
@@ -178,13 +180,28 @@ public class PrEffectHelper {
         g.setTransform(origtx);
     }
 
-    static Point2D project(float x, float y,
+    static Point2D project(float x, float y, double vw, double vh,
                            NGCamera cam, BaseTransform inv,
                            PickRay tmpray, Vec3d tmpvec, Point2D ret)
     {
+        // Calculations in cam.computePickRay are done relative to the
+        // view w,h in the camera which may not match our actual view
+        // dimensions so we scale them to that rectangle, compute the
+        // pick rays, then scale the back to the actual device space before
+        // intersecting with our chosen rendering plane.
+        double xscale = cam.getViewWidth() / vw;
+        double yscale = cam.getViewHeight() / vh;
+        x *= xscale;
+        y *= yscale;
         tmpray = cam.computePickRay(x, y, tmpray);
+        unscale(tmpray.getOriginNoClone(), xscale, yscale);
+        unscale(tmpray.getDirectionNoClone(), xscale, yscale);
         return tmpray.projectToZeroPlane(inv, cam instanceof NGPerspectiveCamera,
                                          tmpvec, ret);
+    }
+    private static void unscale(Vec3d v, double sx, double sy) {
+        v.x /= sx;
+        v.y /= sy;
     }
 
     static Rectangle clipbounds(Point2D cul, Point2D cur, Point2D cll, Point2D clr) {

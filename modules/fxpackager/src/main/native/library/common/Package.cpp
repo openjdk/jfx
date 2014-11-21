@@ -281,7 +281,7 @@ void Package::SetJVMUserArgOverrides(TOrderedMap Value) {
     AutoFreePtr<PropertyFile> userConfig = new PropertyFile();
     userConfig->Assign(Helpers::GetConfigFromJVMUserArgs(orderedOverrides));
     userConfig->SetReadOnly(false);
-    userConfig->SaveToFile(GetJVMUserArgsConfigFileName());
+    userConfig->SaveToFile(GetJVMUserArgsConfigFileName(), true);
     FJVMUserArgsOverrides = orderedOverrides;
 
     // 4. Merge defaults and overrides to produce FJVMUserArgs.
@@ -289,21 +289,17 @@ void Package::SetJVMUserArgOverrides(TOrderedMap Value) {
 }
 
 TOrderedMap Package::GetJVMUserArgs() {
-    // Merge jvmuserarg defaults and jvmuserarg overrides to populate FJVMUserArgs.
-    // 1. If the key is in the config file and not the java.user.preferences the default value is used,
-    //    the one from the config file.
-    // 2. If the key is in the java.user.preferences then the vaue from the java.user.preferences is used.
-    //    The config file value is ignored.
-    // 3. If the key is not in the config file but it is in the java.user.preferences then it is added anyway.
-    //    And if it is removed it won't show back up.
-//    if (FJVMUserConfig->IsModified() == true) {
-//        MergeJVMDefaultsWithOverrides();
-//    }
-
     return FJVMUserArgs;
 }
 
 void Package::MergeJVMDefaultsWithOverrides() {
+    // Merge jvmuserarg defaults and jvmuserarg overrides to populate FJVMUserArgs.
+    // 1. If the key is in the config file and not the java.user.preferences the default value is used,
+    //    the one from the config file.
+    // 2. If the key is in the java.user.preferences then the value from the java.user.preferences is used and
+    //    the config file value is ignored.
+    // 3. If the key is not in the config file but it is in the java.user.preferences then it is added anyway.
+    //    And if it is removed it won't show back up.
     FJVMUserArgs.clear();
     FJVMUserArgs.insert(FDefaultJVMUserArgs.begin(), FDefaultJVMUserArgs.end());
 

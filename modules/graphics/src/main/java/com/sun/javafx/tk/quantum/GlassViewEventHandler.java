@@ -460,13 +460,6 @@ class GlassViewEventHandler extends View.EventHandler {
         }
     }
 
-    // TODO: Define these somewhere else. It is Windows specific for now.
-    private final static byte ATTR_INPUT                 = 0x00;
-    private final static byte ATTR_TARGET_CONVERTED      = 0x01;
-    private final static byte ATTR_CONVERTED             = 0x02;
-    private final static byte ATTR_TARGET_NOTCONVERTED   = 0x03;
-    private final static byte ATTR_INPUT_ERROR           = 0x04;
-
     private static byte inputMethodEventAttrValue(int pos, int[] attrBoundary, byte[] attrValue) {
         if (attrBoundary != null) {
             for (int current = 0; current < attrBoundary.length-1; current++) {
@@ -476,7 +469,7 @@ class GlassViewEventHandler extends View.EventHandler {
                 }
             }
         }
-        return ATTR_INPUT_ERROR;
+        return View.IME_ATTR_INPUT_ERROR;
     }
 
     private static ObservableList<InputMethodTextRun> inputMethodEventComposed(
@@ -502,17 +495,17 @@ class GlassViewEventHandler extends View.EventHandler {
 
                     InputMethodHighlight highlight;
                     switch (inputMethodEventAttrValue(clauseBoundary[current], attrBoundary, attrValue)) {
-                        case ATTR_TARGET_CONVERTED:
+                        case View.IME_ATTR_TARGET_CONVERTED:
                             highlight = InputMethodHighlight.SELECTED_CONVERTED;
                             break;
-                        case ATTR_CONVERTED:
+                        case View.IME_ATTR_CONVERTED:
                             highlight = InputMethodHighlight.UNSELECTED_CONVERTED;
                             break;
-                        case ATTR_TARGET_NOTCONVERTED:
+                        case View.IME_ATTR_TARGET_NOTCONVERTED:
                             highlight = InputMethodHighlight.SELECTED_RAW;
                             break;
-                        case ATTR_INPUT:
-                        case ATTR_INPUT_ERROR:
+                        case View.IME_ATTR_INPUT:
+                        case View.IME_ATTR_INPUT_ERROR:
                         default:
                             highlight = InputMethodHighlight.UNSELECTED_RAW;
                             break;

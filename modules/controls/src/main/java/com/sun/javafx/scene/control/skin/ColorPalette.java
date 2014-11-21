@@ -283,6 +283,8 @@ public class ColorPalette extends Region {
                 final int row = owner.index / NUM_OF_COLUMNS;
                 final int column = owner.index % NUM_OF_COLUMNS;
 
+                // Adjust the direction according to color picker orientation
+                dir = dir.getDirectionForNodeOrientation(colorPicker.getEffectiveNodeOrientation());
                 // This returns true for all the cases which we need to override
                 if (isAtBorder(dir, row, column, owner.isCustom)) {
                     // There's no other node in the direction from the square, so we need to continue on some other row

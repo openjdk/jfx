@@ -65,6 +65,9 @@ private:
 
 public:
     static jstring _getUserJvmOptionDefaultValue(JNIEnv *env, jstring option) {
+        if (env == NULL || option == NULL)
+            return NULL;
+
         jstring result;
 
         Package& package = Package::GetInstance();
@@ -83,6 +86,9 @@ public:
     }
 
     static jobjectArray _getUserJvmOptionDefaultKeys(JNIEnv *env) {
+        if (env == NULL)
+            return NULL;
+
         jobjectArray result;
 
         Package& package = Package::GetInstance();
@@ -98,6 +104,9 @@ public:
     }
 
     static jstring _getUserJvmOptionValue(JNIEnv *env, jstring option) {
+        if (env == NULL || option == NULL)
+            return NULL;
+
         jstring result;
 
         Package& package = Package::GetInstance();
@@ -116,6 +125,9 @@ public:
     }
 
     static void _setUserJvmKeysAndValues(JNIEnv *env, jobjectArray options, jobjectArray values) {
+        if (env == NULL || options == NULL || values == NULL)
+            return;
+        
         Package& package = Package::GetInstance();
         TOrderedMap newMap;
 
@@ -139,6 +151,9 @@ public:
     }
 
     static jobjectArray _getUserJvmOptionKeys(JNIEnv *env) {
+        if (env == NULL)
+            return NULL;
+
         jobjectArray result;
 
         Package& package = Package::GetInstance();

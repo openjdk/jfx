@@ -70,6 +70,7 @@ public class ExceptionDialog extends Dialog<ButtonType> {
 
         GridPane root = new GridPane();
         root.setVisible(false);
+        root.setPrefHeight(450);
         root.setMaxWidth(Double.MAX_VALUE);
         root.add(label, 0, 0);
         root.add(textArea, 0, 1);

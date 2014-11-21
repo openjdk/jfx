@@ -626,7 +626,7 @@ WindowContextBase::~WindowContextBase() {
 
 
 WindowContextTop::WindowContextTop(jobject _jwindow, WindowContext* _owner, long _screen,
-        WindowFrameType _frame_type, WindowType type) :
+        WindowFrameType _frame_type, WindowType type, GdkWMFunction wmf) :
             WindowContextBase(),
             screen(_screen),
             frame_type(_frame_type),
@@ -685,6 +685,10 @@ WindowContextTop::WindowContextTop(jobject _jwindow, WindowContext* _owner, long
 
     gdk_window_register_dnd(gdk_window);
 
+    if (wmf) {
+        gdk_window_set_functions(gdk_window, wmf);
+    }
+
     if (frame_type == TITLED) {
         request_frame_extents();
     }
@@ -720,6 +724,28 @@ WindowContextTop::request_frame_extents() {
         clientMessage.window = GDK_WINDOW_XID(gdk_window);
         clientMessage.message_type = rfeAtom;
         clientMessage.format = 32;
+
+        XSendEvent(display, XDefaultRootWindow(display), False,
+                   SubstructureRedirectMask | SubstructureNotifyMask,
+                   (XEvent *) &clientMessage);
+        XFlush(display);
+    }
+}
+
+void WindowContextTop::activate_window() {
+    Display *display = GDK_WINDOW_XDISPLAY(gdk_window);
+    Atom navAtom = XInternAtom(display, "_NET_ACTIVE_WINDOW", True);
+    if (navAtom != None) {
+        XClientMessageEvent clientMessage;
+        memset(&clientMessage, 0, sizeof(clientMessage));
+
+        clientMessage.type = ClientMessage;
+        clientMessage.window = GDK_WINDOW_XID(gdk_window);
+        clientMessage.message_type = navAtom;
+        clientMessage.format = 32;
+        clientMessage.data.l[0] = 1;
+        clientMessage.data.l[1] = gdk_x11_get_server_time(gdk_window);
+        clientMessage.data.l[2] = 0;
 
         XSendEvent(display, XDefaultRootWindow(display), False,
                    SubstructureRedirectMask | SubstructureNotifyMask,
@@ -1251,6 +1277,7 @@ void WindowContextTop::set_minimized(bool minimize) {
         gtk_window_iconify(GTK_WINDOW(gtk_widget));
     } else {
         gtk_window_deiconify(GTK_WINDOW(gtk_widget));
+        activate_window();
     }
 }
 void WindowContextTop::set_maximized(bool maximize) {
@@ -1750,7 +1777,8 @@ void WindowContextChild::enter_fullscreen() {
         return;
     }
 
-    full_screen_window = new WindowContextTop(jwindow, NULL, 0L, UNTITLED, NORMAL);
+    full_screen_window = new WindowContextTop(jwindow, NULL, 0L, UNTITLED,
+                                                NORMAL, (GdkWMFunction) 0);
     int x, y, w, h;
     gdk_window_get_origin(gdk_window, &x, &y);
     gdk_window_get_geometry(gdk_window, NULL, NULL, &w, &h, NULL);

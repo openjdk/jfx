@@ -557,7 +557,7 @@ void fetchExternalTools(String configName, List packages, File destdir, boolean 
                          into pkgdir
                      }
                 } else {
-                    throw new GradleException("Unhandled pacakge type for compile package ${pkgname}")
+                    throw new GradleException("Unhandled package type for compile package ${pkgname}")
                 }
                 srcball.deleteOnExit();
             }
