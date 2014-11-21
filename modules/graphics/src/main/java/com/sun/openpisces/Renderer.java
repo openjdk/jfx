@@ -154,11 +154,8 @@ public final class Renderer implements PathConsumer2D {
     private int[] edgeBuckets;
     private int numEdges;
 
-    // RT-39439: Need to re-evaluate the BND constants set in the Picecs rasterizer for non AA shape
-    //  private static final float DEC_BND = 20f;
-    //  private static final float INC_BND = 8f;
-    private static final float DEC_BND = 5f;
-    private static final float INC_BND = 2f;
+    private static final float DEC_BND = 20f;
+    private static final float INC_BND = 8f;
 
     // each bucket is a linked list. this method adds eptr to the
     // start "bucket"th linked list.

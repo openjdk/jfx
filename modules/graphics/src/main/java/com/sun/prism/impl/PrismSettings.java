@@ -90,7 +90,6 @@ public final class PrismSettings {
     public static final boolean skipMeshNormalComputation;
     public static final boolean forceUploadingPainter;
     public static final boolean forceAlphaTestShader;
-    public static final boolean forceNonAntialiasedShape;
     
 
     private PrismSettings() {
@@ -351,9 +350,6 @@ public final class PrismSettings {
 
         // Force the use of fragment shader that does alpha testing (i.e. discard if alpha == 0.0)
         forceAlphaTestShader = getBoolean(systemProperties, "prism.forceAlphaTestShader", false);
-
-        // Force non anti-aliasing (not smooth) shape rendering
-        forceNonAntialiasedShape = getBoolean(systemProperties, "prism.forceNonAntialiasedShape", false);
 
     }
 

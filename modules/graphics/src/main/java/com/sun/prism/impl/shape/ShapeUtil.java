@@ -53,14 +53,14 @@ public class ShapeUtil {
                                           BasicStroke stroke,
                                           RectBounds xformBounds,
                                           BaseTransform xform,
-                                          boolean close, boolean antialiasedShape)
+                                          boolean close)
     {
-        return shapeRasterizer.getMaskData(shape, stroke, xformBounds, xform, close, antialiasedShape);
+        return shapeRasterizer.getMaskData(shape, stroke, xformBounds, xform, close);
     }
 
-    public static MaskData rasterizeGlyphOutline(Shape shape, boolean antialiasedShape) {
+    public static MaskData rasterizeGlyphOutline(Shape shape) {
         return textRasterizer.
-            getMaskData(shape, null, null, BaseTransform.IDENTITY_TRANSFORM, true, antialiasedShape);
+            getMaskData(shape, null, null, BaseTransform.IDENTITY_TRANSFORM, true);
     }
 
     /**

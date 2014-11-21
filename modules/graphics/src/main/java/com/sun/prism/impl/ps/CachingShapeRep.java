@@ -172,7 +172,6 @@ class CachingShapeRepState {
         BaseTransform xform;
         RectBounds xformBounds;
         MaskTexData texData;
-        boolean antialiasedShape;
         int refCount;
     }
 
@@ -250,8 +249,8 @@ class CachingShapeRepState {
                 totalPixels + size <= MAX_SIZE_IN_PIXELS;
         }
 
-        boolean entryMatches(CacheEntry entry, Shape shape, BasicStroke stroke, BaseTransform xform, boolean antialiasedShape) {
-            return (entry.antialiasedShape == antialiasedShape) && equalsIgnoreTranslation(xform, entry.xform) && entry.shape.equals(shape) &&
+        boolean entryMatches(CacheEntry entry, Shape shape, BasicStroke stroke, BaseTransform xform) {
+            return equalsIgnoreTranslation(xform, entry.xform) && entry.shape.equals(shape) &&
                    (stroke == null ? entry.stroke == null : stroke.equals(entry.stroke));
 
         }
@@ -260,7 +259,7 @@ class CachingShapeRepState {
                  MaskTexData texData,
                  Shape shape, BasicStroke stroke, BaseTransform xform,
                  RectBounds xformBounds,
-                 boolean xformBoundsIsACopy, boolean antialiasedShape)
+                 boolean xformBoundsIsACopy)
         {
             if (texData == null) {
                 throw new InternalError("MaskTexData must be non-null");
@@ -283,7 +282,7 @@ class CachingShapeRepState {
             for (;i < toPos; i++) {
                 CacheEntry entry = entries[i];
 
-                if (entryMatches(entry, shape, stroke, xform, antialiasedShape))
+                if (entryMatches(entry, shape, stroke, xform))
                 {
                     entry.texData.maskTex.lock();
                     if (entry.texData.maskTex.isSurfaceLost()) {
@@ -305,7 +304,7 @@ class CachingShapeRepState {
 
             // did not find an existing mask; create a new one here
             MaskData maskData =
-                ShapeUtil.rasterizeShape(shape, stroke, xformBounds, xform, true, antialiasedShape);
+                ShapeUtil.rasterizeShape(shape, stroke, xformBounds, xform, true);
             int mw = maskData.getWidth();
             int mh = maskData.getHeight();
             texData.maskX = maskData.getOriginX();
@@ -327,7 +326,6 @@ class CachingShapeRepState {
             entry.xform = xform.copy();
             entry.xformBounds = xformBoundsIsACopy ? xformBounds : (RectBounds)xformBounds.copy();
             entry.texData = texData.copy();
-            entry.antialiasedShape = antialiasedShape;
             entry.refCount = 1;
             texData.cacheEntry = entry;
             addEntry(entry);
@@ -352,7 +350,6 @@ class CachingShapeRepState {
                 entry.xform = null;
                 entry.xformBounds = null;
                 entry.texData.maskTex.dispose();
-                entry.antialiasedShape = false;
                 entry.texData = null;
                 totalPixels -= (texData.maskW * texData.maskH);
             }
@@ -509,7 +506,7 @@ class CachingShapeRepState {
                 // the following will locate an existing cached mask that
                 // matches the given parameters, or failing that, will create
                 // a new mask and put it in the cache
-                maskCache.get(context, texData, shape, stroke, xform, xformBounds, boundsCopy, g.isAntialiasedShape());
+                maskCache.get(context, texData, shape, stroke, xform, xformBounds, boundsCopy);
             }
 
             if (lastXform == null) {

@@ -46,7 +46,7 @@ public class OpenPiscesRasterizer implements ShapeRasterizer {
                                 BasicStroke stroke,
                                 RectBounds xformBounds,
                                 BaseTransform xform,
-                                boolean close, boolean antialiasedShape)
+                                boolean close)
     {
         if (stroke != null && stroke.getType() != BasicStroke.TYPE_CENTERED) {
             // RT-27427
@@ -77,12 +77,10 @@ public class OpenPiscesRasterizer implements ShapeRasterizer {
         }
         Renderer renderer = null;
         if (shape instanceof Path2D) {
-            renderer = OpenPiscesPrismUtils.setupRenderer((Path2D) shape, stroke, xform, rclip,
-                    antialiasedShape);
+            renderer = OpenPiscesPrismUtils.setupRenderer((Path2D) shape, stroke, xform, rclip);
         }
         if (renderer == null) {
-            renderer = OpenPiscesPrismUtils.setupRenderer(shape, stroke, xform, rclip,
-                    antialiasedShape);
+            renderer = OpenPiscesPrismUtils.setupRenderer(shape, stroke, xform, rclip);
         }
         int outpix_xmin = renderer.getOutpixMinX();
         int outpix_ymin = renderer.getOutpixMinY();

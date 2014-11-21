@@ -50,8 +50,6 @@ public class NativePiscesRasterizer implements ShapeRasterizer {
     private ByteBuffer cachedBuffer;
     private MaskData cachedData;
     private int bounds[] = new int[4];
-    private boolean lastAntialiasedShape;
-    private boolean firstTimeAASetting = true;
 
     native static void init(int subpixelLgPositionsX, int subpixelLgPositionsY);
 
@@ -79,21 +77,14 @@ public class NativePiscesRasterizer implements ShapeRasterizer {
             }
             return null;
         });
+        init(3, 3);
     }
 
     @Override
     public MaskData getMaskData(Shape shape, BasicStroke stroke,
                                 RectBounds xformBounds, BaseTransform xform,
-                                boolean close, boolean antialiasedShape)
+                                boolean close)
     {
-
-        if (firstTimeAASetting || (lastAntialiasedShape != antialiasedShape)) {
-            int subpixelLgPositions = antialiasedShape ? 3 : 0;
-            NativePiscesRasterizer.init(subpixelLgPositions, subpixelLgPositions);
-            firstTimeAASetting = false;
-            lastAntialiasedShape = antialiasedShape;
-        }
-
         if (stroke != null && stroke.getType() != BasicStroke.TYPE_CENTERED) {
             // RT-27427
             // TODO: Optimize the combinatorial strokes for simple
