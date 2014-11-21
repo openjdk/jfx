@@ -538,6 +538,9 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
             menuButton.textProperty().unbind();
             menuButton.graphicProperty().unbind();
             menuButton.styleProperty().unbind();
+
+            menuButton.dispose();
+
             // RT-29729 : old instance of context menu window/popup for this MenuButton needs 
             // to be cleaned up. Setting the skin to null - results in a call to dispose() 
             // on the skin which in this case MenuButtonSkinBase - does the subsequent 
@@ -625,34 +628,14 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
         getSkinnable().focusedProperty().addListener(menuBarFocusedPropertyListener);
         for (final Menu menu : getSkinnable().getMenus()) {
             if (!menu.isVisible()) continue;
-            final MenuBarButton menuButton = new MenuBarButton(this, menu.getText(), menu.getGraphic());
+            final MenuBarButton menuButton = new MenuBarButton(this, menu);
             menuButton.setFocusTraversable(false);
             menuButton.getStyleClass().add("menu");
             menuButton.setStyle(menu.getStyle()); // copy style
-            menuButton.setId(menu.getId());
 
             menuButton.getItems().setAll(menu.getItems());
             container.getChildren().add(menuButton);
-            // listen to changes in menu items & update menuButton items
-            menu.getItems().addListener((ListChangeListener<MenuItem>) c -> {
-                while (c.next()) {
-                    menuButton.getItems().removeAll(c.getRemoved());
-                    menuButton.getItems().addAll(c.getFrom(), c.getAddedSubList());
-                }
-            });
-            menu.getStyleClass().addListener((ListChangeListener<String>) c -> {
-                while(c.next()) {
-                    for(int i=c.getFrom(); i<c.getTo(); i++) {
-                        menuButton.getStyleClass().add(menu.getStyleClass().get(i));
-                    }
-                    for (String str : c.getRemoved()) {
-                        menuButton.getStyleClass().remove(str);
-                    }
-                }
-            });
-            menu.idProperty().addListener((observableValue, s, s2) -> {
-                menuButton.setId(s2);
-            });
+
             menuButton.menuListener = (observable, oldValue, newValue) -> {
                 if (menu.isShowing()) {
                     menuButton.show();
@@ -1064,10 +1047,32 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
         private MenuBarSkin menuBarSkin;
         private Menu menu;
 
-        public MenuBarButton(MenuBarSkin menuBarSkin, String text, Node graphic) {
-            super(text, graphic);
+        private final ListChangeListener<MenuItem> itemsListener;
+        private final ListChangeListener<String> styleClassListener;
+
+        public MenuBarButton(MenuBarSkin menuBarSkin, Menu menu) {
+            super(menu.getText(), menu.getGraphic());
             this.menuBarSkin = menuBarSkin;
             setAccessibleRole(AccessibleRole.MENU);
+
+            // listen to changes in menu items & update menuButton items
+            menu.getItems().addListener(itemsListener = c -> {
+                while (c.next()) {
+                    getItems().removeAll(c.getRemoved());
+                    getItems().addAll(c.getFrom(), c.getAddedSubList());
+                }
+            });
+            menu.getStyleClass().addListener(styleClassListener = c -> {
+                while(c.next()) {
+                    for(int i=c.getFrom(); i<c.getTo(); i++) {
+                        getStyleClass().add(menu.getStyleClass().get(i));
+                    }
+                    for (String str : c.getRemoved()) {
+                        getStyleClass().remove(str);
+                    }
+                }
+            });
+            idProperty().bind(menu.idProperty());
         }
 
         public MenuBarSkin getMenuBarSkin() {
@@ -1083,6 +1088,12 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
 
             /* Transfer the a11y focus to an item in the menu bar. */
             menuBarSkin.getSkinnable().notifyAccessibleAttributeChanged(AccessibleAttribute.FOCUS_NODE);
+        }
+
+        void dispose() {
+            menu.getItems().removeListener(itemsListener);
+            menu.getStyleClass().removeListener(styleClassListener);
+            idProperty().unbind();
         }
 
         @Override
