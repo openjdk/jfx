@@ -45,9 +45,12 @@ import java.awt.event.InputMethodEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusListener;
 import java.awt.im.InputMethodRequests;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferInt;
+import java.awt.datatransfer.Clipboard;
 import java.nio.IntBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
@@ -69,10 +72,13 @@ import com.sun.javafx.stage.EmbeddedWindow;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.javafx.PlatformUtil;
 
+import java.lang.reflect.Method;
 import java.util.concurrent.atomic.AtomicInteger;
 import sun.awt.CausedFocusEvent;
 import sun.awt.SunToolkit;
 import sun.java2d.SunGraphics2D;
+import sun.util.logging.PlatformLogger;
+import sun.util.logging.PlatformLogger.Level;
 
 /**
 * {@code JFXPanel} is a component to embed JavaFX content into
@@ -128,6 +134,8 @@ import sun.java2d.SunGraphics2D;
  */
 public class JFXPanel extends JComponent {
 
+    private final static PlatformLogger log = PlatformLogger.getLogger(JFXPanel.class.getName());
+    
     private static AtomicInteger instanceCount = new AtomicInteger(0);
     private static PlatformImpl.FinishListener finishListener;
 
@@ -169,6 +177,82 @@ public class JFXPanel extends JComponent {
     private AtomicInteger disableCount = new AtomicInteger(0);
 
     private boolean isCapturingMouse = false;
+    
+    private static ThreadLocal<FocusListener> focusListener =
+        new ThreadLocal<FocusListener>() {
+            @Override protected FocusListener initialValue() {
+                return new FocusAdapter() {
+                    @Override public void focusLost(FocusEvent e) {
+                        Clipboard c = null;
+                        try {
+                            c = java.awt.Toolkit.getDefaultToolkit().getSystemClipboard();
+                        } catch (SecurityException ex) {
+                            if (log.isLoggable(Level.FINE)) {
+                                log.fine(ex.getMessage());
+                            }
+                            return;
+                        }
+                        // todo: replace with ((SunClipboard)c).checkLostOwnership() when JDK-8061315 is fixed
+                        checkPasteboard(c);
+                    }
+                };
+            }
+        };
+    
+    private static ThreadLocal<Class> classCClipboard =
+        new ThreadLocal<Class>() {
+            @Override protected Class initialValue() {
+                try {
+                    return Class.forName("sun.lwawt.macosx.CClipboard");
+                } catch (Exception ex) {
+                    if (log.isLoggable(Level.FINE)) {
+                        log.fine(ex.getMessage());
+                    }
+                }
+                return null;
+            }
+        };
+    
+    private static ThreadLocal<Method> methodCheckPasteboard =
+        new ThreadLocal<Method>() {
+            @Override protected Method initialValue() {
+                if (classCClipboard.get() != null) {
+                    try {
+                        Method m = classCClipboard.get().getDeclaredMethod("checkPasteboard");
+                        m.setAccessible(true);
+                        return m;
+                    } catch (Exception ex) {
+                        if (log.isLoggable(Level.FINE)) {
+                            log.fine(ex.getMessage());
+                        }
+                    }
+                }
+                return null;
+            }
+        };
+    
+    private static void checkPasteboard(Clipboard clipboard) {
+        if (PlatformUtil.isMac() && methodCheckPasteboard.get() != null && clipboard != null) {
+            try {
+                methodCheckPasteboard.get().invoke(clipboard);
+            } catch (Exception ex) {
+                if (log.isLoggable(Level.FINE)) {
+                    log.fine(ex.getMessage());
+                }
+            }
+        }
+    }
+    
+    private void registerFocusListener() {
+        addFocusListener(focusListener.get());
+    }
+    
+    private void deregisterFocusListener() {
+        removeFocusListener(focusListener.get());
+        focusListener.remove();
+        methodCheckPasteboard.remove();
+        classCClipboard.remove();
+    }
 
     private synchronized void registerFinishListener() {
         if (instanceCount.getAndIncrement() > 0) {
@@ -772,6 +856,8 @@ public class JFXPanel extends JComponent {
         super.addNotify();
 
         registerFinishListener();
+        registerFocusListener();
+
         AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             JFXPanel.this.getToolkit().addAWTEventListener(ungrabListener,
                 SunToolkit.GRAB_EVENT_MASK | AWTEvent.MOUSE_EVENT_MASK);
@@ -820,6 +906,7 @@ public class JFXPanel extends JComponent {
         /* see CR 4867453 */
         getInputContext().removeNotify(this);
 
+        deregisterFocusListener();
         deregisterFinishListener();
     }
 
