@@ -89,6 +89,7 @@ final class SWGraphics implements ReadbackGraphics {
     private Line2D line2d;
     private RoundRectangle2D rect2d;
 
+    private boolean antialiasedShape = true;
     private boolean hasPreCullingBits = false;
 
     private NodePath renderRoot;
@@ -216,6 +217,14 @@ final class SWGraphics implements ReadbackGraphics {
             System.out.println("SW pipe doesn't support shader with alpha testing");
         }
         return false;
+    }
+
+    public void setAntialiasedShape(boolean aa) {
+        antialiasedShape = aa;
+    }
+
+    public boolean isAntialiasedShape() {
+        return antialiasedShape;
     }
 
     public Rectangle getClipRect() {
@@ -496,7 +505,7 @@ final class SWGraphics implements ReadbackGraphics {
             System.out.println("Clip: " + finalClip);
             System.out.println("Composite rule: " + compositeMode);
         }
-        context.renderShape(this.pr, shape, st, tr, this.finalClip);
+        context.renderShape(this.pr, shape, st, tr, this.finalClip, isAntialiasedShape());
     }
 
     private void paintRoundRect(float x, float y, float width, float height, float arcw, float arch, BasicStroke st) {

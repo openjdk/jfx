@@ -35,6 +35,7 @@ import com.sun.prism.Graphics;
 import com.sun.prism.PrinterGraphics;
 import com.sun.prism.RTTexture;
 import com.sun.prism.Texture;
+import com.sun.prism.impl.PrismSettings;
 import com.sun.prism.paint.Paint;
 import com.sun.prism.shape.ShapeRep;
 import static com.sun.prism.shape.ShapeRep.InvalidationType.LOCATION_AND_GEOMETRY;
@@ -57,6 +58,7 @@ public abstract class NGShape extends NGNode {
     protected BasicStroke drawStroke;
     protected Mode mode = Mode.FILL;
     protected ShapeRep shapeRep;
+    private boolean smooth;
 
     public void setMode(Mode mode) {
         if (mode != this.mode) {
@@ -70,7 +72,15 @@ public abstract class NGShape extends NGNode {
     }
 
     public void setSmooth(boolean smooth) {
-        // We don't support aliased shapes at this time
+        smooth = !PrismSettings.forceNonAntialiasedShape && smooth; 
+        if (smooth != this.smooth) {
+            this.smooth = smooth;
+            visualsChanged();
+        }
+    }
+
+    public boolean isSmooth() {
+        return smooth;
     }
 
     public void setFillPaint(Object fillPaint) {
@@ -224,8 +234,9 @@ public abstract class NGShape extends NGNode {
                 cached3D = g.getResourceFactory().createRTTexture(w, h,
                         Texture.WrapMode.CLAMP_TO_ZERO,
                         false);
+                cached3D.setLinearFiltering(isSmooth());
                 cached3D.contentsUseful();
-                final Graphics textureGraphics = cached3D.createGraphics();
+                final Graphics textureGraphics = cached3D.createGraphics();                
                 // Have to move the origin such that when rendering to x=0, we actually end up rendering
                 // at x=bounds.getMinX(). Otherwise anything rendered to the left of the origin would be lost
                 textureGraphics.scale((float) scaleX, (float) scaleY);
@@ -259,10 +270,14 @@ public abstract class NGShape extends NGNode {
      * @param g The graphics object to render with
      */
     protected void renderContent2D(Graphics g, boolean printing) {
+
+        // Set smooth property on shape
+        g.setAntialiasedShape(isSmooth());
+
         ShapeRep localShapeRep = printing ? null : this.shapeRep;
         if (localShapeRep == null) {
             localShapeRep = createShapeRep(g);
-        }        
+        }
         Shape shape = getShape();
         if (mode != Mode.STROKE) {
             g.setPaint(fillPaint);

@@ -63,8 +63,11 @@ typedef struct {
 #define WIND_EVEN_ODD   0
 #define WIND_NON_ZERO   1
 
-#define DEC_BND   20.0f
-#define INC_BND   8.0f
+// RT-39439: Need to re-evaluate the BND constants set in the Picecs rasterizer for non AA shape
+// #define DEC_BND   20.0f
+// #define INC_BND   8.0f
+#define DEC_BND   5.0f
+#define INC_BND   2.0f
 
 typedef struct {
     PathConsumer consumer;

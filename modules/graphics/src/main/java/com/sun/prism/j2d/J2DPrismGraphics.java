@@ -500,6 +500,7 @@ public class J2DPrismGraphics
         return tmpAdaptor;
     }
 
+    private boolean antialiasedShape = true;
     J2DPresentable target;
     java.awt.Graphics2D g2d;
     Affine2D transform;
@@ -1282,6 +1283,17 @@ public class J2DPrismGraphics
             System.out.println("J2D pipe doesn't support shader with alpha testing");
         }
         return false;
+    }
+
+    public void setAntialiasedShape(boolean aa) {
+        antialiasedShape = aa;
+        g2d.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING,
+                antialiasedShape ? java.awt.RenderingHints.VALUE_ANTIALIAS_ON
+                        : java.awt.RenderingHints.VALUE_ANTIALIAS_OFF);
+    }
+
+    public boolean isAntialiasedShape() {
+        return antialiasedShape;
     }
 
     public void scale(float sx, float sy, float sz) {

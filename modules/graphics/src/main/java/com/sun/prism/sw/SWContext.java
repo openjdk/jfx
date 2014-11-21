@@ -49,15 +49,15 @@ final class SWContext {
     private SoftReference<SWArgbPreTexture> imagePaintTextureRef;
 
     interface ShapeRenderer {
-        void renderShape(PiscesRenderer pr, Shape shape, BasicStroke stroke, BaseTransform tr, Rectangle clip);
+        void renderShape(PiscesRenderer pr, Shape shape, BasicStroke stroke, BaseTransform tr, Rectangle clip, boolean antialiasedShape);
         void dispose();
     }
 
     class NativeShapeRenderer implements ShapeRenderer {
         private SoftReference<SWMaskTexture> maskTextureRef;
 
-        public void renderShape(PiscesRenderer pr, Shape shape, BasicStroke stroke, BaseTransform tr, Rectangle clip) {
-            final MaskData mask = ShapeUtil.rasterizeShape(shape, stroke, clip.toRectBounds(), tr, true);
+        public void renderShape(PiscesRenderer pr, Shape shape, BasicStroke stroke, BaseTransform tr, Rectangle clip, boolean antialiasedShape) {
+            final MaskData mask = ShapeUtil.rasterizeShape(shape, stroke, clip.toRectBounds(), tr, true, antialiasedShape);
             final SWMaskTexture tex = this.validateMaskTexture(mask.getWidth(), mask.getHeight());
             mask.uploadToTexture(tex, 0, 0, false);
             pr.fillAlphaMask(tex.getDataNoClone(), mask.getOriginX(), mask.getOriginY(),
@@ -102,7 +102,7 @@ final class SWContext {
     class JavaShapeRenderer implements ShapeRenderer {
         private final DirectRTPiscesAlphaConsumer alphaConsumer = new DirectRTPiscesAlphaConsumer();
 
-        public void renderShape(PiscesRenderer pr, Shape shape, BasicStroke stroke, BaseTransform tr, Rectangle clip) {
+        public void renderShape(PiscesRenderer pr, Shape shape, BasicStroke stroke, BaseTransform tr, Rectangle clip, boolean antialiasedShape) {
             if (stroke != null && stroke.getType() != BasicStroke.TYPE_CENTERED) {
                 // RT-27427
                 // TODO: Optimize the combinatorial strokes for simple
@@ -113,7 +113,7 @@ final class SWContext {
                 shape = stroke.createStrokedShape(shape);
                 stroke = null;
             }
-            final Renderer r = OpenPiscesPrismUtils.setupRenderer(shape, stroke, tr, clip);
+            final Renderer r = OpenPiscesPrismUtils.setupRenderer(shape, stroke, tr, clip, antialiasedShape);
             alphaConsumer.initConsumer(r, pr);
             r.produceAlphas(alphaConsumer);
         }
@@ -126,8 +126,8 @@ final class SWContext {
         this.shapeRenderer = (PrismSettings.doNativePisces) ? new NativeShapeRenderer() : new JavaShapeRenderer();
     }
 
-    void renderShape(PiscesRenderer pr, Shape shape, BasicStroke stroke, BaseTransform tr, Rectangle clip) {
-        this.shapeRenderer.renderShape(pr, shape, stroke, tr, clip);
+    void renderShape(PiscesRenderer pr, Shape shape, BasicStroke stroke, BaseTransform tr, Rectangle clip, boolean antialiasedShape) {
+        this.shapeRenderer.renderShape(pr, shape, stroke, tr, clip, antialiasedShape);
     }
 
     private SWRTTexture initRBBuffer(int width, int height) {

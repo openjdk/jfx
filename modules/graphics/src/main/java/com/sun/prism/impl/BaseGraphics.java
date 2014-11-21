@@ -68,7 +68,7 @@ public abstract class BaseGraphics implements RectShadowGraphics {
     private boolean hasPreCullingBits = false;
     private float extraAlpha = 1f;
     private CompositeMode compMode;
-
+    private boolean antialiasedShape = true;
     private boolean depthBuffer = false;
     private boolean depthTest = false;
     protected Paint paint = DEFAULT_PAINT;
@@ -262,6 +262,14 @@ public abstract class BaseGraphics implements RectShadowGraphics {
     // Currently it is required when depth testing is in use. 
     public boolean isAlphaTestShader() {
         return (PrismSettings.forceAlphaTestShader || (isDepthTest() && isDepthBuffer()));
+    }
+
+    public void setAntialiasedShape(boolean aa) {
+        antialiasedShape = aa;
+    }
+
+    public boolean isAntialiasedShape() {
+        return antialiasedShape;
     }
 
     public void setCamera(NGCamera camera) {

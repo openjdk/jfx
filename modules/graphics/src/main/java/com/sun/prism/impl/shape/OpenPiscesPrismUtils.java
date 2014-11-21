@@ -39,7 +39,8 @@ import com.sun.openpisces.TransformingPathConsumer2D;
 import com.sun.prism.BasicStroke;
 
 public class OpenPiscesPrismUtils {
-    private static final Renderer savedRenderer = new Renderer(3, 3);
+    private static final Renderer savedAARenderer = new Renderer(3, 3);
+    private static final Renderer savedRenderer = new Renderer(0, 0);
     private static final Stroker savedStroker = new Stroker(savedRenderer);
     private static final Dasher savedDasher = new Dasher(savedStroker);
 
@@ -49,12 +50,13 @@ public class OpenPiscesPrismUtils {
     private static PathConsumer2D initRenderer(BasicStroke stroke,
                                                BaseTransform tx,
                                                Rectangle clip,
-                                               int pirule)
+                                               int pirule,
+                                               Renderer renderer)
     {
         int oprule = (stroke == null && pirule == PathIterator.WIND_EVEN_ODD) ?
             Renderer.WIND_EVEN_ODD : Renderer.WIND_NON_ZERO;
-        savedRenderer.reset(clip.x, clip.y, clip.width, clip.height, oprule);
-        PathConsumer2D ret = transformer.getConsumer(savedRenderer, tx);
+        renderer.reset(clip.x, clip.y, clip.width, clip.height, oprule);
+        PathConsumer2D ret = transformer.getConsumer(renderer, tx);
         if (stroke != null) {
             savedStroker.reset(stroke.getLineWidth(), stroke.getEndCap(),
                                stroke.getLineJoin(), stroke.getMiterLimit());
@@ -101,19 +103,23 @@ public class OpenPiscesPrismUtils {
     public static Renderer setupRenderer(Shape shape,
                                   BasicStroke stroke,
                                   BaseTransform xform,
-                                  Rectangle rclip)
+                                  Rectangle rclip,
+                                  boolean antialiasedShape)
     {
         PathIterator pi = shape.getPathIterator(null);
-        feedConsumer(pi, initRenderer(stroke, xform, rclip, pi.getWindingRule()));
-        return savedRenderer;
+        Renderer r = antialiasedShape ? savedAARenderer : savedRenderer;
+        feedConsumer(pi, initRenderer(stroke, xform, rclip, pi.getWindingRule(), r));
+        return r;
     }
 
     public static Renderer setupRenderer(Path2D p2d,
                                   BasicStroke stroke,
                                   BaseTransform xform,
-                                  Rectangle rclip)
+                                  Rectangle rclip,
+                                  boolean antialiasedShape)
     {
-        PathConsumer2D pc2d = initRenderer(stroke, xform, rclip, p2d.getWindingRule());
+        Renderer r = antialiasedShape ? savedAARenderer : savedRenderer;
+        PathConsumer2D pc2d = initRenderer(stroke, xform, rclip, p2d.getWindingRule(), r);
 
         float coords[] = p2d.getFloatCoordsNoClone();
         byte types[] = p2d.getCommandsNoClone();
@@ -146,6 +152,6 @@ public class OpenPiscesPrismUtils {
             }
         }
         pc2d.pathDone();
-        return savedRenderer;
+        return r;
     }
 }

@@ -35,5 +35,5 @@ public interface ShapeRasterizer {
     public MaskData getMaskData(Shape shape, BasicStroke stroke,
                                 RectBounds xformBounds,
                                 BaseTransform xform,
-                                boolean close);
+                                boolean close, boolean antialiasedShape);
 }
