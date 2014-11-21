@@ -28,6 +28,7 @@ package com.sun.javafx.scene.control.skin;
 import java.util.Locale;
 
 import javafx.beans.InvalidationListener;
+import javafx.geometry.NodeOrientation;
 import javafx.scene.Node;
 import javafx.scene.paint.Color;
 
@@ -38,8 +39,8 @@ class WebColorFieldSkin extends InputFieldSkin {
     private boolean noChangeInValue = false;
 
     /**
-     * Create a new IntegerFieldSkin.
-     * @param control The IntegerField
+     * Create a new WebColorFieldSkin.
+     * @param control The WebColorField
      */
     public WebColorFieldSkin(final WebColorField control) {
         super(control);
@@ -50,6 +51,11 @@ class WebColorFieldSkin extends InputFieldSkin {
         control.valueProperty().addListener(integerFieldValueListener = observable -> {
             updateText();
         });
+
+        // RT-37494: Force the major text direction to LTR, so that '#' is always
+        // on the left side of the text. A special style is used in CSS to keep
+        // the text right-aligned when in RTL mode.
+        getTextField().setNodeOrientation(NodeOrientation.LEFT_TO_RIGHT);
     }
 
     @Override public WebColorField getSkinnable() {
@@ -85,7 +91,7 @@ class WebColorFieldSkin extends InputFieldSkin {
     protected void updateText() {
         Color color = ((WebColorField) control).getValue();
         if (color == null) color = Color.BLACK;
-        getTextField().setText(getWebColor(color));
+        getTextField().setText(ColorPickerSkin.formatHexString(color));
     }
 
     protected void updateValue() {
@@ -101,22 +107,12 @@ class WebColorFieldSkin extends InputFieldSkin {
                     // calling setText results in updateValue - so we set this flag to true
                     // so that when this is true updateValue simply returns.
                     noChangeInValue = true; 
-                    getTextField().setText(getWebColor(newValue));
+                    getTextField().setText(ColorPickerSkin.formatHexString(newValue));
                     noChangeInValue = false;
                 }
             } catch (java.lang.IllegalArgumentException ex) {
                 System.out.println("Failed to parse ["+text+"]");
             }
         } 
-    }
-    
-    
-    private static String getWebColor(Color color) {
-        final int red = (int)(color.getRed()*255);
-        final int green = (int)(color.getGreen()*255);
-        final int blue = (int)(color.getBlue()*255);
-        return "#" + String.format("%02X", red) +
-                          String.format("%02X", green) +
-                          String.format("%02X", blue);
     }
 }

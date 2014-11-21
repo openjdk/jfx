@@ -38,9 +38,9 @@ import javafx.beans.value.WeakChangeListener;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.WeakListChangeListener;
-//import javafx.scene.accessibility.Action;
-//import javafx.scene.accessibility.Attribute;
-//import javafx.scene.accessibility.Role;
+import javafx.scene.AccessibleAction;
+import javafx.scene.AccessibleAttribute;
+import javafx.scene.AccessibleRole;
 
 import com.sun.javafx.scene.control.skin.ListCellSkin;
 
@@ -82,6 +82,7 @@ public class ListCell<T> extends IndexedCell<T> {
      */
     public ListCell() {
         getStyleClass().addAll(DEFAULT_STYLE_CLASS);
+        setAccessibleRole(AccessibleRole.LIST_ITEM);
     }
 
 
@@ -145,7 +146,26 @@ public class ListCell<T> extends IndexedCell<T> {
      * it impacts the index of this ListCell, then we must update the item.
      */
     private final ListChangeListener<T> itemsListener = c -> {
-        updateItem(-1);
+        boolean doUpdate = false;
+        while (c.next()) {
+            // RT-35395: We only update the item in this cell if the current cell
+            // index is within the range of the change and certain changes to the
+            // list have occurred.
+            final int currentIndex = getIndex();
+            final ListView<T> lv = getListView();
+            final List<T> items = lv == null ? null : lv.getItems();
+            final int itemCount = items == null ? 0 : items.size();
+
+            final boolean indexAfterChangeFromIndex = currentIndex >= c.getFrom();
+            final boolean indexBeforeChangeToIndex = currentIndex < c.getTo() || currentIndex == itemCount;
+            final boolean indexInRange = indexAfterChangeFromIndex && indexBeforeChangeToIndex;
+
+            doUpdate = indexInRange || (indexAfterChangeFromIndex && !c.wasReplaced() && (c.wasRemoved() || c.wasAdded()));
+        }
+
+        if (doUpdate) {
+            updateItem(-1);
+        }
     };
 
     /**
@@ -441,7 +461,7 @@ public class ListCell<T> extends IndexedCell<T> {
             // RT-35864 - if the index didn't change, then avoid calling updateItem
             // unless the item has changed.
             if (oldIndex == index) {
-                if (oldValue != null ? oldValue.equals(newValue) : newValue == null) {
+                if (!isItemChanged(oldValue, newValue)) {
                     // RT-37054:  we break out of the if/else code here and
                     // proceed with the code following this, so that we may
                     // still update references, listeners, etc as required.
@@ -481,7 +501,10 @@ public class ListCell<T> extends IndexedCell<T> {
         if (index == -1 || listView == null) return;
         
         SelectionModel<T> sm = listView.getSelectionModel();
-        if (sm == null) return;
+        if (sm == null) {
+            updateSelected(false);
+            return;
+        }
         
         boolean isSelected = sm.isSelected(index);
         if (isSelected() == isSelected) return;
@@ -495,7 +518,10 @@ public class ListCell<T> extends IndexedCell<T> {
         if (index == -1 || listView == null) return;
         
         FocusModel<T> fm = listView.getFocusModel();
-        if (fm == null) return;
+        if (fm == null) {
+            setFocused(false);
+            return;
+        }
         
         setFocused(fm.isFocused(index));
     }
@@ -544,49 +570,30 @@ public class ListCell<T> extends IndexedCell<T> {
      *                                                                         *
      **************************************************************************/
 
-//    /** @treatAsPrivate */
-//    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//        switch (attribute) {
-//            case ROLE: return Role.LIST_ITEM;
-//            case TITLE: {
-//                String text = getText();
-//                /* If the data bounded to cell is a Node
-//                 * the default behavior is to hide the text
-//                 * and use data as the graphics. (see ListViewSkin#createDefaultCellImpl).
-//                 * If the text is empty try to get graphics. 
-//                 */
-//                if (text == null || text.isEmpty()) {
-//                    if (getGraphic() != null) {
-//                        text = (String)getGraphic().accGetAttribute(Attribute.TITLE);
-//                    }
-//                }
-//                return text;
-//            }
-//            case INDEX: return getIndex();
-//            case SELECTED: return isSelected();
-//            default: return super.accGetAttribute(attribute, parameters);
-//        }
-//    }
-//
-//    /** @treatAsPrivate */
-//    @Override public void accExecuteAction(Action action, Object... parameters) {
-//        final ListView<T> listView = getListView();
-//        final MultipleSelectionModel<T> sm = listView == null ? null : listView.getSelectionModel();
-//        switch (action) {
-//            case SELECT: {
-//                if (sm != null) sm.clearAndSelect(getIndex());
-//                break;
-//            }
-//            case ADD_TO_SELECTION: {
-//                if (sm != null) sm.select(getIndex());
-//                break;
-//            }
-//            case REMOVE_FROM_SELECTION: {
-//                if (sm != null) sm.clearSelection(getIndex());
-//                break;
-//            }
-//            default: super.accExecuteAction(action);
-//        }
-//    }
+    @Override
+    public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
+        switch (attribute) {
+            case INDEX: return getIndex();
+            case SELECTED: return isSelected();
+            default: return super.queryAccessibleAttribute(attribute, parameters);
+        }
+    }
+
+    @Override
+    public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
+        switch (action) {
+            case REQUEST_FOCUS: {
+                ListView<T> listView = getListView();
+                if (listView != null) {
+                    FocusModel<T> fm = listView.getFocusModel();
+                    if (fm != null) {
+                        fm.focus(getIndex());
+                    }
+                }
+                break;
+            }
+            default: super.executeAccessibleAction(action, parameters);
+        }
+    }
 }
 

@@ -35,6 +35,9 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.WritableValue;
 import javafx.geometry.Orientation;
+import javafx.scene.AccessibleAction;
+import javafx.scene.AccessibleAttribute;
+import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 import javafx.css.PseudoClass;
 import javafx.css.StyleableBooleanProperty;
@@ -46,9 +49,6 @@ import com.sun.javafx.scene.control.skin.TitledPaneSkin;
 import javafx.beans.DefaultProperty;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
-//import javafx.scene.accessibility.Action;
-//import javafx.scene.accessibility.Attribute;
-//import javafx.scene.accessibility.Role;
 
 /**
  * <p>A TitledPane is a panel with a title that can be opened and closed.</p>
@@ -88,7 +88,8 @@ public class TitledPane extends Labeled {
      */
     public TitledPane() {
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
-        
+        setAccessibleRole(AccessibleRole.TITLED_PANE);
+
         // initialize pseudo-class state
         pseudoClassStateChanged(PSEUDO_CLASS_EXPANDED, true);
     }
@@ -153,7 +154,7 @@ public class TitledPane extends Labeled {
             final boolean active = get();
             pseudoClassStateChanged(PSEUDO_CLASS_EXPANDED,   active);
             pseudoClassStateChanged(PSEUDO_CLASS_COLLAPSED, !active);
-//            accSendNotification(Attribute.EXPANDED);
+            notifyAccessibleAttributeChanged(AccessibleAttribute.EXPANDED);
         }
 
         @Override
@@ -362,22 +363,25 @@ public class TitledPane extends Labeled {
      *                                                                         *
      **************************************************************************/
 
-//    /** @treatAsPrivate */
-//    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//        switch (attribute) {
-//            case ROLE: return Role.TITLED_PANE;
-//            case TITLE: return getText();
-//            case EXPANDED: return isExpanded();
-//            default: return super.accGetAttribute(attribute, parameters);
-//        }
-//    }
-//
-//    /** @treatAsPrivate */
-//    @Override public void accExecuteAction(Action action, Object... parameters) {
-//        switch (action) {
-//            case EXPAND: setExpanded(true); break;
-//            case COLLAPSE: setExpanded(false); break;
-//            default: super.accExecuteAction(action);
-//        }
-//    }
+    @Override
+    public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
+        switch (attribute) {
+            case TEXT: {
+                String accText = getAccessibleText();
+                if (accText != null && !accText.isEmpty()) return accText;
+                return getText();
+            }
+            case EXPANDED: return isExpanded();
+            default: return super.queryAccessibleAttribute(attribute, parameters);
+        }
+    }
+
+    @Override
+    public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
+        switch (action) {
+            case EXPAND: setExpanded(true); break;
+            case COLLAPSE: setExpanded(false); break;
+            default: super.executeAccessibleAction(action);
+        }
+    }
 }

@@ -35,6 +35,8 @@
 static GSList* setup_GtkFileFilters(GtkFileChooser*, JNIEnv*, jobjectArray, int default_filter_index);
 
 static void free_fname(char* fname, gpointer unused) {
+    (void)unused;
+
     g_free(fname);
 }
 
@@ -84,6 +86,7 @@ extern "C" {
 JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_gtk_GtkCommonDialogs__1showFileChooser
   (JNIEnv *env, jclass clazz, jlong parent, jstring folder, jstring name, jstring title,
    jint type, jboolean multiple, jobjectArray jFilters, jint default_filter_index) {
+    (void)clazz;
 
     jobjectArray jFileNames = NULL;
     char* filename;
@@ -179,6 +182,8 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_gtk_GtkCommonDialogs__1showFileC
 
 JNIEXPORT jstring JNICALL Java_com_sun_glass_ui_gtk_GtkCommonDialogs__1showFolderChooser
   (JNIEnv *env, jclass clazz, jlong parent, jstring folder, jstring title) {
+    (void)clazz;
+
     jstring jfilename = NULL;
     const char *chooser_folder;
     const char *chooser_title;
@@ -255,12 +260,10 @@ static GSList* setup_GtkFileFilters(GtkFileChooser* chooser, JNIEnv* env, jobjec
 
         //setup description
         jstring jdesc = (jstring)env->CallObjectMethod(jfilter, jgetDescription);
-        int jdesc_size = env->GetStringLength(jdesc);
-        char* description = (char*)g_malloc(jdesc_size + 1);
-        env->GetStringUTFRegion(jdesc, 0, jdesc_size, description);
+        const char * description = env->GetStringUTFChars(jdesc, NULL);
         LOG2("description[%d]: %s\n", i, description)
-        gtk_file_filter_set_name(ffilter, description);
-        g_free(description);
+        gtk_file_filter_set_name(ffilter, (gchar*)const_cast<char*>(description));
+        env->ReleaseStringUTFChars(jdesc, description);
 
         //add patterns
         jobjectArray jextensions = (jobjectArray)env->CallObjectMethod(jfilter, jextensionsToArray);
@@ -270,12 +273,10 @@ static GSList* setup_GtkFileFilters(GtkFileChooser* chooser, JNIEnv* env, jobjec
         for(ext_idx = 0; ext_idx < jextarray_size; ext_idx++) {
             jstring jext = (jstring)env->GetObjectArrayElement(jextensions, ext_idx);    
             EXCEPTION_OCCURED(env);
-            jsize jext_size = env->GetStringLength(jext);
-            char* ext = (char *) g_malloc(jext_size + 1);
-            env->GetStringUTFRegion(jext, 0, jext_size, ext);
+            const char * ext = env->GetStringUTFChars(jext, NULL);
             LOG2("pattern[%d]: %s\n", ext_idx, ext)
-            gtk_file_filter_add_pattern(ffilter, ext);
-            g_free(ext);
+            gtk_file_filter_add_pattern(ffilter, (gchar*)const_cast<char*>(ext));
+            env->ReleaseStringUTFChars(jext, ext);
         }
         LOG0("Filter ready\n")
         gtk_file_chooser_add_filter(chooser, ffilter);

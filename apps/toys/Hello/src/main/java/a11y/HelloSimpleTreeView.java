@@ -25,7 +25,6 @@
 package a11y;
 
 
-import a11y.HelloSimpleTableView.Item;
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;

@@ -55,15 +55,10 @@
 
 static inline GlassWindow *getGlassWindow(JNIEnv *env, jlong jPtr)
 {
-    if (jPtr != 0L)
-    {
-        NSWindow * nsWindow = (NSWindow*)jlong_to_ptr(jPtr);
-        return (GlassWindow*)[nsWindow delegate];
-    }
-    else
-    {
-        return nil;
-    }
+    assert(jPtr != 0L);
+
+    NSWindow * nsWindow = (NSWindow*)jlong_to_ptr(jPtr);
+    return (GlassWindow*)[nsWindow delegate];
 }
 
 static inline NSView<GlassView> *getMacView(JNIEnv *env, jobject jview)
@@ -720,6 +715,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setLevel
 (JNIEnv *env, jobject jWindow, jlong jPtr, jint jLevel)
 {
     LOG("Java_com_sun_glass_ui_mac_MacWindow__1setLevel");
+    if (!jPtr) return;
     
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
@@ -750,6 +746,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setFocusable
 (JNIEnv *env, jobject jWindow, jlong jPtr, jboolean isFocusable)
 {
     LOG("Java_com_sun_glass_ui_mac_MacWindow__1setCanBecomeActive");
+    if (!jPtr) return;
     
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
@@ -770,6 +767,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setEnabled
 (JNIEnv *env, jobject jwindow, jlong jPtr, jboolean isEnabled)
 {
     LOG("Java_com_sun_glass_ui_mac_MacWindow__1setEnabled");
+    if (!jPtr) return;
     
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
@@ -806,6 +804,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setAlpha
 (JNIEnv *env, jobject jWindow, jlong jPtr, jfloat jAlpha)
 {
     LOG("Java_com_sun_glass_ui_mac_MacWindow__1setAlpha");
+    if (!jPtr) return;
     
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
@@ -826,6 +825,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setBackground
 (JNIEnv *env, jobject jWindow, jlong jPtr, jfloat r, jfloat g, jfloat b)
 {
     LOG("Java_com_sun_glass_ui_mac_MacWindow__1setBackground");
+    if (!jPtr) return JNI_FALSE;
     
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
@@ -850,6 +850,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setView
     LOG("Java_com_sun_glass_ui_mac_MacWindow__1setView");
     LOG("   window: %p", jPtr);
     LOG("   view: %p", getMacView(env, jview));
+    if (!jPtr) return JNI_FALSE;
     
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
@@ -922,6 +923,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setMenubar
 (JNIEnv *env, jobject jWindow, jlong jPtr, jlong jMenubarPtr)
 {
     LOG("Java_com_sun_glass_ui_mac_MacWindow__1setMenubar");
+    if (!jPtr) return JNI_FALSE;
     
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
@@ -946,6 +948,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1close
 (JNIEnv *env, jclass cls, jlong jPtr)
 {
     LOG("Java_com_sun_glass_ui_mac_MacWindow__1close");
+    if (!jPtr) return JNI_FALSE;
     
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
@@ -972,6 +975,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1requestFocus
 (JNIEnv *env, jobject jWindow, jlong jPtr)
 {
     LOG("Java_com_sun_glass_ui_mac_MacWindow__1requestFocus");
+    if (!jPtr) return JNI_FALSE;
     
     jboolean focused = JNI_FALSE;
     
@@ -1004,6 +1008,8 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1grabFocus
 (JNIEnv *env, jobject jThis, jlong jPtr)
 {
     LOG("Java_com_sun_glass_ui_mac_MacWindow__1grabFocus");
+    if (!jPtr) return JNI_FALSE;
+
     jboolean ret = JNI_FALSE;
     
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
@@ -1029,6 +1035,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1ungrabFocus
 (JNIEnv *env, jobject jThis, jlong jPtr)
 {
     LOG("Java_com_sun_glass_ui_mac_MacWindow__1ungrabFocus");
+    if (!jPtr) return;
     
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
@@ -1050,6 +1057,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1maximize
 (JNIEnv *env, jobject jWindow, jlong jPtr, jboolean maximize, jboolean isZoomed)
 {
     LOG("Java_com_sun_glass_ui_mac_MacWindow__1maximize");
+    if (!jPtr) return JNI_FALSE;
     
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
@@ -1104,6 +1112,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setBounds
     LOG("   xGravity,yGravity: %.2f,%.2f", xGravity, yGravity);
     LOG("   w x h: %dx%d", w, h);
     LOG("   cw x ch: %dx%d", cw, ch);
+    if (!jPtr) return;
     
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
@@ -1126,6 +1135,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setMinimumSize
 (JNIEnv *env, jobject jWindow, jlong jPtr, jint jW, jint jH)
 {
     LOG("Java_com_sun_glass_ui_mac_MacWindow__1setMinimumSize");
+    if (!jPtr) return JNI_FALSE;
     
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
@@ -1148,6 +1158,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setMaximumSize
 (JNIEnv *env, jobject jWindow, jlong jPtr, jint jW, jint jH)
 {
     LOG("Java_com_sun_glass_ui_mac_MacWindow__1setMaximumSize");
+    if (!jPtr) return JNI_FALSE;
     
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
@@ -1171,6 +1182,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setResizable
 (JNIEnv *env, jobject jWindow, jlong jPtr, jboolean jResizable)
 {
     LOG("Java_com_sun_glass_ui_mac_MacWindow__1setResizable");
+    if (!jPtr) return JNI_FALSE;
     
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
@@ -1196,6 +1208,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setVisible
 (JNIEnv *env, jobject jWindow, jlong jPtr, jboolean jVisible)
 {
     LOG("Java_com_sun_glass_ui_mac_MacWindow__1setVisible");
+    if (!jPtr) return JNI_FALSE;
     
     jboolean now = JNI_FALSE;
     
@@ -1264,6 +1277,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setTitle
 {
     LOG("Java_com_sun_glass_ui_mac_MacWindow__1setTitle");
     LOG("   window: %p", jPtr);
+    if (!jPtr) return JNI_FALSE;
     
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
@@ -1289,6 +1303,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1minimize
 (JNIEnv *env, jobject jWindow, jlong jPtr, jboolean jMiniaturize)
 {
     LOG("Java_com_sun_glass_ui_mac_MacWindow__1minimize");
+    if (!jPtr) return JNI_FALSE;
     
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
@@ -1319,6 +1334,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setIcon
 (JNIEnv *env, jobject jWindow, jlong jPtr, jobject jPixels)
 {
     LOG("Java_com_sun_glass_ui_mac_MacWindow__1setIcon");
+    if (!jPtr) return;
     
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
@@ -1360,6 +1376,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1toFront
 {
     LOG("Java_com_sun_glass_ui_mac_MacWindow__1toFront");
     LOG("   window: %p", jPtr);
+    if (!jPtr) return;
     
     GLASS_POOL_ENTER;
     {
@@ -1379,6 +1396,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1toBack
 (JNIEnv *env, jobject jWindow, jlong jPtr)
 {
     LOG("Java_com_sun_glass_ui_mac_MacWindow__1toBack");
+    if (!jPtr) return;
     
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
@@ -1400,6 +1418,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1enterModal
 (JNIEnv *env, jobject jWindow, jlong jPtr)
 {
     LOG("Java_com_sun_glass_ui_mac_MacWindow__1enterModal");
+    if (!jPtr) return;
     
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
@@ -1440,6 +1459,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1exitModal
 (JNIEnv *env, jobject jWindow, jlong jPtr)
 {
     LOG("Java_com_sun_glass_ui_mac_MacWindow__1exitModal");
+    if (!jPtr) return;
     
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER;
@@ -1460,6 +1480,7 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacWindow__1getEmbeddedX
 (JNIEnv *env, jobject jWindow, jlong jPtr)
 {
     LOG("Java_com_sun_glass_ui_mac_MacWindow__1getEmbeddedX");
+    if (!jPtr) return 0;
     
     jint x = 0;
     
@@ -1484,6 +1505,7 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacWindow__1getEmbeddedY
 (JNIEnv *env, jobject jWindow, jlong jPtr)
 {
     LOG("Java_com_sun_glass_ui_mac_MacWindow__1getEmbeddedX");
+    if (!jPtr) return 0;
     
     jint y = 0;
     

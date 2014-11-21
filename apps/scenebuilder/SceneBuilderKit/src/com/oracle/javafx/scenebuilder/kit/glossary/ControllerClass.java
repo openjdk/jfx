@@ -180,7 +180,7 @@ class ControllerClass {
 
     private static String getNoExtensionName(File file) {
         String name = file.getName();
-        int index = name.lastIndexOf(".");//NOI18N
+        int index = name.lastIndexOf('.');//NOI18N
         if (index == -1) {
             index = name.length();
         }

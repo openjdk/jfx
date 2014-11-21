@@ -30,7 +30,11 @@ import com.sun.glass.ui.Application;
 import java.util.LinkedList;
 import java.util.concurrent.CountDownLatch;
 
-public class RunnableProcessor implements Runnable {
+/**
+ * RunnableProcessor provides control over nested run loops in the JavaFX
+ * event queue.
+ */
+class RunnableProcessor implements Runnable {
 
     private RunnableQueue queue = new RunnableQueue();
 
@@ -47,11 +51,22 @@ public class RunnableProcessor implements Runnable {
         runLoop();
     }
 
-    public void invokeLater(Runnable r) {
+    /**
+     * Posts a Runnable to the JavaFX event queue using this RunnableProcessor
+     *
+     * @param r an action to be performed on the JavaFX application thread.
+     */
+    void invokeLater(Runnable r) {
         queue.postRunnable(r);
     }
 
-    public void invokeAndWait(final Runnable r) {
+    /**
+     * Posts a Runnable to the JavaFX event queue and waits for the Runnable
+     * to complete.
+     *
+     * @param r an action to be performed on the JavaFX application thread.
+     */
+    void invokeAndWait(final Runnable r) {
         final CountDownLatch latch = new CountDownLatch(1);
         queue.postRunnable(() -> {
             try {
@@ -125,7 +140,12 @@ public class RunnableProcessor implements Runnable {
         }
     }
 
-    public static void runLater(Runnable r) {
+    /** Posts a Runnable to the JavaFX event queue using the global
+     * RunnableProcessor.
+     *
+     * @param r an action to be performed on the JavaFX application thread.
+     */
+    static void runLater(Runnable r) {
         NativePlatformFactory.getNativePlatform()
                 .getRunnableProcessor()
                 .invokeLater(r);

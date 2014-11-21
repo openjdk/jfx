@@ -33,12 +33,10 @@ set LIBPATH=
 REM Run the vsvars32.bat file, sending it's output to neverland.
 set VSVER=100
 set VSVARSDIR=%VS100COMNTOOLS%
-if "%VSVARSDIR%"=="" set VSVER=71
-if "%VSVARSDIR%"=="" set VSVARSDIR=%VS71COMNTOOLS%
-if "%VSVARSDIR%"=="" set VSVER=80
-if "%VSVARSDIR%"=="" set VSVARSDIR=%VS80COMNTOOLS%
-if "%VSVARSDIR%"=="" set VSVER=90
-if "%VSVARSDIR%"=="" set VSVARSDIR=%VS90COMNTOOLS%
+if "%VSVARSDIR%"=="" set VSVER=120
+if "%VSVARSDIR%"=="" set VSVARSDIR=%VS120COMNTOOLS%
+if "%VSVARSDIR%"=="" set VSVER=110
+if "%VSVARSDIR%"=="" set VSVARSDIR=%VS110COMNTOOLS%
 
 REM We shouldn't depend on VSVARS32 as it's 32-bit only.
 REM   However, this var is still used somewhere in FX (e.g.

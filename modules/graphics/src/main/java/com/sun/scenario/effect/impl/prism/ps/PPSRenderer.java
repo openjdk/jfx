@@ -44,6 +44,7 @@ import com.sun.prism.ResourceFactoryListener;
 import com.sun.prism.Texture;
 import com.sun.prism.Texture.Usage;
 import com.sun.prism.Texture.WrapMode;
+import com.sun.prism.impl.PrismSettings;
 import com.sun.prism.ps.Shader;
 import com.sun.prism.ps.ShaderFactory;
 import com.sun.scenario.effect.Effect.AccelType;
@@ -193,6 +194,9 @@ public class PPSRenderer extends PrRenderer {
                                Map<String, Integer> params,
                                boolean isPixcoordUsed)
     {
+        if (PrismSettings.verbose) {
+            System.out.println("PPSRenderer: scenario.effect - createShader: " + name);
+        }
         InputStream pscode = shaderSource.loadSource(name);
         int maxTexCoordIndex = samplers.keySet().size()-1;
         ShaderFactory factory = (ShaderFactory)rf;

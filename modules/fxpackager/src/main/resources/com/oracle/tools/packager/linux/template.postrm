@@ -20,8 +20,6 @@ set -e
 
 case "$1" in
     purge|remove|upgrade|failed-upgrade|abort-install|abort-upgrade|disappear)
-        echo Removing shortcut
-        rm -f /usr/share/applications/APPLICATION_NAME.desktop
         if [ "$1" = "purge" ] ; then
             if [ "SERVICE_HINT" = "true" ]; then
                 echo Uninstalling daemon

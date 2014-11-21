@@ -55,6 +55,7 @@ public class GlueElement extends GlueNode {
     private final List<GlueAuxiliary> tail = new ArrayList<>();
     private final List<GlueAuxiliary> content = new ArrayList<>();
     private int indentDepth;
+    private boolean synthetic;
     
     private GlueElement parent;
     
@@ -207,8 +208,9 @@ public class GlueElement extends GlueNode {
             indentDepth = depth;
         }
         
+        final int nextDepth = synthetic ? depth : depth+1;
         for (GlueElement child : children) {
-            child.updateIndent(depth+1);
+            child.updateIndent(nextDepth);
         }
     }
 
@@ -273,6 +275,14 @@ public class GlueElement extends GlueNode {
         
         assert document == targetDocument;
         assert this != targetDocument.getRootElement();
+    }
+
+    public boolean isSynthetic() {
+        return synthetic;
+    }
+
+    public void setSynthetic(boolean synthetic) {
+        this.synthetic = synthetic;
     }
 
     

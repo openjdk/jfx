@@ -34,7 +34,7 @@ package com.oracle.javafx.scenebuilder.kit.editor.job.gridpane;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.job.BatchJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
-import com.oracle.javafx.scenebuilder.kit.editor.job.ModifyObjectJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.ModifyObjectJob;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
@@ -47,6 +47,9 @@ import java.util.List;
 
 /**
  * Job invoked when re-indexing rows content.
+ * 
+ * IMPORTANT:
+ * This job cannot extends BatchDocumentJob because its sub jobs list cannot be initialized lazily.
  */
 public class ReIndexRowContentJob extends Job {
 

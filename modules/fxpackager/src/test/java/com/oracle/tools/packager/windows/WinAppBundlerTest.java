@@ -41,10 +41,12 @@ import org.junit.Test;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
@@ -61,7 +63,9 @@ public class WinAppBundlerTest {
     static File workDir;
     static File appResourcesDir;
     static File fakeMainJar;
+    static File packagedMainJar;
     static Set<File> appResources;
+    static Set<File> packagedAppResources;
     static boolean retain = false;
 
     @BeforeClass
@@ -76,8 +80,10 @@ public class WinAppBundlerTest {
         workDir = new File("build/tmp/tests", "winapp");
         appResourcesDir = new File("build/tmp/tests", "appResources");
         fakeMainJar = new File(appResourcesDir, "mainApp.jar");
+        packagedMainJar = new File(appResourcesDir, "packagedMainApp.jar");
 
         appResources = new HashSet<>(Arrays.asList(fakeMainJar));
+        packagedAppResources = new HashSet<>(Arrays.asList(packagedMainJar));
     }
 
     @Before
@@ -134,22 +140,22 @@ public class WinAppBundlerTest {
         bundleParams.put(BUILD_ROOT.getID(), tmpBase);
 
         bundleParams.put(APP_NAME.getID(), "Smoke Test");
-        bundleParams.put(MAIN_CLASS.getID(), "hello.TestPackager");
+        bundleParams.put(MAIN_CLASS.getID(), "hello.HelloRectangle");
         bundleParams.put(PREFERENCES_ID.getID(), "the/really/long/preferences/id");
         bundleParams.put(MAIN_JAR.getID(),
                 new RelativeFileSet(fakeMainJar.getParentFile(),
                         new HashSet<>(Arrays.asList(fakeMainJar)))
         );
-        bundleParams.put(CLASSPATH.getID(), fakeMainJar.toString());
+        bundleParams.put(CLASSPATH.getID(), "mainApp.jar");
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
         bundleParams.put(VERBOSE.getID(), true);
-        bundleParams.put(ICON.getID(), "java-logo2.gif"); // force no signing
+        bundleParams.put(ICON.getID(), "java-logo2.gif");
 
         boolean valid = bundler.validate(bundleParams);
         assertTrue(valid);
 
         File output = bundler.execute(bundleParams, new File(workDir, "smoke"));
-        validatePackageCfg(output);
+        validatePackageCfg(output, bundleParams);
     }
 
     /**
@@ -172,16 +178,39 @@ public class WinAppBundlerTest {
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
 
         File output = bundler.execute(bundleParams, new File(workDir, "BareMinimum"));
-        validatePackageCfg(output);
+        validatePackageCfg(output, bundleParams);
         assertTrue(output.isDirectory());
     }
-    
-    public void validatePackageCfg(File root) throws IOException {
-        try (FileInputStream fis = new FileInputStream(new File(root, "app\\package.cfg"))) {
+
+    /**
+     * FX Packaging used to trigger a logic bug.  Make sure it doesn't
+     */
+    @Test
+    public void fxPackaging() throws IOException, ConfigException, UnsupportedPlatformException {
+        Bundler bundler = new WinAppBundler();
+
+        Map<String, Object> bundleParams = new HashMap<>();
+
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, packagedAppResources));
+
+        try {
+            boolean valid = bundler.validate(bundleParams);
+            assertTrue(valid);
+        } catch (ConfigException ce) {
+            assertTrue(ce.getMessage().contains("Java Runtime does not include"));
+        }
+
+    }
+
+    public void validatePackageCfg(File root, Map<String, ? super Object> params) throws IOException {
+        try (FileInputStream fis = new FileInputStream(new File(root, WinAppBundler.getLauncherCfgName(params)))) {
             Properties p = new Properties();
             p.load(fis);
             
             // - verify we have app.mainjar, app.version, app.id, app.preferences, app.mainclass, and app.classpath
+            assertNotNull(p.getProperty("app.runtime"));
             assertNotNull(p.getProperty("app.mainjar"));
             assertNotNull(p.getProperty("app.version"));
             assertNotNull(p.getProperty("app.id"));
@@ -221,13 +250,15 @@ public class WinAppBundlerTest {
 
         bundleParams.put(APP_NAME.getID(), "Everything App Name");
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        bundleParams.put(ARGUMENTS.getID(), Arrays.asList("He Said", "She Said"));
+        bundleParams.put(CLASSPATH.getID(), "mainApp.jar");
         bundleParams.put(ICON_ICO.getID(), new File(appResourcesDir, "javalogo_white_48.ico"));
         bundleParams.put(JVM_OPTIONS.getID(), "-Xms128M");
         bundleParams.put(JVM_PROPERTIES.getID(), "everything.jvm.property=everything.jvm.property.value");
-        bundleParams.put(MAIN_CLASS.getID(), "hello.TestPackager");
+        bundleParams.put(MAIN_CLASS.getID(), "hello.HelloRectangle");
         bundleParams.put(MAIN_JAR.getID(), "mainApp.jar");
-        bundleParams.put(CLASSPATH.getID(), "mainApp.jar");
-        bundleParams.put(PREFERENCES_ID.getID(), "everything.preferences.id");
+        bundleParams.put(PREFERENCES_ID.getID(), "everything/preferences/id");
+        bundleParams.put(PRELOADER_CLASS.getID(), "hello.HelloPreloader");
         bundleParams.put(USER_JVM_OPTIONS.getID(), "-Xmx=256M\n");
         bundleParams.put(VERSION.getID(), "1.2.3.4");
         bundleParams.put(WIN_RUNTIME.getID(), System.getProperty("java.home"));
@@ -268,5 +299,48 @@ public class WinAppBundlerTest {
         System.err.println("Bundle at - " + result);
         assertNotNull(result);
         assertTrue(result.exists());
+    }
+
+    /**
+     * multiple launchers
+     */
+    @Test
+    public void twoLaunchersTest() throws IOException, ConfigException, UnsupportedPlatformException {
+        Bundler bundler = new WinAppBundler();
+
+        assertNotNull(bundler.getName());
+        assertNotNull(bundler.getID());
+        assertNotNull(bundler.getDescription());
+        //assertNotNull(bundler.getBundleParameters());
+
+        Map<String, Object> bundleParams = new HashMap<>();
+
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+
+        bundleParams.put(APP_NAME.getID(), "Two Launchers Test");
+        bundleParams.put(MAIN_CLASS.getID(), "hello.HelloRectangle");
+        bundleParams.put(PREFERENCES_ID.getID(), "the/really/long/preferences/id");
+        bundleParams.put(MAIN_JAR.getID(),
+                new RelativeFileSet(fakeMainJar.getParentFile(),
+                        new HashSet<>(Arrays.asList(fakeMainJar)))
+        );
+        bundleParams.put(CLASSPATH.getID(), "mainApp.jar");
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        bundleParams.put(VERBOSE.getID(), true);
+
+        List<Map<String, ? super Object>> secondaryLaunchers = new ArrayList<>();
+        for (String name : new String[] {"Fire", "More Fire"}) {
+            Map<String, ? super Object> launcher = new HashMap<>();
+            launcher.put(APP_NAME.getID(), name);
+            launcher.put(PREFERENCES_ID.getID(), "secondary/launcher/" + name);
+            secondaryLaunchers.add(launcher);
+        }
+        bundleParams.put(SECONDARY_LAUNCHERS.getID(), secondaryLaunchers);
+
+        boolean valid = bundler.validate(bundleParams);
+        assertTrue(valid);
+
+        File output = bundler.execute(bundleParams, new File(workDir, "launchers"));
+        validatePackageCfg(output, bundleParams);
     }
 }

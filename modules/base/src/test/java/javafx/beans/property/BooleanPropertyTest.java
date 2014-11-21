@@ -33,7 +33,6 @@ import com.sun.javafx.binding.ErrorLoggingUtiltity;
 import javafx.beans.binding.ObjectExpression;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
@@ -59,17 +58,12 @@ public class BooleanPropertyTest {
         log.stop();
     }
 
-    @Ignore("RT-27128")
     @Test
     public void testSetValue_Null() {
-        synchronized(log) {
-            log.reset();
-            
-            final BooleanProperty p = new SimpleBooleanProperty(VALUE_1);
-            p.setValue(null);
-            assertEquals(DEFAULT, p.get());
-            log.check(0, "INFO", 1, "NullPointerException");
-        }
+        final BooleanProperty p = new SimpleBooleanProperty(VALUE_1);
+        p.setValue(null);
+        assertEquals(DEFAULT, p.get());
+        log.checkFine(NullPointerException.class);
     }
 
     @Test

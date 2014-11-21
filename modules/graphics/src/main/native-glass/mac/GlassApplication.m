@@ -39,6 +39,7 @@
 #import "RemoteLayerSupport.h"
 
 #import "ProcessInfo.h"
+#import <Security/SecRequirement.h>
 
 //#define VERBOSE
 #ifndef VERBOSE
@@ -677,7 +678,8 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
 {
     isFullScreenExitingLoop = YES;
     GET_MAIN_JENV;
-    [GlassApplication enterNestedEventLoopWithEnv:env];
+    (*env)->CallStaticObjectMethod(env, jApplicationClass,
+            javaIDs.Application.enterNestedEventLoop);
     isFullScreenExitingLoop = NO;
 }
 
@@ -687,7 +689,8 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
         return;
     }
     GET_MAIN_JENV;
-    [GlassApplication leaveNestedEventLoopWithEnv:env retValue:0L];
+    (*env)->CallStaticVoidMethod(env, jApplicationClass,
+            javaIDs.Application.leaveNestedEventLoop, (jobject)NULL);
 }
 
 + (void)registerKeyEvent:(NSEvent*)event
@@ -711,6 +714,44 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
 
 + (BOOL)syncRenderingDisabled {
     return disableSyncRendering;
+}
+
++ (BOOL)isSandboxed
+{
+    static int isSandboxed = -1;
+
+    if (isSandboxed == -1) {
+        isSandboxed = 0;
+
+        NSBundle *mainBundle = [NSBundle mainBundle];
+        NSURL *url = [mainBundle bundleURL];
+        SecStaticCodeRef staticCodeRef = NULL;
+        SecStaticCodeCreateWithPath((CFURLRef)url, kSecCSDefaultFlags, &staticCodeRef);
+
+        if (staticCodeRef) {
+            // Check if the app is signed
+            OSStatus res_signed = SecStaticCodeCheckValidityWithErrors(staticCodeRef, kSecCSBasicValidateOnly, NULL, NULL);
+            if (res_signed == errSecSuccess) {
+                // It is signed, now check if it's sandboxed
+                SecRequirementRef sandboxRequirementRef = NULL;
+                SecRequirementCreateWithString(CFSTR("entitlement[\"com.apple.security.app-sandbox\"] exists"), kSecCSDefaultFlags, &sandboxRequirementRef);
+
+                if (sandboxRequirementRef) {
+                    OSStatus res_sandboxed = SecStaticCodeCheckValidityWithErrors(staticCodeRef, kSecCSBasicValidateOnly, sandboxRequirementRef, NULL);
+                    if (res_sandboxed == errSecSuccess) {
+                        // Yep, sandboxed
+                        isSandboxed = 1;
+                    }
+
+                    CFRelease(sandboxRequirementRef);
+                }
+            }
+
+            CFRelease(staticCodeRef);
+        }
+    }
+
+    return isSandboxed == 1 ? YES : NO;
 }
 
 @end
@@ -741,6 +782,14 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacApplication__1initIDs
 
     javaIDs.Application.reportException = (*env)->GetStaticMethodID(
             env, jClass, "reportException", "(Ljava/lang/Throwable;)V");
+    if ((*env)->ExceptionCheck(env)) return;
+
+    javaIDs.Application.enterNestedEventLoop = (*env)->GetStaticMethodID(
+            env, jClass, "enterNestedEventLoop", "()Ljava/lang/Object;");
+    if ((*env)->ExceptionCheck(env)) return;
+
+    javaIDs.Application.leaveNestedEventLoop = (*env)->GetStaticMethodID(
+            env, jClass, "leaveNestedEventLoop", "(Ljava/lang/Object;)V");
     if ((*env)->ExceptionCheck(env)) return;
 
     javaIDs.MacApplication.notifyApplicationDidTerminate = (*env)->GetMethodID(
@@ -852,11 +901,6 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacApplication__1enterNested
 
     NSAutoreleasePool *glasspool = [[NSAutoreleasePool alloc] init];
     {
-        if (isFullScreenExitingLoop) {
-            // If we ever hit this point (which is unlikely), then we must switch to
-            // using the ui.EventLoop for the internal nested event loop
-            fprintf(stderr, "ERROR in Glass: user's enterNestedEventLoop call while an internal nested event loop is spinning. Please file a bug against Glass.\n");
-        }
         ret = [GlassApplication enterNestedEventLoopWithEnv:env];
     }
     [glasspool drain]; glasspool=nil;
@@ -877,11 +921,6 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacApplication__1leaveNestedEve
 
     NSAutoreleasePool *glasspool = [[NSAutoreleasePool alloc] init];
     {
-        if (isFullScreenExitingLoop) {
-            // If we ever hit this point (which is unlikely), then we must switch to
-            // using the ui.EventLoop for the internal nested event loop
-            fprintf(stderr, "ERROR in Glass: user's leaveNestedEventLoop call while an internal nested event loop is spinning. Please file a bug against Glass.\n");
-        }
         [GlassApplication leaveNestedEventLoopWithEnv:env retValue:retValue];
     }
     [glasspool drain]; glasspool=nil;

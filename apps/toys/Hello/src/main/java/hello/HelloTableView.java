@@ -22,9 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-
 package hello;
-
 
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -38,13 +36,12 @@ import javafx.application.Application;
 import javafx.beans.InvalidationListener;
 import javafx.beans.binding.ObjectBinding;
 import javafx.beans.property.*;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.SortedList;
 import javafx.collections.transformation.FilteredList;
 import javafx.geometry.Insets;
-import javafx.geometry.Pos;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
@@ -63,15 +60,13 @@ import javafx.scene.control.TabPane;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TablePosition;
-import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.control.cell.CheckBoxTableCell;
 import javafx.scene.control.cell.PropertyValueFactory;
-import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
+import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Priority;
@@ -213,104 +208,6 @@ public class HelloTableView extends Application {
         return data;
     }
 
-    private final static TableColumn<Person, String> firstNameCol;
-    private final static TableColumn<Person, String> lastNameCol;
-    private final static TableColumn<Person, String> nameCol;
-    private final static TableColumn<Person, String> emailCol;
-    private final static TableColumn<Person, String> countryCol;
-    private final static TableColumn<Person, Boolean> invitedCol;
-
-    static {
-
-        // Popup Menus
-//        emailMenu = new ContextMenu();
-//        MenuItem option1 = new MenuItem("Option 1");
-//        MenuItem option2 = new MenuItem("Option 2");
-//        emailMenu.getItems().addAll(option1, option2);
-        // -- Popup Menus
-
-
-        // Columns
-        // first name, last name, and wrapper parent column
-        firstNameCol = new TableColumn<>();
-        firstNameCol.setText("First");
-
-        Rectangle sortNode = new Rectangle(10, 10, Color.RED);
-        sortNode.fillProperty().bind(new ObjectBinding<Paint>() {
-            { bind(firstNameCol.sortTypeProperty()); }
-
-            @Override protected Paint computeValue() {
-                switch (firstNameCol.getSortType()) {
-                    case ASCENDING: return Color.GREEN;
-                    case DESCENDING: return Color.RED;
-                    default: return Color.BLACK;
-                }
-            }
-        });
-        firstNameCol.setSortNode(sortNode);
-//        firstNameCol.setMinWidth(300);
-//        firstNameCol.setProperty("firstName");
-//        firstNameCol.setCellFactory(TextFieldCellFactory.tableView());
-//        firstNameCol.setGetCellData(new Runnable2<Object, Integer, Integer>() {
-//            @Override public Object run(Integer row, Integer col) {
-//                return data.get(row).firstName;
-//            }
-//        });
-        firstNameCol.setCellValueFactory(new PropertyValueFactory<Person,String>("firstName"));
-//        firstNameCol.setCellValueFactory(new Callback<CellDataFeatures<Person,String>, ObservableValue<String>>() {
-//            public ObservableValue<String> call(CellDataFeatures<Person,String> p) {
-//                return p.getValue().firstName;
-//            }
-//        });
-        firstNameCol.setOnEditCommit(t -> System.out.println("Edit commit event: " + t.getNewValue()));
-
-//        final Node graphic1 = new ImageView(new Image("file:src/hello/about_16.png"));
-        lastNameCol = new TableColumn<Person, String>();
-//        lastNameCol.setGraphic(graphic1);
-        lastNameCol.setText("Last");
-//        lastNameCol.setResizable(false);
-//        lastNameCol.setProperty("lastName");
-        lastNameCol.setCellValueFactory(p -> p.getValue().lastNameProperty());
-
-        nameCol = new TableColumn<Person, String>();
-        nameCol.setText("Name");
-//        nameCol.setResizable(false);
-        nameCol.getColumns().addAll(firstNameCol, lastNameCol);
-        // -- end
-
-        emailCol = new TableColumn<Person, String>();
-        emailCol.setText("Email");
-//        emailCol.setContextMenu(emailMenu);
-        emailCol.setMinWidth(200);
-//        emailCol.setResizable(false);
-        emailCol.setCellValueFactory(p -> p.getValue().emailProperty());
-
-        countryCol = new TableColumn<Person, String>();
-        countryCol.setText("Country");
-        countryCol.setCellValueFactory(p -> new ReadOnlyObjectWrapper<String>("New Zealand"));
-//        countryCol.setProperty("country");
-
-        invitedCol = new TableColumn<Person, Boolean>();
-        invitedCol.setText("Invited");
-        invitedCol.setMaxWidth(50);
-        invitedCol.setCellValueFactory(new PropertyValueFactory("invited"));
-        invitedCol.setCellFactory(p -> new CheckBoxTableCell<Person, Boolean>());
-        invitedCol.setEditable(true);
-        /*
-        ContextMenu ctx = new ContextMenu();
-        final MenuItem cutMI    = new MenuItem("Cut");
-        final MenuItem copyMI   = new MenuItem("Copy");
-        final MenuItem pasteMI  = new MenuItem("Paste");
-        final MenuItem deleteMI = new MenuItem("DeleteSelection");
-        final MenuItem selectMI = new MenuItem("SelectAll");
-        final ContextMenu cm = new ContextMenu(cutMI, copyMI, pasteMI, deleteMI,
-                                               new SeparatorMenuItem(), selectMI);
-        invitedCol.setContextMenu(cm);
-        */
-        // -- Columns
-    }
-
-
     /**
      * @param args the command line arguments
      */
@@ -382,8 +279,65 @@ public class HelloTableView extends Application {
 
         ObservableList<Person> data = createTestData();
 
+        // build columns
+        // first name, last name, and wrapper parent column
+        TableColumn<Person, String> firstNameCol = new TableColumn<>();
+        firstNameCol.setText("First");
+
+        Rectangle sortNode = new Rectangle(10, 10, Color.RED);
+        sortNode.fillProperty().bind(new ObjectBinding<Paint>() {
+            { bind(firstNameCol.sortTypeProperty()); }
+
+            @Override protected Paint computeValue() {
+                switch (firstNameCol.getSortType()) {
+                    case ASCENDING: return Color.GREEN;
+                    case DESCENDING: return Color.RED;
+                    default: return Color.BLACK;
+                }
+            }
+        });
+        firstNameCol.setSortNode(sortNode);
+//        firstNameCol.setCellFactory(TextFieldCellFactory.tableView());
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<>("firstName"));
+        firstNameCol.setOnEditCommit(t -> {
+            System.out.println("Edit commit event: " + t.getNewValue());
+//            Object obj = t.getNewValue();
+//
+//            if (obj instanceof String) {
+//                ListView lv = t.getSource();
+//                lv.getItems().remove((int) lv.getEditingIndex());
+//                lv.getItems().add( (int) lv.getEditingIndex(), obj);
+//            }
+        });
+
+        TableColumn<Person, String> lastNameCol = new TableColumn<>();
+        lastNameCol.setText("Last");
+        lastNameCol.setCellValueFactory(p -> p.getValue().lastNameProperty());
+
+        TableColumn<Person, String> nameCol = new TableColumn<>();
+        nameCol.setText("Name");
+        nameCol.getColumns().addAll(firstNameCol, lastNameCol);
+        // -- end
+
+        TableColumn<Person, String> emailCol = new TableColumn<>();
+        emailCol.setText("Email");
+        emailCol.setMinWidth(200);
+        emailCol.setCellValueFactory(p -> p.getValue().emailProperty());
+
+        TableColumn<Person, String> countryCol = new TableColumn<>();
+        countryCol.setText("Country");
+        countryCol.setCellValueFactory(p -> new ReadOnlyObjectWrapper<>("New Zealand"));
+
+        TableColumn<Person, Boolean> invitedCol = new TableColumn<>();
+        invitedCol.setText("Invited");
+        invitedCol.setMaxWidth(50);
+        invitedCol.setCellValueFactory(new PropertyValueFactory("invited"));
+        invitedCol.setCellFactory(p -> new CheckBoxTableCell<>());
+        invitedCol.setEditable(true);
+        // -- Columns
+
         // simple table view
-        final TableView<Person> tableView = new TableView<Person>();
+        final TableView<Person> tableView = new TableView<>();
         tableView.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
         tableView.getSelectionModel().setCellSelectionEnabled(false);
         tableView.setTableMenuButtonVisible(false);
@@ -393,8 +347,6 @@ public class HelloTableView extends Application {
         tableView.setPrefSize(485, 300);
         tableView.setEditable(true);
 
-
-        ContextMenu ctx = new ContextMenu();
         final MenuItem cutMI    = new MenuItem("Cut");
         final MenuItem copyMI   = new MenuItem("Copy");
         final MenuItem pasteMI  = new MenuItem("Paste");
@@ -406,67 +358,14 @@ public class HelloTableView extends Application {
 
         tableView.setPlaceholder(new ProgressBar(-1));
 
-        tableView.setRowFactory(p -> new TableRow<Person>() {
-            @Override public void updateItem(Person item, boolean empty) {
-                super.updateItem(item, empty);
-
-                TableView.TableViewSelectionModel sm = tableView.getSelectionModel();
-
-                // get the row and column currently being editing
-                TablePosition editCell = tableView.getEditingCell();
-
-                // set the columns to only be shown if we aren't currently
-                // editing this row. If we are editing this row, we
-                // turn off the columns to show our custom node, which
-                // is set below.
-                boolean showColumns = sm == null ||
-                        sm.isCellSelectionEnabled() ||
-                        editCell == null ||
-                        editCell.getColumn() != -1 ||
-                        editCell.getRow() != getIndex();
-
-                if (showColumns) {
-                    setGraphic(null);
-                } else {
-                    Button stopEditingBtn = new Button("Stop editing");
-                    stopEditingBtn.setPrefSize(200, 50);
-                    stopEditingBtn.setOnAction(t -> tableView.edit(-1, null));
-                    setGraphic(stopEditingBtn);
-                }
-                setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
-            }
-        });
-
-//        tableView.setOnMouseClicked(new EventHandler<MouseEvent>() {
-//            @Override public void handle(MouseEvent event) {
-//                System.out.println("Clicked: " + ((TablePosition) tableView.getSelectionModel().getSelectedCells().get(0)).getTableColumn().getText());
-//                System.out.println("Clicked-2: " + tableView.getFocusModel().getFocusedCell().getTableColumn().getText());
-//            }
-//        });
-
-//        tableView.setOnEditStart(new EventHandler<EditEvent<Person>>() {
-//            @Override public void handle(EditEvent<Person> t) {
-//                System.out.println("Edit Start: " + t.getTablePosition());
-//            }
-//        });
-//        tableView.setOnEditCancel(new EventHandler<EditEvent<Person>>() {
-//            @Override public void handle(EditEvent<Person> t) {
-//                System.out.println("Edit Cancel: " + t.getTablePosition());
-//            }
-//        });
-//        tableView.setOnEditCommit(new EventHandler<EditEvent<Person>>() {
-//            @Override public void handle(EditEvent<Person> t) {
-//                System.out.println("Edit Commit: " + t);
-//            }
-//        });
-
-
         grid.getChildren().addAll(tableView);
         GridPane.setConstraints(tableView, 0, 0, 1, 12);
         GridPane.setVgrow(tableView, Priority.ALWAYS);
         GridPane.setHgrow(tableView, Priority.ALWAYS);
-        // --- simple listview
+        // --- simple tableview
 
+
+        firstNameCol.setCellFactory(TextFieldTableCell.forTableColumn());
 
 
 
@@ -517,22 +416,6 @@ public class HelloTableView extends Application {
         // -- end of selection mode controls
 
         // toggles
-//        // nested columns Toggle
-//        final ToggleButton nestColumnsBtn = new ToggleButton("Nest Columns");
-//        nestColumnsBtn.setSelected(false);
-//        nestColumnsBtn.selectedProperty().addListener(new InvalidationListener() {
-//            public void invalidated(Observable ov) {
-//                if (nestColumnsBtn.isSelected()) {
-//                    tableView.getColumns().setAll(nameCol, emailCol, countryCol);
-//                } else {
-//                    tableView.getColumns().setAll(firstNameCol, lastNameCol, emailCol, countryCol);
-//                }
-////                firstNameCol.setVisible(! firstNameCol.isVisible());
-//            }
-//        });
-//        grid.getChildren().add(nestColumnsBtn);
-//        GridPane.setConstraints(nestColumnsBtn, 1, 4);
-//        // -- end of nested columns toggle
 
         // show/hide column control button
         final ToggleButton columnControlBtn = new ToggleButton("Column Control");
@@ -541,17 +424,6 @@ public class HelloTableView extends Application {
         grid.getChildren().add(columnControlBtn);
         GridPane.setConstraints(columnControlBtn, 1, 5);
         // -- end of show/hide column control button
-
-        // pannable button
-//        final ToggleButton pannableBtn = new ToggleButton("Pannable");
-//        pannableBtn.setSelected(true);
-//        pannableBtn.selectedProperty().addListener(new InvalidationListener() {
-//            public void invalidated(ObservableValue ov) {
-//                tableView.setPannable(pannableBtn.isSelected());
-//            }
-//        });
-//        grid.add(pannableBtn, 1, 6);
-        // -- end of pannable button
 
         // constrained resize button
         final ToggleButton constrainResizeBtn = new ToggleButton("Constrained Resize");
@@ -591,7 +463,10 @@ public class HelloTableView extends Application {
         GridPane.setConstraints(insertBtn, 1, 9);
 
         final Button renameEthanBtn = new Button("Rename Ethan");
-        renameEthanBtn.setOnAction(t -> data.get(2).setFirstName(new BigInteger(40, new Random()).toString(32)));
+        renameEthanBtn.setOnAction(t -> {
+            data.get(2).setFirstName(new BigInteger(40, new Random()).toString(32));
+            // data.set(2, new Person("Jonathan", "Giles"));
+        });
         grid.getChildren().add(renameEthanBtn);
         GridPane.setConstraints(renameEthanBtn, 1, 10);
 
@@ -613,13 +488,14 @@ public class HelloTableView extends Application {
 //            }
 //        });
 
-//        tableView.getSelectionModel().getSelectedCells().addListener(new ListChangeListener<TablePosition>() {
-//            public void onChanged(Change<? extends TablePosition> change) {
-//                System.out.println("SelectedIndices: " + change.getList() +
-//                        ", removed: " + change.getRemoved() +
-//                        ", addedFrom: " + change.getFrom() +
-//                        ", addedTo: " + change.getTo());
-//            }
+        tableView.getSelectionModel().getSelectedCells().addListener(new ListChangeListener<TablePosition>() {
+            public void onChanged(Change<? extends TablePosition> change) {
+                System.out.println(tableView.getSelectionModel().getSelectedCells() + "\n\n");
+            }
+        });
+
+//        tableView.getFocusModel().focusedCellProperty().addListener(o -> {
+//            System.out.println("Focused Cell: " + tableView.getFocusModel().getFocusedCell());
 //        });
     }
 
@@ -661,48 +537,6 @@ public class HelloTableView extends Application {
 
         return tableView;
     }
-
-
-//    private void buildCellsTab(Tab tab) {
-//        GridPane grid = new GridPane();
-//        grid.setPadding(new Insets(5, 5, 5, 5));
-//        grid.setHgap(5);
-//        grid.setVgap(5);
-//
-//        // add a complex listview (using pre-built cell factory)
-//        final ListView<Number> listView2 = new ListView<Number>();
-//        listView2.setItems(money);
-//        listView2.setCellFactory(MoneyFormatCellFactory.listView());
-//        grid.getChildren().add(listView2);
-//        GridPane.setVgrow(listView2, Priority.ALWAYS);
-//        GridPane.setConstraints(listView2, 0, 0);
-//        // --- complex listview
-//
-//        // add another complex listview (using pre-built cell factory)
-//        final ListView<Map<String, String>> listView3 = new ListView<Map<String, String>>();
-//        listView3.setItems(mapData);
-////        listView3.setCellFactory(Cells.ListView.mapProperty(FIRST_NAME));
-//        listView3.setCellFactory(MapValueCellFactory.listView("First Name: %1$s\r\nLast Name: %2$s", FIRST_NAME, LAST_NAME));
-//        grid.getChildren().add(listView3);
-//        GridPane.setVgrow(listView3, Priority.ALWAYS);
-//        GridPane.setConstraints(listView3, 1, 0);
-//        // --- complex listview
-//
-//        tab.setContent(grid);
-//    }
-//
-//
-//    private Comparator<String> alphabeticalComparator = new Comparator<String>() {
-//        @Override public int compare(String o1, String o2) {
-//            return o1.compareTo(o2);
-//        }
-//    };
-//
-//    private Comparator<String> reverseAlphabeticalComparator = new Comparator<String>() {
-//        @Override public int compare(String o1, String o2) {
-//            return o2.compareTo(o1);
-//        }
-//    };
 
     private void buildSortAndFilterTab(Tab tab) {
         // initially we match everything in the filter list
@@ -798,7 +632,7 @@ public class HelloTableView extends Application {
         // first name, last name, and wrapper parent column
         TableColumn<Person, String> firstNameCol = new TableColumn<>();
         firstNameCol.setText("First");
-        firstNameCol.setCellValueFactory(new PropertyValueFactory<Person,String>("firstName"));
+        firstNameCol.setCellValueFactory(new PropertyValueFactory<>("firstName"));
         firstNameCol.setOnEditCommit(t -> System.out.println("Edit commit event: " + t.getNewValue()));
 
         return firstNameCol;
@@ -811,10 +645,8 @@ public class HelloTableView extends Application {
         return lastNameCol;
     }
 
-
     private void buildPerformanceTestTab(Tab tab, boolean customCell) {
         GridPane grid = new GridPane();
-//        grid.setGridLinesVisible(true);
         grid.setPadding(new Insets(5, 5, 5, 5));
         grid.setHgap(5);
         grid.setVgap(5);
@@ -856,9 +688,8 @@ public class HelloTableView extends Application {
     }
 
     public void getLines(ObservableList<List<Double>> bigData) {
-//        List<List<Double>> data = new ArrayList<List<Double>>();
         for (int row = 0; row < NB_LINE; row++) {
-            List<Double> line = new ArrayList<Double>();
+            List<Double> line = new ArrayList<>();
             for (int col = 0; col <= NB_COL; col++) {
                 if(col == 0) line.add((double)row);
                 else line.add(Math.random() * 1000);
@@ -867,13 +698,12 @@ public class HelloTableView extends Application {
         }
     }
 
-
     public List<TableColumn<List<Double>,Double>> getColumns(boolean customCell) {
-        List<TableColumn<List<Double>,Double>> cols = new ArrayList<TableColumn<List<Double>,Double>>();
+        List<TableColumn<List<Double>,Double>> cols = new ArrayList<>();
         for (int i = 0; i <= NB_COL; i++) {
-            TableColumn<List<Double>,Double> col = new TableColumn<List<Double>,Double>("Col" + i);
+            TableColumn<List<Double>,Double> col = new TableColumn<>("Col" + i);
             final int coli = i;
-            col.setCellValueFactory(p -> new ReadOnlyObjectWrapper<Double>(((List<Double>) p.getValue()).get(coli)));
+            col.setCellValueFactory(p -> new ReadOnlyObjectWrapper<>((p.getValue()).get(coli)));
 
             if (customCell) {
                 col.setCellFactory(p -> new TableCell<List<Double>,Double>() {

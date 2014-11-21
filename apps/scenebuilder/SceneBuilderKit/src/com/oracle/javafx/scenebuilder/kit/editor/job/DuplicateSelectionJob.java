@@ -31,12 +31,9 @@
  */
 package com.oracle.javafx.scenebuilder.kit.editor.job;
 
+import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.RelocateNodeJob;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
-import com.oracle.javafx.scenebuilder.kit.editor.job.togglegroup.AdjustAllToggleGroupJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.v2.ClearSelectionJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.v2.CompositeJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.v2.UpdateSelectionJob;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.AbstractSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
@@ -46,8 +43,8 @@ import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMNodes;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
-import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import javafx.scene.Node;
@@ -55,24 +52,21 @@ import javafx.scene.Node;
 /**
  *
  */
-public class DuplicateSelectionJob extends CompositeJob {
+public class DuplicateSelectionJob extends BatchSelectionJob {
 
     private final static double offset = 10;
-    private int numOfDuplicatedObjects = 0;
+    final Map<FXOMObject, FXOMObject> newFxomObjects = new LinkedHashMap<>();
 
     public DuplicateSelectionJob(EditorController editorController) {
         super(editorController);
     }
 
-    /*
-     * CompositeJob
-     */
     @Override
     protected List<Job> makeSubJobs() {
-        final List<Job> result = new ArrayList<>();
+        final List<Job> result = new LinkedList<>();
 
         if (canDuplicate()) { // (1)
-
+            
             final Selection selection = getEditorController().getSelection();
             final AbstractSelectionGroup asg = selection.getGroup();
             assert asg instanceof ObjectSelectionGroup; // Because of (1)
@@ -81,8 +75,7 @@ public class DuplicateSelectionJob extends CompositeJob {
             final FXOMObject targetObject = osg.getAncestor();
             assert targetObject != null; // Because of (1)
             final FXOMDocument targetDocument = getEditorController().getFxomDocument();
-            final Map<FXOMObject, FXOMObject> newFxomObjects = new HashMap<>();
-            for (FXOMObject selectedObject : osg.getItems()) {
+            for (FXOMObject selectedObject : osg.getSortedItems()) {
                 final FXOMDocument newDocument = FXOMNodes.newDocument(selectedObject);
                 final FXOMObject newObject = newDocument.getFxomRoot();
                 newObject.moveToFxomDocument(targetDocument);
@@ -94,17 +87,16 @@ public class DuplicateSelectionJob extends CompositeJob {
             // Build InsertAsSubComponent jobs
             final DesignHierarchyMask targetMask = new DesignHierarchyMask(targetObject);
             if (targetMask.isAcceptingSubComponent(newFxomObjects.keySet())) {
-                result.add(new ClearSelectionJob(getEditorController()));
+                int index = 0;
                 for (Map.Entry<FXOMObject, FXOMObject> entry : newFxomObjects.entrySet()) {
                     final FXOMObject selectedFxomObject = entry.getKey();
                     final FXOMObject newFxomObject = entry.getValue();
                     final InsertAsSubComponentJob insertSubJob = new InsertAsSubComponentJob(
                             newFxomObject,
                             targetObject,
-                            targetMask.getSubComponentCount(),
+                            targetMask.getSubComponentCount() + index++,
                             getEditorController());
                     result.add(insertSubJob);
-                    numOfDuplicatedObjects++;
                     final Object selectedSceneGraphObject = selectedFxomObject.getSceneGraphObject();
                     // Relocate duplicated objects if needed
                     if (selectedSceneGraphObject instanceof Node) {
@@ -120,8 +112,6 @@ public class DuplicateSelectionJob extends CompositeJob {
                         result.add(relocateSubJob);
                     }
                 }
-                result.add(new AdjustAllToggleGroupJob(getEditorController()));
-                result.add(new UpdateSelectionJob(newFxomObjects.values(), getEditorController()));
             }
         }
         return result;
@@ -130,14 +120,24 @@ public class DuplicateSelectionJob extends CompositeJob {
     @Override
     protected String makeDescription() {
         final String result;
-        assert getSubJobs().isEmpty() == false;
-        if (numOfDuplicatedObjects == 1) {
+        assert newFxomObjects.values().isEmpty() == false;
+        if (newFxomObjects.values().size() == 1) {
             result = makeSingleSelectionDescription();
         } else {
             result = makeMultipleSelectionDescription();
         }
 
         return result;
+    }
+
+    @Override
+    protected AbstractSelectionGroup getNewSelectionGroup() {
+        assert newFxomObjects != null; // But possibly empty
+        if (newFxomObjects.isEmpty()) {
+            return null;
+        } else {
+            return new ObjectSelectionGroup(newFxomObjects.values(), newFxomObjects.values().iterator().next(), null);
+        }
     }
 
     private boolean canDuplicate() {
@@ -169,10 +169,7 @@ public class DuplicateSelectionJob extends CompositeJob {
     private String makeSingleSelectionDescription() {
         final String result;
 
-        final Job subJob0 = getSubJobs().get(1);// ClearSelectionJob + Insert + UpdateSelectionJob
-        assert subJob0 instanceof InsertAsSubComponentJob;
-        final InsertAsSubComponentJob insertJob = (InsertAsSubComponentJob) subJob0;
-        final FXOMObject newObject = insertJob.getNewObject();
+        final FXOMObject newObject = newFxomObjects.values().iterator().next();
         if (newObject instanceof FXOMInstance) {
             final Object sceneGraphObject = newObject.getSceneGraphObject();
             if (sceneGraphObject != null) {
@@ -191,6 +188,6 @@ public class DuplicateSelectionJob extends CompositeJob {
     }
 
     private String makeMultipleSelectionDescription() {
-        return I18N.getString("label.action.edit.duplicate.n", numOfDuplicatedObjects);
+        return I18N.getString("label.action.edit.duplicate.n", newFxomObjects.values().size());
     }
 }

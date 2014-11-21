@@ -34,7 +34,7 @@ package com.oracle.javafx.scenebuilder.kit.editor.job.wrap;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
 import com.oracle.javafx.scenebuilder.kit.editor.job.JobUtils;
-import com.oracle.javafx.scenebuilder.kit.editor.job.ModifyObjectJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.ModifyObjectJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.wrap.FXOMObjectCourseComparator.BidimensionalComparator;
 import com.oracle.javafx.scenebuilder.kit.editor.job.wrap.FXOMObjectCourseComparator.GridCourse;
 import static com.oracle.javafx.scenebuilder.kit.editor.job.wrap.FXOMObjectCourseComparator.OVERLAP_FUZZ;
@@ -46,7 +46,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import javafx.geometry.Bounds;
 import javafx.scene.Node;
 import javafx.scene.layout.ColumnConstraints;
@@ -71,14 +70,9 @@ public class WrapInGridPaneJob extends AbstractWrapInSubComponentJob {
     }
 
     @Override
-    protected List<Job> modifyChildrenJobs(final Set<FXOMObject> children) {
+    protected List<Job> modifyChildrenJobs(final List<FXOMObject> children) {
+        final List<Job> jobs = super.modifyChildrenJobs(children);
 
-        final List<Job> jobs = new ArrayList<>();
-        // When wrapping the root node, indices are not yet initialized
-        // (modifyContainer method not called)
-        if (indices.isEmpty()) {
-            modifyContainer(children);
-        }
         for (FXOMObject child : children) {
             int[] childIndices = indices.get(child);
 
@@ -100,7 +94,8 @@ public class WrapInGridPaneJob extends AbstractWrapInSubComponentJob {
     }
 
     @Override
-    protected void modifyContainer(final Set<FXOMObject> children) {
+    protected void modifyNewContainer(final List<FXOMObject> children) {
+        super.modifyNewContainer(children);
 
         final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
 
@@ -141,14 +136,13 @@ public class WrapInGridPaneJob extends AbstractWrapInSubComponentJob {
     }
 
     /**
-     * This method computes either the ROW index or COLUMN index of each element,
-     * by running through a would-be grid according to a given course.
+     * This method computes either the ROW index or COLUMN index of each
+     * element, by running through a would-be grid according to a given course.
      * For instance, when course==ROW_BY_ROW, this method first order the
-     * elements row by row, and then sets their ROW index inside the indices map.
-     * When course==COL_BY_COL, this method orders the
-     * elements column by column, and then sets their COLUMN index inside the
-     * indices map.
-     * Note that this method leaves the original elements and children list
+     * elements row by row, and then sets their ROW index inside the indices
+     * map. When course==COL_BY_COL, this method orders the elements column by
+     * column, and then sets their COLUMN index inside the indices map. Note
+     * that this method leaves the original elements and children list
      * unchanged. All it does is populating the indices map.
      *
      * @param fxomObjects The children of the would-be grid.
@@ -157,7 +151,7 @@ public class WrapInGridPaneJob extends AbstractWrapInSubComponentJob {
      * @return the greater index.
      */
     private int computeIndexByCourse(
-            final Set<FXOMObject> fxomObjects,
+            final List<FXOMObject> fxomObjects,
             final GridCourse course,
             final Map<FXOMObject, int[]> indices) {
 
@@ -193,7 +187,7 @@ public class WrapInGridPaneJob extends AbstractWrapInSubComponentJob {
     }
 
     private void computeSizes(
-            final Set<FXOMObject> fxomObjects,
+            final List<FXOMObject> fxomObjects,
             final Map<FXOMObject, int[]> indices,
             double[] columnWidth, double[] rowHeight) {
 

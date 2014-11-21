@@ -25,8 +25,8 @@
 
 package com.sun.glass.ui.monocle.input.devices;
 
-import com.sun.glass.ui.monocle.input.TestApplication;
-import com.sun.glass.ui.monocle.input.TestLog;
+import com.sun.glass.ui.monocle.TestApplication;
+import com.sun.glass.ui.monocle.TestLog;
 import javafx.geometry.Rectangle2D;
 
 import java.util.HashMap;

@@ -29,8 +29,6 @@ import com.sun.javafx.collections.NonIterableChange;
 import com.sun.javafx.scene.control.ReadOnlyUnbackedObservableList;
 
 import javafx.event.WeakEventHandler;
-//import javafx.scene.accessibility.Attribute;
-//import javafx.scene.accessibility.Role;
 import javafx.scene.control.*;
 
 import com.sun.javafx.scene.control.behavior.TreeTableViewBehavior;
@@ -46,6 +44,8 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
+import javafx.scene.AccessibleAction;
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
 import javafx.scene.control.TreeItem.TreeModificationEvent;
 import javafx.scene.input.MouseEvent;
@@ -176,6 +176,9 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeItem<S>, Tree
                 eventType = eventType.getSuperType();
             }
         }
+
+        // fix for RT-37853
+        getSkinnable().edit(-1, null);
     };
     
     private WeakEventHandler<TreeModificationEvent<S>> weakRootListener;
@@ -273,6 +276,10 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeItem<S>, Tree
         return treeTableView.resizeColumn(tc, delta);
     }
 
+    @Override protected void edit(int index, TreeTableColumn<S, ?> column) {
+        treeTableView.edit(index, column);
+    }
+
     /*
      * FIXME: Naive implementation ahead
      * Attempts to resize column based on the pref width of all items contained
@@ -365,14 +372,7 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeItem<S>, Tree
 
         // If there is no disclosure node, then add one of my own
         if (cell.getDisclosureNode() == null) {
-            final StackPane disclosureNode = new StackPane() {
-//                @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//                    switch (attribute) {
-//                        case ROLE: return Role.DISCLOSURE_NODE;
-//                        default: return super.accGetAttribute(attribute, parameters);
-//                    }
-//                }
-            };
+            final StackPane disclosureNode = new StackPane();
             disclosureNode.getStyleClass().setAll("tree-disclosure-node");
             disclosureNode.setMouseTransparent(true);
 
@@ -394,34 +394,66 @@ public class TreeTableViewSkin<S> extends TableViewSkinBase<S, TreeItem<S>, Tree
         }
     }
 
-//    @Override
-//    public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//        switch (attribute) {
-//            case ROW_AT_INDEX: {
-//                final int rowIndex = (Integer)parameters[0];
-//                return rowIndex < 0 ? null : flow.getPrivateCell(rowIndex);
-//            }
-//            case SELECTED_CELLS: {
-//                List<Node> selection = new ArrayList<>();
-//                TreeTableView.TreeTableViewSelectionModel<S> sm = getSkinnable().getSelectionModel();
-//                for (TreeTablePosition<S,?> pos : sm.getSelectedCells()) {
-//                    TreeTableRow<S> row = flow.getPrivateCell(pos.getRow());
-//                    if (row != null) selection.add(row);
-//                }
-//                return FXCollections.observableArrayList(selection);
-//            }
-//
-//            case FOCUS_ITEM: // TableViewSkinBase
-//            case CELL_AT_ROW_COLUMN: // TableViewSkinBase
-//            case COLUMN_AT_INDEX: // TableViewSkinBase
-//            case HEADER: // TableViewSkinBase
-//            case VERTICAL_SCROLLBAR: // TableViewSkinBase
-//            case HORIZONTAL_SCROLLBAR: // TableViewSkinBase
-//            default: return super.accGetAttribute(attribute, parameters);
-//        }
-//    }
-    
-    
+    @Override
+    protected Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
+        switch (attribute) {
+            case ROW_AT_INDEX: {
+                final int rowIndex = (Integer)parameters[0];
+                return rowIndex < 0 ? null : flow.getPrivateCell(rowIndex);
+            }
+            case SELECTED_ITEMS: {
+                List<Node> selection = new ArrayList<>();
+                TreeTableView.TreeTableViewSelectionModel<S> sm = getSkinnable().getSelectionModel();
+                for (TreeTablePosition<S,?> pos : sm.getSelectedCells()) {
+                    TreeTableRow<S> row = flow.getPrivateCell(pos.getRow());
+                    if (row != null) selection.add(row);
+                }
+                return FXCollections.observableArrayList(selection);
+            }
+            case FOCUS_ITEM: // TableViewSkinBase
+            case CELL_AT_ROW_COLUMN: // TableViewSkinBase
+            case COLUMN_AT_INDEX: // TableViewSkinBase
+            case HEADER: // TableViewSkinBase
+            case VERTICAL_SCROLLBAR: // TableViewSkinBase
+            case HORIZONTAL_SCROLLBAR: // TableViewSkinBase
+            default: return super.queryAccessibleAttribute(attribute, parameters);
+        }
+    }
+
+    @Override
+    protected void executeAccessibleAction(AccessibleAction action, Object... parameters) {
+        switch (action) {
+            case SHOW_ITEM: {
+                Node item = (Node)parameters[0];
+                if (item instanceof TreeTableCell) {
+                    @SuppressWarnings("unchecked")
+                    TreeTableCell<S, ?> cell = (TreeTableCell<S, ?>)item;
+                    flow.show(cell.getIndex());
+                }
+                break;
+            }
+            case SET_SELECTED_ITEMS: {
+                @SuppressWarnings("unchecked")
+                ObservableList<Node> items = (ObservableList<Node>)parameters[0];
+                if (items != null) {
+                    TreeTableView.TreeTableViewSelectionModel<S> sm = getSkinnable().getSelectionModel();
+                    if (sm != null) {
+                        sm.clearSelection();
+                        for (Node item : items) {
+                            if (item instanceof TreeTableCell) {
+                                @SuppressWarnings("unchecked")
+                                TreeTableCell<S, ?> cell = (TreeTableCell<S, ?>)item;
+                                sm.select(cell.getIndex(), cell.getTableColumn());
+                            }
+                        }
+                    }
+                }
+                break;
+            }
+            default: super.executeAccessibleAction(action, parameters);
+        }
+    }
+
     /***************************************************************************
      *                                                                         *
      * Layout                                                                  *

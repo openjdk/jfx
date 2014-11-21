@@ -65,6 +65,7 @@ extern "C" {
 JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1createWindow
   (JNIEnv * env, jobject obj, jlong owner, jlong screen, jint mask)
 {
+    (void)env;
 
     WindowContext* ctx = new WindowContextTop(obj,
             (WindowContext*)JLONG_TO_PTR(owner),
@@ -83,6 +84,8 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1createWindow
 JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1createChildWindow
   (JNIEnv * env, jobject obj , jlong owner)
 {
+    (void)env;
+
     GdkWindow *parent_window = NULL;
     GtkWidget *parent_widget = NULL;
     WindowContextPlug *parent_ctx = NULL;
@@ -123,6 +126,9 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1createChildWindow
 JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1close
   (JNIEnv * env, jobject obj, jlong ptr)
 {
+    (void)env;
+    (void)obj;
+
     WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
     destroy_and_delete_ctx(ctx);
     return JNI_TRUE; // return value not used
@@ -135,6 +141,9 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1close
 JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1setView
   (JNIEnv * env, jobject obj, jlong ptr, jobject view)
 {
+    (void)env;
+    (void)obj;
+
     WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
     return (ctx->set_view(view)) ? JNI_TRUE : JNI_FALSE;
 }
@@ -146,6 +155,9 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1setView
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1showOrHideChildren
   (JNIEnv *env, jobject obj, jlong ptr, jboolean show)
 {
+    (void)env;
+    (void)obj;
+
     WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
     ctx->show_or_hide_children(show);
 }
@@ -158,6 +170,9 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1showOrHideChildren
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow_minimizeImpl
   (JNIEnv * env, jobject obj, jlong ptr, jboolean minimize)
 {
+    (void)env;
+    (void)obj;
+
     WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
     ctx->set_minimized(minimize);
 }
@@ -170,6 +185,10 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow_minimizeImpl
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow_maximizeImpl
   (JNIEnv * env, jobject obj, jlong ptr, jboolean maximize, jboolean wasMaximized)
 {
+    (void)env;
+    (void)obj;
+    (void)wasMaximized;
+
     WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
     ctx->set_maximized(maximize);
 }
@@ -182,6 +201,9 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow_maximizeImpl
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow_setBoundsImpl
   (JNIEnv * env, jobject obj, jlong ptr, jint x, jint y, jboolean xSet, jboolean ySet, jint w, jint h, jint cw, jint ch)
 {
+    (void)env;
+    (void)obj;
+
     WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
     ctx->set_bounds(x, y, xSet, ySet, w, h, cw, ch);
 }
@@ -194,6 +216,9 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow_setBoundsImpl
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow_setVisibleImpl
     (JNIEnv * env, jobject obj, jlong ptr, jboolean visible)
 {
+    (void)env;
+    (void)obj;
+
     WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
     ctx->set_visible(visible);
 }
@@ -206,6 +231,9 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow_setVisibleImpl
 JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1setResizable
   (JNIEnv * env, jobject obj, jlong ptr, jboolean resizable)
 {
+    (void)env;
+    (void)obj;
+
     WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
     ctx->set_resizable(resizable);
     return JNI_TRUE;
@@ -219,6 +247,10 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1setResizable
 JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1requestFocus
   (JNIEnv * env, jobject obj, jlong ptr, jint focus)
 {
+    (void)env;
+    (void)obj;
+    (void)focus;
+
     WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
     ctx->request_focus();
     return JNI_TRUE; //not used
@@ -232,6 +264,9 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1requestFocus
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1setFocusable
   (JNIEnv * env, jobject obj, jlong ptr, jboolean focusable)
 {
+    (void)env;
+    (void)obj;
+
     WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
     ctx->set_focusable(focusable);
 }
@@ -244,6 +279,9 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1setFocusable
 JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1grabFocus
   (JNIEnv * env, jobject obj, jlong ptr)
 {
+    (void)env;
+    (void)obj;
+
     WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
     return ctx->grab_focus();
 }
@@ -256,6 +294,9 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1grabFocus
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1ungrabFocus
   (JNIEnv * env, jobject obj, jlong ptr)
 {
+    (void)env;
+    (void)obj;
+
     WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
     ctx->ungrab_focus();
 }
@@ -268,6 +309,9 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1ungrabFocus
 JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1setTitle
   (JNIEnv * env, jobject obj, jlong ptr, jstring title)
 {
+    (void)env;
+    (void)obj;
+
     WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
     const char* ctitle = mainEnv->GetStringUTFChars(title, NULL);
     ctx->set_title(ctitle);
@@ -284,6 +328,9 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1setTitle
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1setLevel
   (JNIEnv * env, jobject obj, jlong ptr, jint level)
 {
+    (void)env;
+    (void)obj;
+
     WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
     ctx->set_level(level);
 }
@@ -296,6 +343,9 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1setLevel
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1setAlpha
   (JNIEnv * env, jobject obj, jlong ptr, jfloat alpha)
 {
+    (void)env;
+    (void)obj;
+
     WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
     ctx->set_alpha(alpha);
 }
@@ -308,6 +358,9 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1setAlpha
 JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1setBackground
   (JNIEnv * env, jobject obj, jlong ptr, jfloat r, jfloat g, jfloat b)
 {
+    (void)env;
+    (void)obj;
+
     WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
     ctx->set_background(r, g, b);
     return JNI_TRUE;
@@ -321,6 +374,9 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1setBackground
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1setEnabled
   (JNIEnv * env, jobject obj, jlong ptr, jboolean enabled)
 {
+    (void)env;
+    (void)obj;
+
     WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
     ctx->set_enabled(enabled);
 }
@@ -333,6 +389,9 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1setEnabled
 JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1setMinimumSize
   (JNIEnv * env, jobject obj, jlong ptr, jint w, jint h)
 {
+    (void)env;
+    (void)obj;
+
     WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
     if (w < 0 || h < 0) return JNI_FALSE;
     ctx->set_minimum_size(w, h);
@@ -347,6 +406,9 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1setMinimumSize
 JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1setMaximumSize
   (JNIEnv * env, jobject obj, jlong ptr, jint w, jint h)
 {
+    (void)env;
+    (void)obj;
+
     WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
     if (w == 0 || h == 0) return JNI_FALSE;
     if (w == -1) w = G_MAXSHORT;
@@ -364,6 +426,8 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1setMaximumSize
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1setIcon
   (JNIEnv * env, jobject obj, jlong ptr, jobject pixels)
 {
+    (void)obj;
+
     WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
     GdkPixbuf *pixbuf = NULL;
     if (pixels != NULL) {
@@ -383,6 +447,9 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1setIcon
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1toFront
   (JNIEnv * env, jobject obj, jlong ptr)
 {
+    (void)env;
+    (void)obj;
+
     WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
     ctx->restack(true);
 }
@@ -395,6 +462,9 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1toFront
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1toBack
   (JNIEnv * env, jobject obj, jlong ptr)
 {
+    (void)env;
+    (void)obj;
+
     WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
     ctx->restack(false);
 
@@ -408,6 +478,9 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1toBack
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1enterModal
   (JNIEnv * env, jobject obj, jlong ptr)
 {
+    (void)env;
+    (void)obj;
+
     WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
     ctx->set_modal(true);
 }
@@ -420,6 +493,9 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1enterModal
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1enterModalWithWindow
   (JNIEnv * env, jobject obj, jlong ptrDialog, jlong ptrWindow)
 {
+    (void)env;
+    (void)obj;
+
     WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptrDialog);
     WindowContext* parent_ctx = JLONG_TO_WINDOW_CTX(ptrWindow);
     ctx->set_modal(true, parent_ctx);
@@ -433,6 +509,9 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1enterModalWithWindo
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1exitModal
   (JNIEnv * env, jobject obj, jlong ptr)
 {
+    (void)env;
+    (void)obj;
+
     WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
     ctx->set_modal(false);
 }
@@ -445,6 +524,9 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1exitModal
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1setCursorType
   (JNIEnv * env, jobject obj, jlong ptr, jint type)
 {
+    (void)env;
+    (void)obj;
+
     WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
     GdkCursor *cursor = get_native_cursor(type);
     ctx->set_cursor(cursor);
@@ -458,6 +540,8 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1setCursorType
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1setCustomCursor
   (JNIEnv * env, jobject obj, jlong ptr, jobject jCursor)
 {
+    (void)obj;
+
     WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
     GdkCursor *cursor = (GdkCursor*)JLONG_TO_PTR(env->GetLongField(jCursor, jCursorPtr));
 
@@ -472,12 +556,18 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1setCustomCursor
 JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_GtkWindow_isVisible
     (JNIEnv * env, jobject obj, jlong ptr)
 {
+    (void)env;
+    (void)obj;
+
     WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
     return ctx->is_visible() ? JNI_TRUE : JNI_FALSE;
 }
 JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1getNativeWindowImpl
     (JNIEnv * env, jobject obj, jlong ptr)
 {
+    (void)env;
+    (void)obj;
+
     WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
     return GDK_WINDOW_XID(ctx->get_gdk_window());
 }
@@ -489,6 +579,8 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1getNativeWindowImp
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow_getFrameExtents
     (JNIEnv * env, jobject obj, jlong ptr, jintArray extarr)
 {
+    (void)obj;
+
     WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
     WindowFrameExtents extents = ctx->get_frame_extents();
 
@@ -506,6 +598,9 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow_getFrameExtents
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1setGravity
     (JNIEnv * env, jobject obj, jlong ptr, jfloat xGravity, jfloat yGravity)
 {
+    (void)env;
+    (void)obj;
+
     WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
     ctx->set_gravity(xGravity, yGravity);
 
@@ -519,6 +614,9 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1setGravity
  */
 JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1getEmbeddedX
   (JNIEnv *env, jobject obj, jlong ptr) {
+    (void)env;
+    (void)obj;
+
     if (ptr) {
         WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
         return (jint) ctx->getEmbeddedX();
@@ -533,6 +631,9 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1getEmbeddedX
  */
 JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1getEmbeddedY
   (JNIEnv *env, jobject obj, jlong ptr) {
+    (void)env;
+    (void)obj;
+
     if (ptr) {
         WindowContext* ctx = JLONG_TO_WINDOW_CTX(ptr);
         return (jint) ctx->getEmbeddedY();

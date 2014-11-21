@@ -25,6 +25,7 @@
 
 package com.sun.prism;
 
+import com.sun.prism.Texture.WrapMode;
 import com.sun.prism.impl.TextureResourcePool;
 import com.sun.prism.impl.VertexBuffer;
 import com.sun.prism.shape.ShapeRep;
@@ -70,6 +71,30 @@ public interface ResourceFactory extends GraphicsResource {
                                  Texture.WrapMode wrapMode);
 
     /**
+     * Returns a new {@code Texture} containing the pixels from the given
+     * image with the indicated texture edge wrap mode.
+     * Note that the dimensions of the returned texture may be larger
+     * than those of the given image.
+     * <p>
+     * Equivalent to (but perhaps more efficient than):
+     * <pre><code>
+     *     PixelFormat format = image.getPixelFormat();
+     *     int w = image.getWidth();
+     *     int h = image.getHeight();
+     *     Texture tex = createTexture(format, usageHint, wrapMode, w, h, useMipmap);
+     *     tex.update(image, 0, 0, w, h);
+     * </code></pre>
+     *
+     * @param image the pixel data to be uploaded to the new texture
+     * @param usageHint the Dynamic vs. Static nature of the texture data
+     * @param wrapMode the desired edge behavior (clamping vs. wrapping)
+     * @param useMipmap the flag indicates should texture be created with mipmap
+     * @return a new texture
+     */
+    public Texture createTexture(Image image, Texture.Usage usageHint,
+            Texture.WrapMode wrapMode, boolean useMipmap);
+
+    /**
      * Returns a new {@code Texture} with the given format and edge wrapping
      * support.  Note that the dimensions of the returned texture may be larger
      * than those requested and the wrap mode may be a simulated version of
@@ -77,6 +102,7 @@ public interface ResourceFactory extends GraphicsResource {
      *
      * @param formatHint intended pixel format of the data to be stored
      *     in this texture
+     * @param usageHint the Dynamic vs. Static nature of the texture data
      * @param wrapMode intended wrap mode to be used for the texture
      * @param w width of the content in the texture
      * @param h height of the content in the texture
@@ -87,6 +113,25 @@ public interface ResourceFactory extends GraphicsResource {
                                  Texture.Usage usageHint,
                                  Texture.WrapMode wrapMode,
                                  int w, int h);
+
+    /**
+     * Returns a new {@code Texture} with the given format and edge wrapping
+     * support.  Note that the dimensions of the returned texture may be larger
+     * than those requested and the wrap mode may be a simulated version of
+     * the type requested.
+     *
+     * @param formatHint intended pixel format of the data to be stored
+     *     in this texture
+     * @param usageHint the Dynamic vs. Static nature of the texture data
+     * @param wrapMode intended wrap mode to be used for the texture
+     * @param w width of the content in the texture
+     * @param h height of the content in the texture
+     * @param useMipmap the flag indicates should texture be created with mipmap
+     * @return texture most appropriate for the given intended format, wrap
+     * mode and dimensions
+     */
+    public Texture createTexture(PixelFormat formatHint, Texture.Usage usageHint,
+            Texture.WrapMode wrapMode, int w, int h, boolean useMipmap);
 
     /**
      * Returns a new {@code Texture} that can contain the video image as specified
@@ -118,6 +163,25 @@ public interface ResourceFactory extends GraphicsResource {
     public Texture getCachedTexture(Image image, Texture.WrapMode wrapMode);
 
     /**
+     * Returns a {@code Texture} for the given image set up to use or
+     * simulate the indicated wrap mode.
+     * If no texture could be found in the cache, this method will create a
+     * new texture and put it in the cache before returning it.
+     * NOTE: the caller of this method should not hold a reference to the
+     * cached texture beyond its immediate needs since the cache may be
+     * cleared at any time.
+     *
+     * @param image the pixel data to be uploaded if the texture is new or
+     *     needs new fringe pixels to simulate a new wrap mode
+     * @param wrapMode the mode that describes the behavior for samples
+     *     outside the content 
+     * @param useMipmap the flag indicates should mipmapping be used for this
+     *     texture
+     * @return a cached texture
+     */
+    public Texture getCachedTexture(Image image, Texture.WrapMode wrapMode, boolean useMipmap);
+
+    /**
      * Returns true if the given {@code PixelFormat} is supported; otherwise
      * returns false.
      * <p>
@@ -139,6 +203,15 @@ public interface ResourceFactory extends GraphicsResource {
      * @return true if the given format is supported; false otherwise
      */
     public boolean isFormatSupported(PixelFormat format);
+
+    /**
+     * Returns true iff the indicated {@link WrapMode wrap mode} is directly
+     * supported (i.e. not simulated) by the underlying pipeline and platform.
+     * 
+     * @param mode the desired {@code WrapMode}
+     * @return true iff the wrap mode is supported and not simulated
+     */
+    public boolean isWrapModeSupported(WrapMode mode);
 
     /**
      * Returns the maximum supported texture dimension for this device.

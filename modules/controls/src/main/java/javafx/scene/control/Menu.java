@@ -131,6 +131,8 @@ public class Menu extends MenuItem {
     
     /**
      * Constructs a Menu and sets the display text with the specified text.
+     *
+     * @param text the text to display on the menu button
      */
     public Menu(String text) {
         this(text,null);
@@ -139,10 +141,31 @@ public class Menu extends MenuItem {
     /**
      * Constructs a Menu and sets the display text with the specified text
      * and sets the graphic {@link Node} to the given node.
+     *
+     * @param text the text to display on the menu button
+     * @param graphic the graphic to display on the menu button
      */
     public Menu(String text, Node graphic) {
+        this(text, graphic, (MenuItem[])null);
+    }
+
+    /**
+     * Constructs a Menu and sets the display text with the specified text,
+     * the graphic {@link Node} to the given node, and inserts the given items
+     * into the {@link #getItems() items} list.
+     *
+     * @param text the text to display on the menu button
+     * @param graphic the graphic to display on the menu button
+     * @param items The items to display in the popup menu.
+     * @since JavaFX 8u40
+     */
+    public Menu(String text, Node graphic, MenuItem... items) {
         super(text,graphic);
         getStyleClass().add(DEFAULT_STYLE_CLASS);
+
+        if (items != null) {
+            getItems().addAll(items);
+        }
 
         parentPopupProperty().addListener(observable -> {
             for (int i = 0; i < getItems().size(); i++) {

@@ -36,6 +36,7 @@
 
 #include "audiodecoder.h"
 #include <libavformat/avformat.h>
+#include <libavutil/samplefmt.h>
 
 GST_DEBUG_CATEGORY_STATIC(audiodecoder_debug);
 #define GST_CAT_DEFAULT audiodecoder_debug
@@ -131,7 +132,10 @@ static GstFlowReturn audiodecoder_chain(GstPad * pad, GstBuffer * buf);
 static gboolean audiodecoder_src_query(GstPad * pad, GstQuery* query);
 static const GstQueryType * audiodecoder_get_src_query_types(GstPad * pad);
 static gboolean audiodecoder_init_state(AudioDecoder *decoder);
-static void audiodecoder_init_context(BaseDecoder *decoder);
+
+#if DECODE_AUDIO4
+static gboolean audiodecoder_is_oformat_supported(int format);
+#endif
 
 /* --- GObject vmethod implementations --- */
 
@@ -160,7 +164,6 @@ audiodecoder_base_init(gpointer gclass)
 static void audiodecoder_class_init(AudioDecoderClass * klass)
 {
      GST_ELEMENT_CLASS(klass)->change_state = audiodecoder_change_state;
-     BASEDECODER_CLASS(klass)->init_context = audiodecoder_init_context;
 }
 /*
  * Initialize the new element.
@@ -194,16 +197,18 @@ static void audiodecoder_init(AudioDecoder* decoder, AudioDecoderClass* gclass)
  */
 static gboolean audiodecoder_init_state(AudioDecoder *decoder)
 {
-    decoder->samples = av_mallocz(AVCODEC_MAX_AUDIO_FRAME_SIZE);
+#if NEW_CODEC_ID
+    decoder->codec_id = AV_CODEC_ID_NONE;
+#else
+    decoder->codec_id = CODEC_ID_NONE;
+#endif
+    
+#if !DECODE_AUDIO4
+    decoder->samples = av_mallocz(AVCODEC_MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE);
     if (!decoder->samples)
         return FALSE;
-
-#if ! LIBAVCODEC_NEW
-    decoder->packet = NULL;
-    decoder->packet_size = 0;
-#endif // LIBAVCODEC_NEW
-
-    decoder->codec_id = CODEC_ID_NONE;
+#endif
+    
     decoder->total_samples = 0;
     decoder->initial_offset = GST_BUFFER_OFFSET_NONE;
     decoder->duration = GST_CLOCK_TIME_NONE;
@@ -215,17 +220,6 @@ static gboolean audiodecoder_init_state(AudioDecoder *decoder)
 
     basedecoder_init_state(BASEDECODER(decoder));
     return TRUE;
-}
-
-static void audiodecoder_init_context(BaseDecoder *base)
-{
-    AudioDecoder *decoder = AUDIODECODER(base);
-
-    base->context->channels = decoder->num_channels;
-    base->context->sample_rate = decoder->sample_rate;
-    base->context->bit_rate = decoder->bit_rate;
-
-    BASEDECODER_CLASS(parent_class)->init_context(base);
 }
 
 /**
@@ -244,22 +238,14 @@ static void audiodecoder_state_reset(AudioDecoder *decoder)
 
 static void audiodecoder_close_decoder(AudioDecoder *decoder)
 {
+#if !DECODE_AUDIO4
     if (decoder->samples)
     {
         av_free(decoder->samples);
         decoder->samples = NULL;
     }
-
-#if ! LIBAVCODEC_NEW
-    if (decoder->packet)
-    {
-        av_free(decoder->packet);
-
-        decoder->packet = NULL;
-        decoder->packet_size = 0;
-    }
 #endif
-
+    
     basedecoder_close_decoder(BASEDECODER(decoder));
 }
 
@@ -507,7 +493,11 @@ static gboolean audiodecoder_open_init(AudioDecoder *decoder, GstBuffer *buffer)
 
             if (4 == mpeg_version)
             {
+#if NEW_CODEC_ID
+                decoder->codec_id = AV_CODEC_ID_AAC;
+#else
                 decoder->codec_id = CODEC_ID_AAC;
+#endif
                 if (base->codec_data) // codec_data is optional for AAC
                 {
                     //
@@ -546,8 +536,11 @@ static gboolean audiodecoder_open_init(AudioDecoder *decoder, GstBuffer *buffer)
             }
             else
             {
+#if NEW_CODEC_ID
+                decoder->codec_id = AV_CODEC_ID_MP3;
+#else
                 decoder->codec_id = CODEC_ID_MP3;
-
+#endif
                 if (!gst_structure_get_int(caps_struct, "layer", &mpeg_layer))
                     mpeg_layer = 3;
 
@@ -580,9 +573,6 @@ static gboolean audiodecoder_open_init(AudioDecoder *decoder, GstBuffer *buffer)
         }
         else
             return FALSE; // Type is not "audio/mpeg"
-
-        decoder->bytes_per_sample = (AUDIODECODER_BITS_PER_SAMPLE/8)*AUDIODECODER_OUT_NUM_CHANNELS;
-        decoder->initial_offset = GST_BUFFER_OFFSET_IS_VALID(buffer) ?  GST_BUFFER_OFFSET(buffer) : 0;
     }
 
     if (!base->codec && !basedecoder_open_decoder(base, decoder->codec_id))
@@ -592,17 +582,23 @@ static gboolean audiodecoder_open_init(AudioDecoder *decoder, GstBuffer *buffer)
         return FALSE;
     }
 
+    // Limit the number of output channels to 2 because audiopanorama element accepts only up to 2 channels
+    if (decoder->num_channels > AUDIODECODER_OUT_NUM_CHANNELS)
+        decoder->num_channels = AUDIODECODER_OUT_NUM_CHANNELS;
+    
     // Source caps: PCM audio.
     caps = gst_caps_new_simple("audio/x-raw-int",
                                "rate", G_TYPE_INT,
                                decoder->sample_rate,
-                               "channels", G_TYPE_INT,
-                               AUDIODECODER_OUT_NUM_CHANNELS,
+                               "channels", G_TYPE_INT, decoder->num_channels,
                                "endianness", G_TYPE_INT, G_LITTLE_ENDIAN,
                                "width", G_TYPE_INT, AUDIODECODER_BITS_PER_SAMPLE,
                                "depth", G_TYPE_INT, AUDIODECODER_BITS_PER_SAMPLE,
                                "signed", G_TYPE_BOOLEAN, TRUE,
                                NULL);
+
+    decoder->bytes_per_sample = (AUDIODECODER_BITS_PER_SAMPLE/8) * decoder->num_channels;
+    decoder->initial_offset = GST_BUFFER_OFFSET_IS_VALID(buffer) ?  GST_BUFFER_OFFSET(buffer) : 0;
 
     // Set the source caps.
     base->is_initialized = gst_pad_set_caps(base->srcpad, caps);
@@ -610,6 +606,12 @@ static gboolean audiodecoder_open_init(AudioDecoder *decoder, GstBuffer *buffer)
     gst_caps_unref(caps);
 
     return base->is_initialized;
+}
+
+static inline int16_t float_to_int(float sample)
+{
+    int value = (int)(sample * INT16_MAX);
+    return value > INT16_MAX ? INT16_MAX : value < INT16_MIN ? INT16_MIN : (int16_t)value;
 }
 
 /*
@@ -620,19 +622,23 @@ static GstFlowReturn audiodecoder_chain(GstPad *pad, GstBuffer *buf)
     AudioDecoder *decoder = AUDIODECODER(GST_OBJECT_PARENT(pad));
     BaseDecoder  *base = BASEDECODER(decoder);
     GstFlowReturn ret = GST_FLOW_OK;
-    gint          outbuf_size = AVCODEC_MAX_AUDIO_FRAME_SIZE;
     int           num_dec = NO_DATA_USED;
 
-
+#if DECODE_AUDIO4
+    gint          got_frame = 0;
+    int           sample, ci;
+ #else
+    gint          outbuf_size = AVCODEC_MAX_AUDIO_FRAME_SIZE;
+#endif
+    
 #ifdef VERBOSE_DEBUG
     g_print("audiodecoder: incoming size=%d, ts=%.4f, duration=%.4f ", GST_BUFFER_SIZE(buf),
             GST_BUFFER_TIMESTAMP_IS_VALID(buf) ? (double)GST_BUFFER_TIMESTAMP(buf)/GST_SECOND : -1.0,
             GST_BUFFER_DURATION_IS_VALID(buf) ? (double)GST_BUFFER_DURATION(buf)/GST_SECOND : -1.0);
 #endif
-
+   
     // If we have incoming buffers with PTS, then use them.
-    if (GST_BUFFER_TIMESTAMP_IS_VALID(buf))
-        decoder->generate_pts = FALSE;
+    decoder->generate_pts = !GST_BUFFER_TIMESTAMP_IS_VALID(buf);
 
     // If between FLUSH_START and FLUSH_STOP, reject new buffers.
     if (base->is_flushing)
@@ -665,67 +671,44 @@ static GstFlowReturn audiodecoder_chain(GstPad *pad, GstBuffer *buf)
         decoder->is_synced = TRUE;
     }
 
-#if LIBAVCODEC_NEW
-    if (!base->is_hls)
-    {
-        if (av_new_packet(&decoder->packet, GST_BUFFER_SIZE(buf)) == 0)
-        {
-            memcpy(decoder->packet.data, GST_BUFFER_DATA(buf), GST_BUFFER_SIZE(buf));
-            num_dec = avcodec_decode_audio3(base->context, (int16_t*)decoder->samples, &outbuf_size, &decoder->packet);
-            av_free_packet(&decoder->packet);
-        }
-        else
-        {
-            ret = GST_FLOW_ERROR;
-            goto _exit;
-        }
-    }
-    else
-    {
-        av_init_packet(&decoder->packet);
-        decoder->packet.data = GST_BUFFER_DATA(buf);
-        decoder->packet.size = GST_BUFFER_SIZE(buf);
-        num_dec = avcodec_decode_audio3(base->context, (int16_t*)decoder->samples, &outbuf_size, &decoder->packet);
-    }
-#else // ! LIBAVCODEC_NEW
-    if (!base->is_hls)
-    {
-        if (decoder->packet_size < GST_BUFFER_SIZE(buf))
-        {
-            decoder->packet = av_realloc(decoder->packet, GST_BUFFER_SIZE(buf));
-            decoder->packet_size = decoder->packet ? GST_BUFFER_SIZE(buf) : 0;
-        }
+    av_init_packet(&decoder->packet);
+    decoder->packet.data = GST_BUFFER_DATA(buf);
+    decoder->packet.size = GST_BUFFER_SIZE(buf);
 
-        if (decoder->packet)
-        {
-            memcpy(decoder->packet, GST_BUFFER_DATA(buf), GST_BUFFER_SIZE(buf));
-            num_dec = avcodec_decode_audio2(base->context, (int16_t*)decoder->samples, &outbuf_size, decoder->packet, GST_BUFFER_SIZE(buf));
-        }
-        else
-        {
-            ret = GST_FLOW_ERROR;
-            goto _exit;
-        }
-    }
-    else
-        num_dec = avcodec_decode_audio2(base->context, (int16_t*)decoder->samples,
-                                        &outbuf_size, GST_BUFFER_DATA(buf), GST_BUFFER_SIZE(buf));
+#if DECODE_AUDIO4
+    num_dec = avcodec_decode_audio4(base->context, base->frame, &got_frame, &decoder->packet);
+#else
+    num_dec = avcodec_decode_audio3(base->context, (int16_t*)decoder->samples, &outbuf_size, &decoder->packet);
+#endif
 
-#endif // LIBAVCODEC_NEW
-
-    if (num_dec < 0)
+    
+#if DECODE_AUDIO4
+    if (num_dec < 0 || !got_frame)
+#else
+    if (num_dec < 0 || outbuf_size == 0)
+#endif
     {
-        //        avcodec_flush_buffers(base->context);
 #ifdef DEBUG_OUTPUT
         g_print("audiodecoder_chain error: %s\n", avelement_error_to_string(AVELEMENT(decoder), num_dec));
 #endif
         goto _exit;
     }
 
-    if (outbuf_size == 0)
-        goto _exit;
-
     GstBuffer *outbuf = NULL;
+#if DECODE_AUDIO4
+    if (!audiodecoder_is_oformat_supported(base->frame->format))
+    {
+        gst_element_message_full(GST_ELEMENT(decoder), GST_MESSAGE_ERROR, GST_CORE_ERROR, GST_CORE_ERROR_NOT_IMPLEMENTED,
+                                 g_strdup("Unsupported decoded audio format"), NULL, ("audiodecoder.c"), ("audiodecoder_chain"), 0);
+        goto _exit;
+    }
+    
+    int outbuf_size = av_samples_get_buffer_size(NULL, decoder->num_channels, base->frame->nb_samples, AV_SAMPLE_FMT_S16, 1);
+    if (outbuf_size < 0) {
+        goto _exit;
+    }
+#endif
+
     ret = gst_pad_alloc_buffer_and_set_caps(base->srcpad, GST_BUFFER_OFFSET_NONE,
                                             outbuf_size, GST_PAD_CAPS(base->srcpad), &outbuf);
 
@@ -734,14 +717,48 @@ static GstFlowReturn audiodecoder_chain(GstPad *pad, GstBuffer *buf)
     {
         if (ret != GST_FLOW_WRONG_STATE)
         {
-            gst_element_message_full(GST_ELEMENT(decoder), GST_MESSAGE_ERROR, GST_CORE_ERROR, GST_CORE_ERROR_SEEK,
+            gst_element_message_full(GST_ELEMENT(decoder), GST_MESSAGE_ERROR, GST_RESOURCE_ERROR, GST_RESOURCE_ERROR_NO_SPACE_LEFT,
                                      g_strdup("Decoded audio buffer allocation failed"), NULL, ("audiodecoder.c"), ("audiodecoder_chain"), 0);
         }
         goto _exit;
     }
 
+#if DECODE_AUDIO4
+    if (base->frame->format == AV_SAMPLE_FMT_S16P || base->frame->format == AV_SAMPLE_FMT_FLTP)
+    {
+        // Reformat the output frame into single buffer.
+        int16_t *buffer = (int16_t*)GST_BUFFER_DATA(outbuf);
+        for (sample = 0; sample < base->frame->nb_samples; sample++)
+        {
+            int cc = decoder->num_channels;
+            for (ci = 0; ci < cc && ci < AUDIODECODER_OUT_NUM_CHANNELS; ci++) 
+            {
+                switch (base->frame->format) 
+                {
+                    case AV_SAMPLE_FMT_S16P:
+                        buffer[cc * sample + ci] = ((int16_t*)base->frame->data[ci])[sample];
+                        break;
+                    case AV_SAMPLE_FMT_FLTP:
+                        buffer[cc * sample + ci] = float_to_int(((float*)base->frame->data[ci])[sample]);
+                        break;
+                }
+            }
+        }
+    } 
+    else if (base->frame->format == AV_SAMPLE_FMT_S16)
+        memcpy(GST_BUFFER_DATA(outbuf), base->frame->data[0], GST_BUFFER_SIZE(outbuf));
+    else 
+    {
+        gst_element_message_full(GST_ELEMENT(decoder), GST_MESSAGE_ERROR, GST_RESOURCE_ERROR, GST_RESOURCE_ERROR_NO_SPACE_LEFT,
+                                 g_strdup("Unsupported decoder output format"), NULL, ("audiodecoder.c"), ("audiodecoder_chain"), 0);
+        ret = GST_FLOW_ERROR;
+        goto _exit;
+    }    
+        
+#else
     memcpy(GST_BUFFER_DATA(outbuf), decoder->samples, GST_BUFFER_SIZE(outbuf));
-
+#endif
+    
     // Set output buffer properties.
     if (decoder->generate_pts)
     {
@@ -776,17 +793,29 @@ static GstFlowReturn audiodecoder_chain(GstPad *pad, GstBuffer *buf)
         goto _exit;
     }
 
+#ifdef VERBOSE_DEBUG
+    g_print("ret=%s, num_dec=%d, Buffer: size=%d, ts=%.4f, duration=%.4f, offset=%ld, offset_end=%ld\n", 
+            gst_flow_get_name(ret), num_dec, outbuf_size,
+            (double)GST_BUFFER_TIMESTAMP(outbuf)/GST_SECOND, (double)GST_BUFFER_DURATION(outbuf)/GST_SECOND,
+            GST_BUFFER_OFFSET(outbuf), GST_BUFFER_OFFSET_END(outbuf));
+#endif
+    
     ret = gst_pad_push(base->srcpad, outbuf);
 
- _exit:
+_exit:
 
-#ifdef VERBOSE_DEBUG
-    g_print("ret=%s, num_dec=%d\n", gst_flow_get_name(ret), num_dec);
-#endif
 // INLINE - gst_buffer_unref()
     gst_buffer_unref(buf);
     return ret;
 }
+
+#if DECODE_AUDIO4
+static gboolean audiodecoder_is_oformat_supported(int format) 
+{
+    return (format == AV_SAMPLE_FMT_S16P || format == AV_SAMPLE_FMT_FLTP ||
+            format == AV_SAMPLE_FMT_S16);
+}
+#endif
 
 // --------------------------------------------------------------------------
 gboolean audiodecoder_plugin_init(GstPlugin * audiodecoder) {

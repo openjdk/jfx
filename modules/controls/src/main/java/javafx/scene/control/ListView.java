@@ -30,6 +30,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
+import com.sun.javafx.scene.control.behavior.ListCellBehavior;
 import javafx.beans.InvalidationListener;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
@@ -52,9 +53,6 @@ import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.geometry.Orientation;
-//import javafx.scene.accessibility.Action;
-//import javafx.scene.accessibility.Attribute;
-//import javafx.scene.accessibility.Role;
 import javafx.scene.layout.Region;
 import javafx.util.Callback;
 import javafx.css.StyleableObjectProperty;
@@ -73,6 +71,8 @@ import javafx.css.PseudoClass;
 import javafx.beans.DefaultProperty;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
+import javafx.scene.AccessibleAttribute;
+import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 
 /**
@@ -277,7 +277,20 @@ public class ListView<T> extends Control {
     }
     private static final EventType<?> EDIT_COMMIT_EVENT =
             new EventType<>(editAnyEvent(), "EDIT_COMMIT");
-    
+
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Fields                                                                  *
+     *                                                                         *
+     **************************************************************************/
+
+    // by default we always select the first row in the ListView, and when the
+    // items list changes, we also reselect the first row. In some cases, such as
+    // for the ComboBox, this is not desirable, so it can be disabled here.
+    private boolean selectFirstRowByDefault = true;
+
     
 
     /***************************************************************************
@@ -313,6 +326,7 @@ public class ListView<T> extends Control {
      */
     public ListView(ObservableList<T> items) {
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
+        setAccessibleRole(AccessibleRole.LIST_VIEW);
 
         setItems(items);
 
@@ -326,22 +340,15 @@ public class ListView<T> extends Control {
         // ...edit commit handler
         setOnEditCommit(DEFAULT_EDIT_COMMIT_HANDLER);
 
-        // Fix for RT-35679
-        focusedProperty().addListener(focusedListener);
-
         // Fix for RT-36651, which was introduced by RT-35679 (above) and resolved
         // by having special-case code to remove the listener when requested.
         // This is done by ComboBoxListViewSkin, so that selection is not done
         // when a ComboBox is shown.
         getProperties().addListener((MapChangeListener<Object, Object>) change -> {
-            if (change.wasAdded() && "selectOnFocusGain".equals(change.getKey())) {
-                Boolean selectOnFocusGain = (Boolean) change.getValueAdded();
-                if (selectOnFocusGain == null) return;
-                if (selectOnFocusGain) {
-                    focusedProperty().addListener(focusedListener);
-                } else {
-                    focusedProperty().removeListener(focusedListener);
-                }
+            if (change.wasAdded() && "selectFirstRowByDefault".equals(change.getKey())) {
+                Boolean _selectFirstRowByDefault = (Boolean) change.getValueAdded();
+                if (_selectFirstRowByDefault == null) return;
+                selectFirstRowByDefault = _selectFirstRowByDefault;
             }
         });
     }
@@ -361,21 +368,7 @@ public class ListView<T> extends Control {
         list.set(index, t.getNewValue());
     };
 
-    private InvalidationListener focusedListener = observable -> {
-        // RT-25679 - we select the first item in the control if there is no
-        // current selection or focus on any other cell
-        List<T> items = getItems();
-        MultipleSelectionModel<T> sm = getSelectionModel();
-        FocusModel<T> fm = getFocusModel();
 
-        if (items != null && items.size() > 0 &&
-            sm != null && sm.isEmpty() &&
-            fm != null && fm.getFocusedIndex() == -1) {
-                sm.select(0);
-        }
-    };
-    
-    
     
     /***************************************************************************
      *                                                                         *
@@ -942,7 +935,7 @@ public class ListView<T> extends Control {
     
     /**
      * Called when there's a request to scroll an index into view using {@link #scrollTo(int)}
-     * or {@link #scrollTo(S)}
+     * or {@link #scrollTo(Object)}
      * @since JavaFX 8.0
      */
     private ObjectProperty<EventHandler<ScrollToEvent<Integer>>> onScrollTo;
@@ -1082,22 +1075,16 @@ public class ListView<T> extends Control {
      *                                                                         *
      **************************************************************************/
 
-//    /** @treatAsPrivate */
-//    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//        switch (attribute) {
-//            case ROLE: return Role.LIST_VIEW;
-//            case ROW_COUNT: return getItems().size();
-//            case MULTIPLE_SELECTION: {
-//                MultipleSelectionModel<T> sm = getSelectionModel();
-//                return sm != null && sm.getSelectionMode() == SelectionMode.MULTIPLE;
-//            }
-//            case ROW_AT_INDEX: //Skin
-//            case SELECTED_ROWS: //Skin
-//            case VERTICAL_SCROLLBAR: //Skin
-//            case HORIZONTAL_SCROLLBAR: // Skin
-//            default: return super.accGetAttribute(attribute, parameters);
-//        }
-//    }
+    @Override
+    public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
+        switch (attribute) {
+            case MULTIPLE_SELECTION: {
+                MultipleSelectionModel<T> sm = getSelectionModel();
+                return sm != null && sm.getSelectionMode() == SelectionMode.MULTIPLE;
+            }
+            default: return super.queryAccessibleAttribute(attribute, parameters);
+        }
+    }
 
 
     /***************************************************************************
@@ -1215,6 +1202,8 @@ public class ListView<T> extends Control {
             }
             
             updateItemCount();
+
+            updateDefaultSelection();
         }
         
         // watching for changes to the items list content
@@ -1240,9 +1229,13 @@ public class ListView<T> extends Control {
                             selectedItem.equals(c.getRemoved().get(0))) {
                         // Bug fix for RT-28637
                         if (getSelectedIndex() < getItemCount()) {
-                            T newSelectedItem = getModelItem(selectedIndex);
+                            final int previousRow = selectedIndex == 0 ? 0 : selectedIndex - 1;
+                            T newSelectedItem = getModelItem(previousRow);
                             if (! selectedItem.equals(newSelectedItem)) {
-                                setSelectedItem(newSelectedItem);
+                                startAtomic();
+                                clearSelection(selectedIndex);
+                                select(newSelectedItem);
+                                stopAtomic();
                             }
                         }
                     }
@@ -1263,31 +1256,6 @@ public class ListView<T> extends Control {
         private WeakChangeListener<ObservableList<T>> weakItemsObserver = 
                 new WeakChangeListener<ObservableList<T>>(itemsObserver);
         
-        private void updateItemsObserver(ObservableList<T> oldList, ObservableList<T> newList) {
-            // update listeners
-            if (oldList != null) {
-                oldList.removeListener(weakItemsContentObserver);
-            }
-            if (newList != null) {
-                newList.addListener(weakItemsContentObserver);
-            }
-            
-            updateItemCount();
-
-            // when the items list totally changes, we should clear out
-            // the selection and focus
-            int newValueIndex = -1;
-            if (newList != null) {
-                T selectedItem = getSelectedItem();
-                if (selectedItem != null) {
-                    newValueIndex = newList.indexOf(selectedItem);
-                }
-            }
-
-            setSelectedIndex(newValueIndex);
-            focus(newValueIndex);
-        }
-
 
 
         /***********************************************************************
@@ -1416,11 +1384,17 @@ public class ListView<T> extends Control {
          **********************************************************************/
 
         /** {@inheritDoc} */
+        @Override public void clearAndSelect(int row) {
+            ListCellBehavior.setAnchor(listView, row, false);
+            super.clearAndSelect(row);
+        }
+
+        /** {@inheritDoc} */
         @Override protected void focus(int row) {
             if (listView.getFocusModel() == null) return;
             listView.getFocusModel().focus(row);
 
-//            listView.accSendNotification(Attribute.SELECTED_ROWS);
+            listView.notifyAccessibleAttributeChanged(AccessibleAttribute.FOCUS_ITEM);
         }
 
         /** {@inheritDoc} */
@@ -1441,6 +1415,14 @@ public class ListView<T> extends Control {
             return items.get(index);
         }
 
+
+
+        /***********************************************************************
+         *                                                                     *
+         * Private implementation                                              *
+         *                                                                     *
+         **********************************************************************/
+
         private void updateItemCount() {
             if (listView == null) {
                 itemCount = -1;
@@ -1448,7 +1430,45 @@ public class ListView<T> extends Control {
                 List<T> items = listView.getItems();
                 itemCount = items == null ? -1 : items.size();
             }
-        } 
+        }
+
+        private void updateItemsObserver(ObservableList<T> oldList, ObservableList<T> newList) {
+            // update listeners
+            if (oldList != null) {
+                oldList.removeListener(weakItemsContentObserver);
+            }
+            if (newList != null) {
+                newList.removeListener(weakItemsContentObserver);
+                newList.addListener(weakItemsContentObserver);
+            }
+
+            updateItemCount();
+            updateDefaultSelection();
+        }
+
+        private void updateDefaultSelection() {
+            // when the items list totally changes, we should clear out
+            // the selection and focus
+            int newSelectionIndex = -1;
+            int newFocusIndex = -1;
+            if (listView.getItems() != null) {
+                T selectedItem = getSelectedItem();
+                if (selectedItem != null) {
+                    newSelectionIndex = listView.getItems().indexOf(selectedItem);
+                    newFocusIndex = newSelectionIndex;
+                }
+
+                // we put focus onto the first item, if there is at least
+                // one item in the list
+                if (listView.selectFirstRowByDefault && newFocusIndex == -1) {
+                    newFocusIndex = listView.getItems().size() > 0 ? 0 : -1;
+                }
+            }
+
+            clearSelection();
+            select(newSelectionIndex);
+            focus(newFocusIndex);
+        }
     }
 
 
@@ -1471,6 +1491,10 @@ public class ListView<T> extends Control {
             }
             
             updateItemCount();
+
+            if (itemCount > 0) {
+                focus(0);
+            }
         }
 
         private ChangeListener<ObservableList<T>> itemsListener = (observable, oldList, newList) -> {
@@ -1478,47 +1502,50 @@ public class ListView<T> extends Control {
         };
         
         private WeakChangeListener<ObservableList<T>> weakItemsListener = 
-                new WeakChangeListener<ObservableList<T>>(itemsListener);
+                new WeakChangeListener<>(itemsListener);
         
         private void updateItemsObserver(ObservableList<T> oldList, ObservableList<T> newList) {
             // the listview items list has changed, we need to observe
             // the new list, and remove any observer we had from the old list
             if (oldList != null) oldList.removeListener(weakItemsContentListener);
-            if (newList != null) newList.addListener(weakItemsContentListener);
-            
+
+            // Make sure its only once even on the first list see RT-39132
+            if (newList != null) {
+                newList.removeListener(weakItemsContentListener);
+                newList.addListener(weakItemsContentListener);
+            }
+
             updateItemCount();
         }
         
         // Listen to changes in the listview items list, such that when it
         // changes we can update the focused index to refer to the new indices.
-        private final ListChangeListener<T> itemsContentListener = new ListChangeListener<T>() {
-            @Override public void onChanged(Change<? extends T> c) {
-                updateItemCount();
-                
+        private final ListChangeListener<T> itemsContentListener = c -> {
+            updateItemCount();
+
+            while (c.next()) {
+                // looking at the first change
+                int from = c.getFrom();
+                if (getFocusedIndex() == -1 || from > getFocusedIndex()) {
+                    return;
+                }
+
+                c.reset();
+                boolean added = false;
+                boolean removed = false;
+                int addedSize = 0;
+                int removedSize = 0;
                 while (c.next()) {
-                    // looking at the first change
-                    int from = c.getFrom();
-                    if (getFocusedIndex() == -1 || from > getFocusedIndex()) {
-                        return;
-                    }
+                    added |= c.wasAdded();
+                    removed |= c.wasRemoved();
+                    addedSize += c.getAddedSize();
+                    removedSize += c.getRemovedSize();
+                }
 
-                    c.reset();
-                    boolean added = false;
-                    boolean removed = false;
-                    int addedSize = 0;
-                    int removedSize = 0;
-                    while (c.next()) {
-                        added |= c.wasAdded();
-                        removed |= c.wasRemoved();
-                        addedSize += c.getAddedSize();
-                        removedSize += c.getRemovedSize();
-                    }
-
-                    if (added && !removed) {
-                        focus(getFocusedIndex() + addedSize);
-                    } else if (!added && removed) {
-                        focus(getFocusedIndex() - removedSize);
-                    }
+                if (added && !removed) {
+                    focus(getFocusedIndex() + addedSize);
+                } else if (!added && removed) {
+                    focus(getFocusedIndex() - removedSize);
                 }
             }
         };

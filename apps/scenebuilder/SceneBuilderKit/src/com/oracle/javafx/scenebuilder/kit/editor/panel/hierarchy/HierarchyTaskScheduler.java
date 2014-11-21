@@ -38,7 +38,6 @@ import java.util.TimerTask;
 import javafx.application.Platform;
 import javafx.scene.control.Cell;
 import javafx.scene.control.TreeItem;
-import javafx.scene.layout.Border;
 
 /**
  * Used to schedule :
@@ -88,9 +87,7 @@ public class HierarchyTaskScheduler {
                     treeItem.setExpanded(true);
                     final Cell<?> cell = panelController.getCell(treeItem);
                     assert cell != null;
-                    final Border border = panelController.getBorder(
-                            BorderSide.TOP_RIGHT_BOTTOM_LEFT);
-                    cell.setBorder(border);
+                    panelController.setBorder(cell, BorderSide.TOP_RIGHT_BOTTOM_LEFT);
                     isAddEmptyGraphicTaskScheduled = false;
                 });
             }

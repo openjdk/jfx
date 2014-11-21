@@ -29,11 +29,15 @@ import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.beans.value.ObservableValue;
+import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.HBox;
 import javafx.util.Callback;
+
+import java.util.ArrayList;
 import java.util.List;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.Utils;
@@ -159,9 +163,9 @@ public class TableViewKeyInputTest {
      **************************************************************************/    
     
     @Test public void testInitialState() {
-        assertTrue(sm.getSelectedCells().isEmpty());
-        assertTrue(sm.getSelectedIndices().isEmpty());
-        assertTrue(sm.getSelectedItems().isEmpty());
+        assertEquals(0,sm.getSelectedCells().size());
+        assertEquals(0,sm.getSelectedIndices().size());
+        assertEquals(0,sm.getSelectedItems().size());
     }
     
     
@@ -1365,12 +1369,13 @@ public class TableViewKeyInputTest {
         sm.setSelectionMode(SelectionMode.MULTIPLE);
         sm.setCellSelectionEnabled(true);
         sm.select(5, col1);
+        assertTrue(debug(), isAnchor(5,1));
 
         keyboard.doKeyPress(KeyCode.HOME, KeyModifier.SHIFT, KeyModifier.getShortcutKey());
         for (int i = 0; i <= 5; i++) {
             assertTrue(sm.isSelected(i,col1));
         }
-        assertTrue(isAnchor(5,1));
+        assertTrue(debug(), isAnchor(5,1));
         
         keyboard.doKeyPress(KeyCode.END, KeyModifier.SHIFT, KeyModifier.getShortcutKey());
         for (int i = 0; i < tableView.getItems().size() - 1; i++) {
@@ -2257,7 +2262,7 @@ public class TableViewKeyInputTest {
         keyboard.doKeyPress(KeyCode.UP, KeyModifier.getShortcutKey());
         keyboard.doKeyPress(KeyCode.UP, KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
         Toolkit.getToolkit().firePulse();
-        assertTrue(isSelected(7,6,5,4));
+        assertTrue(isSelected(7, 6, 5, 4));
         assertEquals(4, sm.getSelectedItems().size());
     }
 
@@ -2275,10 +2280,10 @@ public class TableViewKeyInputTest {
         keyboard.doKeyPress(KeyCode.UP,  KeyModifier.getShortcutKey());
         keyboard.doKeyPress(KeyCode.UP,  KeyModifier.getShortcutKey());
         keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey(), PlatformUtil.isMac() ? KeyModifier.CTRL : null);
-        keyboard.doKeyPress(KeyCode.UP,  KeyModifier.getShortcutKey());
-        keyboard.doKeyPress(KeyCode.UP,  KeyModifier.SHIFT);
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT);
         Toolkit.getToolkit().firePulse();
-        assertTrue(isSelected(5,4,3));
+        assertTrue(isSelected(5, 4, 3));
         assertEquals(3, sm.getSelectedItems().size());
     }
 
@@ -2296,10 +2301,10 @@ public class TableViewKeyInputTest {
         keyboard.doKeyPress(KeyCode.UP,  KeyModifier.getShortcutKey());
         keyboard.doKeyPress(KeyCode.UP,  KeyModifier.getShortcutKey());
         keyboard.doKeyPress(KeyCode.SPACE, KeyModifier.getShortcutKey(), PlatformUtil.isMac() ? KeyModifier.CTRL : null);
-        keyboard.doKeyPress(KeyCode.UP,  KeyModifier.getShortcutKey());
-        keyboard.doKeyPress(KeyCode.UP,  KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.getShortcutKey());
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
         Toolkit.getToolkit().firePulse();
-        assertTrue(isSelected(7,5,4,3));
+        assertTrue(isSelected(7, 5, 4, 3));
         assertEquals(4, sm.getSelectedItems().size());
     }
 
@@ -2347,8 +2352,8 @@ public class TableViewKeyInputTest {
         sm.setCellSelectionEnabled(false);
         sm.clearAndSelect(2);
 
-        keyboard.doKeyPress(KeyCode.UP,  KeyModifier.getShortcutKey(), KeyModifier.SHIFT); // row 1
-        keyboard.doKeyPress(KeyCode.UP,  KeyModifier.getShortcutKey(), KeyModifier.SHIFT); // row 0
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.getShortcutKey(), KeyModifier.SHIFT); // row 1
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.getShortcutKey(), KeyModifier.SHIFT); // row 0
         Toolkit.getToolkit().firePulse();
         assertTrue(isNotSelected(3,4));
         assertTrue(isSelected(0,1,2));
@@ -2359,7 +2364,7 @@ public class TableViewKeyInputTest {
         keyboard.doKeyPress(KeyCode.UP,  KeyModifier.getShortcutKey(), KeyModifier.SHIFT); // should stay at row 0
         keyboard.doKeyPress(KeyCode.UP,  KeyModifier.getShortcutKey(), KeyModifier.SHIFT); // should stay at row 0
         Toolkit.getToolkit().firePulse();
-        assertTrue(isNotSelected(3,4));
+        assertTrue(isNotSelected(3, 4));
         assertTrue(isSelected(0,1,2));
         assertEquals(3, sm.getSelectedItems().size());
         assertTrue(fm.isFocused(0));
@@ -2378,8 +2383,8 @@ public class TableViewKeyInputTest {
         sm.setCellSelectionEnabled(false);
         sm.clearAndSelect(2);
 
-        keyboard.doKeyPress(KeyCode.DOWN,  KeyModifier.getShortcutKey(), KeyModifier.SHIFT); // row 3
-        keyboard.doKeyPress(KeyCode.DOWN,  KeyModifier.getShortcutKey(), KeyModifier.SHIFT); // row 4
+        keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.getShortcutKey(), KeyModifier.SHIFT); // row 3
+        keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.getShortcutKey(), KeyModifier.SHIFT); // row 4
         Toolkit.getToolkit().firePulse();
         assertTrue(isNotSelected(0,1,2,3));
         assertTrue(isSelected(4));
@@ -2390,7 +2395,7 @@ public class TableViewKeyInputTest {
         keyboard.doKeyPress(KeyCode.DOWN,  KeyModifier.getShortcutKey(), KeyModifier.SHIFT); // should stay at row 4
         keyboard.doKeyPress(KeyCode.DOWN,  KeyModifier.getShortcutKey(), KeyModifier.SHIFT); // should stay at row 4
         Toolkit.getToolkit().firePulse();
-        assertTrue(isNotSelected(0,1,2,3));
+        assertTrue(isNotSelected(0, 1, 2, 3));
         assertTrue(isSelected(4));
         assertEquals(1, sm.getSelectedItems().size());
         assertTrue(fm.isFocused(4));
@@ -2436,14 +2441,14 @@ public class TableViewKeyInputTest {
         keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.getShortcutKey());
         keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.getShortcutKey());
         Toolkit.getToolkit().firePulse();
-        assertTrue(isNotSelected(1,2,3));
+        assertTrue(isNotSelected(1, 2, 3));
         assertTrue(isSelected(0));
         assertEquals(1, sm.getSelectedItems().size());
         assertTrue(fm.isFocused(3));
 
         keyboard.doKeyPress(KeyCode.SPACE,  KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
         Toolkit.getToolkit().firePulse();
-        assertTrue(isSelected(0,1,2,3));
+        assertTrue(isSelected(0, 1, 2, 3));
         assertEquals(4, sm.getSelectedItems().size());
         assertTrue(fm.isFocused(3));
     }
@@ -3664,6 +3669,250 @@ public class TableViewKeyInputTest {
         sm.select(95, col);
         keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.SHIFT);
         keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.SHIFT);
+
+        sl.dispose();
+    }
+
+//    @Test public void test_rt_38326() {
+//        int argCount = 5;
+//        int testCount = (int) Math.pow(2, argCount);
+//        for (int test = 0; test < testCount; test++) {
+//            boolean moveUp                                      = (test & 0b10000) == 0b10000;
+//            boolean singleSelection                             = (test & 0b01000) == 0b01000;
+//            boolean cellSelection                               = (test & 0b00100) == 0b00100;
+//            boolean replaceItemsList                            = (test & 0b00010) == 0b00010;
+//            boolean updateItemsListBeforeSelectionModelChanges  = (test & 0b00001) == 0b00001;
+//
+//            StringBuilder sb = new StringBuilder("@Test public void test_rt_38326_focusLostOnShortcutKeyNav_");
+//            sb.append(moveUp ? "moveUp_" : "moveDown_");
+//            sb.append(singleSelection ? "singleSelection_" : "multipleSelection_");
+//            sb.append(cellSelection ? "cellSelection_" : "rowSelection_");
+//            sb.append(replaceItemsList ? "replaceItemsList_" : "reuseItemsList_");
+//            sb.append(updateItemsListBeforeSelectionModelChanges ? "updateItemsListBeforeSelectionModelChanges" : "updateItemsListAfterSelectionModelChanges");
+//            sb.append("() {\n    ");
+//            sb.append("test_rt_38326(");
+//            sb.append(moveUp + ", ");
+//            sb.append(singleSelection + ", ");
+//            sb.append(cellSelection + ", ");
+//            sb.append(replaceItemsList + ", ");
+//            sb.append(updateItemsListBeforeSelectionModelChanges);
+//            sb.append(");\n}");
+//
+//            System.out.println(sb);
+//        }
+//    }
+
+    // -- tests generated by above commented out code
+    @Test public void test_rt_38326_focusLostOnShortcutKeyNav_moveDown_multipleSelection_rowSelection_reuseItemsList_updateItemsListAfterSelectionModelChanges() {
+        test_rt_38326(false, false, false, false, false);
+    }
+    @Test public void test_rt_38326_focusLostOnShortcutKeyNav_moveDown_multipleSelection_rowSelection_reuseItemsList_updateItemsListBeforeSelectionModelChanges() {
+        test_rt_38326(false, false, false, false, true);
+    }
+    @Test public void test_rt_38326_focusLostOnShortcutKeyNav_moveDown_multipleSelection_rowSelection_replaceItemsList_updateItemsListAfterSelectionModelChanges() {
+        test_rt_38326(false, false, false, true, false);
+    }
+    @Test public void test_rt_38326_focusLostOnShortcutKeyNav_moveDown_multipleSelection_rowSelection_replaceItemsList_updateItemsListBeforeSelectionModelChanges() {
+        test_rt_38326(false, false, false, true, true);
+    }
+    @Test public void test_rt_38326_focusLostOnShortcutKeyNav_moveDown_multipleSelection_cellSelection_reuseItemsList_updateItemsListAfterSelectionModelChanges() {
+        test_rt_38326(false, false, true, false, false);
+    }
+    @Test public void test_rt_38326_focusLostOnShortcutKeyNav_moveDown_multipleSelection_cellSelection_reuseItemsList_updateItemsListBeforeSelectionModelChanges() {
+        test_rt_38326(false, false, true, false, true);
+    }
+    @Test public void test_rt_38326_focusLostOnShortcutKeyNav_moveDown_multipleSelection_cellSelection_replaceItemsList_updateItemsListAfterSelectionModelChanges() {
+        test_rt_38326(false, false, true, true, false);
+    }
+    @Test public void test_rt_38326_focusLostOnShortcutKeyNav_moveDown_multipleSelection_cellSelection_replaceItemsList_updateItemsListBeforeSelectionModelChanges() {
+        test_rt_38326(false, false, true, true, true);
+    }
+    @Test public void test_rt_38326_focusLostOnShortcutKeyNav_moveDown_singleSelection_rowSelection_reuseItemsList_updateItemsListAfterSelectionModelChanges() {
+        test_rt_38326(false, true, false, false, false);
+    }
+    @Test public void test_rt_38326_focusLostOnShortcutKeyNav_moveDown_singleSelection_rowSelection_reuseItemsList_updateItemsListBeforeSelectionModelChanges() {
+        test_rt_38326(false, true, false, false, true);
+    }
+    @Test public void test_rt_38326_focusLostOnShortcutKeyNav_moveDown_singleSelection_rowSelection_replaceItemsList_updateItemsListAfterSelectionModelChanges() {
+        test_rt_38326(false, true, false, true, false);
+    }
+    @Test public void test_rt_38326_focusLostOnShortcutKeyNav_moveDown_singleSelection_rowSelection_replaceItemsList_updateItemsListBeforeSelectionModelChanges() {
+        test_rt_38326(false, true, false, true, true);
+    }
+    @Test public void test_rt_38326_focusLostOnShortcutKeyNav_moveDown_singleSelection_cellSelection_reuseItemsList_updateItemsListAfterSelectionModelChanges() {
+        test_rt_38326(false, true, true, false, false);
+    }
+    @Test public void test_rt_38326_focusLostOnShortcutKeyNav_moveDown_singleSelection_cellSelection_reuseItemsList_updateItemsListBeforeSelectionModelChanges() {
+        test_rt_38326(false, true, true, false, true);
+    }
+    @Test public void test_rt_38326_focusLostOnShortcutKeyNav_moveDown_singleSelection_cellSelection_replaceItemsList_updateItemsListAfterSelectionModelChanges() {
+        test_rt_38326(false, true, true, true, false);
+    }
+    @Test public void test_rt_38326_focusLostOnShortcutKeyNav_moveDown_singleSelection_cellSelection_replaceItemsList_updateItemsListBeforeSelectionModelChanges() {
+        test_rt_38326(false, true, true, true, true);
+    }
+    @Test public void test_rt_38326_focusLostOnShortcutKeyNav_moveUp_multipleSelection_rowSelection_reuseItemsList_updateItemsListAfterSelectionModelChanges() {
+        test_rt_38326(true, false, false, false, false);
+    }
+    @Test public void test_rt_38326_focusLostOnShortcutKeyNav_moveUp_multipleSelection_rowSelection_reuseItemsList_updateItemsListBeforeSelectionModelChanges() {
+        test_rt_38326(true, false, false, false, true);
+    }
+    @Test public void test_rt_38326_focusLostOnShortcutKeyNav_moveUp_multipleSelection_rowSelection_replaceItemsList_updateItemsListAfterSelectionModelChanges() {
+        test_rt_38326(true, false, false, true, false);
+    }
+    @Test public void test_rt_38326_focusLostOnShortcutKeyNav_moveUp_multipleSelection_rowSelection_replaceItemsList_updateItemsListBeforeSelectionModelChanges() {
+        test_rt_38326(true, false, false, true, true);
+    }
+    @Test public void test_rt_38326_focusLostOnShortcutKeyNav_moveUp_multipleSelection_cellSelection_reuseItemsList_updateItemsListAfterSelectionModelChanges() {
+        test_rt_38326(true, false, true, false, false);
+    }
+    @Test public void test_rt_38326_focusLostOnShortcutKeyNav_moveUp_multipleSelection_cellSelection_reuseItemsList_updateItemsListBeforeSelectionModelChanges() {
+        test_rt_38326(true, false, true, false, true);
+    }
+    @Test public void test_rt_38326_focusLostOnShortcutKeyNav_moveUp_multipleSelection_cellSelection_replaceItemsList_updateItemsListAfterSelectionModelChanges() {
+        test_rt_38326(true, false, true, true, false);
+    }
+    @Test public void test_rt_38326_focusLostOnShortcutKeyNav_moveUp_multipleSelection_cellSelection_replaceItemsList_updateItemsListBeforeSelectionModelChanges() {
+        test_rt_38326(true, false, true, true, true);
+    }
+    @Test public void test_rt_38326_focusLostOnShortcutKeyNav_moveUp_singleSelection_rowSelection_reuseItemsList_updateItemsListAfterSelectionModelChanges() {
+        test_rt_38326(true, true, false, false, false);
+    }
+    @Test public void test_rt_38326_focusLostOnShortcutKeyNav_moveUp_singleSelection_rowSelection_reuseItemsList_updateItemsListBeforeSelectionModelChanges() {
+        test_rt_38326(true, true, false, false, true);
+    }
+    @Test public void test_rt_38326_focusLostOnShortcutKeyNav_moveUp_singleSelection_rowSelection_replaceItemsList_updateItemsListAfterSelectionModelChanges() {
+        test_rt_38326(true, true, false, true, false);
+    }
+    @Test public void test_rt_38326_focusLostOnShortcutKeyNav_moveUp_singleSelection_rowSelection_replaceItemsList_updateItemsListBeforeSelectionModelChanges() {
+        test_rt_38326(true, true, false, true, true);
+    }
+    @Test public void test_rt_38326_focusLostOnShortcutKeyNav_moveUp_singleSelection_cellSelection_reuseItemsList_updateItemsListAfterSelectionModelChanges() {
+        test_rt_38326(true, true, true, false, false);
+    }
+    @Test public void test_rt_38326_focusLostOnShortcutKeyNav_moveUp_singleSelection_cellSelection_reuseItemsList_updateItemsListBeforeSelectionModelChanges() {
+        test_rt_38326(true, true, true, false, true);
+    }
+    @Test public void test_rt_38326_focusLostOnShortcutKeyNav_moveUp_singleSelection_cellSelection_replaceItemsList_updateItemsListAfterSelectionModelChanges() {
+        test_rt_38326(true, true, true, true, false);
+    }
+    @Test public void test_rt_38326_focusLostOnShortcutKeyNav_moveUp_singleSelection_cellSelection_replaceItemsList_updateItemsListBeforeSelectionModelChanges() {
+        test_rt_38326(true, true, true, true, true);
+    }
+
+    private void test_rt_38326(boolean moveUp, boolean singleSelection, boolean cellSelection, boolean replaceItemsList, boolean updateItemsListBeforeSelectionModelChanges) {
+        final int items = 10;
+        ObservableList<String> itemsList = FXCollections.observableArrayList();
+        for (int i = 0; i < items; i++) {
+            itemsList.add("Row " + i);
+        }
+
+        if (updateItemsListBeforeSelectionModelChanges) {
+            if (replaceItemsList) {
+                tableView.setItems(itemsList);
+            } else {
+                tableView.getItems().clear();
+                tableView.getItems().addAll(itemsList);
+            }
+        }
+
+        TableColumn<String, String> col = new TableColumn<>("Column");
+        col.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue()));
+
+        TableColumn<String, String> col2 = new TableColumn<>("Column 2");
+        col2.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue()));
+
+        tableView.getColumns().setAll(col, col2);
+
+        TableView.TableViewSelectionModel<String> sm = tableView.getSelectionModel();
+        sm.setSelectionMode(singleSelection ? SelectionMode.SINGLE : SelectionMode.MULTIPLE);
+        sm.setCellSelectionEnabled(cellSelection);
+
+        if (! updateItemsListBeforeSelectionModelChanges) {
+            if (replaceItemsList) {
+                tableView.setItems(itemsList);
+            } else {
+                tableView.getItems().clear();
+                tableView.getItems().addAll(itemsList);
+            }
+        }
+
+        StageLoader sl = new StageLoader(tableView);
+
+        // test the initial state to ensure it is as we expect
+        assertFalse(sm.isSelected(0));
+        assertFalse(sm.isSelected(0, col));
+        assertFalse(sm.isSelected(0, col2));
+        assertEquals(0, sm.getSelectedIndices().size());
+        assertEquals(0, sm.getSelectedItems().size());
+        assertEquals(0, sm.getSelectedCells().size());
+
+        final int startRow = 5;
+        sm.clearSelection();
+        sm.select(startRow, col);
+        assertEquals(1, sm.getSelectedCells().size());
+        assertEquals(startRow, sm.getSelectedCells().get(0).getRow());
+        assertEquals(col, sm.getSelectedCells().get(0).getTableColumn());
+        assertEquals(startRow, tableView.getFocusModel().getFocusedCell().getRow());
+        assertEquals(col, tableView.getFocusModel().getFocusedCell().getTableColumn());
+
+        keyboard.doKeyPress(moveUp ? KeyCode.UP : KeyCode.DOWN, KeyModifier.getShortcutKey());
+        assertEquals(moveUp ? startRow-1 : startRow+1, tableView.getFocusModel().getFocusedCell().getRow());
+        assertEquals(col, tableView.getFocusModel().getFocusedCell().getTableColumn());
+
+        sl.dispose();
+    }
+
+    private int rt_39088_indices_event_count = 0;
+    private int rt_39088_items_event_count = 0;
+    @Test public void test_rt_39088() {
+        ObservableList<String> itemsList = FXCollections.observableArrayList();
+        for (int i = 0; i < 4; i++) {
+            itemsList.add("Row " + i);
+        }
+
+        tableView.setItems(itemsList);
+
+        TableColumn<String, String> col = new TableColumn<>("Column");
+        col.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue()));
+
+        tableView.getColumns().setAll(col);
+
+        TableView.TableViewSelectionModel<String> sm = tableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.setCellSelectionEnabled(false);
+
+        ObservableList<Integer> indices = sm.getSelectedIndices();
+        ObservableList<String> items = sm.getSelectedItems();
+
+        indices.addListener((ListChangeListener<Integer>) change -> rt_39088_indices_event_count++);
+        items.addListener((ListChangeListener<String>) change -> rt_39088_items_event_count++);
+
+        StageLoader sl = new StageLoader(tableView);
+
+        assertEquals(0, rt_39088_indices_event_count);
+        assertEquals(0, rt_39088_items_event_count);
+        assertEquals(0, indices.size());
+        assertEquals(0, items.size());
+
+        sm.select(3);
+        assertEquals(1, rt_39088_indices_event_count);
+        assertEquals(1, rt_39088_items_event_count);
+        assertEquals(1, indices.size());
+        assertEquals(1, items.size());
+
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT);
+        assertEquals(2, rt_39088_indices_event_count);
+        assertEquals(2, rt_39088_items_event_count);
+        assertEquals(2, indices.size());
+        assertEquals(2, items.size());
+
+        // this is where the test fails...
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT);
+        assertEquals(3, rt_39088_indices_event_count);
+        assertEquals(3, rt_39088_items_event_count);
+        assertEquals(3, indices.size());
+        assertEquals(3, items.size());
 
         sl.dispose();
     }

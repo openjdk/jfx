@@ -33,8 +33,10 @@
 package com.oracle.javafx.scenebuilder.kit.editor.job.gridpane.v2;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
+import com.oracle.javafx.scenebuilder.kit.editor.job.BatchSelectionJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
-import com.oracle.javafx.scenebuilder.kit.editor.job.v2.CompositeJob;
+import com.oracle.javafx.scenebuilder.kit.editor.selection.AbstractSelectionGroup;
+import com.oracle.javafx.scenebuilder.kit.editor.selection.GridSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.list.RowConstraintsListPropertyMetadata;
@@ -48,7 +50,7 @@ import javafx.scene.layout.GridPane;
 /**
  *
  */
-public class InsertRowJob extends CompositeJob {
+public class InsertRowJob extends BatchSelectionJob {
 
     private static final RowConstraintsListPropertyMetadata rowContraintsMeta =
             new RowConstraintsListPropertyMetadata(
@@ -88,11 +90,14 @@ public class InsertRowJob extends CompositeJob {
                 = new InsertRowConstraintsJob(gridPaneObject, rowIndex, insertCount, getEditorController());
         result.add(insertJob);
         
-        final Job moveJob
-                = new MoveRowContentJob(gridPaneObject, rowIndex, +insertCount, getEditorController());
-        if (moveJob.isExecutable()) {
-            result.add(moveJob);
-        } // else column is empty : no children to move
+        final int lastRowIndex = rowContraintsMeta.getValue(gridPaneObject).size()-1;
+        for (int r = lastRowIndex; r >= rowIndex; r--) {
+            final Job moveJob
+                    = new MoveRowContentJob(gridPaneObject, r, +insertCount, getEditorController());
+            if (moveJob.isExecutable()) {
+                result.add(moveJob);
+            } // else column is empty : no children to move
+        }
         
         return result;
     }
@@ -101,5 +106,9 @@ public class InsertRowJob extends CompositeJob {
     protected String makeDescription() {
         return getClass().getSimpleName();
     }
-    
+
+    @Override
+    protected AbstractSelectionGroup getNewSelectionGroup() {
+        return new GridSelectionGroup(gridPaneObject, GridSelectionGroup.Type.ROW, rowIndex);
+    }
 }

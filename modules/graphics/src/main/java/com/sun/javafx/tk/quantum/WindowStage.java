@@ -177,7 +177,12 @@ class WindowStage extends GlassStage {
                             // fall through
                         case DECORATED:
                             windowMask |=
-                                    Window.TITLED | Window.CLOSABLE | Window.MINIMIZABLE | Window.MAXIMIZABLE;
+                                Window.TITLED | Window.CLOSABLE | 
+                                Window.MINIMIZABLE | Window.MAXIMIZABLE;
+                            if (ownerWindow != null || modality != Modality.NONE) {
+                                windowMask &= 
+                                    ~(Window.MINIMIZABLE | Window.MAXIMIZABLE);
+                            }
                             resizable = true;
                             break;
                         case UTILITY:
@@ -245,18 +250,15 @@ class WindowStage extends GlassStage {
         if (scene != null) {
             GlassScene newScene = getViewScene();
             View view = newScene.getPlatformView();
-            ViewPainter.renderLock.lock();
-            try {
+            QuantumToolkit.runWithRenderLock(() -> {
                 platformWindow.setView(view);
                 if (oldScene != null) oldScene.updateSceneState();
                 newScene.updateSceneState();
-            } finally {
-                ViewPainter.renderLock.unlock();
-            }
+                return null;
+            });
             requestFocus();
         } else {
-            ViewPainter.renderLock.lock();
-            try {
+            QuantumToolkit.runWithRenderLock(() -> {
                 // platformWindow can be null here, if this window is owned,
                 // and its owner is being closed.
                 if (platformWindow != null) {
@@ -265,9 +267,8 @@ class WindowStage extends GlassStage {
                 if (oldScene != null) {
                     oldScene.updateSceneState();
                 }
-            } finally {
-                ViewPainter.renderLock.unlock();
-            }
+                return null;
+            });
         }
         if (oldScene != null) {
             ViewPainter painter = ((ViewScene)oldScene).getPainter();
@@ -295,39 +296,17 @@ class WindowStage extends GlassStage {
         platformWindow.setMaximumSize(maxWidth, maxHeight);
     }
 
-    @Override public void setIcons(java.util.List icons) {
-
-        int SMALL_ICON_HEIGHT = 32;
-        int SMALL_ICON_WIDTH = 32;
-        if (PlatformUtil.isMac()) { //Mac Sized Icons
-            SMALL_ICON_HEIGHT = 128;
-            SMALL_ICON_WIDTH = 128;
-        } else if (PlatformUtil.isWindows()) { //Windows Sized Icons
-            SMALL_ICON_HEIGHT = 32;
-            SMALL_ICON_WIDTH = 32;
-        } else if (PlatformUtil.isLinux()) { //Linux icons
-            SMALL_ICON_HEIGHT = 128;
-            SMALL_ICON_WIDTH = 128;
-        }
-
-        if (icons == null || icons.size() < 1) { //no icons passed in
-            platformWindow.setIcon(null);
-            return;
-        }
-
-        int width = platformWindow.getWidth();
-        int height = platformWindow.getHeight();
-
+    static Image findBestImage(java.util.List icons, int width, int height) {
         Image image = null;
         double bestSimilarity = 3; //Impossibly high value
-        for (int i = 0; i < icons.size(); i++) {
+        for (Object icon : icons) {
             //Iterate imageList looking for best matching image.
             //'Similarity' measure is defined as good scale factor and small insets.
             //best possible similarity is 0 (no scale, no insets).
             //It's found by experimentation that good-looking results are achieved
             //with scale factors x1, x3/4, x2/3, xN, x1/N.
             //Check to make sure the image/image format is correct.
-            Image im = (Image)icons.get(i);
+            Image im = (Image)icon;
             if (im == null || !(im.getPixelFormat() == PixelFormat.BYTE_RGB ||
                 im.getPixelFormat() == PixelFormat.BYTE_BGRA_PRE ||
                 im.getPixelFormat() == PixelFormat.BYTE_GRAY))
@@ -340,8 +319,8 @@ class WindowStage extends GlassStage {
 
             if (iw > 0 && ih > 0) {
                 //Calc scale factor
-                double scaleFactor = Math.min((double)SMALL_ICON_WIDTH / (double)iw,
-                                              (double)SMALL_ICON_HEIGHT / (double)ih);
+                double scaleFactor = Math.min((double)width / (double)iw,
+                                              (double)height / (double)ih);
                 //Calculate scaled image dimensions
                 //adjusting scale factor to nearest "good" value
                 int adjw;
@@ -386,12 +365,36 @@ class WindowStage extends GlassStage {
                     ((double)height - (double)adjh) / (double)height + //Large padding is bad
                     scaleMeasure; //Large rescale is bad
                 if (similarity < bestSimilarity) {
+                    bestSimilarity = similarity;
                     image = im;
                 }
                 if (similarity == 0) break;
             }
         }
+        return image;
+    }
 
+    @Override public void setIcons(java.util.List icons) {
+
+        int SMALL_ICON_HEIGHT = 32;
+        int SMALL_ICON_WIDTH = 32;
+        if (PlatformUtil.isMac()) { //Mac Sized Icons
+            SMALL_ICON_HEIGHT = 128;
+            SMALL_ICON_WIDTH = 128;
+        } else if (PlatformUtil.isWindows()) { //Windows Sized Icons
+            SMALL_ICON_HEIGHT = 32;
+            SMALL_ICON_WIDTH = 32;
+        } else if (PlatformUtil.isLinux()) { //Linux icons
+            SMALL_ICON_HEIGHT = 128;
+            SMALL_ICON_WIDTH = 128;
+        }
+
+        if (icons == null || icons.size() < 1) { //no icons passed in
+            platformWindow.setIcon(null);
+            return;
+        }
+
+        Image image = findBestImage(icons, SMALL_ICON_WIDTH, SMALL_ICON_HEIGHT);
         if (image == null) {
             //No images were found, possibly all are broken
             return;
@@ -447,17 +450,15 @@ class WindowStage extends GlassStage {
                 }
             }
         }
-        try {
-            ViewPainter.renderLock.lock();
+        QuantumToolkit.runWithRenderLock(() -> {
             // platformWindow can be null here, if this window is owned,
             // and its owner is being closed.
             if (platformWindow != null) {
                 platformWindow.setVisible(visible);
             }
             super.setVisible(visible);
-        } finally {
-            ViewPainter.renderLock.unlock();
-        }
+            return null;
+        });
         // After setting visible to true on the native window, we block
         // other windows.
         if (visible) {
@@ -710,8 +711,7 @@ class WindowStage extends GlassStage {
     
     @Override public void close() {
         super.close();
-        ViewPainter.renderLock.lock();
-        try {
+        QuantumToolkit.runWithRenderLock(() -> {
             // prevents closing a closed platform window
             if (platformWindow != null) {
                 platformWindows.remove(platformWindow);
@@ -722,9 +722,8 @@ class WindowStage extends GlassStage {
             if (oldScene != null) {
                 oldScene.updateSceneState();
             }
-        } finally {
-            ViewPainter.renderLock.unlock();
-        }
+            return null;
+        });
     }
 
     // setPlatformWindowClosed is only set upon receiving platform window has

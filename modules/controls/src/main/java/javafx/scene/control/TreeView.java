@@ -26,6 +26,7 @@
 package javafx.scene.control;
 
 import com.sun.javafx.css.converters.SizeConverter;
+import com.sun.javafx.scene.control.behavior.TreeCellBehavior;
 import com.sun.javafx.scene.control.skin.TreeViewSkin;
 
 import javafx.application.Platform;
@@ -52,9 +53,8 @@ import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.event.WeakEventHandler;
-//import javafx.scene.accessibility.Action;
-//import javafx.scene.accessibility.Attribute;
-//import javafx.scene.accessibility.Role;
+import javafx.scene.AccessibleAttribute;
+import javafx.scene.AccessibleRole;
 import javafx.scene.control.TreeItem.TreeModificationEvent;
 import javafx.scene.layout.Region;
 import javafx.util.Callback;
@@ -321,6 +321,7 @@ public class TreeView<T> extends Control {
      */
     public TreeView(TreeItem<T> root) {
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
+        setAccessibleRole(AccessibleRole.TREE_VIEW);
 
         setRoot(root);
         updateExpandedItemCount(root);
@@ -330,8 +331,6 @@ public class TreeView<T> extends Control {
         MultipleSelectionModel<TreeItem<T>> sm = new TreeViewBitSetSelectionModel<T>(this);
         setSelectionModel(sm);
         setFocusModel(new TreeViewFocusModel<T>(this));
-
-        focusedProperty().addListener(focusedListener);
     }
     
     
@@ -382,19 +381,7 @@ public class TreeView<T> extends Control {
     
     private WeakEventHandler<TreeModificationEvent<T>> weakRootEventListener;
 
-    private InvalidationListener focusedListener = observable -> {
-        // RT-25679 - we select the first item in the control if there is no
-        // current selection or focus on any other cell
-        MultipleSelectionModel<TreeItem<T>> sm = getSelectionModel();
-        FocusModel<TreeItem<T>> fm = getFocusModel();
 
-        if (getExpandedItemCount() > 0 &&
-                sm != null && sm.isEmpty() &&
-                fm != null && fm.getFocusedIndex() == -1) {
-            sm.select(0);
-        }
-    };
-    
     
     /***************************************************************************
      *                                                                         *
@@ -459,8 +446,11 @@ public class TreeView<T> extends Control {
             if (root != null) {
                 weakRootEventListener = new WeakEventHandler<>(rootEvent);
                 getRoot().addEventHandler(TreeItem.<T>treeNotificationEvent(), weakRootEventListener);
-                weakOldItem = new WeakReference<TreeItem<T>>(root);
+                weakOldItem = new WeakReference<>(root);
             }
+
+            // Fix for RT-37853
+            edit(null);
 
             expandedItemCountDirty = true;
             updateRootExpanded();
@@ -962,6 +952,8 @@ public class TreeView<T> extends Control {
      * @return The TreeItem in the given index, or null if it is out of bounds.
      */
     public TreeItem<T> getTreeItem(int row) {
+        if (row < 0) return null;
+
         // normalize the requested row based on whether showRoot is set
         final int _row = isShowRoot() ? row : (row + 1);
 
@@ -1110,34 +1102,17 @@ public class TreeView<T> extends Control {
      *                                                                         *
      **************************************************************************/
 
-//    /** @treatAsPrivate */
-//    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//        switch (attribute) {
-//            case ROLE: return Role.TREE_VIEW;
-//            case MULTIPLE_SELECTION: {
-//                MultipleSelectionModel<TreeItem<T>> sm = getSelectionModel();
-//                return sm != null && sm.getSelectionMode() == SelectionMode.MULTIPLE;
-//            }
-//            case ROW_COUNT: return getExpandedItemCount();
-//            case ROW_AT_INDEX: //Skin
-//            case SELECTED_ROWS: //Skin
-//            case VERTICAL_SCROLLBAR: //Skin
-//            case HORIZONTAL_SCROLLBAR: // Skin
-//            default: return super.accGetAttribute(attribute, parameters);
-//        }
-//    }
-//
-//    /** @treatAsPrivate */
-//    @Override public void accExecuteAction(Action action, Object... parameters) {
-//        switch (action) {
-//            case SCROLL_TO_INDEX: {
-//                int index = (int) parameters[0];
-//                scrollTo(index);
-//                break;
-//            }
-//            default: super.accExecuteAction(action, parameters);
-//        }
-//    }
+    @Override
+    public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
+        switch (attribute) {
+            case MULTIPLE_SELECTION: {
+                MultipleSelectionModel<TreeItem<T>> sm = getSelectionModel();
+                return sm != null && sm.getSelectionMode() == SelectionMode.MULTIPLE;
+            }
+            case ROW_COUNT: return getExpandedItemCount();
+            default: return super.queryAccessibleAttribute(attribute, parameters);
+        }
+    }
 
 
 
@@ -1234,6 +1209,16 @@ public class TreeView<T> extends Control {
 
         /***********************************************************************
          *                                                                     *
+         * Internal fields                                                     *
+         *                                                                     *
+         **********************************************************************/
+
+        private TreeView<T> treeView = null;
+
+
+
+        /***********************************************************************
+         *                                                                     *
          * Constructors                                                        *
          *                                                                     *
          **********************************************************************/
@@ -1247,6 +1232,8 @@ public class TreeView<T> extends Control {
             this.treeView.rootProperty().addListener(weakRootPropertyListener);
                     
             updateTreeEventListener(null, treeView.getRoot());
+
+            updateDefaultSelection();
         }
         
         private void updateTreeEventListener(TreeItem<T> oldRoot, TreeItem<T> newRoot) {
@@ -1261,109 +1248,108 @@ public class TreeView<T> extends Control {
         }
         
         private ChangeListener<TreeItem<T>> rootPropertyListener = (observable, oldValue, newValue) -> {
-            clearSelection();
+            updateDefaultSelection();
             updateTreeEventListener(oldValue, newValue);
         };
-        
-        private EventHandler<TreeModificationEvent<T>> treeItemListener = new EventHandler<TreeModificationEvent<T>>() {
-            @Override public void handle(TreeModificationEvent<T> e) {
-                
-                if (getSelectedIndex() == -1 && getSelectedItem() == null) return;
-                
-                final TreeItem<T> treeItem = e.getTreeItem();
-                if (treeItem == null) return;
 
-                treeView.expandedItemCountDirty = true;
-                
-                // we only shift selection from this row - everything before it
-                // is safe. We might change this below based on certain criteria
-                int startRow = treeView.getRow(treeItem);
-                
-                int shift = 0;
-                if (e.wasExpanded()) {
-                    // need to shuffle selection by the number of visible children
-                    shift = treeItem.getExpandedDescendentCount(false) - 1;
-                    startRow++;
-                } else if (e.wasCollapsed()) {
-                    // remove selection from any child treeItem, and also determine
-                    // if any child item was selected (in which case the parent
-                    // takes the selection on collapse)
-                    treeItem.getExpandedDescendentCount(false);
-                    final int count = treeItem.previousExpandedDescendentCount;
+        private EventHandler<TreeModificationEvent<T>> treeItemListener = e -> {
+            if (getSelectedIndex() == -1 && getSelectedItem() == null) return;
 
-                    final int selectedIndex = getSelectedIndex();
-                    final boolean wasPrimarySelectionInChild =
-                            selectedIndex >= (startRow + 1) &&
-                            selectedIndex < (startRow + count);
+            final TreeItem<T> treeItem = e.getTreeItem();
+            if (treeItem == null) return;
 
-                    boolean wasAnyChildSelected = false;
-                    for (int i = startRow + 1; i < startRow + count; i++) {
-                        if (isSelected(i)) {
-                            wasAnyChildSelected = true;
-                            clearSelection(i);
-                        }
+            treeView.expandedItemCountDirty = true;
+
+            // we only shift selection from this row - everything before it
+            // is safe. We might change this below based on certain criteria
+            int startRow = treeView.getRow(treeItem);
+
+            int shift = 0;
+            if (e.wasExpanded()) {
+                // need to shuffle selection by the number of visible children
+                shift = treeItem.getExpandedDescendentCount(false) - 1;
+                startRow++;
+            } else if (e.wasCollapsed()) {
+                // remove selection from any child treeItem, and also determine
+                // if any child item was selected (in which case the parent
+                // takes the selection on collapse)
+                treeItem.getExpandedDescendentCount(false);
+                final int count = treeItem.previousExpandedDescendentCount;
+
+                final int selectedIndex = getSelectedIndex();
+                final boolean wasPrimarySelectionInChild =
+                        selectedIndex >= (startRow + 1) &&
+                        selectedIndex < (startRow + count);
+
+                boolean wasAnyChildSelected = false;
+                for (int i = startRow + 1; i < startRow + count; i++) {
+                    if (isSelected(i)) {
+                        wasAnyChildSelected = true;
+                        clearSelection(i);
                     }
+                }
 
-                    // put selection onto the newly-collapsed tree item
-                    if (wasPrimarySelectionInChild && wasAnyChildSelected) {
-                        select(startRow);
-                    }
+                // put selection onto the newly-collapsed tree item
+                if (wasPrimarySelectionInChild && wasAnyChildSelected) {
+                    select(startRow);
+                }
 
-                    shift = - count + 1;
-                    startRow++;
-                } else if (e.wasPermutated()) {
-                    // no-op
-                } else if (e.wasAdded()) {
-                    // shuffle selection by the number of added items
-                    shift = treeItem.isExpanded() ? e.getAddedSize() : 0;
+                shift = - count + 1;
+                startRow++;
+            } else if (e.wasPermutated()) {
+                // no-op
+            } else if (e.wasAdded()) {
+                // shuffle selection by the number of added items
+                shift = treeItem.isExpanded() ? e.getAddedSize() : 0;
 
-                    // RT-32963: We were taking the startRow from the TreeItem
-                    // in which the children were added, rather than from the
-                    // actual position of the new child. This led to selection
-                    // being moved off the parent TreeItem by mistake.
-                    // The 'if (e.getAddedSize() == 1)' condition here was
-                    // subsequently commented out due to RT-33894.
-                    startRow = treeView.getRow(e.getAddedChildren().get(0));
-                } else if (e.wasRemoved()) {
-                    // shuffle selection by the number of removed items
-                    shift = treeItem.isExpanded() ? -e.getRemovedSize() : 0;
-                    
-                    // whilst we are here, we should check if the removed items
-                    // are part of the selectedItems list - and remove them
-                    // from selection if they are (as per RT-15446)
-                    final List<Integer> selectedIndices = getSelectedIndices();
-                    final int selectedIndex = getSelectedIndex();
-                    final List<TreeItem<T>> selectedItems = getSelectedItems();
-                    final TreeItem<T> selectedItem = getSelectedItem();
-                    final List<? extends TreeItem<T>> removedChildren = e.getRemovedChildren();
-                    
-                    for (int i = 0; i < selectedIndices.size() && ! selectedItems.isEmpty(); i++) {
-                        int index = selectedIndices.get(i);
-                        if (index > selectedItems.size()) break;
+                // RT-32963: We were taking the startRow from the TreeItem
+                // in which the children were added, rather than from the
+                // actual position of the new child. This led to selection
+                // being moved off the parent TreeItem by mistake.
+                // The 'if (e.getAddedSize() == 1)' condition here was
+                // subsequently commented out due to RT-33894.
+                startRow = treeView.getRow(e.getAddedChildren().get(0));
+            } else if (e.wasRemoved()) {
+                // shuffle selection by the number of removed items
+                shift = treeItem.isExpanded() ? -e.getRemovedSize() : 0;
 
-                        // Removed as part of RT-30356 consistency effort
-//                        TreeItem<T> item = selectedItems.get(index);
-//                        if (item == null || removedChildren.contains(item)) {
-//                            clearSelection(index);
-//                        } else
-                        if (removedChildren.size() == 1 &&
-                                selectedItems.size() == 1 && 
-                                selectedItem != null && 
-                                selectedItem.equals(removedChildren.get(0))) {
-                            // Bug fix for RT-28637
-                            if (selectedIndex < getItemCount()) {
-                                final int previousRow = selectedIndex == 0 ? 0 : selectedIndex - 1;
-                                TreeItem<T> newSelectedItem = getModelItem(previousRow);
-                                if (! selectedItem.equals(newSelectedItem)) {
-                                    setSelectedItem(newSelectedItem);
-                                }
+                // the start row is incorrect - it is _not_ the index of the
+                // TreeItem in which the children were removed from (which is
+                // what it currently represents). We need to take the 'from'
+                // value out of the event and make use of that to understand
+                // what actually changed inside the children list.
+                startRow += e.getFrom() + 1;
+
+                // whilst we are here, we should check if the removed items
+                // are part of the selectedItems list - and remove them
+                // from selection if they are (as per RT-15446)
+                final List<Integer> selectedIndices1 = getSelectedIndices();
+                final int selectedIndex = getSelectedIndex();
+                final List<TreeItem<T>> selectedItems = getSelectedItems();
+                final TreeItem<T> selectedItem = getSelectedItem();
+                final List<? extends TreeItem<T>> removedChildren = e.getRemovedChildren();
+
+                for (int i = 0; i < selectedIndices1.size() && ! selectedItems.isEmpty(); i++) {
+                    int index = selectedIndices1.get(i);
+                    if (index > selectedItems.size()) break;
+
+                    if (removedChildren.size() == 1 &&
+                            selectedItems.size() == 1 &&
+                            selectedItem != null &&
+                            selectedItem.equals(removedChildren.get(0))) {
+                        // Bug fix for RT-28637
+                        if (selectedIndex < getItemCount()) {
+                            final int previousRow = selectedIndex == 0 ? 0 : selectedIndex - 1;
+                            TreeItem<T> newSelectedItem = getModelItem(previousRow);
+                            if (! selectedItem.equals(newSelectedItem)) {
+                                select(newSelectedItem);
                             }
                         }
                     }
                 }
-                
-                shiftSelection(startRow, shift, null);
             }
+
+            shiftSelection(startRow, shift, null);
         };
         
         private WeakChangeListener<TreeItem<T>> weakRootPropertyListener =
@@ -1372,16 +1358,7 @@ public class TreeView<T> extends Control {
         private WeakEventHandler<TreeModificationEvent<T>> weakTreeItemListener;
 
 
-        /***********************************************************************
-         *                                                                     *
-         * Internal properties                                                 *
-         *                                                                     *
-         **********************************************************************/
 
-        private final TreeView<T> treeView;
-
-
-        
         /***********************************************************************
          *                                                                     *
          * Public selection API                                                *
@@ -1424,12 +1401,18 @@ public class TreeView<T> extends Control {
                 // We expect that in concrete subclasses of this class we observe the
                 // data model such that we check to see if the given item exists in it,
                 // whilst SelectedIndex == -1 && SelectedItem != null.
+                setSelectedIndex(-1);
                 setSelectedItem(obj);
             } else {
                 select(row);
             }
         }
 
+        /** {@inheritDoc} */
+        @Override public void clearAndSelect(int row) {
+            TreeCellBehavior.setAnchor(treeView, row, false);
+            super.clearAndSelect(row);
+        }
 
 
         /***********************************************************************
@@ -1445,7 +1428,7 @@ public class TreeView<T> extends Control {
             }
 
             // FIXME this is not the correct location for fire selection events (and does not take into account multiple selection)
-//            treeView.accSendNotification(Attribute.SELECTED_ROWS);
+            treeView.notifyAccessibleAttributeChanged(AccessibleAttribute.FOCUS_ITEM);
         }
 
         /** {@inheritDoc} */
@@ -1467,6 +1450,22 @@ public class TreeView<T> extends Control {
 
             return treeView.getTreeItem(index);
         }
+
+
+
+        /***********************************************************************
+         *                                                                     *
+         * Private implementation                                              *
+         *                                                                     *
+         **********************************************************************/
+
+        private void updateDefaultSelection() {
+            clearSelection();
+
+            // we put focus onto the first item, if there is at least
+            // one item in the list
+            focus(getItemCount() > 0 ? 0 : -1);
+        }
     }
     
     
@@ -1483,6 +1482,10 @@ public class TreeView<T> extends Control {
             this.treeView = treeView;
             this.treeView.rootProperty().addListener(weakRootPropertyListener);
             updateTreeEventListener(null, treeView.getRoot());
+
+            if (treeView.getExpandedItemCount() > 0) {
+                focus(0);
+            }
         }
         
         private final ChangeListener<TreeItem<T>> rootPropertyListener = (observable, oldValue, newValue) -> {

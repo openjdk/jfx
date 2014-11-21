@@ -25,10 +25,15 @@
 
 package com.oracle.tools.packager;
 
+import com.oracle.tools.packager.linux.LinuxAppBundler;
 import com.sun.javafx.tools.packager.PackagerException;
 import org.junit.*;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.PrintStream;
+import java.util.ResourceBundle;
 
 public class CLITest {
 
@@ -40,6 +45,7 @@ public class CLITest {
     @BeforeClass
     public static void prepareApp() {
         Log.setLogger(new Log.Logger(true));
+        Log.setDebug(true);
 
         String tmpBasePath = System.getProperty("tmpBase");
         if (tmpBasePath != null) {
@@ -64,25 +70,47 @@ public class CLITest {
                 "-srcfiles", fakeMainJar.getCanonicalPath(),
                 "-outdir", workDir.getCanonicalPath(),
                 "-outfile", "SimpleTest",
-                "-appclass", "hello.TestPackager",
+                "-appclass", "hello.HelloRectangle",
                 "-native",
                 "-name", "SimpleTest");
     }
 
     @Test
     public void smokeParams() throws Exception {
-        com.sun.javafx.tools.packager.Main.main("-deploy",
-                "-verbose", // verbose is required or test will call System.exit() on failures and break the build
-                "-srcfiles", fakeMainJar.getCanonicalPath(),
-                "-outdir", workDir.getCanonicalPath(),
-                "-outfile", "SimpleTest",
-                "-appclass", "hello.TestPackager",
-                "-native", "image",
-                "-name", "SimpleTest",
-                "-BOptionThatWillNeverExist=true",
-                "-BdesktopHint=false",
-                "-BshortcutHint=true",
-                "-Bruntime=" + System.getProperty("java.home"));
+
+        String packagerJdkRoot = System.getenv("PACKAGER_JDK_ROOT");
+        String runtime = packagerJdkRoot == null
+                ? System.getProperty("java.home")
+                : packagerJdkRoot;
+
+        
+        File f = File.createTempFile("fx-param-test", ".properties");
+        try (FileOutputStream fos = new FileOutputStream(f);
+            PrintStream ps = new PrintStream(fos)) 
+        {
+            ps.println("param1=foo");
+            ps.println("param2=bar");
+            
+            com.sun.javafx.tools.packager.Main.main("-deploy",
+                    "-verbose", // verbose is required or test will call System.exit() on failures and break the build
+                    "-srcfiles", fakeMainJar.getCanonicalPath(),
+                    "-outdir", workDir.getCanonicalPath(),
+                    "-outfile", "SmokeParams",
+                    "-appclass", "hello.HelloRectangle",
+                    "-nosign",
+                    "-preloader", "hello.HelloPreloader",
+                    "-argument", "argument1",
+                    "-argument", "argument2",
+                    "-paramFile", f.getPath(),
+                    "-native", "image",
+                    "-name", "SmokeParams",
+                    "-BOptionThatWillNeverExist=true",
+                    "-BuserJvmOptions=-Xmx=1g",
+                    "-BuserJvmOptions=-Xms=512m",
+                    "-BdesktopHint=false",
+                    "-BshortcutHint=true",
+                    "-Bruntime=" + runtime);
+        }
     }
 
     @Test
@@ -91,10 +119,10 @@ public class CLITest {
                 "-verbose", // verbose is required or test will call System.exit() on failures and break the build
                 "-srcfiles", fakeMainJar.getCanonicalPath(),
                 "-outdir", workDir.getCanonicalPath(),
-                "-outfile", "SimpleTest",
-                "-appclass", "hello.TestPackager",
+                "-outfile", "PropsViaBundlerArgs",
+                "-appclass", "hello.HelloRectangle",
                 "-native", "image",
-                "-name", "SimpleTest",
+                "-name", "PropsViaBundlerArgs",
                 "-BjvmOptions=-Dsqe.foo.bar=baz -Dsqe.qux.corge=grault",
                 "-BuserJvmOptions=-Xmx=1g\n-Xms=512m",
                 "-BjvmProperties=sqe.aba.caba=dabacaba"
@@ -107,10 +135,10 @@ public class CLITest {
                 "-verbose", // verbose is required or test will call System.exit() on failures and break the build
                 "-srcfiles", fakeMainJar.getCanonicalPath(),
                 "-outdir", workDir.getCanonicalPath(),
-                "-outfile", "SimpleTest",
-                "-appclass", "hello.TestPackager",
+                "-outfile", "DuplicateNameClash",
+                "-appclass", "hello.HelloRectangle",
                 "-native", "image",
-                "-name", "SimpleTest",
+                "-name", "DuplicateNameClash",
                 "-Bname=DuplicateTest");
     }
 
@@ -120,11 +148,51 @@ public class CLITest {
                 "-verbose", // verbose is required or test will call System.exit() on failures and break the build
                 "-srcfiles", fakeMainJar.getCanonicalPath(),
                 "-outdir", workDir.getCanonicalPath(),
-                "-outfile", "SimpleTest",
-                "-appclass", "hello.TestPackager",
+                "-outfile", "DuplicateNameMatch",
+                "-appclass", "hello.HelloRectangle",
                 "-native", "image",
-                "-name", "SimpleTest",
-                "-Bname=SimpleTest");
+                "-name", "DuplicateNameMatch",
+                "-Bname=DuplicateNameMatch");
     }
 
+    @Test(expected = PackagerException.class)
+    public void invalidSrcDir() throws Exception {
+        com.sun.javafx.tools.packager.Main.main("-deploy",
+                "-verbose", // verbose is required or test will call System.exit() on failures and break the build
+                "-srcdir", fakeMainJar.getCanonicalPath(), // should be a directory, not a jar
+                "-outdir", workDir.getCanonicalPath(),
+                "-outfile", "InvalidSrcDir",
+                "-appclass", "hello.HelloRectangle",
+                "-native", "image",
+                "-name", "InvalidSrcDir");
+    }
+
+    @Test
+    public void userJvmArgNoValue() throws Exception {
+        PrintStream oldOut = System.out;
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
+             PrintStream outStr = new PrintStream(baos)) 
+        {
+            System.setOut(outStr);
+            com.sun.javafx.tools.packager.Main.main("-deploy",
+                    "-verbose", // verbose is required or test will call System.exit() on failures and break the build
+                    "-srcfiles", fakeMainJar.getCanonicalPath(),
+                    "-outdir", workDir.getCanonicalPath(),
+                    "-outfile", "DuplicateNameMatch",
+                    "-appclass", "hello.HelloRectangle",
+                    "-native", "image",
+                    "-nosign",
+                    "-name", "UserJvmArgNoValue",
+                    "-BuserJvmOptions=-Xmx1g",
+                    "-BuserJvmOptions=-Xms512m");
+            ResourceBundle I18N = ResourceBundle.getBundle(LinuxAppBundler.class.getName());
+            
+            outStr.flush();
+            oldOut.println(baos);
+            Assert.assertTrue("Look for expected failure message", 
+                    baos.toString().contains(I18N.getString("error.empty-user-jvm-option-value.advice")));
+        } finally {
+            System.setOut(oldOut);
+        }
+    }
 }

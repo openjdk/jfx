@@ -42,15 +42,13 @@ class J2DTexturePool extends BaseResourcePool<BufferedImage>
         return Math.min(heapmax / 4, setmax);
     }
 
-    final long targetVram;
-
-    private J2DTexturePool() {
-        super(null, maxVram());
-        targetVram = Math.min(max() / 2, PrismSettings.targetVram);
+    private static long targetVram() {
+        long max = maxVram();
+        return Math.min(max / 2, PrismSettings.targetVram);
     }
 
-    public long target() {
-        return targetVram;
+    private J2DTexturePool() {
+        super(null, targetVram(), maxVram());
     }
 
     @Override
@@ -77,11 +75,13 @@ class J2DTexturePool extends BaseResourcePool<BufferedImage>
         }
     }
 
+    @Override
     public long size(BufferedImage resource) {
         return size(resource.getWidth(), resource.getHeight(),
                     resource.getType());
     }
 
+    @Override
     public long estimateTextureSize(int width, int height,
                                     PixelFormat format)
     {
@@ -103,6 +103,7 @@ class J2DTexturePool extends BaseResourcePool<BufferedImage>
         return size(width, height, type);
     }
 
+    @Override
     public long estimateRTTextureSize(int width, int height,
                                       boolean hasDepth)
     {

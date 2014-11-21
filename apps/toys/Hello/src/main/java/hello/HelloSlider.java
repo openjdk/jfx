@@ -26,10 +26,12 @@
 package hello;
 
 import javafx.application.Application;
+import javafx.geometry.Orientation;
 import javafx.scene.Scene;
 import javafx.scene.control.Slider;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
@@ -61,8 +63,6 @@ public class HelloSlider extends Application {
         slider.setShowTickMarks(true);
         vbox.getChildren().add(slider);
 
-         stage.setTitle("Hello Slider");
-
         slider = new Slider(0, 1.0, 1.0);
         slider.setBlockIncrement(0.2d);
         slider.setMajorTickUnit(0.2d);
@@ -84,8 +84,32 @@ public class HelloSlider extends Application {
         slider.setShowTickLabels(true);
         view.rotateProperty().bind(slider.valueProperty());
         vbox.getChildren().add(slider);
+        
+        HBox hbox = new HBox(5);
+        hbox.getChildren().add(vbox);
+        
+        slider = new Slider(0, 300, 0.0);
+        slider.setOrientation(Orientation.VERTICAL);
+        slider.setBlockIncrement(10d);
+        slider.setMajorTickUnit(30d);
+        slider.setMinorTickCount(10);
+        slider.setShowTickMarks(true);
+        slider.setShowTickLabels(true);
+        view.fitWidthProperty().bind(slider.valueProperty());
+        hbox.getChildren().add(slider);
+        
+        slider = new Slider(0, 256, 0.0);
+        slider.setOrientation(Orientation.VERTICAL);
+        slider.setBlockIncrement(10d);
+        slider.setMajorTickUnit(30d);
+        slider.setMinorTickCount(10);
+        slider.setShowTickMarks(true);
+        slider.setShowTickLabels(true);
+        view.fitHeightProperty().bind(slider.valueProperty());
+        hbox.getChildren().add(slider);
+        
 
-        Scene scene = new Scene(vbox);
+        Scene scene = new Scene(hbox);
         stage.setScene(scene);
         stage.show();
     }

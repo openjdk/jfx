@@ -81,6 +81,14 @@ public final class PlatformManager {
 
         Platform platty;
 
+        /*
+         * We don't want to fully initialize the platforms here for performance
+         * reasons but some platforms may be dependent on native resources that
+         * need to be loaded, those platforms need to be given a chance to load
+         * those resources (without initializing) and determine if the natives
+         * are available.
+         */
+
         // Now "universal" platform(s)
         if (isPlatformEnabled("JavaPlatform")) {
             platty = JavaPlatform.getPlatformInstance();
@@ -121,12 +129,6 @@ public final class PlatformManager {
         }
     }
 
-    public synchronized void preloadPlatforms() {
-        for (Platform platty : platforms) {
-            platty.preloadPlatform();
-        }
-    }
-
     public synchronized void loadPlatforms() {
         // Use an iterator so we can remove on failure
         Iterator<Platform> iter = platforms.iterator();
@@ -147,6 +149,9 @@ public final class PlatformManager {
 
         if (!platforms.isEmpty()) {
             for (Platform platty : platforms) {
+                if (Logger.canLog(Logger.DEBUG)) {
+                    Logger.logMsg(Logger.DEBUG, "Getting content types from platform: "+platty);
+                }
                 String[] npt = platty.getSupportedContentTypes();
                 if (npt != null) {
                     for (String type : npt) {
@@ -193,14 +198,9 @@ public final class PlatformManager {
         // go down the list until we get one that can be created
         for (Platform platty : platforms) {
             if (platty.canPlayContentType(mimeType)) {
-                // attempt to preroll the player
-                Object cookie = platty.prerollMediaPlayer(source);
-                if (null != cookie) {
-                    // OK to play, go ahead with player creation
-                    MediaPlayer outPlayer = platty.createMediaPlayer(source, cookie);
-                    if (null != outPlayer) {
-                        return outPlayer;
-                    }
+                MediaPlayer outPlayer = platty.createMediaPlayer(source);
+                if (null != outPlayer) {
+                    return outPlayer;
                 }
             }
         }

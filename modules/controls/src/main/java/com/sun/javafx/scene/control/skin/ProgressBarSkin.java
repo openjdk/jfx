@@ -196,6 +196,10 @@ public class ProgressBarSkin extends ProgressIndicatorSkin {
         return indeterminateBarAnimationTime;
     }
 
+    private double getIndeterminateBarAnimationTime() {
+        return indeterminateBarAnimationTime == null ? 2.0 : indeterminateBarAnimationTime.get();
+    }
+
 
 
     /***************************************************************************
@@ -243,11 +247,7 @@ public class ProgressBarSkin extends ProgressIndicatorSkin {
         track = new StackPane();
         track.getStyleClass().setAll("track");
 
-        bar = new StackPane() {
-            {
-                impl_treeVisibleProperty().addListener(treeVisibleListener);
-            }
-        };
+        bar = new StackPane();
         bar.getStyleClass().setAll("bar");
 
         getChildren().setAll(track, bar);
@@ -279,14 +279,12 @@ public class ProgressBarSkin extends ProgressIndicatorSkin {
         final double endX = getIndeterminateBarEscape() ? w : w - getIndeterminateBarLength();
 
         // Set up the timeline.  We do not want to reverse if we are not flipping.
-        indeterminateTransition = new IndeterminateTransition(startX, endX, getIndeterminateBarFlip(), this);
+        indeterminateTransition = new IndeterminateTransition(startX, endX, this);
         indeterminateTransition.setCycleCount(Timeline.INDEFINITE);
 
-        if (!clipRegion.translateXProperty().isBound()) {
-            clipRegion.translateXProperty().bind(new When(bar.scaleXProperty().isEqualTo(-1.0, 1e-100)).
-                    then(bar.translateXProperty().subtract(w).add(indeterminateBarLengthProperty())).
-                    otherwise(bar.translateXProperty().negate()));
-        }
+        clipRegion.translateXProperty().bind(new When(bar.scaleXProperty().isEqualTo(-1.0, 1e-100)).
+                then(bar.translateXProperty().subtract(w).add(indeterminateBarLengthProperty())).
+                otherwise(bar.translateXProperty().negate()));
     }
 
     boolean wasIndeterminate = false;
@@ -493,12 +491,13 @@ public class ProgressBarSkin extends ProgressIndicatorSkin {
         private final double endX;
         private final boolean flip;
 
-        public IndeterminateTransition(double startX, double endX, boolean flip, ProgressBarSkin progressBarSkin) {
+        public IndeterminateTransition(double startX, double endX, ProgressBarSkin progressBarSkin) {
             this.startX = startX;
             this.endX = endX;
-            this.flip = flip;
             this.skin = new WeakReference<>(progressBarSkin);
-            setCycleDuration(Duration.seconds(3));
+            this.flip = progressBarSkin.getIndeterminateBarFlip();
+            progressBarSkin.getIndeterminateBarEscape();
+            setCycleDuration(Duration.seconds(progressBarSkin.getIndeterminateBarAnimationTime() * (flip ? 2 : 1)));
         }
 
         @Override

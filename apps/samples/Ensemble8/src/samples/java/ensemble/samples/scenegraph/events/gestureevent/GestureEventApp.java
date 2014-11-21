@@ -194,6 +194,7 @@ public class GestureEventApp extends Application {
         });
 
         listeningNode.setOnScroll((ScrollEvent event) -> {
+            // scroll amount
             double translateX = event.getDeltaX();
             double translateY = event.getDeltaY();
             

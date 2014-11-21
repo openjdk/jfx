@@ -53,6 +53,7 @@ import java.util.HashMap;
 public class ES2ResourceFactory extends BaseShaderFactory {
 
     private ES2Context context;
+    // Maximum size of the texture
     private final int maxTextureSize;
 
     ES2ResourceFactory(Screen screen) {
@@ -60,8 +61,30 @@ public class ES2ResourceFactory extends BaseShaderFactory {
         maxTextureSize = computeMaxTextureSize();
 
         if (PrismSettings.verbose) {
-            System.out.println("Non power of two texture support = " + 
-                    context.getGLContext().canCreateNonPowTwoTextures());
+            System.out.println("Non power of two texture support = "
+                    + context.getGLContext().canCreateNonPowTwoTextures());
+            System.out.println("Maximum number of vertex attributes = "
+                    + context.getGLContext().getIntParam(GLContext.GL_MAX_VERTEX_ATTRIBS));
+            int maxVUC, maxFUC, maxVC;
+            // We need this if-else block is because iMX6 doesn't support component queries 
+            // and Mac  doesn't support vectors queries.
+            if (PlatformUtil.isEmbedded()) {
+                // Multiply by 4 as it is documented that a vector has 4 components.
+                maxVUC = context.getGLContext().getIntParam(GLContext.GL_MAX_VERTEX_UNIFORM_VECTORS) * 4;
+                maxFUC = context.getGLContext().getIntParam(GLContext.GL_MAX_FRAGMENT_UNIFORM_VECTORS) * 4;
+                maxVC = context.getGLContext().getIntParam(GLContext.GL_MAX_VARYING_VECTORS) * 4;
+            } else {
+                maxVUC = context.getGLContext().getIntParam(GLContext.GL_MAX_VERTEX_UNIFORM_COMPONENTS);
+                maxFUC = context.getGLContext().getIntParam(GLContext.GL_MAX_FRAGMENT_UNIFORM_COMPONENTS);
+                maxVC = context.getGLContext().getIntParam(GLContext.GL_MAX_VARYING_COMPONENTS);
+            }
+            System.out.println("Maximum number of uniform vertex components = " + maxVUC);
+            System.out.println("Maximum number of uniform fragment components = " + maxFUC);
+            System.out.println("Maximum number of varying components = " + maxVC);
+            System.out.println("Maximum number of texture units usable in a vertex shader = "
+                    + context.getGLContext().getIntParam(GLContext.GL_MAX_VERTEX_TEXTURE_IMAGE_UNITS));
+            System.out.println("Maximum number of texture units usable in a fragment shader = "
+                    + context.getGLContext().getIntParam(GLContext.GL_MAX_TEXTURE_IMAGE_UNITS));
         }
     }
 
@@ -78,12 +101,35 @@ public class ES2ResourceFactory extends BaseShaderFactory {
         return tex instanceof ES2Texture;
     }
 
+    @Override
+    protected boolean canClampToZero() {
+        return context.getGLContext().canClampToZero();
+    }
+
+    @Override
+    protected boolean canRepeat() {
+        // Actually, this depends on the size.  It works for pow2 textures...
+        return context.getGLContext().canCreateNonPowTwoTextures();
+    }
+
+    @Override
+    protected boolean canClampToEdge() {
+        // Actually, this depends on the size.  It works for pow2 textures...
+        return context.getGLContext().canCreateNonPowTwoTextures();
+    }
+
     public Texture createTexture(PixelFormat formatHint,
                                  Usage usageHint,
                                  WrapMode wrapMode,
                                  int w, int h)
     {
-        return ES2Texture.create(context, formatHint, wrapMode, w, h);
+        return createTexture(formatHint, usageHint, wrapMode, w, h, false);
+    }
+
+    @Override
+    public Texture createTexture(PixelFormat formatHint, Usage usageHint,
+            WrapMode wrapMode, int w, int h, boolean useMipmap) {
+        return ES2Texture.create(context, formatHint, wrapMode, w, h, useMipmap);
     }
 
     public Texture createTexture(MediaFrame frame) {
@@ -140,12 +186,12 @@ public class ES2ResourceFactory extends BaseShaderFactory {
     private int computeMaxTextureSize() {
         int size = context.getGLContext().getMaxTextureSize();
         if (PrismSettings.verbose) {
-            System.err.println("Maximum supported texture size: " + size);
+            System.out.println("Maximum supported texture size: " + size);
         }
         if (size > PrismSettings.maxTextureSize) {
             size = PrismSettings.maxTextureSize;
             if (PrismSettings.verbose) {
-                System.err.println("Maximum texture size clamped to " + size);
+                System.out.println("Maximum texture size clamped to " + size);
             }
         }
         return size;
@@ -252,6 +298,9 @@ public class ES2ResourceFactory extends BaseShaderFactory {
                     "glsl/" + name + ".frag");
             Class klass =
                     Class.forName("com.sun.prism.shader." + name + "_Loader");
+            if (PrismSettings.verbose) {
+                System.out.println("ES2ResourceFactory: Prism - createStockShader: " + name + ".frag");
+            }
             Method m =
                     klass.getMethod("loadShader", new Class[]{ShaderFactory.class,
                         InputStream.class});

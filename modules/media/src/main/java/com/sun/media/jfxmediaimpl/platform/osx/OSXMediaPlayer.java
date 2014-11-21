@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,27 +28,26 @@ package com.sun.media.jfxmediaimpl.platform.osx;
 import com.sun.media.jfxmedia.MediaException;
 import com.sun.media.jfxmedia.effects.AudioEqualizer;
 import com.sun.media.jfxmedia.effects.AudioSpectrum;
-import com.sun.media.jfxmedia.effects.EqualizerBand;
 import com.sun.media.jfxmedia.locator.Locator;
 import com.sun.media.jfxmediaimpl.NativeMedia;
 import com.sun.media.jfxmediaimpl.NativeMediaPlayer;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * Mac OS X MediaPlayer implementation.
  */
 final class OSXMediaPlayer extends NativeMediaPlayer {
-    private NullAudioEQ audioEq;
-    private NullAudioSpectrum audioSpectrum;
+    private final AudioEqualizer audioEq;
+    private final AudioSpectrum audioSpectrum;
     private final Locator mediaLocator;
 
     OSXMediaPlayer(NativeMedia sourceMedia) {
         super(sourceMedia);
         init();
         mediaLocator = sourceMedia.getLocator();
-        audioEq = new NullAudioEQ();
-        audioSpectrum = new NullAudioSpectrum();
+        // This will throw an exception if we can't create the player
+        osxCreatePlayer(mediaLocator.getStringLocation());
+        audioEq = createNativeAudioEqualizer(osxGetAudioEqualizerRef());
+        audioSpectrum = createNativeAudioSpectrum(osxGetAudioSpectrumRef());
     }
 
     OSXMediaPlayer(Locator source) {
@@ -63,10 +62,6 @@ final class OSXMediaPlayer extends NativeMediaPlayer {
     @Override
     public AudioSpectrum getAudioSpectrum() {
         return audioSpectrum;
-    }
-
-    void initializePlayer() {
-        osxCreatePlayer(mediaLocator.getStringLocation());
     }
 
     @Override
@@ -164,7 +159,14 @@ final class OSXMediaPlayer extends NativeMediaPlayer {
         osxDispose();
     }
 
+    @Override
+    public void playerInit() throws MediaException {
+    }
+
     private native void osxCreatePlayer(String sourceURI) throws MediaException;
+    // Have to use native references for these two things
+    private native long osxGetAudioEqualizerRef();
+    private native long osxGetAudioSpectrumRef();
     private native long osxGetAudioSyncDelay() throws MediaException;
     private native void osxSetAudioSyncDelay(long delay) throws MediaException;
     private native void osxPlay() throws MediaException;
@@ -183,137 +185,4 @@ final class OSXMediaPlayer extends NativeMediaPlayer {
     private native double osxGetDuration() throws MediaException;
     private native void osxSeek(double streamTime) throws MediaException;
     private native void osxDispose();
-
-    @Override
-    public void playerInit() throws MediaException {
-    }
-
-    private static final class NullAudioEQ implements AudioEqualizer {
-        private boolean enabled = false;
-        private Map<Double, EqualizerBand> bands
-                = new HashMap<Double,EqualizerBand>();
-
-        public boolean getEnabled() {
-            return enabled;
-        }
-
-        public void setEnabled(boolean bEnable) {
-            enabled = bEnable;
-        }
-
-        public EqualizerBand addBand(double centerFrequency, double bandwidth, double gain) {
-            Double key = new Double(centerFrequency);
-            if (bands.containsKey(key)) {
-                removeBand(centerFrequency);
-            }
-
-            EqualizerBand newBand = new NullEQBand(centerFrequency, bandwidth, gain);
-            bands.put(key, newBand);
-            return newBand;
-        }
-
-        public boolean removeBand(double centerFrequency) {
-            Double key = new Double(centerFrequency);
-            if (bands.containsKey(key)) {
-                bands.remove(key);
-                return true;
-            }
-            return false;
-        }
-    }
-
-    private static final class NullAudioSpectrum implements AudioSpectrum {
-        private boolean enabled = false;
-        private int bandCount = 128;
-        private double interval = 0.1;
-        private int threshold = 60;
-        private float[] fakeData;
-
-        public boolean getEnabled() {
-            return enabled;
-        }
-
-        public void setEnabled(boolean enabled) {
-            this.enabled = enabled;
-        }
-
-        public int getBandCount() {
-            return bandCount;
-        }
-
-        public void setBandCount(int bands) {
-            bandCount = bands;
-            fakeData = new float[bandCount];
-        }
-
-        public double getInterval() {
-            return interval;
-        }
-
-        public void setInterval(double interval) {
-            this.interval = interval;
-        }
-
-        public int getSensitivityThreshold() {
-            return threshold;
-        }
-
-        public void setSensitivityThreshold(int threshold) {
-            this.threshold = threshold;
-        }
-
-        public float[] getMagnitudes(float[] mag) {
-            int size = fakeData.length;
-            if (mag == null || mag.length < size) {
-                mag = new float[size];
-            }
-            System.arraycopy(fakeData, 0, mag, 0, size);
-            return mag;
-        }
-
-        public float[] getPhases(float[] phs) {
-            int size = fakeData.length;
-            if (phs == null || phs.length < size) {
-                phs = new float[size];
-            }
-            System.arraycopy(fakeData, 0, phs, 0, size);
-            return phs;
-        }
-    }
-
-    private static final class NullEQBand implements EqualizerBand {
-        private double center;
-        private double bandwidth;
-        private double gain;
-
-        NullEQBand(double center, double bandwidth, double gain) {
-            this.center = center;
-            this.bandwidth = bandwidth;
-            this.gain = gain;
-        }
-
-        public double getCenterFrequency() {
-            return center;
-        }
-
-        public void setCenterFrequency(double centerFrequency) {
-            center = centerFrequency;
-        }
-
-        public double getBandwidth() {
-            return bandwidth;
-        }
-
-        public void setBandwidth(double bandwidth) {
-            this.bandwidth = bandwidth;
-        }
-
-        public double getGain() {
-            return gain;
-        }
-
-        public void setGain(double gain) {
-            this.gain = gain;
-        }
-    }
 }

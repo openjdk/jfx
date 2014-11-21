@@ -25,6 +25,8 @@
 
 package javafx.scene;
 
+import com.sun.glass.ui.Application;
+import com.sun.glass.ui.Accessible;
 import com.sun.javafx.Logging;
 import com.sun.javafx.Utils;
 import com.sun.javafx.application.PlatformImpl;
@@ -53,6 +55,7 @@ import com.sun.javafx.sg.prism.NGCamera;
 import com.sun.javafx.sg.prism.NGLightBase;
 import com.sun.javafx.tk.*;
 import com.sun.prism.impl.PrismSettings;
+
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.ConditionalFeature;
@@ -69,9 +72,6 @@ import javafx.css.CssMetaData;
 import javafx.css.StyleableObjectProperty;
 import javafx.event.*;
 import javafx.geometry.*;
-//import javafx.scene.accessibility.Accessible;
-//import javafx.scene.accessibility.Attribute;
-//import javafx.scene.accessibility.Role;
 import javafx.scene.image.WritableImage;
 import javafx.scene.input.*;
 import javafx.scene.paint.Color;
@@ -91,6 +91,7 @@ import java.security.PrivilegedAction;
 import java.util.*;
 
 import com.sun.javafx.logging.PulseLogger;
+
 import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
 
 /**
@@ -151,7 +152,7 @@ public class Scene implements EventTarget {
 
     private int dirtyBits;
 
-    private final AccessControlContext acc = AccessController.getContext();
+    final AccessControlContext acc = AccessController.getContext();
 
     private Camera defaultCamera;
 
@@ -173,8 +174,6 @@ public class Scene implements EventTarget {
      *
      * @param root The root node of the scene graph
      *
-     * @throws IllegalStateException if this constructor is called on a thread
-     * other than the JavaFX Application Thread.
      * @throws NullPointerException if root is null
      */
     public Scene(@NamedArg("root") Parent root) {
@@ -204,8 +203,6 @@ public class Scene implements EventTarget {
      * @param width The width of the scene
      * @param height The height of the scene
      *
-     * @throws IllegalStateException if this constructor is called on a thread
-     * other than the JavaFX Application Thread.
      * @throws NullPointerException if root is null
      */
     public Scene(@NamedArg("root") Parent root, @NamedArg("width") double width, @NamedArg("height") double height) {
@@ -218,8 +215,6 @@ public class Scene implements EventTarget {
      * @param root The parent
      * @param fill The fill
      *
-     * @throws IllegalStateException if this constructor is called on a thread
-     * other than the JavaFX Application Thread.
      * @throws NullPointerException if root is null
      */
     public Scene(@NamedArg("root") Parent root, @NamedArg(value="fill", defaultValue="WHITE") Paint fill) {
@@ -234,8 +229,6 @@ public class Scene implements EventTarget {
      * @param height The height of the scene
      * @param fill The fill
      *
-     * @throws IllegalStateException if this constructor is called on a thread
-     * other than the JavaFX Application Thread.
      * @throws NullPointerException if root is null
      */
     public Scene(@NamedArg("root") Parent root, @NamedArg("width") double width, @NamedArg("height") double height,
@@ -257,8 +250,6 @@ public class Scene implements EventTarget {
      * {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
      * for more information.
      *
-     * @throws IllegalStateException if this constructor is called on a thread
-     * other than the JavaFX Application Thread.
      * @throws NullPointerException if root is null
      *
      * @see javafx.scene.Node#setDepthTest(DepthTest)
@@ -271,6 +262,10 @@ public class Scene implements EventTarget {
      * Constructs a scene consisting of a root, with a dimension of width and
      * height, specifies whether a depth buffer is created for this scene and
      * specifies whether scene anti-aliasing is requested.
+     * <p>
+     * A Scene can be created and modified on any thread until it is attached to a {@code Window} that is showing
+     * ({@link javafx.stage.Window#isShowing()}. This does not mean the Scene is thread-safe,
+     * so manipulation from multiple threads at the same time is illegal, may lead to unexpected results and must be avoided.
      *
      * @param root The root node of the scene graph
      * @param width The width of the scene
@@ -284,8 +279,6 @@ public class Scene implements EventTarget {
      * {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
      * for more information.
      *
-     * @throws IllegalStateException if this constructor is called on a thread
-     * other than the JavaFX Application Thread.
      * @throws NullPointerException if root is null
      *
      * @see javafx.scene.Node#setDepthTest(DepthTest)
@@ -320,16 +313,10 @@ public class Scene implements EventTarget {
                     + "ConditionalFeature.SCENE3D");
         }
 
-        Toolkit.getToolkit().checkFxUserThread();
         init();
         setRoot(root);
         init(width, height);
         setFill(fill);
-
-        final boolean isTransparentWindowsSupported = Platform.isSupported(ConditionalFeature.TRANSPARENT_WINDOW);
-        if (! isTransparentWindowsSupported) {
-            PlatformImpl.addNoTransparencyStylesheetToScene(this);
-        }
     }
 
     static {
@@ -403,6 +390,11 @@ public class Scene implements EventTarget {
                             if (scene != null) {
                                 scene.transientFocusContainer = node;
                             }
+                        }
+
+                        @Override
+                        public Accessible getAccessible(Scene scene) {
+                            return scene.getAccessible();
                         }
                     });
         }
@@ -482,8 +474,6 @@ public class Scene implements EventTarget {
      * markDirty method in Node or when the Node's scene changes.
      */
     void addToDirtyList(Node n) {
-        Toolkit.getToolkit().checkFxUserThread();
-
         if (dirtyNodes == null || dirtyNodesSize == 0) {
             if (impl_peer != null) {
                 Toolkit.getToolkit().requestNextPulse();
@@ -670,6 +660,11 @@ public class Scene implements EventTarget {
             return;
         }
 
+        final boolean isTransparentWindowsSupported = Platform.isSupported(ConditionalFeature.TRANSPARENT_WINDOW);
+        if (!isTransparentWindowsSupported) {
+            PlatformImpl.addNoTransparencyStylesheetToScene(this);
+        }
+
         PerformanceTracker.logEvent("Scene.initPeer started");
 
         impl_setAllowPGAccess(true);
@@ -720,13 +715,13 @@ public class Scene implements EventTarget {
 
         Toolkit tk = Toolkit.getToolkit();
         tk.removeSceneTkPulseListener(scenePulseListener);
-//        if (accessible != null) {
-//            disposeAccessibles();
-//            Node root = getRoot();
-//            if (root != null) root.releaseAccessible();
-//            accessible.dispose();
-//            accessible = null;
-//        }
+        if (accessible != null) {
+            disposeAccessibles();
+            Node root = getRoot();
+            if (root != null) root.releaseAccessible();
+            accessible.dispose();
+            accessible = null;
+        }
         impl_peer.dispose();
         impl_peer = null;
 
@@ -981,9 +976,18 @@ public class Scene implements EventTarget {
 
     /**
      * Defines the background fill of this {@code Scene}. Both a {@code null}
-     * value meaning paint no background and a {@link javafx.scene.paint.Paint}
-     * with transparency are supported, but what is painted behind it will
-     * depend on the platform.  The default value is the color white.
+     * value meaning 'paint no background' and a {@link javafx.scene.paint.Paint}
+     * with transparency are supported. The default fill of the Scene is
+     * {@link Color#WHITE}, but it is more commonly the case that the initial
+     * color shown to users is the background fill of the
+     * {@link #rootProperty() root node} of the {@code Scene}, as it typically is
+     * stretched to take up all available space in the {@code Scene}. The
+     * root node of the {@code Scene} is given the CSS style class 'root', and
+     * the default user agent stylesheets that ship with JavaFX (presently
+     * Caspian and Modena) apply styling on to this root style class. In the
+     * case of Caspian this does not impact the background fill color of the
+     * root node, but in the case of Modena the default fill is set to be a
+     * light gray color.
      *
      * @defaultValue WHITE
      */
@@ -2056,9 +2060,9 @@ public class Scene implements EventTarget {
                             + " canceled by nested requestFocus");
                 }
             }
-//            if (accessible != null) {
-//                accessible.sendNotification(Attribute.FOCUS_NODE);
-//            }
+            if (accessible != null) {
+                accessible.sendNotification(AccessibleAttribute.FOCUS_NODE);
+            }
         }
     };
 
@@ -2350,7 +2354,7 @@ public class Scene implements EventTarget {
 
             focusCleanup();
 
-//            disposeAccessibles();
+            disposeAccessibles();
 
             if (PULSE_LOGGING_ENABLED) {
                 PulseLogger.newPhase("CSS Pass");
@@ -2735,10 +2739,10 @@ public class Scene implements EventTarget {
             }
         }
 
-//        @Override
-//        public Accessible getSceneAccessible() {
-//            return getAccessible();
-//        }
+        @Override
+        public Accessible getSceneAccessible() {
+            return getAccessible();
+        }
     }
 
     private class ScenePeerPaintListener implements TKScenePaintListener {
@@ -3426,7 +3430,7 @@ public class Scene implements EventTarget {
                 pressedTargets.clear();
                 releasedTargets.clear();
 
-                if (clickedTarget != null) {
+                if (clickedTarget != null && lastPress != null) {
                     MouseEvent click = new MouseEvent(null, clickedTarget,
                             MouseEvent.MOUSE_CLICKED, e.getSceneX(), e.getSceneY(),
                             e.getScreenX(), e.getScreenY(), e.getButton(),
@@ -3899,9 +3903,9 @@ public class Scene implements EventTarget {
                 getFocusOwner().setFocused(windowFocused);
             }
             if (windowFocused) {
-//                if (accessible != null) {
-//                    accessible.sendNotification(Attribute.FOCUS_NODE);
-//                }
+                if (accessible != null) {
+                    accessible.sendNotification(AccessibleAttribute.FOCUS_NODE);
+                }
             }
         }
 
@@ -5725,6 +5729,7 @@ public class Scene implements EventTarget {
 
 
     Dragboard startDragAndDrop(EventTarget source, TransferMode... transferModes) {
+        Toolkit.getToolkit().checkFxUserThread();
         if (dndGesture == null ||
             (dndGesture.dragDetected != DragDetectedState.PROCESSING))
         {
@@ -5740,7 +5745,7 @@ public class Scene implements EventTarget {
     }
 
     void startFullDrag(EventTarget source) {
-
+        Toolkit.getToolkit().checkFxUserThread();
         if (dndGesture.dragDetected != DragDetectedState.PROCESSING) {
             throw new IllegalStateException("Cannot start full drag " +
                     "outside of DRAG_DETECTED event handler");
@@ -6014,6 +6019,62 @@ public class Scene implements EventTarget {
             scene = s;
         }
     }
+    
+    /*************************************************************************
+    *                                                                        *
+    *                                                                        *
+    *                                                                        *
+    *************************************************************************/
+
+    private static final Object USER_DATA_KEY = new Object();
+    // A map containing a set of properties for this scene
+    private ObservableMap<Object, Object> properties;
+
+    /**
+      * Returns an observable map of properties on this node for use primarily
+      * by application developers.
+      *
+      * @return an observable map of properties on this node for use primarily
+      * by application developers
+      */
+     public final ObservableMap<Object, Object> getProperties() {
+        if (properties == null) {
+            properties = FXCollections.observableMap(new HashMap<Object, Object>());
+        }
+        return properties;
+    }
+
+    /**
+     * Tests if Scene has properties.
+     * @return true if node has properties.
+     */
+     public boolean hasProperties() {
+        return properties != null && !properties.isEmpty();
+    }
+
+    /**
+     * Convenience method for setting a single Object property that can be
+     * retrieved at a later date. This is functionally equivalent to calling
+     * the getProperties().put(Object key, Object value) method. This can later
+     * be retrieved by calling {@link Scene#getUserData()}.
+     *
+     * @param value The value to be stored - this can later be retrieved by calling
+     *          {@link Scene#getUserData()}.
+     */
+    public void setUserData(Object value) {
+        getProperties().put(USER_DATA_KEY, value);
+    }
+
+    /**
+     * Returns a previously set Object property, or null if no such property
+     * has been set using the {@link Scene#setUserData(java.lang.Object)} method.
+     *
+     * @return The Object that was previously set, or null if no property
+     *          has been set or if null was set.
+     */
+    public Object getUserData() {
+        return getProperties().get(USER_DATA_KEY);
+    }
 
     /***************************************************************************
      *                                                                         *
@@ -6166,110 +6227,110 @@ public class Scene implements EventTarget {
         }
     }
 
-//    private Map<Node, Accessible> accMap;
-//    Accessible removeAccessible(Node node) {
-//        if (accMap == null) return null;
-//        return accMap.remove(node);
-//    }
-//
-//    void addAccessible(Node node, Accessible acc) {
-//        if (accMap == null) {
-//            accMap = new HashMap<Node, Accessible>();
-//        }
-//        accMap.put(node, acc);
-//    }
-//
-//    private void disposeAccessibles() {
-//        if (accMap != null) {
-//            for (Map.Entry<Node, Accessible> entry : accMap.entrySet()) {
-//                Node node = entry.getKey();
-//                Accessible acc = entry.getValue();
-//                if (node.accessible != null) {
-//                    /* This node has already been initialized to another scene.
-//                     * Note an accessible can be returned to the node before the
-//                     * pulse if getAccessible() is called. In which case it must 
-//                     * already being removed from accMap.
-//                     */
-//                    if (node.accessible == acc) {
-//                        System.err.println("[A11y] 'node.accessible == acc' should never happen.");
-//                    }
-//                    if (node.getScene() == this) {
-//                        System.err.println("[A11y] 'node.getScene() == this' should never happen.");
-//                    }
-//                    acc.dispose();
-//                } else {
-//                    if (node.getScene() == this) {
-//                        node.accessible = acc;
-//                    } else {
-//                        acc.dispose();
-//                    }
-//                }
-//            }
-//            accMap.clear();
-//        }
-//    }
-//    
-//    private Accessible accessible;
-//
-//    /**
-//     * Experimental API - Do not use (will be removed).
-//     *
-//     * @treatAsPrivate
-//     */
-//    public Accessible getAccessible() {
-//        /*
-//         * The accessible for the Scene should never be
-//         * requested when the peer is not set.
-//         * This can only happen in a error case where a
-//         * descender of this Scene was not disposed and 
-//         * it still being used by the AT client and trying
-//         * to reach to the top level window.
-//         */
-//        if (impl_peer == null) return null;
-//        if (accessible == null) {
-//            accessible = new Accessible() {
-//                @Override public Object getAttribute(Attribute attribute,
-//                                                     Object... parameters) {
-//                    switch (attribute) {
-//                        case CHILDREN: {
-//                            Parent root = getRoot();
-//                            if (root != null) {
-//                                return FXCollections.observableArrayList(root);
-//                            }
-//                            break;
-//                        }
-//                        case TITLE: {
-//                            Window w = getWindow();
-//                            if (w instanceof Stage) {
-//                                return ((Stage)w).getTitle();
-//                            }
-//                            break;
-//                        }
-//                        case NODE_AT_POINT: {
-//                            Window window = getWindow();
-//                            /* is this screen to scene translation correct ? not considering camera ? */
-//                            Point2D pt = (Point2D)parameters[0];
-//                            PickResult res = pick(pt.getX() - getX() - window.getX(), pt.getY() - getY() - window.getY());
-//                            if (res != null) {
-//                                Node node = res.getIntersectedNode();
-//                                if (node != null) return node;
-//                            }
-//                            return getRoot();//not sure
-//                        }
-//                        case ROLE: return Role.PARENT;
-//                        case SCENE: return Scene.this;
-//                        case FOCUS_NODE: {
-//                            if (transientFocusContainer != null) {
-//                                return transientFocusContainer.accGetAttribute(Attribute.FOCUS_NODE);
-//                            }
-//                            return getFocusOwner();
-//                        }
-//                        default:
-//                    }
-//                    return super.getAttribute(attribute, parameters);
-//                }
-//            };
-//        }
-//        return accessible;
-//    }
+    private Map<Node, Accessible> accMap;
+    Accessible removeAccessible(Node node) {
+        if (accMap == null) return null;
+        return accMap.remove(node);
+    }
+
+    void addAccessible(Node node, Accessible acc) {
+        if (accMap == null) {
+            accMap = new HashMap<Node, Accessible>();
+        }
+        accMap.put(node, acc);
+    }
+
+    private void disposeAccessibles() {
+        if (accMap != null) {
+            for (Map.Entry<Node, Accessible> entry : accMap.entrySet()) {
+                Node node = entry.getKey();
+                Accessible acc = entry.getValue();
+                if (node.accessible != null) {
+                    /* This node has already been initialized to another scene.
+                     * Note an accessible can be returned to the node before the
+                     * pulse if getAccessible() is called. In which case it must 
+                     * already being removed from accMap.
+                     */
+                    if (node.accessible == acc) {
+                        System.err.println("[A11y] 'node.accessible == acc' should never happen.");
+                    }
+                    if (node.getScene() == this) {
+                        System.err.println("[A11y] 'node.getScene() == this' should never happen.");
+                    }
+                    acc.dispose();
+                } else {
+                    if (node.getScene() == this) {
+                        node.accessible = acc;
+                    } else {
+                        acc.dispose();
+                    }
+                }
+            }
+            accMap.clear();
+        }
+    }
+    
+    private Accessible accessible;
+    Accessible getAccessible() {
+        /*
+         * The accessible for the Scene should never be
+         * requested when the peer is not set.
+         * This can only happen in a error case where a
+         * descender of this Scene was not disposed and 
+         * it still being used by the AT client and trying
+         * to reach to the top level window.
+         */
+        if (impl_peer == null) return null;
+        if (accessible == null) {
+            accessible = Application.GetApplication().createAccessible();
+            accessible.setEventHandler(new Accessible.EventHandler() {
+                @Override public AccessControlContext getAccessControlContext() {
+                    return impl_getPeer().getAccessControlContext();
+                }
+
+                @Override public Object getAttribute(AccessibleAttribute attribute,
+                                                     Object... parameters) {
+                    switch (attribute) {
+                        case CHILDREN: {
+                            Parent root = getRoot();
+                            if (root != null) {
+                                return FXCollections.observableArrayList(root);
+                            }
+                            break;
+                        }
+                        case TEXT: {
+                            Window w = getWindow();
+                            if (w instanceof Stage) {
+                                return ((Stage)w).getTitle();
+                            }
+                            break;
+                        }
+                        case NODE_AT_POINT: {
+                            Window window = getWindow();
+                            /* is this screen to scene translation correct ? not considering camera ? */
+                            Point2D pt = (Point2D)parameters[0];
+                            PickResult res = pick(pt.getX() - getX() - window.getX(), pt.getY() - getY() - window.getY());
+                            if (res != null) {
+                                Node node = res.getIntersectedNode();
+                                if (node != null) return node;
+                            }
+                            return getRoot();//not sure
+                        }
+                        case ROLE: return AccessibleRole.PARENT;
+                        case SCENE: return Scene.this;
+                        case FOCUS_NODE: {
+                            if (transientFocusContainer != null) {
+                                return transientFocusContainer.queryAccessibleAttribute(AccessibleAttribute.FOCUS_NODE);
+                            }
+                            return getFocusOwner();
+                        }
+                        default:
+                    }
+                    return super.getAttribute(attribute, parameters);
+                }
+            });
+            PlatformImpl.accessibilityActiveProperty().set(true);
+        }
+        return accessible;
+    }
 }

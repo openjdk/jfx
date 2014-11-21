@@ -91,10 +91,21 @@ abstract class GlassScene implements TKScene {
     @Override
     public void dispose() {
         assert stage == null; // dispose() is called after setStage(null)
+        root = null;
+        camera = null;
+        fillPaint = null;
+        sceneListener = null;
+        dragGestureListener = null;
+        dragSourceListener = null;
+        dropTargetListener = null;
+        inputMethodRequests = null;
+        scenePaintListener = null;
+        sceneState = null;
     }
 
     // To be used by subclasses to enforce context check
-    final AccessControlContext getAccessControlContext() {
+    @Override
+    public final AccessControlContext getAccessControlContext() {
         if (accessCtrlCtx == null) {
             throw new RuntimeException("Scene security context has not been set!");
         }

@@ -298,7 +298,10 @@ public:
     void process_configure(GdkEventConfigure*);
     void process_gtk_configure(GdkEventConfigure*);
 
-    void applyShapeMask(void*, uint width, uint height) {}
+    void applyShapeMask(void*, uint width, uint height) {
+        (void)width;
+        (void)height;
+    }
     GtkWindow *get_gtk_window(); // TODO, get window from parent
 
     WindowContextPlug(jobject, void*);
@@ -346,7 +349,10 @@ public:
     int getEmbeddedX();
     int getEmbeddedY();
 
-    void applyShapeMask(void*, uint width, uint height) {}
+    void applyShapeMask(void*, uint width, uint height) {
+        (void)width;
+        (void)height;
+    }
     GtkWindow *get_gtk_window(); // TODO, get window from parent
 
     WindowContextChild(jobject, void*, GtkWidget *parent_widget, WindowContextPlug *parent_context);

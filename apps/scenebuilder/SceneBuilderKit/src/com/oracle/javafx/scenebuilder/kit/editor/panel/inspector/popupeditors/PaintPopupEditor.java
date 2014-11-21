@@ -54,7 +54,7 @@ public class PaintPopupEditor extends PopupEditor {
 
     private PaintPicker paintPicker;
     private final Rectangle graphic = new Rectangle(20, 10);
-    private final EditorController editorController;
+    private EditorController editorController;
 
     private final ChangeListener<Paint> paintChangeListener = (ov, oldValue, newValue) -> {
         // If live update, do not commit the value
@@ -73,9 +73,12 @@ public class PaintPopupEditor extends PopupEditor {
         }
     };
 
-    @SuppressWarnings("LeakingThisInConstructor")
     public PaintPopupEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses, EditorController editorController) {
         super(propMeta, selectedClasses);
+        initialize(editorController);
+    }
+    
+    private void initialize(EditorController editorController) {
         this.editorController = editorController;
     }
 

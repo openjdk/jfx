@@ -274,6 +274,7 @@ public class XYDataVisualizer<X, Y> extends TreeTableView<XYChartItem<X, Y>> {
         removeAllDataMenuItem.setDisable(!isEditable());
         removeAllDataMenuItem.setOnAction((ActionEvent t) -> {
             chart.getData().clear();
+//            chart.setData(null);
         });
 
         MenuItem setNewDataMenuItem = new MenuItem("Set new data");

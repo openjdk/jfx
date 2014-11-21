@@ -28,9 +28,8 @@ package javafx.scene.control;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.BooleanPropertyBase;
 import javafx.event.ActionEvent;
+import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
-//import javafx.scene.accessibility.Attribute;
-//import javafx.scene.accessibility.Role;
 
 import javafx.css.PseudoClass;
 import com.sun.javafx.scene.control.skin.ButtonSkin;
@@ -96,6 +95,7 @@ public class Button extends ButtonBase {
 
     private void initialize() {
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
+        setAccessibleRole(AccessibleRole.BUTTON);
         setMnemonicParsing(true);     // enable mnemonic auto-parsing by default
     }
 
@@ -211,18 +211,4 @@ public class Button extends ButtonBase {
     private static final PseudoClass PSEUDO_CLASS_CANCEL
             = PseudoClass.getPseudoClass("cancel");
 
-
-    /***************************************************************************
-     *                                                                         *
-     * Accessibility handling                                                  *
-     *                                                                         *
-     **************************************************************************/
-
-//    /** @treatAsPrivate */
-//    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//        switch (attribute) {
-//            case ROLE: return Role.BUTTON;
-//            default: return super.accGetAttribute(attribute, parameters);
-//        }
-//    }
 }

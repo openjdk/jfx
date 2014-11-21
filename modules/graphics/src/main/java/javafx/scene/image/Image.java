@@ -62,6 +62,16 @@ import com.sun.javafx.tk.Toolkit;
  * images from a specified URL.
  *
  * <p>
+ * Supported image formats are:
+ * <ul>
+ * <li><a href="http://msdn.microsoft.com/en-us/library/dd183376(v=vs.85).aspx">BMP</a></li>
+ * <li><a href="http://www.w3.org/Graphics/GIF/spec-gif89a.txt">GIF</a></li>
+ * <li><a href="http://www.ijg.org">JPEG</a></li>
+ * <li><a href="http://www.libpng.org/pub/png/spec/">PNG</a></li>
+ * </ul>
+ * </p>
+ *
+ * <p>
  * Images can be resized as they are loaded (for example to reduce the amount of
  * memory consumed by the image). The application can specify the quality of
  * filtering used when scaling, and whether or not to preserve the original

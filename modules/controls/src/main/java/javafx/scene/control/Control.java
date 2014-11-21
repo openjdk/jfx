@@ -42,9 +42,9 @@ import javafx.beans.value.WritableValue;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.geometry.Side;
+import javafx.scene.AccessibleAction;
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
-//import javafx.scene.accessibility.Action;
-//import javafx.scene.accessibility.Attribute;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.layout.Region;
 import com.sun.javafx.application.PlatformImpl;
@@ -242,19 +242,6 @@ public abstract class Control extends Region implements Skinnable {
             // result in reinstalling the skin
             currentSkinClassName = skin == null ? null : skin.getClass().getName();
 
-            // If skinClassName is null, then someone called setSkin directly
-            // rather than the skin being set via css. We know this is because
-            // impl_processCSS ensures the skin is set, and impl_processCSS
-            // expands the skin property to see if the skin has been set.
-            // If skinClassName is null, then we need to see if there is
-            // a UA stylesheet at this point since the logic in impl_processCSS
-            // depends on skinClassName being null.
-            if (skinClassName == null) {
-                final String url = Control.this.getUserAgentStylesheet();
-                if (url != null) {
-                    StyleManager.getInstance().addUserAgentStylesheet(url);
-                }
-            }
             // if someone calls setSkin, we need to make it look like they
             // called set on skinClassName in order to keep CSS from overwriting
             // the skin.
@@ -764,16 +751,6 @@ public abstract class Control extends Region implements Skinnable {
      *                                                                         *
      **************************************************************************/
 
-    /**
-     * Implementors may specify their own user-agent stylesheet. The return
-     * value is a string URL. A relative URL is resolved using the class
-     * loader of the implementing Control.
-     * @return A string URL
-     */
-    protected String getUserAgentStylesheet() {
-        return null;
-    }
-
     private static class StyleableProperties {
         private static final CssMetaData<Control,String> SKIN =
             new CssMetaData<Control,String>("-fx-skin",
@@ -874,14 +851,6 @@ public abstract class Control extends Region implements Skinnable {
      */
     @Deprecated
     @Override protected void impl_processCSS(WritableValue<Boolean> unused) {
-        // don't muck with this if block without first reading the comments in skin property's set method!
-        if (skinClassNameProperty().get() == null) {
-            // TODO: using skinClassName as a flag in skin property's set method is probably a bad idea
-            final String url = Control.this.getUserAgentStylesheet();
-            if (url != null) {
-                StyleManager.getInstance().addUserAgentStylesheet(url);
-            }
-        }
 
         super.impl_processCSS(unused);
 
@@ -921,35 +890,28 @@ public abstract class Control extends Region implements Skinnable {
      *                                                                         *
      **************************************************************************/
 
-//    /** @treatAsPrivate */
-//    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//        switch (attribute) {
-//            case TOOLTIP:
-//                Tooltip tooltip = getTooltip();
-//                return tooltip == null ? "" : tooltip.getText();
-//            default:
-//        }
-//        if (skinBase != null) {
-//            Object result = skinBase.accGetAttribute(attribute, parameters);
-//            if (result != null) return result;
-//        }
-//        return super.accGetAttribute(attribute, parameters);
-//    }
-//
-//    /** @treatAsPrivate */
-//    @Override public void accExecuteAction(Action action, Object... parameters) {
-//        switch (action) {
-//            case SHOW_MENU:
-//                ContextMenu menu = getContextMenu();
-//                if (menu != null) {
-//                    menu.show(this, Side.RIGHT, 0, 0);
-//                }
-//                break;
-//            default:
-//        }
-//        if (skinBase != null) {
-//            skinBase.accExecuteAction(action, parameters);
-//        }
-//        super.accExecuteAction(action, parameters);
-//    }
+    @Override 
+    public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
+        switch (attribute) {
+            case HELP:
+                String help = getAccessibleHelp();
+                if (help != null && !help.isEmpty()) return help;
+                Tooltip tooltip = getTooltip();
+                return tooltip == null ? "" : tooltip.getText();
+            default:
+        }
+        if (skinBase != null) {
+            Object result = skinBase.queryAccessibleAttribute(attribute, parameters);
+            if (result != null) return result;
+        }
+        return super.queryAccessibleAttribute(attribute, parameters);
+    }
+
+    @Override
+    public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
+        if (skinBase != null) {
+            skinBase.executeAccessibleAction(action, parameters);
+        }
+        super.executeAccessibleAction(action, parameters);
+    }
 }

@@ -56,11 +56,11 @@ import com.sun.javafx.tk.PlatformImage;
 import com.sun.prism.impl.BufferUtil;
 
 public class Image implements PlatformImage {
-    static final javafx.scene.image.WritablePixelFormat FX_ByteBgraPre_FORMAT =
+    static final javafx.scene.image.WritablePixelFormat<ByteBuffer> FX_ByteBgraPre_FORMAT =
         javafx.scene.image.PixelFormat.getByteBgraPreInstance();
-    static final javafx.scene.image.WritablePixelFormat FX_IntArgbPre_FORMAT =
+    static final javafx.scene.image.WritablePixelFormat<IntBuffer> FX_IntArgbPre_FORMAT =
         javafx.scene.image.PixelFormat.getIntArgbPreInstance();
-    static final javafx.scene.image.PixelFormat FX_ByteRgb_FORMAT =
+    static final javafx.scene.image.PixelFormat<ByteBuffer> FX_ByteRgb_FORMAT =
         javafx.scene.image.PixelFormat.getByteRgbInstance();
 
     private final Buffer pixelBuffer;
@@ -220,30 +220,30 @@ public class Image implements PlatformImage {
             case RGBA:
                 // Bgra => BgrePre is same operation as Rgba => RgbaPre
                 // TODO: 3D - need a way to handle pre versus non-Pre
-                ByteBgra.ToByteBgraPreConverter.convert(buffer, 0, scanBytes,
-                                                        buffer, 0, scanBytes,
-                                                        w, h);
+                ByteBgra.ToByteBgraPreConverter().convert(buffer, 0, scanBytes,
+                                                          buffer, 0, scanBytes,
+                                                          w, h);
                 /* NOBREAK */
             case RGBA_PRE:
-                ByteRgba.ToByteBgraConverter.convert(buffer, 0, scanBytes,
-                                                     buffer, 0, scanBytes,
-                                                     w, h);
+                ByteRgba.ToByteBgraConverter().convert(buffer, 0, scanBytes,
+                                                       buffer, 0, scanBytes,
+                                                       w, h);
                 return Image.fromByteBgraPreData(buffer, w, h, scanBytes, ps);
 
             case GRAY_ALPHA:
                 // TODO: 3D - need a way to handle pre versus non-Pre
-                ByteGrayAlpha.ToByteGrayAlphaPre.convert(buffer, 0, scanBytes,
-                                                         buffer, 0, scanBytes,
-                                                         w, h);
+                ByteGrayAlpha.ToByteGrayAlphaPreConverter().convert(buffer, 0, scanBytes,
+                                                                    buffer, 0, scanBytes,
+                                                                    w, h);
                 /* NOBREAK */
             case GRAY_ALPHA_PRE:
                 if (scanBytes != w * 2) {
                     throw new AssertionError("Bad stride for GRAY_ALPHA");
                 };
                 byte newbuf[] = new byte[w * h * 4];
-                ByteGrayAlphaPre.ToByteBgraPre.convert(buffer, 0, scanBytes,
-                                                       newbuf, 0, w*4,
-                                                       w, h);
+                ByteGrayAlphaPre.ToByteBgraPreConverter().convert(buffer, 0, scanBytes,
+                                                                  newbuf, 0, w*4,
+                                                                  w, h);
                 return Image.fromByteBgraPreData(newbuf, w, h, ps);
             default:
                 throw new RuntimeException("Unknown image type: " + type);
@@ -442,7 +442,7 @@ public class Image implements PlatformImage {
      * @param pixels the buffer containing the pixels to copy
      * @param format the format of the given buffer
      * @param minX the x offset of the upper-left corner of the pixel region
-     * @param minX the y offset of the upper-left corner of the pixel region
+     * @param minY the y offset of the upper-left corner of the pixel region
      * @param width the width of the pixel region to be copied, in pixels
      * @param height the height of the pixel region to be copied, in pixels
      * @param scanlineStride the scanline stride of the given buffer, in bytes
@@ -545,11 +545,11 @@ public class Image implements PlatformImage {
 
         ByteToIntPixelConverter converter;
         if (tnumBands == 1) {
-            converter = ByteGray.ToIntArgbPreConverter;
+            converter = ByteGray.ToIntArgbPreConverter();
         } else if (pixelFormat == PixelFormat.BYTE_BGRA_PRE) {
-            converter = ByteBgraPre.ToIntArgbPreConverter;
+            converter = ByteBgraPre.ToIntArgbPreConverter();
         } else { // BYTE_RGB
-            converter = ByteRgb.ToIntArgbPreConverter;
+            converter = ByteRgb.ToIntArgbPreConverter();
         }
 
         //new int array for holding new int formatted image data
@@ -580,15 +580,15 @@ public class Image implements PlatformImage {
         ByteBuffer oldbuf = (ByteBuffer) pixelBuffer;
         ByteBuffer newbuf = ByteBuffer.allocate(width * height * 4);
         int oldpos = minY * scanlineStride + minX * 3;
-        ByteRgb.ToByteBgraPreConverter.convert(oldbuf, oldpos, scanlineStride,
-                                               newbuf, 0, width * 4,
-                                               width, height);
+        ByteRgb.ToByteBgraPreConverter().convert(oldbuf, oldpos, scanlineStride,
+                                                 newbuf, 0, width * 4,
+                                                 width, height);
         return new Image(PixelFormat.BYTE_BGRA_PRE, newbuf,
                          width, height, 0, 0, width * 4, getPixelScale());
     }
 
-    private Accessor pixelaccessor;
-    private Accessor getPixelAccessor() {
+    private Accessor<?> pixelaccessor;
+    private Accessor<?> getPixelAccessor() {
         if (pixelaccessor == null) {
             switch (getPixelFormat()) {
                 case BYTE_ALPHA:
@@ -617,13 +617,13 @@ public class Image implements PlatformImage {
             }
         }
         if (pixelaccessor != null && pixelScale != 1.0f) {
-            pixelaccessor = new ScaledAccessor(pixelaccessor, pixelScale);
+            pixelaccessor = new ScaledAccessor<>(pixelaccessor, pixelScale);
         }
         return pixelaccessor;
     }
 
     @Override
-    public javafx.scene.image.PixelFormat getPlatformPixelFormat() {
+    public javafx.scene.image.PixelFormat<?> getPlatformPixelFormat() {
         return getPixelAccessor().getPlatformPixelFormat();
     }
 
@@ -724,7 +724,7 @@ public class Image implements PlatformImage {
 
         public abstract void setArgb(int x, int y, int argb);
 
-        public abstract javafx.scene.image.PixelFormat getPlatformPixelFormat();
+        public abstract javafx.scene.image.PixelFormat<I> getPlatformPixelFormat();
 
         public abstract boolean isWritable();
 
@@ -790,7 +790,7 @@ public class Image implements PlatformImage {
         }
 
         @Override
-        public javafx.scene.image.PixelFormat getPlatformPixelFormat() {
+        public javafx.scene.image.PixelFormat<I> getPlatformPixelFormat() {
             return theDelegate.getPlatformPixelFormat();
         }
 
@@ -954,7 +954,7 @@ public class Image implements PlatformImage {
         }
 
         @Override
-        public javafx.scene.image.PixelFormat getPlatformPixelFormat() {
+        public javafx.scene.image.PixelFormat<I> getPlatformPixelFormat() {
             return theFormat;
         }
 
@@ -1154,8 +1154,8 @@ public class Image implements PlatformImage {
         }
     }
 
-    static javafx.scene.image.PixelFormat FX_ByteGray_FORMAT;
-    static javafx.scene.image.PixelFormat getGrayFXPixelFormat() {
+    static javafx.scene.image.PixelFormat<ByteBuffer> FX_ByteGray_FORMAT;
+    static javafx.scene.image.PixelFormat<ByteBuffer> getGrayFXPixelFormat() {
         if (FX_ByteGray_FORMAT == null) {
             int grays[] = new int[256];
             int gray = 0xff000000;

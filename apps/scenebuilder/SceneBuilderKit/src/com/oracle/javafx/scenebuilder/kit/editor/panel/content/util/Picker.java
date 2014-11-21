@@ -67,7 +67,7 @@ public class Picker {
         assert Double.isNaN(sceneX) == false;
         assert Double.isNaN(sceneY) == false;
         
-        final Point2D localXY = startNode.sceneToLocal(sceneX, sceneY);
+        final Point2D localXY = startNode.sceneToLocal(sceneX, sceneY, true /* rootScene */);
         return pickInLocal(startNode, localXY.getX(), localXY.getY());
     }
     

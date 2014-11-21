@@ -61,6 +61,14 @@ final class GtkApplication extends Application implements InvokeLaterDispatcher.
     private final InvokeLaterDispatcher invokeLaterDispatcher;
 
     GtkApplication() {
+        // Check whether the Display is valid and throw an exception if not.
+        // We use UnsupportedOperationException rather than HeadlessException
+        // so as not to introduce a dependency on AWT.
+        if (!isDisplayValid()) {
+            throw new UnsupportedOperationException("Unable to open DISPLAY");
+        }
+
+        // Embedded in SWT, with shared event thread
         boolean isEventThread = AccessController
                 .doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("javafx.embed.isEventThread"));
         if (!isEventThread) {
@@ -69,6 +77,10 @@ final class GtkApplication extends Application implements InvokeLaterDispatcher.
         } else {
             invokeLaterDispatcher = null;
         }
+    }
+
+    private static boolean isDisplayValid() {
+        return _isDisplayValid();
     }
 
     private void initDisplay() {
@@ -107,6 +119,7 @@ final class GtkApplication extends Application implements InvokeLaterDispatcher.
 
     @Override
     protected void runLoop(final Runnable launchable) {
+        // Embedded in SWT, with shared event thread
         final boolean isEventThread = AccessController
             .doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("javafx.embed.isEventThread"));
         
@@ -142,6 +155,8 @@ final class GtkApplication extends Application implements InvokeLaterDispatcher.
     @Override public boolean shouldUpdateWindow() {
         return true;
     }
+
+    private static native boolean _isDisplayValid();
 
     private native void _terminateLoop();
     

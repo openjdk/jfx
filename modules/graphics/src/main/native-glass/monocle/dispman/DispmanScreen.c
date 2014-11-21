@@ -22,7 +22,7 @@
  * questions.
  */
 
-#include "com_sun_glass_ui_monocle_dispman_DispmanScreen.h"
+#include "com_sun_glass_ui_monocle_DispmanScreen.h"
 #include "Monocle.h"
 
 #include <fcntl.h>
@@ -76,7 +76,7 @@ void load_bcm_symbols() {
 #endif /* USE_DISPMAN */
 }
 
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_monocle_dispman_DispmanScreen_wrapNativeSymbols
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_monocle_DispmanScreen_wrapNativeSymbols
     (JNIEnv *env, jobject obj) {
 
 #ifdef USE_DISPMAN

@@ -73,7 +73,11 @@ abstract class GLContext {
     // Use by Texture
     final static int GL_TEXTURE_2D                = 50;
     final static int GL_TEXTURE_BINDING_2D        = 51;
-    final static int GL_LINEAR                    = 52;
+    final static int GL_NEAREST                   = 52;
+    final static int GL_LINEAR                    = 53;
+    final static int GL_NEAREST_MIPMAP_NEAREST    = 54;
+    final static int GL_LINEAR_MIPMAP_LINEAR      = 55;
+    
 
     // Use by glPixelStorei
     final static int GL_UNPACK_ALIGNMENT          = 60;
@@ -91,6 +95,18 @@ abstract class GLContext {
     final static int GL_FRONT                     = 111;
     final static int GL_NONE                      = 112;
 
+    // Use for querying hardware/implementation limits
+    final static int GL_MAX_FRAGMENT_UNIFORM_COMPONENTS  = 120;
+    final static int GL_MAX_FRAGMENT_UNIFORM_VECTORS     = 121;
+    final static int GL_MAX_TEXTURE_IMAGE_UNITS          = 122;
+    final static int GL_MAX_TEXTURE_SIZE                 = 123;
+    final static int GL_MAX_VERTEX_ATTRIBS               = 124;
+    final static int GL_MAX_VARYING_COMPONENTS           = 125;
+    final static int GL_MAX_VARYING_VECTORS              = 126;
+    final static int GL_MAX_VERTEX_TEXTURE_IMAGE_UNITS   = 127;
+    final static int GL_MAX_VERTEX_UNIFORM_COMPONENTS    = 128;
+    final static int GL_MAX_VERTEX_UNIFORM_VECTORS       = 129;
+
     final static int MAPTYPE_DIFFUSE = MapType.DIFFUSE.ordinal();
     final static int MAPTYPE_SPECULAR = MapType.SPECULAR.ordinal();
     final static int MAPTYPE_BUMP = MapType.BUMP.ordinal();
@@ -100,7 +116,7 @@ abstract class GLContext {
     final static int NUM_MATRIX_ELEMENTS          = 16;
 
     long nativeCtxInfo;
-    private int maxTextureSize = -1;
+    private int maxTextureSize = -1;    
     private Boolean nonPowTwoExtAvailable;
     private Boolean clampToZeroAvailable;
 
@@ -146,8 +162,8 @@ abstract class GLContext {
     private static native void nFinish();
     private static native int nGenAndBindTexture();
     private static native int nGetFBO();
+    private static native int nGetIntParam(int pname);
     private static native int nGetMaxSampleSize();
-    private static native int nGetMaxTextureSize();
     private static native int nGetUniformLocation(long nativeCtxInfo,
             int programID, String name);
     private static native void nPixelStorei(int pname, int param);
@@ -159,13 +175,13 @@ abstract class GLContext {
             int x, int y, int w, int h);
     private static native void nSetDepthTest(long nativeCtxInfo, boolean depthTest);
     private static native void nSetMSAA(long nativeCtxInfo, boolean msaa);
-    private static native void nTexParamsMinMax(int pname);
+    private static native void nTexParamsMinMax(int min, int max);
     private static native boolean nTexImage2D0(int target, int level, int internalFormat,
             int width, int height, int border, int format,
-            int type, Object pixels, int pixelsByteOffset);
+            int type, Object pixels, int pixelsByteOffset, boolean useMipmap);
     private static native boolean nTexImage2D1(int target, int level, int internalFormat,
             int width, int height, int border, int format,
-            int type, Object pixels, int pixelsByteOffset);
+            int type, Object pixels, int pixelsByteOffset, boolean useMipmap);
     private static native void nTexSubImage2D0(int target, int level,
             int xoffset, int yoffset, int width, int height, int format,
             int type, Object pixels, int pixelsByteOffset);
@@ -281,9 +297,7 @@ abstract class GLContext {
              * system the string information will need to be per
              * GLContext class. */
             nonPowTwoExtAvailable = PrismSettings.forcePow2
-                ? Boolean.FALSE
-                : (ES2Pipeline.glFactory.isGLExtensionSupported("GL_ARB_texture_non_power_of_two")
-                    || ES2Pipeline.glFactory.isGLExtensionSupported("GL_OES_texture_npot"));
+                ? Boolean.FALSE : ES2Pipeline.glFactory.isNPOTSupported();
         }
         return nonPowTwoExtAvailable.booleanValue();
     }
@@ -479,6 +493,10 @@ abstract class GLContext {
     }
     /***********************************************************/
 
+    int getIntParam(int param) {
+        return nGetIntParam(param);
+    }
+
     int getSampleSize() {
         int maxSamples = getMaxSampleSize();
         return maxSamples < 2 ? 0 : (maxSamples < 4 ? 2 : 4);
@@ -496,7 +514,7 @@ abstract class GLContext {
         if (maxTextureSize > -1) {
             return maxTextureSize;
         }
-        return maxTextureSize = nGetMaxTextureSize();
+        return maxTextureSize = getIntParam(GLContext.GL_MAX_TEXTURE_SIZE);
     }
 
     int getUniformLocation(int programID, String name) {
@@ -546,22 +564,28 @@ abstract class GLContext {
         nUseProgram(nativeCtxInfo, progid);
     }
 
-    void texParamsMinMax(int pname) {
-        nTexParamsMinMax(pname);
+    void texParamsMinMax(int pname, boolean useMipmap) {
+        int min = pname;
+        int max = pname;
+        if (useMipmap) {
+            min = (min == GLContext.GL_LINEAR) ? GLContext.GL_LINEAR_MIPMAP_LINEAR
+                    : GLContext.GL_NEAREST_MIPMAP_NEAREST;
+        }
+        nTexParamsMinMax(min, max);
     }
 
     boolean texImage2D(int target, int level, int internalFormat,
             int width, int height, int border, int format, int type,
-            java.nio.Buffer pixels) {
+            java.nio.Buffer pixels, boolean useMipmap) {
         boolean result;
         boolean direct = BufferFactory.isDirect(pixels);
         if (direct) {
             result = nTexImage2D0(target, level, internalFormat, width, height, border, format,
-                    type, pixels, BufferFactory.getDirectBufferByteOffset(pixels));
+                    type, pixels, BufferFactory.getDirectBufferByteOffset(pixels), useMipmap);
         } else {
             result = nTexImage2D1(target, level, internalFormat, width, height, border, format,
                     type, BufferFactory.getArray(pixels),
-                    BufferFactory.getIndirectBufferByteOffset(pixels));
+                    BufferFactory.getIndirectBufferByteOffset(pixels), useMipmap);
         }
         return result;
 

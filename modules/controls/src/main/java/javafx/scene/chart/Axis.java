@@ -31,6 +31,7 @@ import javafx.css.PseudoClass;
 import javafx.css.StyleableBooleanProperty;
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.StyleableObjectProperty;
+
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.PaintConverter;
@@ -43,6 +44,8 @@ import javafx.beans.binding.DoubleExpression;
 import javafx.beans.binding.ObjectExpression;
 import javafx.beans.binding.StringExpression;
 import javafx.beans.property.*;
+import javafx.beans.value.WritableBooleanValue;
+import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.css.FontCssMetaData;
@@ -87,7 +90,8 @@ public abstract class Axis<T> extends Region {
     private double oldLength = 0;
     /** True when the current range invalid and all dependent calculations need to be updated */
     boolean rangeValid = false;
-    private boolean measureInvalid = false;
+    boolean measureInvalid = false;
+    boolean tickLabelsVisibleInvalid = false;
 
     private BitSet labelsToSkip = new BitSet();
 
@@ -201,6 +205,7 @@ public abstract class Axis<T> extends Region {
             for (TickMark<T> tick : tickMarks) {
                 tick.setTextVisible(get());
             }
+            tickLabelsVisibleInvalid = true;
             requestAxisLayout();
         }
 
@@ -378,6 +383,9 @@ public abstract class Axis<T> extends Region {
      */
     private DoubleProperty tickLabelRotation = new DoublePropertyBase(0) {
         @Override protected void invalidated() {
+            if (isAutoRanging()) {
+                invalidateRange(); // NumberAxis and CategoryAxis use this property in autorange
+            }
             requestAxisLayout();
         }
 
@@ -700,8 +708,9 @@ public abstract class Axis<T> extends Region {
             rangeValid = true;
         }
 
-        if (lengthDiffers || rangeInvalid || measureInvalid) {
+        if (lengthDiffers || rangeInvalid || measureInvalid || tickLabelsVisibleInvalid) {
             measureInvalid = false;
+            tickLabelsVisibleInvalid = false;
             // RT-12272 : tick labels overlapping
             labelsToSkip.clear();
             double prevEnd = -Double.MAX_VALUE;
@@ -715,13 +724,18 @@ public abstract class Axis<T> extends Region {
                         if (m.isTextVisible()) {
                             double tickHeight = measureTickMarkSize(m.getValue(), getRange()).getHeight();
                             lastStart = updateAndGetDisplayPosition(m) - tickHeight / 2;
+                            break;
+                        } else {
+                            labelsToSkip.set(stop);
                         }
-                        break;
                     }
 
                     for (int i = tickMarks.size() - 1; i > stop; i--) {
                         TickMark<T> m = tickMarks.get(i);
-                        if (!m.isTextVisible()) continue;
+                        if (!m.isTextVisible()) {
+                            labelsToSkip.set(i);
+                            continue;
+                        }
                         double tickHeight = measureTickMarkSize(m.getValue(), getRange()).getHeight();
                         double tickStart = updateAndGetDisplayPosition(m) - tickHeight / 2;
                         if (tickStart <= prevEnd || tickStart + tickHeight > lastStart) {
@@ -739,13 +753,18 @@ public abstract class Axis<T> extends Region {
                         if (m.isTextVisible()) {
                             double tickWidth = measureTickMarkSize(m.getValue(), getRange()).getWidth();
                             lastStart = updateAndGetDisplayPosition(m) - tickWidth / 2;
+                            break;
+                        } else {
+                            labelsToSkip.set(stop);
                         }
-                        break;
                     }
 
                     for (int i = 0; i < stop; ++i) {
                         TickMark<T> m = tickMarks.get(i);
-                        if (!m.isTextVisible()) continue;
+                        if (!m.isTextVisible()) {
+                            labelsToSkip.set(i);
+                            continue;
+                        }
                         double tickWidth = measureTickMarkSize(m.getValue(), getRange()).getWidth();
                         double tickStart = updateAndGetDisplayPosition(m) - tickWidth / 2;
                         if (tickStart <= prevEnd || tickStart + tickWidth > lastStart) {
@@ -975,7 +994,7 @@ public abstract class Axis<T> extends Region {
     }
 
     final double getEffectiveTickLabelRotation() {
-        return Double.isNaN(effectiveTickLabelRotation) ? getTickLabelRotation() : effectiveTickLabelRotation;
+        return !isAutoRanging() || Double.isNaN(effectiveTickLabelRotation) ? getTickLabelRotation() : effectiveTickLabelRotation;
     }
 
     /**
@@ -1110,8 +1129,8 @@ public abstract class Axis<T> extends Region {
             }
 
             @Override
-            public StyleableProperty<Number> getStyleableProperty(Axis n) {
-                return (StyleableProperty<Number>)n.tickLengthProperty();
+            public StyleableProperty<Number> getStyleableProperty(Axis<?> n) {
+                return (StyleableProperty<Number>)(WritableValue<Number>)n.tickLengthProperty();
             }
         };
 
@@ -1158,7 +1177,7 @@ public abstract class Axis<T> extends Region {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(Axis<?> n) {
-                return (StyleableProperty<Number>)n.tickLabelGapProperty();
+                return (StyleableProperty<Number>)(WritableValue<Number>)n.tickLabelGapProperty();
             }
         };
 
@@ -1173,7 +1192,7 @@ public abstract class Axis<T> extends Region {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(Axis<?> n) {
-                return (StyleableProperty<Boolean>)n.tickMarkVisibleProperty();
+                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)n.tickMarkVisibleProperty();
             }
         };
 
@@ -1188,7 +1207,7 @@ public abstract class Axis<T> extends Region {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(Axis<?> n) {
-                return (StyleableProperty<Boolean>)n.tickLabelsVisibleProperty();
+                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)n.tickLabelsVisibleProperty();
             }
         };
 

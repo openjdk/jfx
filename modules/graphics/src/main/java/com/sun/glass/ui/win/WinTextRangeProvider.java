@@ -25,11 +25,11 @@
 
 package com.sun.glass.ui.win;
 
-import static com.sun.javafx.scene.accessibility.Attribute.*;
+import static javafx.scene.AccessibleAttribute.*;
 import java.text.BreakIterator;
 import javafx.geometry.Bounds;
-import com.sun.javafx.scene.accessibility.Action;
-import com.sun.javafx.scene.accessibility.Attribute;
+import javafx.scene.AccessibleAction;
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 
@@ -108,7 +108,7 @@ class WinTextRangeProvider {
         return "Range(start: "+start+", end: "+end+", id: " + id + ")";
     }
 
-    private Object getAttribute(Attribute attribute, Object... parameters) {
+    private Object getAttribute(AccessibleAttribute attribute, Object... parameters) {
         return accessible.getAttribute(attribute, parameters);
     }
 
@@ -122,7 +122,7 @@ class WinTextRangeProvider {
     /***********************************************/
     /*            ITextRangeProvider               */
     /***********************************************/
-    long Clone() {
+    private long Clone() {
         WinTextRangeProvider clone = new WinTextRangeProvider(accessible);
         clone.setRange(start, end);
 
@@ -133,19 +133,19 @@ class WinTextRangeProvider {
         return clone.getNativeProvider();
     }
 
-    boolean Compare(WinTextRangeProvider range) {
+    private boolean Compare(WinTextRangeProvider range) {
         if (range == null) return false;
         return accessible == range.accessible && start == range.start && end == range.end;
     }
 
-    int CompareEndpoints(int endpoint, WinTextRangeProvider targetRange, int targetEndpoint) {
+    private int CompareEndpoints(int endpoint, WinTextRangeProvider targetRange, int targetEndpoint) {
         int offset = endpoint == TextPatternRangeEndpoint_Start ? start : end;
         int targetOffset = targetEndpoint == TextPatternRangeEndpoint_Start ? targetRange.start : targetRange.end;
         return offset - targetOffset;
     }
 
-    void ExpandToEnclosingUnit(int unit) {
-        String text = (String)getAttribute(TITLE);
+    private void ExpandToEnclosingUnit(int unit) {
+        String text = (String)getAttribute(TEXT);
         if (text == null) return;
         int length = text.length();
         if (length == 0) return;
@@ -224,14 +224,14 @@ class WinTextRangeProvider {
         end = Math.max(start, Math.min(end, length));
     }
 
-    long FindAttribute(int attributeId, WinVariant val, boolean backward) {
+    private long FindAttribute(int attributeId, WinVariant val, boolean backward) {
         System.err.println("FindAttribute NOT IMPLEMENTED");
         return 0;
     }
 
-    long FindText(String text, boolean backward, boolean ignoreCase) {
+    private long FindText(String text, boolean backward, boolean ignoreCase) {
         if (text == null) return 0;
-        String documentText = (String)getAttribute(TITLE);
+        String documentText = (String)getAttribute(TEXT);
         if (documentText == null) return 0;
         String rangeText = documentText.substring(start, end);
         if (ignoreCase) {
@@ -250,7 +250,7 @@ class WinTextRangeProvider {
         return result.getNativeProvider();
     }
 
-    WinVariant GetAttributeValue(int attributeId) {
+    private WinVariant GetAttributeValue(int attributeId) {
         WinVariant variant = null;
         switch (attributeId) {
             case UIA_FontNameAttributeId: {
@@ -303,8 +303,8 @@ class WinTextRangeProvider {
         return variant;
     }
 
-    double[] GetBoundingRectangles() {
-        String text = (String)getAttribute(TITLE);
+    private double[] GetBoundingRectangles() {
+        String text = (String)getAttribute(TEXT);
         if (text == null) return null;
         int length = text.length();
 
@@ -336,21 +336,21 @@ class WinTextRangeProvider {
         return null;
     }
 
-    long GetEnclosingElement() {
+    private long GetEnclosingElement() {
         return accessible.getNativeAccessible();
     }
 
-    String GetText(int maxLength) {
-        String text = (String)getAttribute(TITLE);
+    private String GetText(int maxLength) {
+        String text = (String)getAttribute(TEXT);
         if (text == null) return null;
         int endOffset = maxLength != -1 ? Math.min(end, start + maxLength) : end;
 //        System.out.println("+GetText [" + text.substring(start, endOffset)+"]");
         return text.substring(start, endOffset);
     }
 
-    int Move(int unit, final int requestedCount) {
+    private int Move(int unit, final int requestedCount) {
         if (requestedCount == 0) return 0;
-        String text = (String)getAttribute(TITLE);
+        String text = (String)getAttribute(TEXT);
         if (text == null) return 0;
         int length = text.length();
         if (length == 0) return 0;
@@ -452,9 +452,9 @@ class WinTextRangeProvider {
         return actualCount;
     }
 
-    int MoveEndpointByUnit(int endpoint, int unit, final int requestedCount) {
+    private int MoveEndpointByUnit(int endpoint, int unit, final int requestedCount) {
         if (requestedCount == 0) return 0;
-        String text = (String)getAttribute(TITLE);
+        String text = (String)getAttribute(TEXT);
         if (text == null) return 0;
         int length = text.length();
 
@@ -557,8 +557,8 @@ class WinTextRangeProvider {
         return actualCount;
     }
 
-    void MoveEndpointByRange(int endpoint, WinTextRangeProvider targetRange, int targetEndpoint) {
-        String text = (String)getAttribute(TITLE);
+    private void MoveEndpointByRange(int endpoint, WinTextRangeProvider targetRange, int targetEndpoint) {
+        String text = (String)getAttribute(TEXT);
         if (text == null) return;
         int length = text.length();
 
@@ -577,25 +577,25 @@ class WinTextRangeProvider {
         end = Math.max(start, Math.min(end, length));
     }
 
-    void Select() {
-        accessible.executeAction(Action.SELECT, start, end);
+    private void Select() {
+        accessible.executeAction(AccessibleAction.SET_TEXT_SELECTION, start, end);
     }
 
-    void AddToSelection() {
+    private void AddToSelection() {
         /* Only possible for multi selection text view */
 //        accessible.executeAction(Action.ADD_TO_SELECTION, start, end);
     }
 
-    void RemoveFromSelection() {
+    private void RemoveFromSelection() {
         /* Only possible for multi selection text view */
 //        accessible.executeAction(Action.REMOVE_FROM_SELECTION, start, end);
     }
 
-    void ScrollIntoView(boolean alignToTop) {
-        accessible.executeAction(Action.SCROLL_TO_INDEX, start, end);
+    private void ScrollIntoView(boolean alignToTop) {
+        accessible.executeAction(AccessibleAction.SHOW_TEXT_RANGE, start, end);
     }
 
-    long[] GetChildren() {
+    private long[] GetChildren() {
         /* Not embedded object support currently */
         return new long[0];
     }

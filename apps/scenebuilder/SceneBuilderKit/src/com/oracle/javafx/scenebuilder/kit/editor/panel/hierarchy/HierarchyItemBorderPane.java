@@ -33,7 +33,6 @@ package com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy;
 
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.editor.images.ImageUtils;
-import com.oracle.javafx.scenebuilder.kit.editor.panel.hierarchy.AbstractHierarchyPanelController.DisplayOption;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask.Accessory;
@@ -46,7 +45,6 @@ import javafx.scene.image.Image;
  * Object representing the data contained within the hierarchy TreeItems for the
  * BorderPane top/right/bottom/left/center properties.
  *
- * p
  * @treatAsPrivate
  */
 public class HierarchyItemBorderPane extends HierarchyItem {
@@ -60,13 +58,11 @@ public class HierarchyItemBorderPane extends HierarchyItem {
      *
      * @param owner The accessory owner
      * @param fxomObject The FX object represented by this item
-     * @param option The display option
      * @param position The position of the FX object within the BorderPane
      */
     public HierarchyItemBorderPane(
             final DesignHierarchyMask owner,
             final FXOMObject fxomObject,
-            final DisplayOption option,
             final Accessory position) {
         assert owner != null;
         this.owner = owner;

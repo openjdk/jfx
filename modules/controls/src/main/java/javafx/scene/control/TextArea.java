@@ -53,8 +53,7 @@ import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.skin.TextAreaSkin;
 
 import javafx.css.Styleable;
-//import javafx.scene.accessibility.Attribute;
-//import javafx.scene.accessibility.Role;
+import javafx.scene.AccessibleRole;
 
 /**
  * Text input component that allows a user to enter multiple lines of
@@ -453,6 +452,7 @@ public class TextArea extends TextInputControl {
         super(new TextAreaContent());
 
         getStyleClass().add("text-area");
+        setAccessibleRole(AccessibleRole.TEXT_AREA);
         setText(text);
     }
 
@@ -695,24 +695,4 @@ public class TextArea extends TextInputControl {
     public List<CssMetaData<? extends Styleable, ?>> getControlCssMetaData() {
         return getClassCssMetaData();
     }
-
-
-    /***************************************************************************
-     *                                                                         *
-     * Accessibility handling                                                  *
-     *                                                                         *
-     **************************************************************************/
-
-//    /** @treatAsPrivate */
-//    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//        switch (attribute) {
-//            case ROLE: return Role.TEXT_AREA;
-//            case LINE_FOR_OFFSET: //Skin
-//            case LINE_START: //Skin
-//            case LINE_END:  //Skin
-//            case BOUNDS_FOR_RANGE: //Skin
-//            case OFFSET_AT_POINT: //Skin
-//            default: return super.accGetAttribute(attribute, parameters);
-//        }
-//    }
 }

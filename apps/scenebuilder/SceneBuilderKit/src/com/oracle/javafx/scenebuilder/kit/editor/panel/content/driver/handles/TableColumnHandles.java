@@ -43,7 +43,6 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Line;
-import javafx.scene.transform.Transform;
 
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.AbstractResilientHandles;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.ContentPanelController;
@@ -110,24 +109,10 @@ public class TableColumnHandles extends AbstractResilientHandles<Object> {
     }
 
     @Override
-    public Transform getSceneGraphToSceneTransform() {
+    public Node getSceneGraphObjectProxy() {
         assert isReady();
         assert tableView != null;
-        return tableView.getLocalToSceneTransform();
-    }
-
-    @Override
-    public Point2D sceneGraphObjectToScene(double x, double y) {
-        assert isReady();
-        assert tableView != null;
-        return tableView.localToScene(x, y);
-    }
-
-    @Override
-    public Point2D sceneToSceneGraphObject(double x, double y) {
-        assert isReady();
-        assert tableView != null;
-        return tableView.sceneToLocal(x, y);
+        return tableView;
     }
 
     @Override

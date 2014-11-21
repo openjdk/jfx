@@ -606,6 +606,7 @@ public class Level extends Parent {
             me.consume();
         });
         background.setOnMouseDragged((MouseEvent me) -> {
+            // Support touch-only devices like some mobile phones
             moveBat(me.getX() - bat.getWidth() / 2);
             me.consume();
         });

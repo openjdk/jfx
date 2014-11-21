@@ -325,6 +325,26 @@ void GlassApplication::LeaveNestedEventLoop(JNIEnv * env, jobject retValue)
     sm_shouldLeaveNestedLoop = true;
 }
 
+ULONG GlassApplication::s_accessibilityCount = 0;
+
+/* static */
+ULONG GlassApplication::IncrementAccessibility()
+{
+    return InterlockedIncrement(&GlassApplication::s_accessibilityCount);
+}
+
+/* static */
+ULONG GlassApplication::DecrementAccessibility()
+{
+    return InterlockedDecrement(&GlassApplication::s_accessibilityCount);
+}
+
+/* static */
+ULONG GlassApplication::GetAccessibilityCount()
+{
+    return GlassApplication::s_accessibilityCount;
+}
+
 /*******************************************************
  * JNI section
  *******************************************************/
@@ -421,6 +441,18 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinApplication__1runLoop
     while (GlassApplication::GetInstance() && ::GetMessage(&msg, NULL, 0, 0) > 0) {
         ::TranslateMessage(&msg);
         ::DispatchMessage(&msg);
+    }
+
+    if (GlassApplication::GetAccessibilityCount() > 0 && !IS_WIN8) {
+        // Bug in Windows 7. For some reason, JavaFX crashes when the application
+        // is shutting down while Narrator (the screen reader) is running. It is
+        // suspected the crash happens because the event thread is finalized while
+        // accessible objects are still receiving release messages. Not all the
+        // circumstances around this crash are well understood,  but calling
+        // GetMessage() one last time fixes the crash.
+        UINT_PTR timerId = ::SetTimer(NULL, NULL, 1000, NULL);
+        ::GetMessage(&msg, NULL, 0, 0);
+        ::KillTimer(NULL, timerId);
     }
 }
 

@@ -50,10 +50,11 @@ public abstract class BaseTexture<T extends ManagedResource> implements Texture 
     // We do not provide a default wrapMode because it is so dependent on
     // how the texture will be used.
     private final WrapMode wrapMode;
+    private final boolean useMipmap;
     private boolean linearFiltering = true;
     private int lastImageSerial;
 
-    protected BaseTexture(BaseTexture<T> sharedTex, WrapMode newMode) {
+    protected BaseTexture(BaseTexture<T> sharedTex, WrapMode newMode, boolean useMipmap) {
         this.resource = sharedTex.resource;
         this.format = sharedTex.format;
         this.wrapMode = newMode;
@@ -65,20 +66,21 @@ public abstract class BaseTexture<T extends ManagedResource> implements Texture 
         this.contentHeight = sharedTex.contentHeight;
         this.maxContentWidth = sharedTex.maxContentWidth;
         this.maxContentHeight = sharedTex.maxContentHeight;
+        this.useMipmap = useMipmap;
     }
 
     protected BaseTexture(T resource,
                           PixelFormat format, WrapMode wrapMode,
                           int width, int height)
     {
-        this(resource, format, wrapMode, width, height, 0, 0, width, height);
+        this(resource, format, wrapMode, width, height, 0, 0, width, height, false);
     }
 
     protected BaseTexture(T resource,
                           PixelFormat format, WrapMode wrapMode,
                           int physicalWidth, int physicalHeight,
                           int contentX, int contentY,
-                          int contentWidth, int contentHeight)
+                          int contentWidth, int contentHeight, boolean useMipmap)
     {
         this.resource = resource;
         this.format = format;
@@ -91,6 +93,7 @@ public abstract class BaseTexture<T extends ManagedResource> implements Texture 
         this.contentHeight = contentHeight;
         this.maxContentWidth = physicalWidth;
         this.maxContentHeight = physicalHeight;
+        this.useMipmap = useMipmap;
     }
     
     protected BaseTexture(T resource,
@@ -98,7 +101,7 @@ public abstract class BaseTexture<T extends ManagedResource> implements Texture 
                           int physicalWidth, int physicalHeight,
                           int contentX, int contentY,
                           int contentWidth, int contentHeight,
-                          int maxContentWidth, int maxContentHeight)
+                          int maxContentWidth, int maxContentHeight, boolean useMipmap)
     {
         this.resource = resource;
         this.format = format;
@@ -111,6 +114,7 @@ public abstract class BaseTexture<T extends ManagedResource> implements Texture 
         this.contentHeight = contentHeight;
         this.maxContentWidth = maxContentWidth;
         this.maxContentHeight = maxContentHeight;
+        this.useMipmap = useMipmap;
     }
 
     @Override
@@ -179,6 +183,11 @@ public abstract class BaseTexture<T extends ManagedResource> implements Texture 
     @Override
     public final WrapMode getWrapMode() {
         return wrapMode;
+    }
+
+    @Override
+    public boolean getUseMipmap() {
+        return useMipmap;
     }
 
     @Override

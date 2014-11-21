@@ -50,14 +50,16 @@ CFLAGS = -DWIN32 \
          -DJFXMEDIA_JNI_EXPORTS \
          -DTARGET_OS_WIN32=1 \
          -D_WIN32_WINNT=0x0500 \
-         -D_STATIC_CPPLIB \
-         -D_DISABLE_DEPRECATE_STATIC_CPPLIB \
          -DGST_DISABLE_LOADSAVE \
          -DGSTREAMER_LITE \
          -D_WINDLL \
          -D_MBCS \
 	 $(INCLUDES) \
          $(CL_COMPILER_FLAGS)
+
+ifeq ($(VS_VER), 100)
+    CFLAGS += -D_STATIC_CPPLIB -D_DISABLE_DEPRECATE_STATIC_CPPLIB
+endif
 
 LIBS = gstreamer-lite.lib \
        glib-lite.lib \
@@ -98,6 +100,9 @@ CPP_SOURCES = \
         jni/JniUtils.cpp \
         jni/Logger.cpp \
         jni/NativeVideoBuffer.cpp \
+        jni/NativeAudioEqualizer.cpp \
+        jni/NativeAudioSpectrum.cpp \
+        jni/NativeEqualizerBand.cpp \
         jni/JavaInputStreamCallbacks.cpp \
         PipelineManagement/AudioTrack.cpp \
         PipelineManagement/Pipeline.cpp \
@@ -110,7 +115,6 @@ CPP_SOURCES = \
         MediaManagement/MediaManager.cpp \
         Locator/Locator.cpp \
         Locator/LocatorStream.cpp \
-        platform/gstreamer/GstEqualizerBand.cpp \
         platform/gstreamer/GstMedia.cpp \
         platform/gstreamer/GstMediaPlayer.cpp \
         platform/gstreamer/GstPlatform.cpp \

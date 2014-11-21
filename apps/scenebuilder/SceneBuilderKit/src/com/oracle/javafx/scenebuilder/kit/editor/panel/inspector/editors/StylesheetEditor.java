@@ -31,6 +31,7 @@
  */
 package com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors;
 
+import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorPlatform;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
@@ -77,7 +78,7 @@ import javafx.stage.FileChooser;
 public class StylesheetEditor extends InlineListEditor {
 
     private final StackPane root = new StackPane();
-    private final Parent rootInitialBt;
+    private Parent rootInitialBt;
 
     private final MenuItem documentRelativeMenuItem
             = new MenuItem(I18N.getString("inspector.resource.documentrelative"));
@@ -89,9 +90,12 @@ public class StylesheetEditor extends InlineListEditor {
     private Type type;
     private URL fxmlFileLocation;
 
-    @SuppressWarnings("LeakingThisInConstructor")
     public StylesheetEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses, URL fxmlFileLocation) {
         super(propMeta, selectedClasses);
+        initialize(fxmlFileLocation);
+    }
+    
+    private void initialize(URL fxmlFileLocation) {
         this.fxmlFileLocation = fxmlFileLocation;
         setLayoutFormat(PropertyEditor.LayoutFormat.DOUBLE_LINE);
         // Add initial button
@@ -116,7 +120,7 @@ public class StylesheetEditor extends InlineListEditor {
         List<String> value = FXCollections.observableArrayList();
         // Group all the item values in a list
         for (EditorItem stylesheetItem : getEditorItems()) {
-            String itemValue = stylesheetItem.getValue();
+            String itemValue = EditorUtils.toString(stylesheetItem.getValue());
             if (itemValue.isEmpty()) {
                 continue;
             }
@@ -234,7 +238,7 @@ public class StylesheetEditor extends InlineListEditor {
     }
 
     private String getUrl(EditorItem source) {
-        URL url = EditorUtils.getUrl(source.getValue(), fxmlFileLocation);
+        URL url = EditorUtils.getUrl(EditorUtils.toString(source.getValue()), fxmlFileLocation);
         if (url == null) {
             return null;
         }
@@ -252,10 +256,13 @@ public class StylesheetEditor extends InlineListEditor {
                 new FileChooser.ExtensionFilter(
                         I18N.getString("inspector.select.css.filter"),
                         Arrays.asList(extensions)));
+        fileChooser.setInitialDirectory(EditorController.getNextInitialDirectory());
         File file = fileChooser.showOpenDialog(root.getScene().getWindow());
         if ((file == null)) {
             return;
         }
+        // Keep track of the user choice for next time
+        EditorController.updateNextInitialDirectory(file);
         URL url;
         try {
             url = file.toURI().toURL();
@@ -279,10 +286,6 @@ public class StylesheetEditor extends InlineListEditor {
             return;
         }
         addItem(new StylesheetItem(this, urlStr));
-
-        // Workaround for RT-34863: Reload of an updated css file has no effect.
-        // This reset the whole CSS from top. Would need to be moved on the FXOM side.
-        Deprecation.reapplyCSS(root.getScene());
 
         userUpdateValueProperty(getValue());
     }
@@ -323,7 +326,7 @@ public class StylesheetEditor extends InlineListEditor {
         for (EditorItem editorItem : getEditorItems()) {
             assert editorItem instanceof StylesheetItem;
             StylesheetItem stylesheetItem = (StylesheetItem) editorItem;
-            URL url = EditorUtils.getUrl(stylesheetItem.getValue(), fxmlFileLocation);
+            URL url = EditorUtils.getUrl(EditorUtils.toString(stylesheetItem.getValue()), fxmlFileLocation);
             String value = null;
             if ((url == null) || (type == Type.CLASSLOADER_RELATIVE_PATH)) {
                 // In this case we empty the text field (i.e. suffix) content
@@ -373,7 +376,7 @@ public class StylesheetEditor extends InlineListEditor {
             absoluteMenuItem.setDisable(true);
         }
     }
-
+    
     /**
      ***************************************************************************
      *
@@ -400,24 +403,23 @@ public class StylesheetEditor extends InlineListEditor {
         @FXML
         private TextField stylesheetTf;
 
-        private final Pane root;
+        private Pane root;
         private String currentValue;
-        private final EditorItemDelegate editor;
+        private EditorItemDelegate editor;
         private Type itemType = Type.PLAIN_STRING;
 
-        @SuppressWarnings("LeakingThisInConstructor")
         public StylesheetItem(EditorItemDelegate editor, String url) {
 //            System.out.println("New StylesheetItem.");
+            initialize(editor, url);
+        }
+
+        // Method to please FindBugs
+        private void initialize(EditorItemDelegate editor, String url) {
             this.editor = editor;
             Parent parentRoot = EditorUtils.loadFxml("StylesheetEditorItem.fxml", this);
             assert parentRoot instanceof Pane;
             root = (Pane) parentRoot;
 
-            initialize(url);
-        }
-
-        // Method to please FindBugs
-        private void initialize(String url) {
             setValue(url);
             EventHandler<ActionEvent> onActionListener = event -> {
 //                    System.out.println("StylesheetItem : onActionListener");
@@ -435,7 +437,7 @@ public class StylesheetEditor extends InlineListEditor {
                 }
                 updateButtons();
                 updateOpenRevealMenuItems();
-                currentValue = getValue();
+                currentValue = EditorUtils.toString(getValue());
             };
 
             ChangeListener<String> textPropertyChange = (ov, prevText, newText) -> {
@@ -462,7 +464,7 @@ public class StylesheetEditor extends InlineListEditor {
         }
 
         @Override
-        public String getValue() {
+        public Object getValue() {
             String suffix;
             if (stylesheetTf.getText().isEmpty()) {
                 return ""; //NOI18N
@@ -473,8 +475,8 @@ public class StylesheetEditor extends InlineListEditor {
         }
 
         @Override
-        public void setValue(String styleSheet) {
-            PrefixedValue prefixedValue = new PrefixedValue(styleSheet);
+        public void setValue(Object styleSheet) {
+            PrefixedValue prefixedValue = new PrefixedValue(EditorUtils.toString(styleSheet));
             itemType = prefixedValue.getType();
             handlePrefix(itemType);
             if (prefixedValue.getSuffix() != null) {
@@ -485,7 +487,7 @@ public class StylesheetEditor extends InlineListEditor {
             }
             updateButtons();
             updateOpenRevealMenuItems();
-            currentValue = getValue();
+            currentValue = EditorUtils.toString(getValue());
         }
 
         @Override
@@ -521,6 +523,12 @@ public class StylesheetEditor extends InlineListEditor {
         @Override
         public Button getPlusButton() {
             return plusBt;
+        }
+
+        @Override
+        public Button getMinusButton() {
+            // not used here
+            return null;
         }
 
         @FXML
@@ -562,7 +570,7 @@ public class StylesheetEditor extends InlineListEditor {
 
         private void updateOpenRevealMenuItems() {
             // Get the file name part of the suffix
-            String suffix = new PrefixedValue(getValue()).getSuffix();
+            String suffix = new PrefixedValue(EditorUtils.toString(getValue())).getSuffix();
             String fileName = null;
             if (!suffix.isEmpty()) {
                 fileName = EditorUtils.getSimpleFileName(suffix);

@@ -125,13 +125,8 @@ public class ChoiceBoxSkin<T> extends BehaviorSkinBase<ChoiceBox<T>, ChoiceBoxBe
         // When popup is hidden by autohide - the ChoiceBox Showing property needs
         // to be updated. So we listen to when autohide happens. Calling hide()
         // there after causes Showing to be set to false
-        popup.setOnAutoHide(event -> {
-            getSkinnable().hide();
-        });
-        // fix RT-14469 : When tab shifts ChoiceBox focus to another control,
-        // its popup should hide.
-        getSkinnable().focusedProperty().addListener((observable, oldValue, newValue) -> {
-            if (!newValue) {
+        popup.showingProperty().addListener((o, ov, nv) -> {
+            if (!nv) {
                 getSkinnable().hide();
             }
         });

@@ -37,6 +37,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
+import javafx.fxml.FXMLLoader;
 
 /**
  *
@@ -63,7 +64,7 @@ class FXOMSaver {
      * Private
      */
     
-    private static final String NAME_SPACE_FX = "http://javafx.com/javafx/8";
+    private static final String NAME_SPACE_FX = "http://javafx.com/javafx/" + FXMLLoader.JAVAFX_VERSION;
     private static final String NAME_SPACE_FXML = "http://javafx.com/fxml/1";
     
     private void updateNameSpace(FXOMDocument fxomDocument) {
