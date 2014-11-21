@@ -53,6 +53,10 @@
 
 #include <TargetConditionals.h>
 
+/* RT-37125: use setjmp/longjmp versions that do not save/restore the signal mask */
+#define longjmp _longjmp
+#define setjmp _setjmp
+
 #if TARGET_OS_IPHONE /* iOS */
 #undef  USING_BUILTIN_LIBRARY_ENTRYPOINT
 #define USING_BUILTIN_LIBRARY_ENTRYPOINT 1
