@@ -413,7 +413,7 @@ public abstract class BaseShaderGraphics
         // The following is safe; this method does not mutate the transform
         BaseTransform xform = getTransformNoClone();
         MaskData maskData =
-            ShapeUtil.rasterizeShape(shape, stroke, getFinalClipNoClone(), xform, true);
+            ShapeUtil.rasterizeShape(shape, stroke, getFinalClipNoClone(), xform, true, isAntialiasedShape());
         int maskW = maskData.getWidth();
         int maskH = maskData.getHeight();
 
@@ -463,7 +463,7 @@ public abstract class BaseShaderGraphics
         // The following is safe; this method does not mutate the transform
         BaseTransform xform = getTransformNoClone();
         MaskData maskData =
-            ShapeUtil.rasterizeShape(shape, stroke, getFinalClipNoClone(), xform, true);
+            ShapeUtil.rasterizeShape(shape, stroke, getFinalClipNoClone(), xform, true, isAntialiasedShape());
         Texture maskTex = context.getMaskTexture(maskData, false);
         int maskW = maskData.getWidth();
         int maskH = maskData.getHeight();
@@ -487,7 +487,7 @@ public abstract class BaseShaderGraphics
             VertexBuffer vb = context.getVertexBuffer();
             vb.addQuad(dx1, dy1, dx2, dy2, tx1, ty1, tx2, ty2,
                     getPaintTextureTx(xform, shader, bx, by, bw, bh));
-        } else {
+        } else {        
             // the mask has been generated in device space, so we use
             // identity transform here
             context.validatePaintOp(this, IDENT, maskTex, bx, by, bw, bh);
@@ -1489,6 +1489,10 @@ public abstract class BaseShaderGraphics
         if (w <= 0 || h <= 0) {
             return;
         }
+        if (!isAntialiasedShape()) {
+           fillQuad(x, y, x + w, y + h);
+           return;
+        }
         if (isComplexPaint) {
             scratchRRect.setRoundRect(x, y, w, h, 0, 0);
             renderWithComplexPaint(scratchRRect, null, x, y, w, h);
@@ -1513,6 +1517,11 @@ public abstract class BaseShaderGraphics
         if (isComplexPaint) {
             scratchEllipse.setFrame(x, y, w, h);
             renderWithComplexPaint(scratchEllipse, null, x, y, w, h);
+            return;
+        }
+        if (!isAntialiasedShape()) {
+            scratchEllipse.setFrame(x, y, w, h);
+            renderShape(scratchEllipse, null, x, y, w, h);
             return;
         }
         if (PrismSettings.primTextureSize != 0) {
@@ -1540,6 +1549,11 @@ public abstract class BaseShaderGraphics
         if (isComplexPaint) {
             scratchRRect.setRoundRect(x, y, w, h, arcw, arch);
             renderWithComplexPaint(scratchRRect, null, x, y, w, h);
+            return;
+        }
+        if (!isAntialiasedShape()) {
+            scratchRRect.setRoundRect(x, y, w, h, arcw, arch);
+            renderShape(scratchRRect, null, x, y, w, h);
             return;
         }
         renderGeneralRoundedRect(x, y, w, h, arcw, arch,
@@ -1640,6 +1654,11 @@ public abstract class BaseShaderGraphics
             renderWithComplexPaint(scratchRRect, stroke, x, y, w, h);
             return;
         }
+        if (!isAntialiasedShape()) {
+            scratchRRect.setRoundRect(x, y, w, h, 0, 0);
+            renderShape(scratchRRect, stroke, x, y, w, h);
+            return;
+        }
         if (canUseStrokeShader(stroke)) {
             if (PrismSettings.primTextureSize != 0 &&
                 stroke.getLineJoin() != BasicStroke.CAP_ROUND)
@@ -1679,7 +1698,7 @@ public abstract class BaseShaderGraphics
             return;
         }
         if (!isComplexPaint && !stroke.isDashed() &&
-            checkInnerCurvature(w, h))
+            checkInnerCurvature(w, h) && isAntialiasedShape())
         {
             renderGeneralRoundedRect(x, y, w, h, w, h,
                                      MaskType.DRAW_ELLIPSE, stroke);
@@ -1699,7 +1718,7 @@ public abstract class BaseShaderGraphics
             return;
         }
         if (!isComplexPaint && !stroke.isDashed() &&
-            checkInnerCurvature(arcw, arch))
+            checkInnerCurvature(arcw, arch) && isAntialiasedShape())
         {
             renderGeneralRoundedRect(x, y, w, h, arcw, arch,
                                      MaskType.DRAW_ROUNDRECT, stroke);
@@ -1737,6 +1756,11 @@ public abstract class BaseShaderGraphics
             scratchLine.setLine(x1, y1, x2, y2);
             renderWithComplexPaint(scratchLine, stroke, bx, by, bw, bh);
             return;
+        }
+        if (!isAntialiasedShape()) {
+            scratchLine.setLine(x1, y1, x2, y2);
+            renderShape(scratchLine, stroke, bx, by, bw, bh);
+            return;          
         }
         int cap = stroke.getEndCap();
         if (stroke.isDashed()) {
