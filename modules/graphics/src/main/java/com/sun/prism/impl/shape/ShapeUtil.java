@@ -34,18 +34,11 @@ import com.sun.prism.impl.PrismSettings;
 public class ShapeUtil {
 
     private static final ShapeRasterizer shapeRasterizer;
-    private static final ShapeRasterizer textRasterizer;
     static {
         if (PrismSettings.doNativePisces) {
             shapeRasterizer = new NativePiscesRasterizer();
         } else {
             shapeRasterizer = new OpenPiscesRasterizer();
-        }
-
-        if (PrismSettings.doPiscesText || PrismSettings.doOpenPiscesText) {
-            textRasterizer = shapeRasterizer;
-        } else {
-            textRasterizer = null;
         }
     }
 
@@ -56,11 +49,6 @@ public class ShapeUtil {
                                           boolean close, boolean antialiasedShape)
     {
         return shapeRasterizer.getMaskData(shape, stroke, xformBounds, xform, close, antialiasedShape);
-    }
-
-    public static MaskData rasterizeGlyphOutline(Shape shape, boolean antialiasedShape) {
-        return textRasterizer.
-            getMaskData(shape, null, null, BaseTransform.IDENTITY_TRANSFORM, true, antialiasedShape);
     }
 
     /**
