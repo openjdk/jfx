@@ -289,13 +289,12 @@ public class LinuxAppBundler extends AbstractBundler {
         out.println("app.mainjar=" + MAIN_JAR.fetchFrom(params).getIncludedFiles().iterator().next());
         out.println("app.version=" + VERSION.fetchFrom(params));
 
-        //use '/' in the clas name (instead of '.' to simplify native code
+        //use '/' in the class name (instead of '.' to simplify native code
         out.println("app.mainclass=" +
                 MAIN_CLASS.fetchFrom(params).replaceAll("\\.", "/"));
 
         StringBuilder macroedPath = new StringBuilder();
         for (String s : CLASSPATH.fetchFrom(params).split("[ ;:]+")) {
-            macroedPath.append("$PACKAGEDIR/");
             macroedPath.append(s);
             macroedPath.append(":");
         }

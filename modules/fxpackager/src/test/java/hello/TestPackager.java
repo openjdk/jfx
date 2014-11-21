@@ -30,6 +30,8 @@ import jdk.packager.services.UserJvmOptionsService;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.Toolkit;
+import java.io.File;
+import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
 import java.util.List;
@@ -70,8 +72,15 @@ public class TestPackager {
         long t = Runtime.getRuntime().totalMemory();
         Long total = t / 1048576;
 
-        JLabel label = new JLabel("Max: " + value.toString() + "m"
-                                  + "  Total: " + total.toString() + "m");
+        String canonicalPath;
+        try {
+            canonicalPath = new File(".").getCanonicalPath();
+        } catch (IOException ioe) {
+            canonicalPath = ioe.getMessage();
+        }
+        JLabel label = new JLabel("<html>Memory Max: " + value.toString() + " MiB"
+                                  + "<br>Memory Current: " + total.toString() + " MiB"
+                                 + "<br>Current Working Dir: " + canonicalPath + "");
 
         RuntimeMXBean RuntimemxBean = ManagementFactory.getRuntimeMXBean();
         List<String> arguments = RuntimemxBean.getInputArguments();
@@ -143,7 +152,8 @@ public class TestPackager {
 
         JPanel panel = new JPanel();
         panel.setLayout(new BorderLayout());
-        panel.setBorder(BorderFactory.createEmptyBorder(30, 10, 30, 30));
+        panel.setBorder(BorderFactory.createEmptyBorder(10, 30, 30, 30));
+        label.setBorder(BorderFactory.createEmptyBorder(0, 0, 20, 0));
         panel.add(label, BorderLayout.NORTH);
 
         panel.add(box, BorderLayout.CENTER);

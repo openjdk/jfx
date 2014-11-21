@@ -695,16 +695,10 @@ public class MacAppBundler extends AbstractBundler {
         data.put("DEPLOY_JVM_USER_OPTIONS", sb.toString());
 
 
-        //TODO UNLESS we are supporting building for jre7, this is unnecessary
-//        if (params.useJavaFXPackaging()) {
-//            data.put("DEPLOY_LAUNCHER_CLASS", JAVAFX_LAUNCHER_CLASS);
-//        } else {
         data.put("DEPLOY_LAUNCHER_CLASS", MAIN_CLASS.fetchFrom(params));
-//        }
 
         StringBuilder macroedPath = new StringBuilder();
         for (String s : CLASSPATH.fetchFrom(params).split("[ ;:]+")) {
-            macroedPath.append("$PACKAGEDIR/");
             macroedPath.append(s);
             macroedPath.append(":");
         }

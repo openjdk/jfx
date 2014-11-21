@@ -136,7 +136,7 @@ TCHAR* MacPlatform::ConvertFileSystemStringToString(TCHAR* Source, bool &release
 }
 
 void MacPlatform::SetCurrentDirectory(TString Value) {
-    chdir([NSHomeDirectory() UTF8String]);
+    chdir(PlatformString(Value).toPlatformString());
 }
 
 TString MacPlatform::GetPackageRootDirectory() {
