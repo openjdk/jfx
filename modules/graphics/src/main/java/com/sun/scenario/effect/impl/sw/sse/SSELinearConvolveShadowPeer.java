@@ -53,7 +53,7 @@ public class SSELinearConvolveShadowPeer extends SSELinearConvolvePeer {
                      float dxcol, float dycol, float dxrow, float dyrow);
 
     @Override
-    protected void
+    void
         filterVector(int dstPixels[], int dstw, int dsth, int dstscan,
                      int srcPixels[], int srcw, int srch, int srcscan,
                      float weights[], int count,
@@ -85,7 +85,7 @@ public class SSELinearConvolveShadowPeer extends SSELinearConvolvePeer {
                  float weights[], float shadowColor[]);
 
     @Override
-    protected void
+    void
         filterHV(int dstPixels[], int dstcols, int dstrows, int dcolinc, int drowinc,
                  int srcPixels[], int srccols, int srcrows, int scolinc, int srowinc,
                  float weights[])
