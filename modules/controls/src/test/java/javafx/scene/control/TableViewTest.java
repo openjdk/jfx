@@ -4589,4 +4589,66 @@ public class TableViewTest {
         assertEquals(4, listOne.size());
         assertEquals(4, listTwo.size());
     }
+
+    private final ObservableList<String> rt_39482_list = FXCollections.observableArrayList();
+    @Ignore("Fix not yet developed")
+    @Test public void test_rt_39482() {
+        TableView<String> stringTableView = new TableView<>();
+        stringTableView.getItems().addAll("a","b", "c", "d");
+
+        TableColumn<String,String> column = new TableColumn<>("Column");
+        column.setCellValueFactory(cdf -> new ReadOnlyStringWrapper(cdf.getValue()));
+        stringTableView.getColumns().add(column);
+
+        TableView.TableViewSelectionModel<String> sm = stringTableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        sm.getSelectedItems().addListener((ListChangeListener<String>) change -> {
+            while (change.next()) {
+                System.out.println("sm.getSelectedItems(): " + change.getList());
+            }
+        });
+
+        rt_39482_list.addListener((ListChangeListener<String>) change -> {
+            while (change.next()) {
+                System.out.println("rt_39482_list: " + change.getList());
+            }
+        });
+
+        Bindings.bindContent(rt_39482_list, sm.getSelectedItems());
+
+        assertEquals(0, sm.getSelectedItems().size());
+        assertEquals(0, rt_39482_list.size());
+
+        System.out.println("Test One:");
+        sm.selectAll();
+        assertEquals(4, sm.getSelectedItems().size());
+        assertEquals(4, rt_39482_list.size());
+
+        try {
+            System.out.println("\nTest Two:");
+            sm.clearAndSelect(0, column);
+            assertEquals(1, sm.getSelectedCells().size());
+            assertEquals(1, sm.getSelectedIndices().size());
+            assertEquals(1, sm.getSelectedItems().size());
+            assertEquals("a", sm.getSelectedItem());
+            assertEquals("a", rt_39482_list.get(0));
+            assertEquals(1, rt_39482_list.size());
+        } catch (IndexOutOfBoundsException e) {
+            e.printStackTrace();
+            fail();
+        }
+
+        System.out.println("\nTest Three:");
+        sm.selectAll();
+        assertEquals(4, sm.getSelectedCells().size());
+        assertEquals(4, sm.getSelectedIndices().size());
+        assertEquals(4, sm.getSelectedItems().size());
+        assertEquals(4, rt_39482_list.size());
+
+        System.out.println("\nTest Four:");
+        sm.clearAndSelect(1, column);
+        assertEquals(1, sm.getSelectedItems().size());
+        assertEquals(1, rt_39482_list.size());
+    }
 }
