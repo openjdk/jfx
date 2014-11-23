@@ -603,17 +603,16 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
     @Override public void selectAll() {
         if (getSelectionMode() == SINGLE) return;
 
-        quietClearSelection();
         if (getItemCount() <= 0) return;
 
-        int rowCount = getItemCount();
+        final int rowCount = getItemCount();
+        final int focusedIndex = getFocusedIndex();
 
         // set all selected indices to true
-        quietClearSelection();
-        selectedIndices.set(0, (int) rowCount, true);
-        selectedIndicesSeq.callObservers(new NonIterableChange.SimpleAddChange<Integer>(0, (int) rowCount, selectedIndicesSeq));
+        clearSelection();
+        selectedIndices.set(0, rowCount, true);
+        selectedIndicesSeq.callObservers(new NonIterableChange.SimpleAddChange<>(0, rowCount, selectedIndicesSeq));
 
-        int focusedIndex = getFocusedIndex();
         if (focusedIndex == -1) {
             setSelectedIndex(rowCount - 1);
             focus(rowCount - 1);

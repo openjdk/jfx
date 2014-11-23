@@ -44,6 +44,7 @@ import com.sun.javafx.scene.control.infrastructure.StageLoader;
 import com.sun.javafx.scene.control.skin.*;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
+import javafx.beans.binding.Bindings;
 import javafx.beans.binding.ObjectBinding;
 import javafx.beans.property.*;
 import javafx.beans.value.ChangeListener;
@@ -4514,5 +4515,78 @@ public class TableViewTest {
         assertEquals(column, anchor.getTableColumn());
 
         sl.dispose();
+    }
+
+    private final ObservableList<String> rt_39256_list = FXCollections.observableArrayList();
+    @Test public void test_rt_39256() {
+        TableView<String> stringTableView = new TableView<>();
+        stringTableView.getItems().addAll("a","b", "c", "d");
+
+        TableColumn<String,String> column = new TableColumn<>("Column");
+        column.setCellValueFactory(cdf -> new ReadOnlyStringWrapper(cdf.getValue()));
+        stringTableView.getColumns().add(column);
+
+        TableSelectionModel<String> sm = stringTableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+//        rt_39256_list.addListener((ListChangeListener<String>) change -> {
+//            while (change.next()) {
+//                System.err.println("number of selected persons (in bound list): " + change.getList().size());
+//            }
+//        });
+
+        Bindings.bindContent(rt_39256_list, sm.getSelectedItems());
+
+        assertEquals(0, sm.getSelectedItems().size());
+        assertEquals(0, rt_39256_list.size());
+
+        sm.selectAll();
+        assertEquals(4, sm.getSelectedItems().size());
+        assertEquals(4, rt_39256_list.size());
+
+        sm.selectAll();
+        assertEquals(4, sm.getSelectedItems().size());
+        assertEquals(4, rt_39256_list.size());
+
+        sm.selectAll();
+        assertEquals(4, sm.getSelectedItems().size());
+        assertEquals(4, rt_39256_list.size());
+    }
+
+    @Test public void test_rt_39256_noTableView() {
+        ObservableList<String> listOne = FXCollections.observableArrayList();
+        ObservableList<String> listTwo = FXCollections.observableArrayList();
+
+//        listOne.addListener((ListChangeListener<String>) change -> {
+//            while (change.next()) {
+//                System.out.println("number of strings in bound list - listOne: " + change.getList().size() + ", change: " + change);
+//            }
+//        });
+//
+//        listTwo.addListener((ListChangeListener<String>) change -> {
+//            while (change.next()) {
+//                System.out.println("number of strings in unbound list - listTwo: " + change.getList().size() + ", change: " + change);
+//            }
+//        });
+
+        Bindings.bindContent(listOne, listTwo);
+
+        assertEquals(0, listOne.size());
+        assertEquals(0, listTwo.size());
+
+        System.out.println("Test One:");
+        listTwo.setAll("a", "b", "c", "d");
+        assertEquals(4, listOne.size());
+        assertEquals(4, listTwo.size());
+
+        System.out.println("\nTest Two:");
+        listTwo.setAll("e", "f", "g", "h");
+        assertEquals(4, listOne.size());
+        assertEquals(4, listTwo.size());
+
+        System.out.println("\nTest Three:");
+        listTwo.setAll("i", "j", "k", "l");
+        assertEquals(4, listOne.size());
+        assertEquals(4, listTwo.size());
     }
 }

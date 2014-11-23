@@ -42,6 +42,7 @@ import com.sun.javafx.scene.control.behavior.ListCellBehavior;
 import com.sun.javafx.scene.control.behavior.TableCellBehavior;
 import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import javafx.application.Platform;
+import javafx.beans.binding.Bindings;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyStringWrapper;
@@ -1334,5 +1335,37 @@ public class ListViewTest {
         anchor = ListCellBehavior.getAnchor(stringListView, null);
         assertTrue(ListCellBehavior.hasNonDefaultAnchor(stringListView));
         assertEquals(1, anchor);
+    }
+
+    private final ObservableList<String> rt_39256_list = FXCollections.observableArrayList();
+    @Test public void test_rt_39256() {
+        ListView<String> stringListView = new ListView<>();
+        stringListView.getItems().addAll("a","b", "c", "d");
+
+        MultipleSelectionModel<String> sm = stringListView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+//        rt_39256_list.addListener((ListChangeListener<String>) change -> {
+//            while (change.next()) {
+//                System.err.println("number of selected persons (in bound list): " + change.getList().size());
+//            }
+//        });
+
+        Bindings.bindContent(rt_39256_list, sm.getSelectedItems());
+
+        assertEquals(0, sm.getSelectedItems().size());
+        assertEquals(0, rt_39256_list.size());
+
+        sm.selectAll();
+        assertEquals(4, sm.getSelectedItems().size());
+        assertEquals(4, rt_39256_list.size());
+
+        sm.selectAll();
+        assertEquals(4, sm.getSelectedItems().size());
+        assertEquals(4, rt_39256_list.size());
+
+        sm.selectAll();
+        assertEquals(4, sm.getSelectedItems().size());
+        assertEquals(4, rt_39256_list.size());
     }
 }

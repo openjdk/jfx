@@ -2554,8 +2554,6 @@ public class TableView<S> extends Control {
         @Override public void selectAll() {
             if (getSelectionMode() == SelectionMode.SINGLE) return;
 
-            quietClearSelection();
-
             if (isCellSelectionEnabled()) {
                 List<TablePosition<S,?>> indices = new ArrayList<>();
                 TableColumn<S,?> column;

@@ -48,6 +48,7 @@ import com.sun.javafx.scene.control.test.Data;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
+import javafx.beans.binding.Bindings;
 import javafx.beans.binding.ObjectBinding;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
@@ -4715,5 +4716,50 @@ public class TreeTableViewTest {
         assertEquals(column, anchor.getTableColumn());
 
         sl.dispose();
+    }
+
+    private final ObservableList<TreeItem<String>> rt_39256_list = FXCollections.observableArrayList();
+    @Test public void test_rt_39256() {
+        TreeItem<String> root = new TreeItem<>("Root");
+        root.setExpanded(true);
+        root.getChildren().addAll(
+                new TreeItem<>("a"),
+                new TreeItem<>("b"),
+                new TreeItem<>("c"),
+                new TreeItem<>("d")
+        );
+
+        TreeTableView<String> stringTreeTableView = new TreeTableView<>(root);
+        stringTreeTableView.setShowRoot(false);
+
+        TreeTableColumn<String,String> column = new TreeTableColumn<>("Column");
+        column.setCellValueFactory(cdf -> new ReadOnlyStringWrapper(cdf.getValue().getValue()));
+        stringTreeTableView.getColumns().add(column);
+
+        MultipleSelectionModel<TreeItem<String>> sm = stringTreeTableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+//        rt_39256_list.addListener((ListChangeListener<TreeItem<String>>) change -> {
+//            while (change.next()) {
+//                System.err.println("number of selected persons (in bound list): " + change.getList().size());
+//            }
+//        });
+
+        Bindings.bindContent(rt_39256_list, sm.getSelectedItems());
+
+        assertEquals(0, sm.getSelectedItems().size());
+        assertEquals(0, rt_39256_list.size());
+
+        sm.selectAll();
+        assertEquals(4, sm.getSelectedItems().size());
+        assertEquals(4, rt_39256_list.size());
+
+        sm.selectAll();
+        assertEquals(4, sm.getSelectedItems().size());
+        assertEquals(4, rt_39256_list.size());
+
+        sm.selectAll();
+        assertEquals(4, sm.getSelectedItems().size());
+        assertEquals(4, rt_39256_list.size());
     }
 }

@@ -2806,9 +2806,6 @@ public class TreeTableView<S> extends Control {
         @Override public void selectAll() {
             if (getSelectionMode() == SelectionMode.SINGLE) return;
 
-            quietClearSelection();
-//            if (getTableModel() == null) return;
-
             if (isCellSelectionEnabled()) {
                 List<TreeTablePosition<S,?>> indices = new ArrayList<>();
                 TreeTableColumn<S,?> column;
