@@ -122,7 +122,7 @@ static jint ScanlineIterator_next(ScanlineIterator *pIterator, Renderer *pRender
     for (i = 0; i < count; i++) {
         jint ecur = ptrs[i];
         jfloat curx = edges[ecur+CURX];
-        jint cross = ((jint) curx) << 1;
+        jint cross = ((jint) ceil(curx - 0.5f)) << 1;
         jint j;
         edges[ecur+CURX] = curx + edges[ecur+SLOPE];
         if (edges[ecur+OR] > 0) {
@@ -296,8 +296,8 @@ static void addLine(PathConsumer *pRenderer,
         x1 = or;
         or = 0;
     }
-    firstCrossing = Math_max((jint) ceil(y1), this.boundsMinY);
-    lastCrossing = Math_min((jint) ceil(y2), this.boundsMaxY);
+    firstCrossing = Math_max((jint) ceil(y1 - 0.5f), this.boundsMinY);
+    lastCrossing = Math_min((jint) ceil(y2 - 0.5f), this.boundsMaxY);
     if (firstCrossing >= lastCrossing) {
         return;
     }
@@ -325,7 +325,7 @@ static void addLine(PathConsumer *pRenderer,
     }
     this.numEdges++;
     this.edges[ptr+OR] = or;
-    this.edges[ptr+CURX] = x1 + (firstCrossing - y1) * slope;
+    this.edges[ptr+CURX] = x1 + (firstCrossing + 0.5f - y1) * slope;
     this.edges[ptr+SLOPE] = slope;
     this.edges[ptr+YMAX] = (jfloat) lastCrossing;
     bucketIdx = firstCrossing - this.boundsMinY;
@@ -635,13 +635,13 @@ static void setAndClearRelativeAlphas(AlphaConsumer *pAC,
 }
 
 static jint getSubpixMinX(Renderer *pRenderer) {
-    jint sampleColMin = (jint) ceil(this.edgeMinX);
+    jint sampleColMin = (jint) ceil(this.edgeMinX - 0.5f);
     if (sampleColMin < this.boundsMinX) sampleColMin = this.boundsMinX;
     return sampleColMin;
 }
 
 static jint getSubpixMaxX(Renderer *pRenderer) {
-    jint sampleColMax = (jint) ceil(this.edgeMaxX);
+    jint sampleColMax = (jint) ceil(this.edgeMaxX - 0.5f);
     if (sampleColMax > this.boundsMaxX) sampleColMax = this.boundsMaxX;
     return sampleColMax;
 }
