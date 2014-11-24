@@ -53,6 +53,7 @@ import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.geometry.NodeOrientation;
 import javafx.geometry.Side;
 import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
@@ -103,7 +104,11 @@ public class PieChart extends Chart {
     private double centerY;
     private double pieRadius;
     private Data begin = null;
-    private final Path labelLinePath = new Path();
+    private final Path labelLinePath = new Path() {
+        @Override public boolean usesMirroring() {
+            return false;
+        }
+    };
     private Legend legend = new Legend();
     private Data dataItemBeingRemoved = null;
     private Timeline dataRemoveTimeline = null;
@@ -386,6 +391,7 @@ public class PieChart extends Chart {
         // check if symbol has already been created
         if (arcRegion == null) {
             arcRegion = new Region();
+            arcRegion.setNodeOrientation(NodeOrientation.LEFT_TO_RIGHT);
             arcRegion.setPickOnBounds(false);
             item.setNode(arcRegion);
         }
