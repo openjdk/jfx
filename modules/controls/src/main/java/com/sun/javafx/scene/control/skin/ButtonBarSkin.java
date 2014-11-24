@@ -35,6 +35,7 @@ import javafx.beans.property.ObjectProperty;
 import javafx.collections.ListChangeListener;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
+import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonBar.ButtonData;
 import javafx.scene.layout.HBox;
@@ -223,6 +224,38 @@ public class ButtonBarSkin extends BehaviorSkinBase<ButtonBar, BehaviorBase<Butt
                 }
             }
         }
+
+        // now that all buttons have been placed, we need to ensure focus is
+        // set on the correct button. Firstly, we check to see if any button
+        // is of type Button (which is typically the case), and of these, if
+        // any is a default button. If so, we request focus onto this default
+        // button.
+        // If there is no Button that is a default button, we subsequently look
+        // at the ButtonData for each node and request focus on the first one
+        // that returns true for isDefaultButton()
+        boolean isDefaultSet = false;
+        final int childrenCount = buttons.size();
+        for (int i = 0; i < childrenCount; i++) {
+            Node btn = buttons.get(i);
+
+            if (btn instanceof Button && ((Button) btn).isDefaultButton()) {
+                btn.requestFocus();
+                isDefaultSet = true;
+                break;
+            }
+        }
+        if (!isDefaultSet) {
+            for (int i = 0; i < childrenCount; i++) {
+                Node btn = buttons.get(i);
+                ButtonData btnData = ButtonBar.getButtonData(btn);
+
+                if (btnData != null && btnData.isDefaultButton()) {
+                    btn.requestFocus();
+                    isDefaultSet = true;
+                    break;
+                }
+            }
+        }
     }
     
     private void resizeButtons() {
@@ -303,6 +336,7 @@ public class ButtonBarSkin extends BehaviorSkinBase<ButtonBar, BehaviorBase<Butt
             @Override protected Node create(boolean edgeCase) {
                 if ( edgeCase ) return null;
                 Region spacer = new Region();
+                ButtonBar.setButtonData(spacer, ButtonData.SMALL_GAP);
                 spacer.setMinWidth(GAP_SIZE);
                 HBox.setHgrow(spacer, Priority.NEVER);
                 return spacer;
@@ -311,6 +345,7 @@ public class ButtonBarSkin extends BehaviorSkinBase<ButtonBar, BehaviorBase<Butt
         DYNAMIC {
             @Override protected Node create(boolean edgeCase) {
                 Region spacer = new Region();
+                ButtonBar.setButtonData(spacer, ButtonData.BIG_GAP);
                 spacer.setMinWidth(edgeCase ? 0 : GAP_SIZE);
                 HBox.setHgrow(spacer, Priority.ALWAYS);
                 return spacer;
