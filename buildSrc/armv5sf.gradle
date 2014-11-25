@@ -26,18 +26,26 @@
 ext.ARMV5SF = [:]
 def crossLibsPackage="armv6sf-02"
 
-fetchExternalTools('ARMV5SF', [ "${crossLibsPackage}.tgz" ], 
-  rootProject.CROSS_TOOLS_DIR, rootProject.IS_IMPORT_CROSS_TOOLS)
-
 // Define the location of the sdk and toolchain
 def sdk=file("${rootProject.CROSS_TOOLS_DIR}/${crossLibsPackage}")
 
-def compilerHome=file("/opt/arm-linaro-4.7")
+def compilerHome
+def compilerPrefix
+if (IS_LINUX) {
+    fetchExternalTools('ARMV5SF',
+            ["${crossLibsPackage}.tgz",
+             "arm-linaro-4.7.tgz" ],
+            rootProject.CROSS_TOOLS_DIR,
+            rootProject.IS_IMPORT_CROSS_TOOLS)
+
+    compilerHome=file("${rootProject.CROSS_TOOLS_DIR}/arm-linaro-4.7")
+    compilerPrefix="arm-linux-gnueabi-"
+}
+
 if (rootProject.hasProperty("ARMV5SF_COMPILER")) {
     logger.quiet "Using alternate ARMV5SF_COMPILER $rootProject.ARMV5SF_COMPILER"
     compilerHome=file(rootProject.ARMV5SF_COMPILER);
 }
-def compilerPrefix="arm-linux-gnueabi-"
 if (rootProject.hasProperty("ARMV5SF_COMPILER_PREFIX")) {
     logger.quiet "Using alternate ARMV5SF_COMPILER_PREFIX $rootProject.ARMV5SF_COMPILER_PREFIX"
     compilerPrefix="${rootProject.ARMV5SF_COMPILER_PREFIX}"
@@ -48,7 +56,8 @@ if (IS_LINUX) {
 } else if (IS_MAC) {
     jniPlatform="darwin"
 } else {
-    fail( "armv5sf Cannot build on this platform")
+    fail "armv5sf Cannot build on this platform"
+    return;
 }
 
 def compiler = file("$compilerHome/bin/${compilerPrefix}gcc").getAbsolutePath()
