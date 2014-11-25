@@ -2243,6 +2243,9 @@ project(":media") {
                         args(IS_64 ? "ARCH=x64" : "ARCH=x32", "RESOURCE=${nativeOutputDir}/${buildType}/${WIN.media.jfxmediaRcFile}")
                     } else {
                         args ("CC=${mediaProperties.compiler}", "LINK=${mediaProperties.linker}", "LIB=${mediaProperties.lib}")
+                        if (t.name == "linux") {
+                            args(IS_64 ? "ARCH=x64" : "ARCH=x32")
+                        }
 
                         if (t.name.startsWith("arm")) {
                             args("EXTRA_CFLAGS=${mediaProperties.extra_cflags}", "EXTRA_LDFLAGS=${mediaProperties.extra_ldflags}")
@@ -2268,8 +2271,12 @@ project(":media") {
                         if (t.name == "win") {
                             environment(WINDOWS_NATIVE_COMPILE_ENVIRONMENT)
                             args(IS_64 ? "ARCH=x64" : "ARCH=x32", "RESOURCE=${nativeOutputDir}/${buildType}/${WIN.media.gstreamerRcFile}")
-                        } else
+                        } else {
                             args ("CC=${mediaProperties.compiler}", "LINK=${mediaProperties.linker}", "LIB=${mediaProperties.lib}")
+                            if (t.name == "linux") {
+                                args(IS_64 ? "ARCH=x64" : "ARCH=x32")
+                            }
+                        }
                     }
                 }
             }
@@ -2302,8 +2309,12 @@ project(":media") {
                             environment(winEnv)
 
                             args(IS_64 ? "ARCH=x64" : "ARCH=x32", "RESOURCE=${nativeOutputDir}/${buildType}/${WIN.media.fxpluginsRcFile}")
-                        } else
+                        } else {
                             args ("CC=${mediaProperties.compiler}", "LINK=${mediaProperties.linker}", "LIB=${mediaProperties.lib}")
+                            if (t.name == "linux") {
+                                args(IS_64 ? "ARCH=x64" : "ARCH=x32")
+                            }
+                        }
                     }
                 }
             }
@@ -2324,6 +2335,7 @@ project(":media") {
                                         commandLine ("make", "${makeJobsFlag}", "-C", "${nativeSrcDir}/gstreamer/projects/linux/avplugin")
                                         args("CC=${mediaProperties.compiler}", "OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}", 
                                              "BASE_NAME=avplugin", "VERSION=${version}", "LIBAV_DIR=${libavDir}")
+                                        args(IS_64 ? "ARCH=x64" : "ARCH=x32")
                                     }
                                 }
                             }
@@ -2333,6 +2345,7 @@ project(":media") {
                                 commandLine ("make", "${makeJobsFlag}", "-C", "${nativeSrcDir}/gstreamer/projects/linux/avplugin")
                                 args("CC=${mediaProperties.compiler}", "OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}", 
                                      "BASE_NAME=avplugin")
+                                args(IS_64 ? "ARCH=x64" : "ARCH=x32")
                             }
                         }
                     }
@@ -2528,6 +2541,18 @@ project(":web") {
                         "QMAKE_CFLAGS"   : "-m64",
                         "QMAKE_LFLAGS"   : "-m64",
                     ])
+                } else if (t.name == "linux") {
+                    if (IS_64) {
+                        environment([
+                            "QMAKESPEC"      : "linux-g++-64",
+                        ])
+                    } else {
+                        environment([
+                            "QMAKESPEC"      : "linux-g++-32",
+                            "QMAKE_CFLAGS"   : "-m32",
+                            "QMAKE_LFLAGS"   : "-m32",
+                        ])
+                    }
                 } else if (t.name.startsWith("arm")) {
                     // ARM cross build
                     def webkitProperties = project.rootProject.ext[t.upper].webkit

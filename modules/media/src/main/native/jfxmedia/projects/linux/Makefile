@@ -65,6 +65,11 @@ else
 	CFLAGS += -g -Wall -D_DEBUG
 endif
 
+ifeq ($(ARCH), x32)
+    CFLAGS += -m32
+    LDFLAGS += -m32
+endif
+
 CPP_SOURCES = \
         jni/com_sun_media_jfxmedia_logging_Logger.cpp           \
         jni/JavaBandsHolder.cpp 				\

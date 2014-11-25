@@ -53,6 +53,11 @@ INCLUDES += $(shell pkg-config --cflags libavcodec libavformat)
 LDFLAGS  += $(shell pkg-config --libs libavcodec libavformat)
 endif
 
+ifeq ($(ARCH), x32)
+    CFLAGS += -m32
+    LDFLAGS += -m32
+endif
+
 SOURCES = av/fxavcodecplugin.c  \
           av/avelement.c        \
           av/decoder.c          \
