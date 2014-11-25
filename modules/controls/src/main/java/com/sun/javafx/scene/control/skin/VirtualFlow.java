@@ -1776,7 +1776,9 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 // screen reader. 
                 accumCell.setAccessibleRole(AccessibleRole.NODE);
                 accumCell.getChildrenUnmodifiable().addListener((Observable c) -> {
-                    accumCell.getChildrenUnmodifiable().forEach(n -> n.setAccessibleRole(AccessibleRole.NODE));
+                    for (Node n : accumCell.getChildrenUnmodifiable()) {
+                        n.setAccessibleRole(AccessibleRole.NODE);
+                    }
                 });
             }
         }
