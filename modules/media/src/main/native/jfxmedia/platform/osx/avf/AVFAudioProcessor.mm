@@ -123,15 +123,15 @@ static bool FindAudioTap() {
     if (!checkPerformed) {
         if (!gAudioTapCreate) {
             gAudioTapCreate = (AudioTapCreateProc)
-                dlsym(RTLD_DEFAULT, "_MTAudioProcessingTapCreate");
+                dlsym(RTLD_DEFAULT, "MTAudioProcessingTapCreate");
         }
         if (!gAudioTapGetStorage) {
             gAudioTapGetStorage = (AudioTapGetStorageProc)
-                dlsym(RTLD_DEFAULT, "_MTAudioProcessingTapGetStorage");
+                dlsym(RTLD_DEFAULT, "MTAudioProcessingTapGetStorage");
         }
         if (!gAudioTapGetSourceAudio) {
             gAudioTapGetSourceAudio = (AudioTapGetSourceAudioProc)
-                dlsym(RTLD_DEFAULT, "_MTAudioProcessingTapGetSourceAudio");
+                dlsym(RTLD_DEFAULT, "MTAudioProcessingTapGetSourceAudio");
         }
         checkPerformed = true;
     }
