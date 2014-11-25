@@ -97,9 +97,7 @@ public class FilteredListTest {
     }
 
     @Test
-    @Ignore
     public void testLiveMode_changeMatcher() {
-        assertEquals(Arrays.asList("a", "c", "c"), filteredList);
         ObjectProperty<Predicate<String>> pProperty = new SimpleObjectProperty<>();
         pProperty.set((String e) -> !e.equals("c"));
         filteredList = new FilteredList<>(list);
@@ -137,9 +135,12 @@ public class FilteredListTest {
         assertEquals(Arrays.asList(createPerson("AA")), filtered);
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testNullPredicate() {
         filteredList.setPredicate(null);
+        assertEquals(list.size(), filteredList.size());
+        assertEquals(list, filteredList);
+        mlo.check1AddRemove(filteredList, Arrays.asList("a", "d"), 0, 4);
     }
 
     @Test
