@@ -238,7 +238,7 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
                          change:(NSDictionary *)change
                         context:(void *)context {
 	if (context == AVFMediaPlayerItemStatusContext) {
-        AVPlayerStatus status = [[change objectForKey:NSKeyValueChangeNewKey] integerValue];
+        AVPlayerStatus status = (AVPlayerStatus)[[change objectForKey:NSKeyValueChangeNewKey] longValue];
         if (status == AVPlayerStatusReadyToPlay) {
             if (!_movieReady) {
                 // Only send this once, though we'll receive notification a few times

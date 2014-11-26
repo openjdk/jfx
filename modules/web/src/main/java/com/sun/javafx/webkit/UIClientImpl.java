@@ -288,7 +288,7 @@ public final class UIClientImpl implements UIClient {
                         "png",
                         temp);
                     content.put(DataFormat.FILES, Arrays.asList(temp));
-                } catch (IOException e) {
+                } catch (IOException | SecurityException e) {
                     //That is ok. It was just an attempt.
                     //e.printStackTrace();
                 }

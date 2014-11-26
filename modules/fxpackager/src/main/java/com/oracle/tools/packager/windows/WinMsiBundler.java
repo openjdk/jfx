@@ -137,8 +137,8 @@ public class WinMsiBundler  extends AbstractBundler {
 
     private static final String TOOL_CANDLE = "candle.exe";
     private static final String TOOL_LIGHT = "light.exe";
-    // autodetect just v3.7 and v3.8
-    private static final String AUTODETECT_DIRS = ";C:\\Program Files (x86)\\WiX Toolset v3.8\\bin;C:\\Program Files\\WiX Toolset v3.8\\bin;C:\\Program Files (x86)\\WiX Toolset v3.7\\bin;C:\\Program Files\\WiX Toolset v3.7\\bin";
+    // autodetect just v3.7, v3.8, and 3.9
+    private static final String AUTODETECT_DIRS = ";C:\\Program Files (x86)\\WiX Toolset v3.9\\bin;C:\\Program Files\\WiX Toolset v3.9\\bin;C:\\Program Files (x86)\\WiX Toolset v3.8\\bin;C:\\Program Files\\WiX Toolset v3.8\\bin;C:\\Program Files (x86)\\WiX Toolset v3.7\\bin;C:\\Program Files\\WiX Toolset v3.7\\bin";
 
     public static final BundlerParamInfo<String> TOOL_CANDLE_EXECUTABLE = new WindowsBundlerParam<>(
             I18N.getString("param.candle-path.name"),

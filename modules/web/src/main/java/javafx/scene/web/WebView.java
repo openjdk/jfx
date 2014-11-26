@@ -1160,33 +1160,39 @@ final public class WebView extends Parent {
 
         //Drop target implementation:
         EventHandler<DragEvent> destHandler = event -> {
-            Dragboard db = event.getDragboard();
-            LinkedList<String> mimes = new LinkedList<String>();
-            LinkedList<String> values = new LinkedList<String>();
-            for (DataFormat df : db.getContentTypes()) {
-                //TODO: extend to non-string serialized values.
-                //Please, look at the native code.
-                Object content = db.getContent(df);
-                if (content != null) {
-                    for (String mime : df.getIdentifiers()) {
-                        mimes.add(mime);
-                        values.add(content.toString());
+            try {
+                Dragboard db = event.getDragboard();
+                LinkedList<String> mimes = new LinkedList<String>();
+                LinkedList<String> values = new LinkedList<String>();
+                for (DataFormat df : db.getContentTypes()) {
+                    //TODO: extend to non-string serialized values.
+                    //Please, look at the native code.
+                    Object content = db.getContent(df);
+                    if (content != null) {
+                        for (String mime : df.getIdentifiers()) {
+                            mimes.add(mime);
+                            values.add(content.toString());
+                        }
                     }
                 }
-            }
-            if (!mimes.isEmpty()) {
-                int wkDndEventType = getWKDndEventType(event.getEventType());
-                int wkDndAction = page.dispatchDragOperation(
-                    wkDndEventType,
-                    mimes.toArray(new String[0]), values.toArray(new String[0]),
-                    (int)event.getX(), (int)event.getY(),
-                    (int)event.getScreenX(), (int)event.getScreenY(),
-                    getWKDndAction(db.getTransferModes().toArray(new TransferMode[0])));
+                if (!mimes.isEmpty()) {
+                    int wkDndEventType = getWKDndEventType(event.getEventType());
+                    int wkDndAction = page.dispatchDragOperation(
+                        wkDndEventType,
+                        mimes.toArray(new String[0]), values.toArray(new String[0]),
+                        (int)event.getX(), (int)event.getY(),
+                        (int)event.getScreenX(), (int)event.getScreenY(),
+                        getWKDndAction(db.getTransferModes().toArray(new TransferMode[0])));
 
-                //we cannot accept nothing on drop (we skip FX exception)
-                if ( !(wkDndEventType == WebPage.DND_DST_DROP && wkDndAction == WK_DND_ACTION_NONE) )
-                    event.acceptTransferModes(getFXDndAction(wkDndAction));
-                event.consume();
+                    //we cannot accept nothing on drop (we skip FX exception)
+                    if (!(wkDndEventType == WebPage.DND_DST_DROP && wkDndAction == WK_DND_ACTION_NONE)) {
+                        event.acceptTransferModes(getFXDndAction(wkDndAction));
+                    }
+                    event.consume();
+                }
+            } catch (SecurityException ex) {
+                // Just ignore the exception
+                //ex.printStackTrace();
             }
         };
         setOnDragEntered(destHandler);

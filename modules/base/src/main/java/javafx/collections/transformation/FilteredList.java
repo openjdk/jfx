@@ -58,16 +58,20 @@ public final class FilteredList<E> extends TransformationList<E, E>{
     /**
      * Constructs a new FilteredList wrapper around the source list.
      * The provided predicate will match the elements in the source list that will be visible.
+     * If the predicate is null, all elements will be matched and the list is equal to the source list.
      * @param source the source list
-     * @param predicate the predicate to match the elements. Cannot be null.
+     * @param predicate the predicate to match the elements or null to match all elements.
      */
     public FilteredList(@NamedArg("source") ObservableList<E> source, @NamedArg("predicate") Predicate<? super E> predicate) {
         super(source);
-        if (predicate == null) {
-            throw new NullPointerException();
-        }
         filtered = new int[source.size() * 3 / 2  + 1];
-        this.predicate.set(predicate);
+        if (predicate != null) {
+            setPredicate(predicate);
+        } else {
+            for (size = 0; size < source.size(); size++) {
+                filtered[size] = size;
+            }
+        }
     }
 
     /**
@@ -80,51 +84,52 @@ public final class FilteredList<E> extends TransformationList<E, E>{
      * @param source the source list
      */
     public FilteredList(@NamedArg("source") ObservableList<E> source) {
-        this(source, ALWAYS_TRUE);
+        this(source, null);
     }
 
     /**
      * The predicate that will match the elements that will be in this FilteredList.
      * Elements not matching the predicate will be filtered-out.
+     * Null predicate means "always true" predicate, all elements will be matched.
      */
-    private final ObjectProperty<Predicate<? super E>> predicate =
-            new ObjectPropertyBase<Predicate<? super E>>() {
-
-        @Override
-        protected void invalidated() {
-            if (get() == null) {
-                if (isBound()) {
-                    unbind();
-                }
-                set(ALWAYS_TRUE);
-                throw new IllegalArgumentException("Predicate cannot be null.");
-
-            }
-            refilter();
-        }
-
-        @Override
-        public Object getBean() {
-            return FilteredList.this;
-        }
-
-        @Override
-        public String getName() {
-            return "predicate";
-        }
-
-    };
+    private ObjectProperty<Predicate<? super E>> predicate;
 
     public final ObjectProperty<Predicate<? super E>> predicateProperty() {
+        if (predicate == null) {
+            predicate = new ObjectPropertyBase<Predicate<? super E>>() {
+                @Override
+                protected void invalidated() {
+                    refilter();
+                }
+
+                @Override
+                public Object getBean() {
+                    return FilteredList.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "predicate";
+                }
+
+            };
+        }
         return predicate;
     }
 
     public final Predicate<? super E> getPredicate() {
-        return predicate.get();
+        return predicate == null ? null : predicate.get();
     }
 
     public final void setPredicate(Predicate<? super E> predicate) {
-        this.predicate.set(predicate);
+        predicateProperty().set(predicate);
+    }
+
+    private Predicate<? super E> getPredicateImpl() {
+        if (getPredicate() != null) {
+            return getPredicate();
+        }
+        return ALWAYS_TRUE;
     }
 
     @Override
@@ -240,7 +245,7 @@ public final class FilteredList<E> extends TransformationList<E, E>{
     }
 
     private void addRemove(Change<? extends E> c) {
-        Predicate<? super E> pred = predicate.get();
+        Predicate<? super E> pred = getPredicateImpl();
         ensureSize(getSource().size());
         final int from = findPosition(c.getFrom());
         final int to = findPosition(c.getFrom() + c.getRemovedSize());
@@ -286,7 +291,7 @@ public final class FilteredList<E> extends TransformationList<E, E>{
     }
 
     private void updateFilter(int sourceFrom, int sourceTo) {
-        Predicate<? super E> pred = predicate.get();
+        Predicate<? super E> pred = getPredicateImpl();
         beginChange();
         // Fast path for single element update
         if (sourceFrom == sourceTo - 1) {
@@ -380,7 +385,7 @@ public final class FilteredList<E> extends TransformationList<E, E>{
         }
         size = 0;
         int i = 0;
-        Predicate<? super E> pred = predicate.get();
+        Predicate<? super E> pred = getPredicateImpl();
         for (Iterator<? extends E> it = getSource().iterator();it.hasNext(); ) {
             final E next = it.next();
             if (pred.test(next)) {

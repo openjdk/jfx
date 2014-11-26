@@ -46,6 +46,10 @@ def commonFlags = [
         "-fno-strict-aliasing", "-fPIC", "-fno-omit-frame-pointer", // optimization flags
         "-W", "-Wall", "-Wno-unused", "-Wno-parentheses", "-Werror=implicit-function-declaration"] // warning flags
 
+if (!IS_64) {
+    commonFlags += "-m32"
+}
+
 // Specify the compilation parameters and link parameters
 def ccFlags = [
         commonFlags, "-I$JDK_HOME/include", "-I$JDK_HOME/include/linux", "-c",
@@ -170,12 +174,20 @@ LINUX.launcher.compiler = compiler
 LINUX.launcher.ccFlags = ["-DJAVAARCH=\"$OS_ARCH\"", "-I$JDK_HOME/include", "-I$JDK_HOME/include/linux", "-c"]
 LINUX.launcher.linker = linker
 LINUX.launcher.linkFlags = ["-ldl"]
+if (!IS_64) {
+    LINUX.launcher.ccFlags += "-m32"
+    LINUX.launcher.linkFlags += "-m32"
+}
 
 LINUX.launcherlibrary = [:]
 LINUX.launcherlibrary.compiler = compiler
 LINUX.launcherlibrary.ccFlags = ["-DJAVAARCH=\"$OS_ARCH\"", "-I$JDK_HOME/include", "-I$JDK_HOME/include/linux", "-c", "-fPIC"]
 LINUX.launcherlibrary.linker = linker
 LINUX.launcherlibrary.linkFlags = ["-ldl", "-lpthread", "-shared"]
+if (!IS_64) {
+    LINUX.launcherlibrary.ccFlags += "-m32"
+    LINUX.launcherlibrary.linkFlags += "-m32"
+}
 
 LINUX.iio = [:]
 LINUX.iio.javahInclude = ["com/sun/javafx/iio/**/*"]

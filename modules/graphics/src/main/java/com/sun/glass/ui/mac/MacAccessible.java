@@ -953,7 +953,7 @@ final class MacAccessible extends Accessible {
 
     private Bounds flipBounds(Bounds bounds) {
         View view = getRootView((Scene)getAttribute(SCENE));
-        if (view == null) return null;
+        if (view == null || view.getWindow() == null) return null;
         Screen screen = view.getWindow().getScreen();
         float height = screen.getHeight();
         return new BoundingBox(bounds.getMinX(),
@@ -1318,7 +1318,7 @@ final class MacAccessible extends Accessible {
                 }
                 Scene scene = (Scene)result;
                 View view = getRootView(scene);
-                if (view == null) return null;
+                if (view == null || view.getWindow() == null) return null;
                 result = view.getWindow().getNativeWindow();
                 break;
             }
@@ -1589,7 +1589,7 @@ final class MacAccessible extends Accessible {
             }
             default:
         }
-        return map.apply(result);
+        return result != null ? map.apply(result) : null;
     }
 
     private void accessibilitySetValue(long value, long attribute) {
@@ -1915,7 +1915,7 @@ final class MacAccessible extends Accessible {
 
     private long accessibilityHitTest(float x, float y) {
         View view = getView();
-        if (view == null) {
+        if (view == null || view.getWindow() == null) {
             return 0L;
         }
         Screen screen = view.getWindow().getScreen();

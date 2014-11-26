@@ -72,6 +72,11 @@ PACKAGES_LIBS := $(shell pkg-config --libs alsa glib-2.0 gobject-2.0 gmodule-2.0
 
 LDFLAGS = -L$(BUILD_DIR) -lm $(PACKAGES_LIBS) 
 
+ifeq ($(ARCH), x32)
+    CFLAGS += -m32
+    LDFLAGS += -m32
+endif
+
 SOURCES = \
      gstreamer/gst/gst.c                                             \
      gstreamer/gst/gstbin.c                                          \
