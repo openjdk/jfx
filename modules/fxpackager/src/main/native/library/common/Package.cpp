@@ -155,7 +155,7 @@ void Package::Initialize() {
     if (FilePath::FileExists(jvmUserArgsConfigFileName) == true) {
         // Load new location for user VM overrides.
         AutoFreePtr<PropertyFile> userConfig = new PropertyFile(jvmUserArgsConfigFileName);
-        FJVMUserArgsOverrides = Helpers::GetJVMArgsFromConfig(userConfig);
+        FJVMUserArgsOverrides = Helpers::GetJVMUserArgsFromConfig(userConfig);
     }
     else {
         // Attemp to load java.util.prefs for legacy JVM user overrides.
