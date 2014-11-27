@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <project xmlns:fx="javafx:com.sun.javafx.tools.ant" default="fx-deploy">
     <target name="fx-deploy">
         <taskdef resource="com/sun/javafx/tools/ant/antlib.xml"

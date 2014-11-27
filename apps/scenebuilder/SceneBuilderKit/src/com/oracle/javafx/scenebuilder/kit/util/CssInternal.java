@@ -31,6 +31,29 @@
  */
 package com.oracle.javafx.scenebuilder.kit.util;
 
+import java.io.File;
+import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
+
+import javafx.beans.property.ReadOnlyProperty;
+import javafx.collections.FXCollections;
+import javafx.css.CssMetaData;
+import javafx.css.StyleOrigin;
+import javafx.css.Styleable;
+import javafx.css.StyleableProperty;
+import javafx.scene.Node;
+import javafx.scene.Parent;
+
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorPlatform;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorPlatform.Theme;
@@ -43,26 +66,6 @@ import com.sun.javafx.css.SimpleSelector;
 import com.sun.javafx.css.Style;
 import com.sun.javafx.css.Stylesheet;
 import com.sun.javafx.css.parser.CSSParser;
-import java.io.File;
-import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
-import javafx.beans.property.ReadOnlyProperty;
-import javafx.collections.FXCollections;
-import javafx.css.CssMetaData;
-import javafx.css.StyleOrigin;
-import javafx.css.Styleable;
-import javafx.css.StyleableProperty;
-import javafx.scene.Node;
-import javafx.scene.Parent;
 
 /**
  *
@@ -72,19 +75,21 @@ import javafx.scene.Parent;
  */
 public class CssInternal {
 
-    private final static URL caspianThemeUrl = Deprecation.getCaspianStylesheetURL();
-    private final static URL caspianHighContrastThemeUrl = Deprecation.getCaspianHighContrastStylesheetURL();
-    private final static URL caspianEmbeddedThemeUrl = Deprecation.getCaspianEmbeddedStylesheetURL();
-    private final static URL caspianEmbeddedQVGAThemeUrl = Deprecation.getCaspianEmbeddedQVGAStylesheetURL();
-    private final static URL modenaThemeUrl = Deprecation.getModenaStylesheetURL();
-    private final static URL modenaTouchThemeUrl = Deprecation.getModenaTouchStylesheetURL();
-    private final static URL modenaHighContrastBlackonwhiteThemeUrl = Deprecation.getModenaHighContrastBlackonwhiteStylesheetURL();
-    private final static URL modenaHighContrastWhiteonblackThemeUrl = Deprecation.getModenaHighContrastWhiteonblackStylesheetURL();
-    private final static URL modenaHighContrastYellowonblackThemeUrl = Deprecation.getModenaHighContrastYellowonblackStylesheetURL();
-    private final static URL[] themeUrls = {
-        caspianThemeUrl, caspianHighContrastThemeUrl, caspianEmbeddedThemeUrl, caspianEmbeddedQVGAThemeUrl,
-        modenaThemeUrl, modenaTouchThemeUrl, modenaHighContrastBlackonwhiteThemeUrl,
-        modenaHighContrastWhiteonblackThemeUrl, modenaHighContrastYellowonblackThemeUrl
+    private final static String[] themeUrls = {
+        Deprecation.CASPIAN_EMBEDDED_HIGHCONTRAST_STYLESHEET,
+        Deprecation.CASPIAN_EMBEDDED_QVGA_HIGHCONTRAST_STYLESHEET,
+        Deprecation.CASPIAN_EMBEDDED_QVGA_STYLESHEET,
+        Deprecation.CASPIAN_EMBEDDED_STYLESHEET,
+        Deprecation.CASPIAN_HIGHCONTRAST_STYLESHEET,
+        Deprecation.CASPIAN_STYLESHEET,
+        Deprecation.MODENA_HIGHCONTRAST_BLACKONWHITE_STYLESHEET,
+        Deprecation.MODENA_HIGHCONTRAST_WHITEONBLACK_STYLESHEET,
+        Deprecation.MODENA_HIGHCONTRAST_YELLOWONBLACK_STYLESHEET,
+        Deprecation.MODENA_STYLESHEET,
+        Deprecation.MODENA_TOUCH_HIGHCONTRAST_BLACKONWHITE_STYLESHEET,
+        Deprecation.MODENA_TOUCH_HIGHCONTRAST_WHITEONBLACK_STYLESHEET,
+        Deprecation.MODENA_TOUCH_HIGHCONTRAST_YELLOWONBLACK_STYLESHEET,
+        Deprecation.MODENA_TOUCH_STYLESHEET
     };
 
     /**
@@ -99,12 +104,12 @@ public class CssInternal {
 
     public static boolean isCaspianTheme(Style style) {
         return style.getDeclaration().getRule().getStylesheet().getUrl()
-                .equals(caspianThemeUrl.toString());
+                .endsWith(Deprecation.CASPIAN_STYLESHEET);
     }
 
     public static boolean isModenaTheme(Style style) {
         return style.getDeclaration().getRule().getStylesheet().getUrl()
-                .equals(modenaThemeUrl.toString());
+                .endsWith(Deprecation.MODENA_TOUCH_STYLESHEET);
     }
 
     public static String getThemeDisplayName(Style style) {
@@ -126,15 +131,11 @@ public class CssInternal {
     }
 
     public static boolean isThemeRule(Rule rule) {
-        // With SB 2, we apply explicitly theme css (Modena, Caspian, ...)
-        // So although their rules appear with an AUTHOR origin, we have to consider them as USER_AGENT.
-        if (rule.getOrigin() == StyleOrigin.AUTHOR) {
-            String stylePath = rule.getStylesheet().getUrl();
-            assert stylePath != null;
-            for (URL themeUrl : themeUrls) {
-                if (stylePath.equals(themeUrl.toString())) {
-                    return true;
-                }
+        String stylePath = rule.getStylesheet().getUrl();
+        assert stylePath != null;
+        for (String themeUrl : themeUrls) {
+            if (stylePath.endsWith(themeUrl)) {
+                return true;
             }
         }
         return false;
@@ -145,15 +146,11 @@ public class CssInternal {
     }
 
     public static List<String> getThemeStyleClasses(Theme theme) {
-        List<URL> themeStyleSheets = EditorPlatform.getThemeStylesheetURLs(theme);
-        // Add the Modena css, which is not added in the list
-        themeStyleSheets.add(EditorPlatform.getPlatformThemeStylesheetURL());
+        String themeStyleSheet = EditorPlatform.getThemeStylesheetURL(theme);
         Set<String> themeClasses = new HashSet<>();
-        for (URL themeStyleSheet : themeStyleSheets) {
-            // For Theme css, we need to get the text css (.css) to be able to parse it.
-            // (instead of the default binary format .bss)
-            themeClasses.addAll(getStyleClasses(Deprecation.getThemeTextStylesheet(themeStyleSheet)));
-        }
+        // For Theme css, we need to get the text css (.css) to be able to parse it.
+        // (instead of the default binary format .bss)
+        themeClasses.addAll(getStyleClasses(Deprecation.getThemeTextStylesheet(themeStyleSheet)));
         return new ArrayList<>(themeClasses);
     }
 
@@ -168,7 +165,7 @@ public class CssInternal {
     }
 
     public static Map<String, String> getStyleClassesMap(EditorController editorController, Set<FXOMInstance> instances) {
-        Map<String, String> classesMap = new HashMap<>();
+        Map<String, String> classesMap = new TreeMap<>();
         Object fxRoot = null;
         for (FXOMInstance instance : instances) {
             if (fxRoot == null) {
@@ -240,7 +237,7 @@ public class CssInternal {
         Set<String> styleClasses = new HashSet<>();
         Stylesheet s;
         try {
-            s = CSSParser.getInstance().parse(url);
+            s = new CSSParser().parse(url);
         } catch (IOException ex) {
             System.out.println("Warning: Invalid Stylesheet " + url); //NOI18N
             return styleClasses;
@@ -464,7 +461,19 @@ public class CssInternal {
         node.applyCss();
 
         Map<StyleableProperty, List<Style>> ret = new HashMap<>();
-        ret.putAll(Deprecation.getStyleMap(node));
+//        ret.putAll(Deprecation.getStyleMap(node));
+
+        Map<StyleableProperty<?>, List<Style>> map = Deprecation.getStyleMap(node);
+        if (map != null && !map.isEmpty()) {
+            for (Map.Entry<StyleableProperty<?>, List<Style>> entry : map.entrySet()) {
+                StyleableProperty<?> key = entry.getKey();
+                List<Style> value = entry.getValue();
+                if (((javafx.beans.property.Property<?>) key).getBean() == node) {
+                    ret.put(key, value);
+                }
+            }
+        }
+
         // Attached map may impact css performance, so remove it.
         detachMapToNode(node);
         // DEBUG
@@ -483,24 +492,9 @@ public class CssInternal {
         if (style == null || style.getDeclaration() == null) {
             return null;
         }
-        return getOrigin(style.getDeclaration().getRule());
+        return style.getDeclaration().getRule().getOrigin();
     }
 
-    // Wrapper method that force the origin to be USER_AGENT if this is an Fx theme style.
-    public static StyleOrigin getOrigin(Rule rule) {
-        if (rule == null) {
-            return null;
-        }
-        if (isThemeRule(rule)) {
-            // Force the origin to be USER_AGENT if this is an Fx theme style.
-            return StyleOrigin.USER_AGENT;
-        } else {
-            // Are the 2 lines below equivalent ?
-            // styleOrigin = style.getDeclaration().getRule().getStylesheet().getOrigin();
-            return rule.getOrigin();
-        }
-    }
-    
     // From an css url, returns the theme display name
     public static String getThemeDisplayName(String url) {
         String themeName = ""; //NOI18N

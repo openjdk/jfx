@@ -778,15 +778,31 @@ public class TransformOperationsTest {
     public void testTransformBounds() {
         Bounds result = t.transform(new BoundingBox(10, 11, 12, 13, 14, 15));
 
-        Point3D expected1 = new Point3D(
-            t.getMxx() * 10 + t.getMxy() * 11 + t.getMxz() * 12 + t.getTx(),
-            t.getMyx() * 10 + t.getMyy() * 11 + t.getMyz() * 12 + t.getTy(),
-            t.getMzx() * 10 + t.getMzy() * 11 + t.getMzz() * 12 + t.getTz());
+        Point3D[] points = new Point3D[] {
+                new Point3D(10, 11, 12),
+                new Point3D(10, 11, 27),
+                new Point3D(10, 25, 12),
+                new Point3D(10, 25, 27),
+                new Point3D(23, 11, 12),
+                new Point3D(23, 11, 27),
+                new Point3D(23, 25, 12),
+                new Point3D(23, 25, 27),
+        };
 
-        Point3D expected2 = new Point3D(
-            t.getMxx() * 23 + t.getMxy() * 25 + t.getMxz() * 27 + t.getTx(),
-            t.getMyx() * 23 + t.getMyy() * 25 + t.getMyz() * 27 + t.getTy(),
-            t.getMzx() * 23 + t.getMzy() * 25 + t.getMzz() * 27 + t.getTz());
+        Point3D expected1 = new Point3D(Double.MAX_VALUE, Double.MAX_VALUE, Double.MAX_VALUE);
+        Point3D expected2 = new Point3D(-Double.MAX_VALUE, -Double.MAX_VALUE, -Double.MAX_VALUE);
+
+        for (Point3D p : points) {
+            Point3D tp = new Point3D(
+                    t.getMxx() * p.getX() + t.getMxy() * p.getY() + t.getMxz() * p.getZ() + t.getTx(),
+                    t.getMyx() * p.getX() + t.getMyy() * p.getY() + t.getMyz() * p.getZ() + t.getTy(),
+                    t.getMzx() * p.getX() + t.getMzy() * p.getY() + t.getMzz() * p.getZ() + t.getTz());
+            expected1 = new Point3D(Math.min(expected1.getX(), tp.getX()), Math.min(expected1.getY(), tp.getY()),
+                    Math.min(expected1.getZ(), tp.getZ()));
+            expected2 = new Point3D(Math.max(expected2.getX(), tp.getX()), Math.max(expected2.getY(), tp.getY()),
+                    Math.max(expected2.getZ(), tp.getZ()));
+
+        }
 
         assertEquals(expected1.getX(), result.getMinX(), 0.00001);
         assertEquals(expected1.getY(), result.getMinY(), 0.00001);
@@ -1202,15 +1218,31 @@ public class TransformOperationsTest {
                 fail("Should have thrown NonInvertibleTransformException");
             }
 
-            Point3D expected1 = new Point3D(
-                it.getMxx() * 10 + it.getMxy() * 11 + it.getMxz() * 12 + it.getTx(),
-                it.getMyx() * 10 + it.getMyy() * 11 + it.getMyz() * 12 + it.getTy(),
-                it.getMzx() * 10 + it.getMzy() * 11 + it.getMzz() * 12 + it.getTz());
+            Point3D[] points = new Point3D[] {
+                    new Point3D(10, 11, 12),
+                    new Point3D(10, 11, 27),
+                    new Point3D(10, 25, 12),
+                    new Point3D(10, 25, 27),
+                    new Point3D(23, 11, 12),
+                    new Point3D(23, 11, 27),
+                    new Point3D(23, 25, 12),
+                    new Point3D(23, 25, 27),
+            };
 
-            Point3D expected2 = new Point3D(
-                it.getMxx() * 23 + it.getMxy() * 25 + it.getMxz() * 27 + it.getTx(),
-                it.getMyx() * 23 + it.getMyy() * 25 + it.getMyz() * 27 + it.getTy(),
-                it.getMzx() * 23 + it.getMzy() * 25 + it.getMzz() * 27 + it.getTz());
+            Point3D expected1 = new Point3D(Double.MAX_VALUE, Double.MAX_VALUE, Double.MAX_VALUE);
+            Point3D expected2 = new Point3D(-Double.MAX_VALUE, -Double.MAX_VALUE, -Double.MAX_VALUE);
+
+            for (Point3D p : points) {
+                Point3D tp = new Point3D(
+                        it.getMxx() * p.getX() + it.getMxy() * p.getY() + it.getMxz() * p.getZ() + it.getTx(),
+                        it.getMyx() * p.getX() + it.getMyy() * p.getY() + it.getMyz() * p.getZ() + it.getTy(),
+                        it.getMzx() * p.getX() + it.getMzy() * p.getY() + it.getMzz() * p.getZ() + it.getTz());
+                expected1 = new Point3D(Math.min(expected1.getX(), tp.getX()), Math.min(expected1.getY(), tp.getY()),
+                        Math.min(expected1.getZ(), tp.getZ()));
+                expected2 = new Point3D(Math.max(expected2.getX(), tp.getX()), Math.max(expected2.getY(), tp.getY()),
+                        Math.max(expected2.getZ(), tp.getZ()));
+
+            }
 
             assertEquals(expected1.getX(), result.getMinX(), 0.00001);
             assertEquals(expected1.getY(), result.getMinY(), 0.00001);

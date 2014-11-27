@@ -32,5 +32,5 @@ public interface RenderTarget extends Surface {
     public Graphics createGraphics();
     public boolean isOpaque();
     public void setOpaque(boolean opaque);
-    public boolean isAntiAliasing();
+    public boolean isMSAA();
 }

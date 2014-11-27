@@ -260,11 +260,11 @@ public class ShapeTest {
         private float strokeDashOffset;
         private Object stroke;
         private Mode mode;
-        private boolean antialiased;
+        private boolean smooth;
         private Object fill;
 
         public Object getFill() { return fill; }
-        public boolean isSmooth() { return antialiased; }
+        public boolean isSmooth() { return smooth; }
         public Mode getMode() { return mode; }
         public Object getStroke() { return stroke; }
         public float getStrokeDashOffset() { return strokeDashOffset; }
@@ -274,7 +274,7 @@ public class ShapeTest {
         public StrokeLineCap getStrokeLineCap() { return pgStrokeLineCap; }
         public StrokeLineJoin getStrokeLineJoin() { return pgStrokeLineJoin; }
         public void setMode(Mode mode) { this.mode = mode; }
-        @Override public void setAntialiased(boolean aa) { this.antialiased = aa; }
+        @Override public void setSmooth(boolean smooth) { this.smooth = smooth; }
         @Override public void setFillPaint(Object fillPaint) { this.fill = fillPaint; }
         @Override public void setDrawPaint(Object drawPaint) { this.stroke = drawPaint; }
         @Override public void setDrawStroke(float strokeWidth,

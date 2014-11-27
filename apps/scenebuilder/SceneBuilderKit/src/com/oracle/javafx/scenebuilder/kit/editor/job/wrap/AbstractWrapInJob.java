@@ -32,43 +32,48 @@
 package com.oracle.javafx.scenebuilder.kit.editor.job.wrap;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
-import com.oracle.javafx.scenebuilder.kit.editor.job.BatchJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.DeleteObjectJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.BatchSelectionJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
 import com.oracle.javafx.scenebuilder.kit.editor.job.JobUtils;
-import com.oracle.javafx.scenebuilder.kit.editor.job.ModifyFxControllerJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.ModifyObjectJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.ModifyFxControllerJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.ModifyObjectJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.SetDocumentRootJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.ToggleFxRootJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.v2.AddPropertyValueJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.ToggleFxRootJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.AddPropertyValueJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.RemovePropertyJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.RemovePropertyValueJob;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.AbstractSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
+import com.oracle.javafx.scenebuilder.kit.fxom.FXOMProperty;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMPropertyC;
+import com.oracle.javafx.scenebuilder.kit.metadata.Metadata;
+import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Set;
 import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
 import javafx.scene.Node;
 import javafx.scene.Parent;
-import javafx.scene.layout.Region;
+import javafx.scene.chart.Axis;
+import javafx.scene.control.Accordion;
+import javafx.scene.control.DialogPane;
+import javafx.scene.control.TabPane;
+import javafx.scene.layout.BorderPane;
 
 /**
  * Main class used for the wrap jobs.
  */
-public abstract class AbstractWrapInJob extends Job {
+public abstract class AbstractWrapInJob extends BatchSelectionJob {
 
     protected Class<?> newContainerClass;
-    private BatchJob batchJob;
-    private AbstractSelectionGroup selectionSnapshot;
     protected FXOMInstance oldContainer, newContainer;
 
     public AbstractWrapInJob(EditorController editorController) {
@@ -83,6 +88,12 @@ public abstract class AbstractWrapInJob extends Job {
         final AbstractWrapInJob job;
         if (wrappingClass == javafx.scene.layout.AnchorPane.class) {
             job = new WrapInAnchorPaneJob(editorController);
+        } else if (wrappingClass == javafx.scene.layout.BorderPane.class) {
+            job = new WrapInBorderPaneJob(editorController);
+        } else if (wrappingClass == javafx.scene.control.ButtonBar.class) {
+            job = new WrapInButtonBarJob(editorController);
+        } else if (wrappingClass == javafx.scene.control.DialogPane.class) {
+            job = new WrapInDialogPaneJob(editorController);
         } else if (wrappingClass == javafx.scene.layout.FlowPane.class) {
             job = new WrapInFlowPaneJob(editorController);
         } else if (wrappingClass == javafx.scene.layout.GridPane.class) {
@@ -101,6 +112,8 @@ public abstract class AbstractWrapInJob extends Job {
             job = new WrapInStackPaneJob(editorController);
         } else if (wrappingClass == javafx.scene.control.TabPane.class) {
             job = new WrapInTabPaneJob(editorController);
+        } else if (wrappingClass == javafx.scene.text.TextFlow.class) {
+            job = new WrapInTextFlowJob(editorController);
         } else if (wrappingClass == javafx.scene.layout.TilePane.class) {
             job = new WrapInTilePaneJob(editorController);
         } else if (wrappingClass == javafx.scene.control.TitledPane.class) {
@@ -114,174 +127,163 @@ public abstract class AbstractWrapInJob extends Job {
         return job;
     }
 
-    @Override
-    public boolean isExecutable() {
-        return WrapJobUtils.canWrapIn(getEditorController());
-    }
-
-    @Override
-    public void execute() {
-        final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
+    protected boolean canWrapIn() {
         final Selection selection = getEditorController().getSelection();
-
-        assert isExecutable();
-        buildSubJobs();
-
-        try {
-            selectionSnapshot = selection.getGroup().clone();
-        } catch (CloneNotSupportedException x) {
-            // Emergency code
-            throw new RuntimeException(x);
+        if (selection.isEmpty()) {
+            return false;
         }
-        selection.clear();
-        selection.beginUpdate();
-        fxomDocument.beginUpdate();
-        batchJob.execute();
-        fxomDocument.endUpdate();
-        selection.select(newContainer);
-        selection.endUpdate();
+        final AbstractSelectionGroup asg = selection.getGroup();
+        if ((asg instanceof ObjectSelectionGroup) == false) {
+            return false;
+        }
+        final ObjectSelectionGroup osg = (ObjectSelectionGroup) asg;
+        if (osg.hasSingleParent() == false) {
+            return false;
+        }
+        if (getEditorController().isSelectionNode() == false) {
+            return false;
+        }
+        // Cannot wrap in Axis nodes
+        for (FXOMObject fxomObject : osg.getItems()) {
+            if (fxomObject.getSceneGraphObject() instanceof Axis) {
+                return false;
+            }
+        }
+        final FXOMObject parent = osg.getAncestor();
+        if (parent == null) { // selection == root object
+            return true;
+        }
+        final Object parentSceneGraphObject = parent.getSceneGraphObject();
+        if (parentSceneGraphObject instanceof BorderPane
+                || parentSceneGraphObject instanceof DialogPane) {
+            return osg.getItems().size() == 1;
+        }
+        return !(parentSceneGraphObject instanceof Accordion) // accepts only TitledPanes
+                && !(parentSceneGraphObject instanceof TabPane); // accepts only Tabs
     }
 
     @Override
-    public void undo() {
-        assert batchJob != null;
-        final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
-        final Selection selection = getEditorController().getSelection();
+    protected List<Job> makeSubJobs() {
+        final List<Job> result = new ArrayList<>();
 
-        selection.beginUpdate();
-        fxomDocument.beginUpdate();
-        batchJob.undo();
-        fxomDocument.endUpdate();
-        selection.select(selectionSnapshot);
-        selection.endUpdate();
+        if (canWrapIn()) { // (1)
+
+            final Selection selection = getEditorController().getSelection();
+            final AbstractSelectionGroup asg = selection.getGroup();
+            assert asg instanceof ObjectSelectionGroup; // Because of (1)
+            final ObjectSelectionGroup osg = (ObjectSelectionGroup) asg;
+
+            // Retrieve the old container
+            oldContainer = (FXOMInstance) osg.getAncestor();
+
+            // Retrieve the children to be wrapped
+            final List<FXOMObject> children = osg.getSortedItems();
+
+            // Create the new container
+            newContainer = makeNewContainerInstance();
+            // Update the new container
+            modifyNewContainer(children);
+
+            //==================================================================
+            // STEP #1
+            //==================================================================
+            // If the target object is NOT the FXOM root :
+            // - we add the new container to the old container
+            // - we remove the children from the old container
+            //------------------------------------------------------------------
+            if (oldContainer != null) {
+
+                // Retrieve the old container property name in use
+                final PropertyName oldContainerPropertyName
+                        = WrapJobUtils.getContainerPropertyName(oldContainer, children);
+                // Retrieve the old container property (already defined and not null)
+                final FXOMPropertyC oldContainerProperty
+                        = (FXOMPropertyC) oldContainer.getProperties().get(oldContainerPropertyName);
+                assert oldContainerProperty != null
+                        && oldContainerProperty.getParentInstance() != null;
+
+                // Add the new container to the old container
+                final int newContainerIndex = getIndex(oldContainer, children);
+                final Job newContainerAddValueJob = new AddPropertyValueJob(
+                        newContainer,
+                        oldContainerProperty,
+                        newContainerIndex, getEditorController());
+                result.add(newContainerAddValueJob);
+
+                // Remove children from the old container
+                final List<Job> removeChildrenJobs = removeChildrenJobs(oldContainerProperty, children);
+                result.addAll(removeChildrenJobs);
+            } //
+            //------------------------------------------------------------------
+            // If the target object is the FXOM root :
+            // - we update the document root with the new container
+            //------------------------------------------------------------------
+            else {
+                assert children.size() == 1; // Wrap the single root node
+                final FXOMObject rootObject = children.iterator().next();
+                assert rootObject instanceof FXOMInstance;
+                boolean isFxRoot = ((FXOMInstance) rootObject).isFxRoot();
+                final String fxController = rootObject.getFxController();
+                // First remove the fx:controller/fx:root from the old root object
+                if (isFxRoot) {
+                    final ToggleFxRootJob fxRootJob = new ToggleFxRootJob(getEditorController());
+                    result.add(fxRootJob);
+                }
+                if (fxController != null) {
+                    final ModifyFxControllerJob fxControllerJob
+                            = new ModifyFxControllerJob(rootObject, null, getEditorController());
+                    result.add(fxControllerJob);
+                }
+                // Then set the new container as root object
+                final Job setDocumentRoot = new SetDocumentRootJob(
+                        newContainer, getEditorController());
+                result.add(setDocumentRoot);
+                // Finally add the fx:controller/fx:root to the new root object
+                if (isFxRoot) {
+                    final ToggleFxRootJob fxRootJob = new ToggleFxRootJob(getEditorController());
+                    result.add(fxRootJob);
+                }
+                if (fxController != null) {
+                    final ModifyFxControllerJob fxControllerJob
+                            = new ModifyFxControllerJob(newContainer, fxController, getEditorController());
+                    result.add(fxControllerJob);
+                }
+            }
+
+            //==================================================================
+            // STEP #2
+            //==================================================================
+            // This step depends on the new container property 
+            // (either either the SUB COMPONENT or the CONTENT property)
+            //------------------------------------------------------------------
+            result.addAll(wrapChildrenJobs(children));
+        }
+
+        return result;
     }
 
     @Override
-    public void redo() {
-        assert batchJob != null;
-        final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
-        final Selection selection = getEditorController().getSelection();
-
-        selection.clear();
-        selection.beginUpdate();
-        fxomDocument.beginUpdate();
-        batchJob.redo();
-        fxomDocument.endUpdate();
-        selection.select(newContainer);
-        selection.endUpdate();
-    }
-
-    @Override
-    public String getDescription() {
+    protected String makeDescription() {
         return "Wrap in " + newContainerClass.getSimpleName();
     }
 
-    protected void buildSubJobs() {
-
-        assert isExecutable(); // (1)
-
-        // Create batch job
-        batchJob = new BatchJob(getEditorController());
-
-        final Selection selection = getEditorController().getSelection();
-        final AbstractSelectionGroup asg = selection.getGroup();
-        assert asg instanceof ObjectSelectionGroup; // Because of (1)
-        final ObjectSelectionGroup osg = (ObjectSelectionGroup) asg;
-
-        // Retrieve the current container
-        oldContainer = (FXOMInstance) osg.getAncestor();
-
-        // Retrieve the children to be wrapped
-        final Set<FXOMObject> children = osg.getItems();
-
-        // Create the new container
-        newContainer = makeContainerInstance();
-
-        //==================================================================
-        // STEP #1 UPDATE THE NEW CONTAINER
-        //==================================================================
-        // If the target object is NOT the FXOM root :
-        // - we update the new container bounds and add it to the current container
-        // - we remove the children from the current container
-        //------------------------------------------------------------------
-        if (oldContainer != null) {
-
-            // Retrieve the current container property name in use
-            final PropertyName oldContainerPropertyName
-                    = WrapJobUtils.getContainerPropertyName(oldContainer, children);
-            // Retrieve the current container property (already defined and not null)
-            final FXOMPropertyC oldContainerProperty
-                    = (FXOMPropertyC) oldContainer.getProperties().get(oldContainerPropertyName);
-            assert oldContainerProperty != null
-                    && oldContainerProperty.getParentInstance() != null;
-
-            // Update the new container before adding it to the old container
-            final DesignHierarchyMask oldContainerMask
-                    = new DesignHierarchyMask(oldContainer);
-            if (oldContainerMask.isFreeChildPositioning()
-                    && Region.class.isAssignableFrom(newContainer.getDeclaredClass())) { // Do not include Group new container
-                modifyContainerLayout(children);
-            }
-            modifyContainer(children);
-
-            // Add the new container to the current container
-            final int newContainerIndex = getIndex(oldContainer, children);
-            final Job newContainerAddValueJob = new AddPropertyValueJob(
-                    newContainer,
-                    oldContainerProperty,
-                    newContainerIndex, getEditorController());
-            batchJob.addSubJob(newContainerAddValueJob);
-
-            // Remove children from the current container
-            final List<Job> deleteChildrenJobs = deleteChildrenJobs(children);
-            batchJob.addSubJobs(deleteChildrenJobs);
-        } //
-        //------------------------------------------------------------------
-        // If the target object is the FXOM root :
-        // - we update the document root with the new container
-        //------------------------------------------------------------------
-        else {
-            assert children.size() == 1; // Wrap the single root node
-            final FXOMObject rootObject = children.iterator().next();
-            assert rootObject instanceof FXOMInstance;
-            boolean isFxRoot = ((FXOMInstance) rootObject).isFxRoot();
-            final String fxController = rootObject.getFxController();
-            // First remove the fx:controller/fx:root from the old root object
-            if (isFxRoot) {
-                final ToggleFxRootJob fxRootJob = new ToggleFxRootJob(getEditorController());
-                batchJob.addSubJob(fxRootJob);
-            }
-            if (fxController != null) {
-                final ModifyFxControllerJob fxControllerJob
-                        = new ModifyFxControllerJob(rootObject, null, getEditorController());
-                batchJob.addSubJob(fxControllerJob);
-            }
-            // Then set the new container as root object
-            final Job setDocumentRoot = new SetDocumentRootJob(
-                    newContainer, getEditorController());
-            batchJob.addSubJob(setDocumentRoot);
-            // Finally add the fx:controller/fx:root to the new root object
-            if (isFxRoot) {
-                final ToggleFxRootJob fxRootJob = new ToggleFxRootJob(getEditorController());
-                batchJob.addSubJob(fxRootJob);
-            }
-            if (fxController != null) {
-                final ModifyFxControllerJob fxControllerJob
-                        = new ModifyFxControllerJob(newContainer, fxController, getEditorController());
-                batchJob.addSubJob(fxControllerJob);
-            }
-        }
-
-        //==================================================================
-        // STEP #2 UPDATE THE NEW CONTAINER CHILDREN
-        //==================================================================
-        // This step depends on the new container property 
-        // (either either the SUB COMPONENT or the CONTENT property)
-        //------------------------------------------------------------------
-        batchJob.addSubJobs(wrapInJobs(children));
+    @Override
+    protected AbstractSelectionGroup getNewSelectionGroup() {
+        List<FXOMObject> newObjects = new ArrayList<>();
+        newObjects.add(newContainer);
+        return new ObjectSelectionGroup(newObjects, newObjects.iterator().next(), null);
     }
 
-    protected List<Job> addChildrenToPropertyJobs(
+    /**
+     * Used to wrap the specified children in the new container. May use either
+     * the SUB COMPONENT or the CONTENT property.
+     *
+     * @param children The children to be wrapped.
+     * @return A list of jobs.
+     */
+    protected abstract List<Job> wrapChildrenJobs(final List<FXOMObject> children);
+
+    protected List<Job> addChildrenJobs(
             final FXOMPropertyC containerProperty,
             final Collection<FXOMObject> children) {
 
@@ -299,91 +301,117 @@ public abstract class AbstractWrapInJob extends Job {
         return jobs;
     }
 
-    protected List<Job> deleteChildrenJobs(final Set<FXOMObject> children) {
+    protected List<Job> removeChildrenJobs(
+            final FXOMPropertyC containerProperty,
+            final List<FXOMObject> children) {
 
         final List<Job> jobs = new ArrayList<>();
         for (FXOMObject child : children) {
             assert child instanceof FXOMInstance;
-            final Job deleteObjectJob = new DeleteObjectJob(
-                    child, getEditorController());
-            jobs.add(deleteObjectJob);
+            final Job removeValueJob = new RemovePropertyValueJob(
+                    child,
+                    getEditorController());
+            jobs.add(removeValueJob);
         }
         return jobs;
     }
 
     /**
-     * Used to wrap the children in the new container.
-     * May use either the SUB COMPONENT or the CONTENT property.
-     *
-     * @param children
-     * @return
-     */
-    protected abstract List<Job> wrapInJobs(final Set<FXOMObject> children);
-
-    /**
-     * Used to modify the children before adding them to this container.
+     * Used to modify the specified children.
      *
      * @param children The children to be modified.
      * @return A list of jobs.
      */
-    protected abstract List<Job> modifyChildrenJobs(final Set<FXOMObject> children);
-
-    /**
-     * Used to modify this container before adding it to the specified container.
-     *
-     * Note that unlike the modifyChildrenJobs method, we must not use any job
-     * here but directly set the properties.
-     * Indeed, the new container is not yet part of the model.
-     *
-     * @param children The children of this container.
-     */
-    protected abstract void modifyContainer(final Set<FXOMObject> children);
-
-    /**
-     * Used to modify the children layout properties.
-     *
-     * @param children The children.
-     * @return
-     */
-    protected List<Job> modifyChildrenLayoutJobs(final Set<FXOMObject> children) {
+    protected List<Job> modifyChildrenJobs(final List<FXOMObject> children) {
 
         final List<Job> jobs = new ArrayList<>();
+        final DesignHierarchyMask newContainerMask = new DesignHierarchyMask(newContainer);
         final Bounds unionOfBounds = WrapJobUtils.getUnionOfBounds(children);
 
         for (FXOMObject child : children) {
-            assert child.getSceneGraphObject() instanceof Node;
-            final Node childNode = (Node) child.getSceneGraphObject();
-            final Bounds childBounds = childNode.getLayoutBounds();
 
-            final Point2D point = childNode.localToParent(
-                    childBounds.getMinX(), childBounds.getMinY());
-            double layoutX = point.getX() - unionOfBounds.getMinX();
-            double layoutY = point.getY() - unionOfBounds.getMinY();
-            final ModifyObjectJob modifyLayoutX = WrapJobUtils.modifyObjectJob(
-                    (FXOMInstance) child, "layoutX", layoutX, getEditorController());
-            jobs.add(modifyLayoutX);
-            final ModifyObjectJob modifyLayoutY = WrapJobUtils.modifyObjectJob(
-                    (FXOMInstance) child, "layoutY", layoutY, getEditorController());
-            jobs.add(modifyLayoutY);
+            // Modify child LAYOUT bounds
+            if (newContainerMask.isFreeChildPositioning()) {
+                assert child.getSceneGraphObject() instanceof Node;
+                final Node childNode = (Node) child.getSceneGraphObject();
+                final Bounds childBounds = childNode.getLayoutBounds();
+
+                final Point2D point = childNode.localToParent(
+                        childBounds.getMinX(), childBounds.getMinY());
+                double layoutX = point.getX() - unionOfBounds.getMinX();
+                double layoutY = point.getY() - unionOfBounds.getMinY();
+                final ModifyObjectJob modifyLayoutX = WrapJobUtils.modifyObjectJob(
+                        (FXOMInstance) child, "layoutX", layoutX, getEditorController());
+                jobs.add(modifyLayoutX);
+                final ModifyObjectJob modifyLayoutY = WrapJobUtils.modifyObjectJob(
+                        (FXOMInstance) child, "layoutY", layoutY, getEditorController());
+                jobs.add(modifyLayoutY);
+            } else {
+                assert child.getSceneGraphObject() instanceof Node;
+
+                final ModifyObjectJob modifyLayoutX = WrapJobUtils.modifyObjectJob(
+                        (FXOMInstance) child, "layoutX", 0.0, getEditorController());
+                jobs.add(modifyLayoutX);
+                final ModifyObjectJob modifyLayoutY = WrapJobUtils.modifyObjectJob(
+                        (FXOMInstance) child, "layoutY", 0.0, getEditorController());
+                jobs.add(modifyLayoutY);
+            }
+
+            // Remove static properties from child
+            if (child instanceof FXOMInstance) {
+                final FXOMInstance fxomInstance = (FXOMInstance) child;
+                for (FXOMProperty p : fxomInstance.getProperties().values()) {
+                    final Class<?> residentClass = p.getName().getResidenceClass();
+                    if (residentClass != null) {
+                        jobs.add(new RemovePropertyJob(p, getEditorController()));
+                    }
+                }
+            }
         }
+
         return jobs;
     }
 
     /**
-     * Used to modify the container layout properties.
+     * Used to modify the new container.
+     *
+     * Note that unlike the modifyChildrenJobs method, we do not use any job
+     * here but directly set the properties.
      *
      * @param children The children.
      */
-    protected void modifyContainerLayout(final Set<FXOMObject> children) {
-
-        final Bounds unionOfBounds = WrapJobUtils.getUnionOfBounds(children);
-        JobUtils.setLayoutX(newContainer, Node.class, unionOfBounds.getMinX());
-        JobUtils.setLayoutY(newContainer, Node.class, unionOfBounds.getMinY());
+    protected void modifyNewContainer(final List<FXOMObject> children) {
+        if (oldContainer != null) {
+            final DesignHierarchyMask oldContainerMask = new DesignHierarchyMask(oldContainer);
+            if (oldContainerMask.isFreeChildPositioning()) {
+                final Bounds unionOfBounds = WrapJobUtils.getUnionOfBounds(children);
+                JobUtils.setLayoutX(newContainer, Node.class, unionOfBounds.getMinX());
+                JobUtils.setLayoutY(newContainer, Node.class, unionOfBounds.getMinY());
 //            JobUtils.setMinHeight(newContainer, Region.class, unionOfBounds.getHeight());
 //            JobUtils.setMinWidth(newContainer, Region.class, unionOfBounds.getMinY());
+            }
+        }
+
+        // Add static properties to the new container
+        // (meaningfull for single selection only)
+        if (children.size() == 1) {
+            final Metadata metadata = Metadata.getMetadata();
+            final FXOMObject child = children.get(0);
+            if (child instanceof FXOMInstance) {
+                final FXOMInstance fxomInstance = (FXOMInstance) child;
+                for (FXOMProperty p : fxomInstance.getProperties().values()) {
+                    final Class<?> residentClass = p.getName().getResidenceClass();
+                    if (residentClass != null) {
+                        final ValuePropertyMetadata vpm = metadata.queryValueProperty(fxomInstance, p.getName());
+                        final Object value = vpm.getValueObject(fxomInstance);
+                        vpm.setValueObject(newContainer, value);
+                    }
+                }
+            }
+        }
     }
 
-    protected FXOMInstance makeContainerInstance(final Class<?> containerClass) {
+    protected FXOMInstance makeNewContainerInstance(final Class<?> containerClass) {
         // Create new container instance
         final FXOMDocument newDocument = new FXOMDocument();
         final FXOMInstance result = new FXOMInstance(newDocument, containerClass);
@@ -393,19 +421,19 @@ public abstract class AbstractWrapInJob extends Job {
         return result;
     }
 
-    private FXOMInstance makeContainerInstance() {
-        return makeContainerInstance(newContainerClass);
+    private FXOMInstance makeNewContainerInstance() {
+        return AbstractWrapInJob.this.makeNewContainerInstance(newContainerClass);
     }
 
     /**
-     * Returns the index to be used in order to add the new container
-     * to the current container.
+     * Returns the index to be used in order to add the new container to the old
+     * container.
      *
      * @param container
      * @param fxomObjects
      * @return
      */
-    private int getIndex(final FXOMInstance container, final Set<FXOMObject> fxomObjects) {
+    private int getIndex(final FXOMInstance container, final List<FXOMObject> fxomObjects) {
         final DesignHierarchyMask mask = new DesignHierarchyMask(container);
         if (mask.isAcceptingSubComponent() == false) {
             return -1;

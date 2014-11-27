@@ -171,6 +171,9 @@ glong getScreenPtrForLocation(gint x, gint y) {
 }
 
 void screen_settings_changed(GdkScreen* screen, gpointer user_data) {
+    (void)screen;
+    (void)user_data;
+
     mainEnv->CallStaticVoidMethod(jScreenCls, jScreenNotifySettingsChanged);
     LOG_EXCEPTION(mainEnv);
 }

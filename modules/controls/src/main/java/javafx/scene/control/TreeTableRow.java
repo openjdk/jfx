@@ -28,7 +28,6 @@ package javafx.scene.control;
 import javafx.css.PseudoClass;
 import com.sun.javafx.scene.control.skin.TreeTableRowSkin;
 import java.lang.ref.WeakReference;
-import java.util.List;
 
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
@@ -40,10 +39,10 @@ import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.ListChangeListener;
 import javafx.collections.WeakListChangeListener;
+import javafx.scene.AccessibleAction;
+import javafx.scene.AccessibleAttribute;
+import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
-//import javafx.scene.accessibility.Action;
-//import javafx.scene.accessibility.Attribute;
-//import javafx.scene.accessibility.Role;
 import javafx.scene.control.TreeTableView.TreeTableViewFocusModel;
 import javafx.scene.control.TreeTableView.TreeTableViewSelectionModel;
 
@@ -81,6 +80,7 @@ public class TreeTableRow<T> extends IndexedCell<T> {
      */
     public TreeTableRow() {
         getStyleClass().addAll(DEFAULT_STYLE_CLASS);
+        setAccessibleRole(AccessibleRole.TREE_TABLE_ROW);
     }
 
 
@@ -113,11 +113,16 @@ public class TreeTableRow<T> extends IndexedCell<T> {
             }
         }
     };
-    
+
+    private boolean oldExpanded;
     private final InvalidationListener treeItemExpandedInvalidationListener = o -> {
         final boolean expanded = ((BooleanProperty)o).get();
         pseudoClassStateChanged(EXPANDED_PSEUDOCLASS_STATE,   expanded);
         pseudoClassStateChanged(COLLAPSED_PSEUDOCLASS_STATE, !expanded);
+        if (expanded != oldExpanded) {
+            notifyAccessibleAttributeChanged(AccessibleAttribute.EXPANDED);
+        }
+        oldExpanded = expanded;
     };
     
     private final WeakListChangeListener<Integer> weakSelectedListener = 
@@ -153,6 +158,7 @@ public class TreeTableRow<T> extends IndexedCell<T> {
                 oldValue = get(); 
                 
                 if (oldValue != null) {
+                    oldExpanded = oldValue.isExpanded();
                     oldValue.expandedProperty().addListener(weakTreeItemExpandedInvalidationListener);
                     // fake an invalidation to ensure updated pseudo-class state
                     weakTreeItemExpandedInvalidationListener.invalidated(oldValue.expandedProperty());            
@@ -523,82 +529,58 @@ public class TreeTableRow<T> extends IndexedCell<T> {
      *                                                                         *
      **************************************************************************/
 
-//    /** @treatAsPrivate */
-//    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//        final TreeItem<T> treeItem = getTreeItem();
-//        final TreeTableView<T> treeTableView = getTreeTableView();
-//        final List<TreeTableColumn<T,?>> visibleColumns = treeTableView.getVisibleLeafColumns();
-//
-//        TreeTableColumn<T,?> treeColumn = treeTableView.getTreeColumn();
-//        treeColumn = treeColumn != null ? treeColumn :
-//                    !visibleColumns.isEmpty() ? visibleColumns.get(0) :
-//                    null;
-//
-//        switch (attribute) {
-//            case ROLE: return Role.TREE_TABLE_ITEM;
-//            case TREE_ITEM_PARENT: {
-//                if (treeItem == null) return null;
-//                TreeItem<T> parent = treeItem.getParent();
-//                if (parent == null) return null;
-//                int parentIndex = treeTableView.getRow(parent);
-//                return treeTableView.accGetAttribute(Attribute.ROW_AT_INDEX, parentIndex);
-//            }
-//            case TREE_ITEM_COUNT: {
-//                return treeItem == null  ? 0 : treeItem.getChildren().size();
-//            }
-//            case TREE_ITEM_AT_INDEX:
-//                if (treeItem == null) return null;
-//                int index = (Integer)parameters[0];
-//                if (index >= treeItem.getChildren().size()) return null;
-//                TreeItem<T> child = treeItem.getChildren().get(index);
-//                if (child == null) return null;
-//                int childIndex = treeTableView.getRow(child);
-//                return treeTableView.accGetAttribute(Attribute.ROW_AT_INDEX, childIndex);
-//            case TITLE: {
-//                if (treeItem == null) return "";
-//                return treeColumn.getCellData(treeItem);
-//            }
-//            case ROW_INDEX: return getIndex();
-//            case COLUMN_INDEX: return visibleColumns.indexOf(treeColumn);
-//            case LEAF: return treeItem == null ? true : treeItem.isLeaf();
-//            case EXPANDED: return treeItem == null ? false : treeItem.isExpanded();
-//            case INDEX: return getIndex();
-//            case SELECTED: return isSelected();
-//            case DISCLOSURE_LEVEL: {
-//                return treeTableView == null ? 0 : treeTableView.getTreeItemLevel(treeItem);
-//            }
-//            default: return super.accGetAttribute(attribute, parameters);
-//        }
-//    }
-//
-//    /** @treatAsPrivate */
-//    @Override public void accExecuteAction(Action action, Object... parameters) {
-//        final TreeTableView<T> treeTableView = getTreeTableView();
-//        final TreeItem<T> treeItem = getTreeItem();
-//        final TreeTableView.TreeTableViewSelectionModel<T> sm = treeTableView == null ? null : treeTableView.getSelectionModel();
-//
-//        switch (action) {
-//            case EXPAND: {
-//                if (treeItem != null) treeItem.setExpanded(true);
-//                break;
-//            }
-//            case COLLAPSE: {
-//                if (treeItem != null) treeItem.setExpanded(false);
-//                break;
-//            }
-//            case SELECT: {
-//                if (sm != null) sm.clearAndSelect(getIndex());
-//                break;
-//            }
-//            case ADD_TO_SELECTION: {
-//                if (sm != null) sm.select(getIndex());
-//                break;
-//            }
-//            case REMOVE_FROM_SELECTION: {
-//                if (sm != null) sm.clearSelection(getIndex());
-//                break;
-//            }
-//            default: super.accExecuteAction(action);
-//        }
-//    }
+    @Override
+    public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
+        final TreeItem<T> treeItem = getTreeItem();
+        final TreeTableView<T> treeTableView = getTreeTableView();
+
+        switch (attribute) {
+            case TREE_ITEM_PARENT: {
+                if (treeItem == null) return null;
+                TreeItem<T> parent = treeItem.getParent();
+                if (parent == null) return null;
+                int parentIndex = treeTableView.getRow(parent);
+                return treeTableView.queryAccessibleAttribute(AccessibleAttribute.ROW_AT_INDEX, parentIndex);
+            }
+            case TREE_ITEM_COUNT: {
+                if (treeItem == null) return 0;
+                if (!treeItem.isExpanded()) return 0;
+                return treeItem.getChildren().size();
+            }
+            case TREE_ITEM_AT_INDEX: {
+                if (treeItem == null) return null;
+                if (!treeItem.isExpanded()) return null;
+                int index = (Integer)parameters[0];
+                if (index >= treeItem.getChildren().size()) return null;
+                TreeItem<T> child = treeItem.getChildren().get(index);
+                if (child == null) return null;
+                int childIndex = treeTableView.getRow(child);
+                return treeTableView.queryAccessibleAttribute(AccessibleAttribute.ROW_AT_INDEX, childIndex);
+            }
+            case LEAF: return treeItem == null ? true : treeItem.isLeaf();
+            case EXPANDED: return treeItem == null ? false : treeItem.isExpanded();
+            case INDEX: return getIndex();
+            case DISCLOSURE_LEVEL: {
+                return treeTableView == null ? 0 : treeTableView.getTreeItemLevel(treeItem);
+            }
+            default: return super.queryAccessibleAttribute(attribute, parameters);
+        }
+    }
+
+    @Override
+    public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
+        switch (action) {
+            case EXPAND: {
+                TreeItem<T> treeItem = getTreeItem();
+                if (treeItem != null) treeItem.setExpanded(true);
+                break;
+            }
+            case COLLAPSE: {
+                TreeItem<T> treeItem = getTreeItem();
+                if (treeItem != null) treeItem.setExpanded(false);
+                break;
+            }
+            default: super.executeAccessibleAction(action);
+        }
+    }
 }

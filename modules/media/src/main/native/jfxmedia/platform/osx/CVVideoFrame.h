@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,7 +30,9 @@
 
 class CVVideoFrame : public CVideoFrame {
 public:
-    CVVideoFrame(CVPixelBufferRef buf, double frameTime, uint64_t frameHostTime, unsigned long frameNumber);
+    static bool IsFormatSupported(OSType format);
+
+    CVVideoFrame(CVPixelBufferRef buf, double frameTime, uint64_t frameHostTime);
     virtual ~CVVideoFrame();
 
     virtual void Dispose();
@@ -40,4 +42,7 @@ public:
 private:
     CVPixelBufferRef pixelBuffer;
     uint64_t frameHostTime;
+
+    void PrepareChunky();
+    void PreparePlanar();
 };

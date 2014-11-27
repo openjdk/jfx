@@ -28,7 +28,7 @@ package javafx.beans.property.adapter;
 import javafx.beans.property.ReadOnlyProperty;
 
 /**
- * {@code JavaBeanProperty%lt;T%gt;} is the super interface of all adapters between
+ * {@code JavaBeanProperty&lt;T&gt;} is the super interface of all adapters between
  * readonly Java Bean properties and JavaFX properties.
  * 
  * @param T The type of the wrapped property

@@ -1,10 +1,10 @@
 #
-# MacOs jfxmedia makefile
+# Mac OS X jfxmedia makefile
 #
 
+# OUTPUT_DIR, BUILD_TYPE and BASE_NAME are passed on the command line or from the 
+# parent make process
 BUILD_DIR = $(OUTPUT_DIR)/$(BUILD_TYPE)
-TARGET_DIRS = $(BUILD_DIR)
-
 SRCBASE_DIR = ../..
 OBJBASE_DIR = $(BUILD_DIR)/obj/jfxmedia
 
@@ -12,62 +12,84 @@ BASE_DIR = ../../..
 GSTREAMER_LITE_DIR = $(BASE_DIR)/gstreamer/gstreamer-lite
 GLIB_LITE_DIR = $(BASE_DIR)/gstreamer/3rd_party/glib/glib-2.28.8
 
-DIRLIST = MediaManagement    \
-          Locator 	     \
-          PipelineManagement \
-          jni                \
-          Utils 	     \
-          Utils/posix 	     \
-          platform/gstreamer \
-          platform/osx       \
-          Projects/utils
+OSX_PLATFORM_BASE = $(SRCBASE_DIR)/platform/osx
 
 TARGET_NAME = lib$(BASE_NAME).dylib
 TARGET = $(BUILD_DIR)/$(TARGET_NAME)
 
+# separate library for QTKit based platform
+QTK_NAME = lib$(BASE_NAME)_qtkit.dylib
+QTK_LIB = $(BUILD_DIR)/$(QTK_NAME)
+
+AVF_NAME = lib$(BASE_NAME)_avf.dylib
+AVF_LIB = $(BUILD_DIR)/$(AVF_NAME)
+
+# Set up base search path for source and headers
+VPATH = $(SRCBASE_DIR):$(GENERATED_HEADERS_DIR):$(JAVA_HOME)/include:$(JAVA_HOME)/include/darwin
+
+# ------------------------------------------------------------------
+# Base compile/link flags
+
 CFLAGS = -arch x86_64 \
-	 -fPIC                     \
-	 -Werror=implicit-function-declaration \
+         -pipe \
+         -fPIC                     \
+         -Werror=implicit-function-declaration \
          -DTARGET_OS_MAC=1         \
          -D_GNU_SOURCE             \
-         -DGST_REMOVE_DEPRECATED   \
-         -DGST_DISABLE_GST_DEBUG   \
-         -DGST_DISABLE_LOADSAVE    \
-         -DGST_DISABLE_XML         \
-         -DHAVE_CONFIG_H           \
-         -DJFXMEDIA_JNI_EXPORTS    \
-         -DGSTREAMER_LITE          \
          -msse2                    \
          -mmacosx-version-min=10.7
 
-ifeq ($(BUILD_TYPE), release)
+ifeq ($(BUILD_TYPE), Release)
     CFLAGS += -Os
 else
     CFLAGS += -O0 -g -Wall
 endif
 
-BASE_INCLUDES = -I$(JAVA_HOME)/include \
-		-I$(JAVA_HOME)/include/darwin \
-		-I$(SRCBASE_DIR) \
-		-I$(SRCBASE_DIR)/jni \
-		-I$(GENERATED_HEADERS_DIR)
 
-INCLUDES = $(BASE_INCLUDES) \
+INCLUDES = -I$(JAVA_HOME)/include \
+           -I$(JAVA_HOME)/include/darwin \
+           -I$(SRCBASE_DIR) \
+           -I$(SRCBASE_DIR)/jni \
+           -I$(GENERATED_HEADERS_DIR)
+
+
+LDFLAGS = -mmacosx-version-min=10.7 \
+          -arch x86_64 \
+          -L$(BUILD_DIR) \
+          -lobjc \
+          -framework Cocoa \
+          -framework CoreVideo
+
+# ------------------------------------------------------------------
+# jfxmedia compile/link flags
+
+JFXMEDIA_CFLAGS = $(CFLAGS) \
+         -DGST_REMOVE_DEPRECATED   \
+         -DGST_DISABLE_GST_DEBUG   \
+         -DGST_DISABLE_LOADSAVE    \
+         -DGST_DISABLE_XML         \
+         -DGSTREAMER_LITE          \
+         -DJFXMEDIA_JNI_EXPORTS    \
+         -DHAVE_CONFIG_H           \
+
+JFXMEDIA_INCLUDES = $(INCLUDES) \
            -I$(GLIB_LITE_DIR)/ \
            -I$(GLIB_LITE_DIR)/glib \
            -I$(GLIB_LITE_DIR)/gmodule \
            -I$(GLIB_LITE_DIR)/build/osx \
-	   -I$(GSTREAMER_LITE_DIR)/gstreamer \
+           -I$(GSTREAMER_LITE_DIR)/gstreamer \
            -I$(GSTREAMER_LITE_DIR)/gst-plugins-base/gst-libs \
-	   -I$(GSTREAMER_LITE_DIR)/gstreamer/libs
+           -I$(GSTREAMER_LITE_DIR)/gstreamer/libs
 
-LDFLAGS = -mmacosx-version-min=10.7 -arch x86_64 \
-	  -L$(BUILD_DIR) -Wl,-install_name,@rpath/$(TARGET_NAME) \
-          -lgstreamer-lite -lglib-lite -lobjc \
-          -framework CoreVideo -framework CoreAudio -framework QTKit \
-          -framework Cocoa -framework Carbon -framework CoreServices -framework JavaVM
+JFXMEDIA_LDFLAGS = $(LDFLAGS) \
+          -Wl,-install_name,@rpath/$(TARGET_NAME) \
+          -lgstreamer-lite \
+          -lglib-lite
 
-CPP_SOURCES =                                                  \
+# ------------------------------------------------------------------
+# jfxmedia sources/objects
+
+JFXMEDIA_SOURCES =                                             \
               MediaManagement/Media.cpp                        \
               MediaManagement/MediaManager.cpp                 \
               Locator/Locator.cpp                              \
@@ -87,6 +109,9 @@ CPP_SOURCES =                                                  \
               jni/JavaInputStreamCallbacks.cpp                 \
               jni/JavaBandsHolder.cpp                          \
               jni/NativeVideoBuffer.cpp                        \
+              jni/NativeAudioEqualizer.cpp                     \
+              jni/NativeAudioSpectrum.cpp                      \
+              jni/NativeEqualizerBand.cpp                      \
               Utils/MediaWarningDispatcher.cpp                 \
               Utils/LowLevelPerf.cpp                           \
               Utils/posix/posix_critical_section.cpp           \
@@ -100,53 +125,183 @@ CPP_SOURCES =                                                  \
               platform/gstreamer/GstPipelineFactory.cpp        \
               platform/gstreamer/GstVideoFrame.cpp             \
               platform/gstreamer/GstPlatform.cpp               \
-              platform/gstreamer/GstEqualizerBand.cpp          \
               platform/gstreamer/GstMedia.cpp                  \
               platform/gstreamer/GstMediaPlayer.cpp            \
-
-C_SOURCES =   Utils/ColorConverter.c
-
-OBJCMM_SOURCES =                                               \
-              platform/osx/OSXPlatform.mm                      \
-              platform/osx/OSXMediaPlayer.mm                   \
-              platform/osx/QTKMediaPlayer.mm                   \
-              platform/osx/CVVideoFrame.mm
-
-OBJCM_SOURCES =                                                \
+              Utils/ColorConverter.c                           \
               Utils/JObjectPeers.m                             \
               Utils/JavaUtils.m                                \
-              Utils/MTObjectProxy.m
+              Utils/MTObjectProxy.m                            \
+              platform/osx/OSXPlatform.mm                      \
+              platform/osx/OSXMediaPlayer.mm                   \
+              platform/osx/CVVideoFrame.mm
 
-OBJ_DIRS = $(addprefix $(OBJBASE_DIR)/,$(DIRLIST))
-OBJECTS  = $(patsubst %.cpp,$(OBJBASE_DIR)/%.o,$(CPP_SOURCES)) \
-           $(patsubst %.c,$(OBJBASE_DIR)/%.o,$(C_SOURCES)) \
-           $(patsubst %.mm,$(OBJBASE_DIR)/%.o,$(OBJCMM_SOURCES)) \
-           $(patsubst %.m,$(OBJBASE_DIR)/%.o,$(OBJCM_SOURCES))
+JFXMEDIA_OBJECTS = \
+    $(patsubst %.c, $(OBJBASE_DIR)/%.o, $(filter %.c, $(JFXMEDIA_SOURCES))) \
+    $(patsubst %.m, $(OBJBASE_DIR)/%.o, $(filter %.m, $(JFXMEDIA_SOURCES))) \
+    $(patsubst %.cpp, $(OBJBASE_DIR)/%.o, $(filter %.cpp, $(JFXMEDIA_SOURCES))) \
+    $(patsubst %.mm, $(OBJBASE_DIR)/%.o, $(filter %.mm, $(JFXMEDIA_SOURCES)))
 
-.PHONY: default
+# ------------------------------------------------------------------
+# Rules
 
-default: $(TARGET)
+.PHONY: default, checklibs
 
-$(OBJBASE_DIR)/%.o: $(SRCBASE_DIR)/%.cpp
-	$(CC) $(CFLAGS) $(INCLUDES) -x c++ -c $< -o $@
+default: $(TARGET) $(QTK_LIB) $(AVF_LIB)
+	@echo "Ensuring $(TARGET_NAME) does not link against QuickTime..."
+	! nm -m "$(TARGET)" | grep -E "(QTKit|QuickTime)"
+	@echo "Ensuring $(AVF_NAME) does not link against QuickTime..."
+	! nm -m "$(AVF_LIB)" | grep -E "(QTKit|QuickTime)"
 
-$(OBJBASE_DIR)/%.o: $(SRCBASE_DIR)/%.c
-	$(CC) $(CFLAGS) $(INCLUDES) -x c -c $< -o $@
 
-$(OBJBASE_DIR)/%.o: $(SRCBASE_DIR)/%.mm
-	$(CC) $(CFLAGS) $(INCLUDES) -x objective-c++ -c $< -o $@
+# ------------------------------------------------------------------
+# jfxmedia rules
 
-$(OBJBASE_DIR)/%.o: $(SRCBASE_DIR)/%.m
-	$(CC) $(CFLAGS) $(INCLUDES) -x objective-c -c $< -o $@
+# auto-dependencies
+-include $(JFXMEDIA_OBJECTS:.o=.d)
 
-$(OBJECTS): | $(OBJ_DIRS) $(TARGET_DIRS)
+$(OBJBASE_DIR)/%.o: %.cpp
+	@mkdir -p $(dir $@)
+	$(CC) $(JFXMEDIA_CFLAGS) $(JFXMEDIA_INCLUDES) -MD -MF $(OBJBASE_DIR)/$*.d -x c++ -c $< -o $@
 
-$(OBJ_DIRS):
-	mkdir -p $(OBJ_DIRS)
+$(OBJBASE_DIR)/%.o: %.c
+	@mkdir -p $(dir $@)
+	$(CC) $(JFXMEDIA_CFLAGS) $(JFXMEDIA_INCLUDES) -MD -MF $(OBJBASE_DIR)/$*.d -x c -c $< -o $@
 
-$(TARGET_DIRS):
-	mkdir -p $(TARGET_DIRS)
+$(OBJBASE_DIR)/%.o: %.mm
+	@mkdir -p $(dir $@)
+	$(CC) $(JFXMEDIA_CFLAGS) $(JFXMEDIA_INCLUDES) -MD -MF $(OBJBASE_DIR)/$*.d -x objective-c++ -c $< -o $@
 
-$(TARGET): $(OBJECTS)
-	$(LINK) -dynamiclib $(OBJECTS) $(LDFLAGS) -o $@
+$(OBJBASE_DIR)/%.o: %.m
+	@mkdir -p $(dir $@)
+	$(CC) $(JFXMEDIA_CFLAGS) $(JFXMEDIA_INCLUDES) -MD -MF $(OBJBASE_DIR)/$*.d -x objective-c -c $< -o $@
 
+$(TARGET): $(JFXMEDIA_OBJECTS)
+	@mkdir -p $(dir $@)
+	$(LINK) -dynamiclib $(JFXMEDIA_LDFLAGS) $(JFXMEDIA_OBJECTS) -o $@
+
+
+# ------------------------------------------------------------------
+# AVFoundation platform lib rules
+
+ifeq ($(BUILD_TYPE), Release)
+    AVF_XCRUN_FLAGS =
+else
+    # add a -v flag to show the build environment when xcrun is invoked
+    AVF_XCRUN_FLAGS = -v
+endif
+
+# The AVFoundation code uses ARC which is only supported by the clang compiler, so we'll
+# force the use of clang for this module.
+ifeq ($(COMPILE_PARFAIT), true)
+  # call xcrun so we wrap the correct clang++ executable
+  CLANG_PATH = $(shell xcrun -find clang++)
+  AVF_CPP = parfait-clang++ --nativecxx "$(CLANG_PATH)"
+else
+  # add -l to show the full command line used to invoke clang++ (for debugging purposes)
+  AVF_CPP = xcrun -l $(AVF_XCRUN_FLAGS) clang++
+endif
+
+AVF_OBJBASE = $(OBJBASE_DIR)/avf
+
+# We need a full path to the right SDK
+# We use --sdk macosx to force it to use the latest macosx SDK, which should be 10.8 or later
+AVF_SYSROOT = $(shell xcodebuild -sdk macosx -version | grep '^Path: ' | sed 's/Path: //')
+
+# we have to remove -mmacosx-version-min=% from CFLAGS and LDFLAGS and set it to
+# 10.8 since this module requires features only in 10.8 and later
+AVF_LDFLAGS = $(filter-out -mmacosx-version-min=%, $(LDFLAGS)) \
+              -isysroot "$(AVF_SYSROOT)" \
+              -iframework"$(AVF_SYSROOT)/System/Library/Frameworks" \
+              -mmacosx-version-min=10.8 \
+              -Wl,-install_name,@rpath/$(AVF_NAME) \
+              -framework AVFoundation \
+              -framework CoreMedia \
+              -framework Accelerate \
+              -framework AudioUnit \
+              -framework MediaToolbox
+
+AVF_CFLAGS = $(filter-out -mmacosx-version-min=%, $(CFLAGS)) \
+             -isysroot "$(AVF_SYSROOT)" \
+             -iframework"$(AVF_SYSROOT)/System/Library/Frameworks" \
+             -mmacosx-version-min=10.8 \
+             -DCA_AU_USE_FAST_DISPATCH=1 \
+             -DCA_BASIC_AU_FEATURES=1 \
+             -DCA_NO_AU_HOST_CALLBACKS=1 \
+             -DCA_NO_AU_UI_FEATURES=1 \
+             -DCA_USE_AUDIO_PLUGIN_ONLY=1 \
+             -fobjc-arc
+
+# CoreAudio Utility Classes provided by Apple
+COREAUDIO_UTILITY_CLASSES = \
+        platform/osx/CoreAudioUtilityClasses/CoreAudio/AudioUnits/AUPublic/AUBase/AUBase.cpp \
+        platform/osx/CoreAudioUtilityClasses/CoreAudio/AudioUnits/AUPublic/AUBase/AUInputElement.cpp \
+        platform/osx/CoreAudioUtilityClasses/CoreAudio/AudioUnits/AUPublic/AUBase/AUOutputElement.cpp \
+        platform/osx/CoreAudioUtilityClasses/CoreAudio/AudioUnits/AUPublic/AUBase/AUPlugInDispatch.cpp \
+        platform/osx/CoreAudioUtilityClasses/CoreAudio/AudioUnits/AUPublic/AUBase/AUScopeElement.cpp \
+        platform/osx/CoreAudioUtilityClasses/CoreAudio/AudioUnits/AUPublic/AUBase/ComponentBase.cpp \
+        platform/osx/CoreAudioUtilityClasses/CoreAudio/AudioUnits/AUPublic/OtherBases/AUEffectBase.cpp \
+        platform/osx/CoreAudioUtilityClasses/CoreAudio/AudioUnits/AUPublic/Utility/AUBuffer.cpp \
+        platform/osx/CoreAudioUtilityClasses/CoreAudio/PublicUtility/CAAudioChannelLayout.cpp \
+        platform/osx/CoreAudioUtilityClasses/CoreAudio/PublicUtility/CASpectralProcessor.cpp \
+        platform/osx/CoreAudioUtilityClasses/CoreAudio/PublicUtility/CAStreamBasicDescription.cpp \
+        platform/osx/CoreAudioUtilityClasses/CoreAudio/PublicUtility/CAVectorUnit.cpp
+
+COREAUDIO_INCLUDES = \
+        -I$(OSX_PLATFORM_BASE)/CoreAudioUtilityClasses/CoreAudio/AudioUnits/AUPublic/AUBase \
+        -I$(OSX_PLATFORM_BASE)/CoreAudioUtilityClasses/CoreAudio/AudioUnits/AUPublic/OtherBases \
+        -I$(OSX_PLATFORM_BASE)/CoreAudioUtilityClasses/CoreAudio/AudioUnits/AUPublic/Utility \
+        -I$(OSX_PLATFORM_BASE)/CoreAudioUtilityClasses/CoreAudio/PublicUtility
+
+AVF_SOURCES = \
+        platform/osx/avf/AVFMediaPlayer.mm \
+        platform/osx/avf/AVFAudioProcessor.mm \
+        platform/osx/avf/AVFAudioEqualizer.cpp \
+        platform/osx/avf/AVFAudioSpectrumUnit.cpp \
+        platform/osx/avf/AVFSoundLevelUnit.cpp \
+        platform/osx/avf/AVFKernelProcessor.cpp \
+        $(COREAUDIO_UTILITY_CLASSES)
+
+
+AVF_OBJECTS = $(patsubst %.mm,$(AVF_OBJBASE)/%.o,$(filter %.mm, $(AVF_SOURCES))) \
+              $(patsubst %.cpp,$(AVF_OBJBASE)/%.o,$(filter %.cpp, $(AVF_SOURCES)))
+
+AVF_INCLUDES = \
+    $(INCLUDES) \
+    $(COREAUDIO_INCLUDES) \
+    -I$(OSX_PLATFORM_BASE)
+
+-include $(AVF_OBJECTS:.o=.d)
+
+$(AVF_OBJBASE)/%.o: %.cpp
+	@mkdir -p $(dir $@)
+	$(AVF_CPP) $(AVF_CFLAGS) $(AVF_INCLUDES) -MD -MF $(AVF_OBJBASE)/$*.d -x c++ -c $< -o $@
+
+$(AVF_OBJBASE)/%.o: %.mm
+	@mkdir -p $(dir $@)
+	$(AVF_CPP) $(AVF_CFLAGS) $(AVF_INCLUDES) -MD -MF $(AVF_OBJBASE)/$*.d -x objective-c++ -c $< -o $@
+
+$(AVF_LIB): $(TARGET) $(AVF_OBJECTS)
+	@mkdir -p $(dir $@)
+	$(AVF_CPP)  $(AVF_LDFLAGS) -dynamiclib $(AVF_OBJECTS) -l$(BASE_NAME) -o $@
+
+
+# ------------------------------------------------------------------
+# QTKit platform lib rules
+
+QTK_OBJBASE = $(OBJBASE_DIR)/qtk
+QTK_LDFLAGS = $(LDFLAGS) \
+          -Wl,-install_name,@rpath/$(QTK_NAME) \
+          -framework QTKit
+
+QTK_SOURCES = platform/osx/QTKMediaPlayer.mm
+QTK_OBJECTS = $(patsubst %.mm,$(QTK_OBJBASE)/%.o,$(QTK_SOURCES))
+
+-include $(QTK_OBJECTS:.o=.d)
+
+$(QTK_OBJBASE)/%.o: %.mm
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) $(INCLUDES) -MD -MF $(QTK_OBJBASE)/$*.d -x objective-c++ -c $< -o $@
+
+$(QTK_LIB): $(TARGET) $(QTK_OBJECTS)
+	@mkdir -p $(dir $@)
+	$(LINK)  $(QTK_LDFLAGS) -dynamiclib $(QTK_OBJECTS) -l$(BASE_NAME) -o $@

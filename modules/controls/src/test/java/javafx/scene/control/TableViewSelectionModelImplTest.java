@@ -85,9 +85,9 @@ public class TableViewSelectionModelImplTest {
         tableView = new TableView();
         tableView.setItems(data);
         tableView.getColumns().addAll(
-            col0 = new TableColumn<String,String>(),
-            col1 = new TableColumn<String,String>(),
-            col2 = new TableColumn<String,String>()
+            col0 = new TableColumn<>(),
+            col1 = new TableColumn<>(),
+            col2 = new TableColumn<>()
         );
 
 
@@ -117,7 +117,7 @@ public class TableViewSelectionModelImplTest {
 
             // create a new focus model
             focusModel = new TableViewFocusModel(tableView);
-            tableView.setFocusModel((TableViewFocusModel) focusModel);
+            tableView.setFocusModel(focusModel);
         }
     }
 
@@ -167,7 +167,7 @@ public class TableViewSelectionModelImplTest {
         assertFalse(model.isSelected(3, col0));
         assertFalse(cells(model), model.isSelected(3, null));
         assertFalse(model.isSelected(3));
-        assertEquals(0, model.getSelectedCells().size());
+        assertEquals(1, model.getSelectedCells().size());
     }
 
     @Test public void selectRowWhenInSingleCellSelectionMode2() {
@@ -180,20 +180,21 @@ public class TableViewSelectionModelImplTest {
         assertFalse(model.isSelected(3, col0));
         assertFalse(cells(model), model.isSelected(3, null));
         assertFalse(model.isSelected(3));
-        assertEquals(0, model.getSelectedCells().size());
+        assertEquals(1, model.getSelectedCells().size());
     }
 
     @Test public void selectRowWhenInMultipleCellSelectionMode() {
         model.setSelectionMode(SelectionMode.MULTIPLE);
         model.setCellSelectionEnabled(true);
+        model.clearSelection();
         model.select(1);
         model.select(3);
 
-        assertFalse(model.isSelected(1, col0));
-        assertFalse(model.isSelected(3, col0));
+        assertTrue(model.isSelected(1, col0));
+        assertTrue(model.isSelected(3, col0));
         assertFalse(model.isSelected(3, null));
         assertFalse(model.isSelected(3));
-        assertEquals(0, model.getSelectedCells().size());
+        assertEquals(6, model.getSelectedCells().size());
     }
 
     @Test public void selectCellWhenInSingleCellSelectionMode() {
@@ -212,6 +213,7 @@ public class TableViewSelectionModelImplTest {
         model.setSelectionMode(SelectionMode.MULTIPLE);
         model.setCellSelectionEnabled(true);
         assertFalse(model.isSelected(3, col0));
+        model.clearSelection();
         model.select(1, col0);
         model.select(3, col0);
         assertTrue(model.isSelected(1, col0));
@@ -326,6 +328,7 @@ public class TableViewSelectionModelImplTest {
     @Test public void selectPreviousCellWithMultipleSelection() {
         model.setSelectionMode(SelectionMode.MULTIPLE);
         model.setCellSelectionEnabled(true);
+        model.clearSelection();
         model.select(2, col1);
         model.selectAboveCell();
         assertTrue(model.isSelected(2, col1));
@@ -336,6 +339,7 @@ public class TableViewSelectionModelImplTest {
     @Test public void selectNextCellWithMultipleSelection() {
         model.setSelectionMode(SelectionMode.MULTIPLE);
         model.setCellSelectionEnabled(true);
+        model.clearSelection();
         model.select(2, col1);
         model.selectBelowCell();
         assertTrue(model.isSelected(2, col1));
@@ -346,6 +350,7 @@ public class TableViewSelectionModelImplTest {
     @Test public void selectLeftCellWithMultipleSelection() {
         model.setSelectionMode(SelectionMode.MULTIPLE);
         model.setCellSelectionEnabled(true);
+        model.clearSelection();
         model.select(2, col1);
         model.selectLeftCell();
         assertTrue(cells(model), model.isSelected(2, col1));
@@ -356,6 +361,7 @@ public class TableViewSelectionModelImplTest {
     @Test public void selectRightCellWithMultipleSelection() {
         model.setSelectionMode(SelectionMode.MULTIPLE);
         model.setCellSelectionEnabled(true);
+        model.clearSelection();
         model.select(2, col1);
         model.selectRightCell();
         assertTrue(cells(model), model.isSelected(2, col1));
@@ -369,7 +375,7 @@ public class TableViewSelectionModelImplTest {
 
         model.select(10);
         assertFalse(cells(model), model.isSelected(10, null));
-        assertEquals(0, model.getSelectedCells().size());
+        assertEquals(1, model.getSelectedCells().size());
     }
 
     @Test public void ensureCellSelectionIsNoOpWhenDisabled() {
@@ -451,6 +457,7 @@ public class TableViewSelectionModelImplTest {
     @Test public void selectFirstRowInMultipleSelectionCellMode() {
         model.setSelectionMode(SelectionMode.MULTIPLE);
         model.setCellSelectionEnabled(true);
+        model.clearSelection();
         model.select(4, col1);
         model.selectFirst();
         assertTrue(cells(model), model.isSelected(0, col1));
@@ -481,6 +488,7 @@ public class TableViewSelectionModelImplTest {
     @Test public void selectLastRowInMultipleSelectionRowMode() {
         model.setSelectionMode(SelectionMode.MULTIPLE);
         model.setCellSelectionEnabled(false);
+        model.clearSelection();
         model.select(4);
         model.selectLast();
         assertTrue(cells(model), model.isSelected(tableView.getItems().size() - 1));
@@ -491,6 +499,7 @@ public class TableViewSelectionModelImplTest {
     @Test public void selectLastRowInMultipleSelectionCellMode() {
         model.setSelectionMode(SelectionMode.MULTIPLE);
         model.setCellSelectionEnabled(true);
+        model.clearSelection();
         model.select(4, col1);
         model.selectLast();
         assertTrue(cells(model), model.isSelected(tableView.getItems().size() - 1, col1));
@@ -547,7 +556,7 @@ public class TableViewSelectionModelImplTest {
 
     @Test public void focusPreviousRowImmediately() {
         focusModel.focusPrevious();
-        assertEquals(new TablePosition(tableView, 0, null), focusModel.getFocusedCell());
+        assertEquals(new TablePosition(tableView, 0, col0), focusModel.getFocusedCell());
         assertTrue(focusedCell(), focusModel.isFocused(0, null));
     }
 
@@ -569,13 +578,13 @@ public class TableViewSelectionModelImplTest {
     }
 
     @Test public void focusNextRowImmediately() {
-        assertEquals(new TablePosition(tableView, -1, null), focusModel.getFocusedCell());
+        assertEquals(new TablePosition(tableView, 0, col0), focusModel.getFocusedCell());
 
         focusModel.focusNext();
 
-        assertEquals(new TablePosition(tableView, 0, null), focusModel.getFocusedCell());
-        assertTrue(focusedCell(), focusModel.isFocused(0));
-        assertTrue(focusedCell(), focusModel.isFocused(0, null));
+        assertEquals(new TablePosition(tableView, 1, col0), focusModel.getFocusedCell());
+        assertTrue(focusedCell(), focusModel.isFocused(1));
+        assertTrue(focusedCell(), focusModel.isFocused(1, null));
     }
 
     @Test public void focusNextRowFromLastRow() {
@@ -664,6 +673,7 @@ public class TableViewSelectionModelImplTest {
     }
 
     @Test public void focusRightCellFromEndColumn() {
+        model.clearSelection();
         TableColumn<String,?> rightEdge = tableView.getVisibleLeafColumn(tableView.getVisibleLeafColumns().size() - 1);
 
         focusModel.focus(3, rightEdge);
@@ -677,6 +687,7 @@ public class TableViewSelectionModelImplTest {
     @Test public void test_rt33442() {
         model.setSelectionMode(SelectionMode.MULTIPLE);
         model.setCellSelectionEnabled(true);
+        model.clearSelection();
 
         assertTrue(model.getSelectedCells().isEmpty());
 
@@ -702,9 +713,15 @@ public class TableViewSelectionModelImplTest {
         assertEquals(15, model.getSelectedCells().size());
 
         model.setSelectionMode(SelectionMode.SINGLE);
+        assertEquals(1, model.getSelectedCells().size());
         for (int row = 0; row <= 4; row++) {
             for (int column = 0; column <= 2; column++) {
-                assertFalse(model.isSelected(row, tableView.getVisibleLeafColumn(column)));
+                // the last item will be selected
+                if (row == 4 && column == 2) {
+                    assertTrue(model.isSelected(row, tableView.getVisibleLeafColumn(column)));
+                } else {
+                    assertFalse(model.isSelected(row, tableView.getVisibleLeafColumn(column)));
+                }
             }
         }
     }

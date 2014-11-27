@@ -52,18 +52,37 @@ package com.sun.prism.impl;
  * The amounts and sizes returned from the methods should all be in the
  * same units, usually bytes.
  * 
+ * @param <T> the type of resource stored in this pool
  * @see ManagedResource
  */
 public interface ResourcePool<T> {
+    /**
+     * Check that all resources are in the correct state for an idle condition
+     * and free any resources which were disposed from a non-resource thread.
+     * This method must be called on a thread that is appropriate for disposing
+     * and managing resources for this resource pool.
+     * The boolean {@code forgiveStaleLocks} parameter is used to indicate that
+     * an exceptional condition occurred which caused the caller to abort a
+     * cycle of resource usage, potentially with outstanding resource locks.
+     * This method will unlock all non-permanent resources that have outstanding
+     * locks if {@code forgiveStaleLocks} is {@code true}, or it will print out
+     * a warning and a resource summary if that parameter is {@code false}.
+     * 
+     * @param forgiveStaleLocks {@code true} if the caller wishes to forgive
+     *         and unlock all outstanding locks on non-permanent resources
+     */
+    public void freeDisposalRequestedAndCheckResources(boolean forgiveStaleLocks);
 
     /**
      * True if Thread.currentThread() is a thread that created this ResourcePool
+     * @return true if Thread.currentThread() is a thread that created this ResourcePool
      */
     public boolean isManagerThread();
 
     /**
      * The amount of a resource currently being used to hold any kind of
      * resource, whether managed or not.
+     * @return the amount being used
      */
     public long used();
 
@@ -72,6 +91,7 @@ public interface ResourcePool<T> {
      * resources.
      * This amount may be less than the amount returned by the {@link used()}
      * method if the pool is shared amongst other resources.
+     * @return the amount being used to hold managed resources
      */
     public long managed();
 
@@ -79,16 +99,40 @@ public interface ResourcePool<T> {
      * The total space available in this pool for allocating any kind of
      * resource, even unmanaged resources, and including those resources
      * already allocated.
+     * @return the maximum amount of the resource
      */
     public long max();
 
     /**
-     * The target of the maximum amount of space in this resource pool that
-     * should be used so as to be friendly to other parts of the system.
+     * The current target of the maximum amount of space in this resource pool
+     * that should be used so as to be friendly to other parts of the system.
      * This number must be less than or equal to the amount returned by the
-     * {@link max()} method.
+     * {@link max()} method, larger than the amount returned by the
+     * {@link origTarget()} method, and may change over time.
+     * @return the current target amount of the resource to be used
+     * @see #setTarget(long)
      */
     public long target();
+
+    /**
+     * The initial target of the maximum amount of space in this resource pool
+     * that should be used so as to be friendly to other parts of the system.
+     * This number must be less than or equal to the amount returned by the
+     * {@link max()} method.
+     * @return the initial target amount of the resource to be used
+     */
+    public long origTarget();
+
+    /**
+     * Sets a new current target of the maximum amount of space in this
+     * resource pool that should be used so as to be friendly to other parts
+     * of the system.
+     * The specified {@code newTarget} number must be less than or equal to
+     * the amount returned by the {@link max()} method, larger than the amount
+     * returned by the {@link origTarget()} method.
+     * @param newTarget the new current target to be set
+     */
+    public void setTarget(long newTarget);
 
     /**
      * The estimated size of the indicated resource.
@@ -115,20 +159,20 @@ public interface ResourcePool<T> {
     public void recordFree(long size);
 
     /**
-     * Record the indicated amount of the resource as being allocated for
-     * a {@link ManagedResource}.
+     * Record the {@link ManagedResource} object as being currently managed
+     * by this pool.
      * 
      * @param resource the resource that is now being managed
      */
-    public void resourceManaged(T resource);
+    public void resourceManaged(ManagedResource<T> resource);
 
     /**
-     * Record the indicated amount of the resource as no longer being
-     * held in a {@link ManagedResource}.
+     * Record the {@link ManagedResource} object as no longer being managed
+     * by this pool.
      * 
      * @param resource the resource that is freed, no longer being managed
      */
-    public void resourceFreed(T resource);
+    public void resourceFreed(ManagedResource<T> resource);
 
     /**
      * Prepare for an allocation of a resource from this pool of the

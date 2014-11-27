@@ -192,6 +192,9 @@
             <Menu fx:id="wrapMenu" mnemonicParsing="true" text="%menu.title.wrap">
               <items>
                 <MenuItem fx:id="wrapInAnchorPaneMenuItem" mnemonicParsing="false" text="AnchorPane" />
+                <MenuItem fx:id="wrapInBorderPaneMenuItem" mnemonicParsing="false" text="BorderPane" />
+                <MenuItem fx:id="wrapInButtonBarMenuItem" mnemonicParsing="false" text="ButtonBar" />
+                <MenuItem fx:id="wrapInDialogPaneMenuItem" mnemonicParsing="false" text="DialogPane" />
                 <MenuItem fx:id="wrapInFlowPaneMenuItem" mnemonicParsing="false" text="FlowPane" />
                 <MenuItem fx:id="wrapInGridPaneMenuItem" mnemonicParsing="false" text="GridPane" />
                 <MenuItem fx:id="wrapInGroupMenuItem" mnemonicParsing="false" text="Group" />
@@ -201,6 +204,7 @@
                 <MenuItem fx:id="wrapInSplitPaneMenuItem" mnemonicParsing="false" text="SplitPane" />
                 <MenuItem fx:id="wrapInStackPaneMenuItem" mnemonicParsing="false" text="StackPane" />
                 <MenuItem fx:id="wrapInTabPaneMenuItem" mnemonicParsing="false" text="TabPane" />
+                <MenuItem fx:id="wrapInTextFlowMenuItem" mnemonicParsing="false" text="TextFlow" />
                 <MenuItem fx:id="wrapInTilePaneMenuItem" mnemonicParsing="false" text="TilePane" />
                 <MenuItem fx:id="wrapInTitledPaneMenuItem" mnemonicParsing="false" text="TitledPane" />
                 <MenuItem fx:id="wrapInToolBarMenuItem" mnemonicParsing="false" text="ToolBar" />
@@ -212,7 +216,8 @@
         </Menu>
         <Menu fx:id="previewMenu" mnemonicParsing="true" text="%menu.title.preview">
           <items>
-            <MenuItem fx:id="showPreviewMenuItem" mnemonicParsing="true" text="%menu.title.show.preview" />
+            <MenuItem fx:id="showPreviewInWindowMenuItem" mnemonicParsing="true" text="%menu.title.show.preview.in.window" />
+            <MenuItem fx:id="showPreviewInDialogMenuItem" mnemonicParsing="true" text="%menu.title.show.preview.in.dialog" />
             <SeparatorMenuItem mnemonicParsing="false" />
             <Menu fx:id="themeMenu" mnemonicParsing="true" text="%menu.title.theme">
               <items>

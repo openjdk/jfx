@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,10 +24,9 @@
  */
 
 #import <Foundation/Foundation.h>
-#import <QTKit/QTKit.h>
 #import <Utils/MTObjectProxy.h>
 #import "OSXPlayerProtocol.h"
-#import <JavaVM/jni.h>
+#import <jni.h>
 
 #import "JavaPlayerEventDispatcher.h"
 
@@ -42,6 +41,9 @@
     id<OSXPlayerProtocol> player; // actual player implementation
 }
 
-@property (readonly) id<OSXPlayerProtocol> player;
+// Called from OSXPlatform.osxPlatformInit() (java)
++ (BOOL) initPlayerPlatform;
+
+@property (nonatomic,readonly) id<OSXPlayerProtocol> player;
 
 @end

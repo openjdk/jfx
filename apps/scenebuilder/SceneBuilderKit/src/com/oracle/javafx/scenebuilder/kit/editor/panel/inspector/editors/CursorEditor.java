@@ -56,7 +56,7 @@ import javafx.scene.control.MenuItem;
  */
 public class CursorEditor extends PropertyEditor {
 
-    private final Parent root;
+    private Parent root;
 
     @FXML
     private MenuButton cursorMb;
@@ -68,15 +68,14 @@ public class CursorEditor extends PropertyEditor {
     private Cursor cursor = Cursor.DEFAULT;
     private String inheritedText, inheritedParentText;
 
-    @SuppressWarnings("LeakingThisInConstructor")
     public CursorEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses) {
         super(propMeta, selectedClasses);
-        root = EditorUtils.loadFxml("CursorEditor.fxml", this); //NOI18N
         initialize();
     }
 
     // Separate method to please FindBugs
     private void initialize() {
+        root = EditorUtils.loadFxml("CursorEditor.fxml", this); //NOI18N
         int index = 0;
         Map<Cursor, String> predefinedCursors = CursorPropertyMetadata.getCursorMap();
         // Order the cursors

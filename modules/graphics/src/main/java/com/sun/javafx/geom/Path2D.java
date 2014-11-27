@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2006, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -239,6 +239,100 @@ import com.sun.javafx.geom.transform.BaseTransform;
     Point2D getPoint(int coordindex) {
         return new Point2D(floatCoords[coordindex],
                            floatCoords[coordindex+1]);
+    }
+
+    private boolean close(int ix, float fx, float tolerance) {
+        return (Math.abs(ix - fx) <= tolerance);
+    }
+
+    /**
+     * Check and return if the fillable interior of the path is a simple
+     * rectangle on nearly integer bounds and initialize the indicated
+     * {@link Rectangle} with the integer representation of the rectangle
+     * if it is.
+     * The method will return false if the path is not rectangular, or if
+     * the horizontal and linear segments are not within the indicated
+     * tolerance of an integer coordinate, or if the resulting rectangle
+     * cannot be safely represented by the integer attributes of the
+     * {@code Rectangle} object.
+     * 
+     * @param retrect the {@code Rectangle} to return the rectangular area,
+     *                or null
+     * @param tolerance the maximum difference from an integer allowed
+     *                  for any edge of the rectangle
+     * @return true iff the path is a simple rectangle
+     */
+    public boolean checkAndGetIntRect(Rectangle retrect, float tolerance) {
+        // Valid rectangular paths are:
+        //     4 segs: MOVE, LINE, LINE, LINE (implicit CLOSE)
+        //     5 segs: MOVE, LINE, LINE, LINE, LINE
+        //     5 segs: MOVE, LINE, LINE, LINE, CLOSE
+        //     6 segs: MOVE, LINE, LINE, LINE, LINE, CLOSE
+        if (numTypes == 5) {
+            // points[4] can be LINETO or CLOSE
+            if (pointTypes[4] != SEG_LINETO && pointTypes[4] != SEG_CLOSE) {
+                return false;
+            }
+        } else if (numTypes == 6) {
+            // points[4] must be LINETO and
+            // points[5] must be CLOSE
+            if (pointTypes[4] != SEG_LINETO) return false;
+            if (pointTypes[5] != SEG_CLOSE) return false;
+        } else if (numTypes != 4) {
+            return false;
+        }
+        if (pointTypes[0] != SEG_MOVETO) return false;
+        if (pointTypes[1] != SEG_LINETO) return false;
+        if (pointTypes[2] != SEG_LINETO) return false;
+        if (pointTypes[3] != SEG_LINETO) return false;
+
+        int x0 = (int) (floatCoords[0] + 0.5f);
+        int y0 = (int) (floatCoords[1] + 0.5f);
+        if (!close(x0, floatCoords[0], tolerance)) return false;
+        if (!close(y0, floatCoords[1], tolerance)) return false;
+
+        int x1 = (int) (floatCoords[2] + 0.5f);
+        int y1 = (int) (floatCoords[3] + 0.5f);
+        if (!close(x1, floatCoords[2], tolerance)) return false;
+        if (!close(y1, floatCoords[3], tolerance)) return false;
+
+        int x2 = (int) (floatCoords[4] + 0.5f);
+        int y2 = (int) (floatCoords[5] + 0.5f);
+        if (!close(x2, floatCoords[4], tolerance)) return false;
+        if (!close(y2, floatCoords[5], tolerance)) return false;
+
+        int x3 = (int) (floatCoords[6] + 0.5f);
+        int y3 = (int) (floatCoords[7] + 0.5f);
+        if (!close(x3, floatCoords[6], tolerance)) return false;
+        if (!close(y3, floatCoords[7], tolerance)) return false;
+
+        if (numTypes > 4 && pointTypes[4] == SEG_LINETO) {
+            if (!close(x0, floatCoords[8], tolerance)) return false;
+            if (!close(y0, floatCoords[9], tolerance)) return false;
+        }
+
+        if ((x0 == x1 && x2 == x3 && y0 == y3 && y1 == y2) ||
+            (y0 == y1 && y2 == y3 && x0 == x3 && x1 == x2))
+        {
+            // We can use either diagonal to calculate the rectangle:
+            //     (x0, y0) -> (x2, y2)
+            //     (x1, y1) -> (x3, y3)
+            // We also need to deal with upside down and/or backwards rectangles
+            int x, y, w, h;
+            if (x2 < x0) { x = x2; w = x0 - x2; }
+            else         { x = x0; w = x2 - x0; }
+            if (y2 < y0) { y = y2; h = y0 - y2; }
+            else         { y = y0; h = y2 - y0; }
+            // Overflow protection...
+            if (w < 0) return false;
+            if (h < 0) return false;
+
+            if (retrect != null) {
+                retrect.setBounds(x, y, w, h);
+            }
+            return true;
+        }
+        return false;
     }
 
     void needRoom(boolean needMove, int newCoords) {

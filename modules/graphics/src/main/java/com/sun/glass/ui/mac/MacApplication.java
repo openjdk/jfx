@@ -35,12 +35,6 @@ import java.nio.IntBuffer;
 
 import java.security.AccessController;
 import java.security.PrivilegedAction;
-import java.util.HashMap;
-
-import java.util.List;
-import java.util.Map;
-
-import com.sun.javafx.scene.accessibility.Accessible;
 
 final class MacApplication extends Application implements InvokeLaterDispatcher.InvokeLaterSubmitter {
 
@@ -62,6 +56,7 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
     private final InvokeLaterDispatcher invokeLaterDispatcher;
 
     MacApplication() {
+        // Embedded in SWT, with shared event thread
         boolean isEventThread = AccessController
                 .doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("javafx.embed.isEventThread"));
         if (!isEventThread) {
@@ -260,8 +255,8 @@ final class MacApplication extends Application implements InvokeLaterDispatcher.
         return MacTimer.getMaxPeriod_impl();
     }
 
-    @Override public PlatformAccessible createAccessible(Accessible accessible) {
-        return MacAccessible.createAccessible(accessible);
+    @Override public Accessible createAccessible() {
+        return new MacAccessible();
     }
 
     @Override protected FileChooserResult staticCommonDialogs_showFileChooser(Window owner, String folder, String filename, String title, int type,

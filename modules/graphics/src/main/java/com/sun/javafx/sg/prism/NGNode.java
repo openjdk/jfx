@@ -2432,7 +2432,10 @@ public abstract class NGNode {
                                 Object renderHelper,
                                 Effect defaultInput)
         {
-            return new ImageData(fctx, img, new Rectangle(bounds));
+            img.lock();
+            ImageData id = new ImageData(fctx, img, new Rectangle(bounds));
+            id.setReusable(true);
+            return id;
         }
 
         @Override

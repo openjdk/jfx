@@ -36,101 +36,59 @@ import com.oracle.javafx.scenebuilder.kit.editor.job.gridpane.DeleteColumnJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.gridpane.DeleteRowJob;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.AbstractSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.GridSelectionGroup;
+import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 /**
  * Delete job for GridSelectionGroup.
  * This job manages either RemoveRow or RemoveColumn jobs depending on the selection.
  */
-public class DeleteGridSelectionJob extends Job {
+public class DeleteGridSelectionJob extends BatchSelectionJob {
 
-    private Job subJob;
-    private AbstractSelectionGroup selectionSnapshot;
+    private FXOMObject targetGridPane;
 
     public DeleteGridSelectionJob(EditorController editorController) {
         super(editorController);
-        buildSubJobs();
-    }
-
-    /*
-     * Job
-     */
-    @Override
-    public boolean isExecutable() {
-        return subJob != null && subJob.isExecutable();
     }
 
     @Override
-    public void execute() {
-        final Selection selection = getEditorController().getSelection();
-        final AbstractSelectionGroup asg = selection.getGroup();
-        assert asg instanceof GridSelectionGroup;
-        final GridSelectionGroup gsg = (GridSelectionGroup) asg;
-        final FXOMObject targetGridPane = gsg.getParentObject();
+    protected List<Job> makeSubJobs() {
 
-        try {
-            selectionSnapshot = selection.getGroup().clone();
-        } catch (CloneNotSupportedException x) {
-            // Emergency code
-            throw new RuntimeException(x);
-        }
-        selection.clear();
-        selection.beginUpdate();
-        subJob.execute();
-        selection.select(targetGridPane);
-        selection.endUpdate();
-    }
-
-    @Override
-    public void undo() {
-        final Selection selection = getEditorController().getSelection();
-
-        selection.beginUpdate();
-        subJob.undo();
-        selection.select(selectionSnapshot);
-        selection.endUpdate();
-    }
-
-    @Override
-    public void redo() {
-        final Selection selection = getEditorController().getSelection();
-        final AbstractSelectionGroup asg = selection.getGroup();
-        assert asg instanceof GridSelectionGroup;
-        final GridSelectionGroup gsg = (GridSelectionGroup) asg;
-        final FXOMObject targetGridPane = gsg.getParentObject();
-
-        selection.clear();
-        selection.beginUpdate();
-        subJob.redo();
-        selection.select(targetGridPane);
-        selection.endUpdate();
-    }
-
-    @Override
-    public String getDescription() {
-        return subJob.getDescription();
-    }
-
-    /*
-     * Private
-     */
-    private void buildSubJobs() {
-
+        final List<Job> result = new ArrayList<>();
         final Selection selection = getEditorController().getSelection();
         assert selection.getGroup() instanceof GridSelectionGroup;
 
         final GridSelectionGroup gsg = (GridSelectionGroup) selection.getGroup();
+        targetGridPane = gsg.getAncestor();
         switch (gsg.getType()) {
             case COLUMN:
-                subJob = new DeleteColumnJob(getEditorController());
+                result.add(new DeleteColumnJob(getEditorController()));
                 break;
             case ROW:
-                subJob = new DeleteRowJob(getEditorController());
+                result.add(new DeleteRowJob(getEditorController()));
                 break;
             default:
                 assert false;
                 break;
         }
+        return result;
+    }
+
+    @Override
+    protected String makeDescription() {
+        return getSubJobs().get(0).getDescription();
+    }
+
+    @Override
+    protected AbstractSelectionGroup getNewSelectionGroup() {
+        // Selection goes to the GridPane
+        final Set<FXOMObject> newObjects = new HashSet<>();
+        newObjects.add(targetGridPane);
+        return new ObjectSelectionGroup(newObjects, targetGridPane, null);
     }
 }

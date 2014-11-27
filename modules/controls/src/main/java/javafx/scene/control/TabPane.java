@@ -28,7 +28,9 @@ package javafx.scene.control;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
+import com.sun.javafx.collections.UnmodifiableListSet;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
@@ -40,8 +42,8 @@ import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.geometry.Side;
-//import javafx.scene.accessibility.Attribute;
-//import javafx.scene.accessibility.Role;
+import javafx.scene.AccessibleAttribute;
+import javafx.scene.AccessibleRole;
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
@@ -52,6 +54,7 @@ import com.sun.javafx.scene.control.skin.TabPaneSkin;
 import javafx.beans.DefaultProperty;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
+import javafx.scene.Node;
 
 /**
  * <p>A control that allows switching between a group of {@link Tab Tabs}.  Only one tab
@@ -105,10 +108,21 @@ public class TabPane extends Control {
      * Constructs a new TabPane.
      */
     public TabPane() {
+        this((Tab[])null);
+    }
+
+    /**
+     * Constructs a new TabPane with the given tabs set to show.
+     *
+     * @param tabs The {@link Tab tabs} to display inside the TabPane.
+     * @since JavaFX 8u40
+     */
+    public TabPane(Tab... tabs) {
         getStyleClass().setAll("tab-pane");
+        setAccessibleRole(AccessibleRole.TAB_PANE);
         setSelectionModel(new TabPaneSelectionModel(this));
 
-        tabs.addListener((ListChangeListener<Tab>) c -> {
+        this.tabs.addListener((ListChangeListener<Tab>) c -> {
             while (c.next()) {
                 for (Tab tab : c.getRemoved()) {
                     if (tab != null && !getTabs().contains(tab)) {
@@ -123,6 +137,10 @@ public class TabPane extends Control {
                 }
             }
         });
+
+        if (tabs != null) {
+            getTabs().addAll(tabs);
+        }
         
         // initialize pseudo-class state
         Side edge = getSide();
@@ -499,6 +517,34 @@ public class TabPane extends Control {
         return new TabPaneSkin(this);
     }
 
+    /** {@inheritDoc} */
+    @Override public Node lookup(String selector) {
+        Node n = super.lookup(selector);
+        if (n == null) {
+            for(Tab tab : tabs) {
+                n = tab.lookup(selector);
+                if (n != null) break;
+            }
+        }
+        return n;
+    }
+
+    /** {@inheritDoc} */
+    public Set<Node> lookupAll(String selector) {
+
+        if (selector == null) return null;
+
+        final List<Node> results = new ArrayList<>();
+
+        results.addAll(super.lookupAll(selector));
+        for(Tab tab : tabs) {
+            results.addAll(tab.lookupAll(selector));
+        }
+
+        return new UnmodifiableListSet<Node>(results);
+    }
+
+
     /***************************************************************************
      *                                                                         *
      *                         Stylesheet Handling                             *
@@ -601,26 +647,6 @@ public class TabPane extends Control {
     private static final PseudoClass LEFT_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("left");
     private static final PseudoClass RIGHT_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("right");
 
-
-
-    /***************************************************************************
-     *                                                                         *
-     * Accessibility handling                                                  *
-     *                                                                         *
-     **************************************************************************/
-
-//    /** @treatAsPrivate */
-//    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//        switch (attribute) {
-//            case ROLE: return Role.TAB_PANE;
-//            case TABS: //Skin
-//            case SELECTED_TAB: //Skin
-//            default: return super.accGetAttribute(attribute, parameters);
-//        }
-//    }
-
-
-
     /***************************************************************************
      *                                                                         *
      * Support classes                                                         *
@@ -697,7 +723,7 @@ public class TabPane extends Control {
             }
 
             /* Does this get all the change events */
-//            tabPane.accSendNotification(Attribute.SELECTED_TAB);
+            tabPane.notifyAccessibleAttributeChanged(AccessibleAttribute.FOCUS_ITEM);
         }
 
         @Override public void select(Tab tab) {

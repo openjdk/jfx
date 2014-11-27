@@ -27,16 +27,13 @@ package com.sun.javafx.scene.control.skin;
 
 import javafx.css.CssMetaData;
 import com.sun.javafx.css.Stylesheet;
-import java.util.List;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
-import javafx.beans.value.WritableValue;
 import javafx.scene.Cursor;
+import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.effect.BlendMode;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
-import javafx.scene.paint.Paint;
 import javafx.scene.text.Font;
 import javafx.scene.text.TextAlignment;
 import javafx.stage.Stage;
@@ -371,5 +368,49 @@ public class LabeledTextTest {
         labeledText = ((com.sun.javafx.scene.control.skin.LabeledSkinBase)label.getSkin()).text; 
         assertTrue(labeledText.isUnderline());
     }
-    
+
+
+    @Test public void test_RT_37787() {
+
+        label = new Label("test_RT_37787");
+        label.getStyleClass().clear();
+        label.setId("test-rt-37787");
+
+        scene = new Scene(new Group(label));
+        String url = getClass().getResource("LabeledTextTest.css").toExternalForm();
+        scene.getStylesheets().add(url);
+
+        label.setFont(Font.font(10));
+        assertEquals(10, label.getFont().getSize(), .1);
+
+        stage.setScene(scene);
+        stage.show();
+
+        // If the actual size is 10 * 1.5 * 1.5 = 22.5, then we've encountered RT-37787!
+        double expected = Font.getDefault().getSize() * 1.5;
+        double actual = label.getFont().getSize();
+        assertEquals(expected, actual, .1);
+
+    }
+
+    @Test public void test_RT_37787_with_inline_style() {
+
+        label = new Label("test_RT_37787_with_inline_style");
+        label.setStyle("-fx-font-size: 1.231em;");
+        label.getStyleClass().clear();
+
+        VBox root = new VBox();
+        root.setStyle("-fx-font-size: 1.5em");
+        root.getChildren().add(label);
+
+        scene = new Scene(root);
+        stage.setScene(scene);
+        stage.show();
+
+        double expected = Font.getDefault().getSize() * 1.5 * 1.231;
+        double actual = label.getFont().getSize();
+        assertEquals(expected, actual, .1);
+
+    }
+
 }

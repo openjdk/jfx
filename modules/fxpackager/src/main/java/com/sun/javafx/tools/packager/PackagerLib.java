@@ -30,7 +30,6 @@ import com.oracle.tools.packager.ConfigException;
 import com.oracle.tools.packager.Log;
 import com.oracle.tools.packager.RelativeFileSet;
 import com.oracle.tools.packager.UnsupportedPlatformException;
-import com.sun.javafx.tools.ant.Utils;
 import com.sun.javafx.tools.packager.DeployParams.Icon;
 import com.sun.javafx.tools.packager.JarSignature.InputStreamSource;
 import com.sun.javafx.tools.packager.bundlers.*;
@@ -56,7 +55,6 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
-import java.security.CodeSigner;
 import java.security.InvalidKeyException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
@@ -64,14 +62,13 @@ import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.SignatureException;
 import java.security.UnrecoverableKeyException;
-import java.security.cert.CertPath;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.text.MessageFormat;
 import java.util.ArrayList;
-import java.util.Collection;
+import java.util.Base64;
 import java.util.EnumMap;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -90,7 +87,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
-import sun.misc.BASE64Encoder;
 
 public class PackagerLib {
     public static final String JAVAFX_VERSION = "8.0";
@@ -110,7 +106,6 @@ public class PackagerLib {
     private DeployParams deployParams;
     private CreateBSSParams createBssParams;
     private File bssTmpDir;
-    private boolean isSignedJNLP;
 
 
     private enum Filter {ALL, CLASSES_ONLY, RESOURCES}
@@ -143,7 +138,7 @@ public class PackagerLib {
                 return null;
             }
             try (JarFile jf = new JarFile(f)) {
-                Manifest m = jf.getManifest(); //try to read manifest to validate it is jar
+                jf.getManifest(); //try to read manifest to validate it is jar
                 return f;
             } catch (Exception e) {
                 //treat any exception as "not a special case" scenario
@@ -503,7 +498,7 @@ public class PackagerLib {
 
         for (com.oracle.tools.packager.Bundler bundler : Bundlers.createBundlersInstance().getBundlers(bundleType)) {
             // if they specify the bundle format, require we match the ID
-            if (bundleFormat != null && !bundleFormat.equals(bundler.getID())) continue;
+            if (bundleFormat != null && !bundleFormat.equalsIgnoreCase(bundler.getID())) continue;
 
             Map<String, ? super Object> localParams = new HashMap<>(params);
             try {
@@ -894,16 +889,18 @@ public class PackagerLib {
         if (deployParams.offlineAllowed && !deployParams.isExtension) {
             out.println("    <offline-allowed/>");
         }
-        out.println("  </information>");
 
-        if (!deployParams.isExtension) {
-            //FX is platfrom specific (soon will be available for Mac and Linux too)
-            out.println("  <resources>");
-            out.println("    <jfx:javafx-runtime version=\"" +
-                    deployParams.fxPlatform +
-                    "\" href=\"http://javadl.sun.com/webapps/download/GetFile/javafx-latest/windows-i586/javafx2.jnlp\"/>");
-            out.println("  </resources>");
+        if (Boolean.TRUE.equals(deployParams.needShortcut)) {
+            out.println("  <shortcut><desktop/></shortcut>");
+
+//            //TODO: Add support for a more sophisticated shortcut tag.
+//  <shortcut/> // install no shortcuts, and do not consider "installed"
+//  <shortcut installed="true"/> // install no shortcuts, but consider "installed"
+//  <shortcut installed="false"><desktop/></shortcut> // install desktop shortcut, but do not consider the app "installed"
+//  <shortcut installed="true"><menu/></shortcut> // install menu shortcut, and consider app "installed"
         }
+
+        out.println("  </information>");
 
         boolean needToCloseResourceTag = false;
         //jre is available for all platforms
@@ -987,18 +984,7 @@ public class PackagerLib {
         if (deployParams.allPermissions) {
             out.println("<security>");
             out.println("  <all-permissions/>");
-            processEmbeddedCertificates(out);
             out.println("</security>");
-        }
-
-        if (Boolean.TRUE.equals(deployParams.needShortcut)) {
-            out.println("  <shortcut><desktop/></shortcut>");
-
-//            //TODO: Add support for a more sophisticated shortcut tag.
-//  <shortcut/> // install no shortcuts, and do not consider "installed"
-//  <shortcut installed="true"/> // install no shortcuts, but consider "installed"
-//  <shortcut installed="false"><desktop/></shortcut> // install desktop shortcut, but do not consider the app "installed"
-//  <shortcut installed="true"><menu/></shortcut> // install menu shortcut, and consider app "installed"
         }
 
         if (!deployParams.isExtension) {
@@ -1069,8 +1055,6 @@ public class PackagerLib {
                     out.println("  </jfx:javafx-desc>");
                 }
             }
-        } else {
-            out.println("<component-desc/>");
         }
 
         out.println("  <update check=\"" + deployParams.updateMode + "\"/>");
@@ -1107,8 +1091,7 @@ public class PackagerLib {
     }
 
     private String encodeAsBase64(byte inp[]) {
-        BASE64Encoder encoder = new BASE64Encoder();
-        return encoder.encode(inp);
+        return Base64.getEncoder().encodeToString(inp);
     }
 
     private void generateHTML(PrintStream out,
@@ -1129,10 +1112,8 @@ public class PackagerLib {
         String jnlp_content_webstart = null;
 
         if (deployParams.embedJNLP) {
-            jnlp_content_browser =
-                    encodeAsBase64(jnlp_bytes_browser).replaceAll("\\r|\\n", "");
-            jnlp_content_webstart =
-                    encodeAsBase64(jnlp_bytes_webstart).replaceAll("\\r|\\n", "");
+            jnlp_content_browser = encodeAsBase64(jnlp_bytes_browser);
+            jnlp_content_webstart = encodeAsBase64(jnlp_bytes_webstart);
         }
 
         out.println("<html><head>");
@@ -1143,10 +1124,6 @@ public class PackagerLib {
             templateStrings.put(TemplatePlaceholders.SCRIPT_CODE, includeDtString);
         }
         out.println("  " + includeDtString);
-
-        String webstartError = "System is not setup to launch JavaFX applications. " +
-                "Make sure that you have a recent Java runtime, then install JavaFX Runtime 2.0 "+
-                "and check that JavaFX is enabled in the Java Control Panel.";
 
         List<String> w_app = new ArrayList<>();
         List<String> w_platform = new ArrayList<>();
@@ -1669,86 +1646,4 @@ public class PackagerLib {
         return dir.delete();
     }
 
-    private void processEmbeddedCertificates(PrintStream out)
-            throws CertificateEncodingException, IOException {
-        if (deployParams.embedCertificates) {
-            Set<CertPath> certPaths = collectCertPaths();
-            String signed = isSignedJNLP ? " signedjnlp=\"true\">" : ">";
-            if (certPaths != null && !certPaths.isEmpty()) {
-                out.println("  <jfx:details" + signed);
-                for (CertPath cp : certPaths) {
-                    String base64 = Utils.getBase64Encoded(cp);
-                    out.println("     <jfx:certificate-path>" + base64 +
-                            "</jfx:certificate-path>");
-                }
-                out.println("  </jfx:details>");
-            }
-        }
-    }
-
-    private Set<CertPath> collectCertPaths() throws IOException {
-        Set<CertPath> result = new HashSet<>();
-        for (DeployResource resource: deployParams.resources) {
-            final File srcFile = resource.getFile();
-            if (srcFile.exists() && srcFile.isFile() &&
-                srcFile.getName().toLowerCase().endsWith("jar")) {
-                result.addAll(extractCertPaths(srcFile));
-            }
-        }
-        return result;
-    }
-
-    private Set<CertPath> extractCertPaths(File jar) throws IOException {
-        Set<CertPath> result = new HashSet<>();
-        JarFile jf = new JarFile(jar);
-
-        // need to fully read jar file to build up internal signer info map
-        Utils.readAllFully(jf);
-
-        boolean blobSigned = false;
-        Enumeration<JarEntry> entries = jf.entries();
-        while (entries.hasMoreElements()) {
-            JarEntry je = entries.nextElement();
-            String entryName = je.getName();
-
-            CodeSigner[] signers;
-            if (entryName.equalsIgnoreCase(JarSignature.BLOB_SIGNATURE)) {
-                byte[] raw = Utils.getBytes(jf.getInputStream(je));
-                try {
-                    JarSignature js = JarSignature.load(raw);
-                    blobSigned = true;
-                    signers = js.getCodeSigners();
-                } catch(Exception ex) {
-                    throw new IOException(ex);
-                }
-            } else {
-                signers = je.getCodeSigners();
-            }
-            result.addAll(extractCertPaths(signers));
-
-            if (entryName.equalsIgnoreCase("JNLP-INF/APPLICATION.JNLP")) {
-                isSignedJNLP = true;
-            }
-
-            // if blob and also know signed JNLP, no need to continue
-            if (blobSigned && isSignedJNLP) {
-                break;
-            }
-
-        }
-        return result;
-    }
-
-    private static Collection<CertPath> extractCertPaths(CodeSigner[] signers) {
-        Collection<CertPath> result = new ArrayList<>();
-        if (signers != null) {
-            for (CodeSigner cs : signers) {
-                CertPath cp = cs.getSignerCertPath();
-                if (cp != null) {
-                    result.add(cp);
-                }
-            }
-        }
-        return result;
-    }
 }

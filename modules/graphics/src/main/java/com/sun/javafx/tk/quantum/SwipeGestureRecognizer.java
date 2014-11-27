@@ -36,6 +36,11 @@ import javafx.event.EventType;
 import javafx.scene.input.SwipeEvent;
 
 class SwipeGestureRecognizer implements GestureRecognizer {
+
+    private static final double TANGENT_30_DEGREES = 0.577;
+
+    private static final double TANGENT_45_DEGREES = 1;
+
     private static final boolean VERBOSE = false;
 
     // Swipes must be longer than that
@@ -43,9 +48,6 @@ class SwipeGestureRecognizer implements GestureRecognizer {
 
     // Traveling this distance against the swipe direction at its end cancels it
     private static final double BACKWARD_DISTANCE_THRASHOLD = 5; // pixel
-
-    // Trajectory tracking period
-    static final long TIME_STEP = 100000000; // nanosec
 
     private SwipeRecognitionState state = SwipeRecognitionState.IDLE;
     MultiTouchTracker tracker = new MultiTouchTracker();
@@ -111,14 +113,18 @@ class SwipeGestureRecognizer implements GestureRecognizer {
             return null;
         }
 
-        if (absSecondaryDistance > absPrimaryDistance * 0.839 /* tan(2Pi/9) */) {
-            // too diagonal - in range of 10 degrees
+        if (absSecondaryDistance > absPrimaryDistance * TANGENT_30_DEGREES) {
+            // too diagonal - in range of 60 degrees
             return null;
         }
 
-        if (maxSecondaryDeviation > absPrimaryLength / (tracker.getDuration() / 100.0)) {
-            // too imprecise for the performed speed (the slower movement, 
-            // the higher precision requred)
+        if (maxSecondaryDeviation > absPrimaryDistance * TANGENT_45_DEGREES) {
+            // maximum deviation on the secondary axis, is too big
+            return null;
+        }
+
+        int swipeMaxDuration = Integer.getInteger("com.sun.javafx.gestures.swipe.maxduration", 300);
+        if (tracker.getDuration() > swipeMaxDuration) {
             return null;
         }
 
@@ -323,7 +329,7 @@ class SwipeGestureRecognizer implements GestureRecognizer {
     }
 
     private static class TouchPointTracker {
-        long time, beginTime, endTime;
+        long beginTime, endTime;
         double beginX, beginY, endX, endY;
         double beginAbsX, beginAbsY, endAbsX, endAbsY;
         double lengthX, lengthY;
@@ -342,7 +348,7 @@ class SwipeGestureRecognizer implements GestureRecognizer {
         }
 
         public void end(long nanos, double x, double y, double absX, double absY) {
-            progress(nanos, x, y);
+            progress(nanos, absX, absY);
             endX = x;
             endY = y;
             endAbsX = absX;
@@ -351,34 +357,31 @@ class SwipeGestureRecognizer implements GestureRecognizer {
         }
 
         public void progress(long nanos, double x, double y) {
-            if (nanos > time + TIME_STEP) {
-                final double deltaX = x - lastX;
-                final double deltaY = y - lastY;
+			final double deltaX = x - lastX;
+			final double deltaY = y - lastY;
 
-                time = nanos;
-                lengthX += Math.abs(deltaX);
-                lengthY += Math.abs(deltaY);
-                lastX = x;
-                lastY = y;
+			lengthX += Math.abs(deltaX);
+			lengthY += Math.abs(deltaY);
+			lastX = x;
+			lastY = y;
 
-                final double devX = Math.abs(x - beginAbsX);
-                if (devX > maxDeviationX) { maxDeviationX = devX; }
+			final double devX = Math.abs(x - beginAbsX);
+			if (devX > maxDeviationX) { maxDeviationX = devX; }
 
-                final double devY = Math.abs(y - beginAbsY);
-                if (devY > maxDeviationY) { maxDeviationY = devY; }
+			final double devY = Math.abs(y - beginAbsY);
+			if (devY > maxDeviationY) { maxDeviationY = devY; }
 
-                if (Math.signum(deltaX) == Math.signum(lastXMovement)) {
-                    lastXMovement += deltaX;
-                } else {
-                    lastXMovement = deltaX;
-                }
+			if (Math.signum(deltaX) == Math.signum(lastXMovement)) {
+				lastXMovement += deltaX;
+			} else {
+				lastXMovement = deltaX;
+			}
 
-                if (Math.signum(deltaY) == Math.signum(lastYMovement)) {
-                    lastYMovement += deltaY;
-                } else {
-                    lastYMovement = deltaY;
-                }
-            }
+			if (Math.signum(deltaY) == Math.signum(lastYMovement)) {
+				lastYMovement += deltaY;
+			} else {
+				lastYMovement = deltaY;
+			}
         }
 
         public double getDistanceX() {

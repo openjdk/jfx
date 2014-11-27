@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,11 +28,9 @@ package com.sun.media.jfxmediaimpl.platform.gstreamer;
 import com.sun.media.jfxmedia.Media;
 import com.sun.media.jfxmedia.MediaError;
 import com.sun.media.jfxmedia.locator.Locator;
-import com.sun.media.jfxmedia.logging.Logger;
 import com.sun.media.jfxmediaimpl.MediaUtils;
 import com.sun.media.jfxmediaimpl.NativeMedia;
 import com.sun.media.jfxmediaimpl.platform.Platform;
-import java.util.Map;
 
 /**
  * GStreamer implementation of Media
@@ -95,11 +93,5 @@ final class GSTMedia extends NativeMedia {
                                                String contentType,
                                                long sizeHint,
                                                long[] nativeMediaHandle);
-    private native int gstAddMarker(long refNativeMedia, String markerName,
-            double presentationTime);
-    private native int gstRemoveMarker(long refNativeMedia, String markerName,
-            double[] markerTime);
-    private native int gstRemoveAllMarkers(long refNativeMedia);
-    private native int gstGetMarkers(long refNativeMedia, Map<String,Double> markers);
     private native void gstDispose(long refNativeMedia);
 }

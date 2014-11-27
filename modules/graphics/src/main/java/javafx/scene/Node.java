@@ -26,6 +26,7 @@
 package javafx.scene;
 
 
+import com.sun.javafx.geometry.BoundsUtils;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.binding.BooleanExpression;
@@ -75,10 +76,6 @@ import javafx.geometry.Orientation;
 import javafx.geometry.Point2D;
 import javafx.geometry.Point3D;
 import javafx.geometry.Rectangle2D;
-//import javafx.scene.accessibility.Accessible;
-//import javafx.scene.accessibility.Action;
-//import javafx.scene.accessibility.Attribute;
-//import javafx.scene.accessibility.Role;
 import javafx.scene.effect.Blend;
 import javafx.scene.effect.BlendMode;
 import javafx.scene.effect.Effect;
@@ -92,6 +89,7 @@ import javafx.scene.input.InputMethodRequests;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseDragEvent;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.input.PickResult;
 import javafx.scene.input.RotateEvent;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.input.SwipeEvent;
@@ -103,6 +101,7 @@ import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Transform;
 import javafx.stage.Window;
 import javafx.util.Callback;
+import java.security.AccessControlContext;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -112,6 +111,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.sun.glass.ui.Accessible;
+import com.sun.glass.ui.Application;
 import com.sun.javafx.Logging;
 import com.sun.javafx.TempState;
 import com.sun.javafx.Utils;
@@ -208,8 +209,8 @@ import sun.util.logging.PlatformLogger.Level;
  * doesn't explicitly remove it.
  * <p>
  * Node objects may be constructed and modified on any thread as long they are
- * not yet attached to a {@link Scene}. An application must attach nodes to a
- * Scene, and modify nodes that are already attached to a Scene, on the JavaFX
+ * not yet attached to a {@code Scene} in a {@code Window} that is showing.
+ * An application must attach nodes to such a Scene or modify them on the JavaFX
  * Application Thread.
  *
  * <h4>String ID</h4>
@@ -519,6 +520,13 @@ public abstract class Node implements EventTarget, Styleable {
 
     // Happens before we hold the sync lock
     void updateBounds() {
+        // Note: the clip must be handled before the visibility is checked. This is because the visiblity might be
+        // changing in the clip and it is going to be synchronized, so it needs to recompute the bounds.
+        Node n = getClip();
+        if (n != null) {
+            n.updateBounds();
+        }
+
         // See impl_syncPeer()
         if (!treeVisible && !impl_isDirty(DirtyBits.NODE_VISIBLE)) {
             return;
@@ -536,10 +544,6 @@ public abstract class Node implements EventTarget, Styleable {
                     BaseTransform.IDENTITY_TRANSFORM);
         }
 
-        Node n = getClip();
-        if (n != null) {
-            n.updateBounds();
-        }
     }
 
     /**
@@ -745,7 +749,7 @@ public abstract class Node implements EventTarget, Styleable {
                     oldParent = newParent;
                     invalidateLocalToSceneTransform();
                     parentResolvedOrientationInvalidated();
-//                    accSendNotification(Attribute.PARENT);
+                    notifyAccessibleAttributeChanged(AccessibleAttribute.PARENT);
                 }
 
                 @Override
@@ -857,32 +861,32 @@ public abstract class Node implements EventTarget, Styleable {
 
         /* Dispose the accessible peer, if any. If AT ever needs this node again
          * a new accessible peer is created. */
-//        if (accessible != null) {
-//            /* Generally accessibility does not retain any state, therefore deleting objects
-//             * generally does not cause problems (AT just asks everything back).
-//             * The exception to this rule is when the object sends a notifications to the AT, 
-//             * in which case it is expected to be around to answer request for the new values. 
-//             * It is possible that a object is reparented (within the scene) in the middle of
-//             * this process. For example, when a tree item is expanded, the notification is 
-//             * sent to the AT by the cell. But when the TreeView relayouts the cell can be 
-//             * reparented before AT can query the relevant information about the expand event.
-//             * If the accessible was disposed, AT can't properly report the event.
-//             * 
-//             * The fix is to defer the disposal of the accessible to the next pulse.
-//             * If at that time the node is placed back to the scene, then the accessible is hooked
-//             * to Node and AT requests are processed. Otherwise the accessible is disposed.
-//             */
-//            if (oldScene != null && oldScene != newScene && newScene == null) {
-//                // Strictly speaking we need some type of accessible.thaw() at this point.
-//                oldScene.addAccessible(Node.this, accessible);
-//            } else {
-//                accessible.dispose();
-//            }
-//            /* Always set to null to ensure this accessible is never on more than one 
-//             * Scene#accMap at the same time (At lest not with the same accessible). 
-//             */
-//            accessible = null;
-//        }
+        if (accessible != null) {
+            /* Generally accessibility does not retain any state, therefore deleting objects
+             * generally does not cause problems (AT just asks everything back).
+             * The exception to this rule is when the object sends a notifications to the AT, 
+             * in which case it is expected to be around to answer request for the new values. 
+             * It is possible that a object is reparented (within the scene) in the middle of
+             * this process. For example, when a tree item is expanded, the notification is 
+             * sent to the AT by the cell. But when the TreeView relayouts the cell can be 
+             * reparented before AT can query the relevant information about the expand event.
+             * If the accessible was disposed, AT can't properly report the event.
+             * 
+             * The fix is to defer the disposal of the accessible to the next pulse.
+             * If at that time the node is placed back to the scene, then the accessible is hooked
+             * to Node and AT requests are processed. Otherwise the accessible is disposed.
+             */
+            if (oldScene != null && oldScene != newScene && newScene == null) {
+                // Strictly speaking we need some type of accessible.thaw() at this point.
+                oldScene.addAccessible(Node.this, accessible);
+            } else {
+                accessible.dispose();
+            }
+            /* Always set to null to ensure this accessible is never on more than one 
+             * Scene#accMap at the same time (At lest not with the same accessible). 
+             */
+            accessible = null;
+        }
     }
 
     final void setScenes(Scene newScene, SubScene newSubScene) {
@@ -3625,51 +3629,6 @@ public abstract class Node implements EventTarget, Styleable {
     @Deprecated
     protected abstract boolean impl_computeContains(double localX, double localY);
 
-    private double min4(double v1, double v2, double v3, double v4) {
-        return Math.min(Math.min(v1, v2), Math.min(v3, v4));
-    }
-
-    private double max4(double v1, double v2, double v3, double v4) {
-        return Math.max(Math.max(v1, v2), Math.max(v3, v4));
-    }
-
-    private double min8(double v1, double v2, double v3, double v4,
-            double v5, double v6, double v7, double v8) {
-        return Math.min(min4(v1, v2, v3, v4), min4(v5, v6, v7, v8));
-    }
-
-    private double max8(double v1, double v2, double v3, double v4,
-            double v5, double v6, double v7, double v8) {
-        return Math.max(max4(v1, v2, v3, v4), max4(v5, v6, v7, v8));
-    }
-
-    Bounds createBoundingBox(Point3D p1, Point3D p2, Point3D p3, Point3D p4,
-            Point3D p5, Point3D p6, Point3D p7, Point3D p8) {
-        double minX = min8(p1.getX(), p2.getX(), p3.getX(), p4.getX(),
-                p5.getX(), p6.getX(), p7.getX(), p8.getX());
-        double maxX = max8(p1.getX(), p2.getX(), p3.getX(), p4.getX(),
-                p5.getX(), p6.getX(), p7.getX(), p8.getX());
-        double minY = min8(p1.getY(), p2.getY(), p3.getY(), p4.getY(),
-                p5.getY(), p6.getY(), p7.getY(), p8.getY());
-        double maxY = max8(p1.getY(), p2.getY(), p3.getY(), p4.getY(),
-                p5.getY(), p6.getY(), p7.getY(), p8.getY());
-        double minZ = min8(p1.getZ(), p2.getZ(), p3.getZ(), p4.getZ(),
-                p5.getZ(), p6.getZ(), p7.getZ(), p8.getZ());
-        double maxZ = max8(p1.getZ(), p2.getZ(), p3.getZ(), p4.getZ(),
-                p5.getZ(), p6.getZ(), p7.getZ(), p8.getZ());
-
-        return new BoundingBox(minX, minY, minZ, maxX - minX, maxY - minY, maxZ - minZ);
-    }
-
-    Bounds createBoundingBox(Point2D p1, Point2D p2, Point2D p3, Point2D p4) {
-        double minX = min4(p1.getX(), p2.getX(), p3.getX(), p4.getX());
-        double maxX = max4(p1.getX(), p2.getX(), p3.getX(), p4.getX());
-        double minY = min4(p1.getY(), p2.getY(), p3.getY(), p4.getY());
-        double maxY = max4(p1.getY(), p2.getY(), p3.getY(), p4.getY());
-
-        return new BoundingBox(minX, minY, maxX - minX, maxY - minY);
-    }
-
     /*
      *                   Bounds Invalidation And Notification
      *
@@ -4034,21 +3993,100 @@ public abstract class Node implements EventTarget, Styleable {
         final Point2D p3 = screenToLocal(screenBounds.getMaxX(), screenBounds.getMinY());
         final Point2D p4 = screenToLocal(screenBounds.getMaxX(), screenBounds.getMaxY());
 
-        if (p1 == null || p2 == null || p3 == null || p4 == null) {
-            return null;
+        return BoundsUtils.createBoundingBox(p1, p2, p3, p4);
+    }
+
+
+    /**
+     * Transforms a point from the coordinate space of the scene
+     * into the local coordinate space of this {@code Node}.
+     * If the Node does not have any {@link SubScene} or {@code rootScene} is set to true, the arguments are in {@link Scene} coordinates
+     * of the Node returned by {@link #getScene()}. Othwerwise, the subscene coordinates are used, which is equivalent to calling
+     * {@link #sceneToLocal(double, double)}
+     * @param x the x coordinate
+     * @param y the y coordinate
+     * @param rootScene whether Scene coordinates should be used even if the Node is in a SubScene
+     * @return local coordinates of the point
+     * @since JavaFX 8u40
+     */
+    public Point2D sceneToLocal(double x, double y, boolean rootScene) {
+        if (!rootScene) {
+            return sceneToLocal(x, y);
+        }
+        final com.sun.javafx.geom.Point2D tempPt =
+                TempState.getInstance().point;
+
+        tempPt.setLocation((float)(x), (float)y);
+
+        final SubScene subScene = getSubScene();
+        if (subScene != null) {
+            final Point2D ssCoord = SceneUtils.sceneToSubScenePlane(subScene,
+                    new Point2D(tempPt.x, tempPt.y));
+            if (ssCoord == null) {
+                return null;
+            }
+            tempPt.setLocation((float) ssCoord.getX(), (float) ssCoord.getY());
         }
 
-        final double minX = min4(p1.getX(), p2.getX(), p3.getX(), p4.getX());
-        final double maxX = max4(p1.getX(), p2.getX(), p3.getX(), p4.getX());
-        final double minY = min4(p1.getY(), p2.getY(), p3.getY(), p4.getY());
-        final double maxY = max4(p1.getY(), p2.getY(), p3.getY(), p4.getY());
-
-        return new BoundingBox(minX, minY, 0.0, maxX - minX, maxY - minY, 0.0);
+        try {
+            sceneToLocal(tempPt);
+            return new Point2D(tempPt.x, tempPt.y);
+        } catch (NoninvertibleTransformException e) {
+            return null;
+        }
     }
 
     /**
-     * Transforms a point from the coordinate space of the {@link Scene}
+     * Transforms a point from the coordinate space of the scene
      * into the local coordinate space of this {@code Node}.
+     * If the Node does not have any {@link SubScene} or {@code rootScene} is set to true, the arguments are in {@link Scene} coordinates
+     * of the Node returned by {@link #getScene()}. Othwerwise, the subscene coordinates are used, which is equivalent to calling
+     * {@link #sceneToLocal(javafx.geometry.Point2D)}
+     * @param point the point
+     * @param rootScene whether Scene coordinates should be used even if the Node is in a SubScene
+     * @return local coordinates of the point
+     * @since JavaFX 8u40
+     */
+    public Point2D sceneToLocal(Point2D point, boolean rootScene) {
+        return sceneToLocal(point.getX(), point.getY(), rootScene);
+    }
+
+    /**
+     * Transforms a bounds from the coordinate space of the scene
+     * into the local coordinate space of this {@code Node}.
+     * If the Node does not have any {@link SubScene} or {@code rootScene} is set to true, the arguments are in {@link Scene} coordinates
+     * of the Node returned by {@link #getScene()}. Othwerwise, the subscene coordinates are used, which is equivalent to calling
+     * {@link #sceneToLocal(javafx.geometry.Bounds)}.
+     * <p>
+     *     Since 3D bounds cannot be converted with {@code rootScene} set to {@code true}, trying to convert 3D bounds will yield {@code null}.
+     * </p>
+     * @param bounds the bounds
+     * @param rootScene whether Scene coordinates should be used even if the Node is in a SubScene
+     * @return local coordinates of the bounds
+     * @since JavaFX 8u40
+     */
+    public Bounds sceneToLocal(Bounds bounds, boolean rootScene) {
+        if (!rootScene) {
+            return sceneToLocal(bounds);
+        }
+        if (bounds.getMinZ() != 0 || bounds.getMaxZ() != 0) {
+            return null;
+        }
+        final Point2D p1 = sceneToLocal(bounds.getMinX(), bounds.getMinY(), true);
+        final Point2D p2 = sceneToLocal(bounds.getMinX(), bounds.getMaxY(), true);
+        final Point2D p3 = sceneToLocal(bounds.getMaxX(), bounds.getMinY(), true);
+        final Point2D p4 = sceneToLocal(bounds.getMaxX(), bounds.getMaxY(), true);
+
+        return BoundsUtils.createBoundingBox(p1, p2, p3, p4);
+    }
+
+    /**
+     * Transforms a point from the coordinate space of the scene
+     * into the local coordinate space of this {@code Node}.
+     *
+     * Note that if this node is in a {@link SubScene}, the arguments should be in the subscene coordinates,
+     * not that of {@link javafx.scene.Scene}.
+     *
      * @param sceneX x coordinate of a point on a Scene
      * @param sceneY y coordinate of a point on a Scene
      * @return local Node's coordinates of the point or null if Node is not in a {@link Window}.
@@ -4067,8 +4105,12 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     /**
-     * Transforms a point from the coordinate space of the {@link javafx.scene.Scene}
+     * Transforms a point from the coordinate space of the scene
      * into the local coordinate space of this {@code Node}.
+     *
+     * Note that if this node is in a {@link SubScene}, the arguments should be in the subscene coordinates,
+     * not that of {@link javafx.scene.Scene}.
+     *
      * @param scenePoint a point on a Scene
      * @return local Node's coordinates of the point or null if Node is not in a {@link Window}.
      * Null is also returned if the transformation from local to Scene is not invertible.
@@ -4078,8 +4120,12 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     /**
-     * Transforms a point from the coordinate space of the {@link javafx.scene.Scene}
+     * Transforms a point from the coordinate space of the scene
      * into the local coordinate space of this {@code Node}.
+     *
+     * Note that if this node is in a {@link SubScene}, the arguments should be in the subscene coordinates,
+     * not that of {@link javafx.scene.Scene}.
+     *
      * @param scenePoint a point on a Scene
      * @return local Node's coordinates of the point or null if Node is not in a {@link Window}.
      * Null is also returned if the transformation from local to Scene is not invertible.
@@ -4090,8 +4136,12 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     /**
-     * Transforms a point from the coordinate space of the {@link javafx.scene.Scene}
+     * Transforms a point from the coordinate space of the scene
      * into the local coordinate space of this {@code Node}.
+     *
+     * Note that if this node is in a {@link SubScene}, the arguments should be in the subscene coordinates,
+     * not that of {@link javafx.scene.Scene}.
+     *
      * @param sceneX x coordinate of a point on a Scene
      * @param sceneY y coordinate of a point on a Scene
      * @param sceneZ z coordinate of a point on a Scene
@@ -4120,8 +4170,12 @@ public abstract class Node implements EventTarget, Styleable {
 
     /**
      * Transforms a rectangle from the coordinate space of the
-     * {@link javafx.scene.Scene} into the local coordinate space of this
+     * scene into the local coordinate space of this
      * {@code Node}.
+     *
+     * Note that if this node is in a {@link SubScene}, the arguments should be in the subscene coordinates,
+     * not that of {@link javafx.scene.Scene}.
+     *
      * @param sceneBounds bounds on a Scene
      * @return bounds in the local Node'space or null if Node is not in a {@link Window}.
      * Null is also returned if the transformation from local to Scene is not invertible.
@@ -4136,7 +4190,7 @@ public abstract class Node implements EventTarget, Styleable {
             Point2D p3 = sceneToLocal(sceneBounds.getMaxX(), sceneBounds.getMaxY());
             Point2D p4 = sceneToLocal(sceneBounds.getMinX(), sceneBounds.getMaxY());
 
-            return createBoundingBox(p1, p2, p3, p4);
+            return BoundsUtils.createBoundingBox(p1, p2, p3, p4);
         }
         try {
             Point3D p1 = sceneToLocal0(sceneBounds.getMinX(), sceneBounds.getMinY(), sceneBounds.getMinZ());
@@ -4147,7 +4201,7 @@ public abstract class Node implements EventTarget, Styleable {
             Point3D p6 = sceneToLocal0(sceneBounds.getMaxX(), sceneBounds.getMaxY(), sceneBounds.getMaxZ());
             Point3D p7 = sceneToLocal0(sceneBounds.getMaxX(), sceneBounds.getMinY(), sceneBounds.getMinZ());
             Point3D p8 = sceneToLocal0(sceneBounds.getMaxX(), sceneBounds.getMinY(), sceneBounds.getMaxZ());
-            return createBoundingBox(p1, p2, p3, p4, p5, p6, p7, p8);
+            return BoundsUtils.createBoundingBox(p1, p2, p3, p4, p5, p6, p7, p8);
         } catch (NoninvertibleTransformException e) {
             return null;
         }
@@ -4231,26 +4285,14 @@ public abstract class Node implements EventTarget, Styleable {
         final Point2D p7 = localToScreen(localBounds.getMaxX(), localBounds.getMinY(), localBounds.getMinZ());
         final Point2D p8 = localToScreen(localBounds.getMaxX(), localBounds.getMinY(), localBounds.getMaxZ());
 
-        if (p1 == null || p2 == null || p3 == null || p4 == null
-                || p5 == null || p6 == null || p7 == null || p8 == null) {
-            return null;
-        }
-
-        final double minX = min8(p1.getX(), p2.getX(), p3.getX(), p4.getX(),
-                p5.getX(), p6.getX(), p7.getX(), p8.getX());
-        final double maxX = max8(p1.getX(), p2.getX(), p3.getX(), p4.getX(),
-                p5.getX(), p6.getX(), p7.getX(), p8.getX());
-        final double minY = min8(p1.getY(), p2.getY(), p3.getY(), p4.getY(),
-                p5.getY(), p6.getY(), p7.getY(), p8.getY());
-        final double maxY = max8(p1.getY(), p2.getY(), p3.getY(), p4.getY(),
-                p5.getY(), p6.getY(), p7.getY(), p8.getY());
-
-        return new BoundingBox(minX, minY, maxX - minX, maxY - minY);
+        return BoundsUtils.createBoundingBox(p1, p2, p3, p4, p5, p6, p7, p8);
     }
 
     /**
      * Transforms a point from the local coordinate space of this {@code Node}
-     * into the coordinate space of its {@link javafx.scene.Scene}.
+     * into the coordinate space of its scene.
+     * Note that if this node is in a {@link SubScene}, the result is in the subscene coordinates,
+     * not that of {@link javafx.scene.Scene}.
      * @param localX x coordinate of a point in Node's space
      * @param localY y coordinate of a point in Node's space
      * @return scene coordinates of the point or null if Node is not in a {@link Window}
@@ -4265,7 +4307,9 @@ public abstract class Node implements EventTarget, Styleable {
 
     /**
      * Transforms a point from the local coordinate space of this {@code Node}
-     * into the coordinate space of its {@link javafx.scene.Scene}.
+     * into the coordinate space of its scene.
+     * Note that if this node is in a {@link SubScene}, the result is in the subscene coordinates,
+     * not that of {@link javafx.scene.Scene}.
      * @param localPoint a point in Node's space
      * @return scene coordinates of the point or null if Node is not in a {@link Window}
      */
@@ -4275,7 +4319,10 @@ public abstract class Node implements EventTarget, Styleable {
 
     /**
      * Transforms a point from the local coordinate space of this {@code Node}
-     * into the coordinate space of its {@link javafx.scene.Scene}.
+     * into the coordinate space of its scene.
+     * Note that if this node is in a {@link SubScene}, the result is in the subscene coordinates,
+     * not that of {@link javafx.scene.Scene}.
+     * @see #localToScene(javafx.geometry.Point3D, boolean)
      * @since JavaFX 8.0
      */
     public Point3D localToScene(Point3D localPoint) {
@@ -4284,7 +4331,10 @@ public abstract class Node implements EventTarget, Styleable {
 
     /**
      * Transforms a point from the local coordinate space of this {@code Node}
-     * into the coordinate space of its {@link javafx.scene.Scene}.
+     * into the coordinate space of its scene.
+     * Note that if this node is in a {@link SubScene}, the result is in the subscene coordinates,
+     * not that of {@link javafx.scene.Scene}.
+     * @see #localToScene(double, double, double, boolean)
      * @since JavaFX 8.0
      */
     public Point3D localToScene(double x, double y, double z) {
@@ -4296,10 +4346,128 @@ public abstract class Node implements EventTarget, Styleable {
     }
 
     /**
+     * Transforms a point from the local coordinate space of this {@code Node}
+     * into the coordinate space of its scene.
+     * If the Node does not have any {@link SubScene} or {@code rootScene} is set to true, the result point is in {@link Scene} coordinates
+     * of the Node returned by {@link #getScene()}. Othwerwise, the subscene coordinates are used, which is equivalent to calling
+     * {@link #localToScene(javafx.geometry.Point3D)}
+     *
+     * @param localPoint the point in local coordinates
+     * @param rootScene whether Scene coordinates should be used even if the Node is in a SubScene
+     * @return transformed point
+     *
+     * @see #localToScene(javafx.geometry.Point3D)
+     * @since JavaFX 8u40
+     */
+    public Point3D localToScene(Point3D localPoint, boolean rootScene) {
+        Point3D pt = localToScene(localPoint);
+        if (rootScene) {
+            final SubScene subScene = getSubScene();
+            if (subScene != null) {
+                pt = SceneUtils.subSceneToScene(subScene, pt);
+            }
+        }
+        return pt;
+    }
+
+    /**
+     * Transforms a point from the local coordinate space of this {@code Node}
+     * into the coordinate space of its scene.
+     * If the Node does not have any {@link SubScene} or {@code rootScene} is set to true, the result point is in {@link Scene} coordinates
+     * of the Node returned by {@link #getScene()}. Othwerwise, the subscene coordinates are used, which is equivalent to calling
+     * {@link #localToScene(double, double, double)}
+     *
+     * @param x the x coordinate of the point in local coordinates
+     * @param y the y coordinate of the point in local coordinates
+     * @param z the z coordinate of the point in local coordinates
+     * @param rootScene whether Scene coordinates should be used even if the Node is in a SubScene
+     * @return transformed point
+     *
+     * @see #localToScene(double, double, double)
+     * @since JavaFX 8u40
+     */
+    public Point3D localToScene(double x, double y, double z, boolean rootScene) {
+        return localToScene(new Point3D(x, y, z), rootScene);
+    }
+
+    /**
+     * Transforms a point from the local coordinate space of this {@code Node}
+     * into the coordinate space of its scene.
+     * If the Node does not have any {@link SubScene} or {@code rootScene} is set to true, the result point is in {@link Scene} coordinates
+     * of the Node returned by {@link #getScene()}. Othwerwise, the subscene coordinates are used, which is equivalent to calling
+     * {@link #localToScene(javafx.geometry.Point2D)}
+     *
+     * @param localPoint the point in local coordinates
+     * @param rootScene whether Scene coordinates should be used even if the Node is in a SubScene
+     * @return transformed point
+     *
+     * @see #localToScene(javafx.geometry.Point2D)
+     * @since JavaFX 8u40
+     */
+    public Point2D localToScene(Point2D localPoint, boolean rootScene) {
+        if (!rootScene) {
+            return localToScene(localPoint);
+        }
+        Point3D pt = localToScene(localPoint.getX(), localPoint.getY(), 0, rootScene);
+        return new Point2D(pt.getX(), pt.getY());
+    }
+
+    /**
+     * Transforms a point from the local coordinate space of this {@code Node}
+     * into the coordinate space of its scene.
+     * If the Node does not have any {@link SubScene} or {@code rootScene} is set to true, the result point is in {@link Scene} coordinates
+     * of the Node returned by {@link #getScene()}. Othwerwise, the subscene coordinates are used, which is equivalent to calling
+     * {@link #localToScene(double, double)}
+     *
+     * @param x the x coordinate of the point in local coordinates
+     * @param y the y coordinate of the point in local coordinates
+     * @param rootScene whether Scene coordinates should be used even if the Node is in a SubScene
+     * @return transformed point
+     *
+     * @see #localToScene(double, double)
+     * @since JavaFX 8u40
+     */
+    public Point2D localToScene(double x, double y, boolean rootScene) {
+        return localToScene(new Point2D(x, y), rootScene);
+    }
+
+    /**
+     * Transforms a bounds from the local coordinate space of this {@code Node}
+     * into the coordinate space of its scene.
+     * If the Node does not have any {@link SubScene} or {@code rootScene} is set to true, the result bounds are in {@link Scene} coordinates
+     * of the Node returned by {@link #getScene()}. Othwerwise, the subscene coordinates are used, which is equivalent to calling
+     * {@link #localToScene(javafx.geometry.Bounds)}
+     *
+     * @param localBounds the bounds in local coordinates
+     * @param rootScene whether Scene coordinates should be used even if the Node is in a SubScene
+     * @return transformed bounds
+     *
+     * @see #localToScene(javafx.geometry.Bounds)
+     * @since JavaFX 8u40
+     */
+    public Bounds localToScene(Bounds localBounds, boolean rootScene) {
+        if (!rootScene) {
+            return localToScene(localBounds);
+        }
+        Point3D p1 = localToScene(localBounds.getMinX(), localBounds.getMinY(), localBounds.getMinZ(), true);
+        Point3D p2 = localToScene(localBounds.getMinX(), localBounds.getMinY(), localBounds.getMaxZ(), true);
+        Point3D p3 = localToScene(localBounds.getMinX(), localBounds.getMaxY(), localBounds.getMinZ(), true);
+        Point3D p4 = localToScene(localBounds.getMinX(), localBounds.getMaxY(), localBounds.getMaxZ(), true);
+        Point3D p5 = localToScene(localBounds.getMaxX(), localBounds.getMaxY(), localBounds.getMinZ(), true);
+        Point3D p6 = localToScene(localBounds.getMaxX(), localBounds.getMaxY(), localBounds.getMaxZ(), true);
+        Point3D p7 = localToScene(localBounds.getMaxX(), localBounds.getMinY(), localBounds.getMinZ(), true);
+        Point3D p8 = localToScene(localBounds.getMaxX(), localBounds.getMinY(), localBounds.getMaxZ(), true);
+        return BoundsUtils.createBoundingBox(p1, p2, p3, p4, p5, p6, p7, p8);
+    }
+
+    /**
      * Transforms a bounds from the local coordinate space of this
-     * {@code Node} into the coordinate space of its {@link javafx.scene.Scene}.
+     * {@code Node} into the coordinate space of its scene.
+     * Note that if this node is in a {@link SubScene}, the result is in the subscene coordinates,
+     * not that of {@link javafx.scene.Scene}.
      * @param localBounds bounds in Node's space
      * @return the bounds in the scene coordinates or null if Node is not in a {@link Window}
+     * @see #localToScene(javafx.geometry.Bounds, boolean)
      */
     public Bounds localToScene(Bounds localBounds) {
         // Do a quick update of localToParentTransform so that we can determine
@@ -4311,7 +4479,7 @@ public abstract class Node implements EventTarget, Styleable {
             Point2D p3 = localToScene(localBounds.getMaxX(), localBounds.getMaxY());
             Point2D p4 = localToScene(localBounds.getMinX(), localBounds.getMaxY());
 
-            return createBoundingBox(p1, p2, p3, p4);
+            return BoundsUtils.createBoundingBox(p1, p2, p3, p4);
         }
         Point3D p1 = localToScene(localBounds.getMinX(), localBounds.getMinY(), localBounds.getMinZ());
         Point3D p2 = localToScene(localBounds.getMinX(), localBounds.getMinY(), localBounds.getMaxZ());
@@ -4321,7 +4489,7 @@ public abstract class Node implements EventTarget, Styleable {
         Point3D p6 = localToScene(localBounds.getMaxX(), localBounds.getMaxY(), localBounds.getMaxZ());
         Point3D p7 = localToScene(localBounds.getMaxX(), localBounds.getMinY(), localBounds.getMinZ());
         Point3D p8 = localToScene(localBounds.getMaxX(), localBounds.getMinY(), localBounds.getMaxZ());
-        return createBoundingBox(p1, p2, p3, p4, p5, p6, p7, p8);
+        return BoundsUtils.createBoundingBox(p1, p2, p3, p4, p5, p6, p7, p8);
 
     }
 
@@ -4389,7 +4557,7 @@ public abstract class Node implements EventTarget, Styleable {
             Point2D p3 = parentToLocal(parentBounds.getMaxX(), parentBounds.getMaxY());
             Point2D p4 = parentToLocal(parentBounds.getMinX(), parentBounds.getMaxY());
 
-            return createBoundingBox(p1, p2, p3, p4);
+            return BoundsUtils.createBoundingBox(p1, p2, p3, p4);
         }
         Point3D p1 = parentToLocal(parentBounds.getMinX(), parentBounds.getMinY(), parentBounds.getMinZ());
         Point3D p2 = parentToLocal(parentBounds.getMinX(), parentBounds.getMinY(), parentBounds.getMaxZ());
@@ -4399,7 +4567,7 @@ public abstract class Node implements EventTarget, Styleable {
         Point3D p6 = parentToLocal(parentBounds.getMaxX(), parentBounds.getMaxY(), parentBounds.getMaxZ());
         Point3D p7 = parentToLocal(parentBounds.getMaxX(), parentBounds.getMinY(), parentBounds.getMinZ());
         Point3D p8 = parentToLocal(parentBounds.getMaxX(), parentBounds.getMinY(), parentBounds.getMaxZ());
-        return createBoundingBox(p1, p2, p3, p4, p5, p6, p7, p8);
+        return BoundsUtils.createBoundingBox(p1, p2, p3, p4, p5, p6, p7, p8);
     }
 
     /**
@@ -4458,7 +4626,7 @@ public abstract class Node implements EventTarget, Styleable {
             Point2D p3 = localToParent(localBounds.getMaxX(), localBounds.getMaxY());
             Point2D p4 = localToParent(localBounds.getMinX(), localBounds.getMaxY());
 
-            return createBoundingBox(p1, p2, p3, p4);
+            return BoundsUtils.createBoundingBox(p1, p2, p3, p4);
         }
         Point3D p1 = localToParent(localBounds.getMinX(), localBounds.getMinY(), localBounds.getMinZ());
         Point3D p2 = localToParent(localBounds.getMinX(), localBounds.getMinY(), localBounds.getMaxZ());
@@ -4468,7 +4636,7 @@ public abstract class Node implements EventTarget, Styleable {
         Point3D p6 = localToParent(localBounds.getMaxX(), localBounds.getMaxY(), localBounds.getMaxZ());
         Point3D p7 = localToParent(localBounds.getMaxX(), localBounds.getMinY(), localBounds.getMinZ());
         Point3D p8 = localToParent(localBounds.getMaxX(), localBounds.getMinY(), localBounds.getMaxZ());
-        return createBoundingBox(p1, p2, p3, p4, p5, p6, p7, p8);
+        return BoundsUtils.createBoundingBox(p1, p2, p3, p4, p5, p6, p7, p8);
     }
 
     /**
@@ -5273,7 +5441,9 @@ public abstract class Node implements EventTarget, Styleable {
     /**
      * An affine transform that holds the computed local-to-scene transform.
      * This is the concatenation of all transforms in this node's parents and
-     * in this node, including all of the convenience transforms.
+     * in this node, including all of the convenience transforms up to the root.
+     * If this node is in a {@link javafx.scene.SubScene}, this property represents
+     * transforms up to the subscene, not the root scene.
      *
      * <p>
      * Note that when you register a listener or a binding to this property,
@@ -5282,6 +5452,7 @@ public abstract class Node implements EventTarget, Styleable {
      * property on many nodes may negatively affect performance of
      * transformation changes in their common parents.
      * </p>
+     *
      * @since JavaFX 2.2
      */
     public final ReadOnlyObjectProperty<Transform> localToSceneTransformProperty() {
@@ -7540,7 +7711,7 @@ public abstract class Node implements EventTarget, Styleable {
 
                 needsChangeEvent = true;
 
-//                accSendNotification(Attribute.FOCUSED);
+                notifyAccessibleAttributeChanged(AccessibleAttribute.FOCUSED);
             }
         }
 
@@ -7779,6 +7950,9 @@ public abstract class Node implements EventTarget, Styleable {
             p.setLayoutFlag(LayoutFlags.DIRTY_BRANCH);
             if (p.isSceneRoot()) {
                 Toolkit.getToolkit().requestNextPulse();
+                if (getSubScene() != null) {
+                    getSubScene().setDirtyLayout(p);
+                }
             }
             p = p.getParent();
         }
@@ -8599,11 +8773,14 @@ public abstract class Node implements EventTarget, Styleable {
     /**
      * Find CSS styles that were used to style this Node in its current pseudo-class state. The map will contain the styles from this node and,
      * if the node is a Parent, its children. The node corresponding to an entry in the Map can be obtained by casting a StyleableProperty key to a
-     * javafx.beans.property.Property and calling getBean(). The List<Style> contains only those styles used to style the property and will contain
+     * javafx.beans.property.Property and calling getBean(). The List contains only those styles used to style the property and will contain
      * styles used to resolve lookup values.
      *
      * @param styleMap A Map to be populated with the styles. If null, a new Map will be allocated.
      * @return The Map populated with matching styles.
+     *
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated // SB-dependency: RT-21096 has been filed to track this
     public Map<StyleableProperty<?>,List<Style>> impl_findStyles(Map<StyleableProperty<?>,List<Style>> styleMap) {
@@ -8935,7 +9112,7 @@ public abstract class Node implements EventTarget, Styleable {
 
             Node _parent = getParent();
             while (_parent != null) {
-                if (_parent.cssFlag == CssFlags.UPDATE) {
+                if (_parent.cssFlag == CssFlags.UPDATE || _parent.cssFlag == CssFlags.REAPPLY) {
                     topMost = _parent;
                 }
                 _parent = _parent.getParent();
@@ -9156,102 +9333,316 @@ public abstract class Node implements EventTarget, Styleable {
                 return node.getSubScene();
             }
 
-            @Override public void setLabeledBy(Node node, Node labeledBy) {
+            @Override
+            public void setLabeledBy(Node node, Node labeledBy) {
                 node.labeledBy = labeledBy;
+            }
+
+            @Override
+            public Accessible getAccessible(Node node) {
+                return node.getAccessible();
             }
         });
     }
 
-//    /**
-//     * Experimental API - Do not use (will be removed).
-//     *
-//     * @treatAsPrivate
-//     */
-//    public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//        switch (attribute) {
-//            case ROLE: return Role.NODE;
-//            case PARENT: return getParent();
-//            case SCENE: return getScene();
-//            case BOUNDS: return localToScreen(getBoundsInLocal());
-//            case ENABLED: return !isDisabled();
-//            case FOCUSED: return isFocused();
-//            case VISIBLE: return isVisible();
-//            case LABELED_BY: return labeledBy;
-//            default: return null;
-//        }
-//    }
-//
-//    /**
-//     * Experimental API - Do not use (will be removed).
-//     *
-//     * @treatAsPrivate
-//     */
-//    public void accExecuteAction(Action action, Object... parameters) {
-//    }
-//
-//    /**
-//     * Experimental API - Do not use (will be removed).
-//     *
-//     * @treatAsPrivate
-//     */
-//    public final void accSendNotification(Attribute attributes) {
-//        if (accessible == null) {
-//            Scene scene = getScene();
-//            if (scene != null) {
-//                accessible = scene.removeAccessible(this);
-//            }
-//        }
-//        if (accessible != null) {
-//            accessible.sendNotification(attributes);
-//        }
-//    }
-//
-//    Accessible accessible;
-//
-//    /**
-//     * Experimental API - Do not use (will be removed).
-//     *
-//     * @treatAsPrivate
-//     */
-//    public final Accessible getAccessible() {
-//        if (accessible == null) {
-//            Scene scene = getScene();
-//            /* It is possible the node was reparented and getAccessible() 
-//             * is called before the pulse. Try to recycle the accessible
-//             * before creating a new one.
-//             * Note: this code relies that an accessible can never be on
-//             * more than one Scene#accMap. Thus, the only way
-//             * scene#removeAccessible() returns non-null is if the node
-//             * old scene and new scene are the same object.
-//             */
-//            if (scene != null) {
-//                accessible = scene.removeAccessible(this);
-//            }
-//        }
-//        if (accessible == null) {
-//            accessible = new Accessible() {
-//                @Override public Object getAttribute(Attribute attribute, Object... parameters) {
-//                    return accGetAttribute(attribute, parameters);
-//                }
-//                @Override public void executeAction(Action action, Object... parameters) {
-//                    accExecuteAction(action, parameters);
-//                }
-//                @Override public String toString() {
-//                    String klassName = Node.this.getClass().getName();
-//                    return klassName.substring(klassName.lastIndexOf('.')+1);
-//                }
-//            };
-//        }
-//        return accessible;
-//    }
-//
-//    void releaseAccessible() {
-//        Accessible acc = this.accessible;
-//        if (acc != null) {
-//            accessible = null;
-//            acc.dispose();
-//        }
-//    }
+    /**
+     * The accessible role for this {@code Node}.
+     * <p>
+     * The screen reader uses the role of a node to determine the
+     * attributes and actions that are supported.
+     *
+     * @defaultValue {@link AccessibleRole#NODE}
+     * @see AccessibleRole
+     * 
+     * @since JavaFX 8u40
+     */
+    private ObjectProperty<AccessibleRole> accessibleRole;
+
+    public final void setAccessibleRole(AccessibleRole value) {
+        if (value == null) value = AccessibleRole.NODE;
+        accessibleRoleProperty().set(value);
+    }
+
+    public final AccessibleRole getAccessibleRole() {
+        if (accessibleRole == null) return AccessibleRole.NODE;
+        return accessibleRoleProperty().get();
+    }
+
+    public final ObjectProperty<AccessibleRole> accessibleRoleProperty() {
+        if (accessibleRole == null) {
+            accessibleRole = new SimpleObjectProperty<AccessibleRole>(this, "accessibleRole", AccessibleRole.NODE);
+        }
+        return accessibleRole;
+    }
+
+    public final void setAccessibleRoleDescription(String value) {
+        accessibleRoleDescriptionProperty().set(value);
+    }
+
+    public final String getAccessibleRoleDescription() {
+        if (accessibilityProperties == null) return null;
+        if (accessibilityProperties.accessibleRoleDescription == null) return null;
+        return accessibleRoleDescriptionProperty().get();
+    }
+
+    /**
+     * The role description of this {@code Node}.
+     * <p>
+     * Noramlly, when a role is provided for a node, the screen reader
+     * speaks the role as well as the contents of the node.  When this
+     * value is set, it is possbile to override the default.  This is
+     * useful because the set of roles is predefined.  For example,
+     * it is possible to set the role of a node to be a button, but
+     * have the role description be arbitrary text.
+     *
+     * @defaultValue null
+     * 
+     * @since JavaFX 8u40
+     */
+    public final ObjectProperty<String> accessibleRoleDescriptionProperty() {
+        return getAccessibilityProperties().getAccessibleRoleDescription();
+    }
+
+    public final void setAccessibleText(String value) {
+        accessibleTextProperty().set(value);
+    }
+
+    public final String getAccessibleText() {
+        if (accessibilityProperties == null) return null;
+        if (accessibilityProperties.accessibleText == null) return null;
+        return accessibleTextProperty().get();
+    }
+
+    /**
+     * The accessible text for this {@code Node}.
+     * <p>
+     * This property is used to set the text that the screen
+     * reader will speak.  If a node normally speaks text,
+     * that text is overriden.  For example, a button
+     * usually speaks using the text in the control but will
+     * no longer do this when this value is set.
+     *
+     * @defaultValue null
+     * 
+     * @since JavaFX 8u40
+     */
+    public final ObjectProperty<String> accessibleTextProperty() {
+        return getAccessibilityProperties().getAccessibleText();
+    }
+
+    public final void setAccessibleHelp(String value) {
+        accessibleHelpProperty().set(value);
+    }
+
+    public final String getAccessibleHelp() {
+        if (accessibilityProperties == null) return null;
+        if (accessibilityProperties.accessibleHelp == null) return null;
+        return accessibleHelpProperty().get();
+    }
+
+    /**
+     * The accessible help text for this {@code Node}.
+     * <p>
+     * The help text provides a more detailed description of the
+     * accessible text for a node.  By default, if the node has
+     * a tool tip, this text is used.
+     *
+     * @defaultValue null
+     * 
+     * @since JavaFX 8u40
+     */
+    public final ObjectProperty<String> accessibleHelpProperty() {
+        return getAccessibilityProperties().getAccessibleHelp();
+    }
+
+    AccessibilityProperties accessibilityProperties;
+    private AccessibilityProperties getAccessibilityProperties() {
+        if (accessibilityProperties == null) {
+            accessibilityProperties = new AccessibilityProperties();
+        }
+        return accessibilityProperties;
+    }
+
+    private class AccessibilityProperties {
+        ObjectProperty<String> accessibleRoleDescription;
+        ObjectProperty<String> getAccessibleRoleDescription() {
+            if (accessibleRoleDescription == null) {
+                accessibleRoleDescription = new SimpleObjectProperty<String>(Node.this, "accessibleRoleDescription", null);
+            }
+            return accessibleRoleDescription;
+        }
+        ObjectProperty<String> accessibleText;
+        ObjectProperty<String> getAccessibleText() {
+            if (accessibleText == null) {
+                accessibleText = new SimpleObjectProperty<String>(Node.this, "accessibleText", null);
+            }
+            return accessibleText;
+        }
+        ObjectProperty<String> accessibleHelp;
+        ObjectProperty<String> getAccessibleHelp() {
+            if (accessibleHelp == null) {
+                accessibleHelp = new SimpleObjectProperty<String>(Node.this, "accessibleHelp", null);
+            }
+            return accessibleHelp;
+        }
+    }
+
+    /**
+     * This method is called by the assistive technology to request
+     * the value for an attribute.
+     * <p>
+     * This method is commonly overridden by subclasses to implement
+     * attributes that are required for a specific role.<br>
+     * If a particular attribute is not handled, the super class implementation
+     * must be called.
+     * </p>
+     *
+     * @param attribute the requested attribute
+     * @param parameters optional list of parameters
+     * @return the value for the requested attribute
+     *
+     * @see AccessibleAttribute
+     *
+     * @since JavaFX 8u40
+     */
+    public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
+        switch (attribute) {
+            case ROLE: return getAccessibleRole();
+            case ROLE_DESCRIPTION: return getAccessibleRoleDescription();
+            case TEXT: return getAccessibleText();
+            case HELP: return getAccessibleHelp();
+            case PARENT: return getParent();
+            case SCENE: return getScene();
+            case BOUNDS: return localToScreen(getBoundsInLocal());
+            case DISABLED: return isDisabled();
+            case FOCUSED: return isFocused();
+            case VISIBLE: return isVisible();
+            case LABELED_BY: return labeledBy;
+            default: return null;
+        }
+    }
+
+    /**
+     * This method is called by the assistive technology to request the action
+     * indicated by the argument should be executed.
+     * <p>
+     * This method is commonly overridden by subclasses to implement
+     * action that are required for a specific role.<br>
+     * If a particular action is not handled, the super class implementation
+     * must be called.
+     * </p>
+     * 
+     * @param action the action to execute
+     * @param parameters optional list of parameters
+     *
+     * @see AccessibleAction
+     *
+     * @since JavaFX 8u40
+     */
+    public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
+        switch (action) {
+            case REQUEST_FOCUS:
+                if (isFocusTraversable()) {
+                    requestFocus();
+                }
+                break;
+            case SHOW_MENU: {
+                Bounds b = getBoundsInLocal();
+                Point2D pt = localToScreen(b.getMaxX(), b.getMaxY());
+                ContextMenuEvent event =
+                    new ContextMenuEvent(ContextMenuEvent.CONTEXT_MENU_REQUESTED,
+                    b.getMaxX(), b.getMaxY(), pt.getX(), pt.getY(),
+                    false, new PickResult(this, b.getMaxX(), b.getMaxY()));
+                Event.fireEvent(this, event);
+                break;
+            }
+            default:
+        }
+    }
+
+    /**
+     * This method is called by the application to notify the assistive
+     * technology that the value for an attribute has changed.
+     *
+     * @param notification the attribute whose value has changed
+     *
+     * @see AccessibleAttribute
+     *
+     * @since JavaFX 8u40
+     */
+    public final void notifyAccessibleAttributeChanged(AccessibleAttribute attributes) {
+        if (accessible == null) {
+            Scene scene = getScene();
+            if (scene != null) {
+                accessible = scene.removeAccessible(this);
+            }
+        }
+        if (accessible != null) {
+            accessible.sendNotification(attributes);
+        }
+    }
+
+    Accessible accessible;
+    Accessible getAccessible() {
+        if (accessible == null) {
+            Scene scene = getScene();
+            /* It is possible the node was reparented and getAccessible() 
+             * is called before the pulse. Try to recycle the accessible
+             * before creating a new one.
+             * Note: this code relies that an accessible can never be on
+             * more than one Scene#accMap. Thus, the only way
+             * scene#removeAccessible() returns non-null is if the node
+             * old scene and new scene are the same object.
+             */
+            if (scene != null) {
+                accessible = scene.removeAccessible(this);
+            }
+        }
+        if (accessible == null) {
+            accessible = Application.GetApplication().createAccessible();
+            accessible.setEventHandler(new Accessible.EventHandler() {
+                @SuppressWarnings("deprecation")
+                @Override public AccessControlContext getAccessControlContext() {
+                    Scene scene = getScene();
+                    if (scene == null) {
+                        /* This can happen during the release process of an accessible object. */
+                        throw new RuntimeException("Accessbility requested for node not on a scene");
+                    }
+                    if (scene.impl_getPeer() != null) {
+                        return scene.impl_getPeer().getAccessControlContext();
+                    } else {
+                        /* In some rare cases the accessible for a Node is needed
+                         * before its scene is made visible. For example, the screen reader
+                         * might ask a Menu for its ContextMenu before the ContextMenu
+                         * is made visible. That is a problem because the Window for the
+                         * ContextMenu is only created immediately before the first time
+                         * it is shown.
+                         */
+                        return scene.acc;
+                    }
+                }
+                @Override public Object getAttribute(AccessibleAttribute attribute, Object... parameters) {
+                    return queryAccessibleAttribute(attribute, parameters);
+                }
+                @Override public void executeAction(AccessibleAction action, Object... parameters) {
+                    executeAccessibleAction(action, parameters);
+                }
+                @Override public String toString() {
+                    String klassName = Node.this.getClass().getName();
+                    return klassName.substring(klassName.lastIndexOf('.')+1);
+                }
+            });
+        }
+        return accessible;
+    }
+
+    void releaseAccessible() {
+        Accessible acc = this.accessible;
+        if (acc != null) {
+            accessible = null;
+            acc.dispose();
+        }
+    }
 
 }
 

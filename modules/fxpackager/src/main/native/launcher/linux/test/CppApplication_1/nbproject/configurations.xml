@@ -1,0 +1,400 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configurationDescriptor version="94">
+  <logicalFolder name="root" displayName="root" projectFiles="true" kind="ROOT">
+    <logicalFolder name="HeaderFiles"
+                   displayName="Header Files"
+                   projectFiles="true">
+    </logicalFolder>
+    <logicalFolder name="ResourceFiles"
+                   displayName="Resource Files"
+                   projectFiles="true">
+    </logicalFolder>
+    <logicalFolder name="SourceFiles"
+                   displayName="Source Files"
+                   projectFiles="true">
+      <itemPath>main.cpp</itemPath>
+    </logicalFolder>
+    <logicalFolder name="TestFiles"
+                   displayName="Test Files"
+                   projectFiles="false"
+                   kind="TEST_LOGICAL_FOLDER">
+    </logicalFolder>
+    <logicalFolder name="ExternalFiles"
+                   displayName="Important Files"
+                   projectFiles="false"
+                   kind="IMPORTANT_FILES_FOLDER">
+      <itemPath>Makefile</itemPath>
+    </logicalFolder>
+    <logicalFolder name="TestFiles"
+                   displayName="Test Files"
+                   projectFiles="false"
+                   kind="TEST_LOGICAL_FOLDER">
+    </logicalFolder>
+    <logicalFolder name="ExternalFiles"
+                   displayName="Important Files"
+                   projectFiles="false"
+                   kind="IMPORTANT_FILES_FOLDER">
+      <itemPath>Makefile</itemPath>
+    </logicalFolder>
+    <itemPath>../../../win/windows/Exports.cpp</itemPath>
+    <itemPath>../../../win/windows/Exports.h</itemPath>
+    <itemPath>../../../win/windows/FilePath.cpp</itemPath>
+    <itemPath>../../../win/windows/FilePath.h</itemPath>
+    <itemPath>../../../win/windows/GenericPlatform.cpp</itemPath>
+    <itemPath>../../../win/windows/GenericPlatform.h</itemPath>
+    <itemPath>../../../win/windows/Helpers.cpp</itemPath>
+    <itemPath>../../../win/windows/Helpers.h</itemPath>
+    <itemPath>../../../win/windows/Java.cpp</itemPath>
+    <itemPath>../../../win/windows/Java.h</itemPath>
+    <itemPath>../../../win/windows/JavaUserPreferences.cpp</itemPath>
+    <itemPath>../../../win/windows/JavaUserPreferences.h</itemPath>
+    <itemPath>../../../win/windows/JavaVirtualMachine.cpp</itemPath>
+    <itemPath>../../../win/windows/JavaVirtualMachine.h</itemPath>
+    <itemPath>../../../win/windows/LinuxPlatform.cpp</itemPath>
+    <itemPath>../../../win/windows/LinuxPlatform.h</itemPath>
+    <itemPath>../../../win/windows/Lock.cpp</itemPath>
+    <itemPath>../../../win/windows/Lock.h</itemPath>
+    <itemPath>../../../win/windows/MacPlatform.h</itemPath>
+    <itemPath>../../../win/windows/MacPlatform.mm</itemPath>
+    <itemPath>../../../win/windows/Macros.cpp</itemPath>
+    <itemPath>../../../win/windows/Macros.h</itemPath>
+    <itemPath>../../../win/windows/Messages.cpp</itemPath>
+    <itemPath>../../../win/windows/Messages.h</itemPath>
+    <itemPath>../../../win/windows/Package.cpp</itemPath>
+    <itemPath>../../../win/windows/Package.h</itemPath>
+    <itemPath>../../../win/windows/Platform.cpp</itemPath>
+    <itemPath>../../../win/windows/Platform.h</itemPath>
+    <itemPath>../../../win/windows/PlatformString.cpp</itemPath>
+    <itemPath>../../../win/windows/PlatformString.h</itemPath>
+    <itemPath>../../../win/windows/PlatformThread.cpp</itemPath>
+    <itemPath>../../../win/windows/PlatformThread.h</itemPath>
+    <itemPath>../../../win/windows/PosixPlatform.cpp</itemPath>
+    <itemPath>../../../win/windows/PosixPlatform.h</itemPath>
+    <itemPath>../../../win/windows/PropertyFile.cpp</itemPath>
+    <itemPath>../../../win/windows/PropertyFile.h</itemPath>
+    <itemPath>../../../win/windows/WinLauncher.cpp</itemPath>
+    <itemPath>../../../win/windows/WindowsPlatform.cpp</itemPath>
+    <itemPath>../../../win/windows/WindowsPlatform.h</itemPath>
+    <itemPath>../../../../library/linux/xmlparser.h</itemPath>
+  </logicalFolder>
+  <sourceRootList>
+    <Elem>../../../win/windows/launcher</Elem>
+    <Elem>../../../win/windows/launcher</Elem>
+  </sourceRootList>
+  <projectmakefile>Makefile</projectmakefile>
+  <confs>
+    <conf name="Debug" type="1">
+      <toolsSet>
+        <compilerSet>default</compilerSet>
+        <dependencyChecking>true</dependencyChecking>
+        <rebuildPropChanged>false</rebuildPropChanged>
+      </toolsSet>
+      <compileType>
+        <ccTool>
+          <incDir>
+            <pElem>${HOME}/jdk/include</pElem>
+            <pElem>${HOME}/jdk/include/linux</pElem>
+          </incDir>
+        </ccTool>
+        <linkerTool>
+          <output>../../../../../../build/dev/DevTest</output>
+          <linkerLibItems>
+            <linkerLibStdlibItem>PosixThreads</linkerLibStdlibItem>
+            <linkerLibStdlibItem>DynamicLinking</linkerLibStdlibItem>
+          </linkerLibItems>
+        </linkerTool>
+      </compileType>
+      <item path="../../../win/windows/Exports.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../../../win/windows/Exports.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../../../win/windows/FilePath.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../../../win/windows/FilePath.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../../../win/windows/GenericPlatform.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="../../../win/windows/GenericPlatform.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="../../../win/windows/Helpers.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../../../win/windows/Helpers.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../../../win/windows/Java.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../../../win/windows/Java.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../../../win/windows/JavaUserPreferences.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="../../../win/windows/JavaUserPreferences.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="../../../win/windows/JavaVirtualMachine.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="../../../win/windows/JavaVirtualMachine.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="../../../win/windows/LinuxPlatform.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="../../../win/windows/LinuxPlatform.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="../../../win/windows/Lock.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../../../win/windows/Lock.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../../../win/windows/MacPlatform.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../../../win/windows/Macros.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../../../win/windows/Macros.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../../../win/windows/Messages.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../../../win/windows/Messages.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../../../win/windows/Package.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../../../win/windows/Package.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../../../win/windows/Platform.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../../../win/windows/Platform.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../../../win/windows/PlatformString.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="../../../win/windows/PlatformString.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="../../../win/windows/PlatformThread.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="../../../win/windows/PlatformThread.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="../../../win/windows/PosixPlatform.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="../../../win/windows/PosixPlatform.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="../../../win/windows/PropertyFile.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="../../../win/windows/PropertyFile.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="../../../win/windows/WinLauncher.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="../../../win/windows/WindowsPlatform.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="../../../win/windows/WindowsPlatform.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="main.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+    </conf>
+    <conf name="Release" type="1">
+      <toolsSet>
+        <compilerSet>default</compilerSet>
+        <dependencyChecking>true</dependencyChecking>
+        <rebuildPropChanged>false</rebuildPropChanged>
+      </toolsSet>
+      <compileType>
+        <cTool>
+          <developmentMode>5</developmentMode>
+        </cTool>
+        <ccTool>
+          <developmentMode>5</developmentMode>
+        </ccTool>
+        <fortranCompilerTool>
+          <developmentMode>5</developmentMode>
+        </fortranCompilerTool>
+        <asmTool>
+          <developmentMode>5</developmentMode>
+        </asmTool>
+      </compileType>
+      <item path="../../../win/windows/Exports.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../../../win/windows/Exports.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../../../win/windows/FilePath.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../../../win/windows/FilePath.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../../../win/windows/GenericPlatform.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="../../../win/windows/GenericPlatform.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="../../../win/windows/Helpers.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../../../win/windows/Helpers.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../../../win/windows/Java.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../../../win/windows/Java.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../../../win/windows/JavaUserPreferences.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="../../../win/windows/JavaUserPreferences.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="../../../win/windows/JavaVirtualMachine.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="../../../win/windows/JavaVirtualMachine.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="../../../win/windows/LinuxPlatform.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="../../../win/windows/LinuxPlatform.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="../../../win/windows/Lock.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../../../win/windows/Lock.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../../../win/windows/MacPlatform.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../../../win/windows/Macros.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../../../win/windows/Macros.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../../../win/windows/Messages.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../../../win/windows/Messages.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../../../win/windows/Package.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../../../win/windows/Package.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../../../win/windows/Platform.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="../../../win/windows/Platform.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="../../../win/windows/PlatformString.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="../../../win/windows/PlatformString.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="../../../win/windows/PlatformThread.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="../../../win/windows/PlatformThread.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="../../../win/windows/PosixPlatform.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="../../../win/windows/PosixPlatform.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="../../../win/windows/PropertyFile.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="../../../win/windows/PropertyFile.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="../../../win/windows/WinLauncher.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="../../../win/windows/WindowsPlatform.cpp"
+            ex="false"
+            tool="1"
+            flavor2="0">
+      </item>
+      <item path="../../../win/windows/WindowsPlatform.h"
+            ex="false"
+            tool="3"
+            flavor2="0">
+      </item>
+      <item path="main.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+    </conf>
+  </confs>
+</configurationDescriptor>

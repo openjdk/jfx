@@ -131,7 +131,10 @@ public abstract class Shape3D extends Node {
     }
 
     /**
-     * Defines the drawMode this {@code Shape3D}.
+     * Defines the draw mode used to render this {@code Shape3D}.
+     * {@link DrawMode.LINE} is not available on embedded platforms.
+     * If {@code drawMode} is set to {@link DrawMode.LINE} on an embedded
+     * platform the default value of {@link DrawMode.FILL} will be used instead.
      *
      * @defaultValue DrawMode.FILL
      */

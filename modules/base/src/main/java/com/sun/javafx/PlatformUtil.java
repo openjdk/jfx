@@ -45,7 +45,6 @@ public class PlatformUtil {
     private static final String os = System.getProperty("os.name");
     private static final String version = System.getProperty("os.version");
     private static final boolean embedded;
-    private static final boolean embedded3DEnabled;
     private static final String embeddedType;
     private static final boolean useEGL;
     private static final boolean doEGLCompositing;
@@ -56,7 +55,6 @@ public class PlatformUtil {
         javafxPlatform = AccessController.doPrivileged((PrivilegedAction<String>) () -> System.getProperty("javafx.platform"));
         loadProperties();
         embedded = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("com.sun.javafx.isEmbedded"));
-        embedded3DEnabled = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("com.sun.javafx.experimental.embedded.3d"));
         embeddedType = AccessController.doPrivileged((PrivilegedAction<String>) () -> System.getProperty("embedded"));
         useEGL = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("use.egl"));
         if (useEGL) {
@@ -163,13 +161,6 @@ public class PlatformUtil {
      */
     public static boolean isEmbedded() {
         return embedded;
-    }
-
-    /**
-     * Returns true if the embedded platform is 3D enabled.
-     */
-    public static boolean isEmbedded3DEnabled() {
-        return embedded3DEnabled;
     }
 
     /**

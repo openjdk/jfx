@@ -76,6 +76,8 @@ public class UserLibrary extends Library {
     
     private final ObservableList<JarReport> jarReports = FXCollections.observableArrayList();
     private final ObservableList<JarReport> previousJarReports = FXCollections.observableArrayList();
+    private final ObservableList<Path> fxmlFileReports = FXCollections.observableArrayList();
+    private final ObservableList<Path> previousFxmlFileReports = FXCollections.observableArrayList();
     private final SimpleIntegerProperty explorationCountProperty = new SimpleIntegerProperty();
     private final SimpleObjectProperty<Date> explorationDateProperty = new SimpleObjectProperty<>();
 
@@ -107,6 +109,14 @@ public class UserLibrary extends Library {
     
     public ObservableList<JarReport> getPreviousJarReports() {
         return previousJarReports;
+    }
+    
+    public ObservableList<Path> getFxmlFileReports() {
+        return fxmlFileReports;
+    }
+    
+    public ObservableList<Path> getPreviousFxmlFileReports() {
+        return previousFxmlFileReports;
     }
     
     public synchronized State getState() {
@@ -248,6 +258,18 @@ public class UserLibrary extends Library {
             Platform.runLater(() -> {
                 previousJarReports.setAll(jarReports);
                 jarReports.setAll(newJarReports);
+            });
+        }
+    }
+    
+    void updateFxmlFileReports(Collection<Path> newFxmlFileReports) {
+        if (Platform.isFxApplicationThread()) {
+            previousFxmlFileReports.setAll(fxmlFileReports);
+            fxmlFileReports.setAll(newFxmlFileReports);
+        } else {
+            Platform.runLater(() -> {
+                previousFxmlFileReports.setAll(fxmlFileReports);
+                fxmlFileReports.setAll(newFxmlFileReports);
             });
         }
     }

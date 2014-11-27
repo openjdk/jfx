@@ -42,6 +42,8 @@ extern "C" {
 JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_gtk_GtkTimer__1start
   (JNIEnv * env, jobject obj, jobject runnable, jint period)
 {
+    (void)obj;
+
     RunnableContext* context = (RunnableContext*) malloc(sizeof(RunnableContext));
     context->runnable = env->NewGlobalRef(runnable);
     context->flag = 0;
@@ -57,6 +59,8 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_gtk_GtkTimer__1start
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkTimer__1stop
   (JNIEnv * env, jobject obj, jlong ptr)
 {
+    (void)obj;
+
     RunnableContext* context = (RunnableContext*) JLONG_TO_PTR(ptr);
     context->flag = 1;
     env->DeleteGlobalRef(context->runnable);

@@ -29,7 +29,7 @@
   <key>LSApplicationCategoryType</key>
   <string>DEPLOY_BUNDLE_CATEGORY</string>
   <key>CFBundleVersion</key>
-  <string>100</string>
+  <string>DEPLOY_BUNDLE_CFBUNDLE_VERSION</string>
   <key>NSHumanReadableCopyright</key>
   <string>DEPLOY_BUNDLE_COPYRIGHT</string>
   <key>JVMRuntime</key>
@@ -50,6 +50,10 @@ DEPLOY_JVM_OPTIONS
     <dict>
 DEPLOY_JVM_USER_OPTIONS
     </dict>
+  <key>ArgOptions</key>
+  <array>
+DEPLOY_ARGUMENTS
+  </array>DEPLOY_FILE_ASSOCIATIONS
   <key>NSHighResolutionCapable</key>
   <string>true</string>
  </dict>

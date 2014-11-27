@@ -66,6 +66,9 @@
     int previousPlayerState; // avoid repeated states
 
     BOOL isDisposed;
+
+    CAudioEqualizer *_audioEqualizer;
+    CAudioSpectrum *_audioSpectrum;
 }
 
 - (id) initWithURL:(NSURL *)source eventHandler:(CJavaPlayerEventDispatcher*)hdlr;

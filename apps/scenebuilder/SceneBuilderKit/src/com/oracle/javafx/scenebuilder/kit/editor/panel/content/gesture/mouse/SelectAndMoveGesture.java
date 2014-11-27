@@ -199,7 +199,7 @@ public class SelectAndMoveGesture extends AbstractMouseDragGesture {
         assert nodeObject != null; // At least the root is a Node
         assert nodeObject.getSceneGraphObject() instanceof Node;
         final Node sceneGraphNode = (Node) nodeObject.getSceneGraphObject();
-        return sceneGraphNode.sceneToLocal(hitSceneX, hitSceneY);
+        return sceneGraphNode.sceneToLocal(hitSceneX, hitSceneY, true /* rootScene */);
     }
 
     @Override

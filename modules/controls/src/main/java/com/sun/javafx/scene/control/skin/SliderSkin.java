@@ -29,9 +29,8 @@ import javafx.animation.Transition;
 import javafx.geometry.Orientation;
 import javafx.geometry.Point2D;
 import javafx.geometry.Side;
-//import javafx.scene.accessibility.Action;
-//import javafx.scene.accessibility.Attribute;
-//import javafx.scene.accessibility.Role;
+import javafx.scene.AccessibleAttribute;
+import javafx.scene.AccessibleRole;
 import javafx.scene.chart.NumberAxis;
 import javafx.scene.control.Slider;
 import javafx.scene.layout.StackPane;
@@ -84,35 +83,16 @@ public class SliderSkin extends BehaviorSkinBase<Slider, SliderBehavior> {
 
     private void initialize() {
         thumb = new StackPane() {
-//            @Override
-//            public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//                switch (attribute) {
-//                    case ROLE: return Role.THUMB;
-//                    case VALUE: return getSkinnable().getValue();
-//                    case MAX_VALUE: {
-//                        // This is required for mac-support, to convert from pixel to percent
-//                        return getSkinnable().getMax();
-//                    }
-//                    default: return super.accGetAttribute(attribute, parameters);
-//                }
-//            }
-//
-//            @Override
-//            public void accExecuteAction(Action action, Object... parameters) {
-//                switch (action) {
-//                    case MOVE: {
-//                        // FIXME for now we just take the x/y values as value, rather than pixel value
-//                        final Slider slider = getSkinnable();
-//                        final Orientation o = slider.getOrientation();
-//                        double value = (double) (o == Orientation.VERTICAL ? parameters[1] : parameters[0]);
-//                        slider.setValue(slider.getValue() + value);
-//                        break;
-//                    }
-//                    default: super.accExecuteAction(action, parameters);
-//                }
-//            }
+            @Override
+            public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
+                switch (attribute) {
+                    case VALUE: return getSkinnable().getValue();
+                    default: return super.queryAccessibleAttribute(attribute, parameters);
+                }
+            }
         };
         thumb.getStyleClass().setAll("thumb");
+        thumb.setAccessibleRole(AccessibleRole.THUMB);
         track = new StackPane();
         track.getStyleClass().setAll("track");
 //        horizontal = getSkinnable().isVertical();

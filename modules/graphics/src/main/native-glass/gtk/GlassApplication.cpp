@@ -67,12 +67,28 @@ extern "C" {
 
 /*
  * Class:     com_sun_glass_ui_gtk_GtkApplication
+ * Method:    _isDisplayValid
+ * Signature: ()Z
+ */
+JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1isDisplayValid
+  (JNIEnv * env, jclass clazz)
+{
+    (void)env;
+    (void)clazz;
+
+    return is_display_valid();
+}
+
+/*
+ * Class:     com_sun_glass_ui_gtk_GtkApplication
  * Method:    _init
  * Signature: ()V
  */
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1init
   (JNIEnv * env, jobject obj, jlong handler, jboolean _disableGrab)
 {
+    (void)obj;
+
     mainEnv = env;
     process_events_prev = (GdkEventFunc) handler;
     disableGrab = (gboolean) _disableGrab;
@@ -99,6 +115,8 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1init
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1runLoop
   (JNIEnv * env, jobject obj, jobject launchable, jboolean noErrorTrap)
 {
+    (void)obj;
+
     env->CallVoidMethod(launchable, jRunnableRun);
     CHECK_JNI_EXCEPTION(env);
 
@@ -145,6 +163,9 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1runLoop
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1terminateLoop
   (JNIEnv * env, jobject obj)
 {
+    (void)env;
+    (void)obj;
+
     gtk_main_quit();
 }
 
@@ -156,6 +177,8 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1terminateLoop
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1submitForLaterInvocation
   (JNIEnv * env, jobject obj, jobject runnable)
 {
+    (void)obj;
+
     RunnableContext* context = (RunnableContext*)malloc(sizeof(RunnableContext));
     context->runnable = env->NewGlobalRef(runnable);
     gdk_threads_add_idle_full(G_PRIORITY_HIGH_IDLE + 30, call_runnable, context, NULL);
@@ -169,6 +192,9 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1submitForLater
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkApplication_enterNestedEventLoopImpl
   (JNIEnv * env, jobject obj)
 {
+    (void)env;
+    (void)obj;
+
     gtk_main();
 }
 
@@ -180,6 +206,9 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkApplication_enterNestedEvent
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkApplication_leaveNestedEventLoopImpl
   (JNIEnv * env, jobject obj)
 {
+    (void)env;
+    (void)obj;
+
     gtk_main_quit();
 }
 
@@ -191,6 +220,8 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkApplication_leaveNestedEvent
 JNIEXPORT jobjectArray JNICALL Java_com_sun_glass_ui_gtk_GtkApplication_staticScreen_1getScreens
   (JNIEnv * env, jobject obj)
 {
+    (void)obj;
+
     try {
         return rebuild_screens(env);
     } catch (jni_exception&) {
@@ -206,6 +237,9 @@ JNIEXPORT jobjectArray JNICALL Java_com_sun_glass_ui_gtk_GtkApplication_staticSc
 JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkApplication_staticTimer_1getMinPeriod
   (JNIEnv * env, jobject obj)
 {
+    (void)env;
+    (void)obj;
+
     return 0; // There are no restrictions on period in g_threads
 }
 
@@ -217,6 +251,9 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkApplication_staticTimer_1get
 JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkApplication_staticTimer_1getMaxPeriod
   (JNIEnv * env, jobject obj)
 {
+    (void)env;
+    (void)obj;
+
     return 10000; // There are no restrictions on period in g_threads
 }
 
@@ -228,6 +265,9 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkApplication_staticTimer_1get
 JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_gtk_GtkApplication_staticView_1getMultiClickTime
   (JNIEnv * env, jobject obj)
 {
+    (void)env;
+    (void)obj;
+
     static gint multi_click_time = -1;
     if (multi_click_time == -1) {
         g_object_get(gtk_settings_get_default(), "gtk-double-click-time", &multi_click_time, NULL);
@@ -243,6 +283,9 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_gtk_GtkApplication_staticView_1get
 JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkApplication_staticView_1getMultiClickMaxX
   (JNIEnv * env, jobject obj)
 {
+    (void)env;
+    (void)obj;
+
     static gint multi_click_dist = -1;
 
     if (multi_click_dist == -1) {
@@ -269,6 +312,9 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkApplication_staticView_1getM
  */
 JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1supportsTransparentWindows
   (JNIEnv * env, jobject obj) {
+    (void)env;
+    (void)obj;
+
     return gdk_display_supports_composite(gdk_display_get_default())
             && gdk_screen_is_composited(gdk_screen_get_default());
 }

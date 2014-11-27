@@ -77,7 +77,6 @@ Java_com_sun_pisces_JavaSurface_initialize
             surface->cleanup = surface_cleanup;
 
             switch(surface->super.imageType){
-                case TYPE_INT_ARGB:
                 case TYPE_INT_ARGB_PRE:
                     jSurface->javaArrayFieldID = fieldIds[SURFACE_DATA_INT];
                     break;

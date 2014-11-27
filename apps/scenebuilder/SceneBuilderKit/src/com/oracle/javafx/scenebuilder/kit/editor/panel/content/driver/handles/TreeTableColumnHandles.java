@@ -43,7 +43,6 @@ import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTableView;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Line;
-import javafx.scene.transform.Transform;
 
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.AbstractResilientHandles;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.ContentPanelController;
@@ -110,24 +109,9 @@ public class TreeTableColumnHandles extends AbstractResilientHandles<Object> {
     }
 
     @Override
-    public Transform getSceneGraphToSceneTransform() {
-        assert isReady();
+    public Node getSceneGraphObjectProxy() {
         assert treeTableView != null;
-        return treeTableView.getLocalToSceneTransform();
-    }
-
-    @Override
-    public Point2D sceneGraphObjectToScene(double x, double y) {
-        assert isReady();
-        assert treeTableView != null;
-        return treeTableView.localToScene(x, y);
-    }
-
-    @Override
-    public Point2D sceneToSceneGraphObject(double x, double y) {
-        assert isReady();
-        assert treeTableView != null;
-        return treeTableView.sceneToLocal(x, y);
+        return treeTableView;
     }
 
     @Override

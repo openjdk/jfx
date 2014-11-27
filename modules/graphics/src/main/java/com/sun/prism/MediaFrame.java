@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,9 +33,11 @@ import java.nio.ByteBuffer;
  */
 public interface MediaFrame {
     /**
-     * @return the {@code ByteBuffer} that holds video data for this frame
+     * @param plane the numeric index of the plane, for chunky formats pass zero
+     * @return the {@code ByteBuffer} for the specified plane or null for
+     * non-existent planes
      */
-    public ByteBuffer getBuffer();
+    public ByteBuffer getBufferForPlane(int plane);
 
     /**
      * @return {@link PixelFormat} describing how pixels are stored in this
@@ -72,23 +74,6 @@ public interface MediaFrame {
     public int planeCount();
 
     /**
-     * The plane offset is the number of bytes into the ByteBuffer returned by
-     * {@link #getBuffer() getBuffer()} that the specified plane starts.
-     * @return an int array containing the plane byte offsets for each plane
-     */
-    public int[] planeOffsets();
-
-    /**
-     * The plane offset is the number of bytes into the ByteBuffer returned by
-     * {@link #getBuffer() getBuffer()} that the specified plane starts.
-     * @param planeIndex which plane to get the offset for, valid range is zero
-     * to {@link #planeCount() planeCount()}
-     * @return the number of bytes into the buffer that the specified plane
-     * begins
-     */
-    public int offsetForPlane(int planeIndex);
-
-    /**
      * The plane line stride is the number of bytes between two consecutive
      * lines in the buffer. This number will vary depending on the frame's
      * {@code PixelFormat} and decoder output.
@@ -101,7 +86,7 @@ public interface MediaFrame {
      * lines in the buffer. This number will vary depending on the frame's
      * {@code PixelFormat} and decoder output.
      * @param planeIndex which plane to get the stride for, valid range is zero
-     * to {@link #planeCount() planeCount()}
+     * to {@link #planeCount() planeCount()} non-inclusive
      * @return the line stride for the specified plane
      */
     public int strideForPlane(int planeIndex);

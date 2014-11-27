@@ -27,15 +27,19 @@ package javafx.scene.chart;
 
 import javafx.animation.FadeTransition;
 import javafx.animation.ParallelTransition;
+import javafx.application.Platform;
 import javafx.beans.NamedArg;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 import javafx.scene.layout.StackPane;
 import javafx.util.Duration;
 
 import com.sun.javafx.charts.Legend;
 import com.sun.javafx.charts.Legend.LegendItem;
+
+import java.util.Iterator;
 
 /**
  * Chart type that plots symbols for the data points in a series.
@@ -80,6 +84,9 @@ public class ScatterChart<X,Y> extends XYChart<X,Y> {
         // check if symbol has already been created
         if (symbol == null) {
             symbol = new StackPane();
+            symbol.setAccessibleRole(AccessibleRole.TEXT);
+            symbol.setAccessibleRoleDescription("Point");
+            symbol.focusTraversableProperty().bind(Platform.accessibilityActiveProperty());
             item.setNode(symbol);
         }
         // set symbol styles
@@ -162,7 +169,8 @@ public class ScatterChart<X,Y> extends XYChart<X,Y> {
         // update symbol positions
         for (int seriesIndex=0; seriesIndex < getDataSize(); seriesIndex++) {
             Series<X,Y> series = getData().get(seriesIndex);
-            for (Data<X,Y> item = series.begin; item != null; item = item.next) {
+            for (Iterator<Data<X, Y>> it = getDisplayedDataIterator(series); it.hasNext(); ) {
+                Data<X, Y> item = it.next();
                 double x = getXAxis().getDisplayPosition(item.getCurrentX());
                 double y = getYAxis().getDisplayPosition(item.getCurrentY());
                 if (Double.isNaN(x) || Double.isNaN(y)) {

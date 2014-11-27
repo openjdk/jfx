@@ -918,7 +918,9 @@ public class MyController implements Initializable {
 <div class="caption">main_window_content.fxml</div>
 <pre class="code">
 &lt;VBox fx:controller="com.foo.MainController"&gt;
-   &lt;fx:include fx:id="dialog" source="dialog.fxml"/&gt;
+   &lt;fx:define&gt;
+      &lt;fx:include fx:id="dialog" source="dialog.fxml"/&gt;
+   &lt;/fx:define&gt;
    ...
 &lt;/VBox&gt;
 </pre>
@@ -933,7 +935,7 @@ public class MainController extends Controller {
 }
 </pre>
 
-<p>when the controller's <span class="code">initialize()</span> method is called, the <span class="code">dialog</span> field will contain the root element loaded from the "dialog.fxml" include, and the <span class="code">dialogController</span> field will contain the include's controller. The main controller can then invoke methods on the included controller, to populate and show the dialog, for example.</p>
+<p>when the controller's <span class="code">initialize()</span> method is called, the <span class="code">dialog</span> field will contain the root element loaded from the "dialog.fxml" include, and the <span class="code">dialogController</span> field will contain the include's controller. The main controller can then invoke methods on the included controller, to populate and show the dialog, for example. Note that as the content of the file referenced by fx:include otherwise would become part of the scene graph spanned from main_window_content.fxml, it is necessary to wrap fx:include by fx:define to separate the scene graphs of both windows.</p>
 
 <h2><a name="fxmlloader">FXMLLoader</a></h2>
 <p>The <span class="code">FXMLLoader</span> class is responsible for actually loading an FXML source file and returning the resulting object graph. For example, the following code loads an FXML file from a location on the classpath relative to the loading class and localizes it with a resource bundle named "com.foo.example". The type of the root element is assumed to be a subclass of <span class="code">javafx.scene.layout.Pane</span>, and the document is assumed to define a controller of type <span class="code">MyController</span>:</p>

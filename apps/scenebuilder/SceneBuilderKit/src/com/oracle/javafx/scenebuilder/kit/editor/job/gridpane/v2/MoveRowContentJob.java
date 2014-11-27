@@ -33,8 +33,8 @@
 package com.oracle.javafx.scenebuilder.kit.editor.job.gridpane.v2;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
+import com.oracle.javafx.scenebuilder.kit.editor.job.BatchDocumentJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
-import com.oracle.javafx.scenebuilder.kit.editor.job.v2.CompositeJob;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.IntegerPropertyMetadata;
@@ -48,7 +48,7 @@ import javafx.scene.layout.GridPane;
 /**
  *
  */
-public class MoveRowContentJob extends CompositeJob {
+public class MoveRowContentJob extends BatchDocumentJob {
     
     private final IntegerPropertyMetadata rowIndexMeta =
             new IntegerPropertyMetadata(

@@ -205,11 +205,11 @@ class ES2Context extends BaseShaderContext {
         int fboID = ((ES2RenderTarget)target).getFboID();
         glContext.bindFBO(fboID);
 
-        boolean antiAliasing = false;
+        boolean msaa = false;
         if (target instanceof ES2RTTexture) {
             // Attach a depth buffer to the currently bound FBO
             ES2RTTexture rtTarget = (ES2RTTexture)target;
-            antiAliasing = rtTarget.isAntiAliasing();
+            msaa = rtTarget.isMSAA();
             if (depthTest) {
                 rtTarget.attachDepthBuffer(this);
             }
@@ -221,7 +221,7 @@ class ES2Context extends BaseShaderContext {
         int w = target.getContentWidth();
         int h = target.getContentHeight();
         glContext.updateViewportAndDepthTest(x, y, w, h, depthTest);
-        glContext.updateMSAAState(antiAliasing);
+        glContext.updateMSAAState(msaa);
 
         if (camera instanceof NGDefaultCamera) {
             // update projection matrix; this will be uploaded to the shader

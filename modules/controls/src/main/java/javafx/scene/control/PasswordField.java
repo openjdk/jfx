@@ -25,8 +25,8 @@
 
 package javafx.scene.control;
 
-//import javafx.scene.accessibility.Attribute;
-//import javafx.scene.accessibility.Role;
+import javafx.scene.AccessibleAttribute;
+import javafx.scene.AccessibleRole;
 
 /**
  * Text field that masks entered characters.
@@ -39,6 +39,7 @@ public class PasswordField extends TextField {
      */
     public PasswordField() {
         getStyleClass().add("password-field");
+        setAccessibleRole(AccessibleRole.PASSWORD_FIELD);
     }
 
     /***************************************************************************
@@ -68,12 +69,11 @@ public class PasswordField extends TextField {
      *                                                                         *
      **************************************************************************/
 
-//    /** @treatAsPrivate */
-//    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//        switch (attribute) {
-//            case ROLE: return Role.PASSWORD_FIELD;
-//            case TITLE: return null;
-//            default: return super.accGetAttribute(attribute, parameters);
-//        }
-//    }
+    @Override
+    public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
+        switch (attribute) {
+            case TEXT: return null;
+            default: return super.queryAccessibleAttribute(attribute, parameters);
+        }
+    }
 }

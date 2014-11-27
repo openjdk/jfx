@@ -34,6 +34,7 @@ import java.util.List;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Collections;
+import java.util.ArrayList;
 
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
@@ -52,6 +53,44 @@ final class DataFlavorUtils {
 
     static String getFxMimeType(final DataFlavor flavor) {
         return flavor.getPrimaryType() + "/" + flavor.getSubType();
+    }
+
+    static DataFlavor[] getDataFlavors(String[] mimeTypes) {
+        final ArrayList<DataFlavor> flavors =
+            new ArrayList<DataFlavor>(mimeTypes.length);
+        for (String mime : mimeTypes) {
+            DataFlavor flavor = null;
+            try {
+                flavor = new DataFlavor(mime);
+            } catch (ClassNotFoundException e) {
+                // FIXME: what to do?
+                continue;
+            }
+            flavors.add(flavor);
+        }
+        return flavors.toArray(new DataFlavor[0]);
+    }
+
+    static DataFlavor getDataFlavor(final DataFormat format) {
+        DataFlavor[] flavors = getDataFlavors(format.getIdentifiers().toArray(new String[1]));
+
+        // Well, that's our best guess...
+        return flavors.length == 0 ? null : flavors[0];
+    }
+
+    static String getMimeType(final DataFormat format) {
+        // Well, that's our best guess...
+        for (String id : format.getIdentifiers()) return id;
+        return null;
+    }
+
+    static DataFormat getDataFormat(final DataFlavor flavor) {
+        String mimeType = getFxMimeType(flavor);
+        DataFormat dataFormat = DataFormat.lookupMimeType(mimeType);
+        if (dataFormat == null) {
+            dataFormat = new DataFormat(mimeType); // are we ready for this yet?
+        }
+        return dataFormat;
     }
 
     /**

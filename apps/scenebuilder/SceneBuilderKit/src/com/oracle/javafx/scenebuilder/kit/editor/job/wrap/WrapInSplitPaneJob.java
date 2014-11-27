@@ -32,7 +32,6 @@
 package com.oracle.javafx.scenebuilder.kit.editor.job.wrap;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
-import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
 import com.oracle.javafx.scenebuilder.kit.editor.job.JobUtils;
 import com.oracle.javafx.scenebuilder.kit.editor.job.wrap.FXOMObjectCourseComparator.BidimensionalComparator;
 import com.oracle.javafx.scenebuilder.kit.editor.job.wrap.FXOMObjectCourseComparator.GridCourse;
@@ -42,7 +41,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 import javafx.geometry.Bounds;
 import javafx.geometry.Orientation;
 import javafx.scene.Node;
@@ -59,12 +57,8 @@ public class WrapInSplitPaneJob extends AbstractWrapInSubComponentJob {
     }
 
     @Override
-    protected List<Job> modifyChildrenJobs(final Set<FXOMObject> children) {
-        return Collections.emptyList();
-    }
-
-    @Override
-    protected void modifyContainer(final Set<FXOMObject> children) {
+    protected void modifyNewContainer(final List<FXOMObject> children) {
+        super.modifyNewContainer(children);
 
         // Update the SplitPane orientation depending on its children positionning
         final Orientation orientation = getOrientation(children);
@@ -72,14 +66,14 @@ public class WrapInSplitPaneJob extends AbstractWrapInSubComponentJob {
     }
     
     @Override
-    protected Collection<FXOMObject> sortChildren(Set<FXOMObject> children) {
+    protected Collection<FXOMObject> sortChildren(List<FXOMObject> children) {
         final List<FXOMObject> sorted = new ArrayList<>(children);
         final Orientation orientation = getOrientation(children);
         Collections.sort(sorted, UnidimensionalComparator.of(orientation));
         return sorted;
     }
 
-    private Orientation getOrientation(final Set<FXOMObject> fxomObjects) {
+    private Orientation getOrientation(final List<FXOMObject> fxomObjects) {
         int cols = computeSizeByCourse(fxomObjects, GridCourse.COL_BY_COL);
         if (cols == fxomObjects.size()) {
             return Orientation.HORIZONTAL;
@@ -94,7 +88,7 @@ public class WrapInSplitPaneJob extends AbstractWrapInSubComponentJob {
     }
 
     private int computeSizeByCourse(
-            final Set<FXOMObject> fxomObjects,
+            final List<FXOMObject> fxomObjects,
             final GridCourse course) {
 
         final BidimensionalComparator comparator = new BidimensionalComparator(course);

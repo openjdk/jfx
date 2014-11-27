@@ -62,7 +62,7 @@ public class MovingGuideController {
         assert node.getScene() != null;
         
         final Bounds layoutBounds = node.getLayoutBounds();
-        final Bounds boundsInScene = node.localToScene(layoutBounds);
+        final Bounds boundsInScene = node.localToScene(layoutBounds, true /* rootScene */);
         addSampleBounds(boundsInScene, true /* addMiddle */);
     }
     

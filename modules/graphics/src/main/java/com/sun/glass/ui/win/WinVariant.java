@@ -25,7 +25,7 @@
 
 package com.sun.glass.ui.win;
 
-class WinVariant {
+final class WinVariant {
     static final int VT_EMPTY = 0;
     static final int VT_NULL  = 1;
     static final int VT_I2    = 2;

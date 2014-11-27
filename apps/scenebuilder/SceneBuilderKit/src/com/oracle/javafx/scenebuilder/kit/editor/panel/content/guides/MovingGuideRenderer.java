@@ -88,7 +88,7 @@ public class MovingGuideRenderer {
             chrome.setVisible(false);
         }
         
-        final Bounds scope = guideGroup.sceneToLocal(scopeInScene);
+        final Bounds scope = guideGroup.sceneToLocal(scopeInScene, true /* rootScene */);
         for (AbstractSegment s : newLines) {
             final Line chrome;
             if (reusableChromes.isEmpty()) {
@@ -101,8 +101,8 @@ public class MovingGuideRenderer {
                 reusableChromes.remove(chrome);
                 chrome.setVisible(true);
             }
-            final Point2D p1 = guideGroup.sceneToLocal(s.getX1(), s.getY1());
-            final Point2D p2 = guideGroup.sceneToLocal(s.getX2(), s.getY2());
+            final Point2D p1 = guideGroup.sceneToLocal(s.getX1(), s.getY1(), true /* rootScene */);
+            final Point2D p2 = guideGroup.sceneToLocal(s.getX2(), s.getY2(), true /* rootScene */);
             final double startX, startY, endX, endY;
             if (s instanceof HorizontalSegment) {
                 assert MathUtils.equals(p1.getY(), p2.getY());

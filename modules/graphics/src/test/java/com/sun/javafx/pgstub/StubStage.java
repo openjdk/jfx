@@ -48,7 +48,7 @@ public class StubStage implements TKStage {
     }
 
     @Override
-    public TKScene createTKScene(boolean depthBuffer, boolean antiAliasing, AccessControlContext acc) {
+    public TKScene createTKScene(boolean depthBuffer, boolean msaa, AccessControlContext acc) {
         return new StubScene();
     }
 

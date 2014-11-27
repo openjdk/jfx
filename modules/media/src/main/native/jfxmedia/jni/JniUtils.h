@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,6 +27,7 @@
 #define _JNI_UTILS_H_
 
 #include <jni.h>
+#include <string>
 
 #if defined (_LP64) || defined(_WIN64)
 #define jlong_to_ptr(a) ((void*)(a))
@@ -35,6 +36,10 @@
 #define jlong_to_ptr(a) ((void*)(int)(a))
 #define ptr_to_jlong(a) ((jlong)(int)(a))
 #endif
+
+// Throws an exception of the given type (class name)
+// if type is NULL, then will throw a generic Exception
+void ThrowJavaException(JNIEnv *env, const char* type, const char* message);
 
 // Gets a valid, usable JNIEnv for the current thread
 // if didAttach is true on return then you should call
@@ -55,12 +60,14 @@ JNIEnv *GetJavaEnvironment(JavaVM *jvm, jboolean &didAttach);
 class CJavaEnvironment {
 public:
     CJavaEnvironment(JavaVM *);
+    CJavaEnvironment(JNIEnv *); // create with an existing JNIEnv
     ~CJavaEnvironment();
 
     JNIEnv *getEnvironment();
     bool hasException();    // return true if an exception is raised (but do nothing with it)
     bool clearException();  // if an exception is raised, clear it and return true
     bool reportException(); // as above but log the exception to Logger
+    void throwException(std::string message); // Throw an exception with the given message
 
 private:
     JNIEnv *environment;

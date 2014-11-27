@@ -81,16 +81,16 @@ public class Snapshot1Test extends SnapshotCommon {
 
     // ========================== TEST CASES ==========================
 
-    // Verify that we cannot construct a Scene on a thread other than
+    // Verify that we can construct a Scene on a thread other than
     // the FX Application thread
-    @Test (expected=IllegalStateException.class)
+    @Test
     public void testConstructSceneWrongThread() {
         assertFalse(Platform.isFxApplicationThread());
 
         Group root = new Group();
 
-        // The following should throw IllegalStateException
         tmpScene = new Scene(root);
+        assertNotNull(tmpScene);
     }
 
     // Verify that we can construct a graph of nodes on a thread other than
@@ -205,26 +205,25 @@ public class Snapshot1Test extends SnapshotCommon {
     public void testBadSceneCallback1() {
         final CountDownLatch latch = new CountDownLatch(1);
 
-        Util.runAndWait(new Runnable() {
-            public void run() {
-                tmpScene = new Scene(new Group(), 200, 100);
+        Util.runAndWait(() -> {
+            tmpScene = new Scene(new Group(), 200, 100);
 
-                Callback<SnapshotResult, Void> cb = new Callback() {
-                    @Override public Object call(Object param) {
-                        assertNotNull(param);
+            // NOTE: cannot use a lambda expression for the following callback
+            Callback<SnapshotResult, Void> cb = new Callback() {
+                @Override public Object call(Object param) {
+                    assertNotNull(param);
 
-                        latch.countDown();
-                        // The following will cause a ClassCastException warning
-                        // message to be printed.
-                        return "";
-                    }
-                };
+                    latch.countDown();
+                    // The following will cause a ClassCastException warning
+                    // message to be printed.
+                    return "";
+                }
+            };
 
-                tmpScene.snapshot(cb, null);
-                Util.sleep(SLEEP_TIME);
-                assertEquals(1, latch.getCount());
-                System.err.println("testBadSceneCallback1: a ClassCastException warning message is expected here");
-            }
+            tmpScene.snapshot(cb, null);
+            Util.sleep(SLEEP_TIME);
+            assertEquals(1, latch.getCount());
+            System.err.println("testBadSceneCallback1: a ClassCastException warning message is expected here");
         });
 
         try {
@@ -246,23 +245,19 @@ public class Snapshot1Test extends SnapshotCommon {
     public void testBadSceneCallback2() {
         final CountDownLatch latch = new CountDownLatch(1);
 
-        Util.runAndWait(new Runnable() {
-            public void run() {
-                tmpScene = new Scene(new Group(), 200, 100);
+        Util.runAndWait(() -> {
+            tmpScene = new Scene(new Group(), 200, 100);
 
-                Callback cb = new Callback<String, Integer>() {
-                    @Override public Integer call(String param) {
-                        // Should not get here
-                        latch.countDown();
-                        throw new AssertionFailedError("Should never get here");
-                    }
-                };
+            Callback cb = (Callback<String, Integer>) param -> {
+                // Should not get here
+                latch.countDown();
+                throw new AssertionFailedError("Should never get here");
+            };
 
-                tmpScene.snapshot(cb, null);
-                Util.sleep(SLEEP_TIME);
-                assertEquals(1, latch.getCount());
-                System.err.println("testBadSceneCallback2: a ClassCastException warning message is expected here");
-            }
+            tmpScene.snapshot(cb, null);
+            Util.sleep(SLEEP_TIME);
+            assertEquals(1, latch.getCount());
+            System.err.println("testBadSceneCallback2: a ClassCastException warning message is expected here");
         });
 
         try {
@@ -336,26 +331,25 @@ public class Snapshot1Test extends SnapshotCommon {
     public void testBadNodeCallback1() {
         final CountDownLatch latch = new CountDownLatch(1);
 
-        Util.runAndWait(new Runnable() {
-            public void run() {
-                tmpNode = new Rectangle(10, 10);
+        Util.runAndWait(() -> {
+            tmpNode = new Rectangle(10, 10);
 
-                Callback<SnapshotResult, Void> cb = new Callback() {
-                    @Override public Object call(Object param) {
-                        assertNotNull(param);
+            // NOTE: cannot use a lambda expression for the following callback
+            Callback<SnapshotResult, Void> cb = new Callback() {
+                @Override public Object call(Object param) {
+                    assertNotNull(param);
 
-                        latch.countDown();
-                        // The following will cause a ClassCastException warning
-                        // message to be printed.
-                        return "";
-                    }
-                };
+                    latch.countDown();
+                    // The following will cause a ClassCastException warning
+                    // message to be printed.
+                    return "";
+                }
+            };
 
-                tmpNode.snapshot(cb, null, null);
-                Util.sleep(SLEEP_TIME);
-                assertEquals(1, latch.getCount());
-                System.err.println("testBadNodeCallback1: a ClassCastException warning message is expected here");
-            }
+            tmpNode.snapshot(cb, null, null);
+            Util.sleep(SLEEP_TIME);
+            assertEquals(1, latch.getCount());
+            System.err.println("testBadNodeCallback1: a ClassCastException warning message is expected here");
         });
 
         try {
@@ -377,23 +371,19 @@ public class Snapshot1Test extends SnapshotCommon {
     public void testBadNodeCallback2() {
         final CountDownLatch latch = new CountDownLatch(1);
 
-        Util.runAndWait(new Runnable() {
-            public void run() {
-                tmpNode = new Rectangle(10, 10);
+        Util.runAndWait(() -> {
+            tmpNode = new Rectangle(10, 10);
 
-                Callback cb = new Callback<String, Integer>() {
-                    @Override public Integer call(String param) {
-                        // Should not get here
-                        latch.countDown();
-                        throw new AssertionFailedError("Should never get here");
-                    }
-                };
+            Callback cb = (Callback<String, Integer>) param -> {
+                // Should not get here
+                latch.countDown();
+                throw new AssertionFailedError("Should never get here");
+            };
 
-                tmpNode.snapshot(cb, null, null);
-                Util.sleep(SLEEP_TIME);
-                assertEquals(1, latch.getCount());
-                System.err.println("testBadNodeCallback2: a ClassCastException warning message is expected here");
-            }
+            tmpNode.snapshot(cb, null, null);
+            Util.sleep(SLEEP_TIME);
+            assertEquals(1, latch.getCount());
+            System.err.println("testBadNodeCallback2: a ClassCastException warning message is expected here");
         });
 
         try {

@@ -354,6 +354,8 @@ glass_gtk_selection_data_get_data_with_length(
 
 static void
 configure_opaque_window(GtkWidget *window) {
+    (void)window;
+
     gtk_widget_set_visual(window,
                           gdk_screen_get_system_visual(
                               gdk_screen_get_default()));

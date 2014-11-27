@@ -33,11 +33,13 @@ package com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors;
 
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.IntegerPropertyMetadata;
+
 import java.util.ArrayList;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 
@@ -53,10 +55,13 @@ public class IntegerEditor extends AutoSuggestEditor {
     private int min;
     private int max;
 
-    @SuppressWarnings("LeakingThisInConstructor")
     public IntegerEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses,
             Map<String, Object> constants, int minVal, int maxVal) {
         super(propMeta, selectedClasses, new ArrayList<>(constants.keySet()), AutoSuggestEditor.Type.INTEGER);
+        initialize(constants, minVal, maxVal);
+    }
+    
+    private void initialize(Map<String, Object> constants, int minVal, int maxVal) {
         this.constants = constants;
         this.min = minVal;
         this.max = maxVal;
@@ -98,7 +103,7 @@ public class IntegerEditor extends AutoSuggestEditor {
         if (val.isEmpty()) {
             val = "0"; //NOI18N
             getTextField().setText(val);
-            return new Integer(val);
+            return Integer.valueOf(val);
         }
         Object constantValue = constants.get(val.toUpperCase(Locale.ROOT));
         if (constantValue != null) {

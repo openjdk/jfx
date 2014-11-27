@@ -78,7 +78,11 @@ public abstract class MacBaseInstallerBundler extends AbstractBundler {
             params -> {
                 File imageDir = IMAGES_ROOT.fetchFrom(params);
                 if (!imageDir.exists()) imageDir.mkdirs();
-                return new File(imageDir, getID()+ ".image");
+                try {
+                    return Files.createTempDirectory(imageDir.toPath(), "image-").toFile();
+                } catch (IOException e) {
+                    return new File(imageDir, getID()+ ".image");
+                }
             },
             (s, p) -> new File(s));
 
@@ -197,7 +201,7 @@ public abstract class MacBaseInstallerBundler extends AbstractBundler {
         return APP_BUNDLER.fetchFrom(p).doBundle(p, appImageRoot, true);
     }
 
-    protected File prepareDaemonBundle(Map<String, ? super Object> p) throws ConfigException {
+    protected File prepareDaemonBundle(Map<String, ? super Object> p) {
         File daemonImageRoot = DAEMON_IMAGE_BUILD_ROOT.fetchFrom(p);
         return DAEMON_BUNDLER.fetchFrom(p).doBundle(p, daemonImageRoot, true);
     }
@@ -230,7 +234,7 @@ public abstract class MacBaseInstallerBundler extends AbstractBundler {
                         args.add("--entitlements");
                         args.add(entitlementsFile); // entitlements
                     }
-                    args.add("-vvvv"); // super verbose output
+                    args.add("-vvvv"); // super verbo1se output
                     args.add(p.toString());
 
 
@@ -301,12 +305,7 @@ public abstract class MacBaseInstallerBundler extends AbstractBundler {
             //noinspection ThrowableResultOfMethodCallIgnored
             if (toThrow.get() != null) return;
 
-            try (ByteArrayOutputStream baos = new ByteArrayOutputStream(); PrintStream ps = new PrintStream(baos)) {
-                ProcessBuilder pb = new ProcessBuilder("/usr/libexec/PlistBuddy",
-                        "-c", "Print :CFBundleIdentifier", path.resolve("Contents/Info.plist").toString());
-                IOUtils.exec(pb, VERBOSE.fetchFrom(params), false, ps);
-                String bundleID = baos.toString();
-
+            try {
                 List<String> args = new ArrayList<>();
                 args.addAll(Arrays.asList("codesign",
                         "-s", signingIdentity, // sign with this key
@@ -319,7 +318,7 @@ public abstract class MacBaseInstallerBundler extends AbstractBundler {
                     args.add(signingIdentity); // sign with this key
                 }
                 args.add(path.toString());
-                pb = new ProcessBuilder(args);
+                ProcessBuilder pb = new ProcessBuilder(args);
                 IOUtils.exec(pb, VERBOSE.fetchFrom(params));
             } catch (IOException e) {
                 toThrow.set(e);
@@ -382,5 +381,34 @@ public abstract class MacBaseInstallerBundler extends AbstractBundler {
     @Override
     public String getBundleType() {
         return "INSTALLER";
+    }
+    
+    public static String findKey(String key, boolean verbose) {
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream(); PrintStream ps = new PrintStream(baos)) {
+            ProcessBuilder pb = new ProcessBuilder(
+                    "security", "find-certificate", 
+                    "-c", key, // look for key in common name
+                    "-a" // return all matches, not just the first
+            );
+
+            IOUtils.exec(pb, verbose, false, ps);
+            Pattern p = Pattern.compile("\"alis\"<blob>=\"([^\"]+)\"");
+            Matcher m = p.matcher(baos.toString());
+            if (!m.find()) {
+                Log.info("Did not find a key matching '" + key + "'");
+                return null;
+            }
+            String matchedKey = m.group(1);
+            if (m.find()) {
+                Log.info("Found more than one key matching '"  + key + "'");
+                return null;
+            }
+            Log.debug("Using key '" + matchedKey + "'");
+            return matchedKey;
+        } catch (IOException ioe) {
+            ioe.printStackTrace();
+            Log.verbose(ioe);
+            return null;
+        }
     }
 }

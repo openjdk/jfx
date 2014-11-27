@@ -99,6 +99,7 @@ public class LettersPane extends Region {
         final Timeline timeline = new Timeline();
         timeline.getKeyFrames().add(
                 new KeyFrame(Duration.seconds(3), (ActionEvent event) -> {
+                    // we are done remove us from scene
                     getChildren().remove(letter);
         },
                 new KeyValue(letter.translateXProperty(), getRandom(0.0f, getWidth() - letter.getBoundsInLocal().getWidth()), INTERPOLATOR),

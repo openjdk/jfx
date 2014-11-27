@@ -34,6 +34,7 @@ package com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -117,7 +118,7 @@ public abstract class AutoSuggestEditor extends PropertyEditor {
     }
 
     private void preInit(List<String> suggestedList) {
-        this.suggestedList = suggestedList;
+        setSuggestedList(suggestedList);
         if (type == Type.ALPHA) {
             root = EditorUtils.loadFxml("StringAutoSuggestEditor.fxml", this); //NOI18N
             assert textField != null;
@@ -202,13 +203,18 @@ public abstract class AutoSuggestEditor extends PropertyEditor {
     }
 
     protected void resetSuggestedList(List<String> suggestedList) {
-        this.suggestedList = suggestedList;
+        setSuggestedList(suggestedList);
         updateMenuButtonIfNeeded();
         entryField.setPromptText(null);
     }
     
     protected List<String> getSuggestedList() {
         return suggestedList;
+    }
+    
+    private void setSuggestedList(List<String> suggestedList) {
+        Collections.sort(suggestedList);
+        this.suggestedList = suggestedList;
     }
 
     protected Parent getRoot() {
@@ -245,6 +251,7 @@ public abstract class AutoSuggestEditor extends PropertyEditor {
         if (event.getCode() == KeyCode.DOWN) {
             // 'Down' key shows the popup even if popup has been disabled
             suggest = true;
+            suggestedLv.requestFocus();
         }
         handleSuggestedPopup();
     }
@@ -319,8 +326,6 @@ public abstract class AutoSuggestEditor extends PropertyEditor {
             suggestedLv.getSelectionModel().clearSelection();
             // popup x coordinate need to be slightly moved, so that the popup is centered 
             entryField.getContextMenu().show(entryField, Side.BOTTOM, 0, 0);
-
-            suggestedLv.requestFocus();
         }
     }
 
@@ -336,7 +341,10 @@ public abstract class AutoSuggestEditor extends PropertyEditor {
             String selected = suggestedLv.getSelectionModel().getSelectedItem();
             entryField.setText(selected);
             entryField.requestFocus();
-            entryField.selectEnd();
+            entryField.selectAll();
+            if (AutoSuggestEditor.this.getCommitListener() != null) {
+                AutoSuggestEditor.this.getCommitListener().handle(null);
+            }
         }
         hidePopup();
     }

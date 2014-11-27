@@ -58,7 +58,9 @@ import javafx.scene.transform.Affine;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
+import java.util.Arrays;
 import java.util.LinkedList;
+import javafx.scene.text.FontSmoothingType;
 
 /**
  * This class is used to issue draw calls to a {@code Canvas} using a buffer. 
@@ -184,6 +186,22 @@ import java.util.LinkedList;
  * boundary path of a shape, relative to the line width, before it is truncated
  * to a {@link StrokeLineJoin#BEVEL BEVEL} join in a stroke operation.
  * </td></tr>
+ * <tr class="altColor">
+ * <td class="colLast" style="width:15%">{@link #setLineDashes(double...) Dashes}</td>
+ * <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
+ * <td class="colLast" style="width:10%; text-align:center">{@code null}</td>
+ * <td class="colLast">
+ * The array of dash lengths to be applied to the segments in the boundary
+ * of shapes in a stroke operation.
+ * </td></tr>
+ * <tr class="rowColor">
+ * <td class="colLast" style="width:15%">{@link #setLineDashOffset(double) Dash Offset}</td>
+ * <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
+ * <td class="colLast" style="width:10%; text-align:center">{@code 0.0}</td>
+ * <td class="colLast">
+ * The distance offset into the array of dash lengths at which to start the
+ * dashing of the segments in the boundary of shapes in a stroke operation.
+ * </td></tr>
  * 
  * <tr><th colspan="3"><a name="text-attr"><p align="center">Text Attributes</p></a></th></tr>
  * <tr class="rowColor">
@@ -208,6 +226,14 @@ import java.util.LinkedList;
  * <td class="colLast">
  * The vertical position of the text relative to the {@code Y} coordinate
  * specified in the text operation.
+ * </td></tr>
+ * <tr class="altColor">
+ * <td class="colLast" style="width:15%">{@link #setFontSmoothingType(javafx.scene.text.FontSmoothingType) Font Smoothing}</td>
+ * <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
+ * <td class="colLast" style="width:10%; text-align:center">{@link FontSmoothingType#GRAY GRAY}</td>
+ * <td class="colLast">
+ * The type of smoothing (antialiasing) applied to the glyphs in the font
+ * for all fill text operations.
  * </td></tr>
  * 
  * <tr><th colspan="3"><a name="path-attr"><p align="center">Path Attributes</p></a></th></tr>
@@ -314,8 +340,8 @@ import java.util.LinkedList;
  * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
  * </tr>
  * <tr><td colspan="6"><p align="center">
- * <a name="base-fn-1">[1]</a>Only the Transform, Clip, and Effect apply to clearRect()<br>
- * <a name="base-fn-2">[2]</a>Only the Fill Rule applies to fillPolygon(), the current path is left unchanged
+ * <a name="base-fn-1">[1]</a> Only the Transform, Clip, and Effect apply to clearRect()<br>
+ * <a name="base-fn-2">[2]</a> Only the Fill Rule applies to fillPolygon(), the current path is left unchanged
  * </p></td></tr>
  * 
  * <tr><th colspan="1"><p align="center">Text Rendering</p></th></tr>
@@ -329,7 +355,7 @@ import java.util.LinkedList;
  * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes</td>
  * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes</td>
  * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
- * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes</td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes <a href="#text-fn-3">[3]</a></td>
  * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
  * </tr>
  * <tr class="altColor">
@@ -342,9 +368,12 @@ import java.util.LinkedList;
  * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes</td>
  * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
  * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes</td>
- * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes</td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes <a href="#text-fn-3">[3]</a></td>
  * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
  * </tr>
+ * <tr><td colspan="6"><p align="center">
+ * <a name="text-fn-3">[3]</a> The Font Smoothing attribute only applies to filled text
+ * </p></td></tr>
  * 
  * <tr><th colspan="1"><p align="center">Path Rendering</p></th></tr>
  * <tr class="rowColor">
@@ -360,7 +389,7 @@ import java.util.LinkedList;
  * {@link #closePath() closePath()},
  * {@link #rect(double, double, double, double) rect()}
  * </td>
- * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes <a href="#path-fn-3">[3]</a></td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes <a href="#path-fn-4">[4]</a></td>
  * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
  * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
  * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
@@ -372,7 +401,7 @@ import java.util.LinkedList;
  * {@link #fill() fill()}
  * </a>
  * </td>
- * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes <a href="#path-fn-3">[3]</a></td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes <a href="#path-fn-4">[4]</a></td>
  * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes</td>
  * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
  * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
@@ -384,11 +413,11 @@ import java.util.LinkedList;
  * {@link #stroke() stroke()}
  * </a>
  * </td>
- * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes <a href="#path-fn-3">[3]</a></td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes <a href="#path-fn-4">[4]</a></td>
  * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
  * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes</td>
  * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
- * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes <a href="#path-fn-4">[4]</a></td>
+ * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes <a href="#path-fn-5">[5]</a></td>
  * </tr>
  * <tr class="altColor">
  * <td class="colLast" style="width:25%">
@@ -403,8 +432,8 @@ import java.util.LinkedList;
  * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes</td>
  * </tr>
  * <tr><td colspan="6"><p align="center">
- * <a name="path-fn-3">[3]</a>Transform applied only during path construction<br>
- * <a name="path-fn-4">[4]</a>Fill Rule only used for fill() and clip()
+ * <a name="path-fn-4">[4]</a> Transform applied only during path construction<br>
+ * <a name="path-fn-5">[5]</a> Fill Rule only used for fill() and clip()
  * </p></td></tr>
  * 
  * <tr><th colspan="1"><p align="center">Image Rendering</p></th></tr>
@@ -487,8 +516,11 @@ public final class GraphicsContext {
         StrokeLineCap linecap;
         StrokeLineJoin linejoin;
         double miterlimit;
+        double dashes[];
+        double dashOffset;
         int numClipPaths;
         Font font;
+        FontSmoothingType fontsmoothing;
         TextAlignment textalign;
         VPos textbaseline;
         Effect effect;
@@ -503,7 +535,10 @@ public final class GraphicsContext {
                 new Affine2D(),
                 Color.BLACK, Color.BLACK,
                 1.0, StrokeLineCap.SQUARE, StrokeLineJoin.MITER, 10.0,
-                0, Font.getDefault(), TextAlignment.LEFT, VPos.BASELINE,
+                null, 0.0,
+                0,
+                Font.getDefault(), FontSmoothingType.GRAY,
+                TextAlignment.LEFT, VPos.BASELINE,
                 null, FillRule.NON_ZERO);
         }
 
@@ -512,34 +547,20 @@ public final class GraphicsContext {
                 new Affine2D(copy.transform),
                 copy.fill, copy.stroke,
                 copy.linewidth, copy.linecap, copy.linejoin, copy.miterlimit,
+                copy.dashes, copy.dashOffset,
                 copy.numClipPaths,
-                copy.font, copy.textalign, copy.textbaseline,
+                copy.font, copy.fontsmoothing, copy.textalign, copy.textbaseline,
                 copy.effect, copy.fillRule);
-        }
-
-        State(double globalAlpha, BlendMode blendop,
-                     Affine2D transform, Paint fill, Paint stroke,
-                     double linewidth, StrokeLineCap linecap,
-                     StrokeLineJoin linejoin, double miterlimit,
-                     int numClipPaths,
-                     Font font, TextAlignment align, VPos baseline,
-                     Effect effect, FillRule fillRule)
-        {
-            set(globalAlpha, blendop,
-                new Affine2D(transform),
-                fill, stroke,
-                linewidth, linecap, linejoin, miterlimit,
-                numClipPaths,
-                font, textalign, textbaseline,
-                effect, fillRule);
         }
 
         final void set(double globalAlpha, BlendMode blendop,
                        Affine2D transform, Paint fill, Paint stroke,
                        double linewidth, StrokeLineCap linecap,
                        StrokeLineJoin linejoin, double miterlimit,
+                       double dashes[], double dashOffset,
                        int numClipPaths,
-                       Font font, TextAlignment align, VPos baseline,
+                       Font font, FontSmoothingType smoothing,
+                       TextAlignment align, VPos baseline,
                        Effect effect, FillRule fillRule)
         {
             this.globalAlpha = globalAlpha;
@@ -551,8 +572,11 @@ public final class GraphicsContext {
             this.linecap = linecap;
             this.linejoin = linejoin;
             this.miterlimit = miterlimit;
+            this.dashes = dashes;
+            this.dashOffset = dashOffset;
             this.numClipPaths = numClipPaths;
             this.font = font;
+            this.fontsmoothing = smoothing;
             this.textalign = align;
             this.textbaseline = baseline;
             this.effect = effect;
@@ -575,6 +599,8 @@ public final class GraphicsContext {
             ctx.setLineCap(linecap);
             ctx.setLineJoin(linejoin);
             ctx.setMiterLimit(miterlimit);
+            ctx.setLineDashes(dashes);
+            ctx.setLineDashOffset(dashOffset);
             GrowableDataBuffer buf = ctx.getBuffer();
             while (ctx.curState.numClipPaths > numClipPaths) {
                 ctx.curState.numClipPaths--;
@@ -583,6 +609,7 @@ public final class GraphicsContext {
             }
             ctx.setFillRule(fillRule);
             ctx.setFont(font);
+            ctx.setFontSmoothingType(fontsmoothing);
             ctx.setTextAlign(textalign);
             ctx.setTextBaseline(textbaseline);
             ctx.setEffect(effect);
@@ -1324,6 +1351,119 @@ public final class GraphicsContext {
     }
 
     /**
+     * Sets the current stroke line dash pattern to a normalized copy of
+     * the argument.
+     * The default value is {@code null}.
+     * The line dash array is a <a href="#strk-attr">stroke attribute</a>
+     * used for any of the stroke methods as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>.
+     * If the array is {@code null} or empty or contains all {@code 0} elements
+     * then dashing will be disabled and the current dash array will be set
+     * to {@code null}.
+     * If any of the elements of the array are a negative, infinite, or NaN
+     * value outside the range {@code [0, +inf)} then the entire array will
+     * be ignored and the current dash array will remain unchanged.
+     * If the array is an odd length then it will be treated as if it
+     * were two copies of the array appended to each other.
+     * 
+     * @param dashes the array of finite non-negative dash lengths
+     * @since JavaFX 8u40
+     */
+    public void setLineDashes(double... dashes) {
+        if (dashes == null || dashes.length == 0) {
+            if (curState.dashes == null) {
+                return;
+            }
+            curState.dashes = null;
+        } else {
+            boolean allZeros = true;
+            for (int i = 0; i < dashes.length; i++) {
+                double d = dashes[i];
+                if (d >= 0.0 && d < Double.POSITIVE_INFINITY) {
+                    // Non-NaN, finite, non-negative
+                    // Test cannot be inverted or it will not implicitly test for NaN
+                    if (d > 0) {
+                        allZeros = false;
+                    }
+                } else {
+                    return;
+                }
+            }
+            if (allZeros) {
+                if (curState.dashes == null) {
+                    return;
+                }
+                curState.dashes = null;
+            } else {
+                int dashlen = dashes.length;
+                if ((dashlen & 1) == 0) {
+                    curState.dashes = Arrays.copyOf(dashes, dashlen);
+                } else {
+                    curState.dashes = Arrays.copyOf(dashes, dashlen * 2);
+                    System.arraycopy(dashes, 0, curState.dashes, dashlen, dashlen);
+                }
+            }
+        }
+        GrowableDataBuffer buf = getBuffer();
+        buf.putByte(NGCanvas.DASH_ARRAY);
+        buf.putObject(curState.dashes);
+    }
+
+    /**
+     * Gets a copy of the current line dash array.
+     * The default value is {@code null}.
+     * The array may be normalized by the validation tests in the
+     * {@link #setLineDashes(double...)} method.
+     * The line dash array is a <a href="#strk-attr">stroke attribute</a>
+     * used for any of the stroke methods as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>.
+     * 
+     * @return a copy of the current line dash array.
+     * @since JavaFX 8u40
+     */
+    public double[] getLineDashes() {
+        if (curState.dashes == null) {
+            return null;
+        }
+        return Arrays.copyOf(curState.dashes, curState.dashes.length);
+    }
+
+    /**
+     * Sets the line dash offset.
+     * The default value is {@code 0.0}.
+     * The line dash offset is a <a href="#strk-attr">stroke attribute</a>
+     * used for any of the stroke methods as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>.
+     * An infinite or NaN value outside of the range {@code (-inf, +inf)}
+     * will be ignored and the current value will remain unchanged.
+     * 
+     * @param dashOffset the line dash offset in the range {@code (-inf, +inf)}
+     * @since JavaFX 8u40
+     */
+    public void setLineDashOffset(double dashOffset) {
+        // Per W3C spec: On setting, infinite, and NaN
+        // values must be ignored, leaving the value unchanged
+        if (dashOffset > Double.NEGATIVE_INFINITY && dashOffset < Double.POSITIVE_INFINITY) {
+            curState.dashOffset = dashOffset;
+            writeParam(dashOffset, NGCanvas.DASH_OFFSET);
+        }
+    }
+
+    /**
+     * Gets the current line dash offset.
+     * The default value is {@code 0.0}.
+     * The line dash offset is a <a href="#strk-attr">stroke attribute</a>
+     * used for any of the stroke methods as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>.
+     * 
+     * @return the line dash offset in the range {@code (-inf, +inf)}
+     * @since JavaFX 8u40
+     */
+    public double getLineDashOffset() {
+        return curState.dashOffset;
+    }
+
+    /**
      * Sets the current Font.
      * The default value is specified by {@link Font#getDefault()}.
      * The font is a <a href="#text-attr">text attribute</a>
@@ -1353,6 +1493,46 @@ public final class GraphicsContext {
      */
     public Font getFont() {
         return curState.font;
+    }
+
+    /**
+     * Sets the current Font Smoothing Type.
+     * The default value is {@link FontSmoothingType#GRAY GRAY}.
+     * The font smoothing type is a <a href="#text-attr">text attribute</a>
+     * used for any of the text methods as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>.
+     * A {@code null} value will be ignored and the current value will remain unchanged.
+     * <p>
+     * <b>Note</b> that the {@code FontSmoothingType} value of
+     * {@link FontSmoothingType#LCD LCD} is only supported over an opaque
+     * background.  {@code LCD} text will generally appear as {@code GRAY}
+     * text over transparent or partially transparent pixels, and in some
+     * implementations it may not be supported at all on a {@link Canvas}
+     * because the required support does not exist for surfaces which contain
+     * an alpha channel as all {@code Canvas} objects do.
+     * 
+     * @param fontsmoothing the {@link FontSmoothingType} or null
+     * @since JavaFX 8u40
+     */
+    public void setFontSmoothingType(FontSmoothingType fontsmoothing) {
+        if (fontsmoothing != null && fontsmoothing != curState.fontsmoothing) {
+            curState.fontsmoothing = fontsmoothing;
+            writeParam((byte) fontsmoothing.ordinal(), NGCanvas.FONT_SMOOTH);
+        }
+    }
+
+    /**
+     * Gets the current Font Smoothing Type.
+     * The default value is {@link FontSmoothingType#GRAY GRAY}.
+     * The font smoothing type is a <a href="#text-attr">text attribute</a>
+     * used for any of the text methods as specified in the
+     * <a href="#attr-ops-table">Rendering Attributes Table</a>.
+     * 
+     * @return the {@link FontSmoothingType}
+     * @since JavaFX 8u40
+     */
+    public FontSmoothingType getFontSmoothingType() {
+        return curState.fontsmoothing;
     }
 
     /**
@@ -2521,7 +2701,7 @@ public final class GraphicsContext {
         if (writer == null) {
             writer = new PixelWriter() {
                 @Override
-                public PixelFormat getPixelFormat() {
+                public PixelFormat<ByteBuffer> getPixelFormat() {
                     return PixelFormat.getByteBgraPreInstance();
                 }
 
@@ -2561,7 +2741,8 @@ public final class GraphicsContext {
                 }
 
                 private int[] checkBounds(int x, int y, int w, int h,
-                                          PixelFormat pf, int scan)
+                                          PixelFormat<? extends Buffer> pf,
+                                          int scan)
                 {
                     // assert (w >= 0 && h >= 0) - checked by caller
                     int cw = (int) Math.ceil(theCanvas.getWidth());

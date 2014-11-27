@@ -96,6 +96,8 @@ extern "C" {
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkRobot__1keyPress
   (JNIEnv *env, jobject obj, jint code)
 {
+    (void)obj;
+
     checkXTest(env);
     keyButton(code, TRUE);
 }
@@ -108,6 +110,8 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkRobot__1keyPress
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkRobot__1keyRelease
   (JNIEnv *env, jobject obj, jint code)
 {
+    (void)obj;
+
     checkXTest(env);
     keyButton(code, FALSE);
 }
@@ -120,6 +124,8 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkRobot__1keyRelease
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkRobot__1mouseMove
   (JNIEnv *env, jobject obj, jint x, jint y)
 {
+    (void)obj;
+
     Display *xdisplay = gdk_x11_get_default_xdisplay();
     checkXTest(env);
     XWarpPointer(xdisplay,
@@ -153,6 +159,8 @@ static void mouseButtons(jint buttons, gboolean press)
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkRobot__1mousePress
   (JNIEnv *env, jobject obj, jint buttons)
 {
+    (void)obj;
+
     checkXTest(env);
     mouseButtons(buttons, TRUE);
 }
@@ -165,6 +173,8 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkRobot__1mousePress
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkRobot__1mouseRelease
   (JNIEnv *env, jobject obj, jint buttons)
 {
+    (void)obj;
+
     checkXTest(env);
     mouseButtons(buttons, FALSE);
 }
@@ -177,6 +187,8 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkRobot__1mouseRelease
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkRobot__1mouseWheel
   (JNIEnv *env, jobject obj, jint amt)
 {
+    (void)obj;
+
     Display *xdisplay = gdk_x11_get_default_xdisplay();
     int repeat = abs(amt);
     int button = amt < 0 ? 5 : 4;
@@ -198,6 +210,9 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkRobot__1mouseWheel
 JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkRobot__1getMouseX
   (JNIEnv *env, jobject obj) 
 {
+    (void)env;
+    (void)obj;
+
     jint x;
     glass_gdk_display_get_pointer(gdk_display_get_default(), &x, NULL);
     return x;
@@ -211,6 +226,9 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkRobot__1getMouseX
 JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkRobot__1getMouseY
   (JNIEnv *env, jobject obj)
 {
+    (void)env;
+    (void)obj;
+
     jint y;
     glass_gdk_display_get_pointer(gdk_display_get_default(), NULL, &y);
     return y;
@@ -224,6 +242,8 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkRobot__1getMouseY
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkRobot__1getScreenCapture
   (JNIEnv * env, jobject obj, jint x, jint y, jint width, jint height, jintArray data)
 {
+    (void)obj;
+
     GdkPixbuf *screenshot, *tmp;
     GdkWindow *root_window = gdk_get_default_root_window();
 

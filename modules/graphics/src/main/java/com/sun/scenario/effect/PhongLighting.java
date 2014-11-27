@@ -306,8 +306,33 @@ public class PhongLighting extends CoreEffect<RenderState> {
         // TODO: Since only the content input is used for the output bounds
         // we could attempt to factor the bounds of the content input in our
         // answer for the getInputClip() method of the RenderState, but for
-        // now we will just use the stock RenderSpaceRenderState object.
-        return RenderState.RenderSpaceRenderState;
+        // now we will just use (a close copy of) the stock RenderSpaceRenderState object.
+        return new RenderState() {
+            @Override
+            public EffectCoordinateSpace getEffectTransformSpace() {
+                return EffectCoordinateSpace.RenderSpace;
+            }
+
+            @Override
+            public BaseTransform getInputTransform(BaseTransform filterTransform) {
+                return filterTransform;
+            }
+
+            @Override
+            public BaseTransform getResultTransform(BaseTransform filterTransform) {
+                return BaseTransform.IDENTITY_TRANSFORM;
+            }
+
+            @Override
+            public Rectangle getInputClip(int i, Rectangle filterClip) {
+                if (i == 0) {
+                    Rectangle r = new Rectangle(filterClip);
+                    r.grow(1, 1);
+                    return r;
+                }
+                return filterClip;
+            }
+        };
     }
 
     @Override

@@ -29,6 +29,7 @@ import javafx.application.Application;
 import javafx.event.ActionEvent;
 import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
+import javafx.geometry.Pos;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -39,6 +40,8 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.control.RadioMenuItem;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.input.KeyCombination;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 
@@ -46,8 +49,8 @@ public class HelloPopupMenu extends Application {
 
     @Override public void start(Stage stage) {
         stage.setTitle("Hello PopupMenu");
-        stage.setWidth(500);
-        stage.setHeight(500);
+        stage.setWidth(400);
+        stage.setHeight(300);
         Scene scene = createScene();
         scene.setFill(Color.WHITE);
         stage.setScene(scene);
@@ -55,33 +58,35 @@ public class HelloPopupMenu extends Application {
     }
 
     private Scene createScene() {
-        ContextMenu popupMenu = new ContextMenu();
-        popupMenu.addEventHandler(Menu.ON_SHOWN, t -> System.out.println("menu shown"));
-        popupMenu.addEventHandler(Menu.ON_HIDDEN, t -> System.out.println("menu hidden"));
-        popupMenu.addEventHandler(ActionEvent.ACTION, t -> System.out.println("action " + t.getTarget()));
+        Group group = new Group();
+        ContextMenu simpleMenu = new ContextMenu();
+        simpleMenu.addEventHandler(Menu.ON_SHOWN, t -> System.out.println("menu shown"));
+        simpleMenu.addEventHandler(Menu.ON_HIDDEN, t -> System.out.println("menu hidden"));
+        simpleMenu.addEventHandler(ActionEvent.ACTION, t -> System.out.println("action " + t.getTarget()));
 
         MenuItem item = new MenuItem("About");
-        popupMenu.getItems().add(item);
+        simpleMenu.getItems().add(item);
         item = new MenuItem("Preferences");
-        popupMenu.getItems().add(item);
+        simpleMenu.getItems().add(item);
         item = new MenuItem("Templates");
-        popupMenu.getItems().add(item);
+        simpleMenu.getItems().add(item);
 
+        ContextMenu weekdaysMenu = new ContextMenu();
         Menu menu = new Menu("Weekdays");
         menu.addEventHandler(ActionEvent.ACTION, t -> System.out.println("Weekdays action " + t.getTarget()));
-        popupMenu.getItems().add(menu);
+        weekdaysMenu.getItems().add(menu);
         item = new RadioMenuItem("Monday");
         menu.getItems().add(item);
         item = new RadioMenuItem("Tuesday");
         menu.getItems().add(item);
         item = new RadioMenuItem("Wednesday");
         menu.getItems().add(item);
-        item = new SeparatorMenuItem();
-        popupMenu.getItems().add(item);
+        weekdaysMenu.getItems().add(item);
 
+        ContextMenu complexMenu = new ContextMenu();
         menu = new Menu("Types");
         menu.addEventHandler(ActionEvent.ACTION, t -> System.out.println("Types action " + t.getTarget()));
-        popupMenu.getItems().add(menu);
+        complexMenu.getItems().add(menu);
         item = new MenuItem("Push");
         menu.getItems().add(item);
         item = new RadioMenuItem("Radio1");
@@ -122,14 +127,42 @@ public class HelloPopupMenu extends Application {
         item.setAccelerator(KeyCombination.keyCombination("Shortcut + DOWN"));
         menu.getItems().add(item);
         
-        Button button = new Button("Click me");
-        button.setContextMenu(popupMenu);
-        button.setOnAction(e -> {
-            Bounds b = button.getBoundsInLocal();
-            Point2D pt = button.localToScreen(b.getMaxX(), b.getMaxY());
-            popupMenu.show(button, pt.getX(), pt.getY());
+        VBox vbox = new VBox(20);
+        HBox hbox = new HBox(10);
+        vbox.setAlignment(Pos.CENTER);
+        hbox.setAlignment(Pos.CENTER);
+        
+        Button simple = new Button("Simple ContextMenu");
+        Button weekdays = new Button("Weekdays ContextMenu");
+        Button complex = new Button("Complex ContextMenu");
+        
+        simple.setContextMenu(simpleMenu);
+        simple.setOnAction(e -> {
+            Bounds b = simple.getBoundsInLocal();
+            Point2D pt = simple.localToScreen(b.getMaxX(), b.getMaxY());
+            simpleMenu.show(simple, pt.getX(), pt.getY());
         });
-        return new Scene(new Group(button));
+        
+        weekdays.setOnAction(e -> {
+            Bounds b = weekdays.getBoundsInLocal();
+            Point2D pt = weekdays.localToScreen(b.getMaxX(), b.getMaxY());
+            weekdaysMenu.show(weekdays, pt.getX(), pt.getY());
+        });
+        
+        complex.setOnAction(e -> {
+            Bounds b = complex.getBoundsInLocal();
+            Point2D pt = complex.localToScreen(b.getMaxX(), b.getMaxY());
+            complexMenu.show(complex, pt.getX(), pt.getY());
+        });
+        
+        
+        vbox.getChildren().addAll(simple, weekdays, complex);
+        hbox.getChildren().addAll(vbox);
+        hbox.setLayoutX(20);
+        hbox.setLayoutY(20);
+        group.getChildren().add(hbox);
+        
+        return new Scene(group);
     }
 
     /**

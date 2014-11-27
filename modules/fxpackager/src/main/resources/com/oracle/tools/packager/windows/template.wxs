@@ -42,5 +42,6 @@
         <UI/>
         <Icon Id="DesktopIcon.exe" SourceFile="APPLICATION_ICON" />
         <Icon Id="StartMenuIcon.exe" SourceFile="APPLICATION_ICON" />
+SECONDARY_LAUNCHER_ICONS
     </Product>
 </Wix>

@@ -52,7 +52,7 @@ public class HelloToggleButton extends Application {
                 (group.getSelectedToggle() == null ? "****** no selected toggle******" :
                     group.getSelectedToggle().getUserData())));
         
-        ToggleButton button1 = new ToggleButton("Luke, *I* am your father");
+        ToggleButton button1 = new ToggleButton("No, *I* am your father");
         button1.setUserData("Button 1");
         button1.setToggleGroup(group);
         button1.setSelected(true);

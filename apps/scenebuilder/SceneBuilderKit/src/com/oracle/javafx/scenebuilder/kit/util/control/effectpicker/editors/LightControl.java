@@ -43,6 +43,8 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
+import javafx.event.ActionEvent;
+import javafx.event.Event;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -172,6 +174,10 @@ public class LightControl extends VBox {
             updateLightPropertiesUI();
             // Then notify the controller a change occured
             effectPickerController.incrementRevision();
+        });
+
+        lightChoiceBox.addEventHandler(ActionEvent.ACTION, (Event event) -> {
+            event.consume();
         });
 
         updateLightPropertiesUI();

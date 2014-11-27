@@ -41,11 +41,15 @@ inline void snTrace(LPCTSTR lpszFormat, ... )
     va_end(argList);
 }
 
+inline void raise_error_empty(HRESULT hr) { }
+
 #define STRACE1       snTrace
 #if   defined(_DEBUG) || defined(DEBUG)
   #define STRACE      snTrace
+  #define RAISE_ERROR _com_raise_error
 #else // _DEBUG
   #define STRACE      snTraceEmp
+  #define RAISE_ERROR raise_error_empty
 #endif// _DEBUG
 #define STRACE0       snTraceEmp
 
@@ -72,8 +76,8 @@ inline void snTrace(LPCTSTR lpszFormat, ... )
 #define OLE_HRT(fnc)\
         _hr_ = fnc;\
         if(FAILED(_hr_)){\
-            STRACE1(_T("Error:%08x in ") _T(#fnc),  _hr_);\
-            _com_raise_error(_hr_);\
+            STRACE(_T("Error:%08x in ") _T(#fnc),  _hr_);\
+            RAISE_ERROR(_hr_);\
         }
 
 #define OLE_WINERROR2HR(msg, erCode)\
@@ -86,25 +90,25 @@ inline void snTrace(LPCTSTR lpszFormat, ... )
         
 #define OLE_THROW_LASTERROR(msg)\
         OLE_WINERROR2HR(msg, ::GetLastError())\
-        _com_raise_error(_hr_);
+        RAISE_ERROR(_hr_);
 
 #define OLE_CHECK_NOTNULL(x)\
         if(!(x)){\
             STRACE1(_T("Null pointer:") _T(#x));\
-            _com_raise_error(_hr_ = E_POINTER);\
+            RAISE_ERROR(_hr_ = E_POINTER);\
         }
 
 #define OLE_CHECK_NOTNULLSP(x)\
         if(!bool(x)){\
             STRACE1(_T("Null pointer:") _T(#x));\
-            _com_raise_error(_hr_ = E_POINTER);\
+            RAISE_ERROR(_hr_ = E_POINTER);\
         }
 
 #define OLE_HRW32(fnc)\
         _hr_ = fnc;\
         if(ERROR_SUCCESS!=_hr_){\
             STRACE1(_T("OSError:%d in ") _T(#fnc),  _hr_);\
-            _com_raise_error(_hr_ = HRESULT_FROM_WIN32(_hr_));\
+            RAISE_ERROR(_hr_ = HRESULT_FROM_WIN32(_hr_));\
         }
 
 #define OLE_HRW32_BOOL(fnc)\

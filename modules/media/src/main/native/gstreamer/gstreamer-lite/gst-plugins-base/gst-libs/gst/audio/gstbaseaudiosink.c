@@ -334,6 +334,10 @@ gst_base_audio_sink_provide_clock (GstElement * elem)
 
   sink = GST_BASE_AUDIO_SINK (elem);
 
+#ifdef GSTREAMER_LITE
+  GST_OBJECT_LOCK (sink);
+#endif // GSTREAMER_LITE
+
   /* we have no ringbuffer (must be NULL state) */
   if (sink->ringbuffer == NULL)
     goto wrong_state;
@@ -341,7 +345,10 @@ gst_base_audio_sink_provide_clock (GstElement * elem)
   if (!gst_ring_buffer_is_acquired (sink->ringbuffer))
     goto wrong_state;
 
+#ifndef GSTREAMER_LITE
   GST_OBJECT_LOCK (sink);
+#endif // GSTREAMER_LITE
+
   if (!sink->provide_clock)
     goto clock_disabled;
 
@@ -354,6 +361,9 @@ gst_base_audio_sink_provide_clock (GstElement * elem)
 wrong_state:
   {
     GST_DEBUG_OBJECT (sink, "ringbuffer not acquired");
+#ifdef GSTREAMER_LITE
+    GST_OBJECT_UNLOCK (sink);
+#endif // GSTREAMER_LITE
     return NULL;
   }
 clock_disabled:

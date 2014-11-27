@@ -44,6 +44,7 @@ import javafx.scene.chart.XYChart;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.ListView;
+import javafx.scene.control.Spinner;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TreeTableView;
 import javafx.scene.control.TreeView;
@@ -140,6 +141,17 @@ public class SampleDataGenerator {
                         newData = currentData;
                     } else {
                         newData = new PieChartSampleData();
+                    }
+                } else {
+                    newData = null;
+                }
+            } else if (sceneGraphClass == Spinner.class) {
+                final Spinner<?> spinner = (Spinner<?>) sceneGraphObject;
+                if (spinner.getValue() == null) {
+                    if (currentData instanceof SpinnerSampleData) {
+                        newData = currentData;
+                    } else {
+                        newData = new SpinnerSampleData();
                     }
                 } else {
                     newData = null;

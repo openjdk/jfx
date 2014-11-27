@@ -319,22 +319,15 @@ final class PaintCollector implements CompletionListener {
          QuantumToolkit quantum = (QuantumToolkit)QuantumToolkit.getToolkit();
          quantum.pulse(false);
          final CountDownLatch latch = new CountDownLatch(1);
-         boolean locked =  ViewPainter.renderLock.isHeldByCurrentThread();
-         if (locked) {
-             ViewPainter.renderLock.unlock();
-         }
-         try {
+         QuantumToolkit.runWithoutRenderLock(() -> {
              quantum.addRenderJob(new RenderJob(viewPainter, rj -> latch.countDown()));
              try {
                  latch.await();
              } catch (InterruptedException e) {
                  //Fail silently.  If interrupted, then proceed with the UI ...
              }
-         } finally {
-             if (locked) {
-                 ViewPainter.renderLock.lock();
-             }
-         }
+             return null;
+         });
      }
 
     /**
@@ -447,8 +440,9 @@ final class PaintCollector implements CompletionListener {
         }
 
         dirtyScenes.clear();
-        // This should be removed when RT-15195 and all associated issues is finished.
-        if (!QuantumToolkit.multithreaded) {
+
+        // This should be removed when RT-15195, RT-38808 and all associated issues is finished.
+        if (toolkit.shouldWaitForRenderingToComplete()) {
             waitForRenderingToComplete();
         }
     }

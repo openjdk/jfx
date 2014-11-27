@@ -32,10 +32,6 @@
 package com.oracle.javafx.scenebuilder.kit.editor.job.wrap;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
-import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
-import java.util.List;
-import java.util.Set;
 import javafx.scene.layout.AnchorPane;
 
 /**
@@ -46,17 +42,5 @@ public class WrapInAnchorPaneJob extends AbstractWrapInSubComponentJob {
     public WrapInAnchorPaneJob(EditorController editorController) {
         super(editorController);
         newContainerClass = AnchorPane.class;
-    }
-
-    @Override
-    protected List<Job> modifyChildrenJobs(final Set<FXOMObject> children) {
-
-        // We can position the children in the AnchorPane container
-        // => we update the children layout properties
-        return modifyChildrenLayoutJobs(children);
-    }
-
-    @Override
-    protected void modifyContainer(final Set<FXOMObject> children) {
     }
 }

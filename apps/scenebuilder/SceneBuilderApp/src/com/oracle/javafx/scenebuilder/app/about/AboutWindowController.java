@@ -63,7 +63,7 @@ public final class AboutWindowController extends AbstractFxmlWindowController {
     // The resource bundle contains two keys: about.copyright and about.copyright.open
     private String sbAboutCopyrightKeyName = "about.copyright.open"; //NOI18N
     // File name must be in sync with what we use in logging.properties
-    private final String LOG_FILE_NAME = "scenebuilder-2.u.log"; //NOI18N
+    private final String LOG_FILE_NAME = "scenebuilder-2.0.1.log"; //NOI18N
 
     public AboutWindowController() {
         super(AboutWindowController.class.getResource("About.fxml"), //NOI18N
@@ -147,7 +147,7 @@ public final class AboutWindowController extends AbstractFxmlWindowController {
     
     private StringBuilder getVersionParagraph() {
         StringBuilder sb = new StringBuilder(I18N.getString("about.product.version"));
-        sb.append("\nJavaFX Scene Builder 2.u\n\n"); //NOI18N
+        sb.append("\nJavaFX Scene Builder 2.0.1\n\n"); //NOI18N
         return sb;
     }
     private String getLogFilePath() {

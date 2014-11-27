@@ -923,7 +923,7 @@ public abstract class Shape extends Node {
         }
 
         if (impl_isDirty(DirtyBits.NODE_SMOOTH)) {
-            peer.setAntialiased(isSmooth());
+            peer.setSmooth(isSmooth());
         }
     }
 

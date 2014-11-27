@@ -40,10 +40,12 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
@@ -139,13 +141,13 @@ public class WinExeBundlerTest {
         bundleParams.put(BUILD_ROOT.getID(), tmpBase);
 
         bundleParams.put(APP_NAME.getID(), "Smoke Test");
-        bundleParams.put(MAIN_CLASS.getID(), "hello.TestPackager");
+        bundleParams.put(MAIN_CLASS.getID(), "hello.HelloRectangle");
         bundleParams.put(PREFERENCES_ID.getID(), "the/really/long/preferences/id");
         bundleParams.put(MAIN_JAR.getID(),
                 new RelativeFileSet(fakeMainJar.getParentFile(),
                         new HashSet<>(Arrays.asList(fakeMainJar)))
         );
-        bundleParams.put(CLASSPATH.getID(), fakeMainJar.toString());
+        bundleParams.put(CLASSPATH.getID(), "mainApp.jar");
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
         bundleParams.put(LICENSE_FILE.getID(), Arrays.asList("LICENSE", "LICENSE2"));
         bundleParams.put(COPYRIGHT.getID(), "Copyright(c) 2014 the testers \"who like to break stuff\"");
@@ -276,13 +278,15 @@ public class WinExeBundlerTest {
 
         bundleParams.put(APP_NAME.getID(), "Everything App Name");
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        bundleParams.put(ARGUMENTS.getID(), Arrays.asList("He Said", "She Said"));
+        bundleParams.put(CLASSPATH.getID(), "mainApp.jar");
         bundleParams.put(ICON_ICO.getID(), new File(appResourcesDir, "javalogo_white_48.ico"));
         bundleParams.put(JVM_OPTIONS.getID(), "-Xms128M");
         bundleParams.put(JVM_PROPERTIES.getID(), "everything.jvm.property=everything.jvm.property.value");
-        bundleParams.put(MAIN_CLASS.getID(), "hello.TestPackager");
+        bundleParams.put(MAIN_CLASS.getID(), "hello.HelloRectangle");
         bundleParams.put(MAIN_JAR.getID(), "mainApp.jar");
-        bundleParams.put(CLASSPATH.getID(), "mainApp.jar");
-        bundleParams.put(PREFERENCES_ID.getID(), "everything.preferences.id");
+        bundleParams.put(PREFERENCES_ID.getID(), "everything/preferences/id");
+        bundleParams.put(PRELOADER_CLASS.getID(), "hello.HelloPreloader");
         bundleParams.put(USER_JVM_OPTIONS.getID(), "-Xmx=256M\n");
         bundleParams.put(VERSION.getID(), "1.2.3.4");
         bundleParams.put(WIN_RUNTIME.getID(), System.getProperty("java.home"));
@@ -299,7 +303,7 @@ public class WinExeBundlerTest {
 //                STOP_ON_UNINSTALL,
         bundleParams.put(SYSTEM_WIDE.getID(), false);
         bundleParams.put(TITLE.getID(), "Everything Title");
-        bundleParams.put(VENDOR.getID(), "Everything Vendor");
+        bundleParams.put(VENDOR.getID(), "Packager Tests");
 
         // assert they are set
         for (BundlerParamInfo bi :parameters) {
@@ -334,6 +338,173 @@ public class WinExeBundlerTest {
         Assume.assumeTrue(Boolean.parseBoolean(System.getProperty("FULL_TEST")));
 
         File result = bundler.execute(bundleParams, new File(workDir, "everything"));
+        System.err.println("Bundle at - " + result);
+        assertNotNull(result);
+        assertTrue(result.exists());
+    }
+
+
+    /**
+     * multiple launchers
+     */
+    @Test
+    public void twoLaunchersTest() throws IOException, ConfigException, UnsupportedPlatformException {
+        Bundler bundler = new WinExeBundler();
+
+        assertNotNull(bundler.getName());
+        assertNotNull(bundler.getID());
+        assertNotNull(bundler.getDescription());
+        //assertNotNull(bundler.getBundleParameters());
+
+        Map<String, Object> bundleParams = new HashMap<>();
+
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+
+        bundleParams.put(APP_NAME.getID(), "Two Launchers Test");
+        bundleParams.put(MAIN_CLASS.getID(), "hello.HelloRectangle");
+        bundleParams.put(PREFERENCES_ID.getID(), "the/really/long/preferences/id");
+        bundleParams.put(MAIN_JAR.getID(),
+                new RelativeFileSet(fakeMainJar.getParentFile(),
+                        new HashSet<>(Arrays.asList(fakeMainJar)))
+        );
+        bundleParams.put(CLASSPATH.getID(), "mainApp.jar");
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        bundleParams.put(VERBOSE.getID(), true);
+
+        List<Map<String, ? super Object>> secondaryLaunchers = new ArrayList<>();
+        for (String name : new String[] {"Fire", "More Fire"}) {
+            Map<String, ? super Object> launcher = new HashMap<>();
+            launcher.put(APP_NAME.getID(), name);
+            launcher.put(PREFERENCES_ID.getID(), "secondary/launcher/" + name);
+            secondaryLaunchers.add(launcher);
+        }
+        bundleParams.put(SECONDARY_LAUNCHERS.getID(), secondaryLaunchers);
+
+        boolean valid = bundler.validate(bundleParams);
+        assertTrue(valid);
+
+        File output = bundler.execute(bundleParams, new File(workDir, "launchers"));
+        assertNotNull(output);
+        assertTrue(output.exists());
+    }
+
+    /**
+     * Set File Association
+     */
+    @Test
+    public void testFileAssociation()
+        throws IOException, ConfigException, UnsupportedPlatformException
+    {
+        // only run the bundle with full tests
+        Assume.assumeTrue(Boolean.parseBoolean(System.getProperty("FULL_TEST")));
+
+        testFileAssociation("FASmoke 1", "Bogus File", "bogus", "application/x-vnd.test-bogus",
+                            new File(appResourcesDir, "small.ico"));
+    }
+
+    @Test
+    public void testFileAssociationWithNullExtension()
+        throws IOException, ConfigException, UnsupportedPlatformException
+    {
+        // association with no extension is still valid case (see RT-38625)
+        testFileAssociation("FASmoke null", "Bogus File", null, "application/x-vnd.test-bogus",
+                            new File(appResourcesDir, "small.ico"));
+    }
+
+    @Test
+    public void testFileAssociationWithMultipleExtension()
+            throws IOException, ConfigException, UnsupportedPlatformException
+    {
+        // only run the bundle with full tests
+        Assume.assumeTrue(Boolean.parseBoolean(System.getProperty("FULL_TEST")));
+
+        testFileAssociation("FASmoke ME", "Bogus File", "bogus fake", "application/x-vnd.test-bogus",
+                new File(appResourcesDir, "small.ico"));
+    }
+
+    @Test
+    public void testMultipleFileAssociation()
+            throws IOException, ConfigException, UnsupportedPlatformException
+    {
+        // only run the bundle with full tests
+        Assume.assumeTrue(Boolean.parseBoolean(System.getProperty("FULL_TEST")));
+
+        testFileAssociationMultiples("FASmoke MA",
+                new String[]{"Bogus File", "Fake file"},
+                new String[]{"bogus", "fake"},
+                new String[]{"application/x-vnd.test-bogus", "application/x-vnd.test-fake"},
+                new File[]{new File(appResourcesDir, "small.ico"), new File(appResourcesDir, "small.ico")});
+    }
+
+    @Test
+    public void testMultipleFileAssociationWithMultipleExtension()
+            throws IOException, ConfigException, UnsupportedPlatformException
+    {
+        // association with no extension is still valid case (see RT-38625)
+        testFileAssociationMultiples("FASmoke MAME",
+                new String[]{"Bogus File", "Fake file"},
+                new String[]{"bogus boguser", "fake faker"},
+                new String[]{"application/x-vnd.test-bogus", "application/x-vnd.test-fake"},
+                new File[]{new File(appResourcesDir, "small.ico"), new File(appResourcesDir, "small.ico")});
+    }
+
+    private void testFileAssociation(String appName, String description, String extensions,
+                                     String contentType, File icon)
+            throws IOException, ConfigException, UnsupportedPlatformException
+    {
+        testFileAssociationMultiples(appName, new String[] {description}, new String[] {extensions},
+                new String[] {contentType}, new File[] {icon});
+    }
+
+    private void testFileAssociationMultiples(String appName, String[] description, String[] extensions,
+                                              String[] contentType, File[] icon)
+            throws IOException, ConfigException, UnsupportedPlatformException
+    {
+        assertEquals("Sanity: description same length as extensions", description.length, extensions.length);
+        assertEquals("Sanity: extensions same length as contentType", extensions.length, contentType.length);
+        assertEquals("Sanity: contentType same length as icon", contentType.length, icon.length);
+
+        AbstractBundler bundler = new WinExeBundler();
+
+        assertNotNull(bundler.getName());
+        assertNotNull(bundler.getID());
+        assertNotNull(bundler.getDescription());
+        //assertNotNull(bundler.getBundleParameters());
+
+        Map<String, Object> bundleParams = new HashMap<>();
+
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+
+        bundleParams.put(APP_NAME.getID(), appName);
+        bundleParams.put(MAIN_CLASS.getID(), "hello.HelloRectangle");
+        bundleParams.put(MAIN_JAR.getID(),
+                new RelativeFileSet(fakeMainJar.getParentFile(),
+                        new HashSet<>(Arrays.asList(fakeMainJar)))
+        );
+        bundleParams.put(CLASSPATH.getID(), "mainApp.jar");
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        bundleParams.put(VERBOSE.getID(), true);
+        bundleParams.put(SYSTEM_WIDE.getID(), true);
+        bundleParams.put(VENDOR.getID(), "Packager Tests");
+
+        List<Map<String, Object>> associations = new ArrayList<>();
+
+        for (int i = 0; i < description.length; i++) {
+            Map<String, Object> fileAssociation = new HashMap<>();
+            fileAssociation.put(FA_DESCRIPTION.getID(), description[i]);
+            fileAssociation.put(FA_EXTENSIONS.getID(), extensions[i]);
+            fileAssociation.put(FA_CONTENT_TYPE.getID(), contentType[i]);
+            fileAssociation.put(FA_ICON.getID(), icon[i]);
+
+            associations.add(fileAssociation);
+        }
+
+        bundleParams.put(FILE_ASSOCIATIONS.getID(), associations);
+
+        boolean valid = bundler.validate(bundleParams);
+        assertTrue(valid);
+
+        File result = bundler.execute(bundleParams, new File(workDir, APP_FS_NAME.fetchFrom(bundleParams)));
         System.err.println("Bundle at - " + result);
         assertNotNull(result);
         assertTrue(result.exists());

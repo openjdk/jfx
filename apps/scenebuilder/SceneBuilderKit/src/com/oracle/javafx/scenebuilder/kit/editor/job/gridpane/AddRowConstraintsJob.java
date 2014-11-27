@@ -32,12 +32,12 @@
 package com.oracle.javafx.scenebuilder.kit.editor.job.gridpane;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
-import com.oracle.javafx.scenebuilder.kit.editor.job.BatchJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.BatchDocumentJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
 import com.oracle.javafx.scenebuilder.kit.editor.job.JobUtils;
 import com.oracle.javafx.scenebuilder.kit.editor.job.gridpane.GridPaneJobUtils.Position;
-import com.oracle.javafx.scenebuilder.kit.editor.job.v2.AddPropertyJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.v2.AddPropertyValueJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.AddPropertyJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.AddPropertyValueJob;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
@@ -45,19 +45,21 @@ import com.oracle.javafx.scenebuilder.kit.fxom.FXOMProperty;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMPropertyC;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import javafx.scene.layout.RowConstraints;
 
 /**
  * Job invoked when adding row constraints.
  */
-public class AddRowConstraintsJob extends Job {
+public class AddRowConstraintsJob extends BatchDocumentJob {
 
-    private BatchJob subJob;
     // Key = target GridPane instance
     // Value = list of target row indexes for this GridPane
-    private final Map<FXOMObject, List<Integer>> targetGridPanes;
+    private final Map<FXOMObject, Set<Integer>> targetGridPanes;
     private final Position position;
     // If the selected row is associated to an existing constraints, 
     // we duplicate the existing constraints.
@@ -68,68 +70,38 @@ public class AddRowConstraintsJob extends Job {
     public AddRowConstraintsJob(
             final EditorController editorController,
             final Position position,
-            final Map<FXOMObject, List<Integer>> targetGridPanes) {
+            final Map<FXOMObject, Set<Integer>> targetGridPanes) {
         super(editorController);
         this.position = position;
         this.targetGridPanes = targetGridPanes;
-        buildSubJobs();
     }
 
     @Override
-    public boolean isExecutable() {
-        return subJob != null && subJob.isExecutable();
-    }
+    protected List<Job> makeSubJobs() {
 
-    @Override
-    public void execute() {
-        assert isExecutable();
-        final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
-        fxomDocument.beginUpdate();
-        subJob.execute();
-        fxomDocument.endUpdate();
-    }
+        final List<Job> result = new ArrayList<>();
 
-    @Override
-    public void undo() {
-        final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
-        fxomDocument.beginUpdate();
-        subJob.undo();
-        fxomDocument.endUpdate();
-    }
-
-    @Override
-    public void redo() {
-        final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
-        fxomDocument.beginUpdate();
-        subJob.redo();
-        fxomDocument.endUpdate();
-    }
-
-    @Override
-    public String getDescription() {
-        return "Add Row Constraints"; //NOI18N
-    }
-
-    private void buildSubJobs() {
-
-        // Create sub job
-        subJob = new BatchJob(getEditorController(),
-                true /* shouldRefreshSceneGraph */, null);
-
-        // Add row constraints job
+        // Add column constraints job
         assert targetGridPanes.isEmpty() == false;
         for (FXOMObject targetGridPane : targetGridPanes.keySet()) {
             assert targetGridPane instanceof FXOMInstance;
-            final List<Integer> targetIndexes = targetGridPanes.get(targetGridPane);
-            addRowConstraints((FXOMInstance) targetGridPane, targetIndexes);
+            final Set<Integer> targetIndexes = targetGridPanes.get(targetGridPane);
+            result.addAll(addRowConstraints((FXOMInstance) targetGridPane, targetIndexes));
         }
+        
+        return result;
+    }
+    
+    @Override
+    protected String makeDescription() {
+        return "Add Row Constraints"; //NOI18N
     }
 
-    private void addRowConstraints(
+    private Set<Job> addRowConstraints(
             final FXOMInstance targetGridPane,
-            final List<Integer> targetIndexes) {
+            final Set<Integer> targetIndexes) {
 
-        assert subJob != null;
+        final Set<Job> result = new LinkedHashSet<>();
         final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
 
         // Retrieve the constraints property for the specified target GridPane
@@ -166,7 +138,7 @@ public class AddRowConstraintsJob extends Job {
                         addedConstraints,
                         (FXOMPropertyC) constraintsProperty,
                         addedIndex, getEditorController());
-                subJob.addSubJob(addValueJob);
+                result.add(addValueJob);
             } //
             // The target index is not associated to an existing constraints value :
             // - we add new empty constraints from the last existing one to the added index (excluded)
@@ -179,7 +151,7 @@ public class AddRowConstraintsJob extends Job {
                             addedConstraints,
                             (FXOMPropertyC) constraintsProperty,
                             index, getEditorController());
-                    subJob.addSubJob(addValueJob);
+                    result.add(addValueJob);
                 }
                 // Create new constraints with default values for the new added row
                 final FXOMInstance addedConstraints = makeRowConstraintsInstance();
@@ -189,7 +161,7 @@ public class AddRowConstraintsJob extends Job {
                         addedConstraints,
                         (FXOMPropertyC) constraintsProperty,
                         addedIndex, getEditorController());
-                subJob.addSubJob(addValueJob);
+                result.add(addValueJob);
                 constraintsSize = addedIndex + 1;
             }
             shiftIndex++;
@@ -203,8 +175,10 @@ public class AddRowConstraintsJob extends Job {
                     constraintsProperty,
                     targetGridPane,
                     -1, getEditorController());
-            subJob.addSubJob(addPropertyJob);
+            result.add(addPropertyJob);
         }
+        
+        return result;
     }
 
     private FXOMInstance makeRowConstraintsInstance() {

@@ -57,7 +57,7 @@ public class CSSParsingReport {
         this.stylesheetPath = stylesheetPath;
         final Set<CssError> previousErrors = new HashSet<>(StyleManager.errorsProperty());
         try {
-            CSSParser.getInstance().parse(stylesheetPath.toUri().toURL());
+            new CSSParser().parse(stylesheetPath.toUri().toURL());
             // Leave this.ioException to null
             cssErrors.addAll(StyleManager.errorsProperty());
             cssErrors.removeAll(previousErrors);
