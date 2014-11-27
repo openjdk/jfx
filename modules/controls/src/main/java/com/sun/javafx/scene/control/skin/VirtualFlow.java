@@ -1505,6 +1505,14 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         final boolean isVertical = isVertical();
         VirtualScrollBar breadthBar = isVertical ? hbar : vbar;
         VirtualScrollBar lengthBar = isVertical ? vbar : hbar;
+
+        // We may have adjusted the viewport length and breadth after the
+        // layout due to scroll bars becoming visible. So we need to perform
+        // a follow up pass and resize and shift all the cells to fit the
+        // viewport. Note that the prospective viewport size is always >= the
+        // final viewport size, so we don't have to worry about adding
+        // cells during this cleanup phase.
+        fitCells();
         
         // Update cell positions.
         // When rebuilding the cells, we add the cells and along the way compute
@@ -1663,14 +1671,6 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         clipView.resize(snapSize(isVertical ? viewportBreadth : viewportLength),
                         snapSize(isVertical ? viewportLength : viewportBreadth));
 
-        // We may have adjusted the viewport length and breadth after the
-        // layout due to scroll bars becoming visible. So we need to perform
-        // a follow up pass and resize and shift all the cells to fit the
-        // viewport. Note that the prospective viewport size is always >= the
-        // final viewport size, so we don't have to worry about adding
-        // cells during this cleanup phase.
-        fitCells();
-
         // If the viewportLength becomes large enough that all cells fit
         // within the viewport, then we want to update the value to match.
         if (getPosition() != lengthBar.getValue()) {
@@ -1693,9 +1693,9 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         for (int i = 0; i < cells.size(); i++) {
             Cell<?> cell = cells.get(i);
             if (isVertical) {
-                cell.resize(size, cell.getHeight());
+                cell.resize(size, cell.prefHeight(size));
             } else {
-                cell.resize(cell.getWidth(), size);
+                cell.resize(cell.prefWidth(size), size);
             }
         }
     }
