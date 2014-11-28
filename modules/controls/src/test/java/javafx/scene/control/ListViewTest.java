@@ -1371,7 +1371,6 @@ public class ListViewTest {
     }
 
     private final ObservableList<String> rt_39482_list = FXCollections.observableArrayList();
-    @Ignore("Fix not yet developed")
     @Test public void test_rt_39482() {
         ListView<String> stringListView = new ListView<>();
         stringListView.getItems().addAll("a", "b", "c", "d");
@@ -1396,33 +1395,26 @@ public class ListViewTest {
         assertEquals(0, sm.getSelectedItems().size());
         assertEquals(0, rt_39482_list.size());
 
-        System.out.println("Test One:");
-        sm.selectAll();
-        assertEquals(4, sm.getSelectedItems().size());
-        assertEquals(4, rt_39482_list.size());
+        test_rt_39482_selectRow("a", sm, 0);
+        test_rt_39482_selectRow("b", sm, 1);
+        test_rt_39482_selectRow("c", sm, 2);
+        test_rt_39482_selectRow("d", sm, 3);
+    }
 
-        try {
-            System.out.println("\nTest Two:");
-            sm.clearAndSelect(0);
-            assertEquals(1, sm.getSelectedIndices().size());
-            assertEquals(1, sm.getSelectedItems().size());
-            assertEquals("a", sm.getSelectedItem());
-            assertEquals("a", rt_39482_list.get(0));
-            assertEquals(1, rt_39482_list.size());
-        } catch (IndexOutOfBoundsException e) {
-            e.printStackTrace();
-            fail();
-        }
-
-        System.out.println("\nTest Three:");
+    private void test_rt_39482_selectRow(String expectedString,
+                                         MultipleSelectionModel<String> sm,
+                                         int rowToSelect) {
+        System.out.println("\nSelect row " + rowToSelect);
         sm.selectAll();
         assertEquals(4, sm.getSelectedIndices().size());
         assertEquals(4, sm.getSelectedItems().size());
         assertEquals(4, rt_39482_list.size());
 
-        System.out.println("\nTest Four:");
-        sm.clearAndSelect(1);
+        sm.clearAndSelect(rowToSelect);
+        assertEquals(1, sm.getSelectedIndices().size());
         assertEquals(1, sm.getSelectedItems().size());
+        assertEquals(expectedString, sm.getSelectedItem());
+        assertEquals(expectedString, rt_39482_list.get(0));
         assertEquals(1, rt_39482_list.size());
     }
 }

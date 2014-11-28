@@ -345,7 +345,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
 
         // fire off a single add/remove/replace notification (rather than
         // individual remove and add notifications) - see RT-33324
-        ListChangeListener.Change change;
+        ListChangeListener.Change<Integer> change;
 
         /*
          * getFrom() documentation:
@@ -355,16 +355,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
          *   return the same number - the place where the removed elements were positioned in the list.
          */
         if (wasSelected) {
-            change = new NonIterableChange.GenericAddRemoveChange<Integer>(
-                    0, 0, previousSelectedIndices, selectedIndicesSeq) {
-                @Override public boolean wasAdded() {
-                    return false;
-                }
-
-                @Override public boolean wasRemoved() {
-                    return true;
-                }
-            };
+            change = ControlUtils.buildClearAndSelectChange(selectedIndicesSeq, previousSelectedIndices, row);
         } else {
             int changeIndex = selectedIndicesSeq.indexOf(row);
             change = new NonIterableChange.GenericAddRemoveChange<>(

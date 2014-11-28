@@ -2319,13 +2319,14 @@ public class TableView<S> extends Control {
             if (row < 0 || row >= getItemCount()) return;
 
             final TablePosition<S,?> newTablePosition = new TablePosition<>(getTableView(), row, column);
+            final boolean isCellSelectionEnabled = isCellSelectionEnabled();
 
             // replace the anchor
             TableCellBehavior.setAnchor(tableView, newTablePosition, false);
 
             // if I'm in cell selection mode but the column is null, I don't want
             // to select the whole row instead...
-            if (isCellSelectionEnabled() && column == null) {
+            if (isCellSelectionEnabled && column == null) {
                 return;
             }
 
@@ -2360,12 +2361,22 @@ public class TableView<S> extends Control {
 
             stopAtomic();
 
-            // fire off a single add/remove/replace notification (rather than
-            // individual remove and add notifications) - see RT-33324
-            ListChangeListener.Change change;
 
             // We remove the new selection from the list seeing as it is not removed.
-            previousSelection.remove(newTablePosition);
+            if (isCellSelectionEnabled) {
+                previousSelection.remove(newTablePosition);
+            } else {
+                for (TablePosition<S,?> tp : previousSelection) {
+                    if (tp.getRow() == row) {
+                        previousSelection.remove(tp);
+                        break;
+                    }
+                }
+            }
+
+            // fire off a single add/remove/replace notification (rather than
+            // individual remove and add notifications) - see RT-33324
+            ListChangeListener.Change<TablePosition<S, ?>> change;
 
             /*
              * getFrom() documentation:
@@ -2375,22 +2386,12 @@ public class TableView<S> extends Control {
              *   return the same number - the place where the removed elements were positioned in the list.
              */
             if (wasSelected) {
-                change = new NonIterableChange.GenericAddRemoveChange<TablePosition<S,?>>(
-                        0, 0, previousSelection, selectedCellsSeq) {
-                    @Override public boolean wasAdded() {
-                        return false;
-                    }
-
-                    @Override public boolean wasRemoved() {
-                        return true;
-                    }
-                };
+                change = ControlUtils.buildClearAndSelectChange(selectedCellsSeq, previousSelection, row);
             } else {
                 final int changeIndex = selectedCellsSeq.indexOf(newTablePosition);
                 change = new NonIterableChange.GenericAddRemoveChange<>(
                         changeIndex, changeIndex + 1, previousSelection, selectedCellsSeq);
             }
-
             handleSelectedCellsListChangeEvent(change);
         }
 
@@ -2987,27 +2988,33 @@ public class TableView<S> extends Control {
                 // item (i.e. if a sort occurred). Only if the item has changed
                 // should we fire an event to the observers of the selectedItems
                 // list
-                for (int i = 0; i < c.getRemovedSize(); i++) {
-                    TablePosition<S,?> removed = c.getRemoved().get(i);
-                    S removedItem = removed.getItem();
+                final int removedSize = c.getRemovedSize();
+                final int addedSize = c.getAddedSize();
+                if (removedSize != addedSize) {
+                    fireChangeEvent = true;
+                } else {
+                    for (int i = 0; i < removedSize; i++) {
+                        TablePosition<S, ?> removed = c.getRemoved().get(i);
+                        S removedItem = removed.getItem();
 
-                    boolean matchFound = false;
-                    for (int j = 0; j < c.getAddedSize(); j++) {
-                        TablePosition<S,?> added = c.getAddedSubList().get(j);
-                        S addedItem = added.getItem();
+                        boolean matchFound = false;
+                        for (int j = 0; j < addedSize; j++) {
+                            TablePosition<S, ?> added = c.getAddedSubList().get(j);
+                            S addedItem = added.getItem();
 
-                        if (removedItem.equals(addedItem)) {
-                            matchFound = true;
-                            break;
+                            if (removedItem.equals(addedItem)) {
+                                matchFound = true;
+                                break;
+                            }
+                        }
+
+                        if (!matchFound) {
+                            fireChangeEvent = true;
+                            break outer;
                         }
                     }
-
-                    if (! matchFound) {
-                        fireChangeEvent = true;
-                        break outer;
-                    }
+                    fireChangeEvent = false;
                 }
-                fireChangeEvent = false;
             } else {
                 fireChangeEvent = true;
             }
