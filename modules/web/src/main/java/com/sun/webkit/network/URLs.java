@@ -26,8 +26,12 @@
 package com.sun.webkit.network;
 
 import java.net.MalformedURLException;
+import java.net.NetPermission;
 import java.net.URL;
 import java.net.URLStreamHandler;
+import java.security.AccessController;
+import java.security.Permission;
+import java.security.PrivilegedAction;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -36,7 +40,7 @@ import java.util.Map;
  * A collection of static methods for URL creation.
  */
 public final class URLs {
-
+        
     /**
      * The mapping between WebPane-specific protocol names and their
      * respective handlers.
@@ -50,6 +54,8 @@ public final class URLs {
         handlerMap = Collections.unmodifiableMap(map);
     }
 
+    private static final Permission streamHandlerPermission =
+        new NetPermission("specifyStreamHandler");
 
     /**
      * The private default constructor. Ensures non-instantiability.
@@ -81,24 +87,39 @@ public final class URLs {
      * @throws MalformedURLException if no protocol is specified, or an
      *         unknown protocol is found.
      */
-    public static URL newURL(URL context, String spec)
+    public static URL newURL(final URL context, final String spec)
         throws MalformedURLException
     {
         try {
             // Try the standard protocol handler selection procedure
             return new URL(context, spec);
         } catch (MalformedURLException ex) {
+
             // Try WebPane-specific protocol handler, if any
-            URLStreamHandler handler = null;
             int colonPosition = spec.indexOf(':');
-            if (colonPosition != -1) {
-                handler = handlerMap.get(
-                        spec.substring(0, colonPosition).toLowerCase());
+            final URLStreamHandler handler = (colonPosition != -1) ?
+                handlerMap.get(spec.substring(0, colonPosition).toLowerCase()) :
+                null;
+
+            if (handler == null) throw ex;
+            
+            try {
+                // We should be able to specify one of our stream handlers for the URL
+                // when running as an applet or a web start app.
+                return AccessController.doPrivileged((PrivilegedAction<URL>) () -> {
+                    try {
+                        return new URL(context, spec, handler);
+                    } catch (MalformedURLException muex) {
+                        throw new RuntimeException(muex);
+                    }
+                }, null, streamHandlerPermission);
+
+            } catch (RuntimeException re) {
+                if (re.getCause() instanceof MalformedURLException) {
+                    throw (MalformedURLException)re.getCause();
+                }
+                throw re;
             }
-            if (handler == null) {
-                throw ex;
-            }
-            return new URL(context, spec, handler);
         }
     }
 }
