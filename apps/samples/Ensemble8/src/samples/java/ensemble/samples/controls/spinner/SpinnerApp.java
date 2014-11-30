@@ -40,6 +40,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.Spinner;
 import javafx.scene.control.SpinnerValueFactory;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
 import java.util.Arrays;
@@ -123,8 +124,6 @@ public class SpinnerApp extends Application {
         doubleBlock.setLayoutY(100);
         stringBlock.setLayoutY(200);
 
-        Group group = new Group();
-        group.getChildren().addAll(intBlock, doubleBlock, stringBlock);
-        return group;
+        return new VBox(25, intBlock, doubleBlock, stringBlock);
     }
 }
