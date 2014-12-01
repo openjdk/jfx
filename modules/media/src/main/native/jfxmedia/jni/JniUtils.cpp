@@ -33,8 +33,9 @@
 
 void ThrowJavaException(JNIEnv *env, const char* type, const char* message)
 {
-    // First check if there's a pending exception, if there is then do nothing
-    if (env->ExceptionCheck()) {
+    // First check if there's already a pending exception, if there is then do nothing
+    // also abort if we're passed a NULL env
+    if (env ? env->ExceptionCheck() : true) {
         return;
     }
 
@@ -64,23 +65,24 @@ void ThrowJavaException(JNIEnv *env, const char* type, const char* message)
 JNIEnv *GetJavaEnvironment(JavaVM *jvm, jboolean &didAttach)
 {
     JNIEnv *env = NULL;
-
     didAttach = false;
-    if (jvm->GetEnv((void**)&env, JNI_VERSION_1_4) != JNI_OK) {
-        didAttach = true;
-        jvm->AttachCurrentThreadAsDaemon((void**)&env, NULL);
+    if (jvm) {
+        if (jvm->GetEnv((void**)&env, JNI_VERSION_1_4) != JNI_OK) {
+            didAttach = true;
+            jvm->AttachCurrentThreadAsDaemon((void**)&env, NULL);
+        }
     }
     return env;
 }
 
 bool CJavaEnvironment::hasException()
 {
-    return (bool)environment->ExceptionCheck();
+    return (environment ? (bool)environment->ExceptionCheck() : false);
 }
 
 bool CJavaEnvironment::clearException()
 {
-    if (environment->ExceptionCheck()) {
+    if (environment ? environment->ExceptionCheck() : false) {
         environment->ExceptionClear();
         return true;
     }
@@ -93,27 +95,29 @@ bool CJavaEnvironment::clearException()
  */
 bool CJavaEnvironment::reportException()
 {
-    jthrowable exc = environment->ExceptionOccurred();
-    if (NULL != exc) {
-        jclass cid = environment->FindClass("java/lang/Throwable");
-        jmethodID mid = environment->GetMethodID(cid, "toString", "()Ljava/lang/String;");
-        jstring jmsg = (jstring)environment->CallObjectMethod(exc, mid);
-        char* pmsg = (char*)environment->GetStringUTFChars(jmsg, NULL);
-        LOGGER_ERRORMSG(pmsg);
-        environment->ReleaseStringUTFChars(jmsg, pmsg);
-        environment->ExceptionClear();
-        environment->DeleteLocalRef(exc);
-        environment->DeleteLocalRef(cid);
-        return true;
+    if (environment) {
+        jthrowable exc = environment->ExceptionOccurred();
+        if (exc) {
+            jclass cid = environment->FindClass("java/lang/Throwable");
+            jmethodID mid = environment->GetMethodID(cid, "toString", "()Ljava/lang/String;");
+            jstring jmsg = (jstring)environment->CallObjectMethod(exc, mid);
+            char* pmsg = (char*)environment->GetStringUTFChars(jmsg, NULL);
+            LOGGER_ERRORMSG(pmsg);
+            environment->ReleaseStringUTFChars(jmsg, pmsg);
+            environment->ExceptionClear();
+            environment->DeleteLocalRef(exc);
+            environment->DeleteLocalRef(cid);
+            return true;
+        }
     }
     return false;
 }
 
 CJavaEnvironment::CJavaEnvironment(JavaVM *jvm) :
-attached(false),
-environment(NULL)
+    attached(false),
+    environment(NULL)
 {
-    if (NULL != jvm) {
+    if (jvm) {
         environment = GetJavaEnvironment(jvm, attached);
     }
 }
