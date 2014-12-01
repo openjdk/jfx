@@ -513,13 +513,13 @@ public class ColorPalette extends Region {
                     dragDetected = true;
                     mouseDragColor = colorPicker.getValue();
                 }
-                int xIndex = (int)(t.getX()/16.0);
-                int yIndex = (int)(t.getY()/16.0);
-                    int index = xIndex + yIndex*12;
-                if (index < numColors / 3) {
-                    colorPicker.setValue((Color) squares.get(index).rectangle.getFill());
-                    updateSelection(colorPicker.getValue());
-                }
+                int xIndex = com.sun.javafx.Utils.clamp(0,
+                        (int)t.getX()/(SQUARE_SIZE + 1), NUM_OF_COLUMNS - 1);
+                int yIndex = com.sun.javafx.Utils.clamp(0,
+                        (int)t.getY()/(SQUARE_SIZE + 1), NUM_OF_ROWS - 1);
+                int index = xIndex + yIndex*NUM_OF_COLUMNS;
+                colorPicker.setValue((Color) squares.get(index).rectangle.getFill());
+                updateSelection(colorPicker.getValue());
             });
             addEventHandler(MouseEvent.MOUSE_RELEASED, t -> {
                 if(colorPickerGrid.getBoundsInLocal().contains(t.getX(), t.getY())) {
