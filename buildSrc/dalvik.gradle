@@ -107,6 +107,8 @@ DALVIK.armArch = armArchs[0]
 DALVIK.libDest = "lib/${DALVIK.armArch}"
 DALVIK.jfxdvklib = "jfxdvk.jar"
 DALVIK.library = { name -> return "lib${name}.so" as String }
+DALVIK.includeMonocole = true
+DALVIK.includeLens = false
 
 def sdk = project.hasProperty("ANDROID_SDK") ? "${ANDROID_SDK}" : null;
 def ndk = project.hasProperty("ANDROID_NDK") ? "${ANDROID_NDK}" : null;
@@ -423,7 +425,7 @@ def text = (compileNativeText) ? "native" : "t2k"
 
 DALVIK.javafxPlatformProperties = """
 javafx.platform=android
-android.glass.platform=Lens
+android.glass.platform=Monocle
 android.glass.lens=eglfb
 android.log.lens=FINEST
 android.prism.glDepthSize=16
@@ -500,7 +502,9 @@ DALVIK.dvkwebview.ccFlags = [ccFlags, ccWarnFlags, ccArchFlags, ccOptFlags,
 DALVIK.dvkwebview.linkFlags = [linkFlags, "-ldl", "-llog"].flatten()
 
 DALVIK.glass = [:]
-DALVIK.glass.variants = ["eglfb", "lensport"]
+// DALVIK.glass.variants = ["eglfb", "lensport"]
+DALVIK.glass.variants = []
+DALVIK.glass.variants = ["monocle"]
 DALVIK.glass.javahSource = files("modules/graphics/build/classes/dalvik",
  "modules/graphics/build/classes/main")
 DALVIK.glass.javahClasspath = files("modules/graphics/build/classes/main",
@@ -509,6 +513,8 @@ DALVIK.glass.javahClasspath = files("modules/graphics/build/classes/main",
  "$sdk/platforms/$sdk_target/android.jar")
 DALVIK.glass.javahInclude = [
     "javafxports/android/**",
+    "com/sun/glass/ui/monocle/*",
+    "com/sun/glass/ui/monocle/util/*",
     "com/sun/glass/events/**",
     "com/sun/glass/ui/*",
     "com/sun/glass/ui/android/*",
@@ -526,6 +532,23 @@ DALVIK.glass.lensport.ccFlags = [ccFlags, ccWarnFlags, ccArchFlags, ccOptFlags,
     ccDebugFlags, ccDefaultIncludeFlags, "-DISEGLFB", "-DLENSPORT",
     "-I", file("modules/graphics/src/main/native-glass/lens")].flatten()
 DALVIK.glass.lensport.linkFlags = [linkFlags, "-ldl", "-llog"].flatten()
+
+def monocleCFlags = [ccFlags, ccWarnFlags, ccArchFlags, ccOptFlags,
+    ccDebugFlags, ccDefaultIncludeFlags, "-DISEGLFB",
+    "-I", file("modules/graphics/src/main/native-glass/monocle/")
+].flatten()
+
+DALVIK.glass.monocle = [:]
+DALVIK.glass.monocle.nativeSource = [
+        file("modules/graphics/src/main/native-glass/monocle"),
+        file("modules/graphics/src/main/native-glass/monocle/android"),
+        file("modules/graphics/src/main/native-glass/monocle/util") ]
+DALVIK.glass.monocle.compiler = compiler
+DALVIK.glass.monocle.ccFlags = monocleCFlags
+DALVIK.glass.monocle.linker = linker
+DALVIK.glass.monocle.linkFlags =  [linkFlags, "-ldl", "-llog", "-lGLESv2", "-lEGL"].flatten()
+DALVIK.glass.monocle.lib = "glass_monocle"
+
 
 DALVIK.glass.eglfb = [:]
 DALVIK.glass.eglfb.nativeSource = [
