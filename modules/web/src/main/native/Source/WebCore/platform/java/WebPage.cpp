@@ -750,6 +750,23 @@ void WebPage::print(GraphicsContext& gc, int pageIndex, float pageWidth)
     gc.platformContext()->rq().flushBuffer();
 }
 
+bool WebPage::globalWatchdogDisabled = false;
+
+void WebPage::enableWatchdog() {
+    // For now enabling globally and disabling globally forever
+    if (!globalWatchdogDisabled) {
+        JSContextGroupRef contextGroup = toRef(mainThreadNormalWorld()->vm());
+        JSContextGroupSetExecutionTimeLimit(contextGroup, 10, 0, 0);
+    }
+}
+
+void WebPage::disableWatchdog() {
+    globalWatchdogDisabled = true;
+    JSContextGroupRef contextGroup = toRef(mainThreadNormalWorld()->vm());
+	JSContextGroupClearExecutionTimeLimit(contextGroup);
+}
+
+
 } // namespace WebCore
 
 using namespace WebCore;
@@ -826,8 +843,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkInit
 
     frame->init();
 
-    JSContextGroupRef contextGroup = toRef(mainThreadNormalWorld()->vm());
-    JSContextGroupSetExecutionTimeLimit(contextGroup, 10, 0, 0);
+    WebPage::webPageFromJLong(pPage)->enableWatchdog();
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkDestroyPage
@@ -2166,6 +2182,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkConnectInspectorFrontend
             }
         }
     }
+    WebPage::webPageFromJLong(pPage)->disableWatchdog();
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkDisconnectInspectorFrontend
@@ -2176,6 +2193,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkDisconnectInspectorFronten
         return;
     }
     page->inspectorController()->disconnectFrontend();
+    WebPage::webPageFromJLong(pPage)->enableWatchdog();
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkDispatchInspectorMessageFromFrontend
