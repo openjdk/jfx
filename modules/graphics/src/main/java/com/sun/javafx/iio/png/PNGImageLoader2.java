@@ -149,9 +149,7 @@ public final class PNGImageLoader2 extends ImageLoaderImpl {
     }
 
     private byte[] readBytes(byte data[], int offs, int size) throws IOException {
-        if (stream.read(data, offs, size) != size) {
-            throw new EOFException();
-        }
+        stream.readFully(data, offs, size);
         return data;
     }
 

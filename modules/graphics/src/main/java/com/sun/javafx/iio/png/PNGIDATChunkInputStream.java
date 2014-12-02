@@ -26,6 +26,7 @@
 package com.sun.javafx.iio.png;
 
 import com.sun.javafx.iio.common.ImageTools;
+import java.io.DataInputStream;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -47,7 +48,7 @@ public class PNGIDATChunkInputStream extends InputStream {
 
     static final int IDAT_TYPE = 0x49444154;
 
-    private InputStream source;
+    private DataInputStream source;
     private int numBytesAvailable = 0;
     private boolean foundAllIDATChunks = false;
     private int nextChunkLength = 0;
@@ -61,20 +62,16 @@ public class PNGIDATChunkInputStream extends InputStream {
      * @param firstIDATChunkLength the length of the data field of the first
      * IDAT chunk.
      */
-    PNGIDATChunkInputStream(InputStream input, int firstIDATChunkLength) {
+    PNGIDATChunkInputStream(DataInputStream input, int firstIDATChunkLength) {
         this.source = input;
         this.numBytesAvailable = firstIDATChunkLength;
     }
 
     private void nextChunk() throws IOException {
         if (!foundAllIDATChunks) {
-            if (4 != source.skip(4)) { // CRC
-                throw new EOFException();
-            }
-            int chunkLength = (source.read() << 24) | (source.read() << 16) |
-                (source.read() << 8) | source.read();
-            int chunkType = (source.read() << 24) | (source.read() << 16) |
-                (source.read() << 8) | source.read();
+            ImageTools.skipFully(source, 4); // CRC
+            int chunkLength = source.readInt();
+            int chunkType = source.readInt();
             if (chunkType == IDAT_TYPE) {
                 numBytesAvailable += chunkLength;
             } else {

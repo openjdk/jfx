@@ -32,7 +32,9 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FilterInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Iterator;
 import java.util.Random;
 import javax.imageio.IIOImage;
@@ -130,5 +132,40 @@ public class ImageTestHelper {
                 bImg.setRGB(x, y, y * h + x);
             }
         }
+    }
+
+    public static InputStream createTestImageStream(String format)
+            throws IOException
+    {
+        BufferedImage bImg = new BufferedImage(509, 157, BufferedImage.TYPE_INT_RGB);
+        ImageTestHelper.drawImageRandom(bImg);
+        return ImageTestHelper.writeImageToStream(bImg, format, null);
+    }
+
+    public static InputStream createStutteringInputStream(InputStream in) {
+        return new FilterInputStream(in) {
+
+            private final Random rnd = new Random(0);
+            private int numReadStutters = 10;
+            private int numSkipStutters = 10;
+
+            @Override
+            public int read(byte[] b, int off, int len) throws IOException {
+                if (numReadStutters > 0 && rnd.nextBoolean()) {
+                    numReadStutters--;
+                    return 0;
+                }
+                return in.read(b, off, 1);
+            }
+
+            @Override
+            public long skip(long n) throws IOException {
+                if (numSkipStutters > 0 && rnd.nextBoolean()) {
+                    numSkipStutters--;
+                    return 0;
+                }
+                return in.skip(1);
+            }
+        };
     }
 }

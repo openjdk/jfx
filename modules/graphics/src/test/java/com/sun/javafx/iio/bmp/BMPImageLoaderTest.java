@@ -180,35 +180,11 @@ public class BMPImageLoaderTest {
         compare(image, bImg);
     }
 
-    private static class RT15619InputStream extends InputStream {
-
-        private final InputStream delegate;
-
-        public RT15619InputStream(InputStream delegate) {
-            this.delegate = delegate;
-        }
-
-        @Override
-        public int read() throws IOException {
-            return delegate.read();
-        }
-
-        // reads from the stream one byte at a time
-        @Override
-        public int read(byte[] b, int off, int len) throws IOException {
-            return delegate.read(b, off, 1);
-        }
-    }
-
     @Test
     public void testRT15619() throws IOException {
-        BufferedImage bImg = createImage(BufferedImage.TYPE_INT_RGB);
-        ImageTestHelper.drawImageRandom(bImg);
-        ByteArrayInputStream stream =
-                ImageTestHelper.writeImageToStream(bImg, "bmp", null);
-        RT15619InputStream testStream = new RT15619InputStream(stream);
-        Image image = loadImage(testStream);
-        compare(image, bImg);
+        InputStream stream = ImageTestHelper.createTestImageStream("bmp");
+        InputStream testStream = ImageTestHelper.createStutteringInputStream(stream);
+        loadImage(testStream);
     }
 
     @Test

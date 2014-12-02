@@ -26,6 +26,9 @@
 package com.sun.javafx.iio;
 
 import com.sun.javafx.iio.common.ImageTools;
+import com.sun.javafx.iio.png.PNGImageLoaderFactory;
+import java.io.IOException;
+import java.io.InputStream;
 import static org.junit.Assert.*;
 import org.junit.ComparisonFailure;
 import org.junit.Test;
@@ -80,5 +83,15 @@ public class ImageStorageTest {
     public void testCorruptFirstFrame() throws ImageStorageException  {
         String path = getResourcePath("gif/animation/testBad.gif");
         ImageStorage.loadAll(path, null, 0, 0, false, 1.0f, false);
+    }
+
+    @Test
+    public void testRT35133() throws IOException {
+        InputStream stream = ImageTestHelper.createTestImageStream("png");
+        InputStream testStream = ImageTestHelper.createStutteringInputStream(stream);
+        ImageLoaderFactory loaderFactory = PNGImageLoaderFactory.getInstance();
+        ImageLoader loader = loaderFactory.createImageLoader(testStream);
+
+        loader.load(0, 0, 0, true, true);
     }
 }
