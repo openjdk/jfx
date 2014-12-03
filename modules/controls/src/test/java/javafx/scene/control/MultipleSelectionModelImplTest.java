@@ -1136,21 +1136,34 @@ public class MultipleSelectionModelImplTest {
 
     @Test public void test_rt39548_positiveValue_outOfRange() {
         // for this test we want there to be no data in the controls
-        listView.getItems().clear();
-        tableView.getItems().clear();
-        treeView.setRoot(null);
-        treeTableView.setRoot(null);
+        clearModelData();
 
         model.clearAndSelect(10);
     }
 
     @Test public void test_rt39548_negativeValue() {
         // for this test we want there to be no data in the controls
+        clearModelData();
+
+        model.clearAndSelect(-1);
+    }
+
+    @Ignore
+    @Test public void test_rt38884_invalidChange() {
+        model.select(3);
+        int removedSize = model.getSelectedItems().size();
+        ListChangeListener l = (ListChangeListener.Change c) -> {
+            c.next();
+            assertEquals(removedSize, c.getRemovedSize());
+        };
+        model.getSelectedItems().addListener(l);
+        clearModelData();
+    }
+
+    private void clearModelData() {
         listView.getItems().clear();
         tableView.getItems().clear();
         treeView.setRoot(null);
         treeTableView.setRoot(null);
-
-        model.clearAndSelect(-1);
     }
 }
