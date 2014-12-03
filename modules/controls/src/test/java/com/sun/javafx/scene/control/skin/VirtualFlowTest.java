@@ -1048,6 +1048,17 @@ public class VirtualFlowTest {
         assertEquals(1.0, flow.getPosition(), 0.0);
         assertMinimalNumberOfCellsAreUsed(flow);
     }
+
+    @Test
+    public void test_RT39568() {
+        flow.getHbar().setPrefHeight(16);
+        flow.resize(50, flow.getHeight());
+        flow.setPosition(1);
+        pulse();
+        assertTrue("The hbar should have been visible", flow.getHbar().isVisible());
+        assertMinimalNumberOfCellsAreUsed(flow);
+        assertEquals(flow.getViewportLength()-25.0, flow.cells.getLast().getLayoutY(), 0.0);
+    }
 }
 
 class CellStub extends IndexedCell {
