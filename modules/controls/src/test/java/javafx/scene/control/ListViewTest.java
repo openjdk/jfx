@@ -41,6 +41,7 @@ import java.util.List;
 import com.sun.javafx.scene.control.behavior.ListCellBehavior;
 import com.sun.javafx.scene.control.behavior.TableCellBehavior;
 import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
+import com.sun.javafx.scene.control.infrastructure.KeyModifier;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.ObjectProperty;
@@ -1416,5 +1417,46 @@ public class ListViewTest {
         assertEquals(expectedString, sm.getSelectedItem());
         assertEquals(expectedString, rt_39482_list.get(0));
         assertEquals(1, rt_39482_list.size());
+    }
+
+    @Test public void test_rt_39559_useSM_selectAll() {
+        test_rt_39559(true);
+    }
+
+    @Test public void test_rt_39559_useKeyboard_selectAll() {
+        test_rt_39559(false);
+    }
+
+    private void test_rt_39559(boolean useSMSelectAll) {
+        ListView<String> stringListView = new ListView<>();
+        stringListView.getItems().addAll("a", "b", "c", "d");
+
+        MultipleSelectionModel<String> sm = stringListView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        StageLoader sl = new StageLoader(stringListView);
+        KeyEventFirer keyboard = new KeyEventFirer(stringListView);
+
+        assertEquals(0, sm.getSelectedItems().size());
+
+        sm.clearAndSelect(0);
+
+        if (useSMSelectAll) {
+            sm.selectAll();
+        } else {
+            keyboard.doKeyPress(KeyCode.A, KeyModifier.CTRL);
+        }
+
+        assertEquals(4, sm.getSelectedItems().size());
+        assertEquals(0, (int) ListCellBehavior.getAnchor(stringListView, -1));
+
+        keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.SHIFT);
+
+        assertEquals(0, (int) ListCellBehavior.getAnchor(stringListView, -1));
+        assertEquals(2, sm.getSelectedItems().size());
+        assertEquals("a", sm.getSelectedItems().get(0));
+        assertEquals("b", sm.getSelectedItems().get(1));
+
+        sl.dispose();
     }
 }

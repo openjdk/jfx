@@ -1387,6 +1387,15 @@ public class TreeView<T> extends Control {
          **********************************************************************/
 
         /** {@inheritDoc} */
+        @Override public void selectAll() {
+            // when a selectAll happens, the anchor should not change, so we store it
+            // before, and restore it afterwards
+            final int anchor = TreeCellBehavior.getAnchor(treeView, -1);
+            super.selectAll();
+            TreeCellBehavior.setAnchor(treeView, anchor, false);
+        }
+
+        /** {@inheritDoc} */
         @Override public void select(TreeItem<T> obj) {
 //        if (getRowCount() <= 0) return;
             
