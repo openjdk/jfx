@@ -71,9 +71,11 @@ import com.sun.javafx.embed.HostInterface;
 import com.sun.javafx.stage.EmbeddedWindow;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.javafx.PlatformUtil;
+import java.awt.event.InvocationEvent;
 
 import java.lang.reflect.Method;
 import java.util.concurrent.atomic.AtomicInteger;
+import sun.awt.AppContext;
 import sun.awt.CausedFocusEvent;
 import sun.awt.SunToolkit;
 import sun.java2d.SunGraphics2D;
@@ -178,27 +180,6 @@ public class JFXPanel extends JComponent {
 
     private boolean isCapturingMouse = false;
     
-    private static ThreadLocal<FocusListener> focusListener =
-        new ThreadLocal<FocusListener>() {
-            @Override protected FocusListener initialValue() {
-                return new FocusAdapter() {
-                    @Override public void focusLost(FocusEvent e) {
-                        Clipboard c = null;
-                        try {
-                            c = java.awt.Toolkit.getDefaultToolkit().getSystemClipboard();
-                        } catch (SecurityException ex) {
-                            if (log.isLoggable(Level.FINE)) {
-                                log.fine(ex.getMessage());
-                            }
-                            return;
-                        }
-                        // todo: replace with ((SunClipboard)c).checkLostOwnership() when JDK-8061315 is fixed
-                        checkPasteboard(c);
-                    }
-                };
-            }
-        };
-    
     private static ThreadLocal<Class> classCClipboard =
         new ThreadLocal<Class>() {
             @Override protected Class initialValue() {
@@ -243,17 +224,6 @@ public class JFXPanel extends JComponent {
         }
     }
     
-    private void registerFocusListener() {
-        addFocusListener(focusListener.get());
-    }
-    
-    private void deregisterFocusListener() {
-        removeFocusListener(focusListener.get());
-        focusListener.remove();
-        methodCheckPasteboard.remove();
-        classCClipboard.remove();
-    }
-
     private synchronized void registerFinishListener() {
         if (instanceCount.getAndIncrement() > 0) {
             // Already registered
@@ -669,6 +639,15 @@ public class JFXPanel extends JComponent {
      */
     @Override
     protected void processFocusEvent(FocusEvent e) {
+        if (e.getID() == FocusEvent.FOCUS_LOST) {
+            try {
+                Clipboard c = java.awt.Toolkit.getDefaultToolkit().getSystemClipboard();
+                // todo: replace with ((SunClipboard)c).checkLostOwnership() when JDK-8061315 is fixed
+                checkPasteboard(c);
+            } catch (SecurityException ex) {
+                if (log.isLoggable(Level.FINE)) log.fine(ex.getMessage());
+            }
+        }
         sendFocusEventToFX(e);
         super.processFocusEvent(e);
     }
@@ -856,7 +835,6 @@ public class JFXPanel extends JComponent {
         super.addNotify();
 
         registerFinishListener();
-        registerFocusListener();
 
         AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             JFXPanel.this.getToolkit().addAWTEventListener(ungrabListener,
@@ -895,6 +873,9 @@ public class JFXPanel extends JComponent {
         pixelsIm = null;
         pWidth = 0;
         pHeight = 0;
+        
+        methodCheckPasteboard.remove();
+        classCClipboard.remove();
 
         super.removeNotify();
 
@@ -906,8 +887,16 @@ public class JFXPanel extends JComponent {
         /* see CR 4867453 */
         getInputContext().removeNotify(this);
 
-        deregisterFocusListener();
         deregisterFinishListener();
+    }
+    
+    private void invokeOnClientEDT(Runnable r) {
+        AppContext context = SunToolkit.targetToAppContext(this);
+        if (context == null) {
+            if (log.isLoggable(Level.FINE)) log.fine("null AppContext encountered!");
+            return;
+        }
+        SunToolkit.postEvent(context, new InvocationEvent(this, r));
     }
 
     private class HostContainer implements HostInterface {
@@ -921,9 +910,11 @@ public class JFXPanel extends JComponent {
             if (pWidth > 0 && pHeight > 0) {
                 stagePeer.setSize(pWidth, pHeight);
             }
-            if (JFXPanel.this.isFocusOwner()) {
-                stagePeer.setFocused(true, AbstractEvents.FOCUSEVENT_ACTIVATED);
-            }
+            invokeOnClientEDT(() -> {
+                if (JFXPanel.this.isFocusOwner()) {
+                    stagePeer.setFocused(true, AbstractEvents.FOCUSEVENT_ACTIVATED);
+                }
+            });
             sendMoveEventToFX();
         }
 
@@ -934,7 +925,7 @@ public class JFXPanel extends JComponent {
             }
             scenePeer = embeddedScene;
             if (scenePeer == null) {
-                SwingUtilities.invokeLater(() -> {
+                invokeOnClientEDT(() -> {
                     dnd.removeNotify();
                     dnd = null;
                 });
@@ -945,7 +936,7 @@ public class JFXPanel extends JComponent {
             }
             scenePeer.setPixelScaleFactor(scaleFactor);
             
-            SwingUtilities.invokeLater(() -> {
+            invokeOnClientEDT(() -> {
                 dnd = new SwingDnD(JFXPanel.this, scenePeer);
                 dnd.addNotify();
                 if (scenePeer != null) {
@@ -972,7 +963,7 @@ public class JFXPanel extends JComponent {
 
         @Override
         public void setPreferredSize(final int width, final int height) {
-            SwingUtilities.invokeLater(() -> {
+            invokeOnClientEDT(() -> {
                 JFXPanel.this.pPreferredWidth = width;
                 JFXPanel.this.pPreferredHeight = height;
                 JFXPanel.this.revalidate();
@@ -981,7 +972,7 @@ public class JFXPanel extends JComponent {
 
         @Override
         public void repaint() {
-            SwingUtilities.invokeLater(() -> {
+            invokeOnClientEDT(() -> {
                 JFXPanel.this.repaint();
             });
         }
@@ -994,7 +985,7 @@ public class JFXPanel extends JComponent {
         @Override
         public void setCursor(CursorFrame cursorFrame) {
             final Cursor cursor = getPlatformCursor(cursorFrame);
-            SwingUtilities.invokeLater(() -> {
+            invokeOnClientEDT(() -> {
                 JFXPanel.this.setCursor(cursor);
             });
         }
@@ -1021,7 +1012,7 @@ public class JFXPanel extends JComponent {
             // so we can't delegate it to another GUI toolkit.
             if (PlatformUtil.isLinux()) return true;
 
-            SwingUtilities.invokeLater(() -> {
+            invokeOnClientEDT(() -> {
                 Window window = SwingUtilities.getWindowAncestor(JFXPanel.this);
                 if (window != null) {
                     if (JFXPanel.this.getToolkit() instanceof SunToolkit) {
@@ -1039,7 +1030,7 @@ public class JFXPanel extends JComponent {
             // so we can't delegate it to another GUI toolkit.
             if (PlatformUtil.isLinux()) return;
 
-            SwingUtilities.invokeLater(() -> {
+            invokeOnClientEDT(() -> {
                 Window window = SwingUtilities.getWindowAncestor(JFXPanel.this);
                 if (window != null) {
                     if (JFXPanel.this.getToolkit() instanceof SunToolkit) {
