@@ -110,6 +110,31 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
         }
         [_player replaceCurrentItemWithPlayerItem:_playerItem];
 
+        // Set the player item end action to NONE since we'll handle it internally
+        _player.actionAtItemEnd = AVPlayerActionAtItemEndNone;
+
+        /*
+         * AVPlayerItem notifications we could listen for:
+         * 10.7 AVPlayerItemTimeJumpedNotification -> the item's current time has changed discontinuously
+         * 10.7 AVPlayerItemDidPlayToEndTimeNotification -> item has played to its end time
+         * 10.7 AVPlayerItemFailedToPlayToEndTimeNotification (userInfo = NSError) -> item has failed to play to its end time
+         * 10.9 AVPlayerItemPlaybackStalledNotification -> media did not arrive in time to continue playback
+         */
+        playerObservers = [[NSMutableArray alloc] init];
+        id<NSObject> observer;
+        __weak AVFMediaPlayer *blockSelf = self; // retain cycle avoidance
+        NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
+        observer = [center addObserverForName:AVPlayerItemDidPlayToEndTimeNotification
+                                       object:_playerItem
+                                        queue:[NSOperationQueue mainQueue]
+                                   usingBlock:^(NSNotification *note) {
+                                       // promote FINISHED state...
+                                       [blockSelf setPlayerState:kPlayerState_FINISHED];
+                                   }];
+        if (observer) {
+            [playerObservers addObject:observer];
+        }
+
         keyPathsObserved = [[NSMutableArray alloc] init];
         [self observeKeyPath:@"self.playerItem.status"
                  withContext:AVFMediaPlayerItemStatusContext];
@@ -342,9 +367,16 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
     @synchronized(self) {
         if (!isDisposed) {
             [self setPlayerState:kPlayerState_HALTED];
+
+            NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
+            for (id<NSObject> observer in playerObservers) {
+                [center removeObserver:observer];
+            }
+
             for (NSString *keyPath in keyPathsObserved) {
                 [self removeObserver:self forKeyPath:keyPath];
             }
+
             if (_displayLink) {
                 CVDisplayLinkStop(_displayLink);
                 CVDisplayLinkRelease(_displayLink);
