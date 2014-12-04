@@ -129,6 +129,9 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
 
         LIST_VIEW_BINDINGS.add(new ListViewKeyBinding(LEFT, "FocusPreviousRow").shortcut());
         LIST_VIEW_BINDINGS.add(new ListViewKeyBinding(RIGHT, "FocusNextRow").shortcut());
+
+        LIST_VIEW_BINDINGS.add(new ListViewKeyBinding(LEFT, "DiscontinuousSelectPreviousRow").shortcut().shift());
+        LIST_VIEW_BINDINGS.add(new ListViewKeyBinding(RIGHT, "DiscontinuousSelectNextRow").shortcut().shift());
         // --- end of horizontal
 
         LIST_VIEW_BINDINGS.add(new KeyBinding(BACK_SLASH, "ClearSelection").shortcut());
