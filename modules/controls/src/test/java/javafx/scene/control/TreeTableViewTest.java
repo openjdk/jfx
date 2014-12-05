@@ -4861,7 +4861,7 @@ public class TreeTableViewTest {
         if (useSMSelectAll) {
             sm.selectAll();
         } else {
-            keyboard.doKeyPress(KeyCode.A, KeyModifier.CTRL);
+            keyboard.doKeyPress(KeyCode.A, KeyModifier.getShortcutKey());
         }
 
         assertEquals(4, sm.getSelectedItems().size());
