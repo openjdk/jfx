@@ -735,6 +735,9 @@ public final class GraphicsContext {
             buf.putByte(NGCanvas.CLOSEPATH);
         }
         buf.putByte(NGCanvas.PATHEND);
+        // Transform needs to be updated for rendering attributes even though
+        // we have already trasnformed the points as we sent them.
+        updateTransform();
         buf.putByte(command);
         // Now that we have changed the PG layer path, we need to mark our path dirty.
         markPathDirty();
