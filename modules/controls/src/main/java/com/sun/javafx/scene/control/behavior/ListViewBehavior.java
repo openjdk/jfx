@@ -654,23 +654,26 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     private void selectAllToFirstRow() {
         MultipleSelectionModel<T> sm = getControl().getSelectionModel();
         if (sm == null) return;
+
+        FocusModel<T> fm = getControl().getFocusModel();
+        if (fm == null) return;
         
-        int leadIndex = sm.getSelectedIndex();
+        int leadIndex = fm.getFocusedIndex();
         
         if (isShiftDown) {
-            leadIndex = getAnchor() == -1 ? sm.getSelectedIndex() : getAnchor();
+            leadIndex = hasAnchor() ? getAnchor() : leadIndex;
         }
 
         sm.clearSelection();
-        sm.selectRange(0, leadIndex + 1);
-        
+        sm.selectRange(leadIndex, -1);
+
+        // RT-18413: Focus must go to first row
+        fm.focus(0);
+
         if (isShiftDown) {
             setAnchor(leadIndex);
         }
         
-        // RT-18413: Focus must go to first row
-        getControl().getFocusModel().focus(0);
-
         if (onMoveToFirstCell != null) onMoveToFirstCell.run();
     }
 
@@ -678,10 +681,13 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         MultipleSelectionModel<T> sm = getControl().getSelectionModel();
         if (sm == null) return;
 
-        int leadIndex = sm.getSelectedIndex();
-        
+        FocusModel<T> fm = getControl().getFocusModel();
+        if (fm == null) return;
+
+        int leadIndex = fm.getFocusedIndex();
+
         if (isShiftDown) {
-            leadIndex = hasAnchor() ? sm.getSelectedIndex() : getAnchor();
+            leadIndex = hasAnchor() ? getAnchor() : leadIndex;
         }
         
         sm.clearSelection();

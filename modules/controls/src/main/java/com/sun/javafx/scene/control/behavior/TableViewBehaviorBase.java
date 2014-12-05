@@ -963,8 +963,9 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
         TableFocusModel fm = getFocusModel();
         if (fm == null) return;
 
-        TablePositionBase focusedCell = getFocusedCell();
-        
+        final boolean isSingleSelection = sm.getSelectionMode() == SelectionMode.SINGLE;
+        final TablePositionBase focusedCell = getFocusedCell();
+        final TableColumnBase<?,?> column = getFocusedCell().getTableColumn();
         int leadIndex = focusedCell.getRow();
         
         if (isShiftDown) {
@@ -975,17 +976,23 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
         if (! sm.isCellSelectionEnabled()) {
             // we are going from 0 to one before the focused cell as that is
             // the requirement of selectRange, so we call focus on the 0th row
-            sm.selectRange(0, leadIndex + 1);
-            getFocusModel().focus(0);
-//            setAnchor(leadIndex, null);
+            if (isSingleSelection) {
+                sm.select(0);
+            } else {
+                sm.selectRange(leadIndex, -1);
+            }
+            fm.focus(0);
         } else {
-            // TODO
-            
-//            setAnchor(leadIndex, );
+            if (isSingleSelection) {
+                sm.select(0, column);
+            } else {
+                sm.selectRange(leadIndex, column, -1, column);
+            }
+            fm.focus(0, column);
         }
         
         if (isShiftDown) {
-            setAnchor(leadIndex, null);
+            setAnchor(leadIndex, column);
         }
 
         if (onMoveToFirstCell != null) onMoveToFirstCell.run();
@@ -998,8 +1005,9 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
         TableFocusModel fm = getFocusModel();
         if (fm == null) return;
 
-        TablePositionBase focusedCell = getFocusedCell();
-        
+        final int itemCount = getItemCount();
+        final TablePositionBase focusedCell = getFocusedCell();
+        final TableColumnBase<?,?> column = getFocusedCell().getTableColumn();
         int leadIndex = focusedCell.getRow();
         
         if (isShiftDown) {
@@ -1008,13 +1016,13 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
         
         sm.clearSelection();
         if (! sm.isCellSelectionEnabled()) {
-            sm.selectRange(leadIndex, getItemCount());
+            sm.selectRange(leadIndex, itemCount);
         } else {
-            // TODO
+            sm.selectRange(leadIndex, column, itemCount - 1, column);
         }
         
         if (isShiftDown) {
-            setAnchor(leadIndex, null);
+            setAnchor(leadIndex, column);
         }
 
         if (onMoveToLastCell != null) onMoveToLastCell.run();

@@ -25,9 +25,12 @@
 
 package javafx.scene.control;
 
+import com.sun.javafx.scene.control.behavior.ListCellBehavior;
+import com.sun.javafx.scene.control.behavior.TableCellBehavior;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.property.ReadOnlyStringWrapper;
+import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
@@ -102,7 +105,10 @@ public class ListViewKeyInputTest {
     // Returns true if ALL indices are selected
     private boolean isSelected(int... indices) {
         for (int index : indices) {
-            if (! sm.isSelected(index)) return false;
+            if (! sm.isSelected(index)) {
+                System.out.println("Index " + index + " is not selected, but it is expected to be");
+                return false;
+            }
         }
         return true;
     }
@@ -110,7 +116,10 @@ public class ListViewKeyInputTest {
     // Returns true if ALL indices are NOT selected
     private boolean isNotSelected(int... indices) {
         for (int index : indices) {
-            if (sm.isSelected(index)) return false;
+            if (sm.isSelected(index)) {
+                System.out.println("Index " + index + " is selected, but it is not expected to be");
+                return false;
+            }
         }
         return true;
     }
@@ -2161,5 +2170,70 @@ public class ListViewKeyInputTest {
         assertEquals(3, items.size());
 
         sl.dispose();
+    }
+
+    @Test public void test_rt_27709_singleSelection_rowSelection() {
+        test_rt_27709(SelectionMode.SINGLE, false);
+    }
+
+    @Test public void test_rt_27709_multipleSelection_rowSelection() {
+        test_rt_27709(SelectionMode.MULTIPLE, false);
+    }
+
+    @Test public void test_rt_27709_singleSelection_rowSelection_resetSelection() {
+        test_rt_27709(SelectionMode.SINGLE, true);
+    }
+
+    @Test public void test_rt_27709_multipleSelection_rowSelection_resetSelection() {
+        test_rt_27709(SelectionMode.MULTIPLE, true);
+    }
+
+    private void test_rt_27709(SelectionMode mode, boolean resetSelection) {
+        ObservableList<String> itemsList = FXCollections.observableArrayList();
+        for (int i = 0; i < 10; i++) {
+            itemsList.add("Row " + i);
+        }
+
+        listView.setItems(itemsList);
+
+        MultipleSelectionModel<String> sm = listView.getSelectionModel();
+        sm.setSelectionMode(mode);
+
+        ObservableList<Integer> indices = sm.getSelectedIndices();
+
+        int expectedSize = mode == SelectionMode.SINGLE ? 1 : 10;
+        int lookupIndex = mode == SelectionMode.SINGLE ? 0 : 9;
+
+        sm.select(0);
+        assertEquals(1, indices.size());
+
+        keyboard.doKeyPress(KeyCode.END, KeyModifier.SHIFT);
+        assertEquals(expectedSize, indices.size());
+        assertEquals(9, (int) indices.get(lookupIndex));
+
+        if (resetSelection) {
+            sm.clearAndSelect(9);
+            int anchor = ListCellBehavior.getAnchor(listView, null);
+            assertEquals(9, anchor);
+        } else {
+            expectedSize = 1;
+        }
+
+        keyboard.doKeyPress(KeyCode.HOME, KeyModifier.SHIFT);
+        assertEquals(expectedSize, indices.size());
+        assertTrue(debug(),sm.isSelected(0));
+
+        if (resetSelection) {
+            sm.clearAndSelect(0);
+
+            int anchor = ListCellBehavior.getAnchor(listView, null);
+            assertEquals(0, anchor);
+        } else {
+            expectedSize = mode == SelectionMode.SINGLE ? 1 : 10;
+        }
+
+        keyboard.doKeyPress(KeyCode.END, KeyModifier.SHIFT);
+        assertEquals(expectedSize, indices.size());
+        assertTrue(sm.isSelected(9));
     }
 }

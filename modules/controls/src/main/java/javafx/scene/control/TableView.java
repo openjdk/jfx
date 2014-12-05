@@ -2595,13 +2595,13 @@ public class TableView<S> extends Control {
 
         @Override public void selectRange(int minRow, TableColumnBase<S,?> minColumn,
                                           int maxRow, TableColumnBase<S,?> maxColumn) {
-            startAtomic();
-
             if (getSelectionMode() == SelectionMode.SINGLE) {
                 quietClearSelection();
                 select(maxRow, maxColumn);
                 return;
             }
+
+            startAtomic();
 
             final int itemCount = getItemCount();
             final boolean isCellSelectionEnabled = isCellSelectionEnabled();

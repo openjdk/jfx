@@ -25,19 +25,14 @@
 
 package javafx.scene.control;
 
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
+import com.sun.javafx.scene.control.behavior.TableCellBehavior;
 import javafx.beans.property.ReadOnlyStringWrapper;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
-import javafx.event.EventHandler;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.HBox;
-import javafx.util.Callback;
 
-import java.util.ArrayList;
 import java.util.List;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.Utils;
@@ -3913,6 +3908,105 @@ public class TableViewKeyInputTest {
         assertEquals(3, rt_39088_items_event_count);
         assertEquals(3, indices.size());
         assertEquals(3, items.size());
+
+        sl.dispose();
+    }
+
+    @Test public void test_rt_27709_singleSelection_cellSelection() {
+        test_rt_27709(SelectionMode.SINGLE, true, false);
+    }
+
+    @Test public void test_rt_27709_multipleSelection_cellSelection() {
+        test_rt_27709(SelectionMode.MULTIPLE, true, false);
+    }
+
+    @Test public void test_rt_27709_singleSelection_rowSelection() {
+        test_rt_27709(SelectionMode.SINGLE, false, false);
+    }
+
+    @Test public void test_rt_27709_multipleSelection_rowSelection() {
+        test_rt_27709(SelectionMode.MULTIPLE, false, false);
+    }
+
+    @Test public void test_rt_27709_singleSelection_cellSelection_resetSelection() {
+        test_rt_27709(SelectionMode.SINGLE, true, true);
+    }
+
+    @Test public void test_rt_27709_multipleSelection_cellSelection_resetSelection() {
+        test_rt_27709(SelectionMode.MULTIPLE, true, true);
+    }
+
+    @Test public void test_rt_27709_singleSelection_rowSelection_resetSelection() {
+        test_rt_27709(SelectionMode.SINGLE, false, true);
+    }
+
+    @Test public void test_rt_27709_multipleSelection_rowSelection_resetSelection() {
+        test_rt_27709(SelectionMode.MULTIPLE, false, true);
+    }
+
+    private void test_rt_27709(SelectionMode mode, boolean cellSelectionMode, boolean resetSelection) {
+        ObservableList<String> itemsList = FXCollections.observableArrayList();
+        for (int i = 0; i < 10; i++) {
+            itemsList.add("Row " + i);
+        }
+
+        tableView.setItems(itemsList);
+
+        TableColumn<String, String> col = new TableColumn<>("Column");
+        col.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue()));
+
+        tableView.getColumns().setAll(col);
+
+        TableView.TableViewSelectionModel<String> sm = tableView.getSelectionModel();
+        sm.setSelectionMode(mode);
+        sm.setCellSelectionEnabled(cellSelectionMode);
+
+        ObservableList<Integer> indices = sm.getSelectedIndices();
+        ObservableList<TablePosition> cells = sm.getSelectedCells();
+
+        StageLoader sl = new StageLoader(tableView);
+
+        int expectedSize = mode == SelectionMode.SINGLE ? 1 : 10;
+        int lookupIndex = mode == SelectionMode.SINGLE ? 0 : 9;
+
+        sm.select(0, col);
+        assertEquals(1, indices.size());
+        assertEquals(1, cells.size());
+
+        keyboard.doKeyPress(KeyCode.END, KeyModifier.SHIFT);
+        assertEquals(expectedSize, indices.size());
+        assertEquals(expectedSize, cells.size());
+        assertEquals(9, (int) indices.get(lookupIndex));
+        assertEquals(9, cells.get(lookupIndex).getRow());
+
+        if (resetSelection) {
+            sm.clearAndSelect(9, col);
+            TablePosition<?,?> anchor = TableCellBehavior.getAnchor(tableView, null);
+            assertEquals(9, anchor.getRow());
+            assertEquals(col, anchor.getTableColumn());
+        } else {
+            expectedSize = 1;
+        }
+
+        keyboard.doKeyPress(KeyCode.HOME, KeyModifier.SHIFT);
+        assertEquals(expectedSize, indices.size());
+        assertEquals(expectedSize, cells.size());
+        assertTrue(sm.isSelected(0, col));
+
+        if (resetSelection) {
+            sm.clearAndSelect(0, col);
+
+            TablePosition<?,?> anchor = TableCellBehavior.getAnchor(tableView, null);
+            assertEquals(0, anchor.getRow());
+            assertEquals(col, anchor.getTableColumn());
+        } else {
+            expectedSize = mode == SelectionMode.SINGLE ? 1 : 10;
+        }
+
+        keyboard.doKeyPress(KeyCode.END, KeyModifier.SHIFT);
+        assertEquals(expectedSize, indices.size());
+        assertEquals(expectedSize, cells.size());
+        assertTrue(sm.isSelected(9, col));
 
         sl.dispose();
     }
