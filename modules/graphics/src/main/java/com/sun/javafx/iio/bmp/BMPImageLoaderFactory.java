@@ -72,10 +72,7 @@ final class LEInputStream {
     }
 
     public final void skipBytes(int n) throws IOException {
-        int m = (int)in.skip(n);
-        if (m < n) {
-            throw new EOFException();
-        }
+        ImageTools.skipFully(in, n);
     }
 }
 
@@ -202,7 +199,7 @@ final class BMPImageLoader extends ImageLoaderImpl {
             int read = data.in.read(bgra_palette);
             // goto bitmap bits
             if (read < length) {
-                data.in.skip(length - read);
+                data.skipBytes(length - read);
             }
         }
         

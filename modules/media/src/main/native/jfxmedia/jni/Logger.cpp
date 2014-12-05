@@ -47,10 +47,9 @@ bool CLogger::canLog(int level)
 void CLogger::logMsg(int level, const char *msg)
 {
     CJavaEnvironment javaEnv(m_jvm);
-    JNIEnv *env = javaEnv.getEnvironment();
+    JNIEnv *env = javaEnv.getEnvironment(); // env could be NULL
 
-    if (!env || level < m_currentLevel || !m_areJMethodIDsInitialized)
-    {
+    if (!env || level < m_currentLevel || !m_areJMethodIDsInitialized) {
         return;
     }
 
@@ -63,8 +62,7 @@ void CLogger::logMsg(int level, const char *sourceClass, const char *sourceMetho
     CJavaEnvironment javaEnv(m_jvm);
     JNIEnv *env = javaEnv.getEnvironment();
 
-    if (!env || level < m_currentLevel || !m_areJMethodIDsInitialized)
-    {
+    if (!env || level < m_currentLevel || !m_areJMethodIDsInitialized) {
         return;
     }
 
@@ -78,27 +76,23 @@ void CLogger::logMsg(int level, const char *sourceClass, const char *sourceMetho
 // Do NOT use this function. Instead use init() from Java layer.
 bool CLogger::init(JNIEnv *pEnv, jclass cls)
 {
+    if (!pEnv || !cls) {
+        return false;
+    }
     pEnv->GetJavaVM(&m_jvm);
-    if (!m_areJMethodIDsInitialized)
-    {
-        if (NULL != pEnv)
-        {
-            jclass local_cls = pEnv->FindClass("com/sun/media/jfxmedia/logging/Logger");
-            if (NULL != local_cls)
-            {
-                // Get global reference
-                m_cls = (jclass)pEnv->NewWeakGlobalRef(local_cls);
-                pEnv->DeleteLocalRef(local_cls);
+    if (!m_areJMethodIDsInitialized) {
+        jclass local_cls = pEnv->FindClass("com/sun/media/jfxmedia/logging/Logger");
+        if (NULL != local_cls) {
+            // Get global reference
+            m_cls = (jclass)pEnv->NewWeakGlobalRef(local_cls);
+            pEnv->DeleteLocalRef(local_cls);
 
-                if (NULL != m_cls)
-                {
-                    m_logMsg1Method = pEnv->GetStaticMethodID(m_cls, "logMsg", "(ILjava/lang/String;)V");
-                    m_logMsg2Method = pEnv->GetStaticMethodID(m_cls, "logMsg", "(ILjava/lang/String;Ljava/lang/String;Ljava/lang/String;)V");
+            if (NULL != m_cls) {
+                m_logMsg1Method = pEnv->GetStaticMethodID(m_cls, "logMsg", "(ILjava/lang/String;)V");
+                m_logMsg2Method = pEnv->GetStaticMethodID(m_cls, "logMsg", "(ILjava/lang/String;Ljava/lang/String;Ljava/lang/String;)V");
 
-                    if (NULL != m_logMsg1Method && NULL != m_logMsg2Method)
-                    {
-                        m_areJMethodIDsInitialized = true;
-                    }
+                if (NULL != m_logMsg1Method && NULL != m_logMsg2Method) {
+                    m_areJMethodIDsInitialized = true;
                 }
             }
         }
@@ -115,14 +109,12 @@ void CLogger::setLevel(int level)
 
 uint32_t CLogger::CreateInstance(CLogger **ppLogger)
 {
-    if (ppLogger == NULL)
-    {
+    if (ppLogger == NULL) {
         return ERROR_FUNCTION_PARAM_NULL;
     }
 
     *ppLogger = new CLogger();
-    if (*ppLogger == NULL)
-    {
+    if (*ppLogger == NULL) {
         return ERROR_MEMORY_ALLOCATION;
     }
 

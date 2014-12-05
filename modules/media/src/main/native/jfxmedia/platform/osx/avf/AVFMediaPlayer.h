@@ -53,6 +53,7 @@
 
     BOOL isDisposed;
     NSMutableArray *keyPathsObserved;
+    NSMutableArray *playerObservers; // player item notification observers
 
     // placeholders until audio processor is created
     float _volume;

@@ -249,6 +249,7 @@
             <ul>
               <li><a href="#anchorpane">AnchorPane</a></li>
               <li><a href="#border">BorderPane</a></li>
+                <li><a href="#dialogpane">DialogPane</a></li>
               <li><a href="#flowpane">FlowPane</a></li>
               <li><a href="#gridpane">GridPane</a></li>
               <li><a href="#hbox">HBox</a></li>
@@ -314,6 +315,7 @@
               <li><a href="#combobox">ComboBox</a></li>
                 <li><a href="#contextmenu">ContextMenu</a></li>
                 <li><a href="#control">Control</a></li>
+                <li><a href="#datepicker">DatePicker</a></li>
               <li><a href="#htmleditor">HTMLEditor</a></li>
               <li><a href="#hyperlink">Hyperlink</a></li>
               <li><a href="#indexedcell">IndexedCell</a></li>
@@ -335,6 +337,7 @@
               <li><a href="#scrollbar">ScrollBar</a></li>
               <li><a href="#scrollpane">ScrollPane</a></li>
               <li><a href="#separator">Separator</a></li>
+              <li><a href="#spinner">Spinner</a></li>
               <li><a href="#slider">Slider</a></li>
               <li><a href="#splitmenubutton">SplitMenuButton</a></li>
               <li><a href="#splitpane">SplitPane</a></li>
@@ -349,6 +352,8 @@
               <li><a href="#toolbar">ToolBar</a></li>
               <li><a href="#tooltip">Tooltip</a></li>
               <li><a href="#treecell">TreeCell</a></li>
+              <li><a href="#treetablecell">TreeTableCell</a></li>
+              <li><a href="#treetableview">TreeTableView</a></li>
               <li><a href="#treeview">TreeView</a></li>
               <li><a href="#webview">WebView</a></li>
             </ul>
@@ -437,7 +442,7 @@
         During a normal scene&#8209;graph pulse, CSS styles are applied before the scene&#8209;graph is
         laid out and painted. Styles for events that trigger a pseudo&#8209;class state change,
         such as MouseEvent.MOUSE_ENTERED which triggers the &quot;hover&quot; state, are
-        applied on then next pulse following the event.
+        applied on the next pulse following the event.
     </p>
     <p>
         <a href="http://www.w3.org/TR/css3-selectors/">CSS selectors</a> are used to match styles to scene&#8209;graph
@@ -502,7 +507,7 @@
         <a href="../../../javafx/scene/Parent.html#getStylesheets--">getStylesheets</a> property,
         allowing style sheets to be set on a container. This allows for one branch
         of of the scene&#8209;graph to have a distinct set of styles. Any instance of
-        Parent can have a style sheets. A child will take its styles from its own
+        Parent can have style sheets. A child will take its styles from its own
         inline styles, the style sheets of all its ancestors, and any style sheets
         from the Scene.
     </p>
@@ -2181,6 +2186,39 @@
       </tbody>
     </table>
     <br>
+
+    <h4><a name="dialogpane" id="dialogpane">DialogPane</a></h4>
+    <p class="styleclass">Style class: dialog-pane</p>
+    <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
+        <thead>
+        <tr>
+            <th class="propertyname">CSS Property</th>
+            <th class="value">Values</th>
+            <th>Default</th>
+            <th>Comments</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td class="propertyname">-fx-graphic</td>
+            <td class="value"><a href="#typeurl" class="typelink">&lt;uri&gt;</a></td>
+            <td>null</td>
+            <td>&nbsp;</td>
+        </tr>
+        <tr>
+            <td colspan="4" class="parents">Also has all properties of <a href="#pane">Pane</a></td>
+        </tr>
+        </tbody>
+    </table>
+    <h4>Substructure</h4>
+    <ul>
+        <li>header-panel  &mdash; BoderPane
+        <ul><li>graphic-container &mdash; StackPane</li></ul>
+        </li>
+        <li>content &mdash; Label</li>
+        <li>button-bar &mdash; ButtonBar</li>
+    </ul>
+
     <h4><a name="flowpane" id="flowpane">FlowPane</a></h4>
 <p class="styleclass">Style class: empty by default</p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
@@ -3575,7 +3613,7 @@
       <tbody>
         <tr>
           <td class="propertyname">-fx-color-label-visible</td>
-          <td class="value"><a href="#typesize" class="typelink">&lt;boolean&gt;</a></td>
+          <td class="value"><a href="#typeboolean" class="typelink">&lt;boolean&gt;</a></td>
           <td>true</td>
           <td>&nbsp;</td>
         </tr>
@@ -3709,6 +3747,35 @@
         </tr>
         </tbody>
     </table>
+    <h4><a name="datepicker" id="datepicker">DatePicker</a></h4>
+    <p class="styleclass">Style class: date-picker</p>
+    <p>The DatePicker control has all the properties and pseudo&#8209;classes of <a href="#comboboxbase">ComboBoxBase</a></p>
+    <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
+        <thead>
+        <tr>
+            <th class="propertyname">CSS Property</th>
+            <th class="value">Values</th>
+            <th>Default</th>
+            <th>Comments</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td class="propertyname">-fx-show-week-numbers</td>
+            <td class="value"><a href="#typeboolean" class="typeboolean">&lt;boolean&gt;</a></td>
+            <td>true if the resource bundle property "DatePicker.showWeekNumbers" contains the country code.</td>
+            <td>&nbsp;</td>
+        </tr>
+        <tr>
+            <td colspan="4" class="parents">Also has all properties of <a href="#control">Control</a></td>
+        </tr>
+        </tbody>
+    </table>
+    <h4>Substructure</h4>
+    <ul>
+        <li>date-picker-display-node  &mdash; TextField</li>
+    </ul>
+
     <h4><a name="htmleditor" id="htmleditor">HTMLEditor</a></h4>
     <p class="styleclass">Style class: html-editor</p>
     <p>The Hyperlink control has all the properties of <a href="#control">Control</a>.</p>
@@ -4506,8 +4573,43 @@
     <ul>
       <li>line &mdash; Region</li>
     </ul>
-    <h4><a name="slider" id="slider">Slider</a></h4>
-    <p class="styleclass">Style class: slider</p>
+    <h4><a name="spinner" id="spinner">Spinner</a></h4>
+    <p class="styleclass">Style class: spinner</p>
+    <p>Note that the default style class, "spinner", puts arrows on right, stacked vertically. The following
+        style classes can also be used in combination with the default style class in order to control the
+        layout of the Spinner.
+    <table>
+        <thead>
+        <tr>
+            <th class="styleclass">style class</th>
+            <th>Comment</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td class="value">arrows-on-right-horizontal</td>
+            <td>The arrows are placed on the right of the Spinner, pointing horizontally (i.e. left and right)</td>
+        </tr>
+        <tr>
+            <td class="value">arrows-on-left-vertical</td>
+            <td>The arrows are placed on the left of the Spinner, pointing vertically (i.e. up and down)</td>
+        </tr>
+        <tr>
+            <td class="value">arrows-on-left-horizontal</td>
+            <td>The arrows are placed on the left of the Spinner, pointing horizontally (i.e. left and right)</td>
+        </tr>
+        <tr>
+            <td class="value">split-arrows-vertical</td>
+            <td>The arrows are placed above and beneath the spinner, stretching to take the entire width</td>
+        </tr>
+        <tr>
+            <td class="value">split-arrows-horizontal</td>
+            <td>The decrement arrow is placed on the left of the Spinner, and the increment on the right</td>
+        </tr>
+        </tbody>
+    </table>
+
+    </p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
       <thead>
         <tr>
@@ -4519,55 +4621,7 @@
       </thead>
       <tbody>
         <tr>
-          <td class="propertyname">-fx-orientation</td>
-          <td class="value">[ horizontal | vertical ]</td>
-          <td class="default">horizontal</td>
-          <td>&nbsp;</td>
-        </tr>
-        <tr>
-          <td class="propertyname">-fx-show-tick-labels</td>
-          <td class="value"><a href="#typesize" class="typelink">&lt;boolean&gt;</a></td>
-          <td>false</td>
-          <td>&nbsp;</td>
-        </tr>
-        <tr>
-          <td class="propertyname">-fx-show-tick-marks</td>
-          <td class="value"><a href="#typesize" class="typelink">&lt;boolean&gt;</a></td>
-          <td>false</td>
-          <td>&nbsp;</td>
-        </tr>
-        <tr>
-          <td class="propertyname">-fx-major-tick-unit</td>
-          <td class="value"><a href="#typenumber" class="typelink">&lt;number&gt;</a></td>
-          <td>25</td>
-          <td>&nbsp;</td>
-        </tr>
-        <tr>
-          <td class="propertyname">-fx-minor-tick-count</td>
-          <td class="value"><a href="#typenumber" class="typelink">&lt;integer&gt;</a></td>
-          <td>3</td>
-          <td>&nbsp;</td>
-        </tr>
-        <tr>
-          <td class="propertyname">-fx-show-tick-labels</td>
-          <td class="value"><a href="#typesize" class="typelink">&lt;boolean&gt;</a></td>
-          <td>false</td>
-          <td>&nbsp;</td>
-        </tr>
-        <tr>
-          <td class="propertyname">-fx-snap-to-ticks</td>
-          <td class="value"><a href="#typesize" class="typelink">&lt;boolean&gt;</a></td>
-          <td>false</td>
-          <td>&nbsp;</td>
-        </tr>
-        <tr>
-          <td class="propertyname">-fx-block-increment</td>
-          <td class="value"><a href="#typenumber" class="typelink">&lt;integer&gt;</a></td>
-          <td>10</td>
-          <td>&nbsp;</td>
-        </tr>
-        <tr>
-          <td colspan="4" class="parents">Also has all properties of <a href="#control">Control</a></td>
+            <td colspan="4" class="parents">Also has all properties of <a href="#control">Control</a></td>
         </tr>
       </tbody>
     </table>
@@ -4581,23 +4635,116 @@
       </thead>
       <tbody>
         <tr>
-          <td class="propertyname">horizontal</td>
-          <td>applies if this Slider is horizontal</td>
-        </tr>
-        <tr>
-          <td class="propertyname">vertical</td>
-          <td>applies if this Slider is vertical</td>
-        </tr>
-        <tr>
           <td colspan="2" class="parents">Also has all pseudo&#8209;classes of <a href="#control">Control</a></td>
         </tr>
       </tbody>
     </table>
     <h4>Substructure</h4>
     <ul>
-      <li>axis &mdash; NumberAxis</li>
-      <li>track &mdash; Region</li>
-      <li>thumb &mdash; Region</li>
+      <li>text-field &mdash; TextField</li>
+      <li>increment-arrow-button &mdash; StackPane
+      <ul>
+          <li>increment-arrow &mdash; Region</li>
+      </ul>
+      </li>
+        <li>decrement-arrow-button &mdash; StackPane
+            <ul>
+                <li>decrement-arrow &mdash; Region</li>
+            </ul>
+        </li>
+    </ul>
+    <h4><a name="slider" id="slider">Slider</a></h4>
+    <p class="styleclass">Style class: slider</p>
+    <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
+        <thead>
+        <tr>
+            <th class="propertyname">CSS Property</th>
+            <th class="value">Values</th>
+            <th>Default</th>
+            <th>Comments</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td class="propertyname">-fx-orientation</td>
+            <td class="value">[ horizontal | vertical ]</td>
+            <td class="default">horizontal</td>
+            <td>&nbsp;</td>
+        </tr>
+        <tr>
+            <td class="propertyname">-fx-show-tick-labels</td>
+            <td class="value"><a href="#typesize" class="typelink">&lt;boolean&gt;</a></td>
+            <td>false</td>
+            <td>&nbsp;</td>
+        </tr>
+        <tr>
+            <td class="propertyname">-fx-show-tick-marks</td>
+            <td class="value"><a href="#typesize" class="typelink">&lt;boolean&gt;</a></td>
+            <td>false</td>
+            <td>&nbsp;</td>
+        </tr>
+        <tr>
+            <td class="propertyname">-fx-major-tick-unit</td>
+            <td class="value"><a href="#typenumber" class="typelink">&lt;number&gt;</a></td>
+            <td>25</td>
+            <td>&nbsp;</td>
+        </tr>
+        <tr>
+            <td class="propertyname">-fx-minor-tick-count</td>
+            <td class="value"><a href="#typenumber" class="typelink">&lt;integer&gt;</a></td>
+            <td>3</td>
+            <td>&nbsp;</td>
+        </tr>
+        <tr>
+            <td class="propertyname">-fx-show-tick-labels</td>
+            <td class="value"><a href="#typesize" class="typelink">&lt;boolean&gt;</a></td>
+            <td>false</td>
+            <td>&nbsp;</td>
+        </tr>
+        <tr>
+            <td class="propertyname">-fx-snap-to-ticks</td>
+            <td class="value"><a href="#typesize" class="typelink">&lt;boolean&gt;</a></td>
+            <td>false</td>
+            <td>&nbsp;</td>
+        </tr>
+        <tr>
+            <td class="propertyname">-fx-block-increment</td>
+            <td class="value"><a href="#typenumber" class="typelink">&lt;integer&gt;</a></td>
+            <td>10</td>
+            <td>&nbsp;</td>
+        </tr>
+        <tr>
+            <td colspan="4" class="parents">Also has all properties of <a href="#control">Control</a></td>
+        </tr>
+        </tbody>
+    </table>
+    <h4>Pseudo-classes</h4>
+    <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
+        <thead>
+        <tr>
+            <th class="propertyname">CSS Pseudo-class</th>
+            <th>Comments</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td class="propertyname">horizontal</td>
+            <td>applies if this Slider is horizontal</td>
+        </tr>
+        <tr>
+            <td class="propertyname">vertical</td>
+            <td>applies if this Slider is vertical</td>
+        </tr>
+        <tr>
+            <td colspan="2" class="parents">Also has all pseudo&#8209;classes of <a href="#control">Control</a></td>
+        </tr>
+        </tbody>
+    </table>
+    <h4>Substructure</h4>
+    <ul>
+        <li>axis &mdash; NumberAxis</li>
+        <li>track &mdash; Region</li>
+        <li>thumb &mdash; Region</li>
     </ul>
     <h4><a name="splitmenubutton" id="splitmenubutton">SplitMenuButton</a></h4>
     <p class="styleclass">Style class: split-menu-button</p>
@@ -5312,9 +5459,91 @@
         </tr>
       </tbody>
     </table>
+    <h4><a name="treetablecell" id="treetablecell">TreeTableCell</a></h4>
+    <p class="styleclass">Style class: tree-table-cell</p>
+    <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
+        <thead>
+        <tr>
+            <th class="propertyname">CSS Property</th>
+            <th class="value">Values</th>
+            <th>Default</th>
+            <th>Comments</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td colspan="4" class="parents">Also has all properties of <a href="#indexedcell">IndexedCell</a></td>
+        </tr>
+        </tbody>
+    </table>
+    <h4>Pseudo-classes</h4>
+    <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
+        <thead>
+        <tr>
+            <th class="propertyname">CSS Pseudo-class</th>
+            <th>Comments</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td class="propertyname">last-visible</td>
+            <td>true if this is the last visible cell, typically the right-most cell in the TreeTableView</td>
+        </tr>
+        <tr>
+            <td colspan="2" class="parents">Also has all pseudo&#8209;classes of <a href="#indexedcell">IndexedCell</a></td>
+        </tr>
+        </tbody>
+    </table>
+
+    <h4><a name="treetableview" id="treetableview">TreeView</a></h4>
+    <p class="styleclass">Style class: tree-table-view</p>
+    <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
+        <thead>
+        <tr>
+            <th class="propertyname">CSS Property</th>
+            <th class="value">Values</th>
+            <th>Default</th>
+            <th>Comments</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td class="propertyname">-fx-fixed-cell-size</td>
+            <td class="value"><a href="#typesize" class="typelink">&lt;size&gt;</a></td>
+            <td>Region.USE_COMPUTED_SIZE</td>
+            <td>If both -fx-cell-size and -fx-fixed-cell-size properties are
+                specified in CSS, -fx-fixed-cell-size takes precedence.</td>
+        </tr>
+        <tr>
+            <td colspan="4" class="parents">Also has all properties and pseudo&#8209;class state of <a href="#control">Control</a></td>
+        </tr>
+        </tbody>
+    </table>
+
     <h4><a name="treeview" id="treeview">TreeView</a></h4>
     <p class="styleclass">Style class: tree-view</p>
-    <p>TreeView has all the properites and pseudo&#8209;class state of <a href="#control">Control</a></p>
+    <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
+        <thead>
+        <tr>
+            <th class="propertyname">CSS Property</th>
+            <th class="value">Values</th>
+            <th>Default</th>
+            <th>Comments</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td class="propertyname">-fx-fixed-cell-size</td>
+            <td class="value"><a href="#typesize" class="typelink">&lt;size&gt;</a></td>
+            <td>Region.USE_COMPUTED_SIZE</td>
+            <td>If both -fx-cell-size and -fx-fixed-cell-size properties are
+                specified in CSS, -fx-fixed-cell-size takes precedence.</td>
+        </tr>
+        <tr>
+            <td colspan="4" class="parents">Also has all properties and pseudo&#8209;class state of <a href="#control">Control</a></td>
+        </tr>
+        </tbody>
+    </table>
     <!-- Charts -->
     <h2><a name="charts" id="charts">Charts</a></h2>
     <table summary="property table" class="package" width="100%">

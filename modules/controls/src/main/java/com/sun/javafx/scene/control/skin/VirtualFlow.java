@@ -1526,12 +1526,11 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
             // position leading cells
             double offset = currOffset;
-            boolean first = true;
-            for (int i = currIndex; i >= 0 && i < size; i--) {
+
+            for (int i = currIndex - 1; i >= 0 && i < size; i--) {
                 final T cell = cells.get(i);
 
-                offset -= first ? 0.0 : getCellLength(cell);
-                first = false;
+                offset -= getCellLength(cell);
 
                 positionCell(cell, offset);
             }

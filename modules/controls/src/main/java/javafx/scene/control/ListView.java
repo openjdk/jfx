@@ -1386,6 +1386,15 @@ public class ListView<T> extends Control {
          **********************************************************************/
 
         /** {@inheritDoc} */
+        @Override public void selectAll() {
+            // when a selectAll happens, the anchor should not change, so we store it
+            // before, and restore it afterwards
+            final int anchor = ListCellBehavior.getAnchor(listView, -1);
+            super.selectAll();
+            ListCellBehavior.setAnchor(listView, anchor, false);
+        }
+
+        /** {@inheritDoc} */
         @Override public void clearAndSelect(int row) {
             ListCellBehavior.setAnchor(listView, row, false);
             super.clearAndSelect(row);

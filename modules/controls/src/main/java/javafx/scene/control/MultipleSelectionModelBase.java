@@ -310,6 +310,11 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
     }
 
     @Override public void clearAndSelect(int row) {
+        if (row < 0 || row >= getItemCount()) {
+            clearSelection();
+            return;
+        }
+
         final boolean wasSelected = isSelected(row);
 
         // RT-33558 if this method has been called with a given row, and that

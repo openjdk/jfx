@@ -72,7 +72,7 @@ public class MultipleSelectionModelImplTest {
     private Control currentControl;
 
     // ListView
-    private static final ListView<String> listView;
+    private ListView<String> listView;
 
     // ListView model data
     private static ObservableList<String> defaultData = FXCollections.<String>observableArrayList();
@@ -84,20 +84,35 @@ public class MultipleSelectionModelImplTest {
     private static final String ROW_20_VALUE = "Row 20";
 
     // TreeView
-    private static final TreeView treeView;
-    private static final TreeItem<String> root;
-    private static final TreeItem<String> ROW_2_TREE_VALUE;
-    private static final TreeItem<String> ROW_5_TREE_VALUE;
+    private TreeView treeView;
+    private TreeItem<String> root;
+    private TreeItem<String> ROW_2_TREE_VALUE;
+    private TreeItem<String> ROW_5_TREE_VALUE;
     
     // TreeTableView
-    private static final TreeTableView treeTableView;
+    private TreeTableView treeTableView;
 
     // TableView
-    private static final TableView tableView;
+    private TableView tableView;
 
-    static {
+    @Parameters public static Collection implementations() {
+        return Arrays.asList(new Object[][] {
+            { ListView.ListViewBitSetSelectionModel.class },
+            { TreeView.TreeViewBitSetSelectionModel.class },
+            { TableView.TableViewArrayListSelectionModel.class },
+            { TreeTableView.TreeTableViewArrayListSelectionModel.class },
+        });
+    }
+
+    public MultipleSelectionModelImplTest(Class<? extends MultipleSelectionModel> modelClass) {
+        this.modelClass = modelClass;
+    }
+
+    @AfterClass public static void tearDownClass() throws Exception {    }
+
+    @Before public void setUp() {
         // ListView init
-        defaultData.addAll(ROW_1_VALUE, ROW_2_VALUE, ROW_3_VALUE, "Row 4", ROW_5_VALUE, "Row 6",
+        defaultData.setAll(ROW_1_VALUE, ROW_2_VALUE, ROW_3_VALUE, "Row 4", ROW_5_VALUE, "Row 6",
                 "Row 7", "Row 8", "Row 9", "Row 10", "Row 11", "Row 12", "Row 13",
                 "Row 14", "Row 15", "Row 16", "Row 17", "Row 18", "Row 19", ROW_20_VALUE);
 
@@ -118,41 +133,14 @@ public class MultipleSelectionModelImplTest {
         // --- TreeView init
 
         // TreeTableView init
-//        root = new TreeItem<String>(ROW_1_VALUE);
-//        root.setExpanded(true);
-//        for (int i = 1; i < data.size(); i++) {
-//            root.getChildren().add(new TreeItem<String>(data.get(i)));
-//        }
-//        ROW_2_TREE_VALUE = root.getChildren().get(0);
-//        ROW_5_TREE_VALUE = root.getChildren().get(3);
-
         treeTableView = new TreeTableView(root);
         // --- TreeView init
-        
+
         // TableView init
         tableView = new TableView();
         tableView.setItems(data);
-//        tableView.getColumns().add(new TableColumn());
         // --- TableView init
-    }
-    // --- ListView model data
 
-    @Parameters public static Collection implementations() {
-        return Arrays.asList(new Object[][] {
-            { ListView.ListViewBitSetSelectionModel.class },
-            { TreeView.TreeViewBitSetSelectionModel.class },
-            { TableView.TableViewArrayListSelectionModel.class },
-            { TreeTableView.TreeTableViewArrayListSelectionModel.class },
-        });
-    }
-
-    public MultipleSelectionModelImplTest(Class<? extends MultipleSelectionModel> modelClass) {
-        this.modelClass = modelClass;
-    }
-
-    @AfterClass public static void tearDownClass() throws Exception {    }
-
-    @Before public void setUp() {
         try {
             // reset the data model
             data = FXCollections.<String>observableArrayList();
@@ -1144,5 +1132,38 @@ public class MultipleSelectionModelImplTest {
         }));
 
         model.selectIndices(4, 3, 2);
+    }
+
+    @Test public void test_rt39548_positiveValue_outOfRange() {
+        // for this test we want there to be no data in the controls
+        clearModelData();
+
+        model.clearAndSelect(10);
+    }
+
+    @Test public void test_rt39548_negativeValue() {
+        // for this test we want there to be no data in the controls
+        clearModelData();
+
+        model.clearAndSelect(-1);
+    }
+
+    @Ignore
+    @Test public void test_rt38884_invalidChange() {
+        model.select(3);
+        int removedSize = model.getSelectedItems().size();
+        ListChangeListener l = (ListChangeListener.Change c) -> {
+            c.next();
+            assertEquals(removedSize, c.getRemovedSize());
+        };
+        model.getSelectedItems().addListener(l);
+        clearModelData();
+    }
+
+    private void clearModelData() {
+        listView.getItems().clear();
+        tableView.getItems().clear();
+        treeView.setRoot(null);
+        treeTableView.setRoot(null);
     }
 }

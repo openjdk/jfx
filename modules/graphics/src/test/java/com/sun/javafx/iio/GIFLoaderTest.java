@@ -211,7 +211,8 @@ public class GIFLoaderTest {
 
     private void testReadGIFFile(String fname) throws IOException  {
         InputStream i = this.getClass().getResourceAsStream(fname);
-        ImageLoader l = new GIFImageLoader2(i);
+        InputStream testStream = ImageTestHelper.createStutteringInputStream(i);
+        ImageLoader l = new GIFImageLoader2(testStream);
         ImageFrame f = l.load(0, 0, 0, true, false);
         InputStream i2 = this.getClass().getResourceAsStream(fname);
         BufferedImage bimg = javax.imageio.ImageIO.read(i2);

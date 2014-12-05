@@ -29,6 +29,7 @@ import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.scene.control.behavior.ListCellBehavior;
 import com.sun.javafx.scene.control.behavior.TreeCellBehavior;
 import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
+import com.sun.javafx.scene.control.infrastructure.KeyModifier;
 import com.sun.javafx.scene.control.infrastructure.StageLoader;
 import com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 import com.sun.javafx.scene.control.skin.TextFieldSkin;
@@ -2622,5 +2623,56 @@ public class TreeViewTest {
         assertEquals(expectedString, sm.getSelectedItem().getValue());
         assertEquals(expectedString, rt_39482_list.get(0).getValue());
         assertEquals(1, rt_39482_list.size());
+    }
+
+    @Test public void test_rt_39559_useSM_selectAll() {
+        test_rt_39559(true);
+    }
+
+    @Test public void test_rt_39559_useKeyboard_selectAll() {
+        test_rt_39559(false);
+    }
+
+    private void test_rt_39559(boolean useSMSelectAll) {
+        TreeItem<String> a, b;
+        TreeItem<String> root = new TreeItem<>("Root");
+        root.setExpanded(true);
+        root.getChildren().addAll(
+                a = new TreeItem<>("a"),
+                b = new TreeItem<>("b"),
+                new TreeItem<>("c"),
+                new TreeItem<>("d")
+        );
+
+        TreeView<String> stringTreeView = new TreeView<>(root);
+        stringTreeView.setShowRoot(false);
+
+        MultipleSelectionModel<TreeItem<String>> sm = stringTreeView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        StageLoader sl = new StageLoader(stringTreeView);
+        KeyEventFirer keyboard = new KeyEventFirer(stringTreeView);
+
+        assertEquals(0, sm.getSelectedItems().size());
+
+        sm.clearAndSelect(0);
+
+        if (useSMSelectAll) {
+            sm.selectAll();
+        } else {
+            keyboard.doKeyPress(KeyCode.A, KeyModifier.getShortcutKey());
+        }
+
+        assertEquals(4, sm.getSelectedItems().size());
+        assertEquals(0, (int) TreeCellBehavior.getAnchor(stringTreeView, -1));
+
+        keyboard.doKeyPress(KeyCode.DOWN, KeyModifier.SHIFT);
+
+        assertEquals(0, (int) TreeCellBehavior.getAnchor(stringTreeView, -1));
+        assertEquals(2, sm.getSelectedItems().size());
+        assertEquals(a, sm.getSelectedItems().get(0));
+        assertEquals(b, sm.getSelectedItems().get(1));
+
+        sl.dispose();
     }
 }

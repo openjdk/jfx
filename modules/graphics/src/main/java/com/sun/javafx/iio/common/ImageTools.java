@@ -107,6 +107,28 @@ public class ImageTools {
         return readFully(stream, b, 0, b.length);
     }
 
+    /**
+     * Skips over <code>n</code> bytes of data from the input stream.
+     * @param      stream the stream to skip.
+     * @param      n the number of bytes to be skipped.
+     * @exception  EOFException if this input stream reaches the end before
+     *             skipping all the bytes.
+     * @exception  IOException if another I/O error occurs.
+     */
+    public static void skipFully(InputStream stream, long n) throws IOException {
+        while (n > 0) {
+            long skipped = stream.skip(n);
+            if (skipped <= 0) {
+                // check if the EOF is reached
+                if (stream.read() == -1) {
+                    throw new EOFException();
+                }
+                n--;
+            } else {
+                n -= skipped;
+            }
+        }
+    }
 //    public static PixelFormat getPixelFormat(ImageType type) {
 //        PixelFormat format;
 //        switch (type) {

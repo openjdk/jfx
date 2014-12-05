@@ -77,6 +77,10 @@ public:
     void setNeedsOneShotDrawingSynchronization();
     void scheduleCompositingLayerSync();
 #endif
+    void debugStarted();
+    void debugEnded();
+    void enableWatchdog();
+    void disableWatchdog();
 
 private:
 #if USE(ACCELERATED_COMPOSITING)
@@ -123,6 +127,9 @@ private:
     // associated WM_CHAR event if the keydown was handled. We emulate
     // this behavior by setting this flag if the keyDown was handled.
     bool m_suppressNextKeypressEvent;
+
+    bool m_isDebugging;
+    static int globalDebugSessionCounter;
 };
 
 } // namespace WebCore
