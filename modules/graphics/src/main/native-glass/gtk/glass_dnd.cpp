@@ -180,6 +180,8 @@ static void process_dnd_target_drag_motion(WindowContext *ctx, GdkEventDND *even
 
 static void process_dnd_target_drag_leave(WindowContext *ctx, GdkEventDND *event)
 {
+    (void)event;
+
     mainEnv->CallVoidMethod(ctx->get_jview(), jViewNotifyDragLeave, NULL);
     CHECK_JNI_EXCEPTION(mainEnv)
 }
@@ -781,6 +783,8 @@ static gboolean dnd_source_set_raw(GdkWindow *requestor, GdkAtom property, GdkAt
 
 static void process_dnd_source_selection_req(GdkWindow *window, GdkEventSelection* event)
 { 
+    (void)window;
+
     GdkWindow *requestor = GLASS_GDK_SELECTION_EVENT_GET_REQUESTOR(event);
 
     gboolean is_data_set = FALSE;
@@ -803,6 +807,9 @@ static void process_dnd_source_selection_req(GdkWindow *window, GdkEventSelectio
 }
 
 static void process_dnd_source_mouse_release(GdkWindow *window, GdkEventButton *event) {
+    (void)window;
+    (void)event;
+
     glass_gdk_master_pointer_ungrab();
     
     if (GLASS_GDK_DRAG_CONTEXT_GET_SELECTED_ACTION(get_drag_context())) {
@@ -834,11 +841,15 @@ static void process_drag_motion(gint x_root, gint y_root, guint state)
 
 static void process_dnd_source_mouse_motion(GdkWindow *window, GdkEventMotion *event)
 {
+    (void)window;
+
     process_drag_motion(event->x_root, event->y_root, event->state);
 }
 
 static void process_dnd_source_key_press_release(GdkWindow *window, GdkEventKey *event)
 {
+    (void)window;
+
     if (event->is_modifier) {
         guint state = event->state;
         guint new_mod = 0;
@@ -868,6 +879,8 @@ static void process_dnd_source_key_press_release(GdkWindow *window, GdkEventKey 
 
 static void process_dnd_source_drag_status(GdkWindow *window, GdkEventDND *event)
 {
+    (void)window;
+
     GdkDragAction selected = GLASS_GDK_DRAG_CONTEXT_GET_SELECTED_ACTION(event->context);
     GdkCursor* cursor;
     
@@ -913,6 +926,9 @@ static void process_dnd_source_drag_status(GdkWindow *window, GdkEventDND *event
 
 static void process_dnd_source_drop_finished(GdkWindow *window, GdkEventDND *event)
 {
+    (void)window;
+    (void)event;
+
     gdk_threads_add_idle((GSourceFunc) dnd_finish_callback, NULL);
 }
 
@@ -1164,10 +1180,16 @@ void DragView::move(gint x, gint y) {
 }
 
 static void on_screen_changed(GtkWidget *widget, GdkScreen *previous_screen, gpointer view) {
+    (void)widget;
+    (void)previous_screen;
+
     ((DragView::View*) view)->screen_changed();
 }
 
 static gboolean on_expose(GtkWidget *widget, GdkEventExpose *event, gpointer view) {
+    (void)widget;
+    (void)event;
+
     ((DragView::View*) view)->expose();
     return FALSE;
 }

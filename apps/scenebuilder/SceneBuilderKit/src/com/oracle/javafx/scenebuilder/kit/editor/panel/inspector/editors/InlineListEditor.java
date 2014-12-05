@@ -49,7 +49,6 @@ public abstract class InlineListEditor extends PropertyEditor implements EditorI
     private final VBox vbox = new VBox(1);
     private final List<EditorItem> editorItems = new ArrayList<>();
 
-    @SuppressWarnings("LeakingThisInConstructor")
     public InlineListEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses) {
         super(propMeta, selectedClasses);
         setLayoutFormat(PropertyEditor.LayoutFormat.DOUBLE_LINE);
@@ -158,7 +157,9 @@ public abstract class InlineListEditor extends PropertyEditor implements EditorI
         if (!removeAll && editorItems.size() == 1) {
             // Do not remove last item, but reset it
             editorItem.reset();
-            editorItem.getRemoveMenuItem().setDisable(true);
+            if (editorItem.getRemoveMenuItem() != null) {
+                editorItem.getRemoveMenuItem().setDisable(true);
+            }
             return;
         }
         editorItems.remove(editorItem);
@@ -203,6 +204,9 @@ public abstract class InlineListEditor extends PropertyEditor implements EditorI
     private void updateMenuItems() {
         for (int ii = 0; ii < editorItems.size(); ii++) {
             EditorItem item = editorItems.get(ii);
+            if (item.getMoveUpMenuItem() == null || item.getMoveDownMenuItem() == null) {
+                continue;
+            }
             if (ii == 0) {
                 // first item
                 item.getMoveUpMenuItem().setDisable(true);

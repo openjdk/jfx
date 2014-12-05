@@ -38,10 +38,13 @@ public class ByteGrayAlpha {
     public static final BytePixelSetter     setter = Accessor.nonpremul;
     public static final BytePixelAccessor accessor = Accessor.nonpremul;
 
-    public static final ByteToBytePixelConverter ToByteGrayAlphaPre =
-        ToByteGrayAlphaPreConv.instance;
-    public static final ByteToBytePixelConverter ToByteBgra =
-        ToByteBgraSameConv.nonpremul;
+    public static ByteToBytePixelConverter ToByteGrayAlphaPreConverter() {
+        return ToByteGrayAlphaPreConv.instance;
+    }
+
+    public static ByteToBytePixelConverter ToByteBgraConverter() {
+        return ToByteBgraSameConv.nonpremul;
+    }
 
     static class Accessor implements BytePixelAccessor {
         static final BytePixelAccessor nonpremul = new Accessor(false);

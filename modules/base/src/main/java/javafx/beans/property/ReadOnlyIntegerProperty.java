@@ -84,7 +84,7 @@ public abstract class ReadOnlyIntegerProperty extends IntegerExpression
      * @return A {@code ReadOnlyIntegerProperty} that wraps the
      *         {@code ReadOnlyProperty} if necessary
      * @throws NullPointerException
-     *             if {@code value} is {@code null}
+     *             if {@code property} is {@code null}
      * @since JavaFX 8.0
      */
     public static <T extends Number> ReadOnlyIntegerProperty readOnlyIntegerProperty(final ReadOnlyProperty<T> property) {

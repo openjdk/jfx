@@ -33,7 +33,9 @@ package com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors;
 
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.value.DoublePropertyMetadata;
+
 import java.util.Set;
+
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
@@ -61,13 +63,17 @@ public class RotateEditor extends PropertyEditor {
     @FXML
     private Button rotatorHandle;
 
-    private final Parent root;
+    private Parent root;
     private int roundingFactor = 10; // 1 decimal
     private boolean updateFromRotator = false;
 
-    @SuppressWarnings("LeakingThisInConstructor")
     public RotateEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses) {
         super(propMeta, selectedClasses);
+        initialize();
+    }
+    
+    // Method to please FindBugs
+    private void initialize() {
         root = EditorUtils.loadFxml("RotateEditor.fxml", this);
 
         //
@@ -95,11 +101,6 @@ public class RotateEditor extends PropertyEditor {
             userUpdateValueProperty(valDouble);
 
         };
-        initialize(valueListener);
-    }
-    
-    // Method to please FindBugs
-    private void initialize(EventHandler<ActionEvent> valueListener) {
         setNumericEditorBehavior(this, rotateTf, valueListener, false);
     }
 

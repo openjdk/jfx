@@ -190,6 +190,7 @@
 {
     //NSLog(@"windowDidEnterFullScreen");
     [(GlassViewDelegate*)[self->view delegate] sendJavaFullScreenEvent:YES withNativeWidget:YES];
+    [GlassApplication leaveFullScreenExitingLoopIfNeeded];
 }
 
 - (void)windowWillExitFullScreen:(NSNotification *)notification

@@ -100,6 +100,7 @@ public abstract class WCRenderQueue extends Ref {
     public synchronized void decode() {
         assert (gc != null);
         decode(gc);
+        gc.flush();
     }
 
     public synchronized void decode(int fontSmoothingType) {

@@ -27,8 +27,11 @@ package com.sun.javafx.scene.traversal;
 
 import javafx.geometry.NodeOrientation;
 
+/**
+ * Specifies the direction of traversal.
+ */
 public enum Direction {
-    
+
     UP(false),
     DOWN(true),
     LEFT(false),
@@ -44,5 +47,23 @@ public enum Direction {
 
     public boolean isForward() {
         return forward;
+    }
+
+    /**
+     * Returns the direction with respect to the node's orientation. It affect's only arrow keys however, so it's not
+     * an error to ignore this call if handling only next/previous traversal.
+     * @param orientation
+     * @return
+     */
+    public Direction getDirectionForNodeOrientation(NodeOrientation orientation) {
+        if (orientation == NodeOrientation.RIGHT_TO_LEFT) {
+            switch (this) {
+                case LEFT:
+                    return RIGHT;
+                case RIGHT:
+                    return LEFT;
+            }
+        }
+        return this;
     }
 }

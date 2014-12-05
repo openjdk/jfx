@@ -25,10 +25,6 @@
 
 package com.sun.prism.es2;
 
-import com.sun.glass.ui.monocle.EGL;
-import com.sun.glass.ui.monocle.NativeScreen;
-import com.sun.glass.ui.monocle.NativePlatformFactory;
-
 class MonocleGLPixelFormat extends GLPixelFormat {
 
     MonocleGLPixelFormat(long nativeScreen, Attributes attrs) {

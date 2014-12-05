@@ -29,7 +29,7 @@ import com.sun.javafx.scene.control.skin.ProgressBarSkin;
 
 import javafx.beans.value.WritableValue;
 import javafx.css.StyleableProperty;
-//import javafx.scene.accessibility.Attribute;
+import javafx.scene.AccessibleAttribute;
 import javafx.geometry.Orientation;
 
 /**
@@ -130,11 +130,11 @@ public class ProgressBar extends ProgressIndicator {
      *                                                                         *
      **************************************************************************/
 
-//    /** @treatAsPrivate */
-//    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//        switch (attribute) {
-//            case ORIENTATION: return Orientation.HORIZONTAL;
-//            default: return super.accGetAttribute(attribute, parameters);
-//        }
-//    }
+    @Override
+    public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
+        switch (attribute) {
+            case ORIENTATION: return Orientation.HORIZONTAL;
+            default: return super.queryAccessibleAttribute(attribute, parameters);
+        }
+    }    
 }

@@ -46,6 +46,7 @@ public class PickResultChooser {
     private Node node;
     private int face = -1;
     private Point3D point;
+    private Point3D normal;
     private Point2D texCoord;
     private boolean empty = true;
     private boolean closed = false;
@@ -78,7 +79,7 @@ public class PickResultChooser {
         if (empty) {
             return null;
         }
-        return new PickResult(node, point, distance, face, texCoord);
+        return new PickResult(node, point, distance, face, normal, texCoord);
     }
 
     /**
@@ -122,7 +123,7 @@ public class PickResultChooser {
      * @return true if the offered intersection has been used
      */
     public boolean offer(Node node, double distance, int face, Point3D point, Point2D texCoord) {
-        return processOffer(node, node, distance, point, face, texCoord);
+        return processOffer(node, node, distance, point, face, normal, texCoord);
     }
 
     /**
@@ -139,7 +140,7 @@ public class PickResultChooser {
      * @return true if the offered intersection has been used
      */
     public boolean offer(Node node, double distance, Point3D point) {
-        return processOffer(node, node, distance, point, PickResult.FACE_UNDEFINED, null);
+        return processOffer(node, node, distance, point, PickResult.FACE_UNDEFINED, null, null);
     }
 
     /**
@@ -156,7 +157,7 @@ public class PickResultChooser {
         }
         return processOffer(pickResult.getIntersectedNode(), subScene, distance,
                 pickResult.getIntersectedPoint(), pickResult.getIntersectedFace(),
-                pickResult.getIntersectedTexCoord());
+                pickResult.getIntersectedNormal(), pickResult.getIntersectedTexCoord());
     }
 
     /**
@@ -170,11 +171,12 @@ public class PickResultChooser {
      * @param distance The intersected distance measured in pickRay direction magnitudes
      * @param point The intersection point
      * @param face The intersected face
+     * @param normal The intersected normal
      * @param texCoord The intersected texture coordinates
      * @return true if the offered intersection has been used
      */
     private boolean processOffer(Node node, Node depthTestNode, double distance,
-            Point3D point, int face, Point2D texCoord) {
+            Point3D point, int face, Point3D normal, Point2D texCoord) {
 
         final SubScene subScene = NodeHelper.getSubScene(depthTestNode);
         final boolean hasDepthBuffer = Platform.isSupported(ConditionalFeature.SCENE3D)
@@ -191,6 +193,7 @@ public class PickResultChooser {
             this.distance = distance;
             this.face = face;
             this.point = point;
+            this.normal = normal;
             this.texCoord = texCoord;
             this.empty = false;
             accepted = true;
@@ -237,6 +240,16 @@ public class PickResultChooser {
      */
     public final Point3D getIntersectedPoint() {
         return point;
+    }
+
+     /**
+     * Return the intersected normal in local coordinate of the picked Node
+     *
+     * @return new Point3D presenting the intersected normal
+     *
+     */
+    public final Point3D getIntersectedNormal() {
+        return normal;
     }
 
     /**

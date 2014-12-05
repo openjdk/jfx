@@ -251,7 +251,12 @@ public class MediaView extends Node {
         getIOSPlayer().setOverlayVisible(determineVisibility());
         updateOverlayTransformDirectly();
     }
-    
+
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
     @Override
     public void impl_transformsChanged() {
         super.impl_transformsChanged();

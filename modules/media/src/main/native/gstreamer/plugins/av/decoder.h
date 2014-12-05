@@ -59,6 +59,8 @@ struct _BaseDecoder
     guint8        *codec_data;       // codec-specific data
     gint          codec_data_size;   // number of bytes of codec-specific data
 
+    AVFrame        *frame;
+
     AVCodec        *codec;           // the libavcodec decoder reference
     AVCodecContext *context;         // the libavcodec context
 };
@@ -74,7 +76,7 @@ GType     basedecoder_get_type (void);
 
 void      basedecoder_init_state(BaseDecoder *decoder);
 
-gboolean  basedecoder_open_decoder(BaseDecoder *decoder, enum CodecID id);
+gboolean  basedecoder_open_decoder(BaseDecoder *decoder, CodecIDType id);
 
 void      basedecoder_set_codec_data(BaseDecoder *decoder, GstStructure *s);
 

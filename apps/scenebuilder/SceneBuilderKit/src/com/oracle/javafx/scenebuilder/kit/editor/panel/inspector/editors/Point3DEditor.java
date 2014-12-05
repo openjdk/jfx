@@ -32,7 +32,9 @@
 package com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors;
 
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
+
 import java.util.Set;
+
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
@@ -47,7 +49,7 @@ import javafx.scene.Parent;
  */
 public class Point3DEditor extends PropertyEditor {
 
-    private final Parent root;
+    private Parent root;
     @FXML
     private DoubleField xDf;
     @FXML
@@ -56,17 +58,15 @@ public class Point3DEditor extends PropertyEditor {
     private DoubleField zDf;
     DoubleField[] doubleFields = new DoubleField[3];
 
-    @SuppressWarnings("LeakingThisInConstructor")
     public Point3DEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses) {
         super(propMeta, selectedClasses);
-        root = EditorUtils.loadFxml("Point3DEditor.fxml", this);//NOI18N
-
         initialize();
-        setLayoutFormat(PropertyEditor.LayoutFormat.SIMPLE_LINE_BOTTOM);
     }
 
     //Method to please FindBugs
     private void initialize() {
+        root = EditorUtils.loadFxml("Point3DEditor.fxml", this);//NOI18N
+
         doubleFields[0] = xDf;
         doubleFields[1] = yDf;
         doubleFields[2] = zDf;
@@ -74,6 +74,7 @@ public class Point3DEditor extends PropertyEditor {
             EventHandler<ActionEvent> valueListener = event -> userUpdateValueProperty(getValue());
             setNumericEditorBehavior(this, doubleField, valueListener, false);
         }
+        setLayoutFormat(PropertyEditor.LayoutFormat.SIMPLE_LINE_BOTTOM);
     }
 
     @Override
@@ -98,7 +99,7 @@ public class Point3DEditor extends PropertyEditor {
                     return null;
                 }
             }
-            values[index] = new Double(val);
+            values[index] = Double.valueOf(val);
             index++;
         }
         return new Point3D(values[0], values[1], values[2]);

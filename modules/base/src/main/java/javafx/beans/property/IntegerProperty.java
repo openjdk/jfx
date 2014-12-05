@@ -138,7 +138,7 @@ public abstract class IntegerProperty extends ReadOnlyIntegerProperty implements
      * @return A {@code IntegerProperty} that wraps the
      *         {@code Property}
      * @throws NullPointerException
-     *             if {@code value} is {@code null}
+     *             if {@code property} is {@code null}
      * @see #asObject()
      * @since JavaFX 8.0
      */

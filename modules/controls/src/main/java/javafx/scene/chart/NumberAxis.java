@@ -36,18 +36,22 @@ import javafx.animation.KeyValue;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.BooleanPropertyBase;
 import javafx.beans.property.DoubleProperty;
-import javafx.beans.property.IntegerProperty;
-import javafx.beans.property.SimpleIntegerProperty;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
 import javafx.beans.value.ChangeListener;
+import javafx.beans.value.WritableValue;
 import javafx.geometry.Dimension2D;
 import javafx.geometry.Side;
 import javafx.util.Duration;
 import javafx.util.StringConverter;
 
 import com.sun.javafx.charts.ChartLayoutAnimator;
+
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.CssMetaData;
+
 import com.sun.javafx.css.converters.SizeConverter;
+
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 
@@ -58,28 +62,9 @@ import javafx.css.StyleableProperty;
  */
 public final class NumberAxis extends ValueAxis<Number> {
 
-    /** We use these for auto ranging to pick a user friendly tick unit. We handle tick units in the range of 1e-10 to 1e+12 */
-    private static final double[] TICK_UNIT_DEFAULTS = {
-        1.0E-10d, 2.5E-10d, 5.0E-10d, 1.0E-9d, 2.5E-9d, 5.0E-9d, 1.0E-8d, 2.5E-8d, 5.0E-8d, 1.0E-7d, 2.5E-7d, 5.0E-7d,
-        1.0E-6d, 2.5E-6d, 5.0E-6d, 1.0E-5d, 2.5E-5d, 5.0E-5d, 1.0E-4d, 2.5E-4d, 5.0E-4d, 0.0010d, 0.0025d, 0.0050d,
-        0.01d, 0.025d, 0.05d, 0.1d, 0.25d, 0.5d, 1.0d, 2.5d, 5.0d, 10.0d, 25.0d, 50.0d, 100.0d, 250.0d, 500.0d,
-        1000.0d, 2500.0d, 5000.0d, 10000.0d, 25000.0d, 50000.0d, 100000.0d, 250000.0d, 500000.0d, 1000000.0d,
-        2500000.0d, 5000000.0d, 1.0E7d, 2.5E7d, 5.0E7d, 1.0E8d, 2.5E8d, 5.0E8d, 1.0E9d, 2.5E9d, 5.0E9d, 1.0E10d,
-        2.5E10d, 5.0E10d, 1.0E11d, 2.5E11d, 5.0E11d, 1.0E12d, 2.5E12d, 5.0E12d
-    };
-    /** These are matching decimal formatter strings */
-    private static final String[] TICK_UNIT_FORMATTER_DEFAULTS = {"0.0000000000", "0.00000000000", "0.0000000000",
-                                                                  "0.000000000", "0.0000000000", "0.000000000",
-                                                                  "0.00000000", "0.000000000", "0.00000000",
-                                                                  "0.0000000", "0.00000000", "0.0000000", "0.000000",
-                                                                  "0.0000000", "0.000000", "0.00000", "0.000000",
-                                                                  "0.00000", "0.0000", "0.00000", "0.0000", "0.000",
-                                                                  "0.0000", "0.000", "0.00", "0.000", "0.00", "0.0",
-                                                                  "0.00", "0.0", "0", "0.0", "0", "#,##0"};
-
     private Object currentAnimationID;
     private final ChartLayoutAnimator animator = new ChartLayoutAnimator(this);
-    private IntegerProperty currentRangeIndexProperty = new SimpleIntegerProperty(this, "currentRangeIndex", -1);
+    private StringProperty currentFormatterProperty = new SimpleStringProperty(this, "", "");
     private DefaultFormatter defaultFormatter = new DefaultFormatter(this);
 
     // -------------- PUBLIC PROPERTIES --------------------------------------------------------------------------------
@@ -88,7 +73,10 @@ public final class NumberAxis extends ValueAxis<Number> {
     private BooleanProperty forceZeroInRange = new BooleanPropertyBase(true) {
         @Override protected void invalidated() {
             // This will effect layout if we are auto ranging
-            if(isAutoRanging()) requestAxisLayout();
+            if(isAutoRanging()) {
+                requestAxisLayout();
+                invalidateRange();
+            }
         }
 
         @Override
@@ -186,12 +174,12 @@ public final class NumberAxis extends ValueAxis<Number> {
      * @return A range object that can be passed to setRange() and calculateTickValues()
      */
     @Override protected Object getRange() {
-        return new double[]{
+        return new Object[]{
             getLowerBound(),
             getUpperBound(),
             getTickUnit(),
             getScale(),
-            currentRangeIndexProperty.get()
+            currentFormatterProperty.get()
         };
     }
 
@@ -203,13 +191,13 @@ public final class NumberAxis extends ValueAxis<Number> {
      * @param animate If true animate the change in range
      */
     @Override protected void setRange(Object range, boolean animate) {
-        final double[] rangeProps = (double[]) range;
-        final double lowerBound = rangeProps[0];
-        final double upperBound = rangeProps[1];
-        final double tickUnit = rangeProps[2];
-        final double scale = rangeProps[3];
-        final double rangeIndex = rangeProps[4];
-        currentRangeIndexProperty.set((int)rangeIndex);
+        final Object[] rangeProps = (Object[]) range;
+        final double lowerBound = (Double)rangeProps[0];
+        final double upperBound = (Double)rangeProps[1];
+        final double tickUnit = (Double)rangeProps[2];
+        final double scale = (Double)rangeProps[3];
+        final String formatter = (String)rangeProps[4];
+        currentFormatterProperty.set(formatter);
         final double oldLowerBound = getLowerBound();
         setLowerBound(lowerBound);
         setUpperBound(upperBound);
@@ -240,10 +228,10 @@ public final class NumberAxis extends ValueAxis<Number> {
      * @return A list of tick marks that fit along the axis if it was the given length
      */
     @Override protected List<Number> calculateTickValues(double length, Object range) {
-        final double[] rangeProps = (double[]) range;
-        final double lowerBound = rangeProps[0];
-        final double upperBound = rangeProps[1];
-        final double tickUnit = rangeProps[2];
+        final Object[] rangeProps = (Object[]) range;
+        final double lowerBound = (Double)rangeProps[0];
+        final double upperBound = (Double)rangeProps[1];
+        final double tickUnit = (Double)rangeProps[2];
         List<Number> tickValues = new ArrayList<>();
         if (lowerBound == upperBound) {
             tickValues.add(lowerBound);
@@ -315,9 +303,9 @@ public final class NumberAxis extends ValueAxis<Number> {
      * @return size of tick mark label for given value
      */
     @Override protected Dimension2D measureTickMarkSize(Number value, Object range) {
-        final double[] rangeProps = (double[]) range;
-        final double rangeIndex = rangeProps[4];
-        return measureTickMarkSize(value, getTickLabelRotation(), (int)rangeIndex);
+        final Object[] rangeProps = (Object[]) range;
+        final String formatter = (String)rangeProps[4];
+        return measureTickMarkSize(value, getTickLabelRotation(), formatter);
     }
 
     /**
@@ -325,15 +313,15 @@ public final class NumberAxis extends ValueAxis<Number> {
      *
      * @param value     tick mark value
      * @param rotation  The text rotation
-     * @param rangeIndex The index of the tick unit range
+     * @param numFormatter The number formatter
      * @return size of tick mark label for given value
      */
-    private Dimension2D measureTickMarkSize(Number value, double rotation, int rangeIndex) {
+    private Dimension2D measureTickMarkSize(Number value, double rotation, String numFormatter) {
         String labelText;
         StringConverter<Number> formatter = getTickLabelFormatter();
         if (formatter == null) formatter = defaultFormatter;
         if(formatter instanceof DefaultFormatter) {
-            labelText = ((DefaultFormatter)formatter).toString(value, rangeIndex);
+            labelText = ((DefaultFormatter)formatter).toString(value, numFormatter);
         } else {
             labelText = formatter.toString(value);
         }
@@ -376,7 +364,7 @@ public final class NumberAxis extends ValueAxis<Number> {
             paddedMax = 0;
         }
         // calculate the number of tick-marks we can fit in the given length
-        int numOfTickMarks = (int)Math.floor(Math.abs(length)/labelSize);
+        int numOfTickMarks = (int)Math.floor(length/labelSize);
         // can never have less than 2 tick marks one for each end
         numOfTickMarks = Math.max(numOfTickMarks, 2);
         // calculate tick unit for the number of ticks can have in the given data range
@@ -387,18 +375,34 @@ public final class NumberAxis extends ValueAxis<Number> {
         double maxRounded = 0;
         int count = 0;
         double reqLength = Double.MAX_VALUE;
-        int rangeIndex = 10;
+        String formatter = "0.00000000";
         // loop till we find a set of ticks that fit length and result in a total of less than 20 tick marks
         while (reqLength > length || count > 20) {
-            // find a user friendly match from our default tick units to match calculated tick unit
-            for (int i=0; i<TICK_UNIT_DEFAULTS.length; i++) {
-                double tickUnitDefault = TICK_UNIT_DEFAULTS[i];
-                if (tickUnitDefault > tickUnit) {
-                    tickUnitRounded = tickUnitDefault;
-                    rangeIndex = i;
-                    break;
-                }
+            int exp = (int)Math.floor(Math.log10(tickUnit));
+            final double mant = tickUnit / Math.pow(10, exp);
+            double ratio = mant;
+            if (mant > 5d) {
+                exp++;
+                ratio = 1;
+            } else if (mant > 1d) {
+                ratio = mant > 2.5 ? 5 : 2.5;
             }
+            if (exp > 1) {
+                formatter = "#,##0";
+            } else if (exp == 1) {
+                formatter = "0";
+            } else {
+                final boolean ratioHasFrac = Math.rint(ratio) != ratio;
+                final StringBuilder formatterB = new StringBuilder("0");
+                int n = ratioHasFrac ? Math.abs(exp) + 1 : Math.abs(exp);
+                if (n > 0) formatterB.append(".");
+                for (int i = 0; i < n; ++i) {
+                    formatterB.append("0");
+                }
+                formatter = formatterB.toString();
+
+            }
+            tickUnitRounded = ratio * Math.pow(10, exp);
             // move min and max to nearest tick mark
             minRounded = Math.floor(paddedMin / tickUnitRounded) * tickUnitRounded;
             maxRounded = Math.ceil(paddedMax / tickUnitRounded) * tickUnitRounded;
@@ -408,8 +412,8 @@ public final class NumberAxis extends ValueAxis<Number> {
             double last = 0;
             count = 0;
             for (double major = minRounded; major <= maxRounded; major += tickUnitRounded, count ++)  {
-                double size = side.isVertical() ? measureTickMarkSize(major, getTickLabelRotation(), rangeIndex).getHeight() :
-                                            measureTickMarkSize(major, getTickLabelRotation(), rangeIndex).getWidth();
+                double size = side.isVertical() ? measureTickMarkSize(major, getTickLabelRotation(), formatter).getHeight() :
+                                            measureTickMarkSize(major, getTickLabelRotation(), formatter).getWidth();
                 if (major == minRounded) { // first
                     last = size/2;
                 } else {
@@ -418,11 +422,6 @@ public final class NumberAxis extends ValueAxis<Number> {
             }
             reqLength = (count-1) * maxReqTickGap;
             tickUnit = tickUnitRounded;
-            // check if we already found max tick unit
-            if (tickUnitRounded == TICK_UNIT_DEFAULTS[TICK_UNIT_DEFAULTS.length-1]) {
-                // nothing we can do so just have to use this
-                break;
-            }
 
             // fix for RT-35600 where a massive tick unit was being selected
             // unnecessarily. There is probably a better solution, but this works
@@ -430,11 +429,12 @@ public final class NumberAxis extends ValueAxis<Number> {
             if (numOfTickMarks == 2 && reqLength > length) {
                 break;
             }
+            if (reqLength > length || count > 20) tickUnit *= 2; // This is just for the while loop, if there are still too many ticks
         }
         // calculate new scale
         final double newScale = calculateNewScale(length, minRounded, maxRounded);
         // return new range
-        return new double[]{minRounded, maxRounded, tickUnitRounded, newScale, rangeIndex};
+        return new Object[]{minRounded, maxRounded, tickUnitRounded, newScale, formatter};
     }
 
     // -------------- STYLESHEET HANDLING ------------------------------------------------------------------------------
@@ -452,7 +452,7 @@ public final class NumberAxis extends ValueAxis<Number> {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(NumberAxis n) {
-                return (StyleableProperty<Number>)n.tickUnitProperty();
+                return (StyleableProperty<Number>)(WritableValue<Number>)n.tickUnitProperty();
             }
         };
 
@@ -495,20 +495,17 @@ public final class NumberAxis extends ValueAxis<Number> {
         private String prefix = null;
         private String suffix = null;
 
-        /** used internally */
-        private DefaultFormatter() {}
-
         /**
          * Construct a DefaultFormatter for the given NumberAxis
          *
          * @param axis The axis to format tick marks for
          */
         public DefaultFormatter(final NumberAxis axis) {
-            formatter = getFormatter(axis.isAutoRanging()? axis.currentRangeIndexProperty.get() : -1);
+            formatter = axis.isAutoRanging()? new DecimalFormat(axis.currentFormatterProperty.get()) : new DecimalFormat();
             final ChangeListener<Object> axisListener = (observable, oldValue, newValue) -> {
-                formatter = getFormatter(axis.isAutoRanging()? axis.currentRangeIndexProperty.get() : -1);
+                formatter = axis.isAutoRanging()? new DecimalFormat(axis.currentFormatterProperty.get()) : new DecimalFormat();
             };
-            axis.currentRangeIndexProperty.addListener(axisListener);
+            axis.currentFormatterProperty.addListener(axisListener);
             axis.autoRangingProperty().addListener(axisListener);
         }
 
@@ -525,16 +522,6 @@ public final class NumberAxis extends ValueAxis<Number> {
             this.suffix = suffix;
         }
 
-        private static DecimalFormat getFormatter(int rangeIndex) {
-            if (rangeIndex < 0) {
-                return new DecimalFormat();
-            } else if(rangeIndex >= TICK_UNIT_FORMATTER_DEFAULTS.length) {
-                return new DecimalFormat(TICK_UNIT_FORMATTER_DEFAULTS[TICK_UNIT_FORMATTER_DEFAULTS.length-1]);
-            } else {
-                return new DecimalFormat(TICK_UNIT_FORMATTER_DEFAULTS[rangeIndex]);
-            }
-        }
-
         /**
         * Converts the object provided into its string form.
         * Format of the returned string is defined by this converter.
@@ -545,8 +532,8 @@ public final class NumberAxis extends ValueAxis<Number> {
             return toString(object, formatter);
         }
 
-        private String toString(Number object, int rangeIndex) {
-            return toString(object, getFormatter(rangeIndex));
+        private String toString(Number object, String numFormatter) {
+            return toString(object, new DecimalFormat(numFormatter));
         }
 
         private String toString(Number object, DecimalFormat formatter) {

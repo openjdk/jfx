@@ -28,18 +28,13 @@ package com.sun.glass.ui.monocle;
 import com.sun.glass.events.MouseEvent;
 import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.Robot;
-import com.sun.glass.ui.monocle.input.KeyInput;
-import com.sun.glass.ui.monocle.input.KeyState;
-import com.sun.glass.ui.monocle.input.MouseInput;
-import com.sun.glass.ui.monocle.input.MouseState;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import javafx.application.Platform;
 
+import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.nio.ShortBuffer;
 
-public class MonocleRobot extends Robot {
+class MonocleRobot extends Robot {
     @Override
     protected void _create() {
     }
@@ -189,86 +184,26 @@ public class MonocleRobot extends Robot {
             boolean isHiDPI) {
         NativeScreen screen = NativePlatformFactory.getNativePlatform().getScreen();
         final int byteDepth = screen.getDepth() >>> 3;
-        final int bwidth = screen.getWidth();
-        final int bheight = screen.getHeight();
-        IntBuffer ret = null;
+        final int scrWidth = screen.getWidth();
+        final int scrHeight = screen.getHeight();
 
         synchronized (NativeScreen.framebufferSwapLock) {
+            IntBuffer buffer = screen.getScreenCapture().asIntBuffer();
 
-            ByteBuffer buffer = screen.getScreenCapture();
-
-            if (x == 0 && y == 0
-                    && width == screen.getWidth() && height == screen.getHeight()
-                    && byteDepth == 4) {
-                return new MonoclePixels(width, height, buffer.asIntBuffer());
-            } else {
-                int size = width * height;
-                ret = IntBuffer.allocate(size);
-
-                ShortBuffer shortbuf = null;
-                IntBuffer intbuf = null;
-
-                if (byteDepth == 2) {
-                    shortbuf = buffer.asShortBuffer();
-                } else if (byteDepth >= 4) {
-                    intbuf = buffer.asIntBuffer();
-                } else {
-                    throw new RuntimeException("Unknown bit depth");
-                }
-
-                // create a subset of the capture in the return buffer
-                int row, col;
-                for (row = y; row < y + height; row++) {
-                    // stepping through one row at a time.
-
-                    int bufferRowStart = row * bwidth; // first in the screen row
-                    int retRowStart = (row - y) * width; // first in return row
-
-                    ret.position(retRowStart);
-                    if ((row < 0) || (row >= bheight)) {
-                        // off the top or bottom of the window
-                        for (col = 0; col < width; col++) {
-                            ret.put(0xff000000); //black
-                        }
-                    } else {
-                        // in the y body
-
-                        // if off the edge, left
-                        for (col = x; col < 0; col++) {
-                            ret.put(0xff000000); //black
-                        }
-
-                        for (; col < x + width && col < bwidth; col++) {
-                            // get our color from the bytebuffer
-
-                            if (byteDepth == 4) {
-                                ret.put(intbuf.get(bufferRowStart + col));
-                            } else if (byteDepth == 2) {
-                                int v = shortbuf.get(bufferRowStart + col);
-                                int red = (int) ((v & 0xF800) >> 11) << 3;
-                                int green = (int) ((v & 0x7E0) >> 5) << 2;
-                                int blue = (int) (v & 0x1F) << 3;
-
-                                int p = (0xff000000 | 
-                                        (red << 16) | 
-                                        (green << 8) | 
-                                        blue);
-
-                                ret.put(p);
-                            }
-
-                        }
-
-                        // if off the edge right
-                        for (; col < x + width; col++) {
-                            ret.put(0xff000000); //black
-                        }
-
-                    }
+            if (x == 0 && y == 0 && width == scrWidth && height == scrHeight) {
+                return new MonoclePixels(width, height, buffer);
+            } 
+            
+            IntBuffer ret = IntBuffer.allocate(width * height);
+            int rowStop = Math.min(y + height, scrHeight);
+            int colStop = Math.min(x + width, scrWidth);
+            for (int row = y; row < rowStop; row++) {
+                for (int col = x; col < colStop; col++) {
+                    ret.put(buffer.get(row * scrWidth + col));
                 }
             }
-            ret.clear();
-
+            
+            ret.rewind();
             return new MonoclePixels(width, height, ret);
         }
     }

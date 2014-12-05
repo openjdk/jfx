@@ -298,7 +298,10 @@ public:
     void process_configure(GdkEventConfigure*);
     void process_gtk_configure(GdkEventConfigure*);
 
-    void applyShapeMask(void*, uint width, uint height) {}
+    void applyShapeMask(void*, uint width, uint height) {
+        (void)width;
+        (void)height;
+    }
     GtkWindow *get_gtk_window(); // TODO, get window from parent
 
     WindowContextPlug(jobject, void*);
@@ -346,7 +349,10 @@ public:
     int getEmbeddedX();
     int getEmbeddedY();
 
-    void applyShapeMask(void*, uint width, uint height) {}
+    void applyShapeMask(void*, uint width, uint height) {
+        (void)width;
+        (void)height;
+    }
     GtkWindow *get_gtk_window(); // TODO, get window from parent
 
     WindowContextChild(jobject, void*, GtkWidget *parent_widget, WindowContextPlug *parent_context);
@@ -376,7 +382,7 @@ class WindowContextTop: public WindowContextBase {
     bool size_assigned;
     bool on_top;
 public:
-    WindowContextTop(jobject, WindowContext*, long, WindowFrameType, WindowType);
+    WindowContextTop(jobject, WindowContext*, long, WindowFrameType, WindowType, GdkWMFunction);
     void process_map();
     void process_property_notify(GdkEventProperty*);
     void process_configure(GdkEventConfigure*);
@@ -416,6 +422,7 @@ protected:
 private:
     bool get_frame_extents_property(int *, int *, int *, int *);
     void request_frame_extents();
+    void activate_window();
     void initialize_frame_extents();
     void window_configure(XWindowChanges *, unsigned int);
     void update_window_constraints();

@@ -33,9 +33,8 @@ import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.WritableValue;
 import javafx.css.StyleableProperty;
+import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
-//import javafx.scene.accessibility.Attribute;
-//import javafx.scene.accessibility.Role;
 
 /**
  * Label is a non-editable text control. A Label is useful for displaying
@@ -87,6 +86,7 @@ public class Label extends Labeled {
 
     private void initialize() {
         getStyleClass().setAll("label");
+        setAccessibleRole(AccessibleRole.TEXT);
         // Labels are not focus traversable, unlike most other UI Controls.
         // focusTraversable is styleable through css. Calling setFocusTraversable
         // makes it look to css like the user set the value and css will not 
@@ -175,20 +175,4 @@ public class Label extends Labeled {
     protected /*do not make final*/ Boolean impl_cssGetFocusTraversableInitialValue() {
         return Boolean.FALSE;
     }
-
-
-    /***************************************************************************
-     *                                                                         *
-     * Accessibility handling                                                  *
-     *                                                                         *
-     **************************************************************************/
-       
-//    /** @treatAsPrivate */
-//    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//        switch (attribute) {
-//            case ROLE: return Role.TEXT;
-//            case TITLE: //fall through so that mnemonic can be properly handled
-//            default: return super.accGetAttribute(attribute, parameters); 
-//        }
-//    }
 }

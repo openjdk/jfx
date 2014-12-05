@@ -98,7 +98,7 @@ public final class Renderer implements PathConsumer2D {
             for (int i = 0; i < count; i++) {
                 int ecur = ptrs[i];
                 float curx = edges[ecur+CURX];
-                int cross = ((int) curx) << 1;
+                int cross = ((int) Math.ceil(curx - 0.5f)) << 1;
                 edges[ecur+CURX] = curx + edges[ecur+SLOPE];
                 if (edges[ecur+OR] > 0) {
                     cross |= 1;
@@ -154,8 +154,11 @@ public final class Renderer implements PathConsumer2D {
     private int[] edgeBuckets;
     private int numEdges;
 
-    private static final float DEC_BND = 20f;
-    private static final float INC_BND = 8f;
+    // RT-39439: Need to re-evaluate the BND constants set in the Picecs rasterizer for non AA shape
+    //  private static final float DEC_BND = 20f;
+    //  private static final float INC_BND = 8f;
+    private static final float DEC_BND = 5f;
+    private static final float INC_BND = 2f;
 
     // each bucket is a linked list. this method adds eptr to the
     // start "bucket"th linked list.
@@ -276,8 +279,8 @@ public final class Renderer implements PathConsumer2D {
             x1 = or;
             or = 0;
         }
-        final int firstCrossing = Math.max((int)Math.ceil(y1), boundsMinY);
-        final int lastCrossing = Math.min((int)Math.ceil(y2), boundsMaxY);
+        final int firstCrossing = Math.max((int) Math.ceil(y1 - 0.5f), boundsMinY);
+        final int lastCrossing = Math.min((int) Math.ceil(y2 - 0.5f), boundsMaxY);
         if (firstCrossing >= lastCrossing) {
             return;
         }
@@ -298,7 +301,7 @@ public final class Renderer implements PathConsumer2D {
         edges = Helpers.widenArray(edges, ptr, SIZEOF_EDGE);
         numEdges++;
         edges[ptr+OR] = or;
-        edges[ptr+CURX] = x1 + (firstCrossing - y1) * slope;
+        edges[ptr+CURX] = x1 + (firstCrossing + 0.5f - y1) * slope;
         edges[ptr+SLOPE] = slope;
         edges[ptr+YMAX] = lastCrossing;
         final int bucketIdx = firstCrossing - boundsMinY;
@@ -548,13 +551,13 @@ public final class Renderer implements PathConsumer2D {
     }
 
     public int getSubpixMinX() {
-        int sampleColMin = (int) Math.ceil(edgeMinX);
+        int sampleColMin = (int) Math.ceil(edgeMinX - 0.5f);
         if (sampleColMin < boundsMinX) sampleColMin = boundsMinX;
 	return sampleColMin;
     }
 
     public int getSubpixMaxX() {
-        int sampleColMax = (int) Math.ceil(edgeMaxX);
+        int sampleColMax = (int) Math.ceil(edgeMaxX - 0.5f);
         if (sampleColMax > boundsMaxX) sampleColMax = boundsMaxX;
 	return sampleColMax;
     }

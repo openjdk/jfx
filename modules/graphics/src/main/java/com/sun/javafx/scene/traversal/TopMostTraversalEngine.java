@@ -29,6 +29,15 @@ import com.sun.javafx.application.PlatformImpl;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 
+/**
+ * This is the class for all top-level traversal engines in scenes and subscenes.
+ * These traversal engines are created automatically and can only have the default algorithm.
+ *
+ * These engines should be used by calling {@link #trav(javafx.scene.Node, Direction)}, {@link #traverseToFirst()} and
+ * {@link #traverseToLast()} methods. These methods do the actual traversal - selecting the Node that's should be focused next and
+ * focusing it. Also, listener calls are handled by top-most traversal engines.
+ * select* methods can be used as well, but will *not* transfer the focus to the result, they are just query methods.
+ */
 public abstract class TopMostTraversalEngine extends TraversalEngine{
 
     protected TopMostTraversalEngine() {
@@ -50,11 +59,19 @@ public abstract class TopMostTraversalEngine extends TraversalEngine{
         super(algorithm);
     }
 
+    /**
+     * Traverse the focus to the next node in the specified direction.
+     *
+     * @param node The starting node to traverse from
+     * @param dir the traversal direction
+     * @return the new focus owner or null if none found (in that case old focus owner is still valid)
+     */
     public final Node trav(Node node, Direction dir) {
         Node newNode = null;
         Parent p = node.getParent();
         Node traverseNode = node;
         while (p != null) {
+            // First find the nearest traversal engine override (i.e. a ParentTraversalEngine that is traversable)
             ParentTraversalEngine engine = p.getImpl_traversalEngine();
             if (engine != null && engine.canTraverse()) {
                 newNode = engine.select(node, dir);
@@ -72,6 +89,7 @@ public abstract class TopMostTraversalEngine extends TraversalEngine{
             }
             p = p.getParent();
         }
+        // No engine override was able to find the Node in the specified direction, so
         if (newNode == null) {
             newNode = select(traverseNode, dir);
         }
@@ -105,13 +123,20 @@ public abstract class TopMostTraversalEngine extends TraversalEngine{
         notifyTraversedTo(newNode);
     }
 
+    /**
+     * Set focus on the first Node in this context (if any)
+     * @return the first node or null if there's none
+     */
     public final Node traverseToFirst() {
         Node n = selectFirst();
         if (n != null) focusAndNotify(n);
         return n;
     }
 
-
+    /**
+     * Set focus on the last Node in this context (if any)
+     * @return the last node or null if there's none
+     */
     public final Node traverseToLast() {
         Node n = selectLast();
         if (n != null) focusAndNotify(n);

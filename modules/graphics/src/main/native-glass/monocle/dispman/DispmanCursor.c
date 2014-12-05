@@ -22,11 +22,11 @@
  * questions.
  */
 
+#include "com_sun_glass_ui_monocle_DispmanCursor.h"
  #include <stdio.h>
  #include <pthread.h>
  #include <semaphore.h>
  #include <unistd.h>
- #include <jni.h>
  #include <sys/types.h>
  #include <sys/stat.h>
  #include <fcntl.h>
@@ -70,7 +70,7 @@ static void addDispmanxElement();
 static void removeDispmanxElement();
 static void updateCursor();
 
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_monocle_dispman_DispmanCursor__1initDispmanCursor
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_monocle_DispmanCursor__1initDispmanCursor
   (JNIEnv *env, jobject obj, jint width, jint height) {
     cursor.cursorWidth = width;
     cursor.cursorHeight = height;
@@ -82,7 +82,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_monocle_dispman_DispmanCursor__1ini
     updateCursor();
 }
 
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_monocle_dispman_DispmanCursor__1setVisible
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_monocle_DispmanCursor__1setVisible
   (JNIEnv *env, jobject obj, jboolean isVisible)
 {
     if (isVisible) {
@@ -104,14 +104,14 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_monocle_dispman_DispmanCursor__1set
     cursor.isVisible = isVisible;
 }
 
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_monocle_dispman_DispmanCursor__1setLocation
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_monocle_DispmanCursor__1setLocation
   (JNIEnv *env, jobject obj, jint x, jint y) {
     cursor.x = x;
     cursor.y = y;
     updateCursor();
 }
 
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_monocle_dispman_DispmanCursor__1setImage
+JNIEXPORT void JNICALL Java_com_sun_glass_ui_monocle_DispmanCursor__1setImage
   (JNIEnv *env, jobject obj, jbyteArray srcArray)
 {
      VC_RECT_T pixelRect;

@@ -176,7 +176,6 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLFactory_nInitialize
 
     display = XOpenDisplay(0);
     if (display == NULL) {
-        fprintf(stderr, "Failed in XOpenDisplay\n");
         return 0;
     }
 

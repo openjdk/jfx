@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<translation>
+<meta>
+    <source-control>HgForest</source-control>
+</meta>
+
+<file-set name="Java Property Resource Bundles" languages="Std_Admin +Swedish">
+    <file source="rt/modules/media/src/main/resources/com/sun/media/jfxmedia/MediaErrors%j.properties"
+          file-type="JavaProperties"/>
+</file-set>
+
+<file-set name="Java Property Resource Bundles" languages="Std_Admin +Swedish">
+    <file source="rt/modules/web/src/main/resources/com/sun/webkit/LocalizedStrings%j.properties"
+          file-type="JavaProperties"/>
+</file-set>
+
+<file-set name="Java Property Resource Bundles" languages="Std_Admin +Swedish">
+    <file source="rt/modules/controls/src/main/resources/com/sun/javafx/scene/control/skin/resources/controls%j.properties"
+          file-type="JavaProperties"/>
+</file-set>
+
+<file-set name="Java Property Resource Bundles" languages="Std_Admin +Swedish">
+    <file source="rt/modules/web/src/main/resources/com/sun/javafx/scene/web/skin/HTMLEditorSkin%j.properties"
+          file-type="JavaProperties"/>
+</file-set>
+
+<file-set name="Java Property Resource Bundles" languages="Std_Admin +Swedish">
+    <file source="rt/modules/graphics/src/main/resources/com/sun/javafx/tk/quantum/QuantumMessagesBundle%j.properties"
+          file-type="JavaProperties"/>
+</file-set>
+
+</translation>

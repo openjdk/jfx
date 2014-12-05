@@ -94,8 +94,8 @@ public class ResizingGuideRenderer {
                 reusableChromes.remove(chrome);
                 chrome.setVisible(true);
             }
-            final Point2D p1 = guideGroup.sceneToLocal(s.getX1(), s.getY1());
-            final Point2D p2 = guideGroup.sceneToLocal(s.getX2(), s.getY2());
+            final Point2D p1 = guideGroup.sceneToLocal(s.getX1(), s.getY1(), true /* rootScene */);
+            final Point2D p2 = guideGroup.sceneToLocal(s.getX2(), s.getY2(), true /* rootScene */);
             chrome.setup(p1.getX(), p1.getY(), p2.getX(), p2.getY());
             chromeMap.put(s, chrome);
         }

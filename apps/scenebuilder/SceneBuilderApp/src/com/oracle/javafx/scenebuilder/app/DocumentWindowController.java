@@ -99,6 +99,7 @@ import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.control.Accordion;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.DialogPane;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
@@ -142,6 +143,7 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         TOGGLE_OUTLINES_VISIBILITY,
         TOGGLE_GUIDES_VISIBILITY,
         SHOW_PREVIEW_WINDOW,
+        SHOW_PREVIEW_DIALOG,
         ADD_SCENE_STYLE_SHEET,
         SET_RESOURCE,
         REMOVE_RESOURCE,
@@ -511,6 +513,15 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
                 result = true;
                 break;
                 
+            case SHOW_PREVIEW_DIALOG:
+                final FXOMDocument fxomDocument = editorController.getFxomDocument();
+                if (fxomDocument != null) {
+                    Object sceneGraphRoot = fxomDocument.getSceneGraphRoot();
+                    return sceneGraphRoot instanceof DialogPane;
+                }
+                result = false;
+                break;
+                
             case SAVE_FILE:
                 result = isDocumentDirty()
                         || editorController.getFxomDocument().getLocation() == null; // Save new empty document
@@ -589,6 +600,14 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
                     previewWindowController.setToolStylesheet(getToolStylesheet());
                 }
                 previewWindowController.openWindow();
+                break;
+                
+            case SHOW_PREVIEW_DIALOG:
+                if (previewWindowController == null) {
+                    previewWindowController = new PreviewWindowController(editorController, getStage());
+                    previewWindowController.setToolStylesheet(getToolStylesheet());
+                }
+                previewWindowController.openDialog();
                 break;
                 
             case SAVE_FILE:
@@ -767,7 +786,7 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         
         switch(editAction) {
             case DELETE:
-                result = editorController.canPerformEditAction(EditAction.DELETE);
+                result = canPerformDelete();
                 break;
                 
             case CUT:
@@ -919,6 +938,26 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         if (cssPanelSearchPanelHost.getChildren().isEmpty()) {
             cssPanelSearchPanelHost.getChildren().add(cssPanelSearchController.getPanelRoot());
             addCssPanelSearchListener();
+        }
+    }
+
+    public void updatePreferences() {
+        final PreferencesController pc = PreferencesController.getSingleton();
+        final URL fxmlLocation = getEditorController().getFxmlLocation();
+        if (fxmlLocation == null) {
+            // Document has not been saved => nothing to write
+            // This is the case with initial empty document 
+            return;
+        }
+        // Update record document
+        final PreferencesRecordDocument recordDocument = pc.getRecordDocument(this);
+        recordDocument.writeToJavaPreferences();
+        // Update record global
+        final PreferencesRecordGlobal recordGlobal = pc.getRecordGlobal();
+        // recentItems may not contain the current document
+        // if the Open Recent -> Clear menu has been invoked
+        if (recordGlobal.containsRecentItem(fxmlLocation) == false) {
+            recordGlobal.addRecentItem(fxmlLocation);
         }
     }
 
@@ -1411,60 +1450,79 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         }
     }
 
+    private boolean canPerformDelete() {
+        boolean result;
+        final Node focusOwner = this.getScene().getFocusOwner();
+        if (isTextInputControlEditing(focusOwner)) {
+            final TextInputControl tic = getTextInputControl(focusOwner);
+            result = tic.getCaretPosition() < tic.getLength();
+        } else {
+            result = getEditorController().canPerformEditAction(EditAction.DELETE);
+        }
+        return result;
+    }
+
     private void performDelete() {
-        
-        // Collects all the selected objects
-        final List<FXOMObject> selectedObjects = new ArrayList<>();
-        final Selection selection = editorController.getSelection();
-        if (selection.getGroup() instanceof ObjectSelectionGroup) {
-            final ObjectSelectionGroup osg = (ObjectSelectionGroup) selection.getGroup();
-            selectedObjects.addAll(osg.getItems());
-        } else if (selection.getGroup() instanceof GridSelectionGroup) {
-            final GridSelectionGroup gsg = (GridSelectionGroup) selection.getGroup();
-            selectedObjects.addAll(gsg.collectSelectedObjects());
+
+        final Node focusOwner = this.getScene().getFocusOwner();
+        if (isTextInputControlEditing(focusOwner)) {
+            final TextInputControl tic = getTextInputControl(focusOwner);
+            tic.deleteNextChar();
         } else {
-            assert false;
-        }
-        
-        // Collects fx:ids in selected objects and their descendants.
-        // We filter out toggle groups because their fx:ids are managed automatically.
-        final Map<String, FXOMObject> fxIdMap = new HashMap<>();
-        for (FXOMObject selectedObject : selectedObjects) {
-            fxIdMap.putAll(selectedObject.collectFxIds());
-        }
-        FXOMNodes.removeToggleGroups(fxIdMap);
-        
-        // Checks if deleted objects have some fx:ids and ask for confirmation.
-        final boolean deleteConfirmed;
-        if (fxIdMap.isEmpty()) {
-            deleteConfirmed = true;
-        } else {
-            final String message;
-            
-            if (fxIdMap.size() == 1) {
-                if (selectedObjects.size() == 1) {
-                    message = I18N.getString("alert.delete.fxid1of1.message");
-                } else {
-                    message = I18N.getString("alert.delete.fxid1ofN.message");
-                }
+
+            // Collects all the selected objects
+            final List<FXOMObject> selectedObjects = new ArrayList<>();
+            final Selection selection = editorController.getSelection();
+            if (selection.getGroup() instanceof ObjectSelectionGroup) {
+                final ObjectSelectionGroup osg = (ObjectSelectionGroup) selection.getGroup();
+                selectedObjects.addAll(osg.getItems());
+            } else if (selection.getGroup() instanceof GridSelectionGroup) {
+                final GridSelectionGroup gsg = (GridSelectionGroup) selection.getGroup();
+                selectedObjects.addAll(gsg.collectSelectedObjects());
             } else {
-                if (selectedObjects.size() == fxIdMap.size()) {
-                    message = I18N.getString("alert.delete.fxidNofN.message");
-                } else {
-                    message = I18N.getString("alert.delete.fxidKofN.message");
-                }
+                assert false;
             }
-            
-            final AlertDialog d = new AlertDialog(getStage());
-            d.setMessage(message);
-            d.setDetails(I18N.getString("alert.delete.fxid.details"));
-            d.setOKButtonTitle(I18N.getString("label.delete"));
-            
-            deleteConfirmed = (d.showAndWait() == AbstractModalDialog.ButtonID.OK);
-        }
-        
-        if (deleteConfirmed) {
-            editorController.performEditAction(EditAction.DELETE);
+
+            // Collects fx:ids in selected objects and their descendants.
+            // We filter out toggle groups because their fx:ids are managed automatically.
+            final Map<String, FXOMObject> fxIdMap = new HashMap<>();
+            for (FXOMObject selectedObject : selectedObjects) {
+                fxIdMap.putAll(selectedObject.collectFxIds());
+            }
+            FXOMNodes.removeToggleGroups(fxIdMap);
+
+            // Checks if deleted objects have some fx:ids and ask for confirmation.
+            final boolean deleteConfirmed;
+            if (fxIdMap.isEmpty()) {
+                deleteConfirmed = true;
+            } else {
+                final String message;
+
+                if (fxIdMap.size() == 1) {
+                    if (selectedObjects.size() == 1) {
+                        message = I18N.getString("alert.delete.fxid1of1.message");
+                    } else {
+                        message = I18N.getString("alert.delete.fxid1ofN.message");
+                    }
+                } else {
+                    if (selectedObjects.size() == fxIdMap.size()) {
+                        message = I18N.getString("alert.delete.fxidNofN.message");
+                    } else {
+                        message = I18N.getString("alert.delete.fxidKofN.message");
+                    }
+                }
+
+                final AlertDialog d = new AlertDialog(getStage());
+                d.setMessage(message);
+                d.setDetails(I18N.getString("alert.delete.fxid.details"));
+                d.setOKButtonTitle(I18N.getString("label.delete"));
+
+                deleteConfirmed = (d.showAndWait() == AbstractModalDialog.ButtonID.OK);
+            }
+
+            if (deleteConfirmed) {
+                editorController.performEditAction(EditAction.DELETE);
+            }
         }
     }
 
@@ -1475,12 +1533,7 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
                 = new ExtensionFilter(I18N.getString("file.filter.label.fxml"),
                         "*.fxml"); //NOI18N
         fileChooser.getExtensionFilters().add(f);
-            
-        final File nextInitialDirectory 
-                = SceneBuilderApp.getSingleton().getNextInitialDirectory();
-        if (nextInitialDirectory != null) {
-            fileChooser.setInitialDirectory(nextInitialDirectory);
-        }
+        fileChooser.setInitialDirectory(EditorController.getNextInitialDirectory());
 
         File fxmlFile = fileChooser.showOpenDialog(getStage());
         if (fxmlFile != null) {
@@ -1491,7 +1544,7 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
             }
 
             // Keep track of the user choice for next time
-            SceneBuilderApp.getSingleton().updateNextInitialDirectory(fxmlFile);
+            EditorController.updateNextInitialDirectory(fxmlFile);
 
             this.getEditorController().performImportFxml(fxmlFile);
         }
@@ -1518,17 +1571,13 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
         fileChooser.getExtensionFilters().add(audioFilter);
         fileChooser.getExtensionFilters().add(videoFilter);
 
-        final File nextInitialDirectory 
-                = SceneBuilderApp.getSingleton().getNextInitialDirectory();
-        if (nextInitialDirectory != null) {
-            fileChooser.setInitialDirectory(nextInitialDirectory);
-        }
+        fileChooser.setInitialDirectory(EditorController.getNextInitialDirectory());
 
         File mediaFile = fileChooser.showOpenDialog(getStage());
         if (mediaFile != null) {
             
             // Keep track of the user choice for next time
-            SceneBuilderApp.getSingleton().updateNextInitialDirectory(mediaFile);
+            EditorController.updateNextInitialDirectory(mediaFile);
 
             this.getEditorController().performImportMedia(mediaFile);
         }
@@ -1591,12 +1640,7 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
                 = new ExtensionFilter(I18N.getString("file.filter.label.fxml"),
                         "*.fxml"); //NOI18N
         fileChooser.getExtensionFilters().add(f);
-
-        final File nextInitialDirectory 
-                = SceneBuilderApp.getSingleton().getNextInitialDirectory();
-        if (nextInitialDirectory != null) {
-            fileChooser.setInitialDirectory(nextInitialDirectory);
-        }
+        fileChooser.setInitialDirectory(EditorController.getNextInitialDirectory());
 
         File fxmlFile = fileChooser.showOpenDialog(getStage());
         if (fxmlFile != null) {
@@ -1607,7 +1651,7 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
             }
 
             // Keep track of the user choice for next time
-            SceneBuilderApp.getSingleton().updateNextInitialDirectory(fxmlFile);
+            EditorController.updateNextInitialDirectory(fxmlFile);
 
             this.getEditorController().performIncludeFxml(fxmlFile);
         }
@@ -1819,12 +1863,7 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
                     = new FileChooser.ExtensionFilter(I18N.getString("file.filter.label.fxml"),
                             "*.fxml"); //NOI18N
             fileChooser.getExtensionFilters().add(f);
-            
-            final File nextInitialDirectory 
-                    = SceneBuilderApp.getSingleton().getNextInitialDirectory();
-            if (nextInitialDirectory != null) {
-                fileChooser.setInitialDirectory(nextInitialDirectory);
-            }
+            fileChooser.setInitialDirectory(EditorController.getNextInitialDirectory());
 
             File fxmlFile = fileChooser.showSaveDialog(getStage());
             if (fxmlFile == null) {
@@ -1913,9 +1952,13 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
 
                     // Now performs a regular save action
                     result = performSaveAction();
+                    if (result.equals(ActionStatus.DONE)) {
+                        messageBarController.setDocumentDirty(false);
+                        saveJob = getEditorController().getJobManager().getCurrentJob();
+                    }
                     
                     // Keep track of the user choice for next time
-                    SceneBuilderApp.getSingleton().updateNextInitialDirectory(fxmlFile);
+                    EditorController.updateNextInitialDirectory(fxmlFile);
 
                     // Update recent items with just saved file
                     final PreferencesController pc = PreferencesController.getSingleton();
@@ -2008,9 +2051,7 @@ public class DocumentWindowController extends AbstractFxmlWindowController {
             SceneBuilderApp.getSingleton().documentWindowRequestClose(this);
             
             // Write java preferences at close time
-            final PreferencesController pc = PreferencesController.getSingleton();
-            final PreferencesRecordDocument recordDocument = pc.getRecordDocument(this);
-            recordDocument.writeToJavaPreferences();
+            updatePreferences();
         }
                 
         return closeConfirmed ? ActionStatus.DONE : ActionStatus.CANCELLED;

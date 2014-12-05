@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -62,35 +62,20 @@ JNIEXPORT jdouble JNICALL Java_com_sun_media_jfxmediaimpl_NativeVideoBuffer_nati
 /*
  * Class:     com_sun_media_jfxmediaimpl_NativeVideoBuffer
  * Method:    nativeGetBuffer
- * Signature: (J)Ljava/nio/ByteBuffer;
+ * Signature: (JI)Ljava/nio/ByteBuffer;
  *
  * WARNING: This method will create a new ByteBuffer object, you should cache this object to avoid multiple allocations.
  */
-JNIEXPORT jobject JNICALL Java_com_sun_media_jfxmediaimpl_NativeVideoBuffer_nativeGetBuffer
-    (JNIEnv *env, jobject obj, jlong nativeHandle)
+JNIEXPORT jobject JNICALL Java_com_sun_media_jfxmediaimpl_NativeVideoBuffer_nativeGetBufferForPlane
+    (JNIEnv *env, jobject obj, jlong nativeHandle, jint plane)
 {
     CVideoFrame *frame = (CVideoFrame*)jlong_to_ptr(nativeHandle);
     if (frame) {
-        void *dataPtr = frame->GetData();
-        jlong capacity = (jlong)frame->GetSize();
+        void *dataPtr = frame->GetDataForPlane((int)plane);
+        jlong capacity = (jlong)frame->GetSizeForPlane((int)plane);
         return env->NewDirectByteBuffer(dataPtr, capacity);
     }
     return NULL;
-}
-
-/*
- * Class:     com_sun_media_jfxmediaimpl_NativeVideoBuffer
- * Method:    nativeGetFrameNumber
- * Signature: (J)J
- */
-JNIEXPORT jlong JNICALL Java_com_sun_media_jfxmediaimpl_NativeVideoBuffer_nativeGetFrameNumber
-    (JNIEnv *env, jobject obj, jlong nativeHandle)
-{
-    CVideoFrame *frame = (CVideoFrame*)jlong_to_ptr(nativeHandle);
-    if (frame) {
-        return (jlong)frame->GetFrameNumber();
-    }
-    return 0;
 }
 
 /*
@@ -197,32 +182,6 @@ JNIEXPORT jint JNICALL Java_com_sun_media_jfxmediaimpl_NativeVideoBuffer_nativeG
         return frame->GetPlaneCount();
     }
     return 0;
-}
-
-/*
- * Class:     com_sun_media_jfxmediaimpl_NativeVideoBuffer
- * Method:    nativeGetPlaneOffsets
- * Signature: (J)[I
- */
-JNIEXPORT jintArray JNICALL Java_com_sun_media_jfxmediaimpl_NativeVideoBuffer_nativeGetPlaneOffsets
-    (JNIEnv *env, jobject obj, jlong nativeHandle)
-{
-    CVideoFrame *frame = (CVideoFrame*)jlong_to_ptr(nativeHandle);
-    if (frame) {
-        jint count = frame->GetPlaneCount();
-        jintArray offsets = env->NewIntArray(count);
-        jint *offsetArray = new jint[count];
-
-        for (int ii=0; ii < count; ii++) {
-            offsetArray[ii] = frame->GetOffsetForPlane(ii);
-        }
-
-        env->SetIntArrayRegion(offsets, 0, count, offsetArray);
-        delete [] offsetArray;
-
-        return offsets;
-    }
-    return NULL;
 }
 
 /*

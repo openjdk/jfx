@@ -45,7 +45,6 @@ import com.oracle.javafx.scenebuilder.kit.util.MathUtils;
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.ResourceBundle;
@@ -60,11 +59,15 @@ import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.PerspectiveCamera;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.Dialog;
+import javafx.scene.control.DialogPane;
 import javafx.scene.control.Label;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.MeshView;
 import javafx.scene.transform.Scale;
 import javafx.scene.transform.Translate;
+import javafx.stage.Modality;
 import javafx.stage.Window;
 import javafx.stage.WindowEvent;
 
@@ -183,6 +186,33 @@ public final class PreviewWindowController extends AbstractWindowController {
             isDirty = false;
         }
     }
+
+    public void openDialog() {
+        final FXOMDocument fxomDocument = editorController.getFxomDocument();
+        assert fxomDocument != null;
+        // We clone the FXOMDocument
+        FXOMDocument clone;
+        try {
+            clone = new FXOMDocument(fxomDocument.getFxmlText(),
+                    fxomDocument.getLocation(),
+                    fxomDocument.getClassLoader(),
+                    fxomDocument.getResources());
+            clone.setSampleDataEnabled(fxomDocument.isSampleDataEnabled());
+        } catch (IOException ex) {
+            throw new RuntimeException("Bug in PreviewWindowController::openDialog", ex); //NOI18N
+        }
+
+        final Object sceneGraphRoot = clone.getSceneGraphRoot();
+        assert sceneGraphRoot instanceof DialogPane;
+        final DialogPane dialogPane = (DialogPane) sceneGraphRoot;
+        final Dialog<? extends Object> dialog = new Dialog<>();
+        dialog.setDialogPane(dialogPane);
+        dialog.initModality(Modality.NONE);
+        if (dialogPane.getButtonTypes().isEmpty()) {
+            dialog.getDialogPane().getButtonTypes().setAll(ButtonType.CLOSE);
+        }
+        dialog.show();
+    }
     
     @Override
     public void closeWindow() {
@@ -205,7 +235,7 @@ public final class PreviewWindowController extends AbstractWindowController {
             = (observable, oldValue, newValue) -> requestUpdate(DELAYED);
 
     private final ChangeListener<Number> cssRevisionListener
-            = (observable, oldValue, newValue) -> Deprecation.reapplyCSS(getScene());
+            = (observable, oldValue, newValue) -> requestUpdate(IMMEDIATE);
 
     /**
      * We use the provided delay before refreshing the content of the preview.
@@ -226,6 +256,7 @@ public final class PreviewWindowController extends AbstractWindowController {
                 // => we must wrap the code into a Runnable object and call the Platform.runLater
                 Platform.runLater(() -> {
                     final FXOMDocument fxomDocument = editorController.getFxomDocument();
+                    String themeStyleSheetString = null;
                     if (fxomDocument != null) {
                         // We clone the FXOMDocument
                         FXOMDocument clone;
@@ -241,10 +272,7 @@ public final class PreviewWindowController extends AbstractWindowController {
                         }
 
                         Object sceneGraphRoot = clone.getSceneGraphRoot();
-                        final List<String> themeStyleSheetStrings = new ArrayList<>();
-                        for (URL themeURL : EditorPlatform.getThemeStylesheetURLs(editorControllerTheme)) {
-                            themeStyleSheetStrings.add(themeURL.toString());
-                        }
+                        themeStyleSheetString = EditorPlatform.getThemeStylesheetURL(editorControllerTheme);
 
                         if (sceneGraphRoot instanceof Parent) {
                             ((Parent) sceneGraphRoot).setId(NID_PREVIEW_ROOT);
@@ -254,12 +282,12 @@ public final class PreviewWindowController extends AbstractWindowController {
 
                             // Compute the proper styling
                             List<String> newStyleSheets1 = new ArrayList<>();
-                            computeStyleSheets(newStyleSheets1, sceneGraphRoot, themeStyleSheetStrings);
+                            computeStyleSheets(newStyleSheets1, sceneGraphRoot);
 
                             // Clean all styling
                             ((Parent) sceneGraphRoot).getStylesheets().removeAll();
 
-                            // Apply the new styling as a whole
+                            // Apply the new styling
                            ((Parent) sceneGraphRoot).getStylesheets().addAll(newStyleSheets1);
                         } else if (sceneGraphRoot instanceof Node) {
                             StackPane sp1 = new StackPane();
@@ -267,7 +295,7 @@ public final class PreviewWindowController extends AbstractWindowController {
                             
                             // Compute the proper styling
                             List<String> newStyleSheets2 = new ArrayList<>();
-                            computeStyleSheets(newStyleSheets2, sceneGraphRoot, themeStyleSheetStrings);
+                            computeStyleSheets(newStyleSheets2, sceneGraphRoot);
 
                             // Apply the new styling as a whole
                             sp1.getStylesheets().addAll(newStyleSheets2);
@@ -295,6 +323,9 @@ public final class PreviewWindowController extends AbstractWindowController {
                     }
 
                     getScene().setRoot(getRoot());
+                    if (themeStyleSheetString != null) {
+                        getScene().setUserAgentStylesheet(themeStyleSheetString);
+                    }
                     updateWindowSize();
                     updateWindowTitle();
                 });
@@ -518,10 +549,7 @@ public final class PreviewWindowController extends AbstractWindowController {
         requestUpdate(IMMEDIATE);
     }
     
-    private void computeStyleSheets(List<String> newStyleSheets, Object sceneGraphRoot, List<String> themeStyleSheetStrings) {        
-        // Add theme style sheet; order is significant ==> theme one always first
-        newStyleSheets.addAll(0, themeStyleSheetStrings);
-
+    private void computeStyleSheets(List<String> newStyleSheets, Object sceneGraphRoot) {        
         if (sceneGraphRoot instanceof Parent) {
             // At that stage current style sheets are the one defined within the FXML
             ObservableList<String> currentStyleSheets = ((Parent) sceneGraphRoot).getStylesheets();

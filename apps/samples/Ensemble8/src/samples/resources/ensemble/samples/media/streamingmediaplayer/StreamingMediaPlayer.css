@@ -53,8 +53,7 @@
     -fx-background-radius: 2.5, 2.5, 1.5;
     -fx-padding: 0.208333em; 
     -fx-background-image: url("../../shared-resources/slider.png");
-    -fx-background-image-width: 10;
-    -fx-background-image-slice: 0 fill;
+    -fx-background-repeat: round no-repeat;
 }
 
 #media-slider .thumb {

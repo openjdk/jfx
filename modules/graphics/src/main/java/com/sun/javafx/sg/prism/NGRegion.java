@@ -979,18 +979,26 @@ public class NGRegion extends NGGroup {
             double topInset, double rightInset, double bottomInset, double leftInset,
             int outsetsTop, int outsetsRight, int outsetsBottom, int outsetsLeft) {
 
+        // All cache operations are padded by (just shy of) half a pixel so
+        // that as we are translated by sub-pixel amounts we continue to sample
+        // all of the cached pixels out until they become transparent at (or
+        // 1-bit worth of non-zero alhpa from) the center of the border pixel
+        // around the cache.  If there is an integer translation, then our
+        // padding should come up just shy of including new rows/columns of
+        // pixels in the rendering and thus have no impact on pixel fill rates.
+        final float pad = 0.5f - 1f/256f;
         final float dstWidth = outsetsLeft + width + outsetsRight;
         final float dstHeight = outsetsTop + height + outsetsBottom;
         final boolean sameWidth = textureWidth == dstWidth;
         final boolean sameHeight = textureHeight == dstHeight;
-        final float dstX1 = -outsetsLeft;
-        final float dstY1 = -outsetsTop;
-        final float dstX2 = width + outsetsRight;
-        final float dstY2 = height + outsetsBottom;
-        final float srcX1 = rect.x;
-        final float srcY1 = rect.y;
-        final float srcX2 = srcX1 + textureWidth;
-        final float srcY2 = srcY1 + textureHeight;
+        final float dstX1 = -outsetsLeft - pad;
+        final float dstY1 = -outsetsTop - pad;
+        final float dstX2 = width + outsetsRight + pad;
+        final float dstY2 = height + outsetsBottom + pad;
+        final float srcX1 = rect.x - pad;
+        final float srcY1 = rect.y - pad;
+        final float srcX2 = rect.x + textureWidth + pad;
+        final float srcY2 = rect.y + textureHeight + pad;
 
         // If total destination width is < the source width, then we need to start
         // shrinking the left and right sides to accommodate. Likewise in the other dimension.
@@ -1013,8 +1021,8 @@ public class NGRegion extends NGGroup {
             g.drawTexture(cached, dstX1, dstY1, dstX2, dstY2, srcX1, srcY1, srcX2, srcY2);
         } else if (sameHeight) {
             // We do 3-patch rendering fixed height
-            final float left = (float) (adjustedLeftInset + outsetsLeft);
-            final float right = (float) (adjustedRightInset + outsetsRight);
+            final float left  = pad + (float) (adjustedLeftInset  + outsetsLeft);
+            final float right = pad + (float) (adjustedRightInset + outsetsRight);
 
             final float dstLeftX = dstX1 + left;
             final float dstRightX = dstX2 - right;
@@ -1027,8 +1035,8 @@ public class NGRegion extends NGGroup {
                                  dstLeftX, dstRightX, srcLeftX, srcRightX);
         } else if (sameWidth) {
             // We do 3-patch rendering fixed width
-            final float top = (float) (adjustedTopInset + outsetsTop);
-            final float bottom = (float) (adjustedBottomInset + outsetsBottom);
+            final float top    = pad + (float) (adjustedTopInset    + outsetsTop);
+            final float bottom = pad + (float) (adjustedBottomInset + outsetsBottom);
 
             final float dstTopY = dstY1 + top;
             final float dstBottomY = dstY2 - bottom;
@@ -1041,10 +1049,10 @@ public class NGRegion extends NGGroup {
                                  dstTopY, dstBottomY, srcTopY, srcBottomY);
         } else {
             // We do 9-patch rendering
-            final float left = (float) (adjustedLeftInset + outsetsLeft);
-            final float top = (float) (adjustedTopInset + outsetsTop);
-            final float right = (float) (adjustedRightInset + outsetsRight);
-            final float bottom = (float) (adjustedBottomInset + outsetsBottom);
+            final float left   = pad + (float) (adjustedLeftInset   + outsetsLeft);
+            final float top    = pad + (float) (adjustedTopInset    + outsetsTop);
+            final float right  = pad + (float) (adjustedRightInset  + outsetsRight);
+            final float bottom = pad + (float) (adjustedBottomInset + outsetsBottom);
 
             final float dstLeftX = dstX1 + left;
             final float dstRightX = dstX2 - right;
@@ -1159,8 +1167,8 @@ public class NGRegion extends NGGroup {
             final StrokeType bottomType = bottomStyle.getType();
             final StrokeType leftType = leftStyle.getType();
 
-            // The Prism Graphics logic always strokes on the line, it doesn't know about
-            // INSIDE or OUTSIDE or how to handle those. The only way to deal with those is
+            // The Prism Graphics logic can stroke lines only CENTERED and doesn't know what to do with
+            // INSIDE or OUTSIDE strokes for lines. The only way to deal with those is
             // to compensate for them here. So we will adjust the bounds that we are going
             // to stroke to take into account the insets (obviously), and also where we
             // want the stroked line to appear (inside, or outside, or centered).
@@ -1184,8 +1192,8 @@ public class NGRegion extends NGGroup {
                 // If the stroke is uniform, then that means that the style, width, and stroke of
                 // all four sides is the same.
                 if (!(topStroke instanceof Color && ((Color)topStroke).getOpacity() == 0f) && topStyle != BorderStrokeStyle.NONE) {
-                    float w = width - l - r;
-                    float h = height - t - b;
+                    float w = width - leftInset - rightInset;
+                    float h = height - topInset - bottomInset;
                     // The length of each side of the path we're going to stroke
                     final double di = 2 * radii.getTopLeftHorizontalRadius();
                     final double circle = di*Math.PI;
@@ -1199,24 +1207,22 @@ public class NGRegion extends NGGroup {
                         if (radii.isUniform() && radius == 0) {
                             // We're just drawing a squared stroke on all four sides of the same style
                             // and width and color, so a simple drawRect call is all that is needed.
-                            g.drawRect(l, t, w, h);
+                            g.drawRect(leftInset, topInset, w, h);
                         } else if (radii.isUniform()) {
                             // The radii are uniform, but are not squared up, so we have to
                             // draw a rounded rectangle.
                             float ar = radius + radius;
                             if (ar > w) ar = w;
                             if (ar > h) ar = h;
-                            g.drawRoundRect(l, t, w, h, ar, ar);
+                            g.drawRoundRect(leftInset, topInset, w, h, ar, ar);
                         } else {
                             // We do not have uniform radii, so we need to create a path that represents
                             // the stroke and then draw that.
-                            g.draw(createPath(width, height, t, l, b, r, radii));
+                            g.draw(createPath(width, height, topInset, leftInset, bottomInset, rightInset, radii));
                         }
                     }
                 }
             } else if (radii.isUniform() && radius == 0) {
-                // The length of each side of the path we're going to stroke
-                final double totalLineLength = 2 * width + 2 * height;
 
                 // We have different styles, or widths, or strokes on one or more sides, and
                 // therefore we have to draw each side independently. However, the corner radii
@@ -1233,7 +1239,7 @@ public class NGRegion extends NGGroup {
                     if (BorderStrokeStyle.SOLID == topStyle) {
                         g.fillRect(leftInset, topInset, width - leftInset - rightInset, topWidth);
                     } else {
-                        g.setStroke(createStroke(topStyle, topWidth, totalLineLength));
+                        g.setStroke(createStroke(topStyle, topWidth, width, true));
                         g.drawLine(l, t, width - r, t);
                     }
                 }
@@ -1244,7 +1250,7 @@ public class NGRegion extends NGGroup {
                         g.fillRect(width - rightInset - rightWidth, topInset,
                                    rightWidth, height - topInset - bottomInset);
                     } else {
-                        g.setStroke(createStroke(rightStyle, rightWidth, totalLineLength));
+                        g.setStroke(createStroke(rightStyle, rightWidth, height, true));
                         g.drawLine(width - r, topInset, width - r, height - bottomInset);
                     }
                 }
@@ -1255,7 +1261,7 @@ public class NGRegion extends NGGroup {
                         g.fillRect(leftInset, height - bottomInset - bottomWidth,
                                 width - leftInset - rightInset, bottomWidth);
                     } else {
-                        g.setStroke(createStroke(bottomStyle, bottomWidth, totalLineLength));
+                        g.setStroke(createStroke(bottomStyle, bottomWidth, width, true));
                         g.drawLine(l, height - b, width - r, height - b);
                     }
                 }
@@ -1265,7 +1271,7 @@ public class NGRegion extends NGGroup {
                     if (BorderStrokeStyle.SOLID == leftStyle) {
                         g.fillRect(leftInset, topInset, leftWidth, height - topInset - bottomInset);
                     } else {
-                        g.setStroke(createStroke(leftStyle, leftWidth, totalLineLength));
+                        g.setStroke(createStroke(leftStyle, leftWidth, height, true));
                         g.drawLine(l, topInset, l, height - bottomInset);
                     }
                 }
@@ -1275,42 +1281,31 @@ public class NGRegion extends NGGroup {
                 // than 0. In this case we have to take a much slower rendering path by turning this
                 // stroke into a path (or in the current implementation, an array of paths).
                 Shape[] paths = createPaths(t, l, b, r, radii);
-                // TODO This is incorrect for an ellipse (RT-26942)
-                final double totalLineLength =
-                        // TOP
-                        (width - radii.getTopLeftHorizontalRadius() - radii.getTopRightHorizontalRadius()) +
-                        (Math.PI * radii.getTopLeftHorizontalRadius() / 4) +
-                        (Math.PI * radii.getTopRightHorizontalRadius() / 4) +
-                        // RIGHT
-                        (height - radii.getTopRightVerticalRadius() - radii.getBottomRightVerticalRadius()) +
-                        (Math.PI * radii.getTopRightVerticalRadius() / 4) +
-                        (Math.PI * radii.getBottomRightVerticalRadius() / 4) +
-                        // BOTTOM
-                        (width - radii.getBottomLeftHorizontalRadius() - radii.getBottomRightHorizontalRadius()) +
-                        (Math.PI * radii.getBottomLeftHorizontalRadius() / 4) +
-                        (Math.PI * radii.getBottomRightHorizontalRadius() / 4) +
-                        // LEFT
-                        (height - radii.getTopLeftVerticalRadius() - radii.getBottomLeftVerticalRadius()) +
-                        (Math.PI * radii.getTopLeftVerticalRadius() / 4) +
-                        (Math.PI * radii.getBottomLeftVerticalRadius() / 4);
-
                 if (topStyle != BorderStrokeStyle.NONE) {
-                    g.setStroke(createStroke(topStyle, topWidth, totalLineLength));
+                    double rsum = radii.getTopLeftHorizontalRadius() + radii.getTopRightHorizontalRadius();
+                    double topLineLength = width + rsum * (Math.PI / 4 - 1);
+                    g.setStroke(createStroke(topStyle, topWidth, topLineLength, true));
                     g.setPaint(getPlatformPaint(topStroke));
                     g.draw(paths[0]);
                 }
                 if (rightStyle != BorderStrokeStyle.NONE) {
-                    g.setStroke(createStroke(rightStyle, rightWidth, totalLineLength));
+                    double rsum = radii.getTopRightVerticalRadius() + radii.getBottomRightVerticalRadius();
+                    double rightLineLength = height + rsum * (Math.PI / 4 - 1);
+                    g.setStroke(createStroke(rightStyle, rightWidth, rightLineLength, true));
                     g.setPaint(getPlatformPaint(rightStroke));
                     g.draw(paths[1]);
                 }
                 if (bottomStyle != BorderStrokeStyle.NONE) {
-                    g.setStroke(createStroke(bottomStyle, bottomWidth, totalLineLength));
+                    double rsum = radii.getBottomLeftHorizontalRadius() + radii.getBottomRightHorizontalRadius();
+                    double bottomLineLength = width + rsum * (Math.PI / 4 - 1);
+                    g.setStroke(createStroke(bottomStyle, bottomWidth, bottomLineLength, true));
                     g.setPaint(getPlatformPaint(bottomStroke));
                     g.draw(paths[2]);
                 }
                 if (leftStyle != BorderStrokeStyle.NONE) {
-                    g.setStroke(createStroke(leftStyle, leftWidth, totalLineLength));
+                    double rsum = radii.getTopLeftVerticalRadius() + radii.getBottomLeftVerticalRadius();
+                    double leftLineLength = height + rsum * (Math.PI / 4 - 1);
+                    g.setStroke(createStroke(leftStyle, leftWidth, leftLineLength, true));
                     g.setPaint(getPlatformPaint(leftStroke));
                     g.draw(paths[3]);
                 }
@@ -1470,6 +1465,15 @@ public class NGRegion extends NGGroup {
         return (d - (int)d) == 0 ? (int) d : (int) (d + 1);
     }
 
+
+    /**
+     * Calls {@link #createStroke(javafx.scene.layout.BorderStrokeStyle, double, double, boolean)})
+     * with "forLine" set to false
+     */
+    private BasicStroke createStroke(BorderStrokeStyle sb, double strokeWidth, double lineLength) {
+        return createStroke(sb, strokeWidth, lineLength, false);
+    }
+
     /**
      * Creates a Prism BasicStroke based on the stroke style, width, and line length.
      *
@@ -1477,9 +1481,12 @@ public class NGRegion extends NGGroup {
      * @param strokeWidth    The width of the stroke we're going to draw
      * @param lineLength     The total linear length of this stroke. This is needed for
      *                       handling "dashed" and "dotted" cases, otherwise, it is ignored.
+     * @param forLine        When this is set to true, the stroke is always centered. Outer and inner stroke
+     *                       does not make any sense for line as it does not encloses any area
+     *                       The "outer/inner" stroking has to be done by moving the line
      * @return A prism BasicStroke
      */
-    private BasicStroke createStroke(BorderStrokeStyle sb, double strokeWidth, double lineLength) {
+    private BasicStroke createStroke(BorderStrokeStyle sb, double strokeWidth, double lineLength, boolean forLine) {
         int cap;
         if (sb.getLineCap() == StrokeLineCap.BUTT) {
             cap = BasicStroke.CAP_BUTT;
@@ -1498,13 +1505,29 @@ public class NGRegion extends NGGroup {
             join = BasicStroke.JOIN_ROUND;
         }
 
-        // If we're doing an INNER or OUTER stroke, then double the width. We end
-        // up trimming off the inner portion when doing an OUTER, or the outer
-        // portion when doing an INNER.
-        // NOTE: It doesn't appear that we have any code to actually draw INNER or OUTER strokes
-//        if (sb.getType() != StrokeType.CENTERED) {
-//            strokeWidth *= 2.0f;
-//        }
+        int type;
+        if (forLine) {
+            type = BasicStroke.TYPE_CENTERED;
+        } else if (scaleShape) {
+            // Note: this is just a workaround that allows us to avoid shape bounds computation with the given stroke.
+            // By using inner stroke, we know the shape bounds and the shape will be scaled correctly, but the size of
+            // the stroke after the scale will be slightly different, but this should be visible only with big stroke widths
+            // See https://javafx-jira.kenai.com/browse/RT-38384
+            type = BasicStroke.TYPE_INNER;
+        } else {
+            switch (sb.getType()) {
+                case INSIDE:
+                    type = BasicStroke.TYPE_INNER;
+                    break;
+                case OUTSIDE:
+                    type = BasicStroke.TYPE_OUTER;
+                    break;
+                case CENTERED:
+                default:
+                    type = BasicStroke.TYPE_CENTERED;
+                    break;
+            }
+        }
 
         BasicStroke bs;
         if (sb == BorderStrokeStyle.NONE) {
@@ -1576,11 +1599,11 @@ public class NGRegion extends NGGroup {
                 dashOffset = (float) sb.getDashOffset();
             }
 
-            bs = new BasicStroke((float) strokeWidth, cap, join,
+            bs = new BasicStroke(type, (float) strokeWidth, cap, join,
                     (float) sb.getMiterLimit(),
                     array, dashOffset);
         } else {
-            bs = new BasicStroke((float) strokeWidth, cap, join,
+            bs = new BasicStroke(type, (float) strokeWidth, cap, join,
                     (float) sb.getMiterLimit());
         }
 

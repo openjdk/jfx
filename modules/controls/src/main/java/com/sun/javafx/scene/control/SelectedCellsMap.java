@@ -47,7 +47,7 @@ import java.util.*;
  * Refer to RT-33442 for more information on this issue.
  */
 // T == TablePosition<S,?>
-public class SelectedCellsMap<T extends TablePositionBase> {
+public abstract class SelectedCellsMap<T extends TablePositionBase> {
     private final ObservableList<T> selectedCells;
     private final ObservableList<T> sortedSelectedCells;
 
@@ -55,11 +55,16 @@ public class SelectedCellsMap<T extends TablePositionBase> {
 
     public SelectedCellsMap(final ListChangeListener<T> listener) {
         selectedCells = FXCollections.<T>observableArrayList();
-        sortedSelectedCells = new SortedList<>(selectedCells, (o1, o2) -> o1.getRow() - o2.getRow());
+        sortedSelectedCells = new SortedList<>(selectedCells, (T o1, T o2) -> {
+            int result = o1.getRow() - o2.getRow();
+            return result == 0 ? (o1.getColumn() - o2.getColumn()) : result;
+        });
         sortedSelectedCells.addListener(listener);
 
         selectedCellBitSetMap = new TreeMap<>((o1, o2) -> o1.compareTo(o2));
     }
+
+    public abstract boolean isCellSelectionEnabled();
 
     public int size() {
         return selectedCells.size();
@@ -77,25 +82,39 @@ public class SelectedCellsMap<T extends TablePositionBase> {
         final int columnIndex = tp.getColumn();
 
         // update the bitset map
+        boolean isNewBitSet = false;
         BitSet bitset;
         if (! selectedCellBitSetMap.containsKey(row)) {
             bitset = new BitSet();
             selectedCellBitSetMap.put(row, bitset);
+            isNewBitSet = true;
         } else {
             bitset = selectedCellBitSetMap.get(row);
         }
 
-        if (columnIndex >= 0) {
-            boolean isAlreadySet = bitset.get(columnIndex);
-            bitset.set(columnIndex);
+        final boolean cellSelectionModeEnabled = isCellSelectionEnabled();
 
-            if (! isAlreadySet) {
-                // add into the list
-                selectedCells.add(tp);
+        if (cellSelectionModeEnabled) {
+            if (columnIndex >= 0) {
+                boolean isAlreadySet = bitset.get(columnIndex);
+
+                if (!isAlreadySet) {
+                    bitset.set(columnIndex);
+
+                    // add into the list
+                    selectedCells.add(tp);
+                }
+            } else {
+                // FIXME slow path (for now)
+                if (!selectedCells.contains(tp)) {
+                    selectedCells.add(tp);
+                }
             }
         } else {
-            // FIXME slow path (for now)
-            if (! selectedCells.contains(tp)) {
+            if (isNewBitSet) {
+                if (columnIndex >= 0) {
+                    bitset.set(columnIndex);
+                }
                 selectedCells.add(tp);
             }
         }

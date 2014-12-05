@@ -34,13 +34,16 @@ package com.oracle.javafx.scenebuilder.kit.util;
 import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Application.EventHandler;
 import com.sun.javafx.css.Style;
-import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.scene.control.skin.MenuBarSkin;
 import com.sun.javafx.scene.input.PickResultChooser;
+
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+
 import javafx.collections.ObservableMap;
 import javafx.css.CssMetaData;
 import javafx.css.Styleable;
@@ -51,7 +54,8 @@ import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
 import javafx.scene.Group;
 import javafx.scene.Node;
-import javafx.scene.Scene;
+import javafx.scene.Parent;
+import javafx.scene.SubScene;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.PopupControl;
@@ -68,6 +72,21 @@ public class Deprecation {
     private Deprecation() {
         assert false;
     }
+
+    public static final String CASPIAN_STYLESHEET = "com/sun/javafx/scene/control/skin/caspian/caspian.bss"; //NOI18N
+    public static final String CASPIAN_HIGHCONTRAST_STYLESHEET = "com/oracle/javafx/scenebuilder/kit/util/css/caspian/caspian-highContrast.css"; //NOI18N
+    public static final String CASPIAN_EMBEDDED_STYLESHEET = "com/oracle/javafx/scenebuilder/kit/util/css/caspian/caspian-embedded.css"; //NOI18N
+    public static final String CASPIAN_EMBEDDED_HIGHCONTRAST_STYLESHEET = "com/oracle/javafx/scenebuilder/kit/util/css/caspian/caspian-embedded-highContrast.css"; //NOI18N
+    public static final String CASPIAN_EMBEDDED_QVGA_STYLESHEET = "com/oracle/javafx/scenebuilder/kit/util/css/caspian/caspian-embedded-qvga.css"; //NOI18N
+    public static final String CASPIAN_EMBEDDED_QVGA_HIGHCONTRAST_STYLESHEET = "com/oracle/javafx/scenebuilder/kit/util/css/caspian/caspian-embedded-qvga-highContrast.css"; //NOI18N
+    public static final String MODENA_STYLESHEET = "com/sun/javafx/scene/control/skin/modena/modena.bss"; //NOI18N
+    public static final String MODENA_TOUCH_STYLESHEET = "com/oracle/javafx/scenebuilder/kit/util/css/modena/modena-touch.css"; //NOI18N
+    public static final String MODENA_HIGHCONTRAST_BLACKONWHITE_STYLESHEET = "com/oracle/javafx/scenebuilder/kit/util/css/modena/modena-highContrast-blackOnWhite.css"; //NOI18N
+    public static final String MODENA_HIGHCONTRAST_WHITEONBLACK_STYLESHEET = "com/oracle/javafx/scenebuilder/kit/util/css/modena/modena-highContrast-whiteOnBlack.css"; //NOI18N
+    public static final String MODENA_HIGHCONTRAST_YELLOWONBLACK_STYLESHEET = "com/oracle/javafx/scenebuilder/kit/util/css/modena/modena-highContrast-yellowOnBlack.css"; //NOI18N
+    public static final String MODENA_TOUCH_HIGHCONTRAST_BLACKONWHITE_STYLESHEET = "com/oracle/javafx/scenebuilder/kit/util/css/modena/modena-touch-highContrast-blackOnWhite.css"; //NOI18N
+    public static final String MODENA_TOUCH_HIGHCONTRAST_WHITEONBLACK_STYLESHEET = "com/oracle/javafx/scenebuilder/kit/util/css/modena/modena-touch-highContrast-whiteOnBlack.css"; //NOI18N
+    public static final String MODENA_TOUCH_HIGHCONTRAST_YELLOWONBLACK_STYLESHEET = "com/oracle/javafx/scenebuilder/kit/util/css/modena/modena-touch-highContrast-yellowOnBlack.css"; //NOI18N
 
     // Deprecated stuff in Node
 //    // RT-21247 : Promote impl_getAllParentStylesheets to public API
@@ -86,15 +105,33 @@ public class Deprecation {
     }
 
 //    // RT-21096 : Promote impl_getStyleMap / impl_setStyleMap to public API
-    public static ObservableMap<StyleableProperty<?>, List<Style>> getStyleMap(Node node) {
-        return node.impl_getStyleMap();
+    public static Map<StyleableProperty<?>, List<Style>> getStyleMap(Node node) {
+        return node.impl_findStyles(null);
     }
 
-    // Used to woraround RT-34863
-    public static void reapplyCSS(Scene scene) {
-        assert scene != null;
-        StyleManager.getInstance().forget(scene);
-        scene.getRoot().impl_reapplyCSS();
+    public static void reapplyCSS(Parent parent, String stylesheetPath) {
+        assert parent != null;
+        
+        final List<String> stylesheets = parent.getStylesheets();
+        for (String s : new LinkedList<>(stylesheets)) {
+            if (s.endsWith(stylesheetPath)) {
+                final int index = stylesheets.indexOf(s);
+                assert index != -1;
+                stylesheets.remove(index);
+                stylesheets.add(index, s);
+                break;
+            }
+        }
+        
+        for (Node child : parent.getChildrenUnmodifiable()) {
+            if (child instanceof Parent) {
+                final Parent childParent = (Parent) child;
+                reapplyCSS(childParent, stylesheetPath);
+            } else if (child instanceof SubScene) {
+                final SubScene childSubScene = (SubScene) child;
+                reapplyCSS(childSubScene.getRoot(), stylesheetPath);
+            }
+        }
     }
 
     // Retrieve the node of the Styleable.
@@ -154,7 +191,7 @@ public class Deprecation {
 
     // RT-20184 : FX should provide a Parent.pick() routine
     public static Node pick(Node node, double sceneX, double sceneY) {
-        final Point2D p = node.sceneToLocal(sceneX, sceneY);
+        final Point2D p = node.sceneToLocal(sceneX, sceneY, true /* rootScene */);
         final PickRay pickRay = new PickRay(p.getX(), p.getY(), 1.0, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY);
         final PickResultChooser prc = new PickResultChooser();
         node.impl_pickNode(pickRay, prc);
@@ -201,76 +238,8 @@ public class Deprecation {
         tableColumn.impl_setReorderable(reordable);
     }
 
-    // RT-21247 : Promote impl_getAllParentStylesheets to public API
-    public static Group makeStylingIsolationGroupA() {
-        final Group result = new Group() {
-            @Override
-            public List<String> impl_getAllParentStylesheets() { return null; }
-        };
-
-        return result;
-    }
-
-    public static Group makeStylingIsolationGroupB() {
-        final Group result = new Group() {
-            @Override
-            public Styleable getStyleableParent() { return null; }
-        };
-
-        result.getStyleClass().add("root"); //NOI18N
-        result.getStylesheets().add(getModenaStylesheetURL().toString());
-
-        return result;
-    }
-
-    public static URL getCaspianStylesheetURL() {
-        final String resourceName = "com/sun/javafx/scene/control/skin/caspian/caspian.bss"; //NOI18N
-        return ClassLoader.getSystemResource(resourceName);
-    }
-
-    public static URL getCaspianHighContrastStylesheetURL() {
-        final String resourceName = "com/sun/javafx/scene/control/skin/caspian/highcontrast.bss"; //NOI18N
-        return ClassLoader.getSystemResource(resourceName);
-    }
-
-    public static URL getCaspianEmbeddedStylesheetURL() {
-        final String resourceName = "com/sun/javafx/scene/control/skin/caspian/embedded.bss"; //NOI18N
-        return ClassLoader.getSystemResource(resourceName);
-    }
-
-    public static URL getCaspianEmbeddedQVGAStylesheetURL() {
-        final String resourceName = "com/sun/javafx/scene/control/skin/caspian/embedded-qvga.bss"; //NOI18N
-        return ClassLoader.getSystemResource(resourceName);
-    }
-
-    public static URL getModenaStylesheetURL() {
-        final String resourceName = "com/sun/javafx/scene/control/skin/modena/modena.bss"; //NOI18N
-        return ClassLoader.getSystemResource(resourceName);
-    }
-
-    public static URL getModenaTouchStylesheetURL() {
-        final String resourceName = "com/sun/javafx/scene/control/skin/modena/touch.bss"; //NOI18N
-        return ClassLoader.getSystemResource(resourceName);
-    }
-
-    public static URL getModenaHighContrastBlackonwhiteStylesheetURL() {
-        final String resourceName = "com/sun/javafx/scene/control/skin/modena/blackOnWhite.css"; //NOI18N
-        return ClassLoader.getSystemResource(resourceName);
-    }
-
-    public static URL getModenaHighContrastWhiteonblackStylesheetURL() {
-        final String resourceName = "com/sun/javafx/scene/control/skin/modena/whiteOnBlack.css"; //NOI18N
-        return ClassLoader.getSystemResource(resourceName);
-    }
-
-    public static URL getModenaHighContrastYellowonblackStylesheetURL() {
-        final String resourceName = "com/sun/javafx/scene/control/skin/modena/yellowOnBlack.css"; //NOI18N
-        return ClassLoader.getSystemResource(resourceName);
-    }
-
     // Returns the corresponding text css (.css) from a binary css (.bss)
-    public static URL getThemeTextStylesheet(URL binaryStylesheetUrl) {
-        String binaryCssUrlStr = binaryStylesheetUrl.toExternalForm();
+    public static URL getThemeTextStylesheet(String binaryCssUrlStr) {
         String textCssUrlStr = binaryCssUrlStr.replaceAll(".bss", ".css"); //NOI18N
         try {
             return new URL(textCssUrlStr);
@@ -289,5 +258,15 @@ public class Deprecation {
     // using it would break ability to compile over JDK 8 GA, not an option for now.
     public static int getNodeLevel(TreeItem<?> item) {
         return TreeView.getNodeLevel(item);
+    } 
+    
+    public static Point2D localToLocal(Node source, double sourceX, double sourceY, Node target) {
+        final Point2D sceneXY = source.localToScene(sourceX, sourceY, true /* rootScene */);
+        return target.sceneToLocal(sceneXY, true /* rootScene */);
+    }
+    
+    public static Bounds localToLocal(Node source, Bounds sourceBounds, Node target) {
+        final Bounds sceneBounds = source.localToScene(sourceBounds, true /* rootScene */);
+        return target.sceneToLocal(sceneBounds, true /* rootScene */);
     }
 }

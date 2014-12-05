@@ -548,7 +548,7 @@ public abstract class ListExpressionHelper<E> extends ExpressionHelperBase {
             } else {
                 final ObservableList<E> oldValue = currentValue;
                 currentValue = observable.getValue();
-                if ((currentValue == null)? (oldValue != null) : !currentValue.equals(oldValue)) {
+                if (currentValue != oldValue) {
                     Change<E> change = null;
                     if (listChangeSize > 0) {
                         final int safeSize = (currentValue == null)? 0 : currentValue.size();

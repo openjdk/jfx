@@ -121,14 +121,12 @@ class GlassAppletWindow implements AppletWindow {
     }
 
     void dispose() {
-        ViewPainter.renderLock.lock();
-        try {
+        QuantumToolkit.runWithRenderLock(() -> {
             glassWindow.close();
             //TODO - should update glass scene view state
             //TODO - doesn't matter because we are disposing
-        } finally {
-            ViewPainter.renderLock.unlock();
-        }
+            return null;
+        });
     }
 
     @Override

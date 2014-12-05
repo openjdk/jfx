@@ -385,12 +385,10 @@ public class DatePickerTest {
      ********************************************************************/
 
     @Test public void test_rt30549() {
-        StringConverter<LocalDate> converter = datePicker.getConverter();
-
         // Set a MinguoDate from a String
         datePicker.setChronology(MinguoChronology.INSTANCE);
         datePicker.getEditor().setText("5/22/0102 1");
-        datePicker.setValue(converter.fromString(datePicker.getEditor().getText()));
+        datePicker.setValue(datePicker.getConverter().fromString(datePicker.getEditor().getText()));
         assertEquals(MinguoChronology.INSTANCE.date(MinguoEra.ROC, 102, 5, 22),
                      MinguoDate.from(datePicker.getValue()));
         assertEquals("5/22/0102 1", datePicker.getEditor().getText());
@@ -398,7 +396,7 @@ public class DatePickerTest {
         // Convert from MinguoDate to LocalDate (ISO)
         datePicker.setChronology(IsoChronology.INSTANCE);
         assertEquals(LocalDate.of(2013, 5, 22), datePicker.getValue());
-        datePicker.getEditor().setText(converter.toString(datePicker.getValue()));
+        datePicker.getEditor().setText(datePicker.getConverter().toString(datePicker.getValue()));
         assertEquals("5/22/2013", datePicker.getEditor().getText());
     }
 

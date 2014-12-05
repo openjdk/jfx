@@ -31,8 +31,10 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.Base64;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.jar.Attributes;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
@@ -98,6 +100,31 @@ public class PackagerLibTest {
 
         File testFile = new File(dest.getRoot(), "temp.jar");
         assertTrue(testFile.exists() && testFile.canRead());
+    }
+
+    // longer than 56 characters (see RT-26553)
+    final private static String LONG_ARG_VALUE = "VERYLONGSTRINGVERYLONGSTRINGVERYLONGSTRINGVERYLONGST" +
+                                                 "RINGVERYLONGSTRINGVERYLONGSTRINGVERYLONGSTRINGVERYLO" +
+                                                 "NGSTRINGVERYLONGSTRINGVERYLONGSTRINGVERYLONGSTRINGVE" +
+                                                 "RYLONGSTRINGVERYLONGSTRING";
+
+    @Test
+    public void testPackageAsJar_longArgValue() throws PackagerException, IOException {
+        CreateJarParams params = defaultParams();
+        params.manifestAttrs = new HashMap<>();
+        params.arguments = new ArrayList<String>();
+
+        // added to manifest as JavaFX-Argument-1
+        // note that this value will be base64 encoded
+        params.arguments.add(LONG_ARG_VALUE);
+        lib.packageAsJar(params);
+
+        File testFile = new File(dest.getRoot(), "temp.jar");
+        JarFile jar = new JarFile(testFile);
+        Manifest m = jar.getManifest();
+
+        String argValue = m.getMainAttributes().getValue("JavaFX-Argument-1");
+        assertEquals(LONG_ARG_VALUE, new String(Base64.getDecoder().decode(argValue)));
     }
 
     @Test

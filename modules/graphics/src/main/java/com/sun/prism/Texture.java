@@ -430,6 +430,13 @@ public interface Texture extends GraphicsResource {
      * @return the {@code WrapMode} for this texture
      */
     public WrapMode getWrapMode();
+    
+    /**
+     * Returns the true if mipmapping is used for this texture.
+     *
+     * @return the {@code useMipmap} flag for this texture
+     */
+    public boolean getUseMipmap();
 
     /**
      * Constructs an alternate version of this {@code Texture} with an

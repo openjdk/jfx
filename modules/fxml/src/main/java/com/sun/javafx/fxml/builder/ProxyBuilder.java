@@ -422,6 +422,10 @@ public class ProxyBuilder<T> extends AbstractMap<String, Object> implements Buil
             }
         }
 
+        if (Collection.class.isAssignableFrom(type)) {
+            return val;
+        }
+
         if (ArrayListWrapper.class.equals(val.getClass())) {
             // user given value is an ArrayList but the constructor doesn't
             // accept an ArrayList so the ArrayList comes from 

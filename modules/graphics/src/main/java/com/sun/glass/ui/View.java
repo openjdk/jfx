@@ -31,28 +31,30 @@ import java.lang.ref.WeakReference;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.Map;
-import com.sun.javafx.scene.accessibility.Accessible;
 
 public abstract class View {
 
     public final static int GESTURE_NO_VALUE = Integer.MAX_VALUE;
     public final static double GESTURE_NO_DOUBLE_VALUE = Double.NaN;
 
-    final static boolean accessible = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
-        boolean force = Boolean.getBoolean("javafx.accessible.force");
-        if (force) return true;
+    public final static byte IME_ATTR_INPUT                 = 0x00;
+    public final static byte IME_ATTR_TARGET_CONVERTED      = 0x01;
+    public final static byte IME_ATTR_CONVERTED             = 0x02;
+    public final static byte IME_ATTR_TARGET_NOTCONVERTED   = 0x03;
+    public final static byte IME_ATTR_INPUT_ERROR           = 0x04;
 
-        /* Only enable accessibility for Mac 10.9 and Windows 8 or greater.
-         * All other platforms must use the force flag.
-         */
+    final static boolean accessible = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
+        String force = System.getProperty("glass.accessible.force");
+        if (force != null) return Boolean.parseBoolean(force);
+
+        /* By default accessibility is enabled for Mac 10.9 or greater and Windows 7 or greater. */
         try {
             String platform = Platform.determinePlatform();
-            String version = System.getProperty("os.version").replaceFirst("(\\d+\\.\\d+).*", "$1");
-            float v = Float.parseFloat(version);
-            boolean allowedPlatform = (platform.equals(Platform.MAC) && v >= 10.9f) ||
-                                      (platform.equals(Platform.WINDOWS) && v >= 6.2f);
-
-            return allowedPlatform ? Boolean.getBoolean("javafx.accessible") : false;
+            String major = System.getProperty("os.version").replaceFirst("(\\d+)\\.\\d+.*", "$1");
+            String minor = System.getProperty("os.version").replaceFirst("\\d+\\.(\\d+).*", "$1");
+            int v = Integer.parseInt(major) * 100 + Integer.parseInt(minor);
+            return (platform.equals(Platform.MAC) && v >= 1009) ||
+                   (platform.equals(Platform.WINDOWS) && v >= 601);
         } catch (Exception e) {
             return false;
         }
@@ -1099,9 +1101,8 @@ public abstract class View {
         if (accessible) {
             Accessible acc = eventHandler.getSceneAccessible();
             if (acc != null) {
-                PlatformAccessible pAcc = acc.impl_getDelegate();
-                pAcc.setView(this);
-                return pAcc.getNativeAccessible();
+                acc.setView(this);
+                return acc.getNativeAccessible();
             }
         }
         return 0L;

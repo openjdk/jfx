@@ -30,11 +30,6 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* workaround for RT-37173 */
-.titled-pane > * > * > StackPane {
-    -fx-padding: 0;
-}
-
 /*******************************************************************************
  * Menu Bar - text                                                             *
  ******************************************************************************/
@@ -76,25 +71,6 @@
         -sb-sharp-edge-hi, 
         linear-gradient(to bottom, derive(white, -2%), derive(white, -10%) );
         -fx-background-insets: 0, 0 0 1 0, 1 0 1 0;
-}
-
-/*******************************************************************************
- * App SplitPane's                                                             *
- ******************************************************************************/
-
-.theme-presets .split-pane {
-    -fx-background-color: -sb-base-dark;
-    -fx-background-insets: 0;
-    -fx-padding: 0;
-}
-.theme-presets .split-pane > .split-pane-divider {
-    -fx-background-color: -sb-base-dark;
-    -fx-padding: 0 0.5 0 0;
-}
-.theme-presets .split-pane:horizontal .split-pane-divider .horizontal-grabber,
-.theme-presets .split-pane:vertical .split-pane-divider .vertical-grabber {
-    -fx-padding: 3;
-    -fx-shape: "";
 }
 
 /*******************************************************************************

@@ -199,6 +199,8 @@ typedef struct _Renderer {
     jint _paintMode;
     jint _prevPaintMode;
 
+    // Current (user set) color
+    jint _ured, _ugreen, _ublue, _ualpha;
     // Current (internal) color
     jint _cred, _cgreen, _cblue, _calpha;
 

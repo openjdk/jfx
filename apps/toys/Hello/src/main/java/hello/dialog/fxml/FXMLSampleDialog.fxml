@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.lang.*?>
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<DialogPane headerText="Hello from up here!" fx:id="dialogPane" fx:controller="hello.dialog.fxml.FXMLSampleDialog" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
+    <content>
+        <GridPane hgap="10.0" vgap="10.0" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/8">
+            <columnConstraints>
+                <ColumnConstraints halignment="RIGHT" hgrow="NEVER" minWidth="10.0" prefWidth="100.0" />
+                <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+            </columnConstraints>
+            <rowConstraints>
+                <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+            </rowConstraints>
+        <children>
+             <Label text="First Name:" textAlignment="RIGHT" />
+             <Label text="Last Name:" GridPane.rowIndex="1" />
+             <Label text="Email:" GridPane.rowIndex="2" />
+             <TextField fx:id="firstNameField" promptText="Type first name here" GridPane.columnIndex="1" />
+             <TextField fx:id="lastNameField" promptText="Type last name here" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+             <TextField fx:id="emailField" promptText="Type email address here" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+        </children>
+            <padding>
+                <Insets bottom="10.0" left="10.0" right="10.0" />
+            </padding>
+        </GridPane>
+    </content>
+    
+    <buttonTypes>
+        <ButtonType fx:constant="OK" />
+        <ButtonType fx:constant="CANCEL" />
+        <ButtonType text="Help Me!" fx:id="helpButtonType" />
+    </buttonTypes>
+</DialogPane>

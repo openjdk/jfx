@@ -44,8 +44,7 @@
     CGFloat                 parentWindowAlpha;
     
     GlassHostView           *fullscreenHost;
-    GlassBackgroundWindow   *backgroundWindow;
-    // not nil when the FX mode is initiated with the OS X 10.7 widget
+    // not nil when the FS mode is initiated with the OS X 10.7 widget
     NSWindow*               nativeFullScreenModeWindow;
     
     BOOL                    mouseIsDown;
@@ -59,6 +58,7 @@
     NSInteger               lastTrackingNumber;
     
 @public
+    // not nil when we create a new FS window ourselves
     GlassFullscreenWindow   *fullscreenWindow;
 }
 
@@ -90,7 +90,7 @@
 - (void)exitFullscreenWithAnimate:(BOOL)animate;
 - (void)sendJavaFullScreenEvent:(BOOL)entered withNativeWidget:(BOOL)isNative;
 
-- (void)notifyInputMethod:(id)aString attr:(int)attr length:(int)length cursor:(int)cursor;
+- (void)notifyInputMethod:(id)aString attr:(int)attr length:(int)length cursor:(int)cursor selectedRange:(NSRange)selectionRange;
 - (NSRect)getInputMethodCandidatePosRequest:(int)pos;
 
 - (void)setFrameOrigin:(NSPoint)newOrigin;

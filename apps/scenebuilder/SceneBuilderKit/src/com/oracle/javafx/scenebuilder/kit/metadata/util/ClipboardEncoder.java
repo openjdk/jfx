@@ -60,15 +60,7 @@ public class ClipboardEncoder {
     }
     
     public boolean isEncodable() {
-        final boolean result;
-        
-        if (fxomObjects.isEmpty()) {
-            result = false;
-        } else {
-            result = FXOMArchive.isArchivable(fxomObjects);
-        }
-        
-        return result;
+        return fxomObjects.isEmpty() == false;
     }
     
     public ClipboardContent makeEncoding() {

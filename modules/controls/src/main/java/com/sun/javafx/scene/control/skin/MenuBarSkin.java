@@ -25,29 +25,41 @@
 
 package com.sun.javafx.scene.control.skin;
 
+import com.sun.javafx.css.converters.EnumConverter;
+import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.traversal.ParentTraversalEngine;
 import javafx.beans.InvalidationListener;
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.WeakChangeListener;
+import javafx.beans.value.WritableValue;
 import javafx.collections.ListChangeListener;
 import javafx.collections.MapChangeListener;
 import javafx.collections.ObservableList;
+import javafx.css.CssMetaData;
+import javafx.css.Styleable;
+import javafx.css.StyleableDoubleProperty;
+import javafx.css.StyleableObjectProperty;
+import javafx.css.StyleableProperty;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.event.WeakEventHandler;
 import javafx.geometry.Bounds;
 import javafx.geometry.NodeOrientation;
+import javafx.geometry.Pos;
+import javafx.scene.AccessibleAttribute;
+import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 import javafx.scene.Scene;
-//import javafx.scene.accessibility.Attribute;
-//import javafx.scene.accessibility.Role;
 import javafx.scene.control.CustomMenuItem;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.SeparatorMenuItem;
+import javafx.scene.control.SkinBase;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
@@ -289,7 +301,7 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
         
         // When we click else where in the scene - menu selection should be cleared.
         mouseEventHandler = t -> {
-            if (!container.localToScene(container.getLayoutBounds()).contains(t.getX(), t.getY())) {
+            if (!container.localToScreen(container.getLayoutBounds()).contains(t.getScreenX(), t.getScreenY())) {
                 unSelectMenus();
             }
         };
@@ -351,14 +363,20 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
         ** pressing f10 will select the first menu button on a menubar
         */
         final KeyCombination acceleratorKeyCombo;
-        final String os = System.getProperty("os.name");
-        if (os != null && os.startsWith("Mac")) {
+        if (com.sun.javafx.Utils.isMac()) {
            acceleratorKeyCombo = KeyCombination.keyCombination("ctrl+F10");
         } else {
            acceleratorKeyCombo = KeyCombination.keyCombination("F10");
         }
         Utils.executeOnceWhenPropertyIsNonNull(control.sceneProperty(), (Scene scene) -> {
             scene.getAccelerators().put(acceleratorKeyCombo, firstMenuRunnable);
+
+            // put focus on the first menu when the alt key is pressed
+            scene.addEventHandler(KeyEvent.KEY_PRESSED, e -> {
+                if (e.isAltDown()  && !e.isConsumed()) {
+                    firstMenuRunnable.run();
+                }
+            });
         });
 
         ParentTraversalEngine engine = new ParentTraversalEngine(getSkinnable());
@@ -520,6 +538,9 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
             menuButton.textProperty().unbind();
             menuButton.graphicProperty().unbind();
             menuButton.styleProperty().unbind();
+
+            menuButton.dispose();
+
             // RT-29729 : old instance of context menu window/popup for this MenuButton needs 
             // to be cleaned up. Setting the skin to null - results in a call to dispose() 
             // on the skin which in this case MenuButtonSkinBase - does the subsequent 
@@ -607,34 +628,14 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
         getSkinnable().focusedProperty().addListener(menuBarFocusedPropertyListener);
         for (final Menu menu : getSkinnable().getMenus()) {
             if (!menu.isVisible()) continue;
-            final MenuBarButton menuButton = new MenuBarButton(this, menu.getText(), menu.getGraphic());
+            final MenuBarButton menuButton = new MenuBarButton(this, menu);
             menuButton.setFocusTraversable(false);
             menuButton.getStyleClass().add("menu");
             menuButton.setStyle(menu.getStyle()); // copy style
-            menuButton.setId(menu.getId());
 
             menuButton.getItems().setAll(menu.getItems());
             container.getChildren().add(menuButton);
-            // listen to changes in menu items & update menuButton items
-            menu.getItems().addListener((ListChangeListener<MenuItem>) c -> {
-                while (c.next()) {
-                    menuButton.getItems().removeAll(c.getRemoved());
-                    menuButton.getItems().addAll(c.getFrom(), c.getAddedSubList());
-                }
-            });
-            menu.getStyleClass().addListener((ListChangeListener<String>) c -> {
-                while(c.next()) {
-                    for(int i=c.getFrom(); i<c.getTo(); i++) {
-                        menuButton.getStyleClass().add(menu.getStyleClass().get(i));
-                    }
-                    for (String str : c.getRemoved()) {
-                        menuButton.getStyleClass().remove(str);
-                    }
-                }
-            });
-            menu.idProperty().addListener((observableValue, s, s2) -> {
-                menuButton.setId(s2);
-            });
+
             menuButton.menuListener = (observable, oldValue, newValue) -> {
                 if (menu.isShowing()) {
                     menuButton.show();
@@ -788,6 +789,81 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
                             showPrevMenu();
                         }
      */
+    private DoubleProperty spacing;
+    public final void setSpacing(double value) {
+        spacingProperty().set(snapSpace(value));
+    }
+
+    public final double getSpacing() {
+        return spacing == null ? 0.0 : snapSpace(spacing.get());
+    }
+
+    public final DoubleProperty spacingProperty() {
+        if (spacing == null) {
+            spacing = new StyleableDoubleProperty() {
+
+                @Override
+                protected void invalidated() {
+                    final double value = get();
+                    container.setSpacing(value);
+                }
+
+                @Override
+                public Object getBean() {
+                    return MenuBarSkin.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "spacing";
+                }
+
+                @Override
+                public CssMetaData<MenuBar,Number> getCssMetaData() {
+                    return SPACING;
+                }
+            };
+        }
+        return spacing;
+    }
+
+    private ObjectProperty<Pos> containerAlignment;
+    public final void setContainerAlignment(Pos value) {
+        containerAlignmentProperty().set(value);
+    }
+
+    public final Pos getContainerAlignment() {
+        return containerAlignment == null ? Pos.TOP_LEFT : containerAlignment.get();
+    }
+
+    public final ObjectProperty<Pos> containerAlignmentProperty() {
+        if (containerAlignment == null) {
+            containerAlignment = new StyleableObjectProperty<Pos>(Pos.TOP_LEFT) {
+
+                @Override
+                public void invalidated() {
+                    final Pos value = get();
+                    container.setAlignment(value);
+                }
+
+                @Override
+                public Object getBean() {
+                    return MenuBarSkin.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "containerAlignment";
+                }
+
+                @Override
+                public CssMetaData<MenuBar,Pos> getCssMetaData() {
+                    return ALIGNMENT;
+                }
+            };
+        }
+        return containerAlignment;
+    }
 
     @Override
     public void dispose() {
@@ -870,7 +946,7 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
             SceneHelper.getSceneAccessor().setTransientFocusContainer(getSkinnable().getScene(), null);
 
             /* Return the a11y focus to a control in the scene. */
-//            getSkinnable().accSendNotification(Attribute.FOCUS_NODE);
+            getSkinnable().notifyAccessibleAttributeChanged(AccessibleAttribute.FOCUS_NODE);
         }
         focusedMenuIndex = -1;
     }
@@ -971,9 +1047,32 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
         private MenuBarSkin menuBarSkin;
         private Menu menu;
 
-        public MenuBarButton(MenuBarSkin menuBarSkin, String text, Node graphic) {
-            super(text, graphic);
+        private final ListChangeListener<MenuItem> itemsListener;
+        private final ListChangeListener<String> styleClassListener;
+
+        public MenuBarButton(MenuBarSkin menuBarSkin, Menu menu) {
+            super(menu.getText(), menu.getGraphic());
             this.menuBarSkin = menuBarSkin;
+            setAccessibleRole(AccessibleRole.MENU);
+
+            // listen to changes in menu items & update menuButton items
+            menu.getItems().addListener(itemsListener = c -> {
+                while (c.next()) {
+                    getItems().removeAll(c.getRemoved());
+                    getItems().addAll(c.getFrom(), c.getAddedSubList());
+                }
+            });
+            menu.getStyleClass().addListener(styleClassListener = c -> {
+                while(c.next()) {
+                    for(int i=c.getFrom(); i<c.getTo(); i++) {
+                        getStyleClass().add(menu.getStyleClass().get(i));
+                    }
+                    for (String str : c.getRemoved()) {
+                        getStyleClass().remove(str);
+                    }
+                }
+            });
+            idProperty().bind(menu.idProperty());
         }
 
         public MenuBarSkin getMenuBarSkin() {
@@ -988,19 +1087,22 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
             setHover(true);
 
             /* Transfer the a11y focus to an item in the menu bar. */
-//            menuBarSkin.getSkinnable().accSendNotification(Attribute.FOCUS_NODE);
+            menuBarSkin.getSkinnable().notifyAccessibleAttributeChanged(AccessibleAttribute.FOCUS_NODE);
         }
 
-//        @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//            switch (attribute) {
-//                case ROLE: return Role.MENU_ITEM;
-//                case MENU_ITEM_TYPE: return Role.CONTEXT_MENU;
-//                case FOCUS_ITEM: return MenuBarButton.this;
-//                case TITLE: //fall through because the super class handles mnemonics right
-//                case MNEMONIC:
-//                default: return super.accGetAttribute(attribute, parameters);
-//            }
-//        }
+        void dispose() {
+            menu.getItems().removeListener(itemsListener);
+            menu.getStyleClass().removeListener(styleClassListener);
+            idProperty().unbind();
+        }
+
+        @Override
+        public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
+            switch (attribute) {
+                case FOCUS_ITEM: return MenuBarButton.this;
+                default: return super.queryAccessibleAttribute(attribute, parameters);
+            }
+        }
     }
 
     /***************************************************************************
@@ -1057,6 +1159,83 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
     }
 
 
+    /***************************************************************************
+     *                                                                         *
+     * CSS                                                                     *
+     *                                                                         *
+     **************************************************************************/
+
+    private static final CssMetaData<MenuBar,Number> SPACING =
+            new CssMetaData<MenuBar,Number>("-fx-spacing",
+                    SizeConverter.getInstance(), 0.0) {
+
+                @Override
+                public boolean isSettable(MenuBar n) {
+                    final MenuBarSkin skin = (MenuBarSkin) n.getSkin();
+                    return skin.spacing == null || !skin.spacing.isBound();
+                }
+
+                @Override
+                public StyleableProperty<Number> getStyleableProperty(MenuBar n) {
+                    final MenuBarSkin skin = (MenuBarSkin) n.getSkin();
+                    return (StyleableProperty<Number>)(WritableValue<Number>)skin.spacingProperty();
+                }
+            };
+
+    private static final CssMetaData<MenuBar,Pos> ALIGNMENT =
+            new CssMetaData<MenuBar,Pos>("-fx-alignment",
+                    new EnumConverter<Pos>(Pos.class), Pos.TOP_LEFT ) {
+
+                @Override
+                public boolean isSettable(MenuBar n) {
+                    final MenuBarSkin skin = (MenuBarSkin) n.getSkin();
+                    return skin.containerAlignment == null || !skin.containerAlignment.isBound();
+                }
+
+                @Override
+                public StyleableProperty<Pos> getStyleableProperty(MenuBar n) {
+                    final MenuBarSkin skin = (MenuBarSkin) n.getSkin();
+                    return (StyleableProperty<Pos>)(WritableValue<Pos>)skin.containerAlignmentProperty();
+                }
+            };
+
+
+    private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
+    static {
+
+        final List<CssMetaData<? extends Styleable, ?>> styleables =
+                new ArrayList<CssMetaData<? extends Styleable, ?>>(SkinBase.getClassCssMetaData());
+
+        // StackPane also has -fx-alignment. Replace it with 
+        // MenuBarSkin's. 
+        // TODO: Really should be able to reference StackPane.StyleableProperties.ALIGNMENT
+        final String alignmentProperty = ALIGNMENT.getProperty();
+        for (int n=0, nMax=styleables.size(); n<nMax; n++) {
+            final CssMetaData<?,?> prop = styleables.get(n);
+            if (alignmentProperty.equals(prop.getProperty())) styleables.remove(prop);
+        }
+
+        styleables.add(SPACING);
+        styleables.add(ALIGNMENT);
+        STYLEABLES = Collections.unmodifiableList(styleables);
+
+    }
+
+    /**
+     * @return The CssMetaData associated with this class, which may include the
+     * CssMetaData of its super classes.
+     */
+    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
+        return STYLEABLES;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
+        return getClassCssMetaData();
+    }
 
     /***************************************************************************
      *                                                                         *
@@ -1064,11 +1243,11 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
      *                                                                         *
      **************************************************************************/
 
-//    /** @treatAsPrivate */
-//    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//        switch (attribute) {
-//            case FOCUS_NODE: return openMenuButton;
-//            default: return super.accGetAttribute(attribute, parameters);
-//        }
-//    }
+    @Override
+    protected Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
+        switch (attribute) {
+            case FOCUS_NODE: return openMenuButton;
+            default: return super.queryAccessibleAttribute(attribute, parameters);
+        }
+    }
 }

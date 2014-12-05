@@ -73,6 +73,7 @@ import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.control.CheckMenuItem;
+import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
@@ -276,6 +277,12 @@ public class MenuBarController {
     @FXML
     private MenuItem wrapInAnchorPaneMenuItem;
     @FXML
+    private MenuItem wrapInBorderPaneMenuItem;
+    @FXML
+    private MenuItem wrapInButtonBarMenuItem;
+    @FXML
+    private MenuItem wrapInDialogPaneMenuItem;
+    @FXML
     private MenuItem wrapInFlowPaneMenuItem;
     @FXML
     private MenuItem wrapInGridPaneMenuItem;
@@ -292,6 +299,8 @@ public class MenuBarController {
     @FXML
     private MenuItem wrapInTabPaneMenuItem;
     @FXML
+    private MenuItem wrapInTextFlowMenuItem;
+    @FXML
     private MenuItem wrapInTilePaneMenuItem;
     @FXML
     private MenuItem wrapInTitledPaneMenuItem;
@@ -306,7 +315,9 @@ public class MenuBarController {
 
     // Preview
     @FXML
-    private MenuItem showPreviewMenuItem;
+    private MenuItem showPreviewInWindowMenuItem;
+    @FXML
+    private MenuItem showPreviewInDialogMenuItem;
     @FXML
     private RadioMenuItem modenaThemeMenuItem;
     @FXML
@@ -518,6 +529,9 @@ public class MenuBarController {
         assert bringForwardMenuItem != null;
         assert sendBackwardMenuItem != null;
         assert wrapInAnchorPaneMenuItem != null;
+        assert wrapInBorderPaneMenuItem != null;
+        assert wrapInButtonBarMenuItem != null;
+        assert wrapInDialogPaneMenuItem != null;
         assert wrapInFlowPaneMenuItem != null;
         assert wrapInGridPaneMenuItem != null;
         assert wrapInHBoxMenuItem != null;
@@ -526,6 +540,7 @@ public class MenuBarController {
         assert wrapInSplitPaneMenuItem != null;
         assert wrapInStackPaneMenuItem != null;
         assert wrapInTabPaneMenuItem != null;
+        assert wrapInTextFlowMenuItem != null;
         assert wrapInTilePaneMenuItem != null;
         assert wrapInTitledPaneMenuItem != null;
         assert wrapInToolBarMenuItem != null;
@@ -533,7 +548,8 @@ public class MenuBarController {
         assert wrapInGroupMenuItem != null;
         assert unwrapMenuItem != null;
 
-        assert showPreviewMenuItem != null;
+        assert showPreviewInWindowMenuItem != null;
+        assert showPreviewInDialogMenuItem != null;
         assert modenaThemeMenuItem != null;
         assert modenaTouchThemeMenuItem != null;
         assert modenaHighContrastBlackonwhiteThemeMenuItem != null;
@@ -903,6 +919,9 @@ public class MenuBarController {
         sendBackwardMenuItem.setAccelerator(
                 new KeyCharacterCombination("[", modifier)); //NOI18N
         wrapInAnchorPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_ANCHOR_PANE));
+        wrapInBorderPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_BORDER_PANE));
+        wrapInButtonBarMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_BUTTON_BAR));
+        wrapInDialogPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_DIALOG_PANE));
         wrapInFlowPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_FLOW_PANE));
         wrapInGroupMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_GROUP));
         wrapInGridPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_GRID_PANE));
@@ -912,6 +931,7 @@ public class MenuBarController {
         wrapInSplitPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_SPLIT_PANE));
         wrapInStackPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_STACK_PANE));
         wrapInTabPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_TAB_PANE));
+        wrapInTextFlowMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_TEXT_FLOW));
         wrapInTilePaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_TILE_PANE));
         wrapInTitledPaneMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_TITLED_PANE));
         wrapInToolBarMenuItem.setUserData(new EditActionController(EditAction.WRAP_IN_TOOL_BAR));
@@ -924,8 +944,9 @@ public class MenuBarController {
         /*
          * Preview menu
          */
-        showPreviewMenuItem.setUserData(new DocumentControlActionController(DocumentControlAction.SHOW_PREVIEW_WINDOW));
-        showPreviewMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.P, modifier));
+        showPreviewInWindowMenuItem.setUserData(new DocumentControlActionController(DocumentControlAction.SHOW_PREVIEW_WINDOW));
+        showPreviewInWindowMenuItem.setAccelerator(new KeyCodeCombination(KeyCode.P, modifier));
+        showPreviewInDialogMenuItem.setUserData(new DocumentControlActionController(DocumentControlAction.SHOW_PREVIEW_DIALOG));
         caspianHighContrastThemeMenuItem.setUserData(new SetThemeActionController(EditorPlatform.Theme.CASPIAN_HIGH_CONTRAST));
         caspianThemeMenuItem.setUserData(new SetThemeActionController(EditorPlatform.Theme.CASPIAN));
         caspianEmbeddedThemeMenuItem.setUserData(new SetThemeActionController(EditorPlatform.Theme.CASPIAN_EMBEDDED));
@@ -1096,9 +1117,24 @@ public class MenuBarController {
     /*
      * Private (zoom menu)
      */
+    
+    final static double[] scalingTable = {0.25, 0.50, 0.75, 1.00, 1.50, 2.0, 4.0};
+    
     private void updateZoomMenu() {
         final double[] scalingTable = {0.25, 0.50, 0.75, 1.00, 1.50, 2.0, 4.0};
 
+        final MenuItem zoomInMenuItem = new MenuItem(I18N.getString("menu.title.zoom.in"));
+        zoomInMenuItem.setUserData(new ZoomInActionController());
+        zoomInMenuItem.setAccelerator(new KeyCharacterCombination("+", modifier)); //NOI18N
+        zoomMenu.getItems().add(zoomInMenuItem);
+        
+        final MenuItem zoomOutMenuItem = new MenuItem(I18N.getString("menu.title.zoom.out"));
+        zoomOutMenuItem.setUserData(new ZoomOutActionController());
+        zoomOutMenuItem.setAccelerator(new KeyCharacterCombination("/", modifier));  //NOI18N
+        zoomMenu.getItems().add(zoomOutMenuItem);
+        
+        zoomMenu.getItems().add(new SeparatorMenuItem());
+        
         for (int i = 0; i < scalingTable.length; i++) {
             final double scaling = scalingTable[i];
             final String title = String.format("%.0f%%", scaling * 100); //NOI18N
@@ -1108,6 +1144,20 @@ public class MenuBarController {
         }
     }
 
+    
+    private static int findZoomScaleIndex(double zoomScale) {
+        int result = -1;
+        
+        for (int i = 0; i < scalingTable.length; i++) {
+            if (MathUtils.equals(zoomScale, scalingTable[i])) {
+                result = i;
+                break;
+            }
+        }
+        
+        return result;
+    }
+    
     private void updateOpenRecentMenuItems() {
 
         final List<MenuItem> menuItems = new ArrayList<>();
@@ -1162,6 +1212,7 @@ public class MenuBarController {
                         final File file = new File(recentItem);
                         SceneBuilderApp.getSingleton().performOpenRecent(documentWindowController, file);
                     });
+                    mi.setMnemonicParsing(false);
                     menuItems.add(mi);
                 }
             }
@@ -1273,7 +1324,10 @@ public class MenuBarController {
                 sectionItems = new TreeSet<>(new LibraryItemNameComparator());
                 sectionMap.put(li.getSection(), sectionItems);
             }
-            sectionItems.add(li);
+            // Add all builtin Library items except the ContextMenu (see DTL-6831)
+            if (!ContextMenu.class.getSimpleName().equals(li.getName())) {
+                sectionItems.add(li);
+            }
         }
 
         for (Map.Entry<String, Set<LibraryItem>> e : sectionMap.entrySet()) {
@@ -1686,6 +1740,67 @@ public class MenuBarController {
 
     }
     
+    class ZoomInActionController extends MenuItemController {
+
+        @Override
+        public boolean canPerform() {
+            boolean result;
+            if (documentWindowController == null) {
+                result = false;
+            } else {
+                final ContentPanelController contentPanelController
+                        = documentWindowController.getContentPanelController();
+                final int currentScalingIndex
+                        = findZoomScaleIndex(contentPanelController.getScaling());
+                result = currentScalingIndex+1 < scalingTable.length;
+            }
+            return result;
+        }
+
+        @Override
+        public void perform() {
+            final ContentPanelController contentPanelController
+                    = documentWindowController.getContentPanelController();
+            final int currentScalingIndex
+                    = findZoomScaleIndex(contentPanelController.getScaling());
+            final double newScaling
+                    = scalingTable[currentScalingIndex+1];
+            contentPanelController.setScaling(newScaling);
+        }
+
+    }
+    
+
+    class ZoomOutActionController extends MenuItemController {
+
+        @Override
+        public boolean canPerform() {
+            boolean result;
+            if (documentWindowController == null) {
+                result = false;
+            } else {
+                final ContentPanelController contentPanelController
+                        = documentWindowController.getContentPanelController();
+                final int currentScalingIndex
+                        = findZoomScaleIndex(contentPanelController.getScaling());
+                result = 0 <= currentScalingIndex-1;
+            }
+            return result;
+        }
+
+        @Override
+        public void perform() {
+            final ContentPanelController contentPanelController
+                    = documentWindowController.getContentPanelController();
+            final int currentScalingIndex
+                    = findZoomScaleIndex(contentPanelController.getScaling());
+            final double newScaling
+                    = scalingTable[currentScalingIndex-1];
+            contentPanelController.setScaling(newScaling);
+        }
+
+    }
+    
     private void updatePreviewWindowSize(Size size) {
         if (documentWindowController != null
                 && documentWindowController.getPreviewWindowController() != null
@@ -1774,28 +1889,30 @@ public class MenuBarController {
         @Override
         public boolean canPerform() {
             boolean res = documentWindowController != null;
-            final EditorPlatform.Theme currentTheme
-                    = documentWindowController.getEditorController().getTheme();
-            // CASPIAN_HIGH_CONTRAST can be selected only if another CASPIAN
-            // theme is active.
-            // MODENA_HIGH_CONTRAST_<*> can be selected only if another MODENA
-            // theme is active.
-            if (theme == EditorPlatform.Theme.CASPIAN_HIGH_CONTRAST
-                    && EditorPlatform.isModena(currentTheme)) {
-                res = false;
-                caspianHighContrastThemeMenuItem.setSelected(false);
-            } else if (theme == EditorPlatform.Theme.MODENA_HIGH_CONTRAST_BLACK_ON_WHITE
-                    && EditorPlatform.isCaspian(currentTheme)) {
-                res = false;
-                modenaHighContrastBlackonwhiteThemeMenuItem.setSelected(false);
-            } else if (theme == EditorPlatform.Theme.MODENA_HIGH_CONTRAST_WHITE_ON_BLACK
-                    && EditorPlatform.isCaspian(currentTheme)) {
-                res = false;
-                modenaHighContrastWhiteonblackThemeMenuItem.setSelected(false);
-            } else if (theme == EditorPlatform.Theme.MODENA_HIGH_CONTRAST_YELLOW_ON_BLACK
-                    && EditorPlatform.isCaspian(currentTheme)) {
-                res = false;
-                modenaHighContrastYellowonblackThemeMenuItem.setSelected(false);
+            if (res) {
+                final EditorPlatform.Theme currentTheme
+                        = documentWindowController.getEditorController().getTheme();
+                // CASPIAN_HIGH_CONTRAST can be selected only if another CASPIAN
+                // theme is active.
+                // MODENA_HIGH_CONTRAST_<*> can be selected only if another MODENA
+                // theme is active.
+                if (theme == EditorPlatform.Theme.CASPIAN_HIGH_CONTRAST
+                        && EditorPlatform.isModena(currentTheme)) {
+                    res = false;
+                    caspianHighContrastThemeMenuItem.setSelected(false);
+                } else if (theme == EditorPlatform.Theme.MODENA_HIGH_CONTRAST_BLACK_ON_WHITE
+                        && EditorPlatform.isCaspian(currentTheme)) {
+                    res = false;
+                    modenaHighContrastBlackonwhiteThemeMenuItem.setSelected(false);
+                } else if (theme == EditorPlatform.Theme.MODENA_HIGH_CONTRAST_WHITE_ON_BLACK
+                        && EditorPlatform.isCaspian(currentTheme)) {
+                    res = false;
+                    modenaHighContrastWhiteonblackThemeMenuItem.setSelected(false);
+                } else if (theme == EditorPlatform.Theme.MODENA_HIGH_CONTRAST_YELLOW_ON_BLACK
+                        && EditorPlatform.isCaspian(currentTheme)) {
+                    res = false;
+                    modenaHighContrastYellowonblackThemeMenuItem.setSelected(false);
+                }
             }
             
             return res;
@@ -2142,8 +2259,7 @@ public class MenuBarController {
         @Override
         public void handle(ActionEvent t) {
             final PreferencesController pc = PreferencesController.getSingleton();
-            final PreferencesRecordGlobal recordGlobal = pc.getRecordGlobal();
-            recordGlobal.clearRecentItems();
+            pc.clearRecentItems();
         }
     }
 }

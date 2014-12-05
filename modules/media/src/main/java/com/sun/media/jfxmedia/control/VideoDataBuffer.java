@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,7 +27,7 @@ package com.sun.media.jfxmedia.control;
 import java.nio.ByteBuffer;
 
 /**
- * A (@code VideoDataBuffer} describes a single uncompressed frame of video.
+ * A {@code VideoDataBuffer} describes a single frame of video.
  */
 public interface VideoDataBuffer {
     /** Plane index used by all packed formats */
@@ -43,11 +43,15 @@ public interface VideoDataBuffer {
     public static final int YCBCR_PLANE_ALPHA = 3;
 
     /**
-     * Retrieve the data buffer containing video data
-     *
-     * @return The media buffer's data.
+     * Retrieve the data buffer for the specified plane. For chunky formats,
+     * pass {@link PACKED_FORMAT_PLANE} as the plane index. If an invalid plane
+     * index is passed this method returns null.
+     * 
+     * @param plane The numeric index of the plane
+     * @return the {@code ByteBuffer} containing video data for the specified
+     * plane or null for non-existent or invalid planes
      */
-    public ByteBuffer getBuffer();
+    public ByteBuffer getBufferForPlane(int plane);
 
     /**
      * Retrieve the timestamp of the buffer.
@@ -55,15 +59,6 @@ public interface VideoDataBuffer {
      * @return The buffer's timestamp.
      */
     public double getTimestamp();
-
-    /**
-     * Retrieves the frame number of this video frame.
-     *
-     * FIXME: Nuke this, it's completely unused and not useful anyways
-     *
-     * @return The frame's number
-     */
-    public long getFrameNumber();
 
     /**
      * Gets the width of the VideoDataBuffer
@@ -92,7 +87,7 @@ public interface VideoDataBuffer {
     public int getEncodedHeight();
 
     /**
-     * Gets the format of the videoDataBuffer
+     * @return the format of the videoDataBuffer
      */
     public VideoFormat getFormat();
 
@@ -106,21 +101,10 @@ public interface VideoDataBuffer {
     public boolean hasAlpha();
 
     /**
-     * Gets the number of bit planes this video image contains. Non planar formats
-     * will always return 1.
+     * @return the number of planes this video buffer contains, or 1 for
+     * non-planar formats
      */
     public int getPlaneCount();
-
-    /**
-     * Returns the byte offset to the specified bit plane.
-     *
-     * @param planeIndex The numeric index of the plane.
-     * @return Number of bytes from the beginning of data that the specified
-     * plane starts at. Will return zero if the plane is not in use.
-     */
-    public int getOffsetForPlane(int planeIndex);
-
-    public int[] getPlaneOffsets();
 
     /**
      * Returns the number of bytes in each row of pixels for the specified plane.
@@ -131,6 +115,10 @@ public interface VideoDataBuffer {
      */
     public int getStrideForPlane(int planeIndex);
 
+    /**
+     * @see getStrideForPlane
+     * @return an array containing the plane strides for all planes
+     */
     public int[] getPlaneStrides();
 
     /**
@@ -139,6 +127,7 @@ public interface VideoDataBuffer {
      * supported here. Once a conversion is done, a reference to the converted
      * buffer is retained so that future conversions do not need to be performed.
      *
+     * @param newFormat the video format to convert to
      * @return new buffer containing a converted copy of the source video image
      */
     public VideoDataBuffer convertToFormat(VideoFormat newFormat);

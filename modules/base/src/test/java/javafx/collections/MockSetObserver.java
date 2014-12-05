@@ -50,6 +50,10 @@ public class MockSetObserver<E> implements SetChangeListener<E> {
         calls.clear();
     }
 
+    public void check0() {
+        assertEquals(0, calls.size());
+    }
+
     public void assertAdded(Tuple<E> tuple) {
         assertAdded(0, tuple);
     }

@@ -94,7 +94,7 @@ public class NGExternalNode extends NGNode {
                     bufferLock.unlock();
                 }
                 if (rd.clearTarget) {
-                    g.clear();
+                    g.clearQuad(0, 0, rd.bdata.usrwidth, rd.bdata.usrheight);
                 }
             }
             

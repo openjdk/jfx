@@ -6,11 +6,16 @@ BUILD_DIR = $(OUTPUT_DIR)/$(BUILD_TYPE)
 TARGET_DIRS = $(BUILD_DIR)
 
 SRCBASE_DIR = ../../../plugins
-OBJBASE_DIR = $(BUILD_DIR)/obj/plugins/avplugin
 
 DIRLIST = av
 
+ifneq ($(strip $(VERSION)),)
+TARGET = $(BUILD_DIR)/lib$(BASE_NAME)-$(VERSION).so
+OBJBASE_DIR = $(BUILD_DIR)/obj/plugins/avplugin-$(VERSION)
+else
 TARGET = $(BUILD_DIR)/lib$(BASE_NAME).so
+OBJBASE_DIR = $(BUILD_DIR)/obj/plugins/avplugin
+endif
 
 CFLAGS = -fPIC                   \
          -Werror=implicit-function-declaration \

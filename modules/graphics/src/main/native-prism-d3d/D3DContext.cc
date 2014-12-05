@@ -1055,14 +1055,9 @@ D3DContext::SetProjViewMatrix(BOOL depthTest,
         pd3dDevice->SetRenderState(D3DRS_ZENABLE, D3DZB_TRUE);
         pd3dDevice->SetRenderState(D3DRS_ZWRITEENABLE, D3DZB_TRUE);
         pd3dDevice->SetRenderState(D3DRS_ZFUNC, D3DCMP_LESSEQUAL);
-
-        pd3dDevice->SetRenderState(D3DRS_ALPHATESTENABLE, TRUE);
-        pd3dDevice->SetRenderState(D3DRS_ALPHAREF, 0x0);
-        pd3dDevice->SetRenderState(D3DRS_ALPHAFUNC, D3DCMP_GREATER);
     } else {
         pd3dDevice->SetRenderState(D3DRS_ZENABLE, D3DZB_FALSE);
         pd3dDevice->SetRenderState(D3DRS_ZWRITEENABLE, D3DZB_FALSE);
-        pd3dDevice->SetRenderState( D3DRS_ALPHATESTENABLE, FALSE);
     }
 
     return D3D_OK;

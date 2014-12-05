@@ -28,12 +28,15 @@ package javafx.scene.chart;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+
 import javafx.animation.Animation;
 import javafx.animation.FadeTransition;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
+import javafx.application.Platform;
+import javafx.beans.binding.StringBinding;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
@@ -44,12 +47,14 @@ import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.property.StringPropertyBase;
+import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Side;
+import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 import javafx.scene.layout.Region;
 import javafx.scene.shape.Arc;
@@ -62,14 +67,19 @@ import javafx.scene.shape.Path;
 import javafx.scene.text.Text;
 import javafx.scene.transform.Scale;
 import javafx.util.Duration;
+
 import com.sun.javafx.charts.Legend;
 import com.sun.javafx.charts.Legend.LegendItem;
 import com.sun.javafx.collections.NonIterableChange;
+
 import javafx.css.StyleableBooleanProperty;
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.CssMetaData;
+
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.SizeConverter;
+import java.util.BitSet;
+
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 
@@ -88,7 +98,7 @@ public class PieChart extends Chart {
     private static final int MIN_PIE_RADIUS = 25;
     private static final double LABEL_TICK_GAP = 6;
     private static final double LABEL_BALL_RADIUS = 2;
-    private static int uniqueId = 0;
+    private BitSet colorBits = new BitSet(8); 
     private double centerX;
     private double centerY;
     private double pieRadius;
@@ -98,12 +108,13 @@ public class PieChart extends Chart {
     private Data dataItemBeingRemoved = null;
     private Timeline dataRemoveTimeline = null;
     private final ListChangeListener<Data> dataChangeListener = c -> {
-        while(c.next()) {
+        while (c.next()) {
             // RT-28090 Probably a sort happened, just reorder the pointers.
             if (c.wasPermutated()) {
                 Data ptr = begin;
-                for(int i = 0; i < getData().size(); i++) {
+                for (int i = 0; i < getData().size(); i++) {
                     Data item = getData().get(i);
+                    updateDataItemStyleClass(item, i);
                     if (i == 0) {
                         begin = item;
                         ptr = begin;
@@ -114,41 +125,58 @@ public class PieChart extends Chart {
                         ptr = item;
                     }
                 }
+                // update legend style classes
+                if (isLegendVisible()) {
+                    updateLegend();
+                }
                 requestChartLayout();
                 return;
             }
-        // recreate linked list & set chart on new data
-        for(int i=c.getFrom(); i<c.getTo(); i++) {
-            getData().get(i).setChart(PieChart.this);
-            if (begin == null) {
-                begin = getData().get(i);
-                begin.next = null;
-            } else {
-                if (i == 0) {
-                    getData().get(0).next = begin;
-                    begin = getData().get(0);
+            // recreate linked list & set chart on new data
+            for (int i = c.getFrom(); i < c.getTo(); i++) {
+                Data item = getData().get(i);
+                item.setChart(PieChart.this);
+                if (begin == null) {
+                    begin = item;
+                    begin.next = null;
                 } else {
-                    Data ptr = begin;
-                    for (int j = 0; j < i -1 ; j++) {
-                        ptr = ptr.next;
+                    if (i == 0) {
+                        item.next = begin;
+                        begin = item;
+                    } else {
+                        Data ptr = begin;
+                        for (int j = 0; j < i -1 ; j++) {
+                            ptr = ptr.next;
+                        }
+                        item.next = ptr.next;
+                        ptr.next = item;
                     }
-                    getData().get(i).next = ptr.next;
-                    ptr.next = getData().get(i);
+                }
+            }
+            // call data added/removed methods
+            for (Data item : c.getRemoved()) {
+                dataItemRemoved(item);
+            }
+            for (int i = c.getFrom(); i < c.getTo(); i++) {
+                Data item = getData().get(i);
+                // assign default color to the added slice
+                // TODO: check nearby colors
+                item.defaultColorIndex = colorBits.nextClearBit(0);
+                colorBits.set(item.defaultColorIndex);
+                dataItemAdded(item, i);
+            }
+            if (c.wasRemoved() || c.wasAdded()) {
+                for (int i = 0; i < getData().size(); i++) {
+                    Data item = getData().get(i);
+                    updateDataItemStyleClass(item, i);
+                }
+                // update legend if any data has changed
+                if (isLegendVisible()) {
+                    updateLegend();
                 }
             }
         }
-        // call data added/removed methods
-        for (Data item : c.getRemoved()) {
-            dataItemRemoved(item);
-        }
-        for(int i=c.getFrom(); i<c.getTo(); i++) {
-            Data item = getData().get(i);
-            dataItemAdded(item, i);
-        }
-        // update legend if any data has changed
-        if (isLegendVisible() && (c.getRemoved().size() > 0 || c.getFrom() < c.getTo())) updateLegend();
         // re-layout everything
-        }
         requestChartLayout();
     };
 
@@ -333,10 +361,6 @@ public class PieChart extends Chart {
 
     // -------------- METHODS --------------------------------------------------
 
-    private int getUniqueId() {
-        return uniqueId++;
-    }
-    
     private void dataNameChanged(Data item) {
         item.textNode.setText(item.getName());
         requestChartLayout();
@@ -357,18 +381,13 @@ public class PieChart extends Chart {
         }
     }
 
-    private Node createArcRegion(Data item, int index) {
+    private Node createArcRegion(Data item) {
         Node arcRegion = item.getNode();
         // check if symbol has already been created
         if (arcRegion == null) {
             arcRegion = new Region();
             arcRegion.setPickOnBounds(false);
             item.setNode(arcRegion);
-        }
-        // Note: not sure if we want to add or check, ie be more careful and efficient here
-        arcRegion.getStyleClass().setAll("chart-pie", "data" + getUniqueId(), "default-color"+(index % 8));
-        if (item.getPieValue() < 0) {
-            arcRegion.getStyleClass().add("negative");
         }
         return arcRegion;
     }
@@ -379,10 +398,21 @@ public class PieChart extends Chart {
         return text;
     }
 
+    private void updateDataItemStyleClass(final Data item, int index) {
+        Node node = item.getNode();
+        if (node != null) {
+            // Note: not sure if we want to add or check, ie be more careful and efficient here
+            node.getStyleClass().setAll("chart-pie", "data" + index,
+                    "default-color" + item.defaultColorIndex % 8);
+            if (item.getPieValue() < 0) {
+                node.getStyleClass().add("negative");
+            }
+        }                
+    }
+
     private void dataItemAdded(final Data item, int index) {
-        // set default color styleClass
         // create shape
-        Node shape = createArcRegion(item, index);
+        Node shape = createArcRegion(item);
         final Text text = createPieLabel(item);
         item.getChart().getChartChildren().add(shape);
         if (shouldAnimate()) {
@@ -452,6 +482,7 @@ public class PieChart extends Chart {
                 new KeyFrame(Duration.millis(500),
                         actionEvent -> {
                             // removing item
+                            colorBits.clear(item.defaultColorIndex);
                             getChartChildren().remove(shape);
                             // fade out label
                             FadeTransition ft = new FadeTransition(Duration.millis(150),item.textNode);
@@ -481,6 +512,7 @@ public class PieChart extends Chart {
             dataItemBeingRemoved = item;
             animate(dataRemoveTimeline);
         } else {
+            colorBits.clear(item.defaultColorIndex);
             getChartChildren().remove(item.textNode);
             getChartChildren().remove(shape);
             // remove chart references from old data
@@ -792,6 +824,11 @@ public class PieChart extends Chart {
          */
         private Data next = null;
 
+        /**
+         * Default color index for this slice.
+         */
+        private int defaultColorIndex;
+
         // -------------- PUBLIC PROPERTIES ------------------------------------
 
         /**
@@ -943,6 +980,15 @@ public class PieChart extends Chart {
             setName(name);
             setPieValue(value);
             textNode.getStyleClass().addAll("text", "chart-pie-label");
+            textNode.setAccessibleRole(AccessibleRole.TEXT);
+            textNode.setAccessibleRoleDescription("slice");
+            textNode.focusTraversableProperty().bind(Platform.accessibilityActiveProperty());
+            textNode.accessibleTextProperty().bind( new StringBinding() {
+                {bind(nameProperty(), currentPieValueProperty());} 
+                @Override protected String computeValue() {
+                    return getName() + " represents " + getCurrentPieValue() + " percent";
+                }
+            });
         }
 
         // -------------- PUBLIC METHODS ----------------------------------------------
@@ -976,7 +1022,7 @@ public class PieChart extends Chart {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(PieChart node) {
-                return (StyleableProperty<Boolean>)node.clockwiseProperty();
+                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)node.clockwiseProperty();
             }
         };
 
@@ -991,7 +1037,7 @@ public class PieChart extends Chart {
 
             @Override
             public StyleableProperty<Boolean> getStyleableProperty(PieChart node) {
-                return (StyleableProperty<Boolean>)node.labelsVisibleProperty();
+                return (StyleableProperty<Boolean>)(WritableValue<Boolean>)node.labelsVisibleProperty();
             }
         };
 
@@ -1006,7 +1052,7 @@ public class PieChart extends Chart {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(PieChart node) {
-                return (StyleableProperty<Number>)node.labelLineLengthProperty();
+                return (StyleableProperty<Number>)(WritableValue<Number>)node.labelLineLengthProperty();
             }
         };
 
@@ -1021,7 +1067,7 @@ public class PieChart extends Chart {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(PieChart node) {
-                return (StyleableProperty<Number>)node.startAngleProperty();
+                return (StyleableProperty<Number>)(WritableValue<Number>)node.startAngleProperty();
             }
         };
 

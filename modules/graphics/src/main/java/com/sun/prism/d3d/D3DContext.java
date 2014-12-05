@@ -206,7 +206,7 @@ class D3DContext extends BaseShaderContext {
     protected State updateRenderTarget(RenderTarget target, NGCamera camera,
                                        boolean depthTest)  {
         long resourceHandle = ((D3DRenderTarget)target).getResourceHandle();
-        int res = nSetRenderTarget(pContext, resourceHandle, depthTest, target.isAntiAliasing());
+        int res = nSetRenderTarget(pContext, resourceHandle, depthTest, target.isMSAA());
         validate(res);
         // resetLastClip should be called only if render target was changed
         // return value is S_FALSE (success with negative result)
@@ -222,10 +222,19 @@ class D3DContext extends BaseShaderContext {
         // Need to validate the camera before getting its computed data.
         if (camera instanceof NGDefaultCamera) {
             ((NGDefaultCamera) camera).validate(targetWidth, targetHeight);
+            tempTx = adjustClipSpace(camera.getProjViewTx(tempTx));
+        } else {
+            tempTx = adjustClipSpace(camera.getProjViewTx(tempTx));
+            // TODO: verify that this is the right solution. There may be
+            // other use-cases where rendering needs different viewport size.
+            double vw = camera.getViewWidth();
+            double vh = camera.getViewHeight();
+            if (targetWidth != vw || targetHeight != vh) {
+                tempTx.scale(vw / targetWidth, vh / targetHeight, 1.0);
+            }
         }
 
         // Set projection view matrix
-        tempTx = adjustClipSpace(camera.getProjViewTx(tempTx));
         res = nSetProjViewMatrix(pContext, depthTest,
             tempTx.get(0),  tempTx.get(1),  tempTx.get(2),  tempTx.get(3),
             tempTx.get(4),  tempTx.get(5),  tempTx.get(6),  tempTx.get(7),

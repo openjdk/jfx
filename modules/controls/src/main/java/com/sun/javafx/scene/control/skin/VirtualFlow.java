@@ -33,6 +33,7 @@ import com.sun.javafx.scene.traversal.TraversalContext;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.BooleanPropertyBase;
 import javafx.beans.value.ChangeListener;
@@ -40,6 +41,7 @@ import javafx.collections.ObservableList;
 import javafx.event.EventDispatcher;
 import javafx.event.EventHandler;
 import javafx.geometry.Orientation;
+import javafx.scene.AccessibleRole;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Parent;
@@ -497,6 +499,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         ** In a VirtualFlow a vertical scroll should scroll on the vertical only,
         ** whereas in a horizontal ScrollBar it can scroll horizontally.
         */ 
+        // block the event from being passed down to children
         final EventDispatcher blockEventDispatcher = (event, tail) -> event;
         // block ScrollEvent from being passed down to scrollbar's skin
         final EventDispatcher oldHsbEventDispatcher = hbar.getEventDispatcher();
@@ -1233,6 +1236,11 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         // first cell, then we must quit.
         T cell = null;
 
+        // special case for the position == 1.0, skip adding last invisible cell
+        if (index == cellCount && offset == getViewportLength()) {
+            index--;
+            first = false;
+        }
         while (index >= 0 && (offset > 0 || first)) {
             cell = getAvailableCell(index);
             setCellIndex(cell, index);
@@ -1699,7 +1707,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             double cellSize = getCellLength(cell);
             double cellStart = getCellPosition(cell);
             double cellEnd = cellStart + cellSize;
-            if (cellStart > viewportLength || cellEnd < 0) {
+            if (cellStart >= viewportLength || cellEnd < 0) {
                 addToPile(cells.remove(i));
             }
         }
@@ -1757,6 +1765,19 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             if (createCell != null) {
                 accumCell = createCell.call(this);
                 accumCellParent.getChildren().setAll(accumCell);
+
+                // Note the screen reader will attempt to find all
+                // the items inside the view to calculate the item count.
+                // Having items under different parents (sheet and accumCellParent)
+                // leads the screen reader to compute wrong values.
+                // The regular scheme to provide items to the screen reader
+                // uses getPrivateCell(), which places the item in the sheet.
+                // The accumCell, and its children, should be ignored by the
+                // screen reader. 
+                accumCell.setAccessibleRole(AccessibleRole.NODE);
+                accumCell.getChildrenUnmodifiable().addListener((Observable c) -> {
+                    accumCell.getChildrenUnmodifiable().forEach(n -> n.setAccessibleRole(AccessibleRole.NODE));
+                });
             }
         }
         setCellIndex(accumCell, index);
@@ -1787,7 +1808,13 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             // First check the cells that have already been created and are
             // in use. If this call returns a value, then we can use it
             cell = getVisibleCell(index);
-            if (cell != null) return cell;
+            if (cell != null) {
+                // Force the underlying text inside the cell to be updated
+                // so that when the screen reader runs, it will match the
+                // text in the cell (force updateDisplayedText())
+                cell.layout();
+                return cell;
+            }
         }
 
         // check the existing sheet children
@@ -2317,6 +2344,8 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                 layoutY += getCellLength(cell);
             }
             // end of fix for RT-32908
+            cull();
+            firstCell = cells.getFirst();
 
             // Add any necessary leading cells
             if (firstCell != null) {
@@ -2358,6 +2387,11 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
                         positionCell(cell, getCellPosition(cell) + emptySize);
                     }
                     setPosition(1.0f);
+                    // fill the leading empty space
+                    firstCell = cells.getFirst();
+                    int firstIndex = getCellIndex(firstCell);
+                    double prevIndexSize = getCellLength(firstIndex - 1);
+                    addLeadingCells(firstIndex - 1, getCellPosition(firstCell) - prevIndexSize);
                 }
             }
         }

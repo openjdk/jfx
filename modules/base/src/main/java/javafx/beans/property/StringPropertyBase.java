@@ -136,7 +136,8 @@ public abstract class StringPropertyBase extends StringProperty {
     @Override
     public void set(String newValue) {
         if (isBound()) {
-            throw new java.lang.RuntimeException("A bound value cannot be set.");
+            throw new java.lang.RuntimeException((getBean() != null && getName() != null ?
+                    getBean().getClass().getSimpleName() + "." + getName() + " : ": "") + "A bound value cannot be set.");
         }
         if ((value == null)? newValue != null : !value.equals(newValue)) {
             value = newValue;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -200,7 +200,6 @@ public final class MultiTexture implements Texture {
     public void update(MediaFrame frame, boolean skipFlush) {
         if (frame.getPixelFormat() == PixelFormat.MULTI_YCbCr_420) {
             // call update(..) on each texture
-            ByteBuffer pixels = frame.getBuffer();
             Texture tex;
             int encWidth = frame.getEncodedWidth();
             int encHeight = frame.getEncodedHeight();
@@ -217,8 +216,8 @@ public final class MultiTexture implements Texture {
                         texHeight /= 2;
                     }
 
-                    pixels.position(frame.offsetForPlane(index));
-                    tex.update(pixels.slice(), PixelFormat.BYTE_ALPHA,
+                    ByteBuffer pixels = frame.getBufferForPlane(index);
+                    tex.update(pixels, PixelFormat.BYTE_ALPHA,
                             0, 0,
                             0, 0, texWidth, texHeight,
                             frame.strideForPlane(index), skipFlush);
@@ -232,6 +231,12 @@ public final class MultiTexture implements Texture {
     @Override
     public WrapMode getWrapMode() {
         return wrapMode;
+    }
+
+    @Override
+    public boolean getUseMipmap() {
+        // TODO: MultiTexture doesn't support mipmap yet
+        return false;
     }
 
     @Override

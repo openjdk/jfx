@@ -32,6 +32,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -41,6 +42,7 @@ import javafx.scene.paint.LinearGradient;
 import javafx.scene.paint.Paint;
 import javafx.scene.paint.Stop;
 import javafx.scene.text.Font;
+import javafx.util.Duration;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
@@ -277,5 +279,31 @@ public class CSSParserTest {
         }
 
         return nFontFaceSrcs;
+    }
+
+    @Test public void testRT_32522() {
+
+        ParsedValue value = CSSParser.getInstance().parseExpr("foo", "1 2em 3 4;");
+        Object obj = value.convert(Font.font(13));
+        assert obj instanceof Number[];
+        assertArrayEquals(new Number[] {1d, 26d, 3d, 4d}, (Number[])obj);
+
+        value = CSSParser.getInstance().parseExpr("foo", "1;");
+        obj = value.convert(null);
+        assert obj instanceof Number;
+        assertEquals(1d, (Number)obj);
+
+    }
+
+    @Test public void testRT_38483() {
+
+        Duration expected = Duration.millis(42);
+        ParsedValue value = CSSParser.getInstance().parseExpr("foo", "42ms;");
+        Object observed = value.convert(null);
+        assertEquals(expected, observed);
+
+        value = CSSParser.getInstance().parseExpr("foo", "indefinite;");
+        observed = value.convert(null);
+        assertEquals(Duration.INDEFINITE, observed);
     }
 }

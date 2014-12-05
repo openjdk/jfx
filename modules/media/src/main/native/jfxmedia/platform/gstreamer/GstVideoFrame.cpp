@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -86,6 +86,8 @@ GstCaps *create_RGB_caps(CVideoFrame::FrameType type, gint width, gint height, g
         red_mask    = 0x0000FF00;
         green_mask  = 0x00FF0000;
         blue_mask   = 0xFF000000;
+    } else {
+        return NULL; // unsupported format..
     }
 
     newCaps = gst_caps_new_simple("video/x-raw-rgb",
@@ -124,10 +126,8 @@ CGstVideoFrame::CGstVideoFrame(GstBuffer* buffer)
 
     GstCaps* caps = GST_BUFFER_CAPS(m_pBuffer);
 
-    m_ulSize        = (unsigned long)GST_BUFFER_SIZE(m_pBuffer);
-    m_pvData        = (void*)GST_BUFFER_DATA(m_pBuffer);
-    m_ulFrameNumber = (unsigned long) GST_BUFFER_OFFSET(m_pBuffer);
-
+    m_ulBufferSize = (unsigned long)GST_BUFFER_SIZE(m_pBuffer);
+    m_pvBufferBaseAddress = (void*)GST_BUFFER_DATA(m_pBuffer);
 
     if (GST_BUFFER_TIMESTAMP_IS_VALID (m_pBuffer)) {
         m_dTime = (double)GST_BUFFER_TIMESTAMP(m_pBuffer) / GST_SECOND;
@@ -223,11 +223,13 @@ void CGstVideoFrame::SetFrameCaps(GstCaps *newCaps)
         m_iEncodedHeight = m_iHeight;
     }
 
-    m_piPlaneOffsets[0] = m_piPlaneOffsets[1] = m_piPlaneOffsets[2] = m_piPlaneOffsets[3] = 0;
+    m_pvPlaneData[0] = m_pvPlaneData[1] = m_pvPlaneData[2] = m_pvPlaneData[3] = NULL;
+    m_pulPlaneSize[0] = m_pulPlaneSize[1] = m_pulPlaneSize[2] = m_pulPlaneSize[3] = 0;
     m_piPlaneStrides[0] = m_piPlaneStrides[1] = m_piPlaneStrides[2] = m_piPlaneStrides[3] = 0;
 
     switch (m_typeFrame) {
         case YCbCr_420p: {
+            int offset;
             m_iPlaneCount = 3;
 
             if (!gst_structure_get_int(str, "stride-y", &m_piPlaneStrides[0])) {
@@ -240,37 +242,43 @@ void CGstVideoFrame::SetFrameCaps(GstCaps *newCaps)
                 m_piPlaneStrides[2] = m_piPlaneStrides[1];
             }
 
-            if(!gst_structure_get_int(str, "offset-y", &m_piPlaneOffsets[0])) {
-                m_piPlaneOffsets[0] = 0;
-            }
+            offset = 0;
+            gst_structure_get_int(str, "offset-y", &offset);
+            m_pulPlaneSize[0] = m_piPlaneStrides[0] * m_iEncodedHeight;
+            m_pvPlaneData[0] = (void*)((intptr_t)m_pvBufferBaseAddress + offset);
+
             //
             // Chroma offsets assume YV12 ordering
             //
-            if(!gst_structure_get_int(str, "offset-v", &m_piPlaneOffsets[1])) {
-                m_piPlaneOffsets[1] = m_piPlaneOffsets[0] + m_iEncodedHeight * m_piPlaneStrides[0];
-            }
-            if(!gst_structure_get_int(str, "offset-u", &m_piPlaneOffsets[2])) {
-                m_piPlaneOffsets[2] = m_piPlaneOffsets[1] + (m_iEncodedHeight/2) * m_piPlaneStrides[1];
+            offset += m_pulPlaneSize[0];
+            gst_structure_get_int(str, "offset-v", &offset);
+            m_pulPlaneSize[1] = m_piPlaneStrides[1] * (m_iEncodedHeight/2);
+            m_pvPlaneData[1] = (void*)((intptr_t)m_pvBufferBaseAddress + offset);
+
+            offset += m_pulPlaneSize[1];
+            gst_structure_get_int(str, "offset-u", &offset);
+            m_pulPlaneSize[2] = m_piPlaneStrides[2] * (m_iEncodedHeight/2);
+            m_pvPlaneData[2] = (void*)((intptr_t)m_pvBufferBaseAddress + offset);
+
+            // process alpha channel (before we potentially swap Cb/Cr)
+            if (m_bHasAlpha) {
+                m_iPlaneCount++;
+                if (!gst_structure_get_int(str, "stride-a", &m_piPlaneStrides[3])) {
+                    m_piPlaneStrides[3] = m_piPlaneStrides[0];
+                }
+
+                offset += m_pulPlaneSize[2];
+                gst_structure_get_int(str, "offset-a", &offset);
+                m_pulPlaneSize[3] = m_piPlaneStrides[3] * m_iEncodedHeight;
+                m_pvPlaneData[3] = (void*)((intptr_t)m_pvBufferBaseAddress + offset);
             }
 
             //
             // Swap chroma planes for I420.
             //
             if(FOURCC_I420 == m_uFormatFourCC) {
-                int tmp_index = m_piPlaneOffsets[1];
-                m_piPlaneOffsets[1] = m_piPlaneOffsets[2];
-                m_piPlaneOffsets[2] = tmp_index;
-            }
-
-            // process alpha channel
-            if (m_bHasAlpha) {
-                m_iPlaneCount++;
-                if (!gst_structure_get_int(str, "stride-a", &m_piPlaneStrides[3])) {
-                    m_piPlaneStrides[3] = m_piPlaneStrides[0];
-                }
-                if(!gst_structure_get_int(str, "offset-a", &m_piPlaneOffsets[3])) {
-                    m_piPlaneOffsets[3] = m_piPlaneOffsets[2] + (m_iEncodedHeight/2) * m_piPlaneStrides[2];
-                }
+                // Swap Cb/Cr plane data
+                SwapPlanes(1, 2);
             }
             break;
         }
@@ -284,6 +292,8 @@ void CGstVideoFrame::SetFrameCaps(GstCaps *newCaps)
                     m_piPlaneStrides[0] = m_iEncodedWidth * 4; // 32 bpp
                 }
             }
+            m_pulPlaneSize[0] = m_piPlaneStrides[0] * m_iEncodedHeight;
+            m_pvPlaneData[0] = m_pvBufferBaseAddress;
             break;
     }
 
@@ -387,19 +397,19 @@ CGstVideoFrame *CGstVideoFrame::ConvertFromYCbCr420p(FrameType destType)
             status = ColorConvert_YCbCr420p_to_ARGB32(
                         GST_BUFFER_DATA(destBuffer), stride,
                         m_iEncodedWidth, m_iEncodedHeight,
-                        GST_BUFFER_DATA(m_pBuffer) + m_piPlaneOffsets[0],
-                        GST_BUFFER_DATA(m_pBuffer) + m_piPlaneOffsets[v_index],
-                        GST_BUFFER_DATA(m_pBuffer) + m_piPlaneOffsets[u_index],
-                        GST_BUFFER_DATA(m_pBuffer) + m_piPlaneOffsets[3],
+                        (const uint8_t*)m_pvPlaneData[0],
+                        (const uint8_t*)m_pvPlaneData[v_index],
+                        (const uint8_t*)m_pvPlaneData[u_index],
+                        (const uint8_t*)m_pvPlaneData[3],
                         m_piPlaneStrides[0], m_piPlaneStrides[v_index],
                         m_piPlaneStrides[u_index], m_piPlaneStrides[3]);
         } else {
             status = ColorConvert_YCbCr420p_to_ARGB32_no_alpha(
                         GST_BUFFER_DATA(destBuffer), stride,
                         m_iEncodedWidth, m_iEncodedHeight,
-                        GST_BUFFER_DATA(m_pBuffer) + m_piPlaneOffsets[0],
-                        GST_BUFFER_DATA(m_pBuffer) + m_piPlaneOffsets[v_index],
-                        GST_BUFFER_DATA(m_pBuffer) + m_piPlaneOffsets[u_index],
+                        (const uint8_t*)m_pvPlaneData[0],
+                        (const uint8_t*)m_pvPlaneData[v_index],
+                        (const uint8_t*)m_pvPlaneData[u_index],
                         m_piPlaneStrides[0], m_piPlaneStrides[v_index],
                         m_piPlaneStrides[u_index]);
         }
@@ -408,19 +418,19 @@ CGstVideoFrame *CGstVideoFrame::ConvertFromYCbCr420p(FrameType destType)
             status = ColorConvert_YCbCr420p_to_BGRA32(
                         GST_BUFFER_DATA(destBuffer), stride,
                         m_iEncodedWidth, m_iEncodedHeight,
-                        GST_BUFFER_DATA(m_pBuffer) + m_piPlaneOffsets[0],
-                        GST_BUFFER_DATA(m_pBuffer) + m_piPlaneOffsets[v_index],
-                        GST_BUFFER_DATA(m_pBuffer) + m_piPlaneOffsets[u_index],
-                        GST_BUFFER_DATA(m_pBuffer) + m_piPlaneOffsets[3],
+                        (const uint8_t*)m_pvPlaneData[0],
+                        (const uint8_t*)m_pvPlaneData[v_index],
+                        (const uint8_t*)m_pvPlaneData[u_index],
+                        (const uint8_t*)m_pvPlaneData[3],
                         m_piPlaneStrides[0], m_piPlaneStrides[v_index],
                         m_piPlaneStrides[u_index], m_piPlaneStrides[3]);
         } else {
             status = ColorConvert_YCbCr420p_to_BGRA32_no_alpha(
                         GST_BUFFER_DATA(destBuffer), stride,
                         m_iEncodedWidth, m_iEncodedHeight,
-                        GST_BUFFER_DATA(m_pBuffer) + m_piPlaneOffsets[0],
-                        GST_BUFFER_DATA(m_pBuffer) + m_piPlaneOffsets[v_index],
-                        GST_BUFFER_DATA(m_pBuffer) + m_piPlaneOffsets[u_index],
+                        (const uint8_t*)m_pvPlaneData[0],
+                        (const uint8_t*)m_pvPlaneData[v_index],
+                        (const uint8_t*)m_pvPlaneData[u_index],
                         m_piPlaneStrides[0], m_piPlaneStrides[v_index],
                         m_piPlaneStrides[u_index]);
         }
@@ -472,16 +482,16 @@ CGstVideoFrame *CGstVideoFrame::ConvertFromYCbCr422(FrameType destType)
     if (destType == ARGB) {
         status = ColorConvert_YCbCr422p_to_ARGB32_no_alpha(GST_BUFFER_DATA(destBuffer), stride,
                                                            m_iEncodedWidth, m_iEncodedHeight,
-                                                           GST_BUFFER_DATA(m_pBuffer) + m_piPlaneOffsets[0] + 1,
-                                                           GST_BUFFER_DATA(m_pBuffer) + m_piPlaneOffsets[0] + 2,
-                                                           GST_BUFFER_DATA(m_pBuffer) + m_piPlaneOffsets[0],
+                                                           (uint8_t*)m_pvPlaneData[0] + 1,
+                                                           (uint8_t*)m_pvPlaneData[0] + 2,
+                                                           (uint8_t*)m_pvPlaneData[0],
                                                            m_piPlaneStrides[0], m_piPlaneStrides[0]);
     } else {
         status = ColorConvert_YCbCr422p_to_BGRA32_no_alpha(GST_BUFFER_DATA(destBuffer), stride,
                                                            m_iEncodedWidth, m_iEncodedHeight,
-                                                           GST_BUFFER_DATA(m_pBuffer) + m_piPlaneOffsets[0] + 1,
-                                                           GST_BUFFER_DATA(m_pBuffer) + m_piPlaneOffsets[0] + 2,
-                                                           GST_BUFFER_DATA(m_pBuffer) + m_piPlaneOffsets[0],
+                                                           (uint8_t*)m_pvPlaneData[0] + 1,
+                                                           (uint8_t*)m_pvPlaneData[0] + 2,
+                                                           (uint8_t*)m_pvPlaneData[0],
                                                            m_piPlaneStrides[0], m_piPlaneStrides[0]);
     }
 

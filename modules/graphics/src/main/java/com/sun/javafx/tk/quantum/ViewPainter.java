@@ -435,7 +435,7 @@ abstract class ViewPainter implements Runnable {
     }
     
     protected float getPixelScaleFactor() {
-        return presentable == null ? 0.1f : presentable.getPixelScaleFactor();
+        return presentable == null ? 1.0f : presentable.getPixelScaleFactor();
     }
 
     private void doPaint(Graphics g, NodePath renderRootPath) {

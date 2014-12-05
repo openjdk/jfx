@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -93,9 +93,30 @@ public class StubTextLayout implements TextLayout {
                 (float)width, (float)(height-fontSize), 0);
     }
 
+    class StubTextLine implements TextLine {
+        @Override public GlyphList[] getRuns() {
+            return new GlyphList[0];
+        }
+        @Override public RectBounds getBounds() {
+            return new RectBounds();
+        }
+        @Override public float getLeftSideBearing() {
+            return 0;
+        }
+        @Override public float getRightSideBearing() {
+            return 0;
+        }
+        @Override public int getStart() {
+            return 0;
+        }
+        @Override public int getLength() {
+            return 0;
+        }
+    }
+
     @Override
     public TextLine[] getLines() {
-        return null;
+        return new TextLine[] {new StubTextLine()};
     }
 
     @Override

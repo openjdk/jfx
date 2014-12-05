@@ -36,10 +36,15 @@ import com.sun.prism.ResourceFactory;
 public class NGTriangleMesh {
     private boolean meshDirty = true;
     private Mesh mesh;
+    private boolean userDefinedNormals = false;
 
     // points is an array of x,y,z interleaved
     private float[] points;
     private int[] pointsFromAndLengthIndices = new int[2];
+
+    // normals is an array of nx,ny,nz interleaved
+    private float[] normals;
+    private int[] normalsFromAndLengthIndices = new int[2];
 
     // texCoords is an array of u,v interleaved
     private float[] texCoords;
@@ -62,11 +67,14 @@ public class NGTriangleMesh {
     }
 
     boolean validate() {
-        if (points == null || texCoords == null || faces == null || faceSmoothingGroups == null) {
+        if (points == null || texCoords == null || faces == null || faceSmoothingGroups == null
+                || (userDefinedNormals && (normals == null))) {
             return false;
         }
         if (meshDirty) {
-            if (!mesh.buildGeometry(points, pointsFromAndLengthIndices,
+            if (!mesh.buildGeometry(userDefinedNormals,
+                    points, pointsFromAndLengthIndices,
+                    normals, normalsFromAndLengthIndices,
                     texCoords, texCoordsFromAndLengthIndices,
                     faces, facesFromAndLengthIndices,
                     faceSmoothingGroups, faceSmoothingGroupsFromAndLengthIndices)) {
@@ -83,6 +91,14 @@ public class NGTriangleMesh {
     void setPointsByRef(float[] points) {
         meshDirty = true;
         this.points = points;
+    }
+
+    // Note: This method is intentionally made package scope for security
+    // reason. It is created for internal use only.
+    // Do not make it a public method without careful consideration.
+    void setNormalsByRef(float[] normals) {
+        meshDirty = true;
+        this.normals = normals;
     }
 
     // Note: This method is intentionally made package scope for security
@@ -109,11 +125,24 @@ public class NGTriangleMesh {
         this.faceSmoothingGroups = faceSmoothingGroups;
     }
 
+    public void setUserDefinedNormals(boolean userDefinedNormals) {
+        this.userDefinedNormals = userDefinedNormals;
+    }
+
+    public boolean isUserDefinedNormals() {
+        return userDefinedNormals;
+    }
+
     public void syncPoints(FloatArraySyncer array) {
         meshDirty = true;
         points = array != null ? array.syncTo(points, pointsFromAndLengthIndices) : null;
     }
-    
+
+    public void syncNormals(FloatArraySyncer array) {
+        meshDirty = true;
+        normals = array != null ? array.syncTo(normals, normalsFromAndLengthIndices) : null;
+    }
+
     public void syncTexCoords(FloatArraySyncer array) {
         meshDirty = true;
         texCoords = array != null ? array.syncTo(texCoords, texCoordsFromAndLengthIndices) : null;
@@ -140,6 +169,10 @@ public class NGTriangleMesh {
     // NOTE: This method is used for unit test purpose only.
     float[] test_getPoints() {
         return this.points;
+    }
+    // NOTE: This method is used for unit test purpose only.
+    float[] test_getNormals() {
+        return this.normals;
     }
     // NOTE: This method is used for unit test purpose only.
     float[] test_getTexCoords() {

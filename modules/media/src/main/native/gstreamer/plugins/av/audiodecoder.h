@@ -53,13 +53,15 @@ typedef struct _AudioDecoderClass AudioDecoderClass;
 struct _AudioDecoder {
     BaseDecoder  parent;
 
+#if !DECODE_AUDIO4
     guint8       *samples;          // temporary output buffer
-
+#endif
+    
     gboolean     is_synced;         // whether the first audio frame has been found
     gboolean     is_discont;        // whether the next frame is a discontinuity
 
-    enum CodecID codec_id;          // the libavcodec codec ID
-
+    CodecIDType  codec_id;
+    
     gint         num_channels;      // channels / stream
     guint        bytes_per_sample;  // bytes / sample
     gint         sample_rate;       // samples / second
@@ -72,12 +74,7 @@ struct _AudioDecoder {
     guint64      total_samples;     // sample offset from zero at current time
     gboolean     generate_pts;
 
-#if LIBAVCODEC_NEW
-    AVPacket       packet;
-#else // ! LIBAVCODEC_NEW
-    uint8_t        *packet;
-    int            packet_size;
-#endif // LIBAVCODEC_NEW
+    AVPacket     packet;
 };
 
 struct _AudioDecoderClass

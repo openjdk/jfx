@@ -55,7 +55,8 @@ public class Info extends DataType {
     String licenseType;
     String copyright;
     String email;
-    List<Icon> icons = new LinkedList<Icon>();
+    List<Icon> icons = new LinkedList<>();
+    List<FileAssociation> fileAssociations = new LinkedList<>();
 
     /**
      * Application category.
@@ -276,5 +277,18 @@ public class Info extends DataType {
         Splash s = new Splash();
         icons.add(s);
         return s;
+    }
+
+    /**
+     * A hint to the packager that it wishes to be registered with the
+     * operating system as the primary handler of certain extensions and
+     * a certain mime-type.
+     *
+     * @ant.not-required
+     */
+    public FileAssociation createAssociation() {
+        FileAssociation fa = new FileAssociation();
+        fileAssociations.add(fa);
+        return fa;
     }
 }

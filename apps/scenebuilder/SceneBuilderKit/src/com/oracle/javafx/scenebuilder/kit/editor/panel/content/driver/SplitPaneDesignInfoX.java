@@ -117,7 +117,7 @@ public class SplitPaneDesignInfoX  {
     public double[] simulateDividerMove(SplitPane splitPane, int dividerIndex, double sceneX, double sceneY) {
         final List<SplitPane.Divider> dividers = splitPane.getDividers();
         final double currentPos = dividers.get(dividerIndex).getPosition();
-        final Point2D p = splitPane.sceneToLocal(sceneX, sceneY);
+        final Point2D p = splitPane.sceneToLocal(sceneX, sceneY, true /* rootScene */);
         final double claimedPos = splitPaneLocalToDividerPosition(splitPane, p.getX(), p.getY(), true /* clamp */, false /* snap */);
         double minPos, maxPos, newPos;
         final double[] result;
