@@ -33,6 +33,7 @@ import javafx.util.Callback;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 import org.junit.Test;
+import org.junit.After;
 
 public class DebuggerTest extends TestBase {
 
@@ -153,5 +154,12 @@ public class DebuggerTest extends TestBase {
 
     private static String q(String s) {
         return s.replace('\'', '\"');
+    }
+
+    @After
+    public void disableDebug() {
+        submit(() -> {
+            getEngine().impl_getDebugger().setEnabled(false);
+        });    
     }
 }

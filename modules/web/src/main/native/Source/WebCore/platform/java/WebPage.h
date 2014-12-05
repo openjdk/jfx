@@ -77,6 +77,8 @@ public:
     void setNeedsOneShotDrawingSynchronization();
     void scheduleCompositingLayerSync();
 #endif
+    void debugStarted();
+    void debugEnded();
     void enableWatchdog();
     void disableWatchdog();
 
@@ -126,7 +128,8 @@ private:
     // this behavior by setting this flag if the keyDown was handled.
     bool m_suppressNextKeypressEvent;
 
-    static bool globalWatchdogDisabled;
+    bool m_isDebugging;
+    static int globalDebugSessionCounter;
 };
 
 } // namespace WebCore
