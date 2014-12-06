@@ -601,7 +601,6 @@ public abstract class TextInputControlSkin<T extends TextInputControl, B extends
                 
                 if (attr != null) {
                     attr.setManaged(false);
-                    attr.setSmooth(false);
                     imattrs.add(attr);
                 }
             }

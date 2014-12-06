@@ -438,7 +438,6 @@ public class ColorPalette extends Region {
                 rectangle.setFill(color);
             }
 
-            rectangle.setSmooth(false);
             rectangle.setStrokeType(StrokeType.INSIDE);
 
             String tooltipStr = ColorPickerSkin.tooltipString(color);
