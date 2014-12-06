@@ -644,11 +644,8 @@ audioconverter_chain (GstPad * pad, GstBuffer * buf)
     // If between FLUSH_START and FLUSH_STOP, reject new buffers.
     if (decode->is_flushing)
     {
-        // Unref the input buffer.
-        // INLINE - gst_buffer_unref()
-        gst_buffer_unref(buf);
-
-        return GST_FLOW_WRONG_STATE;
+        ret = GST_FLOW_WRONG_STATE;
+        goto _exit;
     }
 
     // Reset state on discont buffer if not after FLUSH_STOP.
@@ -746,13 +743,10 @@ audioconverter_chain (GstPad * pad, GstBuffer * buf)
                                     decode->isFormatInitialized = TRUE;
                                     decode->isAudioConverterReady = TRUE;
                                 } else {
-                                    // Unref the input buffer.
-                                    // INLINE - gst_buffer_unref()
-                                    gst_buffer_unref(buf);
-
                                     gst_caps_unref(sink_peer_caps);
 
-                                    return GST_FLOW_ERROR;
+                                    ret = GST_FLOW_ERROR;
+                                    goto _exit;
                                 }
                             } else {
                                 gint layer;
@@ -786,14 +780,11 @@ audioconverter_chain (GstPad * pad, GstBuffer * buf)
                                             packetListener,
                                             audioStreamTypeHint,
                                             &decode->audioStreamID)) {
-                // Unref the input buffer.
-                // INLINE - gst_buffer_unref()
-                gst_buffer_unref(buf);
-
 #if ENABLE_PRINT_SPEW
                 g_print("AudioFileStreamOpen failed\n");
 #endif
-                return GST_FLOW_ERROR;
+                ret = GST_FLOW_ERROR;
+                goto _exit;
             }
         }
     }
@@ -814,15 +805,12 @@ audioconverter_chain (GstPad * pad, GstBuffer * buf)
 
         OSStatus result = AudioFileStreamParseBytes(decode->audioStreamID, buf_size, buf_data, parserFlags);
 
-        // Unref the input buffer.
-        // INLINE - gst_buffer_unref()
-        gst_buffer_unref(buf);
-
         if(noErr != result) {
 #if ENABLE_PRINT_SPEW
             g_print("AudioFileStreamParseBytes %d\n", result);
 #endif
-            return GST_FLOW_ERROR;
+            ret = GST_FLOW_ERROR;
+            goto _exit;
         }
     } else {
         if(!decode->is_synced && NULL != decode->audioConverter) {
@@ -836,10 +824,6 @@ audioconverter_chain (GstPad * pad, GstBuffer * buf)
 
         packetListener((void*)decode, buf_size, 1, (const void*)buf_data,
                        &packetDescriptions);
-
-        // Unref the input buffer.
-        // INLINE - gst_buffer_unref()
-        gst_buffer_unref(buf);
     }
 
     // Return without pushing a buffer if format not derived from stream parser.
@@ -849,7 +833,7 @@ audioconverter_chain (GstPad * pad, GstBuffer * buf)
 
     // Return without pushing a buffer if format is MPEG audio but no packets are enqueued.
     if(AUDIOCONVERTER_DATA_FORMAT_MPA == decode->data_format && 0 == decode->total_packets) {
-        return GST_FLOW_OK;
+        goto _exit; // GST_FLOW_OK
     }
 
     if(decode->is_synced == FALSE) {
@@ -870,15 +854,12 @@ audioconverter_chain (GstPad * pad, GstBuffer * buf)
             // Allocate memory for output packet descriptions.
             decode->outPacketDescription = g_malloc(decode->samples_per_frame*sizeof(AudioStreamPacketDescription));
             if(NULL == decode->outPacketDescription) {
-                return GST_FLOW_ERROR;
+                ret = GST_FLOW_ERROR;
+                goto _exit;
             }
 
             // Save first frame offset.
-            if (GST_BUFFER_OFFSET_IS_VALID(buf)) {
-                decode->initial_offset = GST_BUFFER_OFFSET(buf);
-            } else {
-                decode->initial_offset = 0;
-            }
+            decode->initial_offset = GST_BUFFER_OFFSET_IS_VALID(buf) ? GST_BUFFER_OFFSET(buf) : 0;
 
             // Query for the stream length if it was not set from a header.
             if (AUDIOCONVERTER_STREAM_LENGTH_UNKNOWN == decode->stream_length)
@@ -933,7 +914,8 @@ audioconverter_chain (GstPad * pad, GstBuffer * buf)
                                             "mpegversion", G_TYPE_INT, 2,
                                              NULL);
             } else {
-                return GST_FLOW_ERROR;
+                ret = GST_FLOW_ERROR;
+                goto _exit;
             }
 
             if(gst_pad_set_caps (decode->sinkpad, caps) == FALSE)
@@ -983,7 +965,7 @@ audioconverter_chain (GstPad * pad, GstBuffer * buf)
 
     if(!decode->isAudioConverterReady) {
         // Return without pushing a buffer if converter is not ready.
-        return GST_FLOW_OK;
+        goto _exit; // GST_FLOW_OK
     } else if(NULL == decode->audioConverter) {
         // Initialize the converter.
         if(noErr != AudioConverterNew(&decode->audioInputFormat,
@@ -993,7 +975,8 @@ audioconverter_chain (GstPad * pad, GstBuffer * buf)
             g_print("Failed to initialize AudioConverter\n");
 #endif
             // Return an error if converter cannot be initialized.
-            return GST_FLOW_ERROR;
+            ret = GST_FLOW_ERROR;
+            goto _exit;
         } else if(NULL != decode->cookieData && noErr != AudioConverterSetProperty(decode->audioConverter,
                                                                             kAudioConverterDecompressionMagicCookie,
                                                                             decode->cookieSize, decode->cookieData)) {
@@ -1001,7 +984,8 @@ audioconverter_chain (GstPad * pad, GstBuffer * buf)
             g_print("Failed to set AudioConverter magic cookie data\n");
 #endif
             // Return an error if converter cannot be initialized.
-            return GST_FLOW_ERROR;
+            ret = GST_FLOW_ERROR;
+            goto _exit;
         } else if(AUDIOCONVERTER_DATA_FORMAT_AAC == decode->data_format) {
             AudioConverterPrimeInfo primeInfo;
             primeInfo.leadingFrames = 0;
@@ -1023,7 +1007,7 @@ audioconverter_chain (GstPad * pad, GstBuffer * buf)
     if(decode->is_priming) {
         // Return without pushing a buffer if there are not enough packets enqueued.
         if(g_queue_get_length(decode->packetDesc) < AUDIOCONVERTER_MPEG_MIN_PACKETS) {
-            return GST_FLOW_OK;
+            goto _exit; // GST_FLOW_OK;
         } else {
             decode->is_priming = FALSE;
         }
@@ -1047,7 +1031,7 @@ audioconverter_chain (GstPad * pad, GstBuffer * buf)
                 gst_element_message_full(GST_ELEMENT(decode), GST_MESSAGE_ERROR, GST_CORE_ERROR, GST_CORE_ERROR_SEEK, g_strdup("Decoded audio buffer allocation failed"), NULL, ("audioconverter.c"), ("audioconverter_chain"), 0);
             }
 
-            return ret;
+            goto _exit;
         }
 
         AudioBufferList outputData;
@@ -1067,7 +1051,8 @@ audioconverter_chain (GstPad * pad, GstBuffer * buf)
 #endif
             // INLINE - gst_buffer_unref()
             gst_buffer_unref(outbuf);
-            return GST_FLOW_ERROR;
+            ret = GST_FLOW_ERROR;
+            goto _exit;
         }
 
         if(0 == outputDataPacketSize) {
@@ -1095,7 +1080,7 @@ audioconverter_chain (GstPad * pad, GstBuffer * buf)
 
         ret = gst_pad_push (decode->srcpad, outbuf);
         if(GST_FLOW_OK != ret) {
-            return ret;
+            goto _exit;
         }
     }
 
@@ -1108,7 +1093,11 @@ audioconverter_chain (GstPad * pad, GstBuffer * buf)
         decode->inputOffset = 0;
     }
 
-    return GST_FLOW_OK;
+_exit:
+    // Unref the input buffer.
+    // INLINE - gst_buffer_unref()
+    gst_buffer_unref(buf);
+    return ret;
 }
 
 #if ENABLE_PRINT_SPEW
