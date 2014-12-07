@@ -41,11 +41,10 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Dialog;
 import javafx.scene.control.DialogPane;
 import javafx.scene.control.Label;
-import javafx.scene.control.MenuItem;
-import javafx.scene.control.SplitMenuButton;
 import javafx.scene.control.Tooltip;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextInputDialog;
@@ -55,7 +54,6 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
-import com.sun.javafx.scene.control.skin.AccordionSkin;
 
 /**
  * A sample that demonstrates the Dialog control.
@@ -91,12 +89,13 @@ public class DialogApp extends Application {
 
     protected Alert createAlert() {
         Alert alert = new Alert(type, "");
-        alert.initModality(Modality.NONE);
+        alert.initModality(Modality.APPLICATION_MODAL);
         alert.initOwner(stage);
         alert.getDialogPane().setContentText(type + " text.");
         alert.getDialogPane().setHeaderText(null);
-        alert.show();
-        
+        alert.showAndWait()
+      		.filter(response -> response == ButtonType.OK)
+      		.ifPresent(response -> System.out.println("The alert was approved"));
         return alert;
     }
     
@@ -109,6 +108,7 @@ public class DialogApp extends Application {
         dialogPane.setContentText("Details of the problem:");
         dialogPane.getButtonTypes().addAll(ButtonType.OK);
         dialogPane.setContentText(th.getMessage());
+        dialog.initModality(Modality.APPLICATION_MODAL);
 
         Label label = new Label("Exception stacktrace:");
         StringWriter sw = new StringWriter();
@@ -131,9 +131,9 @@ public class DialogApp extends Application {
         root.add(label, 0, 0);
         root.add(textArea, 0, 1);
         dialogPane.setExpandableContent(root);
-
-        dialog.show();
-       
+        dialog.showAndWait()
+                .filter(response -> response == ButtonType.OK)
+                .ifPresent(response -> System.out.println("The exception was approved"));
         return dialog;
     }
     
@@ -141,7 +141,14 @@ public class DialogApp extends Application {
         TextInputDialog textInput = new TextInputDialog("");
         textInput.setTitle("Text Input Dialog");
         textInput.getDialogPane().setContentText("First Name:");
-        textInput.show();
+        textInput.showAndWait()
+                .ifPresent(response -> {
+                    if (response.isEmpty()) {
+                        System.out.println("No name was inserted");
+                    } else {
+                        System.out.println("The first name is: " + response);
+                    }
+                });
         return textInput;
     }
 
@@ -150,45 +157,35 @@ public class DialogApp extends Application {
 
         HBox alertBox = new HBox(10);
         VBox dialogCreators = new VBox(20);
-        
-        MenuItem information = new MenuItem("Information");
-        MenuItem warning = new MenuItem("Warning");
-        MenuItem confirmation = new MenuItem("Confirmation");
-        MenuItem error = new MenuItem("Error");
 
-        SplitMenuButton alerts = new SplitMenuButton();
-        alerts.setTooltip(new Tooltip("Choose an Alert type"));
-        alerts.setOnAction(e -> System.out.println("alerts"));
-        alerts.getItems().addAll(information, warning, confirmation, error);
-        alerts.setText(alerts.getItems().get(0).getText());
-        alerts.setOnAction(alerts.getItems().get(0).getOnAction());
-
-        information.setOnAction(e -> {
-            alerts.setText(information.getText());
-            alerts.setOnAction(information.getOnAction());
-            setAlertType(AlertType.INFORMATION);
-        });
-        warning.setOnAction(e -> {
-            alerts.setText(warning.getText());
-            alerts.setOnAction(warning.getOnAction());
-            setAlertType(AlertType.WARNING);
-        });
-        confirmation.setOnAction(e -> {
-            alerts.setText(confirmation.getText());
-            alerts.setOnAction(confirmation.getOnAction());
-            setAlertType(AlertType.CONFIRMATION);
-        });
-        error.setOnAction(e -> {
-            alerts.setText(error.getText());
-            alerts.setOnAction(error.getOnAction());
-            setAlertType(AlertType.ERROR);
-        });
+        ComboBox alert_types = new ComboBox<String>();
+        alert_types.getItems().addAll("Information", "Warning",
+                                        "Confirmation", "Error");
+        alert_types.setValue("Information");
 
         Button create = new Button("Create Alert");
         create.setTooltip(new Tooltip("Create an Alert Dialog"));
-        create.setOnAction(e -> createAlert());
+        create.setOnAction(e ->
+        {
+            String type = (String) alert_types.getValue();
+            switch (type) {
+                case "Information":
+                    setAlertType(AlertType.INFORMATION);
+                    break;
+                case "Warning":
+                    setAlertType(AlertType.WARNING);
+                    break;
+                case "Confirmation":
+                    setAlertType(AlertType.CONFIRMATION);
+                    break;
+                case "Error":
+                    setAlertType(AlertType.ERROR);
+                    break;
+            }
+            createAlert();
+        });
         
-        alertBox.getChildren().addAll(alerts, create);
+        alertBox.getChildren().addAll(alert_types, create);
         
         Button exception = new Button("Create Exception Dialog");
         exception.setTooltip(new Tooltip("Create an Exception Dialog"));
