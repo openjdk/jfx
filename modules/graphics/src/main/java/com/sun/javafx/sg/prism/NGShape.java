@@ -272,7 +272,11 @@ public abstract class NGShape extends NGNode {
     protected void renderContent2D(Graphics g, boolean printing) {
 
         // Set smooth property on shape
-        g.setAntialiasedShape(isSmooth());
+        boolean saveAA = g.isAntialiasedShape();
+        boolean isAA = isSmooth();
+        if (isAA != saveAA) {
+            g.setAntialiasedShape(isAA);
+        }
 
         ShapeRep localShapeRep = printing ? null : this.shapeRep;
         if (localShapeRep == null) {
@@ -289,6 +293,9 @@ public abstract class NGShape extends NGNode {
             localShapeRep.draw(g, shape, contentBounds);
         }
 
+        if (isAA != saveAA) {
+            g.setAntialiasedShape(saveAA);
+        }
         if (!printing) {
             this.shapeRep = localShapeRep;
         }
