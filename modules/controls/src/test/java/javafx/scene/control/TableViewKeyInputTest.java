@@ -34,6 +34,8 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.layout.HBox;
 
 import java.util.List;
+import java.util.function.Function;
+
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.Utils;
 import com.sun.javafx.scene.control.behavior.TableViewAnchorRetriever;
@@ -4007,6 +4009,98 @@ public class TableViewKeyInputTest {
         assertEquals(expectedSize, indices.size());
         assertEquals(expectedSize, cells.size());
         assertTrue(sm.isSelected(9, col));
+
+        sl.dispose();
+    }
+
+    @Test public void test_rt_18440_goLeft() {
+        test_rt_18440(KeyCode.LEFT, 3, false, colIndex -> {
+            keyboard.doLeftArrowPress(KeyModifier.getShortcutKey());
+            return colIndex - 1;
+        });
+    }
+
+    @Test public void test_rt_18440_goLeft_toEnd() {
+        test_rt_18440(KeyCode.LEFT, 3, true, colIndex -> {
+            keyboard.doLeftArrowPress(KeyModifier.getShortcutKey());
+            return colIndex - 1;
+        });
+    }
+
+    @Test public void test_rt_18440_goRight() {
+        test_rt_18440(KeyCode.RIGHT, 0, false, colIndex -> {
+            keyboard.doRightArrowPress(KeyModifier.getShortcutKey());
+            return colIndex + 1;
+        });
+    }
+
+    @Test public void test_rt_18440_goRight_toEnd() {
+        test_rt_18440(KeyCode.RIGHT, 0, true, colIndex -> {
+            keyboard.doRightArrowPress(KeyModifier.getShortcutKey());
+            return colIndex + 1;
+        });
+    }
+
+    private void test_rt_18440(KeyCode direction, int startColumn, boolean goToEnd, Function<Integer, Integer> r) {
+        ObservableList<String> itemsList = FXCollections.observableArrayList();
+        for (int i = 0; i < 10; i++) {
+            itemsList.add("Row " + i);
+        }
+
+        tableView.setItems(itemsList);
+
+        tableView.getColumns().clear();
+        for (int i = 0; i < 4; i++) {
+            TableColumn<String, String> col = new TableColumn<>("Column " + i);
+            col.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue()));
+            tableView.getColumns().add(col);
+        }
+
+        TableView.TableViewFocusModel fm = tableView.getFocusModel();
+        TableView.TableViewSelectionModel<String> sm = tableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.setCellSelectionEnabled(true);
+
+        ObservableList<Integer> indices = sm.getSelectedIndices();
+        ObservableList<String> items = sm.getSelectedItems();
+
+        StageLoader sl = new StageLoader(tableView);
+
+        assertEquals(0, indices.size());
+        assertEquals(0, items.size());
+
+        sm.select(0, tableView.getColumns().get(startColumn));
+        assertEquals(0, sm.getSelectedIndex());
+        assertEquals(tableView.getColumns().get(startColumn), sm.getSelectedCells().get(0).getTableColumn());
+        assertEquals(0, fm.getFocusedIndex());
+        assertEquals(tableView.getColumns().get(startColumn), fm.getFocusedCell().getTableColumn());
+
+        int expectedColumn = r.apply(startColumn);
+        assertEquals(0, sm.getSelectedIndex());
+        assertEquals(tableView.getColumns().get(startColumn), sm.getSelectedCells().get(0).getTableColumn());
+        assertEquals(0, fm.getFocusedIndex());
+        assertEquals(tableView.getColumns().get(expectedColumn), fm.getFocusedCell().getTableColumn());
+
+        expectedColumn = r.apply(expectedColumn);
+        assertEquals(0, sm.getSelectedIndex());
+        assertEquals(tableView.getColumns().get(startColumn), sm.getSelectedCells().get(0).getTableColumn());
+        assertEquals(0, fm.getFocusedIndex());
+        assertEquals(tableView.getColumns().get(expectedColumn), fm.getFocusedCell().getTableColumn());
+
+        if (goToEnd) {
+            expectedColumn = r.apply(expectedColumn);
+            assertEquals(0, sm.getSelectedIndex());
+            assertEquals(tableView.getColumns().get(startColumn), sm.getSelectedCells().get(0).getTableColumn());
+            assertEquals(0, fm.getFocusedIndex());
+            assertEquals(tableView.getColumns().get(expectedColumn), fm.getFocusedCell().getTableColumn());
+        }
+
+        expectedColumn = direction == KeyCode.RIGHT ? 3 : 0;
+        keyboard.doKeyPress(direction, KeyModifier.SHIFT);
+        assertEquals(0, sm.getSelectedIndex());
+        assertEquals(debug(), 4, sm.getSelectedCells().size());
+        assertEquals(0, fm.getFocusedIndex());
+        assertEquals(tableView.getColumns().get(expectedColumn), fm.getFocusedCell().getTableColumn());
 
         sl.dispose();
     }

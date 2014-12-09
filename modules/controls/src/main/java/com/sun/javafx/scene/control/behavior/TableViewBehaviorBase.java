@@ -788,7 +788,11 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
         if (focusedCell == null || focusedCell.getTableColumn() == null) return;
         
         TableColumnBase adjacentColumn = getColumn(focusedCell.getTableColumn(), delta);
-        if (adjacentColumn == null) return;
+        if (adjacentColumn == null) {
+            // if adjacentColumn is null, we use the focusedCell column, as we are
+            // most probably at the very beginning or end of the row
+            adjacentColumn = focusedCell.getTableColumn();
+        }
 
         final int focusedCellRow = focusedCell.getRow();
 
@@ -811,11 +815,15 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
             sm.clearSelection(focusedCellRow, cellColumnToClear);
             fm.focus(focusedCellRow, adjacentColumn);
         } else if (isShiftDown && getAnchor() != null && ! selectionPathDeviated) {
-            final int columnPos = getVisibleLeafIndex(focusedCell.getTableColumn());
-            final int newColumn = columnPos + delta;
+            final int anchorColumn = getAnchor().getColumn();
 
-            int start = Math.min(columnPos, newColumn);
-            int end = Math.max(columnPos, newColumn);
+            // we don't let the newColumn go outside the bounds of the data
+            int newColumn = getVisibleLeafIndex(focusedCell.getTableColumn()) + delta;
+            newColumn = Math.max(Math.min(getVisibleLeafColumns().size() - 1, newColumn), 0);
+
+            int start = Math.min(anchorColumn, newColumn);
+            int end = Math.max(anchorColumn, newColumn);
+
             for (int _col = start; _col <= end; _col++) {
                 sm.select(focusedCell.getRow(), getColumn(_col));
             }
