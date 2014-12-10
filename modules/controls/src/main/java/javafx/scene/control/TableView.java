@@ -3125,11 +3125,11 @@ public class TableView<S> extends Control {
 
             if (added && ! removed) {
                 if (addedSize < c.getList().size()) {
-                    final int newFocusIndex = getFocusedIndex() + addedSize;
+                    final int newFocusIndex = Math.min(getItemCount() - 1, getFocusedIndex() + addedSize);
                     focus(newFocusIndex, focusedCell.getTableColumn());
                 }
             } else if (!added && removed) {
-                final int newFocusIndex = getFocusedIndex() - removedSize;
+                final int newFocusIndex = Math.max(0, getFocusedIndex() - removedSize);
                 if (newFocusIndex < 0) {
                     focus(0, focusedCell.getTableColumn());
                 } else {
@@ -3218,7 +3218,15 @@ public class TableView<S> extends Control {
             if (row < 0 || row >= getItemCount()) {
                 setFocusedCell(EMPTY_CELL);
             } else {
-                setFocusedCell(new TablePosition<>(tableView, row, column));
+                TablePosition<S,?> oldFocusCell = getFocusedCell();
+                TablePosition<S,?> newFocusCell = new TablePosition<>(tableView, row, column);
+                setFocusedCell(newFocusCell);
+
+                if (newFocusCell.equals(oldFocusCell)) {
+                    // manually update the focus properties to ensure consistency
+                    setFocusedIndex(row);
+                    setFocusedItem(getModelItem(row));
+                }
             }
         }
 

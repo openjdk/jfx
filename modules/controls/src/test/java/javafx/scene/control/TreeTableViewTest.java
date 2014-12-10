@@ -1126,15 +1126,15 @@ public class TreeTableViewTest {
         assertTrue("Focused index: " + fm.getFocusedIndex(), fm.isFocused(1));
     }
     
-    @Test public void test_rt17522_focusShouldBeResetWhenFocusedItemIsRemoved_1() {
+    @Test public void test_rt17522_focusShouldBeMovedWhenFocusedItemIsRemoved_1() {
         installChildren();
         FocusModel fm = treeTableView.getFocusModel();
         fm.focus(1);
         assertTrue(fm.isFocused(1));
         
         root.getChildren().remove(child1);
-        assertEquals(-1, fm.getFocusedIndex());
-        assertNull(fm.getFocusedItem());
+        assertEquals(0, fm.getFocusedIndex());
+        assertEquals(treeTableView.getTreeItem(0), fm.getFocusedItem());
     }
     
     @Test public void test_rt17522_focusShouldMoveWhenItemRemovedBeforeFocusIndex_1() {
@@ -4875,5 +4875,78 @@ public class TreeTableViewTest {
         assertEquals(b, sm.getSelectedItems().get(1));
 
         sl.dispose();
+    }
+
+    @Test public void test_rt_16068_firstElement_selectAndRemoveSameRow() {
+        // select and then remove the 'a' item, selection and focus should both
+        // stay at the first row, now 'b'
+        test_rt_16068(0, 0, 0);
+    }
+
+    @Test public void test_rt_16068_firstElement_selectRowAndRemoveLaterSibling() {
+        // select row 'a', and remove row 'c', selection and focus should not change
+        test_rt_16068(0, 2, 0);
+    }
+
+    @Test public void test_rt_16068_middleElement_selectAndRemoveSameRow() {
+        // select and then remove the 'b' item, selection and focus should both
+        // move up one row to the 'a' item
+        test_rt_16068(1, 1, 0);
+    }
+
+    @Test public void test_rt_16068_middleElement_selectRowAndRemoveLaterSibling() {
+        // select row 'b', and remove row 'c', selection and focus should not change
+        test_rt_16068(1, 2, 1);
+    }
+
+    @Test public void test_rt_16068_middleElement_selectRowAndRemoveEarlierSibling() {
+        // select row 'b', and remove row 'a', selection and focus should move up
+        // one row, remaining on 'b'
+        test_rt_16068(1, 0, 0);
+    }
+
+    @Test public void test_rt_16068_lastElement_selectAndRemoveSameRow() {
+        // select and then remove the 'd' item, selection and focus should both
+        // move up one row to the 'c' item
+        test_rt_16068(3, 3, 2);
+    }
+
+    @Test public void test_rt_16068_lastElement_selectRowAndRemoveEarlierSibling() {
+        // select row 'd', and remove row 'a', selection and focus should move up
+        // one row, remaining on 'd'
+        test_rt_16068(3, 0, 2);
+    }
+
+    private void test_rt_16068(int indexToSelect, int indexToRemove, int expectedIndex) {
+        TreeItem<String> root = new TreeItem<>("Root");
+        root.setExpanded(true);
+        root.getChildren().addAll(
+                new TreeItem<>("a"), // 0
+                new TreeItem<>("b"), // 1
+                new TreeItem<>("c"), // 2
+                new TreeItem<>("d")  // 3
+        );
+
+        TreeTableView<String> stringTreeTableView = new TreeTableView<>(root);
+        stringTreeTableView.setShowRoot(false);
+
+        TreeTableColumn<String,String> column = new TreeTableColumn<>("Column");
+        column.setCellValueFactory(cdf -> new ReadOnlyStringWrapper(cdf.getValue().getValue()));
+        stringTreeTableView.getColumns().add(column);
+
+        TreeTableView.TreeTableViewSelectionModel<String> sm = stringTreeTableView.getSelectionModel();
+        FocusModel<TreeItem<String>> fm = stringTreeTableView.getFocusModel();
+
+        sm.select(indexToSelect);
+        assertEquals(indexToSelect, sm.getSelectedIndex());
+        assertEquals(root.getChildren().get(indexToSelect).getValue(), sm.getSelectedItem().getValue());
+        assertEquals(indexToSelect, fm.getFocusedIndex());
+        assertEquals(root.getChildren().get(indexToSelect).getValue(), fm.getFocusedItem().getValue());
+
+        root.getChildren().remove(indexToRemove);
+        assertEquals(expectedIndex, sm.getSelectedIndex());
+        assertEquals(root.getChildren().get(expectedIndex).getValue(), sm.getSelectedItem().getValue());
+        assertEquals(debug(), expectedIndex, fm.getFocusedIndex());
+        assertEquals(root.getChildren().get(expectedIndex).getValue(), fm.getFocusedItem().getValue());
     }
 }
