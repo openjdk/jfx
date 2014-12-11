@@ -86,8 +86,8 @@ import java.security.PrivilegedAction;
  *
  * <p>
  * Applications may also send custom notification to the preloader using the
- * notifyCurrentPreloader() method. This way a preloader may also show
- * application initialization progress.
+ * {@link #notifyPreloader notifyPreloader} method. This way a preloader may
+ * also show application initialization progress.
  * </p>
  *
  * <p>
@@ -120,7 +120,10 @@ public abstract class Preloader extends Application {
     }
 
     /**
-     * Indicates progress.
+     * Indicates download progress.
+     * This method is called by the FX runtime to indicate progress while
+     * application resources are being loaded. It will not be called to deliver
+     * a ProgressNotification sent to {@link #notifyPreloader notifyPreloader}.
      *
      * <p>
      * The implementation of this method provided by the Preloader class
@@ -134,6 +137,8 @@ public abstract class Preloader extends Application {
 
     /**
      * Indicates a change in application state.
+     * This method is called by the FX runtime as part of the
+     * application life-cycle.
      *
      * <p>
      * The implementation of this method provided by the Preloader class
@@ -147,8 +152,13 @@ public abstract class Preloader extends Application {
 
     /**
      * Indicates an application-generated notification.
-     * Application should not call this method directly, but should use
-     * notifyCurrentPreloader() instead to avoid mixed code dialog issues.
+     * This method is called by the FX runtime to deliver a notification sent
+     * via {@link #notifyPreloader notifyPreloader}.
+     *
+     * <p>
+     * Applications should not call this method directly, but should use
+     * {@link #notifyPreloader notifyPreloader} instead to avoid mixed code dialog issues.
+     * </p>
      *
      * <p>
      * The implementation of this method provided by the Preloader class
