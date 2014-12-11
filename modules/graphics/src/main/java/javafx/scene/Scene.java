@@ -111,7 +111,21 @@ import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
  * size based on the preferred size of its content. If only one dimension is specified,
  * the other dimension is computed using the specified dimension, respecting content bias
  * of a root.
- * 
+ * <p>
+ * An application may request depth buffer support or scene anti-aliasing
+ * support at the creation of a {@code Scene}. A scene with only 2D shapes and
+ * without any 3D transforms does not need a depth buffer nor scene
+ * anti-aliasing support. A scene containing 3D shapes or 2D shapes with 3D
+ * transforms may use depth buffer support for proper depth sorted rendering; to
+ * avoid depth fighting (also known as Z fighting), disable depth testing on 2D
+ * shapes that have no 3D transforms. See
+ * {@link Node#depthTestProperty depthTest} for more information. A scene with
+ * 3D shapes may enable scene anti-aliasing to improve its rendering quality.
+ * <p>
+ * The depthBuffer and antiAliasing flags are conditional features. With the
+ * respective default values of: false and {@code SceneAntialiasing.DISABLED}.
+ * See {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
+ * for more information.
  * <p>
  * A default headlight will be added to a scene that contains one or more
  * {@code Shape3D} nodes, but no light nodes. This light source is a 
@@ -239,6 +253,13 @@ public class Scene implements EventTarget {
     /**
      * Constructs a scene consisting of a root, with a dimension of width and
      * height, and specifies whether a depth buffer is created for this scene.
+     * <p>
+     * A scene with only 2D shapes and without any 3D transforms does not need a
+     * depth buffer. A scene containing 3D shapes or 2D shapes with 3D
+     * transforms may use depth buffer support for proper depth sorted
+     * rendering; to avoid depth fighting (also known as Z fighting), disable
+     * depth testing on 2D shapes that have no 3D transforms. See
+     * {@link Node#depthTestProperty depthTest} for more information.
      *
      * @param root The root node of the scene graph
      * @param width The width of the scene
@@ -262,6 +283,15 @@ public class Scene implements EventTarget {
      * Constructs a scene consisting of a root, with a dimension of width and
      * height, specifies whether a depth buffer is created for this scene and
      * specifies whether scene anti-aliasing is requested.
+     * <p>
+     * A scene with only 2D shapes and without any 3D transforms does not need a
+     * depth buffer nor scene anti-aliasing support. A scene containing 3D
+     * shapes or 2D shapes with 3D transforms may use depth buffer support for
+     * proper depth sorted rendering; to avoid depth fighting (also known as Z
+     * fighting), disable depth testing on 2D shapes that have no 3D transforms.
+     * See {@link Node#depthTestProperty depthTest} for more information. A
+     * scene with 3D shapes may enable scene anti-aliasing to improve its
+     * rendering quality.
      * <p>
      * A Scene can be created and modified on any thread until it is attached to a {@code Window} that is showing
      * ({@link javafx.stage.Window#isShowing()}. This does not mean the Scene is thread-safe,
