@@ -68,7 +68,7 @@ import static javafx.concurrent.WorkerStateEvent.WORKER_STATE_SUCCEEDED;
  *     to perform some work on one or more background threads. As part of the
  *     JavaFX UI library, the Service knows about the JavaFX Application thread
  *     and is designed to relieve the application developer from the burden
- *     of manging multithreaded code that interacts with the user interface. As
+ *     of managing multithreaded code that interacts with the user interface. As
  *     such, all of the methods and state on the Service are intended to be
  *     invoked exclusively from the JavaFX Application thread. The only exception
  *     to this, is when initially configuring a Service, which may safely be done
@@ -77,10 +77,16 @@ import static javafx.concurrent.WorkerStateEvent.WORKER_STATE_SUCCEEDED;
  *     started, it may only thereafter be used from the FX thread.
  * </p>
  * <p>
+ *     A Service creates and manages a {@link Task} that performs the work
+ *     on the background thread.
  *     Service implements {@link Worker}. As such, you can observe the state of
- *     the background operation and optionally cancel it. Service is a reusable
+ *     the background task and optionally cancel it. Service is a reusable
  *     Worker, meaning that it can be reset and restarted. Due to this, a Service
  *     can be constructed declaratively and restarted on demand.
+ *     Once a Service is started, it will schedule its Task and listen for
+ *     changes to the state of the Task. A Task does not hold a reference to the
+ *     Service that started it, meaning that a running Task will not prevent
+ *     the Service from being garbage collected.
  * </p>
  * <p>
  *     If an {@link java.util.concurrent.Executor} is specified on the Service,

@@ -321,6 +321,10 @@ public class MacAppStoreBundler extends MacBaseInstallerBundler {
     @Override
     public boolean validate(Map<String, ? super Object> params) throws UnsupportedPlatformException, ConfigException {
         try {
+            if (!System.getProperty("os.name").toLowerCase().contains("os x")) {
+                throw new UnsupportedPlatformException();
+            }
+
             if (params == null) {
                 throw new ConfigException(
                         I18N.getString("error.parameters-null"),

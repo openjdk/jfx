@@ -358,10 +358,21 @@ public abstract class Application {
     /**
      * Notifies the preloader with an application-generated notification.
      * Application code calls this method with a PreloaderNotification that is
-     * delivered to the preloader's handleApplicationNotification() method.
+     * delivered to the
+     * {@link Preloader#handleApplicationNotification
+     * Preloader.handleApplicationNotification} method.
      * This is primarily useful for cases where an application wants the
      * preloader to show progress during a long application initialization
      * step.
+     *
+     * <p>
+     * NOTE: the notification will be delivered only to the preloader's
+     * handleApplicationNotification() method; this means, for example, that
+     * if this method is called with a ProgressNotification, that notification
+     * will not be delivered to the {@link Preloader#handleProgressNotification
+     * Preloader.handleProgressNotification}
+     * method.
+     * </p>
      *
      * @param info the application-generated preloader notification
      */

@@ -1046,6 +1046,26 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
         public TreeModificationEvent(EventType<? extends Event> eventType,
                                      TreeItem<T> treeItem,
                                      List<? extends TreeItem<T>> added,
+                                     List<? extends TreeItem<T>> removed) {
+            this(eventType, treeItem, added, removed, null);
+        }
+
+        /**
+         * Constructs a TreeModificationEvent for when the TreeItem has had its
+         * children list changed, including the
+         * {@link javafx.collections.ListChangeListener.Change} that has taken place.
+         *
+         * @param eventType The type of the event that has occurred.
+         * @param treeItem The TreeItem on which this event occurred.
+         * @param added A list of the items added to the children list of the
+         *      given TreeItem.
+         * @param removed A list of the items removed from the children list of
+         *      the given TreeItem.
+         * @param change The actual change that has taken place on the children list.
+         */
+        private TreeModificationEvent(EventType<? extends Event> eventType,
+                                     TreeItem<T> treeItem,
+                                     List<? extends TreeItem<T>> added,
                                      List<? extends TreeItem<T>> removed,
                                      ListChangeListener.Change<? extends TreeItem<T>> change) {
             super(eventType);
