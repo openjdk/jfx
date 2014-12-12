@@ -255,7 +255,7 @@ public class TableHeaderRow extends StackPane {
     };
     
     private final InvalidationListener columnTextListener = observable -> {
-        TableColumn<?,?> column = (TableColumn<?,?>) ((StringProperty)observable).getBean();
+        TableColumnBase<?,?> column = (TableColumnBase<?,?>) ((StringProperty)observable).getBean();
         CheckMenuItem menuItem = columnMenuItems.get(column);
         if (menuItem != null) {
             menuItem.setText(getText(column.getText(), column));
@@ -325,7 +325,11 @@ public class TableHeaderRow extends StackPane {
 
     /** {@inheritDoc} */
     @Override protected double computePrefHeight(double width) {
-        return snappedTopInset() + header.prefHeight(width) + snappedBottomInset();
+        // we use cornerRegion.getHeight() here to avoid RT-37616, where the
+        // entire header row would disappear when all columns were hidden. We know
+        // that the cornerRegion height has previously been calculated and set,
+        // so we can baseline on this size to prevent the header row disappearing.
+        return snappedTopInset() + Math.max(header.prefHeight(width), cornerRegion.getHeight()) + snappedBottomInset();
     }
 
     // protected to allow subclasses to provide a custom root header

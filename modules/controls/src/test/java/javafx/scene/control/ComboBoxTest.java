@@ -98,6 +98,7 @@ public class ComboBoxTest {
     
     @Before public void setup() {
         comboBox = new ComboBox<String>();
+        comboBox.setSkin(new ComboBoxListViewSkin<>(comboBox));
         sm = comboBox.getSelectionModel();
     }
     
@@ -1662,6 +1663,142 @@ public class ComboBoxTest {
         cb2Keyboard.doKeyPress(KeyCode.TAB, KeyModifier.SHIFT);
         assertTrue(cb1.isFocused());
         assertEquals(cb1, scene.getFocusOwner());
+
+        sl.dispose();
+    }
+
+    private int rt_38901_counter;
+    @Test public void test_rt_38901_selectNull() {
+        test_rt_38901(true);
+    }
+
+    @Test public void test_rt_38901_selectNegativeOne() {
+        test_rt_38901(false);
+    }
+
+    private void test_rt_38901(boolean selectNull) {
+        rt_38901_counter = 0;
+
+        final ComboBox<String> cb = new ComboBox<>();
+        cb.setOnShowing((e) -> {
+            cb.getItems().setAll("DUMMY " + (rt_38901_counter++));
+        });
+
+        assertEquals(-1, cb.getSelectionModel().getSelectedIndex());
+        assertNull(cb.getSelectionModel().getSelectedItem());
+        assertNull(cb.getValue());
+        assertEquals(0, cb.getItems().size());
+
+        // round one
+        cb.show();
+        assertEquals(1, cb.getItems().size());
+        assertEquals("DUMMY 0", cb.getItems().get(0));
+        cb.hide();
+
+        cb.getSelectionModel().select(0);
+        assertEquals(0, cb.getSelectionModel().getSelectedIndex());
+        assertEquals("DUMMY 0", cb.getSelectionModel().getSelectedItem());
+        assertEquals("DUMMY 0", cb.getValue());
+
+        if (selectNull) cb.getSelectionModel().select(null);
+        else cb.getSelectionModel().select(-1);
+
+        assertEquals(-1, cb.getSelectionModel().getSelectedIndex());
+        assertNull(cb.getSelectionModel().getSelectedItem());
+        assertNull(cb.getValue());
+
+
+        // round two
+        cb.show();
+        assertEquals(1, cb.getItems().size());
+        assertEquals("DUMMY 1", cb.getItems().get(0));
+        cb.hide();
+
+        cb.getSelectionModel().select(0);
+        assertEquals(0, cb.getSelectionModel().getSelectedIndex());
+        assertEquals("DUMMY 1", cb.getSelectionModel().getSelectedItem());
+        assertEquals("DUMMY 1", cb.getValue());
+
+        if (selectNull) cb.getSelectionModel().select(null);
+        else cb.getSelectionModel().select(-1);
+
+        assertEquals(-1, cb.getSelectionModel().getSelectedIndex());
+        assertNull(cb.getSelectionModel().getSelectedItem());
+        assertNull(cb.getValue());
+    }
+
+    private int rt_22572_counter;
+    @Test public void test_rt_22572() {
+        rt_22572_counter = 0;
+
+        final ComboBox<String> cb = new ComboBox<>();
+        cb.setOnShowing((e) -> {
+            cb.getItems().setAll("DUMMY " + (rt_22572_counter++));
+        });
+
+        StageLoader sl = new StageLoader(cb);
+
+        assertEquals(-1, cb.getSelectionModel().getSelectedIndex());
+        assertNull(cb.getSelectionModel().getSelectedItem());
+        assertNull(cb.getValue());
+        assertEquals(0, cb.getItems().size());
+
+        // round one
+        cb.show();
+        assertEquals(1, cb.getItems().size());
+        assertEquals("DUMMY 0", cb.getItems().get(0));
+        cb.hide();
+
+        cb.getSelectionModel().select(0);
+        assertEquals(0, cb.getSelectionModel().getSelectedIndex());
+        assertEquals("DUMMY 0", cb.getSelectionModel().getSelectedItem());
+        assertEquals("DUMMY 0", cb.getValue());
+
+
+        // round two - even though the items change, the value should still be
+        // the old value (even though it doesn't exist in the items list any longer).
+        // The selectedIndex and selectedItem do get reset however.
+        cb.show();
+        assertEquals(1, cb.getItems().size());
+        assertEquals("DUMMY 1", cb.getItems().get(0));
+        cb.hide();
+
+        assertEquals(-1, cb.getSelectionModel().getSelectedIndex());
+        assertNull(cb.getSelectionModel().getSelectedItem());
+        assertEquals("DUMMY 0", cb.getValue());
+
+        sl.dispose();
+    }
+
+    private int rt_22937_counter;
+    @Test public void test_rt_22937() {
+        rt_22937_counter = 0;
+
+        final ComboBox<String> cb = new ComboBox<>();
+        cb.setOnShowing((e) -> {
+            cb.getItems().setAll("DUMMY " + (rt_22937_counter++));
+        });
+
+        cb.getItems().add("Toto");
+        cb.setEditable(true);
+        cb.setValue("Tata");
+
+        StageLoader sl = new StageLoader(cb);
+
+        assertEquals(-1, cb.getSelectionModel().getSelectedIndex());
+        assertEquals("Tata", cb.getSelectionModel().getSelectedItem());
+        assertEquals("Tata", cb.getValue());
+        assertEquals(1, cb.getItems().size());
+
+        cb.show();
+        assertEquals(1, cb.getItems().size());
+        assertEquals("DUMMY 0", cb.getItems().get(0));
+        cb.hide();
+
+        cb.getSelectionModel().select(0);
+        assertEquals(0, cb.getSelectionModel().getSelectedIndex());
+        assertEquals("DUMMY 0", cb.getSelectionModel().getSelectedItem());
+        assertEquals("DUMMY 0", cb.getValue());
 
         sl.dispose();
     }

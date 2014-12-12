@@ -45,8 +45,6 @@ public class CreateJarParams extends CommonParams {
     String outfile;
     String fxVersion = PackagerLib.JAVAFX_VERSION;
 
-    String defaultFallbackApp = "com.javafx.main.NoJavaFXFallback";
-
     List<String> arguments;
     List<Param> params;
 

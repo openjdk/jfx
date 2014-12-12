@@ -1,0 +1,37 @@
+<project name="SecondaryLauncher_1" default="default" basedir="."
+         xmlns:fx="javafx:com.sun.javafx.tools.ant">
+    <target name="default">
+        <taskdef resource="com/sun/javafx/tools/ant/antlib.xml"
+                 uri="javafx:com.sun.javafx.tools.ant"
+                 classpath="../../../../../../../libs/ant-javafx.jar"/>
+        <!-- designed to be run in build/resoruce/test/... dir -->
+
+        <fx:application id="SecondaryLauncher_1"
+                        name="Secondary Launcher"
+                        mainClass="hello.TestPackager"/>
+
+        <fx:resources id="appRes">
+            <fx:fileset dir="../../../../../../../tmp/tests/appResources" includes="mainApp.jar"/>
+        </fx:resources>
+
+        <fx:deploy outdir="../../../../../../../tmp/tests/ant" nativeBundles="image">
+
+            <fx:application refId="SecondaryLauncher_1"/>
+
+            <fx:resources refid="appRes"/>
+
+            <fx:info title="Packager Test"/>
+
+            <fx:secondaryLauncher
+                    mainClass="hello.TestPackager"
+                    name="A Rectangle"
+                    />
+
+            <fx:secondaryLauncher
+                    name="Memory Constrained"
+            >
+                <fx:jvmarg value="-xmx64m"/>
+            </fx:secondaryLauncher>
+        </fx:deploy>
+    </target>
+</project>

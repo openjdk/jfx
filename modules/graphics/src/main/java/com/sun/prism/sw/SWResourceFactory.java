@@ -118,7 +118,7 @@ final class SWResourceFactory
         return tex instanceof SWTexture;
     }
 
-    @Override public RTTexture createRTTexture(int width, int height, WrapMode wrapMode, boolean antiAliasing) {
+    @Override public RTTexture createRTTexture(int width, int height, WrapMode wrapMode, boolean msaa) {
         return createRTTexture(width, height, wrapMode);
     }
 
@@ -153,6 +153,11 @@ final class SWResourceFactory
         }
     }
 
+    @Override
+    protected boolean canClampToZero() {
+        return false;
+    }
+
     @Override public Texture createTexture(MediaFrame vdb) {
         return new SWArgbPreTexture(this, WrapMode.CLAMP_TO_EDGE, vdb.getWidth(), vdb.getHeight());
     }
@@ -168,6 +173,11 @@ final class SWResourceFactory
             return null;
         }
         return SWTexture.create(this, formatHint, wrapMode, w, h);
+    }
+
+    @Override public Texture createTexture(PixelFormat formatHint, Usage usageHint,
+            WrapMode wrapMode, int w, int h, boolean useMipmap) {
+        return createTexture(formatHint, usageHint, wrapMode, w, h);
     }
 
     public PhongMaterial createPhongMaterial() {

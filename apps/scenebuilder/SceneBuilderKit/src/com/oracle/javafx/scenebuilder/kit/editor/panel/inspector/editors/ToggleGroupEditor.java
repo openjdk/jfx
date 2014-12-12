@@ -47,9 +47,12 @@ public class ToggleGroupEditor extends AutoSuggestEditor {
 
     List<String> suggestedTgs;
 
-    @SuppressWarnings("LeakingThisInConstructor")
     public ToggleGroupEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses, List<String> suggestedTgs) {
         super(propMeta, selectedClasses, suggestedTgs);
+        initialize(suggestedTgs);
+    }
+    
+    private void initialize(List<String> suggestedTgs) {
         this.suggestedTgs = suggestedTgs;
 
         // text field events handling

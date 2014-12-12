@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -109,24 +109,25 @@ public final class GSTPlatform extends Platform {
         return contentTypesCopy;
     }
 
+    @Override
     public Media createMedia(Locator source) {
         return new GSTMedia(source);
     }
 
     @Override
-    public Object prerollMediaPlayer(Locator source) {
+    public MediaPlayer createMediaPlayer(Locator source) {
         GSTMediaPlayer player;
         try {
             player = new GSTMediaPlayer(source);
         } catch (Exception e) {
             if (Logger.canLog(Logger.DEBUG)) {
-                Logger.logMsg(Logger.DEBUG, "GSTPlatform caught exception while prerolling: "+e);
+                Logger.logMsg(Logger.DEBUG, "GSTPlatform caught exception while creating media player: "+e);
             }
             return null;
         }
 
         // Special case for H.264 decoding on Mac OS X.
-        if (player != null && HostUtils.isMacOSX()) {
+        if (HostUtils.isMacOSX()) {
             String contentType = source.getContentType();
             if ("video/mp4".equals(contentType) || "video/x-m4v".equals(contentType)
                   || source.getStringLocation().endsWith(".m3u8"))
@@ -164,16 +165,6 @@ public final class GSTPlatform extends Platform {
             }
         }
         return player;
-    }
-
-    public MediaPlayer createMediaPlayer(Locator source, Object cookie) {
-        if(cookie == null) {
-            throw new NullPointerException("null player!");
-        } else if(!(cookie instanceof GSTMediaPlayer)) {
-            throw new IllegalArgumentException("!(cookie instanceof GSTMediaPlayer)");
-        }
-
-        return (MediaPlayer)cookie;
     }
 
     /**

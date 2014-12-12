@@ -32,10 +32,7 @@
 package com.oracle.javafx.scenebuilder.kit.editor.job.wrap;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
-import com.oracle.javafx.scenebuilder.kit.editor.job.ModifyObjectJob;
-import com.oracle.javafx.scenebuilder.kit.editor.selection.AbstractSelectionGroup;
-import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
-import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
+import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.ModifyObjectJob;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.metadata.Metadata;
@@ -43,139 +40,17 @@ import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadat
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask.Accessory;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
-import java.util.Set;
+import java.util.List;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
 import javafx.scene.Node;
-import javafx.scene.chart.Axis;
-import javafx.scene.control.Accordion;
-import javafx.scene.control.TabPane;
+import javafx.scene.control.DialogPane;
 import javafx.scene.layout.BorderPane;
-import javafx.scene.text.TextFlow;
 
 /**
  * Utilities to build wrap jobs.
  */
 public class WrapJobUtils {
-
-    /**
-     * Returns true if the selection is an ObjectSelectionGroup that share
-     * the same parent.
-     *
-     * @param editorController
-     * @return
-     */
-    static boolean canWrapIn(final EditorController editorController) {
-        final Selection selection = editorController.getSelection();
-        if (selection.isEmpty()) {
-            return false;
-        }
-        final AbstractSelectionGroup asg = selection.getGroup();
-        if ((asg instanceof ObjectSelectionGroup) == false) {
-            return false;
-        }
-        final ObjectSelectionGroup osg = (ObjectSelectionGroup) asg;
-        if (osg.hasSingleParent() == false) {
-            return false;
-        }
-        if (editorController.isSelectionNode() == false) {
-            return false;
-        }
-        // Cannot wrap in Axis nodes
-        for (FXOMObject fxomObject : osg.getItems()) {
-            if (fxomObject.getSceneGraphObject() instanceof Axis) {
-                return false;
-            }
-        }
-        final FXOMObject parent = osg.getAncestor();
-        if (parent == null) { // selection == root object
-            return true;
-        }
-        final Object parentSceneGraphObject = parent.getSceneGraphObject();
-        if (parentSceneGraphObject instanceof BorderPane) {
-            return osg.getItems().size() == 1;
-        }
-        return !(parentSceneGraphObject instanceof Accordion) // accepts only TitledPanes
-                && !(parentSceneGraphObject instanceof TabPane); // accepts only Tabs
-    }
-
-    static boolean canUnwrap(final EditorController editorController) {
-        final Selection selection = editorController.getSelection();
-        if (selection.isEmpty()) {
-            return false;
-        }
-        final AbstractSelectionGroup asg = selection.getGroup();
-        if ((asg instanceof ObjectSelectionGroup) == false) {
-            return false;
-        }
-        final ObjectSelectionGroup osg = (ObjectSelectionGroup) asg;
-        if (osg.getItems().size() != 1) {
-            return false;
-        }
-        final FXOMObject container = osg.getItems().iterator().next();
-        if (container instanceof FXOMInstance == false) {
-            return false;
-        }
-        final FXOMInstance containerInstance = (FXOMInstance) container;
-        
-        // Unresolved custom type
-        if (container.getSceneGraphObject() == null) {
-            return false;
-        }
-        
-        // Cannot unwrap TabPane
-        if (TabPane.class.isAssignableFrom(containerInstance.getDeclaredClass())) {
-            return false;
-        }
-        // Cannot unwrap all Pane subclasses (ex : BorderPane and TextFlow)
-        if (BorderPane.class.isAssignableFrom(containerInstance.getDeclaredClass())
-                || TextFlow.class.isAssignableFrom(containerInstance.getDeclaredClass())) {
-            return false;
-        }
-        // Can unwrap classes supporting wrapping except TabPane + some Pane subclasses (see above)
-        boolean isAssignableFrom = false;
-        for (Class<?> clazz : EditorController.getClassesSupportingWrapping()) {
-            isAssignableFrom |= clazz.isAssignableFrom(
-                    containerInstance.getDeclaredClass());
-        }
-        if (isAssignableFrom == false) {
-            return false;
-        }
-
-        // Retrieve the num of children of the container to unwrap
-        final DesignHierarchyMask containerMask
-                = new DesignHierarchyMask(container);
-        int childrenCount;
-        if (containerMask.isAcceptingSubComponent()) {
-            childrenCount = containerMask.getSubComponentCount();
-        } else {
-            assert containerMask.isAcceptingAccessory(Accessory.CONTENT); // Because of (1)
-            childrenCount = containerMask.getAccessoryProperty(Accessory.CONTENT) == null ? 0 : 1;
-        }
-        // If the container to unwrap has no childen, it cannot be unwrapped
-        if (childrenCount == 0) {
-            return false;
-        }
-
-        // Retrieve the parent of the container to unwrap
-        final FXOMObject parentContainer = container.getParentObject();
-        // Unwrap the root node
-        if (parentContainer == null) {
-            return childrenCount == 1;
-        } else {
-            // Check that the num of children can be added to the parent container
-            final DesignHierarchyMask parentContainerMask
-                    = new DesignHierarchyMask(parentContainer);
-            if (parentContainerMask.isAcceptingSubComponent()) {
-                return childrenCount >= 1;
-            } else {
-                assert parentContainerMask.isAcceptingAccessory(Accessory.CONTENT)
-                        || parentContainerMask.isAcceptingAccessory(Accessory.GRAPHIC)
-                        || parentContainerMask.getFxomObject().getSceneGraphObject() instanceof BorderPane;
-                return childrenCount == 1;
-            }
-        }
-    }
 
     /**
      * Returns the property name of the specified container to be used for wrapping jobs.
@@ -187,11 +62,11 @@ public class WrapJobUtils {
      * @return
      */
     static PropertyName getContainerPropertyName(
-            final FXOMInstance container, final Set<FXOMObject> children) {
+            final FXOMInstance container, final List<FXOMObject> children) {
         final DesignHierarchyMask mask = new DesignHierarchyMask(container);
         final PropertyName result;
 
-        if (mask.getFxomObject().getSceneGraphObject() instanceof BorderPane) {
+        if (container.getSceneGraphObject() instanceof BorderPane) {
             // wrap/unwrap the child of a BorderPane
             assert mask.isAcceptingAccessory(Accessory.TOP);
             assert mask.isAcceptingAccessory(Accessory.LEFT);
@@ -221,20 +96,67 @@ public class WrapJobUtils {
                 assert false;
                 result = null;
             }
+        } else if (container.getSceneGraphObject() instanceof DialogPane) {
+            // wrap/unwrap the child of a DialodPane
+            assert mask.isAcceptingAccessory(Accessory.DP_CONTENT);
+            assert mask.isAcceptingAccessory(Accessory.DP_GRAPHIC);
+            assert mask.isAcceptingAccessory(Accessory.EXPANDABLE_CONTENT);
+            assert mask.isAcceptingAccessory(Accessory.HEADER);
+            assert children != null && children.size() == 1; // wrap job is executable
+            final FXOMObject child = children.iterator().next();
+
+            final FXOMObject content = mask.getAccessory(Accessory.DP_CONTENT);
+            final FXOMObject graphic = mask.getAccessory(Accessory.DP_GRAPHIC);
+            final FXOMObject expandableContent = mask.getAccessory(Accessory.EXPANDABLE_CONTENT);
+            final FXOMObject header = mask.getAccessory(Accessory.HEADER);
+            // Return same accessory as the child container one
+            if (child.equals(content)) {
+                result = mask.getPropertyNameForAccessory(Accessory.DP_CONTENT);
+            } else if (child.equals(graphic)) {
+                result = mask.getPropertyNameForAccessory(Accessory.DP_GRAPHIC);
+            } else if (child.equals(expandableContent)) {
+                result = mask.getPropertyNameForAccessory(Accessory.EXPANDABLE_CONTENT);
+            } else if (child.equals(header)) {
+                result = mask.getPropertyNameForAccessory(Accessory.HEADER);
+            } else {
+                assert false;
+                result = null;
+            }
         } else if (mask.isAcceptingSubComponent()) {
             result = mask.getSubComponentPropertyName();
-        } else if (mask.isAcceptingAccessory(Accessory.CONTENT)) {
-            result = mask.getPropertyNameForAccessory(Accessory.CONTENT);
-        } else if (mask.isAcceptingAccessory(Accessory.GRAPHIC)) {
-            result = mask.getPropertyNameForAccessory(Accessory.GRAPHIC);
         } else {
-            assert false;
-            result = null;
+            assert mask.isAcceptingAccessory(Accessory.CONTENT)
+                    || mask.isAcceptingAccessory(Accessory.GRAPHIC);
+            assert children != null && children.size() == 1; // wrap job is executable
+            final FXOMObject child = children.iterator().next();
+
+            if (mask.isAcceptingAccessory(Accessory.GRAPHIC) == false) {
+                // Containers accepting CONTENT only
+                assert mask.isAcceptingAccessory(Accessory.CONTENT);
+                result = mask.getPropertyNameForAccessory(Accessory.CONTENT);
+            } else if (mask.isAcceptingAccessory(Accessory.CONTENT) == false) {
+                // Containers accepting GRAPHIC only
+                assert mask.isAcceptingAccessory(Accessory.GRAPHIC);
+                result = mask.getPropertyNameForAccessory(Accessory.GRAPHIC);
+            } else {
+                // Containers accepting both CONTENT and GRAPHIC
+                final FXOMObject content = mask.getAccessory(Accessory.CONTENT);
+                final FXOMObject graphic = mask.getAccessory(Accessory.GRAPHIC);
+                // Return same accessory as the child container one
+                if (child.equals(content)) {
+                    result = mask.getPropertyNameForAccessory(Accessory.CONTENT);
+                } else if (child.equals(graphic)) {
+                    result = mask.getPropertyNameForAccessory(Accessory.GRAPHIC);
+                } else {
+                    assert false;
+                    result = null;
+                }
+            }
         }
         return result;
     }
 
-    static Bounds getUnionOfBounds(final Set<FXOMObject> fxomObjects) {
+    static Bounds getUnionOfBounds(final List<FXOMObject> fxomObjects) {
         assert fxomObjects != null && fxomObjects.isEmpty() == false;
         Bounds result = null;
         for (FXOMObject fxomObject : fxomObjects) {

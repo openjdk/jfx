@@ -160,7 +160,7 @@ final class SWTWindow extends Window {
     }
     
     @Override protected boolean _close(long ptr) {
-        shell.close();
+        shell.dispose();
         return true;
     }
     
@@ -239,9 +239,13 @@ final class SWTWindow extends Window {
             if ((shell.getStyle() & SWT.NO_FOCUS) != 0) {
                 shell.setVisible(visible);
             } else {
-                shell.open();
-                //TODO - explicitly setting focus should not be necessary
-                shell.setFocus();
+                if (visible) {
+                    shell.open();
+                    //TODO - explicitly setting focus should not be necessary
+                    shell.setFocus();
+                } else {
+                    shell.setVisible(false);
+                }
             }
         });
         return true;

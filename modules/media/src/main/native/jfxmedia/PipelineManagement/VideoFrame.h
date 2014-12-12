@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -44,7 +44,8 @@ public:
         ARGB = 1,
         BGRA_PRE = 2,
         YCbCr_420p = 100,
-        YCbCr_422 = 101
+        YCbCr_422 = 101,
+        YCbCr_422_rev = 102
     };
 
 public:
@@ -54,21 +55,19 @@ public:
     virtual void        Dispose() {}
 
     double              GetTime();
-    unsigned long       GetFrameNumber();
 
     int                 GetWidth();
     int                 GetHeight();
     int                 GetEncodedWidth();
     int                 GetEncodedHeight();
-    int                 GetPlaneCount();
-    int                 GetOffsetForPlane(int planeIndex);
-    int                 GetStrideForPlane(int planeIndex);
 
     FrameType           GetType();
     bool                HasAlpha();
 
-    unsigned long       GetSize();
-    void*               GetData();
+    int                 GetPlaneCount();
+    void*               GetDataForPlane(int planeIndex);
+    unsigned long       GetSizeForPlane(int planeIndex);
+    int                 GetStrideForPlane(int planeIndex);
 
     virtual CVideoFrame *ConvertToFormat(FrameType type);
 
@@ -82,14 +81,16 @@ protected:
     int                 m_iEncodedHeight;
     FrameType           m_typeFrame;
     bool                m_bHasAlpha;
-    int                 m_iPlaneCount;
-    int                 m_piPlaneOffsets[4];
-    int                 m_piPlaneStrides[4];
     double              m_dTime;
-    unsigned long       m_ulSize;
-    void*               m_pvData;
-    unsigned long       m_ulFrameNumber;
     bool                m_FrameDirty;
+
+    // frame data buffers
+    int                 m_iPlaneCount;
+    void*               m_pvPlaneData[4];
+    unsigned long       m_pulPlaneSize[4];
+    int                 m_piPlaneStrides[4];
+
+    void SwapPlanes(int aa, int bb);
 };
 
 #endif  //_VIDEO_FRAME_H_

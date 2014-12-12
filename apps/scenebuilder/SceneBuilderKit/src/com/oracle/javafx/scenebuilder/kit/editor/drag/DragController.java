@@ -48,8 +48,8 @@ import com.oracle.javafx.scenebuilder.kit.editor.drag.target.AbstractDropTarget;
 import com.oracle.javafx.scenebuilder.kit.editor.drag.target.RootDropTarget;
 import com.oracle.javafx.scenebuilder.kit.editor.job.BatchJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
-import com.oracle.javafx.scenebuilder.kit.editor.job.v2.BackupSelectionJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.v2.UpdateSelectionJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.BackupSelectionJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.UpdateSelectionJob;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyPath;
 

@@ -31,9 +31,9 @@ import javafx.beans.WeakInvalidationListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
 import javafx.event.Event;
-//import javafx.scene.accessibility.Action;
-//import javafx.scene.accessibility.Attribute;
-//import javafx.scene.accessibility.Role;
+import javafx.scene.AccessibleAction;
+import javafx.scene.AccessibleAttribute;
+import javafx.scene.AccessibleRole;
 import javafx.scene.control.TableView.TableViewFocusModel;
 
 import com.sun.javafx.scene.control.skin.TableCellSkin;
@@ -88,6 +88,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
      */
     public TableCell() {
         getStyleClass().addAll(DEFAULT_STYLE_CLASS);
+        setAccessibleRole(AccessibleRole.TABLE_CELL);
         
         updateColumnIndex();
     }
@@ -509,7 +510,10 @@ public class TableCell<S,T> extends IndexedCell<T> {
         if (getIndex() == -1 || tableView == null) return;
 
         TableSelectionModel<S> sm = tableView.getSelectionModel();
-        if (sm == null) return;
+        if (sm == null) {
+            updateSelected(false);
+            return;
+        }
 
         boolean isSelectedNow = sm.isSelected(getIndex(), getTableColumn());
         if (isSelected == isSelectedNow) return;
@@ -532,7 +536,10 @@ public class TableCell<S,T> extends IndexedCell<T> {
         if (index == -1 || tableView == null || tableRow == null) return;
 
         final TableViewFocusModel<S> fm = tableView.getFocusModel();
-        if (fm == null) return;
+        if (fm == null) {
+            setFocused(false);
+            return;
+        }
 
         boolean isFocusedNow = fm != null && fm.isFocused(index, getTableColumn());
 
@@ -640,7 +647,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
             // RT-35864 - if the index didn't change, then avoid calling updateItem
             // unless the item has changed.
             if (oldIndex == index) {
-                if (oldValue != null ? oldValue.equals(newValue) : newValue == null) {
+                if (!isItemChanged(oldValue, newValue)) {
                     // RT-36670: we need to check the row item here to prevent
                     // the issue where the cell value and index doesn't change,
                     // but the backing row object does.
@@ -779,37 +786,30 @@ public class TableCell<S,T> extends IndexedCell<T> {
      *                                                                         *
      **************************************************************************/
 
-//    /** @treatAsPrivate */
-//    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//        switch (attribute) {
-//            case ROLE: return Role.TABLE_CELL;
-//            case ROW_INDEX: return getIndex();
-//            case COLUMN_INDEX: return columnIndex;
-//            case SELECTED: return isInCellSelectionMode() ? isSelected() : getTableRow().isSelected();
-//            case TITLE: //fall through so that mnemonic can be properly handled
-//            default: return super.accGetAttribute(attribute, parameters);
-//        }
-//    }
-//
-//    /** @treatAsPrivate */
-//    @Override public void accExecuteAction(Action action, Object... parameters) {
-//        final TableView<S> tableView = getTableView();
-//        final TableSelectionModel<S> sm = tableView == null ? null : tableView.getSelectionModel();
-//
-//        switch (action) {
-//            case SELECT: {
-//                if (sm != null) sm.clearAndSelect(getIndex(), getTableColumn());
-//                break;
-//            }
-//            case ADD_TO_SELECTION: {
-//                if (sm != null) sm.select(getIndex(), getTableColumn());
-//                break;
-//            }
-//            case REMOVE_FROM_SELECTION: {
-//                if (sm != null) sm.clearSelection(getIndex(), getTableColumn());
-//                break;
-//            }
-//            default: super.accExecuteAction(action);
-//        }
-//    }
+    @Override
+    public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
+        switch (attribute) {
+            case ROW_INDEX: return getIndex();
+            case COLUMN_INDEX: return columnIndex;
+            case SELECTED: return isInCellSelectionMode() ? isSelected() : getTableRow().isSelected();
+            default: return super.queryAccessibleAttribute(attribute, parameters);
+        }
+    }
+
+    @Override
+    public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
+        switch (action) {
+            case REQUEST_FOCUS: {
+                TableView<S> tableView = getTableView();
+                if (tableView != null) {
+                    TableViewFocusModel<S> fm = tableView.getFocusModel();
+                    if (fm != null) {
+                        fm.focus(getIndex(), getTableColumn());
+                    }
+                }
+                break;
+            }
+            default: super.executeAccessibleAction(action, parameters);
+        }
+    }
 }

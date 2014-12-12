@@ -80,7 +80,7 @@ public class TreeTablePosition<S,T> extends TablePositionBase<TreeTableColumn<S,
 
     private final WeakReference<TreeTableView<S>> controlRef;
     private final WeakReference<TreeItem<S>> treeItemRef;
-
+    int fixedColumnIndex = -1;
 
     /***************************************************************************
      *                                                                         *
@@ -93,6 +93,9 @@ public class TreeTablePosition<S,T> extends TablePositionBase<TreeTableColumn<S,
      * is -1 if the TreeTableView or TreeTableColumn instances are null.
      */
     @Override public int getColumn() {
+        if (fixedColumnIndex > -1) {
+            return fixedColumnIndex;
+        }
         TreeTableView<S> tableView = getTreeTableView();
         TreeTableColumn<S,T> tableColumn = getTableColumn();
         return tableView == null || tableColumn == null ? -1 : 

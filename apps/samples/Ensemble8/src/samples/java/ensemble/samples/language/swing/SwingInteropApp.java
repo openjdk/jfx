@@ -56,6 +56,7 @@ import javafx.stage.Stage;
  * @see javafx.scene.chart.XYChart
  * @see javafx.scene.web.WebEngine
  * @see javafx.scene.web.WebView
+ * @conditionalFeatures SWING
  */
 public class SwingInteropApp extends Application {
 

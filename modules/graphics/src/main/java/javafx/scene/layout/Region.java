@@ -25,8 +25,8 @@
 
 package javafx.scene.layout;
 
+import com.sun.javafx.Utils;
 import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
@@ -52,6 +52,9 @@ import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.image.Image;
 import javafx.scene.shape.Shape;
+import javafx.scene.shape.StrokeLineCap;
+import javafx.scene.shape.StrokeLineJoin;
+import javafx.scene.shape.StrokeType;
 import javafx.util.Callback;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -259,7 +262,7 @@ public class
 
     private static double snapPortion(double value, boolean snapToPixel) {
         if (snapToPixel) {
-            return (value > 0 ? Math.max(1, Math.floor(value)) : Math.min(-1, Math.ceil(value)));
+            return value == 0 ? 0 :(value > 0 ? Math.max(1, Math.floor(value)) : Math.min(-1, Math.ceil(value)));
         }
         return value;
     }
@@ -2485,11 +2488,11 @@ public class
             // within the insets.
             resX -= leftOffset;
             resY -= topOffset;
-            
+
             //denominator represents the width and height of the box within which the new shape must fit.
             resX *= bounds.getWidth() / (getWidth() - leftOffset - rightOffset);
             resY *= bounds.getHeight() / (getHeight() - topOffset - bottomOffset);
-            
+
             // If we also need to center it, we need to adjust the transform so as to place
             // the shape in the center of the bounds
             if (isCenterShape()) {
@@ -2500,13 +2503,13 @@ public class
             // We are only centering. In this case, what we want is for the
             // original shape to be centered. If there are offsets (insets)
             // then we must pre-scale about the center to account for it.
-            
+
             double boundsWidth = bounds.getWidth();
             double boundsHeight = bounds.getHeight();
-            
+
             double scaleFactorX = boundsWidth / (boundsWidth - leftOffset - rightOffset);
             double scaleFactorY = boundsHeight / (boundsHeight - topOffset - bottomOffset);
-            
+
             //This is equivalent to:
             // translate(bounds.getMinX(), bounds.getMinY())
             // scale(scaleFactorX, scaleFactorY)
@@ -2519,37 +2522,37 @@ public class
             //resX = resX * scaleFactorX - scaleFactorX * bounds.getMinX() - scaleFactorX * (leftOffset + (getWidth() - boundsWidth) / 2 - bounds.getMinX()) + bounds.getMinX();
             //resY = resY * scaleFactorY - scaleFactorY * bounds.getMinY() - scaleFactorY * (topOffset + (getHeight() - boundsHeight) / 2 - bounds.getMinY()) + bounds.getMinY();
             //
-            // which can further reduced to 
-            
+            // which can further reduced to
+
             resX = scaleFactorX * (resX -(leftOffset + (getWidth() - boundsWidth) / 2)) + bounds.getMinX();
             resY = scaleFactorY * (resY -(topOffset + (getHeight() - boundsHeight) / 2)) + bounds.getMinY();
-            
+
         } else if (topOffset != 0 || rightOffset != 0 || bottomOffset != 0 || leftOffset != 0) {
             // We are neither centering nor scaling, but we still have to resize the
             // shape because we have to fit within the bounds defined by the offsets
             double scaleFactorX = bounds.getWidth() / (bounds.getWidth() - leftOffset - rightOffset);
             double scaleFactorY = bounds.getHeight() / (bounds.getHeight() - topOffset - bottomOffset);
-            
-            // This is equivalent to: 
+
+            // This is equivalent to:
             // translate(bounds.getMinX(), bounds.getMinY())
             // scale(scaleFactorX, scaleFactorY)
             // translate(-bounds.getMinX(), -bounds.getMinY())
             // translate(-leftOffset, -topOffset)
-            // 
+            //
             // which is an inversion of an transformation done to the shape
             // This gives us
-            // 
+            //
             //resX = resX * scaleFactorX - scaleFactorX * leftOffset - scaleFactorX * bounds.getMinX() + bounds.getMinX();
             //resY = resY * scaleFactorY - scaleFactorY * topOffset - scaleFactorY * bounds.getMinY() + bounds.getMinY();
             //
             // which can be further reduceD to
             resX = scaleFactorX * (resX - leftOffset - bounds.getMinX()) + bounds.getMinX();
             resY = scaleFactorY * (resY - topOffset - bounds.getMinY()) + bounds.getMinY();
-            
+
         }
         return shape.contains((float)resX, (float)resY);
     }
-    
+
     /**
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
@@ -2775,7 +2778,7 @@ public class
      * taking the current size of the region into account to eliminate any
      * percentage-based measurements and to scale the radii to prevent
      * overflowing the width or height.
-     * 
+     *
      * @param i the index of the BackgroundFill whose radii will be normalized.
      * @return the normalized (non-percentage, non-overflowing) radii
      */
@@ -2793,7 +2796,7 @@ public class
      * taking the current size of the region into account to eliminate any
      * percentage-based measurements and to scale the radii to prevent
      * overflowing the width or height.
-     * 
+     *
      * @param i the index of the BorderStroke whose radii will be normalized.
      * @return the normalized (non-percentage, non-overflowing) radii
      */
@@ -2968,6 +2971,59 @@ public class
         // is unrelated to geometric bounds.
     }
 
+    private BaseBounds computeShapeBounds(BaseBounds bounds)
+    {
+        com.sun.javafx.geom.Shape s = _shape.impl_configShape();
+
+        float[] bbox = {
+                Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY,
+                Float.NEGATIVE_INFINITY, Float.NEGATIVE_INFINITY,
+        };
+
+        Background bg = getBackground();
+        if (bg != null) {
+            final RectBounds sBounds = s.getBounds();
+            final Insets bgOutsets = bg.getOutsets();
+            bbox[0] = sBounds.getMinX() - (float) bgOutsets.getLeft();
+            bbox[1] = sBounds.getMinY() - (float) bgOutsets.getTop();
+            bbox[2] = sBounds.getMaxX() + (float) bgOutsets.getBottom();
+            bbox[3] = sBounds.getMaxY() + (float) bgOutsets.getRight();
+        }
+
+        final Border b = getBorder();
+        if (b != null && b.getStrokes().size() > 0) {
+            for (BorderStroke bs : b.getStrokes()) {
+                // This order of border strokes is used in NGRegion.renderAsShape/setBorderStyle
+                BorderStrokeStyle bss = bs.getTopStyle() != null ? bs.getTopStyle() :
+                        bs.getLeftStyle() != null ? bs.getLeftStyle() :
+                                bs.getBottomStyle() != null ? bs.getBottomStyle() :
+                                        bs.getRightStyle() != null ? bs.getRightStyle() : null;
+
+                if (bss == null || bss == BorderStrokeStyle.NONE) {
+                    continue;
+                }
+
+                final StrokeType type = bss.getType();
+                double sw = Math.max(bs.getWidths().top, 0d);
+                StrokeLineCap cap = bss.getLineCap();
+                StrokeLineJoin join = bss.getLineJoin();
+                float miterlimit = (float) Math.max(bss.getMiterLimit(), 1d);
+                Toolkit.getToolkit().accumulateStrokeBounds(
+                        s,
+                        bbox, type, sw,
+                        cap, join, miterlimit, BaseTransform.IDENTITY_TRANSFORM);
+
+            }
+        }
+
+        if (bbox[2] < bbox[0] || bbox[3] < bbox[1]) {
+            return bounds.makeEmpty();
+        }
+
+        return bounds.deriveWithNewBounds(bbox[0], bbox[1], 0.0f,
+                bbox[2], bbox[3], 0.0f);
+    }
+
     /**
      * @treatAsPrivate implementation detail
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
@@ -2989,34 +3045,34 @@ public class
         // If the shape is defined, then the top-left and bottom-right corner positions
         // need to be redefined
         if (_shape != null && isScaleShape() == false) {
-            final Bounds layoutBounds = _shape.getLayoutBounds();
-            final double shapeWidth = layoutBounds.getWidth();
-            final double shapeHeight = layoutBounds.getHeight();
+            // We will hijack the bounds here temporarily just to compute the shape bounds
+            final BaseBounds shapeBounds = computeShapeBounds(bounds);
+            final double shapeWidth = shapeBounds.getWidth();
+            final double shapeHeight = shapeBounds.getHeight();
             if (isCenterShape()) {
                 bx1 = (bx2 - shapeWidth) / 2;
                 by1 = (by2 - shapeHeight) / 2;
                 bx2 = bx1 + shapeWidth;
                 by2 = by1 + shapeHeight;
             } else {
-                bx1 = layoutBounds.getMinX();
-                by1 = layoutBounds.getMinY();
-                bx2 = layoutBounds.getMaxX();
-                by2 = layoutBounds.getMaxY();
+                bx1 = shapeBounds.getMinX();
+                by1 = shapeBounds.getMinY();
+                bx2 = shapeBounds.getMaxX();
+                by2 = shapeBounds.getMaxY();
             }
+        } else {
+            // Expand the bounds to include the outsets from the background and border.
+            // The outsets are the opposite of insets -- a measure of distance from the
+            // edge of the Region outward. The outsets cannot, however, be negative.
+            final Background background = getBackground();
+            final Border border = getBorder();
+            final Insets backgroundOutsets = background == null ? Insets.EMPTY : background.getOutsets();
+            final Insets borderOutsets = border == null ? Insets.EMPTY : border.getOutsets();
+            bx1 -= Math.max(backgroundOutsets.getLeft(), borderOutsets.getLeft());
+            by1 -= Math.max(backgroundOutsets.getTop(), borderOutsets.getTop());
+            bx2 += Math.max(backgroundOutsets.getRight(), borderOutsets.getRight());
+            by2 += Math.max(backgroundOutsets.getBottom(), borderOutsets.getBottom());
         }
-
-        // Expand the bounds to include the outsets from the background and border.
-        // The outsets are the opposite of insets -- a measure of distance from the
-        // edge of the Region outward. The outsets cannot, however, be negative.
-        final Background background = getBackground();
-        final Border border = getBorder();
-        final Insets backgroundOutsets = background == null ? Insets.EMPTY : background.getOutsets();
-        final Insets borderOutsets = border == null ? Insets.EMPTY : border.getOutsets();
-        bx1 -= Math.max(backgroundOutsets.getLeft(), borderOutsets.getLeft());
-        by1 -= Math.max(backgroundOutsets.getTop(), borderOutsets.getTop());
-        bx2 += Math.max(backgroundOutsets.getRight(), borderOutsets.getRight());
-        by2 += Math.max(backgroundOutsets.getBottom(), borderOutsets.getBottom());
-
         // NOTE: Okay to call impl_computeGeomBounds with tx even in the 3D case
         // since Parent.impl_computeGeomBounds does handle 3D correctly.
         BaseBounds cb = super.impl_computeGeomBounds(bounds, tx);
@@ -3051,6 +3107,49 @@ public class
      * CSS                                                                     *
      *                                                                         *
      **************************************************************************/
+
+    /**
+     * An implementation may specify its own user-agent styles for this Region, and its children,
+     * by overriding this method. These styles are used in addition to whatever user-agent stylesheets
+     * are in use. This provides a mechanism for third parties to introduce styles for custom controls.
+     * <p>
+     * The URL is a hierarchical URI of the form [scheme:][//authority][path]. If the URL
+     * does not have a [scheme:] component, the URL is considered to be the [path] component only.
+     * Any leading '/' character of the [path] is ignored and the [path] is treated as a path relative to
+     * the root of the application's classpath.
+     * </p>
+     * <code><pre>
+     *
+     * package com.example.javafx.app;
+     *
+     * import javafx.application.Application;
+     * import javafx.scene.Group;
+     * import javafx.scene.Scene;
+     * import javafx.stage.Stage;
+     *
+     * public class MyApp extends Application {
+     *
+     *     {@literal @}Override public void start(Stage stage) {
+     *         Scene scene = new Scene(new Group());
+     *         scene.getStylesheets().add("/com/example/javafx/app/mystyles.css");
+     *         stage.setScene(scene);
+     *         stage.show();
+     *     }
+     *
+     *     public static void main(String[] args) {
+     *         launch(args);
+     *     }
+     * }
+     * </pre></code>
+     * For additional information about using CSS with the scene graph,
+     * see the <a href="../doc-files/cssref.html">CSS Reference Guide</a>.
+     *
+     * @return A string URL
+     * @since JavaFX 8u40
+     */
+    public String getUserAgentStylesheet() {
+        return null;
+    }
 
      /**
       * Super-lazy instantiation pattern from Bill Pugh.

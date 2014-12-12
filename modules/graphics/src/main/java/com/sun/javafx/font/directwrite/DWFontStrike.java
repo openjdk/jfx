@@ -51,7 +51,7 @@ class DWFontStrike extends PrismFontStrike<DWFontFile> {
     DWFontStrike(DWFontFile fontResource, float size, BaseTransform tx,
                  int aaMode, FontStrikeDesc desc) {
         super(fontResource, size, tx, aaMode, desc);
-        float maxDim = 80f;
+        float maxDim = PrismFontFactory.getFontSizeLimit();
         if (tx.isTranslateOrIdentity()) {
             drawShapes = size > maxDim;
         } else {

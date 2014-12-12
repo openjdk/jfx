@@ -33,6 +33,7 @@ import com.sun.media.jfxmedia.logging.Logger;
 import com.sun.media.jfxmediaimpl.platform.PlatformManager;
 import java.lang.ref.WeakReference;
 import java.security.AccessController;
+import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.List;
@@ -45,11 +46,6 @@ import java.util.WeakHashMap;
  */
 public class NativeMediaManager {
     /**
-     * The NativeMediaManager singleton.
-     */
-    // If we create NativeMediaManager here we will not be able to catch exception from constructor.
-    private static NativeMediaManager theInstance = null;
-    /**
      * Whether the native layer has been initialized.
      */
     private static boolean isNativeLayerInitialized = false;
@@ -57,19 +53,28 @@ public class NativeMediaManager {
      * The {@link MediaErrorListener}s.
      */
     // FIXME: Change to WeakHashMap<MediaErrorListener,Boolean> as it's more efficient
-    private List<WeakReference<MediaErrorListener>> errorListeners =
-            new ArrayList<WeakReference<MediaErrorListener>>();
-    private static NativeMediaPlayerDisposer playerDisposer = new NativeMediaPlayerDisposer();
+    private final List<WeakReference<MediaErrorListener>> errorListeners =
+            new ArrayList();
+    private final static NativeMediaPlayerDisposer playerDisposer =
+            new NativeMediaPlayerDisposer();
     /**
      * List of all un-disposed players.
      */
-    private static Map<MediaPlayer,Boolean> allMediaPlayers =
-            new WeakHashMap<MediaPlayer,Boolean>();
+    private final static Map<MediaPlayer,Boolean> allMediaPlayers =
+            new WeakHashMap();
 
     // cached content types, so we don't have to poll and sort each time, this list
     // should never change once we're initialized
     private final List<String> supportedContentTypes =
-            new ArrayList<String>();
+            new ArrayList();
+
+    /**
+     * The NativeMediaManager singleton.
+     */
+    private static class NativeMediaManagerInitializer {
+        private static final NativeMediaManager globalInstance
+                = new NativeMediaManager();
+    }
 
     /**
      * Get the default
@@ -78,11 +83,8 @@ public class NativeMediaManager {
      * @return the singleton
      * <code>NativeMediaManager</code> instance.
      */
-    public static synchronized NativeMediaManager getDefaultInstance() {
-        if (theInstance == null) {
-            theInstance = new NativeMediaManager();
-        }
-        return theInstance;
+    public static NativeMediaManager getDefaultInstance() {
+        return NativeMediaManagerInitializer.globalInstance;
     }
 
     //**************************************************************************
@@ -91,43 +93,43 @@ public class NativeMediaManager {
     /**
      * Create a <code>NativeMediaManager</code>.
      */
-    protected NativeMediaManager() {}
+    protected NativeMediaManager() {
+        /*
+         * Load native libraries. This must be done early as platforms may need
+         * to attempt loading their own native libs that are dependent on these
+         * This is a slight performance hit, but necessary otherwise we could
+         * erroneously report content types for platforms that cannot be loaded
+         */
+        try {
+            AccessController.doPrivileged((PrivilegedExceptionAction) () -> {
+                if (HostUtils.isWindows() || HostUtils.isMacOSX()) {
+                    NativeLibLoader.loadLibrary("glib-lite");
+                }
+
+                if (!HostUtils.isLinux() && !HostUtils.isIOS()) {
+                    NativeLibLoader.loadLibrary("gstreamer-lite");
+                }
+
+                NativeLibLoader.loadLibrary("jfxmedia");
+                return null;
+            });
+        } catch (PrivilegedActionException pae) {
+            MediaUtils.error(null, MediaError.ERROR_MANAGER_ENGINEINIT_FAIL.code(),
+                    "Unable to load one or more dependent libraries.", pae);
+        }
+
+        // Get the Logger native side rolling before we load platforms
+        if (!Logger.initNative()) {
+            MediaUtils.error(null, MediaError.ERROR_MANAGER_LOGGER_INIT.code(),
+                    "Unable to init logger", null);
+        }
+    }
 
     /**
      * Initialize the native layer if it has not been so already.
      */
     synchronized static void initNativeLayer() {
         if (!isNativeLayerInitialized) {
-            // preload platforms
-            PlatformManager.getManager().preloadPlatforms();
-
-            // Load native libraries.
-            try {
-                AccessController.doPrivileged((PrivilegedExceptionAction) () -> {
-                    if (HostUtils.isWindows() || HostUtils.isMacOSX()) {
-                        NativeLibLoader.loadLibrary("glib-lite");
-                    }
-
-                    if (!HostUtils.isLinux() && !HostUtils.isIOS()) {
-                        NativeLibLoader.loadLibrary("gstreamer-lite");
-                    }
-
-                    NativeLibLoader.loadLibrary("jfxmedia");
-                    return null;
-                });
-            } catch (Exception e) {
-                MediaUtils.error(null, MediaError.ERROR_MANAGER_ENGINEINIT_FAIL.code(),
-                        "Unable to load one or more dependent libraries.", e);
-                return; // abort
-            }
-
-            // Get the Logger native side rolling before we load platforms
-            if (!Logger.initNative()) {
-                MediaUtils.error(null, MediaError.ERROR_MANAGER_LOGGER_INIT.code(),
-                        "Unable to init logger", null);
-                return; // abort
-            }
-
             // load platforms
             PlatformManager.getManager().loadPlatforms();
 

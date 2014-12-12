@@ -86,7 +86,7 @@ public final class SortedList<E> extends TransformationList<E, E>{
     /**
      * Constructs a new unordered SortedList wrapper around the source list.
      * @param source the source list
-     * @see #SortedList(java.util.List, java.util.Comparator)
+     * @see #SortedList(javafx.collections.ObservableList, java.util.Comparator)
      */
     public SortedList(@NamedArg("source") ObservableList<? extends E> source) {
         this(source, (Comparator)null);

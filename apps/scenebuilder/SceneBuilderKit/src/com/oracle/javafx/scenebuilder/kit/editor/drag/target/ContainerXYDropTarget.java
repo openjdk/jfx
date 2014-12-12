@@ -34,11 +34,10 @@ package com.oracle.javafx.scenebuilder.kit.editor.drag.target;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.drag.source.AbstractDragSource;
 import com.oracle.javafx.scenebuilder.kit.editor.job.BatchJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.DeleteObjectJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.InsertAsSubComponentJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
-import com.oracle.javafx.scenebuilder.kit.editor.job.RelocateNodeJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.togglegroup.AdjustAllToggleGroupJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.RelocateNodeJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.RemoveObjectJob;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMIntrinsic;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
@@ -156,7 +155,7 @@ public class ContainerXYDropTarget extends AbstractDropTarget {
             
             if (currentParent != null) {
                 for (FXOMObject draggedObject : draggedObjects) {
-                    result.addSubJob(new DeleteObjectJob(draggedObject,
+                    result.addSubJob(new RemoveObjectJob(draggedObject,
                             editorController));
                 }
             }
@@ -180,7 +179,7 @@ public class ContainerXYDropTarget extends AbstractDropTarget {
             }
             
             final Parent targetParent = (Parent)targetContainer.getSceneGraphObject();
-            final Point2D targetCenter = targetParent.sceneToLocal(sceneX, sceneY);
+            final Point2D targetCenter = targetParent.sceneToLocal(sceneX, sceneY, true /* rootScene */);
             final Bounds layoutBounds = hitNode.getLayoutBounds();
             final Point2D currentOrigin = hitNode.localToParent(0.0, 0.0);
             final Point2D currentCenter = hitNode.localToParent(
@@ -200,8 +199,6 @@ public class ContainerXYDropTarget extends AbstractDropTarget {
                 result.addSubJob(new RelocateNodeJob((FXOMInstance)draggedObject, 
                         newLayoutX, newLayoutY, editorController));
             }
-            
-            result.addSubJob(new AdjustAllToggleGroupJob(editorController));
         }
         
         assert result.isExecutable();
@@ -271,7 +268,7 @@ public class ContainerXYDropTarget extends AbstractDropTarget {
          * Computes drop target location in hitObject parent coordinate space
          */
         final Parent sceneGraphParent = sceneGraphNode.getParent();
-        final Point2D newHit = sceneGraphParent.sceneToLocal(sceneX, sceneY);
+        final Point2D newHit = sceneGraphParent.sceneToLocal(sceneX, sceneY, true /* rootScene */);
         
         final double dx = newHit.getX() - currentHit.getX();
         final double dy = newHit.getY() - currentHit.getY();

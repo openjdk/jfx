@@ -651,6 +651,7 @@ public final class WebPage {
                 WCGraphicsContext bgc = backbuffer.createGraphics();
                 try {
                     paint2GC(bgc);
+                    bgc.flush();
                 } finally {
                     backbuffer.disposeGraphics(bgc);
                 }

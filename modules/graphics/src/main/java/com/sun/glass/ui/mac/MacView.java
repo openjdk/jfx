@@ -30,6 +30,7 @@ import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.util.Map;
+import java.util.TreeSet;
 
 /**
  * MacOSX platform implementation class for View.
@@ -118,7 +119,8 @@ final class MacView extends View {
         _hostRemoteLayerId(getNativeLayer(), nativeLayerId);
     }
     
-    protected void notifyInputMethodMac(String str, int attrib, int length, int cursor) {
+    protected void notifyInputMethodMac(String str, int attrib, int length,
+                                            int cursor, int selStart, int selLength) {
         byte atts[] = new byte[1];
         atts[0] = (byte) attrib;
         int attBounds[] = new int[2];
@@ -129,7 +131,36 @@ final class MacView extends View {
             notifyInputMethod(str, null, attBounds, atts, length, cursor, 0);
         } else {
             // all other cases = just an update, update preview text but do not commit it
-            notifyInputMethod(str, null, attBounds, atts, 0, cursor, 0);
+            if (selLength > 0
+                    && str != null && str.length() > 0
+                    && selStart >= 0
+                    && selLength + selStart <= str.length()) {
+
+                TreeSet<Integer> b = new TreeSet<>();
+                b.add(0);
+                b.add(selStart);
+                b.add(selStart + selLength);
+                b.add(str.length());
+
+                int[] boundary = new int[b.size()];
+                int i = 0;
+                for (int e : b) {
+                    boundary[i] = e;
+                    i++;
+                }
+
+                byte[] values = new byte[boundary.length - 1];
+
+                for (i = 0; i < boundary.length - 1; i++) {
+                    values[i] = (boundary[i] == selStart)
+                                        ? IME_ATTR_TARGET_CONVERTED
+                                        : IME_ATTR_CONVERTED;
+                }
+
+                notifyInputMethod(str, boundary, boundary, values, 0, cursor, 0);
+            } else {
+                notifyInputMethod(str, null, attBounds, atts, 0, cursor, 0);
+            }
         }
     }
 }

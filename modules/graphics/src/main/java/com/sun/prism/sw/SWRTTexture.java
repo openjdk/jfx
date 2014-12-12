@@ -134,7 +134,7 @@ class SWRTTexture extends SWArgbPreTexture implements RTTexture {
     }
 
     @Override
-    public boolean isAntiAliasing() {
+    public boolean isMSAA() {
         return false;
     }
 }

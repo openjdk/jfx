@@ -52,7 +52,7 @@ public class PulseLogger {
                 }
             }
         }
-        catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
+        catch (NoClassDefFoundError | ClassNotFoundException | NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
             // Ignore
         }
 

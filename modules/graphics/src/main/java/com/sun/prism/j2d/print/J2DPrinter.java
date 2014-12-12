@@ -792,24 +792,28 @@ public class J2DPrinter implements PrinterImpl {
      * create a printer-specific instance and store it in a per-printer map.
      */
     private Map<MediaSizeName, Paper> mediaToPaperMap;
+    private Map<Paper, MediaSizeName> paperToMediaMap;
     private synchronized final Paper addPaper(MediaSizeName media) {
 
         if (mediaToPaperMap == null) {
             mediaToPaperMap = new HashMap<MediaSizeName, Paper>();
+            paperToMediaMap = new HashMap<Paper, MediaSizeName>();
         }
 
         Paper paper = predefinedPaperMap.get(media);
         if (paper == null ) {
             MediaSize sz = MediaSize.getMediaSizeForName(media);
             if (sz != null) {
-                int mm = (int)((25400/72.0)+0.5);
+                double pw = sz.getX(1) / 1000.0;
+                double ph = sz.getY(1) / 1000.0;
                 paper = PrintHelper.createPaper(media.toString(),
-                                           sz.getX(mm), sz.getY(mm), Units.MM);
+                                                pw, ph, Units.MM);
             }
         }
         if (paper == null) {
             paper = Paper.NA_LETTER;
         }
+        paperToMediaMap.put(paper, media);
         mediaToPaperMap.put(media, paper);
         return paper;
     }
@@ -823,16 +827,25 @@ public class J2DPrinter implements PrinterImpl {
         return paper;
     }
 
+    private MediaSizeName getMediaSizeName(Paper paper) {
+        populateMedia();
+        MediaSizeName m = paperToMediaMap.get(paper);
+        if (m == null) {
+            m = MediaSize.findMedia((float)paper.getWidth(),
+                                    (float)paper.getHeight(),
+                                    (int)(MediaSize.INCH/72.0));
+        }
+        return m;
+    }
+
     /**
      * For any given paper, this retrieves the hardware margins,
      * or a reasonable and safe guess if they aren't available.
      */
     public Rectangle2D printableArea(Paper paper) {
-        int INCH = MediaSize.INCH;
         Rectangle2D area = null;
-        MediaSizeName msn = MediaSize.findMedia((float)paper.getWidth(),
-                                                (float)paper.getHeight(),
-                                                (int)(INCH/72.0));
+
+        MediaSizeName msn = getMediaSizeName(paper);
         if (msn != null) {
             PrintRequestAttributeSet pras = new HashPrintRequestAttributeSet();
             pras.add(msn);

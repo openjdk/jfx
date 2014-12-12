@@ -1,16 +1,17 @@
 '\" t
-.\" Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+.\" Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
 .\"
 .\" Title: javafxpackager
 .\" Language: Japanese
-.\" Date: 2014年8月
+.\" Date: 2015年3月3日
 .\" SectDesc: Javaデプロイメント・ツール
 .\" Software: JDK 8
 .\" Arch: 汎用
-.\" Part Number: E54735-01
+.\" Part Number: E58104-01
+.\" Doc ID: JSSOR
 .\"
 .if n .pl 99999
-.TH "javafxpackager" "1" "2014年8月" "JDK 8" "Javaデプロイメント・ツール"
+.TH "javafxpackager" "1" "2015年3月3日" "JDK 8" "Javaデプロイメント・ツール"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -74,7 +75,7 @@ CSSファイルをバイナリ形式に変換します。
 .PP
 \-makeall
 .RS 4
-1つの呼出しで、ほとんどの引数が事前定義されたコンパイル、\fBcreatejar\fRおよび\fBdeploy\fRステップを実行し、すべての該当する自己完結型アプリケーション・パッケージの生成を試行します。ソース・ファイルはsrcというフォルダに配置する必要があり、生成されるファイル(JAR、JNLP、HTMLおよび自己完結型アプリケーション・パッケージ)はdistというフォルダに出力されます。このコマンドでは最小限の構成のみが可能で、可能な限り自動化されています。
+1つの呼出しで、ほとんどの引数が事前定義されたコンパイル、\fBcreatejar\fRおよび\fBdeploy\fRステップを実行し、すべての該当する自己完結型アプリケーション・パッケージの生成を試行します。ソース・ファイルは\fBsrc\fRというフォルダに配置する必要があり、生成されるファイル(JAR、JNLP、HTMLおよび自己完結型アプリケーション・パッケージ)は\fBdist\fRというフォルダに出力されます。このコマンドでは最小限の構成のみが可能で、可能な限り自動化されています。
 .RE
 .PP
 \-signjar
@@ -273,9 +274,7 @@ JNLPファイルの\fB<fx:argument>\fR要素に挿入される名前なし引数
 .sp -1
 .IP \(bu 2.3
 .\}
-\fBimage\fR: アプリケーションのディスク・イメージを作成します。
-
-OS Xでは、イメージは\&.appファイルです。Linuxでは、イメージはインストールされるディレクトリです。
+\fBimage\fR: アプリケーションのディスク・イメージを作成します。OS Xでは、イメージは\fB\&.app\fRファイルです。Linuxでは、イメージはインストールされるディレクトリです。
 .RE
 .sp
 .RS 4
@@ -566,9 +565,7 @@ classPath=\fIpath\fR
 .PP
 icon=\fIpath\fR
 .RS 4
-起動ツールおよびその他の支援ツールに使用されるデフォルト・アイコンの場所。
-
-OS Xの場合、形式は\&.icnsである必要があります。Linuxの場合、形式は\&.pngである必要があります。
+起動ツールおよびその他の支援ツールに使用されるデフォルト・アイコンの場所。OS Xの場合、形式は\fB\&.icns\fRである必要があります。Linuxの場合、形式は\fB\&.png\fRである必要があります。
 .RE
 .PP
 identifier=\fIvalue\fR
@@ -650,7 +647,7 @@ userJvmOptions=\fIoption\fR=\fIvalue\fR
 .RE
 .\}
 .RE
-.SS "Macアプリケーション・バンドラ引数"
+.SS "OS Xアプリケーション・バンドラ引数"
 .PP
 mac\&.category=\fIcategory\fR
 .RS 4
@@ -665,7 +662,12 @@ mac\&.CFBundleIdentifier=\fIvalue\fR
 .PP
 mac\&.CFBundleName=\fIname\fR
 .RS 4
-Macメニュー・バーに表示されるアプリケーションの名前。16文字未満の名前をお薦めします。デフォルトは名前属性です。
+OS Xメニュー・バーに表示されるアプリケーションの名前。16文字未満の名前をお薦めします。デフォルトは名前属性です。
+.RE
+.PP
+mac\&.CFBundleVersion=\fIvalue\fR
+.RS 4
+アプリケーションのバージョン番号は内部的に使用されます。値は1つ以上3つ以下の整数である必要があり、1\&.3や2\&.0\&.1のようにピリオド(\&.)で区切ります。値は、\fBappVersion\fR引数の値と異なる可能性があります。\fBappVersion\fR引数が有効な値で指定され、\fBmac\&.CFBundleVersion\fR引数が指定されていない場合、\fBappVersion\fR値が使用されます。どちらの引数も指定されていない場合、\fB100\fRがバージョン番号として使用されます。
 .RE
 .PP
 mac\&.signing\-key\-developer\-id\-app=\fIkey\fR
@@ -677,9 +679,9 @@ mac\&.bundle\-id\-signing\-prefix=\fIprefix\fR
 .RS 4
 plistまたは既存の署名がないバイナリがバンドル内に見つかった場合に署名済バイナリに適用される接頭辞。
 .RE
-.SS "Mac DMG (ディスク・イメージ)バンドラ引数"
+.SS "OS X DMG (ディスク・イメージ)バンドラ引数"
 .PP
-ディスク・イメージがマウント可能になる前に、Mac DMGインストーラは、\fBlicenseFile\fRによって指定されているライセンス・ファイル(指定されている場合)を表示します。
+ディスク・イメージがマウント可能になる前に、OS X DMGインストーラは、\fBlicenseFile\fRによって指定されているライセンス・ファイル(指定されている場合)を表示します。
 .PP
 licenseFile=\fIpath\fR
 .RS 4
@@ -691,9 +693,19 @@ systemWide=\fIboolean\fR
 .RS 4
 使用対象のドラッグしてインストールするターゲットを示すフラグ。アプリケーション・フォルダを表示するには、\fBtrue\fRに設定します。デスクトップ・フォルダを表示するには、\fBfalse\fRに設定します。デフォルトは\fBtrue\fRです。
 .RE
-.SS "Mac PKGバンドラ引数"
 .PP
-Mac PKGインストーラは、ウィザードを示し、\fBlicenseFile\fRによって指定されているライセンス・ファイルをウィザード内のページに表示します。ユーザーはアプリケーションをインストールする前に条件に同意する必要があります。
+mac\&.CFBundleVersion=\fIvalue\fR
+.RS 4
+アプリケーションのバージョン番号は内部的に使用されます。値は1つ以上3つ以下の整数である必要があり、1\&.3や2\&.0\&.1のようにピリオド(\&.)で区切ります。値は、\fBappVersion\fR引数の値と異なる可能性があります。\fBappVersion\fR引数が有効な値で指定され、\fBmac\&.CFBundleVersion\fR引数が指定されていない場合、\fBappVersion\fR値が使用されます。どちらの引数も指定されていない場合、\fB100\fRがバージョン番号として使用されます。
+.RE
+.PP
+mac\&.dmg\&.simple=\fIboolean\fR
+.RS 4
+AppleScriptコードの実行に依存するDMGカスタマイズ手順をスキップするかどうかを示すフラグ。\fBtrue\fRに設定して、手順をスキップします。\fBtrue\fRに設定されている場合、ディスク・ウィンドウにバックグラウンド・イメージがないため、アイコンが所定の位置に移動しません。\fBsystemWide\fR引数も\fBtrue\fRに設定されている場合、ルート・アプリケーション・フォルダのシンボリック・リンクがDMGファイルに追加されます。\fBsystemWide\fR引数が\fBfalse\fRに設定されている場合、アプリケーションのみがDMGファイルに追加され、デスクトップのリンクは追加されません。
+.RE
+.SS "OS X PKGバンドラ引数"
+.PP
+OS X PKGインストーラは、ウィザードを示し、\fBlicenseFile\fRによって指定されているライセンス・ファイルをウィザード内のページに表示します。ユーザーはアプリケーションをインストールする前に条件に同意する必要があります。
 .PP
 licenseFile=\fIpath\fR
 .RS 4
@@ -704,6 +716,11 @@ licenseFile=\fIpath\fR
 mac\&.signing\-key\-developer\-id\-installer=\fIkey\fR
 .RS 4
 開発者IDまたはGatekeeper署名に使用する署名キーの名前。Apple Developer Webサイトから標準のキーをインポートした場合、そのキーがデフォルトで使用されます。キーを識別できない場合、アプリケーションは署名されません。
+.RE
+.PP
+mac\&.CFBundleVersion=\fIvalue\fR
+.RS 4
+アプリケーションのバージョン番号は内部的に使用されます。値は1つ以上3つ以下の整数である必要があり、1\&.3や2\&.0\&.1のようにピリオド(\&.)で区切ります。値は、\fBappVersion\fR引数の値と異なる可能性があります。\fBappVersion\fR引数が有効な値で指定され、\fBmac\&.CFBundleVersion\fR引数が指定されていない場合、\fBappVersion\fR値が使用されます。どちらの引数も指定されていない場合、\fB100\fRがバージョン番号として使用されます。
 .RE
 .SS "Mac App Storeバンドラ引数"
 .PP
@@ -720,6 +737,11 @@ Mac App Storeのアプリケーション署名キーの名前。Apple Developer 
 mac\&.signing\-key\-pkg=\fIkey\fR
 .RS 4
 Mac App Storeのインストーラ署名キーの名前。Apple Developer Webサイトから標準のキーをインポートした場合、そのキーがデフォルトで使用されます。キーを識別できない場合、アプリケーションは署名されません。
+.RE
+.PP
+mac\&.CFBundleVersion=\fIvalue\fR
+.RS 4
+アプリケーションのバージョン番号は内部的に使用されます。値は1つ以上3つ以下の整数である必要があり、1\&.3や2\&.0\&.1のようにピリオド(\&.)で区切ります。値は、\fBappVersion\fR引数の値と異なる可能性があります。\fBappVersion\fR引数が有効な値で指定され、\fBmac\&.CFBundleVersion\fR引数が指定されていない場合、\fBappVersion\fR値が使用されます。どちらの引数も指定されていない場合、\fB100\fRがバージョン番号として使用されます。
 .RE
 .SS "Linux Debianバンドラ引数"
 .PP
@@ -753,7 +775,7 @@ licenseType=\fItype\fR
 .PP
 vendor=\fIvalue\fR
 .RS 4
-アプリケーションを提供する会社、組織または個人。この引数は、DebianのMaintainerフィールドで使用されます。
+アプリケーションを提供する会社、組織または個人。この引数は、Debianの■Maintainer｜Maintainer□フィールドで使用されます。
 .RE
 .SS "Linux RPMバンドラ引数"
 .PP
@@ -815,9 +837,7 @@ vendor=\fIvalue\fR
 .RE
 .SH "例"
 .PP
-\fB例 1\fR
-.br
-\-createjarコマンドの使用
+\fB例 1 \fR\-createjarコマンドの使用
 .RS 4
 .sp
 .if n \{\
@@ -834,9 +854,7 @@ vendor=\fIvalue\fR
 \fBclasses\fRディレクトリの内容を\fBoutjar\&.jar\fRにパッケージ化して、アプリケーション・クラスを\fBpackage\&.ClassName\fRに設定します。
 .RE
 .PP
-\fB例 2\fR
-.br
-\-deployコマンドの使用
+\fB例 2 \fR\-deployコマンドの使用
 .RS 4
 .sp
 .if n \{\
@@ -853,9 +871,7 @@ vendor=\fIvalue\fR
 \fBoutfile\&.jnlp\fRおよび対応する\fBoutfile\&.html\fRファイルをアプリケーション\fBAppName\fRの\fBoutdir\fRに生成します。これは\fBpackage\&.ClassName\fRで開始し、34 x 43ピクセルのサイズです。
 .RE
 .PP
-\fB例 3\fR
-.br
-\-makeallコマンドの使用
+\fB例 3 \fR\-makeallコマンドの使用
 .RS 4
 .sp
 .if n \{\
@@ -872,9 +888,7 @@ vendor=\fIvalue\fR
 コンパイルを含むすべてのパッケージ化作業(\fBcreatejar\fRおよび\fBdeploy\fR)を実行します。
 .RE
 .PP
-\fB例 4\fR
-.br
-\-signjarコマンドの使用
+\fB例 4 \fR\-signjarコマンドの使用
 .RS 4
 .sp
 .if n \{\
@@ -891,9 +905,7 @@ vendor=\fIvalue\fR
 \fBdist\fRディレクトリにあるすべてのJARファイルに署名し、alias、\fBkeyStore\fRおよび\fBstorePass\fRを指定して証明書を添付し、署名されたJARファイルを\fBdist\fRディレクトリに戻します。
 .RE
 .PP
-\fB例 5\fR
-.br
-バンドラ引数を伴う\-deployコマンドの使用
+\fB例 5 \fRバンドラ引数を伴う\-deployコマンドの使用
 .RS 4
 .sp
 .if n \{\

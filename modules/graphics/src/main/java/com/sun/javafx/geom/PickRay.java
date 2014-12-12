@@ -54,7 +54,7 @@ public class PickRay {
     public static PickRay computePerspectivePickRay(
             double x, double y, boolean fixedEye,
             double viewWidth, double viewHeight,
-            double fieldOfView, boolean verticalFieldOfView,
+            double fieldOfViewRadians, boolean verticalFieldOfView,
             Affine3D cameraTransform,
             double nearClip, double farClip,
             PickRay pickRay) {
@@ -68,7 +68,7 @@ public class PickRay {
         double halfViewHeight = viewHeight / 2.0;
         double halfViewDim = verticalFieldOfView? halfViewHeight: halfViewWidth;
         // Distance to projection plane from eye
-        double distanceZ = halfViewDim / Math.tan(Math.toRadians(fieldOfView / 2.0));
+        double distanceZ = halfViewDim / Math.tan(fieldOfViewRadians / 2.0);
 
         direction.x = x - halfViewWidth;
         direction.y = y - halfViewHeight;

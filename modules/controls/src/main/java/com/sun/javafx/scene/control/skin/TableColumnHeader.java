@@ -40,9 +40,9 @@ import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.geometry.VPos;
+import javafx.scene.AccessibleAttribute;
+import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
-//import javafx.scene.accessibility.Attribute;
-//import javafx.scene.accessibility.Role;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableColumn;
@@ -172,6 +172,8 @@ public class TableColumnHeader extends Region {
             setId(column.getId());
             setStyle(column.getStyle());
             updateStyleClass();
+            /* Having TableColumn role parented by TableColumn causes VoiceOver to be unhappy */
+            setAccessibleRole(AccessibleRole.TABLE_COLUMN);
         }
     }
     
@@ -1024,15 +1026,13 @@ public class TableColumnHeader extends Region {
         return getClassCssMetaData();
     }
 
-//    @Override
-//    public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//        switch (attribute) {
-//            /* Having TableColumn role parented by TableColumn causes VoiceOver to be unhappy */
-//            case ROLE: return column != null ? Role.TABLE_COLUMN : super.accGetAttribute(attribute, parameters);
-//            case INDEX: return getIndex(column);
-//            case TITLE: return column != null ? column.getText() : null;
-//            default: return super.accGetAttribute(attribute, parameters);
-//        }
-//    }
+    @Override
+    public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
+        switch (attribute) {
+            case INDEX: return getIndex(column);
+            case TEXT: return column != null ? column.getText() : null;
+            default: return super.queryAccessibleAttribute(attribute, parameters);
+        }
+    }
 
 }

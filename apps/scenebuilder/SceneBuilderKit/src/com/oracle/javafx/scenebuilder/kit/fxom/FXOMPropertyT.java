@@ -135,23 +135,6 @@ public class FXOMPropertyT extends FXOMProperty {
     public GlueElement getValueElement() {
         return valueElement;
     }
-    
-    public static FXOMPropertyT newInstance(FXOMPropertyT source, FXOMDocument targetDocument) {
-        final FXOMPropertyT result;
-        
-        assert source != null;
-        assert targetDocument != null;
-        assert source.getFxomDocument() != targetDocument;
-        
-        
-        result = new FXOMPropertyT(
-                targetDocument,
-                source.getName(),
-                source.getValue());
-        
-        
-        return result;
-    }
 
     /*
      * FXOMProperty

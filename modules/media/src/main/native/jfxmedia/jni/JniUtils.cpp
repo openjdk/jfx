@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,6 +30,36 @@
 #if ENABLE_PLATFORM_GSTREAMER
 #include <platform/gstreamer/GstJniUtils.h>
 #endif // ENABLE_PLATFORM_GSTREAMER
+
+void ThrowJavaException(JNIEnv *env, const char* type, const char* message)
+{
+    // First check if there's a pending exception, if there is then do nothing
+    if (env->ExceptionCheck()) {
+        return;
+    }
+
+    jclass klass = NULL;
+    if (type) {
+        klass = env->FindClass(type);
+        if (!klass) {
+            // might have caused an exception
+            if (env->ExceptionOccurred()) {
+                env->ExceptionClear();
+            }
+        }
+    }
+    if (!klass) {
+        klass = env->FindClass("java/lang/Exception");
+        if (!klass) {
+            if (env->ExceptionOccurred()) {
+                env->ExceptionClear();
+            }
+            // This shouldn't happen...
+            return;
+        }
+    }
+    env->ThrowNew(klass, message);
+}
 
 JNIEnv *GetJavaEnvironment(JavaVM *jvm, jboolean &didAttach)
 {

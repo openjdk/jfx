@@ -137,8 +137,8 @@ public class WinMsiBundler  extends AbstractBundler {
 
     private static final String TOOL_CANDLE = "candle.exe";
     private static final String TOOL_LIGHT = "light.exe";
-    // autodetect just v3.7 and v3.8
-    private static final String AUTODETECT_DIRS = ";C:\\Program Files (x86)\\WiX Toolset v3.8\\bin;C:\\Program Files\\WiX Toolset v3.8\\bin;C:\\Program Files (x86)\\WiX Toolset v3.7\\bin;C:\\Program Files\\WiX Toolset v3.7\\bin";
+    // autodetect just v3.7, v3.8, and 3.9
+    private static final String AUTODETECT_DIRS = ";C:\\Program Files (x86)\\WiX Toolset v3.9\\bin;C:\\Program Files\\WiX Toolset v3.9\\bin;C:\\Program Files (x86)\\WiX Toolset v3.8\\bin;C:\\Program Files\\WiX Toolset v3.8\\bin;C:\\Program Files (x86)\\WiX Toolset v3.7\\bin;C:\\Program Files\\WiX Toolset v3.7\\bin";
 
     public static final BundlerParamInfo<String> TOOL_CANDLE_EXECUTABLE = new WindowsBundlerParam<>(
             I18N.getString("param.candle-path.name"),
@@ -320,6 +320,20 @@ public class WinMsiBundler  extends AbstractBundler {
                         MessageFormat.format(I18N.getString("error.version-string-wrong-format.advice"), PRODUCT_VERSION.getID()));
             }
 
+            // only one mime type per association, at least one file extension
+            List<Map<String, ? super Object>> associations = FILE_ASSOCIATIONS.fetchFrom(p);
+            if (associations != null) {
+                for (int i = 0; i < associations.size(); i++) {
+                    Map<String, ? super Object> assoc = associations.get(i);
+                    List<String> mimes = FA_CONTENT_TYPE.fetchFrom(assoc);
+                    if (mimes.size() > 1) {
+                        throw new ConfigException(
+                                MessageFormat.format(I18N.getString("error.too-many-content-types-for-file-association"), i),
+                                I18N.getString("error.too-many-content-types-for-file-association.advice"));
+                    }
+                }
+            }
+
             return true;
         } catch (RuntimeException re) {
             if (re.getCause() instanceof ConfigException) {
@@ -386,7 +400,26 @@ public class WinMsiBundler  extends AbstractBundler {
             // just copies the service launcher to the app root folder
             appDir = SERVICE_BUNDLER.fetchFrom(p).doBundle(p, appDir, true);
         }
-        
+
+        // copy file association icons
+        List<Map<String, ? super Object>> fileAssociations = FILE_ASSOCIATIONS.fetchFrom(p);
+        for (Map<String, ? super Object> fileAssociation : fileAssociations) {
+            File icon = FA_ICON.fetchFrom(fileAssociation); //TODO FA_ICON_ICO
+            if (icon == null) {
+                continue;
+            }
+            
+            File faIconFile = new File(appDir, icon.getName());
+
+            if (icon.exists()) {
+                try {
+                    IOUtils.copyFile(icon, faIconFile);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
         return appDir != null;
     }
 
@@ -481,7 +514,8 @@ public class WinMsiBundler  extends AbstractBundler {
                 I18N.getString("resource.post-install-script"),
                 (String) null,
                 getConfig_Script(params),
-                VERBOSE.fetchFrom(params));
+                VERBOSE.fetchFrom(params),
+                DROP_IN_RESOURCES_ROOT.fetchFrom(params));
         return true;
     }
 
@@ -511,8 +545,7 @@ public class WinMsiBundler  extends AbstractBundler {
 
         //WinAppBundler will add application folder again => step out
         File imageRootDir = WIN_APP_IMAGE.fetchFrom(params);
-        File launcher = WinAppBundler.getLauncher(
-                imageRootDir.getParentFile(), params);
+        File launcher = new File(imageRootDir, WinAppBundler.getLauncherName(params));
 
         String launcherPath = relativePath(imageRootDir, launcher);
         data.put("APPLICATION_LAUNCHER", launcherPath);
@@ -543,11 +576,32 @@ public class WinMsiBundler  extends AbstractBundler {
             data.put("WIN64", "no");
         }
 
+        List<Map<String, ? super Object>> secondaryLaunchers = SECONDARY_LAUNCHERS.fetchFrom(params);
+
+        StringBuilder secondaryLauncherIcons = new StringBuilder();
+        for (int i = 0; i < secondaryLaunchers.size(); i++) {
+            Map<String, ? super Object> sl = secondaryLaunchers.get(i);
+            //        <Icon Id="DesktopIcon.exe" SourceFile="APPLICATION_ICON" />
+            if (SHORTCUT_HINT.fetchFrom(sl) || MENU_HINT.fetchFrom(sl)) {
+                File secondaryLauncher = new File(imageRootDir, WinAppBundler.getLauncherName(sl));
+                String secondaryLauncherPath = relativePath(imageRootDir, secondaryLauncher);
+                String secondaryLauncherIconPath = secondaryLauncherPath.replace(".exe", ".ico");
+
+                secondaryLauncherIcons.append("        <Icon Id=\"Launcher");
+                secondaryLauncherIcons.append(i);
+                secondaryLauncherIcons.append(".exe\" SourceFile=\"");
+                secondaryLauncherIcons.append(secondaryLauncherIconPath);
+                secondaryLauncherIcons.append("\" />\r\n");
+            }
+        }
+        data.put("SECONDARY_LAUNCHER_ICONS", secondaryLauncherIcons.toString());
+
         Writer w = new BufferedWriter(new FileWriter(getConfig_ProjectFile(params)));
         w.write(preprocessTextResource(
                 WinAppBundler.WIN_BUNDLER_PREFIX + getConfig_ProjectFile(params).getName(),
                 I18N.getString("resource.wix-config-file"), 
-                MSI_PROJECT_TEMPLATE, data, VERBOSE.fetchFrom(params)));
+                MSI_PROJECT_TEMPLATE, data, VERBOSE.fetchFrom(params),
+                DROP_IN_RESOURCES_ROOT.fetchFrom(params)));
         w.close();
         return true;
     }
@@ -581,14 +635,12 @@ public class WinMsiBundler  extends AbstractBundler {
         out.println(prefix + " <Component Id=\"comp" + (compId++) + "\" DiskId=\"1\""
                 + " Guid=\"" + UUID.randomUUID().toString() + "\""
                 + (BIT_ARCH_64.fetchFrom(params) ? " Win64=\"yes\"" : "") + ">");
-        out.println("  <CreateFolder/>");
-        out.println("  <RemoveFolder Id=\"RemoveDir" + (id++) + "\" On=\"uninstall\" />");
+        out.println(prefix + "  <CreateFolder/>");
+        out.println(prefix + "  <RemoveFolder Id=\"RemoveDir" + (id++) + "\" On=\"uninstall\" />");
 
         boolean needRegistryKey = !MSI_SYSTEM_WIDE.fetchFrom(params);
         File imageRootDir = WIN_APP_IMAGE.fetchFrom(params);
-        File launcherFile = WinAppBundler.getLauncher(
-                /* Step up as WinAppBundler will add app folder */
-                imageRootDir.getParentFile(), params);
+        File launcherFile = new File(imageRootDir, WinAppBundler.getLauncherName(params));
         File launcherSvcFile = WinServiceBundler.getLauncherSvc(
                                 imageRootDir, params);
 
@@ -617,6 +669,10 @@ public class WinMsiBundler  extends AbstractBundler {
 
         boolean menuShortcut = MENU_HINT.fetchFrom(params);
         boolean desktopShortcut = SHORTCUT_HINT.fetchFrom(params);
+
+        Map<String, String> idToFileMap = new TreeMap<>();
+        boolean launcherSet = false;
+
         for (File f : files) {
             boolean isLauncher = f.equals(launcherFile);
             boolean isLauncherSvc = f.equals(launcherSvcFile);
@@ -625,11 +681,15 @@ public class WinMsiBundler  extends AbstractBundler {
             if (isLauncherSvc) {
                 continue;
             }
+            launcherSet = launcherSet || isLauncher;
 
             boolean doShortcuts = isLauncher && (menuShortcut || desktopShortcut);
 
+            String thisFileId = isLauncher ? LAUNCHER_ID : ("FileId" + (id++));
+            idToFileMap.put(f.getName(), thisFileId);
+
             out.println(prefix + "   <File Id=\"" +
-                    (isLauncher ? LAUNCHER_ID : ("FileId" + (id++))) + "\""
+                    thisFileId + "\""
                     + " Name=\"" + f.getName() + "\" "
                     + " Source=\"" + relativePath(imageRootDir, f) + "\""
                     + (BIT_ARCH_64.fetchFrom(params) ? " ProcessorArchitecture=\"x64\"" : "") + ">");
@@ -643,8 +703,91 @@ public class WinMsiBundler  extends AbstractBundler {
                         + " Name=\"" + APP_NAME.fetchFrom(params)
                         + "\" Advertise=\"no\" Icon=\"StartMenuIcon.exe\" IconIndex=\"0\" />");
             }
+
+            List<Map<String, ? super Object>> secondaryLaunchers = SECONDARY_LAUNCHERS.fetchFrom(params);
+            for (int i = 0; i < secondaryLaunchers.size(); i++) {
+                Map<String, ? super Object> sl = secondaryLaunchers.get(i);
+                File secondaryLauncherFile = new File(imageRootDir, WinAppBundler.getLauncherName(sl));
+                if (f.equals(secondaryLauncherFile)) {
+                    if (SHORTCUT_HINT.fetchFrom(sl)) {
+                        out.println(prefix + "  <Shortcut Id=\"desktopShortcut" + i + "\" Directory=\"DesktopFolder\""
+                                + " Name=\"" + APP_NAME.fetchFrom(sl) + "\" WorkingDirectory=\"INSTALLDIR\""
+                                + " Advertise=\"no\" Icon=\"Launcher" + i + ".exe\" IconIndex=\"0\" />");
+                    }
+                    if (MENU_HINT.fetchFrom(sl)) {
+                        out.println(prefix + "     <Shortcut Id=\"ExeShortcut" + i + "\" Directory=\"ProgramMenuDir\""
+                                + " Name=\"" + APP_NAME.fetchFrom(sl)
+                                + "\" Advertise=\"no\" Icon=\"Launcher" + i + ".exe\" IconIndex=\"0\" />");
+                        //Should we allow different menu groups?  Not for now.
+                    }
+                }
+            }
             out.println(prefix + "   </File>");
         }
+
+        if (launcherSet) {
+            List<Map<String, ? super Object>> fileAssociations = FILE_ASSOCIATIONS.fetchFrom(params);
+            String regName = APP_REGISTRY_NAME.fetchFrom(params);
+            Set<String> defaultedMimes = new TreeSet<String>();
+            int count = 0;
+            for (int i = 0; i < fileAssociations.size(); i++) {
+                Map<String, ? super Object> fileAssociation = fileAssociations.get(i);
+                String description = FA_DESCRIPTION.fetchFrom(fileAssociation);
+                List<String> extensions = FA_EXTENSIONS.fetchFrom(fileAssociation);
+                List<String> mimeTypes = FA_CONTENT_TYPE.fetchFrom(fileAssociation);
+                File icon = FA_ICON.fetchFrom(fileAssociation); //TODO FA_ICON_ICO
+                
+                String mime = (mimeTypes == null || mimeTypes.isEmpty()) ? null : mimeTypes.get(0);
+                
+                if (extensions == null) {
+                    Log.info(I18N.getString("message.creating-association-with-null-extension"));
+
+                    String entryName = regName + "File";
+                    if (count > 0) {
+                        entryName += "." + count;
+                    }
+                    count++;
+                    out.print(prefix + "   <ProgId Id='" + entryName + "' Description='" + description + "'");
+                    if (icon != null && icon.exists()) {
+                        out.print(" Icon='" + idToFileMap.get(icon.getName()) + "' IconIndex='0'");
+                    }
+                    out.println(" />");
+                } else {
+                    for (String ext : extensions) {
+                        String entryName = regName + "File";
+                        if (count > 0) {
+                            entryName += "." + count;
+                        }
+                        count++;
+
+                        out.print(prefix + "   <ProgId Id='" + entryName + "' Description='" + description + "'");
+                        if (icon != null && icon.exists()) {
+                            out.print(" Icon='" + idToFileMap.get(icon.getName()) + "' IconIndex='0'");
+                        }
+                        out.println(">");
+
+                        if (extensions == null) {
+                            Log.info(I18N.getString("message.creating-association-with-null-extension"));
+                        } else {
+                            out.print(prefix + "    <Extension Id='" + ext + "' Advertise='no'");
+                            if (mime == null) {
+                                out.println(">");
+                            } else {
+                                out.println(" ContentType='" + mime + "'>");
+                                if (!defaultedMimes.contains(mime)) {
+                                    out.println(prefix + "      <MIME ContentType='" + mime + "' Default='yes' />");
+                                    defaultedMimes.add(mime);
+                                }
+                            }
+                            out.println(prefix + "      <Verb Id='open' Command='Open' TargetFile='" + LAUNCHER_ID + "' Argument='\"%1\"' />");
+                            out.println(prefix + "    </Extension>");
+                        }
+                        out.println(prefix + "   </ProgId>");
+                    }
+                }
+            }
+        }
+
         out.println(prefix + " </Component>");
 
         // Two components cannot share the same key path value.

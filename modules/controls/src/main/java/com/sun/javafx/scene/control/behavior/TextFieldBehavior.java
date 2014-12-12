@@ -177,8 +177,19 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
         ActionEvent actionEvent = new ActionEvent(textField, null);
 
         textField.fireEvent(actionEvent);
+        textField.commitValue();
 
         if (onAction == null && !actionEvent.isConsumed()) {
+            forwardToParent(event);
+        }
+    }
+
+    @Override
+    protected void cancelEdit(KeyEvent event) {
+        TextField textField = getControl();
+        if (textField.getTextFormatter() != null) {
+            textField.cancelEdit();
+        } else {
             forwardToParent(event);
         }
     }
@@ -196,7 +207,6 @@ public class TextFieldBehavior extends TextInputControlBehavior<TextField> {
         int end = textField.getCaretPosition();
 
         if (end > 0) {
-            getUndoManager().addChange(0, textField.textProperty().getValueSafe().substring(0, end), null);
             replaceText(0, end, "");
         }
     }

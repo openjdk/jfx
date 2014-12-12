@@ -44,6 +44,11 @@ PACKAGES_LIBS := $(shell pkg-config --libs glib-2.0 gobject-2.0)
 
 LDFLAGS = -L$(BUILD_DIR) -lgstreamer-lite $(PACKAGES_LIBS) 
 
+ifeq ($(ARCH), x32)
+    CFLAGS += -m32
+    LDFLAGS += -m32
+endif
+
 SOURCES = fxplugins.c                        \
           progressbuffer/progressbuffer.c    \
           progressbuffer/hlsprogressbuffer.c \

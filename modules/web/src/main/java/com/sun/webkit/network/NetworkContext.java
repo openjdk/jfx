@@ -40,6 +40,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.sun.webkit.WebPage;
+import java.security.Permission;
 
 final class NetworkContext {
 
@@ -193,6 +194,13 @@ final class NetworkContext {
         private final ThreadGroup group;
         private final AtomicInteger index = new AtomicInteger(1);
 
+        // Need to assert the modifyThread and modifyThreadGroup permission when
+        // creating the thread from the URLLoaderThreadFactory, so we can
+        // create the thread with the desired ThreadGroup.
+        // Note that this is needed when running as an applet or a web start app.
+        private static final Permission modifyThreadGroupPerm = new RuntimePermission("modifyThreadGroup");
+        private static final Permission modifyThreadPerm = new RuntimePermission("modifyThread");
+
         private URLLoaderThreadFactory() {
             SecurityManager sm = System.getSecurityManager();
             group = (sm != null) ? sm.getThreadGroup()
@@ -201,13 +209,19 @@ final class NetworkContext {
 
         @Override
         public Thread newThread(Runnable r) {
-            Thread t = new Thread(group, r,
-                    "URL-Loader-" + index.getAndIncrement());
-            t.setDaemon(true);
-            if (t.getPriority() != Thread.NORM_PRIORITY) {
-                t.setPriority(Thread.NORM_PRIORITY);
-            }
-            return t;
+            // Assert the modifyThread and modifyThreadGroup permissions
+            return
+                AccessController.doPrivileged((PrivilegedAction<Thread>) () -> {
+                    Thread t = new Thread(group, r,
+                            "URL-Loader-" + index.getAndIncrement());
+                    t.setDaemon(true);
+                    if (t.getPriority() != Thread.NORM_PRIORITY) {
+                        t.setPriority(Thread.NORM_PRIORITY);
+                    }
+                    return t;
+                },
+                null,
+                modifyThreadGroupPerm, modifyThreadPerm);
         }
     }
 }

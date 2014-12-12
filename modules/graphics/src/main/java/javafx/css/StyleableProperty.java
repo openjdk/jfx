@@ -42,7 +42,10 @@ import javafx.beans.value.WritableValue;
  * or {@link javafx.scene.Parent#getStylesheets()}</li>
  * <li>a style from {@link javafx.scene.Node#setStyle(java.lang.String)}</li>
  * </ol>
+ * <p>The {@link javafx.css.StyleablePropertyFactory StyleablePropertyFactory}
+ * greatly simplifies creating a StyleableProperty and its corresponding CssMetaData.</p>
  * @since JavaFX 8.0
+ * @see javafx.css.StyleablePropertyFactory
  */
 public interface StyleableProperty<T> extends WritableValue<T> {
     

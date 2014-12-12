@@ -1131,7 +1131,7 @@ public abstract class Animation {
             try {
                 handler.handle(new ActionEvent(this, null));
             } catch (Exception ex) {
-                ex.printStackTrace();
+                Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), ex);
             }
         }
     }

@@ -28,12 +28,9 @@
 
 #include <gst/gst.h>
 #include <libavcodec/avcodec.h>
+#include "avdefines.h"
 
 G_BEGIN_DECLS
-
-// According to ffmpeg Git they introduced
-// _decode_video2 and _decode_audio3  in version 52.25.0
-#define LIBAVCODEC_NEW (LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(52,25,1))
 
 // Maximum size of the buffer for string representation of errors
 #define ERROR_STRING_SIZE 256
@@ -52,9 +49,7 @@ struct _AVElement
 {
     GstElement element;
 
-#if LIBAVCODEC_NEW
     char error_string[ERROR_STRING_SIZE];
-#endif // LIBAVCODEC_NEW
 };
 
 struct _AVElementClass
@@ -65,6 +60,13 @@ struct _AVElementClass
 GType     avelement_get_type (void);
 
 const char* avelement_error_to_string(AVElement *avelement, int ret);
+
+#if NEW_CODEC_ID
+typedef enum AVCodecID CodecIDType;
+#else
+typedef enum CodecID CodecIDType;
+#endif
+
 
 G_END_DECLS
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,6 +27,8 @@
 #import <Utils/MTObjectProxy.h>
 #import <jni/Logger.h>
 #import "CVVideoFrame.h"
+#import <PipelineManagement/NullAudioEqualizer.h>
+#import <PipelineManagement/NullAudioSpectrum.h>
 
 #import <limits.h>
 
@@ -54,6 +56,9 @@
 - (NSSet*) imageConsumers;
 - (void) removeImageConsumer:(id)consumer flush:(BOOL)flush;
 - (void) addImageConsumer:(id)consumer;
+
+- (NSArray *) availableRanges;
+- (NSArray *) loadedRanges;
 
 @end
 
@@ -103,8 +108,7 @@
     NSDictionary *pba = [NSDictionary dictionaryWithObjectsAndKeys:
                          [NSNumber numberWithBool:YES], @"IOSurfaceCoreAnimationCompatibility", // doesn't seem necessary
                          [NSArray arrayWithObjects:
-                          [NSNumber numberWithLong:k32ARGBPixelFormat],
-                          [NSNumber numberWithLong:k2vuyPixelFormat],
+                         [NSNumber numberWithLong:k2vuyPixelFormat],
                           nil], @"PixelFormatType",
                          nil];
     
@@ -163,7 +167,10 @@
         requestedState = kPlaybackState_Stop;
         
         isDisposed = NO;
-        
+
+        _audioEqualizer = new CNullAudioEqualizer();
+        _audioSpectrum = new CNullAudioSpectrum();
+
         // create the movie on the main thread, but don't wait for it to happen
         if (![NSThread isMainThread]) {
             [self performSelectorOnMainThread:@selector(createMovie) withObject:nil waitUntilDone:NO];
@@ -183,7 +190,25 @@
     
     [movieURL release];
     
+    if (_audioEqualizer) {
+        delete _audioEqualizer;
+    }
+
+    if (_audioSpectrum) {
+        delete _audioSpectrum;
+    }
+
     [super dealloc];
+}
+
+- (CAudioEqualizer*) audioEqualizer
+{
+    return _audioEqualizer;
+}
+
+- (CAudioSpectrum*) audioSpectrum
+{
+    return _audioSpectrum;
 }
 
 - (void) dispose
@@ -256,7 +281,6 @@
             if (eventHandler) {
                 eventHandler->SendPlayerMediaErrorEvent(ERROR_OSX_INIT);
             }
-            [qtMovie release];
             qtMovie = nil;
         }
         
@@ -654,6 +678,7 @@ static void append_log(NSMutableString *s, NSString *fmt, ...) {
     NSString *appString = [[NSString alloc] initWithFormat:fmt arguments:args];
     [s appendFormat:@"%@\n", appString];
     va_end(args);
+    [appString release];
 }
 #define TRACK_LOG(fmt, ...) append_log(trackLog, fmt, ##__VA_ARGS__)
 #else
@@ -937,7 +962,7 @@ static void append_log(NSMutableString *s, NSString *fmt, ...) {
 
         CVVideoFrame *frame = NULL;
         try {
-            frame = new CVVideoFrame(buf, frameTime, hostTime, 0);
+            frame = new CVVideoFrame(buf, frameTime, hostTime);
         } catch (const char *message) {
             LOGGER_DEBUGMSG(message);
             return;

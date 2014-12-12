@@ -156,7 +156,7 @@ public class TextInputControlBindings {
         BINDINGS.add(new KeyBinding(TAB, "TraversePrevious").shift().ctrl());
 
         // The following keys are forwarded to the parent container
-        BINDINGS.add(new KeyBinding(ESCAPE, "ToParent"));
+        BINDINGS.add(new KeyBinding(ESCAPE, "Cancel"));
         BINDINGS.add(new KeyBinding(F10, "ToParent"));
         // TODO XXX DEBUGGING ONLY
 //        BINDINGS.add(new KeyBinding(F4, "TraverseDebug").alt().ctrl().shift());

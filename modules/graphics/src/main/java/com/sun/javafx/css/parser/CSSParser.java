@@ -40,6 +40,7 @@ import com.sun.javafx.css.SizeUnits;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.css.Stylesheet;
 import com.sun.javafx.css.converters.BooleanConverter;
+import com.sun.javafx.css.converters.DurationConverter;
 import com.sun.javafx.css.converters.EffectConverter;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.FontConverter;
@@ -89,6 +90,7 @@ import javafx.scene.shape.StrokeType;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontPosture;
 import javafx.scene.text.FontWeight;
+import javafx.util.Duration;
 import sun.util.logging.PlatformLogger;
 import sun.util.logging.PlatformLogger.Level;
 
@@ -117,11 +119,15 @@ final public class CSSParser {
         final static CSSParser INSTANCE = new CSSParser();
     }
 
+    /**
+     * @deprecated As of 8u40, use new CSSParser() instead.
+     */
+    @Deprecated
     public static CSSParser getInstance() {
         return InstanceHolder.INSTANCE;
     }
 
-    private CSSParser() {
+    public CSSParser() {
         properties = new HashMap<String,String>();
     }
 
@@ -321,7 +327,7 @@ final public class CSSParser {
 
             currentToken = nextToken(lex);
             CSSParser.Term term = this.expr(lex);
-            value = valueFor(property, term);
+            value = valueFor(property, term, lex);
         } catch (IOException ioe) {
         } catch (ParseException e) {
             if (LOGGER.isLoggable(Level.WARNING)) {
@@ -613,7 +619,14 @@ final public class CSSParser {
             break;
         case CSSLexer.TURN:
             units = SizeUnits.TURN;
-            trim = 5;
+            trim = 4;
+            break;
+        case CSSLexer.SECONDS:
+            units = SizeUnits.S;
+            trim = 1;
+            break;
+        case CSSLexer.MS:
+            units = SizeUnits.MS;
             break;
         default:
             if (LOGGER.isLoggable(Level.FINEST)) {
@@ -689,7 +702,7 @@ final public class CSSParser {
     //
     ////////////////////////////////////////////////////////////////////////////
 
-    ParsedValueImpl valueFor(String property, Term root) throws ParseException {
+    ParsedValueImpl valueFor(String property, Term root, CSSLexer lexer) throws ParseException {
         final String prop = property.toLowerCase(Locale.ROOT);
         properties.put(prop, prop);
         if (root == null || root.token == null) {
@@ -705,7 +718,7 @@ final public class CSSParser {
                 return new ParsedValueImpl<String,String>("null", null);
             }
         }
-        if ("-fx-fill".equals(property)) {
+        if ("-fx-fill".equals(prop)) {
              ParsedValueImpl pv = parse(root);
             if (pv.getConverter() == StyleConverter.getUrlConverter()) {
                 // ImagePatternConverter expects array of ParsedValue where element 0 is the URL
@@ -714,7 +727,7 @@ final public class CSSParser {
             }
             return pv;
         }
-        else if ("-fx-background-color".equals(property)) {
+        else if ("-fx-background-color".equals(prop)) {
             return parsePaintLayers(root);
         } else if ("-fx-background-image".equals(prop)) {
             return parseURILayers(root);
@@ -751,10 +764,10 @@ final public class CSSParser {
         } else if ("-fx-border-image-width".equals(prop)) {
              return parseBorderImageWidthLayers(root);
         } else if ("-fx-padding".equals(prop)) {
-            ParsedValueImpl<?,Size>[] sides = parseSizeSeries(root);
+            ParsedValueImpl<?,Size>[] sides = parseSize1to4(root);
             return new ParsedValueImpl<ParsedValue[],Insets>(sides, InsetsConverter.getInstance());
         } else if ("-fx-label-padding".equals(prop)) {
-            ParsedValueImpl<?,Size>[] sides = parseSizeSeries(root);
+            ParsedValueImpl<?,Size>[] sides = parseSize1to4(root);
             return new ParsedValueImpl<ParsedValue[],Insets>(sides, InsetsConverter.getInstance());
         } else if (prop.endsWith("font-family")) {
             return parseFontFamily(root);
@@ -845,9 +858,20 @@ final public class CSSParser {
         case CSSLexer.GRAD:
         case CSSLexer.RAD:
         case CSSLexer.TURN:
-            ParsedValueImpl sizeValue = new ParsedValueImpl<Size,Number>(size(token), null);
-            value = new ParsedValueImpl<ParsedValue<?,Size>, Number>(sizeValue, SizeConverter.getInstance());
+            if (root.nextInSeries == null) {
+                ParsedValueImpl sizeValue = new ParsedValueImpl<Size,Number>(size(token), null);
+                value = new ParsedValueImpl<ParsedValue<?,Size>, Number>(sizeValue, SizeConverter.getInstance());
+            } else {
+                ParsedValueImpl<Size,Size>[] sizeValue = parseSizeSeries(root);
+                value = new ParsedValueImpl<ParsedValue[],Number[]>(sizeValue, SizeConverter.SequenceConverter.getInstance());
+            }
             break;
+        case CSSLexer.SECONDS:
+        case CSSLexer.MS: {
+            ParsedValue<Size, Size> sizeValue = new ParsedValueImpl<Size, Size>(size(token), null);
+            value = new ParsedValueImpl<ParsedValue<?, Size>, Duration>(sizeValue, DurationConverter.getInstance());
+            break;
+        }
         case CSSLexer.STRING:
         case CSSLexer.IDENT:
             boolean isIdent = ttype == CSSLexer.IDENT;
@@ -861,6 +885,14 @@ final public class CSSParser {
             } else if ("radial".equals(text) && (root.nextInSeries) != null) {
                 // if nextInSeries is null, then assume this is _not_ an old-style radial gradient
                 value = radialGradient(root);
+            } else if ("infinity".equals(text)) {
+                Size size = new Size(Double.MAX_VALUE, SizeUnits.PX);
+                ParsedValueImpl sizeValue = new ParsedValueImpl<Size,Number>(size, null);
+                value = new ParsedValueImpl<ParsedValue<?,Size>,Number>(sizeValue, SizeConverter.getInstance());
+            } else if ("indefinite".equals(text)) {
+                Size size = new Size(Double.POSITIVE_INFINITY, SizeUnits.PX);
+                ParsedValueImpl<Size,Size> sizeValue = new ParsedValueImpl<>(size, null);
+                value = new ParsedValueImpl<ParsedValue<?,Size>,Duration>(sizeValue, DurationConverter.getInstance());
             } else if ("true".equals(text)) {
                 // TODO: handling of boolean is really bogus
                 value = new ParsedValueImpl<String,Boolean>("true",BooleanConverter.getInstance());
@@ -869,9 +901,14 @@ final public class CSSParser {
                 value = new ParsedValueImpl<String,Boolean>("false",BooleanConverter.getInstance());
             } else {
                 // if the property value is another property, then it needs to be looked up.
-                boolean needsLookup = isIdent && properties.containsKey(str);
+                boolean needsLookup = isIdent && properties.containsKey(text);
                 if (needsLookup || ((value = colorValueOfString(str)) == null )) {
-                    value = new ParsedValueImpl<String,String>(str, null, isIdent || needsLookup);
+                    // If the value is a lookup, make sure to use the lower-case text so it matches the property
+                    // in the Declaration. If the value is not a lookup, then use str since the value might
+                    // be a string which could have some case sensitive meaning
+                    //
+                    // TODO: isIdent is needed here because of RT-38345. This effectively undoes RT-38201
+                    value = new ParsedValueImpl<String,String>(needsLookup ? text : str, null, isIdent || needsLookup);
                 }
             }
             break;
@@ -2311,7 +2348,7 @@ final public class CSSParser {
 
     // An size or a series of four size values
     // <size> | <size> <size> <size> <size>
-    private ParsedValueImpl<?,Size>[] parseSizeSeries(final Term root)
+    private ParsedValueImpl<?,Size>[] parseSize1to4(final Term root)
             throws ParseException {
 
         Term temp = root;
@@ -2342,7 +2379,7 @@ final public class CSSParser {
         ParsedValueImpl<ParsedValue[],Insets>[] layers = new ParsedValueImpl[nLayers];
 
         while(temp != null) {
-            ParsedValueImpl<?,Size>[] sides = parseSizeSeries(temp);
+            ParsedValueImpl<?,Size>[] sides = parseSize1to4(temp);
             layers[layer++] = new ParsedValueImpl<ParsedValue[],Insets>(sides, InsetsConverter.getInstance());
             while(temp.nextInSeries != null) {
                 temp = temp.nextInSeries;
@@ -2362,7 +2399,7 @@ final public class CSSParser {
         ParsedValueImpl<ParsedValue[],Insets> layer = null;
 
         while(temp != null) {
-            ParsedValueImpl<?,Size>[] sides = parseSizeSeries(temp);
+            ParsedValueImpl<?,Size>[] sides = parseSize1to4(temp);
             layer = new ParsedValueImpl<ParsedValue[],Insets>(sides, InsetsConverter.getInstance());
             while(temp.nextInSeries != null) {
                 temp = temp.nextInSeries;
@@ -2383,7 +2420,7 @@ final public class CSSParser {
         ParsedValueImpl<ParsedValue[],Margins>[] layers = new ParsedValueImpl[nLayers];
 
         while(temp != null) {
-            ParsedValueImpl<?,Size>[] sides = parseSizeSeries(temp);
+            ParsedValueImpl<?,Size>[] sides = parseSize1to4(temp);
             layers[layer++] = new ParsedValueImpl<ParsedValue[],Margins>(sides, Margins.Converter.getInstance());
             while(temp.nextInSeries != null) {
                 temp = temp.nextInSeries;
@@ -2394,6 +2431,44 @@ final public class CSSParser {
         return new ParsedValueImpl<ParsedValue<ParsedValue[],Margins>[], Margins[]>(layers, Margins.SequenceConverter.getInstance());
     }
 
+    // <size> | <size> <size> <size> <size>
+    private ParsedValueImpl<Size, Size>[] parseSizeSeries(Term root)
+            throws ParseException {
+
+        if (root.token == null) error(root, "Parse error");
+
+        List<ParsedValueImpl<Size,Size>> sizes = new ArrayList<>();
+
+        Term term = root;
+        while(term != null) {
+            Token token = term.token;
+            final int ttype = token.getType();
+            switch (ttype) {
+                case CSSLexer.NUMBER:
+                case CSSLexer.PERCENTAGE:
+                case CSSLexer.EMS:
+                case CSSLexer.EXS:
+                case CSSLexer.PX:
+                case CSSLexer.CM:
+                case CSSLexer.MM:
+                case CSSLexer.IN:
+                case CSSLexer.PT:
+                case CSSLexer.PC:
+                case CSSLexer.DEG:
+                case CSSLexer.GRAD:
+                case CSSLexer.RAD:
+                case CSSLexer.TURN:
+                    ParsedValueImpl sizeValue = new ParsedValueImpl<Size, Size>(size(token), null);
+                    sizes.add(sizeValue);
+                    break;
+                default:
+                    error (root, "expected series of <size>");
+            }
+            term = term.nextInSeries;
+        }
+        return sizes.toArray(new ParsedValueImpl[sizes.size()]);
+
+    }
 
     // http://www.w3.org/TR/css3-background/#the-border-radius
     // <size>{1,4} [ '/' <size>{1,4}]? [',' <size>{1,4} [ '/' <size>{1,4}]?]?
@@ -3799,16 +3874,40 @@ final public class CSSParser {
         // need to read the first token
         currentToken = nextToken(lexer);
 
-        while ((currentToken != null) &&
-               (currentToken.getType() != Token.EOF)) {
+        while((currentToken != null) &&
+                (currentToken.getType() == CSSLexer.AT_KEYWORD)) {
 
-            if (currentToken.getType() == CSSLexer.FONT_FACE) {
+            currentToken = nextToken(lexer);
+
+            if (currentToken == null || currentToken.getType() != CSSLexer.IDENT) {
+
+                // just using ParseException for a nice error message, not for throwing the exception.
+                ParseException parseException = new ParseException("Expected IDENT", currentToken, this);
+                final String msg = parseException.toString();
+                CssError error = createError(msg);
+                if (LOGGER.isLoggable(Level.WARNING)) {
+                    LOGGER.warning(error.toString());
+                }
+                reportError(error);
+
+                // get past EOL or SEMI
+                do {
+                    currentToken = lexer.nextToken();
+                } while ((currentToken != null) &&
+                        (currentToken.getType() == CSSLexer.SEMI) ||
+                        (currentToken.getType() == CSSLexer.WS) ||
+                        (currentToken.getType() == CSSLexer.NL));
+                continue;
+            }
+
+            String keyword = currentToken.getText().toLowerCase(Locale.ROOT);
+            if ("font-face".equals(keyword)) {
                 FontFace fontFace = fontFace(lexer);
                 if (fontFace != null) stylesheet.getFontFaces().add(fontFace);
                 currentToken = nextToken(lexer);
                 continue;
 
-            } else if (currentToken.getType() == CSSLexer.IMPORT) {
+            } else if ("import".equals(keyword)) {
 
                 if (CSSParser.imports == null) {
                     CSSParser.imports = new Stack<>();
@@ -3821,10 +3920,7 @@ final public class CSSParser {
                     Stylesheet importedStylesheet = handleImport(lexer);
 
                     if (importedStylesheet != null) {
-                        List<Rule> importedRules = importedStylesheet.getRules();
-                        if (importedRules != null && !importedRules.isEmpty()) {
-                            stylesheet.getRules().addAll(importedRules);
-                        }
+                        stylesheet.importStylesheet(importedStylesheet);
                     }
 
                     imports.pop();
@@ -3834,12 +3930,12 @@ final public class CSSParser {
                     }
 
                 } else {
-                    // Import imports import!
+// Import imports import!
                     final int line = currentToken.getLine();
                     final int pos = currentToken.getOffset();
                     final String msg =
                             MessageFormat.format("Recursive @import at {2} [{0,number,#},{1,number,#}]",
-                                    line,pos,imports.peek());
+                                    line, pos, imports.peek());
                     CssError error = createError(msg);
                     if (LOGGER.isLoggable(Level.WARNING)) {
                         LOGGER.warning(error.toString());
@@ -3856,7 +3952,12 @@ final public class CSSParser {
                         (currentToken.getType() == CSSLexer.NL));
 
                 continue;
+
             }
+        }
+
+        while ((currentToken != null) &&
+               (currentToken.getType() != Token.EOF)) {
 
             List<Selector> selectors = selectors(lexer);
             if (selectors == null) return;
@@ -4091,18 +4192,18 @@ final public class CSSParser {
                     new ParsedValueImpl<ParsedValue[], String>(uriValues, URLConverter.getInstance());
 
             String urlString = parsedValue.convert(null);
-
-            try {
-                URL url = new URL(urlString);
-                return new CSSParser().parse(url);
-            } catch (MalformedURLException malf) {
-
-            } catch (IOException ioe) {
-
-            }
+            importedStylesheet = StyleManager.loadStylesheet(urlString);
         }
-
-        return null;
+        if (importedStylesheet == null) {
+            final String msg =
+                    MessageFormat.format("Could not import {0}", fname);
+            CssError error = createError(msg);
+            if (LOGGER.isLoggable(Level.WARNING)) {
+                LOGGER.warning(error.toString());
+            }
+            reportError(error);
+        }
+        return importedStylesheet;
     }
 
     private List<Selector> selectors(CSSLexer lexer) {
@@ -4449,7 +4550,7 @@ final public class CSSParser {
         Term root = expr(lexer);
         ParsedValueImpl value = null;
         try {
-            value = (root != null) ? valueFor(property, root) : null;
+            value = (root != null) ? valueFor(property, root, lexer) : null;
         } catch (ParseException re) {
                 Token badToken = re.tok;
                 final int line = badToken != null ? badToken.getLine() : -1;
@@ -4469,7 +4570,7 @@ final public class CSSParser {
         if (important) currentToken = nextToken(lexer);
 
         Declaration decl = (value != null)
-                ? new Declaration(property, value, important) : null;
+                ? new Declaration(property.toLowerCase(Locale.ROOT), value, important) : null;
         return decl;
     }
 
@@ -4544,6 +4645,8 @@ final public class CSSParser {
             case CSSLexer.RAD:
             case CSSLexer.TURN:
             case CSSLexer.PERCENTAGE:
+            case CSSLexer.SECONDS:
+            case CSSLexer.MS:
                 break;
 
             case CSSLexer.STRING:

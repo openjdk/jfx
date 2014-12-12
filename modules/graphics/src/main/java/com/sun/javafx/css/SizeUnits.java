@@ -246,6 +246,41 @@ public enum SizeUnits {
             return round(value*360);
         }
 
+    },
+
+
+    S(true) {
+
+        @Override
+        public String toString() { return "s"; }
+
+        @Override
+        public double points(double value, double multiplier_not_used, Font font_not_used) {
+            return value;
+        }
+
+        @Override
+        public double pixels(double value, double multiplier_not_used, Font font_not_used) {
+            return value;
+        }
+
+    },
+
+    MS(true) {
+
+        @Override
+        public String toString() { return "ms"; }
+
+        @Override
+        public double points(double value, double multiplier_not_used, Font font_not_used) {
+            return value;
+        }
+
+        @Override
+        public double pixels(double value, double multiplier_not_used, Font font_not_used) {
+            return value;
+        }
+
     };
 
     abstract double points(double value, double multiplier, Font font);

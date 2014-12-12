@@ -129,8 +129,13 @@ class D3DResourceFactory extends BaseShaderFactory {
   
     @Override
     public D3DTexture createTexture(PixelFormat format, Usage usagehint,
-                                    WrapMode wrapMode, int w, int h)
-    {
+            WrapMode wrapMode, int w, int h) {
+        return createTexture(format, usagehint, wrapMode, w, h, false);
+    }
+
+    @Override
+    public D3DTexture createTexture(PixelFormat format, Usage usagehint,
+            WrapMode wrapMode, int w, int h, boolean useMipmap) {
         if (!isFormatSupported(format)) {
             throw new UnsupportedOperationException(
                 "Pixel format " + format +
@@ -156,7 +161,7 @@ class D3DResourceFactory extends BaseShaderFactory {
         }
         long pResource = nCreateTexture(context.getContextHandle(),
                                         format.ordinal(), usagehint.ordinal(),
-                                        false /*isRTT*/, allocw, alloch, 0);
+                                        false /*isRTT*/, allocw, alloch, 0, useMipmap);
         if (pResource == 0L) {
             return null;
         }
@@ -166,7 +171,7 @@ class D3DResourceFactory extends BaseShaderFactory {
         if (wrapMode != WrapMode.CLAMP_NOT_NEEDED && (w < texw || h < texh)) {
             wrapMode = wrapMode.simulatedVersion();
         }
-        return new D3DTexture(context, format, wrapMode, pResource, texw, texh, w, h);
+        return new D3DTexture(context, format, wrapMode, pResource, texw, texh, w, h, useMipmap);
     }
 
     @Override
@@ -215,7 +220,7 @@ class D3DResourceFactory extends BaseShaderFactory {
             }
             long pResource = nCreateTexture(context.getContextHandle(),
                     texFormat.ordinal(), Usage.DYNAMIC.ordinal(),
-                    false, texWidth, texHeight, 0);
+                    false, texWidth, texHeight, 0, false);
             if (0 == pResource) {
                 return null;
             }
@@ -225,7 +230,7 @@ class D3DResourceFactory extends BaseShaderFactory {
             WrapMode wrapMode = (texWidth < physWidth || texHeight < physHeight)
                     ? WrapMode.CLAMP_TO_EDGE_SIMULATED : WrapMode.CLAMP_TO_EDGE;
             D3DTexture tex = new D3DTexture(context, texFormat, wrapMode, pResource,
-                                            physWidth, physHeight, width, height);
+                                            physWidth, physHeight, width, height, false);
             frame.releaseFrame();
             return tex;
         }
@@ -261,7 +266,7 @@ class D3DResourceFactory extends BaseShaderFactory {
     }
 
     @Override
-    public D3DRTTexture createRTTexture(int width, int height, WrapMode wrapMode, boolean antiAliasing) {
+    public D3DRTTexture createRTTexture(int width, int height, WrapMode wrapMode, boolean msaa) {
         if (PrismSettings.verbose && context.isLost()) {
             System.err.println("RT Texture allocation while the device is lost");
         }
@@ -276,7 +281,7 @@ class D3DResourceFactory extends BaseShaderFactory {
         }
         D3DVramPool pool = D3DVramPool.instance;
         int aaSamples;
-        if (antiAliasing) {
+        if (msaa) {
             int maxSamples = D3DPipeline.getInstance().getMaxSamples();
             aaSamples =  maxSamples < 2 ? 0 : (maxSamples < 4 ? 2 : 4);
         } else {
@@ -291,7 +296,7 @@ class D3DResourceFactory extends BaseShaderFactory {
         long pResource = nCreateTexture(context.getContextHandle(),
                                         PixelFormat.INT_ARGB_PRE.ordinal(),
                                         Usage.DEFAULT.ordinal(),
-                                        true /*isRTT*/, createw, createh, aaSamples);
+                                        true /*isRTT*/, createw, createh, aaSamples, false);
         if (pResource == 0L) {
             return null;
         }
@@ -319,7 +324,7 @@ class D3DResourceFactory extends BaseShaderFactory {
         if (pResource != 0L) {
             int width = D3DResourceFactory.nGetTextureWidth(pResource);
             int height = D3DResourceFactory.nGetTextureHeight(pResource);
-            D3DRTTexture rtt = createRTTexture(width, height, WrapMode.CLAMP_NOT_NEEDED, pState.isAntiAliasing());
+            D3DRTTexture rtt = createRTTexture(width, height, WrapMode.CLAMP_NOT_NEEDED, pState.isMSAA());
             if (PrismSettings.dirtyOptsEnabled) {
                 rtt.contentsUseful();
             }
@@ -485,7 +490,8 @@ class D3DResourceFactory extends BaseShaderFactory {
     static native long nCreateTexture(long pContext,
                                       int format, int hint,
                                       boolean isRTT,
-                                      int width, int height, int samples);
+                                      int width, int height, int samples,
+                                      boolean useMipmap);
     static native long nCreateSwapChain(long pContext, long hwnd,
                                         boolean isVsyncEnabled);
     static native int nReleaseResource(long pContext, long resource);

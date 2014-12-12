@@ -59,13 +59,15 @@ import static org.junit.Assert.*;
 
 public class MacAppStoreBundlerTest {
 
-    static final int MIN_SIZE=0x100000; // 1MiB
+    static final int MIN_SIZE = 0x100000; // 1MiB
 
     static File tmpBase;
     static File workDir;
     static File appResourcesDir;
     static File fakeMainJar;
     static File hdpiIcon;
+    static String runtimeJdk;
+    static String runtimeJre;
     static Set<File> appResources;
     static boolean retain = false;
 
@@ -74,9 +76,12 @@ public class MacAppStoreBundlerTest {
         // only run on mac
         Assume.assumeTrue(System.getProperty("os.name").toLowerCase().contains("os x"));
 
+        runtimeJdk = System.getenv("PACKAGER_JDK_ROOT");
+        runtimeJre = System.getenv("PACKAGER_JRE_ROOT");
+
         // and only if we have the correct JRE settings
         String jre = System.getProperty("java.home").toLowerCase();
-        Assume.assumeTrue(jre.endsWith("/contents/home/jre") || jre.endsWith("/contents/home/jre"));
+        Assume.assumeTrue(runtimeJdk != null || jre.endsWith("/contents/home/jre") || jre.endsWith("/contents/home/jre"));
 
         // make sure we have a default signing key
         String signingKeyName = MacAppStoreBundler.MAC_APP_STORE_APP_SIGNING_KEY.fetchFrom(new TreeMap<>());
@@ -99,6 +104,7 @@ public class MacAppStoreBundlerTest {
 
 
         Log.setLogger(new Log.Logger(true));
+        Log.setDebug(true);
 
         retain = Boolean.parseBoolean(System.getProperty("RETAIN_PACKAGER_TESTS"));
 
@@ -169,17 +175,21 @@ public class MacAppStoreBundlerTest {
         bundleParams.put(BUILD_ROOT.getID(), tmpBase);
 
         bundleParams.put(APP_NAME.getID(), "Smoke Test");
-        bundleParams.put(MAIN_CLASS.getID(), "hello.TestPackager");
+        bundleParams.put(MAIN_CLASS.getID(), "hello.HelloRectangle");
         bundleParams.put(PREFERENCES_ID.getID(), "the/really/long/preferences/id");
         bundleParams.put(MAIN_JAR.getID(),
                 new RelativeFileSet(fakeMainJar.getParentFile(),
                         new HashSet<>(Arrays.asList(fakeMainJar)))
         );
-        bundleParams.put(CLASSPATH.getID(), fakeMainJar.toString());
+        bundleParams.put(CLASSPATH.getID(), "mainApp.jar");
         bundleParams.put(IDENTIFIER.getID(), "com.example.javapacakger.hello.TestPackager");
         bundleParams.put(MacAppBundler.MAC_CATEGORY.getID(), "public.app-category.developer-tools");
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
         bundleParams.put(VERBOSE.getID(), true);
+
+        if (runtimeJdk != null) {
+            bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
+        }
 
         boolean valid = bundler.validate(bundleParams);
         assertTrue(valid);
@@ -207,7 +217,7 @@ public class MacAppStoreBundlerTest {
         Matcher matcher = jreInfoPListPattern.matcher(output);
         assertTrue("Insure that info.plist is packed in for embedded jre", matcher.find());
 
-        assertFalse("Insure JFX Media isn't packed in", output.contains("/libjfxmedia.dylib"));
+        assertFalse("Insure JFX Media isn't packed in", output.contains("/libjfxmedia_qtkit.dylib"));
     }
 
     @Test
@@ -219,18 +229,21 @@ public class MacAppStoreBundlerTest {
 
         bundleParams.put(APP_NAME.getID(), "Everything App Name");
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        bundleParams.put(ARGUMENTS.getID(), Arrays.asList("He Said", "She Said"));
         bundleParams.put(BUNDLE_ID_SIGNING_PREFIX.getID(), "everything.signing.prefix.");
+        bundleParams.put(CLASSPATH.getID(), "mainApp.jar");
         bundleParams.put(ICON_ICNS.getID(), hdpiIcon);
         bundleParams.put(JVM_OPTIONS.getID(), "-Xms128M");
         bundleParams.put(JVM_PROPERTIES.getID(), "everything.jvm.property=everything.jvm.property.value");
         bundleParams.put(MAC_CATEGORY.getID(), "public.app-category.developer-tools");
         bundleParams.put(MAC_CF_BUNDLE_IDENTIFIER.getID(), "com.example.everything.cf-bundle-identifier");
         bundleParams.put(MAC_CF_BUNDLE_NAME.getID(), "Everything CF Bundle Name");
-        bundleParams.put(MAC_RUNTIME.getID(), System.getProperty("java.home"));
-        bundleParams.put(MAIN_CLASS.getID(), "hello.TestPackager");
+        bundleParams.put(MAC_CF_BUNDLE_VERSION.getID(), "8.2.0");
+        bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk == null ? System.getProperty("java.home") : runtimeJdk);
+        bundleParams.put(MAIN_CLASS.getID(), "hello.HelloRectangle");
         bundleParams.put(MAIN_JAR.getID(), "mainApp.jar");
-        bundleParams.put(CLASSPATH.getID(), "mainApp.jar");
-        bundleParams.put(PREFERENCES_ID.getID(), "everything.preferences.id");
+        bundleParams.put(PREFERENCES_ID.getID(), "everything/preferences/id");
+        bundleParams.put(PRELOADER_CLASS.getID(), "hello.HelloPreloader");
         bundleParams.put(USER_JVM_OPTIONS.getID(), "-Xmx=256M\n");
         bundleParams.put(VERSION.getID(), "1.2.3.4");
 
@@ -238,14 +251,14 @@ public class MacAppStoreBundlerTest {
         bundleParams.put(MAC_APP_STORE_ENTITLEMENTS.getID(), null);
         bundleParams.put(MAC_APP_STORE_PKG_SIGNING_KEY.getID(), "3rd Party Mac Developer Installer");
 
-                // assert they are set
-        for (BundlerParamInfo bi :parameters) {
+        // assert they are set
+        for (BundlerParamInfo bi : parameters) {
             assertNotNull("Bundle args Contains " + bi.getID(), bundleParams.containsKey(bi.getID()));
         }
 
         // and only those are set
         bundleParamLoop:
-        for (String s :bundleParams.keySet()) {
+        for (String s : bundleParams.keySet()) {
             for (BundlerParamInfo<?> bpi : parameters) {
                 if (s.equals(bpi.getID())) {
                     continue bundleParamLoop;
@@ -255,7 +268,7 @@ public class MacAppStoreBundlerTest {
         }
 
         // assert they resolve
-        for (BundlerParamInfo bi :parameters) {
+        for (BundlerParamInfo bi : parameters) {
             bi.fetchFrom(bundleParams);
         }
 
@@ -274,5 +287,86 @@ public class MacAppStoreBundlerTest {
         System.err.println("Bundle at - " + result);
 
         checkFiles(result);
+    }
+
+    /**
+     * User a JRE instead of a JDK
+     */
+    @Test
+    public void testJRE() throws IOException, ConfigException, UnsupportedPlatformException {
+        String jre = runtimeJre == null ? "/Library/Internet Plug-Ins/JavaAppletPlugin.plugin/" : runtimeJre;
+        Assume.assumeTrue(new File(jre).isDirectory());
+
+        try {
+            AbstractBundler bundler = new MacAppStoreBundler();
+    
+            assertNotNull(bundler.getName());
+            assertNotNull(bundler.getID());
+            assertNotNull(bundler.getDescription());
+    
+            Map<String, Object> bundleParams = new HashMap<>();
+    
+            bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+    
+            bundleParams.put(APP_NAME.getID(), "Smoke Test");
+            bundleParams.put(MAIN_CLASS.getID(), "hello.HelloRectangle");
+            bundleParams.put(PREFERENCES_ID.getID(), "the/really/long/preferences/id");
+            bundleParams.put(MAIN_JAR.getID(),
+                    new RelativeFileSet(fakeMainJar.getParentFile(),
+                            new HashSet<>(Arrays.asList(fakeMainJar)))
+            );
+            bundleParams.put(CLASSPATH.getID(), "mainApp.jar");
+            bundleParams.put(IDENTIFIER.getID(), "com.example.javapacakger.hello.TestPackager");
+            bundleParams.put(MacAppBundler.MAC_CATEGORY.getID(), "public.app-category.developer-tools");
+            bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+            bundleParams.put(VERBOSE.getID(), true);
+            bundleParams.put(MAC_RUNTIME.getID(), jre);
+    
+            boolean valid = bundler.validate(bundleParams);
+            assertTrue(valid);
+    
+            File result = bundler.execute(bundleParams, new File(workDir, "jre"));
+            System.err.println("Bundle at - " + result);
+    
+            checkFiles(result);
+
+            // if we get here we fail
+            assertTrue("ConfigException should have been thrown", false);
+        } catch (ConfigException ignore) {
+            // expected
+        }
+    }
+
+    /**
+     * Request no signature, should be a validaiton error
+     */
+    @Test(expected = ConfigException.class)
+    public void invalidDoNotSign() throws IOException, ConfigException, UnsupportedPlatformException {
+        AbstractBundler bundler = new MacAppStoreBundler();
+
+        Map<String, Object> bundleParams = new HashMap<>();
+
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+
+        bundleParams.put(APP_NAME.getID(), "Smoke Test");
+        bundleParams.put(MAIN_CLASS.getID(), "hello.HelloRectangle");
+        bundleParams.put(PREFERENCES_ID.getID(), "the/really/long/preferences/id");
+        bundleParams.put(MAIN_JAR.getID(),
+                new RelativeFileSet(fakeMainJar.getParentFile(),
+                        new HashSet<>(Arrays.asList(fakeMainJar)))
+        );
+        bundleParams.put(CLASSPATH.getID(), "mainApp.jar");
+        bundleParams.put(IDENTIFIER.getID(), "com.example.javapacakger.hello.TestPackager");
+        bundleParams.put(MacAppBundler.MAC_CATEGORY.getID(), "public.app-category.developer-tools");
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        bundleParams.put(VERBOSE.getID(), true);
+
+        if (runtimeJdk != null) {
+            bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
+        }
+
+        bundleParams.put(SIGN_BUNDLE.getID(), false);
+        
+        bundler.validate(bundleParams);
     }
 }

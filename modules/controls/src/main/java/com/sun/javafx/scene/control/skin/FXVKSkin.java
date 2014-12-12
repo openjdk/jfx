@@ -386,9 +386,11 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
             vkPopup = new Popup();
             vkPopup.setAutoFix(false);
         }
+        vkPopup.getContent().setAll(fxvk);
 
         double screenHeight =
             com.sun.javafx.Utils.getScreen(fxvk).getBounds().getHeight();
+        double width = com.sun.javafx.Utils.getScreen(fxvk).getBounds().getWidth();
 
         //Setup VK slide animations
         slideInTimeline.getKeyFrames().setAll(
@@ -405,15 +407,13 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
                 new KeyValue(winY, screenHeight, Interpolator.EASE_BOTH)));
 
         //Set VK size
-        double width = com.sun.javafx.Utils.getScreen(fxvk).getBounds().getWidth();
         fxvk.setPrefWidth(width);
         fxvk.setMinWidth(USE_PREF_SIZE);
         fxvk.setMaxWidth(USE_PREF_SIZE);
-        
+
         fxvk.setPrefHeight(VK_HEIGHT);
         fxvk.setMinHeight(USE_PREF_SIZE);
 
-        vkPopup.getContent().setAll(fxvk);
 
         //set up long-press triger for secondary VK
         if (secondaryVKDelay == null) {

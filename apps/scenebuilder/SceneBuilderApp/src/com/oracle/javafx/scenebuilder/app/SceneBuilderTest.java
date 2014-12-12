@@ -186,7 +186,7 @@ public class SceneBuilderTest {
             final Bounds b = node.getLayoutBounds();
             final double midX = (b.getMinX() + b.getMaxX()) / 2.0;
             final double midY = (b.getMinY() + b.getMaxY()) / 2.0;
-            final Point2D nodeCenter = node.localToScene(midX, midY);
+            final Point2D nodeCenter = node.localToScene(midX, midY, true /* rootScene */);
             
             final ContentPanelController cpc = dwc.getContentPanelController();
             result = cpc.searchWithNode(node, nodeCenter.getX(), nodeCenter.getY());

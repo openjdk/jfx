@@ -179,6 +179,15 @@ Two buttons are live in this application, a JavaFX Button and a Swing JButton.
 The user can click on either the JavaFX one or the Swing one to respectively disable or enable the other button.
 
 
+----------
+AirportApp
+
+A sample application with an aeronautical theme. The user can select an airport from the ListView
+which is then located on a map (utilising a ScrollPane to animate to the correct location).
+There is a detailed video showing how this app is constructed, including applying CSS and connecting code.
+You can find the video on the Java YouTube channel at: http://youtu.be/ij0HwRAlCmo
+
+
 -------------------------------------------------------------------- 
 Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
 

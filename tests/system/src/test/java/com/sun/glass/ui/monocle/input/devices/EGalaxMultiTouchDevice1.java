@@ -25,101 +25,15 @@
 
 package com.sun.glass.ui.monocle.input.devices;
 
-import com.sun.glass.ui.monocle.input.TestApplication;
-import com.sun.glass.ui.monocle.input.TestLog;
-import com.sun.glass.ui.monocle.input.UInput;
-import org.junit.Assume;
-
 /** The touch screen used in the Freescale i.MX6Q Sabre Device Platform,
  * extrapolated to five touch points. There is some guesswork here as to
  * whether the screen always resends stationary points. This class assumes that
  * it does not resend stationary points.
  */
-public class EGalaxMultiTouchDevice1 extends TestTouchDevice {
+public class EGalaxMultiTouchDevice1 extends EGalaxMultiTouchDeviceBase {
 
     public EGalaxMultiTouchDevice1() {
-        super(5);
-    }
-
-    @Override
-    public void create() {
-        // this device fails multitouch tests on Lens
-        Assume.assumeTrue(TestApplication.isMonocle());
-        ui = new UInput();
-        ui.processLine("OPEN");
-        ui.processLine("EVBIT EV_SYN");
-        ui.processLine("ABSBIT ABS_MT_TRACKING_ID");
-        ui.processLine("ABSBIT ABS_MT_POSITION_X");
-        ui.processLine("ABSBIT ABS_MT_POSITION_Y");
-        ui.processLine("ABSBIT ABS_MT_TOUCH_MAJOR");
-        ui.processLine("ABSMIN ABS_MT_TRACKING_ID 0");
-        ui.processLine("ABSMAX ABS_MT_TRACKING_ID 5");
-        ui.processLine("ABSMIN ABS_MT_POSITION_X 0");
-        ui.processLine("ABSMAX ABS_MT_POSITION_X 32767");
-        ui.processLine("ABSMIN ABS_MT_POSITION_Y 0");
-        ui.processLine("ABSMAX ABS_MT_POSITION_Y 32767");
-        ui.processLine("ABSMIN ABS_MT_TOUCH_MAJOR 0");
-        ui.processLine("ABSMAX ABS_MT_TOUCH_MAJOR 255");
-        ui.processLine("PROPBIT INPUT_PROP_POINTER");
-        ui.processLine("PROPBIT INPUT_PROP_DIRECT");
-        ui.processLine("PROPERTY ID_INPUT_TOUCHSCREEN 1");
-        ui.processLine("CREATE");
-        setAbsScale(32768, 32768);
-    }
-
-    @Override
-    public int addPoint(double x, double y) {
-        int p = super.addPoint(x, y);
-        ui.processLine("EV_ABS ABS_MT_TRACKING_ID " + p);
-        ui.processLine("EV_ABS ABS_MT_TOUCH_MAJOR 1");
-        ui.processLine("EV_ABS ABS_MT_POSITION_X " + transformedXs[p]);
-        ui.processLine("EV_ABS ABS_MT_POSITION_Y " + transformedYs[p]);
-        ui.processLine("EV_SYN SYN_MT_REPORT 0");
-        return p;
-    }
-
-    @Override
-    public void removePoint(int p) {
-        super.removePoint(p);
-        ui.processLine("EV_ABS ABS_MT_TRACKING_ID " + p);
-        ui.processLine("EV_ABS ABS_MT_TOUCH_MAJOR 0");
-        ui.processLine("EV_SYN SYN_MT_REPORT 0");
-    }
-
-    @Override
-    public void setPoint(int p, double x, double y) {
-        super.setPoint(p, x, y);
-        ui.processLine("EV_ABS ABS_MT_TRACKING_ID " + p);
-        ui.processLine("EV_ABS ABS_MT_TOUCH_MAJOR 1");
-        ui.processLine("EV_ABS ABS_MT_POSITION_X " + transformedXs[p]);
-        ui.processLine("EV_ABS ABS_MT_POSITION_Y " + transformedYs[p]);
-        ui.processLine("EV_SYN SYN_MT_REPORT 0");
-    }
-
-    @Override
-    public void setAndRemovePoint(int p, double x, double y) {
-        // This device doesn't send move and release at the same time
-        removePoint(p);
-    }
-
-    @Override
-    public void sync() {
-        super.sync();
-    }
-
-    @Override
-    public void resendStateAndSync() {
-        TestLog.log("TestTouchDevice: sync");
-        for (int p = 0; p < points.length; p++) {
-            if (points[p]) {
-                ui.processLine("EV_ABS ABS_MT_TRACKING_ID " + p);
-                ui.processLine("EV_ABS ABS_MT_TOUCH_MAJOR 1");
-                ui.processLine("EV_ABS ABS_MT_POSITION_X " + transformedXs[p]);
-                ui.processLine("EV_ABS ABS_MT_POSITION_Y " + transformedYs[p]);
-                ui.processLine("EV_SYN SYN_MT_REPORT 0");
-            }
-        }
-        sync();
+        super(false, false, true, SendIDOnRelease.SEND_ID);
     }
 
 }

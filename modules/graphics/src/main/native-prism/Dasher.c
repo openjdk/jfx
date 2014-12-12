@@ -102,22 +102,50 @@ void Dasher_init(Dasher *pDasher,
     Dasher_reset(pDasher, dash, numdashes, phase);
 }
 
+#define MAX_CYCLES 16000000.0f
 void Dasher_reset(Dasher *pDasher, jfloat dash[], jint ndashes, jfloat phase) {
     jint sidx;
-    jfloat d;
-
-    if (phase < 0) {
-        phase = 0;
-//        throw new IllegalArgumentException("phase < 0 !");
-    }
+    jfloat d, sum, cycles;
+    jint i;
 
     // Normalize so 0 <= phase < dash[0]
     sidx = 0;
     this.dashOn = JNI_TRUE;
-    while (phase >= (d = dash[sidx])) {
-        phase -= d;
-        sidx = (sidx + 1) % ndashes;
-        this.dashOn = !this.dashOn;
+    sum = 0.0f;
+    for (i = 0; i < ndashes; i++) {
+        sum += dash[i];
+    }
+    cycles = phase / sum;
+    if (phase < 0) {
+        if (-cycles >= MAX_CYCLES) {
+            phase = 0;
+        } else {
+            jint fullcycles = (jint) floor(-cycles);
+            if ((fullcycles & ndashes & 1) != 0) {
+                this.dashOn = !this.dashOn;
+            }
+            phase += fullcycles * sum;
+            while (phase < 0) {
+                if (--sidx < 0) sidx = ndashes-1;
+                phase += dash[sidx];
+                this.dashOn = !this.dashOn;
+            }
+        }
+    } else if (phase > 0) {
+        if (cycles >= MAX_CYCLES) {
+            phase = 0;
+        } else {
+            jint fullcycles = (jint) floor(cycles);
+            if ((fullcycles & ndashes & 1) != 0) {
+                this.dashOn = !this.dashOn;
+            }
+            phase -= fullcycles * sum;
+            while (phase >= (d = dash[sidx])) {
+                phase -= d;
+                sidx = (sidx + 1) % ndashes;
+                this.dashOn = !this.dashOn;
+            }
+        }
     }
 
     this.dash = dash;

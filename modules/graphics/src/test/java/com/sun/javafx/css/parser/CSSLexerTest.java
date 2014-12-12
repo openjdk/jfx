@@ -183,7 +183,19 @@ public class CSSLexerTest {
         lexDigitsWithUnits("turn", CSSLexer.TURN);
         // case should be ignored
         lexDigitsWithUnits("TurN", CSSLexer.TURN);
-    }        
+    }
+    @Test
+    public void testLexValidDigitsWithS() {
+        lexDigitsWithUnits("s", CSSLexer.SECONDS);
+        // case should be ignored
+        lexDigitsWithUnits("S", CSSLexer.SECONDS);
+    }
+    @Test
+    public void testLexValidDigitsWithMS() {
+        lexDigitsWithUnits("ms", CSSLexer.MS);
+        // case should be ignored
+        lexDigitsWithUnits("mS", CSSLexer.MS);
+    }
     @Test
     public void testLexValidDigitsWithPCT() {        
         lexDigitsWithUnits("%", CSSLexer.PERCENTAGE);

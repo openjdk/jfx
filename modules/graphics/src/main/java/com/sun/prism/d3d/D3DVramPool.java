@@ -36,17 +36,15 @@ class D3DVramPool extends BaseResourcePool<D3DTextureData>
     public static final D3DVramPool instance = new D3DVramPool();
 
     private D3DVramPool() {
-        super(PrismSettings.maxVram);
+        super(PrismSettings.targetVram, PrismSettings.maxVram);
     }
 
-    public long target() {
-        return PrismSettings.targetVram;
-    }
-
+    @Override
     public long size(D3DTextureData resource) {
         return resource.getSize();
     }
 
+    @Override
     public long estimateTextureSize(int width, int height,
                                     PixelFormat format)
     {
@@ -54,6 +52,7 @@ class D3DVramPool extends BaseResourcePool<D3DTextureData>
                ((long) format.getBytesPerPixelUnit());
     }
 
+    @Override
     public long estimateRTTextureSize(int width, int height,
                                       boolean hasDepth)
     {

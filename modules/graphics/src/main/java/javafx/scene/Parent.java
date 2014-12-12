@@ -29,14 +29,11 @@ import com.sun.javafx.scene.traversal.ParentTraversalEngine;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
-import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
-//import javafx.scene.accessibility.Attribute;
-//import javafx.scene.accessibility.Role;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -64,6 +61,7 @@ import com.sun.javafx.sg.prism.NGGroup;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.javafx.scene.LayoutFlags;
+import javafx.stage.Window;
 
 /**
  * The base class for all nodes that have children in the scene graph.
@@ -359,9 +357,12 @@ public abstract class Parent extends Node {
     }) {
         @Override
         protected void onProposedChange(final List<Node> newNodes, int[] toBeRemoved) {
-            if (Parent.this.getScene() != null) {
-                // NOTE: this will throw IllegalStateException if we are on the wrong thread
-                Toolkit.getToolkit().checkFxUserThread();
+            final Scene scene = getScene();
+            if (scene != null) {
+                Window w = scene.getWindow();
+                if (w != null && w.impl_getPeer() != null) {
+                    Toolkit.getToolkit().checkFxUserThread();
+                }
             }
             geomChanged = false;
 
@@ -542,7 +543,8 @@ public abstract class Parent extends Node {
      * restored. An {@link IllegalArgumentException} is thrown in this case.
      *
      * <p>
-     * If this {@link Parent} node is attached to a {@link Scene}, then its
+     * If this {@link Parent} node is attached to a {@link Scene} attached to a {@link Window}
+     * that is showning ({@link javafx.stage.Window#isShowing()}), then its
      * list of children must only be modified on the JavaFX Application Thread.
      * An {@link IllegalStateException} is thrown if this restriction is
      * violated.
@@ -1281,6 +1283,7 @@ public abstract class Parent extends Node {
      */
     protected Parent() {
         layoutFlag = LayoutFlags.NEEDS_LAYOUT;
+        setAccessibleRole(AccessibleRole.PARENT);
     }
 
     /**
@@ -1400,7 +1403,7 @@ public abstract class Parent extends Node {
             for (int i=0, max=children.size(); i<max; i++) {
                 final Node node = children.get(i);
                 if (node.isVisible()) {
-                    bounds = node.getTransformedBounds(bounds, tx);
+                    bounds = getChildTransformedBounds(node, tx, bounds);
                     // if the bounds of the child are invalid, we don't want
                     // to use those in the remaining computations.
                     if (bounds.isEmpty()) continue;
@@ -1507,9 +1510,7 @@ public abstract class Parent extends Node {
             Node node = children.get(0);
             node.boundsChanged = false;
             if (node.isVisible()) {
-                cachedBounds = node.getTransformedBounds(
-                                        cachedBounds,
-                                        BaseTransform.IDENTITY_TRANSFORM);
+                cachedBounds = getChildTransformedBounds(node, BaseTransform.IDENTITY_TRANSFORM, cachedBounds);
                 top = left = bottom = right = near = far = node;
             } else {
                 cachedBounds.makeEmpty();
@@ -1581,8 +1582,7 @@ public abstract class Parent extends Node {
                 // assert node.isVisible();
                 node.boundsChanged = false;
                 --remainingDirtyNodes;
-                tmp = node.getTransformedBounds(
-                               tmp, BaseTransform.IDENTITY_TRANSFORM);
+                tmp = getChildTransformedBounds(node, BaseTransform.IDENTITY_TRANSFORM, tmp);
                 if (!tmp.isEmpty()) {
                     float tmpx = tmp.getMinX();
                     float tmpy = tmp.getMinY();
@@ -1708,11 +1708,29 @@ public abstract class Parent extends Node {
         super.updateBounds();
     }
 
+    // Note: this marks the currently processed child in terms of transformed bounds. In rare situations like
+    // in RT-37879, it might happen that the child bounds will be marked as invalid. Due to optimizations,
+    // the invalidation must *always* be propagated to the parent, because the parent with some transformation
+    // calls child's getTransformedBounds non-idenitity transform and the child's transformed bounds are thus not validated.
+    // This does not apply to the call itself however, because the call will yield the correct result even if something
+    // was invalidated during the computation. We can safely ignore such invalidations from that Node in this case
+    private Node currentlyProcessedChild;
+
+    private BaseBounds getChildTransformedBounds(Node node, BaseTransform tx, BaseBounds bounds) {
+        currentlyProcessedChild = node;
+        bounds = node.getTransformedBounds(bounds, tx);
+        currentlyProcessedChild = null;
+        return bounds;
+    }
+
     /**
      * Called by Node whenever its bounds have changed.
      */
     void childBoundsChanged(Node node) {
-        // assert node.isVisible();
+        // See comment above at "currentlyProcessedChild" field
+        if (node == currentlyProcessedChild) {
+            return;
+        }
 
         cachedBoundsInvalid = true;
 
@@ -1774,22 +1792,20 @@ public abstract class Parent extends Node {
         return alg.processContainerNode(this, ctx);
     }
 
-//    /** @treatAsPrivate */
-//    @Override
-//    public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//        switch (attribute) {
-//            case ROLE: return Role.PARENT;
-//            case CHILDREN: return getChildrenUnmodifiable();
-//            default: return super.accGetAttribute(attribute, parameters);
-//        }
-//    }
-//
-//    void releaseAccessible() {
-//        for (int i=0, max=children.size(); i<max; i++) {
-//            final Node node = children.get(i);
-//            node.releaseAccessible();
-//        }
-//        super.releaseAccessible();
-//    }
+    @Override
+    public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
+        switch (attribute) {
+            case CHILDREN: return getChildrenUnmodifiable();
+            default: return super.queryAccessibleAttribute(attribute, parameters);
+        }
+    }
+
+    void releaseAccessible() {
+        for (int i=0, max=children.size(); i<max; i++) {
+            final Node node = children.get(i);
+            node.releaseAccessible();
+        }
+        super.releaseAccessible();
+    }
 
 }

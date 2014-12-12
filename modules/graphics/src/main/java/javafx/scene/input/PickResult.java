@@ -47,6 +47,7 @@ public class PickResult {
     private Point3D point;
     private double distance = Double.POSITIVE_INFINITY;
     private int face = -1;
+    private Point3D normal;
     private Point2D texCoord;
 
     /**
@@ -62,6 +63,30 @@ public class PickResult {
         this.point = point;
         this.distance = distance;
         this.face = face;
+        this.normal = null;
+        this.texCoord = texCoord;
+    }
+
+    /**
+     * Creates a new instance of PickResult.
+     *
+     * @param node The intersected node
+     * @param point The intersected point in local coordinate of the picked Node
+     * @param distance The intersected distance between camera position and the picked Node
+     * @param face The intersected face of the picked Node
+     * @param texCoord The intersected texture coordinates of the picked Node
+     * @param normal The intersected normal of the picked Node
+     *
+     * @since JavaFX 8u40
+     */
+    public PickResult(@NamedArg("node") Node node, @NamedArg("point") Point3D point,
+            @NamedArg("distance") double distance, @NamedArg("face") int face,
+            @NamedArg("normal") Point3D normal, @NamedArg("texCoord") Point2D texCoord) {
+        this.node = node;
+        this.point = point;
+        this.distance = distance;
+        this.face = face;
+        this.normal = normal;
         this.texCoord = texCoord;
     }
 
@@ -77,6 +102,7 @@ public class PickResult {
         this.point = point;
         this.distance = distance;
         this.face = FACE_UNDEFINED;
+        this.normal = null;
         this.texCoord = null;
     }
 
@@ -140,11 +166,23 @@ public class PickResult {
      }
 
     /**
+     * Return the intersected normal of the picked 3d shape. If the picked
+     * target is not Shape3D or has pickOnBounds==true, it returns null.
+     *
+     * @return a new Point3D presenting the intersected normal
+     *
+     * @since JavaFX 8u40
+     */
+    public final Point3D getIntersectedNormal() {
+        return normal;
+    }
+
+    /**
      * Return the intersected texture coordinates of the picked 3d shape.
      * If the picked target is not Shape3D or has pickOnBounds==true,
      * it returns null.
      *
-     * return new Point2D presenting the intersected TexCoord
+     * @return a new Point2D presenting the intersected TexCoord
      */
     public final Point2D getIntersectedTexCoord() {
         return texCoord;
@@ -159,6 +197,9 @@ public class PickResult {
         if (getIntersectedFace() != FACE_UNDEFINED) {
                 sb.append(", face = ").append(getIntersectedFace());
         }
+        if (getIntersectedNormal() != null) {
+                sb.append(", normal = ").append(getIntersectedNormal());
+        }        
         if (getIntersectedTexCoord() != null) {
                 sb.append(", texCoord = ").append(getIntersectedTexCoord());
         }

@@ -37,6 +37,9 @@ extern "C" {
 JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_GtkDnDClipboard_isOwner
   (JNIEnv *env , jobject obj)
 {
+    (void)env;
+    (void)obj;
+
     return (is_dnd_owner) ? JNI_TRUE : JNI_FALSE;
 }
 
@@ -49,6 +52,8 @@ JNIEXPORT jint JNICALL
 Java_com_sun_glass_ui_gtk_GtkDnDClipboard_pushToSystemImpl
   (JNIEnv * env, jobject obj, jobject data, jint supported)
 {
+    (void)obj;
+
     return execute_dnd(env, data, supported);
 }
 
@@ -60,6 +65,10 @@ Java_com_sun_glass_ui_gtk_GtkDnDClipboard_pushToSystemImpl
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkDnDClipboard_pushTargetActionToSystem
   (JNIEnv * env, jobject obj, jint action)
 {
+    (void)env;
+    (void)obj;
+    (void)action;
+
     // Never called.
 }
 
@@ -71,6 +80,8 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkDnDClipboard_pushTargetActio
 JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_gtk_GtkDnDClipboard_popFromSystem
   (JNIEnv * env, jobject obj, jstring mime)
 {
+    (void)obj;
+
     return dnd_target_get_data(env, mime);
 }
 
@@ -82,6 +93,8 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_gtk_GtkDnDClipboard_popFromSyste
 JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkDnDClipboard_supportedSourceActionsFromSystem
   (JNIEnv *env, jobject obj)
 {
+    (void)obj;
+
     return dnd_target_get_supported_actions(env);
 }
 
@@ -93,6 +106,8 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkDnDClipboard_supportedSource
 JNIEXPORT jobjectArray JNICALL Java_com_sun_glass_ui_gtk_GtkDnDClipboard_mimesFromSystem
   (JNIEnv * env, jobject obj)
 {
+    (void)obj;
+
     return dnd_target_get_mimes(env);
 }
 

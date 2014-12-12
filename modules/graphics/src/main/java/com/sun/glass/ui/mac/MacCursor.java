@@ -50,7 +50,10 @@ final class MacCursor extends Cursor {
 
     void set() {
         int type = getType();
-        setVisible(type != CURSOR_NONE);
+        isCursorNONE = type == CURSOR_NONE;
+        // Re-apply the last requested cursor visibility, and take into account
+        // the isCursorNONE flag (see the setter below).
+        setVisible(isVisible);
 
         switch (type) {
             case CURSOR_NONE:
@@ -70,8 +73,25 @@ final class MacCursor extends Cursor {
     native private static void _setVisible(boolean visible);
     native private static Size _getBestSize(int width, int height);
 
+    // [NSCursor (un)hide] method calls must be balanced,
+    // so we keep the state in the boolean field to avoid
+    // multiple native calls.
+    private static boolean isNSCursorVisible = true;
+
+    // These two flags help us handle the NONE cursor which
+    // we emulate by hidding the cursor.
+    private static boolean isCursorNONE = false;
+    private static boolean isVisible = true; // as requested by client code
+
     static void setVisible_impl(boolean visible) {
-        _setVisible(visible);
+        isVisible = visible;
+        final boolean effectiveVisible = visible && !isCursorNONE;
+        if (isNSCursorVisible == effectiveVisible) {
+            return;
+        } else {
+            isNSCursorVisible = effectiveVisible;
+            _setVisible(effectiveVisible);
+        }
     }
 
     static Size getBestSize_impl(int width, int height) {

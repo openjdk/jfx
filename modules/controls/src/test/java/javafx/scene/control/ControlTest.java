@@ -991,11 +991,16 @@ public class ControlTest {
     @Test
     public void testRT18097() {
         try {
-            ClassLoader cl = Thread.currentThread().getContextClassLoader();
-            URL base = cl.getResource("javafx/..");
-            File f = new File(base.toURI());
-            System.out.println(f.getPath());
-            recursiveCheck(f, f.getPath().length());
+            File f = System.getProperties().containsKey("CSS_META_DATA_TEST_DIR") ?
+                    new File(System.getProperties().get("CSS_META_DATA_TEST_DIR").toString()) :
+                    null;
+            if (f == null) {
+                ClassLoader cl = Thread.currentThread().getContextClassLoader();
+                URL base = cl.getResource("javafx/../javafx");
+                f = new File(base.toURI());
+            }
+            //System.err.println(f.getPath());
+            recursiveCheck(f, f.getPath().length() - 7);
         } catch (Exception ex) {
             ex.printStackTrace(System.err);
             fail(ex.getMessage());
@@ -1044,7 +1049,7 @@ public class ControlTest {
             } catch (NoSuchMethodException ex) {
                 fail("NoSuchMethodException: RT-18097 cannot be tested on " + what);
             } catch (IllegalAccessException ex) {
-                fail("IllegalAccessException:  RT-18097 cannot be tested on " + what);
+                System.err.println("IllegalAccessException:  RT-18097 cannot be tested on " + what);
             } catch (IllegalArgumentException ex) {
                 fail("IllegalArgumentException:  RT-18097 cannot be tested on " + what);
             } catch (InvocationTargetException ex) {

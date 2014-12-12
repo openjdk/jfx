@@ -93,8 +93,6 @@ public class SubScene extends Node {
      * @param width The width of the sub-scene
      * @param height The height of the sub-scene
      *
-     * @throws IllegalStateException if this constructor is called on a thread
-     * other than the JavaFX Application Thread.
      * @throws NullPointerException if root is null
      */
     public SubScene(@NamedArg("root") Parent root, @NamedArg("width") double width, @NamedArg("height") double height) {
@@ -118,8 +116,6 @@ public class SubScene extends Node {
      * See {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
      * for more information.
      *
-     * @throws IllegalStateException if this constructor is called on a thread
-     * other than the JavaFX Application Thread.
      * @throws NullPointerException if root is null
      *
      * @see javafx.scene.Node#setDepthTest(DepthTest)
@@ -139,7 +135,7 @@ public class SubScene extends Node {
             PlatformLogger.getLogger(logname).warning("System can't support "
                     + "ConditionalFeature.SCENE3D");
         }
-        if (isAntiAliasing && !Toolkit.getToolkit().isAntiAliasingSupported()) {
+        if (isAntiAliasing && !Toolkit.getToolkit().isMSAASupported()) {
             String logname = SubScene.class.getName();
             PlatformLogger.getLogger(logname).warning("System can't support "
                     + "antiAliasing");
@@ -644,7 +640,7 @@ public class SubScene extends Node {
             return new NGSubScene(false, false);
         }
         boolean aa = !(antiAliasing == null || antiAliasing == SceneAntialiasing.DISABLED);
-        return new NGSubScene(depthBuffer, aa && Toolkit.getToolkit().isAntiAliasingSupported());
+        return new NGSubScene(depthBuffer, aa && Toolkit.getToolkit().isMSAASupported());
     }
 
     /**

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,10 +26,10 @@
 package javafx.util.converter;
 
 import java.text.DateFormat;
-import java.text.DecimalFormat;
-import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collection;
 import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
@@ -38,19 +38,18 @@ import static org.junit.Assert.*;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.Ignore;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 /**
  */
+@RunWith(Parameterized.class)
 public class DateStringConverterTest {
-    private DateStringConverter converter;
-    
     private static final Date VALID_DATE;
-    private static final String VALID_DATE_STRING_MDY = "12/01/1985"; // 12th January 1985
-//    private static final String VALID_DATE_STRING_YMD = "1985/01/12"; // 12th January 1985
-    
+
     static {
+        TimeZone.setDefault(TimeZone.getTimeZone("GMT"));
         Calendar c = Calendar.getInstance();
-        c.setTimeZone(TimeZone.getTimeZone("GMT"));
         c.set(Calendar.YEAR, 1985);
         c.set(Calendar.MONTH, Calendar.JANUARY);
         c.set(Calendar.DAY_OF_MONTH, 12);
@@ -59,56 +58,73 @@ public class DateStringConverterTest {
         c.set(Calendar.SECOND, 0);
         c.set(Calendar.MILLISECOND, 0);
         VALID_DATE = c.getTime();
-//        
-//        c.set(Calendar.HOUR_OF_DAY, 12);
-//        c.set(Calendar.MINUTE, 34);
-//        c.set(Calendar.SECOND, 56);
-//        VALID_DATE_FULL = c.getTime();
+    }
+    
+    @Parameterized.Parameters public static Collection implementations() {
+        return Arrays.asList(new Object[][] {
+            { new DateStringConverter(),
+              Locale.getDefault(Locale.Category.FORMAT), DateFormat.DEFAULT,
+              VALID_DATE, null, null },
+
+            { new DateStringConverter(DateFormat.SHORT),
+              Locale.getDefault(Locale.Category.FORMAT), DateFormat.SHORT,
+              VALID_DATE, null, null },
+
+            { new DateStringConverter(Locale.UK),
+              Locale.UK, DateFormat.DEFAULT,
+              VALID_DATE, null, null },
+
+            { new DateStringConverter(Locale.UK, DateFormat.SHORT),
+              Locale.UK, DateFormat.SHORT,
+              VALID_DATE, null, null },
+
+            { new DateStringConverter("dd MM yyyy"),
+              Locale.getDefault(Locale.Category.FORMAT), DateFormat.DEFAULT,
+              VALID_DATE, "dd MM yyyy", null },
+
+            { new DateStringConverter(DateFormat.getDateInstance(DateFormat.LONG)),
+              Locale.getDefault(Locale.Category.FORMAT), DateFormat.DEFAULT,
+              VALID_DATE, null, DateFormat.getDateInstance(DateFormat.LONG) },
+        });
+    }
+
+    private DateStringConverter converter;
+    private Locale locale;
+    private int dateStyle;
+    private String pattern;
+    private DateFormat dateFormat;
+    private Date validDate;
+    private DateFormat validFormatter;
+    
+    public DateStringConverterTest(DateStringConverter converter, Locale locale, int dateStyle, Date validDate, String pattern, DateFormat dateFormat) {
+        this.converter = converter;
+        this.locale = locale;
+        this.dateStyle = dateStyle;
+        this.validDate = validDate;
+        this.pattern = pattern;
+        this.dateFormat = dateFormat;
+
+        if (dateFormat != null) {
+            validFormatter = dateFormat;
+        } else if (pattern != null) {
+            validFormatter = new SimpleDateFormat(pattern);
+        } else {
+            validFormatter = DateFormat.getDateInstance(dateStyle, locale);
+        }
     }
     
     @Before public void setup() {
-        TimeZone.setDefault(TimeZone.getTimeZone("GMT"));
-        converter = new DateStringConverter();
     }
     
     /*********************************************************************
      * Test constructors
      ********************************************************************/ 
     
-    @Test public void testDefaultConstructor() {
-        DateStringConverter c = new DateStringConverter();
-        assertEquals(Locale.getDefault(), c.locale);
-        assertNull(c.pattern);
-        assertNull(c.dateFormat);
-    }
-    
-    @Test public void testConstructor_locale() {
-        DateStringConverter c = new DateStringConverter(Locale.CANADA);
-        assertEquals(Locale.CANADA, c.locale);
-        assertNull(c.pattern);
-        assertNull(c.dateFormat);
-    }
-    
-    @Test public void testConstructor_pattern() {
-        DateStringConverter c = new DateStringConverter("yyyy/MM/dd");
-        assertEquals(Locale.getDefault(), c.locale);
-        assertEquals("yyyy/MM/dd", c.pattern);
-        assertNull(c.dateFormat);
-    }
-    
-    @Test public void testConstructor_locale_pattern() {
-        DateStringConverter c = new DateStringConverter(Locale.CANADA, "yyyy/MM/dd");
-        assertEquals(Locale.CANADA, c.locale);
-        assertEquals("yyyy/MM/dd", c.pattern);
-        assertNull(c.dateFormat);
-    }
-    
-    @Test public void testConstructor_numberFormat() {
-        DateFormat format = DateFormat.getDateInstance();
-        DateStringConverter c = new DateStringConverter(format);
-        assertNull(c.locale);
-        assertNull(c.pattern);
-        assertEquals(format, c.dateFormat);
+    @Test public void testConstructor() {
+        assertEquals(locale, converter.locale);
+        assertEquals(dateStyle, converter.dateStyle);
+        assertEquals(pattern, converter.pattern);
+        assertEquals(dateFormat, converter.dateFormat);
     }
     
     
@@ -125,29 +141,26 @@ public class DateStringConverterTest {
         assertTrue(converter.getDateFormat() instanceof SimpleDateFormat);
     }
     
-    @Test public void getDateFormat_nonNullNumberFormat() {
-        DateFormat format = DateFormat.getDateInstance();
-        converter = new DateStringConverter(format);
-        assertEquals(format, converter.getDateFormat());
-    }
-    
-    
     /*********************************************************************
      * Test toString / fromString methods
      ********************************************************************/    
     
-    @Ignore
     @Test public void fromString_testValidInput() {
-        assertEquals(VALID_DATE, converter.fromString(VALID_DATE_STRING_MDY));
+        String input = validFormatter.format(validDate);
+        assertEquals("Input = "+input, validDate, converter.fromString(input));
     }
     
-    @Ignore
     @Test public void fromString_testValidInputWithWhiteSpace() {
-        assertEquals(VALID_DATE, converter.fromString("      " + VALID_DATE_STRING_MDY + "      "));
+        String input = validFormatter.format(validDate);
+        assertEquals("Input = "+input, validDate, converter.fromString("      " + input + "      "));
     }
     
-    @Ignore
-    @Test public void toString_validInput() {
-        assertEquals(VALID_DATE_STRING_MDY, converter.toString(VALID_DATE));
+    @Test(expected=RuntimeException.class)
+    public void fromString_testInvalidInput() {
+        converter.fromString("abcdefg");
     }
+    
+    @Test public void toString_validOutput() {
+        assertEquals(validFormatter.format(validDate), converter.toString(validDate));
+    }    
 }

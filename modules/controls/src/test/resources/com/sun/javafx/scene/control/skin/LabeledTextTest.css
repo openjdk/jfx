@@ -12,3 +12,5 @@
     -fx-underline: true;
 }
 
+#test-rt-37787 { -fx-font-size: 1.5em; }
+

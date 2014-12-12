@@ -29,7 +29,9 @@ import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.beans.value.ObservableValue;
+import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
+import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.scene.input.KeyCode;
 import javafx.util.Callback;
@@ -218,9 +220,10 @@ public class TreeTableViewKeyInputTest {
      **************************************************************************/    
     
     @Test public void testInitialState() {
-        assertTrue(sm.getSelectedCells().isEmpty());
-        assertTrue(sm.getSelectedIndices().isEmpty());
-        assertTrue(sm.getSelectedItems().isEmpty());
+        assertEquals(-1, sm.getSelectedIndex());
+        assertEquals(0, sm.getSelectedCells().size());
+        assertEquals(0, sm.getSelectedIndices().size());
+        assertEquals(0, sm.getSelectedItems().size());
     }
     
     
@@ -444,9 +447,8 @@ public class TreeTableViewKeyInputTest {
         keyboard.doDownArrowPress(KeyModifier.SHIFT);
         keyboard.doDownArrowPress(KeyModifier.SHIFT);
         keyboard.doUpArrowPress(KeyModifier.SHIFT);
-        assertTrue(debug(), sm.isSelected(0));
-        assertTrue(sm.isSelected(1));
-        assertFalse(sm.isSelected(2));
+        assertTrue(debug(), isSelected(0, 1));
+        assertTrue(debug(), isNotSelected(2));
     }
     
     @Test public void testShiftUpTwiceThenShiftDownFrom0Index() {
@@ -1423,7 +1425,7 @@ public class TreeTableViewKeyInputTest {
         for (int i = 0; i <= 5; i++) {
             assertTrue(sm.isSelected(i,col1));
         }
-        assertTrue(isAnchor(5,1));
+        assertTrue(debug(), isAnchor(5,1));
         
         keyboard.doKeyPress(KeyCode.END, KeyModifier.SHIFT, KeyModifier.getShortcutKey());
         for (int i = 0; i < tableView.getExpandedItemCount() - 1; i++) {
@@ -2196,7 +2198,7 @@ public class TreeTableViewKeyInputTest {
         sm.clearAndSelect(5);                          
 
         keyboard.doKeyPress(KeyCode.HOME, KeyModifier.SHIFT); 
-        assertTrue(isSelected(0,1,2,3,4,5));
+        assertTrue(debug(), isSelected(0,1,2,3,4,5));
         assertTrue(isNotSelected(6,7,8,9));
         
         keyboard.doKeyPress(KeyCode.END, KeyModifier.SHIFT); 
@@ -3307,7 +3309,7 @@ public class TreeTableViewKeyInputTest {
         keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT); // col 3
         keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.SHIFT); // col 4
         assertEquals(0, getAnchor().getRow());
-        assertEquals(0, getAnchor().getColumn());              // anchor does not move
+        assertEquals(debug(), 0, getAnchor().getColumn());              // anchor does not move
         assertTrue(fm.isFocused(0, col4));
         assertTrue(sm.isSelected(0, col0));
         assertTrue(sm.isSelected(0, col1));
@@ -4003,7 +4005,10 @@ public class TreeTableViewKeyInputTest {
         // get the current exception handler before replacing with our own,
         // as ListListenerHelp intercepts the exception otherwise
         final Thread.UncaughtExceptionHandler exceptionHandler = Thread.currentThread().getUncaughtExceptionHandler();
-        Thread.currentThread().setUncaughtExceptionHandler((t, e) -> fail("We don't expect any exceptions in this test!"));
+        Thread.currentThread().setUncaughtExceptionHandler((t, e) -> {
+            e.printStackTrace();
+            fail("We don't expect any exceptions in this test!");
+        });
 
         final int items = 10;
         root.getChildren().clear();
@@ -4156,6 +4161,194 @@ public class TreeTableViewKeyInputTest {
         sm.select(95, col);
         keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.SHIFT);
         keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.SHIFT);
+
+        sl.dispose();
+    }
+
+//    @Test public void test_rt_38326() {
+//        int argCount = 4;
+//        int testCount = (int) Math.pow(2, argCount);
+//        for (int test = 0; test < testCount; test++) {
+//            boolean moveUp                                      = (test & 0b1000) == 0b1000;
+//            boolean singleSelection                             = (test & 0b0100) == 0b0100;
+//            boolean cellSelection                               = (test & 0b0010) == 0b0010;
+//            boolean updateItemsListBeforeSelectionModelChanges  = (test & 0b0001) == 0b0001;
+//
+//            StringBuilder sb = new StringBuilder("@Test public void test_rt_38326_focusLostOnShortcutKeyNav_");
+//            sb.append(moveUp ? "moveUp_" : "moveDown_");
+//            sb.append(singleSelection ? "singleSelection_" : "multipleSelection_");
+//            sb.append(cellSelection ? "cellSelection_" : "rowSelection_");
+//            sb.append(updateItemsListBeforeSelectionModelChanges ? "updateItemsListBeforeSelectionModelChanges" : "updateItemsListAfterSelectionModelChanges");
+//            sb.append("() {\n    ");
+//            sb.append("test_rt_38326(");
+//            sb.append(moveUp + ", ");
+//            sb.append(singleSelection + ", ");
+//            sb.append(cellSelection + ", ");
+//            sb.append(updateItemsListBeforeSelectionModelChanges);
+//            sb.append(");\n}");
+//
+//            System.out.println(sb);
+//        }
+//    }
+
+    // -- tests generated by above commented out code
+    @Test public void test_rt_38326_focusLostOnShortcutKeyNav_moveDown_multipleSelection_rowSelection_updateItemsListAfterSelectionModelChanges() {
+        test_rt_38326(false, false, false, false);
+    }
+    @Test public void test_rt_38326_focusLostOnShortcutKeyNav_moveDown_multipleSelection_rowSelection_updateItemsListBeforeSelectionModelChanges() {
+        test_rt_38326(false, false, false, true);
+    }
+    @Test public void test_rt_38326_focusLostOnShortcutKeyNav_moveDown_multipleSelection_cellSelection_updateItemsListAfterSelectionModelChanges() {
+        test_rt_38326(false, false, true, false);
+    }
+    @Test public void test_rt_38326_focusLostOnShortcutKeyNav_moveDown_multipleSelection_cellSelection_updateItemsListBeforeSelectionModelChanges() {
+        test_rt_38326(false, false, true, true);
+    }
+    @Test public void test_rt_38326_focusLostOnShortcutKeyNav_moveDown_singleSelection_rowSelection_updateItemsListAfterSelectionModelChanges() {
+        test_rt_38326(false, true, false, false);
+    }
+    @Test public void test_rt_38326_focusLostOnShortcutKeyNav_moveDown_singleSelection_rowSelection_updateItemsListBeforeSelectionModelChanges() {
+        test_rt_38326(false, true, false, true);
+    }
+    @Test public void test_rt_38326_focusLostOnShortcutKeyNav_moveDown_singleSelection_cellSelection_updateItemsListAfterSelectionModelChanges() {
+        test_rt_38326(false, true, true, false);
+    }
+    @Test public void test_rt_38326_focusLostOnShortcutKeyNav_moveDown_singleSelection_cellSelection_updateItemsListBeforeSelectionModelChanges() {
+        test_rt_38326(false, true, true, true);
+    }
+    @Test public void test_rt_38326_focusLostOnShortcutKeyNav_moveUp_multipleSelection_rowSelection_updateItemsListAfterSelectionModelChanges() {
+        test_rt_38326(true, false, false, false);
+    }
+    @Test public void test_rt_38326_focusLostOnShortcutKeyNav_moveUp_multipleSelection_rowSelection_updateItemsListBeforeSelectionModelChanges() {
+        test_rt_38326(true, false, false, true);
+    }
+    @Test public void test_rt_38326_focusLostOnShortcutKeyNav_moveUp_multipleSelection_cellSelection_updateItemsListAfterSelectionModelChanges() {
+        test_rt_38326(true, false, true, false);
+    }
+    @Test public void test_rt_38326_focusLostOnShortcutKeyNav_moveUp_multipleSelection_cellSelection_updateItemsListBeforeSelectionModelChanges() {
+        test_rt_38326(true, false, true, true);
+    }
+    @Test public void test_rt_38326_focusLostOnShortcutKeyNav_moveUp_singleSelection_rowSelection_updateItemsListAfterSelectionModelChanges() {
+        test_rt_38326(true, true, false, false);
+    }
+    @Test public void test_rt_38326_focusLostOnShortcutKeyNav_moveUp_singleSelection_rowSelection_updateItemsListBeforeSelectionModelChanges() {
+        test_rt_38326(true, true, false, true);
+    }
+    @Test public void test_rt_38326_focusLostOnShortcutKeyNav_moveUp_singleSelection_cellSelection_updateItemsListAfterSelectionModelChanges() {
+        test_rt_38326(true, true, true, false);
+    }
+    @Test public void test_rt_38326_focusLostOnShortcutKeyNav_moveUp_singleSelection_cellSelection_updateItemsListBeforeSelectionModelChanges() {
+        test_rt_38326(true, true, true, true);
+    }
+
+    private void test_rt_38326(boolean moveUp, boolean singleSelection, boolean cellSelection, boolean updateItemsListBeforeSelectionModelChanges) {
+        final int items = 10;
+        ObservableList<TreeItem<String>> itemsList = FXCollections.observableArrayList();
+        for (int i = 0; i < items; i++) {
+            itemsList.add(new TreeItem<>("Row " + i));
+        }
+
+        root.setExpanded(true);
+
+        if (updateItemsListBeforeSelectionModelChanges) {
+            root.getChildren().clear();
+            root.getChildren().addAll(itemsList);
+        }
+
+        TreeTableColumn<String, String> col = new TreeTableColumn<>("Column");
+        col.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue().getValue()));
+
+        TreeTableColumn<String, String> col2 = new TreeTableColumn<>("Column 2");
+        col2.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue().getValue()));
+
+        tableView.getColumns().setAll(col, col2);
+
+        TreeTableView.TreeTableViewSelectionModel<String> sm = tableView.getSelectionModel();
+        sm.setSelectionMode(singleSelection ? SelectionMode.SINGLE : SelectionMode.MULTIPLE);
+        sm.setCellSelectionEnabled(cellSelection);
+
+        if (! updateItemsListBeforeSelectionModelChanges) {
+            root.getChildren().clear();
+            root.getChildren().addAll(itemsList);
+        }
+
+        StageLoader sl = new StageLoader(tableView);
+
+        // test the initial state to ensure it is as we expect
+        assertFalse(sm.isSelected(0));
+        assertFalse(sm.isSelected(0, col));
+        assertFalse(sm.isSelected(0, col2));
+        assertEquals(0, sm.getSelectedIndices().size());
+        assertEquals(0, sm.getSelectedItems().size());
+        assertEquals(0, sm.getSelectedCells().size());
+
+        final int startRow = 5;
+        sm.clearSelection();
+        sm.select(startRow, col);
+        assertEquals(1, sm.getSelectedCells().size());
+        assertEquals(startRow, sm.getSelectedCells().get(0).getRow());
+        assertEquals(col, sm.getSelectedCells().get(0).getTableColumn());
+        assertEquals(startRow, tableView.getFocusModel().getFocusedCell().getRow());
+        assertEquals(col, tableView.getFocusModel().getFocusedCell().getTableColumn());
+
+        keyboard.doKeyPress(moveUp ? KeyCode.UP : KeyCode.DOWN, KeyModifier.getShortcutKey());
+        assertEquals(moveUp ? startRow-1 : startRow+1, tableView.getFocusModel().getFocusedCell().getRow());
+        assertEquals(col, tableView.getFocusModel().getFocusedCell().getTableColumn());
+
+        sl.dispose();
+    }
+
+    private int rt_39088_indices_event_count = 0;
+    private int rt_39088_items_event_count = 0;
+    @Test public void test_rt_39088() {
+        ObservableList<TreeItem<String>> itemsList = FXCollections.observableArrayList();
+        for (int i = 0; i < 4; i++) {
+            itemsList.add(new TreeItem<>("Row " + i));
+        }
+
+        root.setExpanded(true);
+        root.getChildren().setAll(itemsList);
+
+        TreeTableColumn<String, String> col = new TreeTableColumn<>("Column");
+        col.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue().getValue()));
+
+        tableView.getColumns().setAll(col);
+
+        TreeTableView.TreeTableViewSelectionModel<String> sm = tableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.setCellSelectionEnabled(false);
+
+        ObservableList<Integer> indices = sm.getSelectedIndices();
+        ObservableList<TreeItem<String>> items = sm.getSelectedItems();
+
+        indices.addListener((ListChangeListener<Integer>) change -> rt_39088_indices_event_count++);
+        items.addListener((ListChangeListener<TreeItem<String>>) change -> rt_39088_items_event_count++);
+
+        StageLoader sl = new StageLoader(tableView);
+
+        assertEquals(0, rt_39088_indices_event_count);
+        assertEquals(0, rt_39088_items_event_count);
+        assertEquals(0, indices.size());
+        assertEquals(0, items.size());
+
+        sm.select(3);
+        assertEquals(1, rt_39088_indices_event_count);
+        assertEquals(1, rt_39088_items_event_count);
+        assertEquals(1, indices.size());
+        assertEquals(1, items.size());
+
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT);
+        assertEquals(2, rt_39088_indices_event_count);
+        assertEquals(2, rt_39088_items_event_count);
+        assertEquals(2, indices.size());
+        assertEquals(2, items.size());
+
+        // this is where the test fails...
+        keyboard.doKeyPress(KeyCode.UP, KeyModifier.SHIFT);
+        assertEquals(3, rt_39088_indices_event_count);
+        assertEquals(3, rt_39088_items_event_count);
+        assertEquals(3, indices.size());
+        assertEquals(3, items.size());
 
         sl.dispose();
     }

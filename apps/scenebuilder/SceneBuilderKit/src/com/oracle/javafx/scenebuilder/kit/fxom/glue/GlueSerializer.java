@@ -88,24 +88,30 @@ class GlueSerializer {
     }
     
     private void serializeElement(GlueElement element, XMLBuffer xmlBuffer) {
-        for (GlueAuxiliary auxiliary : element.getFront()) {
-            serializeAuxiliary(auxiliary, xmlBuffer);
-        }
-        xmlBuffer.beginElement(element.getTagName());
-        serializeAttributes(element, xmlBuffer);
-        if (element.getChildren().isEmpty()) {
-            for (GlueAuxiliary auxiliary : element.getContent()) {
-                serializeAuxiliary(auxiliary, xmlBuffer);
-            }
-        } else {
+        if (element.isSynthetic()) {
             for (GlueElement child : element.getChildren()) {
                 serializeElement(child, xmlBuffer);
             }
-            for (GlueAuxiliary auxiliary : element.getTail()) {
+        } else {
+            for (GlueAuxiliary auxiliary : element.getFront()) {
                 serializeAuxiliary(auxiliary, xmlBuffer);
             }
+            xmlBuffer.beginElement(element.getTagName());
+            serializeAttributes(element, xmlBuffer);
+            if (element.getChildren().isEmpty()) {
+                for (GlueAuxiliary auxiliary : element.getContent()) {
+                    serializeAuxiliary(auxiliary, xmlBuffer);
+                }
+            } else {
+                for (GlueElement child : element.getChildren()) {
+                    serializeElement(child, xmlBuffer);
+                }
+                for (GlueAuxiliary auxiliary : element.getTail()) {
+                    serializeAuxiliary(auxiliary, xmlBuffer);
+                }
+            }
+            xmlBuffer.endElement();
         }
-        xmlBuffer.endElement();
     }
     
     private void serializeAuxiliary(GlueAuxiliary auxiliary, XMLBuffer xmlBuffer) {

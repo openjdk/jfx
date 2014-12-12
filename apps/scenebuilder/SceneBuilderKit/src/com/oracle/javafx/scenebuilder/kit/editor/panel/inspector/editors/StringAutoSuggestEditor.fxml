@@ -42,7 +42,7 @@
 <children>
     <TextField fx:id="textField" onKeyReleased="#textFieldKeyReleased" onMouseClicked="#textFieldMouseClicked" prefWidth="-1.0">
       <contextMenu>
-        <ContextMenu maxHeight="-1.0" styleClass="auto-suggest-popup">
+        <ContextMenu maxHeight="-1.0">
           <items>
             <CustomMenuItem mnemonicParsing="false">
               <content>
@@ -50,6 +50,11 @@
               </content>
             </CustomMenuItem>
           </items>
+               <styleClass>
+                  <String fx:value="theme-presets" />
+                  <String fx:value="property-sheet" />
+                  <String fx:value="auto-suggest-popup" />
+               </styleClass>
         </ContextMenu>
       </contextMenu>
 <HBox.margin>

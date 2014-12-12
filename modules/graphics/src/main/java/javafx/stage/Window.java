@@ -28,6 +28,7 @@ package javafx.stage;
 import java.security.AllPermission;
 import java.security.AccessControlContext;
 import java.security.AccessController;
+import java.util.HashMap;
 import java.util.Iterator;
 
 import javafx.beans.property.DoubleProperty;
@@ -41,6 +42,8 @@ import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.ReadOnlyDoubleWrapper;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableMap;
 import javafx.event.Event;
 import javafx.event.EventDispatchChain;
 import javafx.event.EventDispatcher;
@@ -164,7 +167,7 @@ public class Window implements EventTarget {
      * @deprecated This is an internal API that is not intended for use and will be removed in the next version
      */
     @Deprecated
-    protected TKStage impl_peer;
+    protected volatile TKStage impl_peer;
 
     private TKBoundsConfigurator peerBoundsConfigurator =
             new TKBoundsConfigurator();
@@ -434,6 +437,62 @@ public class Window implements EventTarget {
     public final boolean isFocused() { return focused.get(); }
     public final ReadOnlyBooleanProperty focusedProperty() { return focused.getReadOnlyProperty(); }
 
+    /*************************************************************************
+    *                                                                        *
+    *                                                                        *
+    *                                                                        *
+    *************************************************************************/
+
+    private static final Object USER_DATA_KEY = new Object();
+    // A map containing a set of properties for this window
+    private ObservableMap<Object, Object> properties;
+
+    /**
+      * Returns an observable map of properties on this node for use primarily
+      * by application developers.
+      *
+      * @return an observable map of properties on this node for use primarily
+      * by application developers
+      */
+     public final ObservableMap<Object, Object> getProperties() {
+        if (properties == null) {
+            properties = FXCollections.observableMap(new HashMap<Object, Object>());
+        }
+        return properties;
+    }
+
+    /**
+     * Tests if Window has properties.
+     * @return true if node has properties.
+     */
+     public boolean hasProperties() {
+        return properties != null && !properties.isEmpty();
+    }
+
+    /**
+     * Convenience method for setting a single Object property that can be
+     * retrieved at a later date. This is functionally equivalent to calling
+     * the getProperties().put(Object key, Object value) method. This can later
+     * be retrieved by calling {@link Window#getUserData()}.
+     *
+     * @param value The value to be stored - this can later be retrieved by calling
+     *          {@link Window#getUserData()}.
+     */
+    public void setUserData(Object value) {
+        getProperties().put(USER_DATA_KEY, value);
+    }
+
+    /**
+     * Returns a previously set Object property, or null if no such property
+     * has been set using the {@link Window#setUserData(java.lang.Object)} method.
+     *
+     * @return The Object that was previously set, or null if no property
+     *          has been set or if null was set.
+     */
+    public Object getUserData() {
+        return getProperties().get(USER_DATA_KEY);
+    }
+    
     /**
      * The {@code Scene} to be rendered on this {@code Stage}. There can only
      * be one {@code Scene} on the {@code Stage} at a time, and a {@code Scene}
@@ -460,7 +519,9 @@ public class Window implements EventTarget {
             if (oldScene == newScene) {
                 return;
             }
-            Toolkit.getToolkit().checkFxUserThread();
+            if (impl_peer != null) {
+                Toolkit.getToolkit().checkFxUserThread();
+            }
             // First, detach scene peer from this window
             updatePeerScene(null);
             // Second, dispose scene peer

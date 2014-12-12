@@ -250,7 +250,7 @@ public class HierarchyTreeViewController extends AbstractHierarchyPanelControlle
             final TreeCell<?> treeCellTop
                     = HierarchyTreeViewUtils.getTreeCell(treeCells, treeItemTop);
             if (treeCellTop != null) {
-                treeCellTop.setBorder(getBorder(BorderSide.TOP_RIGHT_LEFT));
+                setBorder(treeCellTop, BorderSide.TOP_RIGHT_LEFT);
                 treeCellTopIndex = treeCellTop.getIndex();
             } else {
                 treeCellTopIndex = 0;
@@ -262,7 +262,7 @@ public class HierarchyTreeViewController extends AbstractHierarchyPanelControlle
             final TreeItem<HierarchyItem> treeItemBottom = treeItemTop.getChildren().get(size - 1);
             final TreeCell<?> treeCellBottom = HierarchyTreeViewUtils.getTreeCell(treeCells, treeItemBottom);
             if (treeCellBottom != null) {
-                treeCellBottom.setBorder(getBorder(BorderSide.RIGHT_BOTTOM_LEFT));
+                setBorder(treeCellBottom, BorderSide.RIGHT_BOTTOM_LEFT);
                 treeCellBottomIndex = treeCellBottom.getIndex();
             } else {
                 treeCellBottomIndex = treeCells.size() - 1;
@@ -274,7 +274,7 @@ public class HierarchyTreeViewController extends AbstractHierarchyPanelControlle
                 final TreeCell<?> treeCell = (TreeCell<?>) node;
                 final int index = treeCell.getIndex();
                 if (index > treeCellTopIndex && index < treeCellBottomIndex) {
-                    treeCell.setBorder(getBorder(BorderSide.RIGHT_LEFT));
+                    setBorder(treeCell, BorderSide.RIGHT_LEFT);
                 }
             }
         }

@@ -61,7 +61,10 @@ final class MeshTempState {
     final int triVerts[] = new int[3];
     final Vec3f triPoints[] = new Vec3f[3];
     final Vec2f triTexCoords[] = new Vec2f[3];
-    final Vec3f norm[] = new Vec3f[3];
+    final Vec3f[] triNormals = new Vec3f[3];
+    final int triPointIndex[] = new int[3];
+    final int triNormalIndex[] = new int[3];
+    final int triTexCoordIndex[] = new int[3];
 
     /**
      * A temporary 3 by 3 float matrix used by BaseMesh to compute quat.
@@ -116,7 +119,7 @@ final class MeshTempState {
 
     private MeshTempState() {
         for (int i = 0; i < 3; i++) {
-            norm[i] = new Vec3f();
+            triNormals[i] = new Vec3f();
         }
     }
 

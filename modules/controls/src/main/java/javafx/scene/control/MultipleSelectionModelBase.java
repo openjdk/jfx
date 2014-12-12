@@ -90,8 +90,12 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
                 }
 
                 if (hasRealChangeOccurred) {
-                    c.reset();
-                    selectedItemsSeq.callObservers(new MappingChange<Integer, T>(c, map, selectedItemsSeq));
+                    if (selectedItemChange != null) {
+                        selectedItemsSeq.callObservers(selectedItemChange);
+                    } else {
+                        c.reset();
+                        selectedItemsSeq.callObservers(new MappingChange<Integer, T>(c, map, selectedItemsSeq));
+                    }
                 }
                 c.reset();
             }
@@ -142,7 +146,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
 
 
     final BitSet selectedIndices;
-    private final ReadOnlyUnbackedObservableList<Integer> selectedIndicesSeq;
+    final ReadOnlyUnbackedObservableList<Integer> selectedIndicesSeq;
     @Override public ObservableList<Integer> getSelectedIndices() {
         return selectedIndicesSeq;
     }
@@ -159,6 +163,8 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
      * Internal field                                                      *
      *                                                                     *
      **********************************************************************/
+
+    ListChangeListener.Change selectedItemChange;
 
     // Fix for RT-20945 (and numerous other issues!)
     private int atomicityCount = 0;
@@ -278,8 +284,12 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         
         // This ensure that the selection remains accurate when a shift occurs.
         final int selectedIndex = getSelectedIndex();
-        if (selectedIndex >= position && selectedIndex > -1 && selectedIndex + shift > -1) {
-            final int newSelectionLead = selectedIndex + shift;
+        if (selectedIndex >= position && selectedIndex > -1) {
+            // Fix for RT-38787: we used to not enter this block if
+            // selectedIndex + shift resulted in a value less than zero, whereas
+            // now we just set the newSelectionLead to zero in that instance.
+            // There exists unit tests that cover this.
+            final int newSelectionLead = Math.max(0, selectedIndex + shift);
             setSelectedIndex(newSelectionLead);
 
             // added for RT-30356
@@ -300,23 +310,31 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
     }
 
     @Override public void clearAndSelect(int row) {
+        final boolean wasSelected = isSelected(row);
+
         // RT-33558 if this method has been called with a given row, and that
         // row is the only selected row currently, then this method becomes a no-op.
-        if (getSelectedIndices().size() == 1 && isSelected(row)) {
-            return;
+        if (wasSelected && getSelectedIndices().size() == 1) {
+            // before we return, we double-check that the selected item
+            // is equal to the item in the given index
+            if (getSelectedItem() == getModelItem(row)) {
+                return;
+            }
         }
+
+        // firstly we make a copy of the selection, so that we can send out
+        // the correct details in the selection change event.
+        // We remove the new selection from the list seeing as it is not removed.
+        BitSet selectedIndicesCopy = new BitSet();
+        selectedIndicesCopy.or(selectedIndices);
+        selectedIndicesCopy.clear(row);
+        List<Integer> previousSelectedIndices = createListFromBitSet(selectedIndicesCopy);
 
         // RT-32411 We used to call quietClearSelection() here, but this
         // resulted in the selectedItems and selectedIndices lists never
         // reporting that they were empty.
         // makeAtomic toggle added to resolve RT-32618
         startAtomic();
-
-        // firstly we make a copy of the selection, so that we can send out
-        // the correct details in the selection change event
-        BitSet selectedIndicesCopy = new BitSet();
-        selectedIndicesCopy.or(selectedIndices);
-        List<Integer> previousSelectedIndices = createListFromBitSet(selectedIndicesCopy);
 
         // then clear the current selection
         clearSelection();
@@ -327,9 +345,24 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
 
         // fire off a single add/remove/replace notification (rather than
         // individual remove and add notifications) - see RT-33324
-        int changeIndex = selectedIndicesSeq.indexOf(row);
-        selectedIndicesSeq.callObservers(new NonIterableChange.GenericAddRemoveChange<>(
-                changeIndex, changeIndex+1, previousSelectedIndices, selectedIndicesSeq));
+        ListChangeListener.Change<Integer> change;
+
+        /*
+         * getFrom() documentation:
+         *   If wasAdded is true, the interval contains all the values that were added.
+         *   If wasPermutated is true, the interval marks the values that were permutated.
+         *   If wasRemoved is true and wasAdded is false, getFrom() and getTo() should
+         *   return the same number - the place where the removed elements were positioned in the list.
+         */
+        if (wasSelected) {
+            change = ControlUtils.buildClearAndSelectChange(selectedIndicesSeq, previousSelectedIndices, row);
+        } else {
+            int changeIndex = selectedIndicesSeq.indexOf(row);
+            change = new NonIterableChange.GenericAddRemoveChange<>(
+                    changeIndex, changeIndex+1, previousSelectedIndices, selectedIndicesSeq);
+        }
+
+        selectedIndicesSeq.callObservers(change);
     }
 
     @Override public void select(int row) {
@@ -402,6 +435,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         // We expect that in concrete subclasses of this class we observe the
         // data model such that we check to see if the given item exists in it,
         // whilst SelectedIndex == -1 && SelectedItem != null.
+        setSelectedIndex(-1);
         setSelectedItem(obj);
     }
 
@@ -560,17 +594,16 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
     @Override public void selectAll() {
         if (getSelectionMode() == SINGLE) return;
 
-        quietClearSelection();
         if (getItemCount() <= 0) return;
 
-        int rowCount = getItemCount();
+        final int rowCount = getItemCount();
+        final int focusedIndex = getFocusedIndex();
 
         // set all selected indices to true
-        quietClearSelection();
-        selectedIndices.set(0, (int) rowCount, true);
-        selectedIndicesSeq.callObservers(new NonIterableChange.SimpleAddChange<Integer>(0, (int) rowCount, selectedIndicesSeq));
+        clearSelection();
+        selectedIndices.set(0, rowCount, true);
+        selectedIndicesSeq.callObservers(new NonIterableChange.SimpleAddChange<>(0, rowCount, selectedIndicesSeq));
 
-        int focusedIndex = getFocusedIndex();
         if (focusedIndex == -1) {
             setSelectedIndex(rowCount - 1);
             focus(rowCount - 1);
@@ -613,11 +646,13 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
             clearSelection();
         }
 
-        // we pass in (index, index) here to represent that nothing was added
-        // in this change.
-        selectedIndicesSeq.callObservers(
-                new NonIterableChange.GenericAddRemoveChange<>(index, index,
-                Collections.singletonList(index), selectedIndicesSeq));
+        if (!isAtomic()) {
+            // we pass in (index, index) here to represent that nothing was added
+            // in this change.
+            selectedIndicesSeq.callObservers(
+                    new NonIterableChange.GenericAddRemoveChange<>(index, index,
+                            Collections.singletonList(index), selectedIndicesSeq));
+        }
     }
 
     @Override public void clearSelection() {

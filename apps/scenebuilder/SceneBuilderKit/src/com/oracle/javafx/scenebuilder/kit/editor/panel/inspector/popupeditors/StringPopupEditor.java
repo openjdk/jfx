@@ -51,7 +51,6 @@ public class StringPopupEditor extends PopupEditor {
 
     private Parent root;
 
-    @SuppressWarnings("LeakingThisInConstructor")
     public StringPopupEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses) {
         super(propMeta, selectedClasses);
     }

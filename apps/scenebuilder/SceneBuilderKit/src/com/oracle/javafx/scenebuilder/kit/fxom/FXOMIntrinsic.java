@@ -35,10 +35,10 @@ import com.oracle.javafx.scenebuilder.kit.fxom.glue.GlueElement;
 import com.oracle.javafx.scenebuilder.kit.metadata.util.PropertyName;
 import java.net.URL;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
 
 /**
  *
@@ -53,7 +53,7 @@ public class FXOMIntrinsic extends FXOMObject {
         UNDEFINED
     }
     
-    private final Map<PropertyName, FXOMProperty> properties = new TreeMap<>();
+    private final Map<PropertyName, FXOMProperty> properties = new LinkedHashMap<>();
     private Object sourceSceneGraphObject;
 
     
@@ -62,7 +62,7 @@ public class FXOMIntrinsic extends FXOMObject {
         this.sourceSceneGraphObject = targetSceneGraphObject;
     }
     
-    FXOMIntrinsic(FXOMDocument document, Type type, String source) {
+    public FXOMIntrinsic(FXOMDocument document, Type type, String source) {
         super(document, makeTagNameFromType(type));
         getGlueElement().getAttributes().put("source", source);
     }
@@ -110,28 +110,6 @@ public class FXOMIntrinsic extends FXOMObject {
     
     public Map<PropertyName, FXOMProperty> getProperties() {
         return properties;
-    }
-    
-    public static FXOMIntrinsic newInstance(FXOMIntrinsic source, FXOMDocument targetDocument) {
-        final FXOMIntrinsic result;
-        
-        assert source != null;
-        assert targetDocument != null;
-        assert source.getFxomDocument() != targetDocument;
-        
-        result = new FXOMIntrinsic(
-                targetDocument,
-                source.getType(),
-                source.getSource());
-        
-        result.setFxConstant(source.getFxConstant());
-        result.setFxController(source.getFxController());
-        result.setFxFactory(source.getFxFactory());
-        result.setFxId(source.getFxId());
-        result.setFxValue(source.getFxValue());
-        
-        
-        return result;
     }
 
     /*
@@ -198,6 +176,18 @@ public class FXOMIntrinsic extends FXOMObject {
         if ((getType() == Type.FX_REFERENCE) 
                 && ((source == null) || source.equals(getSource()))) {
             result.add(this);
+        }
+    }
+
+    @Override
+    protected void collectReferences(String source, FXOMObject scope, List<FXOMNode> result) {
+        assert result != null;
+        
+        if ((scope == null) || (scope != this)) {
+            if ((getType() == Type.FX_REFERENCE) 
+                    && ((source == null) || source.equals(getSource()))) {
+                result.add(this);
+            }
         }
     }
 

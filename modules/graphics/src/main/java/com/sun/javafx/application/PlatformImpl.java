@@ -32,6 +32,7 @@ import com.sun.javafx.runtime.SystemProperties;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.security.AccessControlContext;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -45,7 +46,8 @@ import javafx.application.ConditionalFeature;
 import com.sun.javafx.tk.TKListener;
 import com.sun.javafx.tk.TKStage;
 import com.sun.javafx.tk.Toolkit;
-import javafx.application.Platform;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.scene.Scene;
 
 import java.security.AccessController;
@@ -84,6 +86,7 @@ public class PlatformImpl {
     private static Boolean hasMultiTouch;
     private static Boolean hasPointer;
     private static boolean isThreadMerged = false;
+    private static BooleanProperty accessibilityActive = new SimpleBooleanProperty();
 
     /**
      * Set a flag indicating whether this application should show up in the
@@ -442,7 +445,10 @@ public class PlatformImpl {
         if (initialized.get()) {
             // Always call toolkit exit on FX app thread
 //            System.err.println("PlatformImpl.tkExit: scheduling Toolkit.exit");
-            PlatformImpl.runAndWait(() -> Toolkit.getToolkit().exit(), true);
+            PlatformImpl.runAndWait(() -> {
+//                System.err.println("PlatformImpl.tkExit: calling Toolkit.exit");
+                Toolkit.getToolkit().exit();
+            }, true);
 
             if (isThreadMerged) {
                 removeFwEventQueue();
@@ -452,6 +458,10 @@ public class PlatformImpl {
             toolkitListener = null;
             platformExitLatch.countDown();
         }
+    }
+
+    public static BooleanProperty accessibilityActiveProperty() {
+        return accessibilityActive;
     }
 
     public static void exit() {
@@ -543,10 +553,23 @@ public class PlatformImpl {
 
     private static String accessibilityTheme;
     public static boolean setAccessibilityTheme(String platformTheme) {
+
         if (accessibilityTheme != null) {
             StyleManager.getInstance().removeUserAgentStylesheet(accessibilityTheme);
             accessibilityTheme = null;
         }
+        
+        _setAccessibilityTheme(platformTheme);
+
+        if (accessibilityTheme != null) {
+            StyleManager.getInstance().addUserAgentStylesheet(accessibilityTheme);
+            return true;
+        }
+        return false;
+
+    }
+
+    private static void _setAccessibilityTheme(String platformTheme) {
 
         // check to see if there is an override to enable a high-contrast theme
         final String userTheme = AccessController.doPrivileged(
@@ -591,11 +614,6 @@ public class PlatformImpl {
                 }   
             }
         }
-        if (accessibilityTheme != null) {
-            StyleManager.getInstance().addUserAgentStylesheet(accessibilityTheme);
-            return true;
-        }
-        return false;
     }
 
     private static void _setPlatformUserAgentStylesheet(String stylesheetUrl) {
@@ -607,68 +625,80 @@ public class PlatformImpl {
         if (overrideStylesheetUrl != null) {
             stylesheetUrl = overrideStylesheetUrl;
         }
+        
+        final List<String> uaStylesheets = new ArrayList<>();
 
         // check for named theme constants for modena and caspian
         if (Application.STYLESHEET_CASPIAN.equalsIgnoreCase(stylesheetUrl)) {
             isCaspian = true;
-            AccessController.doPrivileged(
-                    (PrivilegedAction) () -> {
-                        StyleManager.getInstance().setDefaultUserAgentStylesheet("com/sun/javafx/scene/control/skin/caspian/caspian.css");
 
-                        if (isSupported(ConditionalFeature.INPUT_TOUCH)) {
-                            StyleManager.getInstance().addUserAgentStylesheet("com/sun/javafx/scene/control/skin/caspian/embedded.css");
-                            if (com.sun.javafx.Utils.isQVGAScreen()) {
-                                StyleManager.getInstance().addUserAgentStylesheet("com/sun/javafx/scene/control/skin/caspian/embedded-qvga.css");
-                            }
-                            if (PlatformUtil.isAndroid()) {
-                                StyleManager.getInstance().addUserAgentStylesheet("com/sun/javafx/scene/control/skin/caspian/android.css");
-                            }
-                        }
+            uaStylesheets.add("com/sun/javafx/scene/control/skin/caspian/caspian.css");
 
-                        if (isSupported(ConditionalFeature.TWO_LEVEL_FOCUS)) {
-                            StyleManager.getInstance().addUserAgentStylesheet("com/sun/javafx/scene/control/skin/caspian/two-level-focus.css");
-                        }
+            if (isSupported(ConditionalFeature.INPUT_TOUCH)) {
+                uaStylesheets.add("com/sun/javafx/scene/control/skin/caspian/embedded.css");
+                if (com.sun.javafx.Utils.isQVGAScreen()) {
+                    uaStylesheets.add("com/sun/javafx/scene/control/skin/caspian/embedded-qvga.css");
+                }
+                if (PlatformUtil.isAndroid()) {
+                    uaStylesheets.add("com/sun/javafx/scene/control/skin/caspian/android.css");
+                }
+            }
 
-                        if (isSupported(ConditionalFeature.VIRTUAL_KEYBOARD)) {
-                            StyleManager.getInstance().addUserAgentStylesheet("com/sun/javafx/scene/control/skin/caspian/fxvk.css");
-                        }
-                        return null;
-                    }
-            );
+            if (isSupported(ConditionalFeature.TWO_LEVEL_FOCUS)) {
+                uaStylesheets.add("com/sun/javafx/scene/control/skin/caspian/two-level-focus.css");
+            }
+
+            if (isSupported(ConditionalFeature.VIRTUAL_KEYBOARD)) {
+                uaStylesheets.add("com/sun/javafx/scene/control/skin/caspian/fxvk.css");
+            }
+
+            if (!isSupported(ConditionalFeature.TRANSPARENT_WINDOW)) {
+                uaStylesheets.add("com/sun/javafx/scene/control/skin/caspian/caspian-no-transparency.css");
+            }            
+
         } else if (Application.STYLESHEET_MODENA.equalsIgnoreCase(stylesheetUrl)) {
             isModena = true;
-            AccessController.doPrivileged(
-                    (PrivilegedAction) () -> {
-                        StyleManager.getInstance().setDefaultUserAgentStylesheet("com/sun/javafx/scene/control/skin/modena/modena.css");
 
-                        if (isSupported(ConditionalFeature.INPUT_TOUCH)) {
-                            StyleManager.getInstance().addUserAgentStylesheet(
-                                    "com/sun/javafx/scene/control/skin/modena/touch.css");
-                        }
-                        // when running on embedded add a extra stylesheet to tune performance of modena theme
-                        if (PlatformUtil.isEmbedded()) {
-                            StyleManager.getInstance().addUserAgentStylesheet(
-                                    "com/sun/javafx/scene/control/skin/modena/modena-embedded-performance.css");
-                        }
-                        if (PlatformUtil.isAndroid()) {
-                            StyleManager.getInstance().addUserAgentStylesheet("com/sun/javafx/scene/control/skin/modena/android.css");
-                        }
+            uaStylesheets.add("com/sun/javafx/scene/control/skin/modena/modena.css");
 
-                        if (isSupported(ConditionalFeature.TWO_LEVEL_FOCUS)) {
-                            StyleManager.getInstance().addUserAgentStylesheet("com/sun/javafx/scene/control/skin/modena/two-level-focus.css");
-                        }
+            if (isSupported(ConditionalFeature.INPUT_TOUCH)) {
+                uaStylesheets.add("com/sun/javafx/scene/control/skin/modena/touch.css");
+            }
+            // when running on embedded add a extra stylesheet to tune performance of modena theme
+            if (PlatformUtil.isEmbedded()) {
+                uaStylesheets.add("com/sun/javafx/scene/control/skin/modena/modena-embedded-performance.css");
+            }
+            if (PlatformUtil.isAndroid()) {
+                uaStylesheets.add("com/sun/javafx/scene/control/skin/modena/android.css");
+            }
 
-                        if (isSupported(ConditionalFeature.VIRTUAL_KEYBOARD)) {
-                            StyleManager.getInstance().addUserAgentStylesheet("com/sun/javafx/scene/control/skin/caspian/fxvk.css");
-                        }
-                        return null;
-                    }
-            );
+            if (isSupported(ConditionalFeature.TWO_LEVEL_FOCUS)) {
+                uaStylesheets.add("com/sun/javafx/scene/control/skin/modena/two-level-focus.css");
+            }
+
+            if (isSupported(ConditionalFeature.VIRTUAL_KEYBOARD)) {
+                uaStylesheets.add("com/sun/javafx/scene/control/skin/caspian/fxvk.css");
+            }
+
+            if (!isSupported(ConditionalFeature.TRANSPARENT_WINDOW)) {
+                uaStylesheets.add("com/sun/javafx/scene/control/skin/modena/modena-no-transparency.css");
+            }
+
         } else {
-            StyleManager.getInstance().setDefaultUserAgentStylesheet(stylesheetUrl);
+            uaStylesheets.add(stylesheetUrl);
         }
+
         // Ensure that accessibility starts right
-        setAccessibilityTheme(Toolkit.getToolkit().getThemeName());
+        _setAccessibilityTheme(Toolkit.getToolkit().getThemeName());
+        if (accessibilityTheme != null) {
+            uaStylesheets.add(accessibilityTheme);
+        }
+
+        AccessController.doPrivileged((PrivilegedAction) () -> {
+            StyleManager.getInstance().setUserAgentStylesheets(uaStylesheets);
+            return null;
+        });
+
     }
 
     public static void addNoTransparencyStylesheetToScene(final Scene scene) {
@@ -704,11 +734,31 @@ public class PlatformImpl {
                 if (isMediaSupported == null) {
                     isMediaSupported = checkForClass(
                             "javafx.scene.media.MediaView");
+                    if (isMediaSupported && PlatformUtil.isEmbedded()) {
+                        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+                            String s = System.getProperty(
+                                    "com.sun.javafx.experimental.embedded.media", 
+                                    "false");
+                            isMediaSupported = Boolean.valueOf(s);
+                            return null;
+
+                        });
+                    }
                 }
                 return isMediaSupported;
             case WEB:
                 if (isWebSupported == null) {
                     isWebSupported = checkForClass("javafx.scene.web.WebView");
+                    if (isWebSupported && PlatformUtil.isEmbedded()) {
+                        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+                            String s = System.getProperty(
+                                    "com.sun.javafx.experimental.embedded.web", 
+                                    "false");
+                            isWebSupported = Boolean.valueOf(s);
+                            return null;
+
+                        });
+                    }
                 }
                 return isWebSupported;
             case SWT:

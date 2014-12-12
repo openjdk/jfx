@@ -89,42 +89,8 @@ static void avcodec_logger(void* ptr, int level, const char* fmt, va_list vl)
  ***********************************************************************************/
 const char* avelement_error_to_string(AVElement *element, int ret)
 {
-#if LIBAVCODEC_NEW
     if (av_strerror(ret, element->error_string, ERROR_STRING_SIZE) < 0)
         g_strlcpy(element->error_string, "Unknown", ERROR_STRING_SIZE);
 
     return element->error_string;
-#else
-    switch(ret)
-    {
-    case AVERROR_IO:
-        return "I/O error";
-    case AVERROR_NUMEXPECTED:
-        return "Number syntax expected in filename";
-
-    case AVERROR_INVALIDDATA:
-        return "invalid data found";
-
-    case AVERROR_NOMEM:
-        return "not enough memory";
-
-    case AVERROR_NOFMT:
-        return "unknown format";
-
-    case AVERROR_NOTSUPP:
-        return "Operation not supported";
-
-    case AVERROR_NOENT:
-        return "No such file or directory";
-
-    case AVERROR_EOF:
-        return "End of file";
-
-    case AVERROR_PATCHWELCOME:
-        return "Patches welcome";
-
-    default:
-        return "Unknown";
-    }
-#endif
 }

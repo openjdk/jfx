@@ -32,6 +32,7 @@ import com.sun.javafx.scene.traversal.Algorithm;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.scene.traversal.ParentTraversalEngine;
 import com.sun.javafx.scene.traversal.TraversalContext;
+import javafx.css.PseudoClass;
 import javafx.geometry.Orientation;
 import org.w3c.dom.html.HTMLDocument;
 import org.w3c.dom.html.HTMLElement;
@@ -407,6 +408,8 @@ public class HTMLEditorSkin extends BehaviorSkinBase<HTMLEditor, HTMLEditorBehav
 //                    webPage.dispatchFocusEvent(new WCFocusEvent(WCFocusEvent.FOCUS_LOST, WCFocusEvent.FORWARD));
 //                    enableToolbar(false);
 //                }
+
+            pseudoClassStateChanged(CONTAINS_FOCUS_PSEUDOCLASS_STATE, newValue);
 
             Platform.runLater(new Runnable() {
                 @Override public void run() {
@@ -1122,4 +1125,6 @@ public class HTMLEditorSkin extends BehaviorSkinBase<HTMLEditor, HTMLEditorBehav
     public void print(PrinterJob job) {
         webView.getEngine().print(job);
     }
+
+    private static PseudoClass CONTAINS_FOCUS_PSEUDOCLASS_STATE = PseudoClass.getPseudoClass("contains-focus");
 }

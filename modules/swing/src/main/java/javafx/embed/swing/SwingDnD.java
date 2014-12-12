@@ -70,6 +70,7 @@ import java.awt.event.MouseEvent;
 
 /**
  * An utility class to connect DnD mechanism of Swing and FX.
+ * It allows FX content to use the AWT machinery for performing DnD.
  */
 final class SwingDnD {
 

@@ -68,15 +68,13 @@ class GlassWindowEventHandler extends Window.EventHandler implements PrivilegedA
                 stage.stageListener.changedLocation(window.getX(), window.getY());
                 //We need to sync the new x,y for painting
                 if (!Application.GetApplication().hasWindowManager()) {
-                    ViewPainter.renderLock.lock();
-                    try { 
+                    QuantumToolkit.runWithRenderLock(() -> {
                         GlassScene scene = stage.getScene();
                         if (scene != null) {
                             scene.updateSceneState();
                         }
-                    } finally { 
-                        ViewPainter.renderLock.unlock();
-                    }
+                        return null;
+                    });
                 }
                 break;
             case WindowEvent.RESIZE:
@@ -121,7 +119,13 @@ class GlassWindowEventHandler extends Window.EventHandler implements PrivilegedA
 
     @Override
     public void handleLevelEvent(int level) {
-        stage.stageListener.changedAlwaysOnTop(level != Level.NORMAL);
+        QuantumToolkit.runWithoutRenderLock(() -> {
+            AccessControlContext acc = stage.getAccessControlContext();
+            return AccessController.doPrivileged((PrivilegedAction<Void>)() -> {
+                stage.stageListener.changedAlwaysOnTop(level != Level.NORMAL);
+                return (Void)null;
+            } , acc);
+        });
     }
     
     @Override
@@ -129,27 +133,29 @@ class GlassWindowEventHandler extends Window.EventHandler implements PrivilegedA
         this.window = window;
         this.type = type;
 
-        AccessControlContext acc = stage.getAccessControlContext();
-        AccessController.doPrivileged(this, acc);
+        QuantumToolkit.runWithoutRenderLock(() -> {
+            AccessControlContext acc = stage.getAccessControlContext();
+            return AccessController.doPrivileged(this, acc);
+        });
     }
     
     @Override
     public void handleScreenChangedEvent(Window window, long time, Screen oldScreen, Screen newScreen) {
         GlassScene scene = stage.getScene();
         if (scene != null) {
-            ViewPainter.renderLock.lock();
-            try { 
+            QuantumToolkit.runWithRenderLock(() -> {
                 scene.entireSceneNeedsRepaint();
                 scene.updateSceneState();
-            } finally { 
-                ViewPainter.renderLock.unlock();
-            }
+                return null;
+            });
         }
 
-        AccessControlContext acc = stage.getAccessControlContext();
-        AccessController.doPrivileged((PrivilegedAction<Void>)() -> {
-            stage.stageListener.changedScreen(oldScreen, newScreen);
-            return (Void)null;
-        } , acc);
+        QuantumToolkit.runWithoutRenderLock(() -> {
+            AccessControlContext acc = stage.getAccessControlContext();
+            return AccessController.doPrivileged((PrivilegedAction<Void>)() -> {
+                stage.stageListener.changedScreen(oldScreen, newScreen);
+                return (Void)null;
+            } , acc);
+        });
     }
 }
