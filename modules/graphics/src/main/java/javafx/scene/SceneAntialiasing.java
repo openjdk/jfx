@@ -25,10 +25,19 @@
 
 package javafx.scene;
 
+import javafx.scene.shape.Shape;
+
 /**
  * The JavaFX {@code SceneAntialiasing} class specifies the level of
  * anti-aliasing desired. Scene anti-aliasing is primarily used when rendering
  * 3D primitives, which are otherwise rendered aliased.
+ * <p>
+ * {@code SceneAntialiasing} is unrelated to
+ * {@link Shape#setSmooth Shape.setSmooth}. Unlike
+ * {@link Shape#setSmooth Shape.setSmooth}, {@code SceneAntialiasing} affects
+ * the smoothness of the entire rendered scene whereas
+ * {@link Shape#setSmooth Shape.setSmooth} is a rendering hint that applies to
+ * an individual 2D Shape.
  * <p>
  * Note: In order for {@code SceneAntialiasing} to have an affect, the underlying
  * system must support:
