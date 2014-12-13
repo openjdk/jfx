@@ -79,8 +79,9 @@ public class StyleConverter<F, T> {
     
     /** 
      * @return A {@code StyleConverter} that converts a String 
-     * representation of a web color to a {@code Color}
-     * @see Color#web(java.lang.String) 
+     * representation of a duration to a {@link Duration}
+     *
+     * @since JavaFX 8u40
      */
     public static StyleConverter<?,Duration> getDurationConverter() {
         return DurationConverter.getInstance();

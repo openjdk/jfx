@@ -46,7 +46,15 @@ public class DateTimeStringConverter extends StringConverter<Date> {
     protected final Locale locale;
     protected final String pattern;
     protected final DateFormat dateFormat;
+
+    /**
+     * @since JavaFX 8u40
+     */
     protected final int dateStyle;
+
+    /**
+     * @since JavaFX 8u40
+     */
     protected final int timeStyle;
 
 

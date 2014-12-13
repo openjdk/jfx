@@ -6066,6 +6066,8 @@ public class Scene implements EventTarget {
       *
       * @return an observable map of properties on this node for use primarily
       * by application developers
+      *
+      * @since JavaFX 8u40
       */
      public final ObservableMap<Object, Object> getProperties() {
         if (properties == null) {
@@ -6077,6 +6079,8 @@ public class Scene implements EventTarget {
     /**
      * Tests if Scene has properties.
      * @return true if node has properties.
+     *
+     * @since JavaFX 8u40
      */
      public boolean hasProperties() {
         return properties != null && !properties.isEmpty();
@@ -6090,6 +6094,8 @@ public class Scene implements EventTarget {
      *
      * @param value The value to be stored - this can later be retrieved by calling
      *          {@link Scene#getUserData()}.
+     *
+     * @since JavaFX 8u40
      */
     public void setUserData(Object value) {
         getProperties().put(USER_DATA_KEY, value);
@@ -6101,6 +6107,8 @@ public class Scene implements EventTarget {
      *
      * @return The Object that was previously set, or null if no property
      *          has been set or if null was set.
+     *
+     * @since JavaFX 8u40
      */
     public Object getUserData() {
         return getProperties().get(USER_DATA_KEY);
