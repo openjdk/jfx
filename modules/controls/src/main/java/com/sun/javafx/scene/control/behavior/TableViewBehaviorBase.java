@@ -1274,11 +1274,11 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
         TableFocusModel fm = getFocusModel();
         if (fm == null) return;
 
-        int leadIndex = fm.getFocusedIndex();
+        int anchor = hasAnchor() ? getAnchor().getRow() : fm.getFocusedIndex();
         int leadSelectedIndex = onScrollPageUp.call(false);
         
         if (! sm.isCellSelectionEnabled()) {
-            sm.selectRange(leadIndex, leadSelectedIndex - 1);
+            sm.selectRange(anchor, leadSelectedIndex - 1);
         }
     }
     
@@ -1288,12 +1288,12 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
         
         TableFocusModel fm = getFocusModel();
         if (fm == null) return;
-        
-        int leadIndex = fm.getFocusedIndex();
+
+        int anchor = hasAnchor() ? getAnchor().getRow() : fm.getFocusedIndex();
         int leadSelectedIndex = onScrollPageDown.call(false);
         
         if (! sm.isCellSelectionEnabled()) {
-            sm.selectRange(leadIndex, leadSelectedIndex + 1);
+            sm.selectRange(anchor, leadSelectedIndex + 1);
         }
     }
     

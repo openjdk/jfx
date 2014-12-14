@@ -841,9 +841,9 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         FocusModel<TreeItem<T>> fm = getControl().getFocusModel();
         if (fm == null) return;
 
-        int leadIndex = fm.getFocusedIndex();
+        int anchor = getAnchor();
         int leadSelectedIndex = onScrollPageUp.call(false);
-        sm.selectRange(leadIndex, leadSelectedIndex - 1);
+        sm.selectRange(anchor, leadSelectedIndex - 1);
     }
     
     private void discontinuousSelectPageDown() {
@@ -853,9 +853,9 @@ public class TreeViewBehavior<T> extends BehaviorBase<TreeView<T>> {
         FocusModel<TreeItem<T>> fm = getControl().getFocusModel();
         if (fm == null) return;
         
-        int leadIndex = fm.getFocusedIndex();
+        int anchor = getAnchor();
         int leadSelectedIndex = onScrollPageDown.call(false);
-        sm.selectRange(leadIndex, leadSelectedIndex + 1);
+        sm.selectRange(anchor, leadSelectedIndex + 1);
     }
     
     private void discontinuousSelectAllToFirstRow() {

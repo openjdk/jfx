@@ -25,6 +25,7 @@
 
 package javafx.scene.control;
 
+import com.sun.javafx.scene.control.behavior.TableCellBehavior;
 import com.sun.javafx.scene.control.behavior.TreeTableCellBehavior;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.collections.FXCollections;
@@ -4543,5 +4544,121 @@ public class TreeTableViewKeyInputTest {
         assertEquals(tableView.getColumns().get(expectedColumn), fm.getFocusedCell().getTableColumn());
 
         sl.dispose();
+    }
+
+    @Test public void test_rt_24865_moveDownwards() {
+        root.getChildren().clear();
+        for (int i = 0; i < 100; i++) {
+            root.getChildren().add(new TreeItem<>("Row " + i));
+        }
+
+        root.setExpanded(true);
+        tableView.setShowRoot(false);
+        tableView.setRoot(root);
+
+        Toolkit.getToolkit().firePulse();
+
+        ObservableList<Integer> indices = sm.getSelectedIndices();
+
+        sm.select(0);
+        assertTrue(isSelected(0));
+        assertTrue(fm.isFocused(0));
+        assertEquals(1, indices.size());
+        assertEquals(0, ((TreeTablePosition) TreeTableCellBehavior.getAnchor(tableView, null)).getRow());
+
+        keyboard.doDownArrowPress(KeyModifier.SHIFT);
+        keyboard.doDownArrowPress(KeyModifier.SHIFT);
+        keyboard.doDownArrowPress(KeyModifier.SHIFT);
+        assertTrue(isSelected(0, 1, 2, 3));
+        assertTrue(fm.isFocused(3));
+        assertEquals(4, indices.size());
+        assertEquals(0, ((TreeTablePosition)TreeTableCellBehavior.getAnchor(tableView, null)).getRow());
+
+        keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
+        keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
+        keyboard.doDownArrowPress(KeyModifier.getShortcutKey());
+        assertTrue(isSelected(0, 1, 2, 3));
+        assertTrue(isNotSelected(4, 5, 6, 7, 8, 9));
+        assertTrue(fm.isFocused(6));
+        assertEquals(4, indices.size());
+        assertEquals(0, ((TreeTablePosition)TreeTableCellBehavior.getAnchor(tableView, null)).getRow());
+
+        // main point of test: selection between the last index (3) and the focus
+        // index (6) should now be true
+        keyboard.doKeyPress(KeyCode.PAGE_DOWN, KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
+        final int selectedRowCount = indices.size();
+        for (int i = 0; i < selectedRowCount; i++) {
+            assertTrue(isSelected(i));
+        }
+        assertTrue(fm.isFocused(selectedRowCount - 1));
+        assertEquals(0, ((TreeTablePosition)TreeTableCellBehavior.getAnchor(tableView, null)).getRow());
+
+        keyboard.doDownArrowPress(KeyModifier.SHIFT);
+        int newSelectedRowCount = selectedRowCount + 1;
+        for (int i = 0; i < newSelectedRowCount; i++) {
+            assertTrue(isSelected(i));
+        }
+        assertTrue(fm.isFocused(newSelectedRowCount - 1));
+        assertEquals(0, ((TreeTablePosition)TreeTableCellBehavior.getAnchor(tableView, null)).getRow());
+    }
+
+    @Test public void test_rt_24865_moveUpwards() {
+        root.getChildren().clear();
+        for (int i = 0; i < 100; i++) {
+            root.getChildren().add(new TreeItem<>("Row " + i));
+        }
+
+        root.setExpanded(true);
+        tableView.setShowRoot(false);
+        tableView.setRoot(root);
+
+        Toolkit.getToolkit().firePulse();
+
+        ObservableList<Integer> indices = sm.getSelectedIndices();
+
+        sm.select(50);
+        tableView.scrollTo(50);
+
+        Toolkit.getToolkit().firePulse();
+
+        assertTrue(isSelected(50));
+        assertTrue(fm.isFocused(50));
+        assertEquals(1, indices.size());
+        assertEquals(50, ((TreeTablePosition)TreeTableCellBehavior.getAnchor(tableView, null)).getRow());
+
+        keyboard.doUpArrowPress(KeyModifier.SHIFT);
+        keyboard.doUpArrowPress(KeyModifier.SHIFT);
+        keyboard.doUpArrowPress(KeyModifier.SHIFT);
+        assertTrue(isSelected(50, 49, 48, 47));
+        assertTrue(fm.isFocused(47));
+        assertEquals(4, indices.size());
+        assertEquals(50, ((TreeTablePosition)TreeTableCellBehavior.getAnchor(tableView, null)).getRow());
+
+        keyboard.doUpArrowPress(KeyModifier.getShortcutKey());
+        keyboard.doUpArrowPress(KeyModifier.getShortcutKey());
+        keyboard.doUpArrowPress(KeyModifier.getShortcutKey());
+        assertTrue(isSelected(50, 49, 48, 47));
+        assertTrue(isNotSelected(46, 45, 44, 43, 42, 41));
+        assertTrue(fm.isFocused(44));
+        assertEquals(4, indices.size());
+        assertEquals(50, ((TreeTablePosition)TreeTableCellBehavior.getAnchor(tableView, null)).getRow());
+
+        // main point of test: selection between the last index (47) and the focus
+        // index (44) should now be true
+        keyboard.doKeyPress(KeyCode.PAGE_UP, KeyModifier.getShortcutKey(), KeyModifier.SHIFT);
+        final int selectedRowCount = indices.size();
+        for (int i = 0; i < selectedRowCount; i++) {
+            assertTrue(isSelected(50 - i));
+        }
+        assertTrue(fm.isFocused(50 - selectedRowCount + 1));
+        assertEquals(50, ((TreeTablePosition)TreeTableCellBehavior.getAnchor(tableView, null)).getRow());
+
+        keyboard.doUpArrowPress(KeyModifier.SHIFT);
+        int newSelectedRowCount = selectedRowCount + 1;
+        for (int i = 0; i < newSelectedRowCount; i++) {
+            assertTrue(isSelected(50 - i));
+        }
+        assertTrue(fm.isFocused(50 - newSelectedRowCount + 1));
+        assertEquals(50, ((TreeTablePosition)TreeTableCellBehavior.getAnchor(tableView, null)).getRow());
     }
 }
