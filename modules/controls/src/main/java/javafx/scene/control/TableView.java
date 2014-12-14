@@ -455,17 +455,22 @@ public class TableView<S> extends Control {
                         }
                     }
                     return comparatorsBound;
-                }
+                } else {
+                    if (itemsList == null || itemsList.isEmpty()) {
+                        // sorting is not supported on null or empty lists
+                        return true;
+                    }
 
-                Comparator comparator = table.getComparator();
-                if (comparator == null) {
+                    Comparator comparator = table.getComparator();
+                    if (comparator == null) {
+                        return true;
+                    }
+
+                    // otherwise we attempt to do a manual sort, and if successful
+                    // we return true
+                    FXCollections.sort(itemsList, comparator);
                     return true;
                 }
-
-                // otherwise we attempt to do a manual sort, and if successful
-                // we return true
-                FXCollections.sort(itemsList, comparator);
-                return true;
             } catch (UnsupportedOperationException e) {
                 // TODO might need to support other exception types including:
                 // ClassCastException - if the class of the specified element prevents it from being added to this list
