@@ -229,7 +229,7 @@ extern "C" {
         jboolean result = false;
         Package& package = Package::GetInstance();
         
-        if (package.Debugging() == DebugState::dsNative) {
+        if (package.Debugging() == dsNative) {
             Platform& platform = Platform::GetInstance();
             result = platform.GetDebugState() != dsNone;
         }

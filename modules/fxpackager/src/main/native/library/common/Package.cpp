@@ -180,11 +180,11 @@ void Package::SetCommandLineArguments(int argc, TCHAR* argv[]) {
 
 #ifdef DEBUG
             if (arg == _T("-debug")) {
-                FDebugging = DebugState::dsNative;
+                FDebugging = dsNative;
             }
             
             if (arg == _T("-javadebug")) {
-                FDebugging = DebugState::dsJava;
+                FDebugging = dsJava;
             }
 #endif //DEBUG
 #ifdef MAC

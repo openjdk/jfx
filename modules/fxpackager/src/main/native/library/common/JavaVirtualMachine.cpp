@@ -205,7 +205,7 @@ public:
 #ifdef DEBUG
         Platform& platform = Platform::GetInstance();
 
-        if (platform.GetDebugState() == Platform::dsNative) {
+        if (platform.GetDebugState() == dsNative) {
             AppendValue(_T("vfprintf"), _T(""), (void*)vfprintfHook);
         }
 #endif //DEBUG
@@ -368,10 +368,10 @@ bool JavaVirtualMachine::StartJVM() {
     options.AppendValues(RemoveTrailingEquals(package.GetJVMUserArgs()));
 
 #ifdef DEBUG
-    if (package.Debugging() == DebugState::dsJava) {
+    if (package.Debugging() == dsJava) {
         options.AppendValue(_T("-Xdebug"), _T(""));
         options.AppendValue(_T("-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=localhost:8000"), _T(""));
-        platform.ShowMessage("localhost:8000");
+        platform.ShowMessage(_T("localhost:8000"));
     }
 #endif //DEBUG
     
