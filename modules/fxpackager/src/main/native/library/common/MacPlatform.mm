@@ -377,7 +377,7 @@ private:
                 TString key = Keys.front();
                 Keys.pop_front();
                 NSString *tempKey = StringToNSString(key);
-                node = node[tempKey];
+                node = [node valueForKey:tempKey];
                 
                 if (Keys.size() == 0) {
                     break;
