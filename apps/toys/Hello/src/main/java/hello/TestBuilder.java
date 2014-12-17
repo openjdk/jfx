@@ -79,6 +79,7 @@ import javafx.animation.AnimationTimer;
 import javafx.stage.Modality;
 import javafx.stage.Popup;
 import javafx.stage.Stage;
+import javafx.stage.WindowEvent;
 import javafx.util.Callback;
 import javafx.util.Duration;
 import com.sun.glass.events.KeyEvent;
@@ -1292,13 +1293,20 @@ public class TestBuilder {
                 stage1.setScene(s1);
                 stage1.setX(WindowsStage.getX()+300);
                 stage1.setY(WindowsStage.getY()+150);
-		 stage1.setAlwaysOnTop(true);
+		stage1.setAlwaysOnTop(true);
                 stage1.show();
                 setMini.setDisable(false);
                 resVerBtn.setDisable(false);
                 resHorBtn.setDisable(false);
                 resDiaBtn.setDisable(false);
             }
+        });
+
+        stage1.setOnCloseRequest(event -> {
+            setMini.setDisable(true);
+            resVerBtn.setDisable(true);
+            resHorBtn.setDisable(true);
+            resDiaBtn.setDisable(true);
         });
 
         resVerBtn.setDisable(true);
