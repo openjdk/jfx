@@ -104,19 +104,14 @@ public class ES2Backend extends GLSLBackend {
         // other, it will get awkward since the #version string has to be
         // the first thing in the file (i.e., you can't put it inside the
         // "#ifdef GL_ES" section).
-        // TODO: We are currently using highp across the board if it is
-        // supported just to be safe, but there are likely many variables
-        // that could live with mediump or lowp; should experiment with
-        // using lower precision by default...
+        // TODO: We are currently using highp across the board just to be
+        // safe, but there are likely many variables that could live with
+        // mediump or lowp; should experiment with using lower precision
+        // by default...
         sb.append("#ifdef GL_ES\n");
         sb.append("#extension GL_OES_standard_derivatives : enable\n");
-        sb.append("#ifdef GL_FRAGMENT_PRECISION_HIGH\n");
         sb.append("precision highp float;\n");
         sb.append("precision highp int;\n");
-        sb.append("#else\n");
-        sb.append("precision mediump float;\n");
-        sb.append("precision mediump int;\n");
-        sb.append("#endif\n");
         sb.append("#else\n");
         sb.append("#define highp\n");
         sb.append("#define mediump\n");
