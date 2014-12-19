@@ -155,7 +155,7 @@ public class SSELinearConvolvePeer extends SSEEffectPeer<LinearConvolveRenderSta
         return new ImageData(getFilterContext(), dst, dstBounds);
     }
 
-    protected native void
+    native void
         filterVector(int dstPixels[], int dstw, int dsth, int dstscan,
                      int srcPixels[], int srcw, int srch, int srcscan,
                      float weights[], int count,
@@ -172,7 +172,7 @@ public class SSELinearConvolvePeer extends SSEEffectPeer<LinearConvolveRenderSta
      * Rows are horizontal in the first pass and vertical in the second pass.
      * Cols are vice versa.
      */
-    protected native void
+    native void
         filterHV(int dstPixels[], int dstcols, int dstrows, int dcolinc, int drowinc,
                  int srcPixels[], int srccols, int srcrows, int scolinc, int srowinc,
                  float weights[]);
