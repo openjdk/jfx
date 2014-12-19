@@ -5695,6 +5695,9 @@ public class Scene implements EventTarget {
      * appearance to a user that the data has been moved by the drag and drop
      * gesture. A {@code transferMode} that has the value {@code NONE}
      * indicates that no data was transferred during the drag and drop gesture.
+     * Positional data for the {@code DragEvent} is invalid.  Valid positional
+     * data for the {@code DragEvent} is presented in the {@link onDragDropped}
+     * event handler.
      */
     public final ObjectProperty<EventHandler<? super DragEvent>> onDragDoneProperty() {
         if (onDragDone == null) {

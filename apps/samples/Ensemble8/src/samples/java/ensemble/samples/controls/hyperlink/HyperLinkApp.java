@@ -38,6 +38,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.Hyperlink;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
@@ -54,11 +55,14 @@ public class HyperLinkApp extends Application {
     private static final Image ICON_48 = new Image(HyperLinkApp.class.getResourceAsStream("/ensemble/samples/shared-resources/icon-48x48.png"));
 
     public Parent createContent() {
-        ImageView iv = new ImageView(ICON_48);
+        HBox hbox = new HBox(18);
+        hbox.setAlignment(Pos.CENTER);
+        
         VBox vbox = new VBox();
         vbox.setSpacing(5);
         vbox.setAlignment(Pos.CENTER_LEFT);
 
+        ImageView iv = new ImageView(ICON_48);
         Hyperlink h1 = new Hyperlink("Hyperlink");
         h1.setPrefWidth(80);
         h1.setMinWidth(Hyperlink.USE_PREF_SIZE);
@@ -69,7 +73,9 @@ public class HyperLinkApp extends Application {
         h2.setGraphic(iv);
 
         vbox.getChildren().addAll(h1, h2);
-        return vbox;
+        hbox.getChildren().add(vbox);
+        
+        return hbox;
     }
 
     @Override

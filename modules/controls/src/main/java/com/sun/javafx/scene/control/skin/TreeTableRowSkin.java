@@ -419,7 +419,7 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
                             /* This is the row-based case */
                             column = treeTableView.getVisibleLeafColumn(0);
                         }
-                        TreeTableCell<T,?> cell = cellsMap.get(column);
+                        TreeTableCell<T,?> cell = cellsMap.get(column).get();
                         if (cell != null) selection.add(cell);
                     }
                     return FXCollections.observableArrayList(selection);

@@ -195,7 +195,13 @@ extern "C" {
 #ifdef DEBUG
 // Build with debug info. Create a class:
 //
+// package com;
+//
 // class DebugExports {
+//   static {
+//      System.loadLibrary("packager");
+//   }
+//
 //   public static native boolean isdebugged();
 //
 //   public static native int getpid();
@@ -203,7 +209,8 @@ extern "C" {
 //
 // Use the following in Java in the main or somewhere else:
 //
-// uses DebugExports;
+// import com.DebugExports;
+// import java.util.Arrays;
 //
 // if (Arrays.asList(args).contains("-debug")) {
 //   System.out.println("pid=" + getpid());
@@ -218,14 +225,21 @@ extern "C" {
 // The call to isdebugger() will wait until a native debugger is attached. The process
 // identifier (pid) will be printed to the console for you to attach your debugger to.
 extern "C" {
-    JNIEXPORT jint JNICALL Java_debugexports__getpid(JNIEnv *env) {
-        Platform& platform = Platform::GetInstance();
-        return platform.GetProcessID();
+    JNIEXPORT jboolean JNICALL Java_com_DebugExports_isdebugged(JNIEnv *env, jclass klass) {
+        jboolean result = false;
+        Package& package = Package::GetInstance();
+        
+        if (package.Debugging() == dsNative) {
+            Platform& platform = Platform::GetInstance();
+            result = platform.GetDebugState() != dsNone;
+        }
+        
+        return result;
     }
 
-    JNIEXPORT jboolean JNICALL Java_debugexports__isdebugged(JNIEnv *env) {
+    JNIEXPORT jint JNICALL Java_com_DebugExports_getpid(JNIEnv *env, jclass klass) {
         Platform& platform = Platform::GetInstance();
-        return platform.GetDebugState() != Platform::dsNone;
+        return platform.GetProcessID();
     }
 }
 #endif //DEBUG

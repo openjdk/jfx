@@ -788,7 +788,11 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
         if (focusedCell == null || focusedCell.getTableColumn() == null) return;
         
         TableColumnBase adjacentColumn = getColumn(focusedCell.getTableColumn(), delta);
-        if (adjacentColumn == null) return;
+        if (adjacentColumn == null) {
+            // if adjacentColumn is null, we use the focusedCell column, as we are
+            // most probably at the very beginning or end of the row
+            adjacentColumn = focusedCell.getTableColumn();
+        }
 
         final int focusedCellRow = focusedCell.getRow();
 
@@ -811,11 +815,15 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
             sm.clearSelection(focusedCellRow, cellColumnToClear);
             fm.focus(focusedCellRow, adjacentColumn);
         } else if (isShiftDown && getAnchor() != null && ! selectionPathDeviated) {
-            final int columnPos = getVisibleLeafIndex(focusedCell.getTableColumn());
-            final int newColumn = columnPos + delta;
+            final int anchorColumn = getAnchor().getColumn();
 
-            int start = Math.min(columnPos, newColumn);
-            int end = Math.max(columnPos, newColumn);
+            // we don't let the newColumn go outside the bounds of the data
+            int newColumn = getVisibleLeafIndex(focusedCell.getTableColumn()) + delta;
+            newColumn = Math.max(Math.min(getVisibleLeafColumns().size() - 1, newColumn), 0);
+
+            int start = Math.min(anchorColumn, newColumn);
+            int end = Math.max(anchorColumn, newColumn);
+
             for (int _col = start; _col <= end; _col++) {
                 sm.select(focusedCell.getRow(), getColumn(_col));
             }
@@ -963,8 +971,9 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
         TableFocusModel fm = getFocusModel();
         if (fm == null) return;
 
-        TablePositionBase focusedCell = getFocusedCell();
-        
+        final boolean isSingleSelection = sm.getSelectionMode() == SelectionMode.SINGLE;
+        final TablePositionBase focusedCell = getFocusedCell();
+        final TableColumnBase<?,?> column = getFocusedCell().getTableColumn();
         int leadIndex = focusedCell.getRow();
         
         if (isShiftDown) {
@@ -975,17 +984,23 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
         if (! sm.isCellSelectionEnabled()) {
             // we are going from 0 to one before the focused cell as that is
             // the requirement of selectRange, so we call focus on the 0th row
-            sm.selectRange(0, leadIndex + 1);
-            getFocusModel().focus(0);
-//            setAnchor(leadIndex, null);
+            if (isSingleSelection) {
+                sm.select(0);
+            } else {
+                sm.selectRange(leadIndex, -1);
+            }
+            fm.focus(0);
         } else {
-            // TODO
-            
-//            setAnchor(leadIndex, );
+            if (isSingleSelection) {
+                sm.select(0, column);
+            } else {
+                sm.selectRange(leadIndex, column, -1, column);
+            }
+            fm.focus(0, column);
         }
         
         if (isShiftDown) {
-            setAnchor(leadIndex, null);
+            setAnchor(leadIndex, column);
         }
 
         if (onMoveToFirstCell != null) onMoveToFirstCell.run();
@@ -998,8 +1013,9 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
         TableFocusModel fm = getFocusModel();
         if (fm == null) return;
 
-        TablePositionBase focusedCell = getFocusedCell();
-        
+        final int itemCount = getItemCount();
+        final TablePositionBase focusedCell = getFocusedCell();
+        final TableColumnBase<?,?> column = getFocusedCell().getTableColumn();
         int leadIndex = focusedCell.getRow();
         
         if (isShiftDown) {
@@ -1008,13 +1024,13 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
         
         sm.clearSelection();
         if (! sm.isCellSelectionEnabled()) {
-            sm.selectRange(leadIndex, getItemCount());
+            sm.selectRange(leadIndex, itemCount);
         } else {
-            // TODO
+            sm.selectRange(leadIndex, column, itemCount - 1, column);
         }
         
         if (isShiftDown) {
-            setAnchor(leadIndex, null);
+            setAnchor(leadIndex, column);
         }
 
         if (onMoveToLastCell != null) onMoveToLastCell.run();
@@ -1258,11 +1274,11 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
         TableFocusModel fm = getFocusModel();
         if (fm == null) return;
 
-        int leadIndex = fm.getFocusedIndex();
+        int anchor = hasAnchor() ? getAnchor().getRow() : fm.getFocusedIndex();
         int leadSelectedIndex = onScrollPageUp.call(false);
         
         if (! sm.isCellSelectionEnabled()) {
-            sm.selectRange(leadIndex, leadSelectedIndex - 1);
+            sm.selectRange(anchor, leadSelectedIndex - 1);
         }
     }
     
@@ -1272,12 +1288,12 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
         
         TableFocusModel fm = getFocusModel();
         if (fm == null) return;
-        
-        int leadIndex = fm.getFocusedIndex();
+
+        int anchor = hasAnchor() ? getAnchor().getRow() : fm.getFocusedIndex();
         int leadSelectedIndex = onScrollPageDown.call(false);
         
         if (! sm.isCellSelectionEnabled()) {
-            sm.selectRange(leadIndex, leadSelectedIndex + 1);
+            sm.selectRange(anchor, leadSelectedIndex + 1);
         }
     }
     

@@ -48,6 +48,7 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.control.PopupControl;
 import javafx.scene.control.Separator;
 import javafx.scene.control.Tooltip;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
@@ -223,6 +224,12 @@ public class ColorPalette extends Region {
         for (int i = 0; i < customColors.size(); i++) {
             Color c = customColors.get(i);
             ColorSquare square = new ColorSquare(c, i, true);
+            square.addEventHandler(KeyEvent.KEY_PRESSED, e -> {
+                if (e.getCode() == KeyCode.DELETE) {
+                    customColors.remove(square.rectangle.getFill());
+                    buildCustomColors();
+                }
+            });
             customColorGrid.add(square, customColumnIndex, customRowIndex);
             customColumnIndex++;
             if (customColumnIndex == NUM_OF_COLUMNS) {

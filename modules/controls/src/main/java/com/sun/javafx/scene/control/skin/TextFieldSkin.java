@@ -118,7 +118,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
     private double pressX, pressY; // For dragging handles on embedded
 
     // For use with PasswordField
-    public static final char BULLET = '\u2022';
+    public static final char BULLET = '\u25cf';
 
     /**
      * Create a new TextFieldSkin.
