@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,7 +22,6 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-#include <com_sun_media_jfxmediaimpl_platform_gstreamer_GSTAudioSpectrum.h>
 
 #include "GstAudioSpectrum.h"
 #include <MediaManagement/Media.h>
@@ -30,84 +29,6 @@
 #include <PipelineManagement/AudioSpectrum.h>
 #include <jni/JavaBandsHolder.h>
 #include <jni/JniUtils.h>
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-JNIEXPORT jboolean JNICALL
-Java_com_sun_media_jfxmediaimpl_platform_gstreamer_GSTAudioSpectrum_gstGetEnabled(JNIEnv *env, jobject obj, jlong ref_media)
-{
-    CMedia* pMedia = (CMedia*)jlong_to_ptr(ref_media);
-    CAudioSpectrum *pSpectrum = pMedia->GetPipeline()->GetAudioSpectrum();
-
-    return (NULL != pSpectrum) ? pSpectrum->IsEnabled() : JNI_FALSE;
-}
-
-JNIEXPORT void JNICALL
-Java_com_sun_media_jfxmediaimpl_platform_gstreamer_GSTAudioSpectrum_gstSetEnabled(JNIEnv *env, jobject obj, jlong ref_media,
-                                                                                  jboolean enabled)
-{
-    CMedia* pMedia = (CMedia*)jlong_to_ptr(ref_media);
-    CAudioSpectrum *pSpectrum = pMedia->GetPipeline()->GetAudioSpectrum();
-
-    if (pSpectrum != NULL)
-        pSpectrum->SetEnabled(enabled);
-}
-
-JNIEXPORT void JNICALL
-Java_com_sun_media_jfxmediaimpl_platform_gstreamer_GSTAudioSpectrum_gstSetBands(JNIEnv *env, jobject obj, jlong ref_media,
-                                                                                jint bands, jfloatArray magnitudes, jfloatArray phases)
-{
-    CMedia* pMedia = (CMedia*)jlong_to_ptr(ref_media);
-    CAudioSpectrum *pSpectrum = pMedia->GetPipeline()->GetAudioSpectrum();
-    CBandsHolder *pHolder = new (nothrow) CJavaBandsHolder(env, bands, magnitudes, phases);
-
-    if (pSpectrum != NULL && pHolder != NULL)
-        pSpectrum->SetBands(bands, pHolder);
-}
-
-JNIEXPORT jdouble JNICALL
-Java_com_sun_media_jfxmediaimpl_platform_gstreamer_GSTAudioSpectrum_gstGetInterval(JNIEnv *env, jobject obj, jlong ref_media)
-{
-    CMedia* pMedia = (CMedia*)jlong_to_ptr(ref_media);
-    CAudioSpectrum *pSpectrum = pMedia->GetPipeline()->GetAudioSpectrum();
-
-    return (NULL != pSpectrum) ? pSpectrum->GetInterval() : 0.0;
-}
-
-JNIEXPORT void JNICALL Java_com_sun_media_jfxmediaimpl_platform_gstreamer_GSTAudioSpectrum_gstSetInterval(JNIEnv *env, jobject obj, jlong ref_media,
-                                                                                                          jdouble interval)
-{
-    CMedia* pMedia = (CMedia*)jlong_to_ptr(ref_media);
-    CAudioSpectrum *pSpectrum = pMedia->GetPipeline()->GetAudioSpectrum();
-
-    if (pSpectrum != NULL)
-        pSpectrum->SetInterval(interval);
-}
-
-JNIEXPORT jint JNICALL Java_com_sun_media_jfxmediaimpl_platform_gstreamer_GSTAudioSpectrum_gstGetThreshold(JNIEnv *env, jobject obj, jlong ref_media)
-{
-    CMedia* pMedia = (CMedia*)jlong_to_ptr(ref_media);
-    CAudioSpectrum *pSpectrum = pMedia->GetPipeline()->GetAudioSpectrum();
-
-    return (NULL != pSpectrum) ? pSpectrum->GetThreshold() : 0;
-}
-
-JNIEXPORT void JNICALL
-Java_com_sun_media_jfxmediaimpl_platform_gstreamer_GSTAudioSpectrum_gstSetThreshold(JNIEnv *env, jobject obj, jlong ref_media,
-                                                                                    jint threshold)
-{
-    CMedia* pMedia = (CMedia*)jlong_to_ptr(ref_media);
-    CAudioSpectrum *pSpectrum = pMedia->GetPipeline()->GetAudioSpectrum();
-
-    if (pSpectrum != NULL)
-        pSpectrum->SetThreshold(threshold);
-}
-
-#ifdef __cplusplus
-}
-#endif
 
 /************************************************************************
  *

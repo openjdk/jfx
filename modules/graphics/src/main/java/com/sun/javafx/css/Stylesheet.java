@@ -335,4 +335,20 @@ public class Stylesheet {
         os.close();
     }
 
+    // Add the rules from the other stylesheet to this one
+    public void importStylesheet(Stylesheet importedStylesheet) {
+        if (importedStylesheet == null) return;
+
+        List<Rule> rulesToImport = importedStylesheet.getRules();
+        if (rulesToImport == null || rulesToImport.isEmpty()) return;
+
+        List<Rule> importedRules = new ArrayList<>(rulesToImport.size());
+        for (Rule rule : rulesToImport) {
+            List<Selector> selectors = rule.getSelectors();
+            List<Declaration> declarations = rule.getUnobservedDeclarationList();
+            importedRules.add(new Rule(selectors, declarations));
+        }
+
+        rules.addAll(importedRules);
+    }
 }

@@ -25,12 +25,9 @@
 
 package javafx.scene.chart;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.ArrayList;
-import java.util.Collections;
+import java.util.*;
 
+import javafx.scene.AccessibleRole;
 import javafx.animation.Animation;
 import javafx.animation.FadeTransition;
 import javafx.animation.Interpolator;
@@ -38,8 +35,10 @@ import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.ParallelTransition;
 import javafx.animation.Timeline;
+import javafx.application.Platform;
 import javafx.beans.NamedArg;
 import javafx.beans.property.DoubleProperty;
+import javafx.beans.value.WritableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Orientation;
@@ -49,10 +48,13 @@ import javafx.util.Duration;
 
 import com.sun.javafx.charts.Legend;
 import com.sun.javafx.charts.Legend.LegendItem;
+
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
+
 import com.sun.javafx.css.converters.SizeConverter;
+
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 
@@ -343,7 +345,8 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
         int catIndex = 0;
         for (String category : categoryAxis.getCategories()) {
             int index = 0;
-            for (Series<X,Y> series = begin; series != null; series = series.next) {
+            for (Iterator<Series<X, Y>> sit = getDisplayedSeriesIterator(); sit.hasNext(); ) {
+                Series<X, Y> series = sit.next();
                 final Data<X,Y> item = getDataItem(series, index, catIndex, category);
                 if (item != null) {
                     final Node bar = item.getNode();
@@ -546,6 +549,9 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
         Node bar = item.getNode();
         if (bar == null) {
             bar = new StackPane();
+            bar.setAccessibleRole(AccessibleRole.TEXT);
+            bar.setAccessibleRoleDescription("Bar");
+            bar.focusTraversableProperty().bind(Platform.accessibilityActiveProperty());
             item.setNode(bar);
         }
         bar.getStyleClass().addAll("chart-bar", "series" + seriesIndex, "data" + itemIndex,series.defaultColorStyleClass);
@@ -575,7 +581,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(BarChart<?,?> node) {
-                return (StyleableProperty<Number>)node.barGapProperty();
+                return (StyleableProperty<Number>)(WritableValue<Number>)node.barGapProperty();
             }
         };
          
@@ -590,7 +596,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
 
             @Override
             public StyleableProperty<Number> getStyleableProperty(BarChart<?,?> node) {
-                return (StyleableProperty<Number>)node.categoryGapProperty();
+                return (StyleableProperty<Number>)(WritableValue<Number>)node.categoryGapProperty();
             }
         };
 

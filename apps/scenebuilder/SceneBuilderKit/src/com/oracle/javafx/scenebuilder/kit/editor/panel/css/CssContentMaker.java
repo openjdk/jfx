@@ -57,6 +57,7 @@ import javafx.scene.Parent;
 /**
  * This class construct the model exposed by the CSS Panel.
  *
+ * @treatAsPrivate
  */
 public class CssContentMaker {
 
@@ -387,10 +388,11 @@ public class CssContentMaker {
 //        System.out.println("--> css url = " + style.getDeclaration().getRule().getStylesheet().getUrl());
 //    }
 
-    /*
+    /**
      *
-     * Public classes
+     * Public classes.
      *
+     * @treatAsPrivate
      */
     public static abstract class PropertyState implements Comparable<PropertyState> {
 
@@ -445,6 +447,10 @@ public class CssContentMaker {
         }
     }
 
+/**
+ *
+ * @treatAsPrivate
+ */
     public static class BeanPropertyState extends PropertyState {
 
         PropertyMetadata propMeta;
@@ -473,6 +479,10 @@ public class CssContentMaker {
         }
     }
 
+/**
+ *
+ * @treatAsPrivate
+ */
     public static class CssPropertyState extends PropertyState {
 
         protected final StyleableProperty<?> value;
@@ -503,6 +513,10 @@ public class CssContentMaker {
             return value.getValue();
         }
 
+        /**
+         *
+         * @treatAsPrivate
+         */
         public static class CssStyle {
 
             private final Style style;
@@ -592,10 +606,11 @@ public class CssContentMaker {
         }
     }
 
-    /*
+    /**
      *
-     * Private classes
+     * Private classes.
      *
+     * @treatAsPrivate
      */
     protected static class CssSubPropertyState extends CssPropertyState {
 

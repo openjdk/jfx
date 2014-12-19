@@ -73,6 +73,19 @@ public class WindowsBundlerParam<T> extends StandardBundlerParam<T> {
             },
             (s, p) -> s);
 
+    public static final BundlerParamInfo<String> APP_REGISTRY_NAME = new StandardBundlerParam<> (
+            I18N.getString("param.registry-name.name"),
+            I18N.getString("param.registry-name.description"),
+            "win.registryName",
+            String.class,
+            params -> {
+                String nm = APP_NAME.fetchFrom(params);
+                if (nm == null) return null;
+
+                return nm.replaceAll("[^-a-zA-Z\\.0-9]", "");
+            },
+            (s, p) -> s);
+
     public static final StandardBundlerParam<String> MENU_GROUP =
             new StandardBundlerParam<>(
                     I18N.getString("param.menu-group.name"),
@@ -109,7 +122,7 @@ public class WindowsBundlerParam<T> extends StandardBundlerParam<T> {
 
     //Subsetting of JRE is restricted.
     //JRE README defines what is allowed to strip:
-    //   ﻿http://www.oracle.com/technetwork/java/javase/jre-7-readme-430162.html //TODO update when 8 goes GA
+    //   http://www.oracle.com/technetwork/java/javase/jre-8-readme-2095710.html
     public static final BundlerParamInfo<JreUtils.Rule[]> WIN_JRE_RULES = new StandardBundlerParam<>(
             "",
             "",

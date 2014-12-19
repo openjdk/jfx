@@ -590,6 +590,11 @@ public class MenuItem implements EventTarget, Styleable {
         return Collections.emptyList();
     }                
 
+    /**
+     * @treatAsPrivate implementation detail
+     * @deprecated This is an internal API that is not intended for use and will be removed in the next version
+     */
+    @Deprecated
     public Node impl_styleableGetNode() {
         // Fix for RT-20582. We dive into the visual representation
         // of this MenuItem so that we may return it to the caller.

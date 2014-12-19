@@ -6,11 +6,16 @@ BUILD_DIR = $(OUTPUT_DIR)/$(BUILD_TYPE)
 TARGET_DIRS = $(BUILD_DIR)
 
 SRCBASE_DIR = ../../../plugins
-OBJBASE_DIR = $(BUILD_DIR)/obj/plugins/avplugin
 
 DIRLIST = av
 
+ifneq ($(strip $(VERSION)),)
+TARGET = $(BUILD_DIR)/lib$(BASE_NAME)-$(VERSION).so
+OBJBASE_DIR = $(BUILD_DIR)/obj/plugins/avplugin-$(VERSION)
+else
 TARGET = $(BUILD_DIR)/lib$(BASE_NAME).so
+OBJBASE_DIR = $(BUILD_DIR)/obj/plugins/avplugin
+endif
 
 CFLAGS = -fPIC                   \
          -Werror=implicit-function-declaration \
@@ -46,6 +51,11 @@ LDFLAGS  += -L$(LIBAV_DIR)/lib/ -lavcodec -lavformat
 else
 INCLUDES += $(shell pkg-config --cflags libavcodec libavformat)
 LDFLAGS  += $(shell pkg-config --libs libavcodec libavformat)
+endif
+
+ifeq ($(ARCH), x32)
+    CFLAGS += -m32
+    LDFLAGS += -m32
 endif
 
 SOURCES = av/fxavcodecplugin.c  \

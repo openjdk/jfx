@@ -63,8 +63,8 @@ typedef struct {
 #define WIND_EVEN_ODD   0
 #define WIND_NON_ZERO   1
 
-#define DEC_BND   20.0f
-#define INC_BND   8.0f
+#define DEC_BND   1.0f
+#define INC_BND   0.4f
 
 typedef struct {
     PathConsumer consumer;

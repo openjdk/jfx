@@ -31,6 +31,7 @@
  */
 package com.oracle.javafx.scenebuilder.kit.editor.job;
 
+import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.ModifyObjectJob;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController.Size;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
@@ -216,7 +217,7 @@ public class UsePredefinedSizeJob extends Job {
         }
 
         String sizeString = size.toString();
-        return Double.parseDouble(sizeString.substring(5, sizeString.indexOf("x"))); //NOI18N
+        return Double.parseDouble(sizeString.substring(5, sizeString.indexOf('x'))); //NOI18N
     }
     
     private double getHeightFromSize(Size size) {
@@ -227,6 +228,6 @@ public class UsePredefinedSizeJob extends Job {
         }
         
         String sizeString = size.toString();
-        return Double.parseDouble(sizeString.substring(sizeString.indexOf("x") + 1, sizeString.length())); //NOI18N
+        return Double.parseDouble(sizeString.substring(sizeString.indexOf('x') + 1, sizeString.length())); //NOI18N
     }
 }

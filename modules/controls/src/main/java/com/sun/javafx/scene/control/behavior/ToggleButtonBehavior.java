@@ -55,6 +55,34 @@ public class ToggleButtonBehavior<C extends ToggleButton> extends ButtonBehavior
         TOGGLE_BUTTON_BINDINGS.add(new KeyBinding(KeyCode.UP, "TogglePrevious-Up"));
     }
 
+    /**
+     * Returns the next toggle index or "from" if none found
+     */
+    private int nextToggleIndex(final ObservableList<Toggle> toggles, final int from) {
+        Toggle toggle;
+        if (from  < 0 || from >= toggles.size()) return 0;
+        int i = (from + 1) % toggles.size();
+        while (i != from && (toggle = toggles.get(i)) instanceof Node &&
+                ((Node)toggle).isDisabled()) {
+            i = (i + 1) % toggles.size();
+        }
+        return i;
+    }
+
+    /**
+     * Returns the previous toggle index or "from" if none found
+     */
+    private int previousToggleIndex(final ObservableList<Toggle> toggles, final int from) {
+        Toggle toggle;
+        if (from  < 0 || from >= toggles.size()) return toggles.size();
+        int i = Math.floorMod(from - 1, toggles.size());
+        while (i != from && (toggle = toggles.get(i)) instanceof Node &&
+                ((Node)toggle).isDisabled()) {
+            i = Math.floorMod(i - 1, toggles.size());
+        }
+        return i;
+    }
+
     @Override
     protected void callAction(String name) {
         ToggleButton toggleButton = getControl();
@@ -76,28 +104,26 @@ public class ToggleButtonBehavior<C extends ToggleButton> extends ButtonBehavior
                 if (Utils.isTwoLevelFocus()) {
                     super.callAction(toggleToTraverseAction(name));
                 } else if (traversingToNext) {
-                    int nextToggleIndex = currentToggleIdx;
-                    Toggle toggle = null;
-                    while (++nextToggleIndex < toggles.size() && (toggle = toggles.get(nextToggleIndex)) instanceof Node &&
-                            ((Node)toggle).isDisabled());
-                    if (nextToggleIndex == toggles.size()) {
+                    int nextToggleIndex = nextToggleIndex(toggles, currentToggleIdx);
+                    if (nextToggleIndex == currentToggleIdx) {
                         super.callAction(toggleToTraverseAction(name));
                     } else {
+                        Toggle toggle = toggles.get(nextToggleIndex);
                         toggleGroup.selectToggle(toggle);
                         ((Control)toggle).requestFocus();
                     }
                 } else {
-                    int prevToggleIndex = currentToggleIdx;
-                    Toggle toggle = null;
-                    while (--prevToggleIndex >= 0 && (toggle = toggles.get(prevToggleIndex)) instanceof Node &&
-                            ((Node)toggle).isDisabled());
-                    if (prevToggleIndex < 0) {
+                    int prevToggleIndex = previousToggleIndex(toggles, currentToggleIdx);
+                    if (prevToggleIndex == currentToggleIdx) {
                         super.callAction(toggleToTraverseAction(name));
                     } else {
+                        Toggle toggle = toggles.get(prevToggleIndex);
                         toggleGroup.selectToggle(toggle);
                         ((Control)toggle).requestFocus();
                     }
                 }
+                break;
+            default: super.callAction(name);
         }
     }
 

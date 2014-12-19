@@ -104,7 +104,7 @@ class DummyRTTexture extends DummyTexture implements RTTexture {
     }
 
     @Override
-    public boolean isAntiAliasing() {
+    public boolean isMSAA() {
         return false;
     }
 }

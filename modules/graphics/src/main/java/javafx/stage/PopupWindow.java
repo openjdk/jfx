@@ -436,6 +436,9 @@ public abstract class PopupWindow extends Window {
         // RT-28447
         final Scene ownerScene = getRootWindow(owner).getScene();
         if (ownerScene != null) {
+            if (ownerScene.getUserAgentStylesheet() != null) {
+                sceneValue.setUserAgentStylesheet(ownerScene.getUserAgentStylesheet());
+            }
             sceneValue.getStylesheets().setAll(ownerScene.getStylesheets());
             if (sceneValue.getCursor() == null) {
                 sceneValue.setCursor(ownerScene.getCursor());

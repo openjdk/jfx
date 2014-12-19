@@ -76,10 +76,10 @@ public class ImagePool {
 
     static final int QUANT = 32;
 
-    private final List<SoftReference<Filterable>> unlocked =
-        new ArrayList<SoftReference<Filterable>>();
-    private final List<SoftReference<Filterable>> locked =
-        new ArrayList<SoftReference<Filterable>>();
+    private final List<SoftReference<PoolFilterable>> unlocked =
+        new ArrayList<SoftReference<PoolFilterable>>();
+    private final List<SoftReference<PoolFilterable>> locked =
+        new ArrayList<SoftReference<PoolFilterable>>();
 
     // On Canmore with the PowerVR SGX chip, there is a driver issue
     // that causes incorrect rendering if one tries to reuse an FBO
@@ -97,8 +97,8 @@ public class ImagePool {
     // (where there would normally be reuse).
     private final boolean usePurgatory = Boolean.getBoolean("decora.purgatory");
     private final List<Filterable> hardPurgatory = new ArrayList<Filterable>();
-    private final List<SoftReference<Filterable>> softPurgatory =
-        new ArrayList<SoftReference<Filterable>>();
+    private final List<SoftReference<PoolFilterable>> softPurgatory =
+        new ArrayList<SoftReference<PoolFilterable>>();
 
     /**
      * Package-private constructor.
@@ -106,7 +106,7 @@ public class ImagePool {
     ImagePool() {
     }
 
-    public synchronized Filterable checkOut(Renderer renderer, int w, int h) {
+    public synchronized PoolFilterable checkOut(Renderer renderer, int w, int h) {
         if (w <= 0 || h <= 0) {
             // if image is empty in any way, return a small non-empty image.
             w = h = 1;
@@ -123,13 +123,13 @@ public class ImagePool {
         pixelsAccessed += ((long) w) * h;
         // first look for an already cached image of sufficient size,
         // choosing the one that is closest in size to the requested dimensions
-        SoftReference<Filterable> chosenEntry = null;
-        Filterable chosenImage = null;
+        SoftReference<PoolFilterable> chosenEntry = null;
+        PoolFilterable chosenImage = null;
         int mindiff = Integer.MAX_VALUE;
-        Iterator<SoftReference<Filterable>> entries = unlocked.iterator();
+        Iterator<SoftReference<PoolFilterable>> entries = unlocked.iterator();
         while (entries.hasNext()) {
-            SoftReference<Filterable> entry = entries.next();
-            Filterable eimg = entry.get();
+            SoftReference<PoolFilterable> entry = entries.next();
+            PoolFilterable eimg = entry.get();
             if (eimg == null) {
                 entries.remove();
                 continue;
@@ -170,7 +170,7 @@ public class ImagePool {
         // get rid of expired entries from locked list
         entries = locked.iterator();
         while (entries.hasNext()) {
-            SoftReference<Filterable> entry = entries.next();
+            SoftReference<PoolFilterable> entry = entries.next();
             Filterable eimg = entry.get();
             if (eimg == null) {
                 entries.remove();
@@ -178,7 +178,7 @@ public class ImagePool {
         }
 
         // if all else fails, just create a new one...
-        Filterable img = null;
+        PoolFilterable img = null;
         try {
             img = renderer.createCompatibleImage(w, h);
         } catch (OutOfMemoryError e) {}
@@ -191,19 +191,20 @@ public class ImagePool {
             } catch (OutOfMemoryError e) {}
         }
         if (img != null) {
-            locked.add(new SoftReference<Filterable>(img));
+            img.setImagePool(this);
+            locked.add(new SoftReference<PoolFilterable>(img));
             numCreated++;
             pixelsCreated += ((long) w) * h;
         }
         return img;
     }
 
-    public synchronized void checkIn(Filterable img) {
-        SoftReference<Filterable> chosenEntry = null;
+    public synchronized void checkIn(PoolFilterable img) {
+        SoftReference<PoolFilterable> chosenEntry = null;
         Filterable chosenImage = null;
-        Iterator<SoftReference<Filterable>> entries = locked.iterator();
+        Iterator<SoftReference<PoolFilterable>> entries = locked.iterator();
         while (entries.hasNext()) {
-            SoftReference<Filterable> entry = entries.next();
+            SoftReference<PoolFilterable> entry = entries.next();
             Filterable eimg = entry.get();
             if (eimg == null) {
                 entries.remove();
@@ -244,7 +245,7 @@ public class ImagePool {
 
     private void pruneCache() {
         // flush all unlocked images
-        for (SoftReference<Filterable> r : unlocked) {
+        for (SoftReference<PoolFilterable> r : unlocked) {
             Filterable image = r.get();
             if (image != null) {
                 image.flush();
@@ -260,7 +261,7 @@ public class ImagePool {
     }
 
     public synchronized void dispose() {
-        for (SoftReference<Filterable> r : unlocked) {
+        for (SoftReference<PoolFilterable> r : unlocked) {
             Filterable image = r.get();
             if (image != null) {
                 image.flush();

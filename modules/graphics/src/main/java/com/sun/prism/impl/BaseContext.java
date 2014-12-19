@@ -112,9 +112,7 @@ public abstract class BaseContext {
     protected abstract void setRenderTarget(RenderTarget target, NGCamera camera,
                                             boolean depthTest, boolean state3D);
 
-    public void validateClearOp(BaseGraphics g) {
-        validatePaintOp(g, BaseTransform.IDENTITY_TRANSFORM, null, 0, 0, 0, 0);
-    }
+    public abstract void validateClearOp(BaseGraphics g);
 
     public abstract void validatePaintOp(BaseGraphics g, BaseTransform xform,
                                          Texture maskTex,

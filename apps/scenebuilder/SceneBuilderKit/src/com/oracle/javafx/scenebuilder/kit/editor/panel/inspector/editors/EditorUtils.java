@@ -514,7 +514,7 @@ public class EditorUtils {
     }
     
     // Get the URL corresponding to a PrefixedValue string
-    @SuppressWarnings("UseSpecificCatch")
+//    @SuppressWarnings("UseSpecificCatch")
     public static URL getUrl(String prefixedString, URL fxmlFileLocation) {
         PrefixedValue prefixedValue = new PrefixedValue(prefixedString);
         URL url = null;
@@ -541,5 +541,10 @@ public class EditorUtils {
     public static String getSimpleFileName(String url) {
         File file = new File(url);
         return file.getName();
+    }
+    
+    public static String toString(Object obj) {
+        assert obj instanceof String;
+        return (String) obj; 
     }
 }

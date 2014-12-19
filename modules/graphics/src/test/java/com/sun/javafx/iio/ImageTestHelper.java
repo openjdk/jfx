@@ -32,7 +32,9 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FilterInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Iterator;
 import java.util.Random;
 import javax.imageio.IIOImage;
@@ -40,11 +42,12 @@ import javax.imageio.ImageIO;
 import javax.imageio.ImageWriteParam;
 import javax.imageio.ImageWriter;
 import javax.imageio.stream.ImageOutputStream;
-import static org.junit.Assert.fail;
 
 public class ImageTestHelper {
 
-    static void writeImage(BufferedImage bImg, String fileName, String format, String compression) {
+    public static void writeImage(BufferedImage bImg, String fileName, String format, String compression)
+            throws IOException
+    {
         if (fileName != null) {
             File file = new File(fileName);
             file.delete();
@@ -52,7 +55,9 @@ public class ImageTestHelper {
         }
     }
 
-    static void writeImage(BufferedImage bImg, Object out, String format, String compression) {
+    public static void writeImage(BufferedImage bImg, Object out, String format, String compression)
+            throws IOException
+    {
         try (ImageOutputStream ios = ImageIO.createImageOutputStream(out)) {
             Iterator<ImageWriter> iter = ImageIO.getImageWritersByFormatName(format);
             ImageWriter writer = iter.next();
@@ -68,23 +73,18 @@ public class ImageTestHelper {
                 writer.dispose();
                 ios.flush();
             }
-        } catch (IOException e) {
-            fail("unexpected IOException: " + e);
         }
     }
 
-    static ByteArrayInputStream writeImageToStream(BufferedImage bImg,
-            String format, String compression, File file)
+    public static ByteArrayInputStream writeImageToStream(BufferedImage bImg,
+            String format, String compression) throws IOException
     {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         writeImage(bImg, out, format, compression);
-        if (file != null) {
-            writeImage(bImg, file, format, compression);
-        }
         return new ByteArrayInputStream(out.toByteArray());
     }
 
-    static void drawImageGradient(BufferedImage bImg) {
+    public static void drawImageGradient(BufferedImage bImg) {
         int w = bImg.getWidth();
         int h = bImg.getHeight();
         Graphics2D graphics = bImg.createGraphics();
@@ -93,7 +93,7 @@ public class ImageTestHelper {
         graphics.fillRect(0, 0, w, h);
     }
 
-    static void drawImageRandom(BufferedImage bImg) {
+    public static void drawImageRandom(BufferedImage bImg) {
         int w = bImg.getWidth();
         int h = bImg.getHeight();
         Random r = new Random(1);
@@ -104,7 +104,7 @@ public class ImageTestHelper {
         }
     }
 
-    static void drawImageHue(BufferedImage bImg) {
+    public static void drawImageHue(BufferedImage bImg) {
         int w = bImg.getWidth();
         int h = bImg.getHeight();
         for (int y = 0; y < h; y++) {
@@ -123,7 +123,7 @@ public class ImageTestHelper {
         }
     }
 
-    static void drawImageAll(BufferedImage bImg) {
+    public static void drawImageAll(BufferedImage bImg) {
         int w = bImg.getWidth();
         int h = bImg.getHeight();
         //if (h*w < (1<<24)) return;
@@ -132,5 +132,40 @@ public class ImageTestHelper {
                 bImg.setRGB(x, y, y * h + x);
             }
         }
+    }
+
+    public static InputStream createTestImageStream(String format)
+            throws IOException
+    {
+        BufferedImage bImg = new BufferedImage(509, 157, BufferedImage.TYPE_INT_RGB);
+        ImageTestHelper.drawImageRandom(bImg);
+        return ImageTestHelper.writeImageToStream(bImg, format, null);
+    }
+
+    public static InputStream createStutteringInputStream(InputStream in) {
+        return new FilterInputStream(in) {
+
+            private final Random rnd = new Random(0);
+            private int numReadStutters = 10;
+            private int numSkipStutters = 10;
+
+            @Override
+            public int read(byte[] b, int off, int len) throws IOException {
+                if (numReadStutters > 0 && rnd.nextBoolean()) {
+                    numReadStutters--;
+                    return 0;
+                }
+                return in.read(b, off, 1);
+            }
+
+            @Override
+            public long skip(long n) throws IOException {
+                if (numSkipStutters > 0 && rnd.nextBoolean()) {
+                    numSkipStutters--;
+                    return 0;
+                }
+                return in.skip(1);
+            }
+        };
     }
 }

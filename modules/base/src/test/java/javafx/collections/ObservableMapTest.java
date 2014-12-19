@@ -37,6 +37,8 @@ import java.util.Map;
 import static javafx.collections.MockMapObserver.Call.call;
 import static javafx.collections.MockMapObserver.Tuple.tup;
 import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -391,7 +393,39 @@ public class ObservableMapTest {
         assertTrue(observableMap.entrySet().toArray(new Map.Entry[0]).length == 3);
         assertTrue(observableMap.entrySet().toArray().length == 3);
     }
-    
+
+    @Test
+    public void testObserverCanRemoveObservers() {
+        final MapChangeListener<String, String> listObserver = change -> {
+            change.getMap().removeListener(observer);
+        };
+        observableMap.addListener(listObserver);
+        observableMap.put("x", "x");
+        observer.clear();
+        observableMap.put("y", "y");
+        observer.check0();
+        observableMap.removeListener(listObserver);
+
+        final StringMapChangeListener listener = new StringMapChangeListener();
+        observableMap.addListener(listener);
+        observableMap.put("z", "z");
+        assertEquals(listener.counter, 1);
+        observableMap.put("zz", "zz");
+        assertEquals(listener.counter, 1);
+    }
+
+
+    private static class StringMapChangeListener implements MapChangeListener<String, String> {
+
+        private int counter;
+
+        @Override
+        public void onChanged(Change<? extends String, ? extends String> change) {
+            change.getMap().removeListener(this);
+            ++counter;
+        }
+    }
+
     @Test
     public void testEqualsAndHashCode() {
         final Map<String, String> other = new HashMap<>(observableMap);

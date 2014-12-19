@@ -110,6 +110,8 @@ typedef struct _tagJavaIDs {
         jmethodID createPixels;
         jmethodID getScaleFactor;
         jmethodID reportException;
+        jmethodID enterNestedEventLoop;
+        jmethodID leaveNestedEventLoop;
     } Application;
     struct {
         jmethodID notifyApplicationDidTerminate;

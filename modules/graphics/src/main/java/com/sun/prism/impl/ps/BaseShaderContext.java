@@ -71,6 +71,16 @@ import com.sun.prism.ps.ShaderFactory;
  * the entire Screen.
  */
 public abstract class BaseShaderContext extends BaseContext {
+    private static final int CHECK_SHADER    = (0x01     );
+    private static final int CHECK_TRANSFORM = (0x01 << 1);
+    private static final int CHECK_CLIP      = (0x01 << 2);
+    private static final int CHECK_COMPOSITE = (0x01 << 3);
+    private static final int CHECK_PAINT_OP_MASK =
+        (CHECK_SHADER | CHECK_TRANSFORM | CHECK_CLIP | CHECK_COMPOSITE);
+    private static final int CHECK_TEXTURE_OP_MASK =
+        (CHECK_SHADER | CHECK_TRANSFORM | CHECK_CLIP | CHECK_COMPOSITE);
+    private static final int CHECK_CLEAR_OP_MASK =
+        (CHECK_CLIP);
 
     public enum MaskType {
         SOLID          ("Solid"),
@@ -86,8 +96,7 @@ public abstract class BaseShaderContext extends BaseContext {
         DRAW_ELLIPSE   ("DrawEllipse", FILL_ELLIPSE),
         FILL_ROUNDRECT ("FillRoundRect"),
         DRAW_ROUNDRECT ("DrawRoundRect", FILL_ROUNDRECT),
-        DRAW_SEMIROUNDRECT("DrawSemiRoundRect"),
-        FILL_CUBICCURVE("FillCubicCurve");
+        DRAW_SEMIROUNDRECT("DrawSemiRoundRect");
 
         private String name;
         private MaskType filltype;
@@ -114,19 +123,36 @@ public abstract class BaseShaderContext extends BaseContext {
         }
     }
 
-    // mask type     4 bits (12 types)
+    // mask type     4 bits (14 types)
     // paint type    2 bits
     // paint opts    2 bits
     private static final int NUM_STOCK_SHADER_SLOTS =
         MaskType.values().length << 4;
     // TODO: need to dispose these when the context is disposed... (RT-27379)
     private final Shader[] stockShaders = new Shader[NUM_STOCK_SHADER_SLOTS];
-    private Shader textureRGBShader;
-    private Shader textureMaskRGBShader;
-    private Shader textureYV12Shader;
-    private Shader textureFirstLCDShader;
-    private Shader textureSecondLCDShader;
-    private Shader superShader;
+    // stockShaders with alpha test
+    private final Shader[] stockATShaders = new Shader[NUM_STOCK_SHADER_SLOTS];
+
+    public enum SpecialShaderType {
+        TEXTURE_RGB          ("Solid_TextureRGB"),
+        TEXTURE_MASK_RGB     ("Mask_TextureRGB"),
+        TEXTURE_YV12         ("Solid_TextureYV12"),
+        TEXTURE_First_LCD    ("Solid_TextureFirstPassLCD"),
+        TEXTURE_SECOND_LCD   ("Solid_TextureSecondPassLCD"),
+        SUPER                ("Mask_TextureSuper");
+         
+        private String name;
+        private SpecialShaderType(String name) {
+            this.name = name;
+        }
+        public String getName() {
+            return name;
+        }
+    }
+    private final Shader[] specialShaders = new Shader[SpecialShaderType.values().length];
+    // specialShaders with alpha test
+    private final Shader[] specialATShaders = new Shader[SpecialShaderType.values().length];
+    
     private Shader externalShader;
 
     private RTTexture lcdBuffer;
@@ -147,7 +173,7 @@ public abstract class BaseShaderContext extends BaseContext {
             externalShader = null;
         }
         // the rest of the shaders will be re-validated as they are used
-    }
+   }
 
     public static class State {
         private Shader lastShader;
@@ -203,9 +229,10 @@ public abstract class BaseShaderContext extends BaseContext {
         return (maskType.ordinal() << 4) | (paintType << 2) | (paintOption << 0);
     }
 
-    private Shader getPaintShader(MaskType maskType, Paint paint) {
+    private Shader getPaintShader(boolean alphaTest, MaskType maskType, Paint paint) {
         int index = getStockShaderIndex(maskType, paint);
-        Shader shader = stockShaders[index];
+        Shader shaders[] = alphaTest ? stockATShaders : stockShaders;
+        Shader shader = shaders[index];
         if (shader != null && !shader.isValid()) {
             shader.dispose();
             shader = null;
@@ -224,7 +251,10 @@ public abstract class BaseShaderContext extends BaseContext {
                     shaderName += "_REPEAT";
                 }
             }
-            shader = stockShaders[index] = factory.createStockShader(shaderName);
+            if (alphaTest) {
+                shaderName += "_AlphaTest";
+            }
+            shader = shaders[index] = factory.createStockShader(shaderName);
         }
         return shader;
     }
@@ -265,74 +295,29 @@ public abstract class BaseShaderContext extends BaseContext {
         }
     }
 
-    private Shader getTextureRGBShader() {
-        if (textureRGBShader != null && !textureRGBShader.isValid()) {
-            textureRGBShader.dispose();
-            textureRGBShader = null;
+    private Shader getSpecialShader(BaseGraphics g, SpecialShaderType sst) {
+        // We do alpha test if depth test is enabled
+        boolean alphaTest = g.isAlphaTestShader();
+        Shader shaders[] = alphaTest ? specialATShaders : specialShaders;
+        Shader shader = shaders[sst.ordinal()];
+        if (shader != null && !shader.isValid()) {
+            shader.dispose();
+            shader = null;
         }
-        if (textureRGBShader == null) {
-            textureRGBShader = factory.createStockShader("Solid_TextureRGB");
+        if (shader == null) {
+            String shaderName = sst.getName();
+            if (alphaTest) {
+                shaderName += "_AlphaTest";
+            }
+            shaders[sst.ordinal()] = shader = factory.createStockShader(shaderName);
         }
-        return textureRGBShader;
+        return shader;
     }
 
-    private Shader getTextureMaskRGBShader() {
-        if (textureMaskRGBShader != null && !textureMaskRGBShader.isValid()) {
-            textureMaskRGBShader.dispose();
-            textureMaskRGBShader = null;
-        }
-        if (textureMaskRGBShader == null) {
-            textureMaskRGBShader = factory.createStockShader("Mask_TextureRGB");
-        }
-        return textureMaskRGBShader;
-    }
-
-    private Shader getTextureYV12Shader() {
-        if (textureYV12Shader != null && !textureYV12Shader.isValid()) {
-            textureYV12Shader.dispose();
-            textureYV12Shader = null;
-        }
-        if (textureYV12Shader == null) {
-            textureYV12Shader = factory.createStockShader("Solid_TextureYV12");
-        }
-        return textureYV12Shader;
-    }
-
-    private Shader getTextureFirstPassLCDShader() {
-        if (textureFirstLCDShader != null && !textureFirstLCDShader.isValid()) {
-            textureFirstLCDShader.dispose();
-            textureFirstLCDShader = null;
-        }
-        if (textureFirstLCDShader == null) {
-            textureFirstLCDShader = factory.createStockShader("Solid_TextureFirstPassLCD");
-        }
-        return textureFirstLCDShader;
-    }
-
-    private Shader getTextureSecondPassLCDShader() {
-        if (textureSecondLCDShader != null && !textureSecondLCDShader.isValid()) {
-            textureSecondLCDShader.dispose();
-            textureSecondLCDShader = null;
-        }
-        if (textureSecondLCDShader == null) {
-            textureSecondLCDShader = factory.createStockShader("Solid_TextureSecondPassLCD");
-        }
-        return textureSecondLCDShader;
-    }
-
-    private Shader getSuperShader() {
-        if (superShader != null && !superShader.isValid()) {
-            superShader.dispose();
-            superShader = null;
-        }
-        if (superShader == null) {
-            superShader = factory.createStockShader("Mask_TextureSuper");
-        }
-        return superShader;
-    }
-
+    @Override
     public boolean isSuperShaderEnabled() {
-        return state.lastShader == superShader;
+        return state.lastShader == specialATShaders[SpecialShaderType.SUPER.ordinal()]
+                || state.lastShader == specialShaders[SpecialShaderType.SUPER.ordinal()];
     }
 
     private void updatePerVertexColor(Paint paint, float extraAlpha) {
@@ -341,6 +326,11 @@ public abstract class BaseShaderContext extends BaseContext {
         } else {
             getVertexBuffer().setPerVertexColor(extraAlpha);
         }
+    }
+
+    @Override
+    public void validateClearOp(BaseGraphics g) {
+        checkState((BaseShaderGraphics) g, CHECK_CLEAR_OP_MASK, null, null);
     }
 
     @Override
@@ -430,8 +420,8 @@ public abstract class BaseShaderContext extends BaseContext {
         if (externalShader == null) {
             Paint paint = g.getPaint();
             Texture paintTex = null;
-            Texture tex0 = null;
-            Texture tex1 = null;
+            Texture tex0;
+            Texture tex1;
             if (paint.getType().isGradient()) {
                 // we need to flush here in case the paint shader is staying
                 // the same but the paint parameters are changing; we do this
@@ -456,7 +446,7 @@ public abstract class BaseShaderContext extends BaseContext {
                 ResourceFactory rf = g.getResourceFactory();
                 paintTex = rf.getCachedTexture(texPaint.getImage(), Texture.WrapMode.REPEAT);
             }
-            Shader shader = null;
+            Shader shader;
             if (factory.isSuperShaderAllowed() &&
                 paintTex == null &&
                 maskTex == factory.getGlyphTexture())
@@ -464,7 +454,7 @@ public abstract class BaseShaderContext extends BaseContext {
                 // Enabling the super shader to be used to render text.
                 // The texture pointed by tex0 is the region cache texture
                 // and it does not affect text rendering
-                shader = getSuperShader();
+                shader = getSpecialShader(g, SpecialShaderType.SUPER);
                 tex0 = factory.getRegionTexture();
                 tex1 = maskTex;
             } else {
@@ -484,16 +474,21 @@ public abstract class BaseShaderContext extends BaseContext {
                     tex0 = paintTex;
                     tex1 = null;
                 }
-                shader = getPaintShader(maskType, paint);
+                // We do alpha test if depth test is enabled
+                shader = getPaintShader(g.isAlphaTestShader(), maskType, paint);
             }
-            checkState(g, xform, shader, tex0, tex1);
+            checkState(g, CHECK_PAINT_OP_MASK, xform, shader);
+            setTexture(0, tex0);
+            setTexture(1, tex1);
             updatePaintShader(g, shader, maskType, paint, bx, by, bw, bh);
             updatePerVertexColor(paint, g.getExtraAlpha());
             if (paintTex != null) paintTex.unlock();
             return shader;
         } else {
             // note that paint is assumed to be a simple Color in this case
-            checkState(g, xform, externalShader, maskTex, null);
+            checkState(g, CHECK_PAINT_OP_MASK, xform, externalShader);
+            setTexture(0, maskTex);
+            setTexture(1, null);  // Needed?
             updatePerVertexColor(null, g.getExtraAlpha());
             return externalShader;
         }
@@ -511,10 +506,12 @@ public abstract class BaseShaderContext extends BaseContext {
                                 Texture tex0, Texture tex1, boolean firstPass,
                                 Paint fillColor)
     {
-        Shader shader = firstPass ? getTextureFirstPassLCDShader() :
-                                    getTextureSecondPassLCDShader();
+        Shader shader = firstPass ? getSpecialShader(g, SpecialShaderType.TEXTURE_First_LCD) :
+                                    getSpecialShader(g, SpecialShaderType.TEXTURE_SECOND_LCD);
 
-        checkState(g, xform, shader, tex0, tex1);
+        checkState(g, CHECK_TEXTURE_OP_MASK, xform, shader);
+        setTexture(0, tex0);
+        setTexture(1, tex1);
         updatePerVertexColor(fillColor, g.getExtraAlpha());
         return shader;
     }
@@ -522,7 +519,7 @@ public abstract class BaseShaderContext extends BaseContext {
     Shader validateTextureOp(BaseShaderGraphics g, BaseTransform xform,
                              Texture[] textures, PixelFormat format)
     {
-        Shader shader = null;
+        Shader shader;
 
         if (format == PixelFormat.MULTI_YCbCr_420) {
             // must have at least three textures, any more than four are ignored
@@ -531,7 +528,7 @@ public abstract class BaseShaderContext extends BaseContext {
             }
 
             if (externalShader == null) {
-                shader = getTextureYV12Shader();
+                shader = getSpecialShader(g, SpecialShaderType.TEXTURE_YV12);
             } else {
                 shader = externalShader;
             }
@@ -540,7 +537,12 @@ public abstract class BaseShaderContext extends BaseContext {
         }
 
         if (null != shader) {
-            checkState(g, xform, shader, textures);
+            checkState(g, CHECK_TEXTURE_OP_MASK, xform, shader);
+            // clamp to 0..4 textures for now, expand on this later if we need to
+            int texCount = Math.max(0, Math.min(textures.length, 4));
+            for (int index = 0; index < texCount; index++) {
+                setTexture(index, textures[index]);
+            }
             updatePerVertexColor(null, g.getExtraAlpha());
         }
         return shader;
@@ -565,10 +567,10 @@ public abstract class BaseShaderContext extends BaseContext {
                     // The shader was designed to render many Regions (from the Region
                     // texture cache) and text (from the glyph cache texture) without
                     // changing the state in the context.
-                    shader = getSuperShader();
+                    shader = getSpecialShader(g, SpecialShaderType.SUPER);
                     tex1 = factory.getGlyphTexture();
                 } else {
-                    shader = getTextureRGBShader();
+                    shader = getSpecialShader(g, SpecialShaderType.TEXTURE_RGB);
                 }
                 break;
             case MULTI_YCbCr_420: // Must use multitexture method
@@ -579,7 +581,9 @@ public abstract class BaseShaderContext extends BaseContext {
         } else {
             shader = externalShader;
         }
-        checkState(g, xform, shader, tex0, tex1);
+        checkState(g, CHECK_TEXTURE_OP_MASK, xform, shader);
+        setTexture(0, tex0);
+        setTexture(1, tex1);
         updatePerVertexColor(null, g.getExtraAlpha());
         return shader;
     }
@@ -595,7 +599,7 @@ public abstract class BaseShaderContext extends BaseContext {
             case BYTE_RGB:
             case BYTE_GRAY:
             case BYTE_APPLE_422: // uses GL_RGBA as internal format
-                shader = getTextureMaskRGBShader();
+                shader = getSpecialShader(g, SpecialShaderType.TEXTURE_MASK_RGB);
                 break;
             case MULTI_YCbCr_420: // Must use multitexture method
             case BYTE_ALPHA:
@@ -605,7 +609,9 @@ public abstract class BaseShaderContext extends BaseContext {
         } else {
             shader = externalShader;
         }
-        checkState(g, xform, shader, tex0, tex1);
+        checkState(g, CHECK_TEXTURE_OP_MASK, xform, shader);
+        setTexture(0, tex0);
+        setTexture(1, tex1);
         updatePerVertexColor(null, g.getExtraAlpha());
         return shader;
     }
@@ -632,89 +638,50 @@ public abstract class BaseShaderContext extends BaseContext {
     }
 
     private void checkState(BaseShaderGraphics g,
+                            int checkFlags,
                             BaseTransform xform,
-                            Shader shader,
-                            Texture tex0, Texture tex1)
+                            Shader shader)
     {
         setRenderTarget(g);
 
-        setTexture(0, tex0);
-        setTexture(1, tex1);
-
-        if (shader != state.lastShader) {
-            flushVertexBuffer();
-            shader.enable();
-            state.lastShader = shader;
-            // the transform matrix is part of the state of each shader
-            // (in ES2 at least), so we need to make sure the transform
-            // is updated for the current shader by setting isXformValid=false
-            state.isXformValid = false;
+        if ((checkFlags & CHECK_SHADER) != 0) {
+            if (shader != state.lastShader) {
+                flushVertexBuffer();
+                shader.enable();
+                state.lastShader = shader;
+                // the transform matrix is part of the state of each shader
+                // (in ES2 at least), so we need to make sure the transform
+                // is updated for the current shader by setting isXformValid=false
+                state.isXformValid = false;
+                checkFlags |= CHECK_TRANSFORM;
+            }
         }
 
-        if (!state.isXformValid || !xform.equals(state.lastTransform)) {
-            flushVertexBuffer();
-            updateShaderTransform(shader, xform);
-            state.lastTransform.setTransform(xform);
-            state.isXformValid = true;
+        if ((checkFlags & CHECK_TRANSFORM) != 0) {
+            if (!state.isXformValid || !xform.equals(state.lastTransform)) {
+                flushVertexBuffer();
+                updateShaderTransform(shader, xform);
+                state.lastTransform.setTransform(xform);
+                state.isXformValid = true;
+            }
         }
 
-        Rectangle clip = g.getClipRectNoClone();
-        if (clip != state.lastClip) {
-            flushVertexBuffer();
-            updateClipRect(clip);
-            state.lastClip = clip;
+        if ((checkFlags & CHECK_CLIP) != 0) {
+            Rectangle clip = g.getClipRectNoClone();
+            if (clip != state.lastClip) {
+                flushVertexBuffer();
+                updateClipRect(clip);
+                state.lastClip = clip;
+            }
         }
 
-        CompositeMode mode = g.getCompositeMode();
-        if (mode != state.lastComp) {
-            flushVertexBuffer();
-            updateCompositeMode(mode);
-            state.lastComp = mode;
-        }
-    }
-
-    private void checkState(BaseShaderGraphics g,
-                            BaseTransform xform,
-                            Shader shader,
-                            Texture[] textures)
-    {
-        setRenderTarget(g);
-
-        // clamp to 0..4 textures for now, expand on this later if we need to
-        int texCount = Math.max(0, Math.min(textures.length, 4));
-        for (int index = 0; index < texCount; index++) {
-            setTexture(index, textures[index]);
-        }
-
-        if (shader != state.lastShader) {
-            flushVertexBuffer();
-            shader.enable();
-            state.lastShader = shader;
-            // the transform matrix is part of the state of each shader
-            // (in ES2 at least), so we need to make sure the transform
-            // is updated for the current shader by setting isXformValid=false
-            state.isXformValid = false;
-        }
-
-        if (!state.isXformValid || !xform.equals(state.lastTransform)) {
-            flushVertexBuffer();
-            updateShaderTransform(shader, xform);
-            state.lastTransform.setTransform(xform);
-            state.isXformValid = true;
-        }
-
-        Rectangle clip = g.getClipRectNoClone();
-        if (clip != state.lastClip) {
-            flushVertexBuffer();
-            updateClipRect(clip);
-            state.lastClip = clip;
-        }
-
-        CompositeMode mode = g.getCompositeMode();
-        if (mode != state.lastComp) {
-            flushVertexBuffer();
-            updateCompositeMode(mode);
-            state.lastComp = mode;
+        if ((checkFlags & CHECK_COMPOSITE) != 0) {
+            CompositeMode mode = g.getCompositeMode();
+            if (mode != state.lastComp) {
+                flushVertexBuffer();
+                updateCompositeMode(mode);
+                state.lastComp = mode;
+            }
         }
     }
 
@@ -744,6 +711,7 @@ public abstract class BaseShaderContext extends BaseContext {
         }
     }
 
+    @Override
     public RTTexture getLCDBuffer() {
         return lcdBuffer;
     }

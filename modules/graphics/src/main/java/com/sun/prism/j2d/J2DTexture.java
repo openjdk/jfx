@@ -101,7 +101,7 @@ class J2DTexture extends BaseTexture<J2DTexResource> {
     }
 
     J2DTexture(J2DTexture sharedTex, WrapMode altMode) {
-        super(sharedTex, altMode);
+        super(sharedTex, altMode, false);
         this.setter = sharedTex.setter;
     }
 
@@ -197,8 +197,7 @@ class J2DTexture extends BaseTexture<J2DTexResource> {
             }
         }
 
-        ByteBuffer bbuf = frame.getBuffer();
-        bbuf.position(frame.offsetForPlane(0));
+        ByteBuffer bbuf = frame.getBufferForPlane(0);
         BufferedImage bimg = getBufferedImage();
         updateFromBuffer(bimg, bbuf.asIntBuffer(), PixelFormat.INT_ARGB_PRE,
                 0, 0, 0, 0, frame.getWidth(), frame.getHeight(),

@@ -146,7 +146,7 @@ private:
     extern jmethodID jViewNotifyDragLeave; //com.sun.glass.ui.View#notifyDragLeave ()V
     extern jmethodID jViewNotifyScroll; //com.sun.glass.ui.View#notifyScroll (IIIIDDIIIIIDD)V
     extern jmethodID jViewNotifyInputMethod; //com.sun.glass.ui.View#notifyInputMethod (Ljava/lang/String;[I[I[BIII)V
-    extern jmethodID jViewNotifyInputMethodDraw; //com.sun.glass.ui.gtk.GtkView#notifyInputMethodDraw (Ljava/lang/String;III)V
+    extern jmethodID jViewNotifyInputMethodDraw; //com.sun.glass.ui.gtk.GtkView#notifyInputMethodDraw (Ljava/lang/String;III[B)V
     extern jmethodID jViewNotifyInputMethodCaret; //com.sun.glass.ui.gtk.GtkView#notifyInputMethodCaret (III)V
     extern jmethodID jViewNotifyPreeditMode; //com.sun.glass.ui.gtk.GtkView#notifyPreeditMode (Z)V
     extern jmethodID jViewNotifyMenu; //com.sun.glass.ui.View#notifyMenu (IIIIZ)V
@@ -240,6 +240,8 @@ private:
     guint8* convert_BGRA_to_RGBA(const int* pixels, int stride, int height);
 
     gboolean check_and_clear_exception(JNIEnv *env);
+
+    jboolean is_display_valid();
 
     gsize get_files_count(gchar **uris);
 

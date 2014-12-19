@@ -157,7 +157,7 @@ public class PrismMediaFrameHandler implements ResourceFactoryListener {
         textures.clear();
     }
     
-    private RenderJob releaseRenderJob = new RenderJob(() -> {
+    private final RenderJob releaseRenderJob = new RenderJob(() -> {
         releaseData();
     });
 
@@ -209,58 +209,62 @@ public class PrismMediaFrameHandler implements ResourceFactoryListener {
             }
         }
 
-        public ByteBuffer getBuffer() {
-            return master.getBuffer();
+        @Override
+        public ByteBuffer getBufferForPlane(int plane) {
+            return master.getBufferForPlane(plane);
         }
 
+        @Override
         public void holdFrame() {
             master.holdFrame();
         }
         
+        @Override
         public void releaseFrame() {
             master.releaseFrame();
         }
 
+        @Override
         public PixelFormat getPixelFormat() {
             return videoFormat;
         }
 
+        @Override
         public int getWidth() {
             return master.getWidth();
         }
 
+        @Override
         public int getHeight() {
             return master.getHeight();
         }
 
+        @Override
         public int getEncodedWidth() {
             return master.getEncodedWidth();
         }
 
+        @Override
         public int getEncodedHeight() {
             return master.getEncodedHeight();
         }
 
+        @Override
         public int planeCount() {
             return master.getPlaneCount();
         }
 
-        public int[] planeOffsets() {
-            return master.getPlaneOffsets();
-        }
-
-        public int offsetForPlane(int planeIndex) {
-            return master.getOffsetForPlane(planeIndex);
-        }
-
+        @Override
         public int[] planeStrides() {
             return master.getPlaneStrides();
         }
 
+        @Override
         public int strideForPlane(int planeIndex) {
             return master.getStrideForPlane(planeIndex);
         }
 
+        @Override
         public MediaFrame convertToFormat(PixelFormat fmt) {
             if (fmt == getPixelFormat()) {
                 return this;

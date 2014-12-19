@@ -54,8 +54,6 @@ public final class PrismSettings {
     public static final boolean useNewImageLoader;
     public static final List<String> tryOrder;
     public static final int prismStatFrequency;
-    public static final boolean doPiscesText;
-    public static final boolean doOpenPiscesText;
     public static final boolean doNativePisces;
     public static final String refType;
     public static final boolean forceRepaint;
@@ -89,6 +87,9 @@ public final class PrismSettings {
     public static final boolean superShader;
     public static final boolean skipMeshNormalComputation;
     public static final boolean forceUploadingPainter;
+    public static final boolean forceAlphaTestShader;
+    public static final boolean forceNonAntialiasedShape;
+    
 
     private PrismSettings() {
     }
@@ -225,12 +226,6 @@ public final class PrismSettings {
             doNativePisces = Boolean.parseBoolean(npprop);
         }
 
-        /* Setting for text.
-         */
-        String text = systemProperties.getProperty("prism.text", "");
-        doPiscesText = "pisces".equals(text);
-        doOpenPiscesText = "openpisces".equals(text);
-
         String primtex = systemProperties.getProperty("prism.primtextures");
         if (primtex == null) {
             primTextureSize = PlatformUtil.isEmbedded() ? -1 : 0;
@@ -252,8 +247,10 @@ public final class PrismSettings {
 
         allowHiDPIScaling = getBoolean(systemProperties, "prism.allowhidpi", true);
 
-        maxVram = getLong(systemProperties, "prism.maxvram", 256 * 1024 * 1024, null);
-        targetVram = getLong(systemProperties, "prism.targetvram", maxVram * 3 / 4, null);
+        maxVram = getLong(systemProperties, "prism.maxvram", 512 * 1024 * 1024,
+                          "Try -Dprism.maxvram=<long>[kKmMgG]");
+        targetVram = getLong(systemProperties, "prism.targetvram", maxVram / 8, maxVram,
+                             "Try -Dprism.targetvram=<long>[kKmMgG]|<double(0,100)>%");
         poolStats = getBoolean(systemProperties, "prism.poolstats", false);
         poolDebug = getBoolean(systemProperties, "prism.pooldebug", false);
 
@@ -263,11 +260,6 @@ public final class PrismSettings {
                 System.out.print(s+" ");
             }
             System.out.println("");
-            if (PrismSettings.doPiscesText || PrismSettings.doOpenPiscesText) {
-                System.out.println("Using " + text + " for text rasterization");
-            } else {
-                System.out.println("Using platform text rasterizer");
-            }
             String piscestype = (doNativePisces ? "native" : "java");
             System.out.println("Using " + piscestype + "-based Pisces rasterizer");
             printBooleanOption(dirtyOptsEnabled, "Using dirty region optimizations");
@@ -343,6 +335,13 @@ public final class PrismSettings {
 
         // Force uploading painter (e.g., to avoid Linux live-resize jittering)
         forceUploadingPainter = getBoolean(systemProperties, "prism.forceUploadingPainter", false);
+
+        // Force the use of fragment shader that does alpha testing (i.e. discard if alpha == 0.0)
+        forceAlphaTestShader = getBoolean(systemProperties, "prism.forceAlphaTestShader", false);
+
+        // Force non anti-aliasing (not smooth) shape rendering
+        forceNonAntialiasedShape = getBoolean(systemProperties, "prism.forceNonAntialiasedShape", false);
+
     }
 
     private static int parseInt(String s, int dflt, int trueDflt,
@@ -366,9 +365,26 @@ public final class PrismSettings {
         return dflt;
     }
 
-    private static long parseLong(String s, long dflt, String errMsg) {
+    private static long parseLong(String s, long dflt, long rel, String errMsg) {
         if (s != null && s.length() > 0) {
             long mult = 1;
+            if (s.endsWith("%")) {
+                if (rel > 0) {
+                    try {
+                        s = s.substring(0, s.length() - 1);
+                        double percent = Double.parseDouble(s);
+                        if (percent >= 0 && percent <= 100) {
+                            return Math.round(rel * percent / 100.0);
+                        }
+                    } catch (Exception e) {
+                    }
+                }
+
+                if (errMsg != null) {
+                    System.err.println(errMsg);
+                }
+                return dflt;
+            }
             if (s.endsWith("k") || s.endsWith("K")) {
                 mult = 1024L;
             } else if (s.endsWith("m") || s.endsWith("M")) {
@@ -444,7 +460,17 @@ public final class PrismSettings {
                                 String errMsg)
     {
         return parseLong(properties.getProperty(key),
-                         dflt,
+                         dflt, 0,
+                         errMsg);
+    }
+
+    private static long getLong(Properties properties,
+                                String key,
+                                long dflt, long rel,
+                                String errMsg)
+    {
+        return parseLong(properties.getProperty(key),
+                         dflt, rel,
                          errMsg);
     }
 }

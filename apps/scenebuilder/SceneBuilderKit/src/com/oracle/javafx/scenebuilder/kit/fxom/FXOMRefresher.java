@@ -41,6 +41,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.List;
 import java.util.Set;
+import javafx.scene.Parent;
 import javafx.scene.control.SplitPane;
 
 /**
@@ -90,11 +91,18 @@ class FXOMRefresher {
      */
     
     private void refreshDocument(FXOMDocument currentDocument, FXOMDocument newDocument) {
-//        if (currentDocument.getSceneGraphRoot() instanceof Parent) {
-//            reloadStylesheets((Parent)currentDocument.getRootObject());
-//        }
+        
+        // Transfers scene graph object from newDocument to currentDocument
         currentDocument.setSceneGraphRoot(newDocument.getSceneGraphRoot());
         
+        // Simulates Scene's behavior : automatically adds "root" styleclass if
+        // if the scene graph root is a Parent instance
+        if (currentDocument.getSceneGraphRoot() instanceof Parent) {
+            final Parent rootParent = (Parent) currentDocument.getSceneGraphRoot();
+            rootParent.getStyleClass().add(0, "root");
+        }
+        
+        // Recurses
         if (currentDocument.getFxomRoot() != null) {
             refreshFxomObject(currentDocument.getFxomRoot(), newDocument.getFxomRoot());
         }

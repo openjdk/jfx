@@ -28,10 +28,10 @@ package com.sun.javafx.scene.control.skin;
 import javafx.beans.value.ObservableValue;
 import javafx.css.Styleable;
 import javafx.geometry.*;
-//import javafx.scene.accessibility.Attribute;
 import javafx.scene.control.*;
 import com.sun.javafx.scene.control.behavior.ComboBoxBaseBehavior;
 import javafx.beans.InvalidationListener;
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Region;
@@ -83,9 +83,7 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
     }
     
     private Point2D getPrefPopupPosition() {
-        double dx = 0;
-        dx += (getSkinnable().getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) ? -3 : 0;
-        return com.sun.javafx.Utils.pointRelativeTo(getSkinnable(), getPopupContent(), HPos.CENTER, VPos.BOTTOM, dx, 0, false);
+        return com.sun.javafx.Utils.pointRelativeTo(getSkinnable(), getPopupContent(), HPos.CENTER, VPos.BOTTOM, 0, 0, false);
     }
     
     private void positionAndShowPopup() {
@@ -95,14 +93,36 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
 
         final Node popupContent = getPopupContent();
         popupContent.applyCss();
-        popupContent.autosize();
+
+        if (popupContent instanceof Region) {
+            // snap to pixel
+            final Region r = (Region) popupContent;
+
+            final double prefWidth = r.prefWidth(-1);
+            final double minWidth = r.minWidth(-1);
+            final double maxWidth = r.maxWidth(-1);
+            final double w = Math.min(Math.max(prefWidth, minWidth), Math.max(minWidth, maxWidth));
+
+            final double prefHeight = r.prefHeight(-1);
+            final double minHeight = r.minHeight(-1);
+            final double maxHeight = r.maxHeight(-1);
+            final double h = Math.min(Math.max(prefHeight, minHeight), Math.max(minHeight, maxHeight));
+
+            popupContent.resize(snapSize(w), snapSize(h));
+        } else {
+            popupContent.autosize();
+        }
+
+
         Point2D p = getPrefPopupPosition();
 
         popupNeedsReconfiguring = true;
         reconfigurePopup();
         
         final ComboBoxBase<T> comboBoxBase = getSkinnable();
-        _popup.show(comboBoxBase.getScene().getWindow(), p.getX(), p.getY());
+        _popup.show(comboBoxBase.getScene().getWindow(),
+                snapPosition(p.getX()),
+                snapPosition(p.getY()));
 
         popupContent.requestFocus();
     }
@@ -140,7 +160,7 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
         popup.addEventHandler(WindowEvent.WINDOW_HIDDEN, t -> {
             // Make sure the accessibility focus returns to the combo box
             // after the window closes.
-//            getSkinnable().accSendNotification(Attribute.FOCUS_NODE);
+            getSkinnable().notifyAccessibleAttributeChanged(AccessibleAttribute.FOCUS_NODE);
         });
         
         // Fix for RT-21207
@@ -177,8 +197,8 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
         final Point2D p = getPrefPopupPosition();
 
         final Node popupContent = getPopupContent();
-        final double minWidth = popupContent.prefWidth(1);
-        final double minHeight = popupContent.prefHeight(1);
+        final double minWidth = popupContent.prefWidth(Region.USE_COMPUTED_SIZE);
+        final double minHeight = popupContent.prefHeight(Region.USE_COMPUTED_SIZE);
 
         if (p.getX() > -1) popup.setAnchorX(p.getX());
         if (p.getY() > -1) popup.setAnchorY(p.getY());

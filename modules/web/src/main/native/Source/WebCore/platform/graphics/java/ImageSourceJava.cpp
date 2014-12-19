@@ -62,20 +62,7 @@ ImageSource::~ImageSource()
 #ifndef NDEBUG
     ++ImageSourceCounter::deleted;
 #endif
-
-    JNIEnv* env = WebCore_GetJavaEnv();
-    // [env] could be NULL in case of deallocation static BitmapImage objects
-    if (!env)
-        return;
-
-    static jmethodID midDestroy = env->GetMethodID(
-        PG_GetGraphicsImageDecoderClass(env),
-        "destroy",
-        "()V");
-    ASSERT(midDestroy);
-
-    env->CallVoidMethod(m_decoder, midDestroy);
-    CheckAndClearException(env);
+    clear(true);
 }
 
 void ImageSource::setData(SharedBuffer *data, bool allDataReceived)
@@ -252,7 +239,25 @@ void ImageSource::clear(
     SharedBuffer* data,
     bool allDataReceived)
 {
-    notImplemented();
+        if (destroyAll) {
+                JNIEnv* env = WebCore_GetJavaEnv();
+                // [env] could be NULL in case of deallocation static BitmapImage objects
+                if (!env)
+                        return;
+
+                static jmethodID midDestroy = env->GetMethodID(
+                        PG_GetGraphicsImageDecoderClass(env),
+                        "destroy",
+                        "()V");
+                ASSERT(midDestroy);
+
+                env->CallVoidMethod(m_decoder, midDestroy);
+                CheckAndClearException(env);
+        }
+
+        if (data) {
+                setData(data, allDataReceived);
+        }
 }
 
 bool ImageSource::initialized() const

@@ -250,6 +250,7 @@ class LibraryFolderWatcher implements Runnable {
         }
 
         library.addItems(newItems);
+        library.updateFxmlFileReports(paths);
         library.updateExplorationDate(new Date());
     }
     

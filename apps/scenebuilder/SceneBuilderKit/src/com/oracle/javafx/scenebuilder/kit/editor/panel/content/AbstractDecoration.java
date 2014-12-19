@@ -32,6 +32,7 @@
 package com.oracle.javafx.scenebuilder.kit.editor.panel.content;
 
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
+import com.oracle.javafx.scenebuilder.kit.util.Deprecation;
 
 import javafx.beans.value.ChangeListener;
 import javafx.geometry.Bounds;
@@ -39,6 +40,7 @@ import javafx.geometry.Point2D;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.SubScene;
 import javafx.scene.transform.NonInvertibleTransformException;
 import javafx.scene.transform.Transform;
 
@@ -77,10 +79,6 @@ public abstract class AbstractDecoration<T> {
         this.sceneGraphObject = sceneGraphClass.cast(fxomObject.getSceneGraphObject());
         
         this.rootNode.sceneProperty().addListener((ChangeListener<Scene>) (ov, v1, v2) -> rootNodeSceneDidChange());
-        
-        // This is workaround for DTL-6628 
-        rootNode.getStyleClass().add("theme-presets"); //NOI18N
-        rootNode.getStyleClass().add("SBKIT-content-panel"); //NOI18N
     }
 
     public ContentPanelController getContentPanelController() {
@@ -136,13 +134,16 @@ public abstract class AbstractDecoration<T> {
     }
     
     public Transform getSceneGraphObjectToDecorationTransform() {
-        final Transform t1 = getSceneGraphToSceneTransform();
+        final Node proxy = getSceneGraphObjectProxy();
+        final SubScene contentSubScene = contentPanelController.getContentSubScene();
+        final Transform t0 = proxy.getLocalToSceneTransform();
+        final Transform t1 = contentSubScene.getLocalToSceneTransform();
         final Transform t2 = getRootNode().getLocalToSceneTransform();
         final Transform result;
         
         try {
             final Transform i2 = t2.createInverse();
-            result = i2.createConcatenation(t1);
+            result = i2.createConcatenation(t1).createConcatenation(t0);
         } catch(NonInvertibleTransformException x) {
             throw new RuntimeException(x);
         }
@@ -151,9 +152,7 @@ public abstract class AbstractDecoration<T> {
     }
     
     public abstract Bounds getSceneGraphObjectBounds();
-    public abstract Transform getSceneGraphToSceneTransform();
-    public abstract Point2D sceneGraphObjectToScene(double x, double y);
-    public abstract Point2D sceneToSceneGraphObject(double x, double y);
+    public abstract Node getSceneGraphObjectProxy();
     protected abstract void startListeningToSceneGraphObject();
     protected abstract void stopListeningToSceneGraphObject();
     protected abstract void layoutDecoration();
@@ -164,7 +163,8 @@ public abstract class AbstractDecoration<T> {
      */
     
     public Point2D sceneGraphObjectToDecoration(double x, double y) {
-        return getRootNode().sceneToLocal(sceneGraphObjectToScene(x, y));
+        final Node proxy = getSceneGraphObjectProxy();
+        return Deprecation.localToLocal(proxy, x, y, getRootNode());
     }
             
     protected void startListeningToLayoutBounds(Node node) {
@@ -190,11 +190,17 @@ public abstract class AbstractDecoration<T> {
     protected void startListeningToLocalToSceneTransform(Node node) {
         assert node != null;
         node.localToSceneTransformProperty().addListener(localToSceneTransformListener);
+        node.sceneProperty().addListener(sceneListener);
+        final SubScene contentSubScene = contentPanelController.getContentSubScene();
+        contentSubScene.localToSceneTransformProperty().addListener(localToSceneTransformListener);
     }
     
     protected void stopListeningToLocalToSceneTransform(Node node) {
         assert node != null;
         node.localToSceneTransformProperty().removeListener(localToSceneTransformListener);
+        node.sceneProperty().removeListener(sceneListener);
+        final SubScene contentSubScene = contentPanelController.getContentSubScene();
+        contentSubScene.localToSceneTransformProperty().removeListener(localToSceneTransformListener);
     }
     
     /*
@@ -225,5 +231,8 @@ public abstract class AbstractDecoration<T> {
         = (ov, v1, v2) -> layoutDecoration();
     
     private final ChangeListener<Transform> localToSceneTransformListener
-        = (ov, v1, v2) -> layoutDecoration();
+        = (ov, v1, v2) -> layoutDecoration(); 
+    
+    private final ChangeListener<Scene> sceneListener
+        = (ov, v1, v2) -> layoutDecoration(); 
 }

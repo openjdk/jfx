@@ -54,7 +54,7 @@ public class CompileLinearConvolve {
         // by the LinearConvolveRenderState quantization algorithm)
         jslcinfo.outTypes = (outTypes & JSLC.OUT_HW_SHADERS);
         int lastpeersize = -1;
-        for (int i = 1; i < LinearConvolveRenderState.MAX_KERNEL_SIZE; i += 4) {
+        for (int i = 1; i < LinearConvolveRenderState.MAX_COMPILED_KERNEL_SIZE; i += 4) {
             int peersize = LinearConvolveRenderState.getPeerSize(i);
             if (peersize != lastpeersize) {
                 String source = String.format(base, peersize/4, peersize/4);
@@ -70,7 +70,7 @@ public class CompileLinearConvolve {
         jslcinfo.peerName = name;
         jslcinfo.genericsName = "LinearConvolveRenderState";
         jslcinfo.interfaceName = null; // "LinearConvolvePeer";
-        int peersize = LinearConvolveRenderState.MAX_KERNEL_SIZE / 4;
+        int peersize = LinearConvolveRenderState.MAX_COMPILED_KERNEL_SIZE / 4;
         String genericbase = String.format(base, peersize, 0);
         JSLC.compile(jslcinfo, genericbase, basetime);
 

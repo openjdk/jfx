@@ -35,7 +35,9 @@ import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.DoubleField;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.EditorUtils;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
+
 import java.util.Set;
+
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
@@ -61,7 +63,6 @@ public class Rectangle2DPopupEditor extends PopupEditor {
     private Parent root;
     private Rectangle2D rectangle2D;
 
-    @SuppressWarnings("LeakingThisInConstructor")
     public Rectangle2DPopupEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses) {
         super(propMeta, selectedClasses);
     }
@@ -82,7 +83,7 @@ public class Rectangle2DPopupEditor extends PopupEditor {
                     return null;
                 }
             }
-            values[index] = new Double(val);
+            values[index] = Double.valueOf(val);
             index++;
         }
         rectangle2D = new Rectangle2D(values[0], values[1], values[2], values[3]);

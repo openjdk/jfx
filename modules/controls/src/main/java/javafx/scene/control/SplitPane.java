@@ -112,11 +112,11 @@ import javafx.css.StyleableProperty;
  * <pre><code>
  * SplitPane sp = new SplitPane();
  * final StackPane sp1 = new StackPane();
- * sp1.getChildren().add(new Button("Button One"));
+ * sp1.getItems().add(new Button("Button One"));
  * final StackPane sp2 = new StackPane();
- * sp2.getChildren().add(new Button("Button Two"));
+ * sp2.getItems().add(new Button("Button Two"));
  * final StackPane sp3 = new StackPane();
- * sp3.getChildren().add(new Button("Button Three"));
+ * sp3.getItems().add(new Button("Button Three"));
  * sp.getItems().addAll(sp1, sp2, sp3);
  * sp.setDividerPositions(0.3f, 0.6f, 0.9f);
  * </code></pre>
@@ -174,6 +174,17 @@ public class SplitPane extends Control {
      * Creates a new SplitPane with no content.
      */
     public SplitPane() {
+        this((Node[])null);
+    }
+
+    /**
+     * Creates a new SplitPane with the given items set as the content to split
+     * between one or more dividers.
+     *
+     * @param items The items to place inside the SplitPane.
+     * @since JavaFX 8u40
+     */
+    public SplitPane(Node... items) {
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
         // focusTraversable is styleable through css. Calling setFocusTraversable
         // makes it look to css like the user set the value and css will not 
@@ -181,7 +192,7 @@ public class SplitPane extends Control {
         // null StyleOrigin ensures that css will be able to override the value.
         ((StyleableProperty<Boolean>)(WritableValue<Boolean>)focusTraversableProperty()).applyStyle(null, Boolean.FALSE); 
 
-        items.addListener(new ListChangeListener<Node>() {
+        getItems().addListener(new ListChangeListener<Node>() {
             @Override public void onChanged(Change<? extends Node> c) {
                 while (c.next()) {
                     int from = c.getFrom();
@@ -207,7 +218,7 @@ public class SplitPane extends Control {
                     }
                 }
                 dividers.clear();
-                for (int i = 0; i < items.size() - 1; i++) {
+                for (int i = 0; i < getItems().size() - 1; i++) {
                     if (dividerCache.containsKey(i) && dividerCache.get(i) != Double.MAX_VALUE) {
                         Divider d = new Divider();
                         d.setPosition(dividerCache.get(i));
@@ -219,6 +230,10 @@ public class SplitPane extends Control {
                 }
             }
         });
+
+        if (items != null) {
+            getItems().addAll(items);
+        }
         
         // initialize pseudo-class state
         pseudoClassStateChanged(HORIZONTAL_PSEUDOCLASS_STATE, true);
@@ -235,9 +250,10 @@ public class SplitPane extends Control {
 
     /**
      * <p>This property controls how the SplitPane should be displayed to the
-     * user: if set to {@code true}, the SplitPane will be 'horizontal', resulting in
-     * the two nodes being placed next to each other, whilst being
-     * set to {@code false} will result in the nodes being stacked vertically.</p>
+     * user. {@link javafx.geometry.Orientation#HORIZONTAL} will result in
+     * two (or more) nodes being placed next to each other horizontally, whilst
+     * {@link javafx.geometry.Orientation#VERTICAL} will result in the nodes being
+     * stacked vertically.</p>
      *
      */
     public final void setOrientation(Orientation value) {

@@ -95,7 +95,7 @@ class J2DResourceFactory extends BaseResourceFactory
     }
 
     @Override
-    public RTTexture createRTTexture(int width, int height, Texture.WrapMode wrapMode, boolean antiAliasing) {
+    public RTTexture createRTTexture(int width, int height, Texture.WrapMode wrapMode, boolean msaa) {
         return createRTTexture(width, height, wrapMode);
     }
 
@@ -113,6 +113,11 @@ class J2DResourceFactory extends BaseResourceFactory
                                  int w, int h)
     {
         return J2DTexture.create(formatHint, wrapMode, w, h);
+    }
+
+    public Texture createTexture(PixelFormat formatHint,
+            Usage usageHint, WrapMode wrapMode, int w, int h, boolean useMipmap) {
+        return createTexture(formatHint, usageHint, wrapMode, w, h);
     }
 
     public Texture createTexture(MediaFrame vdb) {
@@ -140,7 +145,12 @@ class J2DResourceFactory extends BaseResourceFactory
     public boolean isCompatibleTexture(Texture tex) {
         return tex instanceof J2DTexture;
     }
-    
+
+    @Override
+    protected boolean canClampToZero() {
+        return false;
+    }
+
     public int getMaximumTextureSize() {
         return Integer.MAX_VALUE;
     }

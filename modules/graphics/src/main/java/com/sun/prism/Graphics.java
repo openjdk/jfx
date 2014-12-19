@@ -63,6 +63,9 @@ public interface Graphics {
     public boolean isDepthTest();
     public void setDepthBuffer(boolean depthBuffer);
     public boolean isDepthBuffer();
+    public boolean isAlphaTestShader();
+    public void setAntialiasedShape(boolean aa);
+    public boolean isAntialiasedShape();
     public RectBounds getFinalClipNoClone();
     public Rectangle getClipRect();
     public Rectangle getClipRectNoClone();

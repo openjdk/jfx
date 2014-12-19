@@ -62,7 +62,9 @@ public class ControlAcceleratorSupport {
     }
 
     public static void addAcceleratorsIntoScene(ObservableList<MenuItem> items, Node anchor) {
-        if (items == null || items.isEmpty()) {
+        // we allow an empty items list as we install listeners later on - if
+        // we return on empty, the listener is never installed (leading to RT-39249)
+        if (items == null/* || items.isEmpty()*/) {
             return;
         }
 
@@ -188,7 +190,10 @@ public class ControlAcceleratorSupport {
     // --- Remove
 
     public static void removeAcceleratorsFromScene(List<? extends MenuItem> items, Tab anchor) {
-        Scene scene = anchor.getTabPane().getScene();
+        TabPane tabPane = anchor.getTabPane();
+        if (tabPane == null) return;
+
+        Scene scene = tabPane.getScene();
         removeAcceleratorsFromScene(items, scene);
     }
 

@@ -96,15 +96,6 @@ public abstract class MenuButtonBehaviorBase<C extends MenuButton> extends Butto
     @Override protected void callAction(String name) {
         MenuButton button = getControl();
         Side popupSide = button.getPopupSide();
-        
-        if (button.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT) {
-            // Swap L/R direction for RTL
-            if (popupSide == Side.LEFT) {
-                popupSide = Side.RIGHT;
-            } else if (popupSide == Side.RIGHT) {
-                popupSide = Side.LEFT;
-            }
-        }
 
         if (CLOSE_ACTION.equals(name)) {
             button.hide();
@@ -115,14 +106,16 @@ public abstract class MenuButtonBehaviorBase<C extends MenuButton> extends Butto
                 button.show();
             }
         } else if (!button.isShowing() &&
-                   ("TraverseUp".equals(name)    && popupSide == Side.TOP) ||
-                   ("TraverseDown".equals(name)  && (popupSide == Side.BOTTOM || popupSide == Side.TOP)) ||
-                   ("TraverseLeft".equals(name)  && popupSide == Side.LEFT) ||
-                   ("TraverseRight".equals(name) && (popupSide == Side.RIGHT || popupSide == Side.LEFT))) {
+                   ("TraverseUp".equals(name)    && popupSide == Side.TOP)    ||
+                   ("TraverseDown".equals(name)  && (popupSide == Side.BOTTOM || popupSide == Side.TOP))  ||
+                   ("TraverseLeft".equals(name)  && (popupSide == Side.RIGHT  || popupSide == Side.LEFT)) ||
+                   ("TraverseRight".equals(name) && (popupSide == Side.RIGHT  || popupSide == Side.LEFT))) {
             // Show the menu when arrow key matches the popupSide
             // direction -- but also allow RIGHT key for LEFT position and
-            // DOWN key for TOP position. This is needed because the skin
-            // only paints right- and down-facing arrows in these cases.
+            // DOWN key for TOP position. To be symmetrical, we also allow for
+            // the LEFT key to work when in the RIGHT position. This is needed
+            // because the skin only paints right- and down-facing arrows in
+            // these cases.
             button.show();
         } else {
             super.callAction(name);

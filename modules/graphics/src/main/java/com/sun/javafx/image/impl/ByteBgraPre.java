@@ -40,14 +40,25 @@ public class ByteBgraPre {
     public static final BytePixelSetter     setter = Accessor.instance;
     public static final BytePixelAccessor accessor = Accessor.instance;
 
-    public static final ByteToBytePixelConverter ToByteBgraConverter =
-        ByteBgraPre.ToByteBgraConv.instance;
-    public static final ByteToBytePixelConverter ToByteBgraPreConverter =
-        BaseByteToByteConverter.create(accessor);
-    public static final ByteToIntPixelConverter ToIntArgbConverter =
-        ByteBgraPre.ToIntArgbConv.instance;
-    public static final ByteToIntPixelConverter ToIntArgbPreConverter =
-        ByteBgra.ToIntArgbSameConv.premul;
+    public static ByteToBytePixelConverter ToByteBgraConverter() {
+        return ByteBgraPre.ToByteBgraConv.instance;
+    }
+
+    private static ByteToBytePixelConverter ToByteBgraPreObj;
+    public  static ByteToBytePixelConverter ToByteBgraPreConverter() {
+        if (ToByteBgraPreObj == null) {
+            ToByteBgraPreObj = BaseByteToByteConverter.create(accessor);
+        }
+        return ToByteBgraPreObj;
+    }
+
+    public static ByteToIntPixelConverter ToIntArgbConverter() {
+        return ByteBgraPre.ToIntArgbConv.instance;
+    }
+
+    public static ByteToIntPixelConverter ToIntArgbPreConverter() {
+        return ByteBgra.ToIntArgbSameConv.premul;
+    }
 
     static class Accessor implements BytePixelAccessor {
         static final BytePixelAccessor instance = new Accessor();

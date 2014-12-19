@@ -252,13 +252,7 @@ public class GIFImageLoader2 extends ImageLoaderImpl {
     }
 
     private void skipBytes(int n) throws IOException {
-        while (n > 0) {
-            int lskip = (int) stream.skip(n);
-            if (lskip <= 0) {
-                throw new EOFException();
-            }
-            n -= lskip;
-        }
+        ImageTools.skipFully(stream, n);
     }
 
     public void dispose() {}

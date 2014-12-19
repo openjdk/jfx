@@ -25,9 +25,9 @@
 
 package com.sun.javafx.tk;
 
+import com.sun.glass.ui.Accessible;
 import javafx.collections.ObservableList;
 import javafx.event.EventType;
-//import javafx.scene.accessibility.Accessible;
 import javafx.scene.input.*;
 
 /**
@@ -118,5 +118,5 @@ public interface TKSceneListener {
 
     public void touchEventEnd();
 
-//    public Accessible getSceneAccessible();
+    public Accessible getSceneAccessible();
 }

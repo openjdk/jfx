@@ -36,13 +36,10 @@ class ES2VramPool extends BaseResourcePool<ES2TextureData>
     static ES2VramPool instance = new ES2VramPool();
 
     private ES2VramPool() {
-        super(PrismSettings.maxVram);
+        super(PrismSettings.targetVram, PrismSettings.maxVram);
     }
 
-    public long target() {
-        return PrismSettings.targetVram;
-    }
-
+    @Override
     public long estimateTextureSize(int width, int height,
                                     PixelFormat format)
     {
@@ -50,6 +47,7 @@ class ES2VramPool extends BaseResourcePool<ES2TextureData>
                ((long) format.getBytesPerPixelUnit());
     }
 
+    @Override
     public long estimateRTTextureSize(int width, int height,
                                       boolean hasDepth)
     {
@@ -57,6 +55,7 @@ class ES2VramPool extends BaseResourcePool<ES2TextureData>
         return ((long) width) * ((long) height) * 4L;
     }
 
+    @Override
     public long size(ES2TextureData resource) {
         return resource.getSize();
     }

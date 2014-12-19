@@ -25,10 +25,6 @@
 
 package com.sun.glass.ui.monocle.input.devices;
 
-import com.sun.glass.ui.monocle.input.TestApplication;
-import com.sun.glass.ui.monocle.input.UInput;
-import org.junit.Assume;
-
 
 public class EGalaxSingleTouchDevice1 extends EGalaxSingleTouchDeviceBase {
 

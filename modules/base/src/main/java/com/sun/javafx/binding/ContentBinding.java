@@ -55,6 +55,7 @@ public class ContentBinding {
             list1.clear();
             list1.addAll(list2);
         }
+        list2.removeListener(contentBinding);
         list2.addListener(contentBinding);
         return contentBinding;
     }
@@ -64,6 +65,7 @@ public class ContentBinding {
         final SetContentBinding<E> contentBinding = new SetContentBinding<E>(set1);
         set1.clear();
         set1.addAll(set2);
+        set2.removeListener(contentBinding);
         set2.addListener(contentBinding);
         return contentBinding;
     }
@@ -73,6 +75,7 @@ public class ContentBinding {
         final MapContentBinding<K, V> contentBinding = new MapContentBinding<K, V>(map1);
         map1.clear();
         map1.putAll(map2);
+        map2.removeListener(contentBinding);
         map2.addListener(contentBinding);
         return contentBinding;
     }

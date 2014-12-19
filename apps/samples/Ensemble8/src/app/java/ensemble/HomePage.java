@@ -298,6 +298,7 @@ public class HomePage extends ListView<HomePage.HomePageRow> implements Callback
             sampleButton.setGraphic(Samples.HIGHLIGHTS[highlightIndex].getLargePreview());
             sampleButton.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
             sampleButton.setOnAction((ActionEvent actionEvent) -> {
+//                System.out.println("Clicked " + Samples.HIGHLIGHTS[highlightIndex].name);
                 pageBrowser.goToSample(Samples.HIGHLIGHTS[highlightIndex]);
             });
             return sampleButton;

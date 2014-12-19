@@ -23,7 +23,7 @@
  * questions.
  */
 
-#include "com_sun_glass_ui_monocle_linux_Udev.h"
+#include "com_sun_glass_ui_monocle_Udev.h"
 #include "Monocle.h"
 
 #include <errno.h>
@@ -104,7 +104,7 @@ static void monocle_close(JNIEnv UNUSED(*env), int fd) {
 }
 
  JNIEXPORT jlong JNICALL
- Java_com_sun_glass_ui_monocle_linux_Udev__1open
+ Java_com_sun_glass_ui_monocle_Udev__1open
  (JNIEnv *env, jobject UNUSED(jUdev)) {
     int fd;
     struct sockaddr_nl addrS;
@@ -129,7 +129,7 @@ static void monocle_close(JNIEnv UNUSED(*env), int fd) {
  }
 
 JNIEXPORT jint JNICALL
-Java_com_sun_glass_ui_monocle_linux_Udev__1readEvent
+Java_com_sun_glass_ui_monocle_Udev__1readEvent
 (JNIEnv *env, jobject UNUSED(jUdev), jlong fdL, jobject bufferObj) {
     int fd = (int) fdL;
     char *buffer = (char *) (*env)->GetDirectBufferAddress(env, bufferObj);
@@ -149,13 +149,13 @@ Java_com_sun_glass_ui_monocle_linux_Udev__1readEvent
 }
 
 JNIEXPORT void JNICALL
-Java_com_sun_glass_ui_monocle_linux_Udev__1close
+Java_com_sun_glass_ui_monocle_Udev__1close
 (JNIEnv *env, jobject UNUSED(jUdev), jlong fdL) {
     monocle_close(env, (int) fdL);
 }
 
 JNIEXPORT jint JNICALL
-Java_com_sun_glass_ui_monocle_linux_Udev__1getPropertiesOffset
+Java_com_sun_glass_ui_monocle_Udev__1getPropertiesOffset
 (JNIEnv *env, jobject UNUSED(jUdev), jobject bufferObj) {
     void *buffer = (*env)->GetDirectBufferAddress(env, bufferObj);
     switch (getEventFormat(buffer)) {
@@ -171,7 +171,7 @@ Java_com_sun_glass_ui_monocle_linux_Udev__1getPropertiesOffset
 }
 
 JNIEXPORT jint JNICALL
-Java_com_sun_glass_ui_monocle_linux_Udev__1getPropertiesLength
+Java_com_sun_glass_ui_monocle_Udev__1getPropertiesLength
 (JNIEnv *env, jobject UNUSED(jUdev), jobject bufferObj) {
     void *buffer = (*env)->GetDirectBufferAddress(env, bufferObj);
     switch (getEventFormat(buffer)) {

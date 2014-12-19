@@ -83,7 +83,7 @@ public abstract class ReadOnlyBooleanProperty extends BooleanExpression
      * @return A {@code ReadOnlyBooleanProperty} that wraps the
      *         {@code ReadOnlyProperty} if necessary
      * @throws NullPointerException
-     *             if {@code value} is {@code null}
+     *             if {@code property} is {@code null}
      * @since JavaFX 8.0
      */
     public static ReadOnlyBooleanProperty readOnlyBooleanProperty(final ReadOnlyProperty<Boolean> property) {

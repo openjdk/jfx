@@ -79,14 +79,17 @@ public class FontPopupEditor extends PopupEditor {
     private BoundedDoubleEditor sizeEditor;
     private EditorController editorController;
 
-    @SuppressWarnings("LeakingThisInConstructor")
     public FontPopupEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses, EditorController editorController) {
         super(propMeta, selectedClasses);
-        this.editorController = editorController;
+        initialize(editorController);
     }
 
+    private void initialize(EditorController editorController) {
+        this.editorController = editorController;
+    }
+    
     private void setStyle() {
-        styleEditor.reset("", "", new ArrayList<>(getStyles(familyEditor.getValue(), false, editorController)));//NOI18N
+        styleEditor.reset("", "", new ArrayList<>(getStyles(EditorUtils.toString(familyEditor.getValue()), false, editorController)));//NOI18N
         styleEditor.setUpdateFromModel(true);
         styleEditor.setValue(font.getStyle());
         styleEditor.setUpdateFromModel(false);
@@ -106,7 +109,8 @@ public class FontPopupEditor extends PopupEditor {
         Font oldFont = font;
         Object sizeObj = sizeEditor.getValue();
         assert sizeObj instanceof Double;
-        Font newFont = getFont(familyEditor.getValue(), styleEditor.getValue(), (Double) sizeObj, editorController);
+        Font newFont = getFont(EditorUtils.toString(familyEditor.getValue()), EditorUtils.toString(styleEditor.getValue()),
+                (Double) sizeObj, editorController);
         if (newFont != null) {
             return newFont;
         } else {
@@ -206,9 +210,12 @@ public class FontPopupEditor extends PopupEditor {
         private List<String> families;
         private String family = null;
 
-        @SuppressWarnings("LeakingThisInConstructor")
         public FamilyEditor(String name, String defaultValue, List<String> families, EditorController editorController) {
             super(name, defaultValue, families);
+            initialize(families, editorController);
+        }
+        
+        private void initialize(List<String> families, EditorController editorController) {
             this.families = families;
             EventHandler<ActionEvent> onActionListener = event -> {
                 if (Objects.equals(family, getTextField().getText())) {
@@ -230,7 +237,7 @@ public class FontPopupEditor extends PopupEditor {
         }
 
         @Override
-        public String getValue() {
+        public Object getValue() {
             return getTextField().getText();
         }
 
@@ -244,9 +251,12 @@ public class FontPopupEditor extends PopupEditor {
         
         private String style = null;
 
-        @SuppressWarnings("LeakingThisInConstructor")
         public StyleEditor(String name, String defaultValue, List<String> suggestedList, EditorController editorController) {
             super(name, defaultValue, suggestedList);
+            initialize(editorController);
+        }
+        
+        private void initialize(EditorController editorController) {
             EventHandler<ActionEvent> onActionListener = event -> {
                 if (Objects.equals(style, getTextField().getText())) {
                     // no change
@@ -266,7 +276,7 @@ public class FontPopupEditor extends PopupEditor {
         }
 
         @Override
-        public String getValue() {
+        public Object getValue() {
             return getTextField().getText();
         }
     }

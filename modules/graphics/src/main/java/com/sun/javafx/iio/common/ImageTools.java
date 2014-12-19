@@ -107,6 +107,28 @@ public class ImageTools {
         return readFully(stream, b, 0, b.length);
     }
 
+    /**
+     * Skips over <code>n</code> bytes of data from the input stream.
+     * @param      stream the stream to skip.
+     * @param      n the number of bytes to be skipped.
+     * @exception  EOFException if this input stream reaches the end before
+     *             skipping all the bytes.
+     * @exception  IOException if another I/O error occurs.
+     */
+    public static void skipFully(InputStream stream, long n) throws IOException {
+        while (n > 0) {
+            long skipped = stream.skip(n);
+            if (skipped <= 0) {
+                // check if the EOF is reached
+                if (stream.read() == -1) {
+                    throw new EOFException();
+                }
+                n--;
+            } else {
+                n -= skipped;
+            }
+        }
+    }
 //    public static PixelFormat getPixelFormat(ImageType type) {
 //        PixelFormat format;
 //        switch (type) {
@@ -425,6 +447,23 @@ public class ImageTools {
         }
 
         return output;
+    }
+
+    public static String getScaledImageName(String path) {
+        StringBuilder result = new StringBuilder();
+        int slash = path.lastIndexOf('/');
+        String name = (slash < 0) ? path : path.substring(slash + 1);
+        int dot = name.lastIndexOf(".");
+        if (dot < 0) {
+            dot = name.length();
+        }
+        if (slash >= 0) {
+            result.append(path.substring(0, slash + 1));
+        }
+        result.append(name.substring(0, dot));
+        result.append("@2x");
+        result.append(name.substring(dot));
+        return result.toString();
     }
 
     public static InputStream createInputStream(String input) throws IOException {

@@ -35,6 +35,7 @@ import com.oracle.javafx.scenebuilder.app.DocumentWindowController;
 import com.oracle.javafx.scenebuilder.app.SceneBuilderApp;
 import com.oracle.javafx.scenebuilder.app.SceneBuilderApp.ApplicationControlAction;
 import com.oracle.javafx.scenebuilder.app.i18n.I18N;
+import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.util.dialog.AbstractModalDialog;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.util.dialog.ErrorDialog;
 
@@ -115,7 +116,7 @@ public class TemplateDialogController extends AbstractModalDialog {
         nameTextField.setText(FxmlTemplates.getTemplateName(template));
 
         // Update location text field
-        final File initialDirectory = SceneBuilderApp.getSingleton().getNextInitialDirectory();
+        final File initialDirectory = EditorController.getNextInitialDirectory();
         if (initialDirectory != null) {
             locationTextField.setText(initialDirectory.getAbsolutePath());
         } else {
@@ -176,7 +177,7 @@ public class TemplateDialogController extends AbstractModalDialog {
             errorDialog.showAndWait();
         }
 
-        SceneBuilderApp.getSingleton().updateNextInitialDirectory(newProjectDirectory);
+        EditorController.updateNextInitialDirectory(newProjectDirectory);
         closeWindow();
     }
 

@@ -74,7 +74,7 @@ public class ResizingGuideController {
         assert node.getScene() != null;
         
         final Bounds layoutBounds = node.getLayoutBounds();
-        final Bounds boundsInScene = node.localToScene(layoutBounds);
+        final Bounds boundsInScene = node.localToScene(layoutBounds, true /* rootScene */);
         final double minX = boundsInScene.getMinX();
         final double minY = boundsInScene.getMinY();
         final double maxX = boundsInScene.getMaxX();

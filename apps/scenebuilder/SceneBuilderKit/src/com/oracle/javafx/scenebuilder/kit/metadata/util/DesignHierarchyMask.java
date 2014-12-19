@@ -42,6 +42,7 @@ import com.oracle.javafx.scenebuilder.kit.metadata.Metadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.klass.ComponentClassMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ComponentPropertyMetadata;
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
+import com.oracle.javafx.scenebuilder.kit.util.Deprecation;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -53,6 +54,7 @@ import javafx.geometry.Orientation;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.DialogPane;
 import javafx.scene.control.Labeled;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
@@ -98,10 +100,26 @@ public class DesignHierarchyMask {
         CENTER,
         XAXIS,
         YAXIS,
-        TREE_COLUMN
+        TREE_COLUMN,
+        EXPANDABLE_CONTENT,
+        HEADER,
+        DP_CONTENT {
+                    @Override
+                    public String toString() {
+                        return "CONTENT"; // NOI18N
+                    }
+                },
+        DP_GRAPHIC {
+                    @Override
+                    public String toString() {
+                        return "GRAPHIC"; // NOI18N
+                    }
+                }
     }
     private static final PropertyName graphicName = new PropertyName("graphic");
     private static final PropertyName contentName = new PropertyName("content");
+    private static final PropertyName expandableContentName = new PropertyName("expandableContent");
+    private static final PropertyName headerName = new PropertyName("header");
     private static final PropertyName topName = new PropertyName("top");
     private static final PropertyName bottomName = new PropertyName("bottom");
     private static final PropertyName leftName = new PropertyName("left");
@@ -282,7 +300,7 @@ public class DesignHierarchyMask {
     public String getSingleLineDescription() {
         String result = getDescription();
         if (result != null && containsLineFeed(result)) {
-            result = result.substring(0, result.indexOf("\n")) + "..."; //NOI18N
+            result = result.substring(0, result.indexOf('\n')) + "..."; //NOI18N
         }
         return result;
     }
@@ -378,6 +396,24 @@ public class DesignHierarchyMask {
     public boolean isAcceptingAccessory(Accessory accessory) {
         final PropertyName propertyName = getPropertyNameForAccessory(accessory);
         final Class<?> valueClass = getClassForAccessory(accessory);
+
+        final Object sceneGraphObject = fxomObject.getSceneGraphObject();
+        switch (accessory) {
+            case CONTENT:
+            case GRAPHIC:
+                if (sceneGraphObject instanceof DialogPane == true) {
+                    return false;
+                }
+                break;
+            case DP_CONTENT:
+            case DP_GRAPHIC:
+                if (sceneGraphObject instanceof DialogPane == false) {
+                    return false;
+                }
+                break;
+            default:
+                break;
+        }
         return isAcceptingProperty(propertyName, valueClass);
     }
 
@@ -427,6 +463,12 @@ public class DesignHierarchyMask {
                 break;
             case TREE_COLUMN:
                 result = javafx.scene.control.TreeTableColumn.class;
+                break;
+            case DP_CONTENT:
+            case EXPANDABLE_CONTENT:
+            case DP_GRAPHIC:
+            case HEADER:
+                result = javafx.scene.Node.class;
                 break;
             default: // Bug
                 throw new IllegalStateException("Unexpected accessory " + accessory);
@@ -606,10 +648,18 @@ public class DesignHierarchyMask {
 
         switch (accessory) {
             case GRAPHIC:
+            case DP_GRAPHIC:
                 result = graphicName;
                 break;
             case CONTENT:
+            case DP_CONTENT:
                 result = contentName;
+                break;
+            case EXPANDABLE_CONTENT:
+                result = expandableContentName;
+                break;
+            case HEADER:
+                result = headerName;
                 break;
             case TOP:
                 result = topName;
@@ -763,26 +813,15 @@ public class DesignHierarchyMask {
      * @return the number of columns
      */
     public int getColumnsSize() {
-        assert fxomObject instanceof FXOMInstance;
-        final FXOMInstance fxomInstance = (FXOMInstance) fxomObject;
-        assert fxomInstance.getSceneGraphObject() instanceof GridPane;
-
-        // Retrieve the column constraints size
-        final int constraintsSize = getColumnsConstraintsSize();
-
-        // Retrieve the max column index
-        int maxColumnIndex = -1;
-        for (int i = 0, count = getSubComponentCount(); i < count; i++) {
-            final FXOMObject childObject = getSubComponentAtIndex(i);
-            if (childObject.getSceneGraphObject() != null) {
-                final DesignHierarchyMask childMask = new DesignHierarchyMask(childObject);
-                if (maxColumnIndex < childMask.getColumnIndex()) {
-                    maxColumnIndex = childMask.getColumnIndex();
-                }
-            }
+        final Object sceneGraphObject;
+        // For FXOMIntrinsic, we use the source sceneGraphObject
+        if (fxomObject instanceof FXOMIntrinsic) {
+            sceneGraphObject = ((FXOMIntrinsic) fxomObject).getSourceSceneGraphObject();
+        } else {
+            sceneGraphObject = fxomObject.getSceneGraphObject();
         }
-
-        return Math.max(constraintsSize, maxColumnIndex + 1);
+        assert sceneGraphObject instanceof GridPane;
+        return Deprecation.getGridPaneColumnCount((GridPane) sceneGraphObject);
     }
 
     /**
@@ -794,26 +833,15 @@ public class DesignHierarchyMask {
      * @return the number of rows
      */
     public int getRowsSize() {
-        assert fxomObject instanceof FXOMInstance;
-        final FXOMInstance fxomInstance = (FXOMInstance) fxomObject;
-        assert fxomInstance.getSceneGraphObject() instanceof GridPane;
-
-        // Retrieve the row constraints size
-        final int constraintsSize = getRowsConstraintsSize();
-
-        // Retrieve the max row index
-        int maxRowIndex = -1;
-        for (int i = 0, count = getSubComponentCount(); i < count; i++) {
-            final FXOMObject childObject = getSubComponentAtIndex(i);
-            if (childObject.getSceneGraphObject() != null) {
-                final DesignHierarchyMask childMask = new DesignHierarchyMask(childObject);
-                if (maxRowIndex < childMask.getRowIndex()) {
-                    maxRowIndex = childMask.getRowIndex();
-                }
-            }
+        final Object sceneGraphObject;
+        // For FXOMIntrinsic, we use the source sceneGraphObject
+        if (fxomObject instanceof FXOMIntrinsic) {
+            sceneGraphObject = ((FXOMIntrinsic) fxomObject).getSourceSceneGraphObject();
+        } else {
+            sceneGraphObject = fxomObject.getSceneGraphObject();
         }
-
-        return Math.max(constraintsSize, maxRowIndex + 1);
+        assert sceneGraphObject instanceof GridPane;
+        return Deprecation.getGridPaneRowCount((GridPane) sceneGraphObject);
     }
     
     public List<FXOMObject> getColumnContentAtIndex(int index) {

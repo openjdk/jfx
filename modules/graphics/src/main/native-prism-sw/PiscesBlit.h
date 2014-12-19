@@ -41,33 +41,24 @@ void genTexturePaint565NoAlpha(Renderer *rdr, jint height);
 void genTexturePaint565WithAlpha(Renderer *rdr, jint height);
 
 void blitSrc8888_pre(Renderer *rdr, jint height);
-void blitSrc8888(Renderer *rdr, jint height);
 
 void blitSrcMask8888_pre(Renderer *rdr, jint height);
 
-void blitPTSrc8888(Renderer *rdr, jint height);
 void blitPTSrc8888_pre(Renderer *rdr, jint height);
 
 void blitPTSrcMask8888_pre(Renderer *rdr, jint height);
 
-void blitSrcOver8888(Renderer *rdr, jint height);
 void blitSrcOver8888_pre(Renderer *rdr, jint height);
 
 void blitSrcOverMask8888_pre(Renderer *rdr, jint height);
 
 void blitSrcOverLCDMask8888_pre(Renderer *rdr, jint height);
 
-void blitPTSrcOver8888(Renderer *rdr, jint height);
 void blitPTSrcOver8888_pre(Renderer *rdr, jint height);
 
 void blitPTSrcOverMask8888_pre(Renderer *rdr, jint height);
 
-void clearRect8888(Renderer *rdr, jint x, jint y, jint w, jint h);
-
-void emitLineSource8888(Renderer *rdr, jint height, jint frac);
-void emitLinePTSource8888(Renderer *rdr, jint height, jint frac);
-void emitLineSourceOver8888(Renderer *rdr, jint height, jint frac);
-void emitLinePTSourceOver8888(Renderer *rdr, jint height, jint frac);
+void clearRect8888_any(Renderer *rdr, jint x, jint y, jint w, jint h);
 
 void emitLineSource8888_pre(Renderer *rdr, jint height, jint frac);
 void emitLinePTSource8888_pre(Renderer *rdr, jint height, jint frac);

@@ -48,6 +48,8 @@ import com.sun.webkit.graphics.*;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
@@ -60,6 +62,9 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
 
     private final static Logger log =
         Logger.getLogger(WCGraphicsPrismContext.class.getName());
+    private final static boolean DEBUG_DRAW_CLIP_SHAPE = Boolean.valueOf(
+            AccessController.doPrivileged((PrivilegedAction<String>) () ->
+            System.getProperty("com.sun.webkit.debugDrawClipShape", "false")));
 
     private Graphics baseGraphics;
     private BaseTransform baseTransform;
@@ -72,6 +77,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
     private Graphics cachedGraphics = null;
 
     private int fontSmoothingType;
+    private boolean isRootLayerValid = false;
 
     WCGraphicsPrismContext(Graphics g) {
         init(g, true);
@@ -176,7 +182,6 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
             layer.render(g);
         }
 
-        layer.dispose();
         //restore transform
         setTransform(cur);
     }
@@ -192,6 +197,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
         state = states.remove(size - 1);
         if (layer != state.getLayerNoClone()) {
             renderLayer(layer);
+            layer.dispose();
             if (log.isLoggable(Level.FINE)) {
                 log.fine("Popped layer " + layer);
             }
@@ -207,6 +213,65 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
             restoreStateInternal();
         } while ( !state.isRestorePoint() );
     }
+
+    /**
+     *  Renders all layers to the underlaying Graphics, but preserves the
+     *  current state and the states stack
+     */
+    private void flushAllLayers() {
+        if (state == null) {
+            // context disposed
+            return;
+        }
+
+        if (isRootLayerValid) {
+            log.fine("FlushAllLayers: root layer is valid, skipping");
+            return;
+        }
+
+        if (log.isLoggable(Level.FINE)) {
+            log.fine("FlushAllLayers");
+        }
+
+        ContextState currentState = state;
+
+        for (int i = states.size() - 1; i >=0; i--) {
+            Layer layer = state.getLayerNoClone();
+            state = states.get(i);
+            if (layer != state.getLayerNoClone()) {
+                renderLayer(layer);
+            } else {
+                resetCachedGraphics();
+            }
+        }
+
+        Layer layer = state.getLayerNoClone();
+        if (layer != null) {
+            renderLayer(layer);
+        }
+
+        state = currentState;
+        isRootLayerValid = true;
+    }
+
+
+    public void dispose() {
+        if (!states.isEmpty()) {
+            log.fine("Unbalanced saveState/restoreState");
+        }
+        for (ContextState state: states) {
+            if (state.getLayerNoClone() != null) {
+                state.getLayerNoClone().dispose();
+            }
+        }
+        states.clear();
+
+        if (state.getLayerNoClone() != null) {
+            state.getLayerNoClone().dispose();
+        }
+        state = null;
+    }
+
 
     public void setClip(WCPath path, boolean isOut) {
         Affine3D tr = new Affine3D(state.getTransformNoClone());
@@ -301,6 +366,8 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
             state.clip(transformClip(shape));
             if (log.isLoggable(Level.FINE)) {
                 log.log(Level.FINE, "setClip({0})", shape);
+            }
+            if (DEBUG_DRAW_CLIP_SHAPE) {
                 //Draw clip shape
                 Rectangle rc = state.getClipNoClone();
                 if (rc != null && rc.width >= 2 && rc.height >= 2) {
@@ -1171,8 +1238,8 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
     }
 
     private abstract static class Layer {
-        final FilterContext fctx;
-        final PrDrawable buffer;
+        FilterContext fctx;
+        PrDrawable buffer;
         Graphics graphics;
         final Rectangle bounds;
 
@@ -1198,7 +1265,11 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
         abstract void render(Graphics g);
 
         private void dispose() {
-            Effect.releaseCompatibleImage(fctx, buffer);
+            if (buffer != null) {
+                Effect.releaseCompatibleImage(fctx, buffer);
+                fctx = null;
+                buffer = null;
+            }
         }
 
         private double getX() { return (double) bounds.x; }
@@ -1329,6 +1400,7 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
                         blend(g);
                         break;
                 }
+                isRootLayerValid = false;
             }
         }
 
@@ -1599,18 +1671,9 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
         resetCachedGraphics();
     }
 
-    public void dispose() {
-        if (!states.isEmpty()) {
-            log.fine("Unbalanced saveState/restoreState");
-        }
-        while (!states.isEmpty()) {
-            restoreStateInternal();
-        }
-        // |state| is now the initial state. It may have a layer, too
-        Layer layer = state.getLayerNoClone();
-        if (layer != null) {
-            renderLayer(layer);
-        }
+    @Override
+    public void flush() {
+        flushAllLayers();
     }
 
     @Override

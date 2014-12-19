@@ -67,7 +67,6 @@ public class BoundsPopupEditor extends PopupEditor {
     private Parent root;
     private Bounds bounds;
 
-    @SuppressWarnings("LeakingThisInConstructor")
     public BoundsPopupEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses) {
         super(propMeta, selectedClasses);
     }

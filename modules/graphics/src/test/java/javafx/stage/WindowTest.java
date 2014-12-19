@@ -27,6 +27,7 @@ package javafx.stage;
 
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertTrue;
+import static junit.framework.Assert.assertNotNull;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 
@@ -64,6 +65,29 @@ public final class WindowTest {
         toolkit.fireTestPulse();
 
         assertEquals(1.0f, peer.opacity);
+    }
+    
+    @Test public void testProperties() {
+        javafx.collections.ObservableMap<Object, Object> properties = testWindow.getProperties();
+
+        /* If we ask for it, we should get it.
+         */
+        assertNotNull(properties);
+
+        /* What we put in, we should get out.
+         */
+        properties.put("MyKey", "MyValue");
+        assertEquals("MyValue", properties.get("MyKey"));
+
+        /* If we ask for it again, we should get the same thing.
+         */
+        javafx.collections.ObservableMap<Object, Object> properties2 = testWindow.getProperties();
+        assertEquals(properties2, properties);
+
+        /* What we put in to the other one, we should get out of this one because
+         * they should be the same thing.
+         */
+        assertEquals("MyValue", properties2.get("MyKey"));
     }
 
     private static StubStage getPeer(final Window window) {

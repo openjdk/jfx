@@ -27,14 +27,15 @@ package com.sun.javafx.scene.control.skin;
 
 import javafx.geometry.Orientation;
 import javafx.geometry.Point2D;
-//import javafx.scene.accessibility.Action;
-//import javafx.scene.accessibility.Attribute;
-//import javafx.scene.accessibility.Role;
+import javafx.scene.AccessibleAction;
+import javafx.scene.AccessibleAttribute;
+import javafx.scene.AccessibleRole;
 import javafx.scene.control.ScrollBar;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
+import javafx.scene.Node;
 import com.sun.javafx.Utils;
 import com.sun.javafx.scene.control.behavior.ScrollBarBehavior;
 
@@ -94,58 +95,32 @@ public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior
         trackBackground.getStyleClass().setAll("track-background");
 
         thumb = new StackPane() {
-//            @Override
-//            public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//                switch (attribute) {
-//                    case ROLE: return Role.THUMB;
-//                    case VALUE: return getSkinnable().getValue();
-//                    case MAX_VALUE: {
-//                        // This is required for mac-support, to convert from pixel to percent
-//                        return getSkinnable().getMax();
-//                    }
-//                    default: return super.accGetAttribute(attribute, parameters);
-//                }
-//            }
-//
-//            @Override
-//            public void accExecuteAction(Action action, Object... parameters) {
-//                switch (action) {
-//                    case MOVE: {
-//                        // FIXME for now we just take the x/y values as value, rather than pixel value
-//                        final ScrollBar scrollBar = getSkinnable();
-//                        final Orientation o = scrollBar.getOrientation();
-//                        double value = (double) (o == Orientation.VERTICAL ? parameters[1] : parameters[0]);
-//                        scrollBar.setValue(scrollBar.getValue() + value);
-//                        break;
-//                    }
-//                    default: super.accExecuteAction(action, parameters);
-//                }
-//            }
+            @Override
+            public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
+                switch (attribute) {
+                    case VALUE: return getSkinnable().getValue();
+                    default: return super.queryAccessibleAttribute(attribute, parameters);
+                }
+            }
         };
         thumb.getStyleClass().setAll("thumb");
+        thumb.setAccessibleRole(AccessibleRole.THUMB);
 
 
         if (!IS_TOUCH_SUPPORTED) {
             
             incButton = new EndButton("increment-button", "increment-arrow") {
-//                @Override
-//                public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//                    switch (attribute) {
-//                        case ROLE: return Role.INCREMENT_BUTTON;
-//                        default: return super.accGetAttribute(attribute, parameters);
-//                    }
-//                }
-//
-//                @Override
-//                public void accExecuteAction(Action action, Object... parameters) {
-//                    switch (action) {
-//                        case FIRE: 
-//                            getSkinnable().increment();
-//                            break;
-//                        default: super.accExecuteAction(action, parameters);
-//                    }
-//                }
+                @Override
+                public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
+                    switch (action) {
+                        case FIRE: 
+                            getSkinnable().increment();
+                            break;
+                        default: super.executeAccessibleAction(action, parameters);
+                    }
+                }
             };
+            incButton.setAccessibleRole(AccessibleRole.INCREMENT_BUTTON);
             incButton.setOnMousePressed(me -> {
                 /*
                 ** if the tracklenght isn't greater than do nothing....
@@ -166,24 +141,17 @@ public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior
             });
 
             decButton = new EndButton("decrement-button", "decrement-arrow") {
-//                @Override
-//                public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//                    switch (attribute) {
-//                        case ROLE: return Role.DECREMENT_BUTTON;
-//                        default: return super.accGetAttribute(attribute, parameters);
-//                    }
-//                }
-//
-//                @Override
-//                public void accExecuteAction(Action action, Object... parameters) {
-//                    switch (action) {
-//                        case FIRE:
-//                            getSkinnable().decrement();
-//                            break;
-//                        default: super.accExecuteAction(action, parameters);
-//                    }
-//                }
+                @Override
+                public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
+                    switch (action) {
+                        case FIRE:
+                            getSkinnable().decrement();
+                            break;
+                        default: super.executeAccessibleAction(action, parameters);
+                    }
+                }
             };
+            decButton.setAccessibleRole(AccessibleRole.DECREMENT_BUTTON);
             decButton.setOnMousePressed(me -> {
                 /*
                 ** if the tracklenght isn't greater than do nothing....
@@ -485,7 +453,7 @@ public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior
         ScrollBar s = getSkinnable();
         double clampedValue = Utils.clamp(s.getMin(), s.getValue(), s.getMax());
         trackPos = (s.getMax() - s.getMin() > 0) ? ((trackLength - thumbLength) * (clampedValue - s.getMin()) / (s.getMax() - s.getMin())) : (0.0F);
-
+        
         if (!IS_TOUCH_SUPPORTED) {
             if (s.getOrientation() == Orientation.VERTICAL) {
                 trackPos += decButton.prefHeight(-1);
@@ -493,11 +461,11 @@ public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior
                 trackPos += decButton.prefWidth(-1);
             }
         }
-
+        
         thumb.setTranslateX( snapPosition(s.getOrientation() == Orientation.VERTICAL ? snappedLeftInset() : trackPos + snappedLeftInset()));
         thumb.setTranslateY( snapPosition(s.getOrientation() == Orientation.VERTICAL ? trackPos + snappedTopInset() : snappedTopInset()));
     }
-
+    
     @Override protected void layoutChildren(final double x, final double y,
             final double w, final double h) {
         
@@ -570,7 +538,7 @@ public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior
 
             s.resize(snapSize(s.getWidth()), snapSize(s.getHeight()));
         }
-
+        
         // things should be invisible only when well below minimum length
         if (s.getOrientation() == Orientation.VERTICAL && h >= (computeMinHeight(-1, (int)y , snappedRightInset(), snappedBottomInset(), (int)x) - (y+snappedBottomInset())) ||
             s.getOrientation() == Orientation.HORIZONTAL && w >= (computeMinWidth(-1, (int)y , snappedRightInset(), snappedBottomInset(), (int)x) - (x+snappedRightInset()))) {
@@ -606,6 +574,23 @@ public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior
                 }
             }
         }
+    }
+
+    
+    public Node getThumb() {
+        return thumb;
+    }
+    
+    public Node getTrack() {
+        return track;
+    }
+    
+    public Node getIncButton() {
+        return incButton;
+    }
+    
+    public Node getDecButton() {
+        return decButton;
     }
     
     private static class EndButton extends Region {

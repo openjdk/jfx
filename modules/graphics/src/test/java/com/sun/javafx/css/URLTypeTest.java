@@ -46,6 +46,9 @@ public class URLTypeTest {
     public URLTypeTest() {
     }
 
+    static final String absClassName = "/com/sun/javafx/css/URLTypeTest.class";
+    static final String classURL = URLTypeTest.class.getResource("URLTypeTest.class").toExternalForm();
+
     final String baseURL = "http://a/b/c/d;p?q";
 
     // from rfc3986, section 5
@@ -54,7 +57,10 @@ public class URLTypeTest {
         {"g"             ,  "http://a/b/c/g"},
         {"./g"           ,  "http://a/b/c/g"},
         {"g/"            ,  "http://a/b/c/g/"},
-        {"/g"            ,  "http://a/g"},
+        // The following is relative to classloader root, and since it won't be found, will return null
+        {"/g"            ,  null},
+        // The following is relative to classloader root and will be resolved as such
+        {absClassName    ,  classURL},
         {"//g"           ,  "http://g"},
         // actual is http://a/b/c/?y - bug in java.net.URI?       {"?y"            ,  "http://a/b/c/d;p?y"},
         {"g?y"           ,  "http://a/b/c/g?y"},

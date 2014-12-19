@@ -94,6 +94,7 @@ public final class NGWebView extends NGGroup {
             } else {
                 page.paint(gc, 0, 0, (int) width, (int) height);
             }
+            gc.flush();
         } finally {
             gc.dispose();
         }

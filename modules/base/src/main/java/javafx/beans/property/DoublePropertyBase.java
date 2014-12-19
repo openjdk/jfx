@@ -139,7 +139,8 @@ public abstract class DoublePropertyBase extends DoubleProperty {
     @Override
     public void set(double newValue) {
         if (isBound()) {
-            throw new java.lang.RuntimeException("A bound value cannot be set.");
+            throw new java.lang.RuntimeException((getBean() != null && getName() != null ?
+                    getBean().getClass().getSimpleName() + "." + getName() + " : ": "") + "A bound value cannot be set.");
         }
         if (value != newValue) {
             value = newValue;

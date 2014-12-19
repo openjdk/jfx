@@ -32,10 +32,9 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.geometry.Side;
+import javafx.scene.AccessibleAction;
+import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
-//import javafx.scene.accessibility.Action;
-//import javafx.scene.accessibility.Attribute;
-//import javafx.scene.accessibility.Role;
 import com.sun.javafx.scene.control.skin.MenuButtonSkin;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
@@ -93,7 +92,7 @@ public class MenuButton extends ButtonBase {
 
     /**
      * Creates a new empty menu button with the given text to display on the
-     * menu. Use {@link #setGraphic(Node)} and {@link #getItems()} to set the
+     * button. Use {@link #setGraphic(Node)} and {@link #getItems()} to set the
      * content.
      * 
      * @param text the text to display on the menu button
@@ -104,19 +103,38 @@ public class MenuButton extends ButtonBase {
 
     /**
      * Creates a new empty menu button with the given text and graphic to
-     * display on the menu. Use {@link #getItems()} to set the content.
+     * display on the button. Use {@link #getItems()} to set the content.
      * 
      * @param text the text to display on the menu button
      * @param graphic the graphic to display on the menu button
      */
     public MenuButton(String text, Node graphic) {
+        this(text, graphic, (MenuItem[])null);
+    }
+
+    /**
+     * Creates a new menu button with the given text and graphic to
+     * display on the button, and inserts the given items
+     * into the {@link #getItems() items} list.
+     *
+     * @param text the text to display on the menu button
+     * @param graphic the graphic to display on the menu button
+     * @param items The items to display in the popup menu.
+     * @since JavaFX 8u40
+     */
+    public MenuButton(String text, Node graphic, MenuItem... items) {
         if (text != null) {
             setText(text);
         }
         if (graphic != null) {
             setGraphic(graphic);
         }
+        if (items != null) {
+            getItems().addAll(items);
+        }
+
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
+        setAccessibleRole(AccessibleRole.MENU_BUTTON);
         setMnemonicParsing(true);     // enable mnemonic auto-parsing by default
         // the default value for popupSide = Side.BOTTOM therefor
         // PSEUDO_CLASS_OPENVERTICALLY should be set from the start.
@@ -268,25 +286,17 @@ public class MenuButton extends ButtonBase {
      *                                                                         *
      **************************************************************************/
 
-//    /** @treatAsPrivate */
-//    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//        switch (attribute) {
-//            case ROLE: return Role.MENU_BUTTON;
-//            default: return super.accGetAttribute(attribute, parameters);
-//        }
-//    }
-//
-//    /** @treatAsPrivate */
-//    @Override public void accExecuteAction(Action action, Object... parameters) {
-//        switch (action) {
-//            case FIRE:
-//                if (isShowing()) {
-//                    hide();
-//                } else {
-//                    show();
-//                }
-//                break;
-//            default: super.accExecuteAction(action);
-//        }
-//    }
+    @Override
+    public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
+        switch (action) {
+            case FIRE:
+                if (isShowing()) {
+                    hide();
+                } else {
+                    show();
+                }
+                break;
+            default: super.executeAccessibleAction(action);
+        }
+    }
 }

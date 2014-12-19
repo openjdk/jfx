@@ -186,12 +186,16 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, B
         super(control, new BehaviorBase<ProgressIndicator>(control, Collections.emptyList()));
 
         this.control = control;
-        this.control.indeterminateProperty().addListener(indeterminateListener);
-        this.control.progressProperty().addListener(progressListener);
+
+        // register listeners
+        registerChangeListener(control.indeterminateProperty(), "INDETERMINATE");
+        registerChangeListener(control.progressProperty(), "PROGRESS");
+        registerChangeListener(control.visibleProperty(), "VISIBLE");
+        registerChangeListener(control.parentProperty(), "PARENT");
+        registerChangeListener(control.sceneProperty(), "SCENE");
 
         initialize();
     }
-
 
 
     /***************************************************************************
@@ -199,6 +203,22 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, B
      * API (for ProgressBarSkin)                                               *
      *                                                                         *
      **************************************************************************/
+
+    @Override protected void handleControlPropertyChanged(String p) {
+        super.handleControlPropertyChanged(p);
+
+        if ("INDETERMINATE".equals(p)) {
+            initialize();
+        } else if ("PROGRESS".equals(p)) {
+            updateProgress();
+        } else if ("VISIBLE".equals(p)) {
+            updateAnimation();
+        } else if ("PARENT".equals(p)) {
+            updateAnimation();
+        } else if ("SCENE".equals(p)) {
+            updateAnimation();
+        }
+    }
 
     protected void initialize() {
         boolean isIndeterminate = control.isIndeterminate();
@@ -241,8 +261,6 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, B
             spinner = null;
         }
 
-        control.indeterminateProperty().removeListener(indeterminateListener);
-        control.progressProperty().removeListener(progressListener);
         control = null;
     }
 
@@ -271,6 +289,18 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, B
         }
     }
 
+    protected void updateAnimation() {
+        ProgressIndicator control = getSkinnable();
+        final boolean isTreeVisible = control.isVisible() &&
+                                      control.getParent() != null &&
+                                      control.getScene() != null;
+        if (indeterminateTransition != null) {
+            pauseTimeline(! isTreeVisible);
+        } else if (isTreeVisible) {
+            createIndeterminateTimeline();
+        }
+    }
+
 
 
     /***************************************************************************
@@ -279,19 +309,6 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, B
      *                                                                         *
      **************************************************************************/
 
-    // Listen to ProgressIndicator indeterminateProperty
-    private final InvalidationListener indeterminateListener = valueModel -> initialize();
-
-    private final InvalidationListener progressListener = valueModel -> updateProgress();
-
-    protected final InvalidationListener treeVisibleListener = observable -> {
-        final boolean isTreeVisible = getSkinnable().impl_isTreeVisible();
-        if (indeterminateTransition != null) {
-            pauseTimeline(! isTreeVisible);
-        } else if (isTreeVisible) {
-            createIndeterminateTimeline();
-        }
-    };
 
 
 
@@ -535,8 +552,6 @@ public class ProgressIndicatorSkin extends BehaviorSkinBase<ProgressIndicator, B
         private Paint fillOverride = null;
 
         private IndeterminateSpinner(boolean spinEnabled, Paint fillOverride) {
-            // does not need to be a weak listener since it only listens to its own property
-            impl_treeVisibleProperty().addListener(treeVisibleListener);
             this.spinEnabled = spinEnabled;
             this.fillOverride = fillOverride;
 

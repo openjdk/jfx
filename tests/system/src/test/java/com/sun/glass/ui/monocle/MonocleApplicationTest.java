@@ -1,4 +1,4 @@
-package com.sun.glass.ui.monocle;/*
+/*
  * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
@@ -22,12 +22,10 @@ package com.sun.glass.ui.monocle;/*
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+package com.sun.glass.ui.monocle;
 
 import com.sun.glass.events.KeyEvent;
 import com.sun.glass.ui.Application;
-import com.sun.glass.ui.monocle.input.TestApplication;
-import com.sun.glass.ui.monocle.input.TestRunnable;
-import javafx.scene.input.KeyCode;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;

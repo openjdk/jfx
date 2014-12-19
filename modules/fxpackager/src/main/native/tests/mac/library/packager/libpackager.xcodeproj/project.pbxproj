@@ -1,0 +1,597 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		DE0959CD19A51A02008845F2 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DE0959CC19A51A02008845F2 /* Cocoa.framework */; };
+		DE0959DE19A51A02008845F2 /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DE0959DD19A51A02008845F2 /* XCTest.framework */; };
+		DE0959DF19A51A02008845F2 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DE0959CC19A51A02008845F2 /* Cocoa.framework */; };
+		DE0959E219A51A02008845F2 /* libpackager.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = DE0959C919A51A02008845F2 /* libpackager.dylib */; };
+		DE0959E819A51A02008845F2 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = DE0959E619A51A02008845F2 /* InfoPlist.strings */; };
+		DE0959EA19A51A02008845F2 /* packagerTests.m in Sources */ = {isa = PBXBuildFile; fileRef = DE0959E919A51A02008845F2 /* packagerTests.m */; };
+		DE095A1B19A51A33008845F2 /* Exports.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DE0959F419A51A33008845F2 /* Exports.cpp */; };
+		DE095A1C19A51A33008845F2 /* Exports.h in Headers */ = {isa = PBXBuildFile; fileRef = DE0959F519A51A33008845F2 /* Exports.h */; };
+		DE095A1D19A51A33008845F2 /* FilePath.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DE0959F619A51A33008845F2 /* FilePath.cpp */; };
+		DE095A1E19A51A33008845F2 /* FilePath.h in Headers */ = {isa = PBXBuildFile; fileRef = DE0959F719A51A33008845F2 /* FilePath.h */; };
+		DE095A1F19A51A33008845F2 /* GenericPlatform.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DE0959F819A51A33008845F2 /* GenericPlatform.cpp */; };
+		DE095A2019A51A33008845F2 /* GenericPlatform.h in Headers */ = {isa = PBXBuildFile; fileRef = DE0959F919A51A33008845F2 /* GenericPlatform.h */; };
+		DE095A2119A51A33008845F2 /* Helpers.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DE0959FA19A51A33008845F2 /* Helpers.cpp */; };
+		DE095A2219A51A33008845F2 /* Helpers.h in Headers */ = {isa = PBXBuildFile; fileRef = DE0959FB19A51A33008845F2 /* Helpers.h */; };
+		DE095A2319A51A33008845F2 /* Java.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DE0959FC19A51A33008845F2 /* Java.cpp */; };
+		DE095A2419A51A33008845F2 /* Java.h in Headers */ = {isa = PBXBuildFile; fileRef = DE0959FD19A51A33008845F2 /* Java.h */; };
+		DE095A2519A51A33008845F2 /* JavaUserPreferences.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DE0959FE19A51A33008845F2 /* JavaUserPreferences.cpp */; };
+		DE095A2619A51A33008845F2 /* JavaUserPreferences.h in Headers */ = {isa = PBXBuildFile; fileRef = DE0959FF19A51A33008845F2 /* JavaUserPreferences.h */; };
+		DE095A2719A51A33008845F2 /* JavaVirtualMachine.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DE095A0019A51A33008845F2 /* JavaVirtualMachine.cpp */; };
+		DE095A2819A51A33008845F2 /* JavaVirtualMachine.h in Headers */ = {isa = PBXBuildFile; fileRef = DE095A0119A51A33008845F2 /* JavaVirtualMachine.h */; };
+		DE095A2919A51A33008845F2 /* LinuxPlatform.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DE095A0219A51A33008845F2 /* LinuxPlatform.cpp */; };
+		DE095A2A19A51A33008845F2 /* LinuxPlatform.h in Headers */ = {isa = PBXBuildFile; fileRef = DE095A0319A51A33008845F2 /* LinuxPlatform.h */; };
+		DE095A2B19A51A33008845F2 /* Lock.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DE095A0419A51A33008845F2 /* Lock.cpp */; };
+		DE095A2C19A51A33008845F2 /* Lock.h in Headers */ = {isa = PBXBuildFile; fileRef = DE095A0519A51A33008845F2 /* Lock.h */; };
+		DE095A2D19A51A33008845F2 /* MacPlatform.h in Headers */ = {isa = PBXBuildFile; fileRef = DE095A0619A51A33008845F2 /* MacPlatform.h */; };
+		DE095A2E19A51A33008845F2 /* MacPlatform.mm in Sources */ = {isa = PBXBuildFile; fileRef = DE095A0719A51A33008845F2 /* MacPlatform.mm */; };
+		DE095A2F19A51A33008845F2 /* Macros.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DE095A0819A51A33008845F2 /* Macros.cpp */; };
+		DE095A3019A51A33008845F2 /* Macros.h in Headers */ = {isa = PBXBuildFile; fileRef = DE095A0919A51A33008845F2 /* Macros.h */; };
+		DE095A3119A51A33008845F2 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DE095A0A19A51A33008845F2 /* main.cpp */; };
+		DE095A3219A51A33008845F2 /* Messages.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DE095A0B19A51A33008845F2 /* Messages.cpp */; };
+		DE095A3319A51A33008845F2 /* Messages.h in Headers */ = {isa = PBXBuildFile; fileRef = DE095A0C19A51A33008845F2 /* Messages.h */; };
+		DE095A3419A51A33008845F2 /* Package.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DE095A0D19A51A33008845F2 /* Package.cpp */; };
+		DE095A3519A51A33008845F2 /* Package.h in Headers */ = {isa = PBXBuildFile; fileRef = DE095A0E19A51A33008845F2 /* Package.h */; };
+		DE095A3619A51A33008845F2 /* Platform.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DE095A0F19A51A33008845F2 /* Platform.cpp */; };
+		DE095A3719A51A33008845F2 /* Platform.h in Headers */ = {isa = PBXBuildFile; fileRef = DE095A1019A51A33008845F2 /* Platform.h */; };
+		DE095A3819A51A33008845F2 /* PlatformString.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DE095A1119A51A33008845F2 /* PlatformString.cpp */; };
+		DE095A3919A51A33008845F2 /* PlatformString.h in Headers */ = {isa = PBXBuildFile; fileRef = DE095A1219A51A33008845F2 /* PlatformString.h */; };
+		DE095A3A19A51A33008845F2 /* PlatformThread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DE095A1319A51A33008845F2 /* PlatformThread.cpp */; };
+		DE095A3B19A51A33008845F2 /* PlatformThread.h in Headers */ = {isa = PBXBuildFile; fileRef = DE095A1419A51A33008845F2 /* PlatformThread.h */; };
+		DE095A3C19A51A33008845F2 /* PosixPlatform.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DE095A1519A51A33008845F2 /* PosixPlatform.cpp */; };
+		DE095A3D19A51A33008845F2 /* PosixPlatform.h in Headers */ = {isa = PBXBuildFile; fileRef = DE095A1619A51A33008845F2 /* PosixPlatform.h */; };
+		DE095A3E19A51A33008845F2 /* PropertyFile.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DE095A1719A51A33008845F2 /* PropertyFile.cpp */; };
+		DE095A3F19A51A33008845F2 /* PropertyFile.h in Headers */ = {isa = PBXBuildFile; fileRef = DE095A1819A51A33008845F2 /* PropertyFile.h */; };
+		DE095A4019A51A33008845F2 /* WindowsPlatform.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DE095A1919A51A33008845F2 /* WindowsPlatform.cpp */; };
+		DE095A4119A51A33008845F2 /* WindowsPlatform.h in Headers */ = {isa = PBXBuildFile; fileRef = DE095A1A19A51A33008845F2 /* WindowsPlatform.h */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		DE0959E019A51A02008845F2 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = DE0959C119A51A02008845F2 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = DE0959C819A51A02008845F2;
+			remoteInfo = packager;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		DE0959C919A51A02008845F2 /* libpackager.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = libpackager.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
+		DE0959CC19A51A02008845F2 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
+		DE0959CF19A51A02008845F2 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		DE0959D019A51A02008845F2 /* CoreData.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreData.framework; path = System/Library/Frameworks/CoreData.framework; sourceTree = SDKROOT; };
+		DE0959D119A51A02008845F2 /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
+		DE0959D419A51A02008845F2 /* libpackager-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "libpackager-Prefix.pch"; sourceTree = "<group>"; };
+		DE0959DC19A51A02008845F2 /* libpackagerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = libpackagerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		DE0959DD19A51A02008845F2 /* XCTest.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = XCTest.framework; path = Library/Frameworks/XCTest.framework; sourceTree = DEVELOPER_DIR; };
+		DE0959E519A51A02008845F2 /* libpackagerTests-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "libpackagerTests-Info.plist"; sourceTree = "<group>"; };
+		DE0959E719A51A02008845F2 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		DE0959E919A51A02008845F2 /* packagerTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = packagerTests.m; sourceTree = "<group>"; };
+		DE0959F419A51A33008845F2 /* Exports.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Exports.cpp; path = ../../../../../library/common/Exports.cpp; sourceTree = "<group>"; };
+		DE0959F519A51A33008845F2 /* Exports.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Exports.h; path = ../../../../../library/common/Exports.h; sourceTree = "<group>"; };
+		DE0959F619A51A33008845F2 /* FilePath.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = FilePath.cpp; path = ../../../../../library/common/FilePath.cpp; sourceTree = "<group>"; };
+		DE0959F719A51A33008845F2 /* FilePath.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = FilePath.h; path = ../../../../../library/common/FilePath.h; sourceTree = "<group>"; };
+		DE0959F819A51A33008845F2 /* GenericPlatform.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = GenericPlatform.cpp; path = ../../../../../library/common/GenericPlatform.cpp; sourceTree = "<group>"; };
+		DE0959F919A51A33008845F2 /* GenericPlatform.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = GenericPlatform.h; path = ../../../../../library/common/GenericPlatform.h; sourceTree = "<group>"; };
+		DE0959FA19A51A33008845F2 /* Helpers.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Helpers.cpp; path = ../../../../../library/common/Helpers.cpp; sourceTree = "<group>"; };
+		DE0959FB19A51A33008845F2 /* Helpers.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Helpers.h; path = ../../../../../library/common/Helpers.h; sourceTree = "<group>"; };
+		DE0959FC19A51A33008845F2 /* Java.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Java.cpp; path = ../../../../../library/common/Java.cpp; sourceTree = "<group>"; };
+		DE0959FD19A51A33008845F2 /* Java.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Java.h; path = ../../../../../library/common/Java.h; sourceTree = "<group>"; };
+		DE0959FE19A51A33008845F2 /* JavaUserPreferences.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = JavaUserPreferences.cpp; path = ../../../../../library/common/JavaUserPreferences.cpp; sourceTree = "<group>"; };
+		DE0959FF19A51A33008845F2 /* JavaUserPreferences.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = JavaUserPreferences.h; path = ../../../../../library/common/JavaUserPreferences.h; sourceTree = "<group>"; };
+		DE095A0019A51A33008845F2 /* JavaVirtualMachine.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = JavaVirtualMachine.cpp; path = ../../../../../library/common/JavaVirtualMachine.cpp; sourceTree = "<group>"; };
+		DE095A0119A51A33008845F2 /* JavaVirtualMachine.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = JavaVirtualMachine.h; path = ../../../../../library/common/JavaVirtualMachine.h; sourceTree = "<group>"; };
+		DE095A0219A51A33008845F2 /* LinuxPlatform.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = LinuxPlatform.cpp; path = ../../../../../library/common/LinuxPlatform.cpp; sourceTree = "<group>"; };
+		DE095A0319A51A33008845F2 /* LinuxPlatform.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = LinuxPlatform.h; path = ../../../../../library/common/LinuxPlatform.h; sourceTree = "<group>"; };
+		DE095A0419A51A33008845F2 /* Lock.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Lock.cpp; path = ../../../../../library/common/Lock.cpp; sourceTree = "<group>"; };
+		DE095A0519A51A33008845F2 /* Lock.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Lock.h; path = ../../../../../library/common/Lock.h; sourceTree = "<group>"; };
+		DE095A0619A51A33008845F2 /* MacPlatform.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MacPlatform.h; path = ../../../../../library/common/MacPlatform.h; sourceTree = "<group>"; };
+		DE095A0719A51A33008845F2 /* MacPlatform.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = MacPlatform.mm; path = ../../../../../library/common/MacPlatform.mm; sourceTree = "<group>"; };
+		DE095A0819A51A33008845F2 /* Macros.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Macros.cpp; path = ../../../../../library/common/Macros.cpp; sourceTree = "<group>"; };
+		DE095A0919A51A33008845F2 /* Macros.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Macros.h; path = ../../../../../library/common/Macros.h; sourceTree = "<group>"; };
+		DE095A0A19A51A33008845F2 /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = main.cpp; path = ../../../../../library/common/main.cpp; sourceTree = "<group>"; };
+		DE095A0B19A51A33008845F2 /* Messages.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Messages.cpp; path = ../../../../../library/common/Messages.cpp; sourceTree = "<group>"; };
+		DE095A0C19A51A33008845F2 /* Messages.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Messages.h; path = ../../../../../library/common/Messages.h; sourceTree = "<group>"; };
+		DE095A0D19A51A33008845F2 /* Package.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Package.cpp; path = ../../../../../library/common/Package.cpp; sourceTree = "<group>"; };
+		DE095A0E19A51A33008845F2 /* Package.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Package.h; path = ../../../../../library/common/Package.h; sourceTree = "<group>"; };
+		DE095A0F19A51A33008845F2 /* Platform.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Platform.cpp; path = ../../../../../library/common/Platform.cpp; sourceTree = "<group>"; };
+		DE095A1019A51A33008845F2 /* Platform.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Platform.h; path = ../../../../../library/common/Platform.h; sourceTree = "<group>"; };
+		DE095A1119A51A33008845F2 /* PlatformString.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PlatformString.cpp; path = ../../../../../library/common/PlatformString.cpp; sourceTree = "<group>"; };
+		DE095A1219A51A33008845F2 /* PlatformString.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PlatformString.h; path = ../../../../../library/common/PlatformString.h; sourceTree = "<group>"; };
+		DE095A1319A51A33008845F2 /* PlatformThread.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PlatformThread.cpp; path = ../../../../../library/common/PlatformThread.cpp; sourceTree = "<group>"; };
+		DE095A1419A51A33008845F2 /* PlatformThread.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PlatformThread.h; path = ../../../../../library/common/PlatformThread.h; sourceTree = "<group>"; };
+		DE095A1519A51A33008845F2 /* PosixPlatform.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PosixPlatform.cpp; path = ../../../../../library/common/PosixPlatform.cpp; sourceTree = "<group>"; };
+		DE095A1619A51A33008845F2 /* PosixPlatform.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PosixPlatform.h; path = ../../../../../library/common/PosixPlatform.h; sourceTree = "<group>"; };
+		DE095A1719A51A33008845F2 /* PropertyFile.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PropertyFile.cpp; path = ../../../../../library/common/PropertyFile.cpp; sourceTree = "<group>"; };
+		DE095A1819A51A33008845F2 /* PropertyFile.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PropertyFile.h; path = ../../../../../library/common/PropertyFile.h; sourceTree = "<group>"; };
+		DE095A1919A51A33008845F2 /* WindowsPlatform.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = WindowsPlatform.cpp; path = ../../../../../library/common/WindowsPlatform.cpp; sourceTree = "<group>"; };
+		DE095A1A19A51A33008845F2 /* WindowsPlatform.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = WindowsPlatform.h; path = ../../../../../library/common/WindowsPlatform.h; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		DE0959C619A51A02008845F2 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DE0959CD19A51A02008845F2 /* Cocoa.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DE0959D919A51A02008845F2 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DE0959E219A51A02008845F2 /* libpackager.dylib in Frameworks */,
+				DE0959DF19A51A02008845F2 /* Cocoa.framework in Frameworks */,
+				DE0959DE19A51A02008845F2 /* XCTest.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		DE0959C019A51A02008845F2 = {
+			isa = PBXGroup;
+			children = (
+				DE0959D219A51A02008845F2 /* packager */,
+				DE0959E319A51A02008845F2 /* packagerTests */,
+				DE0959CB19A51A02008845F2 /* Frameworks */,
+				DE0959CA19A51A02008845F2 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		DE0959CA19A51A02008845F2 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				DE0959C919A51A02008845F2 /* libpackager.dylib */,
+				DE0959DC19A51A02008845F2 /* libpackagerTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		DE0959CB19A51A02008845F2 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				DE0959CC19A51A02008845F2 /* Cocoa.framework */,
+				DE0959DD19A51A02008845F2 /* XCTest.framework */,
+				DE0959CE19A51A02008845F2 /* Other Frameworks */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		DE0959CE19A51A02008845F2 /* Other Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				DE0959CF19A51A02008845F2 /* Foundation.framework */,
+				DE0959D019A51A02008845F2 /* CoreData.framework */,
+				DE0959D119A51A02008845F2 /* AppKit.framework */,
+			);
+			name = "Other Frameworks";
+			sourceTree = "<group>";
+		};
+		DE0959D219A51A02008845F2 /* packager */ = {
+			isa = PBXGroup;
+			children = (
+				DE0959F419A51A33008845F2 /* Exports.cpp */,
+				DE0959F519A51A33008845F2 /* Exports.h */,
+				DE0959F619A51A33008845F2 /* FilePath.cpp */,
+				DE0959F719A51A33008845F2 /* FilePath.h */,
+				DE0959F819A51A33008845F2 /* GenericPlatform.cpp */,
+				DE0959F919A51A33008845F2 /* GenericPlatform.h */,
+				DE0959FA19A51A33008845F2 /* Helpers.cpp */,
+				DE0959FB19A51A33008845F2 /* Helpers.h */,
+				DE0959FC19A51A33008845F2 /* Java.cpp */,
+				DE0959FD19A51A33008845F2 /* Java.h */,
+				DE0959FE19A51A33008845F2 /* JavaUserPreferences.cpp */,
+				DE0959FF19A51A33008845F2 /* JavaUserPreferences.h */,
+				DE095A0019A51A33008845F2 /* JavaVirtualMachine.cpp */,
+				DE095A0119A51A33008845F2 /* JavaVirtualMachine.h */,
+				DE095A0219A51A33008845F2 /* LinuxPlatform.cpp */,
+				DE095A0319A51A33008845F2 /* LinuxPlatform.h */,
+				DE095A0419A51A33008845F2 /* Lock.cpp */,
+				DE095A0519A51A33008845F2 /* Lock.h */,
+				DE095A0619A51A33008845F2 /* MacPlatform.h */,
+				DE095A0719A51A33008845F2 /* MacPlatform.mm */,
+				DE095A0819A51A33008845F2 /* Macros.cpp */,
+				DE095A0919A51A33008845F2 /* Macros.h */,
+				DE095A0A19A51A33008845F2 /* main.cpp */,
+				DE095A0B19A51A33008845F2 /* Messages.cpp */,
+				DE095A0C19A51A33008845F2 /* Messages.h */,
+				DE095A0D19A51A33008845F2 /* Package.cpp */,
+				DE095A0E19A51A33008845F2 /* Package.h */,
+				DE095A0F19A51A33008845F2 /* Platform.cpp */,
+				DE095A1019A51A33008845F2 /* Platform.h */,
+				DE095A1119A51A33008845F2 /* PlatformString.cpp */,
+				DE095A1219A51A33008845F2 /* PlatformString.h */,
+				DE095A1319A51A33008845F2 /* PlatformThread.cpp */,
+				DE095A1419A51A33008845F2 /* PlatformThread.h */,
+				DE095A1519A51A33008845F2 /* PosixPlatform.cpp */,
+				DE095A1619A51A33008845F2 /* PosixPlatform.h */,
+				DE095A1719A51A33008845F2 /* PropertyFile.cpp */,
+				DE095A1819A51A33008845F2 /* PropertyFile.h */,
+				DE095A1919A51A33008845F2 /* WindowsPlatform.cpp */,
+				DE095A1A19A51A33008845F2 /* WindowsPlatform.h */,
+				DE0959D319A51A02008845F2 /* Supporting Files */,
+			);
+			path = packager;
+			sourceTree = "<group>";
+		};
+		DE0959D319A51A02008845F2 /* Supporting Files */ = {
+			isa = PBXGroup;
+			children = (
+				DE0959D419A51A02008845F2 /* libpackager-Prefix.pch */,
+			);
+			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+		DE0959E319A51A02008845F2 /* packagerTests */ = {
+			isa = PBXGroup;
+			children = (
+				DE0959E919A51A02008845F2 /* packagerTests.m */,
+				DE0959E419A51A02008845F2 /* Supporting Files */,
+			);
+			path = packagerTests;
+			sourceTree = "<group>";
+		};
+		DE0959E419A51A02008845F2 /* Supporting Files */ = {
+			isa = PBXGroup;
+			children = (
+				DE0959E519A51A02008845F2 /* libpackagerTests-Info.plist */,
+				DE0959E619A51A02008845F2 /* InfoPlist.strings */,
+			);
+			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXHeadersBuildPhase section */
+		DE0959C719A51A02008845F2 /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DE095A3319A51A33008845F2 /* Messages.h in Headers */,
+				DE095A3719A51A33008845F2 /* Platform.h in Headers */,
+				DE095A3519A51A33008845F2 /* Package.h in Headers */,
+				DE095A3B19A51A33008845F2 /* PlatformThread.h in Headers */,
+				DE095A4119A51A33008845F2 /* WindowsPlatform.h in Headers */,
+				DE095A2419A51A33008845F2 /* Java.h in Headers */,
+				DE095A2C19A51A33008845F2 /* Lock.h in Headers */,
+				DE095A1C19A51A33008845F2 /* Exports.h in Headers */,
+				DE095A3F19A51A33008845F2 /* PropertyFile.h in Headers */,
+				DE095A2A19A51A33008845F2 /* LinuxPlatform.h in Headers */,
+				DE095A2019A51A33008845F2 /* GenericPlatform.h in Headers */,
+				DE095A2219A51A33008845F2 /* Helpers.h in Headers */,
+				DE095A2619A51A33008845F2 /* JavaUserPreferences.h in Headers */,
+				DE095A3D19A51A33008845F2 /* PosixPlatform.h in Headers */,
+				DE095A1E19A51A33008845F2 /* FilePath.h in Headers */,
+				DE095A3019A51A33008845F2 /* Macros.h in Headers */,
+				DE095A2819A51A33008845F2 /* JavaVirtualMachine.h in Headers */,
+				DE095A2D19A51A33008845F2 /* MacPlatform.h in Headers */,
+				DE095A3919A51A33008845F2 /* PlatformString.h in Headers */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXHeadersBuildPhase section */
+
+/* Begin PBXNativeTarget section */
+		DE0959C819A51A02008845F2 /* libpackager */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = DE0959ED19A51A02008845F2 /* Build configuration list for PBXNativeTarget "libpackager" */;
+			buildPhases = (
+				DE0959C519A51A02008845F2 /* Sources */,
+				DE0959C619A51A02008845F2 /* Frameworks */,
+				DE0959C719A51A02008845F2 /* Headers */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = libpackager;
+			productName = packager;
+			productReference = DE0959C919A51A02008845F2 /* libpackager.dylib */;
+			productType = "com.apple.product-type.library.dynamic";
+		};
+		DE0959DB19A51A02008845F2 /* libpackagerTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = DE0959F019A51A02008845F2 /* Build configuration list for PBXNativeTarget "libpackagerTests" */;
+			buildPhases = (
+				DE0959D819A51A02008845F2 /* Sources */,
+				DE0959D919A51A02008845F2 /* Frameworks */,
+				DE0959DA19A51A02008845F2 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				DE0959E119A51A02008845F2 /* PBXTargetDependency */,
+			);
+			name = libpackagerTests;
+			productName = packagerTests;
+			productReference = DE0959DC19A51A02008845F2 /* libpackagerTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		DE0959C119A51A02008845F2 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0600;
+				ORGANIZATIONNAME = "___FULLUSERNAME___";
+				TargetAttributes = {
+					DE0959DB19A51A02008845F2 = {
+						TestTargetID = DE0959C819A51A02008845F2;
+					};
+				};
+			};
+			buildConfigurationList = DE0959C419A51A02008845F2 /* Build configuration list for PBXProject "libpackager" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = DE0959C019A51A02008845F2;
+			productRefGroup = DE0959CA19A51A02008845F2 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				DE0959C819A51A02008845F2 /* libpackager */,
+				DE0959DB19A51A02008845F2 /* libpackagerTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		DE0959DA19A51A02008845F2 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DE0959E819A51A02008845F2 /* InfoPlist.strings in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		DE0959C519A51A02008845F2 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DE095A2F19A51A33008845F2 /* Macros.cpp in Sources */,
+				DE095A3419A51A33008845F2 /* Package.cpp in Sources */,
+				DE095A3E19A51A33008845F2 /* PropertyFile.cpp in Sources */,
+				DE095A3619A51A33008845F2 /* Platform.cpp in Sources */,
+				DE095A3819A51A33008845F2 /* PlatformString.cpp in Sources */,
+				DE095A1B19A51A33008845F2 /* Exports.cpp in Sources */,
+				DE095A3A19A51A33008845F2 /* PlatformThread.cpp in Sources */,
+				DE095A2519A51A33008845F2 /* JavaUserPreferences.cpp in Sources */,
+				DE095A1F19A51A33008845F2 /* GenericPlatform.cpp in Sources */,
+				DE095A3C19A51A33008845F2 /* PosixPlatform.cpp in Sources */,
+				DE095A2B19A51A33008845F2 /* Lock.cpp in Sources */,
+				DE095A2919A51A33008845F2 /* LinuxPlatform.cpp in Sources */,
+				DE095A3219A51A33008845F2 /* Messages.cpp in Sources */,
+				DE095A2E19A51A33008845F2 /* MacPlatform.mm in Sources */,
+				DE095A2319A51A33008845F2 /* Java.cpp in Sources */,
+				DE095A2719A51A33008845F2 /* JavaVirtualMachine.cpp in Sources */,
+				DE095A3119A51A33008845F2 /* main.cpp in Sources */,
+				DE095A2119A51A33008845F2 /* Helpers.cpp in Sources */,
+				DE095A1D19A51A33008845F2 /* FilePath.cpp in Sources */,
+				DE095A4019A51A33008845F2 /* WindowsPlatform.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DE0959D819A51A02008845F2 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DE0959EA19A51A02008845F2 /* packagerTests.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		DE0959E119A51A02008845F2 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = DE0959C819A51A02008845F2 /* libpackager */;
+			targetProxy = DE0959E019A51A02008845F2 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin PBXVariantGroup section */
+		DE0959E619A51A02008845F2 /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				DE0959E719A51A02008845F2 /* en */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
+
+/* Begin XCBuildConfiguration section */
+		DE0959EB19A51A02008845F2 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CONFIGURATION_BUILD_DIR = ../../../../../../../build/dev/DevTest.app/Contents/MacOS;
+				COPY_PHASE_STRIP = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				USER_HEADER_SEARCH_PATHS = /System/Library/Frameworks/JavaVM.framework/Headers;
+			};
+			name = Debug;
+		};
+		DE0959EC19A51A02008845F2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				SDKROOT = macosx;
+				USER_HEADER_SEARCH_PATHS = /System/Library/Frameworks/JavaVM.framework/Headers;
+			};
+			name = Release;
+		};
+		DE0959EE19A51A02008845F2 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				CONFIGURATION_BUILD_DIR = ../../../../../../../build/dev/DevTest.app/Contents/MacOS;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "packager/libpackager-Prefix.pch";
+				PRODUCT_NAME = libpackager;
+				SDKROOT = macosx;
+				USER_HEADER_SEARCH_PATHS = "/System/Library/Frameworks/JavaVM.framework/Headers /Library/Java/JavaVirtualMachines/jdk1.8.0_20.jdk/Contents/Home/include/**";
+			};
+			name = Debug;
+		};
+		DE0959EF19A51A02008845F2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "packager/libpackager-Prefix.pch";
+				PRODUCT_NAME = libpackager;
+				SDKROOT = macosx;
+				USER_HEADER_SEARCH_PATHS = "/System/Library/Frameworks/JavaVM.framework/Headers /Library/Java/JavaVirtualMachines/jdk1.8.0_20.jdk/Contents/Home/include/**";
+			};
+			name = Release;
+		};
+		DE0959F119A51A02008845F2 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(BUILT_PRODUCTS_DIR)/libpackager.dylib";
+				COMBINE_HIDPI_IMAGES = YES;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(DEVELOPER_FRAMEWORKS_DIR)",
+					"$(inherited)",
+				);
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "packager/libpackager-Prefix.pch";
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				INFOPLIST_FILE = "packagerTests/libpackagerTests-Info.plist";
+				PRODUCT_NAME = libpackagerTests;
+				TEST_HOST = "$(BUNDLE_LOADER)";
+				WRAPPER_EXTENSION = xctest;
+			};
+			name = Debug;
+		};
+		DE0959F219A51A02008845F2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(BUILT_PRODUCTS_DIR)/libpackager.dylib";
+				COMBINE_HIDPI_IMAGES = YES;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(DEVELOPER_FRAMEWORKS_DIR)",
+					"$(inherited)",
+				);
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "packager/libpackager-Prefix.pch";
+				INFOPLIST_FILE = "packagerTests/libpackagerTests-Info.plist";
+				PRODUCT_NAME = libpackagerTests;
+				TEST_HOST = "$(BUNDLE_LOADER)";
+				WRAPPER_EXTENSION = xctest;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		DE0959C419A51A02008845F2 /* Build configuration list for PBXProject "libpackager" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DE0959EB19A51A02008845F2 /* Debug */,
+				DE0959EC19A51A02008845F2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		DE0959ED19A51A02008845F2 /* Build configuration list for PBXNativeTarget "libpackager" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DE0959EE19A51A02008845F2 /* Debug */,
+				DE0959EF19A51A02008845F2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		DE0959F019A51A02008845F2 /* Build configuration list for PBXNativeTarget "libpackagerTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DE0959F119A51A02008845F2 /* Debug */,
+				DE0959F219A51A02008845F2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = DE0959C119A51A02008845F2 /* Project object */;
+}

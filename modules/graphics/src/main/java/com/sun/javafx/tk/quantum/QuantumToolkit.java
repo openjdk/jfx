@@ -72,6 +72,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
 import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Clipboard;
 import com.sun.glass.ui.ClipboardAssistance;
@@ -139,13 +140,16 @@ public final class QuantumToolkit extends Toolkit {
     public static final boolean pulseDebug =
             AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("quantum.pulse"));
 
-    public static final boolean multithreaded =
+    private static boolean userSetMultithreaded = false;
+    private static final boolean multithreaded =
             AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
                 // If it is not specified, or it is true, then it should
                 // be true. Otherwise it should be false.
                 String value = System.getProperty("quantum.multithreaded");
-                value = value == null ? "" : value.trim();
-                final boolean result = "".equals(value) || Boolean.parseBoolean(value);
+                if (value == null) return true;
+
+                userSetMultithreaded = true;
+                final boolean result = Boolean.parseBoolean(value);
                 if (verbose) {
                     System.out.println(result ? "Multi-Threading Enabled" : "Multi-Threading Disabled");
                 }
@@ -213,6 +217,9 @@ public final class QuantumToolkit extends Toolkit {
 
     private final PerformanceTracker perfTracker = new PerformanceTrackerImpl();
 
+    // This is a workaround fix for Mac to serialize the access to Prism context when EmbeddedStage is used.
+    private static boolean hasEmbeddedStage = false;
+
     @Override public boolean init() {
         /*
          * Glass Mac, X11 need Application.setDeviceDetails to happen prior to Glass Application.Run
@@ -252,6 +259,7 @@ public final class QuantumToolkit extends Toolkit {
         try {
             this.userRunnable = userStartupRunnable;
 
+            // Ensure that the toolkit can only be started here
             Application.run(() -> runToolkit());
         } catch (RuntimeException ex) {
             if (verbose) {
@@ -275,6 +283,34 @@ public final class QuantumToolkit extends Toolkit {
     // restart the toolkit if previously terminated
     private void assertToolkitRunning() {
         // not implemented
+    }
+
+    static void setHasEmbeddedStage(boolean embeddedStage) {
+        hasEmbeddedStage = embeddedStage;
+    }
+
+    // Called by PaintCollector as a workaround to RT-15195 and RT-38808.
+    boolean shouldWaitForRenderingToComplete() {
+        if (userSetMultithreaded) return !multithreaded;
+        // Work around for RT-38808, crash on Mac
+        // This is to serialize the access to Prism context when EmbeddedStage is used.
+        if ((PlatformUtil.isMac()) && hasEmbeddedStage) return true;
+        return !multithreaded; 
+    }
+
+    /**
+     * Method to initialize the Scene Graph on the JavaFX application thread.
+     * Specifically, we will do static initialization for those classes in
+     * the javafx.stage, javafx.scene, and javafx.controls packages necessary
+     * to allow subsequent construction of the Scene or any Node, including
+     * a PopupControl, on a background thread.
+     *
+     * This method is called on the JavaFX application thread.
+     */
+    private static void initSceneGraph() {
+        // It is both necessary and sufficient to call a static method on the
+        // Screen class to allow PopupControl instances to be created on any thread.
+        javafx.stage.Screen.getPrimary();
     }
 
     // Called by Glass from Application.run()
@@ -301,8 +337,6 @@ public final class QuantumToolkit extends Toolkit {
                     QuantumToolkit.this.postPulse();
                 } catch (Throwable th) {
                     th.printStackTrace(System.err);
-                    // } catch (RuntimeException re) {
-                    // ignore spurious Glass timer events while exiting...
                 }
             };
             pulseTimer = Application.GetApplication().createTimer(timerRunnable);
@@ -317,6 +351,8 @@ public final class QuantumToolkit extends Toolkit {
                 }
             });
         }
+        // Initialize JavaFX scene graph
+        initSceneGraph();
         launchLatch.countDown();
         try {
             Application.invokeAndWait(this.userRunnable);
@@ -348,6 +384,44 @@ public final class QuantumToolkit extends Toolkit {
                                    " vpipe: " + pipeline.isVsyncSupported());
             }
             PerformanceTracker.logEvent("Toolkit.startup - finished");
+        }
+    }
+
+    /**
+     * Runs the specified supplier, releasing the renderLock if needed.
+     * This is called by glass event handlers for Window, View, and
+     * Accessible.
+     * @param <T> the type of the return value
+     * @param supplier the supplier to be run
+     * @return the return value from calling supplier.get()
+     */
+    public static <T> T runWithoutRenderLock(Supplier<T> supplier) {
+        final boolean locked = ViewPainter.renderLock.isHeldByCurrentThread();
+        try {
+            if (locked) {
+                ViewPainter.renderLock.unlock();
+            }
+            return supplier.get();
+        } finally {
+            if (locked) {
+                ViewPainter.renderLock.lock();
+            }
+        }
+    }
+
+    /**
+     * Runs the specified supplier, first acquiring the renderLock.
+     * The lock is released when done.
+     * @param <T> the type of the return value
+     * @param supplier the supplier to be run
+     * @return the return value from calling supplier.get()
+     */
+    public static <T> T runWithRenderLock(Supplier<T> supplier) {
+        ViewPainter.renderLock.lock();
+        try {
+            return supplier.get();
+        } finally {
+            ViewPainter.renderLock.unlock();
         }
     }
 
@@ -674,21 +748,22 @@ public final class QuantumToolkit extends Toolkit {
         // This method must run on the FX application thread
         checkFxUserThread();
 
+        // Turn off pulses so no extraneous runnables are submitted
+        pulseTimer.stop();
+
         // We need to wait for the last frame to finish so that the renderer
         // is not running while we are shutting down glass.
         PaintCollector.getInstance().waitForRenderingToComplete();
 
         notifyShutdownHooks();
 
-        ViewPainter.renderLock.lock();
-        try {
+        runWithRenderLock(() -> {
             //TODO - should update glass scene view state
             //TODO - doesn't matter because we are exiting
             Application app = Application.GetApplication();
             app.terminate();
-        } finally {
-            ViewPainter.renderLock.unlock();
-        }
+            return null;
+        });
 
         dispose();
 
@@ -1097,8 +1172,8 @@ public final class QuantumToolkit extends Toolkit {
     }
 
     @Override
-    public boolean isAntiAliasingSupported() {
-        return  GraphicsPipeline.getPipeline().isAntiAliasingSupported();
+    public boolean isMSAASupported() {
+        return  GraphicsPipeline.getPipeline().isMSAASupported();
     }
 
     static TransferMode clipboardActionToTransferMode(final int action) {
@@ -1377,8 +1452,8 @@ public final class QuantumToolkit extends Toolkit {
                     errored = true;
                     t.printStackTrace(System.err);
                 } finally {
-                    Disposer.cleanUp();            
-                    ManagedResource.freeDisposalRequestedAndCheckResources(errored);
+                    Disposer.cleanUp();
+                    rf.getTextureResourcePool().freeDisposalRequestedAndCheckResources(errored);
                 }
             }
         });

@@ -33,6 +33,8 @@
 #include "glass_general.h"
 
 static void my_free(guchar *pixels, gpointer data) {
+    (void)data;
+
     g_free(pixels);
 }
 
@@ -46,6 +48,8 @@ extern "C" {
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkPixels__1copyPixels
   (JNIEnv *env, jobject obj, jobject jDst, jobject jSrc, jint jSize)
 {
+    (void)obj;
+
     //Taken from MacPixels (and fixed)
     void *src = env->GetDirectBufferAddress(jSrc);
     void *dst = env->GetDirectBufferAddress(jDst);
@@ -63,6 +67,8 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkPixels__1copyPixels
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkPixels__1attachInt
   (JNIEnv * env, jobject obj, jlong ptr, jint w, jint h, jobject ints, jintArray array, jint offset)
 {
+    (void)obj;
+
     jint *data;
     GdkPixbuf **pixbuf;
     guint8 *dataRGBA;
@@ -93,6 +99,8 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkPixels__1attachInt
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkPixels__1attachByte
   (JNIEnv * env, jobject obj, jlong ptr, jint w, jint h, jobject bytes, jbyteArray array, jint offset)
 {
+    (void)obj;
+
     jbyte *data;
     GdkPixbuf **pixbuf;
     guint8 *dataRGBA;

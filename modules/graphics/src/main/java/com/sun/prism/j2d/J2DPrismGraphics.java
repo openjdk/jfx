@@ -58,6 +58,7 @@ import com.sun.prism.RenderTarget;
 import com.sun.prism.ResourceFactory;
 import com.sun.prism.Texture;
 import com.sun.prism.Texture.WrapMode;
+import com.sun.prism.impl.PrismSettings;
 import com.sun.prism.j2d.paint.MultipleGradientPaint.ColorSpaceType;
 import com.sun.prism.j2d.paint.RadialGradientPaint;
 import com.sun.prism.paint.Color;
@@ -499,6 +500,7 @@ public class J2DPrismGraphics
         return tmpAdaptor;
     }
 
+    private boolean antialiasedShape = true;
     J2DPresentable target;
     java.awt.Graphics2D g2d;
     Affine2D transform;
@@ -1274,6 +1276,24 @@ public class J2DPrismGraphics
 
     public boolean isDepthTest() {
         return false;
+    }
+
+    public boolean isAlphaTestShader() {
+        if (PrismSettings.verbose && PrismSettings.forceAlphaTestShader) {
+            System.out.println("J2D pipe doesn't support shader with alpha testing");
+        }
+        return false;
+    }
+
+    public void setAntialiasedShape(boolean aa) {
+        antialiasedShape = aa;
+        g2d.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING,
+                antialiasedShape ? java.awt.RenderingHints.VALUE_ANTIALIAS_ON
+                        : java.awt.RenderingHints.VALUE_ANTIALIAS_OFF);
+    }
+
+    public boolean isAntialiasedShape() {
+        return antialiasedShape;
     }
 
     public void scale(float sx, float sy, float sz) {

@@ -33,8 +33,9 @@ import javafx.beans.property.ObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
+import javafx.scene.AccessibleAction;
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
-//import javafx.scene.accessibility.Attribute;
 import javafx.scene.control.ResizeFeaturesBase;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
@@ -197,6 +198,10 @@ public class TableViewSkin<T> extends TableViewSkinBase<T, T, TableView<T>, Tabl
         return tableView.resizeColumn(tc, delta);
     }
 
+    @Override protected void edit(int index, TableColumn<T, ?> column) {
+        tableView.edit(index, (TableColumn<T,?>)column);
+    }
+
     /*
      * FIXME: Naive implementation ahead
      * Attempts to resize column based on the pref width of all items contained
@@ -290,25 +295,55 @@ public class TableViewSkin<T> extends TableViewSkinBase<T, T, TableView<T>, Tabl
         }
     }
     
-//    @Override
-//    public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//        switch (attribute) {
-//            case SELECTED_CELLS: {
-//                List<Node> selection = new ArrayList<>();
-//                TableViewSelectionModel<T> sm = getSkinnable().getSelectionModel();
-//                for (TablePosition pos : sm.getSelectedCells()) {
-//                    TableRow<T> row = flow.getPrivateCell(pos.getRow());
-//                    if (row != null) selection.add(row);
-//                }
-//                return FXCollections.observableArrayList(selection);
-//            }
-//            case FOCUS_ITEM: // TableViewSkinBase
-//            case CELL_AT_ROW_COLUMN: // TableViewSkinBase
-//            case COLUMN_AT_INDEX: // TableViewSkinBase
-//            case HEADER: // TableViewSkinBase
-//            default: return super.accGetAttribute(attribute, parameters);
-//        }
-//    }
+    @Override
+    public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
+        switch (attribute) {
+            case SELECTED_ITEMS: {
+                List<Node> selection = new ArrayList<>();
+                TableViewSelectionModel<T> sm = getSkinnable().getSelectionModel();
+                for (TablePosition<T,?> pos : sm.getSelectedCells()) {
+                    TableRow<T> row = flow.getPrivateCell(pos.getRow());
+                    if (row != null) selection.add(row);
+                }
+                return FXCollections.observableArrayList(selection);
+            }
+            default: return super.queryAccessibleAttribute(attribute, parameters);
+        }
+    }
+
+    @Override
+    protected void executeAccessibleAction(AccessibleAction action, Object... parameters) {
+        switch (action) {
+            case SHOW_ITEM: {
+                Node item = (Node)parameters[0];
+                if (item instanceof TableCell) {
+                    @SuppressWarnings("unchecked")
+                    TableCell<T, ?> cell = (TableCell<T, ?>)item;
+                    flow.show(cell.getIndex());
+                }
+                break;
+            }
+            case SET_SELECTED_ITEMS: {
+                @SuppressWarnings("unchecked")
+                ObservableList<Node> items = (ObservableList<Node>)parameters[0];
+                if (items != null) {
+                    TableSelectionModel<T> sm = getSkinnable().getSelectionModel();
+                    if (sm != null) {
+                        sm.clearSelection();
+                        for (Node item : items) {
+                            if (item instanceof TableCell) {
+                                @SuppressWarnings("unchecked")
+                                TableCell<T, ?> cell = (TableCell<T, ?>)item;
+                                sm.select(cell.getIndex(), cell.getTableColumn());
+                            }
+                        }
+                    }
+                }
+                break;
+            }
+            default: super.executeAccessibleAction(action, parameters);
+        }
+    }
 
     /***************************************************************************
      *                                                                         *

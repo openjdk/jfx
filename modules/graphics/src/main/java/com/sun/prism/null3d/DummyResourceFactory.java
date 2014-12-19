@@ -69,6 +69,12 @@ class DummyResourceFactory extends BaseShaderFactory {
         return new DummyTexture(context, format, wrapMode, w, h);
     }
 
+    @Override
+    public DummyTexture createTexture(PixelFormat format, Usage usagehint,
+            WrapMode wrapMode, int w, int h, boolean useMipmap) {
+        return createTexture(format, usagehint, wrapMode, w, h);
+    }
+
     public int getRTTWidth(int w, WrapMode wrapMode) {
         return w;
     }
@@ -88,7 +94,7 @@ class DummyResourceFactory extends BaseShaderFactory {
     }
 
     @Override
-    public RTTexture createRTTexture(int width, int height, WrapMode wrapMode, boolean antiAliasing) {
+    public RTTexture createRTTexture(int width, int height, WrapMode wrapMode, boolean msaa) {
         return new DummyRTTexture(context, wrapMode, width, height);
     }
 

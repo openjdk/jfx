@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -53,8 +53,9 @@ final class GSTMediaPlayer extends NativeMediaPlayer {
             throwMediaErrorException(rc, null);
         }
 
-        audioSpectrum = new GSTAudioSpectrum(gstMedia.getNativeMediaRef());
-        audioEqualizer = new GSTAudioEqualizer(gstMedia.getNativeMediaRef());
+        long mediaRef = gstMedia.getNativeMediaRef();
+        audioSpectrum = createNativeAudioSpectrum(gstGetAudioSpectrum(mediaRef));
+        audioEqualizer = createNativeAudioEqualizer(gstGetAudioEqualizer(mediaRef));
     }
 
     GSTMediaPlayer(Locator source) {
@@ -79,6 +80,7 @@ final class GSTMediaPlayer extends NativeMediaPlayer {
         throw new MediaException(message, null, me);
     }
 
+    @Override
     protected long playerGetAudioSyncDelay() throws MediaException {
         long[] audioSyncDelay = new long[1];
         int rc = gstGetAudioSyncDelay(gstMedia.getNativeMediaRef(), audioSyncDelay);
@@ -88,6 +90,7 @@ final class GSTMediaPlayer extends NativeMediaPlayer {
         return audioSyncDelay[0];
     }
 
+    @Override
     protected void playerSetAudioSyncDelay(long delay) throws MediaException {
         int rc = gstSetAudioSyncDelay(gstMedia.getNativeMediaRef(), delay);
         if (0 != rc) {
@@ -95,6 +98,7 @@ final class GSTMediaPlayer extends NativeMediaPlayer {
         }
     }
 
+    @Override
     protected void playerPlay() throws MediaException {
         int rc = gstPlay(gstMedia.getNativeMediaRef());
         if (0 != rc) {
@@ -102,6 +106,7 @@ final class GSTMediaPlayer extends NativeMediaPlayer {
         }
     }
 
+    @Override
     protected void playerStop() throws MediaException {
         int rc = gstStop(gstMedia.getNativeMediaRef());
         if (0 != rc) {
@@ -109,6 +114,7 @@ final class GSTMediaPlayer extends NativeMediaPlayer {
         }
     }
 
+    @Override
     protected void playerPause() throws MediaException {
         int rc = gstPause(gstMedia.getNativeMediaRef());
         if (0 != rc) {
@@ -116,6 +122,7 @@ final class GSTMediaPlayer extends NativeMediaPlayer {
         }
     }
 
+    @Override
     protected void playerFinish() throws MediaException {
         int rc = gstFinish(gstMedia.getNativeMediaRef());
         if (0 != rc) {
@@ -123,6 +130,7 @@ final class GSTMediaPlayer extends NativeMediaPlayer {
         }
     }
 
+    @Override
     protected float playerGetRate() throws MediaException {
         float[] rate = new float[1];
         int rc = gstGetRate(gstMedia.getNativeMediaRef(), rate);
@@ -132,6 +140,7 @@ final class GSTMediaPlayer extends NativeMediaPlayer {
         return rate[0];
     }
 
+    @Override
     protected void playerSetRate(float rate) throws MediaException {
         int rc = gstSetRate(gstMedia.getNativeMediaRef(), rate);
         if (0 != rc) {
@@ -139,6 +148,7 @@ final class GSTMediaPlayer extends NativeMediaPlayer {
         }
     }
 
+    @Override
     protected double playerGetPresentationTime() throws MediaException {
         double[] presentationTime = new double[1];
         int rc = gstGetPresentationTime(gstMedia.getNativeMediaRef(), presentationTime);
@@ -148,10 +158,12 @@ final class GSTMediaPlayer extends NativeMediaPlayer {
         return presentationTime[0];
     }
 
+    @Override
     protected boolean playerGetMute() throws MediaException {
         return muteEnabled;
     }
 
+    @Override
     protected synchronized void playerSetMute(boolean enable) throws MediaException {
         if (enable != muteEnabled) {
             if (enable) {
@@ -181,6 +193,7 @@ final class GSTMediaPlayer extends NativeMediaPlayer {
         }
     }
 
+    @Override
     protected float playerGetVolume() throws MediaException {
         synchronized(this) {
             if (muteEnabled)
@@ -194,6 +207,7 @@ final class GSTMediaPlayer extends NativeMediaPlayer {
         return volume[0];
     }
 
+    @Override
     protected synchronized void playerSetVolume(float volume) throws MediaException {
         if (!muteEnabled) {
             int rc = gstSetVolume(gstMedia.getNativeMediaRef(), volume);
@@ -207,6 +221,7 @@ final class GSTMediaPlayer extends NativeMediaPlayer {
         }
     }
 
+    @Override
     protected float playerGetBalance() throws MediaException {
         float[] balance = new float[1];
         int rc = gstGetBalance(gstMedia.getNativeMediaRef(), balance);
@@ -216,6 +231,7 @@ final class GSTMediaPlayer extends NativeMediaPlayer {
         return balance[0];
     }
 
+    @Override
     protected void playerSetBalance(float balance) throws MediaException {
         int rc = gstSetBalance(gstMedia.getNativeMediaRef(), balance);
         if (0 != rc) {
@@ -223,6 +239,7 @@ final class GSTMediaPlayer extends NativeMediaPlayer {
         }
     }
 
+    @Override
     protected double playerGetDuration() throws MediaException {
         double[] duration = new double[1];
         int rc = gstGetDuration(gstMedia.getNativeMediaRef(), duration);
@@ -236,6 +253,7 @@ final class GSTMediaPlayer extends NativeMediaPlayer {
         }
     }
 
+    @Override
     protected void playerSeek(double streamTime) throws MediaException {
         int rc = gstSeek(gstMedia.getNativeMediaRef(), streamTime);
         if (0 != rc) {
@@ -243,9 +261,11 @@ final class GSTMediaPlayer extends NativeMediaPlayer {
         }
     }
 
+    @Override
     protected void playerInit() throws MediaException {
     }
 
+    @Override
     protected void playerDispose() {
         audioEqualizer = null;
         audioSpectrum = null;
@@ -254,6 +274,8 @@ final class GSTMediaPlayer extends NativeMediaPlayer {
 
     // Native methods
     private native int gstInitPlayer(long refNativeMedia);
+    private native long gstGetAudioEqualizer(long refNativeMedia);
+    private native long gstGetAudioSpectrum(long refNativeMedia);
     private native int gstGetAudioSyncDelay(long refNativeMedia, long[] syncDelay);
     private native int gstSetAudioSyncDelay(long refNativeMedia, long delay);
     private native int gstPlay(long refNativeMedia);

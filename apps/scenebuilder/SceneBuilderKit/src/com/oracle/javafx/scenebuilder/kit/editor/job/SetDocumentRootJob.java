@@ -29,118 +29,88 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
 package com.oracle.javafx.scenebuilder.kit.editor.job;
 
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
-import com.oracle.javafx.scenebuilder.kit.editor.selection.Selection;
-import com.oracle.javafx.scenebuilder.kit.fxom.FXOMDocument;
+import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.SetFxomRootJob;
+import com.oracle.javafx.scenebuilder.kit.editor.selection.AbstractSelectionGroup;
+import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMObject;
+import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignHierarchyMask;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  *
  */
-public class SetDocumentRootJob extends Job {
+public class SetDocumentRootJob extends BatchSelectionJob {
 
     private final FXOMObject newRoot;
-    private FXOMObject oldRoot;
-    private Job trimJob;
-    
-    public SetDocumentRootJob(FXOMObject newRoot, EditorController editorController) {
+    private final boolean usePredefinedSize;
+    private final String description;
+
+    public SetDocumentRootJob(FXOMObject newRoot, 
+            boolean usePredefinedSize, 
+            String description,
+            EditorController editorController) {
         super(editorController);
-        
+
         assert editorController.getFxomDocument() != null;
         assert (newRoot == null) || (newRoot.getFxomDocument() == editorController.getFxomDocument());
-        
+        assert description != null;
+
         this.newRoot = newRoot;
+        this.usePredefinedSize = usePredefinedSize;
+        this.description = description;
+    }
+    
+    public SetDocumentRootJob(FXOMObject newRoot, EditorController editorController) {
+        this(newRoot, false /* usePredefinedSize */, 
+                SetDocumentRootJob.class.getSimpleName(), editorController);
     }
 
     public FXOMObject getNewRoot() {
         return newRoot;
     }
-    
-    
-    /*
-     * Job
-     */
-    
-    @Override
-    public boolean isExecutable() {
-        return newRoot != getEditorController().getFxomDocument().getFxomRoot();
-    }
 
     @Override
-    public void execute() {
-        assert oldRoot == null;
-        assert trimJob == null;
-        
-        // Saves the current root
-        final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
-        oldRoot = fxomDocument.getFxomRoot();
-        
-        // Before setting newRoot as the root of the fxom document,
-        // we must remove its static properties.
-        // We create a RemovePropertyJob for each existing static property
-        if (newRoot != null) {
-            trimJob = new PrunePropertiesJob(newRoot, null, getEditorController());
-            if (trimJob.isExecutable() == false) {
-                trimJob = null;
+    protected List<Job> makeSubJobs() {
+        final List<Job> result = new ArrayList<>();
+        if (newRoot != getEditorController().getFxomDocument().getFxomRoot()) {
+            // Before setting newRoot as the root of the fxom document,
+            // we must remove its static properties.
+            // We create a RemovePropertyJob for each existing static property
+            if (newRoot != null) {
+                result.add(new PrunePropertiesJob(newRoot, null, getEditorController()));
+            }
+            
+            // Adds job that effectively modifes the root
+            result.add(new SetFxomRootJob(newRoot, getEditorController()));
+            
+            // If need, we add a job for resizing the root object
+            if ((newRoot != null) && usePredefinedSize) {
+                final DesignHierarchyMask mask = new DesignHierarchyMask(newRoot);
+                if (mask.needResizeWhenTopElement()) {
+                    result.add(new UsePredefinedSizeJob(getEditorController(), 
+                            EditorController.Size.SIZE_DEFAULT, newRoot));
+                }
             }
         }
-        
-        // Now execute jobs
-        final Selection selection = getEditorController().getSelection();
-        selection.beginUpdate();
-        fxomDocument.beginUpdate();
-        if (trimJob != null) {
-            trimJob.execute();
-        }
-        fxomDocument.setFxomRoot(newRoot);
-        fxomDocument.endUpdate();
-        selection.endUpdate();
+        return result;
     }
 
     @Override
-    public void undo() {
-        final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
-        final Selection selection = getEditorController().getSelection();
-        
-        assert fxomDocument.getFxomRoot() == newRoot;
-        
-        selection.beginUpdate();
-        fxomDocument.beginUpdate();
-        fxomDocument.setFxomRoot(oldRoot);
-        if (trimJob != null) {
-            trimJob.undo();
-        }
-        fxomDocument.endUpdate();
-        selection.endUpdate();
-        
-        assert fxomDocument.getFxomRoot() == oldRoot;
+    protected String makeDescription() {
+        return description;
     }
 
     @Override
-    public void redo() {
-        final FXOMDocument fxomDocument = getEditorController().getFxomDocument();
-        final Selection selection = getEditorController().getSelection();
-        
-        assert fxomDocument.getFxomRoot() == oldRoot;
-        
-        selection.beginUpdate();
-        fxomDocument.beginUpdate();
-        if (trimJob != null) {
-            trimJob.redo();
+    protected AbstractSelectionGroup getNewSelectionGroup() {
+        if (newRoot == null) {
+            return null;
         }
-        fxomDocument.setFxomRoot(newRoot);
-        fxomDocument.endUpdate();
-        selection.endUpdate();
-        
-        assert fxomDocument.getFxomRoot() == newRoot;
-    }
-
-    @Override
-    public String getDescription() {
-        // Not expected to reach the user
-        return getClass().getSimpleName();
+        List<FXOMObject> newObjects = new ArrayList<>();
+        newObjects.add(newRoot);
+        return new ObjectSelectionGroup(newObjects, newRoot, null);
     }
 }
