@@ -483,6 +483,7 @@ class WindowStage extends GlassStage {
     
     @Override public void setOpacity(float opacity) {
         platformWindow.setAlpha(opacity);
+        getScene().entireSceneNeedsRepaint();
     }
 
     public boolean needsUpdateWindow() {
