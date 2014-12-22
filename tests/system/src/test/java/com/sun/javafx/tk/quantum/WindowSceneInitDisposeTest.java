@@ -57,8 +57,8 @@ public class WindowSceneInitDisposeTest {
             t.show();
 
             Thread.currentThread().setUncaughtExceptionHandler((t2, e) -> {
-                System.out.println("Exception caught: " + e);
-                System.out.flush();
+                System.err.println("Exception caught in thread: " + t2);
+                e.printStackTrace();
                 exception = e;
             });
 
