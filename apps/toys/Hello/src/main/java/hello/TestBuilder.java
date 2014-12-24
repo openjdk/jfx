@@ -95,6 +95,7 @@ public class TestBuilder {
     //Variables used by "HelloMenu" section
     private CheckMenuItem showMessagesItem;
     private final Label sysMenuLabel = new Label("Using System Menu");
+    private Popup screenShot;
 
     //Variables used by "HelloComboBox" section
     private final ObservableList<String> strings = FXCollections.observableArrayList(
@@ -1524,7 +1525,7 @@ public class TestBuilder {
      */
     public void robotTest(final Scene globalScene, final VBox mainBox,
                           final Stage robotStage){
-	
+
         Label l = new Label("Robot features Demo");
         Group lGroup = new Group(l);
         lGroup.setLayoutX(400);
@@ -1554,7 +1555,7 @@ public class TestBuilder {
         Button screenTestBtn = new Button("Robot Get Screen Capture Test");
         screenTestBtn.setOnAction(new EventHandler<ActionEvent>() {
             @Override public void handle(ActionEvent e) {
-               robotScreenTest(result1, robotStage);
+               screenShot = robotScreenTest(result1, robotStage);
             }
         });
 
@@ -1628,6 +1629,9 @@ public class TestBuilder {
         Button btn = new Button("Back");
         btn.setOnAction(new EventHandler<ActionEvent>() {
             @Override public void handle(ActionEvent e) {
+                if (screenShot.isShowing()) {
+                    screenShot.hide();
+                }
                 globalScene.setRoot(mainBox);
             }
         });
@@ -1785,7 +1789,7 @@ public class TestBuilder {
         return false;
     }
        
-    public void robotScreenTest(final TextField result, Stage stage){
+    public Popup robotScreenTest(final TextField result, Stage stage){
 	
 		Bounds bounds = rec1.localToScreen(new BoundingBox(0, 0, 
             rec1.getBoundsInParent().getWidth(),
@@ -1841,10 +1845,10 @@ public class TestBuilder {
         } else {
             result.setText("Failed");
         }
-        showImage(stage, width, height, result);
+        return showImage(stage, width, height, result);
     }
 
-    private void showImage(Stage stage, int width, int height, TextField tf) {
+    private Popup showImage(Stage stage, int width, int height, TextField tf) {
 
         int frame = 70;
         Rectangle rec = new Rectangle(width + frame, height + frame);
@@ -1876,6 +1880,7 @@ public class TestBuilder {
         popup.setY(stage.getY() + 430);
         popup.getContent().addAll(popupPane);
         popup.show(stage);
+        return popup;
     }
 
     /**
