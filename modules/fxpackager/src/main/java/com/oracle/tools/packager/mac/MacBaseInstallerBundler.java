@@ -44,6 +44,7 @@ import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.EnumSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -216,6 +217,20 @@ public abstract class MacBaseInstallerBundler extends AbstractBundler {
 
         // sign all dylibs and jars
         Files.walk(appLocation.toPath())
+                // while we are searching let's fix permissions
+                .peek(path -> {
+                    try {
+                        Set<PosixFilePermission> pfp = Files.getPosixFilePermissions(path);
+                        if (!pfp.contains(PosixFilePermission.OWNER_WRITE)) {
+                            pfp = EnumSet.copyOf(pfp);
+                            pfp.add(PosixFilePermission.OWNER_WRITE);
+                            Files.setPosixFilePermissions(path, pfp);
+                        }
+                    } catch (IOException e) {
+                        Log.debug(e);
+                    }
+                })
+                // now only care about jars and dylibs
                 .filter(p -> (p.toString().endsWith(".jar")
                                 || p.toString().endsWith(".dylib"))
                 ).forEach(p -> {

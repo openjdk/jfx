@@ -264,7 +264,7 @@ public class MacAppBundler extends AbstractBundler {
             workingBase = workingBase.getParentFile();
         }
         return JreUtils.extractJreAsRelativeFileSet(workingBase.toString(),
-                MAC_RULES.fetchFrom(params));
+                MAC_RULES.fetchFrom(params), true);
     }
 
     public MacAppBundler() {
@@ -916,7 +916,17 @@ public class MacAppBundler extends AbstractBundler {
                             I18N.getString("error.cannot-detect-runtime-in-directory.advice")));
         }
 
-        // fist, strip the link to the DLL for the plugin
+        // we need the Info.plist for signing
+        rules.add(Rule.suffix("/contents/info.plist"));
+        
+        // Strip some JRE specific stuff
+        if (isJRE) {
+            rules.add(Rule.suffixNeg("/contents/disabled.plist"));
+            rules.add(Rule.suffixNeg("/contents/enabled.plist"));
+            rules.add(Rule.substrNeg("/contents/frameworks/"));
+        }
+        
+        // strip the link to the DLL for the plugin
         if (isJDK) {
             rules.add(Rule.suffixNeg("/macos/libjli.dylib"));
         }
