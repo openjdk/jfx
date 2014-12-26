@@ -297,44 +297,38 @@ public class MacAppStoreBundlerTest {
         String jre = runtimeJre == null ? "/Library/Internet Plug-Ins/JavaAppletPlugin.plugin/" : runtimeJre;
         Assume.assumeTrue(new File(jre).isDirectory());
 
-        try {
-            AbstractBundler bundler = new MacAppStoreBundler();
-    
-            assertNotNull(bundler.getName());
-            assertNotNull(bundler.getID());
-            assertNotNull(bundler.getDescription());
-    
-            Map<String, Object> bundleParams = new HashMap<>();
-    
-            bundleParams.put(BUILD_ROOT.getID(), tmpBase);
-    
-            bundleParams.put(APP_NAME.getID(), "Smoke Test");
-            bundleParams.put(MAIN_CLASS.getID(), "hello.HelloRectangle");
-            bundleParams.put(PREFERENCES_ID.getID(), "the/really/long/preferences/id");
-            bundleParams.put(MAIN_JAR.getID(),
-                    new RelativeFileSet(fakeMainJar.getParentFile(),
-                            new HashSet<>(Arrays.asList(fakeMainJar)))
-            );
-            bundleParams.put(CLASSPATH.getID(), "mainApp.jar");
-            bundleParams.put(IDENTIFIER.getID(), "com.example.javapacakger.hello.TestPackager");
-            bundleParams.put(MacAppBundler.MAC_CATEGORY.getID(), "public.app-category.developer-tools");
-            bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
-            bundleParams.put(VERBOSE.getID(), true);
-            bundleParams.put(MAC_RUNTIME.getID(), jre);
-    
-            boolean valid = bundler.validate(bundleParams);
-            assertTrue(valid);
-    
-            File result = bundler.execute(bundleParams, new File(workDir, "jre"));
-            System.err.println("Bundle at - " + result);
-    
-            checkFiles(result);
+        AbstractBundler bundler = new MacAppStoreBundler();
 
-            // if we get here we fail
-            assertTrue("ConfigException should have been thrown", false);
-        } catch (ConfigException ignore) {
-            // expected
-        }
+        assertNotNull(bundler.getName());
+        assertNotNull(bundler.getID());
+        assertNotNull(bundler.getDescription());
+
+        Map<String, Object> bundleParams = new HashMap<>();
+
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+
+        bundleParams.put(APP_NAME.getID(), "Smoke Test");
+        bundleParams.put(MAIN_CLASS.getID(), "hello.HelloRectangle");
+        bundleParams.put(PREFERENCES_ID.getID(), "the/really/long/preferences/id");
+        bundleParams.put(MAIN_JAR.getID(),
+                new RelativeFileSet(fakeMainJar.getParentFile(),
+                        new HashSet<>(Arrays.asList(fakeMainJar)))
+        );
+        bundleParams.put(CLASSPATH.getID(), "mainApp.jar");
+        bundleParams.put(IDENTIFIER.getID(), "com.example.javapacakger.hello.TestPackager");
+        bundleParams.put(MacAppBundler.MAC_CATEGORY.getID(), "public.app-category.developer-tools");
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        bundleParams.put(VERBOSE.getID(), true);
+        bundleParams.put(MAC_RUNTIME.getID(), jre);
+
+        boolean valid = bundler.validate(bundleParams);
+        assertTrue(valid);
+
+        File result = bundler.execute(bundleParams, new File(workDir, "jre"));
+        System.err.println("Bundle at - " + result);
+
+        checkFiles(result);
+
     }
 
     /**
