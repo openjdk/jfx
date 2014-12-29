@@ -233,6 +233,7 @@ public class MacAppStoreBundlerTest {
         bundleParams.put(BUNDLE_ID_SIGNING_PREFIX.getID(), "everything.signing.prefix.");
         bundleParams.put(CLASSPATH.getID(), "mainApp.jar");
         bundleParams.put(ICON_ICNS.getID(), hdpiIcon);
+        bundleParams.put(INSTALLER_SUFFIX.getID(), "-MAS-TEST");
         bundleParams.put(JVM_OPTIONS.getID(), "-Xms128M");
         bundleParams.put(JVM_PROPERTIES.getID(), "everything.jvm.property=everything.jvm.property.value");
         bundleParams.put(MAC_CATEGORY.getID(), "public.app-category.developer-tools");

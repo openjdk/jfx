@@ -100,6 +100,14 @@ public class MacPkgBundler extends MacBaseInstallerBundler {
             params -> MacBaseInstallerBundler.findKey("Developer ID Installer: " + SIGNING_KEY_USER.fetchFrom(params), VERBOSE.fetchFrom(params)),
             (s, p) -> s);
 
+    public static final BundlerParamInfo<String> INSTALLER_SUFFIX = new StandardBundlerParam<> (
+            I18N.getString("param.installer-suffix.name"),
+            I18N.getString("param.installer-suffix.description"),
+            "mac.pkg.installerName.suffix",
+            String.class,
+            params -> "",
+            (s, p) -> s);
+
     public MacPkgBundler() {
         super();
         baseResourceLoader = MacResources.class;
@@ -385,7 +393,9 @@ public class MacPkgBundler extends MacBaseInstallerBundler {
             }
 
             // build final package
-            File finalPKG = new File(outdir, INSTALLER_NAME.fetchFrom(params)+".pkg");
+            File finalPKG = new File(outdir, INSTALLER_NAME.fetchFrom(params)
+                    + INSTALLER_SUFFIX.fetchFrom(params)
+                    + ".pkg");
             outdir.mkdirs();
 
             List<String> commandLine = new ArrayList<>();
@@ -463,6 +473,7 @@ public class MacPkgBundler extends MacBaseInstallerBundler {
         results.addAll(Arrays.asList(
                 DEVELOPER_ID_INSTALLER_SIGNING_KEY,
                 //IDENTIFIER,
+                INSTALLER_SUFFIX,
                 LICENSE_FILE
                 //SERVICE_HINT
         ));
