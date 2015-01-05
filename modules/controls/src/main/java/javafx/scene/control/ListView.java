@@ -1554,9 +1554,9 @@ public class ListView<T> extends Control {
                 }
 
                 if (added && !removed) {
-                    focus(getFocusedIndex() + addedSize);
+                    focus(Math.min(getItemCount() - 1, getFocusedIndex() + addedSize));
                 } else if (!added && removed) {
-                    focus(getFocusedIndex() - removedSize);
+                    focus(Math.max(0, getFocusedIndex() - removedSize));
                 }
             }
         };

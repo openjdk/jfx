@@ -144,7 +144,7 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, CellBehavi
                             /* This is the row-based case */
                             column = tableView.getVisibleLeafColumn(0);
                         }
-                        TableCell<T,?> cell = cellsMap.get(column);
+                        TableCell<T,?> cell = cellsMap.get(column).get();
                         if (cell != null) selection.add(cell);
                     }
                     return FXCollections.observableArrayList(selection);

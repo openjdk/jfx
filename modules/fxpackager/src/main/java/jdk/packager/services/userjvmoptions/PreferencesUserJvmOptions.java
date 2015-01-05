@@ -43,7 +43,7 @@ import java.util.prefs.Preferences;
  */
 final public class PreferencesUserJvmOptions implements UserJvmOptionsService {
 
-    Preferences node = Preferences.userRoot().node(System.getProperty("app.preferences.id"));
+    Preferences node = Preferences.userRoot().node(System.getProperty("app.preferences.id").replace(".", "/")).node("JVMUserOptions");
 
     @Override
     public Map<String, String> getUserJVMOptions() {

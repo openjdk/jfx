@@ -53,6 +53,7 @@ import static com.oracle.tools.packager.StandardBundlerParam.*;
 import static com.oracle.tools.packager.mac.MacAppBundler.*;
 import static com.oracle.tools.packager.mac.MacBaseInstallerBundler.MAC_APP_IMAGE;
 import static com.oracle.tools.packager.mac.MacPkgBundler.DEVELOPER_ID_INSTALLER_SIGNING_KEY;
+import static com.oracle.tools.packager.mac.MacPkgBundler.INSTALLER_SUFFIX;
 import static org.junit.Assert.*;
 
 public class MacPkgBundlerTest {
@@ -454,6 +455,7 @@ public class MacPkgBundlerTest {
         bundleParams.put(BUNDLE_ID_SIGNING_PREFIX.getID(), "everything.signing.prefix.");
         bundleParams.put(CLASSPATH.getID(), "mainApp.jar");
         bundleParams.put(ICON_ICNS.getID(), hdpiIcon);
+        bundleParams.put(INSTALLER_SUFFIX.getID(), "-PKG-TEST");
         bundleParams.put(JVM_OPTIONS.getID(), "-Xms128M");
         bundleParams.put(JVM_PROPERTIES.getID(), "everything.jvm.property=everything.jvm.property.value");
         bundleParams.put(MAC_CATEGORY.getID(), "public.app-category.developer-tools");

@@ -128,6 +128,11 @@ public class FilteredListTest {
         assertEquals(Arrays.asList(createPerson("AA"),createPerson("BB")), filtered);
 
         lo.clear();
+        list.get(1).name.set("BBB");
+        assertEquals(1, lo.calls.size());
+        lo.checkUpdate(0, filtered, 1, 2);
+
+        lo.clear();
         list.get(1).name.set("B");
         assertEquals(1, lo.calls.size());
         lo.checkAddRemove(0, filtered, Arrays.asList(createPerson("B")), 1, 1);

@@ -36,9 +36,9 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import javafx.collections.ObservableMap;
+import javafx.beans.Observable;
+import javafx.collections.Person;
 
 import static org.junit.Assert.*;
 
@@ -670,6 +670,58 @@ public class ListPropertyBaseTest {
         listener3.reset();
         v.set(VALUE_2b);
         listener3.check(property, 1);
+    }
+
+    @Test
+    public void testUpdate() {
+        ObservableList<Person> list = createPersonsList();
+        ListProperty<Person> property = new SimpleListProperty<>(list);
+        MockListObserver<Person> mlo = new MockListObserver<>();
+        property.addListener(mlo);
+        list.get(3).name.set("zero"); // four -> zero
+        ObservableList<Person> expected = FXCollections.observableArrayList(
+                new Person("one"), new Person("two"), new Person("three"),
+                new Person("zero"), new Person("five"));
+        mlo.check1Update(expected, 3, 4);
+    }
+
+    @Test
+    public void testPermutation() {
+        ObservableList<Person> list = createPersonsList();
+        ListProperty<Person> property = new SimpleListProperty<>(list);
+        MockListObserver<Person> mlo = new MockListObserver<>();
+        property.addListener(mlo);
+        FXCollections.sort(list);
+        ObservableList<Person> expected = FXCollections.observableArrayList(
+                new Person("five"), new Person("four"), new Person("one"),
+                new Person("three"), new Person("two"));
+        mlo.check1Permutation(expected, new int[]{2, 4, 3, 1, 0});
+    }
+
+    @Test
+    public void testPermutationUpdate() {
+        ObservableList<Person> list = createPersonsList();
+        ObservableList<Person> sorted = list.sorted((o1, o2) -> o1.compareTo(o2));
+        ListProperty<Person> property = new SimpleListProperty<>(sorted);
+        MockListObserver<Person> mlo = new MockListObserver<>();
+        property.addListener(mlo);
+        // add another listener to test Generic code path instead of SingleChange
+        property.addListener(new MockListObserver<>());
+        list.get(3).name.set("zero"); // four -> zero
+        ObservableList<Person> expected = FXCollections.observableArrayList(
+                new Person("five"), new Person("one"), new Person("three"),
+                new Person("two"), new Person("zero"));
+        mlo.checkPermutation(0, expected, 0, expected.size(), new int[]{0, 4, 1, 2, 3});
+        mlo.checkUpdate(1, expected, 4, 5);
+    }
+
+    private ObservableList<Person> createPersonsList() {
+        ObservableList<Person> list = FXCollections.observableArrayList(
+                (Person p) -> new Observable[]{p.name});
+        list.addAll(
+                new Person("one"), new Person("two"), new Person("three"),
+                new Person("four"), new Person("five"));
+        return list;
     }
 
     @Test

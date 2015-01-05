@@ -30,7 +30,7 @@ import sun.util.logging.PlatformLogger;
 public class Logging {
 
     private static class LoggerHolder {
-        private static final PlatformLogger INSTANCE = PlatformLogger.getLogger("beans");
+        private static final PlatformLogger INSTANCE = PlatformLogger.getLogger("javafx.beans");
     }
 
     public static PlatformLogger getLogger() {

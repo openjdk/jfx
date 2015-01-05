@@ -390,6 +390,7 @@ public class Spinner<T> extends Control {
         if (valueFactory == null) {
             throw new IllegalStateException("Can't increment Spinner with a null SpinnerValueFactory");
         }
+        commitEditorText();
         valueFactory.increment(steps);
     }
 
@@ -422,6 +423,7 @@ public class Spinner<T> extends Control {
         if (valueFactory == null) {
             throw new IllegalStateException("Can't decrement Spinner with a null SpinnerValueFactory");
         }
+        commitEditorText();
         valueFactory.decrement(steps);
     }
 
@@ -625,6 +627,20 @@ public class Spinner<T> extends Control {
         }
         return value;
     }
+
+    private void commitEditorText() {
+        if (!isEditable()) return;
+        String text = getEditor().getText();
+        SpinnerValueFactory<T> valueFactory = getValueFactory();
+        if (valueFactory != null) {
+            StringConverter<T> converter = valueFactory.getConverter();
+            if (converter != null) {
+                T value = converter.fromString(text);
+                valueFactory.setValue(value);
+            }
+        }
+    }
+
 
     /***************************************************************************
      *                                                                         *

@@ -1578,10 +1578,12 @@ public class TreeView<T> extends Control {
                         }
                     }
                 } else if (e.wasRemoved()) {
+                    row += e.getFrom() + 1;
+
                     for (int i = 0; i < e.getRemovedChildren().size(); i++) {
                         TreeItem<T> item = e.getRemovedChildren().get(i);
                         if (item != null && item.equals(getFocusedItem())) {
-                            focus(-1);
+                            focus(Math.max(0, getFocusedIndex() - 1));
                             return;
                         }
                     }

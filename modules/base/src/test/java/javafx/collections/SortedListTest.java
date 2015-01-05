@@ -215,37 +215,65 @@ public class SortedListTest {
 
     @Test
     public void testMutableElement() {
-        ArrayList<Person> backingList = new ArrayList<>();
-        backingList.addAll(Arrays.asList(new Person("c"),
-                new Person("f"),
-                new Person("d"),
-                new Person("k"),
-                new Person("b")));
+        ObservableList<Person> list = createPersonsList();
 
-        ObservableList<Person> list = FXCollections.observableList(backingList, (Person p) -> new Observable[] {p.name});
-
-        SortedList<Person> sorted = new SortedList<Person>(list, new NaturalElementComparator<>());
-        ListChangeListener<Person> listener = c -> {
-            c.next();
-            assertTrue(c.wasPermutated());
-            assertArrayEquals(new int[] {0, 4, 1, 2, 3}, c.getPermutation());
-            assertTrue(c.next());
-            assertTrue(c.wasUpdated());
-            assertEquals(4, c.getFrom());
-            assertEquals(5, c.getTo());
-        };
-        assertEquals(Arrays.asList(new Person("b"),
-                new Person("c"),
-                new Person("d"),
-                new Person("f"),
-                new Person("k")), sorted);
+        SortedList<Person> sorted = new SortedList<>(list, new NaturalElementComparator<>());
+        assertEquals(Arrays.asList(
+                new Person("five"), new Person("four"), new Person("one"),
+                new Person("three"), new Person("two")),
+                sorted);
+        MockListObserver<Person> listener = new MockListObserver<>();
         sorted.addListener(listener);
-        sorted.get(1).name.set("z");
-        assertEquals(Arrays.asList(new Person("b"),
-                new Person("d"),
-                new Person("f"),
-                new Person("k"),
-                new Person("z")), sorted);
+        list.get(3).name.set("zero"); // four -> zero
+        ObservableList<Person> expected = FXCollections.observableArrayList(
+                new Person("five"), new Person("one"), new Person("three"),
+                new Person("two"), new Person("zero"));
+        listener.checkPermutation(0, expected, 0, list.size(), new int[]{0, 4, 1, 2, 3});
+        listener.checkUpdate(1, expected, 4, 5);
+        assertEquals(expected, sorted);
+    }
+
+    @Test
+    public void testMutableElementUnsorted_rt39541() {
+        ObservableList<Person> list = createPersonsList();
+        SortedList<Person> unsorted = new SortedList<>(list);
+        MockListObserver<Person> listener = new MockListObserver<>();
+        unsorted.addListener(listener);
+        list.get(3).name.set("zero"); // four -> zero
+        ObservableList<Person> expected = FXCollections.observableArrayList(
+                new Person("one"), new Person("two"), new Person("three"),
+                new Person("zero"), new Person("five"));
+        listener.check1Update(expected, 3, 4);
+    }
+
+    @Test
+    public void testMutableElementUnsortedChain_rt39541() {
+        ObservableList<Person> items = createPersonsList();
+
+        SortedList<Person> sorted = new SortedList<>(items, new NaturalElementComparator<>());
+        SortedList<Person> unsorted = new SortedList<>(sorted);
+
+        assertEquals(sorted, unsorted);
+
+        MockListObserver<Person> listener = new MockListObserver<>();
+        unsorted.addListener(listener);
+        items.get(3).name.set("zero"); // "four" -> "zero"
+        ObservableList<Person> expected = FXCollections.observableArrayList(
+                new Person("five"), new Person("one"), new Person("three"),
+                new Person("two"), new Person("zero"));
+        listener.checkPermutation(0, expected, 0, expected.size(), new int[] {0, 4, 1, 2, 3});
+        listener.checkUpdate(1, expected, 4, 5);
+        assertEquals(expected, sorted);
+        assertEquals(expected, unsorted);
+    }
+
+    private ObservableList<Person> createPersonsList() {
+        ObservableList<Person> list = FXCollections.observableArrayList(
+                (Person p) -> new Observable[]{p.name});
+        list.addAll(
+                new Person("one"), new Person("two"), new Person("three"),
+                new Person("four"), new Person("five"));
+        return list;
     }
 
     @Test

@@ -2847,13 +2847,13 @@ public class TreeTableView<S> extends Control {
 
         @Override public void selectRange(int minRow, TableColumnBase<TreeItem<S>,?> minColumn,
                                           int maxRow, TableColumnBase<TreeItem<S>,?> maxColumn) {
-            startAtomic();
-
             if (getSelectionMode() == SelectionMode.SINGLE) {
                 quietClearSelection();
                 select(maxRow, maxColumn);
                 return;
             }
+
+            startAtomic();
 
             final int itemCount = getItemCount();
             final boolean isCellSelectionEnabled = isCellSelectionEnabled();
@@ -3394,10 +3394,12 @@ public class TreeTableView<S> extends Control {
                         }
                     }
                 } else if (e.wasRemoved()) {
+                    row += e.getFrom() + 1;
+
                     for (int i = 0; i < e.getRemovedChildren().size(); i++) {
                         TreeItem<S> item = e.getRemovedChildren().get(i);
                         if (item != null && item.equals(getFocusedItem())) {
-                            focus(-1);
+                            focus(Math.max(0, getFocusedIndex() - 1));
                             return;
                         }
                     }
@@ -3483,7 +3485,15 @@ public class TreeTableView<S> extends Control {
             if (row < 0 || row >= getItemCount()) {
                 setFocusedCell(EMPTY_CELL);
             } else {
-                setFocusedCell(new TreeTablePosition<>(treeTableView, row, column));
+                TreeTablePosition<S,?> oldFocusCell = getFocusedCell();
+                TreeTablePosition<S,?> newFocusCell = new TreeTablePosition<>(treeTableView, row, column);
+                setFocusedCell(newFocusCell);
+
+                if (newFocusCell.equals(oldFocusCell)) {
+                    // manually update the focus properties to ensure consistency
+                    setFocusedIndex(row);
+                    setFocusedItem(getModelItem(row));
+                }
             }
         }
 

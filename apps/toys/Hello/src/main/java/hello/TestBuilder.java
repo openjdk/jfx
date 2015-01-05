@@ -79,6 +79,7 @@ import javafx.animation.AnimationTimer;
 import javafx.stage.Modality;
 import javafx.stage.Popup;
 import javafx.stage.Stage;
+import javafx.stage.WindowEvent;
 import javafx.util.Callback;
 import javafx.util.Duration;
 import com.sun.glass.events.KeyEvent;
@@ -94,6 +95,7 @@ public class TestBuilder {
     //Variables used by "HelloMenu" section
     private CheckMenuItem showMessagesItem;
     private final Label sysMenuLabel = new Label("Using System Menu");
+    private Popup screenShot;
 
     //Variables used by "HelloComboBox" section
     private final ObservableList<String> strings = FXCollections.observableArrayList(
@@ -1292,13 +1294,20 @@ public class TestBuilder {
                 stage1.setScene(s1);
                 stage1.setX(WindowsStage.getX()+300);
                 stage1.setY(WindowsStage.getY()+150);
-		 stage1.setAlwaysOnTop(true);
+		stage1.setAlwaysOnTop(true);
                 stage1.show();
                 setMini.setDisable(false);
                 resVerBtn.setDisable(false);
                 resHorBtn.setDisable(false);
                 resDiaBtn.setDisable(false);
             }
+        });
+
+        stage1.setOnCloseRequest(event -> {
+            setMini.setDisable(true);
+            resVerBtn.setDisable(true);
+            resHorBtn.setDisable(true);
+            resDiaBtn.setDisable(true);
         });
 
         resVerBtn.setDisable(true);
@@ -1516,7 +1525,7 @@ public class TestBuilder {
      */
     public void robotTest(final Scene globalScene, final VBox mainBox,
                           final Stage robotStage){
-	
+
         Label l = new Label("Robot features Demo");
         Group lGroup = new Group(l);
         lGroup.setLayoutX(400);
@@ -1546,7 +1555,7 @@ public class TestBuilder {
         Button screenTestBtn = new Button("Robot Get Screen Capture Test");
         screenTestBtn.setOnAction(new EventHandler<ActionEvent>() {
             @Override public void handle(ActionEvent e) {
-               robotScreenTest(result1, robotStage);
+               screenShot = robotScreenTest(result1, robotStage);
             }
         });
 
@@ -1620,6 +1629,9 @@ public class TestBuilder {
         Button btn = new Button("Back");
         btn.setOnAction(new EventHandler<ActionEvent>() {
             @Override public void handle(ActionEvent e) {
+                if (screenShot.isShowing()) {
+                    screenShot.hide();
+                }
                 globalScene.setRoot(mainBox);
             }
         });
@@ -1777,7 +1789,7 @@ public class TestBuilder {
         return false;
     }
        
-    public void robotScreenTest(final TextField result, Stage stage){
+    public Popup robotScreenTest(final TextField result, Stage stage){
 	
 		Bounds bounds = rec1.localToScreen(new BoundingBox(0, 0, 
             rec1.getBoundsInParent().getWidth(),
@@ -1833,10 +1845,10 @@ public class TestBuilder {
         } else {
             result.setText("Failed");
         }
-        showImage(stage, width, height, result);
+        return showImage(stage, width, height, result);
     }
 
-    private void showImage(Stage stage, int width, int height, TextField tf) {
+    private Popup showImage(Stage stage, int width, int height, TextField tf) {
 
         int frame = 70;
         Rectangle rec = new Rectangle(width + frame, height + frame);
@@ -1868,6 +1880,7 @@ public class TestBuilder {
         popup.setY(stage.getY() + 430);
         popup.getContent().addAll(popupPane);
         popup.show(stage);
+        return popup;
     }
 
     /**

@@ -1261,4 +1261,27 @@ public class SpinnerTest {
         localTimeValueFactory.setMax(twoDays);
         assertTimeEquals(twoDays, localTimeValueFactory.getMin());
     }
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Tests for bugs                                                          *
+     *                                                                         *                                                                         *
+     **************************************************************************/
+
+    @Test public void test_rt_39655_decrement() {
+        assertEquals(5, (int) intSpinner.getValue());
+        intSpinner.setEditable(true);
+        intSpinner.getEditor().setText("7");
+        intSpinner.decrement();
+        assertEquals(6, (int) intSpinner.getValue());
+    }
+
+    @Test public void test_rt_39655_increment() {
+        assertEquals(5, (int) intSpinner.getValue());
+        intSpinner.setEditable(true);
+        intSpinner.getEditor().setText("7");
+        intSpinner.increment();
+        assertEquals(8, (int) intSpinner.getValue());
+    }
 }

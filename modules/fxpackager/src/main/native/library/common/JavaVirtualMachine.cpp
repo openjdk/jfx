@@ -117,14 +117,14 @@ bool JavaVMCreate(JavaVM** jvm, JNIEnv** env, void* jvmArgs) {
         if (FCreateProc == NULL) {
             Platform& platform = Platform::GetInstance();
             Messages& messages = Messages::GetInstance();
-            platform.ShowError(messages.GetMessage(FAILED_LOCATING_JVM_ENTRY_POINT));
+            platform.ShowMessage(messages.GetMessage(FAILED_LOCATING_JVM_ENTRY_POINT));
             return false;
         }
 
         if ((*FCreateProc)(jvm, env, jvmArgs) < 0) {
             Platform& platform = Platform::GetInstance();
             Messages& messages = Messages::GetInstance();
-            platform.ShowError(messages.GetMessage(FAILED_CREATING_JVM));
+            platform.ShowMessage(messages.GetMessage(FAILED_CREATING_JVM));
             return false;
         }
 
@@ -205,7 +205,7 @@ public:
 #ifdef DEBUG
         Platform& platform = Platform::GetInstance();
 
-        if (platform.GetDebugState() == Platform::dsNative) {
+        if (platform.GetDebugState() == dsNative) {
             AppendValue(_T("vfprintf"), _T(""), (void*)vfprintfHook);
         }
 #endif //DEBUG
@@ -366,9 +366,18 @@ bool JavaVirtualMachine::StartJVM() {
     options.AppendValue(_T("-Dapp.preferences.id"), package.GetAppID());
     options.AppendValues(package.GetJVMArgs());
     options.AppendValues(RemoveTrailingEquals(package.GetJVMUserArgs()));
- 
+
+#ifdef DEBUG
+    if (package.Debugging() == dsJava) {
+        options.AppendValue(_T("-Xdebug"), _T(""));
+        options.AppendValue(_T("-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=localhost:8000"), _T(""));
+        platform.ShowMessage(_T("localhost:8000"));
+    }
+#endif //DEBUG
+    
     TString maxHeapSizeOption;
     TString minHeapSizeOption;
+
 
     if (package.GetMemoryState() == PackageBootFields::msAuto) {
         TPlatformNumber memorySize = package.GetMemorySize();
@@ -388,7 +397,7 @@ bool JavaVirtualMachine::StartJVM() {
 
     if (mainClassName.empty() == true) {
         Messages& messages = Messages::GetInstance();
-        platform.ShowError(messages.GetMessage(NO_MAIN_CLASS_SPECIFIED));
+        platform.ShowMessage(messages.GetMessage(NO_MAIN_CLASS_SPECIFIED));
         return false;
     }
 
@@ -420,7 +429,7 @@ bool JavaVirtualMachine::StartJVM() {
             return true;
         }
         catch (JavaException& exception) {
-            platform.ShowError(PlatformString(exception.what()).toString());
+            platform.ShowMessage(PlatformString(exception.what()).toString());
             return false;
         }
     }
@@ -509,7 +518,7 @@ void JavaVirtualMachine::ShutdownJVM() {
         // I.e. this will happen when EDT and other app thread will exit.
         if (FJvm->DetachCurrentThread() != JNI_OK) {
             Platform& platform = Platform::GetInstance();
-            platform.ShowError(_T("Detach failed."));
+            platform.ShowMessage(_T("Detach failed."));
         }
 
         FJvm->DestroyJavaVM();
