@@ -91,8 +91,8 @@ void AVFEqualizerBand::SetFilterType(AVFEqualizerBand::AVFEqualizerFilterType ty
 }
 
 void AVFEqualizerBand::SetCenterFrequency(double centerFrequency) {
-    mFrequency = centerFrequency;
     mEQ->MoveBand(mFrequency, centerFrequency);
+    mFrequency = centerFrequency;
     RecalculateParams();
 }
 
@@ -281,6 +281,19 @@ void AVFEqualizerBand::ApplyFilter(double *inSource, double *inDest, int frameCo
 
 #pragma mark -
 
+AVFAudioEqualizer::~AVFAudioEqualizer() {
+    mEQBufferA.free();
+    mEQBufferB.free();
+
+    // Free the EQ bands, otherwise they'll leak
+    for (AVFEQBandIterator iter = mEQBands.begin(); iter != mEQBands.end(); iter++) {
+        if (iter->second) {
+            delete iter->second;
+        }
+    }
+    mEQBands.clear();
+}
+
 AUKernelBase *AVFAudioEqualizer::NewKernel() {
     return new AVFEqualizerKernel(this, mAudioUnit);
 }
@@ -320,21 +333,35 @@ bool AVFAudioEqualizer::RemoveBand(double frequency) {
 }
 
 void AVFAudioEqualizer::MoveBand(double oldFrequency, double newFrequency) {
-    AVFEqualizerBand *band = mEQBands[oldFrequency];
-    if (band) {
-        RemoveBand(newFrequency);
-        mEQBands[newFrequency] = band;
-        mEQBands.erase(oldFrequency);
+    // only if freq actually changes
+    if (oldFrequency != newFrequency) {
+        AVFEqualizerBand *band = mEQBands[oldFrequency];
+        if (band) {
+            RemoveBand(newFrequency);
+            mEQBands[newFrequency] = band;
+            mEQBands.erase(oldFrequency);
+        }
+        ResetBandParameters();
     }
-    ResetBandParameters();
 }
 
 void AVFAudioEqualizer::ResetBandParameters() {
     // Update channel counts, recalculate params if necessary
     // bands are automatically sorted by the map from low to high
-    for (AVFEQBandIterator iter = mEQBands.begin(); iter != mEQBands.end(); iter++) {
+    for (AVFEQBandIterator iter = mEQBands.begin(); iter != mEQBands.end();) {
+        if (!iter->second) {
+            // NULL pointer protection, just remove the offending band
+            mEQBands.erase(iter++);
+            if (!mEQBands.empty() && (iter == mEQBands.end())) {
+                // re-process the last valid band, otherwise it won't be set to
+                // HighShelf filter type
+                --iter;
+            } else {
+                continue;
+            }
+        }
         AVFEqualizerBand *band = iter->second;
-            // middle bands are peak/notch filters
+        // middle bands are peak/notch filters
         AVFEqualizerBand::AVFEqualizerFilterType type = AVFEqualizerBand::Peak;
 
         if (iter == mEQBands.begin()) {
@@ -346,6 +373,7 @@ void AVFAudioEqualizer::ResetBandParameters() {
         band->SetFilterType(type);
         band->SetChannelCount(GetChannelCount());
         band->RecalculateParams();
+        iter++; // here due to NULL ptr protection, otherwise we double increment
     }
 }
 
@@ -376,12 +404,14 @@ void AVFAudioEqualizer::RunFilter(const Float32 *inSourceP,
 
         // Run each band in sequence
         for (AVFEQBandIterator iter = mEQBands.begin(); iter != mEQBands.end(); iter++) {
-            if (srcA) {
-                iter->second->ApplyFilter(mEQBufferA, mEQBufferB, inFramesToProcess, channel);
-            } else {
-                iter->second->ApplyFilter(mEQBufferB, mEQBufferA, inFramesToProcess, channel);
+            if (iter->second) {
+                if (srcA) {
+                    iter->second->ApplyFilter(mEQBufferA, mEQBufferB, inFramesToProcess, channel);
+                } else {
+                    iter->second->ApplyFilter(mEQBufferB, mEQBufferA, inFramesToProcess, channel);
+                }
+                srcA = !srcA;
             }
-            srcA = !srcA;
         }
 
         // Copy back to dest stream

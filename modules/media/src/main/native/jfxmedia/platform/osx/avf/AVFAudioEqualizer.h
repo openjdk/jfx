@@ -121,10 +121,7 @@ public:
         mEQBufferB()
     {}
     
-    virtual ~AVFAudioEqualizer() {
-        mEQBufferA.free();
-        mEQBufferB.free();
-    }
+    virtual ~AVFAudioEqualizer();
 
     virtual AUKernelBase *NewKernel();
 
