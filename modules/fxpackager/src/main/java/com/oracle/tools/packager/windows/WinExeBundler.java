@@ -457,7 +457,9 @@ public class WinExeBundler extends AbstractBundler {
 
         data.put("APPLICATION_LICENSE_FILE", innosetupEscape(getLicenseFile(params)));
 
-        if (EXE_SYSTEM_WIDE.fetchFrom(params)) {
+        Boolean isSystemWide = EXE_SYSTEM_WIDE.fetchFrom(params);
+        
+        if (isSystemWide) {
             data.put("APPLICATION_INSTALL_ROOT", "{pf}");
             data.put("APPLICATION_INSTALL_PRIVILEGE", "admin");
         } else {
@@ -527,12 +529,20 @@ public class WinExeBundler extends AbstractBundler {
                 Log.info(I18N.getString("message.creating-association-with-null-extension"));
             } else {
                 for (String ext : extensions) {
-                    // "Root: HKCR; Subkey: \".myp\"; ValueType: string; ValueName: \"\"; ValueData: \"MyProgramFile\"; Flags: uninsdeletevalue"
-                    registryEntries.append("Root: HKCR; Subkey: \".")
-                        .append(ext)
-                        .append("\"; ValueType: string; ValueName: \"\"; ValueData: \"")
-                        .append(entryName)
-                        .append("\"; Flags: uninsdeletevalue\r\n");
+                    if (isSystemWide) {
+                        // "Root: HKCR; Subkey: \".myp\"; ValueType: string; ValueName: \"\"; ValueData: \"MyProgramFile\"; Flags: uninsdeletevalue"
+                        registryEntries.append("Root: HKCR; Subkey: \".")
+                                .append(ext)
+                                .append("\"; ValueType: string; ValueName: \"\"; ValueData: \"")
+                                .append(entryName)
+                                .append("\"; Flags: uninsdeletevalue\r\n");
+                    } else {
+                        registryEntries.append("Root: HKCU; Subkey: \"Software\\Classes\\.")
+                                .append(ext)
+                                .append("\"; ValueType: string; ValueName: \"\"; ValueData: \"")
+                                .append(entryName)
+                                .append("\"; Flags: uninsdeletevalue\r\n");
+                    }
                 }
             }
 
@@ -540,37 +550,70 @@ public class WinExeBundler extends AbstractBundler {
                 String ext = extensions.get(0);
                 List<String> mimeTypes = FA_CONTENT_TYPE.fetchFrom(fileAssociation);
                 for (String mime : mimeTypes) {
-                    // "Root: HKCR; Subkey: HKCR\\Mime\\Database\\Content Type\\application/chaos; ValueType: string; ValueName: Extension; ValueData: .chaos; Flags: uninsdeletevalue"
-                    registryEntries.append("Root: HKCR; Subkey: \"Mime\\Database\\Content Type\\")
-                        .append(mime)
-                        .append("\"; ValueType: string; ValueName: \"Extension\"; ValueData: \".")
-                        .append(ext)
-                        .append("\"; Flags: uninsdeletevalue\r\n");
+                    if (isSystemWide) {
+                        // "Root: HKCR; Subkey: HKCR\\Mime\\Database\\Content Type\\application/chaos; ValueType: string; ValueName: Extension; ValueData: .chaos; Flags: uninsdeletevalue"
+                        registryEntries.append("Root: HKCR; Subkey: \"Mime\\Database\\Content Type\\")
+                            .append(mime)
+                            .append("\"; ValueType: string; ValueName: \"Extension\"; ValueData: \".")
+                            .append(ext)
+                            .append("\"; Flags: uninsdeletevalue\r\n");
+                    } else {
+                        registryEntries.append("Root: HKCU; Subkey: \"Software\\Classes\\Mime\\Database\\Content Type\\")
+                                .append(mime)
+                                .append("\"; ValueType: string; ValueName: \"Extension\"; ValueData: \".")
+                                .append(ext)
+                                .append("\"; Flags: uninsdeletevalue\r\n");
+                    }
                 }
             }
 
-            //"Root: HKCR; Subkey: \"MyProgramFile\"; ValueType: string; ValueName: \"\"; ValueData: \"My Program File\"; Flags: uninsdeletekey"
-            registryEntries.append("Root: HKCR; Subkey: \"")
-                .append(entryName)
-                .append("\"; ValueType: string; ValueName: \"\"; ValueData: \"")
-                .append(description)
-                .append("\"; Flags: uninsdeletekey\r\n");
+            if (isSystemWide) {
+                //"Root: HKCR; Subkey: \"MyProgramFile\"; ValueType: string; ValueName: \"\"; ValueData: \"My Program File\"; Flags: uninsdeletekey"
+                registryEntries.append("Root: HKCR; Subkey: \"")
+                    .append(entryName)
+                    .append("\"; ValueType: string; ValueName: \"\"; ValueData: \"")
+                    .append(description)
+                    .append("\"; Flags: uninsdeletekey\r\n");
+            } else {
+                registryEntries.append("Root: HKCU; Subkey: \"Software\\Classes\\")
+                    .append(entryName)
+                    .append("\"; ValueType: string; ValueName: \"\"; ValueData: \"")
+                    .append(description)
+                    .append("\"; Flags: uninsdeletekey\r\n");
+                
+            }
 
             if (icon != null && icon.exists()) {
-                // "Root: HKCR; Subkey: \"MyProgramFile\\DefaultIcon\"; ValueType: string; ValueName: \"\"; ValueData: \"{app}\\MYPROG.EXE,0\"\n" +
-                registryEntries.append("Root: HKCR; Subkey: \"")
+                if (isSystemWide) {
+                    // "Root: HKCR; Subkey: \"MyProgramFile\\DefaultIcon\"; ValueType: string; ValueName: \"\"; ValueData: \"{app}\\MYPROG.EXE,0\"\n" +
+                    registryEntries.append("Root: HKCR; Subkey: \"")
                         .append(entryName)
                         .append("\\DefaultIcon\"; ValueType: string; ValueName: \"\"; ValueData: \"{app}\\")
                         .append(icon.getName())
                         .append("\"\r\n");
+                } else {
+                    registryEntries.append("Root: HKCU; Subkey: \"Software\\Classes\\")
+                            .append(entryName)
+                            .append("\\DefaultIcon\"; ValueType: string; ValueName: \"\"; ValueData: \"{app}\\")
+                            .append(icon.getName())
+                            .append("\"\r\n");
+                }
             }
 
-            //"Root: HKCR; Subkey: \"MyProgramFile\\shell\\open\\command\"; ValueType: string; ValueName: \"\"; ValueData: \"\"\"{app}\\MYPROG.EXE\"\" \"\"%1\"\"\"\n"
-            registryEntries.append("Root: HKCR; Subkey: \"")
-                    .append(entryName)
-                    .append("\\shell\\open\\command\"; ValueType: string; ValueName: \"\"; ValueData: \"\"\"{app}\\")
-                    .append(APP_NAME.fetchFrom(params))
-                    .append("\"\" \"\"%1\"\"\"\r\n");
+            if (isSystemWide) {
+                //"Root: HKCR; Subkey: \"MyProgramFile\\shell\\open\\command\"; ValueType: string; ValueName: \"\"; ValueData: \"\"\"{app}\\MYPROG.EXE\"\" \"\"%1\"\"\"\n"
+                registryEntries.append("Root: HKCR; Subkey: \"")
+                        .append(entryName)
+                        .append("\\shell\\open\\command\"; ValueType: string; ValueName: \"\"; ValueData: \"\"\"{app}\\")
+                        .append(APP_NAME.fetchFrom(params))
+                        .append("\"\" \"\"%1\"\"\"\r\n");
+            } else {
+                registryEntries.append("Root: HKCU; Subkey: \"Software\\Classes\\")
+                        .append(entryName)
+                        .append("\\shell\\open\\command\"; ValueType: string; ValueName: \"\"; ValueData: \"\"\"{app}\\")
+                        .append(APP_NAME.fetchFrom(params))
+                        .append("\"\" \"\"%1\"\"\"\r\n");
+            }
         }
         if (registryEntries.length() > 0) {
             data.put("FILE_ASSOCIATIONS", "ChangesAssociations=yes\r\n\r\n[Registry]\r\n" + registryEntries.toString());

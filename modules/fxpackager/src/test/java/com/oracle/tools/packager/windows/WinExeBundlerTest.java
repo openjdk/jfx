@@ -399,7 +399,7 @@ public class WinExeBundlerTest {
         Assume.assumeTrue(Boolean.parseBoolean(System.getProperty("FULL_TEST")));
 
         testFileAssociation("FASmoke 1", "Bogus File", "bogus", "application/x-vnd.test-bogus",
-                            new File(appResourcesDir, "small.ico"));
+                            new File(appResourcesDir, "small.ico"), false);
     }
 
     @Test
@@ -408,7 +408,7 @@ public class WinExeBundlerTest {
     {
         // association with no extension is still valid case (see RT-38625)
         testFileAssociation("FASmoke null", "Bogus File", null, "application/x-vnd.test-bogus",
-                            new File(appResourcesDir, "small.ico"));
+                            new File(appResourcesDir, "small.ico"), true);
     }
 
     @Test
@@ -419,7 +419,7 @@ public class WinExeBundlerTest {
         Assume.assumeTrue(Boolean.parseBoolean(System.getProperty("FULL_TEST")));
 
         testFileAssociation("FASmoke ME", "Bogus File", "bogus fake", "application/x-vnd.test-bogus",
-                new File(appResourcesDir, "small.ico"));
+                new File(appResourcesDir, "small.ico"), false);
     }
 
     @Test
@@ -433,7 +433,7 @@ public class WinExeBundlerTest {
                 new String[]{"Bogus File", "Fake file"},
                 new String[]{"bogus", "fake"},
                 new String[]{"application/x-vnd.test-bogus", "application/x-vnd.test-fake"},
-                new File[]{new File(appResourcesDir, "small.ico"), new File(appResourcesDir, "small.ico")});
+                new File[]{new File(appResourcesDir, "small.ico"), new File(appResourcesDir, "small.ico")}, true);
     }
 
     @Test
@@ -445,19 +445,19 @@ public class WinExeBundlerTest {
                 new String[]{"Bogus File", "Fake file"},
                 new String[]{"bogus boguser", "fake faker"},
                 new String[]{"application/x-vnd.test-bogus", "application/x-vnd.test-fake"},
-                new File[]{new File(appResourcesDir, "small.ico"), new File(appResourcesDir, "small.ico")});
+                new File[]{new File(appResourcesDir, "small.ico"), new File(appResourcesDir, "small.ico")}, false);
     }
 
     private void testFileAssociation(String appName, String description, String extensions,
-                                     String contentType, File icon)
+                                     String contentType, File icon, boolean systemWide)
             throws IOException, ConfigException, UnsupportedPlatformException
     {
         testFileAssociationMultiples(appName, new String[] {description}, new String[] {extensions},
-                new String[] {contentType}, new File[] {icon});
+                new String[] {contentType}, new File[] {icon}, systemWide);
     }
 
     private void testFileAssociationMultiples(String appName, String[] description, String[] extensions,
-                                              String[] contentType, File[] icon)
+                                              String[] contentType, File[] icon, boolean systemWide)
             throws IOException, ConfigException, UnsupportedPlatformException
     {
         assertEquals("Sanity: description same length as extensions", description.length, extensions.length);
@@ -484,7 +484,7 @@ public class WinExeBundlerTest {
         bundleParams.put(CLASSPATH.getID(), "mainApp.jar");
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
         bundleParams.put(VERBOSE.getID(), true);
-        bundleParams.put(SYSTEM_WIDE.getID(), true);
+        bundleParams.put(SYSTEM_WIDE.getID(), systemWide);
         bundleParams.put(VENDOR.getID(), "Packager Tests");
 
         List<Map<String, Object>> associations = new ArrayList<>();
