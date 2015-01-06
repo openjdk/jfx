@@ -2377,6 +2377,7 @@ public class TreeTableView<S> extends Control {
                     final int from = startRow + 1;
                     final int to = startRow + count;
                     final List<Integer> removed = new ArrayList<>();
+                    TreeTableColumn<S,?> selectedColumn = null;
                     for (int i = from; i < to; i++) {
                         // we have to handle cell selection mode differently than
                         // row selection mode. Refer to RT-34103 for the bug report
@@ -2390,6 +2391,7 @@ public class TreeTableView<S> extends Control {
                                 if (isSelected(i, col)) {
                                     wasAnyChildSelected = true;
                                     clearSelection(i, col);
+                                    selectedColumn = col;
                                 }
                             }
                         } else {
@@ -2407,7 +2409,7 @@ public class TreeTableView<S> extends Control {
 
                     // put selection onto the newly-collapsed tree item
                     if (wasPrimarySelectionInChild && wasAnyChildSelected) {
-                        select(startRow);
+                        select(startRow, selectedColumn);
                     } else if (! isCellSelectionMode) {
                         // we pass in (index, index) here to represent that nothing was added
                         // in this change.

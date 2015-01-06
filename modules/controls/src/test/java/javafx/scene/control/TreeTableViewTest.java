@@ -165,12 +165,15 @@ public class TreeTableViewTest {
     }
     
     private String debug() {
-        StringBuilder sb = new StringBuilder("Selected Indices: [");
+        StringBuilder sb = new StringBuilder("Selected Cells: [");
         
-        List<Integer> indices = sm.getSelectedIndices();
-        for (Integer index : indices) {
-            sb.append(index);
-            sb.append(", ");
+        List<TreeTablePosition<?,?>> cells = sm.getSelectedCells();
+        for (TreeTablePosition cell : cells) {
+            sb.append("(");
+            sb.append(cell.getRow());
+            sb.append(",");
+            sb.append(cell.getColumn());
+            sb.append("), ");
         }
         
         sb.append("] \nFocus: " + fm.getFocusedIndex());
@@ -4948,5 +4951,60 @@ public class TreeTableViewTest {
         assertEquals(root.getChildren().get(expectedIndex).getValue(), sm.getSelectedItem().getValue());
         assertEquals(debug(), expectedIndex, fm.getFocusedIndex());
         assertEquals(root.getChildren().get(expectedIndex).getValue(), fm.getFocusedItem().getValue());
+    }
+
+    @Test public void test_rt_39675() {
+        TreeItem<String> b;
+        TreeItem<String> root = new TreeItem<>("Root");
+        root.setExpanded(true);
+        root.getChildren().addAll(
+                new TreeItem<>("a"),
+                b = new TreeItem<>("b"),
+                new TreeItem<>("c"),
+                new TreeItem<>("d")
+        );
+
+        b.setExpanded(true);
+        b.getChildren().addAll(
+                new TreeItem<>("b1"),
+                new TreeItem<>("b2"),
+                new TreeItem<>("b3"),
+                new TreeItem<>("b4")
+        );
+
+        TreeTableView<String> stringTreeTableView = new TreeTableView<>(root);
+
+        TreeTableColumn<String,String> column0 = new TreeTableColumn<>("Column1");
+        column0.setCellValueFactory(cdf -> new ReadOnlyStringWrapper(cdf.getValue().getValue()));
+
+        TreeTableColumn<String,String> column1 = new TreeTableColumn<>("Column2");
+        column1.setCellValueFactory(cdf -> new ReadOnlyStringWrapper(cdf.getValue().getValue()));
+
+        TreeTableColumn<String,String> column2 = new TreeTableColumn<>("Column3");
+        column2.setCellValueFactory(cdf -> new ReadOnlyStringWrapper(cdf.getValue().getValue()));
+
+        stringTreeTableView.getColumns().addAll(column0, column1, column2);
+
+        sm = stringTreeTableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.SINGLE);
+        sm.setCellSelectionEnabled(true);
+
+        StageLoader sl = new StageLoader(stringTreeTableView);
+
+        assertEquals(0, sm.getSelectedItems().size());
+
+        sm.clearAndSelect(4, column0);  // select 'b2' in row 4, column 0
+        assertTrue(sm.isSelected(4, column0));
+        assertEquals(1, sm.getSelectedCells().size());
+        assertEquals("b2", ((TreeItem)sm.getSelectedItem()).getValue());
+
+        // collapse the 'b' tree item, selection and focus should go to
+        // the 'b' tree item in row 2, column 0
+        b.setExpanded(false);
+        assertTrue(sm.isSelected(2, column0));
+        assertEquals(1, sm.getSelectedCells().size());
+        assertEquals("b", ((TreeItem)sm.getSelectedItem()).getValue());
+
+        sl.dispose();
     }
 }
