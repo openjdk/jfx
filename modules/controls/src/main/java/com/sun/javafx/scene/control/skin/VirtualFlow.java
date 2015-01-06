@@ -1270,17 +1270,23 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         // of the viewport. In these cases, we have to adjust the cells up
         // and reset the mapper position. This might happen when items got
         // removed at the top or when the viewport size increased.
-        cell = cells.getFirst();
-        int firstIndex = getCellIndex(cell);
-        double firstCellPos = getCellPosition(cell);
-        if (firstIndex == 0 && firstCellPos > 0) {
-            setPosition(0.0f);
-            offset = 0;
-            for (int i = 0; i < cells.size(); i++) {
-                cell = cells.get(i);
-                positionCell(cell, offset);
-                offset += getCellLength(cell);
+        if (cells.size() > 0) {
+            cell = cells.getFirst();
+            int firstIndex = getCellIndex(cell);
+            double firstCellPos = getCellPosition(cell);
+            if (firstIndex == 0 && firstCellPos > 0) {
+                setPosition(0.0f);
+                offset = 0;
+                for (int i = 0; i < cells.size(); i++) {
+                    cell = cells.get(i);
+                    positionCell(cell, offset);
+                    offset += getCellLength(cell);
+                }
             }
+        } else {
+            // reset scrollbar to top, so if the flow sees cells again it starts at the top
+            vbar.setValue(0);
+            hbar.setValue(0);
         }
     }
 
