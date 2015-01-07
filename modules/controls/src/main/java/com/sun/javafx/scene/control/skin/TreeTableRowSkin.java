@@ -428,7 +428,10 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
             case CELL_AT_ROW_COLUMN: {
                 int colIndex = (Integer)parameters[1];
                 TreeTableColumn<T,?> column = treeTableView.getVisibleLeafColumn(colIndex);
-                return cellsMap.get(column);
+                if (cellsMap.containsKey(column)) {
+                    return cellsMap.get(column).get();
+                }
+                return null;
             }
             case FOCUS_ITEM: {
                 TreeTableView.TreeTableViewFocusModel<T> fm = treeTableView.getFocusModel();
@@ -438,7 +441,10 @@ public class TreeTableRowSkin<T> extends TableRowSkinBase<TreeItem<T>, TreeTable
                     /* This is the row-based case */
                     column = treeTableView.getVisibleLeafColumn(0);
                 }
-                return cellsMap.get(column);
+                if (cellsMap.containsKey(column)) {
+                    return cellsMap.get(column).get();
+                }
+                return null;
             }
             default: return super.queryAccessibleAttribute(attribute, parameters);
         }

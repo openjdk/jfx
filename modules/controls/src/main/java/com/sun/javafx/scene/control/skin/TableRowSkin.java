@@ -153,7 +153,10 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, CellBehavi
             case CELL_AT_ROW_COLUMN: {
                 int colIndex = (Integer)parameters[1];
                 TableColumn<T,?> column = tableView.getVisibleLeafColumn(colIndex);
-                return cellsMap.get(column);
+                if (cellsMap.containsKey(column)) {
+                    return cellsMap.get(column).get();
+                }
+                return null;
             }
             case FOCUS_ITEM: {
                 TableViewFocusModel<T> fm = tableView.getFocusModel();
@@ -163,7 +166,10 @@ public class TableRowSkin<T> extends TableRowSkinBase<T, TableRow<T>, CellBehavi
                     /* This is the row-based case */
                     column = tableView.getVisibleLeafColumn(0);
                 }
-                return cellsMap.get(column);
+                if (cellsMap.containsKey(column)) {
+                    return cellsMap.get(column).get();
+                }
+                return null;
             }
             default: return super.queryAccessibleAttribute(attribute, parameters);
         }
