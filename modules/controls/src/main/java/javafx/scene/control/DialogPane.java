@@ -818,7 +818,8 @@ public class DialogPane extends Pane {
     @Override protected void layoutChildren() {
         final boolean hasHeader = hasHeader();
 
-        final double w = Math.max(minWidth(-1), getWidth()) - (snappedLeftInset() + snappedRightInset());
+        // snapped insets code commented out to resolve RT-39738
+        final double w = Math.max(minWidth(-1), getWidth());// - (snappedLeftInset() + snappedRightInset());
 
         final double minHeight = minHeight(w);
         final double prefHeight = prefHeight(w);
