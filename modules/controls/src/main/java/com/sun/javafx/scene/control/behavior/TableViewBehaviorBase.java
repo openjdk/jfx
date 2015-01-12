@@ -786,17 +786,23 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
         
         final TablePositionBase focusedCell = getFocusedCell();
         if (focusedCell == null || focusedCell.getTableColumn() == null) return;
-        
+
+        boolean atEnd = false;
         TableColumnBase adjacentColumn = getColumn(focusedCell.getTableColumn(), delta);
         if (adjacentColumn == null) {
             // if adjacentColumn is null, we use the focusedCell column, as we are
             // most probably at the very beginning or end of the row
             adjacentColumn = focusedCell.getTableColumn();
+            atEnd = true;
         }
 
         final int focusedCellRow = focusedCell.getRow();
 
         if (isShiftDown && sm.isSelected(focusedCellRow, adjacentColumn)) {
+            if (atEnd) {
+                return;
+            }
+
             // work out if we're backtracking
             boolean backtracking = false;
             ObservableList<? extends TablePositionBase> selectedCells = getSelectedCells();
