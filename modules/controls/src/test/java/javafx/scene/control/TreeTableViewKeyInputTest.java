@@ -4663,20 +4663,20 @@ public class TreeTableViewKeyInputTest {
     }
 
     @Test public void test_rt_39792_goLeft_goPastEnd() {
-        test_rt_39792(KeyCode.LEFT, 3, colIndex -> {
+        test_rt_39792(3, colIndex -> {
             keyboard.doLeftArrowPress(KeyModifier.SHIFT);
             return colIndex - 1;
         });
     }
 
     @Test public void test_rt_39792_goRight_goPastEnd() {
-        test_rt_39792(KeyCode.RIGHT, 0, colIndex -> {
+        test_rt_39792(0, colIndex -> {
             keyboard.doRightArrowPress(KeyModifier.SHIFT);
             return colIndex + 1;
         });
     }
 
-    private void test_rt_39792(KeyCode direction, int startColumn, Function<Integer, Integer> r) {
+    private void test_rt_39792(int startColumn, Function<Integer, Integer> r) {
         root.getChildren().clear();
         for (int i = 0; i < 10; i++) {
             root.getChildren().add(new TreeItem<>("Row " + i));
