@@ -35,7 +35,6 @@
 @interface GlassViewDelegate : NSObject <GlassDragSourceDelegate>
 {
     NSView                  *nsView;
-    jobject                 jView;
     
     NSTrackingRectTag       trackingRect;
     
@@ -58,6 +57,7 @@
     NSInteger               lastTrackingNumber;
     
 @public
+    jobject                 jView;
     // not nil when we create a new FS window ourselves
     GlassFullscreenWindow   *fullscreenWindow;
 }
