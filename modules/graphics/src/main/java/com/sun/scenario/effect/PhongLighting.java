@@ -325,7 +325,7 @@ public class PhongLighting extends CoreEffect<RenderState> {
 
             @Override
             public Rectangle getInputClip(int i, Rectangle filterClip) {
-                if (i == 0) {
+                if (i == 0 && filterClip != null) {
                     Rectangle r = new Rectangle(filterClip);
                     r.grow(1, 1);
                     return r;
