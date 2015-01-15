@@ -99,7 +99,6 @@ ANDROID = [:]
 ANDROID.compileSwing = false;
 ANDROID.compileSWT = false;
 ANDROID.compileFXPackager = false;
-ANDROID.compileDesignTime = false;
 ANDROID.glassPlatform = "android"
 ANDROID.armArch = armArchs[0]
 ANDROID.libDest = "lib/${ANDROID.armArch}"

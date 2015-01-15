@@ -193,11 +193,6 @@ class ES2Texture<T extends ES2TextureData> extends BaseTexture<ES2TextureResourc
             texHeight = nextPowerOfTwo(texHeight, maxSize);
         }
 
-        // make sure the texture is not smaller than minimum size
-        int minSize = PrismSettings.minTextureSize;
-        texWidth = Math.max(texWidth, minSize);
-        texHeight = Math.max(texHeight, minSize);
-
         ES2VramPool pool = ES2VramPool.instance;
         long size = pool.estimateTextureSize(texWidth, texHeight, format);
         if (!pool.prepareForAllocation(size)) {
@@ -289,11 +284,6 @@ class ES2Texture<T extends ES2TextureData> extends BaseTexture<ES2TextureResourc
             texWidth = nextPowerOfTwo(texWidth, maxSize);
             texHeight = nextPowerOfTwo(texHeight, maxSize);
         }
-
-        // make sure the texture is not smaller than minimum size
-        int minSize = PrismSettings.minTextureSize;
-        texWidth = Math.max(texWidth, minSize);
-        texHeight = Math.max(texHeight, minSize);
 
         ES2VramPool pool = ES2VramPool.instance;
         long size = pool.estimateTextureSize(texWidth, texHeight, format);

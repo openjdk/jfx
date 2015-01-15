@@ -56,6 +56,14 @@ public class MacDmgBundler extends MacBaseInstallerBundler {
             params -> Boolean.FALSE,
             (s, p) -> Boolean.parseBoolean(s));
 
+    public static final BundlerParamInfo<String> INSTALLER_SUFFIX = new StandardBundlerParam<> (
+            I18N.getString("param.installer-suffix.name"),
+            I18N.getString("param.installer-suffix.description"),
+            "mac.dmg.installerName.suffix",
+            String.class,
+            params -> "",
+            (s, p) -> s);
+
     public MacDmgBundler() {
         super();
         baseResourceLoader = MacResources.class;
@@ -294,7 +302,9 @@ public class MacDmgBundler extends MacBaseInstallerBundler {
         if (!imagesRoot.exists()) imagesRoot.mkdirs();
 
         File protoDMG = new File(imagesRoot, APP_NAME.fetchFrom(p) +"-tmp.dmg");
-        File finalDMG = new File(outdir, INSTALLER_NAME.fetchFrom(p) +".dmg");
+        File finalDMG = new File(outdir, INSTALLER_NAME.fetchFrom(p)
+                + INSTALLER_SUFFIX.fetchFrom(p)
+                + ".dmg");
 
         File srcFolder = APP_IMAGE_BUILD_ROOT.fetchFrom(p); //new File(imageDir, p.name+".app");
         File predefinedImage = getPredefinedImage(p);
@@ -467,6 +477,7 @@ public class MacDmgBundler extends MacBaseInstallerBundler {
 
         results.addAll(MacAppBundler.getAppBundleParameters());
         results.addAll(Arrays.asList(
+                INSTALLER_SUFFIX,
                 LICENSE_FILE,
                 SIMPLE_DMG,
                 SYSTEM_WIDE

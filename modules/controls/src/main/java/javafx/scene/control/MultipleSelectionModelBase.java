@@ -385,15 +385,15 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         boolean isSameItem = newItem != null && newItem.equals(currentItem);
         boolean fireUpdatedItemEvent = isSameRow && ! isSameItem;
 
+        setSelectedIndex(row);
+        focus(row);
+
         if (! selectedIndices.get(row)) {
             if (getSelectionMode() == SINGLE) {
                 quietClearSelection();
             }
             selectedIndices.set(row);
         }
-
-        setSelectedIndex(row);
-        focus(row);
 
         if (! isAtomic()) {
             int changeIndex = selectedIndicesSeq.indexOf(row);

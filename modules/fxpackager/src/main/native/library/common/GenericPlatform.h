@@ -61,7 +61,7 @@ public:
     virtual std::map<TString, TString> GetKeys();
     
 #ifdef DEBUG
-    virtual Platform::DebugState GetDebugState();
+    virtual DebugState GetDebugState();
 #endif //DEBUG
 };
 

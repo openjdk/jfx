@@ -112,7 +112,7 @@ extern "C" {
             javavm.ShutdownJVM();
         }
         else {
-            platform.ShowError(_T("Failed to launch JVM\n"));
+            platform.ShowMessage(_T("Failed to launch JVM\n"));
         }
 
         return result;

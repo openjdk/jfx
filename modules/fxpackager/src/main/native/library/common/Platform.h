@@ -153,6 +153,7 @@ public:
     virtual size_t GetCount() = 0;
 };
 
+enum DebugState {dsNone, dsNative, dsJava};
 
 class Platform {
 protected:
@@ -163,11 +164,9 @@ public:
 
     virtual ~Platform(void) {}
 
-    enum DebugState {dsNone, dsNative, dsJava};
-
 public:
-    virtual void ShowError(TString title, TString description) = 0;
-    virtual void ShowError(TString description) = 0;
+    virtual void ShowMessage(TString title, TString description) = 0;
+    virtual void ShowMessage(TString description) = 0;
 
     virtual void SetCurrentDirectory(TString Value) = 0;
     
@@ -213,7 +212,7 @@ public:
     virtual void SaveToFile(TString FileName, std::list<TString> Contents, bool ownerOnly) = 0;
 
 #ifdef DEBUG
-    virtual Platform::DebugState GetDebugState() = 0;
+    virtual DebugState GetDebugState() = 0;
     virtual int GetProcessID() = 0;
     virtual bool IsNativeDebuggerPresent() = 0;
 #endif //DEBUG

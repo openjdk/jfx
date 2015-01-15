@@ -54,7 +54,7 @@ public class PresentableState {
     protected boolean isWindowVisible;
     protected boolean isWindowMinimized;
     protected float screenScale;
-    protected static boolean hasWindowManager =
+    protected static final boolean hasWindowManager =
             Application.GetApplication().hasWindowManager();
     // Between PaintCollector and *Painter, there is a window where
     // the associated View can be closed. This variable allows us

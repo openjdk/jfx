@@ -205,7 +205,7 @@ static jfieldID  jDelegateMenuField = 0;
 - (void)_setShortcut:(jchar)jshortcut modifiers:(jint)jmodifiers
 {
     NSString *shortcut = GetStringForJavaKey(jshortcut);
-    LOG("_setShortcut %@", shortcut);
+    LOG("_setShortcut %c -> %s", jshortcut, [shortcut UTF8String]);
     
     NSUInteger modifier = 0;
     if ((jmodifiers & com_sun_glass_events_KeyEvent_MODIFIER_COMMAND) != 0)
