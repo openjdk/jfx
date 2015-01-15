@@ -4213,4 +4213,64 @@ public class TableViewKeyInputTest {
         assertTrue(fm.isFocused(50 - newSelectedRowCount + 1));
         assertEquals(50, ((TablePosition)TableCellBehavior.getAnchor(tableView, null)).getRow());
     }
+
+    @Test public void test_rt_39792_goLeft_goPastEnd() {
+        test_rt_39792(3, colIndex -> {
+            keyboard.doLeftArrowPress(KeyModifier.SHIFT);
+            return colIndex - 1;
+        });
+    }
+
+    @Test public void test_rt_39792_goRight_goPastEnd() {
+        test_rt_39792(0, colIndex -> {
+            keyboard.doRightArrowPress(KeyModifier.SHIFT);
+            return colIndex + 1;
+        });
+    }
+
+    private void test_rt_39792(int startColumn, Function<Integer, Integer> r) {
+        ObservableList<String> itemsList = FXCollections.observableArrayList();
+        for (int i = 0; i < 10; i++) {
+            itemsList.add("Row " + i);
+        }
+
+        tableView.setItems(itemsList);
+
+        tableView.getColumns().clear();
+        for (int i = 0; i < 4; i++) {
+            TableColumn<String, String> col = new TableColumn<>("Column " + i);
+            col.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue()));
+            tableView.getColumns().add(col);
+        }
+
+        TableView.TableViewSelectionModel<String> sm = tableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.setCellSelectionEnabled(true);
+
+        ObservableList<Integer> indices = sm.getSelectedIndices();
+        ObservableList<String> items = sm.getSelectedItems();
+
+        StageLoader sl = new StageLoader(tableView);
+
+        assertEquals(0, indices.size());
+        assertEquals(0, items.size());
+
+        sm.select(0, tableView.getColumns().get(startColumn));
+        assertEquals(1, sm.getSelectedCells().size());
+
+        int expectedColumn = r.apply(startColumn);
+        assertEquals(2, sm.getSelectedCells().size());
+
+        expectedColumn = r.apply(expectedColumn);
+        assertEquals(3, sm.getSelectedCells().size());
+
+        expectedColumn = r.apply(expectedColumn);
+        assertEquals(4, sm.getSelectedCells().size());
+
+        // this should not cause any issue, but it does - as noted in RT-39792
+        /*expectedColumn = */r.apply(expectedColumn);
+        assertEquals(4, sm.getSelectedCells().size());
+
+        sl.dispose();
+    }
 }

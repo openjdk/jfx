@@ -38,7 +38,6 @@ if (!IOS.canBuild) return;
 IOS.compileSwing = false;
 IOS.compileSWT = false;
 IOS.compileFXPackager = false;
-IOS.compileDesignTime = false;
 
 defineProperty("USE_LIPO", "false")
 IOS.useLipo = Boolean.parseBoolean(USE_LIPO)
