@@ -1540,15 +1540,19 @@ public class TreeTableView<S> extends Control {
         }
         return onScrollToColumn;
     }
-    
+
     /**
-     * Returns the index position of the given TreeItem, taking into account the
-     * current state of each TreeItem (i.e. whether or not it is expanded).
-     * 
+     * Returns the index position of the given TreeItem, assuming that it is
+     * currently accessible through the tree hierarchy (most notably, that all
+     * parent tree items are expanded). If a parent tree item is collapsed,
+     * the result is that this method will return -1 to indicate that the
+     * given tree item is not accessible in the tree.
+     *
      * @param item The TreeItem for which the index is sought.
      * @return An integer representing the location in the current TreeTableView of the
-     *      first instance of the given TreeItem, or -1 if it is null or can not 
-     *      be found.
+     *      first instance of the given TreeItem, or -1 if it is null or can not
+     *      be found (for example, if a parent (all the way up to the root) is
+     *      collapsed).
      */
     public int getRow(TreeItem<S> item) {
         return TreeUtil.getRow(item, getRoot(), expandedItemCountDirty, isShowRoot());

@@ -36,6 +36,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Random;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 import com.sun.javafx.scene.control.behavior.TableCellBehavior;
 import com.sun.javafx.scene.control.behavior.TreeCellBehavior;
@@ -1017,12 +1018,12 @@ public class TreeTableViewTest {
         installChildren();
         root.setExpanded(false);
         assertEquals(0, treeTableView.getRow(root));
-        
-        // note that the indices are still positive, representing what the values
-        // would be if this row is visible
-        assertEquals(1, treeTableView.getRow(child1));
-        assertEquals(2, treeTableView.getRow(child2));
-        assertEquals(3, treeTableView.getRow(child3));
+
+        // note that the indices are negative, as these children rows are not
+        // visible in the tree
+        assertEquals(-1, treeTableView.getRow(child1));
+        assertEquals(-1, treeTableView.getRow(child2));
+        assertEquals(-1, treeTableView.getRow(child3));
     }
     
 //    @Test public void removingLastTest() {
@@ -5006,5 +5007,146 @@ public class TreeTableViewTest {
         assertEquals("b", ((TreeItem)sm.getSelectedItem()).getValue());
 
         sl.dispose();
+    }
+
+
+    private ObservableList<String> test_rt_39661_setup() {
+        ObservableList<String>  rawItems = FXCollections.observableArrayList(
+                "9-item", "8-item", "7-item", "6-item",
+                "5-item", "4-item", "3-item", "2-item", "1-item");
+        root = createSubTree("root", rawItems);
+        root.setExpanded(true);
+        treeTableView = new TreeTableView(root);
+        return rawItems;
+    }
+
+    private TreeItem createSubTree(Object item, ObservableList<String> rawItems) {
+        TreeItem child = new TreeItem(item);
+        child.getChildren().setAll(rawItems.stream()
+                .map(rawItem -> new TreeItem(rawItem))
+                .collect(Collectors.toList()));
+        return child;
+    }
+
+    @Test public void test_rt_39661_rowLessThanExpandedItemCount() {
+        ObservableList<String> rawItems = test_rt_39661_setup();
+        TreeItem child = createSubTree("child", rawItems);
+        TreeItem grandChild = (TreeItem) child.getChildren().get(rawItems.size() - 1);
+        root.getChildren().add(child);
+        assertTrue("row of item must be less than expandedItemCount, but was: " + treeTableView.getRow(grandChild),
+                treeTableView.getRow(grandChild) < treeTableView.getExpandedItemCount());
+    }
+
+    @Test public void test_rt_39661_rowOfGrandChildParentCollapsedUpdatedOnInsertAbove() {
+        ObservableList<String> rawItems = test_rt_39661_setup();
+        int grandIndex = 2;
+        int childIndex = 3;
+
+        TreeItem child = createSubTree("addedChild2", rawItems);
+        TreeItem grandChild = (TreeItem) child.getChildren().get(grandIndex);
+        root.getChildren().add(childIndex, child);
+
+        int rowOfGrand = treeTableView.getRow(grandChild);
+        root.getChildren().add(childIndex - 1, createSubTree("other", rawItems));
+
+        assertEquals(-1, treeTableView.getRow(grandChild));
+    }
+
+    @Test public void test_rt_39661_rowOfGrandChildParentCollapsedUpdatedOnInsertAboveWithoutAccess() {
+        ObservableList<String> rawItems = test_rt_39661_setup();
+        int grandIndex = 2;
+        int childIndex = 3;
+
+        TreeItem child = createSubTree("addedChild2", rawItems);
+        TreeItem grandChild = (TreeItem) child.getChildren().get(grandIndex);
+        root.getChildren().add(childIndex, child);
+
+        int rowOfGrand = 7; //treeTableView.getRow(grandChild);
+        root.getChildren().add(childIndex, createSubTree("other", rawItems));
+
+        assertEquals(-1, treeTableView.getRow(grandChild));
+    }
+
+    @Test public void test_rt_39661_rowOfGrandChildParentExpandedUpdatedOnInsertAbove() {
+        ObservableList<String> rawItems = test_rt_39661_setup();
+        int grandIndex = 2;
+        int childIndex = 3;
+        TreeItem child = createSubTree("addedChild2", rawItems);
+        TreeItem grandChild = (TreeItem) child.getChildren().get(grandIndex);
+        child.setExpanded(true);
+        root.getChildren().add(childIndex, child);
+        int rowOfGrand = treeTableView.getRow(grandChild);
+        root.getChildren().add(childIndex -1, createSubTree("other", rawItems));
+        assertEquals(rowOfGrand + 1, treeTableView.getRow(grandChild));
+    }
+
+    /**
+     * Testing getRow on grandChild: compare collapsed/expanded parent.
+     */
+    @Test public void test_rt_39661_rowOfGrandChildDependsOnParentExpansion() {
+        ObservableList<String> rawItems = test_rt_39661_setup();
+        int grandIndex = 2;
+        int childIndex = 3;
+
+        TreeItem collapsedChild = createSubTree("addedChild", rawItems);
+        TreeItem collapsedGrandChild = (TreeItem) collapsedChild.getChildren().get(grandIndex);
+        root.getChildren().add(childIndex, collapsedChild);
+
+        int collapedGrandIndex = treeTableView.getRow(collapsedGrandChild);
+        int collapsedRowCount = treeTableView.getExpandedItemCount();
+
+        // start again
+        test_rt_39661_setup();
+        assertEquals(collapsedRowCount - 1, treeTableView.getExpandedItemCount());
+        TreeItem expandedChild = createSubTree("addedChild2", rawItems);
+        TreeItem expandedGrandChild = (TreeItem) expandedChild.getChildren().get(grandIndex);
+        expandedChild.setExpanded(true);
+
+        root.getChildren().add(childIndex, expandedChild);
+        assertNotSame("getRow must depend on expansionState " + collapedGrandIndex,
+                collapedGrandIndex, treeTableView.getRow(expandedGrandChild));
+    }
+
+    @Test public void test_rt_39661_rowOfGrandChildInCollapsedChild() {
+        ObservableList<String> rawItems = test_rt_39661_setup();
+
+        // create a collapsed new child to insert into the root
+        TreeItem newChild = createSubTree("added-child", rawItems);
+        TreeItem grandChild = (TreeItem) newChild.getChildren().get(2);
+        root.getChildren().add(6, newChild);
+
+        // query the row of a grand-child
+        int row = treeTableView.getRow(grandChild);
+
+        // grandChild not visible, row coordinate in tree is not available
+        assertEquals("grandChild not visible", -1, row);
+
+        // the other way round: if we get a row, expect the item at the row be the grandChild
+        if (row > -1) {
+            assertEquals(grandChild, treeTableView.getTreeItem(row));
+        }
+    }
+
+    @Test public void test_rt_39661_rowOfRootChild() {
+        ObservableList<String> rawItems = test_rt_39661_setup();
+        int index = 2;
+
+        TreeItem child = (TreeItem) root.getChildren().get(index);
+        assertEquals(index + 1, treeTableView.getRow(child));
+    }
+
+    @Test public void test_rt_39661_expandedItemCount() {
+        ObservableList<String> rawItems = test_rt_39661_setup();
+        int initialRowCount = treeTableView.getExpandedItemCount();
+        assertEquals(root.getChildren().size() + 1, initialRowCount);
+
+        TreeItem collapsedChild = createSubTree("collapsed-child", rawItems);
+        root.getChildren().add(collapsedChild);
+        assertEquals(initialRowCount + 1, treeTableView.getExpandedItemCount());
+
+        TreeItem expandedChild = createSubTree("expanded-child", rawItems);
+        expandedChild.setExpanded(true);
+        root.getChildren().add(0, expandedChild);
+        assertEquals(2 * initialRowCount + 1, treeTableView.getExpandedItemCount());
     }
 }
