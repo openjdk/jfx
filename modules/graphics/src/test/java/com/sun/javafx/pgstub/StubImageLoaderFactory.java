@@ -64,6 +64,11 @@ public final class StubImageLoaderFactory {
                 }
 
                 @Override
+                public int getLoopCount() {
+                    throw new IllegalStateException();
+                }
+
+                @Override
                 public int getWidth() {
                     throw new IllegalStateException();
                 }

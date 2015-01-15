@@ -46,12 +46,14 @@ public class GIFImageLoader2 extends ImageLoaderImpl {
 
     static final byte FILE_SIG87[] = {'G', 'I', 'F', '8', '7', 'a'};
     static final byte FILE_SIG89[] = {'G', 'I', 'F', '8', '9', 'a'};
+    static final byte NETSCAPE_SIG[] = {'N', 'E', 'T', 'S', 'C', 'A', 'P', 'E', '2', '.', '0'};
     static final int DEFAULT_FPS = 25;
 
     InputStream stream = null;
     int screenW, screenH, bgColor;
     byte globalPalette[][];  // r,g,b,a
     byte image[];
+    int loopCount = 1;
 
     public GIFImageLoader2(InputStream input) throws IOException {
         super(GIFDescriptor.getInstance());
@@ -97,6 +99,22 @@ public class GIFImageLoader2 extends ImageLoaderImpl {
         }
     }
 
+    private void readAppExtension() throws IOException {
+        int size = readByte();
+        byte buf[] = readBytes(new byte[size]);
+        if (Arrays.equals(NETSCAPE_SIG, buf)) {
+            for (int subBlockSize = readByte(); subBlockSize != 0; subBlockSize = readByte()) {
+                byte subBlock[] = readBytes(new byte[subBlockSize]);
+                int subBlockId = subBlock[0];
+                if (subBlockSize == 3 && subBlockId == 1) { // loop count extension
+                    loopCount = subBlock[1] + (subBlock[2] << 8);
+                }
+            }
+        } else {
+            consumeAnExtension(); // read data sub-blocks
+        }
+    }
+
     // reads Image Control extension information
     // returns ((pField & 0x1F) << 24) + (trnsIndex << 16) + frameDelay;
     private int readControlCode() throws IOException {
@@ -125,6 +143,9 @@ public class GIFImageLoader2 extends ImageLoaderImpl {
                     switch (readByte()) {
                         case 0xF9:
                             controlData = readControlCode();
+                            break;
+                        case 0xFF:
+                            readAppExtension();
                             break;
                         default:
                             consumeAnExtension();
@@ -325,7 +346,7 @@ public class GIFImageLoader2 extends ImageLoaderImpl {
     // fill metadata
     private ImageMetadata updateMetadata(int w, int h, int delayTime) {
         ImageMetadata metaData = new ImageMetadata(null, true, null, null, null,
-                delayTime != 0 ? delayTime*10 : 1000/DEFAULT_FPS, w, h, null, null, null);
+                delayTime != 0 ? delayTime*10 : 1000/DEFAULT_FPS, loopCount, w, h, null, null, null);
         updateImageMetadata(metaData);
         return metaData;
     }

@@ -31,6 +31,7 @@ public interface ImageLoader {
     public int getFrameCount();
     public PlatformImage getFrame(int index);
     public int getFrameDelay(int index);
+    public int getLoopCount();
     public int getWidth();
     public int getHeight();
 }

@@ -29,18 +29,20 @@ public final class StubPlatformImageInfo {
     private final int width;
     private final int height;
     private final int[] frameDelays;
+    private final int loopCount;
 
     public StubPlatformImageInfo(final int width,
                                  final int height) {
-        this(width, height, null);
+        this(width, height, null, 0);
     }
 
     public StubPlatformImageInfo(final int width,
                                  final int height,
-                                 final int[] frameDelays) {
+                                 final int[] frameDelays, final int loopCount) {
         this.width = width;
         this.height = height;
         this.frameDelays = frameDelays;
+        this.loopCount = loopCount;
     }
 
     public int getFrameCount() {
@@ -49,6 +51,10 @@ public final class StubPlatformImageInfo {
 
     public int getFrameDelay(final int index) {
         return frameDelays[index];
+    }
+
+    int getLoopCount() {
+        return loopCount;
     }
 
     public int getHeight() {

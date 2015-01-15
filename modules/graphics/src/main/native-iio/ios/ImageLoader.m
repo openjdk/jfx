@@ -44,6 +44,7 @@
 @synthesize colorSpace;
 @synthesize nImages;
 @synthesize delayTime;
+@synthesize loopCount;
 @synthesize cgImageSource;
 @synthesize cgImage;
 
@@ -135,6 +136,7 @@
     IIOLog(@"Image color space:          %d", [self colorSpace]);
     IIOLog(@"Image number of components: %d", [self nComponents]);
     IIOLog(@"Image number of images:     %d", [self nImages]);
+    IIOLog(@"Image loop count:           %d", [self loopCount]);
     IIOLog(@"Image duration:             %d", [self delayTime]);
 }
 
@@ -144,12 +146,16 @@
     NSDictionary *gifDict = (NSDictionary *) [dict objectForKey : (id) kCGImagePropertyGIFDictionary];
 
     int delay = 100; // 100ms default if no time interval is retrieved
+    int nLoopCount = 1;
     if (gifDict) {
         NSNumber *delayValue = [gifDict objectForKey : (id) kCGImagePropertyGIFDelayTime];
         delay = (int) ([delayValue doubleValue] * 1000);
+        NSNumber *loopCountValue = [gifDict objectForKey : (id) kCGImagePropertyGIFLoopCount];
+        nLoopCount = [loopCountValue intValue];
     }
 
     [self setDelayTime : delay];
+    [self setLoopCount : nLoopCount];
 }
 
 -(CGImageRef) createImageAtIndex : (int) index {

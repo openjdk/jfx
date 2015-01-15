@@ -297,7 +297,7 @@ public final class PNGImageLoader2 extends ImageLoaderImpl {
 
     private ImageMetadata updateMetadata() {
         ImageMetadata metaData = new ImageMetadata(null, true,
-                null, null, null, null, width, height, null, null, null);
+                null, null, null, null, null, width, height, null, null, null);
         updateImageMetadata(metaData);
         return metaData;
     }

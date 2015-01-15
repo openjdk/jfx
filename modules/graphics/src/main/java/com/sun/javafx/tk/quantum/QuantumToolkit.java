@@ -1317,6 +1317,8 @@ public final class QuantumToolkit extends Toolkit {
         @Override
         public int getFrameDelay(int index) { return 0; }
         @Override
+        public int getLoopCount() { return 0; }
+        @Override
         public int getWidth() { return image.getWidth(); }
         @Override
         public int getHeight() { return image.getHeight(); }
