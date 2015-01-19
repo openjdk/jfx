@@ -1058,9 +1058,6 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
         
         int leadSelectedIndex = onScrollPageUp.call(false);
 
-        // fix for RT-34407
-        int adjust = leadIndex < leadSelectedIndex ? 1 : -1;
-
         selectionChanging = true;
         if (sm.getSelectionMode() == null || sm.getSelectionMode() == SelectionMode.SINGLE) {
             if (sm.isCellSelectionEnabled()) {
@@ -1071,8 +1068,10 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
         } else {
             sm.clearSelection();
             if (sm.isCellSelectionEnabled()) {
-                sm.selectRange(leadIndex, col, leadSelectedIndex + adjust, col);
+                sm.selectRange(leadIndex, col, leadSelectedIndex, col);
             } else {
+                // fix for RT-34407
+                int adjust = leadIndex < leadSelectedIndex ? 1 : -1;
                 sm.selectRange(leadIndex, leadSelectedIndex + adjust);
             }
         }
@@ -1095,9 +1094,6 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
         
         int leadSelectedIndex = onScrollPageDown.call(false);
 
-        // fix for RT-34407
-        int adjust = leadIndex < leadSelectedIndex ? 1 : -1;
-        
         selectionChanging = true;
         if (sm.getSelectionMode() == null || sm.getSelectionMode() == SelectionMode.SINGLE) {
             if (sm.isCellSelectionEnabled()) {
@@ -1109,10 +1105,10 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
             sm.clearSelection();
 
             if (sm.isCellSelectionEnabled()) {
-                for (int _row = leadIndex; _row <= leadSelectedIndex + adjust; _row++) {
-                    sm.select(_row, col);
-                }
+                sm.selectRange(leadIndex, col, leadSelectedIndex, col);
             } else {
+                // fix for RT-34407
+                int adjust = leadIndex < leadSelectedIndex ? 1 : -1;
                 sm.selectRange(leadIndex, leadSelectedIndex + adjust);
             }
         }
