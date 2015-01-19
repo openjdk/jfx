@@ -5149,4 +5149,40 @@ public class TreeTableViewTest {
         root.getChildren().add(0, expandedChild);
         assertEquals(2 * initialRowCount + 1, treeTableView.getExpandedItemCount());
     }
+
+    private int test_rt_39822_count = 0;
+    @Test public void test_rt_39822() {
+        // get the current exception handler before replacing with our own,
+        // as ListListenerHelp intercepts the exception otherwise
+        final Thread.UncaughtExceptionHandler exceptionHandler = Thread.currentThread().getUncaughtExceptionHandler();
+        Thread.currentThread().setUncaughtExceptionHandler((t, e) -> {
+            e.printStackTrace();
+
+            if (test_rt_39822_count == 0) {
+                test_rt_39822_count++;
+                if (! (e instanceof IllegalStateException)) {
+                    fail("Incorrect exception type - expecting IllegalStateException");
+                }
+            } else {
+                // don't care
+                test_rt_39822_count++;
+            }
+        });
+
+        TreeTableView<String> table = new TreeTableView<>();
+        TreeTableColumn<String, String> col1 = new TreeTableColumn<>("Foo");
+        table.getColumns().addAll(col1, col1);  // add column twice
+
+        StageLoader sl = null;
+        try {
+            sl = new StageLoader(table);
+        } finally {
+            if (sl != null) {
+                sl.dispose();
+            }
+
+            // reset the exception handler
+            Thread.currentThread().setUncaughtExceptionHandler(exceptionHandler);
+        }
+    }
 }

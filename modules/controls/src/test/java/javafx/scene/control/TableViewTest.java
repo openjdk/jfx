@@ -4755,4 +4755,40 @@ public class TableViewTest {
         assertEquals(expectedIndex, fm.getFocusedIndex());
         assertEquals(stringTableView.getItems().get(expectedIndex), fm.getFocusedItem());
     }
+
+    private int test_rt_39822_count = 0;
+    @Test public void test_rt_39822() {
+        // get the current exception handler before replacing with our own,
+        // as ListListenerHelp intercepts the exception otherwise
+        final Thread.UncaughtExceptionHandler exceptionHandler = Thread.currentThread().getUncaughtExceptionHandler();
+        Thread.currentThread().setUncaughtExceptionHandler((t, e) -> {
+            e.printStackTrace();
+
+            if (test_rt_39822_count == 0) {
+                test_rt_39822_count++;
+                if (! (e instanceof IllegalStateException)) {
+                    fail("Incorrect exception type - expecting IllegalStateException");
+                }
+            } else {
+                // don't care
+                test_rt_39822_count++;
+            }
+        });
+
+        TableView<String> table = new TableView<>();
+        TableColumn<String, String> col1 = new TableColumn<>("Foo");
+        table.getColumns().addAll(col1, col1);  // add column twice
+
+        StageLoader sl = null;
+        try {
+            sl = new StageLoader(table);
+        } finally {
+            if (sl != null) {
+                sl.dispose();
+            }
+
+            // reset the exception handler
+            Thread.currentThread().setUncaughtExceptionHandler(exceptionHandler);
+        }
+    }
 }

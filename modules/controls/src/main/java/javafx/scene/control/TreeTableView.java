@@ -653,6 +653,38 @@ public class TreeTableView<S> extends Control {
     
     private final ListChangeListener<TreeTableColumn<S,?>> columnsObserver = new ListChangeListener<TreeTableColumn<S,?>>() {
         @Override public void onChanged(ListChangeListener.Change<? extends TreeTableColumn<S,?>> c) {
+            final List<TreeTableColumn<S,?>> columns = getColumns();
+
+            // Fix for RT-39822 - don't allow the same column to be installed twice
+            while (c.next()) {
+                if (c.wasAdded()) {
+                    List<TreeTableColumn<S,?>> duplicates = new ArrayList<>();
+                    for (TreeTableColumn<S,?> addedColumn : c.getAddedSubList()) {
+                        if (addedColumn == null) continue;
+
+                        int count = 0;
+                        for (TreeTableColumn<S,?> column : columns) {
+                            if (addedColumn == column) {
+                                count++;
+                            }
+                        }
+
+                        if (count > 1) {
+                            duplicates.add(addedColumn);
+                        }
+                    }
+
+                    if (!duplicates.isEmpty()) {
+                        String titleList = "";
+                        for (TreeTableColumn<S,?> dupe : duplicates) {
+                            titleList += "'" + dupe.getText() + "', ";
+                        }
+                        throw new IllegalStateException("Duplicate TreeTableColumns detected in TreeTableView columns list with titles " + titleList);
+                    }
+                }
+            }
+            c.reset();
+
             // We don't maintain a bind for leafColumns, we simply call this update
             // function behind the scenes in the appropriate places.
             updateVisibleLeafColumns();
