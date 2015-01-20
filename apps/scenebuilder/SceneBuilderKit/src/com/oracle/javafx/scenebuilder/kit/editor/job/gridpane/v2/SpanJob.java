@@ -34,9 +34,9 @@ package com.oracle.javafx.scenebuilder.kit.editor.job.gridpane.v2;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController.EditAction;
 import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
+import com.oracle.javafx.scenebuilder.kit.editor.job.BatchDocumentJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.Job;
-import com.oracle.javafx.scenebuilder.kit.editor.job.ModifyObjectJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.v2.CompositeJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.ModifyObjectJob;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.AbstractSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.ObjectSelectionGroup;
 import com.oracle.javafx.scenebuilder.kit.fxom.FXOMInstance;
@@ -54,11 +54,11 @@ import javafx.scene.layout.GridPane;
  * This job is multi-selection proof: it will do something on all items of the
  * selection if and only if required conditions are met by all of them.
  */
-public class SpanJob extends CompositeJob {
+public class SpanJob extends BatchDocumentJob {
     private final EditAction editAction;
 
     public SpanJob(EditorController editorController, EditAction editAction) {
-        super(editorController, true, true);
+        super(editorController);
         this.editAction = editAction;
     }
 
@@ -180,7 +180,7 @@ public class SpanJob extends CompositeJob {
         
         return newSpan;
     }
-    
+
     private enum TREND {DECREASE, INCREASE};
     private enum PROPERTY {COLUMN_INDEX, COLUMN_SPAN, ROW_INDEX, ROW_SPAN};
     

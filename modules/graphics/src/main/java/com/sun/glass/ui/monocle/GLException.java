@@ -27,7 +27,7 @@ package com.sun.glass.ui.monocle;
 
 public class GLException extends Exception {
 
-    public GLException(int errorCode, String message) {
+    GLException(int errorCode, String message) {
         super("0x" + Integer.toHexString(errorCode) + ": " + message);
     }
 

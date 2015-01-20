@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -53,7 +53,7 @@ class DummyTexture extends BaseTexture  {
     {
         super(new DummyManagedResource(), format, wrapMode,
               contentWidth, contentHeight,
-              0, 0, contentWidth, contentHeight);
+              0, 0, contentWidth, contentHeight, false);
 
         this.context = context;
 

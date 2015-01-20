@@ -134,8 +134,8 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
         // result in the correct selection occuring (whilst the focus index moves
         // about).
         if (shiftDown) {
-            if (! hasAnchor(tableView)) {
-                setAnchor(tableView, focusedCell);
+            if (! hasNonDefaultAnchor(tableView)) {
+                setAnchor(tableView, focusedCell, false);
             }
         } else {
             removeAnchor(tableView);
@@ -163,20 +163,26 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
 
                     final int anchorRow = anchor.getRow();
 
-                    if (sm.isCellSelectionEnabled()) {
-                        // clear selection, but maintain the anchor
-                        sm.clearSelection();
+                    final boolean asc = anchorRow < row;
 
-                        // and then determine all row and columns which must be selected
-                        int minRow = Math.min(anchor.getRow(), row);
-                        int maxRow = Math.max(anchor.getRow(), row);
-                        TableColumnBase<S,T> minColumn = anchor.getColumn() < column ? anchor.getTableColumn() : tableColumn;
-                        TableColumnBase<S,T> maxColumn = anchor.getColumn() >= column ? anchor.getTableColumn() : tableColumn;
+                    // clear selection, but maintain the anchor
+                    sm.clearSelection();
 
-                        // and then perform the selection
+                    // and then determine all row and columns which must be selected
+                    int minRow = Math.min(anchorRow, row);
+                    int maxRow = Math.max(anchorRow, row);
+                    TableColumnBase<S,T> minColumn = anchor.getColumn() < column ? anchor.getTableColumn() : tableColumn;
+                    TableColumnBase<S,T> maxColumn = anchor.getColumn() >= column ? anchor.getTableColumn() : tableColumn;
+
+                    // and then perform the selection.
+                    // RT-21444: We need to put the range in the correct
+                    // order or else the last selected row will not be the
+                    // last item in the selectedItems list of the selection
+                    // model,
+                    if (asc) {
                         sm.selectRange(minRow, minColumn, maxRow, maxColumn);
                     } else {
-                        selectRows(anchorRow, row);
+                        sm.selectRange(maxRow, minColumn, minRow, maxColumn);
                     }
 
                     // This line of code below was disabled as a fix for RT-30394.
@@ -198,15 +204,15 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
         final TableSelectionModel<S> sm = getSelectionModel();
         final int row = getControl().getIndex();
         final TableColumnBase<S,T> column = getTableColumn();
-        boolean isAlreadySelected = sm.isSelected(row, sm.isCellSelectionEnabled() ? column : null);
+        boolean isAlreadySelected = sm.isSelected(row, column);
 
         if (isAlreadySelected && shortcutDown) {
             sm.clearSelection(row, column);
-            getFocusModel().focus(row, (TC) (sm.isCellSelectionEnabled() ? column : null));
+            getFocusModel().focus(row, (TC) column);
             isAlreadySelected = false;
         } else {
             // we check if cell selection is enabled to fix RT-33897
-            sm.clearAndSelect(row, sm.isCellSelectionEnabled() ? column : null);
+            sm.clearAndSelect(row, column);
         }
 
         handleClicks(button, clickCount, isAlreadySelected);

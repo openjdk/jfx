@@ -119,7 +119,7 @@ public class TabDriver extends AbstractDriver {
             final TabPane tabPane
                     = tab.getTabPane();
             final Bounds sceneGraphNodeBounds 
-                    = tabPane.localToScene(tabPane.getLayoutBounds());
+                    = tabPane.localToScene(tabPane.getLayoutBounds(), true /* rootScene */);
             result = sceneGraphNodeBounds.intersects(bounds);
         } else {
             result = false;

@@ -988,6 +988,77 @@ public class VirtualFlowTest {
         flow.addTrailingCells(true);
     }
 
+    private int rt36556_instanceCount;
+    @Test
+    public void test_rt36556() {
+        rt36556_instanceCount = 0;
+        flow = new VirtualFlow();
+        flow.setVertical(true);
+        flow.setCreateCell(p -> {
+            rt36556_instanceCount++;
+            return new CellStub(flow);
+        });
+        flow.setCellCount(100);
+        flow.resize(300, 300);
+        pulse();
+        final int cellCountAtStart = rt36556_instanceCount;
+        flow.adjustPixels(10000);
+        pulse();
+        assertEquals(cellCountAtStart, rt36556_instanceCount);
+        assertNull(flow.getVisibleCell(0));
+        assertMinimalNumberOfCellsAreUsed(flow);
+    }
+
+    @Test
+    public void test_rt36556_scrollto() {
+        rt36556_instanceCount = 0;
+        flow = new VirtualFlow();
+        flow.setVertical(true);
+        flow.setCreateCell(p -> {
+            rt36556_instanceCount++;
+            return new CellStub(flow);
+        });
+        flow.setCellCount(100);
+        flow.resize(300, 300);
+        pulse();
+        final int cellCountAtStart = rt36556_instanceCount;
+        flow.scrollTo(80);
+        pulse();
+        assertEquals(cellCountAtStart, rt36556_instanceCount);
+        assertNull(flow.getVisibleCell(0));
+        assertMinimalNumberOfCellsAreUsed(flow);
+    }
+    
+    @Test
+    public void test_RT39035() {
+        flow.adjustPixels(250);
+        pulse();
+        flow.adjustPixels(500);
+        pulse();
+        assertTrue(flow.getPosition() < 1.0);
+        assertMinimalNumberOfCellsAreUsed(flow);
+    }
+
+    @Test
+    public void test_RT37421() {
+        flow.setPosition(0.98);
+        pulse();
+        flow.adjustPixels(100);
+        pulse();
+        assertEquals(1.0, flow.getPosition(), 0.0);
+        assertMinimalNumberOfCellsAreUsed(flow);
+    }
+
+    @Test
+    public void test_RT39568() {
+        flow.getHbar().setPrefHeight(16);
+        flow.resize(50, flow.getHeight());
+        flow.setPosition(1);
+        pulse();
+        assertTrue("The hbar should have been visible", flow.getHbar().isVisible());
+        assertMinimalNumberOfCellsAreUsed(flow);
+        assertEquals(flow.getViewportLength()-25.0, flow.cells.getLast().getLayoutY(), 0.0);
+    }
 }
 
 class CellStub extends IndexedCell {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -58,14 +58,8 @@ struct _VideoDecoder {
     int         u_offset;
     int         v_offset;
     int         uv_blocksize;
-    AVFrame     *yuv_frame;
 
-#if LIBAVCODEC_NEW
     AVPacket       packet;
-#else // ! LIBAVCODEC_NEW
-    uint8_t        *packet;
-    int            packet_size;
-#endif // LIBAVCODEC_NEW
 };
 
 struct _VideoDecoderClass

@@ -2045,7 +2045,7 @@ public class GridPane extends Pane {
         if (columnPercentTotal > 0) {
             for (int i = 0; i < columnPercentWidth.length; i++) {
                 if (columnPercentWidth[i] >= 0) {
-                    final double size = (contentWidth - hgaps) * (columnPercentWidth[i]/100);
+                    final double size = snapPortion((contentWidth - hgaps) * (columnPercentWidth[i]/100));
                     widths.setSize(i, size);
                 }
             }

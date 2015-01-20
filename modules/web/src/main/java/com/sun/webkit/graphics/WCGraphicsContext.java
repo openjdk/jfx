@@ -133,5 +133,7 @@ public abstract class WCGraphicsContext {
     public abstract WCGradient createLinearGradient(WCPoint p1, WCPoint p2);
     public abstract WCGradient createRadialGradient(WCPoint p1, float r1, WCPoint p2, float r2);
 
+    public abstract void flush();
+
     public abstract void dispose();
 }

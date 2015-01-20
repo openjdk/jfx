@@ -79,6 +79,7 @@ public class ScrollBarApp extends Application {
         xscrollBar = horizontalScrollBar(-1,-1,xBarWidth,xBarHeight,xBarWidth,xBarHeight);
         xscrollBar.setUnitIncrement(20.0);
         xscrollBar.valueProperty().addListener((ObservableValue<? extends Number> observable, Number oldValue, Number newValue) -> {
+            //changes the x position of the circle
             setScrollValueX(xscrollBar.getValue(), circle);
         });
 
@@ -86,6 +87,7 @@ public class ScrollBarApp extends Application {
         yscrollBar = verticalScrollBar(-1,-1,yBarWidth,yBarHeight,yBarWidth,yBarHeight);
         yscrollBar.setUnitIncrement(20.0);
         yscrollBar.valueProperty().addListener((ObservableValue<? extends Number> observable, Number oldValue, Number newValue) -> {
+            //changes the y position of the circle
             setScrollValueY(yscrollBar.getValue(), circle);
         });
 

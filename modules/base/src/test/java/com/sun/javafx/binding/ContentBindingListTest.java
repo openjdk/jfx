@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -199,5 +199,24 @@ public class ContentBindingListTest {
 
         assertTrue(binding1.equals(binding1));
         assertFalse(binding1.equals(binding2));
+    }
+
+    @Test
+    public void testAlreadyBound() {
+        // get the current exception handler before replacing with our own,
+        // as ListListenerHelper intercepts the exception otherwise
+        final Thread.UncaughtExceptionHandler exceptionHandler =
+                Thread.currentThread().getUncaughtExceptionHandler();
+        Thread.currentThread().setUncaughtExceptionHandler((t, e) -> {
+                throw new AssertionError("We don't expect any exceptions in this test!", e);
+            }
+        );
+
+        ContentBinding.bind(op1, op2);
+        ContentBinding.bind(op1, op2);
+        op2.remove(1);
+
+        // reset the exception handler
+        Thread.currentThread().setUncaughtExceptionHandler(exceptionHandler);
     }
 }

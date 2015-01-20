@@ -132,9 +132,6 @@ void initState(ContextInfo *ctxInfo) {
     ctxInfo->state.depthWritesEnabled = JNI_FALSE;
     glDepthMask(ctxInfo->state.depthWritesEnabled);
     glDisable(GL_DEPTH_TEST);
-#ifndef IS_EGL
-    glDisable(GL_ALPHA_TEST);
-#endif
 
     if (ctxInfo->state.scissorEnabled) {
         ctxInfo->state.scissorEnabled = JNI_FALSE;
@@ -591,6 +588,8 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_es2_GLContext_nCreateProgram
             ctxInfo->glGetProgramInfoLog(shaderProgram, length, NULL, msg);
             fprintf(stderr, "Program link log: %.*s\n", length, msg);
             free(msg);
+        } else {
+            fprintf(stderr, "glLinkProgram: GL_LINK_STATUS returns GL_FALSE but GL_INFO_LOG_LENGTH returns 0\n");
         }
 
         ctxInfo->glDetachShader(shaderProgram, vertID);
@@ -642,7 +641,7 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_es2_GLContext_nCompileShader
     }
     ctxInfo->glShaderSource(shaderID, 1, (const GLchar **) &shaderString, (GLint *) NULL);
     ctxInfo->glCompileShader(shaderID);
-    ctxInfo->glGetShaderiv(shaderID, GL_COMPILE_STATUS, &success);
+    ctxInfo->glGetShaderiv(shaderID, GL_COMPILE_STATUS, &success);    
 
     free(shaderString);
 
@@ -655,6 +654,8 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_es2_GLContext_nCompileShader
             ctxInfo->glGetShaderInfoLog(shaderID, length, NULL, msg);
             fprintf(stderr, "Shader compile log: %.*s\n", length, msg);
             free(msg);
+        } else {
+            fprintf(stderr, "glCompileShader: GL_COMPILE_STATUS returns GL_FALSE but GL_INFO_LOG_LENGTH returns 0\n");
         }
 
         ctxInfo->glDeleteShader(shaderID);
@@ -862,18 +863,6 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_es2_GLContext_nGetMaxSampleSize
 
 /*
  * Class:     com_sun_prism_es2_GLContext
- * Method:    nGetMaxTextureSize
- * Signature: ()I
- */
-JNIEXPORT jint JNICALL Java_com_sun_prism_es2_GLContext_nGetMaxTextureSize
-(JNIEnv *env, jclass class) {
-    GLint param;
-    glGetIntegerv(GL_MAX_TEXTURE_SIZE, &param);
-    return (jint) param;
-}
-
-/*
- * Class:     com_sun_prism_es2_GLContext
  * Method:    nGetUniformLocation
  * Signature: (JILjava/lang/String;)I
  */
@@ -928,8 +917,14 @@ int translatePrismToGL(int value) {
             return GL_TEXTURE_2D;
         case com_sun_prism_es2_GLContext_GL_TEXTURE_BINDING_2D:
             return GL_TEXTURE_BINDING_2D;
+        case com_sun_prism_es2_GLContext_GL_NEAREST:
+            return GL_NEAREST;
         case com_sun_prism_es2_GLContext_GL_LINEAR:
             return GL_LINEAR;
+        case com_sun_prism_es2_GLContext_GL_NEAREST_MIPMAP_NEAREST:
+            return GL_NEAREST_MIPMAP_NEAREST;
+        case com_sun_prism_es2_GLContext_GL_LINEAR_MIPMAP_LINEAR:
+            return GL_LINEAR_MIPMAP_LINEAR;
 
         case com_sun_prism_es2_GLContext_WRAPMODE_REPEAT:
             return GL_REPEAT;
@@ -937,6 +932,28 @@ int translatePrismToGL(int value) {
             return GL_CLAMP_TO_EDGE;
         case com_sun_prism_es2_GLContext_WRAPMODE_CLAMP_TO_BORDER:
             return GL_CLAMP_TO_BORDER;
+
+        case com_sun_prism_es2_GLContext_GL_MAX_FRAGMENT_UNIFORM_COMPONENTS:
+            return GL_MAX_FRAGMENT_UNIFORM_COMPONENTS;
+        case com_sun_prism_es2_GLContext_GL_MAX_FRAGMENT_UNIFORM_VECTORS:
+            return GL_MAX_FRAGMENT_UNIFORM_VECTORS;
+        case com_sun_prism_es2_GLContext_GL_MAX_TEXTURE_IMAGE_UNITS:
+            return GL_MAX_TEXTURE_IMAGE_UNITS;
+        case com_sun_prism_es2_GLContext_GL_MAX_TEXTURE_SIZE:
+            return GL_MAX_TEXTURE_SIZE;
+        case com_sun_prism_es2_GLContext_GL_MAX_VARYING_COMPONENTS:
+            return GL_MAX_VARYING_COMPONENTS;
+        case com_sun_prism_es2_GLContext_GL_MAX_VARYING_VECTORS:
+            return GL_MAX_VARYING_VECTORS;
+        case com_sun_prism_es2_GLContext_GL_MAX_VERTEX_ATTRIBS:
+            return GL_MAX_VERTEX_ATTRIBS;
+        case com_sun_prism_es2_GLContext_GL_MAX_VERTEX_UNIFORM_COMPONENTS:
+            return GL_MAX_VERTEX_UNIFORM_COMPONENTS;
+        case com_sun_prism_es2_GLContext_GL_MAX_VERTEX_UNIFORM_VECTORS:
+            return GL_MAX_VERTEX_UNIFORM_VECTORS;
+        case com_sun_prism_es2_GLContext_GL_MAX_VERTEX_TEXTURE_IMAGE_UNITS:
+            return GL_MAX_VERTEX_TEXTURE_IMAGE_UNITS;
+            
         default:
             fprintf(stderr, "warning: Unknown value. Returning value = %d\n", value);
     }
@@ -959,6 +976,19 @@ GLint translatePixelStore(int pname) {
             fprintf(stderr, "warning: Unknown pname. Returning pname = %d\n", pname);
     }
     return (GLint) pname;
+}
+
+/*
+ * Class:     com_sun_prism_es2_GLContext
+ * Method:    nGetIntParam
+ * Signature: (I)I
+ */
+JNIEXPORT jint JNICALL Java_com_sun_prism_es2_GLContext_nGetIntParam
+(JNIEnv *env, jclass class, jint pname) {
+    GLint param;
+
+    glGetIntegerv((GLenum) translatePrismToGL(pname), &param);
+    return (jint) param;
 }
 
 /*
@@ -1075,9 +1105,10 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nScissorTest
  * Signature: (I)V
  */
 JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nTexParamsMinMax
-(JNIEnv *env, jclass class, jint pname) {
-    GLenum param = translatePrismToGL(pname);
+(JNIEnv *env, jclass class, jint min, jint max) {
+    GLenum param = translatePrismToGL(max);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, param);
+    param = translatePrismToGL(min);    
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, param);
 }
 
@@ -1089,7 +1120,7 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nTexParamsMinMax
 JNIEXPORT jboolean JNICALL Java_com_sun_prism_es2_GLContext_nTexImage2D0
 (JNIEnv *env, jclass class, jint target, jint level, jint internalFormat,
         jint width, jint height, jint border, jint format, jint type,
-        jobject pixels, jint pixelsByteOffset) {
+        jobject pixels, jint pixelsByteOffset, jboolean useMipmap) {
     GLvoid *ptr = NULL;
     GLenum err;
 
@@ -1099,6 +1130,9 @@ JNIEXPORT jboolean JNICALL Java_com_sun_prism_es2_GLContext_nTexImage2D0
     }
 
     glGetError();
+    if (useMipmap) {
+        glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE);
+    }
     glTexImage2D((GLenum) translatePrismToGL(target), (GLint) level,
             (GLint) translatePrismToGL(internalFormat),
             (GLsizei) width, (GLsizei) height, (GLint) border,
@@ -1118,7 +1152,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_prism_es2_GLContext_nTexImage2D0
 JNIEXPORT jboolean JNICALL Java_com_sun_prism_es2_GLContext_nTexImage2D1
 (JNIEnv *env, jclass class, jint target, jint level, jint internalFormat,
         jint width, jint height, jint border, jint format, jint type,
-        jobject pixels, jint pixelsByteOffset) {
+        jobject pixels, jint pixelsByteOffset, jboolean useMipmap) {
     GLvoid *ptr = NULL;
     GLenum err;
 
@@ -1128,6 +1162,9 @@ JNIEXPORT jboolean JNICALL Java_com_sun_prism_es2_GLContext_nTexImage2D1
     }
 
     glGetError();
+    if (useMipmap) {
+        glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE);
+    }
     glTexImage2D((GLenum) translatePrismToGL(target), (GLint) level,
             (GLint) translatePrismToGL(internalFormat),
             (GLsizei) width, (GLsizei) height, (GLint) border,
@@ -1241,19 +1278,10 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nSetDepthTest
         glDepthFunc(GL_LEQUAL);
         glDepthMask(GL_TRUE);
         ctxInfo->state.depthWritesEnabled = JNI_TRUE;
-#ifndef IS_EGL /* RT-25058 */
-        glEnable(GL_ALPHA_TEST);
-#ifndef ANDROID_NDK
-        glAlphaFunc(GL_NOTEQUAL, 0.0);
-#endif
-#endif
     } else {
         glDisable(GL_DEPTH_TEST);
         glDepthMask(GL_FALSE);
         ctxInfo->state.depthWritesEnabled = JNI_FALSE;
-#ifndef IS_EGL
-        glDisable(GL_ALPHA_TEST);
-#endif
     }
 }
 

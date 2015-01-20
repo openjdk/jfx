@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -322,7 +322,7 @@ D3DResourceManager::CreateVertexBuffer(D3DVertexBufferResource** ppVBRes)
 
 HRESULT
 D3DResourceManager::CreateTexture(UINT width, UINT height,
-                                  BOOL isRTT, BOOL isOpaque, /*BOOL autoMipMap,*/
+                                  BOOL isRTT, BOOL isOpaque, BOOL useMipmap,
                                   D3DFORMAT *pFormat, DWORD dwUsage,
                                   D3DResource **ppTextureResource)
 {
@@ -331,7 +331,7 @@ D3DResourceManager::CreateTexture(UINT width, UINT height,
                 width, height, isRTT, isOpaque);
 
     IDirect3DDevice9 *pd3dDevice = pCtx->Get3DDevice();
-
+       
     if (pd3dDevice == NULL) {
         return E_FAIL;
     }
@@ -379,9 +379,9 @@ D3DResourceManager::CreateTexture(UINT width, UINT height,
         }
     }
 
-    // if (pool == D3DPOOL_MANAGED && !isDynamic && autoMipMap) {
-    //     dwUsage |= D3DUSAGE_AUTOGENMIPMAP;
-    // }
+    if (useMipmap) {
+         dwUsage |= D3DUSAGE_AUTOGENMIPMAP;
+     }
 
     IDirect3DTexture9 *pTexture = NULL;
     HRESULT res = pd3dDevice->CreateTexture(width, height, 1/*levels*/, dwUsage,

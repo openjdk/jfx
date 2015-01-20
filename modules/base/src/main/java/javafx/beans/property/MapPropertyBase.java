@@ -250,7 +250,8 @@ public abstract class MapPropertyBase<K, V> extends MapProperty<K, V> {
     @Override
     public void set(ObservableMap<K, V> newValue) {
         if (isBound()) {
-            throw new RuntimeException("A bound value cannot be set.");
+            throw new java.lang.RuntimeException((getBean() != null && getName() != null ?
+                    getBean().getClass().getSimpleName() + "." + getName() + " : ": "") + "A bound value cannot be set.");
         }
         if (value != newValue) {
             final ObservableMap<K, V> oldValue = value;

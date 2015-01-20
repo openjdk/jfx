@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -548,7 +548,7 @@ public abstract class ListExpressionHelper<E> extends ExpressionHelperBase {
             } else {
                 final ObservableList<E> oldValue = currentValue;
                 currentValue = observable.getValue();
-                if ((currentValue == null)? (oldValue != null) : !currentValue.equals(oldValue)) {
+                if (currentValue != oldValue) {
                     Change<E> change = null;
                     if (listChangeSize > 0) {
                         final int safeSize = (currentValue == null)? 0 : currentValue.size();

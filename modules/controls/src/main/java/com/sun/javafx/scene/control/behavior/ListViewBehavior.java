@@ -242,13 +242,21 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     
     private final ListChangeListener<Integer> selectedIndicesListener = c -> {
         while (c.next()) {
+            if (c.wasReplaced()) {
+                if (ListCellBehavior.hasDefaultAnchor(getControl())) {
+                    ListCellBehavior.removeAnchor(getControl());
+                }
+            }
+
+            final int shift = c.wasPermutated() ? c.getTo() - c.getFrom() : 0;
+
             MultipleSelectionModel<T> sm = getControl().getSelectionModel();
 
             // there are no selected items, so lets clear out the anchor
             if (! selectionChanging) {
                 if (sm.isEmpty()) {
                     setAnchor(-1);
-                } else if (! sm.isSelected(getAnchor())) {
+                } else if (hasAnchor() && ! sm.isSelected(getAnchor() + shift)) {
                     setAnchor(-1);
                 }
             }
@@ -337,7 +345,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     }
 
     private void setAnchor(int anchor) {
-        ListCellBehavior.setAnchor(getControl(), anchor < 0 ? null : anchor);
+        ListCellBehavior.setAnchor(getControl(), anchor < 0 ? null : anchor, false);
     }
     
     private int getAnchor() {
@@ -345,7 +353,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
     }
     
     private boolean hasAnchor() {
-        return ListCellBehavior.hasAnchor(getControl());
+        return ListCellBehavior.hasNonDefaultAnchor(getControl());
     }
 
     @Override public void mousePressed(MouseEvent e) {
@@ -533,7 +541,7 @@ public class ListViewBehavior<T> extends BehaviorBase<ListView<T>> {
         selectionChanging = true;
         for (int i = 0; i < indices.size(); i++) {
             int index = indices.get(i);
-            if (index < min || index >= max) {
+            if (index < min || index > max) {
                 sm.clearSelection(index);
             }
         }

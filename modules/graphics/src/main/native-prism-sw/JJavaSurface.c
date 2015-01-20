@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -77,7 +77,6 @@ Java_com_sun_pisces_JavaSurface_initialize
             surface->cleanup = surface_cleanup;
 
             switch(surface->super.imageType){
-                case TYPE_INT_ARGB:
                 case TYPE_INT_ARGB_PRE:
                     jSurface->javaArrayFieldID = fieldIds[SURFACE_DATA_INT];
                     break;

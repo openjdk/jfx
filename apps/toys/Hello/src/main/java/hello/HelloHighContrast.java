@@ -53,7 +53,7 @@ public class HelloHighContrast extends Application {
             }
 
             // install new style
-            String userData = (String) group.getSelectedToggle().getUserData();
+            String userData = (String) (group.getSelectedToggle() != null ? group.getSelectedToggle().getUserData() : null);
             if (userData != null) {
                 lastStyleUsed = userData;
                 StyleManager.getInstance().addUserAgentStylesheet(MODENA_PATH + userData);

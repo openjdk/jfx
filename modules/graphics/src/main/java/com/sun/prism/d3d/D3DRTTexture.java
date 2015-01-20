@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -61,7 +61,7 @@ class D3DRTTexture extends D3DTexture
     {
         super(context, PixelFormat.INT_ARGB_PRE, wrapMode, pResource,
               physicalWidth, physicalHeight,
-              contentX, contentY, contentWidth, contentHeight, true, samples);
+              contentX, contentY, contentWidth, contentHeight, true, samples, false);
         this.opaque = false;
     }
 
@@ -161,7 +161,7 @@ class D3DRTTexture extends D3DTexture
         return getContext().isRTTVolatile();
     }
 
-    public boolean isAntiAliasing() {
+    public boolean isMSAA() {
         return resource.getResource().getSamples() != 0;
     }
 }

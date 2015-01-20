@@ -487,8 +487,17 @@ final class URLLoader implements Runnable {
             return null;
         }
 
-        InputStream inputStream = errorStream == null
+        InputStream inputStream = null;
+        try {
+            inputStream = errorStream == null
                 ? c.getInputStream() : errorStream;
+        } catch (IOException e) {
+            if (logger.isLoggable(Level.FINE)) {
+                logger.log(Level.FINE, String.format("Exception caught: [%s], %s",
+                    e.getClass().getSimpleName(),
+                    e.getMessage()));
+            }
+        }
         String encoding = c.getContentEncoding();
         if ("gzip".equalsIgnoreCase(encoding)) {
             inputStream = new GZIPInputStream(inputStream);
@@ -500,42 +509,44 @@ final class URLLoader implements Runnable {
                 byteBufferPool.newAllocator(MAX_BUF_COUNT);
         ByteBuffer byteBuffer = null;
         try {
-            // 8192 is the default size of a BufferedInputStream used in
-            // most URLConnections, by using the same size, we avoid quite
-            // a few System.arrayCopy() calls
-            byte[] buffer = new byte[8192];
-            while (!canceled) {
-                int count;
-                try {
-                    count = inputStream.read(buffer);
-                } catch (EOFException ex) {
-                    // can be thrown by GZIPInputStream signaling
-                    // the end of the stream
-                    count = -1;
-                }
+            if (inputStream != null) {
+                // 8192 is the default size of a BufferedInputStream used in
+                // most URLConnections, by using the same size, we avoid quite
+                // a few System.arrayCopy() calls
+                byte[] buffer = new byte[8192];
+                while (!canceled) {
+                    int count;
+                    try {
+                        count = inputStream.read(buffer);
+                    } catch (EOFException ex) {
+                        // can be thrown by GZIPInputStream signaling
+                        // the end of the stream
+                        count = -1;
+                    }
 
-                if (count == -1) {
-                    break;
-                }
+                    if (count == -1) {
+                        break;
+                    }
 
-                if (byteBuffer == null) {
-                    byteBuffer = allocator.allocate();
-                }
-
-                int remaining = byteBuffer.remaining();
-                if (count < remaining) {
-                    byteBuffer.put(buffer, 0, count);
-                } else {
-                    byteBuffer.put(buffer, 0, remaining);
-
-                    byteBuffer.flip();
-                    didReceiveData(byteBuffer, allocator);
-                    byteBuffer = null;
-
-                    int outstanding = count - remaining;
-                    if (outstanding > 0) {
+                    if (byteBuffer == null) {
                         byteBuffer = allocator.allocate();
-                        byteBuffer.put(buffer, remaining, outstanding);
+                    }
+
+                    int remaining = byteBuffer.remaining();
+                    if (count < remaining) {
+                        byteBuffer.put(buffer, 0, count);
+                    } else {
+                        byteBuffer.put(buffer, 0, remaining);
+
+                        byteBuffer.flip();
+                        didReceiveData(byteBuffer, allocator);
+                        byteBuffer = null;
+
+                        int outstanding = count - remaining;
+                        if (outstanding > 0) {
+                            byteBuffer = allocator.allocate();
+                            byteBuffer.put(buffer, remaining, outstanding);
+                        }
                     }
                 }
             }

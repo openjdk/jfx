@@ -135,7 +135,7 @@ public abstract class ComboBoxBaseSkin<T> extends BehaviorSkinBase<ComboBoxBase<
         } 
     }
     
-    private void updateDisplayArea() {
+    protected void updateDisplayArea() {
         final List<Node> children = getChildren();
         final Node oldDisplayNode = displayNode;
         displayNode = getDisplayNode();

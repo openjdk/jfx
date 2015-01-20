@@ -176,7 +176,9 @@ public class AccordionBehavior extends BehaviorBase<Accordion> {
                         // TODO need to detect the focus direction
                         // to selected the first panel when TAB is pressed
                         // or select the last panel when SHIFT TAB is pressed.
-                        accordion.getPanes().get(0).requestFocus();
+                        if (! accordion.getPanes().isEmpty()) {
+                            accordion.getPanes().get(0).requestFocus();
+                        }
                     }
                 }
             }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -54,7 +54,7 @@ class ES2RTTexture extends ES2Texture<ES2RTTextureData>
                 physicalWidth, physicalHeight,
                 contentX, contentY,
                 contentWidth, contentHeight,
-                maxContentWidth, maxContentHeight);
+                maxContentWidth, maxContentHeight, false);
         PrismTrace.rttCreated(resource.getResource().getFboID(),
                               physicalWidth, physicalHeight,
                               PixelFormat.BYTE_BGRA_PRE.getBytesPerPixelUnit());
@@ -72,7 +72,7 @@ class ES2RTTexture extends ES2Texture<ES2RTTextureData>
         if (dbID != 0) {
             return;
         }
-        int msaaSamples = isAntiAliasing() ? context.getGLContext().getSampleSize() : 0;
+        int msaaSamples = isMSAA() ? context.getGLContext().getSampleSize() : 0;
         dbID = context.getGLContext().createDepthBuffer(getPhysicalWidth(),
                 getPhysicalHeight(), msaaSamples);
 
@@ -86,7 +86,7 @@ class ES2RTTexture extends ES2Texture<ES2RTTextureData>
      * @param context current context
      */
     private void createAndAttachMSAABuffer(ES2Context context) {
-        // Assert isAntiAliasing() must be true
+        // Assert isMSAA() must be true
         ES2RTTextureData texData = resource.getResource();
         int rbID = texData.getMSAARenderBufferID();
         if (rbID != 0) {
@@ -385,7 +385,7 @@ class ES2RTTexture extends ES2Texture<ES2RTTextureData>
         return false;
     }
 
-    public boolean isAntiAliasing() {
+    public boolean isMSAA() {
         return resource.getResource().getMSAARenderBufferID() != 0;
     }
 }

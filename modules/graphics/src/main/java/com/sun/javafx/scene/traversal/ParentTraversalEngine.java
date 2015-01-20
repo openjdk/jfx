@@ -27,6 +27,13 @@ package com.sun.javafx.scene.traversal;
 
 import javafx.scene.Parent;
 
+/**
+ * This traversal engine can be used to change algorithm for some specific parent/control that needs different traversal.
+ * This can be achieved by setting such engine using {@link Parent#setImpl_traversalEngine(ParentTraversalEngine)}
+ * and providing a special Algorithm implementation.
+ *
+ * Alternatively, the traversal engine can be w/o an algorithm and used just for listening to focus changes inside the specified parent.
+ */
 public final class ParentTraversalEngine extends TraversalEngine{
 
     private final Parent root;

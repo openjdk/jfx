@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -404,6 +404,7 @@ public abstract class SetExpressionHelper<E> extends ExpressionHelperBase {
                             if (numMoved > 0) {
                                 System.arraycopy(oldListeners, index+1, invalidationListeners, index, numMoved);
                             }
+                            invalidationSize--;
                             if (!locked) {
                                 invalidationListeners[--invalidationSize] = null; // Let gc do its work
                             }

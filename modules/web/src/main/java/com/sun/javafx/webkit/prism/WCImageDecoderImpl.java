@@ -41,8 +41,6 @@ import java.io.InputStream;
 import java.util.Arrays;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.concurrent.Service;
 import javafx.concurrent.Task;
 
@@ -55,16 +53,19 @@ final class WCImageDecoderImpl extends WCImageDecoder {
     private int imageWidth = 0;
     private int imageHeight = 0;
     private ImageFrame[] frames;
+    private int frameCount = 0; // keeps frame count when decoded frames are temporarily destroyed
+    private boolean framesDecoded = false; // guards frames from repeated decoding
     private PrismImage[] images;
     private volatile byte[] data;
-    private volatile int dataSize;
+    private volatile int dataSize = 0;
 
     static {
         log = Logger.getLogger(WCImageDecoderImpl.class.getName());
     }
 
     /*
-     * This method is supposed to be called from the ImageSource destructor.
+     * This method is supposed to be called from ImageSource::clear() method
+     * when either the decoded data or the image decoder itself are to be destroyed.
      * It should free all complex object on the java layer and explicitely
      * destroy objects which has native resources.
      */
@@ -73,10 +74,9 @@ final class WCImageDecoderImpl extends WCImageDecoder {
             log.fine(String.format("%X Destroy image decoder", hashCode()));
         }
 
-        if (this.loader != null) {
-            this.loader.cancel();
-            this.loader = null;
-        }
+        destroyLoader();
+        frames = null;
+        images = null;
     }
 
     @Override protected String getFilenameExtension() {
@@ -84,23 +84,41 @@ final class WCImageDecoderImpl extends WCImageDecoder {
         return ".img";
     }
 
-    @Override protected void addImageData(byte[] data) {
-        if (data != null) {
-            if (this.data == null) {
-                this.data = Arrays.copyOf(data, data.length * 2);
-                this.dataSize = data.length;
-            }
-            else {
-                int newDataSize = this.dataSize + data.length;
-                if (newDataSize > this.data.length) {
-                    byte[] newData = new byte[Math.max(newDataSize, this.data.length * 2)];
-                    System.arraycopy(this.data, 0, newData, 0, this.dataSize);
-                    this.data = newData;
+
+    @Override protected void addImageData(byte[] dataPortion) {
+        if (dataPortion != null) {
+            framesDecoded = false;
+            if (data == null) {
+                data = Arrays.copyOf(dataPortion, dataPortion.length * 2);
+                dataSize = dataPortion.length;
+            } else {
+                int newDataSize = dataSize + dataPortion.length;
+                if (newDataSize > data.length) {
+                    resizeDataArray(Math.max(newDataSize, data.length * 2));
                 }
-                System.arraycopy(data, 0, this.data, this.dataSize, data.length);
-                this.dataSize = newDataSize;
+                System.arraycopy(dataPortion, 0, data, dataSize, dataPortion.length);
+                dataSize = newDataSize;
             }
+            startLoader(); // partial data received - decode frames in background
+        } else if (data != null && !framesDecoded) {
+            // null dataPortion means data completion
+            destroyLoader();
+            if (data.length > dataSize) {
+                resizeDataArray(dataSize);
+            }
+            setFrames(loadFrames()); // full data received - decode frames immediately
+            framesDecoded = true;
         }
+    }
+
+    private void destroyLoader() {
+        if (loader != null) {
+            loader.cancel();
+            loader = null;
+        }
+    }
+
+    private void startLoader() {
         if (this.loader == null) {
             this.loader = new Service<ImageFrame[]>() {
                 protected Task<ImageFrame[]> createTask() {
@@ -111,20 +129,21 @@ final class WCImageDecoderImpl extends WCImageDecoder {
                     };
                 }
             };
-            this.loader.valueProperty().addListener((ov, old, frames1) -> {
+            this.loader.valueProperty().addListener((ov, old, frames) -> {
                 if ((frames != null) && (loader != null)) {
                     setFrames(frames);
                 }
             });
         }
-        if (data == null) {
-            this.loader.cancel();
-            this.loader = null;
-            setFrames(loadFrames()); // decode frames immediately
+        if (!this.loader.isRunning()) {
+            this.loader.restart();
         }
-        else if (!this.loader.isRunning()) {
-            this.loader.restart(); // decode frames in background
-        }
+    }
+
+    private void resizeDataArray(int newDataSize) {
+        byte[] newData = new byte[newDataSize];
+        System.arraycopy(data, 0, newData, 0, dataSize);
+        data = newData;
     }
 
     @Override protected void loadFromResource(String name) {
@@ -215,12 +234,11 @@ final class WCImageDecoderImpl extends WCImageDecoder {
     private void setFrames(ImageFrame[] frames) {
         this.frames = frames;
         this.images = null;
+        frameCount = frames == null ? 0 : frames.length;
     }
 
     @Override protected int getFrameCount() {
-        return this.frames != null
-                ? this.frames.length
-                : 0;
+        return frameCount;
     }
 
     @Override protected WCImageFrame getFrame(int idx, int[] data) {
@@ -261,6 +279,9 @@ final class WCImageDecoderImpl extends WCImageDecoder {
     }
 
     private ImageFrame getImageFrame(int idx) {
+        if (frames == null && idx >=0 && getFrameCount() > idx) {
+            setFrames(loadFrames()); // re-decode frames if they have been destroyed
+        }
         return (idx >= 0) && (this.frames != null) && (this.frames.length > idx)
                 ? this.frames[idx]
                 : null;

@@ -28,7 +28,7 @@ package com.sun.javafx.iio;
 import com.sun.prism.Image;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
-import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
 import static org.junit.Assert.*;
 import org.junit.Test;
@@ -44,23 +44,13 @@ public class ImageLoaderScalingTest {
     }
 
     private Image loadImage(InputStream stream, int width, int height)
+            throws Exception
     {
-        try {
-            ImageFrame[] imgFrames =
-                ImageStorage.loadAll(stream, null, width, height, false, 1.0f, false);
-            assertNotNull(imgFrames);
-            assertTrue(imgFrames.length > 0);
-            return Image.convertImageFrame(imgFrames[0]);
-        } catch (ImageStorageException e) {
-            fail("unexpected ImageStorageException: " + e);
-        } catch (Exception e) {
-            fail("unexpected Exception: " + e);
-        }
-        return null;
-    }
-
-    private ByteArrayInputStream writePNGStream(BufferedImage bImg, File file) {
-        return ImageTestHelper.writeImageToStream(bImg, "png", null, file);
+        ImageFrame[] imgFrames =
+            ImageStorage.loadAll(stream, null, width, height, false, 1.0f, false);
+        assertNotNull(imgFrames);
+        assertTrue(imgFrames.length > 0);
+        return Image.convertImageFrame(imgFrames[0]);
     }
 
     private void compare(Image img, BufferedImage bImg) {
@@ -89,37 +79,53 @@ public class ImageLoaderScalingTest {
         }
     }
 
+    private void writePNGFile(BufferedImage bImg, String fileName) {
+        try {
+            ImageTestHelper.writeImage(bImg, fileName, "png", null);
+        } catch (IOException e) {
+            System.out.println("writePNGFile " + fileName + " failed: " + e);
+        }
+    }
+
     private void writeImages(Image img, BufferedImage bImg) {
         int w = img.getWidth();
         int h = img.getHeight();
-        writePNGStream(bImg, new File("out"+w+"x"+h+"OrigJDK.png"));
+        writePNGFile(bImg, "out"+w+"x"+h+"OrigJDK.png");
         int pixels[] = new int[w * h];
         img.getPixels(0, 0, w, h,
                 javafx.scene.image.PixelFormat.getIntArgbPreInstance(),
                 pixels, 0, w);
         BufferedImage fxImg = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
         fxImg.setRGB(0, 0, w, h, pixels, 0, w);
-        writePNGStream(fxImg, new File("out"+w+"x"+h+"ScaledFX.png"));
+        writePNGFile(fxImg, "out"+w+"x"+h+"ScaledFX.png");
     }
 
-    private void scaleAndCompareImage(BufferedImage bImg, int width, int height) {
-        ByteArrayInputStream in = writePNGStream(bImg, null);
+    private ByteArrayInputStream writePNGStream(BufferedImage bImg)
+            throws IOException
+    {
+        return ImageTestHelper.writeImageToStream(bImg, "png", null);
+    }
+
+    private void scaleAndCompareImage(BufferedImage bImg, int width, int height)
+            throws Exception
+    {
+        ByteArrayInputStream in = writePNGStream(bImg);                
         Image img = loadImage(in, width, height);
         compare(img, bImg);
     }
 
-    private void testScale(int w1, int h1, int w2, int h2) {
+    private void testScale(int w1, int h1, int w2, int h2) throws Exception {
         BufferedImage bImg = createImage(w1, h1);
         scaleAndCompareImage(bImg, w2, h2);
     }
 
     @Test
-    public void testNoScale() {
+    public void testNoScale() throws Exception {
         testScale(100, 100, 100, 100);
     }
 
     @Test
-    public void testAllTheScales() {
+    public void testAllTheScales() throws Exception {
         BufferedImage bImg = createImage(10, 10);
         for (int h = 2; h < 20; h++) {
             for (int w = 2; w < 20; w++) {
@@ -130,7 +136,7 @@ public class ImageLoaderScalingTest {
     }
 
     @Test
-    public void testRT20295() {
+    public void testRT20295() throws Exception {
         // (62.0 / 78.0) * 78 != 62
         testScale(100, 62, 100, 78);
     }

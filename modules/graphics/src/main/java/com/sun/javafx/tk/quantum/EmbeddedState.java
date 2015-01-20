@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,10 +25,8 @@
 
 package com.sun.javafx.tk.quantum;
 
-import java.nio.IntBuffer;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import com.sun.glass.ui.Pixels;
+import com.sun.prism.PixelSource;
 
 /**
  * EmbeddedState is intended to provide for a shadow copy the View/Scene state
@@ -44,17 +42,23 @@ final class EmbeddedState extends SceneState {
     /**
      * Put the pixels on the screen.
      * 
-     * @param pixels - the pixels to draw
-     * @param uploadCount - the number of uploads (can be null)
+     * @param source - the source for the Pixels object to be uploaded
      */
-    public void uploadPixels(Pixels pixels, AtomicInteger uploadCount) {
+    @Override
+    public void uploadPixels(PixelSource source) {
         if (isValid()) {
-            EmbeddedScene escene = (EmbeddedScene) scene;
-            // Pixels are always stored in an IntBuffer for uploading
-            escene.uploadPixels(pixels);
-            if (uploadCount != null) {
-                uploadCount.decrementAndGet();
+            Pixels pixels = source.getLatestPixels();
+            if (pixels != null) {
+                try {
+                    EmbeddedScene escene = (EmbeddedScene) scene;
+                    // Pixels are always stored in an IntBuffer for uploading
+                    escene.uploadPixels(pixels);
+                } finally {
+                    source.doneWithPixels(pixels);
+                }
             }
+        } else {
+            source.skipLatestPixels();
         }
     }
 

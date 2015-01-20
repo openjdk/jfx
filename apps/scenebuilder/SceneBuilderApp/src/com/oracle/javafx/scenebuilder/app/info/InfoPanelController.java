@@ -33,8 +33,8 @@ package com.oracle.javafx.scenebuilder.app.info;
 
 import com.oracle.javafx.scenebuilder.app.i18n.I18N;
 import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
-import com.oracle.javafx.scenebuilder.kit.editor.job.ModifyFxControllerJob;
-import com.oracle.javafx.scenebuilder.kit.editor.job.ToggleFxRootJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.ModifyFxControllerJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.ToggleFxRootJob;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors.ControllerClassEditor;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.util.AbstractFxmlPanelController;
 import com.oracle.javafx.scenebuilder.kit.editor.selection.GridSelectionGroup;

@@ -36,7 +36,7 @@ import com.oracle.javafx.scenebuilder.kit.editor.drag.DragController;
 import com.oracle.javafx.scenebuilder.kit.editor.drag.target.AbstractDropTarget;
 import com.oracle.javafx.scenebuilder.kit.editor.drag.target.GridPaneDropTarget;
 import com.oracle.javafx.scenebuilder.kit.editor.drag.target.RootDropTarget;
-import com.oracle.javafx.scenebuilder.kit.editor.job.BatchModifyObjectJob;
+import com.oracle.javafx.scenebuilder.kit.editor.job.atomic.ModifyObjectJob;
 import com.oracle.javafx.scenebuilder.kit.editor.job.RelocateSelectionJob;
 import com.oracle.javafx.scenebuilder.kit.editor.messagelog.MessageLog;
 import com.oracle.javafx.scenebuilder.kit.editor.panel.content.AbstractDecoration;
@@ -797,8 +797,8 @@ implements AbstractGesture.Observer {
                 = Metadata.getMetadata().queryValueProperty(inlineEditedObject, propertyName);
         final EditorController editorController
                 = contentPanelController.getEditorController();
-        final BatchModifyObjectJob job
-                = new BatchModifyObjectJob(inlineEditedObject, vpm, newValue, editorController);
+        final ModifyObjectJob job
+                = new ModifyObjectJob(inlineEditedObject, vpm, newValue, editorController);
         
         if (job.isExecutable()) {
             editorController.getJobManager().push(job);

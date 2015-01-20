@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -63,6 +63,10 @@ import com.sun.prism.paint.Paint;
 
 final class SWGraphics implements ReadbackGraphics {
 
+    private static final BasicStroke DEFAULT_STROKE =
+        new BasicStroke(1.0f, BasicStroke.CAP_SQUARE, BasicStroke.JOIN_MITER, 10.0f);
+    private static final Paint DEFAULT_PAINT = Color.WHITE;
+
     private final PiscesRenderer pr;
     private final SWContext context;
     private final SWRTTexture target;
@@ -78,13 +82,14 @@ final class SWGraphics implements ReadbackGraphics {
 
     private int clipRectIndex;
 
-    private Paint paint;
-    private BasicStroke stroke;
+    private Paint paint = DEFAULT_PAINT;
+    private BasicStroke stroke = DEFAULT_STROKE;
 
     private Ellipse2D ellipse2d;
     private Line2D line2d;
     private RoundRectangle2D rect2d;
 
+    private boolean antialiasedShape = true;
     private boolean hasPreCullingBits = false;
 
     private NodePath renderRoot;
@@ -205,6 +210,21 @@ final class SWGraphics implements ReadbackGraphics {
 
     public boolean isDepthBuffer() {
         return false;
+    }
+
+    public boolean isAlphaTestShader() {
+        if (PrismSettings.verbose && PrismSettings.forceAlphaTestShader) {
+            System.out.println("SW pipe doesn't support shader with alpha testing");
+        }
+        return false;
+    }
+
+    public void setAntialiasedShape(boolean aa) {
+        antialiasedShape = aa;
+    }
+
+    public boolean isAntialiasedShape() {
+        return antialiasedShape;
     }
 
     public Rectangle getClipRect() {
@@ -485,7 +505,7 @@ final class SWGraphics implements ReadbackGraphics {
             System.out.println("Clip: " + finalClip);
             System.out.println("Composite rule: " + compositeMode);
         }
-        context.renderShape(this.pr, shape, st, tr, this.finalClip);
+        context.renderShape(this.pr, shape, st, tr, this.finalClip, isAntialiasedShape());
     }
 
     private void paintRoundRect(float x, float y, float width, float height, float arcw, float arch, BasicStroke st) {

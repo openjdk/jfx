@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,6 +35,7 @@ public class ByteGrayAlphaPre {
     public static final BytePixelSetter     setter = ByteGrayAlpha.Accessor.premul;
     public static final BytePixelAccessor accessor = ByteGrayAlpha.Accessor.premul;
 
-    public static final ByteToBytePixelConverter ToByteBgraPre =
-        ByteGrayAlpha.ToByteBgraSameConv.premul;
+    public static ByteToBytePixelConverter ToByteBgraPreConverter() {
+        return ByteGrayAlpha.ToByteBgraSameConv.premul;
+    }
 }

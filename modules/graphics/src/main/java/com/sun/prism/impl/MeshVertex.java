@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -88,7 +88,7 @@ class MeshVertex {
      * return current number of points (last index +1)
      */
     static int weldWithTB(MeshVertex v, int index) {
-        Vec3f[] nSum = MeshTempState.getInstance().norm;
+        Vec3f[] nSum = MeshTempState.getInstance().triNormals;
         for (; v != null; v = v.next) {
             if (v.index < 0) {
                 int nuLocal = 0;

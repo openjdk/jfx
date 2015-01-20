@@ -25,25 +25,44 @@
 
 package com.sun.glass.ui.monocle;
 
-import com.sun.glass.ui.monocle.linux.LinuxSystem;
-
+/** AcceleratedScreen provides methods necessary to instantiate and intitialize
+ * a hardware-accelerated screen for rendering.
+ */
 public class AcceleratedScreen {
 
     private static long glesLibraryHandle;
     private static long eglLibraryHandle;
-    protected static boolean initialized = false;
-    long eglSurface, eglContext, eglDisplay;
+    private static boolean initialized = false;
+    private long eglSurface;
+    private long eglContext;
+    private long eglDisplay;
     protected static LinuxSystem ls = LinuxSystem.getLinuxSystem();
+    private EGL egl;
 
+    /** Returns a platform-specific native display handle suitable for use with
+     * eglGetDisplay.
+     */
     protected long platformGetNativeDisplay() {
         return 0L;
     }
 
+    /** Returns a platform-specific native window handle suitable for use with
+     * eglCreateWindowSurface.
+     */
     protected long platformGetNativeWindow() {
         return 0L;
     }
 
-    public AcceleratedScreen(int[] attributes) throws GLException, UnsatisfiedLinkError {
+    /**
+     * Perform basic egl intialization - open the display, create the drawing
+     * surface, and create a GL context to that drawing surface.
+     * @param attributes - attributes to be used for filtering the EGL
+     *                   configurations to choose from
+     * @throws GLException
+     * @throws UnsatisfiedLinkError
+     */
+    AcceleratedScreen(int[] attributes) throws GLException, UnsatisfiedLinkError {
+        egl = EGL.getEGL();
         initPlatformLibraries();
 
         int major[] = {0}, minor[]={0};
@@ -58,51 +77,67 @@ public class AcceleratedScreen {
         }
 
         eglDisplay =
-                EGL.eglGetDisplay(nativeDisplay);
+                egl.eglGetDisplay(nativeDisplay);
         if (eglDisplay == EGL.EGL_NO_DISPLAY) {
-            throw new GLException(EGL.eglGetError(), "Could not get EGL display");
+            throw new GLException(egl.eglGetError(),
+                                 "Could not get EGL display");
         }
 
-        if (!EGL.eglInitialize(eglDisplay, major, minor)) {
-            throw new GLException(EGL.eglGetError(), "Error initializing EGL");
+        if (!egl.eglInitialize(eglDisplay, major, minor)) {
+            throw new GLException(egl.eglGetError(),
+                                  "Error initializing EGL");
         }
 
-        if (!EGL.eglBindAPI(EGL.EGL_OPENGL_ES_API)) {
-            throw new GLException(EGL.eglGetError(), "Error binding OPENGL API");
+        if (!egl.eglBindAPI(EGL.EGL_OPENGL_ES_API)) {
+            throw new GLException(egl.eglGetError(),
+                                  "Error binding OPENGL API");
         }
 
         long eglConfigs[] = {0};
         int configCount[] = {0};
 
-        if (!EGL.eglChooseConfig(eglDisplay, attributes, eglConfigs,
-                                 1, configCount)) {
-            throw new GLException(EGL.eglGetError(), "Error choosing EGL config");
+        if (!egl.eglChooseConfig(eglDisplay, attributes, eglConfigs,
+                                         1, configCount)) {
+            throw new GLException(egl.eglGetError(),
+                                  "Error choosing EGL config");
         }
 
         eglSurface =
-                EGL.eglCreateWindowSurface(eglDisplay, eglConfigs[0],
-                        nativeWindow, null);
+                egl.eglCreateWindowSurface(eglDisplay, eglConfigs[0],
+                                                   nativeWindow, null);
         if (eglSurface == EGL.EGL_NO_SURFACE) {
-            throw new GLException(EGL.eglGetError(), "Could not get EGL surface");
+            throw new GLException(egl.eglGetError(),
+                                  "Could not get EGL surface");
         }
 
         int emptyAttrArray [] = {};
-        eglContext = EGL.eglCreateContext(eglDisplay, eglConfigs[0],
+        eglContext = egl.eglCreateContext(eglDisplay, eglConfigs[0],
                 0, emptyAttrArray);
         if (eglContext == EGL.EGL_NO_CONTEXT) {
-            throw new GLException(EGL.eglGetError(), "Could not get EGL context");
+            throw new GLException(egl.eglGetError(),
+                                  "Could not get EGL context");
         }
     }
 
+    /** Make the EGL drawing surface current or not
+     *
+     * @param flag
+     */
     public void enableRendering(boolean flag) {
         if (flag) {
-            EGL.eglMakeCurrent(eglDisplay, eglSurface, eglSurface, eglContext);
+            egl.eglMakeCurrent(eglDisplay, eglSurface, eglSurface,
+                                       eglContext);
         } else {
-            EGL.eglMakeCurrent(eglDisplay, 0, 0, eglContext);
+            egl.eglMakeCurrent(eglDisplay, 0, 0, eglContext);
         }
     }
 
-    protected boolean initPlatformLibraries() throws UnsatisfiedLinkError{
+    /** Load any native libraries needed to instantiate and initialize the
+     * native drawing surface and rendering context
+     * @return success or failure
+     * @throws UnsatisfiedLinkError
+     */
+    boolean initPlatformLibraries() throws UnsatisfiedLinkError{
         if (!initialized) {
             glesLibraryHandle = ls.dlopen("libGLESv2.so",
                     LinuxSystem.RTLD_LAZY | LinuxSystem.RTLD_GLOBAL);
@@ -119,15 +154,25 @@ public class AcceleratedScreen {
         return true;
     }
 
+    /** Return the GL library handle - for use in looking up native symbols
+     *
+     */
     public long getGLHandle() {
         return glesLibraryHandle;
     }
 
-    public long getEGLHandle() { return eglLibraryHandle; }
+    /** Return the EGL library handle - for use in looking up native symbols
+     *
+     */
+    protected long getEGLHandle() { return eglLibraryHandle; }
 
+    /** Copy the contents of the GL backbuffer to the screen
+     *
+     * @return success or failure
+     */
     public boolean swapBuffers() {
         synchronized(NativeScreen.framebufferSwapLock) {
-            EGL.eglSwapBuffers(eglDisplay, eglSurface);
+            egl.eglSwapBuffers(eglDisplay, eglSurface);
         }
         return true;
     }

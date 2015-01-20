@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -138,7 +138,8 @@ public abstract class ObjectPropertyBase<T> extends ObjectProperty<T> {
     @Override
     public void set(T newValue) {
         if (isBound()) {
-            throw new java.lang.RuntimeException("A bound value cannot be set.");
+            throw new java.lang.RuntimeException((getBean() != null && getName() != null ?
+                    getBean().getClass().getSimpleName() + "." + getName() + " : ": "") + "A bound value cannot be set.");
         }
         if (value != newValue) {
             value = newValue;

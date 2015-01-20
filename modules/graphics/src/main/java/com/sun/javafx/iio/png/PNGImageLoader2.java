@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -149,9 +149,7 @@ public final class PNGImageLoader2 extends ImageLoaderImpl {
     }
 
     private byte[] readBytes(byte data[], int offs, int size) throws IOException {
-        if (stream.read(data, offs, size) != size) {
-            throw new EOFException();
-        }
+        stream.readFully(data, offs, size);
         return data;
     }
 

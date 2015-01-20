@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -245,5 +245,16 @@ public class Quat4f {
     this.z *= s;
     this.w *= s;
   }
+
+    /**
+     * Returns a <code>String</code> that represents the value of this
+     * <code>Quat4f</code>.
+     *
+     * @return a string representation of this <code>Quat4f</code>.
+     */
+    @Override
+    public String toString() {
+        return "Quat4f[" + x + ", " + y + ", " + z + ", " + w + "]";
+    }
 }
 

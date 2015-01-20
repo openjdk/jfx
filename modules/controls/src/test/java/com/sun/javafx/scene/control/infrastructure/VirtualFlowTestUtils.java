@@ -248,14 +248,15 @@ public class VirtualFlowTestUtils {
             return rowCell;
         }
 
-        int count = 0;
+        int count = -1;
         for (Node n : rowCell.getChildrenUnmodifiable()) {
             if (! (n instanceof IndexedCell)) {
                 continue;
             }
             count++;
-            if (count < column) continue;
-            return (IndexedCell) n;
+            if (count == column) {
+                return (IndexedCell) n;
+            }
         }
         return null;
     }

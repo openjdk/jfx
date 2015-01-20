@@ -25,6 +25,7 @@
 
 package com.sun.scenario.effect.impl.state;
 
+import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.geom.Rectangle;
 import com.sun.scenario.effect.Color4f;
 import com.sun.scenario.effect.FilterContext;
@@ -32,6 +33,8 @@ import com.sun.scenario.effect.ImageData;
 import com.sun.scenario.effect.impl.EffectPeer;
 import com.sun.scenario.effect.impl.Renderer;
 import java.nio.FloatBuffer;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 
 /**
  * The {@code LinearConvolveRenderState} object manages the strategies of
@@ -54,12 +57,30 @@ import java.nio.FloatBuffer;
  * the final resulting {@code ImageData} of the last pass.
  */
 public abstract class LinearConvolveRenderState implements RenderState {
-    public static final int MAX_KERNEL_SIZE = 128;
+    public static final int MAX_COMPILED_KERNEL_SIZE = 128;
+    public static final int MAX_KERNEL_SIZE;
 
     static final float MIN_EFFECT_RADIUS = 1.0f / 256.0f;
 
     static final float[] BLACK_COMPONENTS =
         Color4f.BLACK.getPremultipliedRGBComponents();
+
+    static {
+        /*
+         * Set the maximum linear convolve kernel size used in LinearConvolveRenderState.
+         * The default value is set to 64 if platform is an embedded system and 128 otherwise.
+         */
+        final int defSize = PlatformUtil.isEmbedded() ? 64 : MAX_COMPILED_KERNEL_SIZE;
+        int size = AccessController.doPrivileged(
+                (PrivilegedAction<Integer>) () -> Integer.getInteger(
+                        "decora.maxLinearConvolveKernelSize", defSize));
+        if (size > MAX_COMPILED_KERNEL_SIZE) {
+            System.out.println("Clamping maxLinearConvolveKernelSize to "
+                    + MAX_COMPILED_KERNEL_SIZE);
+            size = MAX_COMPILED_KERNEL_SIZE;
+        }
+        MAX_KERNEL_SIZE = size;
+    }
 
     public enum PassType {
         /**

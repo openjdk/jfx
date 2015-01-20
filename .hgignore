@@ -33,3 +33,34 @@ syntax: glob
 */Debug/*
 *~
 modules/web/src/main/native/LayoutTests
+
+# avoid someone inadvertently checking in their gradle settings
+gradle.properties
+
+# ignore Xcode project droppings
+modules/media/src/main/native/xcode_project/[Bb]uild
+
+xcuserdata
+DerivedData
+
+*.xccheckout
+*.moved-aside
+*.hmap
+*.ipa
+*~.nib
+*.xcuserstate
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+
+# whitelist default files (if they exist)
+!default.pbxuser
+!default.mode1v3
+!default.mode2v3
+!default.perspectivev3
+apps/scenebuilder/SceneBuilderApp/src/com/oracle/javafx/scenebuilder/app/about/about.properties
+.git
+.gitattributes
+.gitignore
+*.sdf

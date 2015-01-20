@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -199,6 +199,8 @@ typedef struct _Renderer {
     jint _paintMode;
     jint _prevPaintMode;
 
+    // Current (user set) color
+    jint _ured, _ugreen, _ublue, _ualpha;
     // Current (internal) color
     jint _cred, _cgreen, _cblue, _calpha;
 

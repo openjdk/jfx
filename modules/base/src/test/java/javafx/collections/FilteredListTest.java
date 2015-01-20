@@ -97,9 +97,7 @@ public class FilteredListTest {
     }
 
     @Test
-    @Ignore
     public void testLiveMode_changeMatcher() {
-        assertEquals(Arrays.asList("a", "c", "c"), filteredList);
         ObjectProperty<Predicate<String>> pProperty = new SimpleObjectProperty<>();
         pProperty.set((String e) -> !e.equals("c"));
         filteredList = new FilteredList<>(list);
@@ -135,6 +133,21 @@ public class FilteredListTest {
         lo.checkAddRemove(0, filtered, Arrays.asList(createPerson("B")), 1, 1);
 
         assertEquals(Arrays.asList(createPerson("AA")), filtered);
+    }
+
+    @Test
+    public void testNullPredicate() {
+        filteredList.setPredicate(null);
+        assertEquals(list.size(), filteredList.size());
+        assertEquals(list, filteredList);
+        mlo.check1AddRemove(filteredList, Arrays.asList("a", "d"), 0, 4);
+    }
+
+    @Test
+    public void testSingleArgConstructor() {
+        filteredList = new FilteredList<>(list);
+        assertEquals(list.size(), filteredList.size());
+        assertEquals(list, filteredList);
     }
 
     private Person createPerson(String name) {

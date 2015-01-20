@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -244,6 +244,41 @@ public enum SizeUnits {
         @Override
 	public double pixels(double value, double multiplier_not_used, Font font_not_used) {
             return round(value*360);
+        }
+
+    },
+
+
+    S(true) {
+
+        @Override
+        public String toString() { return "s"; }
+
+        @Override
+        public double points(double value, double multiplier_not_used, Font font_not_used) {
+            return value;
+        }
+
+        @Override
+        public double pixels(double value, double multiplier_not_used, Font font_not_used) {
+            return value;
+        }
+
+    },
+
+    MS(true) {
+
+        @Override
+        public String toString() { return "ms"; }
+
+        @Override
+        public double points(double value, double multiplier_not_used, Font font_not_used) {
+            return value;
+        }
+
+        @Override
+        public double pixels(double value, double multiplier_not_used, Font font_not_used) {
+            return value;
         }
 
     };

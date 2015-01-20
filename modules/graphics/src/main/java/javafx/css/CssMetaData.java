@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -52,6 +52,8 @@ import javafx.scene.Node;
  * {@code getCssMetaData()} simply return {@code getClassCssMetaData()}. The
  * purpose of {@code getClassCssMetaData()} is to allow sub-classes to easily
  * include the CssMetaData of some ancestor.
+ * <p>The {@link javafx.css.StyleablePropertyFactory StyleablePropertyFactory}
+ * greatly simplifies creating a StyleableProperty and its corresponding CssMetaData.</p>
  * <p>
  * This example is a typical implementation. 
  * <code><pre>
@@ -106,6 +108,7 @@ import javafx.scene.Node;
  * @param <S> The type of Styleable
  * @param <V> The type into which the parsed value is converted. 
  * @since JavaFX 8.0
+ * @see javafx.css.StyleablePropertyFactory
  */
 public abstract class CssMetaData<S extends Styleable, V> {
     

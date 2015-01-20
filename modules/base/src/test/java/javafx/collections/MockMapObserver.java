@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -45,6 +45,10 @@ public class MockMapObserver<K, V> implements MapChangeListener<K, V> {
 
     public void clear() {
         calls.clear();
+    }
+
+    public void check0() {
+        assertEquals(0, calls.size());
     }
 
     public void assertAdded(Tuple<K, V> tuple) {

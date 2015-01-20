@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -973,6 +973,39 @@ public class SequentialTransitionPlayTest {
 
         assertEquals(4000, xProperty.get());
 
+    }
+
+    @Test
+    public void testJumpToDelay() {
+        child1X.setDelay(Duration.seconds(2));
+        st.getChildren().addAll(child1X);
+
+        st.jumpTo(Duration.seconds(2).subtract(TickCalculation.toDuration(100)));
+        st.play();
+
+        assertEquals(Status.RUNNING, st.getStatus());
+        assertEquals(Status.STOPPED, child1X.getStatus());
+
+        amt.pulse(); amt.pulse();
+
+        assertEquals(Math.round(TICK_MILLIS), xProperty.get(), 1e-10);
+    }
+
+    @Test
+    public void testJumpToSecondDelay() {
+        child1Y.setDelay(Duration.seconds(2));
+        st.getChildren().addAll(child1X, child1Y);
+
+        st.jumpTo(Duration.seconds(62).subtract(TickCalculation.toDuration(100)));
+        st.play();
+
+        assertEquals(Status.RUNNING, st.getStatus());
+        assertEquals(Status.STOPPED, child1X.getStatus());
+        assertEquals(Status.STOPPED, child1Y.getStatus());
+
+        amt.pulse(); amt.pulse();
+
+        assertEquals(Math.round(TICK_MILLIS), yProperty.get(), 1e-10);
     }
 
 }

@@ -36,7 +36,6 @@ import com.oracle.javafx.scenebuilder.app.about.AboutWindowController;
 import com.oracle.javafx.scenebuilder.app.i18n.I18N;
 import com.oracle.javafx.scenebuilder.app.menubar.MenuBarController;
 import com.oracle.javafx.scenebuilder.app.preferences.PreferencesController;
-import com.oracle.javafx.scenebuilder.app.preferences.PreferencesRecordDocument;
 import com.oracle.javafx.scenebuilder.app.preferences.PreferencesRecordGlobal;
 import com.oracle.javafx.scenebuilder.app.preferences.PreferencesWindowController;
 import com.oracle.javafx.scenebuilder.app.template.FxmlTemplates;
@@ -125,7 +124,6 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
     private final AboutWindowController aboutWindowController
             = new AboutWindowController();
     private UserLibrary userLibrary;
-    private File nextInitialDirectory;
     private ToolTheme toolTheme = ToolTheme.DEFAULT;
     
 
@@ -330,19 +328,6 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
         }
     }
 
-    public void updateNextInitialDirectory(File chosenFile) {
-        assert chosenFile != null;
-
-        final Path chosenFolder = chosenFile.toPath().getParent();
-        if (chosenFolder != null) {
-            nextInitialDirectory = chosenFolder.toFile();
-        }
-    }
-
-    public File getNextInitialDirectory() {
-        return nextInitialDirectory;
-    }
-    
     public static synchronized String getDarkToolStylesheet() {
         if (darkToolStylesheet == null) {
             final URL url = SceneBuilderApp.class.getResource("css/ThemeDark.css"); //NOI18N
@@ -502,13 +487,11 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
 
         fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter(I18N.getString("file.filter.label.fxml"),
                 "*.fxml")); //NOI18N
-        if (nextInitialDirectory != null) {
-            fileChooser.setInitialDirectory(nextInitialDirectory);
-        }
+        fileChooser.setInitialDirectory(EditorController.getNextInitialDirectory());
         final List<File> fxmlFiles = fileChooser.showOpenMultipleDialog(null);
         if (fxmlFiles != null) {
             assert fxmlFiles.isEmpty() == false;
-            updateNextInitialDirectory(fxmlFiles.get(0));
+            EditorController.updateNextInitialDirectory(fxmlFiles.get(0));
             performOpenFiles(fxmlFiles, fromWindow);
         }
     }
@@ -680,11 +663,9 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
 
         // Exit if confirmed
         if (exitConfirmed) {
-            final PreferencesController pc = PreferencesController.getSingleton();
             for (DocumentWindowController dwc : new ArrayList<>(windowList)) {
                 // Write to java preferences before closing
-                final PreferencesRecordDocument recordDocument = pc.getRecordDocument(dwc);
-                recordDocument.writeToJavaPreferences();
+                dwc.updatePreferences();
                 documentWindowRequestClose(dwc);
             }
             logTimestamp(ACTION.STOP);
@@ -793,21 +774,58 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
     }
     
     private void userLibraryExplorationCountDidChange() {
-        // At that point we dunno if some JAR files are involved
-        // or not (exploration is about FXML files too).
-        switch(userLibrary.getJarReports().size()) {
-            case 0:
-                if (userLibrary.getPreviousJarReports().size() > 0) {
-                    logInfoMessage("log.user.jar.exploration.0");
+        // We can have 0, 1 or N FXML file, same for JAR one.
+        final int numOfFxmlFiles = userLibrary.getFxmlFileReports().size();
+        final int numOfJarFiles = userLibrary.getJarReports().size();
+        final int jarCount = userLibrary.getJarReports().size();
+        final int fxmlCount = userLibrary.getFxmlFileReports().size();
+        
+        switch (numOfFxmlFiles + numOfJarFiles) {
+            case 0: // Case 0-0
+                final int previousNumOfJarFiles = userLibrary.getPreviousJarReports().size();
+                final int previousNumOfFxmlFiles = userLibrary.getPreviousFxmlFileReports().size();
+                if (previousNumOfFxmlFiles > 0 || previousNumOfJarFiles > 0) {
+                    logInfoMessage("log.user.exploration.0");
                 }
                 break;
             case 1:
-                final Path jarPath = userLibrary.getJarReports().get(0).getJar();
-                logInfoMessage("log.user.jar.exploration.1", jarPath.getFileName());
+                Path path;
+                if (numOfFxmlFiles == 1) { // Case 1-0
+                    path = userLibrary.getFxmlFileReports().get(0);
+                } else { // Case 0-1
+                    path = userLibrary.getJarReports().get(0).getJar();
+                }
+                logInfoMessage("log.user.exploration.1", path.getFileName());
                 break;
             default:
-                final int jarCount = userLibrary.getJarReports().size();
-                logInfoMessage("log.user.jar.exploration.n", jarCount);
+                switch (numOfFxmlFiles) {
+                    case 0: // Case 0-N
+                        logInfoMessage("log.user.jar.exploration.n", jarCount);
+                        break;
+                    case 1:
+                        final Path fxmlName = userLibrary.getFxmlFileReports().get(0).getFileName();
+                        if (numOfFxmlFiles == numOfJarFiles) { // Case 1-1
+                            final Path jarName = userLibrary.getJarReports().get(0).getJar().getFileName();
+                            logInfoMessage("log.user.fxml.jar.exploration.1.1", fxmlName, jarName);
+                        } else { // Case 1-N
+                            logInfoMessage("log.user.fxml.jar.exploration.1.n", fxmlName, jarCount);
+                        }
+                        break;
+                    default:
+                        switch (numOfJarFiles) {
+                            case 0: // Case N-0
+                                logInfoMessage("log.user.fxml.exploration.n", fxmlCount);
+                                break;
+                            case 1: // Case N-1
+                                final Path jarName = userLibrary.getJarReports().get(0).getJar().getFileName();
+                                logInfoMessage("log.user.fxml.jar.exploration.n.1", fxmlCount, jarName);
+                                break;
+                            default: // Case N-N
+                                logInfoMessage("log.user.fxml.jar.exploration.n.n", fxmlCount, jarCount);
+                                break;
+                        }
+                        break;
+                }
                 break;
         }
     }
@@ -818,9 +836,9 @@ public class SceneBuilderApp extends Application implements AppPlatform.AppNotif
         }
     }
     
-    private void logInfoMessage(String key, Object arg) {
+    private void logInfoMessage(String key, Object... args) {
         for (DocumentWindowController dwc : windowList) {
-            dwc.getEditorController().getMessageLog().logInfoMessage(key, I18N.getBundle(), arg);
+            dwc.getEditorController().getMessageLog().logInfoMessage(key, I18N.getBundle(), args);
         }
     }
 }

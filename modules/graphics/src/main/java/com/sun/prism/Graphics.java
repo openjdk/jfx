@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -63,6 +63,9 @@ public interface Graphics {
     public boolean isDepthTest();
     public void setDepthBuffer(boolean depthBuffer);
     public boolean isDepthBuffer();
+    public boolean isAlphaTestShader();
+    public void setAntialiasedShape(boolean aa);
+    public boolean isAntialiasedShape();
     public RectBounds getFinalClipNoClone();
     public Rectangle getClipRect();
     public Rectangle getClipRectNoClone();

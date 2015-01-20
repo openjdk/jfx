@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -430,6 +430,13 @@ public interface Texture extends GraphicsResource {
      * @return the {@code WrapMode} for this texture
      */
     public WrapMode getWrapMode();
+    
+    /**
+     * Returns the true if mipmapping is used for this texture.
+     *
+     * @return the {@code useMipmap} flag for this texture
+     */
+    public boolean getUseMipmap();
 
     /**
      * Constructs an alternate version of this {@code Texture} with an

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,14 +40,30 @@ public class IntArgbPre {
     public static final IntPixelSetter     setter = Accessor.instance;
     public static final IntPixelAccessor accessor = Accessor.instance;
 
-    public static final IntToBytePixelConverter ToByteBgraConverter =
-        IntArgbPre.ToByteBgraConv.instance;
-    public static final IntToBytePixelConverter ToByteBgraPreConverter =
-        new IntTo4ByteSameConverter(IntArgbPre.getter, ByteBgraPre.setter);
-    public static final IntToIntPixelConverter ToIntArgbConverter =
-        IntArgbPre.ToIntArgbConv.instance;
-    public static final IntToIntPixelConverter ToIntArgbPreConverter =
-        BaseIntToIntConverter.create(accessor);
+    public static IntToBytePixelConverter ToByteBgraConverter() {
+        return IntArgbPre.ToByteBgraConv.instance;
+    }
+
+    private static IntToBytePixelConverter ToByteBgraPreObj;
+    public  static IntToBytePixelConverter ToByteBgraPreConverter() {
+        if (ToByteBgraPreObj == null) {
+            ToByteBgraPreObj =
+                    new IntTo4ByteSameConverter(IntArgbPre.getter, ByteBgraPre.setter);
+        }
+        return ToByteBgraPreObj;
+    }
+
+    public static IntToIntPixelConverter ToIntArgbConverter() {
+        return IntArgbPre.ToIntArgbConv.instance;
+    }
+
+    private static IntToIntPixelConverter ToIntArgbPreObj;
+    public  static IntToIntPixelConverter ToIntArgbPreConverter() {
+        if (ToIntArgbPreObj == null) {
+            ToIntArgbPreObj = BaseIntToIntConverter.create(accessor);
+        }
+        return ToIntArgbPreObj;
+    }
 
     static class Accessor implements IntPixelAccessor {
         static final IntPixelAccessor instance = new Accessor();

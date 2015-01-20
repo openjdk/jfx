@@ -96,6 +96,10 @@ public class JreUtils {
     }
 
     public static void walk(File base, File root, Rule ruleset[], Set<File> files) {
+        walk(base, root, ruleset, files, false);
+    }
+
+    public static void walk(File base, File root, Rule ruleset[], Set<File> files, boolean acceptSymlinks) {
         if (!root.isDirectory()) {
             if (root.isFile()) {
                 files.add(root);
@@ -106,10 +110,9 @@ public class JreUtils {
         File[] lst = root.listFiles();
         if (lst != null) {
             for (File f : lst) {
-                //ignore symbolic links!
-                if (IOUtils.isNotSymbolicLink(f) && !shouldExclude(base, f, ruleset)) {
+                if ((acceptSymlinks || IOUtils.isNotSymbolicLink(f)) && !shouldExclude(base, f, ruleset)) {
                     if (f.isDirectory()) {
-                        walk(base, f, ruleset, files);
+                        walk(base, f, ruleset, files, acceptSymlinks);
                     } else if (f.isFile()) {
                         //add to list
                         files.add(f);
@@ -120,13 +123,17 @@ public class JreUtils {
     }
 
     public static RelativeFileSet extractJreAsRelativeFileSet(String root, JreUtils.Rule[] ruleset) {
+        return extractJreAsRelativeFileSet(root, ruleset, false);
+    }
+    
+    public static RelativeFileSet extractJreAsRelativeFileSet(String root, JreUtils.Rule[] ruleset, boolean acceptSymlinks) {
         if (root.isEmpty()) return null;
 
         File baseDir = new File(root);
 
         Set<File> lst = new HashSet<>();
 
-        walk(baseDir, baseDir, ruleset, lst);
+        walk(baseDir, baseDir, ruleset, lst, acceptSymlinks);
 
         return new RelativeFileSet(baseDir, lst);
     }

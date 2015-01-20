@@ -334,7 +334,10 @@ public class ShowAndWaitTest {
             assertFalse(stage1ShowReturned.get());
         };
 
-        Runnable rNext = () -> nextRunnableReached.set(true);
+        Runnable rNext = () -> {
+            // This should happen after the nested event loop exits
+            nextRunnableReached.set(true);
+        };
 
         Util.runAndWait(rShow1, rHide1, rNext);
 
@@ -373,7 +376,10 @@ public class ShowAndWaitTest {
             tmpStage1.hide();
             Util.sleep(1);
             assertFalse(stage1ShowReturned.get());
-            Platform.runLater(() -> nextRunnableReached.set(true));
+            Platform.runLater(() -> {
+                // This should happen after the nested event loop exits
+                nextRunnableReached.set(true);
+            });
         };
 
         Util.runAndWait(rShow1, rHide1);

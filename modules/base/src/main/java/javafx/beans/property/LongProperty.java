@@ -136,7 +136,7 @@ public abstract class LongProperty extends ReadOnlyLongProperty implements
      * @return A {@code LongProperty} that wraps the
      *         {@code Property}
      * @throws NullPointerException
-     *             if {@code value} is {@code null}
+     *             if {@code property} is {@code null}
      * @see #asObject()
      * @since JavaFX 8.0
      */

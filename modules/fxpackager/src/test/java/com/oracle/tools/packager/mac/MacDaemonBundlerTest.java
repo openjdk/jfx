@@ -29,6 +29,7 @@ import static com.oracle.tools.packager.StandardBundlerParam.APP_NAME;
 import static com.oracle.tools.packager.StandardBundlerParam.IDENTIFIER;
 import static com.oracle.tools.packager.StandardBundlerParam.BUILD_ROOT;
 import static com.oracle.tools.packager.StandardBundlerParam.VERBOSE;
+import static com.oracle.tools.packager.StandardBundlerParam.SYSTEM_WIDE;
 
 import java.io.File;
 import java.io.IOException;
@@ -46,6 +47,8 @@ import org.junit.Assume;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import static com.oracle.tools.packager.mac.MacAppBundler.MAC_RUNTIME;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -54,6 +57,7 @@ public class MacDaemonBundlerTest {
 
     static File tmpBase;
     static File workDir;
+    static String runtimeJdk;
     static boolean retain = false;
 
     @BeforeClass
@@ -61,11 +65,14 @@ public class MacDaemonBundlerTest {
         // only run on mac
         Assume.assumeTrue(System.getProperty("os.name").toLowerCase().contains("os x"));
 
+        runtimeJdk = System.getenv("PACKAGER_JDK_ROOT");
+
         // and only if we have the correct JRE settings
         String jre = System.getProperty("java.home").toLowerCase();
-        Assume.assumeTrue(jre.endsWith("/contents/home/jre") || jre.endsWith("/contents/home/jre"));
+        Assume.assumeTrue(runtimeJdk != null || jre.endsWith("/contents/home/jre") || jre.endsWith("/contents/home/jre"));
 
         Log.setLogger(new Log.Logger(true));
+        Log.setDebug(true);
 
         retain = Boolean.parseBoolean(System.getProperty("RETAIN_PACKAGER_TESTS"));
         workDir = new File("build/tmp/tests", "macdaemon");
@@ -128,6 +135,11 @@ public class MacDaemonBundlerTest {
         bundleParams.put(APP_NAME.getID(), "Smoke Test App");
         bundleParams.put(IDENTIFIER.getID(), "smoke.app");        
         bundleParams.put(VERBOSE.getID(), true);
+        bundleParams.put(SYSTEM_WIDE.getID(), true);
+
+        if (runtimeJdk != null) {
+            bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
+        }
 
         boolean valid = bundler.validate(bundleParams);
         assertTrue(valid);
@@ -138,4 +150,26 @@ public class MacDaemonBundlerTest {
         assertTrue(result.exists());
     }
     
+    /*
+     * Test that bundler doesn't support per-user daemons (RT-37985)
+     */
+    @Test(expected = ConfigException.class)
+    public void perUserDaemonTest() throws ConfigException, UnsupportedPlatformException {
+        AbstractBundler bundler = new MacDaemonBundler();
+
+        Map<String, Object> bundleParams = new HashMap<>();
+        bundleParams.put(SYSTEM_WIDE.getID(), false);
+
+        bundler.validate(bundleParams);
+    }
+
+    @Test
+    public void perSystemDaemonTest() throws ConfigException, UnsupportedPlatformException {
+        AbstractBundler bundler = new MacDaemonBundler();
+
+        Map<String, Object> bundleParams = new HashMap<>();
+        bundleParams.put(SYSTEM_WIDE.getID(), true);
+
+        bundler.validate(bundleParams);
+    }
 }

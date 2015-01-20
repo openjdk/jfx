@@ -38,9 +38,9 @@ import javafx.geometry.Bounds;
 import javafx.geometry.HPos;
 import javafx.geometry.Point2D;
 import javafx.geometry.Rectangle2D;
+import javafx.scene.AccessibleAttribute;
 import javafx.scene.Group;
 import javafx.scene.Node;
-//import javafx.scene.accessibility.Attribute;
 import javafx.scene.control.IndexRange;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
@@ -816,13 +816,13 @@ public class TextFieldSkin extends TextInputControlSkin<TextField, TextFieldBeha
         }
     }
 
-//    @Override
-//    protected Object accGetAttribute(Attribute attribute, Object... parameters) {
-//        switch (attribute) {
-//            case BOUNDS_FOR_RANGE:
-//            case OFFSET_AT_POINT:
-//                return textNode.accGetAttribute(attribute, parameters);
-//            default: return super.accGetAttribute(attribute, parameters);
-//        }
-//    }
+    @Override
+    protected Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
+        switch (attribute) {
+            case BOUNDS_FOR_RANGE:
+            case OFFSET_AT_POINT:
+                return textNode.queryAccessibleAttribute(attribute, parameters);
+            default: return super.queryAccessibleAttribute(attribute, parameters);
+        }
+    }
 }

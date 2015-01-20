@@ -98,7 +98,7 @@ import java.util.TimerTask;
  * any updates. Such as ScheduledService might be implemented like this:
  *
  * <pre><code>
- * ScheduledService&lt;Document&gt; svc = new ScheduledService&lt;&gt;(Duration.seconds(1)) {
+ * ScheduledService&lt;Document&gt; svc = new ScheduledService&lt;Document&gt;() {
  *     protected Task&lt;Document&gt; createTask() {
  *         return new Task&lt;Document&gt;() {
  *             protected Document call() {
@@ -107,9 +107,10 @@ import java.util.TimerTask;
  *                 // Parse it into a document
  *                 return document;
  *             }
- *         }
+ *         };
  *     }
- * }
+ * };
+ * svc.setPeriod(Duration.seconds(1));
  * </code></pre>
  *
  * This example will ping the remote server every 1 second.

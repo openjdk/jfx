@@ -32,10 +32,12 @@
 package com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors;
 
 import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
+
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.Node;
@@ -50,7 +52,6 @@ public class DividerPositionsEditor extends PropertyEditor {
 
     private final VBox vbox = new VBox(5);
 
-    @SuppressWarnings("LeakingThisInConstructor")
     public DividerPositionsEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses) {
         super(propMeta, selectedClasses);
         setLayoutFormat(PropertyEditor.LayoutFormat.SIMPLE_LINE_TOP);
@@ -80,7 +81,7 @@ public class DividerPositionsEditor extends PropertyEditor {
                     return null;
                 }
             }
-            values[index] = new Double(val);
+            values[index] = Double.valueOf(val);
             index++;
         }
         return Arrays.asList(values);

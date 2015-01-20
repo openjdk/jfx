@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -46,7 +46,7 @@ public class SceneUtils {
             final Point2D projection = CameraHelper.project(
                     SubSceneHelper.getEffectiveCamera(subScene), point);
             // transform to scene/outer-subScene coords
-            point = subScene.localToScene(projection.getX(), projection.getY(), 0.0);
+            point = n.localToScene(projection.getX(), projection.getY(), 0.0);
             n = NodeHelper.getSubScene(n);
         }
 

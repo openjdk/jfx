@@ -181,6 +181,8 @@ extern "C" {
 JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_gtk_GtkCursor__1createCursor
   (JNIEnv * env, jobject obj, jint x, jint y, jobject pixels)
 {
+    (void)obj;
+
     GdkPixbuf *pixbuf = NULL;
     GdkCursor *cursor = NULL;
     env->CallVoidMethod(pixels, jPixelsAttachData, PTR_TO_JLONG(&pixbuf));
@@ -200,6 +202,10 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_gtk_GtkCursor__1createCursor
 JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_gtk_GtkCursor__1getBestSize
         (JNIEnv *env, jclass jCursorClass, jint width, jint height)                                                                              
 {
+    (void)jCursorClass;
+    (void)width;
+    (void)height;
+
     int size = gdk_display_get_default_cursor_size(gdk_display_get_default());
 
     jclass jc = env->FindClass("com/sun/glass/ui/Size");

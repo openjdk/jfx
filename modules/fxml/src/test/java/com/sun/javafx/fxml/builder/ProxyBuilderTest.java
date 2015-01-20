@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -216,5 +216,26 @@ public class ProxyBuilderTest {
             fail("expected RuntimeException");
         } catch (RuntimeException ex) {
         }
+    }
+
+    @Test
+    public void testReadOnlyList() {
+        ProxyBuilder pb = new ProxyBuilder(ClassWithReadOnlyCollection.class);
+        pb.put("a", 123);
+
+        List<Integer> inputList = Arrays.asList(1, 2, 3, 4, 5);
+        pb.put("propertyList", inputList);
+
+        ClassWithReadOnlyCollection result = (ClassWithReadOnlyCollection) pb.build();
+        assertEquals(123, result.a, 1e-10);
+        assertArrayEquals(inputList.toArray(), result.propertyList.toArray());
+
+
+        pb = new ProxyBuilder(ClassWithReadOnlyCollection.class);
+
+        pb.put("propertyList", inputList);
+
+        result = (ClassWithReadOnlyCollection) pb.build();
+        assertArrayEquals(inputList.toArray(), result.propertyList.toArray());
     }
 }

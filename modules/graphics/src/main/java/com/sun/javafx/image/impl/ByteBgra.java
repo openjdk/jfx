@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,14 +40,25 @@ public class ByteBgra {
     public static final BytePixelSetter     setter = Accessor.instance;
     public static final BytePixelAccessor accessor = Accessor.instance;
 
-    public static final ByteToBytePixelConverter ToByteBgraConverter =
-        BaseByteToByteConverter.create(accessor);
-    public static final ByteToBytePixelConverter ToByteBgraPreConverter =
-        ByteBgra.ToByteBgraPreConv.instance;
-    public static final ByteToIntPixelConverter ToIntArgbConverter =
-        ByteBgra.ToIntArgbSameConv.nonpremul;
-    public static final ByteToIntPixelConverter ToIntArgbPreConverter =
-        ByteBgra.ToIntArgbPreConv.instance;
+    private static ByteToBytePixelConverter ToByteBgraConv;
+    public  static ByteToBytePixelConverter ToByteBgraConverter() {
+        if (ToByteBgraConv == null) {
+            ToByteBgraConv = BaseByteToByteConverter.create(accessor);
+        }
+        return ToByteBgraConv;
+    }
+
+    public static ByteToBytePixelConverter ToByteBgraPreConverter() {
+        return ByteBgra.ToByteBgraPreConv.instance;
+    }
+
+    public static ByteToIntPixelConverter ToIntArgbConverter() {
+        return ByteBgra.ToIntArgbSameConv.nonpremul;
+    }
+
+    public static ByteToIntPixelConverter ToIntArgbPreConverter() {
+        return ByteBgra.ToIntArgbPreConv.instance;
+    }
 
     static class Accessor implements BytePixelAccessor {
         static final BytePixelAccessor instance = new Accessor();

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,7 +42,7 @@ public class FloatStringConverterTest {
     @Test public void fromString_testValidStringInput() {
         assertEquals((Float)10.3521f, converter.fromString("10.3521"));
     }
-    
+
     @Test public void fromString_testValidStringInputWithWhiteSpace() {
         assertEquals((Float)10.3521f, converter.fromString("      10.3521     "));
     }

@@ -490,14 +490,14 @@ public class ListCellTest {
         cell.updateListView(list);
 
         // Other is configured to represent row 1 which is not focused.
-        ListCell<String> other = new ListCell<String>();
+        ListCell<String> other = new ListCell<>();
         other.updateListView(list);
         other.updateIndex(1);
 
-        // Replace with a null focus model, which should clear selection
+        // Replace with a null focus model, which should clear focused
         list.setFocusModel(null);
-        assertFalse(cell.isSelected());
-        assertFalse(other.isSelected());
+        assertFalse(cell.isFocused());
+        assertFalse(other.isFocused());
     }
 
     @Test public void replacingTheFocusModelRemovesTheListenerFromTheOldModel() {

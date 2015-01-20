@@ -213,6 +213,11 @@ abstract class GLFactory {
         return nIsGLExtensionSupported(nativeCtxInfo, sglExtStr);
     }
 
+    boolean isNPOTSupported() {
+        return (isGLExtensionSupported("GL_ARB_texture_non_power_of_two")
+                    || isGLExtensionSupported("GL_OES_texture_npot"));
+    }
+
     abstract int getAdapterCount();
 
     abstract int getAdapterOrdinal(long nativeScreen);

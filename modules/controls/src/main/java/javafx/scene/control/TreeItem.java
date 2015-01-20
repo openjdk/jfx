@@ -410,7 +410,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
     private ListChangeListener<TreeItem<T>> childrenListener = c -> {
         expandedDescendentCountDirty = true;
         while (c.next()) {
-            updateChildren(c.getAddedSubList(), c.getRemoved());
+            updateChildren(c);
         }
     };
 
@@ -899,8 +899,11 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
         ignoreSortUpdate = false;
     }
 
-    private void updateChildren(List<? extends TreeItem<T>> added, List<? extends TreeItem<T>> removed) {
+    private void updateChildren(ListChangeListener.Change<? extends TreeItem<T>> c) {
         setLeaf(children.isEmpty());
+
+        final List<? extends TreeItem<T>> added = c.getAddedSubList();
+        final List<? extends TreeItem<T>> removed = c.getRemoved();
 
         // update the relationships such that all added children point to
         // this node as the parent (and all removed children point to null)
@@ -910,7 +913,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
         // fire an event up the parent hierarchy such that any listening
         // TreeViews (which only listen to their root node) can redraw
         fireEvent(new TreeModificationEvent<T>(
-                CHILDREN_MODIFICATION_EVENT, this, added, removed));
+                CHILDREN_MODIFICATION_EVENT, this, added, removed, c));
     }
 
     // Convenience method to set the parent of all children in the given list to 
@@ -967,6 +970,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
 
         private final List<? extends TreeItem<T>> added;
         private final List<? extends TreeItem<T>> removed;
+        private final ListChangeListener.Change<? extends TreeItem<T>> change;
         
         private final boolean wasExpanded;
         private final boolean wasCollapsed;
@@ -1002,6 +1006,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
             this.newValue = newValue;
             this.added = null;
             this.removed = null;
+            this.change = null;
             this.wasExpanded = false;
             this.wasCollapsed = false;
         }
@@ -1022,6 +1027,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
             this.newValue = null;
             this.added = null;
             this.removed = null;
+            this.change = null;
             this.wasExpanded = expanded;
             this.wasCollapsed = ! expanded;
         }
@@ -1038,13 +1044,36 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
          *      the given TreeItem.
          */
         public TreeModificationEvent(EventType<? extends Event> eventType,
-                TreeItem<T> treeItem, List<? extends TreeItem<T>> added, 
-                List<? extends TreeItem<T>> removed) {
+                                     TreeItem<T> treeItem,
+                                     List<? extends TreeItem<T>> added,
+                                     List<? extends TreeItem<T>> removed) {
+            this(eventType, treeItem, added, removed, null);
+        }
+
+        /**
+         * Constructs a TreeModificationEvent for when the TreeItem has had its
+         * children list changed, including the
+         * {@link javafx.collections.ListChangeListener.Change} that has taken place.
+         *
+         * @param eventType The type of the event that has occurred.
+         * @param treeItem The TreeItem on which this event occurred.
+         * @param added A list of the items added to the children list of the
+         *      given TreeItem.
+         * @param removed A list of the items removed from the children list of
+         *      the given TreeItem.
+         * @param change The actual change that has taken place on the children list.
+         */
+        private TreeModificationEvent(EventType<? extends Event> eventType,
+                                     TreeItem<T> treeItem,
+                                     List<? extends TreeItem<T>> added,
+                                     List<? extends TreeItem<T>> removed,
+                                     ListChangeListener.Change<? extends TreeItem<T>> change) {
             super(eventType);
             this.treeItem = treeItem;
             this.newValue = null;
             this.added = added;
             this.removed = removed;
+            this.change = change;
             this.wasExpanded = false;
             this.wasCollapsed = false;
 
@@ -1147,5 +1176,8 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
          * but that there have been no additions or removals.
          */
         public boolean wasPermutated() { return wasPermutated; }
+
+        int getFrom() { return change == null ? -1 : change.getFrom(); }
+        int getTo() { return change == null ? -1 : change.getTo(); }
     }
 }

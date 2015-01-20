@@ -58,7 +58,7 @@ import javafx.stage.Stage;
  * @see javafx.scene.media.AudioSpectrumListener
  * @see javafx.scene.media.Media
  * @see javafx.scene.media.MediaPlayer
- * @conditionalFeatures WEB
+ * @conditionalFeatures WEB, MEDIA
  */
 public class AudioBarChartApp extends Application {
 

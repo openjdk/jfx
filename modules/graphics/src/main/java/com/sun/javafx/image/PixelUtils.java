@@ -209,41 +209,41 @@ public class PixelUtils {
     {
         if (src ==        ByteBgra.getter) {
             if (dst ==               ByteBgra.setter) {
-                return    ByteBgra.ToByteBgraConverter;
+                return    ByteBgra.ToByteBgraConverter();
             } else if (dst ==        ByteBgraPre.setter) {
-                return    ByteBgra.ToByteBgraPreConverter;
+                return    ByteBgra.ToByteBgraPreConverter();
             }
         } else if (src == ByteBgraPre.getter) {
             if (dst ==                  ByteBgra.setter) {
-                return    ByteBgraPre.ToByteBgraConverter;
+                return    ByteBgraPre.ToByteBgraConverter();
             } else if (dst ==           ByteBgraPre.setter) {
-                return    ByteBgraPre.ToByteBgraPreConverter;
+                return    ByteBgraPre.ToByteBgraPreConverter();
             }
         } else if (src == ByteRgb.getter) {
             if (dst ==              ByteBgra.setter) {
-                return    ByteRgb.ToByteBgraConverter;
+                return    ByteRgb.ToByteBgraConverter();
             } else if (dst ==       ByteBgraPre.setter) {
-                return    ByteRgb.ToByteBgraPreConverter;
+                return    ByteRgb.ToByteBgraPreConverter();
             } else if (dst ==       ByteBgr.setter) {
-                return    ByteRgb.ToByteBgrConverter;
+                return    ByteRgb.ToByteBgrConverter();
             }
         } else if (src == ByteBgr.getter) {
             if (dst ==              ByteBgr.setter) {
-                return    ByteBgr.ToByteBgrConverter;
+                return    ByteBgr.ToByteBgrConverter();
             } else if (dst ==       ByteBgra.setter) {
-                return    ByteBgr.ToByteBgraConverter;
+                return    ByteBgr.ToByteBgraConverter();
             } else if (dst ==       ByteBgraPre.setter) {
-                return    ByteBgr.ToByteBgraPreConverter;
+                return    ByteBgr.ToByteBgraPreConverter();
             }
         } else if (src == ByteGray.getter) {
             if (dst ==               ByteGray.setter) {
-                return    ByteGray.ToByteGrayConverter;
+                return    ByteGray.ToByteGrayConverter();
             } else if (dst ==        ByteBgr.setter) {
-                return    ByteGray.ToByteBgrConverter;
+                return    ByteGray.ToByteBgrConverter();
             } else if (dst ==        ByteBgra.setter) {
-                return    ByteGray.ToByteBgraConverter;
+                return    ByteGray.ToByteBgraConverter();
             } else if (dst ==        ByteBgraPre.setter) {
-                return    ByteGray.ToByteBgraPreConverter;
+                return    ByteGray.ToByteBgraPreConverter();
             }
         } else if (src instanceof ByteIndexed.Getter) {
             if (dst == ByteBgra.setter || dst == ByteBgraPre.setter) {
@@ -267,33 +267,33 @@ public class PixelUtils {
     {
         if (src ==        ByteBgra.getter) {
             if (dst ==               IntArgb.setter) {
-                return    ByteBgra.ToIntArgbConverter;
+                return    ByteBgra.ToIntArgbConverter();
             } else if (dst ==        IntArgbPre.setter) {
-                return    ByteBgra.ToIntArgbPreConverter;
+                return    ByteBgra.ToIntArgbPreConverter();
             }
         } else if (src == ByteBgraPre.getter) {
             if (dst ==                  IntArgb.setter) {
-                return    ByteBgraPre.ToIntArgbConverter;
+                return    ByteBgraPre.ToIntArgbConverter();
             } else if (dst ==           IntArgbPre.setter) {
-                return    ByteBgraPre.ToIntArgbPreConverter;
+                return    ByteBgraPre.ToIntArgbPreConverter();
             }
         } else if (src == ByteRgb.getter) {
             if (dst ==              IntArgb.setter) {
-                return    ByteRgb.ToIntArgbConverter;
+                return    ByteRgb.ToIntArgbConverter();
             } else if (dst ==       IntArgbPre.setter) {
-                return    ByteRgb.ToIntArgbPreConverter;
+                return    ByteRgb.ToIntArgbPreConverter();
             }
         } else if (src == ByteBgr.getter) {
             if (dst ==              IntArgb.setter) {
-                return    ByteBgr.ToIntArgbConverter;
+                return    ByteBgr.ToIntArgbConverter();
             } else if (dst ==       IntArgbPre.setter) {
-                return    ByteBgr.ToIntArgbPreConverter;
+                return    ByteBgr.ToIntArgbPreConverter();
             }
         } else if (src == ByteGray.getter) {
             if (dst ==              IntArgbPre.setter) {
-                return    ByteGray.ToIntArgbPreConverter;
+                return    ByteGray.ToIntArgbPreConverter();
             } else if (dst ==       IntArgb.setter) {
-                return    ByteGray.ToIntArgbConverter;
+                return    ByteGray.ToIntArgbConverter();
             }
         } else if (src instanceof ByteIndexed.Getter) {
             if (dst == IntArgb.setter || dst == IntArgbPre.setter) {
@@ -314,15 +314,15 @@ public class PixelUtils {
     {
         if (src ==        IntArgb.getter) {
             if (dst ==              ByteBgra.setter) {
-                return    IntArgb.ToByteBgraConverter;
+                return    IntArgb.ToByteBgraConverter();
             } else if (dst ==       ByteBgraPre.setter) {
-                return    IntArgb.ToByteBgraPreConverter;
+                return    IntArgb.ToByteBgraPreConverter();
             }
         } else if (src == IntArgbPre.getter) {
             if (dst ==                 ByteBgra.setter) {
-                return    IntArgbPre.ToByteBgraConverter;
+                return    IntArgbPre.ToByteBgraConverter();
             } else if (dst ==          ByteBgraPre.setter) {
-                return    IntArgbPre.ToByteBgraPreConverter;
+                return    IntArgbPre.ToByteBgraPreConverter();
             }
         }
         if (dst == ByteGray.setter) {
@@ -341,15 +341,15 @@ public class PixelUtils {
     {
         if (src ==        IntArgb.getter) {
             if (dst ==              IntArgb.setter) {
-                return    IntArgb.ToIntArgbConverter;
+                return    IntArgb.ToIntArgbConverter();
             } else if (dst ==       IntArgbPre.setter) {
-                return    IntArgb.ToIntArgbPreConverter;
+                return    IntArgb.ToIntArgbPreConverter();
             }
         } else if (src == IntArgbPre.getter) {
             if (dst ==                 IntArgb.setter) {
-                return    IntArgbPre.ToIntArgbConverter;
+                return    IntArgbPre.ToIntArgbConverter();
             } else if (dst ==          IntArgbPre.setter) {
-                return    IntArgbPre.ToIntArgbPreConverter;
+                return    IntArgbPre.ToIntArgbPreConverter();
             }
         }
         if (src.getAlphaType() != AlphaType.OPAQUE &&

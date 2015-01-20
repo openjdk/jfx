@@ -1,16 +1,17 @@
 '\" t
-.\" Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+.\" Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
 .\"
 .\" Title: javafxpackager
 .\" Language: English
-.\" Date: August 2014
+.\" Date: 03 March 2015
 .\" SectDesc: Java Deployment Tools
 .\" Software: JDK 8
 .\" Arch: Generic
-.\" Part Number: E38209-03
+.\" Part Number: E38209-04
+.\" Doc ID: JSSOR
 .\"
 .if n .pl 99999
-.TH "javafxpackager" "1" "August 2014" "JDK 8" "Java Deployment Tools"
+.TH "javafxpackager" "1" "03 March 2015" "JDK 8" "Java Deployment Tools"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -77,7 +78,9 @@ Assembles the application package for redistribution\&. By default, the deploy t
 Performs compilation,
 \fBcreatejar\fR, and
 \fBdeploy\fR
-steps as one call, with most arguments predefined, and attempts to generate all applicable self\-contained application packages\&. The source files must be located in a folder called src, and the resulting files (JAR, JNLP, HTML, and self\-contained application packages) are put in a folder called dist\&. This command can only be configured in a minimal way and is as automated as possible\&.
+steps as one call, with most arguments predefined, and attempts to generate all applicable self\-contained application packages\&. The source files must be located in a folder called
+\fBsrc\fR, and the resulting files (JAR, JNLP, HTML, and self\-contained application packages) are put in a folder called
+\fBdist\fR\&. This command can only be configured in a minimal way and is as automated as possible\&.
 .RE
 .PP
 \-signjar
@@ -295,9 +298,9 @@ is not specified\&.
 .sp -1
 .IP \(bu 2.3
 .\}
-\fBimage\fR: Creates a disk image for the application\&.
-
-On OS X, the image is the \&.app file\&. On Linux, the image is the directory that gets installed\&.
+\fBimage\fR: Creates a disk image for the application\&. On OS X, the image is the
+\fB\&.app\fR
+file\&. On Linux, the image is the directory that gets installed\&.
 .RE
 .sp
 .RS 4
@@ -606,9 +609,9 @@ commands\&.
 .PP
 icon=\fIpath\fR
 .RS 4
-Location of the default icon to be used for launchers and other assists\&.
-
-For OS X, the format must be \&.icns\&. For Linux, the format must be \&.png\&.
+Location of the default icon to be used for launchers and other assists\&. For OS X, the format must be
+\fB\&.icns\fR\&. For Linux, the format must be
+\fB\&.png\fR\&.
 .RE
 .PP
 identifier=\fIvalue\fR
@@ -710,7 +713,7 @@ option, as shown in the following example:
 .RE
 .\}
 .RE
-.SS "Mac Application Bundler Arguments"
+.SS "OS X Application Bundler Arguments"
 .PP
 mac\&.category=\fIcategory\fR
 .RS 4
@@ -726,7 +729,22 @@ Value stored in the info plist for
 .PP
 mac\&.CFBundleName=\fIname\fR
 .RS 4
-Name of the application as it appears on the Mac Menu Bar\&. A name of less than 16 characters is recommended\&. The default is the name attribute\&.
+Name of the application as it appears on the OS X Menu Bar\&. A name of less than 16 characters is recommended\&. The default is the name attribute\&.
+.RE
+.PP
+mac\&.CFBundleVersion=\fIvalue\fR
+.RS 4
+Version number for the application, used internally\&. The value must be at least one integer and no more than three integers separated by periods (\&.) for example, 1\&.3 or 2\&.0\&.1\&. The value can be different than the value for the
+\fBappVersion\fR
+argument\&. If the
+\fBappVersion\fR
+argument is specified with a valid value and the
+\fBmac\&.CFBundleVersion\fR
+argument is not specified, then the
+\fBappVersion\fR
+value is used\&. If neither argument is specified,
+\fB100\fR
+is used as the version number\&.
 .RE
 .PP
 mac\&.signing\-key\-developer\-id\-app=\fIkey\fR
@@ -738,9 +756,9 @@ mac\&.bundle\-id\-signing\-prefix=\fIprefix\fR
 .RS 4
 Prefix that is applied to the signed binary when binaries that lack plists or existing signatures are found inside the bundles\&.
 .RE
-.SS "Mac DMG (Disk Image) Bundler Arguments"
+.SS "OS X DMG (Disk Image) Bundler Arguments"
 .PP
-The Mac DMG installer shows the license file specified by
+The OS X DMG installer shows the license file specified by
 \fBlicenseFile\fR, if provided, before allowing the disk image to be mounted\&.
 .PP
 licenseFile=\fIpath\fR
@@ -758,9 +776,38 @@ to show the Applications folder\&. Set to
 to show the Desktop folder\&. The default is
 \fBtrue\fR\&.
 .RE
-.SS "Mac PKG Bundler Arguments"
 .PP
-The Mac PKG installer presents a wizard and shows the license file specified by
+mac\&.CFBundleVersion=\fIvalue\fR
+.RS 4
+Version number for the application, used internally\&. The value must be at least one integer and no more than three integers separated by periods (\&.) for example, 1\&.3 or 2\&.0\&.1\&. The value can be different than the value for the
+\fBappVersion\fR
+argument\&. If the
+\fBappVersion\fR
+argument is specified with a valid value and the
+\fBmac\&.CFBundleVersion\fR
+argument is not specified, then the
+\fBappVersion\fR
+value is used\&. If neither argument is specified,
+\fB100\fR
+is used as the version number\&.
+.RE
+.PP
+mac\&.dmg\&.simple=\fIboolean\fR
+.RS 4
+Flag that indicates if DMG customization steps that depend on executing AppleScript code are skipped\&. Set to
+\fBtrue\fR
+to skip the steps\&. When set to
+\fBtrue\fR, the disk window does not have a background image, and the icons are not moved into place\&. If the
+\fBsystemWide\fR
+argument is also set to
+\fBtrue\fR, then a symbolic link to the root Applications folder is added to the DMG file\&. If the
+\fBsystemWide\fR
+argument is set to
+\fBfalse\fR, then only the application is added to the DMG file, no link to the desktop is added\&.
+.RE
+.SS "OS X PKG Bundler Arguments"
+.PP
+The OS X PKG installer presents a wizard and shows the license file specified by
 \fBlicenseFile\fR
 as one of the pages in the wizard\&. The user must accept the terms before installing the application\&.
 .PP
@@ -773,6 +820,21 @@ Location of the End User License Agreement (EULA) to be presented or recorded by
 mac\&.signing\-key\-developer\-id\-installer=\fIkey\fR
 .RS 4
 Name of the signing key used for Developer ID or Gatekeeper signing\&. If you imported a standard key from the Apple Developer Website, then that key is used by default\&. If no key can be identified, then the application is not signed\&.
+.RE
+.PP
+mac\&.CFBundleVersion=\fIvalue\fR
+.RS 4
+Version number for the application, used internally\&. The value must be at least one integer and no more than three integers separated by periods (\&.) for example, 1\&.3 or 2\&.0\&.1\&. The value can be different than the value for the
+\fBappVersion\fR
+argument\&. If the
+\fBappVersion\fR
+argument is specified with a valid value and the
+\fBmac\&.CFBundleVersion\fR
+argument is not specified, then the
+\fBappVersion\fR
+value is used\&. If neither argument is specified,
+\fB100\fR
+is used as the version number\&.
 .RE
 .SS "Mac App Store Bundler Arguments"
 .PP
@@ -790,6 +852,21 @@ Name of the application signing key for the Mac App Store\&. If you imported a s
 mac\&.signing\-key\-pkg=\fIkey\fR
 .RS 4
 Name of the installer signing key for the Mac App Store\&. If you imported a standard key from the Apple Developer Website, then that key is used by default\&. If no key can be identified, then the application is not signed\&.
+.RE
+.PP
+mac\&.CFBundleVersion=\fIvalue\fR
+.RS 4
+Version number for the application, used internally\&. The value must be at least one integer and no more than three integers separated by periods (\&.) for example, 1\&.3 or 2\&.0\&.1\&. The value can be different than the value for the
+\fBappVersion\fR
+argument\&. If the
+\fBappVersion\fR
+argument is specified with a valid value and the
+\fBmac\&.CFBundleVersion\fR
+argument is not specified, then the
+\fBappVersion\fR
+value is used\&. If neither argument is specified,
+\fB100\fR
+is used as the version number\&.
 .RE
 .SS "Linux Debian Bundler Arguments"
 .PP
@@ -903,9 +980,7 @@ command is executed is used\&.
 .RE
 .SH "EXAMPLES"
 .PP
-\fBExample 1\fR
-.br
-Using the \-createjar Command
+\fBExample 1 \fRUsing the \-createjar Command
 .RS 4
 .sp
 .if n \{\
@@ -926,9 +1001,7 @@ directory to
 \fBpackage\&.ClassName\fR\&.
 .RE
 .PP
-\fBExample 2\fR
-.br
-Using the \-deploy Command
+\fBExample 2 \fRUsing the \-deploy Command
 .RS 4
 .sp
 .if n \{\
@@ -954,9 +1027,7 @@ for application
 and has dimensions of 34 by 43 pixels\&.
 .RE
 .PP
-\fBExample 3\fR
-.br
-Using the \-makeall Command
+\fBExample 3 \fRUsing the \-makeall Command
 .RS 4
 .sp
 .if n \{\
@@ -975,9 +1046,7 @@ Does all the packaging work including compilation,
 \fBdeploy\fR\&.
 .RE
 .PP
-\fBExample 4\fR
-.br
-Using the \-signjar Command
+\fBExample 4 \fRUsing the \-signjar Command
 .RS 4
 .sp
 .if n \{\
@@ -1001,9 +1070,7 @@ and
 directory\&.
 .RE
 .PP
-\fBExample 5\fR
-.br
-Using the \-deploy Command with Bundler Arguments
+\fBExample 5 \fRUsing the \-deploy Command with Bundler Arguments
 .RS 4
 .sp
 .if n \{\

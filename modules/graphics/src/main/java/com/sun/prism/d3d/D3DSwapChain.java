@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -65,7 +65,7 @@ class D3DSwapChain
         int y0 = rectDST.y;
         int x1 = x0 + rectDST.width;
         int y1 = y0 + rectDST.height;
-        if (isAntiAliasing()) {
+        if (isMSAA()) {
             context.flushVertexBuffer();
             g.blit(texBackBuffer, null, x0, y0, x1, y1, x0, y0, x1, y1);
         } else {
@@ -151,7 +151,7 @@ class D3DSwapChain
         texBackBuffer.setOpaque(opaque);
     }
 
-    public boolean isAntiAliasing() {
-        return texBackBuffer != null ? texBackBuffer.isAntiAliasing() : false;
+    public boolean isMSAA() {
+        return texBackBuffer != null ? texBackBuffer.isMSAA() : false;
     }
 }

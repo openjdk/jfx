@@ -78,10 +78,13 @@ public class StyleClassEditor extends InlineListEditor {
     private List<String> themeClasses;
     private EditorController editorController;
 
-    @SuppressWarnings("LeakingThisInConstructor")
     public StyleClassEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses,
             Set<FXOMInstance> selectedInstances, EditorController editorController) {
         super(propMeta, selectedClasses);
+        initialize(selectedInstances, editorController);
+    }
+    
+    private void initialize(Set<FXOMInstance> selectedInstances, EditorController editorController) {
         this.selectedInstances = selectedInstances;
         this.editorController = editorController;
         setLayoutFormat(PropertyEditor.LayoutFormat.DOUBLE_LINE);
@@ -108,7 +111,7 @@ public class StyleClassEditor extends InlineListEditor {
         List<String> value = FXCollections.observableArrayList();
         // Group all the item values in a list
         for (EditorItem styleItem : getEditorItems()) {
-            String itemValue = styleItem.getValue();
+            String itemValue = EditorUtils.toString(styleItem.getValue());
             if (itemValue.isEmpty()) {
                 continue;
             }
@@ -214,26 +217,25 @@ public class StyleClassEditor extends InlineListEditor {
         @FXML
         private StackPane styleClassSp;
 
-        private final Parent root;
+        private Parent root;
         private TextField styleClassTf;
         private String currentValue;
-        private final Map<String, String> cssClassesMap;
-        private final EditorItemDelegate editor;
+        private Map<String, String> cssClassesMap;
+        private EditorItemDelegate editor;
 
-        @SuppressWarnings("LeakingThisInConstructor")
         public StyleClassItem(EditorItemDelegate editor, Map<String, String> cssClassesMap) {
 //            System.out.println("New StyleClassItem.");
             // It is an AutoSuggestEditor without MenuButton
             super("", "", new ArrayList<>(cssClassesMap.keySet()), false); //NOI18N
+            initialize(editor, cssClassesMap);
+        }
+
+        // Method to please FindBugs
+        private void initialize(EditorItemDelegate editor, Map<String, String> cssClassesMap) {
             this.editor = editor;
             this.cssClassesMap = cssClassesMap;
             root = EditorUtils.loadFxml("StyleClassEditorItem.fxml", this);//NOI18N
 
-            initialize();
-        }
-
-        // Method to please FindBugs
-        private void initialize() {
             // Add the AutoSuggest text field in the scene graph
             styleClassSp.getChildren().add(super.getRoot());
 
@@ -253,7 +255,7 @@ public class StyleClassEditor extends InlineListEditor {
                     ((TextField) event.getSource()).selectAll();
                 }
                 updateButtons();
-                currentValue = getValue();
+                currentValue = EditorUtils.toString(getValue());
             };
 
             ChangeListener<String> textPropertyChange = (ov, prevText, newText) -> {
@@ -306,15 +308,15 @@ public class StyleClassEditor extends InlineListEditor {
         }
 
         @Override
-        public String getValue() {
+        public Object getValue() {
             return EditorUtils.getPlainString(styleClassTf.getText()).trim();
         }
 
         @Override
-        public void setValue(String styleClass) {
-            styleClassTf.setText(styleClass.trim());
+        public void setValue(Object styleClass) {
+            styleClassTf.setText(EditorUtils.toString(styleClass).trim());
             updateButtons();
-            currentValue = getValue();
+            currentValue = EditorUtils.toString(getValue());
         }
 
         @Override
@@ -351,6 +353,12 @@ public class StyleClassEditor extends InlineListEditor {
         @Override
         public Button getPlusButton() {
             return plusBt;
+        }
+
+        @Override
+        public Button getMinusButton() {
+            // not used here
+            return null;
         }
 
         @FXML

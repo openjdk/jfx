@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,18 +34,11 @@ import com.sun.prism.impl.PrismSettings;
 public class ShapeUtil {
 
     private static final ShapeRasterizer shapeRasterizer;
-    private static final ShapeRasterizer textRasterizer;
     static {
         if (PrismSettings.doNativePisces) {
             shapeRasterizer = new NativePiscesRasterizer();
         } else {
             shapeRasterizer = new OpenPiscesRasterizer();
-        }
-
-        if (PrismSettings.doPiscesText || PrismSettings.doOpenPiscesText) {
-            textRasterizer = shapeRasterizer;
-        } else {
-            textRasterizer = null;
         }
     }
 
@@ -53,14 +46,9 @@ public class ShapeUtil {
                                           BasicStroke stroke,
                                           RectBounds xformBounds,
                                           BaseTransform xform,
-                                          boolean close)
+                                          boolean close, boolean antialiasedShape)
     {
-        return shapeRasterizer.getMaskData(shape, stroke, xformBounds, xform, close);
-    }
-
-    public static MaskData rasterizeGlyphOutline(Shape shape) {
-        return textRasterizer.
-            getMaskData(shape, null, null, BaseTransform.IDENTITY_TRANSFORM, true);
+        return shapeRasterizer.getMaskData(shape, stroke, xformBounds, xform, close, antialiasedShape);
     }
 
     /**

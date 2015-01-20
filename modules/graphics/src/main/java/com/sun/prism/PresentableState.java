@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,8 +24,6 @@
  */
 
 package com.sun.prism;
-
-import java.util.concurrent.atomic.AtomicInteger;
 
 import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Pixels;
@@ -211,7 +209,7 @@ public class PresentableState {
         return window;
     }
 
-    public boolean isAntiAliasing() { return false; }
+    public boolean isMSAA() { return false; }
 
     /**
      * @return the underlying View
@@ -252,13 +250,16 @@ public class PresentableState {
     /**
      * Put the pixels on the screen.
      * 
-     * @param pixels - the pixels to draw
-     * @param uploadCount - the number of uploads (can be null)
+     * @param source - the source for the Pixels object to be uploaded
      */
-    public void uploadPixels(Pixels pixels, AtomicInteger uploadCount) {
-        view.uploadPixels(pixels);
-        if (uploadCount != null) {
-            uploadCount.decrementAndGet();
+    public void uploadPixels(PixelSource source) {
+        Pixels pixels = source.getLatestPixels();
+        if (pixels != null) {
+            try {
+                view.uploadPixels(pixels);
+            } finally {
+                source.doneWithPixels(pixels);
+            }
         }
     }
 

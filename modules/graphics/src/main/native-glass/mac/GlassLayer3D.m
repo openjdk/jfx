@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -89,9 +89,13 @@ static NSArray *allModes = nil;
         [self setContentsGravity:kCAGravityTopLeft];
 
         // Initially the view is not in any window yet, so using the
-        // mainScreen's scale is a good starting point (this is most probably
+        // screens[0]'s scale is a good starting point (this is most probably
         // the notebook's main LCD display which is HiDPI-capable).
-        [self notifyScaleFactorChanged:GetScreenScaleFactor([NSScreen mainScreen])];
+        // Note that mainScreen is the screen with the current app bar focus
+        // in Mavericks and later OS so it will likely not match the screen
+        // we initially show windows on if an app is started from an external
+        // monitor.
+        [self notifyScaleFactorChanged:GetScreenScaleFactor([[NSScreen screens] objectAtIndex:0])];
 
         [self setMasksToBounds:YES];
         [self setNeedsDisplayOnBoundsChange:YES];

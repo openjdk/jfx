@@ -296,7 +296,7 @@ public abstract class TableRowSkinBase<T,
                         final int thisIndex = getSkinnable().getIndex();
                         for (int i = 0; i < flow.cells.size(); i++) {
                             C cell = flow.cells.get(i);
-                            if (cell == null || cell.isEmpty() || cell.getIndex() >= thisIndex) continue;
+                            if (cell == null || cell.isEmpty()) continue;
                             cell.requestLayout();
                             cell.layout();
                         }
@@ -330,8 +330,6 @@ public abstract class TableRowSkinBase<T,
             R tableCell = cells.get(column);
             TableColumnBase<T, ?> tableColumn = getTableColumnBase(tableCell);
 
-            width = snapSize(tableCell.prefWidth(-1)) - snapSize(horizontalPadding);
-
             boolean isVisible = true;
             if (fixedCellSizeEnabled) {
                 // we determine if the cell is visible, and if not we have the
@@ -355,6 +353,8 @@ public abstract class TableRowSkinBase<T,
                 if (fixedCellSizeEnabled && tableCell.getParent() == null) {
                     getChildren().add(tableCell);
                 }
+
+                width = snapSize(tableCell.prefWidth(-1)) - snapSize(horizontalPadding);
 
                 // Added for RT-32700, and then updated for RT-34074.
                 // We change the alignment from CENTER_LEFT to TOP_LEFT if the
@@ -433,6 +433,8 @@ public abstract class TableRowSkinBase<T,
                     // TableCells in the scenegraph
                     getChildren().remove(tableCell);
                 }
+
+                width = snapSize(tableCell.prefWidth(-1)) - snapSize(horizontalPadding);
             }
 
             x += width;
@@ -487,6 +489,17 @@ public abstract class TableRowSkinBase<T,
     }
 
     protected void updateCells(boolean resetChildren) {
+        // To avoid a potential memory leak (when the TableColumns in the
+        // TableView are created/inserted/removed/deleted, we have a 'refresh
+        // counter' that when we reach 0 will delete all cells in this row
+        // and recreate all of them.
+        if (resetChildren) {
+            if (fullRefreshCounter == 0) {
+                recreateCells();
+            }
+            fullRefreshCounter--;
+        }
+
         // if clear isn't called first, we can run into situations where the
         // cells aren't updated properly.
         final boolean cellsEmpty = cells.isEmpty();
@@ -638,14 +651,6 @@ public abstract class TableRowSkinBase<T,
     }
 
     private void recreateCells() {
-        // This function is smart in the sense that we don't recreate all
-        // TableCell instances every time this function is called. Instead we
-        // only create TableCells for TableColumns we haven't already encountered.
-        // To avoid a potential memory leak (when the TableColumns in the
-        // TableView are created/inserted/removed/deleted, we have a 'refresh
-        // counter' that when we reach 0 will delete all cells in this row
-        // and recreate all of them.
-
         if (cellsMap != null) {
             Collection<R> cells = cellsMap.values();
             Iterator<R> cellsIter = cells.iterator();
@@ -660,13 +665,11 @@ public abstract class TableRowSkinBase<T,
 
         ObservableList<? extends TableColumnBase/*<T,?>*/> columns = getVisibleLeafColumns();
 
-        if (columns.size() != columnCount || fullRefreshCounter == 0 || cellsMap == null) {
-            cellsMap = new WeakHashMap<TableColumnBase, R>(columns.size());
-            fullRefreshCounter = DEFAULT_FULL_REFRESH_COUNTER;
-            getChildren().clear();
-        }
+        cellsMap = new WeakHashMap<TableColumnBase, R>(columns.size());
+        fullRefreshCounter = DEFAULT_FULL_REFRESH_COUNTER;
+        getChildren().clear();
+
         columnCount = columns.size();
-        fullRefreshCounter--;
 
         for (TableColumnBase col : columns) {
             if (cellsMap.containsKey(col)) {

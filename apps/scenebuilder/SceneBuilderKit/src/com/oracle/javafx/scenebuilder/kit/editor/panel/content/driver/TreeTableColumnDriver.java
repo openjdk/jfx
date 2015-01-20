@@ -121,7 +121,7 @@ public class TreeTableColumnDriver extends AbstractDriver {
         final TreeTableViewDesignInfoX di 
                 = new TreeTableViewDesignInfoX();
         final Bounds tcBounds 
-                = tv.localToScene(di.getColumnBounds(tc));
+                = tv.localToScene(di.getColumnBounds(tc), true /* rootScene */);
         
         return tcBounds.intersects(bounds);
     }

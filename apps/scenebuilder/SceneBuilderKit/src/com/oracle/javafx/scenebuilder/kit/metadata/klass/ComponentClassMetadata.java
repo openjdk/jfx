@@ -65,6 +65,10 @@ public class ComponentClassMetadata extends ClassMetadata {
             // We consider that BorderPane has no subcomponents.
             // left, right, bottom and top components are treated as "accessories".
             result = null;
+        } else if (componentClass == javafx.scene.control.DialogPane.class) {
+            // We consider that DialogPane has no subcomponents.
+            // content, expanded content, header and graphic components are treated as "accessories".
+            result = null;
         } else {
             while ((result == null) && (componentClass != null)) {
                 result = getSubComponentProperty(componentClass);
@@ -121,13 +125,15 @@ public class ComponentClassMetadata extends ClassMetadata {
     private static PropertyName getSubComponentProperty(Class<?> componentClass) {
         final PropertyName result;
         
-        assert componentClass != javafx.scene.layout.BorderPane.class;
+        assert componentClass != javafx.scene.layout.BorderPane.class
+                && componentClass != javafx.scene.control.DialogPane.class;
         
         /*
          * Component Class -> Sub Component Property
          * =========================================
          * 
          * Accordion        panes
+         * ButtonBar        buttons
          * ContextMenu      items
          * Menu             items
          * MenuBar          menus
@@ -149,6 +155,8 @@ public class ComponentClassMetadata extends ClassMetadata {
       
         if (componentClass == javafx.scene.control.Accordion.class) {
             result = panesName;
+        } else if (componentClass == javafx.scene.control.ButtonBar.class) {
+            result = buttonsName;
         } else if (componentClass == javafx.scene.control.ContextMenu.class) {
             result = itemsName;
         } else if (componentClass == javafx.scene.control.Menu.class) {
@@ -186,6 +194,7 @@ public class ComponentClassMetadata extends ClassMetadata {
         return result;
     }
         
+    private static final PropertyName buttonsName = new PropertyName("buttons");
     private static final PropertyName columnsName = new PropertyName("columns");
     private static final PropertyName elementsName = new PropertyName("elements");
     private static final PropertyName itemsName = new PropertyName("items");

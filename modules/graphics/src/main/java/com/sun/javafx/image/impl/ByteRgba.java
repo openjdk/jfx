@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,13 +40,27 @@ public class ByteRgba {
     public static final BytePixelSetter     setter = Accessor.instance;
     public static final BytePixelAccessor accessor = Accessor.instance;
 
-    public static final ByteToBytePixelConverter ToByteRgbaConverter =
-        BaseByteToByteConverter.create(accessor);
-    public static final ByteToBytePixelConverter ToByteBgraConverter =
-        BaseByteToByteConverter.createReorderer(getter, ByteBgra.setter,
-                                                2, 1, 0, 3);
-//    public static final ByteToBytePixelConverter ToByteBgraPreConverter =
-//        ByteRgba.ToByteBgraPreConv.instance;
+    private static ByteToBytePixelConverter ToByteRgbaObj;
+    public  static ByteToBytePixelConverter ToByteRgbaConverter() {
+        if (ToByteRgbaObj == null) {
+            ToByteRgbaObj = BaseByteToByteConverter.create(accessor);
+        }
+        return ToByteRgbaObj;
+    }
+
+    private static ByteToBytePixelConverter ToByteBgraObj;
+    public  static ByteToBytePixelConverter ToByteBgraConverter() {
+        if (ToByteBgraObj == null) {
+            ToByteBgraObj =
+                    BaseByteToByteConverter.createReorderer(getter, ByteBgra.setter,
+                                                            2, 1, 0, 3);
+        }
+        return ToByteBgraObj;
+    }
+
+//    public static ByteToBytePixelConverter ToByteBgraPreConverter() {
+//        return ByteRgba.ToByteBgraPreConv.instance;
+//    }
 
     static class Accessor implements BytePixelAccessor {
         static final BytePixelAccessor instance = new Accessor();

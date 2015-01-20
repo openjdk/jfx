@@ -22,7 +22,7 @@
  * questions.
  */
 
-#include "com_sun_glass_ui_monocle_dispman_DispmanAcceleratedScreen.h"
+#include "com_sun_glass_ui_monocle_DispmanAcceleratedScreen.h"
 #include "Monocle.h"
 
 #include <EGL/egl.h>
@@ -35,7 +35,7 @@
 #include "wrapped_bcm.h"
 #endif /* USE_DISPMAN */
 
-JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_monocle_dispman_DispmanAcceleratedScreen__1platformGetNativeWindow
+JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_monocle_DispmanAcceleratedScreen__1platformGetNativeWindow
     (JNIEnv *env, jobject obj, jint displayID, jint layerID) {
 
 #ifdef USE_DISPMAN

@@ -74,6 +74,8 @@ public class MenuBarTest {
     protected void startApp(Parent root) {
         scene = new Scene(root,800,600);
         stage = new Stage();
+        stage.setX(0); // The MouseEventGenerator set the screen X/Y to be the same as local Node X/Y, so we need to keep stage at 0,0
+        stage.setY(0);
         stage.setScene(scene);
         stage.show();
         tk.firePulse();

@@ -35,6 +35,7 @@ import javafx.scene.shape.FillRule;
 import javafx.scene.shape.StrokeLineCap;
 import javafx.scene.shape.StrokeLineJoin;
 import javafx.scene.text.Font;
+import javafx.scene.text.FontSmoothingType;
 import javafx.scene.text.TextAlignment;
 import javafx.scene.transform.Affine;
 import javafx.scene.transform.Rotate;
@@ -43,6 +44,9 @@ import org.junit.Before;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertNotNull;
 
 public class CanvasTest {
 
@@ -304,6 +308,13 @@ public class CanvasTest {
         assertEquals(f, gc.getFont());
     }
 
+    @Test public void testGCState_FontSmoothing_Null() {
+        gc.setFontSmoothingType(FontSmoothingType.GRAY);
+        assertEquals(FontSmoothingType.GRAY, gc.getFontSmoothingType());
+        gc.setFontSmoothingType(null);
+        assertEquals(FontSmoothingType.GRAY, gc.getFontSmoothingType());
+    }
+
     @Test public void testGCState_TextBaseline_Null() {
         gc.setTextBaseline(VPos.BASELINE);
         assertEquals(VPos.BASELINE, gc.getTextBaseline());
@@ -329,16 +340,22 @@ public class CanvasTest {
         gc.setLineJoin(StrokeLineJoin.BEVEL);
         gc.setLineWidth(1);
         gc.setMiterLimit(1);
+        gc.setLineDashes(10, 10);
+        gc.setLineDashOffset(100);
         assertEquals(gc.getLineCap(), StrokeLineCap.ROUND);
         assertEquals(gc.getLineJoin(), StrokeLineJoin.BEVEL);
         assertEquals(gc.getLineWidth(), 1, 0.00001);
         assertEquals(gc.getMiterLimit(), 1, 0.00001);
+        assertArrayEquals(gc.getLineDashes(), new double[] {10, 10}, 0.00001);
+        assertEquals(gc.getLineDashOffset(), 100, 0.00001);
         gc.restore();
         
         assertEquals(gc.getLineCap(), StrokeLineCap.BUTT);
         assertEquals(gc.getLineJoin(), StrokeLineJoin.MITER);
         assertEquals(gc.getLineWidth(), 5, 0.00001);
         assertEquals(gc.getMiterLimit(), 3, 0.00001);
+        assertNull(gc.getLineDashes());
+        assertEquals(gc.getLineDashOffset(), 0, 0.00001);
     }
 
     @Test
@@ -365,6 +382,61 @@ public class CanvasTest {
         gc.setLineJoin(StrokeLineJoin.ROUND);
         gc.setLineJoin(null);
         assertEquals(gc.getLineJoin(), StrokeLineJoin.ROUND);
+    }
+
+    @Test
+    public void testGCState_LineDashNonPositive() throws Exception {
+        gc.setLineDashes(20, 10);
+        assertArrayEquals(gc.getLineDashes(), new double[] {20, 10}, 0.00001);
+        gc.setLineDashes(1, Double.NaN);
+        assertArrayEquals(gc.getLineDashes(), new double[] {20, 10}, 0.00001);
+        gc.setLineDashes(1, Double.POSITIVE_INFINITY);
+        assertArrayEquals(gc.getLineDashes(), new double[] {20, 10}, 0.00001);
+        gc.setLineDashes(1, -1);
+        assertArrayEquals(gc.getLineDashes(), new double[] {20, 10}, 0.00001);
+    }
+
+    @Test
+    public void testGCState_LineDashNull() throws Exception {
+        gc.setLineDashes(10, 10);
+        assertNotNull(gc.getLineDashes());
+        gc.setLineDashes(null);
+        assertNull(gc.getLineDashes());
+
+        gc.setLineDashes(10, 10);
+        assertNotNull(gc.getLineDashes());
+        gc.setLineDashes();
+        assertNull(gc.getLineDashes());
+
+        gc.setLineDashes(10, 10);
+        assertNotNull(gc.getLineDashes());
+        gc.setLineDashes(new double[0]);
+        assertNull(gc.getLineDashes());
+
+        gc.setLineDashes(10, 10);
+        assertNotNull(gc.getLineDashes());
+        gc.setLineDashes(0, 0);
+        assertNull(gc.getLineDashes());
+    }
+
+    @Test
+    public void testGCState_LineDashOddLength() throws Exception {
+        gc.setLineDashes(10);
+        assertArrayEquals(gc.getLineDashes(), new double[] {10, 10}, 0.00001);
+        gc.setLineDashes(10, 20, 30);
+        assertArrayEquals(gc.getLineDashes(), new double[] {10, 20, 30, 10, 20, 30}, 0.00001);
+    }
+
+    @Test
+    public void testGCState_LineDashOffsetNonFinite() throws Exception {
+        gc.setLineDashOffset(5.0);
+        assertEquals(gc.getLineDashOffset(), 5.0, 0.00001);
+        gc.setLineDashOffset(Double.NaN);
+        assertEquals(gc.getLineDashOffset(), 5.0, 0.00001);
+        gc.setLineDashOffset(Double.NEGATIVE_INFINITY);
+        assertEquals(gc.getLineDashOffset(), 5.0, 0.00001);
+        gc.setLineDashOffset(Double.POSITIVE_INFINITY);
+        assertEquals(gc.getLineDashOffset(), 5.0, 0.00001);
     }
 
     @Test public void testGCState_BlendMode() throws Exception {

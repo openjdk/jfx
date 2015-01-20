@@ -35,7 +35,7 @@ import java.util.HashMap;
  * be needed. */
 final class MonocleSystemClipboard extends SystemClipboard {
 
-    public MonocleSystemClipboard() {
+    MonocleSystemClipboard() {
         super(Clipboard.SYSTEM);
     }
 

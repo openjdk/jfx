@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -192,7 +192,10 @@ public abstract class NGShape3D extends NGNode {
 
     @Override
     protected void renderContent(Graphics g) {
-        if (!Platform.isSupported(ConditionalFeature.SCENE3D) || material == null) {
+        if (!Platform.isSupported(ConditionalFeature.SCENE3D) ||
+             material == null ||
+             g instanceof com.sun.prism.PrinterGraphics)
+        {
             return;
         }
         renderMeshView(g);

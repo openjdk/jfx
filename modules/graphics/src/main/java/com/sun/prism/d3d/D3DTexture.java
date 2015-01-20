@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,27 +41,17 @@ class D3DTexture extends BaseTexture<D3DTextureResource>
     D3DTexture(D3DContext context, PixelFormat format, WrapMode wrapMode,
                long pResource,
                int physicalWidth, int physicalHeight,
-               int contentWidth, int contentHeight)
-    {
-        this(context, format, wrapMode, pResource,
-             physicalWidth, physicalHeight,
-             contentWidth, contentHeight, false);
-    }
-
-    D3DTexture(D3DContext context, PixelFormat format, WrapMode wrapMode,
-               long pResource,
-               int physicalWidth, int physicalHeight,
                int contentWidth, int contentHeight, boolean isRTT)
     {
         this(context, format, wrapMode, pResource, physicalWidth, physicalHeight,
-                0, 0, contentWidth, contentHeight, isRTT, 0);
+                0, 0, contentWidth, contentHeight, isRTT, 0, false);
     }
 
     D3DTexture(D3DContext context, PixelFormat format, WrapMode wrapMode,
                long pResource,
                int physicalWidth, int physicalHeight,
                int contentX, int contentY, int contentWidth, int contentHeight,
-               boolean isRTT, int samples)
+               boolean isRTT, int samples, boolean useMipmap)
     {
         super(new D3DTextureResource(new D3DTextureData(context, pResource, isRTT,
                                                         physicalWidth, physicalHeight,
@@ -69,11 +59,12 @@ class D3DTexture extends BaseTexture<D3DTextureResource>
               format, wrapMode,
               physicalWidth, physicalHeight,
               contentX, contentY, contentWidth, contentHeight, 
-              physicalWidth, physicalHeight);
+              physicalWidth, physicalHeight, useMipmap);
     }
 
+    // TODO: We don't handle mipmap in shared texture yet.
     D3DTexture(D3DTexture sharedTex, WrapMode altMode) {
-        super(sharedTex, altMode);
+        super(sharedTex, altMode, false);
     }
 
     @Override
@@ -101,7 +92,7 @@ class D3DTexture extends BaseTexture<D3DTextureResource>
         }
         frame.holdFrame();
 
-        ByteBuffer pixels = (ByteBuffer)frame.getBuffer();
+        ByteBuffer pixels = (ByteBuffer)frame.getBufferForPlane(0);
         int result;
 
         // FIXME: checkVideoParams since they differ from normal params slightly
@@ -116,20 +107,17 @@ class D3DTexture extends BaseTexture<D3DTextureResource>
 
         // always do plane 0 since it's used for packed formats
         if (targetFormat.getDataType() == PixelFormat.DataType.INT) {
-            pixels.position(frame.offsetForPlane(0));
             result = D3DResourceFactory.nUpdateTextureI(
                     ctx.getContextHandle(),
                     getNativeSourceHandle(),
-                    pixels.slice().asIntBuffer(), null,
+                    pixels.asIntBuffer(), null,
                     0, 0, 0, 0, frame.getEncodedWidth(), frame.getEncodedHeight(),
                     frame.strideForPlane(0));
         } else {
-            pixels.position(frame.offsetForPlane(0));
-            // FIXME: is pixels.slice() necessary?
             result = D3DResourceFactory.nUpdateTextureB(
                     ctx.getContextHandle(),
                     getNativeSourceHandle(),
-                    pixels.slice(), null,
+                    pixels, null,
                     targetFormat.ordinal(),
                     0, 0,
                     0, 0, frame.getEncodedWidth(), frame.getEncodedHeight(),

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,17 +36,15 @@ class D3DVramPool extends BaseResourcePool<D3DTextureData>
     public static final D3DVramPool instance = new D3DVramPool();
 
     private D3DVramPool() {
-        super(PrismSettings.maxVram);
+        super(PrismSettings.targetVram, PrismSettings.maxVram);
     }
 
-    public long target() {
-        return PrismSettings.targetVram;
-    }
-
+    @Override
     public long size(D3DTextureData resource) {
         return resource.getSize();
     }
 
+    @Override
     public long estimateTextureSize(int width, int height,
                                     PixelFormat format)
     {
@@ -54,6 +52,7 @@ class D3DVramPool extends BaseResourcePool<D3DTextureData>
                ((long) format.getBytesPerPixelUnit());
     }
 
+    @Override
     public long estimateRTTextureSize(int width, int height,
                                       boolean hasDepth)
     {

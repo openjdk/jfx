@@ -37,6 +37,11 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.control.ToolBar;
 import javafx.scene.layout.BorderPane;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+
 /**
  * Container for samplePage that has scrolling and knows how to navigate to sections
  */
@@ -55,7 +60,9 @@ public class SamplePageNavigation extends BorderPane {
         toolBar.getItems().add(new Label("Go to section:"));
         final ChoiceBox<SamplePage.Section> sectionChoiceBox = new ChoiceBox<>();
         sectionChoiceBox.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> setCurrentSection(newValue));
-        sectionChoiceBox.getItems().addAll(samplePage.getSections());
+        List<SamplePage.Section> sections = new ArrayList<>(samplePage.getSections());
+        Collections.sort(sections, (o1, o2) -> o1.name.compareTo(o2.name));
+        sectionChoiceBox.getItems().addAll(sections);
         toolBar.getItems().add(sectionChoiceBox);
         setBottom(toolBar);
         scrollPane.vvalueProperty().addListener((observable, oldValue, newValue) -> {

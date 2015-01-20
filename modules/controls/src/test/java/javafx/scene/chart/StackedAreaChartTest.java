@@ -26,27 +26,23 @@
 package javafx.scene.chart;
 
 
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.PrintStream;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import javafx.collections.*;
 
-import com.sun.javafx.pgstub.StubToolkit;
-import com.sun.javafx.tk.Toolkit;
 
 import javafx.scene.Node;
-import javafx.scene.Scene;
 import javafx.scene.Group;
-import javafx.stage.Stage;
 import javafx.scene.shape.*;
+import static org.junit.Assert.assertTrue;
 
 import org.junit.Ignore;
 
-@Ignore
+
 public class StackedAreaChartTest extends XYChartTestBase {
-    
-    private Scene scene;
-    private StubToolkit toolkit;
-    private Stage stage;
     StackedAreaChart<Number,Number> ac;
     final XYChart.Series<Number, Number> series1 = new XYChart.Series<Number, Number>();
     boolean useCategoryAxis = false;
@@ -99,7 +95,7 @@ public class StackedAreaChartTest extends XYChartTestBase {
         return sb;
     }
     
-    @Test 
+    @Test @Ignore("pending RT-28373")
     public void testSeriesAdd() {
         startApp();
         ac.getData().addAll(series1);
@@ -431,5 +427,37 @@ public class StackedAreaChartTest extends XYChartTestBase {
 
         assertEquals(2, yAxis.dataMinValue, 1e-100);
         assertEquals(15, yAxis.dataMaxValue, 1e-100);
+    }
+    
+    boolean writeWasCalled = false;
+    @Test
+    public void testDataWithoutSymbolsAddWithAnimation_rt_39353() {
+        startApp();
+        ac.setAnimated(true);
+        ac.setCreateSymbols(false);
+        ac.getData().addAll(series1);
+        series1.getData().add(new XYChart.Data(40d,10d));
+        final PrintStream defaultErrorStream = System.err;
+        final PrintStream errChecker = new PrintStream(new OutputStream() {
+            @Override
+            public void write(int b) throws IOException {
+                writeWasCalled = true;
+            }
+        });
+        try {
+            System.setErr(errChecker);
+        } catch (SecurityException ex) {
+            // ignore
+        }
+        toolkit.setAnimationTime(0);
+        // check remove just in case
+        series1.getData().remove(0);
+        toolkit.setAnimationTime(800);
+        try {
+            System.setErr(defaultErrorStream);
+        } catch (SecurityException ex) {
+            // ignore
+        }
+        assertTrue(!writeWasCalled);
     }
 }

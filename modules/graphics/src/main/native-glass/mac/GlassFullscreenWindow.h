@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,22 +26,9 @@
 #import <Cocoa/Cocoa.h>
 #import <jni.h>
 
-// used during fullscreen animation for fading in/out the screen
-@interface GlassBackgroundWindow : NSWindow
-{
-        NSWindow                                *trackWindow;
-        CGFloat                                        startingTrackingSize;
-}
-
-- (id)initWithWindow:(NSWindow *)window;
-
-@end
-
 @interface GlassFullscreenWindow : NSWindow
 {
         NSPoint                                        point;
-@public
-        CGDirectDisplayID                displayID;
 }
 
 - (id)initWithContentRect:(NSRect)contentRect withHostView:(NSView *)hostView withView:(NSView *)view withScreen:(NSScreen *)screen withPoint:(NSPoint)point;

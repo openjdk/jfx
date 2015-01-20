@@ -57,6 +57,7 @@ import com.sun.webkit.LoadListenerClient;
 import com.sun.webkit.graphics.Ref;
 import com.sun.webkit.graphics.RenderTheme;
 import com.sun.webkit.graphics.WCGraphicsContext;
+import javafx.application.Application;
 
 public final class RenderThemeImpl extends RenderTheme {
     private final static Logger log = Logger.getLogger(RenderThemeImpl.class.getName());
@@ -364,10 +365,15 @@ public final class RenderThemeImpl extends RenderTheme {
         }
     }
 
-    // TODO: get theme value
     @Override
     protected int getRadioButtonSize() {
-        return 15;
+        String style = Application.getUserAgentStylesheet();
+        if (Application.STYLESHEET_MODENA.equalsIgnoreCase(style)) {
+            return 20; // 18 + 2; size + focus outline
+        } else if (Application.STYLESHEET_CASPIAN.equalsIgnoreCase(style)) {
+            return 19; // 16 + 3; size + focus outline
+        }
+        return 20;
     }
 
     // TODO: get theme value

@@ -31,15 +31,12 @@
  */
 package com.oracle.javafx.scenebuilder.kit.editor.panel.inspector.editors;
 
-import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
-import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
-import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignImage;
-import com.oracle.javafx.scenebuilder.kit.metadata.util.PrefixedValue;
 import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.Set;
+
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
@@ -52,6 +49,12 @@ import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
 import javafx.stage.FileChooser;
 
+import com.oracle.javafx.scenebuilder.kit.editor.EditorController;
+import com.oracle.javafx.scenebuilder.kit.editor.i18n.I18N;
+import com.oracle.javafx.scenebuilder.kit.metadata.property.ValuePropertyMetadata;
+import com.oracle.javafx.scenebuilder.kit.metadata.util.DesignImage;
+import com.oracle.javafx.scenebuilder.kit.metadata.util.PrefixedValue;
+
 /**
  * Image property editor (handle the url path).
  */
@@ -62,7 +65,7 @@ public class ImageEditor extends PropertyEditor {
     @FXML
     private TextField imagePathTf;
 
-    private final Parent root;
+    private Parent root;
     private DesignImage image = null;
 
     private final MenuItem documentRelativeMenuItem
@@ -75,9 +78,13 @@ public class ImageEditor extends PropertyEditor {
     private PrefixedValue.Type type = PrefixedValue.Type.PLAIN_STRING;
     private URL fxmlFileLocation;
 
-    @SuppressWarnings("LeakingThisInConstructor")
     public ImageEditor(ValuePropertyMetadata propMeta, Set<Class<?>> selectedClasses, URL fxmlFileLocation) {
         super(propMeta, selectedClasses);
+        initialize(fxmlFileLocation);
+    }
+    
+    // Separate method to please FindBugs
+    private void initialize(URL fxmlFileLocation) {
         this.fxmlFileLocation = fxmlFileLocation;
         root = EditorUtils.loadFxml("ImageEditor.fxml", this); //NOI18N
 
@@ -104,11 +111,6 @@ public class ImageEditor extends PropertyEditor {
             image = new DesignImage(imageObj, prefixedValue);
             userUpdateValueProperty(image);
         };
-        initialize(valueListener);
-    }
-
-    // Separate method to please FindBugs
-    private void initialize(EventHandler<ActionEvent> valueListener) {
         setTextEditorBehavior(this, imagePathTf, valueListener);
 
         documentRelativeMenuItem.setOnAction(e -> switchType(PrefixedValue.Type.DOCUMENT_RELATIVE_PATH));
@@ -244,10 +246,13 @@ public class ImageEditor extends PropertyEditor {
                 new FileChooser.ExtensionFilter(
                         I18N.getString("inspector.select.image"),
                         Arrays.asList(extensions)));
+        fileChooser.setInitialDirectory(EditorController.getNextInitialDirectory());
         File file = fileChooser.showOpenDialog(imagePathTf.getScene().getWindow());
         if ((file == null)) {
             return;
         }
+        // Keep track of the user choice for next time
+        EditorController.updateNextInitialDirectory(file);
         URL url;
         try {
             url = file.toURI().toURL();

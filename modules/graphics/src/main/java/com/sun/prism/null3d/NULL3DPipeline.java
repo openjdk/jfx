@@ -89,7 +89,7 @@ public class NULL3DPipeline extends GraphicsPipeline {
     }
 
     @Override
-    public boolean isAntiAliasingSupported() {
+    public boolean isMSAASupported() {
         return true;
     }
 

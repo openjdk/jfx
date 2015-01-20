@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -107,7 +107,7 @@ HICON Pixels::CreateIcon(JNIEnv *env, jobject jPixels, BOOL fIcon, jint x, jint 
     Pixels pixels(env, jPixels);
 
     Bitmap mask(pixels.GetWidth(), pixels.GetHeight());
-    Bitmap bitmap(pixels);
+    DIBitmap bitmap(pixels);
 
     ICONINFO iconInfo;
     memset(&iconInfo, 0, sizeof(ICONINFO));

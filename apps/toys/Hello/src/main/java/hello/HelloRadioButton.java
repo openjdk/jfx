@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,11 +28,18 @@ package hello;
 import static javafx.scene.paint.Color.GHOSTWHITE;
 import javafx.application.Application;
 import javafx.collections.ObservableList;
+import javafx.geometry.Pos;
+import javafx.geometry.Side;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
 import javafx.scene.control.RadioButton;
+import javafx.scene.control.Toggle;
 import javafx.scene.control.ToggleGroup;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
 /**
@@ -45,27 +52,55 @@ public class HelloRadioButton extends Application {
     }
 
     @Override public void start(Stage stage) {
-        stage.setTitle("Hello RadioButton");
-        stage.setWidth(600);
-        stage.setHeight(450);
-        Scene scene = newScene();
-        ToggleGroup group = new ToggleGroup();
-        RadioButton button1 = new RadioButton("Luke, *I* am your father");
-        button1.setToggleGroup(group);
+        VBox vbox = new VBox(20);
+        HBox sides = new HBox(14);
+        vbox.setAlignment(Pos.CENTER);
+        sides.setAlignment(Pos.CENTER);
+        VBox quotes = new VBox(10);
+        quotes.setAlignment(Pos.CENTER_LEFT);
+        
+        ToggleGroup toggle = new ToggleGroup();
+        RadioButton button1 = new RadioButton("No, *I* am your father");
+        button1.setToggleGroup(toggle);
+        button1.setSelected(true);
         RadioButton button2 = new RadioButton("Nooooooooo!");
         button2.setLayoutY(40);
-        button2.setToggleGroup(group);
-        button1.setSelected(true);
-        ObservableList<Node> content = ((Group)scene.getRoot()).getChildren();
-        content.add(button1);
-        content.add(button2);
-        stage.setScene(scene);
-        stage.show();
-    }
+        button2.setToggleGroup(toggle);
+        quotes.getChildren().addAll(button1, button2);
+        
+        Button clear = new Button("Clear Selection");
+        sides.getChildren().add(new Label("Select Side:"));
+        
+        ToggleGroup sideGroup = new ToggleGroup();
+        for (final Side side : Side.class.getEnumConstants()) {
+            final RadioButton rb = new RadioButton(side.toString());
+            rb.setToggleGroup(sideGroup);
+            if (side == Side.BOTTOM) {
+                rb.setSelected(true);
+            }
+            sides.getChildren().add(rb);
+        }
+        clear.setOnAction(e -> {
+            Toggle tog = sideGroup.getSelectedToggle();
+            if (tog != null) {
+                RadioButton rb = (RadioButton)tog;
+                rb.setSelected(false);
+            }
+        });
+        vbox.getChildren().addAll(quotes, clear, sides);
+        vbox.setLayoutX(20);
+        vbox.setLayoutY(20);
 
-    private static Scene newScene() {
-        Scene scene = new Scene(new Group());
+        Group group = new Group();
+        Scene scene = new Scene(group);
         scene.setFill(GHOSTWHITE);
-        return scene;
+        group.getChildren().add(vbox);
+        
+        stage.setTitle("Hello RadioButton");
+        stage.setWidth(450);
+        stage.setHeight(300);
+        stage.setScene(scene);
+        stage.setResizable(false);
+        stage.show();
     }
 }

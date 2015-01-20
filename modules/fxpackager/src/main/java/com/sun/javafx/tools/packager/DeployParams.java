@@ -60,6 +60,7 @@ public class DeployParams extends CommonParams {
     String version;
     Boolean systemWide;
     Boolean serviceHint;
+    Boolean signBundle;
 
     String applicationClass;
     String preloader;
@@ -77,7 +78,7 @@ public class DeployParams extends CommonParams {
     String codebase;
 
     boolean embedJNLP = true;
-    boolean embedCertificates = false;
+    @Deprecated final boolean embedCertificates = false;
     boolean allPermissions = false;
     String updateMode = "background";
     boolean isExtension = false;
@@ -119,7 +120,7 @@ public class DeployParams extends CommonParams {
     // raw arguments to the bundler
     Map<String, ? super Object> bundlerArguments = new HashMap<>();
 
-    String fallbackApp = "com.javafx.main.NoJavaFXFallback";
+    String fallbackApp = null;
 
     public void setJavaRuntimeSource(File src) {
         javaRuntimeToUse = src;
@@ -156,6 +157,10 @@ public class DeployParams extends CommonParams {
 
     public void setServiceHint(Boolean serviceHint) {
         this.serviceHint = serviceHint;
+    }
+
+    public void setSignBundle(Boolean signBundle) {
+        this.signBundle = signBundle;
     }
 
     public void setJRE(String v) {
@@ -236,7 +241,9 @@ public class DeployParams extends CommonParams {
     }
 
     public void setEmbedCertifcates(boolean v) {
-        embedCertificates = v;
+        if (v) {
+            System.out.println("JavaFX Packager no longer supports embedding certificates in JNLP files.  Setting will be ignored.");
+        }
     }
 
     public void setPlaceholder(String p) {
@@ -470,20 +477,21 @@ public class DeployParams extends CommonParams {
     static final Set<String> multi_args = new TreeSet<>(Arrays.asList(
             StandardBundlerParam.JVM_PROPERTIES.getID(),
             StandardBundlerParam.JVM_OPTIONS.getID(),
-            StandardBundlerParam.USER_JVM_OPTIONS.getID()
+            StandardBundlerParam.USER_JVM_OPTIONS.getID(),
+            StandardBundlerParam.ARGUMENTS.getID()
     ));
 
     @SuppressWarnings("unchecked")
-    public void addBundleArgument(String key, String value) {
+    public void addBundleArgument(String key, Object value) {
         // special hack for multi-line arguments
-        if (multi_args.contains(key)) {
+        if (multi_args.contains(key) && value instanceof String) {
             Object existingValue = bundlerArguments.get(key);
             if (existingValue instanceof String) {
                 bundlerArguments.put(key, existingValue + "\n\n" + value);
             } else if (existingValue instanceof List) {
-                ((List<String>)existingValue).add(value);
-            } else if (existingValue instanceof Map && value.contains("=")) {
-                String[] mapValues = value.split("=", 2);
+                ((List)existingValue).add(value);
+            } else if (existingValue instanceof Map && ((String)value).contains("=")) {
+                String[] mapValues = ((String)value).split("=", 2);
                 ((Map)existingValue).put(mapValues[0], mapValues[1]);
             } else {
                 bundlerArguments.put(key, value);
@@ -526,6 +534,7 @@ public class DeployParams extends CommonParams {
                 bundleParams.setRuntime(javaRuntimeToUse);
             }
             bundleParams.setApplicationClass(applicationClass);
+            bundleParams.setPrelaoderClass(preloader);
             bundleParams.setName(this.appName);
             bundleParams.setAppVersion(version);
             bundleParams.setType(bundleType);
@@ -536,6 +545,7 @@ public class DeployParams extends CommonParams {
             bundleParams.setMenuHint(needMenu);
             bundleParams.setSystemWide(systemWide);
             bundleParams.setServiceHint(serviceHint);
+            bundleParams.setSignBundle(signBundle);
             bundleParams.setCopyright(copyright);
             bundleParams.setApplicationCategory(category);
             bundleParams.setLicenseType(licenseType);
@@ -546,6 +556,7 @@ public class DeployParams extends CommonParams {
             bundleParams.setJvmProperties(properties);
             bundleParams.setJvmargs(jvmargs);
             bundleParams.setJvmUserArgs(jvmUserArgs);
+            bundleParams.setArguments(arguments);
 
             File appIcon = null;
             for (Icon ic: icons) {

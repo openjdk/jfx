@@ -26,18 +26,26 @@
 ext.ARMV7SF = [:]
 def crossLibsPackage="armv6sf-02"
 
-fetchExternalTools('ARMV7SF', [ "${crossLibsPackage}.tgz" ], 
-  rootProject.CROSS_TOOLS_DIR, rootProject.IS_IMPORT_CROSS_TOOLS)
-
 // Define the location of the sdk and toolchain
 def sdk=file("${rootProject.CROSS_TOOLS_DIR}/${crossLibsPackage}")
 
-def compilerHome=file("/opt/arm-linaro-4.7")
+def compilerHome
+def compilerPrefix
+if (IS_LINUX) {
+    fetchExternalTools('ARMV7SF',
+            ["${crossLibsPackage}.tgz",
+             "arm-linaro-4.7.tgz" ],
+            rootProject.CROSS_TOOLS_DIR,
+            rootProject.IS_IMPORT_CROSS_TOOLS)
+
+    compilerHome=file("${rootProject.CROSS_TOOLS_DIR}/arm-linaro-4.7")
+    compilerPrefix="arm-linux-gnueabi-"
+}
+
 if (rootProject.hasProperty("ARMV7SF_COMPILER")) {
     logger.quiet "Using alternate ARMV7SF_COMPILER $rootProject.ARMV7SF_COMPILER"
     compilerHome=file(rootProject.ARMV7SF_COMPILER);
 }
-def compilerPrefix="arm-linux-gnueabi-"
 if (rootProject.hasProperty("ARMV7SF_COMPILER_PREFIX")) {
     logger.quiet "Using alternate ARMV7SF_COMPILER_PREFIX $rootProject.ARMV7SF_COMPILER_PREFIX"
     compilerPrefix="${rootProject.ARMV7SF_COMPILER_PREFIX}"
@@ -49,7 +57,11 @@ if (IS_LINUX) {
     jniPlatform="darwin"
 } else {
     fail "armv7sf Cannot build on this platform"
+    return;
 }
+
+def compiler = file("$compilerHome/bin/${compilerPrefix}gcc").getAbsolutePath()
+def linker = file("$compilerHome/bin/${compilerPrefix}g++").getAbsolutePath()
 
 // Declare whether this particular target file applies to the current system
 ARMV7SF.canBuild = (IS_LINUX || IS_MAC) && compilerHome.exists() && sdk.exists()
@@ -69,11 +81,15 @@ ARMV7SF.compileDesignTime = false;
 ARMV7SF.compileWebnodeNative = false;
 ARMV7SF.compileMediaNative = false;
 
-ARMV7SF.includeLens = true
+ARMV7SF.includeLens = false
+ARMV7SF.includeMonocle = true
 ARMV7SF.includeNull3d = true
 ARMV7SF.includeEGL = true
 ARMV7SF.includeSwing = false
 ARMV7SF.includeSWT = false
+ARMV7SF.includeGTK = true
+
+ARMV7SF.javafxPlatformDefault="monocle"
 
 // Libraries end up in the sdk/rt/lib/arm directory for arm builds
 ARMV7SF.arch = "arm"
@@ -161,29 +177,33 @@ def webLFlags = [extraLFlags].flatten()
 
 def gtkCFlags = [extraCFlags].flatten()
 def gtkLFlags = [extraLFlags].flatten()
-setupTools("ARMV7SF_tools",
-    { propFile ->
-        ByteArrayOutputStream results = new ByteArrayOutputStream();
-        exec {
-            commandLine("$sdk/bin/pkg-config", "--cflags", "gtk+-2.0", "gthread-2.0", "xtst");
-            setStandardOutput(results);
-        }
-        propFile << "cflags=" << results.toString().trim() << "\n";
 
-        results = new ByteArrayOutputStream();
-        exec {
-            commandLine "$sdk/bin/pkg-config", "--libs", "gtk+-2.0", "gthread-2.0", "xtst"
-            standardOutput = results
-        }
-        propFile << "libs=" << results.toString().trim();
-    },
-    { properties ->
-        gtkCFlags.addAll(properties.getProperty("cflags").split(" "))
-        gtkLFlags.addAll(properties.getProperty("libs").split(" "))
-    }
-)
+def gtkCFlags_pkgconfig = "-pthread -I${sdk}/usr/include/gtk-2.0 -I${sdk}/usr/lib/arm-linux-gnueabi/gtk-2.0/include -I${sdk}/usr/include/atk-1.0 -I${sdk}/usr/include/cairo -I${sdk}/usr/include/gdk-pixbuf-2.0 -I${sdk}/usr/include/pango-1.0 -I${sdk}/usr/include/gio-unix-2.0/ -I${sdk}/usr/include -I${sdk}/usr/include/glib-2.0 -I${sdk}/usr/lib/arm-linux-gnueabi/glib-2.0/include -I${sdk}/usr/include/pixman-1 -I${sdk}/usr/include/freetype2 -I${sdk}/usr/include/libpng12"
 
-ARMV7SF.javafxPlatformProperties = """javafx.platform=monocle
+def gtkLFlags_pkgconfig = "-pthread -L${sdk}/usr/lib/arm-linux-gnueabi -lgtk-x11-2.0 -lgdk-x11-2.0 -latk-1.0 -lgio-2.0 -lpangoft2-1.0 -lpangocairo-1.0 -lgdk_pixbuf-2.0 -lcairo -lpango-1.0 -lfreetype -lfontconfig -lgobject-2.0 -lgthread-2.0 -lrt -lglib-2.0 -lXtst"
+
+gtkCFlags.addAll(gtkCFlags_pkgconfig.split(" "))
+gtkLFlags.addAll(gtkLFlags_pkgconfig.split(" "))
+
+def monoclePlatformAdditions = """
+monocle.glass.platform=Monocle
+monocle.prism.order=es2,sw
+monocle.prism.eglfb=true
+monocle.prism.lcdtext=false
+monocle.prism.maxvram=128m
+monocle.prism.targetvram=112m
+monocle.use.egl=true
+monocle.use.gles2=true
+monocle.embedded=monocle
+monocle.com.sun.javafx.isEmbedded=true
+monocle.doNativeComposite=true
+monocle.com.sun.javafx.scene.control.skin.FXVK.cache=true
+monocle.prism.glDepthSize=0
+monocle.com.sun.javafx.gestures.zoom=true
+monocle.com.sun.javafx.gestures.rotate=true
+monocle.com.sun.javafx.gestures.scroll=true"""
+
+def lensPlatformAdditions = """
 directfb.com.sun.javafx.scene.control.skin.ListViewSkin.pannable=true
 directfb.com.sun.javafx.scene.control.skin.TreeViewSkin.pannable=true
 directfb.com.sun.javafx.scene.control.skin.TableViewSkin.pannable=true
@@ -207,15 +227,15 @@ eglfb.prism.lcdtext=false
 eglfb.prism.maxvram=128m
 eglfb.prism.targetvram=112m
 eglfb.use.egl=true
-eglfb.doNativeComposite=true
 eglfb.use.gles2=true
 eglfb.embedded=eglfb
 eglfb.com.sun.javafx.isEmbedded=true
+eglfb.doNativeComposite=true
 eglfb.com.sun.javafx.scene.control.skin.FXVK.cache=true
+eglfb.prism.glDepthSize=0
 eglfb.com.sun.javafx.gestures.zoom=true
 eglfb.com.sun.javafx.gestures.rotate=true
 eglfb.com.sun.javafx.gestures.scroll=true
-eglfb.prism.glDepthSize=0
 fb.com.sun.javafx.scene.control.skin.ListViewSkin.pannable=true
 fb.com.sun.javafx.scene.control.skin.TreeViewSkin.pannable=true
 fb.com.sun.javafx.scene.control.skin.TableViewSkin.pannable=true
@@ -228,22 +248,6 @@ fb.com.sun.javafx.scene.control.skin.FXVK.cache=true
 fb.com.sun.javafx.gestures.zoom=true
 fb.com.sun.javafx.gestures.rotate=true
 fb.com.sun.javafx.gestures.scroll=true
-monocle.glass.platform=Monocle
-monocle.prism.order=es2,sw
-monocle.prism.eglfb=true
-monocle.prism.lcdtext=false
-monocle.prism.maxvram=128m
-monocle.prism.targetvram=112m
-monocle.use.egl=true
-monocle.use.gles2=true
-monocle.embedded=monocle
-monocle.com.sun.javafx.isEmbedded=true
-monocle.doNativeComposite=true
-monocle.com.sun.javafx.scene.control.skin.FXVK.cache=true
-monocle.com.sun.javafx.gestures.zoom=true
-monocle.com.sun.javafx.gestures.rotate=true
-monocle.com.sun.javafx.gestures.scroll=true
-monocle.prism.glDepthSize=0
 eglx11.com.sun.javafx.scene.control.skin.ListViewSkin.pannable=true
 eglx11.com.sun.javafx.scene.control.skin.TreeViewSkin.pannable=true
 eglx11.com.sun.javafx.scene.control.skin.TableViewSkin.pannable=true
@@ -259,10 +263,12 @@ eglx11.use.gles2=true
 eglx11.embedded=eglx11
 eglx11.com.sun.javafx.isEmbedded=true
 eglx11.com.sun.javafx.scene.control.skin.FXVK.cache=true
+eglx11.prism.glDepthSize=0
 eglx11.com.sun.javafx.gestures.zoom=true
 eglx11.com.sun.javafx.gestures.rotate=true
-eglx11.com.sun.javafx.gestures.scroll=true
-eglx11.prism.glDepthSize=0
+eglx11.com.sun.javafx.gestures.scroll=true"""
+
+def gtkPlatformAdditions = """
 gtk.com.sun.javafx.scene.control.skin.ListViewSkin.pannable=true
 gtk.com.sun.javafx.scene.control.skin.TreeViewSkin.pannable=true
 gtk.com.sun.javafx.scene.control.skin.TableViewSkin.pannable=true
@@ -276,67 +282,53 @@ gtk.com.sun.javafx.gestures.scroll=true"""
 
 def pangoCCFlags = [extraCFlags, "-D_ENABLE_PANGO"];
 def pangoLinkFlags = [extraLFlags];
-setupTools("ARMV7SF_pango_tools",
-    { propFile ->
-        ByteArrayOutputStream results = new ByteArrayOutputStream();
-        exec {
-            commandLine "$sdk/bin/pkg-config", "--cflags", "pangoft2"
-            standardOutput = results
-        }
-        propFile << "cflags=" << results.toString().trim() << "\n";
 
-        results = new ByteArrayOutputStream();
-        exec {
-            commandLine "$sdk/bin/pkg-config", "--libs", "pangoft2"
-            standardOutput = results
-        }
-        propFile << "libs=" << results.toString().trim();
-    },
-    { properties ->
-        pangoCCFlags.addAll(properties.getProperty("cflags").split(" "))
-        pangoLinkFlags.addAll(properties.getProperty("libs").split(" "))
-    }
-)
+def pangoCFlags_pkgconfig = "-pthread -I${sdk}/usr/include/pango-1.0 -I${sdk}/usr/include/freetype2 -I${sdk}/usr/include -I${sdk}/usr/include/glib-2.0 -I${sdk}/usr/lib/arm-linux-gnueabi/glib-2.0/include "
+
+def pangoLFlags_pkgconfig = "-L${sdk}/usr/lib/arm-linux-gnueabi -lpangoft2-1.0 -lpango-1.0 -lfreetype -lfontconfig -lgobject-2.0 -lglib-2.0"
+
+pangoCCFlags.addAll(gtkCFlags_pkgconfig.split(" "))
+pangoLinkFlags.addAll(gtkLFlags_pkgconfig.split(" "))
 
 def freetypeCCFlags = [ext.IS_COMPILE_PANGO ? "-D_ENABLE_PANGO" :
                        ext.IS_COMPILE_HARFBUZZ ? "-D_ENABLE_HARFBUZZ" : ""]
 def freetypeLinkFlags = []
-setupTools("ARMV7SF_freetype_tools",
-    { propFile ->
-        ByteArrayOutputStream results = new ByteArrayOutputStream();
-        exec {
-            commandLine "$sdk/bin/pkg-config", "--cflags", "freetype2"
-            standardOutput = results
-        }
-        propFile << "cflags=" << results.toString().trim() << "\n";
 
-        results = new ByteArrayOutputStream();
-        exec {
-            commandLine "$sdk/bin/pkg-config", "--libs", "freetype2"
-            standardOutput = results
-        }
-        propFile << "libs=" << results.toString().trim();
-    },
-    { properties ->
-        freetypeCCFlags.addAll(properties.getProperty("cflags").split(" "))
-        freetypeLinkFlags.addAll(properties.getProperty("libs").split(" "))
-    }
-)
+def freetypeCFlags_pkgconfig = "-I${sdk}/usr/include/freetype2 -I${sdk}/usr/include"
+def freeytpeLFlags_pkgconfig = "-L${sdk}/usr/lib/arm-linux-gnueabi -lfreetype"
 
-def compiler = file("$compilerHome/bin/${compilerPrefix}gcc").getAbsolutePath()
-def linker = file("$compilerHome/bin/${compilerPrefix}g++").getAbsolutePath()
+freetypeCCFlags.addAll(gtkCFlags_pkgconfig.split(" "))
+freetypeLinkFlags.addAll(gtkLFlags_pkgconfig.split(" "))
+
+ARMV7SF.javafxPlatformProperties = "javafx.platform=${ARMV7SF.javafxPlatformDefault}"
 
 ARMV7SF.glass = [:]
-ARMV7SF.glass.variants = ["eglfb", "directfb", "fb", "gtk", "lensport", "monocle", "monocle_x11" ]
 ARMV7SF.glass.javahInclude = [
     "com/sun/glass/events/**",
-    "com/sun/glass/ui/*",
-    "com/sun/glass/ui/lens/*",
-    "com/sun/glass/ui/monocle/*",
-    "com/sun/glass/ui/monocle/linux/*",
-    "com/sun/glass/ui/monocle/util/*",
-    "com/sun/glass/ui/monocle/x11/*",
-    "com/sun/glass/ui/gtk/*"]
+    "com/sun/glass/ui/*"]
+ARMV7SF.glass.variants = [ ]
+if (ARMV7SF.includeLens) { 
+    ARMV7SF.glass.variants.addAll("eglfb", "directfb", "fb", "lensport" );
+    ARMV7SF.glass.javahInclude.addAll("com/sun/glass/ui/lens/*");
+    ARMV7SF.javafxPlatformProperties = ARMV7SF.javafxPlatformProperties + lensPlatformAdditions
+}
+if (ARMV7SF.includeMonocle) { 
+    ARMV7SF.glass.variants.addAll("monocle", "monocle_x11");
+    ARMV7SF.glass.javahInclude.addAll(
+        "com/sun/glass/ui/monocle/*",
+        "com/sun/glass/ui/monocle/dispman/*",
+        "com/sun/glass/ui/monocle/mx6/*",
+        "com/sun/glass/ui/monocle/linux/*",
+        "com/sun/glass/ui/monocle/util/*",
+        "com/sun/glass/ui/monocle/x11/*");
+    ARMV7SF.javafxPlatformProperties = ARMV7SF.javafxPlatformProperties + monoclePlatformAdditions
+}
+if (ARMV7SF.includeGTK) {
+    ARMV7SF.glass.variants.addAll("gtk");
+    ARMV7SF.glass.javahInclude.addAll("com/sun/glass/ui/gtk/*");
+    ARMV7SF.javafxPlatformProperties = ARMV7SF.javafxPlatformProperties + gtkPlatformAdditions
+}
+
 ARMV7SF.glass.lib = "glass"
 
 ARMV7SF.glass.lensport = [:]
@@ -537,7 +529,6 @@ ARMV7SF.fontT2K.linker = linker
 ARMV7SF.fontT2K.linkFlags = fontLFlags
 ARMV7SF.fontT2K.lib = "javafx_font_t2k"
 
-ARMV7SF.disablefontFreetype = true // Need to fix the imports
 ARMV7SF.fontFreetype = [:]
 ARMV7SF.fontFreetype.javahInclude = ["com/sun/javafx/font/freetype/OSFreetype.class"]
 ARMV7SF.fontFreetype.nativeSource = ["src/main/native-font/freetype.c"]
@@ -547,7 +538,6 @@ ARMV7SF.fontFreetype.linker = linker
 ARMV7SF.fontFreetype.linkFlags = [linkFlags, fontLFlags, freetypeLinkFlags].flatten()
 ARMV7SF.fontFreetype.lib = "javafx_font_freetype"
 
-ARMV7SF.disablefontPango = true
 ARMV7SF.fontPango = [:]
 ARMV7SF.fontPango.javahInclude = ["com/sun/javafx/font/freetype/OSPango.class"]
 ARMV7SF.fontPango.nativeSource = ["src/main/native-font/pango.c"]

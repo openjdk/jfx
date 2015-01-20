@@ -76,14 +76,14 @@ abstract class GlassScene implements TKScene {
     private final AtomicBoolean painting = new AtomicBoolean(false);
 
     private final boolean depthBuffer;
-    private final boolean antiAliasing;
+    private final boolean msaa;
 
     SceneState sceneState;
 
     private AccessControlContext accessCtrlCtx = null;
 
-    protected GlassScene(boolean depthBuffer, boolean antiAliasing) {
-        this.antiAliasing = antiAliasing;
+    protected GlassScene(boolean depthBuffer, boolean msaa) {
+        this.msaa = msaa;
         this.depthBuffer = depthBuffer;
         sceneState = new SceneState(this);
     }
@@ -91,10 +91,21 @@ abstract class GlassScene implements TKScene {
     @Override
     public void dispose() {
         assert stage == null; // dispose() is called after setStage(null)
+        root = null;
+        camera = null;
+        fillPaint = null;
+        sceneListener = null;
+        dragGestureListener = null;
+        dragSourceListener = null;
+        dropTargetListener = null;
+        inputMethodRequests = null;
+        scenePaintListener = null;
+        sceneState = null;
     }
 
     // To be used by subclasses to enforce context check
-    final AccessControlContext getAccessControlContext() {
+    @Override
+    public final AccessControlContext getAccessControlContext() {
         if (accessCtrlCtx == null) {
             throw new RuntimeException("Scene security context has not been set!");
         }
@@ -138,8 +149,8 @@ abstract class GlassScene implements TKScene {
         return depthBuffer;
     }
 
-    boolean isAntiAliasing() {
-        return antiAliasing;
+    boolean isMSAA() {
+        return msaa;
     }
 
     protected abstract boolean isSynchronous();

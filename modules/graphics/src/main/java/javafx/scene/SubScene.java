@@ -65,7 +65,23 @@ import sun.util.logging.PlatformLogger;
  * of which can be rendered with a different camera, depth buffer, or scene
  * anti-aliasing. A {@code SubScene} is embedded into the main scene or another
  * sub-scene.
- * 
+ * <p>
+ * An application may request depth buffer support or scene anti-aliasing
+ * support at the creation of a {@code SubScene}. A sub-scene with only 2D
+ * shapes and without any 3D transforms does not need a depth buffer nor scene
+ * anti-aliasing support. A sub-scene containing 3D shapes or 2D shapes with 3D
+ * transforms may use depth buffer support for proper depth sorted rendering; to
+ * avoid depth fighting (also known as Z fighting), disable depth testing on 2D
+ * shapes that have no 3D transforms. See
+ * {@link Node#depthTestProperty depthTest} for more information. A sub-scene
+ * with 3D shapes may enable scene anti-aliasing to improve its rendering
+ * quality.
+ * <p>
+ * The depthBuffer and antiAliasing flags are conditional features. With the
+ * respective default values of: false and {@code SceneAntialiasing.DISABLED}.
+ * See {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
+ * for more information.
+ *
  * <p>
  * Possible use cases are:
  * <ul>
@@ -93,8 +109,6 @@ public class SubScene extends Node {
      * @param width The width of the sub-scene
      * @param height The height of the sub-scene
      *
-     * @throws IllegalStateException if this constructor is called on a thread
-     * other than the JavaFX Application Thread.
      * @throws NullPointerException if root is null
      */
     public SubScene(@NamedArg("root") Parent root, @NamedArg("width") double width, @NamedArg("height") double height) {
@@ -105,6 +119,15 @@ public class SubScene extends Node {
      * Constructs a {@code SubScene} consisting of a root, with a dimension of width and
      * height, specifies whether a depth buffer is created for this scene and
      * specifies whether scene anti-aliasing is requested.
+     * <p>
+     * A sub-scene with only 2D shapes and without any 3D transforms does not
+     * need a depth buffer nor scene anti-aliasing support. A sub-scene
+     * containing 3D shapes or 2D shapes with 3D transforms may use depth buffer
+     * support for proper depth sorted rendering; to avoid depth fighting (also
+     * known as Z fighting), disable depth testing on 2D shapes that have no 3D
+     * transforms. See {@link Node#depthTestProperty depthTest} for more
+     * information. A sub-scene with 3D shapes may enable scene anti-aliasing to
+     * improve its rendering quality.
      *
      * @param root The root node of the scene graph
      * @param width The width of the sub-scene
@@ -118,8 +141,6 @@ public class SubScene extends Node {
      * See {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
      * for more information.
      *
-     * @throws IllegalStateException if this constructor is called on a thread
-     * other than the JavaFX Application Thread.
      * @throws NullPointerException if root is null
      *
      * @see javafx.scene.Node#setDepthTest(DepthTest)
@@ -139,7 +160,7 @@ public class SubScene extends Node {
             PlatformLogger.getLogger(logname).warning("System can't support "
                     + "ConditionalFeature.SCENE3D");
         }
-        if (isAntiAliasing && !Toolkit.getToolkit().isAntiAliasingSupported()) {
+        if (isAntiAliasing && !Toolkit.getToolkit().isMSAASupported()) {
             String logname = SubScene.class.getName();
             PlatformLogger.getLogger(logname).warning("System can't support "
                     + "antiAliasing");
@@ -644,7 +665,7 @@ public class SubScene extends Node {
             return new NGSubScene(false, false);
         }
         boolean aa = !(antiAliasing == null || antiAliasing == SceneAntialiasing.DISABLED);
-        return new NGSubScene(depthBuffer, aa && Toolkit.getToolkit().isAntiAliasingSupported());
+        return new NGSubScene(depthBuffer, aa && Toolkit.getToolkit().isMSAASupported());
     }
 
     /**

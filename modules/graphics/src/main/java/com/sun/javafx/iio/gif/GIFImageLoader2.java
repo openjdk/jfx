@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -252,13 +252,7 @@ public class GIFImageLoader2 extends ImageLoaderImpl {
     }
 
     private void skipBytes(int n) throws IOException {
-        while (n > 0) {
-            int lskip = (int) stream.skip(n);
-            if (lskip <= 0) {
-                throw new EOFException();
-            }
-            n -= lskip;
-        }
+        ImageTools.skipFully(stream, n);
     }
 
     public void dispose() {}

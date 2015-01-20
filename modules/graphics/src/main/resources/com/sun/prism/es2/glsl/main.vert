@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -54,9 +54,15 @@ void main()
 
     vec4 worldPos = worldMatrix * vec4(pos, 1.0);
 
-    vec3 t1 = tangent.xyz * tangent.yzx *2.0;
-    vec3 t2 = tangent.zxy * tangent.www *2.0;
-    vec3 t3 = tangent.xyz * tangent.xyz *2.0;
+    // Note: The breaking of a vector and scale computation statement into
+    //       2 separate statements is intentional to workaround a shader
+    //       compiler bug on the Freescale iMX6 platform. See RT-37789 for details. 
+    vec3 t1 = tangent.xyz * tangent.yzx;
+         t1 *= 2.0;
+    vec3 t2 = tangent.zxy * tangent.www;
+         t2 *= 2.0;
+    vec3 t3 = tangent.xyz * tangent.xyz;
+         t3 *= 2.0;
     vec3 t4 = 1.0-(t3+t3.yzx);
 
     vec3 r1 = t1 + t2;
@@ -89,7 +95,7 @@ void main()
     L = lights[2].pos.xyz - worldPos.xyz;
     lightTangentSpacePositions[2] = vec4( getLocalVector(L,tangentFrame)*lights[2].pos.w, 1.0);
 
-    mat4 mvpMatrix = viewProjectionMatrix * worldMatrix;
+     mat4 mvpMatrix = viewProjectionMatrix * worldMatrix;
 
     //Send texcoords to Pixel Shader and calculate vertex position.
     oTexCoords = texCoords;

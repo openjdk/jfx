@@ -35,8 +35,8 @@ import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.value.WritableValue;
 import javafx.css.StyleableProperty;
-//import javafx.scene.accessibility.Attribute;
-//import javafx.scene.accessibility.Role;
+import javafx.scene.AccessibleAttribute;
+import javafx.scene.AccessibleRole;
 
 
 /**
@@ -99,6 +99,7 @@ public class ProgressIndicator extends Control {
         ((StyleableProperty<Boolean>)(WritableValue<Boolean>)focusTraversableProperty()).applyStyle(null, Boolean.FALSE);
         setProgress(progress);
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
+        setAccessibleRole(AccessibleRole.PROGRESS_INDICATOR);
         
         // need to initialize pseudo-class state
         final int c = Double.compare(INDETERMINATE_PROGRESS, progress);
@@ -245,16 +246,15 @@ public class ProgressIndicator extends Control {
      *                                                                         *
      **************************************************************************/
 
-//    /** @treatAsPrivate */
-//    @Override public Object accGetAttribute(Attribute attribute, Object... parameters) {
-//        switch (attribute) {
-//            case ROLE: return Role.PROGRESS_INDICATOR;
-//            case VALUE: return getProgress();
-//            case MAX_VALUE: return 1.0;
-//            case MIN_VALUE: return 0.0;
-//            case INDETERMINATE: return isIndeterminate();
-//            default: return super.accGetAttribute(attribute, parameters);
-//        }
-//    }
+    @Override
+    public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
+        switch (attribute) {
+            case VALUE: return getProgress();
+            case MAX_VALUE: return 1.0;
+            case MIN_VALUE: return 0.0;
+            case INDETERMINATE: return isIndeterminate();
+            default: return super.queryAccessibleAttribute(attribute, parameters);
+        }
+    }
 
 }

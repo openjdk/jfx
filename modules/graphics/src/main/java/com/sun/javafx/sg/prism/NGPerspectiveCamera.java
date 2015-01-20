@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,15 +42,15 @@ import com.sun.javafx.geom.PickRay;
  */
 public class NGPerspectiveCamera extends NGCamera {
     private final boolean fixedEyeAtCameraZero;
-    private double fov;
+    private double fovrad;
     private boolean verticalFieldOfView;
 
     public NGPerspectiveCamera(boolean fixedEyeAtCameraZero) {
         this.fixedEyeAtCameraZero = fixedEyeAtCameraZero;
     }
 
-    public void setFieldOfView(float fieldOfView) {
-        this.fov = Math.toRadians(fieldOfView);
+    public void setFieldOfView(float fieldOfViewDegrees) {
+        this.fovrad = Math.toRadians(fieldOfViewDegrees);
     }
 
     public void setVerticalFieldOfView(boolean verticalFieldOfView) {
@@ -60,7 +60,7 @@ public class NGPerspectiveCamera extends NGCamera {
     @Override
     public PickRay computePickRay(float x, float y, PickRay pickRay) {
         return PickRay.computePerspectivePickRay(x, y, fixedEyeAtCameraZero,
-                viewWidth, viewHeight, fov, verticalFieldOfView, worldTransform,
+                viewWidth, viewHeight, fovrad, verticalFieldOfView, worldTransform,
                 zNear, zFar,
                 pickRay);
     }

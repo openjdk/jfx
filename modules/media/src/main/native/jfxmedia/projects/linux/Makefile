@@ -65,6 +65,11 @@ else
 	CFLAGS += -g -Wall -D_DEBUG
 endif
 
+ifeq ($(ARCH), x32)
+    CFLAGS += -m32
+    LDFLAGS += -m32
+endif
+
 CPP_SOURCES = \
         jni/com_sun_media_jfxmedia_logging_Logger.cpp           \
         jni/JavaBandsHolder.cpp 				\
@@ -73,6 +78,9 @@ CPP_SOURCES = \
         jni/JniUtils.cpp 					\
         jni/Logger.cpp 						\
         jni/NativeVideoBuffer.cpp 				\
+        jni/NativeAudioEqualizer.cpp \
+        jni/NativeAudioSpectrum.cpp \
+        jni/NativeEqualizerBand.cpp \
         jni/JavaInputStreamCallbacks.cpp 			\
         PipelineManagement/AudioTrack.cpp 			\
         PipelineManagement/Pipeline.cpp 			\
@@ -87,7 +95,6 @@ CPP_SOURCES = \
         Locator/LocatorStream.cpp 				\
         Utils/MediaWarningDispatcher.cpp 			\
         Utils/posix/posix_critical_section.cpp          \
-        platform/gstreamer/GstEqualizerBand.cpp         \
         platform/gstreamer/GstMedia.cpp                 \
         platform/gstreamer/GstMediaPlayer.cpp           \
         platform/gstreamer/GstPlatform.cpp              \
