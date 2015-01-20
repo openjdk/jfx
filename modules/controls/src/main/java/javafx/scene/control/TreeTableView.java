@@ -2901,7 +2901,10 @@ public class TreeTableView<S> extends Control {
             final int endChangeIndex = selectedCellsMap.indexOf(new TreeTablePosition<>(treeTableView, maxRow, (TreeTableColumn<S,?>)maxColumn));
 
             if (startChangeIndex > -1 && endChangeIndex > -1) {
-                handleSelectedCellsListChangeEvent(new NonIterableChange.SimpleAddChange<>(startChangeIndex, endChangeIndex + 1, selectedCellsSeq));
+                final int startIndex = Math.min(startChangeIndex, endChangeIndex);
+                final int endIndex = Math.max(startChangeIndex, endChangeIndex);
+                ListChangeListener.Change c = new NonIterableChange.SimpleAddChange<>(startIndex, endIndex + 1, selectedCellsSeq);
+                handleSelectedCellsListChangeEvent(c);
             }
         }
 

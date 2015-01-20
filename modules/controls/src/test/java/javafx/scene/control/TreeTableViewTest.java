@@ -4876,4 +4876,81 @@ public class TreeTableViewTest {
 
         sl.dispose();
     }
+
+    private int test_rt_39842_count = 0;
+    @Test public void test_rt_39842_selectLeftDown() {
+        test_rt_39842(true, false);
+    }
+
+    @Test public void test_rt_39842_selectLeftUp() {
+        test_rt_39842(true, true);
+    }
+
+    @Test public void test_rt_39842_selectRightDown() {
+        test_rt_39842(false, false);
+    }
+
+    @Test public void test_rt_39842_selectRightUp() {
+        test_rt_39842(false, true);
+    }
+
+    private void test_rt_39842(boolean selectToLeft, boolean selectUpwards) {
+        test_rt_39842_count = 0;
+
+        TreeTableColumn firstNameCol = new TreeTableColumn("First Name");
+        firstNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("firstName"));
+
+        TreeTableColumn lastNameCol = new TreeTableColumn("Last Name");
+        lastNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("lastName"));
+
+        TreeItem root = new TreeItem("root");
+        root.getChildren().setAll(
+                new TreeItem(new Person("Jacob", "Smith", "jacob.smith@example.com")),
+                new TreeItem(new Person("Isabella", "Johnson", "isabella.johnson@example.com")),
+                new TreeItem(new Person("Ethan", "Williams", "ethan.williams@example.com")),
+                new TreeItem(new Person("Emma", "Jones", "emma.jones@example.com")),
+                new TreeItem(new Person("Michael", "Brown", "michael.brown@example.com")));
+        root.setExpanded(true);
+
+        TreeTableView<Person> table = new TreeTableView<>(root);
+        table.setShowRoot(false);
+        table.getColumns().addAll(firstNameCol, lastNameCol);
+
+        sm = table.getSelectionModel();
+        sm.setCellSelectionEnabled(true);
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+        sm.getSelectedCells().addListener((ListChangeListener) c -> test_rt_39842_count++);
+
+        StageLoader sl = new StageLoader(table);
+
+        assertEquals(0, test_rt_39842_count);
+
+        if (selectToLeft) {
+            if (selectUpwards) {
+                sm.selectRange(3, lastNameCol, 0, firstNameCol);
+            } else {
+                sm.selectRange(0, lastNameCol, 3, firstNameCol);
+            }
+        } else {
+            if (selectUpwards) {
+                sm.selectRange(3, firstNameCol, 0, lastNameCol);
+            } else {
+                sm.selectRange(0, firstNameCol, 3, lastNameCol);
+            }
+        }
+
+        // test model state
+        assertEquals(8, sm.getSelectedCells().size());
+        assertEquals(1, test_rt_39842_count);
+
+        // test visual state
+        for (int row = 0; row <= 3; row++) {
+            for (int column = 0; column <= 1; column++) {
+                IndexedCell cell = VirtualFlowTestUtils.getCell(table, row, column);
+                assertTrue(cell.isSelected());
+            }
+        }
+
+        sl.dispose();
+    }
 }
