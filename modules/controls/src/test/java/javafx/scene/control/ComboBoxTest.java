@@ -1802,4 +1802,21 @@ public class ComboBoxTest {
 
         sl.dispose();
     }
+
+    @Test public void test_rt_39809() {
+        ComboBox<String> comboBox = new ComboBox<>();
+        comboBox.getItems().setAll(null, "1", "2", "3");
+
+        StageLoader sl = new StageLoader(comboBox);
+
+        comboBox.getSelectionModel().clearAndSelect(1);
+        assertEquals("1", comboBox.getSelectionModel().getSelectedItem());
+        assertEquals(1, comboBox.getSelectionModel().getSelectedIndex());
+
+        comboBox.getSelectionModel().clearAndSelect(0);
+        assertEquals(null, comboBox.getSelectionModel().getSelectedItem());
+        assertEquals(-1, comboBox.getSelectionModel().getSelectedIndex());
+
+        sl.dispose();
+    }
 }

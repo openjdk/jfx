@@ -455,17 +455,22 @@ public class TableView<S> extends Control {
                         }
                     }
                     return comparatorsBound;
-                }
+                } else {
+                    if (itemsList == null || itemsList.isEmpty()) {
+                        // sorting is not supported on null or empty lists
+                        return true;
+                    }
 
-                Comparator comparator = table.getComparator();
-                if (comparator == null) {
+                    Comparator comparator = table.getComparator();
+                    if (comparator == null) {
+                        return true;
+                    }
+
+                    // otherwise we attempt to do a manual sort, and if successful
+                    // we return true
+                    FXCollections.sort(itemsList, comparator);
                     return true;
                 }
-
-                // otherwise we attempt to do a manual sort, and if successful
-                // we return true
-                FXCollections.sort(itemsList, comparator);
-                return true;
             } catch (UnsupportedOperationException e) {
                 // TODO might need to support other exception types including:
                 // ClassCastException - if the class of the specified element prevents it from being added to this list
@@ -591,6 +596,38 @@ public class TableView<S> extends Control {
     
     private final ListChangeListener<TableColumn<S,?>> columnsObserver = new ListChangeListener<TableColumn<S,?>>() {
         @Override public void onChanged(Change<? extends TableColumn<S,?>> c) {
+            final List<TableColumn<S,?>> columns = getColumns();
+
+            // Fix for RT-39822 - don't allow the same column to be installed twice
+            while (c.next()) {
+                if (c.wasAdded()) {
+                    List<TableColumn<S,?>> duplicates = new ArrayList<>();
+                    for (TableColumn<S,?> addedColumn : c.getAddedSubList()) {
+                        if (addedColumn == null) continue;
+
+                        int count = 0;
+                        for (TableColumn<S,?> column : columns) {
+                            if (addedColumn == column) {
+                                count++;
+                            }
+                        }
+
+                        if (count > 1) {
+                            duplicates.add(addedColumn);
+                        }
+                    }
+
+                    if (!duplicates.isEmpty()) {
+                        String titleList = "";
+                        for (TableColumn<S,?> dupe : duplicates) {
+                            titleList += "'" + dupe.getText() + "', ";
+                        }
+                        throw new IllegalStateException("Duplicate TableColumns detected in TableView columns list with titles " + titleList);
+                    }
+                }
+            }
+            c.reset();
+
             // We don't maintain a bind for leafColumns, we simply call this update
             // function behind the scenes in the appropriate places.
             updateVisibleLeafColumns();
@@ -2595,13 +2632,13 @@ public class TableView<S> extends Control {
 
         @Override public void selectRange(int minRow, TableColumnBase<S,?> minColumn,
                                           int maxRow, TableColumnBase<S,?> maxColumn) {
-            startAtomic();
-
             if (getSelectionMode() == SelectionMode.SINGLE) {
                 quietClearSelection();
                 select(maxRow, maxColumn);
                 return;
             }
+
+            startAtomic();
 
             final int itemCount = getItemCount();
             final boolean isCellSelectionEnabled = isCellSelectionEnabled();
@@ -3125,11 +3162,11 @@ public class TableView<S> extends Control {
 
             if (added && ! removed) {
                 if (addedSize < c.getList().size()) {
-                    final int newFocusIndex = getFocusedIndex() + addedSize;
+                    final int newFocusIndex = Math.min(getItemCount() - 1, getFocusedIndex() + addedSize);
                     focus(newFocusIndex, focusedCell.getTableColumn());
                 }
             } else if (!added && removed) {
-                final int newFocusIndex = getFocusedIndex() - removedSize;
+                final int newFocusIndex = Math.max(0, getFocusedIndex() - removedSize);
                 if (newFocusIndex < 0) {
                     focus(0, focusedCell.getTableColumn());
                 } else {
@@ -3218,7 +3255,15 @@ public class TableView<S> extends Control {
             if (row < 0 || row >= getItemCount()) {
                 setFocusedCell(EMPTY_CELL);
             } else {
-                setFocusedCell(new TablePosition<>(tableView, row, column));
+                TablePosition<S,?> oldFocusCell = getFocusedCell();
+                TablePosition<S,?> newFocusCell = new TablePosition<>(tableView, row, column);
+                setFocusedCell(newFocusCell);
+
+                if (newFocusCell.equals(oldFocusCell)) {
+                    // manually update the focus properties to ensure consistency
+                    setFocusedIndex(row);
+                    setFocusedItem(getModelItem(row));
+                }
             }
         }
 

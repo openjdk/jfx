@@ -183,7 +183,7 @@ class PrismImageLoader2 implements com.sun.javafx.tk.ImageLoader {
      */
     private static synchronized PlatformLogger getImageioLogger() {
         if (imageioLogger == null) {
-            imageioLogger = PlatformLogger.getLogger("imageio");
+            imageioLogger = PlatformLogger.getLogger("javafx.scene.image");
         }
 
         return imageioLogger;

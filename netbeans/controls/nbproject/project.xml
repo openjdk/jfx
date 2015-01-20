@@ -7,7 +7,6 @@
             <explicit-platform explicit-source-supported="true"/>
             <source-roots>
                 <root id="src.dir"/>
-                <root id="java.dir"/>
                 <root id="src.resources.dir"/>
             </source-roots>
             <test-roots>
@@ -25,14 +24,6 @@
             </reference>
             <reference>
                 <foreign-project>buildSrc</foreign-project>
-                <artifact-type>jar</artifact-type>
-                <script>build.xml</script>
-                <target>jar</target>
-                <clean-target>clean</clean-target>
-                <id>jar</id>
-            </reference>
-            <reference>
-                <foreign-project>designTime</foreign-project>
                 <artifact-type>jar</artifact-type>
                 <script>build.xml</script>
                 <target>jar</target>

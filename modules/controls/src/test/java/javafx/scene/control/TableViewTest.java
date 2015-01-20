@@ -4691,4 +4691,104 @@ public class TableViewTest {
 
         sl.dispose();
     }
+
+    @Test public void test_rt_16068_firstElement_selectAndRemoveSameRow() {
+        // select and then remove the 'a' item, selection and focus should both
+        // stay at the first row, now 'b'
+        test_rt_16068(0, 0, 0);
+    }
+
+    @Test public void test_rt_16068_firstElement_selectRowAndRemoveLaterSibling() {
+        // select row 'a', and remove row 'c', selection and focus should not change
+        test_rt_16068(0, 2, 0);
+    }
+
+    @Test public void test_rt_16068_middleElement_selectAndRemoveSameRow() {
+        // select and then remove the 'b' item, selection and focus should both
+        // move up one row to the 'a' item
+        test_rt_16068(1, 1, 0);
+    }
+
+    @Test public void test_rt_16068_middleElement_selectRowAndRemoveLaterSibling() {
+        // select row 'b', and remove row 'c', selection and focus should not change
+        test_rt_16068(1, 2, 1);
+    }
+
+    @Test public void test_rt_16068_middleElement_selectRowAndRemoveEarlierSibling() {
+        // select row 'b', and remove row 'a', selection and focus should move up
+        // one row, remaining on 'b'
+        test_rt_16068(1, 0, 0);
+    }
+
+    @Test public void test_rt_16068_lastElement_selectAndRemoveSameRow() {
+        // select and then remove the 'd' item, selection and focus should both
+        // move up one row to the 'c' item
+        test_rt_16068(3, 3, 2);
+    }
+
+    @Test public void test_rt_16068_lastElement_selectRowAndRemoveEarlierSibling() {
+        // select row 'd', and remove row 'a', selection and focus should move up
+        // one row, remaining on 'd'
+        test_rt_16068(3, 0, 2);
+    }
+
+    private void test_rt_16068(int indexToSelect, int indexToRemove, int expectedIndex) {
+        TableView<String> stringTableView = new TableView<>();
+        stringTableView.getItems().addAll("a","b", "c", "d");
+
+        TableColumn<String,String> column = new TableColumn<>("Column");
+        column.setCellValueFactory(cdf -> new ReadOnlyStringWrapper(cdf.getValue()));
+        stringTableView.getColumns().add(column);
+
+        TableView.TableViewSelectionModel<?> sm = stringTableView.getSelectionModel();
+        FocusModel<?> fm = stringTableView.getFocusModel();
+
+        sm.select(indexToSelect);
+        assertEquals(indexToSelect, sm.getSelectedIndex());
+        assertEquals(stringTableView.getItems().get(indexToSelect), sm.getSelectedItem());
+        assertEquals(indexToSelect, fm.getFocusedIndex());
+        assertEquals(stringTableView.getItems().get(indexToSelect), fm.getFocusedItem());
+
+        stringTableView.getItems().remove(indexToRemove);
+        assertEquals(expectedIndex, sm.getSelectedIndex());
+        assertEquals(stringTableView.getItems().get(expectedIndex), sm.getSelectedItem());
+        assertEquals(expectedIndex, fm.getFocusedIndex());
+        assertEquals(stringTableView.getItems().get(expectedIndex), fm.getFocusedItem());
+    }
+
+    private int test_rt_39822_count = 0;
+    @Test public void test_rt_39822() {
+        // get the current exception handler before replacing with our own,
+        // as ListListenerHelp intercepts the exception otherwise
+        final Thread.UncaughtExceptionHandler exceptionHandler = Thread.currentThread().getUncaughtExceptionHandler();
+        Thread.currentThread().setUncaughtExceptionHandler((t, e) -> {
+            e.printStackTrace();
+
+            if (test_rt_39822_count == 0) {
+                test_rt_39822_count++;
+                if (! (e instanceof IllegalStateException)) {
+                    fail("Incorrect exception type - expecting IllegalStateException");
+                }
+            } else {
+                // don't care
+                test_rt_39822_count++;
+            }
+        });
+
+        TableView<String> table = new TableView<>();
+        TableColumn<String, String> col1 = new TableColumn<>("Foo");
+        table.getColumns().addAll(col1, col1);  // add column twice
+
+        StageLoader sl = null;
+        try {
+            sl = new StageLoader(table);
+        } finally {
+            if (sl != null) {
+                sl.dispose();
+            }
+
+            // reset the exception handler
+            Thread.currentThread().setUncaughtExceptionHandler(exceptionHandler);
+        }
+    }
 }

@@ -216,7 +216,7 @@ public class GestureEventApp extends Application {
         });
 
         listeningNode.setOnRotate((RotateEvent event) -> {
-            rec.setRotate(listeningNode.getRotate() + event.getAngle());
+            rec.setRotate(rec.getRotate() + event.getAngle());
             showOnConsole(msgPrefix + "Rotate event");
             event.consume();
         });

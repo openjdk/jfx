@@ -96,14 +96,6 @@ class ES2Context extends BaseShaderContext {
         quadIndices = vb.genQuadsIndexBuffer(NUM_QUADS);
         setIndexBuffer(quadIndices);
         state = new State();
-
-        // JIRA: RT-21739
-        // TODO: This is a temporary mechanism to work well with Glass on Mac due
-        // to the CALayer work. Need to be removed in the early future for 3.0
-        if (PlatformUtil.isMac() || PlatformUtil.isIOS()) {
-           HashMap devDetails = (HashMap) ES2Pipeline.getInstance().getDeviceDetails();
-           ES2Pipeline.glFactory.updateDeviceDetails(devDetails, glContext);
-        }
     }
     
     final void clearContext() {

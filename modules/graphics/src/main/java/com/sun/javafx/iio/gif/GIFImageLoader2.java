@@ -257,15 +257,14 @@ public class GIFImageLoader2 extends ImageLoaderImpl {
 
     public void dispose() {}
 
-    // fill whole image with bk color
-    private void fillBackground(int trnsIndex, byte img[]) {
-        byte r = globalPalette[0][bgColor], g = globalPalette[1][bgColor];
-        byte b = globalPalette[2][bgColor], a = (bgColor == trnsIndex) ? (byte)0 : (byte)0xFF;
-        for (int i = 0, pos = 0, l = screenW * screenH; i != l; pos += 4, ++i) {
-            img[pos + 0] = r;
-            img[pos + 1] = g;
-            img[pos + 2] = b;
-            img[pos + 3] = a;
+    // GIF specification states that restore to background should fill the frame
+    // with background color, but actually all modern programs fill with transparent color.
+    private void restoreToBackground(byte img[], int left, int top, int w, int h) {
+        for (int y = 0; y != h; ++y) {
+            int iPos = ((top + y) * screenW + left) * 4;
+            for (int x = 0; x != w; iPos += 4, ++x) {
+                img[iPos + 3] = 0;
+            }
         }
     }
 
@@ -300,7 +299,7 @@ public class GIFImageLoader2 extends ImageLoaderImpl {
         }
 
         if (disposalCode != 3) img = img.clone();
-        if (disposalCode == 2) fillBackground(trnsIndex, image);
+        if (disposalCode == 2) restoreToBackground(image, left, top, w, h);
 
         return new ImageFrame(ImageStorage.ImageType.RGBA, ByteBuffer.wrap(img),
                 screenW, screenH, screenW * 4, null, metadata);

@@ -62,15 +62,15 @@ LinuxPlatform::LinuxPlatform(void) : Platform(), GenericPlatform(), PosixPlatfor
 LinuxPlatform::~LinuxPlatform(void) {
 }
 
-void LinuxPlatform::ShowError(TString title, TString description) {
+void LinuxPlatform::ShowMessage(TString title, TString description) {
     printf("%s %s\n", PlatformString(title).toPlatformString(), PlatformString(description).toPlatformString());
     fflush(stdout);
 }
 
-void LinuxPlatform::ShowError(TString description) {
+void LinuxPlatform::ShowMessage(TString description) {
     TString appname = GetModuleFileName();
     appname = FilePath::ExtractFileName(appname);
-    ShowError(PlatformString(appname).toPlatformString(), PlatformString(description).toPlatformString());
+    ShowMessage(PlatformString(appname).toPlatformString(), PlatformString(description).toPlatformString());
 }
 
 TCHAR* LinuxPlatform::ConvertStringToFileSystemString(TCHAR* Source, bool &release) {
