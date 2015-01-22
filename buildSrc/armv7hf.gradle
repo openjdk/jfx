@@ -78,7 +78,6 @@ ARMV7HF.library = { name -> return "lib${name}.so" as String }
 ARMV7HF.compileSwing = false;
 ARMV7HF.compileSWT = false;
 ARMV7HF.compileFXPackager = false;
-ARMV7HF.compileDesignTime = false;
 ARMV7HF.compileWebnodeNative = false;
 ARMV7HF.compileMediaNative = false;
 

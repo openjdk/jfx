@@ -63,7 +63,15 @@ class MacGLFactory extends GLFactory {
     @Override
     GLContext createGLContext(GLDrawable drawable, GLPixelFormat pixelFormat,
         GLContext shareCtx, boolean vSyncRequest) {
-        return new MacGLContext(drawable, pixelFormat, shareCtx, vSyncRequest);
+        GLContext prismCtx = new MacGLContext(drawable, pixelFormat, shareCtx, vSyncRequest);
+
+        // JIRA: RT-21739
+        // TODO: This is a temporary mechanism to work well with Glass on Mac due
+        // to the CALayer work. Need to be removed in the early future for 3.0
+        HashMap devDetails = (HashMap) ES2Pipeline.getInstance().getDeviceDetails();
+        updateDeviceDetails(devDetails, prismCtx);
+
+        return prismCtx;
     }
 
     @Override
@@ -125,8 +133,7 @@ class MacGLFactory extends GLFactory {
     // JIRA: RT-21739
     // TODO: This is a temporary mechanism to work well with Glass on Mac due
     // to the CALayer work. Need to be removed in the early future for 3.0
-    @Override
-    void updateDeviceDetails(HashMap deviceDetails, GLContext glContext) {
+    private void updateDeviceDetails(HashMap deviceDetails, GLContext glContext) {
            deviceDetails.put("contextPtr", glContext.getNativeHandle());
     }
 }

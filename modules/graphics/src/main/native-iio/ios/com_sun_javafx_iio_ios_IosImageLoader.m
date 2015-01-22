@@ -97,7 +97,7 @@ extern "C" {
         IosImageLoader_setInputParametersID = (*env)->GetMethodID(env,
                                                                   klazz,
                                                                   "setInputParameters",
-                                                                  "(III)V");
+                                                                  "(IIII)V");
         IosImageLoader_updateImageProgressID = (*env)->GetMethodID(env,
                                                                    klazz,
                                                                    "updateProgress",
@@ -140,7 +140,8 @@ extern "C" {
                                IosImageLoader_setInputParametersID,
                                (jint) [loader width],
                                (jint) [loader height],
-                               (jint) [loader nImages]);
+                               (jint) [loader nImages],
+                               (jint) [loader loopCount]);
 
         (*env)->CallVoidMethod(env,
                                obj,
@@ -208,7 +209,8 @@ extern "C" {
                                IosImageLoader_setInputParametersID,
                                (jint) [loader width],
                                (jint) [loader height],
-                               (jint) [loader nImages]);
+                               (jint) [loader nImages],
+                               (jint) [loader loopCount]);
 
         (*env)->CallVoidMethod(env,
                                obj,

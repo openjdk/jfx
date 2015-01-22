@@ -28,8 +28,8 @@ package javafx.collections;
 import javafx.beans.property.StringProperty;
 import javafx.beans.property.StringPropertyBase;
 
-class Person {
-    StringProperty name = new StringPropertyBase("foo") {
+public class Person implements Comparable<Person> {
+    public StringProperty name = new StringPropertyBase("foo") {
 
         @Override
         public Object getBean() {
@@ -75,7 +75,9 @@ class Person {
     public String toString() {
         return "Person[" + name.get() + "]";
     }
-    
-    
 
+    @Override
+    public int compareTo(Person o) {
+        return this.name.get().compareTo(o.name.get());
+    }
 }

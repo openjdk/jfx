@@ -70,7 +70,6 @@ X86EGL.library = { name -> return "lib${name}.so" as String }
 X86EGL.compileSwing = false;
 X86EGL.compileSWT = false;
 X86EGL.compileFXPackager = false;
-X86EGL.compileDesignTime = false;
 X86EGL.compileWebnodeNative = false;
 X86EGL.compileMediaNative = false;
 

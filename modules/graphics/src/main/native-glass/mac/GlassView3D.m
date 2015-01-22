@@ -29,6 +29,7 @@
 #import "com_sun_glass_events_MouseEvent.h"
 #import "com_sun_glass_ui_View_Capability.h"
 #import "com_sun_glass_ui_mac_MacGestureSupport.h"
+#import "GlassKey.h"
 #import "GlassMacros.h"
 #import "GlassView3D.h"
 #import "GlassLayer3D.h"
@@ -451,6 +452,40 @@
     // Crash if the FS window is released while performing a key equivalent
     // Local copy of the id keeps the retain/release calls balanced.
     id fsWindow = [self->_delegate->fullscreenWindow retain];
+
+    // RT-37093, RT-37399 Command-EQUALS and Command-DOT needs special casing on Mac
+    // as it is passed through as two calls to performKeyEquivalent, which in turn
+    // create extra KeyEvents.
+    //
+    NSString *chars = [theEvent charactersIgnoringModifiers];
+    if ([theEvent type] == NSKeyDown && [chars length] > 0)
+    {
+        unichar uch = [chars characterAtIndex:0];
+        if ([theEvent modifierFlags] & NSCommandKeyMask &&
+            (uch == com_sun_glass_events_KeyEvent_VK_PERIOD ||
+             uch == com_sun_glass_events_KeyEvent_VK_EQUALS))
+        {
+            GET_MAIN_JENV;
+            
+            jcharArray jKeyChars = GetJavaKeyChars(env, theEvent);
+            jint jModifiers = GetJavaModifiers(theEvent);
+            
+            (*env)->CallVoidMethod(env, self->_delegate->jView, jViewNotifyKey,
+                                   com_sun_glass_events_KeyEvent_PRESS,
+                                   uch, jKeyChars, jModifiers);
+            (*env)->CallVoidMethod(env, self->_delegate->jView, jViewNotifyKey,
+                                   com_sun_glass_events_KeyEvent_TYPED,
+                                   uch, jKeyChars, jModifiers);
+            (*env)->CallVoidMethod(env, self->_delegate->jView, jViewNotifyKey,
+                                   com_sun_glass_events_KeyEvent_RELEASE,
+                                   uch, jKeyChars, jModifiers);
+            (*env)->DeleteLocalRef(env, jKeyChars);
+            
+            GLASS_CHECK_EXCEPTION(env);
+            [fsWindow release];
+            return YES;
+        }
+    }
     [self->_delegate sendJavaKeyEvent:theEvent isDown:YES];
     [fsWindow release];
     return NO; // return NO to allow system-default processing of Cmd+Q, etc.
@@ -574,7 +609,7 @@
         [[layer getPainterOffscreen] unbind];
         [layer flush];
     }
-    LOG("end:%d", flush);
+    LOG("end");
 }
 
 - (void)drawRect:(NSRect)dirtyRect

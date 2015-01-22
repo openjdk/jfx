@@ -80,14 +80,14 @@ public class MultiTouchImageView extends StackPane {
             startScale = getScaleX();
         });
         addEventHandler(ZoomEvent.ZOOM, (ZoomEvent event) -> {
-            setScaleX(event.getTotalZoomFactor());
-            setScaleY(event.getTotalZoomFactor());
+            setScaleX(startScale * event.getTotalZoomFactor());
+            setScaleY(startScale * event.getTotalZoomFactor());
         });
         addEventHandler(RotateEvent.ROTATION_STARTED, (RotateEvent event) -> {
             startRotate = getRotate();
         });
         addEventHandler(RotateEvent.ROTATE, (RotateEvent event) -> {
-            setRotate(event.getTotalAngle());
+            setRotate(startRotate + event.getTotalAngle());
         });
 
     }

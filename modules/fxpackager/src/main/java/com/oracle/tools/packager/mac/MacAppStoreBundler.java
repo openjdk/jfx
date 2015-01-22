@@ -83,6 +83,14 @@ public class MacAppStoreBundler extends MacBaseInstallerBundler {
             params -> null,
             (s, p) -> new File(s));
 
+    public static final BundlerParamInfo<String> INSTALLER_SUFFIX = new StandardBundlerParam<> (
+            I18N.getString("param.installer-suffix.name"),
+            I18N.getString("param.installer-suffix.description"),
+            "mac.app-store.installerName.suffix",
+            String.class,
+            params -> "-MacAppStore",
+            (s, p) -> s);
+
     public MacAppStoreBundler() {
         super();
         baseResourceLoader = MacResources.class;
@@ -125,7 +133,9 @@ public class MacAppStoreBundler extends MacBaseInstallerBundler {
             ProcessBuilder pb;
 
             // create the final pkg file
-            File finalPKG = new File(outdir, INSTALLER_NAME.fetchFrom(p)+"-MacAppStore.pkg");
+            File finalPKG = new File(outdir, INSTALLER_NAME.fetchFrom(p)
+                    + INSTALLER_SUFFIX.fetchFrom(p)
+                    + ".pkg");
             outdir.mkdirs();
 
             pb = new ProcessBuilder("productbuild",
@@ -300,11 +310,11 @@ public class MacAppStoreBundler extends MacBaseInstallerBundler {
     public Collection<BundlerParamInfo<?>> getBundleParameters() {
         Collection<BundlerParamInfo<?>> results = new LinkedHashSet<>();
         results.addAll(getAppBundleParameters());
-        results.addAll(getPKGBundleParameters());
+        results.addAll(getMacAppStoreBundleParameters());
         return results;
     }
 
-    public Collection<BundlerParamInfo<?>> getPKGBundleParameters() {
+    public Collection<BundlerParamInfo<?>> getMacAppStoreBundleParameters() {
         Collection<BundlerParamInfo<?>> results = new LinkedHashSet<>();
 
         results.addAll(getAppBundleParameters());
@@ -312,6 +322,7 @@ public class MacAppStoreBundler extends MacBaseInstallerBundler {
         results.addAll(Arrays.asList(
                 MAC_APP_STORE_APP_SIGNING_KEY,
                 MAC_APP_STORE_ENTITLEMENTS,
+                INSTALLER_SUFFIX,
                 MAC_APP_STORE_PKG_SIGNING_KEY
         ));
 

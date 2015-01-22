@@ -934,13 +934,17 @@ public class TreeView<T> extends Control {
     }
     
     /**
-     * Returns the index position of the given TreeItem, taking into account the
-     * current state of each TreeItem (i.e. whether or not it is expanded).
+     * Returns the index position of the given TreeItem, assuming that it is
+     * currently accessible through the tree hierarchy (most notably, that all
+     * parent tree items are expanded). If a parent tree item is collapsed,
+     * the result is that this method will return -1 to indicate that the
+     * given tree item is not accessible in the tree.
      * 
      * @param item The TreeItem for which the index is sought.
      * @return An integer representing the location in the current TreeView of the
      *      first instance of the given TreeItem, or -1 if it is null or can not 
-     *      be found.
+     *      be found (for example, if a parent (all the way up to the root) is
+     *      collapsed).
      */
     public int getRow(TreeItem<T> item) {
         return TreeUtil.getRow(item, getRoot(), expandedItemCountDirty, isShowRoot());
@@ -1578,10 +1582,12 @@ public class TreeView<T> extends Control {
                         }
                     }
                 } else if (e.wasRemoved()) {
+                    row += e.getFrom() + 1;
+
                     for (int i = 0; i < e.getRemovedChildren().size(); i++) {
                         TreeItem<T> item = e.getRemovedChildren().get(i);
                         if (item != null && item.equals(getFocusedItem())) {
-                            focus(-1);
+                            focus(Math.max(0, getFocusedIndex() - 1));
                             return;
                         }
                     }

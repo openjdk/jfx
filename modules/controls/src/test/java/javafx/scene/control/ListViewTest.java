@@ -1459,4 +1459,64 @@ public class ListViewTest {
 
         sl.dispose();
     }
+
+    @Test public void test_rt_16068_firstElement_selectAndRemoveSameRow() {
+        // select and then remove the 'a' item, selection and focus should both
+        // stay at the first row, now 'b'
+        test_rt_16068(0, 0, 0);
+    }
+
+    @Test public void test_rt_16068_firstElement_selectRowAndRemoveLaterSibling() {
+        // select row 'a', and remove row 'c', selection and focus should not change
+        test_rt_16068(0, 2, 0);
+    }
+
+    @Test public void test_rt_16068_middleElement_selectAndRemoveSameRow() {
+        // select and then remove the 'b' item, selection and focus should both
+        // move up one row to the 'a' item
+        test_rt_16068(1, 1, 0);
+    }
+
+    @Test public void test_rt_16068_middleElement_selectRowAndRemoveLaterSibling() {
+        // select row 'b', and remove row 'c', selection and focus should not change
+        test_rt_16068(1, 2, 1);
+    }
+
+    @Test public void test_rt_16068_middleElement_selectRowAndRemoveEarlierSibling() {
+        // select row 'b', and remove row 'a', selection and focus should move up
+        // one row, remaining on 'b'
+        test_rt_16068(1, 0, 0);
+    }
+
+    @Test public void test_rt_16068_lastElement_selectAndRemoveSameRow() {
+        // select and then remove the 'd' item, selection and focus should both
+        // move up one row to the 'c' item
+        test_rt_16068(3, 3, 2);
+    }
+
+    @Test public void test_rt_16068_lastElement_selectRowAndRemoveEarlierSibling() {
+        // select row 'd', and remove row 'a', selection and focus should move up
+        // one row, remaining on 'd'
+        test_rt_16068(3, 0, 2);
+    }
+
+    private void test_rt_16068(int indexToSelect, int indexToRemove, int expectedIndex) {
+        ListView<String> stringListView = new ListView<>();
+        stringListView.getItems().addAll("a", "b", "c", "d");
+
+        MultipleSelectionModel<?> sm = stringListView.getSelectionModel();
+        FocusModel<?> fm = stringListView.getFocusModel();
+
+        sm.select(indexToSelect);
+        assertEquals(indexToSelect, sm.getSelectedIndex());
+        assertEquals(stringListView.getItems().get(indexToSelect), sm.getSelectedItem());
+        assertEquals(indexToSelect, fm.getFocusedIndex());
+        assertEquals(stringListView.getItems().get(indexToSelect), fm.getFocusedItem());
+
+        stringListView.getItems().remove(indexToRemove);
+        assertEquals(expectedIndex, sm.getSelectedIndex());
+        assertEquals(stringListView.getItems().get(expectedIndex), sm.getSelectedItem());
+        assertEquals(expectedIndex, fm.getFocusedIndex());
+        assertEquals(stringListView.getItems().get(expectedIndex), fm.getFocusedItem());
+    }
 }

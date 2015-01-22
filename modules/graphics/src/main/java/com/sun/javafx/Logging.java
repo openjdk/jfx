@@ -44,7 +44,7 @@ public class Logging {
      */
     public static final PlatformLogger getLayoutLogger() {
         if (layoutLogger == null) {
-            layoutLogger = PlatformLogger.getLogger("layout");
+            layoutLogger = PlatformLogger.getLogger("javafx.scene.layout");
         }
         return layoutLogger;
     }
@@ -61,7 +61,7 @@ public class Logging {
      */
     public static final PlatformLogger getFocusLogger() {
         if (focusLogger == null) {
-            focusLogger = PlatformLogger.getLogger("focus");
+            focusLogger = PlatformLogger.getLogger("javafx.scene.focus");
         }
         return focusLogger;
     }
@@ -78,7 +78,7 @@ public class Logging {
      */
     public static final PlatformLogger getInputLogger() {
         if (inputLogger == null) {
-            inputLogger = PlatformLogger.getLogger("input");
+            inputLogger = PlatformLogger.getLogger("javafx.scene.input");
         }
         return inputLogger;
     }
@@ -95,7 +95,7 @@ public class Logging {
      */
     public static final PlatformLogger getCSSLogger() {
         if (cssLogger == null) {
-            cssLogger = PlatformLogger.getLogger("css");
+            cssLogger = PlatformLogger.getLogger("javafx.css");
         }
         return cssLogger;
     }
@@ -129,7 +129,7 @@ public class Logging {
      */
     public static final PlatformLogger getAccessibilityLogger() {
         if (accessibilityLogger == null) {
-            accessibilityLogger = PlatformLogger.getLogger("accessibility");
+            accessibilityLogger = PlatformLogger.getLogger("javafx.accessibility");
         }
         return accessibilityLogger;
     }
