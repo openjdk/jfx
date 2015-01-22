@@ -901,8 +901,7 @@ public class TableView<S> extends Control {
                 @Override protected void invalidated() {
                     if (isInited) {
                         get().call(new ResizeFeatures(TableView.this, null, 0.0));
-                        refresh();
-                
+
                         if (oldPolicy != null) {
                             PseudoClass state = PseudoClass.getPseudoClass(oldPolicy.toString());
                             pseudoClassStateChanged(state, false);
@@ -1450,13 +1449,6 @@ public class TableView<S> extends Control {
         boolean allowed = getColumnResizePolicy().call(new ResizeFeatures<S>(TableView.this, column, delta));
         if (!allowed) return false;
 
-        // This fixes the issue where if the column width is reduced and the
-        // table width is also reduced, horizontal scrollbars will begin to
-        // appear at the old width. This forces the VirtualFlow.maxPrefBreadth
-        // value to be reset to -1 and subsequently recalculated. Of course
-        // ideally we'd just refreshView, but for the time-being no such function
-        // exists.
-        refresh();
         return true;
     }
 
@@ -1592,6 +1584,19 @@ public class TableView<S> extends Control {
             }
         }
     }
+
+    /**
+     * Calling {@code refresh()} forces the TableView control to recreate and
+     * repopulate the cells necessary to populate the visual bounds of the control.
+     * In other words, this forces the TableView to update what it is showing to
+     * the user. This is useful in cases where the underlying data source has
+     * changed in a way that is not observed by the TableView itself.
+     *
+     * @since JavaFX 8u60
+     */
+    public void refresh() {
+        getProperties().put(TableViewSkinBase.RECREATE, Boolean.TRUE);
+    }
     
     
 
@@ -1617,18 +1622,6 @@ public class TableView<S> extends Control {
         this.lastSortEventSupportInfo = null;
     }
 
-    /**
-     * Call this function to force the TableView to re-evaluate itself. This is
-     * useful when the underlying data model is provided by a TableModel, and
-     * you know that the data model has changed. This will force the TableView
-     * to go back to the dataProvider and get the row count, as well as update
-     * the view to ensure all sorting is still correct based on any changes to
-     * the data model.
-     */
-    private void refresh() {
-        getProperties().put(TableViewSkinBase.REFRESH, Boolean.TRUE);
-    }
-
 
     // --- Content width
     private void setContentWidth(double contentWidth) {
@@ -1640,7 +1633,6 @@ public class TableView<S> extends Control {
             // with a null TableColumn, which indicates to the resize policy function
             // that it shouldn't actually do anything specific to one column.
             getColumnResizePolicy().call(new ResizeFeatures<S>(TableView.this, null, 0.0));
-            refresh();
         }
     }
     
@@ -1659,7 +1651,6 @@ public class TableView<S> extends Control {
         // with a null TableColumn, which indicates to the resize policy function
         // that it shouldn't actually do anything specific to one column.
         getColumnResizePolicy().call(new ResizeFeatures<S>(TableView.this, null, 0.0));
-        refresh();
     }
 
     private void buildVisibleLeafColumns(List<TableColumn<S,?>> cols, List<TableColumn<S,?>> vlc) {

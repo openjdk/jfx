@@ -2877,4 +2877,65 @@ public class TreeViewTest {
         root.getChildren().add(0, expandedChild);
         assertEquals(2 * initialRowCount + 1, treeView.getExpandedItemCount());
     }
+
+    @Test public void test_rt_22599() {
+        TreeItem<RT22599_DataType> root = new TreeItem<>();
+        root.getChildren().setAll(
+                new TreeItem<>(new RT22599_DataType(1, "row1")),
+                new TreeItem<>(new RT22599_DataType(2, "row2")),
+                new TreeItem<>(new RT22599_DataType(3, "row3")));
+        root.setExpanded(true);
+
+        TreeView<RT22599_DataType> tree = new TreeView<>(root);
+        tree.setShowRoot(false);
+
+        StageLoader sl = new StageLoader(tree);
+
+        // testing initial state
+        assertNotNull(tree.getSkin());
+        assertEquals("row1", VirtualFlowTestUtils.getCell(tree, 0).getText());
+        assertEquals("row2", VirtualFlowTestUtils.getCell(tree, 1).getText());
+        assertEquals("row3", VirtualFlowTestUtils.getCell(tree, 2).getText());
+
+        // change row 0 (where "row1" currently resides), keeping same id.
+        // Because 'set' is called, the control should update to the new content
+        // without any user interaction
+        TreeItem<RT22599_DataType> data;
+        root.getChildren().set(0, data = new TreeItem<>(new RT22599_DataType(0, "row1a")));
+        Toolkit.getToolkit().firePulse();
+        assertEquals("row1a", VirtualFlowTestUtils.getCell(tree, 0).getText());
+
+        // change the row 0 (where we currently have "row1a") value directly.
+        // Because there is no associated property, this won't be observed, so
+        // the control should still show "row1a" rather than "row1b"
+        data.getValue().text = "row1b";
+        Toolkit.getToolkit().firePulse();
+        assertEquals("row1a", VirtualFlowTestUtils.getCell(tree, 0).getText());
+
+        // call refresh() to force a refresh of all visible cells
+        tree.refresh();
+        Toolkit.getToolkit().firePulse();
+        assertEquals("row1b", VirtualFlowTestUtils.getCell(tree, 0).getText());
+
+        sl.dispose();
+    }
+
+    private static class RT22599_DataType {
+        public int id = 0;
+        public String text = "";
+
+        public RT22599_DataType(int id, String text) {
+            this.id = id;
+            this.text = text;
+        }
+
+        @Override public String toString() {
+            return text;
+        }
+
+        @Override public boolean equals(Object obj) {
+            if (obj == null) return false;
+            return id == ((RT22599_DataType)obj).id;
+        }
+    }
 }

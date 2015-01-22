@@ -28,6 +28,7 @@ package javafx.scene.control;
 import com.sun.javafx.collections.NonIterableChange;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.behavior.TreeCellBehavior;
+import com.sun.javafx.scene.control.skin.ListViewSkin;
 import com.sun.javafx.scene.control.skin.TreeViewSkin;
 
 import javafx.application.Platform;
@@ -1015,6 +1016,21 @@ public class TreeView<T> extends Control {
     @Override protected Skin<?> createDefaultSkin() {
         return new TreeViewSkin<T>(this);
     }
+
+    /**
+     * Calling {@code refresh()} forces the TreeView control to recreate and
+     * repopulate the cells necessary to populate the visual bounds of the control.
+     * In other words, this forces the TreeView to update what it is showing to
+     * the user. This is useful in cases where the underlying data source has
+     * changed in a way that is not observed by the TreeView itself.
+     *
+     * @since JavaFX 8u60
+     */
+    public void refresh() {
+        getProperties().put(TreeViewSkin.RECREATE, Boolean.TRUE);
+    }
+
+
     
     /***************************************************************************
      *                                                                         *

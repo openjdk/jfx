@@ -29,7 +29,9 @@ import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.WeakInvalidationListener;
 import javafx.collections.FXCollections;
+import javafx.collections.MapChangeListener;
 import javafx.collections.ObservableList;
+import javafx.collections.ObservableMap;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.event.WeakEventHandler;
@@ -50,6 +52,8 @@ import java.util.List;
 import com.sun.javafx.scene.control.behavior.TreeViewBehavior;
 
 public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewBehavior<T>, TreeCell<T>> {
+
+    public static final String RECREATE = "treeRecreateKey";
 
     // RT-34744 : IS_PANNABLE will be false unless
     // com.sun.javafx.scene.control.skin.TreeViewSkin.pannable
@@ -90,6 +94,10 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
         };
         flow.getVbar().addEventFilter(MouseEvent.MOUSE_PRESSED, ml);
         flow.getHbar().addEventFilter(MouseEvent.MOUSE_PRESSED, ml);
+
+        final ObservableMap<Object, Object> properties = treeView.getProperties();
+        properties.remove(RECREATE);
+        properties.addListener(propertiesMapListener);
 
         // init the behavior 'closures'
         getBehavior().setOnFocusPreviousRow(() -> { onFocusPreviousCell(); });
@@ -133,6 +141,15 @@ public class TreeViewSkin<T> extends VirtualContainerBase<TreeView<T>, TreeViewB
 //    private boolean needItemCountUpdate = false;
     private boolean needCellsRebuilt = true;
     private boolean needCellsReconfigured = false;
+
+    private MapChangeListener<Object, Object> propertiesMapListener = c -> {
+        if (! c.wasAdded()) return;
+        if (RECREATE.equals(c.getKey())) {
+            needCellsRebuilt = true;
+            getSkinnable().requestLayout();
+            getSkinnable().getProperties().remove(RECREATE);
+        }
+    };
     
     private EventHandler<TreeModificationEvent<T>> rootListener = e -> {
         if (e.wasAdded() && e.wasRemoved() && e.getAddedSize() == e.getRemovedSize()) {
