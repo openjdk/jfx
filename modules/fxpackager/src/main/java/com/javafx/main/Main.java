@@ -36,6 +36,7 @@ import java.net.URLClassLoader;
 import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.jar.Attributes;
@@ -44,7 +45,6 @@ import java.util.jar.Manifest;
 import javax.swing.JApplet;
 import javax.swing.JFrame;
 import javax.swing.SwingUtilities;
-import sun.misc.BASE64Decoder;
 
 /**
  * This class loads com.sun.javafx.application.LauncherImpl and calls the
@@ -493,9 +493,7 @@ public class Main {
     }
 
     private static String decodeBase64(String inp) throws IOException {
-        BASE64Decoder decoder = new BASE64Decoder();
-        byte[] decodedBytes = decoder.decodeBuffer(inp);
-        return new String(decodedBytes);
+        return new String(Base64.getDecoder().decode(inp));
     }
 
     private static String[] getAppArguments(Attributes attrs) {

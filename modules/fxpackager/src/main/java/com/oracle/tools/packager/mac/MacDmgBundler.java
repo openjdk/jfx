@@ -26,7 +26,6 @@ package com.oracle.tools.packager.mac;
 
 import com.oracle.tools.packager.*;
 import com.oracle.tools.packager.IOUtils;
-import sun.misc.BASE64Encoder;
 
 import java.io.*;
 import java.text.MessageFormat;
@@ -193,8 +192,7 @@ public class MacDmgBundler extends MacBaseInstallerBundler {
                     LICENSE_FILE.fetchFrom(params).get(0));
 
             byte[] licenseContentOriginal = IOUtils.readFully(licFile);
-            BASE64Encoder encoder = new BASE64Encoder();
-            String licenseInBase64 = encoder.encode(licenseContentOriginal);
+            String licenseInBase64 = Base64.getEncoder().encodeToString(licenseContentOriginal);
 
             Map<String, String> data = new HashMap<>();
             data.put("APPLICATION_LICENSE_TEXT", licenseInBase64);
