@@ -206,6 +206,11 @@ final class LensView extends View {
         notifyMenu(x, y, xAbs, yAbs, isKeyboardTrigger);
     }
 
+    @Override
+    protected int _getNativeFrameBuffer(long ptr) {
+        return 0;
+    }
+
     /**
      * Native methods
      */

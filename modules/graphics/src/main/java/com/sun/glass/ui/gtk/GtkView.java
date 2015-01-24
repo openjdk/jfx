@@ -52,6 +52,11 @@ final class GtkView extends View {
     }
 
     @Override
+    protected int _getNativeFrameBuffer(long ptr) {
+        return 0;
+    }
+
+    @Override
     protected native long _create(Map caps);
 
     @Override

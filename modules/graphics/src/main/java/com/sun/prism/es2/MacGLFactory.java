@@ -63,13 +63,13 @@ class MacGLFactory extends GLFactory {
     @Override
     GLContext createGLContext(GLDrawable drawable, GLPixelFormat pixelFormat,
         GLContext shareCtx, boolean vSyncRequest) {
+        GLContext glassCtx = new MacGLContext(drawable, pixelFormat, shareCtx, vSyncRequest);
         GLContext prismCtx = new MacGLContext(drawable, pixelFormat, shareCtx, vSyncRequest);
 
-        // JIRA: RT-21739
-        // TODO: This is a temporary mechanism to work well with Glass on Mac due
-        // to the CALayer work. Need to be removed in the early future for 3.0
+        // NOTE: glassCtx isn't the prism rendering context. This glassCtx is created
+        // and passed to Glass; prism never needs to switch or access it.
         HashMap devDetails = (HashMap) ES2Pipeline.getInstance().getDeviceDetails();
-        updateDeviceDetails(devDetails, prismCtx);
+        devDetails.put("contextPtr", glassCtx.getNativeHandle());
 
         return prismCtx;
     }
@@ -128,12 +128,5 @@ class MacGLFactory extends GLFactory {
     @Override
     void updateDeviceDetails(HashMap deviceDetails) {
            deviceDetails.put("shareContextPtr", getShareContext().getNativeHandle());
-    }
-
-    // JIRA: RT-21739
-    // TODO: This is a temporary mechanism to work well with Glass on Mac due
-    // to the CALayer work. Need to be removed in the early future for 3.0
-    private void updateDeviceDetails(HashMap deviceDetails, GLContext glContext) {
-           deviceDetails.put("contextPtr", glContext.getNativeHandle());
     }
 }

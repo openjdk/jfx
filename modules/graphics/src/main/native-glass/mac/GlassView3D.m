@@ -233,7 +233,6 @@
         {
             glDeleteTextures(1, &self->_texture);
         }
-        [[layer getPainterOffscreen] unbind];
     }
     
     [[self layer] release];
@@ -606,7 +605,6 @@
     if (self->_drawCounter == 0)
     {
         GlassLayer3D *layer = (GlassLayer3D*)[self layer];
-        [[layer getPainterOffscreen] unbind];
         [layer flush];
     }
     LOG("end");

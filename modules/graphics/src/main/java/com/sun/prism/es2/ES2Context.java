@@ -122,32 +122,15 @@ class ES2Context extends BaseShaderContext {
         return ES2PhongShader.getShader(meshView, this);
     }
 
-    // JIRA: RT-21738
-    // TODO: If we can't resolve this platform specific treatment code
-    // by 3.0, we need to refactor it to platform specific project
-    private int savedFBO = 0;
     void makeCurrent(GLDrawable drawable) {
         if (drawable == null) {
             drawable = dummyGLDrawable;
         }
-        if (PlatformUtil.isMac() || PlatformUtil.isIOS()) {
-            if (drawable != currentDrawable) {
-                if (drawable == dummyGLDrawable) {
-                    // Need to restore FBO to Glass' boundFBO
-                    glContext.bindFBO(savedFBO);
-                } else {
-                    savedFBO = glContext.getBoundFBO();
-                    glContext.makeCurrent(drawable);
-                }
-                currentDrawable = drawable;
-            }
-        } else { // Linux and Windows
-            if (drawable != currentDrawable) {
-                glContext.makeCurrent(drawable);
-                // Need to restore FBO to on screen framebuffer
-                glContext.bindFBO(0);
-                currentDrawable = drawable;
-            }
+        if (drawable != currentDrawable) {
+            glContext.makeCurrent(drawable);
+            // Need to restore FBO to on screen framebuffer
+            glContext.bindFBO(0);
+            currentDrawable = drawable;
         }
     }
 

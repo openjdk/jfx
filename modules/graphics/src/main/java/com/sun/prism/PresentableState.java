@@ -44,6 +44,7 @@ public class PresentableState {
     protected View view;
     
     // Captured state
+    protected int nativeFrameBuffer;
     protected int windowX, windowY;
     protected float windowAlpha;
     protected long nativeWindowHandle;
@@ -230,18 +231,30 @@ public class PresentableState {
     }
 
     /**
-     * Locks the underlying view for rendering
+     * @return native native frame buffer
      *
      * May be called on any thread.
      */
+    public int getNativeFrameBuffer() {
+        return nativeFrameBuffer;
+    }
+
+    /**
+     * Locks the underlying view for rendering
+     *
+     * Must be called on Prism renderer thread.
+     */
     public void lock() {
-        if (view != null) view.lock();
+        if (view != null) {
+            view.lock();
+            nativeFrameBuffer = view.getNativeFrameBuffer();
+        }
     }
 
     /**
      * Unlocks the underlying view after rendering
      *
-     * May be called on any thread.
+     * Must be called on Prism renderer thread.
      */
     public void unlock() {
         if (view != null) view.unlock();
