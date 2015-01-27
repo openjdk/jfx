@@ -25,6 +25,7 @@
 
 package com.sun.javafx.sg.prism;
 
+import com.sun.glass.ui.Screen;
 import javafx.geometry.VPos;
 import javafx.scene.text.Font;
 import java.nio.IntBuffer;
@@ -311,6 +312,7 @@ public class NGCanvas extends NGNode {
 
     private GrowableDataBuffer thebuf;
 
+    private final float highestPixelScale;
     private int tw, th;
     private int cw, ch;
     private RenderBuf cv;
@@ -348,6 +350,12 @@ public class NGCanvas extends NGNode {
     private static RectBounds TEMP_RECTBOUNDS = new RectBounds();
 
     public NGCanvas() {
+        float hPS = 1.0f;
+        for (Screen s : Screen.getScreens()) {
+            hPS = Math.max(s.getScale(), hPS);
+        }
+        highestPixelScale = hPS;
+
         cv = new RenderBuf(InitType.PRESERVE_UPPER_LEFT);
         temp = new RenderBuf(InitType.CLEAR);
         clip = new RenderBuf(InitType.FILL_WHITE);
