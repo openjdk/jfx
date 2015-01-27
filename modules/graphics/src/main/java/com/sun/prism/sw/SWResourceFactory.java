@@ -26,6 +26,7 @@
 package com.sun.prism.sw;
 
 import com.sun.glass.ui.Screen;
+import com.sun.prism.Image;
 import com.sun.prism.MediaFrame;
 import com.sun.prism.Mesh;
 import com.sun.prism.MeshView;
@@ -45,10 +46,16 @@ import com.sun.prism.impl.VertexBuffer;
 import com.sun.prism.impl.shape.BasicRoundRectRep;
 import com.sun.prism.impl.shape.BasicShapeRep;
 import com.sun.prism.shape.ShapeRep;
+import java.util.Map;
+import java.util.WeakHashMap;
 
 final class SWResourceFactory
     extends BaseResourceFactory
         implements ResourceFactory {
+
+    private static final Map<Image,Texture> clampTexCache = new WeakHashMap<>();
+    private static final Map<Image,Texture> repeatTexCache = new WeakHashMap<>();
+    private static final Map<Image,Texture> mipmapTexCache = new WeakHashMap<>();
 
     private static final ShapeRep theRep = new BasicShapeRep();
     private static final ShapeRep rectRep = new BasicRoundRectRep();
@@ -57,6 +64,7 @@ final class SWResourceFactory
     private final SWContext context;
 
     public SWResourceFactory(Screen screen) {
+        super(clampTexCache, repeatTexCache, mipmapTexCache);
         this.screen = screen;
         this.context = new SWContext(this);
     }
