@@ -66,12 +66,12 @@ public class EditorPlatform {
     /**
      * This URL is where you go when the user takes Scene Builder Help action (shortcut F1)
      */
-    public static final String DOCUMENTATION_URL = "http://docs.oracle.com/javafx/index.html"; //NOI18N
+    public static final String DOCUMENTATION_URL = "https://docs.oracle.com/javafx/index.html"; //NOI18N
 
     /**
      * Javadoc home (for Inspector and CSS Analyzer properties)
      */
-    public final static String JAVADOC_HOME = "http://docs.oracle.com/javase/8/javafx/api/"; //NOI18N
+    public final static String JAVADOC_HOME = "https://docs.oracle.com/javase/8/javafx/api/"; //NOI18N
     
 
     /**

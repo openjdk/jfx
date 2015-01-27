@@ -351,13 +351,13 @@ public final class Media {
      * <p>Constraints:
      * <ul>
      * <li>The supplied URI must conform to RFC-2396 as required by
-     * <A href="http://download.oracle.com/javase/7/docs/api/java/net/URI.html">java.net.URI</A>.</li>
+     * <A href="https://docs.oracle.com/javase/8/docs/api/java/net/URI.html">java.net.URI</A>.</li>
      * <li>Only HTTP, FILE, and JAR URIs are supported.</li>
      * </ul>
      *
-     * <p>See <A href="http://download.oracle.com/javase/7/docs/api/java/net/URI.html">java.net.URI</A>
+     * <p>See <A href="https://docs.oracle.com/javase/8/docs/api/java/net/URI.html">java.net.URI</A>
      * for more information about URI formatting in general.
-     * JAR URL syntax is specified in <a href="http://download.oracle.com/javase/7/docs/api/java/net/JarURLConnection.html">java.net.JarURLConnection</A>.
+     * JAR URL syntax is specified in <a href="https://docs.oracle.com/javase/8/docs/api/java/net/JarURLConnection.html">java.net.JarURLConnection</A>.
      *
      * @param source The URI of the source media.
      * @throws NullPointerException if the URI string is <code>null</code>.

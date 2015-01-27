@@ -275,7 +275,7 @@ defineProperty("JAVA", cygpath("$JDK_HOME/bin/java${IS_WINDOWS ? '.exe' : ''}"))
 defineProperty("JAVAC", cygpath("$JDK_HOME/bin/javac${IS_WINDOWS ? '.exe' : ''}"))
 defineProperty("JAVAH", cygpath("$JDK_HOME/bin/javah${IS_WINDOWS ? '.exe' : ''}"))
 defineProperty("JAVADOC", cygpath("$JDK_HOME/bin/javadoc${IS_WINDOWS ? '.exe' : ''}"))
-defineProperty("JDK_DOCS", "http://docs.oracle.com/javase/8/docs/api/")
+defineProperty("JDK_DOCS", "https://docs.oracle.com/javase/8/docs/api/")
 
 defineProperty("javaRuntimeVersion", System.getProperty("java.runtime.version"))
 defineProperty("javaVersion", javaRuntimeVersion.split("-")[0])

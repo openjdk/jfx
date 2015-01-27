@@ -160,7 +160,7 @@
 # which should point to the JDK API documentation. You can override which JDK to point to here.
 # This follows the rules specified in the JavaDoc tool documentation. Examples are below.
 
-#JDK_DOCS = http://download.oracle.com/javase/7/docs/api
+#JDK_DOCS = https://docs.oracle.com/javase/8/docs/api
 #JDK_DOCS = file:///Library/Java/JavaVirtualMachines/jdk1.8.0/Content/Home/docs/api
 #JDK_DOCS = relative/path/to/docs/api
 
@@ -182,7 +182,7 @@
 #USE_DEPEND = false
 
 # Specify compiler LINT arguments. These values are defined by the javac compiler. You can
-# study the list of available options here http://docs.oracle.com/javase/7/docs/technotes/tools/solaris/javac.html
+# study the list of available options here https://docs.oracle.com/javase/7/docs/technotes/tools/solaris/javac.html
 # If LINT is empty, then no warning are generated. Otherwise, LINT should be a space or comma separated
 # list of names. If the name is prefixed with a '-' then that warning is removed (not used). For example:
 #

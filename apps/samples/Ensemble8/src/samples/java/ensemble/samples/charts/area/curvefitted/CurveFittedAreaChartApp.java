@@ -46,7 +46,7 @@ import javafx.stage.Stage;
  * @see javafx.scene.chart.AreaChart
  * @see javafx.scene.chart.NumberAxis
  * @related /Charts/Area/Area Chart
- * @docUrl http://docs.oracle.com/javafx/2/charts/jfxpub-charts.htm Using JavaFX Charts Tutorial
+ * @docUrl https://docs.oracle.com/javafx/2/charts/jfxpub-charts.htm Using JavaFX Charts Tutorial
  * @playground chart.data
  * @playground - (name="xAxis")
  * @playground xAxis.autoRanging

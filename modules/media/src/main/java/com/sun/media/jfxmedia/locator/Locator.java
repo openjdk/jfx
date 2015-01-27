@@ -192,7 +192,7 @@ public class Locator {
      * manipulation in order to be used and this procedure fails to produce a
      * usable URI.
      * @throws IllegalArgumentException if the URI is a Jar URL as described in
-     * {@link JarURLConnection http://download.oracle.com/javase/6/docs/api/java/net/JarURLConnection.html},
+     * {@link JarURLConnection https://docs.oracle.com/javase/8/docs/api/java/net/JarURLConnection.html},
      * and the scheme of the URL after removing the leading four characters is
      * <code>null</code>.
      * @throws UnsupportedOperationException if the URI's protocol is

@@ -60,7 +60,7 @@ environment:
 **To find the supported versions of operating system, Java platform, JavaFX Platform
 and NetBeans IDE for a particular JavaFX Scene Builder release, see the release 
 documentation page at
-http://docs.oracle.com/javafx/release-documentation.html 
+https://docs.oracle.com/javafx/release-documentation.html 
 
 To get the latest release of JavaFX Scene Builder, go to 
 http://www.oracle.com/technetwork/java/javafx/downloads/index.html

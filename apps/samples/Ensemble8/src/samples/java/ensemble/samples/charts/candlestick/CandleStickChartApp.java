@@ -48,7 +48,7 @@ import javafx.stage.Stage;
  * @preview preview.png
  * @see javafx.scene.chart.NumberAxis
  * @see javafx.scene.chart.XYChart
- * @docUrl http://docs.oracle.com/javafx/2/charts/jfxpub-charts.htm Using JavaFX Charts Tutorial
+ * @docUrl https://docs.oracle.com/javafx/2/charts/jfxpub-charts.htm Using JavaFX Charts Tutorial
  * @related /Charts/Scatter/Scatter Chart
  * @related /Charts/Scatter/Advanced Scatter Chart
  * @highlight

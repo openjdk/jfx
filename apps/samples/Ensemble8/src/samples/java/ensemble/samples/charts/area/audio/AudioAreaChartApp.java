@@ -56,7 +56,7 @@ import javafx.stage.Stage;
  * @see javafx.scene.media.AudioSpectrumListener
  * @see javafx.scene.media.Media
  * @see javafx.scene.media.MediaPlayer
- * @docUrl http://docs.oracle.com/javafx/2/charts/jfxpub-charts.htm Using JavaFX Charts Tutorial
+ * @docUrl https://docs.oracle.com/javafx/2/charts/jfxpub-charts.htm Using JavaFX Charts Tutorial
  * @conditionalFeatures MEDIA
  */
 public class AudioAreaChartApp extends Application {

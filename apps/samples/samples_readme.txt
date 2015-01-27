@@ -83,7 +83,7 @@ What are the other ways I can package the samples?
 
 You can also package any of the samples as an applet, JNLP, or native bundle 
 that includes an installer and a copy of the JRE for execution in an environment
-that does not have JavaFX installed. See http://docs.oracle.com/javafx for 
+that does not have JavaFX installed. See https://docs.oracle.com/javafx for 
 additional information about deploying JavaFX application.
 
 

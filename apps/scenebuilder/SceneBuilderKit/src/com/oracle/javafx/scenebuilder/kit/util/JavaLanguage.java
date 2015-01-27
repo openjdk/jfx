@@ -50,7 +50,7 @@ public class JavaLanguage {
     public static boolean isIdentifier(String value) {
         /*
          * See Java JavaLanguage Specification, section 3.8: Identifiers
-         * http://docs.oracle.com/javase/specs/jls/se7/html/jls-3.html#jls-3.8
+         * https://docs.oracle.com/javase/specs/jls/se7/html/jls-3.html#jls-3.8
          */
         return isIdentifierChars(value)
                 && ! isKeyword(value)

@@ -139,11 +139,11 @@ public class BuildEnsembleSearchIndex {
             String foundUrl = matcher.group(1);
 //            System.out.println("foundUrl = " + foundUrl);
             final String docPageUrl = (foundUrl.startsWith("http") ? foundUrl : baseUrl + foundUrl);
-            if ("http://docs.oracle.com/javafx/2/api/javafx/scene/doc-files/cssref.html".equals(docPageUrl) || 
-                    "http://docs.oracle.com/javafx/2/api/index.html".equals(docPageUrl) ||
+            if ("https://docs.oracle.com/javafx/2/api/javafx/scene/doc-files/cssref.html".equals(docPageUrl) || 
+                    "https://docs.oracle.com/javafx/2/api/index.html".equals(docPageUrl) ||
                     "http://www.oracle.com/technetwork/java/javafx/downloads/supportedconfigurations-1506746.html".equals(docPageUrl) ||
                     "http://www.oracle.com/technetwork/java/javase/downloads/".equals(docPageUrl) ||
-                    "http://docs.oracle.com/javafx/2/api/javafx/fxml/doc-files/introduction_to_fxml.html".equals(docPageUrl)) {
+                    "https://docs.oracle.com/javafx/2/api/javafx/fxml/doc-files/introduction_to_fxml.html".equals(docPageUrl)) {
                 continue;
             }
             System.out.println(docPageUrl);

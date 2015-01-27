@@ -50,7 +50,7 @@ import javafx.stage.Stage;
  * @see javafx.scene.chart.CategoryAxis
  * @see javafx.scene.chart.LineChart
  * @see javafx.scene.chart.NumberAxis
- * @docUrl http://docs.oracle.com/javafx/2/charts/jfxpub-charts.htm Using JavaFX Charts Tutorial
+ * @docUrl https://docs.oracle.com/javafx/2/charts/jfxpub-charts.htm Using JavaFX Charts Tutorial
  * @playground chart.data
  * @playground - (name="xAxis")
  * @playground xAxis.autoRanging
