@@ -685,6 +685,11 @@ public final class QuantumToolkit extends Toolkit {
     }
 
     @Override
+    public ScreenConfigurationAccessor getScreenConfigurationAccessor() {
+        return screenAccessor;
+    }
+
+    @Override
     public PerformanceTracker getPerformanceTracker() {
         return perfTracker;
     }

@@ -48,6 +48,7 @@ import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.NoninvertibleTransformException;
 import com.sun.javafx.text.PrismTextLayout;
 import com.sun.javafx.tk.RenderJob;
+import com.sun.javafx.tk.ScreenConfigurationAccessor;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.prism.BasicStroke;
 import com.sun.prism.CompositeMode;
@@ -350,9 +351,11 @@ public class NGCanvas extends NGNode {
     private static RectBounds TEMP_RECTBOUNDS = new RectBounds();
 
     public NGCanvas() {
+        Toolkit tk = Toolkit.getToolkit();
+        ScreenConfigurationAccessor screenAccessor = tk.getScreenConfigurationAccessor();
         float hPS = 1.0f;
-        for (Screen s : Screen.getScreens()) {
-            hPS = Math.max(s.getScale(), hPS);
+        for (Object screen : tk.getScreens()) {
+            hPS = Math.max(screenAccessor.getScale(screen), hPS);
         }
         highestPixelScale = hPS;
 
