@@ -891,10 +891,10 @@ public class DialogPane extends Pane {
                 x += graphicPrefWidth;
             }
         } else {
-            header.resizeRelocate(leftPadding, topPadding, w - rightPadding, headerPrefHeight);
+            header.resizeRelocate(x, y, w - (leftPadding + rightPadding), headerPrefHeight);
             y += headerPrefHeight;
         }
-        
+
         content.resizeRelocate(x, y, availableContentWidth, contentAreaHeight);
         y += hasHeader ? contentAreaHeight : contentAndGraphicHeight;
         
@@ -904,7 +904,10 @@ public class DialogPane extends Pane {
         }
         
         if (buttonBar != null) {
-            buttonBar.resizeRelocate(leftPadding, (h - buttonBarPrefHeight - bottomPadding), w - rightPadding, buttonBarPrefHeight);
+            buttonBar.resizeRelocate(leftPadding,
+                                     y,
+                                     w - (leftPadding + rightPadding),
+                                     buttonBarPrefHeight);
         }
     }
 
