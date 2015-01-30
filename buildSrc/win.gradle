@@ -31,7 +31,6 @@ if (!WIN.canBuild) return;
 WIN.compileSwing = true;
 WIN.compileSWT = true;
 WIN.compileFXPackager = true;
-WIN.compileDesignTime = true;
 
 WIN.includeNull3d = true
 

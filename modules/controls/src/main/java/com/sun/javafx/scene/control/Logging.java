@@ -44,7 +44,7 @@ public class Logging {
      */
     public static final PlatformLogger getControlsLogger() {
         if (controlsLogger == null) {
-            controlsLogger = PlatformLogger.getLogger("controls");
+            controlsLogger = PlatformLogger.getLogger("javafx.scene.control");
         }
         return controlsLogger;
     }

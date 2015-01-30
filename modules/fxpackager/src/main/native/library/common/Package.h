@@ -80,7 +80,7 @@ private:
     PackageBootFields* FBootFields;
     TString FJVMUserArgsConfigFileName;
     
-    bool FDebugging;
+    DebugState FDebugging;
 
     //PropertyFile* FJVMUserConfig; // Contains JVM user overrides
     TOrderedMap FJVMUserArgsOverrides;
@@ -93,6 +93,7 @@ private:
     void Initialize();
     void MergeJVMDefaultsWithOverrides();
     TString GetMainJar();
+    void SaveJVMUserArgOverrides(TOrderedMap Data);
     
 public:
     static Package& GetInstance();
@@ -129,6 +130,8 @@ public:
     
     TPlatformNumber GetMemorySize();
     PackageBootFields::MemoryState GetMemoryState();
+    
+    DebugState Debugging();
 };
 
 #endif //PACKAGE_H

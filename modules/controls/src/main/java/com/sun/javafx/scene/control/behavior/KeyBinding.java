@@ -145,9 +145,9 @@ public class KeyBinding {
         int s = 0;
         if (code != null && code != event.getCode()) return 0; else s = 1;
         if (!shift.equals(event.isShiftDown())) return 0; else if (shift != ANY) s++;
-        if (!ctrl.equals(event.isControlDown())) return 0; else if (shift != ANY) s++;
-        if (!alt.equals(event.isAltDown())) return 0; else if (shift != ANY) s++;
-        if (!meta.equals(event.isMetaDown())) return 0; else if (shift != ANY) s++;
+        if (!ctrl.equals(event.isControlDown())) return 0; else if (ctrl != ANY) s++;
+        if (!alt.equals(event.isAltDown())) return 0; else if (alt != ANY) s++;
+        if (!meta.equals(event.isMetaDown())) return 0; else if (meta != ANY) s++;
         if (eventType != null && eventType != event.getEventType()) return 0; else s++;
         // We can now trivially accept it
         return s;

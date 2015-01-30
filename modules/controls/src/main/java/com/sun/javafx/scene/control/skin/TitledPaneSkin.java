@@ -444,7 +444,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane, TitledPaneBehavi
             double height = getHeight() - (top + bottom);
             double arrowWidth = snapSize(arrowRegion.prefWidth(-1));
             double arrowHeight = snapSize(arrowRegion.prefHeight(-1));
-            double labelWidth = snapSize(labelPrefWidth(-1));
+            double labelWidth = snapSize(Math.min(width - arrowWidth / 2.0, labelPrefWidth(-1)));
             double labelHeight = snapSize(labelPrefHeight(-1));
 
             double x = left + arrowWidth + Utils.computeXOffset(width - arrowWidth, labelWidth, hpos);

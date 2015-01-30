@@ -26,6 +26,7 @@
 package com.sun.prism.j2d;
 
 import com.sun.glass.ui.Screen;
+import com.sun.prism.Image;
 import com.sun.prism.MediaFrame;
 import com.sun.prism.Mesh;
 import com.sun.prism.MeshView;
@@ -42,12 +43,19 @@ import com.sun.prism.impl.TextureResourcePool;
 import com.sun.prism.impl.VertexBuffer;
 import com.sun.prism.impl.shape.BasicShapeRep;
 import com.sun.prism.shape.ShapeRep;
+import java.util.Map;
+import java.util.WeakHashMap;
 
 class J2DResourceFactory extends BaseResourceFactory
 {
+    private static final Map<Image,Texture> clampTexCache = new WeakHashMap<>();
+    private static final Map<Image,Texture> repeatTexCache = new WeakHashMap<>();
+    private static final Map<Image,Texture> mipmapTexCache = new WeakHashMap<>();
+
     private Screen screen;
 
     J2DResourceFactory(Screen screen) {
+        super(clampTexCache, repeatTexCache, mipmapTexCache);
         this.screen = screen;
     }
 

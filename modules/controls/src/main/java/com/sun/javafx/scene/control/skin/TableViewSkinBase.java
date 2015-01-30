@@ -34,6 +34,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.MapChangeListener;
 import javafx.collections.ObservableList;
+import javafx.collections.ObservableMap;
 import javafx.geometry.Insets;
 import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleAttribute;
@@ -57,6 +58,7 @@ import javafx.geometry.VPos;
 
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.Map;
 
 /**
  *
@@ -202,7 +204,10 @@ public abstract class TableViewSkinBase<M, S, C extends Control, B extends Behav
         updateTableItems(null, itemsProperty().get());
         itemsProperty().addListener(weakItemsChangeListener);
 
-        control.getProperties().addListener(propertiesMapListener);
+        final ObservableMap<Object, Object> properties = control.getProperties();
+        properties.remove(REFRESH);
+        properties.remove(RECREATE);
+        properties.addListener(propertiesMapListener);
         
         control.addEventHandler(ScrollToEvent.<TC>scrollToColumn(), event -> {
             scrollHorizontally(event.getScrollTarget());

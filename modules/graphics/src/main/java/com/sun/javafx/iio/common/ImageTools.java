@@ -252,7 +252,8 @@ public class ImageTools {
             ImageMetadata imd = new ImageMetadata(metadata.gamma,
                     metadata.blackIsZero, null,
                     metadata.backgroundColor, null,
-                    metadata.delayTime, metadata.imageWidth, metadata.imageHeight,
+                    metadata.delayTime, metadata.loopCount,
+                    metadata.imageWidth, metadata.imageHeight,
                     metadata.imageLeftPosition, metadata.imageTopPosition,
                     metadata.disposalMethod);
             retFrame = new ImageFrame(convertedType, newBuf, width, height,

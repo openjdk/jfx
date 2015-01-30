@@ -49,6 +49,11 @@ final class SWTView extends View {
     //TODO - implement IME
     @Override protected void _enableInputMethodEvents(long ptr, boolean enable) { }
 
+    @Override
+    protected int _getNativeFrameBuffer(long ptr) {
+        return 0;
+    }
+
     @Override protected long _create(Map caps) {
         if (hiddenShell == null) {
             hiddenShell = new Shell(Display.getDefault(), SWT.SHELL_TRIM);

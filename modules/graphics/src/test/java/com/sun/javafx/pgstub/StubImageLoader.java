@@ -84,6 +84,11 @@ public final class StubImageLoader implements ImageLoader {
     }
 
     @Override
+    public int getLoopCount() {
+        return imageInfo.getLoopCount();
+    }
+
+    @Override
     public int getWidth() {
         return imageInfo.getWidth();
     }

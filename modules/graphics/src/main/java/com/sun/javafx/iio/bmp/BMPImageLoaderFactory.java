@@ -482,7 +482,7 @@ final class BMPImageLoader extends ImageLoaderImpl {
 
         // Pass image metadata to any listeners.
         ImageMetadata imageMetadata = new ImageMetadata(null, Boolean.TRUE,
-            null, null, null, null, bih.biWidth, hght,
+            null, null, null, null, null, bih.biWidth, hght,
             null, null, null);
         updateImageMetadata(imageMetadata);
 

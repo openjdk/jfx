@@ -662,6 +662,8 @@ public abstract class Toolkit {
 
     public abstract List<?> getScreens();
 
+    public abstract ScreenConfigurationAccessor getScreenConfigurationAccessor();
+
     public abstract void registerDragGestureListener(TKScene s, Set<TransferMode> tm, TKDragGestureListener l);
 
     /**

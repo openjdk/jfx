@@ -653,6 +653,38 @@ public class TreeTableView<S> extends Control {
     
     private final ListChangeListener<TreeTableColumn<S,?>> columnsObserver = new ListChangeListener<TreeTableColumn<S,?>>() {
         @Override public void onChanged(ListChangeListener.Change<? extends TreeTableColumn<S,?>> c) {
+            final List<TreeTableColumn<S,?>> columns = getColumns();
+
+            // Fix for RT-39822 - don't allow the same column to be installed twice
+            while (c.next()) {
+                if (c.wasAdded()) {
+                    List<TreeTableColumn<S,?>> duplicates = new ArrayList<>();
+                    for (TreeTableColumn<S,?> addedColumn : c.getAddedSubList()) {
+                        if (addedColumn == null) continue;
+
+                        int count = 0;
+                        for (TreeTableColumn<S,?> column : columns) {
+                            if (addedColumn == column) {
+                                count++;
+                            }
+                        }
+
+                        if (count > 1) {
+                            duplicates.add(addedColumn);
+                        }
+                    }
+
+                    if (!duplicates.isEmpty()) {
+                        String titleList = "";
+                        for (TreeTableColumn<S,?> dupe : duplicates) {
+                            titleList += "'" + dupe.getText() + "', ";
+                        }
+                        throw new IllegalStateException("Duplicate TreeTableColumns detected in TreeTableView columns list with titles " + titleList);
+                    }
+                }
+            }
+            c.reset();
+
             // We don't maintain a bind for leafColumns, we simply call this update
             // function behind the scenes in the appropriate places.
             updateVisibleLeafColumns();
@@ -1154,8 +1186,7 @@ public class TreeTableView<S> extends Control {
                 @Override protected void invalidated() {
                     if (isInited) {
                         get().call(new TreeTableView.ResizeFeatures(TreeTableView.this, null, 0.0));
-                        refresh();
-                
+
                         if (oldPolicy != null) {
                             PseudoClass state = PseudoClass.getPseudoClass(oldPolicy.toString());
                             pseudoClassStateChanged(state, false);
@@ -1540,15 +1571,19 @@ public class TreeTableView<S> extends Control {
         }
         return onScrollToColumn;
     }
-    
+
     /**
-     * Returns the index position of the given TreeItem, taking into account the
-     * current state of each TreeItem (i.e. whether or not it is expanded).
-     * 
+     * Returns the index position of the given TreeItem, assuming that it is
+     * currently accessible through the tree hierarchy (most notably, that all
+     * parent tree items are expanded). If a parent tree item is collapsed,
+     * the result is that this method will return -1 to indicate that the
+     * given tree item is not accessible in the tree.
+     *
      * @param item The TreeItem for which the index is sought.
      * @return An integer representing the location in the current TreeTableView of the
-     *      first instance of the given TreeItem, or -1 if it is null or can not 
-     *      be found.
+     *      first instance of the given TreeItem, or -1 if it is null or can not
+     *      be found (for example, if a parent (all the way up to the root) is
+     *      collapsed).
      */
     public int getRow(TreeItem<S> item) {
         return TreeUtil.getRow(item, getRoot(), expandedItemCountDirty, isShowRoot());
@@ -1658,14 +1693,6 @@ public class TreeTableView<S> extends Control {
 
         boolean allowed = getColumnResizePolicy().call(new TreeTableView.ResizeFeatures<S>(TreeTableView.this, column, delta));
         if (!allowed) return false;
-
-        // This fixes the issue where if the column width is reduced and the
-        // table width is also reduced, horizontal scrollbars will begin to
-        // appear at the old width. This forces the VirtualFlow.maxPrefBreadth
-        // value to be reset to -1 and subsequently recalculated. Of course
-        // ideally we'd just refreshView, but for the time-being no such function
-        // exists.
-        refresh();
         return true;
     }
 
@@ -1792,6 +1819,19 @@ public class TreeTableView<S> extends Control {
             }
         }
     }
+
+    /**
+     * Calling {@code refresh()} forces the TreeTableView control to recreate and
+     * repopulate the cells necessary to populate the visual bounds of the control.
+     * In other words, this forces the TreeTableView to update what it is showing to
+     * the user. This is useful in cases where the underlying data source has
+     * changed in a way that is not observed by the TreeTableView itself.
+     *
+     * @since JavaFX 8u60
+     */
+    public void refresh() {
+        getProperties().put(TableViewSkinBase.RECREATE, Boolean.TRUE);
+    }
     
     
     
@@ -1837,18 +1877,7 @@ public class TreeTableView<S> extends Control {
         }
     }
 
-    /**
-     * Call this function to force the TableView to re-evaluate itself. This is
-     * useful when the underlying data model is provided by a TableModel, and
-     * you know that the data model has changed. This will force the TableView
-     * to go back to the dataProvider and get the row count, as well as update
-     * the view to ensure all sorting is still correct based on any changes to
-     * the data model.
-     */
-    private void refresh() {
-        getProperties().put(TableViewSkinBase.REFRESH, Boolean.TRUE);
-    }
-    
+
     // --- Content width
     private void setContentWidth(double contentWidth) {
         this.contentWidth = contentWidth;
@@ -1859,7 +1888,6 @@ public class TreeTableView<S> extends Control {
             // with a null TreeTableColumn, which indicates to the resize policy function
             // that it shouldn't actually do anything specific to one column.
             getColumnResizePolicy().call(new TreeTableView.ResizeFeatures<S>(TreeTableView.this, null, 0.0));
-            refresh();
         }
     }
     
@@ -1878,7 +1906,6 @@ public class TreeTableView<S> extends Control {
         // with a null TreeTableColumn, which indicates to the resize policy function
         // that it shouldn't actually do anything specific to one column.
         getColumnResizePolicy().call(new TreeTableView.ResizeFeatures<S>(TreeTableView.this, null, 0.0));
-        refresh();
     }
 
     private void buildVisibleLeafColumns(List<TreeTableColumn<S,?>> cols, List<TreeTableColumn<S,?>> vlc) {
@@ -2377,6 +2404,7 @@ public class TreeTableView<S> extends Control {
                     final int from = startRow + 1;
                     final int to = startRow + count;
                     final List<Integer> removed = new ArrayList<>();
+                    TreeTableColumn<S,?> selectedColumn = null;
                     for (int i = from; i < to; i++) {
                         // we have to handle cell selection mode differently than
                         // row selection mode. Refer to RT-34103 for the bug report
@@ -2390,6 +2418,7 @@ public class TreeTableView<S> extends Control {
                                 if (isSelected(i, col)) {
                                     wasAnyChildSelected = true;
                                     clearSelection(i, col);
+                                    selectedColumn = col;
                                 }
                             }
                         } else {
@@ -2407,7 +2436,7 @@ public class TreeTableView<S> extends Control {
 
                     // put selection onto the newly-collapsed tree item
                     if (wasPrimarySelectionInChild && wasAnyChildSelected) {
-                        select(startRow);
+                        select(startRow, selectedColumn);
                     } else if (! isCellSelectionMode) {
                         // we pass in (index, index) here to represent that nothing was added
                         // in this change.
@@ -2847,13 +2876,13 @@ public class TreeTableView<S> extends Control {
 
         @Override public void selectRange(int minRow, TableColumnBase<TreeItem<S>,?> minColumn,
                                           int maxRow, TableColumnBase<TreeItem<S>,?> maxColumn) {
-            startAtomic();
-
             if (getSelectionMode() == SelectionMode.SINGLE) {
                 quietClearSelection();
                 select(maxRow, maxColumn);
                 return;
             }
+
+            startAtomic();
 
             final int itemCount = getItemCount();
             final boolean isCellSelectionEnabled = isCellSelectionEnabled();
@@ -3397,10 +3426,12 @@ public class TreeTableView<S> extends Control {
                         }
                     }
                 } else if (e.wasRemoved()) {
+                    row += e.getFrom() + 1;
+
                     for (int i = 0; i < e.getRemovedChildren().size(); i++) {
                         TreeItem<S> item = e.getRemovedChildren().get(i);
                         if (item != null && item.equals(getFocusedItem())) {
-                            focus(-1);
+                            focus(Math.max(0, getFocusedIndex() - 1));
                             return;
                         }
                     }
@@ -3486,7 +3517,15 @@ public class TreeTableView<S> extends Control {
             if (row < 0 || row >= getItemCount()) {
                 setFocusedCell(EMPTY_CELL);
             } else {
-                setFocusedCell(new TreeTablePosition<>(treeTableView, row, column));
+                TreeTablePosition<S,?> oldFocusCell = getFocusedCell();
+                TreeTablePosition<S,?> newFocusCell = new TreeTablePosition<>(treeTableView, row, column);
+                setFocusedCell(newFocusCell);
+
+                if (newFocusCell.equals(oldFocusCell)) {
+                    // manually update the focus properties to ensure consistency
+                    setFocusedIndex(row);
+                    setFocusedItem(getModelItem(row));
+                }
             }
         }
 

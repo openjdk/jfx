@@ -43,7 +43,6 @@ final class EmbeddedStage extends GlassStage implements EmbeddedStageInterface {
 
     public EmbeddedStage(HostInterface host) {
         this.host = host;
-        QuantumToolkit.setHasEmbeddedStage(true);
     }
 
     // TKStage methods

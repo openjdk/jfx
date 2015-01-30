@@ -62,7 +62,10 @@ public class PNGIDATChunkInputStream extends InputStream {
      * @param firstIDATChunkLength the length of the data field of the first
      * IDAT chunk.
      */
-    PNGIDATChunkInputStream(DataInputStream input, int firstIDATChunkLength) {
+    PNGIDATChunkInputStream(DataInputStream input, int firstIDATChunkLength) throws IOException {
+        if (firstIDATChunkLength < 0) {
+            throw new IOException("Invalid chunk length");
+        }
         this.source = input;
         this.numBytesAvailable = firstIDATChunkLength;
     }
@@ -71,6 +74,9 @@ public class PNGIDATChunkInputStream extends InputStream {
         if (!foundAllIDATChunks) {
             ImageTools.skipFully(source, 4); // CRC
             int chunkLength = source.readInt();
+            if (chunkLength < 0) {
+                throw new IOException("Invalid chunk length");
+            }
             int chunkType = source.readInt();
             if (chunkType == IDAT_TYPE) {
                 numBytesAvailable += chunkLength;

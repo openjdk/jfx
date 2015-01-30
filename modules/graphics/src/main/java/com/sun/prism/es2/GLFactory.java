@@ -224,14 +224,6 @@ abstract class GLFactory {
 
     abstract void updateDeviceDetails(HashMap deviceDetails);
 
-    // JIRA: RT-21739
-    // TODO: This is a temporary mechanism to work well with Glass on Mac due
-    // to the CALayer work. Need to be removed in the early future for 3.0
-    void updateDeviceDetails(HashMap deviceDetails, GLContext glContext) {
-        // NOP for all platforms except for Mac which will override it in its
-        // platform specific implementation code
-    }
-
     void printDriverInformation(int adapter) {
         /* We are assuming a system with a single or homogeneous GPUs. */
         System.out.println("Graphics Vendor: " + nGetGLVendor(nativeCtxInfo));
