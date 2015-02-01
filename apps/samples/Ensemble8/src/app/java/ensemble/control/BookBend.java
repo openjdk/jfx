@@ -292,25 +292,26 @@ public class BookBend {
                 new Stop(0, pathColor), 
                 new Stop((xC - xF) / (xO - xF), bendStartColor), 
                 new Stop((xB - xF) / (xO - xF), bendEndColor)));
-        
+
+        ArcTo arcTo1 = new ArcTo();
+        arcTo1.setXAxisRotation(Math.toDegrees(-ANGLE));
+        arcTo1.setRadiusX(bE_a);
+        arcTo1.setRadiusY(bE_b);
+        arcTo1.setX(BP1.getX());
+        arcTo1.setY(BP1.getY());
+        ArcTo arcTo2 = new ArcTo();
+        arcTo2.setXAxisRotation(Math.toDegrees(-ANGLE));
+        arcTo2.setRadiusX(rE_a);
+        arcTo2.setRadiusY(rE_b);
+        arcTo2.setX(RP4.getX());
+        arcTo2.setY(RP4.getY());
+
         p.getElements().setAll(
                 new MoveTo(BP4.getX(), BP4.getY()),
-                ArcToBuilder.create()
-                    .XAxisRotation(Math.toDegrees(-ANGLE))
-                    .radiusX(bE_a)
-                    .radiusY(bE_b)
-                    .x(BP1.getX())
-                    .y(BP1.getY())
-                    .build(),
+                arcTo1,
                 new LineTo(xF, yF), 
                 new LineTo(RP1.getX(), RP1.getY()),
-                ArcToBuilder.create()
-                    .XAxisRotation(Math.toDegrees(-ANGLE))
-                    .radiusX(rE_a)
-                    .radiusY(rE_b)
-                    .x(RP4.getX())
-                    .y(RP4.getY())
-                    .build(),
+                arcTo2,
                 new ClosePath());
 
         if (shadow != null) {
@@ -321,26 +322,27 @@ public class BookBend {
                     new Stop(level0 * 0.3 + level1 * 0.7, Color.rgb(0, 0, 0, 0.25)), 
                     new Stop(level1, Color.rgb(0, 0, 0, 0.0)), 
                     new Stop(1, Color.rgb(0, 0, 0, 0))));
-            
+
+            ArcTo arcTo3 = new ArcTo();
+            arcTo3.setXAxisRotation(Math.toDegrees(-ANGLE));
+            arcTo3.setRadiusX(rE_a);
+            arcTo3.setRadiusY(rE_b);
+            arcTo3.setX(RP4.getX());
+            arcTo3.setY(RP4.getY());
+            arcTo3.setSweepFlag(true);
+            ArcTo arcTo4 = new ArcTo();
+            arcTo4.setXAxisRotation(Math.toDegrees(-ANGLE));
+            arcTo4.setRadiusX(bE_a);
+            arcTo4.setRadiusY(bE_b);
+            arcTo4.setX(BP3.getX());
+            arcTo4.setY(BP3.getY());
+            arcTo4.setSweepFlag(true);
+
             shadow.getElements().setAll(
                     new MoveTo(RP3.getX(), RP3.getY()),
-                    ArcToBuilder.create()
-                        .XAxisRotation(Math.toDegrees(-ANGLE))
-                        .radiusX(rE_a)
-                        .radiusY(rE_b)
-                        .x(RP4.getX())
-                        .y(RP4.getY())
-                        .sweepFlag(true)
-                        .build(),
-                    new LineTo(BP4.getX(), BP4.getY()), 
-                    ArcToBuilder.create()
-                        .XAxisRotation(Math.toDegrees(-ANGLE))
-                        .radiusX(bE_a)
-                        .radiusY(bE_b)
-                        .x(BP3.getX())
-                        .y(BP3.getY())
-                        .sweepFlag(true)
-                        .build(),
+                    arcTo3,
+                    new LineTo(BP4.getX(), BP4.getY()),
+                    arcTo4,
                     new LineTo(xO, yO),
                     new ClosePath());
         }

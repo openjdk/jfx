@@ -57,14 +57,13 @@ import javafx.scene.PerspectiveCamera;
 import javafx.scene.PointLight;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
-import javafx.scene.control.ButtonBuilder;
 import javafx.scene.control.ColorPicker;
 import javafx.scene.control.Label;
-import javafx.scene.control.LabelBuilder;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.VBoxBuilder;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.paint.PhongMaterial;
@@ -86,10 +85,6 @@ import com.javafx.experiments.importers.maya.Xform;
 import com.javafx.experiments.importers.obj.ObjImporter;
 import com.sun.javafx.geom.Vec3d;
 
-
-/**
- *
- */
 public class OldTestViewer extends Application {
     public static final String PATH_PROPERTY = "file";
 
@@ -238,8 +233,6 @@ public class OldTestViewer extends Application {
         //spheresGroup.getChildren().addAll(box1, box2, cylinder1, cylinder2, sphere1, sphere2);
         spheresGroup.getChildren().addAll(box1, cylinder1, sphere1);
         spheresGroup.setRotateX(180.0);
-
-
 
         /*
         // red
@@ -515,7 +508,7 @@ public class OldTestViewer extends Application {
         Button light3zeroXYZButton;
         Button light3show;
         Button light3hide;
-        
+
         /*
         Button backButton;
         Button stopButton;
@@ -621,42 +614,27 @@ public class OldTestViewer extends Application {
             }
         };
 
-        borderPane.setCenter(VBoxBuilder.create()
-            .id("center")
-            .spacing(0)
-            .alignment(Pos.TOP_CENTER)
-            .children(
-                lightColorPicker,
-                backColorPicker,
-                fovLabel = LabelBuilder.create()
-                    .id("fov-label")
-                    .text("fov")
-                    .build(),
-                nearLabel = LabelBuilder.create()
-                    .id("near-label")
-                    .text("Near Clip")
-                    .build(),
-                farLabel = LabelBuilder.create()
-                    .id("far-label")
-                    .text("Far Clip")
-                    .build(),
-                resetFovButton = ButtonBuilder.create()
-                    .id("resetFov-button")
-                    .text("reset FOV")
-                    .onAction(resetFovAction)
-                    .build(),
-                resetNearButton = ButtonBuilder.create()
-                    .id("resetNear-button")
-                    .text("reset near")
-                    .onAction(resetNearAction)
-                    .build(),
-                resetFarButton = ButtonBuilder.create()
-                    .id("resetFar-button")
-                    .text("reset far")
-                    .onAction(resetFarAction)
-                    .build()
-                )
-            .build());
+        fovLabel = new Label("fov");
+        fovLabel.setId("fov-label");
+        nearLabel = new Label("Near Clip");
+        nearLabel.setId("near-label");
+        farLabel = new Label("Far Clip");
+        farLabel.setId("far-label");
+        resetFovButton = new Button("reset FOV");
+        resetFovButton.setId("resetFov-button");
+        resetFovButton.setOnAction(resetFovAction);
+        resetNearButton = new Button("reset near");
+        resetNearButton.setId("resetNear-button");
+        resetNearButton.setOnAction(resetNearAction);
+        resetFarButton = new Button("reset far");
+        resetFarButton.setId("resetFar-button");
+        resetFarButton.setOnAction(resetFarAction);
+
+        VBox vbox = new VBox(0, lightColorPicker, backColorPicker, fovLabel, nearLabel, farLabel,
+                resetFovButton, resetNearButton, resetFarButton);
+        vbox.setId("center");
+        vbox.setAlignment(Pos.TOP_CENTER);
+        borderPane.setCenter(vbox);
         
         handleMouse2(fovLabel);
         handleMouse2(nearLabel);
@@ -715,50 +693,31 @@ public class OldTestViewer extends Application {
             }
         });
 
-        borderPane.setLeft(VBoxBuilder.create()
-            .id("left")
-            .spacing(0)
-            .alignment(Pos.TOP_CENTER)
-            .children(
-                light2ColorPicker,
-                light2Label = LabelBuilder.create()
-                    .id("light2-label")
-                    .text("light2")
-                    .build(),
-                light2xyLabel = LabelBuilder.create()
-                    .id("light2xy-label")
-                    .text("light2 XY")
-                    .build(),
-                light2xzLabel = LabelBuilder.create()
-                    .id("light2xz-label")
-                    .text("light2 XZ")
-                    .build(),
-                light2yzLabel = LabelBuilder.create()
-                    .id("light2yz-label")
-                    .text("light2 YZ")
-                    .build(),
-                light2resetXYZButton = ButtonBuilder.create()
-                    .id("light2-resetXYZ")
-                    .text("reset XYZ")
-                    .onAction(light2resetXYZAction)
-                    .build(),
-                light2zeroXYZButton = ButtonBuilder.create()
-                    .id("light2-zeroXYZ")
-                    .text("zero XYZ")
-                    .onAction(light2zeroXYZAction)
-                    .build(),
-                light2show = ButtonBuilder.create()
-                    .id("light2-show")
-                    .text("show")
-                    .onAction(light2showAction)
-                    .build(),
-                light2hide = ButtonBuilder.create()
-                    .id("light2-hide")
-                    .text("hide")
-                    .onAction(light2hideAction)
-                    .build()
-                )
-            .build());
+        light2Label = new Label("light2");
+        light2Label.setId("light2-label");
+        light2xyLabel = new Label("light2 XY");
+        light2xyLabel.setId("light2xy-label");
+        light2xzLabel = new Label("light2 XZ");
+        light2xzLabel.setId("light2xz-label");
+        light2yzLabel = new Label("light2 YZ");
+        light2yzLabel.setId("light2yz-label");
+        light2resetXYZButton = new Button("reset XYZ");
+        light2resetXYZButton.setId("light2-resetXYZ");
+        light2resetXYZButton.setOnAction(light2resetXYZAction);
+        light2zeroXYZButton = new Button("zero XYZ");
+        light2zeroXYZButton.setId("light2-zeroXYZ");
+        light2zeroXYZButton.setOnAction(light2zeroXYZAction);
+        light2show = new Button("show");
+        light2show.setId("light2-show");
+        light2show.setOnAction(light2showAction);
+        light2hide = new Button("hide");
+        light2hide.setId("light2-hide");
+        light2hide.setOnAction(light2hideAction);
+        VBox vbox2 = new VBox(0, light2ColorPicker, light2Label, light2xyLabel, light2xzLabel, light2yzLabel,
+                light2resetXYZButton, light2zeroXYZButton, light2show, light2hide);
+        vbox2.setId("left");
+        vbox2.setAlignment(Pos.TOP_CENTER);
+        borderPane.setLeft(vbox2);
 
         handleMouse2(light2Label);
         handleMouse2(light2xyLabel);
@@ -818,93 +777,59 @@ public class OldTestViewer extends Application {
             }
         });
 
-        borderPane.setRight(VBoxBuilder.create()
-            .id("right")
-            .spacing(0)
-            .alignment(Pos.TOP_CENTER)
-            .children(
-                light3ColorPicker,
-                light3Label = LabelBuilder.create()
-                    .id("light3-label")
-                    .text("light3")
-                    .build(),
-                light3xyLabel = LabelBuilder.create()
-                    .id("light3xy-label")
-                    .text("light3 XY")
-                    .build(),
-                light3xzLabel = LabelBuilder.create()
-                    .id("light3xz-label")
-                    .text("light3 XZ")
-                    .build(),
-                light3yzLabel = LabelBuilder.create()
-                    .id("light3yz-label")
-                    .text("light3 YZ")
-                    .build(),
-                light3resetXYZButton = ButtonBuilder.create()
-                    .id("light3-resetXYZ")
-                    .text("reset XYZ")
-                    .onAction(light3resetXYZAction)
-                    .build(),
-                light3zeroXYZButton = ButtonBuilder.create()
-                    .id("light3-zeroXYZ")
-                    .text("zero XYZ")
-                    .onAction(light3zeroXYZAction)
-                    .build(),
-                light3show = ButtonBuilder.create()
-                    .id("light3-show")
-                    .text("show")
-                    .onAction(light3showAction)
-                    .build(),
-                light3hide = ButtonBuilder.create()
-                    .id("light3-hide")
-                    .text("hide")
-                    .onAction(light3hideAction)
-                    .build()
-                )
-            .build());
+        light3Label = new Label("light3");
+        light3Label.setId("light3-label");
+        light3xyLabel = new Label("light3 XY");
+        light3xyLabel.setId("light3xy-label");
+        light3xzLabel = new Label("light3 XZ");
+        light3xzLabel.setId("light3xz-label");
+        light3yzLabel = new Label("light3 YZ");
+        light3yzLabel.setId("light3yz-label");
+        light3resetXYZButton = new Button("reset XYZ");
+        light3resetXYZButton.setId("light3-resetXYZ");
+        light3resetXYZButton.setOnAction(light3resetXYZAction);
+        light3zeroXYZButton = new Button("zero XYZ");
+        light3zeroXYZButton.setId("light3-zeroXYZ");
+        light3zeroXYZButton.setOnAction(light3zeroXYZAction);
+        light3show = new Button("show");
+        light3show.setId("light3-show");
+        light3show.setOnAction(light3showAction);
+        light3hide = new Button("hide");
+        light3hide.setId("light3-hide");
+        light3hide.setOnAction(light3hideAction);
+
+        VBox vbox3 = new VBox(0, light3ColorPicker, light3Label, light3xyLabel, light3xzLabel, light3yzLabel,
+                light3resetXYZButton, light3zeroXYZButton, light3show, light3hide);
+        vbox3.setId("right");
+        vbox3.setAlignment(Pos.TOP_CENTER);
+        borderPane.setRight(vbox3);
 
         handleMouse2(light3Label);
         handleMouse2(light3xyLabel);
         handleMouse2(light3xzLabel);
         handleMouse2(light3yzLabel);
-
-
-
 /*
-        borderPane.setBottom(HBoxBuilder.create()
-            .id("bottom")
-            .spacing(0)
-            .alignment(Pos.CENTER)
-            .children(
-                backButton = ButtonBuilder.create()
-                    .id("back-button")
-                    .text("<-")
-                    .onAction(backAction)
-                    .build(),
-                stopButton = ButtonBuilder.create()
-                    .id("stop-button")
-                    .text("Stop")
-                    .onAction(stopAction)
-                    .build(),
-                playButton = ButtonBuilder.create()
-                    .id("play-button")
-                    .text("Play")
-                    .onAction(playAction)
-                    .build(),
-                pauseButton = ButtonBuilder.create()
-                    .id("pause-button")
-                    .text("Pause")
-                    .onAction(pauseAction)
-                    .build(),
-                forwardButton = ButtonBuilder.create()
-                    .id("forward-button")
-                    .text("->")
-                    .onAction(forwardAction)
-                    .build()
-                )
-            .build());
-            */
-        
+        backButton = new Button("<-");
+        backButton.setId("back-button");
+        backButton.setOnAction(backAction);
+        stopButton = new Button("Stop");
+        stopButton.setId("stop-button");
+        stopButton.setOnAction(stopAction);
+        playButton = new Button("Play");
+        playButton.setId("play-button");
+        playButton.setOnAction(playAction);
+        pauseButton = new Button("Pause");
+        pauseButton.setId("pause-button");
+        pauseButton.setOnAction(pauseAction);
+        forwardButton = new Button("->");
+        forwardButton.setId("forward-button");
+        forwardButton.setOnAction(forwardAction);
+
+        HBox hbox = new HBox(0, backButton, stopButton, playButton, pauseButton, forwardButton);
+        hbox.setId("bottom");
+        hbox.setAlignment(Pos.CENTER);
+        borderPane.setBottom(hbox);
+*/
         stage.show();
     }
     
@@ -1074,9 +999,7 @@ public class OldTestViewer extends Application {
 
         });
     }
-    
- 
-    
+
     //=============================================================================
     // start
     //=============================================================================
