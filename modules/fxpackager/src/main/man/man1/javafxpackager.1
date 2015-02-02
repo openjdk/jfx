@@ -361,6 +361,11 @@ package for OS X\&.
 .RE
 .RE
 .PP
+\-nosign
+.RS 4
+If present, the bundle generated for self\-contained applications is not signed by the bundler\&. The default for bundlers that support signing is to sign the bundle if signing keys are properly configured\&. This attribute is ignored by bundlers that do not support signing\&. At the time of the 8u40 release of the JDK, only OS X bundlers support signing\&.
+.RE
+.PP
 \-outdir \fIdir\fR
 .RS 4
 Name of the directory that will receive generated output files\&.
