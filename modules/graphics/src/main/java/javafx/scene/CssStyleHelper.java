@@ -1165,7 +1165,7 @@ final class CssStyleHelper {
             final Object val = parsedValue.getValue();
             if (val instanceof String) {
 
-                final String sval = (String)val;
+                final String sval = ((String) val).toLowerCase(Locale.ROOT);
 
                 CascadingStyle resolved =
                     resolveRef(styleable, sval, styleMap, states);
