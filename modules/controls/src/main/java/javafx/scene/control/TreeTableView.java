@@ -2718,36 +2718,27 @@ public class TreeTableView<S> extends Control {
                 clearSelection();
                 return;
             }
-            
-            // We have no option but to iterate through the model and select the
-            // first occurrence of the given object. Once we find the first one, we
-            // don't proceed to select any others.
-            TreeItem<S> rowObj = null;
-            for (int i = 0; i < getRowCount(); i++) {
-                rowObj = treeTableView.getTreeItem(i);
-                if (rowObj == null) continue;
 
-                if (rowObj.equals(obj)) {
-                    if (isSelected(i)) {
-                        return;
-                    }
-
-                    if (getSelectionMode() == SelectionMode.SINGLE) {
-                        quietClearSelection();
-                    }
-
-                    select(i);
+            int firstIndex = treeTableView.getRow(obj);
+            if (firstIndex > -1) {
+                if (isSelected(firstIndex)) {
                     return;
                 }
-            }
 
-            // if we are here, we did not find the item in the entire data model.
-            // Even still, we allow for this item to be set to the give object.
-            // We expect that in concrete subclasses of this class we observe the
-            // data model such that we check to see if the given item exists in it,
-            // whilst SelectedIndex == -1 && SelectedItem != null.
-            setSelectedIndex(-1);
-            setSelectedItem(obj);
+                if (getSelectionMode() == SelectionMode.SINGLE) {
+                    quietClearSelection();
+                }
+
+                select(firstIndex);
+            } else {
+                // if we are here, we did not find the item in the entire data model.
+                // Even still, we allow for this item to be set to the give object.
+                // We expect that in concrete subclasses of this class we observe the
+                // data model such that we check to see if the given item exists in it,
+                // whilst SelectedIndex == -1 && SelectedItem != null.
+                setSelectedIndex(-1);
+                setSelectedItem(obj);
+            }
         }
 
         @Override public void selectIndices(int row, int... rows) {
