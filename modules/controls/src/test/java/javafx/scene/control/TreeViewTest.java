@@ -51,6 +51,7 @@ import static org.junit.Assert.assertEquals;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
+import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
@@ -2937,5 +2938,36 @@ public class TreeViewTest {
             if (obj == null) return false;
             return id == ((RT22599_DataType)obj).id;
         }
+    }
+
+    private int rt_39966_count = 0;
+    @Test public void test_rt_39966() {
+        TreeItem<String> root = new TreeItem<>("Root");
+        TreeView<String> table = new TreeView<>(root);
+        table.setShowRoot(true);
+
+        StageLoader sl = new StageLoader(table);
+
+        // initially there is no selection
+        assertTrue(table.getSelectionModel().isEmpty());
+
+        table.getSelectionModel().selectedItemProperty().addListener((value, s1, s2) -> {
+            if (rt_39966_count == 0) {
+                rt_39966_count++;
+                assertFalse(table.getSelectionModel().isEmpty());
+            } else {
+                assertTrue(debug(), table.getSelectionModel().isEmpty());
+            }
+        });
+
+        // our assertion two lines down always succeeds. What fails is our
+        // assertion above within the listener.
+        table.getSelectionModel().select(0);
+        assertFalse(table.getSelectionModel().isEmpty());
+
+        table.setRoot(null);
+        assertTrue(debug(),table.getSelectionModel().isEmpty());
+
+        sl.dispose();
     }
 }

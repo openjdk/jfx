@@ -385,15 +385,18 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
         boolean isSameItem = newItem != null && newItem.equals(currentItem);
         boolean fireUpdatedItemEvent = isSameRow && ! isSameItem;
 
-        setSelectedIndex(row);
-        focus(row);
-
+        startAtomic();
         if (! selectedIndices.get(row)) {
             if (getSelectionMode() == SINGLE) {
                 quietClearSelection();
             }
             selectedIndices.set(row);
         }
+
+        setSelectedIndex(row);
+        focus(row);
+
+        stopAtomic();
 
         if (! isAtomic()) {
             int changeIndex = selectedIndicesSeq.indexOf(row);
@@ -661,31 +664,26 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
     }
 
     @Override public void clearSelection() {
+        List<Integer> removed = new AbstractList<Integer>() {
+            final BitSet clone = (BitSet) selectedIndices.clone();
+
+            @Override public Integer get(int index) {
+                return clone.nextSetBit(index);
+            }
+
+            @Override public int size() {
+                return clone.cardinality();
+            }
+        };
+
+        quietClearSelection();
+
         if (! isAtomic()) {
             setSelectedIndex(-1);
             focus(-1);
-        }
-
-        if (! selectedIndices.isEmpty()) {
-            List<Integer> removed = new AbstractList<Integer>() {
-                final BitSet clone = (BitSet) selectedIndices.clone();
-
-                @Override public Integer get(int index) {
-                    return clone.nextSetBit(index);
-                }
-
-                @Override public int size() {
-                    return clone.cardinality();
-                }
-            };
-
-            quietClearSelection();
-
-            if (! isAtomic()) {
-                selectedIndicesSeq.callObservers(
-                        new NonIterableChange.GenericAddRemoveChange<Integer>(0, 0,
-                        removed, selectedIndicesSeq));
-            }
+            selectedIndicesSeq.callObservers(
+                    new NonIterableChange.GenericAddRemoveChange<>(0, 0,
+                    removed, selectedIndicesSeq));
         }
     }
 

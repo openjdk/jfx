@@ -2971,12 +2971,22 @@ public class TreeTableView<S> extends Control {
         }
 
         @Override public void clearSelection() {
+            final List<TreeTablePosition<S,?>> removed = new ArrayList<>((Collection)getSelectedCells());
+
+            quietClearSelection();
+
             if (! isAtomic()) {
                 updateSelectedIndex(-1);
                 focus(-1);
-            }
 
-            selectedCellsMap.clear();
+                ListChangeListener.Change<TreeTablePosition<S, ?>> c = new NonIterableChange<TreeTablePosition<S, ?>>(0, 0, selectedCellsSeq) {
+                    @Override
+                    public List<TreeTablePosition<S, ?>> getRemoved() {
+                        return removed;
+                    }
+                };
+                handleSelectedCellsListChangeEvent(c);
+            }
         }
 
         private void quietClearSelection() {

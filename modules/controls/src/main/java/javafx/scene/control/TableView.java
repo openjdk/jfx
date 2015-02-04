@@ -2718,12 +2718,22 @@ public class TableView<S> extends Control {
         }
 
         @Override public void clearSelection() {
+            final List<TablePosition<S,?>> removed = new ArrayList<>((Collection)getSelectedCells());
+
+            quietClearSelection();
+
             if (! isAtomic()) {
                 updateSelectedIndex(-1);
                 focus(-1);
-            }
 
-            selectedCellsMap.clear();
+                ListChangeListener.Change<TablePosition<S, ?>> c = new NonIterableChange<TablePosition<S, ?>>(0, 0, selectedCellsSeq) {
+                    @Override
+                    public List<TablePosition<S, ?>> getRemoved() {
+                        return removed;
+                    }
+                };
+                handleSelectedCellsListChangeEvent(c);
+            }
         }
 
         private void quietClearSelection() {

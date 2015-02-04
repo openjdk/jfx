@@ -5323,4 +5323,39 @@ public class TreeTableViewTest {
             return id == ((RT22599_DataType)obj).id;
         }
     }
+
+    private int rt_39966_count = 0;
+    @Test public void test_rt_39966() {
+        TreeItem<String> root = new TreeItem<>("Root");
+        TreeTableView<String> table = new TreeTableView<>(root);
+        table.setShowRoot(true);
+
+        TreeTableColumn<String,String> column = new TreeTableColumn<>("Column");
+        column.setCellValueFactory(cdf -> new ReadOnlyStringWrapper(cdf.getValue().getValue()));
+        table.getColumns().add(column);
+
+        StageLoader sl = new StageLoader(table);
+
+        // initially there is no selection
+        assertTrue(table.getSelectionModel().isEmpty());
+
+        table.getSelectionModel().selectedItemProperty().addListener((value, s1, s2) -> {
+            if (rt_39966_count == 0) {
+                rt_39966_count++;
+                assertFalse(table.getSelectionModel().isEmpty());
+            } else {
+                assertTrue(table.getSelectionModel().isEmpty());
+            }
+        });
+
+        // our assertion two lines down always succeeds. What fails is our
+        // assertion above within the listener.
+        table.getSelectionModel().select(0);
+        assertFalse(table.getSelectionModel().isEmpty());
+
+        table.setRoot(null);
+        assertTrue(table.getSelectionModel().isEmpty());
+
+        sl.dispose();
+    }
 }
