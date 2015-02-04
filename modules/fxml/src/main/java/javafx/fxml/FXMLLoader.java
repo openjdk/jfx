@@ -95,13 +95,17 @@ import sun.reflect.Reflection;
 import sun.reflect.misc.ConstructorUtil;
 import sun.reflect.misc.MethodUtil;
 import sun.reflect.misc.ReflectUtil;
-import sun.security.util.SecurityConstants;
 
 /**
  * Loads an object hierarchy from an XML document.
  * @since JavaFX 2.0
  */
 public class FXMLLoader {
+
+    // Indicates permission to get the ClassLoader
+    private static final RuntimePermission GET_CLASSLOADER_PERMISSION =
+        new RuntimePermission("getClassLoader");
+
     // Abstract base class for elements
     private abstract class Element {
         public final Element parent;
@@ -3051,7 +3055,7 @@ public class FXMLLoader {
                         caller.getClassLoader() :
                         null;
                 if (needsClassLoaderPermissionCheck(callerClassLoader, FXMLLoader.class.getClassLoader())) {
-                    sm.checkPermission(SecurityConstants.GET_CLASSLOADER_PERMISSION);
+                    sm.checkPermission(GET_CLASSLOADER_PERMISSION);
                 }
             }
             return Thread.currentThread().getContextClassLoader();
