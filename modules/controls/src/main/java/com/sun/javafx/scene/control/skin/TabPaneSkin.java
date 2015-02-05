@@ -293,16 +293,28 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
 
     private void stopCurrentAnimation(Tab tab) {
         final TabHeaderSkin tabRegion = tabHeaderArea.getTabHeaderSkin(tab);
-        if (tabRegion != null && tabRegion.currentAnimation != null) {
+        if (tabRegion != null) {
             // Execute the code immediately, don't wait for the animation to finish.
-            tabRegion.currentAnimation.getKeyFrames().get(0).getOnFinished().handle(null);
-            tabRegion.currentAnimation.stop();
-            tabRegion.currentAnimation = null;
+            Timeline timeline = tabRegion.currentAnimation;
+            if (timeline != null) {
+                timeline.getOnFinished().handle(null);
+                timeline.stop();
+                tabRegion.currentAnimation = null;
+            }
         }
     }
 
     private void addTabs(List<? extends Tab> addedList, int from) {
         int i = 0;
+
+        // RT-39984: check if any other tabs are animating - they must be completed first.
+        List<Node> headers = new ArrayList<>(tabHeaderArea.headersRegion.getChildren());
+        for (Node n : headers) {
+            TabHeaderSkin header = (TabHeaderSkin) n;
+            stopCurrentAnimation(header.tab);
+        }
+        // end of fix for RT-39984
+
         for (final Tab tab : addedList) {
             stopCurrentAnimation(tab); // Note that this must happen before addTab() call below
             // A new tab was added - animate it out
@@ -431,9 +443,10 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
         timeline.setCycleCount(1);
 
         KeyValue keyValue = new KeyValue(tabRegion.animationTransition, endValue, Interpolator.LINEAR);
-
         timeline.getKeyFrames().clear();
-        timeline.getKeyFrames().add(new KeyFrame(duration, func, keyValue));
+        timeline.getKeyFrames().add(new KeyFrame(duration, keyValue));
+
+        timeline.setOnFinished(func);
         return timeline;
     }
 
