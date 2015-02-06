@@ -790,7 +790,10 @@ class WindowStage extends GlassStage {
         super.setPlatformEnabled(enabled);
         platformWindow.setEnabled(enabled);
         if (enabled) {
-            requestToFront();
+            // Check if window is really enabled - to handle nested case
+            if (platformWindow.isEnabled()) {
+                requestToFront();
+            }
         } else {
             removeActiveWindow(this);
         }
