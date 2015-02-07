@@ -553,6 +553,11 @@ public class StubToolkit extends Toolkit {
         return Arrays.asList(screenConfigurations);
     }
 
+    @Override
+    public ScreenConfigurationAccessor getScreenConfigurationAccessor() {
+        return accessor;
+    }
+
     @Override public void registerDragGestureListener(TKScene s, Set<TransferMode> tm, TKDragGestureListener l) {
         if (dndDelegate != null) {
             dndDelegate.registerListener(l);

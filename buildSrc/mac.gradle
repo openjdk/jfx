@@ -32,7 +32,6 @@ if (!MAC.canBuild) return;
 MAC.compileSwing = true;
 MAC.compileSWT = true;
 MAC.compileFXPackager = true;
-MAC.compileDesignTime = true;
 
 MAC.includeNull3d = true
 

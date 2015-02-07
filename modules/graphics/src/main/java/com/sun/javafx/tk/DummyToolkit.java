@@ -332,6 +332,11 @@ final public class DummyToolkit extends Toolkit {
     }
 
     @Override
+    public ScreenConfigurationAccessor getScreenConfigurationAccessor() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
     public void registerDragGestureListener(TKScene s, Set<TransferMode> tms, TKDragGestureListener l) {
         throw new UnsupportedOperationException("Not supported yet.");
     }

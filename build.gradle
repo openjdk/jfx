@@ -626,7 +626,7 @@ compileTargets { t ->
     // Every platform must define these variables
     if (!project.hasProperty(t.upper)) throw new Exception("ERROR: Incorrectly configured compile flags file, missing ${t.name} property")
     def props = project.ext[t.upper];
-    ["compileSwing", "compileSWT", "compileFXPackager", "compileDesignTime", "libDest"].each { prop ->
+    ["compileSwing", "compileSWT", "compileFXPackager", "libDest"].each { prop ->
         if (!props.containsKey(prop)) throw new Exception("ERROR: Incorrectly configured compile flags file, missing ${prop} property on ${t.name}")
     }
 }
@@ -639,14 +639,12 @@ compileTargets { t ->
 ext.COMPILE_SWING = false;
 ext.COMPILE_SWT = false;
 ext.COMPILE_FXPACKAGER = false;
-ext.COMPILE_DESIGN_TIME = false;
 compileTargets { t ->
     def targetProperties = project.rootProject.ext[t.upper]
 
     if (targetProperties.compileSwing) COMPILE_SWING = true
     if (targetProperties.compileSWT) COMPILE_SWT = true
     if (targetProperties.compileFXPackager) COMPILE_FXPACKAGER = true
-    if (targetProperties.compileDesignTime) COMPILE_DESIGN_TIME = true
 
     if (!targetProperties.containsKey('compileWebnodeNative')) {
         // unless specified otherwise, we will compile native Webnode if IS_COMPILE_WEBKIT
@@ -1204,7 +1202,7 @@ allprojects {
     // entire SDK, a different javadoc command is used (see the javadoc task on the top level)
     javadoc {
         enabled = IS_BUILD_JAVADOC
-        exclude("com/**/*", "javafx/scene/ParentDesignInfo*", "Compile*", "javafx/builder/**/*", "javafx/scene/accessibility/**/*");
+        exclude("com/**/*", "Compile*", "javafx/builder/**/*", "javafx/scene/accessibility/**/*");
         executable = JAVADOC;
         options.windowTitle("JavaFX Project ${project.name} ${RELEASE_NAME}")
         if (BUILD_CLOSED) {
@@ -1603,7 +1601,7 @@ project(":graphics") {
 
 project(":controls") {
     dependencies {
-        compile BUILD_SRC, project(":base"), project(":graphics"), project(":designTime")
+        compile BUILD_SRC, project(":base"), project(":graphics")
         // TODO not sure how to specify this? processResources project(":base"), project(":graphics")
         testCompile project(":graphics").sourceSets.test.output
         testCompile project(":base").sourceSets.test.output
@@ -1700,23 +1698,6 @@ project(":builders") {
         // tracker and this attempts to fire up the toolkit and this looks for native libraries and fails,
         // we have to use the stub toolkit for now.
         jvmArgs "-Djavafx.toolkit=com.sun.javafx.pgstub.StubToolkit"
-    }
-}
-
-project(":designTime") {
-    tasks.all {
-        if (!COMPILE_DESIGN_TIME) it.enabled = false
-    }
-    dependencies {
-        compile project(":graphics")
-    }
-    // impossible to run tests on designTime when not compiling SDK and designTime subproject
-    // need to disable test and compileTestJava tasks and remove their dependencies
-    if (!DO_BUILD_SDK_FOR_TEST) {
-        [test, compileTestJava].each {
-            it.dependsOn = []
-            it.enabled = false
-        }
     }
 }
 
@@ -2747,7 +2728,7 @@ task javadoc(type: Javadoc) {
     classpath += files(projectsToDocument.collect { project ->
         project.sourceSets.main.output
     });
-    exclude("com/**/*", "javafx/scene/ParentDesignInfo*", "Compile*", "javafx/builder/**/*", "javafx/scene/accessibility/**/*");
+    exclude("com/**/*", "Compile*", "javafx/builder/**/*", "javafx/scene/accessibility/**/*");
     options.windowTitle("${javadocTitle}")
     options.header("${javadocHeader}")
     options.bottom("${javadocBottom}")

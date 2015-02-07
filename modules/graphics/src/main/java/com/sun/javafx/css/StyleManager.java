@@ -123,7 +123,7 @@ final public class StyleManager {
     private static PlatformLogger LOGGER;
     private static PlatformLogger getLogger() {
         if (LOGGER == null) {
-            LOGGER = com.sun.javafx.Logging.getCSSLogger();
+            LOGGER = com.sun.javafx.util.Logging.getCSSLogger();
         }
         return LOGGER;
     }

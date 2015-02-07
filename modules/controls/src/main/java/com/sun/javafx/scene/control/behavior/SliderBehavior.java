@@ -36,7 +36,7 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
-import com.sun.javafx.Utils;
+import com.sun.javafx.util.Utils;
 import static javafx.scene.input.KeyCode.DOWN;
 import static javafx.scene.input.KeyCode.END;
 import static javafx.scene.input.KeyCode.F4;

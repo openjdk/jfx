@@ -38,7 +38,7 @@ import java.util.Map;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
-import javafx.animation.TimelineBuilder;
+import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
@@ -145,9 +145,8 @@ public class PageContainer extends Pane {
         if (currentPage != null && animate) {
             final Label currentTitlelabel = titlesMap.get(currentPage);
             final Bounds currentPageTitleBounds = currentTitlelabel.getBoundsInParent();
-            TimelineBuilder.create()
-                .keyFrames(
-                    new KeyFrame(Duration.ZERO, 
+            TimeLine timeL = new Timeline(
+                    new KeyFrame(Duration.ZERO,
                         new KeyValue(selectionBox.xProperty(), currentPageTitleBounds.getMinX()),
                         new KeyValue(selectionBox.yProperty(), currentPageTitleBounds.getMinY()),
                         new KeyValue(selectionBox.widthProperty(), currentPageTitleBounds.getWidth()),
@@ -165,8 +164,8 @@ public class PageContainer extends Pane {
                         new KeyValue(currentTitlelabel.textFillProperty(), DARK_GREY, Interpolator.EASE_BOTH),
                         new KeyValue(headerArrow.layoutXProperty(), newPageTitleBounds.getMinX() + (newPageTitleBounds.getWidth()/2) - 6, Interpolator.EASE_BOTH)
                     )
-                )
-                .build().play();
+                );
+            timeL.play();
             // hide current page
             currentPage.setVisible(false);
         } else {

@@ -101,7 +101,6 @@ ext.DALVIK = [:]
 DALVIK.compileSwing = false;
 DALVIK.compileSWT = false;
 DALVIK.compileFXPackager = false;
-DALVIK.compileDesignTime = false;
 DALVIK.glassPlatform = "android"
 DALVIK.armArch = armArchs[0]
 DALVIK.libDest = "lib/${DALVIK.armArch}"

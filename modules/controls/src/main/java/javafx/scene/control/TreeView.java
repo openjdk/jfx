@@ -28,6 +28,7 @@ package javafx.scene.control;
 import com.sun.javafx.collections.NonIterableChange;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.behavior.TreeCellBehavior;
+import com.sun.javafx.scene.control.skin.ListViewSkin;
 import com.sun.javafx.scene.control.skin.TreeViewSkin;
 
 import javafx.application.Platform;
@@ -934,13 +935,17 @@ public class TreeView<T> extends Control {
     }
     
     /**
-     * Returns the index position of the given TreeItem, taking into account the
-     * current state of each TreeItem (i.e. whether or not it is expanded).
+     * Returns the index position of the given TreeItem, assuming that it is
+     * currently accessible through the tree hierarchy (most notably, that all
+     * parent tree items are expanded). If a parent tree item is collapsed,
+     * the result is that this method will return -1 to indicate that the
+     * given tree item is not accessible in the tree.
      * 
      * @param item The TreeItem for which the index is sought.
      * @return An integer representing the location in the current TreeView of the
      *      first instance of the given TreeItem, or -1 if it is null or can not 
-     *      be found.
+     *      be found (for example, if a parent (all the way up to the root) is
+     *      collapsed).
      */
     public int getRow(TreeItem<T> item) {
         return TreeUtil.getRow(item, getRoot(), expandedItemCountDirty, isShowRoot());
@@ -1011,6 +1016,21 @@ public class TreeView<T> extends Control {
     @Override protected Skin<?> createDefaultSkin() {
         return new TreeViewSkin<T>(this);
     }
+
+    /**
+     * Calling {@code refresh()} forces the TreeView control to recreate and
+     * repopulate the cells necessary to populate the visual bounds of the control.
+     * In other words, this forces the TreeView to update what it is showing to
+     * the user. This is useful in cases where the underlying data source has
+     * changed in a way that is not observed by the TreeView itself.
+     *
+     * @since JavaFX 8u60
+     */
+    public void refresh() {
+        getProperties().put(TreeViewSkin.RECREATE, Boolean.TRUE);
+    }
+
+
     
     /***************************************************************************
      *                                                                         *
@@ -1578,10 +1598,12 @@ public class TreeView<T> extends Control {
                         }
                     }
                 } else if (e.wasRemoved()) {
+                    row += e.getFrom() + 1;
+
                     for (int i = 0; i < e.getRemovedChildren().size(); i++) {
                         TreeItem<T> item = e.getRemovedChildren().get(i);
                         if (item != null && item.equals(getFocusedItem())) {
-                            focus(-1);
+                            focus(Math.max(0, getFocusedIndex() - 1));
                             return;
                         }
                     }

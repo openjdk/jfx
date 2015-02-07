@@ -445,9 +445,11 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
                 styleMask = styleMask|NSClosableWindowMask;
             }
             
-            if (((jStyleMask&com_sun_glass_ui_Window_MINIMIZABLE) != 0) || ((jStyleMask&com_sun_glass_ui_Window_MAXIMIZABLE) != 0))
+            if (((jStyleMask&com_sun_glass_ui_Window_MINIMIZABLE) != 0) ||
+                ((jStyleMask&com_sun_glass_ui_Window_MAXIMIZABLE) != 0))
             {
-                // on Mac OS X there is one set for min/max buttons, so if clients requests either one, we turn them both on
+                // on Mac OS X there is one set for min/max buttons,
+                // so if clients requests either one, we turn them both on
                 styleMask = styleMask|NSMiniaturizableWindowMask;
             }
             
@@ -457,7 +459,7 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
             
             if ((jStyleMask&com_sun_glass_ui_Window_UTILITY) != 0)
             {
-                styleMask = styleMask|NSUtilityWindowMask;
+                styleMask = styleMask | NSUtilityWindowMask | NSNonactivatingPanelMask;
             }
         }
 
@@ -476,9 +478,14 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
         NSScreen *screen = (NSScreen*)jlong_to_ptr(jScreenPtr);
         window = [[GlassWindow alloc] _initWithContentRect:NSMakeRect(x, y, w, h) styleMask:styleMask screen:screen jwindow:jWindow jIsChild:jIsChild];
         
-        if ((jStyleMask&com_sun_glass_ui_Window_UNIFIED) != 0) {
+        if ((jStyleMask & com_sun_glass_ui_Window_UNIFIED) != 0) {
             //Prevent the textured effect from disappearing on border thickness recalculation
             [window->nsWindow setAutorecalculatesContentBorderThickness:NO forEdge:NSMaxYEdge];
+        }
+
+        if ((jStyleMask & com_sun_glass_ui_Window_UTILITY) != 0) {
+            [[window->nsWindow standardWindowButton:NSWindowMiniaturizeButton] setHidden:YES];
+            [[window->nsWindow standardWindowButton:NSWindowZoomButton] setHidden:YES];
         }
 
         if (jIsChild == JNI_FALSE)

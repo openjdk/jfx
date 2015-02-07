@@ -70,6 +70,11 @@ final class WinView extends View {
         return multiClickMaxY;
     }
 
+    @Override
+    protected int _getNativeFrameBuffer(long ptr) {
+        return 0;
+    }
+
     @Override native protected void _enableInputMethodEvents(long ptr, boolean enable);
     @Override native protected void _finishInputMethodComposition(long ptr);
 

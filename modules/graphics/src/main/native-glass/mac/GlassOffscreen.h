@@ -32,7 +32,6 @@
 
 // as destination (to draw into)
 - (void)bindForWidth:(GLuint)width andHeight:(GLuint)height;
-- (void)unbind;
 
 // as source (to show)
 - (GLuint)texture;
@@ -40,6 +39,7 @@
 
 - (GLuint)width;
 - (GLuint)height;
+- (GLuint)fbo;
 
 @end
 

@@ -36,7 +36,7 @@ import javafx.stage.Stage;
 
 public class HelloHyperlink extends Application {
 
-    private static final String animImageURL = "file:animated_89_c.gif";
+    private static final String animImageURL = "hello/animated_89_c.gif";
 
     public static void main(String[] args) {
         Application.launch(args);

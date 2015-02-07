@@ -58,6 +58,12 @@ public class ImageMetadata {
     public final Integer delayTime;
 
     /**
+     * The amount of times to loop the animation, zero or null if the animation
+     * should loop endlessly.
+     */
+    public final Integer loopCount;
+
+    /**
      * A palette index to be used for transparent pixels.
      */
     public final Integer transparentIndex;
@@ -99,11 +105,13 @@ public class ImageMetadata {
      * The color format, in Integer, is packed as ARGB with 8 bits per channel.
      * @param delayTime the amount of time to pause at the current image
      * (milliseconds).
+     * @param loopCount the amount of times to loop the animation
+     * (zero for infinite loop).
      * @param transparentIndex a palette index to be used as transparency.
      */
     public ImageMetadata(Float gamma, Boolean blackIsZero,
             Integer backgroundIndex, Integer backgroundColor,
-            Integer transparentIndex, Integer delayTime,
+            Integer transparentIndex, Integer delayTime, Integer loopCount,
             Integer imageWidth, Integer imageHeight,
             Integer imageLeftPosition, Integer imageTopPosition,
             Integer disposalMethod) {
@@ -113,6 +121,7 @@ public class ImageMetadata {
         this.backgroundColor = backgroundColor;
         this.transparentIndex = transparentIndex;
         this.delayTime = delayTime;
+        this.loopCount = loopCount;
         this.imageWidth = imageWidth;
         this.imageHeight = imageHeight;
         this.imageLeftPosition = imageLeftPosition;
@@ -137,6 +146,9 @@ public class ImageMetadata {
         }
         if (delayTime != null) {
             sb.append(" delayTime: " + delayTime);
+        }
+        if (loopCount != null) {
+            sb.append(" loopCount: " + loopCount);
         }
         if (transparentIndex != null) {
             sb.append(" transparentIndex: " + transparentIndex);

@@ -73,9 +73,9 @@ public final class URLConverter extends StyleConverterImpl<ParsedValue[], String
         if (resource != null && resource.trim().isEmpty() == false) {
 
             if (resource.startsWith("url(")) {
-                resource = com.sun.javafx.Utils.stripQuotes(resource.substring(4, resource.length() - 1));
+                resource = com.sun.javafx.util.Utils.stripQuotes(resource.substring(4, resource.length() - 1));
             } else {
-                resource = com.sun.javafx.Utils.stripQuotes(resource);
+                resource = com.sun.javafx.util.Utils.stripQuotes(resource);
             }
 
             String stylesheetURL = values.length > 1 && values[1] != null ? (String)values[1].getValue() : null;
@@ -143,7 +143,7 @@ public final class URLConverter extends StyleConverterImpl<ParsedValue[], String
 
 
         } catch (final MalformedURLException|URISyntaxException e) {
-            PlatformLogger cssLogger = com.sun.javafx.Logging.getCSSLogger();
+            PlatformLogger cssLogger = com.sun.javafx.util.Logging.getCSSLogger();
             if (cssLogger.isLoggable(PlatformLogger.Level.WARNING)) {
                 cssLogger.warning(e.getLocalizedMessage());
             }

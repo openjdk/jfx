@@ -37,9 +37,11 @@
 
 #include "MacPlatform.h"
 #include "Helpers.h"
+#include "Package.h"
 
 #include <sys/sysctl.h>
 #include <pthread.h>
+#include <vector>
 
 #import <Foundation/Foundation.h>
 
@@ -50,6 +52,15 @@
 #import <Cocoa/Cocoa.h>
 #endif //__OBJC__
 
+//--------------------------------------------------------------------------------------------------
+
+NSString* StringToNSString(TString Value) {
+    NSString* result = [NSString stringWithCString:Value.c_str()
+                                          encoding:[NSString defaultCStringEncoding]];
+    return result;
+}
+
+//--------------------------------------------------------------------------------------------------
 
 MacPlatform::MacPlatform(void) : Platform(), GenericPlatform(), PosixPlatform() {
 }
@@ -61,20 +72,17 @@ bool MacPlatform::UsePListForConfigFile() {
     return FilePath::FileExists(GetConfigFileName()) == false;
 }
 
-void MacPlatform::ShowError(TString Title, TString Description) {
-    NSString *ltitle = [NSString stringWithCString:Title.c_str()
-                                            encoding:[NSString defaultCStringEncoding]];
-
-    NSString *ldescription = [NSString stringWithCString:Description.c_str()
-                                            encoding:[NSString defaultCStringEncoding]];
+void MacPlatform::ShowMessage(TString Title, TString Description) {
+    NSString *ltitle = StringToNSString(Title);
+    NSString *ldescription = StringToNSString(Description);
 
     NSLog(@"%@:%@", ltitle, ldescription);
 }
 
-void MacPlatform::ShowError(TString Description) {
+void MacPlatform::ShowMessage(TString Description) {
     TString appname = GetModuleFileName();
     appname = FilePath::ExtractFileName(appname);
-    ShowError(appname, Description);
+    ShowMessage(appname, Description);
 }
 
 
@@ -299,7 +307,7 @@ std::map<TString, TString> MacPlatform::GetKeys() {
     return keys;
 }
 
-#ifdef DEBUG
+#ifdef DEBUG 
 bool MacPlatform::IsNativeDebuggerPresent() {
     int state;
     int mib[4];
@@ -327,183 +335,229 @@ int MacPlatform::GetProcessID() {
 
 //--------------------------------------------------------------------------------------------------
 
+class UserDefaults {
+private:
+    TOrderedMap FData;
+    TString FDomainName;
+    
+    bool ReadDictionary(NSDictionary *Items, TOrderedMap &Data) {
+        bool result = false;
+        int index = 1;
+        
+        for (id key in Items) {
+            id option = [Items valueForKey:key];
+            
+            if ([key isKindOfClass:[NSString class]] && [option isKindOfClass:[NSString class]]) {
+                TString name = [key UTF8String];
+                TString value = [option UTF8String];
+                
+                if (name.empty() == false) {
+                    TValueIndex item;
+                    item.value = value;
+                    item.index = index;
+                    
+                    Data.insert(TOrderedMap::value_type(name, item));
+                    result = true;
+                    index++;
+                }
+            }
+        }
+        
+        return result;
+    }
+    
+    // Open and read the defaults file specified by domain.
+    bool ReadPreferences(NSDictionary *Defaults, std::list<TString> Keys, TOrderedMap &Data) {
+        bool result = false;
+        
+        if (Keys.size() > 0 && Defaults != NULL) {
+            NSDictionary *node = Defaults;
+            
+            while (Keys.size() > 0 && node != NULL) {
+                TString key = Keys.front();
+                Keys.pop_front();
+                NSString *tempKey = StringToNSString(key);
+                node = [node valueForKey:tempKey];
+                
+                if (Keys.size() == 0) {
+                    break;
+                }
+            }
+            
+            if (node != NULL) {
+                result = ReadDictionary(node, Data);
+            }
+        }
+        
+        return result;
+    }
+    
+    NSDictionary* LoadPreferences(TString DomainName) {
+        NSDictionary *result = NULL;
+        
+        if (DomainName.empty() == false) {
+            NSUserDefaults *prefs = [[NSUserDefaults alloc] init];
+            
+            if (prefs != NULL) {
+                NSString *lDomainName = StringToNSString(DomainName);
+                result = [prefs persistentDomainForName: lDomainName];
+            }
+        }
+        
+        return result;
+    }
+    
+public:
+    UserDefaults(TString DomainName) {
+        FDomainName = DomainName;
+    }
+    
+    bool Read(std::list<TString> Keys) {
+        NSDictionary *defaults = LoadPreferences(FDomainName);
+        return ReadPreferences(defaults, Keys, FData);
+    }
+    
+    TOrderedMap GetData() {
+        return FData;
+    }
+};
+
+//--------------------------------------------------------------------------------------------------
+
 MacJavaUserPreferences::MacJavaUserPreferences(void) : JavaUserPreferences() {
 }
 
-/**
- * This gets the JVMOptions, both the internal developer only options and set of options the developer
- * wants a user to be able to override.
- *
- * The developer would set the options they required, for instance:
-
- <fx:platform>
- <fx:jvmarg value="-verbose:class"/>
- <fx:jvmarg value="-Djava.policy.file=$APPDIR/app/whatever.policy"/>
- <fx:jvmuserarg name="-Xmx" value="768m" />
- <fx:jvmuserarg name="-Djava.util.logging.config.file=" value="~/logging.properties" />
- </fx:platform>
-
- * this will result in Info.plist having (default)
-
- <key>JVMOptions</key>
- <array>
- <TString>-verbose:class</TString>
- <TString>-Djava.policy.file=$APPDIR/app/whatever.policy</TString>
- </array>
- <key>JVMUserOptions</key>
- <dict>
- <key>-Djava.util.logging.config.file=</key>
- <TString>~/logging.properties</TString>
- <key>-Xmx</key>
- <TString>768m</TString>
- </dict>
-
- * and initially set up the applications preference file in ~/Library/Preferences/..name based on bundleid..plist,
- * i.e. just the JVMUserOptions
-
- <key>JVMUserOptions</key>
- <dict>
- <key>-Djava.util.logging.config.file=</key>
- <TString>~/logging.properties</TString>
- <key>-Xmx</key>
- <TString>860m</TString>
- </dict>
-
- */
-
-#define JVM_OPTIONS_KEY "JVMOptions"
-#define JVM_USER_OPTIONS_KEY "JVMUserOptions"
-#define JVM_PREFERENCES_ID "JVMPreferencesID"
-#define DEFAULT_JAVA_PREFS_DOMAIN "com.apple.java.util.prefs"
-
-
-NSArray *getJVMOptions(NSDictionary *infoDictionary, NSString *mainBundlePath) {
-    NSArray *options = [infoDictionary objectForKey:@JVM_OPTIONS_KEY];
-    NSDictionary *defaultOverrides = [infoDictionary objectForKey:@JVM_USER_OPTIONS_KEY];
-
-    if (options == nil) {
-        options = [NSArray array];
-    }
-
-
-    //Do String substitutions - for now only one is $APPDIR, if a second one is added this will
-    //be generalized and use a set of options
-    NSString *contentsPath = [mainBundlePath stringByAppendingString:@"/Contents"];
-
-    //Create some extra room for user options and preferences id
-    NSMutableArray *expandedOptions = [[NSMutableArray alloc] initWithCapacity:(
-                                                                                [options count] + [defaultOverrides count] + 5)];
-
-    //Add preferences ID
-    NSString *preferencesID = [infoDictionary objectForKey:@JVM_PREFERENCES_ID];
-    if (preferencesID != nil) {
-        [expandedOptions addObject: [@"-Dapp.preferences.id=" stringByAppendingString: preferencesID]];
-    }
-
-    for (id option in options) {
-        NSString *expandedOption =
-        [option stringByReplacingOccurrencesOfString:@"$APPDIR" withString:contentsPath];
-        [expandedOptions addObject:expandedOption];
-    }
-
-
-    // calculate a normalized path including the JVMUserOptions key
-    BOOL leadingSlash = [preferencesID hasPrefix: @"/"];
-    BOOL trailingSlash = [preferencesID hasSuffix: @"/"] || ([preferencesID length] == 0);
-
-    NSString *fullPath = [NSString stringWithFormat:@"%@%@%@%@/", leadingSlash?@"":@"/",
-                          preferencesID, trailingSlash?@"":@"/", @JVM_USER_OPTIONS_KEY];
-
-    // now pull out the parts...
-    NSString *strippedPath = [fullPath stringByTrimmingCharactersInSet: [NSCharacterSet
-                                                                         characterSetWithCharactersInString:@"/"]];
-    NSArray *pathParts = [strippedPath componentsSeparatedByString:@"/"];
-
-    // calculate our persistent domain and the path of dictionaries to descend
-    NSString *persistentDomain;
-    NSMutableArray *dictPath = [NSMutableArray arrayWithArray: pathParts];
-    if ([pathParts count] > 2) {
-        // for 3 or more steps, the domain is first.second.third and the keys are "/first/second/third/", "fourth/", "fifth/"... etc
-        persistentDomain = [[NSString stringWithFormat: @"%@.%@.%@", [pathParts objectAtIndex: 0],
-                             [pathParts objectAtIndex: 1], [pathParts objectAtIndex: 2]] lowercaseString];
-
-        [dictPath replaceObjectAtIndex: 0 withObject: [NSString stringWithFormat:@"/%@/%@/%@", [pathParts objectAtIndex: 0],
-                                                       [pathParts objectAtIndex: 1], [pathParts objectAtIndex: 2]]];
-        [dictPath removeObjectAtIndex: 2];
-        [dictPath removeObjectAtIndex: 1];
-    } else {
-        // for 1 or two steps, the domain is first.second.third and the keys are "/", "first/", "second/"
-        persistentDomain = @DEFAULT_JAVA_PREFS_DOMAIN;
-        [dictPath insertObject: @"" atIndex:0];
-    }
-
-    // set up the user defaults for the appropriate persistent domain
-    NSUserDefaults *userDefaults = [[NSUserDefaults alloc] init];
-    NSDictionary *userOverrides = [userDefaults persistentDomainForName: persistentDomain];
-
-    // walk down our path parts, making dictionaries along the way if they are missing
-    NSDictionary *parentNode = NULL;
-    NSUInteger pathLength = [dictPath count];
-    for (unsigned int i = 0; i < pathLength; i++) {
-        NSString *nodeKey = [[dictPath objectAtIndex: i] stringByAppendingString: @"/"];
-        parentNode = userOverrides;
-        userOverrides = [parentNode objectForKey: nodeKey];
-        if (userOverrides == Nil) {
-            userOverrides = [NSMutableDictionary dictionaryWithCapacity: 2];
-            [parentNode setValue: userOverrides forKey: nodeKey];
-        }
-    }
-
-    //If overrides don't exist add them - the intent is to make it easier for the user to actually modify them
-    if ([userOverrides count] == 0) {
-        if (parentNode == NULL) {
-            [userDefaults setPersistentDomain: defaultOverrides forName: persistentDomain];
-            userOverrides = [userDefaults persistentDomainForName: persistentDomain];
-        } else {
-            NSString *nodeKey = [[dictPath objectAtIndex: ([dictPath count] - 1)] stringByAppendingString: @"/"];
-            //[parentNode setObject: defaultOverrides forKey:nodeKey];
-            userOverrides = [parentNode objectForKey: nodeKey];
-        }
-    }
-
-    // some writes may have occured, sync
-    [userDefaults synchronize];
-    //[userDefaults release];
-
-    // now we examine the prefs node for defaulted values and substitute user options
-    for (id key in defaultOverrides) {
-        NSString *newOption;
-        if ([userOverrides valueForKey: key] != nil &&
-            [[userOverrides valueForKey:key] isNotEqualTo:[defaultOverrides valueForKey:key]]) {
-            newOption = [key stringByAppendingString:[userOverrides valueForKey:key]];
-        }
-        else {
-            newOption = [key stringByAppendingString:[defaultOverrides valueForKey:key]];
-        }
-        NSString *expandedOption =
-        [newOption stringByReplacingOccurrencesOfString:@"$APPDIR" withString:contentsPath];
-        [expandedOptions addObject: expandedOption];
-    }
-
-    //Loop through all user override keys again looking for ones we haven't already uses
-    for (id key in userOverrides) {
-        //If the default object for key is nil, this is an option the user added so include
-        if ([defaultOverrides objectForKey: key] == nil) {
-            NSString *newOption = [key stringByAppendingString:[userOverrides valueForKey:key]];
-            NSString *expandedOption =
-            [newOption stringByReplacingOccurrencesOfString:@"$APPDIR" withString:contentsPath];
-            [expandedOptions addObject: expandedOption];
-        }
-    }
-
-    return expandedOptions;
+TString toLowerCase(TString Value) {
+    // Use Cocoa's lowercase method because it is better than the ones provided by C/C++.
+    NSString *temp = StringToNSString(Value);
+    temp = [temp lowercaseString];
+    TString result = [temp UTF8String];
+    return result;
 }
 
+// Split the string Value into using Delimiter.
+std::list<TString> Split(TString Value, TString Delimiter) {
+    std::list<TString> result;
+    std::vector<char> buffer(Value.c_str(), Value.c_str() + Value.size() + 1);
+    char *p = strtok(&buffer[0], Delimiter.data());
+    
+    while (p != NULL) {
+        TString token = p;
+        result.push_back(token);
+        p = strtok(NULL, Delimiter.data());
+    }
+    
+    return result;
+}
+
+// 1. If the path is fewer than three components (Example: one/two/three) then the domain is the
+//    default domain "com.apple.java.util.prefs" stored in the plist file
+//    ~/Library/Preferences/com.apple.java.util.prefs.plist
+//
+//    For example: If AppID = "hello", the path is "hello/JVMUserOptions and the
+//    plist file is ~/Library/Preferences/com.apple.java.util.prefs.plist containing the contents:
+//
+//    <?xml version="1.0" encoding="UTF-8"?>
+//    <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+//    <plist version="1.0">
+//    <dict>
+//      <key>/</key>
+//      <dict>
+//        <key>hello/</key>
+//        <dict>
+//          <key>JVMUserOptions/</key>
+//          <dict>
+//            <key>-DXmx</key>
+//            <string>512m</string>
+//          </dict>
+//        </dict>
+//      </dict>
+//    </dict>
+//    </plist>
+//
+// 2. If the path is three or more, the first three become the domain name (even
+//    if shared across applicaitons) and the remaining become individual keys.
+//
+//    For example: If AppID = "com/hello/foo", the path is "hello/JVMUserOptions and the
+//    domain is "com.hello.foo" stored in the plist file ~/Library/Preferences/com.hello.foo.plist
+//    containing the contents:
+//
+//    <?xml version="1.0" encoding="UTF-8"?>
+//    <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+//    <plist version="1.0">
+//    <dict>
+//      <key>/com/hello/foo/</key>
+//      <dict>
+//        <key>JVMUserOptions/</key>
+//        <dict>
+//          <key>-DXmx</key>
+//          <string>512m</string>
+//        </dict>
+//      </dict>
+//    </dict>
+//    </plist>
+//
+// NOTE: To change these values use the command line utility "defaults":
+// Example: defaults read com.apple.java.util.prefs /
+// Since OS 10.9 Mavericks the defaults are cashed so directly modifying the files is not recommended.
 bool MacJavaUserPreferences::Load(TString Appid) {
     bool result = false;
+    
+    if (Appid.empty() == false) {
+        // This is for backwards compatability. Older packaged applications have an
+        // app.preferences.id that is delimited by period (".") rather than
+        // slash ("/") so convert to newer style.
+        TString path = Helpers::ReplaceString(Appid, _T("."), _T("/"));
+        
+        path = path + _T("/JVMUserOptions");
+        TString domainName;
+        std::list<TString> keys = Split(path, _T("/"));
+        
+        // If there are less than three parts to the path then use the default preferences file.
+        if (keys.size() < 3) {
+            domainName = _T("com.apple.java.util.prefs");
 
-    //TODO implement
+            // Append slash to the end of each key.
+            for (std::list<TString>::iterator iterator = keys.begin(); iterator != keys.end(); iterator++) {
+                TString item = *iterator;
+                item = item + _T("/");
+                *iterator = item;
+            }
+            
+            // The root key is /.
+            keys.push_front(_T("/"));
+        }
+        else {
+            // Remove the first three keys and use them for the root key and the preferencesID.
+            TString one = keys.front();
+            keys.pop_front();
+            TString two = keys.front();
+            keys.pop_front();
+            TString three = keys.front();
+            keys.pop_front();
+            domainName = one + TString(".") + two + TString(".") + three;
+            domainName = toLowerCase(domainName);
+            
+            // Append slash to the end of each key.
+            for (std::list<TString>::iterator iterator = keys.begin(); iterator != keys.end(); iterator++) {
+                TString item = *iterator;
+                item = item + _T("/");
+                *iterator = item;
+            }
+            
+            // The root key is /one/two/three/
+            TString key = TString("/") + one + TString("/") + two + TString("/") + three + TString("/");
+            keys.push_front(key);
+        }
 
+        UserDefaults userDefaults(domainName);
+        
+        if (userDefaults.Read(keys) == true) {
+            result = true;
+            FMap = userDefaults.GetData();
+        }
+    }
+    
     return result;
 }
 

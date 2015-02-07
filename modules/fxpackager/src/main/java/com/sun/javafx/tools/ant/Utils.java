@@ -32,13 +32,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.security.cert.CertPath;
 import java.security.cert.CertificateEncodingException;
+import java.util.Base64;
 import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import org.apache.tools.ant.types.FileSet;
 import org.apache.tools.ant.types.resources.FileResource;
-import sun.misc.BASE64Encoder;
 
 public final class Utils {
     private Utils() {
@@ -97,7 +97,6 @@ public final class Utils {
     public static String getBase64Encoded(CertPath certPath)
             throws CertificateEncodingException
     {
-        BASE64Encoder encoder = new BASE64Encoder();
-        return encoder.encode(certPath.getEncoded());
+        return Base64.getEncoder().encodeToString(certPath.getEncoded());
     }
 }

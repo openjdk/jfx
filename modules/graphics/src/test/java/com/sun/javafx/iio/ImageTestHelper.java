@@ -168,4 +168,12 @@ public class ImageTestHelper {
             }
         };
     }
+
+    public static ByteArrayInputStream constructStreamFromInts(int[] ints) {
+        byte[] bytes = new byte[ints.length];
+        for (int i = 0; i < ints.length; i++) {
+            bytes[i] = (byte)ints[i];
+        }
+        return new ByteArrayInputStream(bytes);
+    }
 }

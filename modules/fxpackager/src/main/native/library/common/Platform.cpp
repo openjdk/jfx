@@ -70,7 +70,7 @@ Library::Library(TString FileName) {
 
     if (FModule == NULL) {
         Messages& messages = Messages::GetInstance();
-        platform.ShowError(messages.GetMessage(LIBRARY_NOT_FOUND), FileName);
+        platform.ShowMessage(messages.GetMessage(LIBRARY_NOT_FOUND), FileName);
     }
 }
 

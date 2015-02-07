@@ -441,7 +441,6 @@ final class PaintCollector implements CompletionListener {
 
         dirtyScenes.clear();
 
-        // This should be removed when RT-15195, RT-38808 and all associated issues is finished.
         if (toolkit.shouldWaitForRenderingToComplete()) {
             waitForRenderingToComplete();
         }

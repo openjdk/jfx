@@ -191,8 +191,11 @@ class ES2SwapChain implements ES2RenderTarget, Presentable, GraphicsResource {
     public ES2Graphics createGraphics() {
         context.makeCurrent(drawable);
 
-        GLContext glContext = context.getGLContext();
-        nativeDestHandle = glContext.getBoundFBO();
+        nativeDestHandle = pState.getNativeFrameBuffer();
+        if (nativeDestHandle == 0) {
+            GLContext glContext = context.getGLContext();
+            nativeDestHandle = glContext.getBoundFBO();
+        }
 
         needsResize = (w != getPhysicalWidth() || h != getPhysicalHeight());
         // the stableBackbuffer will be used as the render target

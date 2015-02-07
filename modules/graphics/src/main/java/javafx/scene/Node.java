@@ -113,9 +113,9 @@ import java.util.Set;
 
 import com.sun.glass.ui.Accessible;
 import com.sun.glass.ui.Application;
-import com.sun.javafx.Logging;
-import com.sun.javafx.TempState;
-import com.sun.javafx.Utils;
+import com.sun.javafx.util.Logging;
+import com.sun.javafx.util.TempState;
+import com.sun.javafx.util.Utils;
 import com.sun.javafx.beans.IDProperty;
 import com.sun.javafx.beans.event.AbstractNotifyListener;
 import com.sun.javafx.binding.ExpressionHelper;

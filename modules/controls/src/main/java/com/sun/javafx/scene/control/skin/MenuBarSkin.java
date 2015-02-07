@@ -363,7 +363,7 @@ public class MenuBarSkin extends BehaviorSkinBase<MenuBar, BehaviorBase<MenuBar>
         ** pressing f10 will select the first menu button on a menubar
         */
         final KeyCombination acceleratorKeyCombo;
-        if (com.sun.javafx.Utils.isMac()) {
+        if (com.sun.javafx.util.Utils.isMac()) {
            acceleratorKeyCombo = KeyCombination.keyCombination("ctrl+F10");
         } else {
            acceleratorKeyCombo = KeyCombination.keyCombination("F10");

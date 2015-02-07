@@ -26,7 +26,7 @@
 package com.javafx.experiments.dukepad.calculator;
 
 import com.javafx.experiments.dukepad.core.Fonts;
-import com.sun.javafx.Utils;
+import com.sun.javafx.util.Utils;
 import com.sun.javafx.scene.control.skin.ButtonSkin;
 import com.sun.javafx.scene.control.skin.TextFieldSkin;
 import javafx.beans.value.ChangeListener;

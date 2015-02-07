@@ -34,6 +34,7 @@
 #import "GlassWindow.h"
 #import "GlassView3D.h"
 #import "GlassHelper.h"
+#import "GlassLayer3D.h"
 
 //#define VERBOSE
 #ifndef VERBOSE
@@ -330,6 +331,33 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_mac_MacView__1create
     
     LOG("   view: %p", value);
     return value;
+}
+
+/*
+ * Class:     com_sun_glass_ui_mac_MacView
+ * Method:    _getNativeFrameBuffer
+ * Signature: (J)I
+ */
+JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacView__1getNativeFrameBuffer
+(JNIEnv *env, jobject jView, jlong jPtr)
+{
+    LOG("Java_com_sun_glass_ui_mac_MacView__1_getNativeFrameBuffer");
+    LOG("   view: %p", jPtr);
+    if (!jPtr) return 0L;
+    
+    jint fb = 0;
+    
+    GLASS_ASSERT_MAIN_JAVA_THREAD(env);
+    GLASS_POOL_ENTER;
+    {
+        NSView<GlassView> *view = getGlassView(env, jPtr);
+        GlassLayer3D *layer = (GlassLayer3D*)[view layer];
+        fb = (jint) [[layer getPainterOffscreen] fbo];
+    }
+    GLASS_POOL_EXIT;
+    GLASS_CHECK_EXCEPTION(env);
+
+    return fb;
 }
 
 /*

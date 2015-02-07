@@ -51,9 +51,6 @@ public class HelloMenuButton extends Application {
      * @param args the command line arguments
      */
     public static void main(String[] args) {
-        //com.sun.javafx.Logging.getFocusLogger().setLevel(PlatformLogger.FINE);
-        //com.sun.javafx.Logging.getInputLogger().setLevel(PlatformLogger.FINE);
-        //com.sun.javafx.scene.control.Logging.getControlsLogger().setLevel(PlatformLogger.FINEST);
         Application.launch(args);
     }
 

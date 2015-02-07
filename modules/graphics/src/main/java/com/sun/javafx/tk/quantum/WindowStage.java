@@ -483,6 +483,10 @@ class WindowStage extends GlassStage {
     
     @Override public void setOpacity(float opacity) {
         platformWindow.setAlpha(opacity);
+        GlassScene gs = getScene();
+        if (gs != null) {
+            gs.entireSceneNeedsRepaint();
+        }
     }
 
     public boolean needsUpdateWindow() {
@@ -786,7 +790,10 @@ class WindowStage extends GlassStage {
         super.setPlatformEnabled(enabled);
         platformWindow.setEnabled(enabled);
         if (enabled) {
-            requestToFront();
+            // Check if window is really enabled - to handle nested case
+            if (platformWindow.isEnabled()) {
+                requestToFront();
+            }
         } else {
             removeActiveWindow(this);
         }

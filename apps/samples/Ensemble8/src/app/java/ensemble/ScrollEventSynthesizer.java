@@ -213,11 +213,11 @@ public class ScrollEventSynthesizer implements EventHandler {
             };
 
             // animate a slow down from current velocity to zero
-            inertiaTimeline = TimelineBuilder.create()
-                .keyFrames(
+            inertiaTimeline = new Timeline(
                     new KeyFrame(Duration.ZERO, new KeyValue(animatePosition, 0)),
-                    new KeyFrame(Duration.millis(INERTIA_DURATION), new KeyValue(animatePosition, 1d, Interpolator.SPLINE(0.0513, 0.1131, 0.1368, 1.0000)))
-                ).build();
+                    new KeyFrame(Duration.millis(INERTIA_DURATION), new KeyValue(animatePosition, 1d,
+                            Interpolator.SPLINE(0.0513, 0.1131, 0.1368, 1.0000)))
+            );
             inertiaTimeline.play();
         }
     }

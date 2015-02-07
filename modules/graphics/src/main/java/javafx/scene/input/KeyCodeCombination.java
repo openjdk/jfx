@@ -160,7 +160,7 @@ public final class KeyCodeCombination extends KeyCombination {
         // such that each individual word is capitalized and the underline replaced
         // by spaces.
 
-        String[] words = com.sun.javafx.Utils.split(name, "_");
+        String[] words = com.sun.javafx.util.Utils.split(name, "_");
         for (String word : words) {
             if (sb.length() > initialLength) {
                 sb.append(' ');

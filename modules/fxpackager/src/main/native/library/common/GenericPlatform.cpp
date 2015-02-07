@@ -176,11 +176,11 @@ std::map<TString, TString> GenericPlatform::GetKeys() {
 }
 
 #ifdef DEBUG
-Platform::DebugState GenericPlatform::GetDebugState() {
-    Platform::DebugState result = Platform::dsNone;
+DebugState GenericPlatform::GetDebugState() {
+    DebugState result = dsNone;
     
     if (IsNativeDebuggerPresent() == true) {
-        result = Platform::dsNative;
+        result = dsNative;
     }
     
     return result;

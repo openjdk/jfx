@@ -57,8 +57,8 @@ public:
     virtual TCHAR* ConvertStringToFileSystemString(TCHAR* Source, bool &release);
     virtual TCHAR* ConvertFileSystemStringToString(TCHAR* Source, bool &release);
 
-    virtual void ShowError(TString title, TString description);
-    virtual void ShowError(TString description);
+    virtual void ShowMessage(TString title, TString description);
+    virtual void ShowMessage(TString description);
     virtual void SetCurrentDirectory(TString Value);
     virtual TString GetPackageRootDirectory();
     virtual TString GetAppDataDirectory();

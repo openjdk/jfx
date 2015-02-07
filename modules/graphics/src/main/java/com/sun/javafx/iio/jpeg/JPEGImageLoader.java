@@ -222,7 +222,7 @@ public class JPEGImageLoader extends ImageLoaderImpl {
         height = widthHeight[1];
 
         ImageMetadata md = new ImageMetadata(null, true,
-                null, null, null, null,
+                null, null, null, null, null,
                 inWidth, inHeight, null, null, null);
 
         updateImageMetadata(md);

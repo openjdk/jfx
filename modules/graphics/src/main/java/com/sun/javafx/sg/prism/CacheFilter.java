@@ -211,7 +211,7 @@ public class CacheFilter {
      * Assumes that caller locked and validated the cachedImageData.untximage
      * if not null...
      */
-    private boolean needToRenderCache(BaseTransform renderXform, double[] xformInfo) {
+    private boolean needToRenderCache(BaseTransform renderXform, double[] xformInfo, float pixelScale) {
         if (cachedImageData == null) {
             return true;
         }
@@ -250,6 +250,13 @@ public class CacheFilter {
         double scaleY = xformInfo[1];
         double rotate = xformInfo[2];
         if (scaleHint) {
+            if (cachedScaleX < pixelScale || cachedScaleY < pixelScale) {
+                // We have moved onto a screen with a higher pixelScale and
+                // our cache was less than that pixel scale.  Even though
+                // we have the scaleHint, we always cache at a minimum of
+                // the pixel scale of the screen so we need to re-cache.
+                return true;
+            }
             if (rotateHint) {
                 return false;
             } else {
@@ -525,7 +532,8 @@ public class CacheFilter {
                 }
             }
         }
-        if (needToRenderCache(xform, xformInfo)) {
+        float pixelScale = g.getAssociatedScreen().getScale();
+        if (needToRenderCache(xform, xformInfo, pixelScale)) {
             if (PulseLogger.PULSE_LOGGING_ENABLED) {
                 PulseLogger.incrementCounter("CacheFilter rebuilding");
             }
@@ -540,8 +548,8 @@ public class CacheFilter {
                 // do not cache the image at a small scale factor when
                 // scaleHint is set as it leads to poor rendering results
                 // when image is scaled up.
-                cachedScaleX = Math.max(NGNode.highestPixelScale, xformInfo[0]);
-                cachedScaleY = Math.max(NGNode.highestPixelScale, xformInfo[1]);
+                cachedScaleX = Math.max(pixelScale, xformInfo[0]);
+                cachedScaleY = Math.max(pixelScale, xformInfo[1]);
                 cachedRotate = 0;
                 cachedXform.setTransform(cachedScaleX, 0.0,
                                          0.0, cachedScaleX,
