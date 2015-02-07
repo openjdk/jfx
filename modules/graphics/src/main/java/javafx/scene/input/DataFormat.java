@@ -31,7 +31,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
-import com.sun.javafx.WeakReferenceQueue;
+import com.sun.javafx.util.WeakReferenceQueue;
 import javafx.beans.NamedArg;
 
 /**

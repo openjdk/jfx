@@ -53,7 +53,7 @@ import javafx.scene.input.TouchEvent;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
 import javafx.util.Duration;
-import com.sun.javafx.Utils;
+import com.sun.javafx.util.Utils;
 import com.sun.javafx.scene.control.behavior.ScrollPaneBehavior;
 import com.sun.javafx.scene.traversal.TraverseListener;
 import static com.sun.javafx.scene.control.skin.Utils.*;

@@ -28,7 +28,7 @@ package com.sun.javafx.scene.control.skin;
 import javafx.scene.control.IndexedCell;
 import javafx.scene.control.ScrollBar;
 
-import com.sun.javafx.Utils;
+import com.sun.javafx.util.Utils;
 
 /**
  * This custom ScrollBar is used to map the increment & decrement features

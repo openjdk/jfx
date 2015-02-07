@@ -25,6 +25,10 @@
 
 package javafx.collections;
 
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
+import javafx.beans.Observable;
 import javafx.beans.property.StringProperty;
 import javafx.beans.property.StringPropertyBase;
 
@@ -79,5 +83,24 @@ public class Person implements Comparable<Person> {
     @Override
     public int compareTo(Person o) {
         return this.name.get().compareTo(o.name.get());
+    }
+    
+    public static ObservableList<Person> createPersonsList(Person... persons) {
+        ObservableList<Person> list = FXCollections.observableArrayList(
+                (Person p) -> new Observable[]{p.name});
+        list.addAll(persons);
+        return list;
+    }
+
+    public static List<Person> createPersonsFromNames(String... names) {
+        return Arrays.asList(names).stream().
+                map(name -> new Person(name)).collect(Collectors.toList());
+    }
+
+    public static ObservableList<Person> createPersonsList(String... names) {
+        ObservableList<Person> list = FXCollections.observableArrayList(
+                (Person p) -> new Observable[]{p.name});
+        list.addAll(createPersonsFromNames(names));
+        return list;
     }
 }

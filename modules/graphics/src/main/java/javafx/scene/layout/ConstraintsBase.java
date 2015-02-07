@@ -30,7 +30,7 @@ import java.util.Iterator;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 
-import com.sun.javafx.WeakReferenceQueue;
+import com.sun.javafx.util.WeakReferenceQueue;
 
 /**
  * The base class for defining node-specific layout constraints.  Region

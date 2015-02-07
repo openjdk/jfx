@@ -25,7 +25,7 @@
 
 package com.sun.javafx.css.converters;
 
-import com.sun.javafx.Logging;
+import com.sun.javafx.util.Logging;
 import com.sun.javafx.css.StringStore;
 import com.sun.javafx.css.StyleConverterImpl;
 import javafx.css.ParsedValue;

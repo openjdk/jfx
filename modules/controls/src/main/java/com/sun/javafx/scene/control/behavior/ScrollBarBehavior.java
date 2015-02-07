@@ -25,7 +25,7 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import com.sun.javafx.Utils;
+import com.sun.javafx.util.Utils;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.event.ActionEvent;

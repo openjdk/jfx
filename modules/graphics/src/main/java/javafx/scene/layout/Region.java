@@ -25,7 +25,7 @@
 
 package javafx.scene.layout;
 
-import com.sun.javafx.Utils;
+import com.sun.javafx.util.Utils;
 import javafx.beans.InvalidationListener;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
@@ -61,8 +61,8 @@ import java.util.Collections;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Function;
-import com.sun.javafx.Logging;
-import com.sun.javafx.TempState;
+import com.sun.javafx.util.Logging;
+import com.sun.javafx.util.TempState;
 import com.sun.javafx.binding.ExpressionHelper;
 import com.sun.javafx.css.converters.BooleanConverter;
 import com.sun.javafx.css.converters.InsetsConverter;

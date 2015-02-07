@@ -27,8 +27,8 @@ package javafx.scene;
 
 import com.sun.glass.ui.Application;
 import com.sun.glass.ui.Accessible;
-import com.sun.javafx.Logging;
-import com.sun.javafx.Utils;
+import com.sun.javafx.util.Logging;
+import com.sun.javafx.util.Utils;
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.css.StyleManager;

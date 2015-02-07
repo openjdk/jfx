@@ -30,7 +30,7 @@ import java.lang.ref.Reference;
 import java.lang.ref.WeakReference;
 import java.util.*;
 
-import com.sun.javafx.*;
+import com.sun.javafx.PlatformUtil;
 import javafx.animation.FadeTransition;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;

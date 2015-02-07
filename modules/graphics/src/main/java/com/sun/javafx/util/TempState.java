@@ -23,7 +23,7 @@
  * questions.
  */
 
-package com.sun.javafx;
+package com.sun.javafx.util;
 
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.RectBounds;

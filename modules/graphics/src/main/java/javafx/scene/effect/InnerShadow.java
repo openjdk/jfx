@@ -32,7 +32,7 @@ import javafx.beans.property.ObjectPropertyBase;
 import javafx.scene.Node;
 import javafx.scene.paint.Color;
 
-import com.sun.javafx.Utils;
+import com.sun.javafx.util.Utils;
 import com.sun.javafx.effect.EffectDirtyBits;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.transform.BaseTransform;

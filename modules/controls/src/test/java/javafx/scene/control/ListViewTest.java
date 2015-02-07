@@ -1579,4 +1579,34 @@ public class ListViewTest {
             return id == ((RT22599_DataType)obj).id;
         }
     }
+
+    private int rt_39966_count = 0;
+    @Test public void test_rt_39966() {
+        ObservableList<String> list = FXCollections.observableArrayList("Hello World");
+        ListView<String> listView = new ListView<>(list);
+
+        StageLoader sl = new StageLoader(listView);
+
+        // initially there is no selection
+        assertTrue(listView.getSelectionModel().isEmpty());
+
+        listView.getSelectionModel().selectedItemProperty().addListener((value, s1, s2) -> {
+            if (rt_39966_count == 0) {
+                rt_39966_count++;
+                assertFalse(listView.getSelectionModel().isEmpty());
+            } else {
+                assertTrue(listView.getSelectionModel().isEmpty());
+            }
+        });
+
+        // our assertion two lines down always succeeds. What fails is our
+        // assertion above within the listener.
+        listView.getSelectionModel().select(0);
+        assertFalse(listView.getSelectionModel().isEmpty());
+
+        list.remove(0);
+        assertTrue(listView.getSelectionModel().isEmpty());
+
+        sl.dispose();
+    }
 }

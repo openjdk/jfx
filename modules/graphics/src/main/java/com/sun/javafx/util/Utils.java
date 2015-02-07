@@ -23,7 +23,7 @@
  * questions.
  */
 
-package com.sun.javafx;
+package com.sun.javafx.util;
 
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
@@ -40,6 +40,7 @@ import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.stage.Window;
 import java.util.List;
+import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.stage.StageHelper;
 
 /**

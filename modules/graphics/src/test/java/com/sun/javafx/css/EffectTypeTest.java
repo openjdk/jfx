@@ -162,7 +162,7 @@ public class EffectTypeTest {
         value = getInnerShadowValue(is, true);
         result = value.convert(font);
         // derived color is 50% of is.getColor()
-        is.setColor(com.sun.javafx.Utils.deriveColor(is.getColor(), 0.5f));
+        is.setColor(com.sun.javafx.util.Utils.deriveColor(is.getColor(), 0.5f));
         checkInnerShadow("convert[2] ", is, (InnerShadow)result);
 
         DropShadow ds = getDropShadow();
@@ -174,7 +174,7 @@ public class EffectTypeTest {
         value = getDropShadowValue(ds, true);
         result = value.convert(font);
         // derived color is 50% of is.getColor()
-        ds.setColor(com.sun.javafx.Utils.deriveColor(ds.getColor(), 0.5f));
+        ds.setColor(com.sun.javafx.util.Utils.deriveColor(ds.getColor(), 0.5f));
         checkDropShadow("convert[4] ", ds, (DropShadow)result);
 
     }

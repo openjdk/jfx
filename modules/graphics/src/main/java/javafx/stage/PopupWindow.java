@@ -25,7 +25,7 @@
 
 package javafx.stage;
 
-import com.sun.javafx.Utils;
+import com.sun.javafx.util.Utils;
 import com.sun.javafx.event.DirectEvent;
 import java.util.ArrayList;
 import java.util.List;

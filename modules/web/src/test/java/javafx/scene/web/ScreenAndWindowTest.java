@@ -25,7 +25,7 @@
 
 package javafx.scene.web;
 
-import com.sun.javafx.Utils;
+import com.sun.javafx.util.Utils;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Group;
 import javafx.scene.Node;

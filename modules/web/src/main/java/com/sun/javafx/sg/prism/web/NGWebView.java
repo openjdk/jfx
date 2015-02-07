@@ -23,13 +23,14 @@
  * questions.
  */
 
-package com.sun.javafx.sg.prism;
+package com.sun.javafx.sg.prism.web;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.sg.prism.NGGroup;
 import com.sun.prism.Graphics;
 import com.sun.prism.PrinterGraphics;
 import com.sun.webkit.WebPage;
