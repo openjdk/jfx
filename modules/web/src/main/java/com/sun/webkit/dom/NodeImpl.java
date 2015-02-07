@@ -3,6 +3,8 @@
 package com.sun.webkit.dom;
 
 import com.sun.webkit.Disposer;
+import com.sun.webkit.DisposerRecord;
+import com.sun.webkit.dom.JSObject;
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
