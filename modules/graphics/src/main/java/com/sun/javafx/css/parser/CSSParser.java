@@ -25,7 +25,7 @@
 
 package com.sun.javafx.css.parser;
 
-import com.sun.javafx.Utils;
+import com.sun.javafx.util.Utils;
 import com.sun.javafx.css.Combinator;
 import com.sun.javafx.css.CompoundSelector;
 import com.sun.javafx.css.CssError;
@@ -166,7 +166,7 @@ final public class CSSParser {
         sourceOfInlineStyle = styleable;
     }
 
-    private static final PlatformLogger LOGGER = com.sun.javafx.Logging.getCSSLogger();
+    private static final PlatformLogger LOGGER = com.sun.javafx.util.Logging.getCSSLogger();
 
     private static final class ParseException extends Exception {
         ParseException(String message) {
@@ -531,7 +531,7 @@ final public class CSSParser {
     }
 
     private String stripQuotes(String string) {
-        return com.sun.javafx.Utils.stripQuotes(string);
+        return com.sun.javafx.util.Utils.stripQuotes(string);
     }
 
     private double clamp(double min, double val, double max) {

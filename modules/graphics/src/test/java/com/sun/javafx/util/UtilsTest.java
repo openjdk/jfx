@@ -23,7 +23,7 @@
  * questions.
  */
 
-package com.sun.javafx;
+package com.sun.javafx.util;
 
 import static org.junit.Assert.assertEquals;
 

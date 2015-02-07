@@ -25,7 +25,7 @@
 
 package javafx.fxml;
 
-import com.sun.javafx.Logging;
+import com.sun.javafx.util.Logging;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;

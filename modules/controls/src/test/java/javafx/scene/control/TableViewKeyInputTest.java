@@ -38,7 +38,7 @@ import java.util.List;
 import java.util.function.Function;
 
 import com.sun.javafx.PlatformUtil;
-import com.sun.javafx.Utils;
+import com.sun.javafx.util.Utils;
 import com.sun.javafx.scene.control.behavior.TableViewAnchorRetriever;
 import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import com.sun.javafx.scene.control.infrastructure.KeyModifier;

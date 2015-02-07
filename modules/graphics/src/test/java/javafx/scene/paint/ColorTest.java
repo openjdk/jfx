@@ -29,7 +29,7 @@ import javafx.animation.Interpolatable;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
-import com.sun.javafx.Utils;
+import com.sun.javafx.util.Utils;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;

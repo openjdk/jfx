@@ -25,7 +25,7 @@
 
 package javafx.scene.shape;
 
-import com.sun.javafx.WeakReferenceQueue;
+import com.sun.javafx.util.WeakReferenceQueue;
 import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.sg.prism.NGPath;
 import javafx.beans.property.BooleanProperty;

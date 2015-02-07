@@ -38,7 +38,7 @@ import javafx.scene.web.WebView;
 import javafx.stage.Screen;
 import javafx.stage.Window;
 
-import com.sun.javafx.Utils;
+import com.sun.javafx.util.Utils;
 import com.sun.webkit.CursorManager;
 import com.sun.webkit.WebPageClient;
 import com.sun.webkit.graphics.WCGraphicsManager;

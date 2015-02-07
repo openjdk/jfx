@@ -249,7 +249,7 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
         double inputControlMaxY = inputControlMinY + inputControlHeight; 
 
         double screenHeight =
-            com.sun.javafx.Utils.getScreen(node).getBounds().getHeight();
+            com.sun.javafx.util.Utils.getScreen(node).getBounds().getHeight();
         double visibleAreaMaxY = screenHeight - VK_HEIGHT;
 
         double inputLineCenterY = 0.0;
@@ -328,7 +328,7 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
         if (unHideEventHandler == null) {
             unHideEventHandler = event -> {
                 if (attachedNode != null && isVKHidden) {
-                    double screenHeight = com.sun.javafx.Utils.getScreen(attachedNode).getBounds().getHeight();
+                    double screenHeight = com.sun.javafx.util.Utils.getScreen(attachedNode).getBounds().getHeight();
                     if (fxvk.getHeight() > 0 && (vkPopup.getY() > screenHeight - fxvk.getHeight())) {
                         if (slideInTimeline.getStatus() != Animation.Status.RUNNING) {
                             startSlideIn();
@@ -389,8 +389,8 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
         vkPopup.getContent().setAll(fxvk);
 
         double screenHeight =
-            com.sun.javafx.Utils.getScreen(fxvk).getBounds().getHeight();
-        double width = com.sun.javafx.Utils.getScreen(fxvk).getBounds().getWidth();
+            com.sun.javafx.util.Utils.getScreen(fxvk).getBounds().getHeight();
+        double width = com.sun.javafx.util.Utils.getScreen(fxvk).getBounds().getWidth();
 
         //Setup VK slide animations
         slideInTimeline.getKeyFrames().setAll(
@@ -464,7 +464,7 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
 
         if (!vkPopup.isShowing()) {
             Rectangle2D screenBounds =
-                com.sun.javafx.Utils.getScreen(node).getBounds();
+                com.sun.javafx.util.Utils.getScreen(node).getBounds();
 
             vkPopup.setX((screenBounds.getWidth() - fxvk.prefWidth(-1)) / 2);
             winY.set(screenBounds.getHeight());
@@ -510,7 +510,7 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
 
                     if (!vkPopup.isShowing()) {
                         Rectangle2D screenBounds =
-                            com.sun.javafx.Utils.getScreen(attachedNode).getBounds();
+                            com.sun.javafx.util.Utils.getScreen(attachedNode).getBounds();
 
                         vkPopup.setX((screenBounds.getWidth() - fxvk.prefWidth(-1)) / 2);
                         if (oldNode == null || isVKHidden) {
@@ -980,7 +980,7 @@ public class FXVKSkin extends BehaviorSkinBase<FXVK, BehaviorBase<FXVK>> {
                 Platform.runLater(() -> {
                     // Position popup on screen
                     Point2D nodePoint =
-                        com.sun.javafx.Utils.pointRelativeTo(key, w, h, HPos.CENTER, VPos.TOP,
+                        com.sun.javafx.util.Utils.pointRelativeTo(key, w, h, HPos.CENTER, VPos.TOP,
                                                              5, -3, true);
                     double x = nodePoint.getX();
                     double y = nodePoint.getY();

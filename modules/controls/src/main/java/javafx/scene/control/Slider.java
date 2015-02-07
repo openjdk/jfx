@@ -43,7 +43,7 @@ import javafx.scene.AccessibleAttribute;
 import javafx.scene.AccessibleRole;
 import javafx.util.StringConverter;
 
-import com.sun.javafx.Utils;
+import com.sun.javafx.util.Utils;
 
 import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;

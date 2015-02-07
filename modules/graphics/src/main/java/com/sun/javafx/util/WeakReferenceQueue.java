@@ -23,7 +23,7 @@
  * questions.
  */
 
-package com.sun.javafx;
+package com.sun.javafx.util;
 
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;

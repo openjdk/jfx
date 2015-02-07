@@ -25,7 +25,7 @@
 
 package com.sun.javafx.css.converters;
 
-import com.sun.javafx.Utils;
+import com.sun.javafx.util.Utils;
 import com.sun.javafx.css.Size;
 import com.sun.javafx.css.StyleConverterImpl;
 import javafx.css.CssMetaData;

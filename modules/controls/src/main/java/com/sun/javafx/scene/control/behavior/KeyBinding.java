@@ -25,7 +25,7 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import com.sun.javafx.Utils;
+import com.sun.javafx.util.Utils;
 import static com.sun.javafx.scene.control.behavior.OptionalBoolean.ANY;
 import static com.sun.javafx.scene.control.behavior.OptionalBoolean.FALSE;
 import static com.sun.javafx.scene.control.behavior.OptionalBoolean.TRUE;

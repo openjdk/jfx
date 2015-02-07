@@ -186,7 +186,7 @@ public class CustomColorDialog extends HBox {
     
     private void fixPosition() {
         Window w = dialog.getOwner();
-        Screen s = com.sun.javafx.Utils.getScreen(w);
+        Screen s = com.sun.javafx.util.Utils.getScreen(w);
         Rectangle2D sb = s.getBounds();
         double xR = w.getX() + w.getWidth();
         double xL = w.getX() - dialog.getWidth();

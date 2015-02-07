@@ -53,8 +53,8 @@ import javafx.event.EventType;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Scene;
 
-import com.sun.javafx.Utils;
-import com.sun.javafx.WeakReferenceQueue;
+import com.sun.javafx.util.Utils;
+import com.sun.javafx.util.WeakReferenceQueue;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.stage.WindowEventDispatcher;
 import com.sun.javafx.stage.WindowHelper;

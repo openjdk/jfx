@@ -33,7 +33,7 @@ import javafx.collections.ObservableList;
 import javafx.scene.input.KeyCode;
 import java.util.List;
 import com.sun.javafx.PlatformUtil;
-import com.sun.javafx.Utils;
+import com.sun.javafx.util.Utils;
 import com.sun.javafx.scene.control.behavior.TreeViewAnchorRetriever;
 import com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import com.sun.javafx.scene.control.infrastructure.KeyModifier;

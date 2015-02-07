@@ -67,7 +67,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import com.sun.javafx.Utils;
+import com.sun.javafx.util.Utils;
 import com.sun.javafx.binding.ExpressionHelper;
 import javafx.util.StringConverter;
 

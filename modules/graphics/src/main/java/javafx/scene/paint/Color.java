@@ -29,7 +29,7 @@ import javafx.animation.Interpolatable;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
-import com.sun.javafx.Utils;
+import com.sun.javafx.util.Utils;
 import com.sun.javafx.tk.Toolkit;
 import javafx.beans.NamedArg;
 

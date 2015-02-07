@@ -519,9 +519,9 @@ public class ColorPalette extends Region {
                     dragDetected = true;
                     mouseDragColor = colorPicker.getValue();
                 }
-                int xIndex = com.sun.javafx.Utils.clamp(0,
+                int xIndex = com.sun.javafx.util.Utils.clamp(0,
                         (int)t.getX()/(SQUARE_SIZE + 1), NUM_OF_COLUMNS - 1);
-                int yIndex = com.sun.javafx.Utils.clamp(0,
+                int yIndex = com.sun.javafx.util.Utils.clamp(0,
                         (int)t.getY()/(SQUARE_SIZE + 1), NUM_OF_ROWS - 1);
                 int index = xIndex + yIndex*NUM_OF_COLUMNS;
                 colorPicker.setValue((Color) squares.get(index).rectangle.getFill());

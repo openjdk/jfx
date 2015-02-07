@@ -23,7 +23,7 @@
  * questions.
  */
 
-package com.sun.javafx;
+package com.sun.javafx.util;
 
 import com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.pgstub.StubToolkit.ScreenConfiguration;

@@ -39,7 +39,7 @@ import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import javafx.stage.Window;
 
-import com.sun.javafx.Logging;
+import com.sun.javafx.util.Logging;
 import org.junit.Before;
 import org.junit.Test;
 import sun.util.logging.PlatformLogger;

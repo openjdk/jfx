@@ -25,7 +25,7 @@
 
 package com.sun.javafx.scene.control.skin;
 
-import com.sun.javafx.Utils;
+import com.sun.javafx.util.Utils;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;

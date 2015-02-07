@@ -48,8 +48,8 @@ import javafx.css.StyleableProperty;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontPosture;
 import javafx.scene.text.FontWeight;
-import com.sun.javafx.Logging;
-import com.sun.javafx.Utils;
+import com.sun.javafx.util.Logging;
+import com.sun.javafx.util.Utils;
 import com.sun.javafx.css.CalculatedValue;
 import com.sun.javafx.css.CascadingStyle;
 import com.sun.javafx.css.CssError;
@@ -75,7 +75,7 @@ import static com.sun.javafx.css.CalculatedValue.*;
  */
 final class CssStyleHelper {
 
-    private static final PlatformLogger LOGGER = com.sun.javafx.Logging.getCSSLogger();
+    private static final PlatformLogger LOGGER = com.sun.javafx.util.Logging.getCSSLogger();
 
     private CssStyleHelper() {
         this.triggerStates = new PseudoClassState();

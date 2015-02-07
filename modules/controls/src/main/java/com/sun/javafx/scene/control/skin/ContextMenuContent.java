@@ -403,7 +403,7 @@ public class ContextMenuContent extends Region {
                 contextMenu.getOwnerWindow().getScene() == null) {
             return -1;
         }
-        return snapSize(com.sun.javafx.Utils.getScreen(
+        return snapSize(com.sun.javafx.util.Utils.getScreen(
             contextMenu.getOwnerWindow().getScene().getRoot()).getVisualBounds().getHeight());
         
     }
