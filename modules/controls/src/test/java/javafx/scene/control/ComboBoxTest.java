@@ -1836,4 +1836,100 @@ public class ComboBoxTest {
 
         sl.dispose();
     }
+
+    /**
+     * Bullet 1: selected index must be updated
+     * Corner case: last selected. Fails for core
+     */
+    @Test public void test_rt_40012_selectedAtLastOnDisjointRemoveItemsAbove() {
+        ObservableList<String> items = FXCollections.observableArrayList("0", "1", "2", "3", "4", "5");
+        ComboBox<String> comboBox = new ComboBox<>(items);
+        SelectionModel sm = comboBox.getSelectionModel();
+
+        int last = items.size() - 1;
+
+        // selecting item "5"
+        sm.select(last);
+
+        // disjoint remove of 2 elements above the last selected
+        // Removing "1" and "3"
+        items.removeAll(items.get(1), items.get(3));
+
+        // selection should move up two places such that it remains on item "5",
+        // but in index (last - 2).
+        int expected = last - 2;
+        assertEquals("5", sm.getSelectedItem());
+        assertEquals("selected index after disjoint removes above", expected, sm.getSelectedIndex());
+    }
+
+    /**
+     * Variant of 1: if selectedIndex is not updated,
+     * the old index is no longer valid
+     * for accessing the items.
+     */
+    @Test public void test_rt_40012_accessSelectedAtLastOnDisjointRemoveItemsAbove() {
+        ObservableList<String> items = FXCollections.observableArrayList("0", "1", "2", "3", "4", "5");
+        ComboBox<String> comboBox = new ComboBox<>(items);
+        SelectionModel sm = comboBox.getSelectionModel();
+
+        int last = items.size() - 1;
+
+        // selecting item "5"
+        sm.select(last);
+
+        // disjoint remove of 2 elements above the last selected
+        items.removeAll(items.get(1), items.get(3));
+        int selected = sm.getSelectedIndex();
+        if (selected > -1) {
+            items.get(selected);
+        }
+    }
+
+    /**
+     * Bullet 2: selectedIndex notification count
+     *
+     * Note that we don't use the corner case of having the last index selected
+     * (which fails already on updating the index)
+     */
+    private int rt_40012_count = 0;
+    @Test public void test_rt_40012_selectedIndexNotificationOnDisjointRemovesAbove() {
+        ObservableList<String> items = FXCollections.observableArrayList("0", "1", "2", "3", "4", "5");
+        ComboBox<String> comboBox = new ComboBox<>(items);
+        SelectionModel sm = comboBox.getSelectionModel();
+
+        int last = items.size() - 2;
+        sm.select(last);
+        assertEquals(last, sm.getSelectedIndex());
+
+        rt_40012_count = 0;
+        sm.selectedIndexProperty().addListener(o -> rt_40012_count++);
+
+        // disjoint remove of 2 elements above the last selected
+        items.removeAll(items.get(1), items.get(3));
+        assertEquals("sanity: selectedIndex must be shifted by -2", last - 2, sm.getSelectedIndex());
+        assertEquals("must fire single event on removes above", 1, rt_40012_count);
+    }
+
+    /**
+     * Bullet 3: unchanged selectedItem must not fire change
+     */
+    @Test
+    public void test_rt_40012_selectedItemNotificationOnDisjointRemovesAbove() {
+        ObservableList<String> items = FXCollections.observableArrayList("0", "1", "2", "3", "4", "5");
+        ComboBox<String> comboBox = new ComboBox<>(items);
+        SelectionModel sm = comboBox.getSelectionModel();
+
+        int last = items.size() - 2;
+        Object lastItem = items.get(last);
+        sm.select(last);
+        assertEquals(lastItem, sm.getSelectedItem());
+
+        rt_40012_count = 0;
+        sm.selectedItemProperty().addListener(o -> rt_40012_count++);
+
+        // disjoint remove of 2 elements above the last selected
+        items.removeAll(items.get(1), items.get(3));
+        assertEquals("sanity: selectedItem unchanged", lastItem, sm.getSelectedItem());
+        assertEquals("must not fire on unchanged selected item", 0, rt_40012_count);
+    }
 }

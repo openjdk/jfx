@@ -2375,143 +2375,153 @@ public class TreeTableView<S> extends Control {
                 // we only shift selection from this row - everything before it
                 // is safe. We might change this below based on certain criteria
                 int startRow = treeTableView.getRow(treeItem);
-                
+
                 int shift = 0;
-                if (e.wasExpanded()) {
-                    // need to shuffle selection by the number of visible children
-                    shift = treeItem.getExpandedDescendentCount(false) - 1;
-                    startRow++;
-                } else if (e.wasCollapsed()) {
-                    // remove selection from any child treeItem, and also determine
-                    // if any child item was selected (in which case the parent
-                    // takes the selection on collapse)
-                    treeItem.getExpandedDescendentCount(false);
-                    final int count = treeItem.previousExpandedDescendentCount;
-
-                    final int selectedIndex = getSelectedIndex();
-                    final boolean wasPrimarySelectionInChild =
-                            selectedIndex >= (startRow + 1) &&
-                            selectedIndex < (startRow + count);
-
-                    boolean wasAnyChildSelected = false;
-                    final boolean isCellSelectionMode = isCellSelectionEnabled();
-                    ObservableList<TreeTableColumn<S,?>> columns = getTreeTableView().getVisibleLeafColumns();
-
-                    if (!isCellSelectionMode) {
-                        startAtomic();
-                    }
-
-                    final int from = startRow + 1;
-                    final int to = startRow + count;
-                    final List<Integer> removed = new ArrayList<>();
-                    TreeTableColumn<S,?> selectedColumn = null;
-                    for (int i = from; i < to; i++) {
-                        // we have to handle cell selection mode differently than
-                        // row selection mode. Refer to RT-34103 for the bug report
-                        // that drove this change, but in short the issue was that
-                        // when collapsing a branch that had selection, we were
-                        // always calling isSelected(row), but that always returns
-                        // false in cell selection mode.
-                        if (isCellSelectionMode) {
-                            for (int column = 0; column < columns.size(); column++) {
-                                final TreeTableColumn<S,?> col = columns.get(column);
-                                if (isSelected(i, col)) {
-                                    wasAnyChildSelected = true;
-                                    clearSelection(i, col);
-                                    selectedColumn = col;
-                                }
-                            }
-                        } else {
-                            if (isSelected(i)) {
-                                wasAnyChildSelected = true;
-                                clearSelection(i);
-                                removed.add(i);
-                            }
-                        }
-                    }
-
-                    if (!isCellSelectionMode) {
-                        stopAtomic();
-                    }
-
-                    // put selection onto the newly-collapsed tree item
-                    if (wasPrimarySelectionInChild && wasAnyChildSelected) {
-                        select(startRow, selectedColumn);
-                    } else if (! isCellSelectionMode) {
-                        // we pass in (index, index) here to represent that nothing was added
-                        // in this change.
-                        ListChangeListener.Change change = new NonIterableChange.GenericAddRemoveChange<>(from, from,
-                                removed, selectedIndicesSeq);
-                        selectedIndicesSeq.callObservers(change);
-                    }
-
-                    shift = - count + 1;
-                    startRow++;
-                } else if (e.wasPermutated()) {
-                    // This handles the sorting case where nothing was added or
-                    // removed, but the location of the selected index / item
-                    // has likely changed. This was added to fix RT-30156 and
-                    // unit tests exist to prevent it from regressing.
-                    quietClearSelection();
-                    select(oldSelectedItem);
-                } else if (e.wasAdded()) {
-                    // shuffle selection by the number of added items
-                    shift = treeItem.isExpanded() ? e.getAddedSize() : 0;
-
-                    // RT-32963: We were taking the startRow from the TreeItem
-                    // in which the children were added, rather than from the
-                    // actual position of the new child. This led to selection
-                    // being moved off the parent TreeItem by mistake.
-                    // The 'if (e.getAddedSize() == 1)' condition here was
-                    // subsequently commented out due to RT-33894.
-                    startRow = treeTableView.getRow(e.getAddedChildren().get(0));
-
-                    TreeTablePosition<S,?> anchor = TreeTableCellBehavior.getAnchor(treeTableView, null);
-                    if (anchor != null) {
-                        boolean isAnchorSelected = isSelected(anchor.getRow(), anchor.getTableColumn());
-                        if (isAnchorSelected) {
-                            TreeTablePosition<S,?> newAnchor = new TreeTablePosition<>(treeTableView, anchor.getRow() + shift, anchor.getTableColumn());
-                            TreeTableCellBehavior.setAnchor(treeTableView, newAnchor, false);
-                        }
-                    }
-                } else if (e.wasRemoved()) {
-                    // shuffle selection by the number of removed items
-                    shift = treeItem.isExpanded() ? -e.getRemovedSize() : 0;
-
-                    // the start row is incorrect - it is _not_ the index of the
-                    // TreeItem in which the children were removed from (which is
-                    // what it currently represents). We need to take the 'from'
-                    // value out of the event and make use of that to understand
-                    // what actually changed inside the children list.
-                    startRow += e.getFrom() + 1;
-                    
-                    // whilst we are here, we should check if the removed items
-                    // are part of the selectedItems list - and remove them
-                    // from selection if they are (as per RT-15446)
-                    final List<Integer> selectedIndices = getSelectedIndices();
-                    final List<TreeItem<S>> selectedItems = getSelectedItems();
-                    final TreeItem<S> selectedItem = getSelectedItem();
-                    final List<? extends TreeItem<S>> removedChildren = e.getRemovedChildren();
-                    
-                    for (int i = 0; i < selectedIndices.size() && ! selectedItems.isEmpty(); i++) {
-                        int index = selectedIndices.get(i);
-                        if (index > selectedItems.size()) break;
-
-                        if (removedChildren.size() == 1 &&
-                                selectedItems.size() == 1 && 
-                                selectedItem != null && 
-                                selectedItem.equals(removedChildren.get(0))) {
-                            // Bug fix for RT-28637
-                            if (oldSelectedIndex < getItemCount()) {
-                                final int previousRow = oldSelectedIndex == 0 ? 0 : oldSelectedIndex - 1;
-                                TreeItem<S> newSelectedItem = getModelItem(previousRow);
-                                if (! selectedItem.equals(newSelectedItem)) {
-                                    clearAndSelect(previousRow);
-                                }
-                            }
-                        }
-                    }
+                ListChangeListener.Change<? extends TreeItem<?>> change = e.getChange();
+                if (change != null) {
+                    change.next();
                 }
+
+                do {
+                    final int addedSize = change == null ? 0 : change.getAddedSize();
+                    final int removedSize = change == null ? 0 : change.getRemovedSize();
+
+                    if (e.wasExpanded()) {
+                        // need to shuffle selection by the number of visible children
+                        shift += treeItem.getExpandedDescendentCount(false) - 1;
+                        startRow++;
+                    } else if (e.wasCollapsed()) {
+                        // remove selection from any child treeItem, and also determine
+                        // if any child item was selected (in which case the parent
+                        // takes the selection on collapse)
+                        treeItem.getExpandedDescendentCount(false);
+                        final int count = treeItem.previousExpandedDescendentCount;
+
+                        final int selectedIndex = getSelectedIndex();
+                        final boolean wasPrimarySelectionInChild =
+                                selectedIndex >= (startRow + 1) &&
+                                        selectedIndex < (startRow + count);
+
+                        boolean wasAnyChildSelected = false;
+                        final boolean isCellSelectionMode = isCellSelectionEnabled();
+                        ObservableList<TreeTableColumn<S, ?>> columns = getTreeTableView().getVisibleLeafColumns();
+
+                        if (!isCellSelectionMode) {
+                            startAtomic();
+                        }
+
+                        final int from = startRow + 1;
+                        final int to = startRow + count;
+                        final List<Integer> removed = new ArrayList<>();
+                        TreeTableColumn<S, ?> selectedColumn = null;
+                        for (int i = from; i < to; i++) {
+                            // we have to handle cell selection mode differently than
+                            // row selection mode. Refer to RT-34103 for the bug report
+                            // that drove this change, but in short the issue was that
+                            // when collapsing a branch that had selection, we were
+                            // always calling isSelected(row), but that always returns
+                            // false in cell selection mode.
+                            if (isCellSelectionMode) {
+                                for (int column = 0; column < columns.size(); column++) {
+                                    final TreeTableColumn<S, ?> col = columns.get(column);
+                                    if (isSelected(i, col)) {
+                                        wasAnyChildSelected = true;
+                                        clearSelection(i, col);
+                                        selectedColumn = col;
+                                    }
+                                }
+                            } else {
+                                if (isSelected(i)) {
+                                    wasAnyChildSelected = true;
+                                    clearSelection(i);
+                                    removed.add(i);
+                                }
+                            }
+                        }
+
+                        if (!isCellSelectionMode) {
+                            stopAtomic();
+                        }
+
+                        // put selection onto the newly-collapsed tree item
+                        if (wasPrimarySelectionInChild && wasAnyChildSelected) {
+                            select(startRow, selectedColumn);
+                        } else if (!isCellSelectionMode) {
+                            // we pass in (index, index) here to represent that nothing was added
+                            // in this change.
+                            ListChangeListener.Change newChange = new NonIterableChange.GenericAddRemoveChange<>(from, from,
+                                    removed, selectedIndicesSeq);
+                            selectedIndicesSeq.callObservers(newChange);
+                        }
+
+                        shift += -count + 1;
+                        startRow++;
+                    } else if (e.wasPermutated()) {
+                        // This handles the sorting case where nothing was added or
+                        // removed, but the location of the selected index / item
+                        // has likely changed. This was added to fix RT-30156 and
+                        // unit tests exist to prevent it from regressing.
+                        quietClearSelection();
+                        select(oldSelectedItem);
+                    } else if (e.wasAdded()) {
+                        // shuffle selection by the number of added items
+                        shift += treeItem.isExpanded() ? addedSize : 0;
+
+                        // RT-32963: We were taking the startRow from the TreeItem
+                        // in which the children were added, rather than from the
+                        // actual position of the new child. This led to selection
+                        // being moved off the parent TreeItem by mistake.
+                        // The 'if (e.getAddedSize() == 1)' condition here was
+                        // subsequently commented out due to RT-33894.
+                        startRow = treeTableView.getRow(e.getChange().getAddedSubList().get(0));
+
+                        TreeTablePosition<S, ?> anchor = TreeTableCellBehavior.getAnchor(treeTableView, null);
+                        if (anchor != null) {
+                            boolean isAnchorSelected = isSelected(anchor.getRow(), anchor.getTableColumn());
+                            if (isAnchorSelected) {
+                                TreeTablePosition<S, ?> newAnchor = new TreeTablePosition<>(treeTableView, anchor.getRow() + shift, anchor.getTableColumn());
+                                TreeTableCellBehavior.setAnchor(treeTableView, newAnchor, false);
+                            }
+                        }
+                    } else if (e.wasRemoved()) {
+                        // shuffle selection by the number of removed items
+                        shift += treeItem.isExpanded() ? -removedSize : 0;
+
+                        // the start row is incorrect - it is _not_ the index of the
+                        // TreeItem in which the children were removed from (which is
+                        // what it currently represents). We need to take the 'from'
+                        // value out of the event and make use of that to understand
+                        // what actually changed inside the children list.
+                        startRow += e.getFrom() + 1;
+
+                        // whilst we are here, we should check if the removed items
+                        // are part of the selectedItems list - and remove them
+                        // from selection if they are (as per RT-15446)
+                        final List<Integer> selectedIndices = getSelectedIndices();
+                        final List<TreeItem<S>> selectedItems = getSelectedItems();
+                        final TreeItem<S> selectedItem = getSelectedItem();
+                        final List<? extends TreeItem<S>> removedChildren = e.getChange().getRemoved();
+
+                        for (int i = 0; i < selectedIndices.size() && !selectedItems.isEmpty(); i++) {
+                            int index = selectedIndices.get(i);
+                            if (index > selectedItems.size()) break;
+
+                            if (removedChildren.size() == 1 &&
+                                    selectedItems.size() == 1 &&
+                                    selectedItem != null &&
+                                    selectedItem.equals(removedChildren.get(0))) {
+                                // Bug fix for RT-28637
+                                if (oldSelectedIndex < getItemCount()) {
+                                    final int previousRow = oldSelectedIndex == 0 ? 0 : oldSelectedIndex - 1;
+                                    TreeItem<S> newSelectedItem = getModelItem(previousRow);
+                                    if (!selectedItem.equals(newSelectedItem)) {
+                                        clearAndSelect(previousRow);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } while (e.getChange() != null && e.getChange().next());
                 
                 shiftSelection(startRow, shift, new Callback<ShiftParams, Void>() {
                     @Override public Void call(ShiftParams param) {
@@ -3397,59 +3407,66 @@ public class TreeTableView<S> extends Control {
                 // don't shift focus if the event occurred on a tree item after
                 // the focused row, or if there is no focus index at present
                 if (getFocusedIndex() == -1) return;
-                
-                int row = treeTableView.getRow(e.getTreeItem());
-                int shift = 0;
-                if (e.wasExpanded()) {
-                    if (row < getFocusedIndex()) {
-                        // need to shuffle selection by the number of visible children
-                        shift = e.getTreeItem().getExpandedDescendentCount(false) - 1;
-                    }
-                } else if (e.wasCollapsed()) {
-                    if (row < getFocusedIndex()) {
-                        // need to shuffle selection by the number of visible children
-                        // that were just hidden
-                        shift = - e.getTreeItem().previousExpandedDescendentCount + 1;
-                    }
-                } else if (e.wasAdded()) {
-                    // get the TreeItem the event occurred on - we only need to
-                    // shift if the tree item is expanded
-                    TreeItem<S> eventTreeItem = e.getTreeItem();
-                    if (eventTreeItem.isExpanded()) {
-                        for (int i = 0; i < e.getAddedChildren().size(); i++) {
-                            // get the added item and determine the row it is in
-                            TreeItem<S> item = e.getAddedChildren().get(i);
-                            row = treeTableView.getRow(item);
 
-                            if (item != null && row <= getFocusedIndex()) {
-                                shift += item.getExpandedDescendentCount(false);
+                int shift = 0;
+                if (e.getChange() != null) {
+                    e.getChange().next();
+                }
+
+                do {
+                    int row = treeTableView.getRow(e.getTreeItem());
+
+                    if (e.wasExpanded()) {
+                        if (row < getFocusedIndex()) {
+                            // need to shuffle selection by the number of visible children
+                            shift += e.getTreeItem().getExpandedDescendentCount(false) - 1;
+                        }
+                    } else if (e.wasCollapsed()) {
+                        if (row < getFocusedIndex()) {
+                            // need to shuffle selection by the number of visible children
+                            // that were just hidden
+                            shift += -e.getTreeItem().previousExpandedDescendentCount + 1;
+                        }
+                    } else if (e.wasAdded()) {
+                        // get the TreeItem the event occurred on - we only need to
+                        // shift if the tree item is expanded
+                        TreeItem<S> eventTreeItem = e.getTreeItem();
+                        if (eventTreeItem.isExpanded()) {
+                            for (int i = 0; i < e.getAddedChildren().size(); i++) {
+                                // get the added item and determine the row it is in
+                                TreeItem<S> item = e.getAddedChildren().get(i);
+                                row = treeTableView.getRow(item);
+
+                                if (item != null && row <= getFocusedIndex()) {
+                                    shift += item.getExpandedDescendentCount(false);
+                                }
                             }
                         }
-                    }
-                } else if (e.wasRemoved()) {
-                    row += e.getFrom() + 1;
+                    } else if (e.wasRemoved()) {
+                        row += e.getFrom() + 1;
 
-                    for (int i = 0; i < e.getRemovedChildren().size(); i++) {
-                        TreeItem<S> item = e.getRemovedChildren().get(i);
-                        if (item != null && item.equals(getFocusedItem())) {
-                            focus(Math.max(0, getFocusedIndex() - 1));
-                            return;
+                        for (int i = 0; i < e.getRemovedChildren().size(); i++) {
+                            TreeItem<S> item = e.getRemovedChildren().get(i);
+                            if (item != null && item.equals(getFocusedItem())) {
+                                focus(Math.max(0, getFocusedIndex() - 1));
+                                return;
+                            }
+                        }
+
+                        if (row <= getFocusedIndex()) {
+                            // shuffle selection by the number of removed items
+                            shift += e.getTreeItem().isExpanded() ? -e.getRemovedSize() : 0;
                         }
                     }
-                    
-                    if (row <= getFocusedIndex()) {
-                        // shuffle selection by the number of removed items
-                        shift = e.getTreeItem().isExpanded() ? -e.getRemovedSize() : 0;
-                    }
-                }
-                
-                if(shift != 0) {
-                    TreeTablePosition<S,?> focusedCell = getFocusedCell();
+                } while (e.getChange() != null && e.getChange().next());
+
+                if (shift != 0) {
+                    TreeTablePosition<S, ?> focusedCell = getFocusedCell();
                     final int newFocus = focusedCell.getRow() + shift;
                     if (newFocus >= 0) {
                         Platform.runLater(() -> focus(newFocus, focusedCell.getTableColumn()));
                     }
-                } 
+                }
             }
         };
         

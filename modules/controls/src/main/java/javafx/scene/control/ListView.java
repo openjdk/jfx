@@ -1309,6 +1309,8 @@ public class ListView<T> extends Control {
 //                System.out.println("\tWas permutated");
 //            }
             c.reset();
+
+            int shift = 0;
             while (c.next()) {
                 if (c.wasReplaced()) {
                     if (c.getList().isEmpty()) {
@@ -1333,8 +1335,7 @@ public class ListView<T> extends Control {
                         }
                     }
                 } else if (c.wasAdded() || c.wasRemoved()) {
-                    int shift = c.wasAdded() ? c.getAddedSize() : -c.getRemovedSize();
-                    shiftSelection(c.getFrom(), shift, null);
+                    shift += c.wasAdded() ? c.getAddedSize() : -c.getRemovedSize();
                 } else if (c.wasPermutated()) {
 
                     // General approach:
@@ -1388,6 +1389,10 @@ public class ListView<T> extends Control {
                         }
                     }
                 }
+            }
+
+            if (shift != 0) {
+                shiftSelection(c.getFrom(), shift, null);
             }
             
             previousModelSize = getItemCount();
