@@ -290,11 +290,19 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
             // now we just set the newSelectionLead to zero in that instance.
             // There exists unit tests that cover this.
             final int newSelectionLead = Math.max(0, selectedIndex + shift);
+
             setSelectedIndex(newSelectionLead);
 
-            // added for RT-30356
-            selectedIndices.set(newSelectionLead, true);
- 
+            // added the selectedIndices call for RT-30356.
+            // changed to check if hasPermutated, and to call select(..) for RT-40010.
+            // This forces the selection event to go through the system and fire
+            // the necessary events.
+            if (hasPermutated) {
+                selectedIndices.set(newSelectionLead, true);
+            } else {
+                select(newSelectionLead);
+            }
+
             // removed due to RT-27185
 //            focus(newSelectionLead);
         }

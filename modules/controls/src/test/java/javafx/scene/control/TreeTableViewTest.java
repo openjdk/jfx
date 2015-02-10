@@ -5514,4 +5514,34 @@ public class TreeTableViewTest {
         assertEquals("sanity: selectedItem unchanged", lastItem, sm.getSelectedItem());
         assertEquals("must not fire on unchanged selected item", 0, rt_40012_count);
     }
+
+    private int rt_40010_count = 0;
+    @Test public void test_rt_40010() {
+        TreeItem<String> root = new TreeItem<>("Root");
+        TreeItem<String> child = new TreeItem<>("child");
+        root.setExpanded(true);
+        root.getChildren().addAll(child);
+
+        TreeTableView<String> stringTreeTableView = new TreeTableView<>(root);
+        TreeTableView.TreeTableViewSelectionModel<String> sm = stringTreeTableView.getSelectionModel();
+
+        TreeTableColumn<String,String> column = new TreeTableColumn<>("Column");
+        column.setCellValueFactory(cdf -> new ReadOnlyStringWrapper(cdf.getValue().getValue()));
+        stringTreeTableView.getColumns().add(column);
+
+        sm.getSelectedIndices().addListener((ListChangeListener<? super Integer>) l -> rt_40010_count++);
+        sm.getSelectedItems().addListener((ListChangeListener<? super TreeItem<String>>) l -> rt_40010_count++);
+
+        assertEquals(0, rt_40010_count);
+
+        sm.select(1);
+        assertEquals(1, sm.getSelectedIndex());
+        assertEquals(child, sm.getSelectedItem());
+        assertEquals(2, rt_40010_count);
+
+        root.getChildren().remove(child);
+        assertEquals(0, sm.getSelectedIndex());
+        assertEquals(root, sm.getSelectedItem());
+        assertEquals(4, rt_40010_count);
+    }
 }
