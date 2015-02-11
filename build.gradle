@@ -1958,7 +1958,7 @@ project(":fxpackager") {
             doLast {
                 mkdir "$buildDir/native"
                 exec({
-                    commandLine("$RC", "/nologo", "/l", "0x409", "/r", "/dJFX_DVERSION=8", "/dJFX_VERSION=8",
+                    commandLine("$RC", "/nologo", "/l", "0x409", "/r", "/dJFX_DVERSION=9", "/dJFX_VERSION=9",
                             "/fo$buildDir/native/javapackager/javapackager.res",
                             "src/main/native/javapackager/win/javapackager.rc");
                     environment(WINDOWS_NATIVE_COMPILE_ENVIRONMENT);
