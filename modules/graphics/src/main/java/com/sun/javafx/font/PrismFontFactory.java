@@ -55,7 +55,7 @@ public abstract class PrismFontFactory implements FontFactory {
     public static final boolean isIOS;
     public static final boolean isAndroid;
     public static final boolean isEmbedded;
-    public static int cacheLayoutSize = 0x10000;
+    public static final int cacheLayoutSize;
     static boolean useNativeRasterizer;
     private static int subPixelMode;
     public static final int SUB_PIXEL_ON = 1;
@@ -93,6 +93,7 @@ public abstract class PrismFontFactory implements FontFactory {
         isIOS     = PlatformUtil.isIOS();
         isAndroid = PlatformUtil.isAndroid();
         isEmbedded = PlatformUtil.isEmbedded();
+        int[] tempCacheLayoutSize = {0x10000};
 
         debugFonts = AccessController.doPrivileged(
                 (PrivilegedAction<Boolean>) () -> {
@@ -153,8 +154,10 @@ public abstract class PrismFontFactory implements FontFactory {
                     s = System.getProperty("prism.cacheLayoutSize");
                     if (s != null) {
                         try {
-                            cacheLayoutSize = Integer.parseInt(s);
-                            if (cacheLayoutSize < 0) cacheLayoutSize = 0;
+                            tempCacheLayoutSize[0] = Integer.parseInt(s);
+                            if (tempCacheLayoutSize[0] < 0) {
+                                tempCacheLayoutSize[0] = 0;
+                            }
                         } catch (NumberFormatException nfe) {
                             System.err.println("Cannot parse cache layout size '"
                                     + s + "'");
@@ -164,6 +167,7 @@ public abstract class PrismFontFactory implements FontFactory {
                     return debug;
                 }
         );
+        cacheLayoutSize = tempCacheLayoutSize[0];
     }
 
     private static String getNativeFactoryName() {
