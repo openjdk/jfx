@@ -1783,8 +1783,13 @@ final class CssStyleHelper {
             // if we have a font shorthand and it is more specific than font-size, then don't use the font-size style
             if (fontShorthand != null && fontShorthand.compareTo(fontSize) < 0) {
                 fontSize = null;
+            } else if (origin == StyleOrigin.USER) {
+                // If fontSize is an inline or author-stylesheet style, use it.
+                // Otherwise, fontSize is a user-agent stylesheet style and should not override the USER style.
+                if (StyleOrigin.USER.compareTo(fontSize.getOrigin()) > 0) {
+                    fontSize = null;
+                }
             }
-
         } else if (origin != StyleOrigin.USER) {
             //
             // If we don't have a font-size, see if there is an inherited font-size.
