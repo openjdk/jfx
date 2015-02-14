@@ -63,6 +63,7 @@ public final class ImageCursor_getCurrentFrame_Test {
         final Image animatedImage =
                 TestImages.createAnimatedTestImage(
                         300, 400,        // width, height
+                        0,               // loop count
                         2000, 1000, 3000 // frame delays
                 );
         final ImageCursor animatedImageCursor = new ImageCursor(animatedImage);
@@ -108,6 +109,7 @@ public final class ImageCursor_getCurrentFrame_Test {
         final Image animatedImage =
                 TestImages.createAnimatedTestImage(
                         300, 400,        // width, height
+                        0,               // loop count
                         2000, 1000, 3000 // frame delays
                 );
         final ImageCursor animatedImageCursor = new ImageCursor(animatedImage);

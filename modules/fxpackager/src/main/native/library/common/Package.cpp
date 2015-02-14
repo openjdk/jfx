@@ -59,9 +59,7 @@ void Package::Initialize() {
     Platform& platform = Platform::GetInstance();
 
     FBootFields = new PackageBootFields();
-
-    FDebugging = false;
-
+    FDebugging = dsNone;
     std::map<TString, TString> keys = platform.GetKeys();
 
     FBootFields->FPackageRootDirectory = platform.GetPackageRootDirectory();
@@ -176,16 +174,19 @@ void Package::SetCommandLineArguments(int argc, TCHAR* argv[]) {
         // Prepare app arguments. Skip value at index 0 - this is path to executable.
         FBootFields->FCommandName = argv[0];
 
-        // Path to .exe is at 0 index so start at index 1.
+        // Path to executable is at 0 index so start at index 1.
         for (int index = 1; index < argc; index++) {
             TString arg = argv[index];
 
-            if (arg == _T("/Debug")) {
 #ifdef DEBUG
-                FDebugging = true;
-#endif //DEBUG
-                continue;
+            if (arg == _T("-debug")) {
+                FDebugging = dsNative;
             }
+            
+            if (arg == _T("-javadebug")) {
+                FDebugging = dsJava;
+            }
+#endif //DEBUG
 #ifdef MAC
             if (arg.find(_T("-psn_"), 0) != TString::npos) {
                 Platform& platform = Platform::GetInstance();
@@ -276,16 +277,21 @@ void Package::SetJVMUserArgOverrides(TOrderedMap Value) {
         orderedOverrides.insert(TOrderedMap::value_type(key, item));
         index++;
     }
+    
+    FJVMUserArgsOverrides = orderedOverrides;
 
     // 3. Overwrite JVM user config overrides with provided key/value pair.
-    AutoFreePtr<PropertyFile> userConfig = new PropertyFile();
-    userConfig->Assign(Helpers::GetConfigFromJVMUserArgs(orderedOverrides));
-    userConfig->SetReadOnly(false);
-    userConfig->SaveToFile(GetJVMUserArgsConfigFileName(), true);
-    FJVMUserArgsOverrides = orderedOverrides;
+    SaveJVMUserArgOverrides(orderedOverrides);
 
     // 4. Merge defaults and overrides to produce FJVMUserArgs.
     MergeJVMDefaultsWithOverrides();
+}
+
+void Package::SaveJVMUserArgOverrides(TOrderedMap Data) {
+    AutoFreePtr<PropertyFile> userConfig = new PropertyFile();
+    userConfig->Assign(Helpers::GetConfigFromJVMUserArgs(Data));
+    userConfig->SetReadOnly(false);
+    userConfig->SaveToFile(GetJVMUserArgsConfigFileName(), true);
 }
 
 TOrderedMap Package::GetJVMUserArgs() {
@@ -447,4 +453,8 @@ TPlatformNumber Package::GetMemorySize() {
 PackageBootFields::MemoryState Package::GetMemoryState() {
     assert(FBootFields != NULL);
     return FBootFields->FMemoryState;
+}
+
+DebugState Package::Debugging() {
+    return FDebugging;
 }

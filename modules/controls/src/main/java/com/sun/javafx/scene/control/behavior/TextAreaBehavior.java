@@ -449,7 +449,7 @@ public class TextAreaBehavior extends TextInputControlBehavior<TextArea> {
             skin.populateContextMenu(contextMenu);
             double menuWidth = contextMenu.prefWidth(-1);
             double menuX = screenX - (IS_TOUCH_SUPPORTED ? (menuWidth / 2) : 0);
-            Screen currentScreen = com.sun.javafx.Utils.getScreenForPoint(screenX, 0);
+            Screen currentScreen = com.sun.javafx.util.Utils.getScreenForPoint(screenX, 0);
             Rectangle2D bounds = currentScreen.getBounds();
 
             if (menuX < bounds.getMinX()) {

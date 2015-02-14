@@ -138,13 +138,7 @@ public class MockListObserver<E> implements ListChangeListener<E> {
     public void check1Update(ObservableList<E> list, int from, int to) {
         assertFalse(tooManyCalls);
         assertEquals(1, calls.size());
-        Call<E> call = calls.get(0);
-        assertEquals(list, call.list);
-        assertEquals(Collections.EMPTY_LIST, call.removed);
-        assertArrayEquals(new int[0], call.permutation);
-        assertEquals(true, call.update);
-        assertEquals(from, call.from);
-        assertEquals(to, call.to);
+        checkUpdate(0, list, from, to);
     }
     
     public void checkUpdate(int idx, ObservableList<E> list, int from, int to) {

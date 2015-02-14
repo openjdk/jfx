@@ -33,7 +33,6 @@ if (!LINUX.canBuild) return;
 LINUX.compileSwing = true;
 LINUX.compileSWT = true;
 LINUX.compileFXPackager = true;
-LINUX.compileDesignTime = true;
 
 // Libraries end up in the sdk/rt/lib/$OS_ARCH directory for Linux
 LINUX.libDest = "lib/$OS_ARCH"

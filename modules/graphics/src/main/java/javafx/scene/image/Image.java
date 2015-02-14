@@ -857,7 +857,8 @@ public class Image {
         public Animation(final Image image, final ImageLoader loader) {
             imageRef = new WeakReference<Image>(image);
             timeline = new Timeline();
-            timeline.setCycleCount(Timeline.INDEFINITE);
+            int loopCount = loader.getLoopCount();
+            timeline.setCycleCount(loopCount == 0 ? Timeline.INDEFINITE : loopCount);
 
             final int frameCount = loader.getFrameCount();
             int duration = 0;
@@ -869,7 +870,7 @@ public class Image {
 
             // Note: we need one extra frame in the timeline to define how long
             // the last frame is shown, the wrap around is "instantaneous"
-            addKeyFrame(0, duration);
+            timeline.getKeyFrames().add(new KeyFrame(Duration.millis(duration)));
         }
 
         public void start() {

@@ -69,9 +69,6 @@
 // Tracks pressed modifier keys
 static NSUInteger s_modifierFlags = 0;
 
-// The last processed key event
-static NSEvent* s_lastKeyEvent = nil;
-
 // Extracted from class-dump utility output for NSEvent class
 @interface NSEvent (hidden)
 

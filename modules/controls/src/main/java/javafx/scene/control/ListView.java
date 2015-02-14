@@ -31,6 +31,7 @@ import java.util.HashMap;
 import java.util.List;
 
 import com.sun.javafx.scene.control.behavior.ListCellBehavior;
+import com.sun.javafx.scene.control.skin.TableViewSkinBase;
 import javafx.beans.InvalidationListener;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
@@ -974,6 +975,21 @@ public class ListView<T> extends Control {
     @Override protected Skin<?> createDefaultSkin() {
         return new ListViewSkin<T>(this);
     }
+
+    /**
+     * Calling {@code refresh()} forces the ListView control to recreate and
+     * repopulate the cells necessary to populate the visual bounds of the control.
+     * In other words, this forces the ListView to update what it is showing to
+     * the user. This is useful in cases where the underlying data source has
+     * changed in a way that is not observed by the ListView itself.
+     *
+     * @since JavaFX 8u60
+     */
+    public void refresh() {
+        getProperties().put(ListViewSkin.RECREATE, Boolean.TRUE);
+    }
+
+
     
     /***************************************************************************
      *                                                                         *
@@ -1293,6 +1309,8 @@ public class ListView<T> extends Control {
 //                System.out.println("\tWas permutated");
 //            }
             c.reset();
+
+            int shift = 0;
             while (c.next()) {
                 if (c.wasReplaced()) {
                     if (c.getList().isEmpty()) {
@@ -1317,8 +1335,7 @@ public class ListView<T> extends Control {
                         }
                     }
                 } else if (c.wasAdded() || c.wasRemoved()) {
-                    int shift = c.wasAdded() ? c.getAddedSize() : -c.getRemovedSize();
-                    shiftSelection(c.getFrom(), shift, null);
+                    shift += c.wasAdded() ? c.getAddedSize() : -c.getRemovedSize();
                 } else if (c.wasPermutated()) {
 
                     // General approach:
@@ -1372,6 +1389,10 @@ public class ListView<T> extends Control {
                         }
                     }
                 }
+            }
+
+            if (shift != 0) {
+                shiftSelection(c.getFrom(), shift, null);
             }
             
             previousModelSize = getItemCount();
@@ -1554,9 +1575,9 @@ public class ListView<T> extends Control {
                 }
 
                 if (added && !removed) {
-                    focus(getFocusedIndex() + addedSize);
+                    focus(Math.min(getItemCount() - 1, getFocusedIndex() + addedSize));
                 } else if (!added && removed) {
-                    focus(getFocusedIndex() - removedSize);
+                    focus(Math.max(0, getFocusedIndex() - removedSize));
                 }
             }
         };

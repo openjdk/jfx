@@ -39,7 +39,6 @@ import javafx.stage.Stage;
 public class HelloChoiceBox extends Application {
 
     public static void main(String[] args) {
-//        com.sun.javafx.Logging.getFocusLogger().setLevel(PlatformLogger.FINE);
         Application.launch(args);
     }
 

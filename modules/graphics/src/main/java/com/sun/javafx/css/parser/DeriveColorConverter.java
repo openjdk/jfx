@@ -54,7 +54,7 @@ public final class DeriveColorConverter extends StyleConverterImpl<ParsedValue[]
         ParsedValue[] values = value.getValue();
         final Color color = (Color) values[0].convert(font);
         final Size brightness = (Size) values[1].convert(font);
-        return com.sun.javafx.Utils.deriveColor(color, brightness.pixels(font));
+        return com.sun.javafx.util.Utils.deriveColor(color, brightness.pixels(font));
     }
 
     @Override

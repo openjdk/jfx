@@ -51,7 +51,6 @@ import javafx.geometry.Pos;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
-import javafx.scene.control.ButtonBuilder;
 import javafx.scene.control.Hyperlink;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
@@ -60,15 +59,12 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.HBoxBuilder;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
-import javafx.scene.layout.RegionBuilder;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Text;
-import javafx.scene.text.TextBuilder;
 import javafx.util.Callback;
 
 public class SocialPage extends Page {
@@ -103,85 +99,59 @@ public class SocialPage extends Page {
         box.setAlignment(Pos.CENTER);
 
         VBox recentBox = new VBox(12);
-        recentBox.getChildren().addAll(
-            HBoxBuilder.create()
-                .spacing(12)
-                .alignment(Pos.CENTER)
-                .children(
-                    TextBuilder.create()
-                        .text(dataService.getTwitterSearch())
-                        .font(HUGE_FONT)
-                        .fill(BLUE)
-                        .build(),
-                    TextBuilder.create()
-                        .text("Recent")
-                        .font(HUGE_FONT)
-                        .fill(VLIGHT_GRAY)
-                        .build(),
-                    spacer1 = RegionBuilder.create()
-                        .build(),
-                    refreshButton1 = ButtonBuilder.create()
-                        .text(null)
-                        .id("refresh-button")
-                        .prefWidth(162)
-                        .prefHeight(48)
-                        .minWidth(162)
-                        .minHeight(48)
-                        .onMouseClicked(recentListPopulator)
-                        .build()
-                )
-                .build(),
-            recentTweetsList
-        );
-        VBox.setVgrow(recentTweetsList, Priority.ALWAYS);
+        HBox hb = new HBox(12);
+        hb.setAlignment(Pos.CENTER);
+        Text t1 = new Text(dataService.getTwitterSearch());
+        t1.setFont(HUGE_FONT);
+        t1.setFill(BLUE);
+        Text t2 = new Text("Recent");
+        t2.setFont(HUGE_FONT);
+        t2.setFill(VLIGHT_GRAY);
+        spacer1 = new Region();
+        refreshButton1 = new Button();
+        refreshButton1.setId("refresh-button");
+        refreshButton1.setPrefWidth(162);
+        refreshButton1.setPrefHeight(48);
+        refreshButton1.setminWidth(162);
+        refreshButton1.setMinHeight(48);
+        refreshButton1.setOnMouseClicked(recentListPopulator);
 
-        VBox localBox = new VBox(12);
-        localBox.getChildren().addAll(
-            HBoxBuilder.create()
-                .spacing(12)
-                .alignment(Pos.CENTER)
-                .children(
-                    TextBuilder.create()
-                        .text(dataService.getTwitterSearch())
-                        .font(HUGE_FONT)
-                        .fill(PINK)
-                        .build(),
-                    TextBuilder.create()
-                        .text("Local")
-                        .font(HUGE_FONT)
-                        .fill(VLIGHT_GRAY)
-                        .build(),
-                    spacer2 = RegionBuilder.create()
-                        .build(),
-                    refreshButton2 = ButtonBuilder.create()
-                        .text(null)
-                        .id("refresh-button")
-                        .prefWidth(162)
-                        .prefHeight(48)
-                        .minWidth(162)
-                        .minHeight(48)
-                        .onMouseClicked(popularListPopulator)
-                        .build()
-                )
-                .build(),
-            popularTweetsList
-        );
+        hb.getChildren().addAll(t1, t2, spacer1, refreshButton1);
+        recentBox.getChildren().addAll(hb, recentTweetsList);
+        VBox.setVgrow(recentTweetsList, Priority.ALWAYS);
+        HBox hb = new HBox(12);
+        hb.setAlignment(Pos.CENTER);
+        Text t3 = new Text(dataService.getTwitterSearch());
+        t3.setFont(HUGE_FONT);
+        t3.setFill(PINK);
+        Text t4 = new Text("Local");
+        t4.setFont(HUGE_FONT);
+        t4.setFill(VLIGHT_GRAY);
+        spacer2 = new Region();
+        refreshButton2 = new Button();
+        refreshButton2.setId("refresh-button");
+        refreshButton2.setPrefWidth(162);
+        refreshButton2.setPrefHeight(48);
+        refreshButton2.setMinWidth(162);
+        refreshButton2.setMinHeight(48);
+        refreshButton2.setOnMouseClicked(popularListPopulator);
+        hb.getChildren().addAll(t3, t4, spacer2, refreshButton2);
+        VBox localBox = new VBox(12, hb, popularTweetsList);
         VBox.setVgrow(popularTweetsList, Priority.ALWAYS);
 
         box.getChildren().addAll(recentBox, localBox);
         if (PlatformIntegration.supportsSendingTweets()) {
-            tweetButton = ButtonBuilder.create()
-                .text(null)
-                .id("tweet-button")
-                .prefWidth(162)
-                .prefHeight(48)
-                .minHeight(48)
-                .onMouseClicked(new EventHandler<MouseEvent>() {
-                    @Override public void handle(MouseEvent t) {
-                        PlatformIntegration.tweet("#javaone ");
-                    }
-                })
-                .build();
+            tweetButton = new Button();
+            tweetButton.setId("tweet-button");
+            tweetButton.setPrefWidth(162);
+            tweetButton.setPrefHeight(48);
+            tweetButton.setMinHeight(48);
+            tweetButton.setOnMouseClicked(new EventHandler<MouseEvent>() {
+                @Override
+                public void handle(MouseEvent t) {
+                    PlatformIntegration.tweet("#javaone ");
+                }
+            });
             tweetButton.getStyleClass().clear();
             box.getChildren().add(tweetButton);
         }

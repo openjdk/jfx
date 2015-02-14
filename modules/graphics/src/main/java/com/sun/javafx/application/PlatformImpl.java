@@ -636,7 +636,7 @@ public class PlatformImpl {
 
             if (isSupported(ConditionalFeature.INPUT_TOUCH)) {
                 uaStylesheets.add("com/sun/javafx/scene/control/skin/caspian/embedded.css");
-                if (com.sun.javafx.Utils.isQVGAScreen()) {
+                if (com.sun.javafx.util.Utils.isQVGAScreen()) {
                     uaStylesheets.add("com/sun/javafx/scene/control/skin/caspian/embedded-qvga.css");
                 }
                 if (PlatformUtil.isAndroid()) {

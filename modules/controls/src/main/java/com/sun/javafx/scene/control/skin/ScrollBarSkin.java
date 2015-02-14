@@ -36,7 +36,7 @@ import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.Node;
-import com.sun.javafx.Utils;
+import com.sun.javafx.util.Utils;
 import com.sun.javafx.scene.control.behavior.ScrollBarBehavior;
 
 public class ScrollBarSkin extends BehaviorSkinBase<ScrollBar, ScrollBarBehavior> {

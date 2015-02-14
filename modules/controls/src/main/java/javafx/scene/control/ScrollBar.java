@@ -25,7 +25,7 @@
 
 package javafx.scene.control;
 
-import com.sun.javafx.Utils;
+import com.sun.javafx.util.Utils;
 import com.sun.javafx.css.converters.EnumConverter;
 import com.sun.javafx.css.converters.SizeConverter;
 import com.sun.javafx.scene.control.skin.ScrollBarSkin;

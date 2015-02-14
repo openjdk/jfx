@@ -33,7 +33,7 @@ import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.scene.paint.Color;
 
-import com.sun.javafx.Utils;
+import com.sun.javafx.util.Utils;
 import com.sun.javafx.tk.Toolkit;
 
 /**

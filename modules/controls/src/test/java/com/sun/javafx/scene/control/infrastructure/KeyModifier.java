@@ -25,7 +25,7 @@
 
 package com.sun.javafx.scene.control.infrastructure;
 
-import com.sun.javafx.Utils;
+import com.sun.javafx.util.Utils;
 import com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.scene.control.behavior.KeyBinding;
 import com.sun.javafx.tk.Toolkit;

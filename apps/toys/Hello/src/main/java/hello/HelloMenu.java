@@ -229,7 +229,6 @@ public class HelloMenu extends Application {
      * @param args the command line arguments
      */
     public static void main(String[] args) {
-//        com.sun.javafx.Logging.getFocusLogger().setLevel(PlatformLogger.FINE);
         Application.launch(args);
     }
 }

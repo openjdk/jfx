@@ -25,7 +25,7 @@
 
 package com.sun.javafx.css;
 
-import com.sun.javafx.Logging;
+import com.sun.javafx.util.Logging;
 import javafx.css.CssMetaData;
 import javafx.css.ParsedValue;
 import javafx.css.StyleConverter;

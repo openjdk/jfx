@@ -29,7 +29,7 @@ import java.lang.ref.WeakReference;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import com.sun.javafx.Utils;
+import com.sun.javafx.util.Utils;
 import javafx.beans.Observable;
 import javafx.geometry.Orientation;
 import javafx.scene.Node;

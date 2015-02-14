@@ -32,7 +32,7 @@ import javafx.event.EventDispatchChain;
 
 import javafx.scene.Node;
 
-import com.sun.javafx.WeakReferenceQueue;
+import com.sun.javafx.util.WeakReferenceQueue;
 import com.sun.javafx.binding.ExpressionHelper;
 import com.sun.javafx.event.EventHandlerManager;
 import com.sun.javafx.geom.transform.Affine2D;

@@ -71,7 +71,7 @@ import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.scene.input.PickResultChooser;
 import com.sun.javafx.sg.prism.NGNode;
-import com.sun.javafx.sg.prism.NGWebView;
+import com.sun.javafx.sg.prism.web.NGWebView;
 import com.sun.javafx.tk.TKPulseListener;
 import com.sun.javafx.tk.Toolkit;
 import com.sun.javafx.webkit.InputMethodClientImpl;

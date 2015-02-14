@@ -289,7 +289,10 @@ public class Dialog<R> implements EventTarget {
      */
     public final void show() {
         Event.fireEvent(this, new DialogEvent(this, DialogEvent.DIALOG_SHOWING));
-        dialog.sizeToScene();
+        if( getWidth() == Double.NaN && getHeight() == Double.NaN ) {
+            dialog.sizeToScene();
+        }
+
         dialog.show();
         
         Event.fireEvent(this, new DialogEvent(this, DialogEvent.DIALOG_SHOWN));
@@ -304,7 +307,10 @@ public class Dialog<R> implements EventTarget {
      */
     public final Optional<R> showAndWait() {
         Event.fireEvent(this, new DialogEvent(this, DialogEvent.DIALOG_SHOWING));
-        dialog.sizeToScene();
+        if( getWidth() == Double.NaN && getHeight() == Double.NaN ) {
+            dialog.sizeToScene();
+        }
+        
 
         // this is slightly odd - we fire the SHOWN event before the show()
         // call, so that users get the event before the dialog blocks

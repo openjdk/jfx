@@ -25,7 +25,7 @@
 
 package com.sun.javafx.jmx;
 
-import com.sun.javafx.Logging;
+import com.sun.javafx.util.Logging;
 
 public abstract class MXExtension {
     private static final String EXTENSION_CLASS_NAME =

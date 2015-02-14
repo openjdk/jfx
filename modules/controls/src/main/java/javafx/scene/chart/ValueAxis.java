@@ -458,7 +458,7 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
      * @return display position
      */
     @Override public double getDisplayPosition(T value) {
-        return Math.round(offset + ((value.doubleValue() - currentLowerBound.get()) * getScale()));
+        return offset + ((value.doubleValue() - currentLowerBound.get()) * getScale());
     }
 
     /**

@@ -231,19 +231,6 @@ public final class FilteredList<E> extends TransformationList<E, E>{
         }
     }
 
-    private void update(Change<? extends E> c) {
-        int from = findPosition(c.getFrom());
-        int to = findPosition(c.getTo());
-
-        // NOTE: this is sub-optimal, as we may mark some Nodes as "updated" even though
-        // they will be removed from the list in the next step
-        for (int i = from; i < to; ++i) {
-            nextUpdate(i);
-        }
-
-        updateFilter(c.getFrom(), c.getTo());
-    }
-
     private void addRemove(Change<? extends E> c) {
         Predicate<? super E> pred = getPredicateImpl();
         ensureSize(getSource().size());
@@ -290,89 +277,38 @@ public final class FilteredList<E> extends TransformationList<E, E>{
         }
     }
 
-    private void updateFilter(int sourceFrom, int sourceTo) {
+    private void update(Change<? extends E> c) {
         Predicate<? super E> pred = getPredicateImpl();
-        beginChange();
-        // Fast path for single element update
-        if (sourceFrom == sourceTo - 1) {
-            int pos = findPosition(sourceFrom);
-            final E sourceFromElement = getSource().get(sourceFrom);
-            if (filtered[pos] == sourceFrom) {
-                if (!pred.test(sourceFromElement)) {
-                    nextRemove(pos, sourceFromElement);
+        ensureSize(getSource().size());
+        int sourceFrom = c.getFrom();
+        int sourceTo = c.getTo();
+        int filterFrom = findPosition(sourceFrom);
+        int filterTo = findPosition(sourceTo);
+        ListIterator<? extends E> it = getSource().listIterator(sourceFrom);
+        int pos = filterFrom;
+        while (pos < filterTo || sourceFrom < sourceTo) {
+            E el = it.next();
+            if (pos < size && filtered[pos] == sourceFrom) {
+                if (!pred.test(el)) {
+                    nextRemove(pos, el);
                     System.arraycopy(filtered, pos + 1, filtered, pos, size - pos - 1);
                     --size;
+                    --filterTo;
+                } else {
+                    nextUpdate(pos);
+                    ++pos;
                 }
             } else {
-                ensureSize(getSource().size());
-                if (pred.test(sourceFromElement)) {
+                if (pred.test(el)) {
                     nextAdd(pos, pos + 1);
                     System.arraycopy(filtered, pos, filtered, pos + 1, size - pos);
                     filtered[pos] = sourceFrom;
                     ++size;
+                    ++pos;
+                    ++filterTo;
                 }
             }
-        } else {
-            ensureSize(getSource().size());
-            int filterFrom = findPosition(sourceFrom);
-            int filterTo = findPosition(sourceTo);
-
-            int i = filterFrom; // The index that traverses filtered[] array
-
-            if (i == 0) {
-                // Look at the beginning
-                final int jTo = size == 0 ? sourceTo : filtered[0];
-                final ListIterator<? extends E> it = getSource().listIterator(sourceFrom);
-                for (; it.nextIndex() < jTo;) {
-                    E el = it.next();
-                    if (pred.test(el)) {
-                        nextAdd(i, i + 1);
-                        System.arraycopy(filtered, i, filtered, i + 1, size - i);
-                        filtered[i] = it.previousIndex();
-                        size++;
-                        filterTo++;
-                        i++;
-                    }
-                }
-            }
-
-
-            // Now traverse the rest of the list. We first check the item in the filtered
-            // array, if it still matches the filter
-            ListIterator<? extends E> it = getSource().listIterator(filtered[i]);
-            for (; i < filterTo; ++i) {
-                advanceTo(it, filtered[i]);
-                final E el = it.next();
-                if (!pred.test(el)) {
-                    nextRemove(i, el);
-                    System.arraycopy(filtered, i + 1, filtered, i, size - i - 1);
-                    size--;
-                    filterTo--;
-                    i--;
-                }
-                final int jTo = (i == filterTo - 1 ? sourceTo : filtered[i + 1]);
-                // Then we look at the elements that are between the current element in filtered[] array
-                // and it's successor
-                while (it.nextIndex() < jTo) {
-                    final E midEl = it.next();
-                    if (pred.test(midEl)) {
-                        nextAdd(i + 1, i + 2);
-                        System.arraycopy(filtered, i + 1, filtered, i + 2, size - i - 1);
-                        filtered[i + 1] = it.previousIndex();
-                        size++;
-                        filterTo++;
-                        i++;
-                    }
-                }
-            }
-
-        }
-        endChange();
-    }
-
-    private static void advanceTo(ListIterator<?> it, int index) {
-        while(it.nextIndex() < index) {
-            it.next();
+            sourceFrom++;
         }
     }
 

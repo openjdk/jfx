@@ -39,8 +39,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import com.sun.javafx.TempState;
-import com.sun.javafx.Utils;
+import com.sun.javafx.util.TempState;
+import com.sun.javafx.util.Utils;
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.collections.VetoableListDecorator;
 import com.sun.javafx.collections.annotations.ReturnsUnmodifiableCollection;

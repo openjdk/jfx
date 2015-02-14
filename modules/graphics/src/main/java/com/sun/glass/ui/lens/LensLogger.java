@@ -36,7 +36,7 @@ final class LensLogger {
     private static final PlatformLogger logger = initLogger();
 
     private static PlatformLogger initLogger() {
-        PlatformLogger logger = PlatformLogger.getLogger("lens");
+        PlatformLogger logger = PlatformLogger.getLogger("javafx.lens");
         String levelString = AccessController.doPrivileged(
                 (PrivilegedAction<String>) () -> System.getProperty("log.lens", "SEVERE").toUpperCase(Locale.ROOT));
         try {

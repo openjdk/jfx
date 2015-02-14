@@ -45,11 +45,12 @@
 
 - (void)dealloc
 {
-    GET_MAIN_JENV;
+    assert(pthread_main_np() == 1);
+    JNIEnv *env = jEnv;
     if (env != NULL)
     {
-            (*env)->DeleteGlobalRef(env, self->jWindow);
-            GLASS_CHECK_EXCEPTION(env);
+        (*env)->DeleteGlobalRef(env, self->jWindow);
+        GLASS_CHECK_EXCEPTION(env);
     }
     
     self->jWindow = NULL;

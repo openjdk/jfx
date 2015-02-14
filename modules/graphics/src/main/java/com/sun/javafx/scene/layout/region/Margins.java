@@ -114,7 +114,7 @@ public class Margins {
             // unitsMatch will only be false if proportional is true and
             // not all of the units are percent.
             if (unitsMatch == false) {
-                   final PlatformLogger LOGGER = com.sun.javafx.Logging.getCSSLogger();
+                   final PlatformLogger LOGGER = com.sun.javafx.util.Logging.getCSSLogger();
                     if (LOGGER.isLoggable(Level.WARNING)) {
                         final String msg =
                             new StringBuilder("units do no match: ")

@@ -30,7 +30,7 @@ import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.IntegerPropertyBase;
 import javafx.beans.property.SimpleBooleanProperty;
 
-import com.sun.javafx.Utils;
+import com.sun.javafx.util.Utils;
 
 
 /**

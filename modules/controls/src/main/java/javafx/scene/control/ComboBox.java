@@ -528,15 +528,22 @@ public class ComboBox<T> extends ComboBoxBase<T> {
                         setSelectedIndex(newIndex);
                     }
                 }
-                
+
+                int shift = 0;
                 while (c.next()) {
                     comboBox.wasSetAllCalled = comboBox.previousItemCount == c.getRemovedSize();
-                    
-                    
-                    if (c.getFrom() <= getSelectedIndex() && getSelectedIndex()!= -1 && (c.wasAdded() || c.wasRemoved())) {
-                        int shift = c.wasAdded() ? c.getAddedSize() : -c.getRemovedSize();
-                        clearAndSelect(getSelectedIndex() + shift);
+
+                    if (c.wasReplaced()) {
+                        // no-op
+                    } else if (c.wasAdded() || c.wasRemoved()) {
+                        if (c.getFrom() <= getSelectedIndex() && getSelectedIndex()!= -1) {
+                            shift += c.wasAdded() ? c.getAddedSize() : -c.getRemovedSize();
+                        }
                     }
+                }
+
+                if (shift != 0) {
+                    clearAndSelect(getSelectedIndex() + shift);
                 }
                 
                 comboBox.previousItemCount = getItemCount();

@@ -36,7 +36,7 @@ public class AcceleratedScreen {
     private long eglSurface;
     private long eglContext;
     private long eglDisplay;
-    protected static LinuxSystem ls = LinuxSystem.getLinuxSystem();
+    protected static final LinuxSystem ls = LinuxSystem.getLinuxSystem();
     private EGL egl;
 
     /** Returns a platform-specific native display handle suitable for use with

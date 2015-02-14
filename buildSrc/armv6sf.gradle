@@ -77,7 +77,6 @@ ARMV6SF.library = { name -> return "lib${name}.so" as String }
 ARMV6SF.compileSwing = false;
 ARMV6SF.compileSWT = false;
 ARMV6SF.compileFXPackager = false;
-ARMV6SF.compileDesignTime = false;
 ARMV6SF.compileWebnodeNative = false;
 
 ARMV6SF.includeLens = false

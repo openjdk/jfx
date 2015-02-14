@@ -271,6 +271,9 @@ public final class PNGImageLoader2 extends ImageLoaderImpl {
         while (true) {
             int chunk[] = readChunk();
 
+            if (chunk[0] < 0) {
+                throw new IOException("Invalid chunk length");
+            }
             switch (chunk[1]) {
                 case IDAT_TYPE:
                     return chunk[0];
@@ -294,7 +297,7 @@ public final class PNGImageLoader2 extends ImageLoaderImpl {
 
     private ImageMetadata updateMetadata() {
         ImageMetadata metaData = new ImageMetadata(null, true,
-                null, null, null, null, width, height, null, null, null);
+                null, null, null, null, null, width, height, null, null, null);
         updateImageMetadata(metaData);
         return metaData;
     }

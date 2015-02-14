@@ -29,7 +29,9 @@ import java.util.ArrayList;
 import java.util.List;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
+import javafx.collections.MapChangeListener;
 import javafx.collections.ObservableList;
+import javafx.collections.ObservableMap;
 import javafx.collections.WeakListChangeListener;
 import javafx.event.EventHandler;
 import javafx.geometry.Orientation;
@@ -56,6 +58,8 @@ import com.sun.javafx.scene.control.skin.resources.ControlResources;
  *
  */
 public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewBehavior<T>, ListCell<T>> {
+
+    public static final String RECREATE = "listRecreateKey";
     
     /**
      * Region placed over the top of the flow (and possibly the header row) if
@@ -112,6 +116,10 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
         
         updateRowCount();
 
+        final ObservableMap<Object, Object> properties = listView.getProperties();
+        properties.remove(RECREATE);
+        properties.addListener(propertiesMapListener);
+
         // init the behavior 'closures'
         getBehavior().setOnFocusPreviousRow(() -> { onFocusPreviousCell(); });
         getBehavior().setOnFocusNextRow(() -> { onFocusNextCell(); });
@@ -149,6 +157,15 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
             flow.setFixedCellSize(getSkinnable().getFixedCellSize());
         }
     }
+
+    private MapChangeListener<Object, Object> propertiesMapListener = c -> {
+        if (! c.wasAdded()) return;
+        if (RECREATE.equals(c.getKey())) {
+            needCellsRebuilt = true;
+            getSkinnable().requestLayout();
+            getSkinnable().getProperties().remove(RECREATE);
+        }
+    };
 
     private final ListChangeListener<T> listViewItemsListener = new ListChangeListener<T>() {
         @Override public void onChanged(Change<? extends T> c) {

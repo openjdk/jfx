@@ -78,10 +78,10 @@ public final class TestImages {
     public static Image createAnimatedTestImage(
             final int width,
             final int height,
-            final int... frameDelays) {
+            final int loopCount, final int... frameDelays) {
         final String url = "file:testAnimImg_" + width + "x" + height + ".png";
         final StubPlatformImageInfo spii = 
-                new StubPlatformImageInfo(width, height, frameDelays);
+                new StubPlatformImageInfo(width, height, frameDelays, loopCount);
         imageLoaderFactory.registerImage(url, spii);
 
         return new Image(url);

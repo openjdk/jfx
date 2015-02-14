@@ -25,7 +25,7 @@
 
 package javafx.scene.shape;
 
-import com.sun.javafx.Logging;
+import com.sun.javafx.util.Logging;
 import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.sg.prism.NGNode;

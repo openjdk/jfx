@@ -29,6 +29,7 @@ import javafx.event.Event;
 import javafx.geometry.NodeOrientation;
 import javafx.scene.Node;
 import javafx.scene.Parent;
+import javafx.scene.control.SelectionModel;
 import javafx.scene.control.SingleSelectionModel;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
@@ -79,49 +80,23 @@ public class TabPaneBehavior extends BehaviorBase<TabPane> {
                 selectNextTab();
             }
         } else if (CTRL_TAB.equals(name) || CTRL_PAGE_DOWN.equals(name)) {
-            TabPane tp = getControl();
-            if (tp.getSelectionModel().getSelectedIndex() == (tp.getTabs().size() - 1)) {
-                tp.getSelectionModel().selectFirst();
-            } else {
-                selectNextTab();
-            }
-            tp.requestFocus();
+            selectNextTab();
         } else if (CTRL_SHIFT_TAB.equals(name) || CTRL_PAGE_UP.equals(name)) {
-            TabPane tp = getControl();
-            if (tp.getSelectionModel().getSelectedIndex() == 0) {
-                tp.getSelectionModel().selectLast();
-            } else {
-                selectPreviousTab();
-            }
-            tp.requestFocus();
+            selectPreviousTab();
         } else if (HOME.equals(name)) {
             if (getControl().isFocused()) {
-                getControl().getSelectionModel().selectFirst();
+                moveSelection(0, 1);
             }
         } else if (END.equals(name)) {
             if (getControl().isFocused()) {
-                getControl().getSelectionModel().selectLast();
+                moveSelection(getControl().getTabs().size() - 1, -1);
             }
         } else {
             super.callAction(name);
         }
     }
 
-    public static boolean isChildFocused(Node focusedNode, List<Node> children) {
-        boolean answer = false;
-        for(int i = 0; i < children.size(); i++) {
-            if (children.get(i) == focusedNode) {
-                answer = true;
-                break;
-            }
-            if (children.get(i) instanceof Parent) {
-                if (isChildFocused(focusedNode, ((Parent)children.get(i)).getChildrenUnmodifiable())) {
-                    return true;
-                }
-            }
-        }
-        return answer;
-    }
+
 
     /***************************************************************************
      *                                                                         *
@@ -165,33 +140,56 @@ public class TabPaneBehavior extends BehaviorBase<TabPane> {
         }
     }
 
-    // Find a tab after the currently selected that is not disabled.
+    // Find a tab after the currently selected that is not disabled. Loop around
+    // if no tabs are found after currently selected tab.
     public void selectNextTab() {
-        SingleSelectionModel<Tab> selectionModel = getControl().getSelectionModel();
-        int current = selectionModel.getSelectedIndex();
-        int index = current;
-        while (index < getControl().getTabs().size()) {
-            selectionModel.selectNext();
-            index++;
-            if (!selectionModel.getSelectedItem().isDisable()) {
-                return;
-            }
-        }
-        selectionModel.select(current);
+        moveSelection(1);
     }
 
     // Find a tab before the currently selected that is not disabled.
-    public void selectPreviousTab() {       
-        SingleSelectionModel<Tab> selectionModel = getControl().getSelectionModel();
-        int current = selectionModel.getSelectedIndex();
-        int index = current;
-        while (index > 0) {
-            selectionModel.selectPrevious();
-            index--;
-            if (!selectionModel.getSelectedItem().isDisable()) {
-                return;
-            }
+    public void selectPreviousTab() {
+        moveSelection(-1);
+    }
+
+    private void moveSelection(int delta) {
+        moveSelection(getControl().getSelectionModel().getSelectedIndex(), delta);
+    }
+
+    private void moveSelection(int startIndex, int delta) {
+        final TabPane tabPane = getControl();
+        int tabIndex = findValidTab(startIndex, delta);
+        if (tabIndex > -1) {
+            final SelectionModel<Tab> selectionModel = tabPane.getSelectionModel();
+            selectionModel.select(tabIndex);
         }
-        selectionModel.select(current);
+        tabPane.requestFocus();
+    }
+
+    private int findValidTab(int startIndex, int delta) {
+        final TabPane tabPane = getControl();
+        final List<Tab> tabs = tabPane.getTabs();
+        final int max = tabs.size();
+
+        int index = startIndex;
+        do {
+            index = nextIndex(index + delta, max);
+            Tab tab = tabs.get(index);
+            if (tab != null && !tab.isDisable()) {
+                return index;
+            }
+        } while (index != startIndex);
+
+        return -1;
+    }
+
+    private int nextIndex(int value, int max) {
+        final int min = 0;
+        int r = value % max;
+        if (r > min && max < min) {
+            r = r + max - min;
+        } else if (r < min && max > min) {
+            r = r + max - min;
+        }
+        return r;
     }
 }

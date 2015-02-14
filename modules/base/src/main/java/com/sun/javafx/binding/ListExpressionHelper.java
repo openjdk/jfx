@@ -26,6 +26,7 @@
 package com.sun.javafx.binding;
 
 import com.sun.javafx.collections.NonIterableChange;
+import com.sun.javafx.collections.SourceAdapterChange;
 import javafx.beans.InvalidationListener;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableListValue;
@@ -296,7 +297,7 @@ public abstract class ListExpressionHelper<E> extends ExpressionHelperBase {
 
         @Override
         protected void fireValueChangedEvent(final Change<? extends E> change) {
-            listener.onChanged(new MappedChange<E>(observable, change));
+            listener.onChanged(new SourceAdapterChange<>(observable, change));
         }
     }
 
@@ -566,7 +567,7 @@ public abstract class ListExpressionHelper<E> extends ExpressionHelperBase {
 
         @Override
         protected void fireValueChangedEvent(final Change<? extends E> change) {
-            final Change<E> mappedChange = (listChangeSize == 0)? null : new MappedChange<E>(observable, change);
+            final Change<E> mappedChange = (listChangeSize == 0)? null : new SourceAdapterChange<>(observable, change);
             notifyListeners(currentValue, mappedChange, false);
         }
 
@@ -599,43 +600,4 @@ public abstract class ListExpressionHelper<E> extends ExpressionHelperBase {
         }
 
     }
-
-    private static class MappedChange<E> extends Change<E> {
-        private final Change<? extends E> source;
-        private int[] perm;
-
-        private MappedChange(ObservableList<E> list, Change<? extends E> source) {
-            super(list);
-            this.source = source;
-        }
-
-        @Override public boolean next() {return source.next();}
-        @Override public void reset() {source.reset();}
-        @Override public int getFrom() {return source.getFrom();}
-        @Override public int getTo() {return source.getTo();}
-        @Override public List<E> getRemoved() {return (List<E>)source.getRemoved();}
-        @Override protected int[] getPermutation() {
-            if (perm == null) {
-                if (source.wasPermutated()) {
-                    final int from = source.getFrom();
-                    final int n = source.getTo() - from;
-                    perm = new int[n];
-                    for (int i=0; i<n; i++) {
-                        perm[i] = source.getPermutation(from + i);
-                    }
-                } else {
-                    perm = new int[0];
-                }
-            }
-            return perm;
-        }
-
-        @Override
-        public String toString() {
-            return source.toString();
-        }
-        
-    }
-
-
 }
