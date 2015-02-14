@@ -5358,4 +5358,190 @@ public class TreeTableViewTest {
 
         sl.dispose();
     }
+
+    /**
+     * Bullet 1: selected index must be updated
+     * Corner case: last selected. Fails for core
+     */
+    @Test public void test_rt_40012_selectedAtLastOnDisjointRemoveItemsAbove() {
+        TreeItem<String> root = new TreeItem<>("Root");
+        root.setExpanded(true);
+        root.getChildren().addAll(
+            new TreeItem<>("0"),
+            new TreeItem<>("1"),
+            new TreeItem<>("2"),
+            new TreeItem<>("3"),
+            new TreeItem<>("4"),
+            new TreeItem<>("5")
+        );
+
+        TreeTableView<String> stringTreeTableView = new TreeTableView<>(root);
+        stringTreeTableView.setShowRoot(false);
+        TreeTableView.TreeTableViewSelectionModel<String> sm = stringTreeTableView.getSelectionModel();
+
+        TreeTableColumn<String,String> column = new TreeTableColumn<>("Column");
+        column.setCellValueFactory(cdf -> new ReadOnlyStringWrapper(cdf.getValue().getValue()));
+        stringTreeTableView.getColumns().add(column);
+
+        int last = root.getChildren().size() - 1;
+
+        // selecting item "5"
+        sm.select(last);
+
+        // disjoint remove of 2 elements above the last selected
+        // Removing "1" and "3"
+        root.getChildren().removeAll(root.getChildren().get(1), root.getChildren().get(3));
+
+        // selection should move up two places such that it remains on item "5",
+        // but in index (last - 2).
+        int expected = last - 2;
+        assertEquals("5", sm.getSelectedItem().getValue());
+        assertEquals("selected index after disjoint removes above", expected, sm.getSelectedIndex());
+    }
+
+    /**
+     * Variant of 1: if selectedIndex is not updated,
+     * the old index is no longer valid
+     * for accessing the items.
+     */
+    @Test public void test_rt_40012_accessSelectedAtLastOnDisjointRemoveItemsAbove() {
+        TreeItem<String> root = new TreeItem<>("Root");
+        root.setExpanded(true);
+        root.getChildren().addAll(
+                new TreeItem<>("0"),
+                new TreeItem<>("1"),
+                new TreeItem<>("2"),
+                new TreeItem<>("3"),
+                new TreeItem<>("4"),
+                new TreeItem<>("5")
+        );
+
+        TreeTableView<String> stringTreeTableView = new TreeTableView<>(root);
+        stringTreeTableView.setShowRoot(false);
+        TreeTableView.TreeTableViewSelectionModel<String> sm = stringTreeTableView.getSelectionModel();
+
+        TreeTableColumn<String,String> column = new TreeTableColumn<>("Column");
+        column.setCellValueFactory(cdf -> new ReadOnlyStringWrapper(cdf.getValue().getValue()));
+        stringTreeTableView.getColumns().add(column);
+
+        int last = root.getChildren().size() - 1;
+
+        // selecting item "5"
+        sm.select(last);
+
+        // disjoint remove of 2 elements above the last selected
+        root.getChildren().removeAll(root.getChildren().get(1), root.getChildren().get(3));
+        int selected = sm.getSelectedIndex();
+        if (selected > -1) {
+            root.getChildren().get(selected);
+        }
+    }
+
+    /**
+     * Bullet 2: selectedIndex notification count
+     *
+     * Note that we don't use the corner case of having the last index selected
+     * (which fails already on updating the index)
+     */
+    private int rt_40012_count = 0;
+    @Test public void test_rt_40012_selectedIndexNotificationOnDisjointRemovesAbove() {
+        TreeItem<String> root = new TreeItem<>("Root");
+        root.setExpanded(true);
+        root.getChildren().addAll(
+                new TreeItem<>("0"),
+                new TreeItem<>("1"),
+                new TreeItem<>("2"),
+                new TreeItem<>("3"),
+                new TreeItem<>("4"),
+                new TreeItem<>("5")
+        );
+
+        TreeTableView<String> stringTreeTableView = new TreeTableView<>(root);
+        stringTreeTableView.setShowRoot(false);
+        TreeTableView.TreeTableViewSelectionModel<String> sm = stringTreeTableView.getSelectionModel();
+
+        TreeTableColumn<String,String> column = new TreeTableColumn<>("Column");
+        column.setCellValueFactory(cdf -> new ReadOnlyStringWrapper(cdf.getValue().getValue()));
+        stringTreeTableView.getColumns().add(column);
+
+        int last = root.getChildren().size() - 2;
+        sm.select(last);
+        assertEquals(last, sm.getSelectedIndex());
+
+        rt_40012_count = 0;
+        sm.selectedIndexProperty().addListener(o -> rt_40012_count++);
+
+        // disjoint remove of 2 elements above the last selected
+        root.getChildren().removeAll(root.getChildren().get(1), root.getChildren().get(3));
+        assertEquals("sanity: selectedIndex must be shifted by -2", last - 2, sm.getSelectedIndex());
+        assertEquals("must fire single event on removes above", 1, rt_40012_count);
+    }
+
+    /**
+     * Bullet 3: unchanged selectedItem must not fire change
+     */
+    @Test
+    public void test_rt_40012_selectedItemNotificationOnDisjointRemovesAbove() {
+        TreeItem<String> root = new TreeItem<>("Root");
+        root.setExpanded(true);
+        root.getChildren().addAll(
+                new TreeItem<>("0"),
+                new TreeItem<>("1"),
+                new TreeItem<>("2"),
+                new TreeItem<>("3"),
+                new TreeItem<>("4"),
+                new TreeItem<>("5")
+        );
+
+        TreeTableView<String> stringTreeTableView = new TreeTableView<>(root);
+        stringTreeTableView.setShowRoot(false);
+        TreeTableView.TreeTableViewSelectionModel<String> sm = stringTreeTableView.getSelectionModel();
+
+        TreeTableColumn<String,String> column = new TreeTableColumn<>("Column");
+        column.setCellValueFactory(cdf -> new ReadOnlyStringWrapper(cdf.getValue().getValue()));
+        stringTreeTableView.getColumns().add(column);
+
+        int last = root.getChildren().size() - 2;
+        Object lastItem = root.getChildren().get(last);
+        sm.select(last);
+        assertEquals(lastItem, sm.getSelectedItem());
+
+        rt_40012_count = 0;
+        sm.selectedItemProperty().addListener(o -> rt_40012_count++);
+
+        // disjoint remove of 2 elements above the last selected
+        root.getChildren().removeAll(root.getChildren().get(1), root.getChildren().get(3));
+        assertEquals("sanity: selectedItem unchanged", lastItem, sm.getSelectedItem());
+        assertEquals("must not fire on unchanged selected item", 0, rt_40012_count);
+    }
+
+    private int rt_40010_count = 0;
+    @Test public void test_rt_40010() {
+        TreeItem<String> root = new TreeItem<>("Root");
+        TreeItem<String> child = new TreeItem<>("child");
+        root.setExpanded(true);
+        root.getChildren().addAll(child);
+
+        TreeTableView<String> stringTreeTableView = new TreeTableView<>(root);
+        TreeTableView.TreeTableViewSelectionModel<String> sm = stringTreeTableView.getSelectionModel();
+
+        TreeTableColumn<String,String> column = new TreeTableColumn<>("Column");
+        column.setCellValueFactory(cdf -> new ReadOnlyStringWrapper(cdf.getValue().getValue()));
+        stringTreeTableView.getColumns().add(column);
+
+        sm.getSelectedIndices().addListener((ListChangeListener<? super Integer>) l -> rt_40010_count++);
+        sm.getSelectedItems().addListener((ListChangeListener<? super TreeItem<String>>) l -> rt_40010_count++);
+
+        assertEquals(0, rt_40010_count);
+
+        sm.select(1);
+        assertEquals(1, sm.getSelectedIndex());
+        assertEquals(child, sm.getSelectedItem());
+        assertEquals(2, rt_40010_count);
+
+        root.getChildren().remove(child);
+        assertEquals(0, sm.getSelectedIndex());
+        assertEquals(root, sm.getSelectedItem());
+        assertEquals(4, rt_40010_count);
+    }
 }

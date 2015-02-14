@@ -77,7 +77,7 @@ import java.nio.FloatBuffer;
  * sw loops.
  */
 public class BoxRenderState extends LinearConvolveRenderState {
-    public static final int MAX_BOX_SIZES[] = {
+    private static final int MAX_BOX_SIZES[] = {
         getMaxSizeForKernelSize(MAX_KERNEL_SIZE, 0),
         getMaxSizeForKernelSize(MAX_KERNEL_SIZE, 1),
         getMaxSizeForKernelSize(MAX_KERNEL_SIZE, 2),
