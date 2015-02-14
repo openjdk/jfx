@@ -2195,6 +2195,9 @@ public class TableView<S> extends Control {
         // new indices.
         private void updateSelection(ListChangeListener.Change<? extends S> c) {
             c.reset();
+
+            int shift = 0;
+            int startRow = -1;
             while (c.next()) {
                 if (c.wasReplaced()) {
                     if (c.getList().isEmpty()) {
@@ -2219,56 +2222,8 @@ public class TableView<S> extends Control {
                         }
                     }
                 } else if (c.wasAdded() || c.wasRemoved()) {
-                    int startRow = c.getFrom();
-                    int shift = c.wasAdded() ? c.getAddedSize() : -c.getRemovedSize();
-                    
-                    if (startRow < 0) return;
-                    if (shift == 0) return;
-                    
-                    List<TablePosition<S,?>> newIndices = new ArrayList<>(selectedCellsMap.size());
-
-                    for (int i = 0; i < selectedCellsMap.size(); i++) {
-                        final TablePosition<S,?> old = selectedCellsMap.get(i);
-                        final int oldRow = old.getRow();
-                        final int newRow = Math.max(0, oldRow < startRow ? oldRow : oldRow + shift);
-
-                        if (oldRow < startRow) {
-                            continue;
-                        }
-
-                        // Special case for RT-28637 (See unit test in TableViewTest).
-                        // Essentially the selectedItem was correct, but selectedItems
-                        // was empty.
-                        if (oldRow == 0 && shift == -1) {
-                            newIndices.add(new TablePosition<>(getTableView(), 0, old.getTableColumn()));
-                            continue;
-                        }
-
-                        newIndices.add(new TablePosition<>(getTableView(), newRow, old.getTableColumn()));
-                    }
-
-                    final int newIndicesSize = newIndices.size();
-
-                    if ((c.wasRemoved() || c.wasAdded()) && newIndicesSize > 0) {
-                        TablePosition<S,?> anchor = TableCellBehavior.getAnchor(tableView, null);
-                        if (anchor != null) {
-                            boolean isAnchorSelected = isSelected(anchor.getRow(), anchor.getTableColumn());
-                            if (isAnchorSelected) {
-                                TablePosition<S,?> newAnchor = new TablePosition<>(tableView, anchor.getRow() + shift, anchor.getTableColumn());
-                                TableCellBehavior.setAnchor(tableView, newAnchor, false);
-                            }
-                        }
-
-                        quietClearSelection();
-
-                        // Fix for RT-22079
-                        blockFocusCall = true;
-                        for (int i = 0; i < newIndicesSize; i++) {
-                            TablePosition<S, ?> tp = newIndices.get(i);
-                            select(tp.getRow(), tp.getTableColumn());
-                        }
-                        blockFocusCall = false;
-                    }
+                    startRow = c.getFrom();
+                    shift += c.wasAdded() ? c.getAddedSize() : -c.getRemovedSize();
                 } else if (c.wasPermutated()) {
                     // General approach:
                     //   -- detected a sort has happened
@@ -2327,6 +2282,53 @@ public class TableView<S> extends Control {
                     } else {
                         stopAtomic();
                     }
+                }
+            }
+
+            if (shift != 0 && startRow >= 0) {
+                List<TablePosition<S,?>> newIndices = new ArrayList<>(selectedCellsMap.size());
+
+                for (int i = 0; i < selectedCellsMap.size(); i++) {
+                    final TablePosition<S,?> old = selectedCellsMap.get(i);
+                    final int oldRow = old.getRow();
+                    final int newRow = Math.max(0, oldRow < startRow ? oldRow : oldRow + shift);
+
+                    if (oldRow < startRow) {
+                        continue;
+                    }
+
+                    // Special case for RT-28637 (See unit test in TableViewTest).
+                    // Essentially the selectedItem was correct, but selectedItems
+                    // was empty.
+                    if (oldRow == 0 && shift == -1) {
+                        newIndices.add(new TablePosition<>(getTableView(), 0, old.getTableColumn()));
+                        continue;
+                    }
+
+                    newIndices.add(new TablePosition<>(getTableView(), newRow, old.getTableColumn()));
+                }
+
+                final int newIndicesSize = newIndices.size();
+
+                if ((c.wasRemoved() || c.wasAdded()) && newIndicesSize > 0) {
+                    TablePosition<S,?> anchor = TableCellBehavior.getAnchor(tableView, null);
+                    if (anchor != null) {
+                        boolean isAnchorSelected = isSelected(anchor.getRow(), anchor.getTableColumn());
+                        if (isAnchorSelected) {
+                            TablePosition<S,?> newAnchor = new TablePosition<>(tableView, anchor.getRow() + shift, anchor.getTableColumn());
+                            TableCellBehavior.setAnchor(tableView, newAnchor, false);
+                        }
+                    }
+
+                    quietClearSelection();
+
+                    // Fix for RT-22079
+                    blockFocusCall = true;
+                    for (int i = 0; i < newIndicesSize; i++) {
+                        TablePosition<S, ?> tp = newIndices.get(i);
+                        select(tp.getRow(), tp.getTableColumn());
+                    }
+                    blockFocusCall = false;
                 }
             }
             

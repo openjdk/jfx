@@ -409,8 +409,11 @@ installCrossCompiler() {
 }
 
 SCRIPTDIR=`dirname $0`
-SCRIPTDIR=`cd $SCRIPTDIR ; pwd`
-RT=`cd $SCRIPTDIR/../.. ; pwd`
+if [[ ! "SCRIPTDIRRT" =~ ^/ ]]
+then
+    SCRIPTDIR="$PWD/$SCRIPTDIR"
+    fi
+RT="$SCRIPTDIR/../.."
 
 echo Using OpenJFX working directory at $RT
 confirm()
@@ -419,7 +422,7 @@ if [[ $CONFIRMED -eq 0 ]]; then
     read RT
 fi
 
-CROSSLIBS=`dirname $RT`/crosslibs
+CROSSLIBS=$RT/../crosslibs
 echo Using crosslibs directory $CROSSLIBS
 
 mkdir -p $CROSSLIBS || exit 1

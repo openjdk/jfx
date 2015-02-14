@@ -154,8 +154,12 @@ class GlassSystemMenu implements TKSystemMenu {
                 int from = change.getFrom();
                 int to = change.getTo();
                 List<? extends MenuItemBase> removed = change.getRemoved();
+
                 for (int i = from + removed.size() - 1; i >= from ; i--) {
-                    glassMenu.remove(i);
+                    List<Object> menuItemList = glassMenu.getItems();
+                    if (i >= 0 && menuItemList.size() > i) {
+                        glassMenu.remove(i);
+                    }
                 }
                 for (int i = from; i < to; i++) {
                     MenuItemBase item = change.getList().get(i);

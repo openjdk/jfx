@@ -25,6 +25,7 @@
 
 package javafx.scene.control;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -48,7 +49,6 @@ import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
-import javafx.scene.control.TreeSortMode;
 
 import static javafx.scene.control.TreeSortMode.*;
 
@@ -409,9 +409,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
     // called whenever the contents of the children sequence changes
     private ListChangeListener<TreeItem<T>> childrenListener = c -> {
         expandedDescendentCountDirty = true;
-        while (c.next()) {
-            updateChildren(c);
-        }
+        updateChildren(c);
     };
 
 
@@ -902,13 +900,20 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
     private void updateChildren(ListChangeListener.Change<? extends TreeItem<T>> c) {
         setLeaf(children.isEmpty());
 
-        final List<? extends TreeItem<T>> added = c.getAddedSubList();
-        final List<? extends TreeItem<T>> removed = c.getRemoved();
+        final List<TreeItem<T>> added = new ArrayList<>();
+        final List<TreeItem<T>> removed = new ArrayList<>();
+
+        while (c.next()) {
+            added.addAll(c.getAddedSubList());
+            removed.addAll(c.getRemoved());
+        }
 
         // update the relationships such that all added children point to
         // this node as the parent (and all removed children point to null)
         updateChildrenParent(removed, null);
         updateChildrenParent(added, this);
+
+        c.reset();
 
         // fire an event up the parent hierarchy such that any listening
         // TreeViews (which only listen to their root node) can redraw
@@ -1179,5 +1184,6 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
 
         int getFrom() { return change == null ? -1 : change.getFrom(); }
         int getTo() { return change == null ? -1 : change.getTo(); }
+        ListChangeListener.Change<? extends TreeItem<T>> getChange() { return change; }
     }
 }
