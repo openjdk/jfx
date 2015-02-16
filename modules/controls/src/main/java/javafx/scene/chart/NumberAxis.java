@@ -249,7 +249,9 @@ public final class NumberAxis extends ValueAxis<Number> {
                     // If tickUnit is integer, start with the nearest integer
                     double first = Math.rint(tickUnit) == tickUnit ? Math.ceil(lowerBound) : lowerBound + tickUnit;
                     for (double major = first; major < upperBound; major += tickUnit) {
-                        tickValues.add(major);
+                        if (!tickValues.contains(major)) {
+                            tickValues.add(major);
+                        }
                     }
                 }
             }
