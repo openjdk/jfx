@@ -26,6 +26,7 @@
 package com.sun.javafx.scene.control.skin;
 
 import com.sun.javafx.util.Utils;
+import javafx.animation.Animation;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
@@ -98,6 +99,10 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
         NONE,
         GROW
         // In future we could add FADE, ...
+    }
+
+    private enum TabAnimationState {
+        SHOWING, HIDING, NONE;
     }
     
     private ObjectProperty<TabAnimation> openTabAnimation = new StyleableObjectProperty<TabAnimation>(TabAnimation.GROW) {
@@ -270,7 +275,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
                 // end of removing menu item
 
                 EventHandler<ActionEvent> cleanup = ae -> {
-                    tabRegion.animating = false;
+                    tabRegion.animationState = TabAnimationState.NONE;
 
                     tabHeaderArea.removeTab(tab);
                     tabHeaderArea.requestLayout();
@@ -280,7 +285,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
                 };
 
                 if (closeTabAnimation.get() == TabAnimation.GROW) {
-                    tabRegion.animating = true;
+                    tabRegion.animationState = TabAnimationState.HIDING;
                     Timeline closedTabTimeline = tabRegion.currentAnimation =
                             createTimeline(tabRegion, Duration.millis(ANIMATION_SPEED), 0.0F, cleanup);
                     closedTabTimeline.play();    
@@ -296,7 +301,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
         if (tabRegion != null) {
             // Execute the code immediately, don't wait for the animation to finish.
             Timeline timeline = tabRegion.currentAnimation;
-            if (timeline != null) {
+            if (timeline != null && timeline.getStatus() == Animation.Status.RUNNING) {
                 timeline.getOnFinished().handle(null);
                 timeline.stop();
                 tabRegion.currentAnimation = null;
@@ -311,7 +316,9 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
         List<Node> headers = new ArrayList<>(tabHeaderArea.headersRegion.getChildren());
         for (Node n : headers) {
             TabHeaderSkin header = (TabHeaderSkin) n;
-            stopCurrentAnimation(header.tab);
+            if (header.animationState == TabAnimationState.HIDING) {
+                stopCurrentAnimation(header.tab);
+            }
         }
         // end of fix for RT-39984
 
@@ -327,11 +334,11 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
             final TabHeaderSkin tabRegion = tabHeaderArea.getTabHeaderSkin(tab);
             if (tabRegion != null) {
                 if (openTabAnimation.get() == TabAnimation.GROW) {
-                    tabRegion.animating = true;
+                    tabRegion.animationState = TabAnimationState.SHOWING;
                     tabRegion.animationTransition.setValue(0.0);
                     tabRegion.setVisible(true);
                     tabRegion.currentAnimation = createTimeline(tabRegion, Duration.millis(ANIMATION_SPEED), 1.0, event -> {
-                        tabRegion.animating = false;
+                        tabRegion.animationState = TabAnimationState.NONE;
                         tabRegion.setVisible(true);
                         tabRegion.inner.requestLayout();
                     });
@@ -1219,7 +1226,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
                         labelHeight = maxHeight;
                     }
 
-                    if (animating) {
+                    if (animationState != TabAnimationState.NONE) {
 //                        if (prefWidth.getValue() < labelAreaWidth) {
 //                            labelAreaWidth = prefWidth.getValue();
 //                        }
@@ -1431,7 +1438,7 @@ public class TabPaneSkin extends BehaviorSkinBase<TabPane, TabPaneBehavior> {
             getChildren().clear();
         }
 
-        private boolean animating = false;
+        private TabAnimationState animationState = TabAnimationState.NONE;
         private Timeline currentAnimation;
 
         @Override protected double computePrefWidth(double height) {
