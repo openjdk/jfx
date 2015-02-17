@@ -47,7 +47,7 @@ public abstract class FXRobot {
      * @param wait if true, wait until events in the queue are processed
      */
     public void setAutoWaitForIdle(boolean wait) {
-        wait = autoWait;
+        autoWait = wait;
     }
 
     /**
