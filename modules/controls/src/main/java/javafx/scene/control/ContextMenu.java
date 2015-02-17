@@ -133,6 +133,7 @@ public class ContextMenu extends PopupControl {
     public ContextMenu() {
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
         setAutoHide(true);
+        setConsumeAutoHidingEvents(false);
     }
 
     /**

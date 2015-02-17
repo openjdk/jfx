@@ -165,10 +165,6 @@ public abstract class CellBehaviorBase<T extends Cell> extends BehaviorBase<T> {
         latePress = false;
     }
 
-    @Override public void contextMenuRequested(ContextMenuEvent e) {
-        doSelect(e.getX(), e.getY(), MouseButton.SECONDARY, 1, false, false);
-    }
-
 
 
     /***************************************************************************
