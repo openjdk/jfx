@@ -926,14 +926,6 @@ public class MacAppBundler extends AbstractBundler {
             rules.add(Rule.substrNeg("/contents/frameworks/"));
         }
         
-        // strip the link to the DLL for the plugin
-        if (isJDK) {
-            rules.add(Rule.suffixNeg("/macos/libjli.dylib"));
-        }
-        if (isJRE) {
-            rules.add(Rule.suffixNeg("/macos/javaappletplugin"));
-        }
-
         // strip out command line tools
         rules.add(Rule.suffixNeg("home/bin"));
         if (isJDK) {
