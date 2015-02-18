@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -59,7 +59,6 @@ import javafx.util.Callback;
 import org.w3c.dom.Document;
 
 import java.io.BufferedInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import static java.lang.String.format;
@@ -71,6 +70,9 @@ import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.List;
 import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -460,6 +462,38 @@ final public class WebEngine {
         return userStyleSheetLocation == null ? null : userStyleSheetLocation.get();
     }
 
+    private byte[] readFully(BufferedInputStream in) throws IOException {
+        final int BUF_SIZE = 4096;
+        int outSize = 0;
+        final List<byte[]> outList = new ArrayList<>();
+        byte[] buffer = new byte[BUF_SIZE];
+
+        while (true) {
+            int nBytes = in.read(buffer);
+            if (nBytes < 0) break;
+
+            byte[] chunk;
+            if (nBytes == buffer.length) {
+                chunk = buffer;
+                buffer = new byte[BUF_SIZE];
+            } else {
+                chunk = new byte[nBytes];
+                System.arraycopy(buffer, 0, chunk, 0, nBytes);
+            }
+            outList.add(chunk);
+            outSize += nBytes;
+        }
+
+        final byte[] out = new byte[outSize];
+        int outPos = 0;
+        for (byte[] chunk : outList) {
+            System.arraycopy(chunk, 0, out, outPos, chunk.length);
+            outPos += chunk.length;
+        }
+
+        return out;
+    }
+
     public final StringProperty userStyleSheetLocationProperty() {
         if (userStyleSheetLocation == null) {
             userStyleSheetLocation = new StringPropertyBase(null) {
@@ -483,9 +517,9 @@ final public class WebEngine {
 
                             BufferedInputStream in =
                                     new BufferedInputStream(conn.getInputStream());
-                            ByteArrayOutputStream out = new ByteArrayOutputStream();
-                            new sun.misc.BASE64Encoder().encodeBuffer(in, out);
-                            dataUrl = DATA_PREFIX + out.toString();
+                            byte[] inBytes = readFully(in);
+                            String out = Base64.getMimeEncoder().encodeToString(inBytes);
+                            dataUrl = DATA_PREFIX + out;
                         } catch (IOException e) {
                             throw new RuntimeException(e);
                         }
