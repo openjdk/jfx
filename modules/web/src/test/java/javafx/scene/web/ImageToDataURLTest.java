@@ -25,6 +25,7 @@
 
 package javafx.scene.web;
 
+import org.junit.Ignore;
 import org.junit.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -76,6 +77,7 @@ public class ImageToDataURLTest extends TestBase {
         + "</body>\n"
         + "</html>\n";
 
+    @Ignore("RT-40092")
     @Test public void testImageToDataURL() {
         loadContent(htmlContent);
         submit(() -> {
