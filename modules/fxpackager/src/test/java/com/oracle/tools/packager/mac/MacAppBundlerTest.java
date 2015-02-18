@@ -40,8 +40,10 @@ import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -67,6 +69,7 @@ public class MacAppBundlerTest {
     static String runtimeJre;
     static Set<File> appResources;
     static boolean retain = false;
+    static boolean signingKeysPresent = false;
 
     @BeforeClass
     public static void prepareApp() {
@@ -91,6 +94,23 @@ public class MacAppBundlerTest {
         fakeMainJar = new File(appResourcesDir, "mainApp.jar");
 
         appResources = new HashSet<>(Arrays.asList(fakeMainJar));
+
+        String signingKeyName = MacAppStoreBundler.MAC_APP_STORE_APP_SIGNING_KEY.fetchFrom(new TreeMap<>());
+        if (signingKeyName != null) {
+            try (ByteArrayOutputStream baos = new ByteArrayOutputStream(); PrintStream ps = new PrintStream(baos)) {
+                ProcessBuilder pb = new ProcessBuilder(
+                        "security",
+                        "find-certificate", "-c", signingKeyName);
+
+                IOUtils.exec(pb, Log.isDebug(), false, ps);
+
+                String commandOutput = baos.toString();
+                Assume.assumeTrue(commandOutput.contains(signingKeyName));
+                signingKeysPresent = true;
+            } catch (Throwable t) {
+                // any exception is ignored, signing key already set to false
+            }
+        }
     }
 
     @Before
@@ -383,10 +403,12 @@ public class MacAppBundlerTest {
     }
 
     /**
-     * Build smoke test and mark it as quarantined, possibly signed
+     * Build signed smoke test and mark it as quarantined, skip if no keys present
      */
     @Test
     public void quarantinedAppTest() throws IOException, ConfigException, UnsupportedPlatformException {
+        Assume.assumeTrue(signingKeysPresent);
+        
         AbstractBundler bundler = new MacAppBundler();
 
         assertNotNull(bundler.getName());
@@ -416,6 +438,7 @@ public class MacAppBundlerTest {
         System.err.println("Bundle at - " + result);
         assertNotNull(result);
         assertTrue(result.exists());
+        validateSignatures(result);
 
         // mark it as though it's been downloaded
         ProcessBuilder pb = new ProcessBuilder(
@@ -483,6 +506,9 @@ public class MacAppBundlerTest {
         System.err.println("Bundle at - " + output);
         assertNotNull(output);
         assertTrue(output.exists());
+        if (signingKeysPresent) {
+            validateSignatures(output);
+        }
     }
 
     /**
@@ -659,6 +685,9 @@ public class MacAppBundlerTest {
         System.err.println("Bundle at - " + output);
         assertNotNull(output);
         assertTrue(output.exists());
+        if (signingKeysPresent) {
+            validateSignatures(output);
+        }
     }
 
     /**
@@ -671,6 +700,29 @@ public class MacAppBundlerTest {
         assertTrue(MacBaseInstallerBundler.findKey("A completely bogus key that should never realistically exist unless we are attempting to falsely break the tests", true) == null);
     }
     
+    public void validateSignatures(File appLocation) throws IOException {
+        // shallow validation
+        ProcessBuilder pb = new ProcessBuilder(
+                "codesign", "--verify",
+                "-v", // single verbose
+                appLocation.getCanonicalPath());
+        IOUtils.exec(pb, true);
+
+        // deep validation
+        pb = new ProcessBuilder(
+                "codesign", "--verify",
+                "--deep",
+                "-v", // single verbose
+                appLocation.getCanonicalPath());
+        IOUtils.exec(pb, true);
+        
+        //spctl, this verifies gatekeeper
+        pb = new ProcessBuilder(
+                "spctl", "--assess",
+                "-v", // single verbose
+                appLocation.getCanonicalPath());
+        IOUtils.exec(pb, true);
+    }    
 
 
 }

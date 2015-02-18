@@ -212,9 +212,7 @@ public abstract class MacBaseInstallerBundler extends AbstractBundler {
     }
 
     public static void signAppBundle(Map<String, ? super Object> params, File appLocation, String signingIdentity, String identifierPrefix, String entitlementsFile, String inheritedEntitlements) throws IOException {
-
         AtomicReference<IOException> toThrow = new AtomicReference<>();
-
         // sign all dylibs and jars
         Files.walk(appLocation.toPath())
                 // while we are searching let's fix permissions
@@ -232,26 +230,22 @@ public abstract class MacBaseInstallerBundler extends AbstractBundler {
                 })
                 // now only care about jars and dylibs
                 .filter(p -> (p.toString().endsWith(".jar")
-                                || p.toString().endsWith(".dylib"))
+                                || p.toString().endsWith(".dylib")
+                        && !p.toString().contains("/Contents/MacOS/libjli.dylib"))
                 ).forEach(p -> {
                     //noinspection ThrowableResultOfMethodCallIgnored
                     if (toThrow.get() != null) return;
 
                     List<String> args = new ArrayList<>();
-                    args.addAll(Arrays.asList(
-                            "codesign",
-                            "-f")); // replace all existing signatures
-                    if (signingIdentity != null) {
-                        args.add("-s");
-                        args.add(signingIdentity); // sign with this key
-                    }
+                    args.addAll(Arrays.asList("codesign",
+                            "-s", signingIdentity, // sign with this key
+                            "--prefix", identifierPrefix, // use the identifier as a prefix
+                            "-vvvv")); 
                     if (entitlementsFile != null) {
                         args.add("--entitlements");
                         args.add(entitlementsFile); // entitlements
                     }
-                    args.add("-vvvv"); // super verbo1se output
                     args.add(p.toString());
-
 
                     try {
                         Set<PosixFilePermission> oldPermissions = Files.getPosixFilePermissions(p);
@@ -271,7 +265,6 @@ public abstract class MacBaseInstallerBundler extends AbstractBundler {
         if (ioe != null) {
             throw ioe;
         }
-
         // sign all contained executables with an inherit entitlement
         Files.find(appLocation.toPath().resolve("Contents"), Integer.MAX_VALUE,
                 (path, attr) -> (Files.isExecutable(path) && Files.isRegularFile(path)))
@@ -282,18 +275,13 @@ public abstract class MacBaseInstallerBundler extends AbstractBundler {
 
                     List<String> args = new ArrayList<>();
                     args.addAll(Arrays.asList("codesign",
-                            "--deep",
-//                            "--prefix", identifierPrefix, // use the identifier as a prefix
-                            "-f")); // replace all existing signatures
-                    if (signingIdentity != null) {
-                        args.add("-s");
-                        args.add(signingIdentity); // sign with this key
-                    }
+                            "-s", signingIdentity, // sign with this key
+                            "--prefix", identifierPrefix, // use the identifier as a prefix
+                            "-vvvv")); 
                     if (inheritedEntitlements != null) {
                         args.add("--entitlements");
                         args.add(inheritedEntitlements); // entitlements
                     }
-                    args.add("-vvvv"); // super verbose output
                     args.add(path.toString()); // this is what we are signing
 
                     try {
@@ -314,7 +302,6 @@ public abstract class MacBaseInstallerBundler extends AbstractBundler {
         if (ioe != null) {
             throw ioe;
         }
-
         // sign all plugins and frameworks
         Consumer<? super Path> signIdentifiedByPList = path -> {
             //noinspection ThrowableResultOfMethodCallIgnored
@@ -324,14 +311,8 @@ public abstract class MacBaseInstallerBundler extends AbstractBundler {
                 List<String> args = new ArrayList<>();
                 args.addAll(Arrays.asList("codesign",
                         "-s", signingIdentity, // sign with this key
-                        "-f", // replace all existing signatures
                         "--prefix", identifierPrefix, // use the identifier as a prefix
-                        //"-i", bundleID, // sign the bundle's CFBundleIdentifier
                         "-vvvv"));
-                if (signingIdentity != null) {
-                    args.add("-s");
-                    args.add(signingIdentity); // sign with this key
-                }
                 args.add(path.toString());
                 ProcessBuilder pb = new ProcessBuilder(args);
                 IOUtils.exec(pb, VERBOSE.fetchFrom(params));
@@ -366,12 +347,11 @@ public abstract class MacBaseInstallerBundler extends AbstractBundler {
         args.addAll(Arrays.asList("codesign",
                 "-s", signingIdentity, // sign with this key
                 "--deep", // sign deeply, including plugins
-                "-f")); // replace all existing signatures
+                "-vvvv")); // super verbose output
         if (entitlementsFile != null) {
             args.add("--entitlements");
             args.add(entitlementsFile); // entitlements
         }
-        args.add("-vvvv"); // super verbose output
         args.add(appLocation.toString());
 
         ProcessBuilder pb = new ProcessBuilder(args.toArray(new String[args.size()]));
