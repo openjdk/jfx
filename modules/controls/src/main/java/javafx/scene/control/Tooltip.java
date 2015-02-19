@@ -181,16 +181,21 @@ public class Tooltip extends PopupControl {
      */
     public final StringProperty textProperty() { return text; }
     public final void setText(String value) {
-        if (isShowing() && value != null && !value.equals(getText())) {
-            //Dynamic tooltip content is location-dependant.
-            //Chromium trick.
-            setAnchorX(BEHAVIOR.lastMouseX);
-            setAnchorY(BEHAVIOR.lastMouseY);
-        }
         textProperty().setValue(value);
     }
     public final String getText() { return text.getValue() == null ? "" : text.getValue(); }
-    private final StringProperty text = new SimpleStringProperty(this, "text", "");
+    private final StringProperty text = new SimpleStringProperty(this, "text", "") {
+        @Override protected void invalidated() {
+            super.invalidated();
+            final String value = get();
+            if (isShowing() && value != null && !value.equals(getText())) {
+                //Dynamic tooltip content is location-dependant.
+                //Chromium trick.
+                setAnchorX(BEHAVIOR.lastMouseX);
+                setAnchorY(BEHAVIOR.lastMouseY);
+            }
+        }
+    };
 
     /**
      * Specifies the behavior for lines of text <em>when text is multiline</em>.
