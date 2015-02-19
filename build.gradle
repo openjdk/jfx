@@ -841,7 +841,7 @@ if (UPDATE_STUB_CACHE) {
 
 // Save a reference to the buildSrc.jar file because we need it for actually
 // compiling things, not just for the sake of this build script
-// (such as generating the builders, JSL files, etc)
+// (such as generating the JSL files, etc)
 ext.BUILD_SRC = rootProject.files("buildSrc/build/libs/buildSrc.jar")
 
 /**
@@ -1651,7 +1651,7 @@ project(":extensions") {
 }
 
 project(":swing") {
-    /* should not be built, but needed in builders and JMX
+    /* should not be built, but needed in JMX
     tasks.all {
         if (!COMPILE_SWING) it.enabled = false
     }
@@ -1683,25 +1683,6 @@ project(":fxml") {
         // we have to use the stub toolkit for now.
         jvmArgs "-Djavafx.toolkit=com.sun.javafx.pgstub.StubToolkit"
         classpath += files("$JDK_HOME/jre/lib/ext/nashorn.jar")
-    }
-}
-
-project(":builders") {
-    sourceCompatibility = 1.7
-
-    if (!COMPILE_SWING) sourceSets.main.java.exclude ("**/swing/**")
-    if (!COMPILE_SWT)   sourceSets.main.java.exclude ("**/swt/**")
-
-    dependencies {
-        compile BUILD_SRC, project(":base"), project(":graphics"),
-                project(":controls"), project(":swt"), project(":swing"), project(":media"), project(":web")
-        testCompile project(":graphics").sourceSets.test.output
-    }
-    test {
-        // StubToolkit is not *really* needed here, but because some code inadvertently invokes performance
-        // tracker and this attempts to fire up the toolkit and this looks for native libraries and fails,
-        // we have to use the stub toolkit for now.
-        jvmArgs "-Djavafx.toolkit=com.sun.javafx.pgstub.StubToolkit"
     }
 }
 
@@ -1958,7 +1939,7 @@ project(":fxpackager") {
             doLast {
                 mkdir "$buildDir/native"
                 exec({
-                    commandLine("$RC", "/nologo", "/l", "0x409", "/r", "/dJFX_DVERSION=8", "/dJFX_VERSION=8",
+                    commandLine("$RC", "/nologo", "/l", "0x409", "/r", "/dJFX_DVERSION=9", "/dJFX_VERSION=9",
                             "/fo$buildDir/native/javapackager/javapackager.res",
                             "src/main/native/javapackager/win/javapackager.rc");
                     environment(WINDOWS_NATIVE_COMPILE_ENVIRONMENT);
@@ -2720,7 +2701,7 @@ task javadoc(type: Javadoc) {
             project(":base"), project(":graphics"), project(":controls"), project(":media"),
             project(":swing"), project(":swt"), project(":fxml"), project(":web")]
     source(projectsToDocument.collect({
-        [it.sourceSets.main.java, "$it.buildDir/generated-src/builders"]
+        [it.sourceSets.main.java]
     }));
     setDestinationDir(new File(buildDir, 'javadoc'));
     // Might need a classpath
@@ -2839,7 +2820,7 @@ task copySources(type: Copy) {
     def projectsToCopy = [
             project(":base"), project(":graphics"), project(":controls"),
             project(":swing"), project(":swt"), project(":fxml"),
-            project(":builders"), project(":media"), project(":web")]
+            project(":media"), project(":web")]
     from(projectsToCopy.collect({ proj ->
         files(proj.sourceSets.main.java.srcDirs)
     }))
@@ -2887,7 +2868,6 @@ compileTargets { t ->
         includeEmptyDirs = false
         from("modules/base/build/classes/main",
              "modules/base/build/resources/main",
-             "modules/builders/build/classes/main",
              "modules/graphics/build/classes/main",
              "modules/graphics/build/resources/main",
              "modules/controls/build/classes/main",
@@ -3006,7 +2986,6 @@ compileTargets { t ->
         archiveName = "build/${sdkDirName}/rt/lib/jfxswt.jar";
         includeEmptyDirs = false
         from("modules/swt/build/classes/main");
-        from("modules/builders/build/classes/main");
         include("**/javafx/embed/swt/**")
         exclude("**/*.java");  // Builder java files are in build/classes and should be excluded
 
@@ -3199,7 +3178,6 @@ ext.JFXRT_CP =
         project(":controls").sourceSets.main.output.classesDir,
         project(":fxml").sourceSets.main.output.classesDir,
         project(":swing").sourceSets.main.output.classesDir, //NOTE - used by 3Dviewer
-        project(":builders").sourceSets.main.output.classesDir,
             "modules/media/build/classes/main",
             "modules/web/build/classes/main",
     )
