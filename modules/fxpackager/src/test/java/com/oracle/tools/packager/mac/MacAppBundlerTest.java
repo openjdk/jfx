@@ -476,6 +476,9 @@ public class MacAppBundlerTest {
         System.err.println("Bundle at - " + output);
         assertNotNull(output);
         assertTrue(output.exists());
+        if (signingKeysPresent) {
+            validateSignatures(output);
+        }
     }
 
     /**
