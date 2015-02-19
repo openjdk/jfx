@@ -114,11 +114,11 @@ public class DocsPage extends Region implements ChangeListener<String>, Page{
     
     private void updateSidebar(String url) {
         String key = url;
-        if (key.startsWith("http://download.java.net/jdk8/jfxdocs/")) {
-            key = key.substring("http://download.java.net/jdk8/jfxdocs/".length(), key.lastIndexOf('.'));
+        if (key.startsWith("https://docs.oracle.com/javase/8/javafx/api/")) {
+            key = key.substring("https://docs.oracle.com/javase/8/javafx/api/".length(), key.lastIndexOf('.'));
             key = key.replaceAll("/", ".");
-        } else if (key.startsWith("http://download.java.net/jdk8/docs/api/")) {
-            key = key.substring("http://download.java.net/jdk8/docs/api/".length(), key.lastIndexOf('.'));
+        } else if (key.startsWith("https://docs.oracle.com/javase/8/docs/api/")) {
+            key = key.substring("https://docs.oracle.com/javase/8/docs/api/".length(), key.lastIndexOf('.'));
             key = key.replaceAll("/", ".");
         } 
         SampleInfo[] samples = Samples.getSamplesForDoc(key);

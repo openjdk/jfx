@@ -72,7 +72,6 @@ public abstract class WCMediaPlayer extends Ref {
     protected abstract void cancelLoad();
     protected abstract void disposePlayer();
 
-    // called if preload != PRELOAD_AUTO
     protected abstract void prepareToPlay();
     protected abstract void play();
     protected abstract void pause();

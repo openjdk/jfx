@@ -87,7 +87,7 @@ public class EnsembleCompiletimeMain {
             indexDir.mkdirs();
             BuildEnsembleSearchIndex.buildSearchIndex(
                 allSamples, 
-                "http://download.java.net/jdk8/jfxdocs/",
+                "https://docs.oracle.com/javase/8/javafx/api/",
                 "https://docs.oracle.com/javafx/index.html",
                 indexDir);
         }
