@@ -45,10 +45,8 @@ FontPlatformData FontCustomPlatformData::fontPlatformData(
     return FontPlatformData(RQRef::create(font), size);
 }
 
-FontCustomPlatformData* createFontCustomPlatformData(SharedBuffer* buffer)
+std::unique_ptr<FontCustomPlatformData> createFontCustomPlatformData(SharedBuffer& buffer)
 {
-    ASSERT_ARG(buffer, buffer);
-    
     JNIEnv* env = WebCore_GetJavaEnv();
 
     static JGClass sharedBufferClass(env->FindClass(
@@ -64,7 +62,7 @@ FontCustomPlatformData* createFontCustomPlatformData(SharedBuffer* buffer)
     JLObject sharedBuffer(env->CallStaticObjectMethod(
             sharedBufferClass,
             mid1,
-            ptr_to_jlong(buffer)));
+            ptr_to_jlong(&buffer)));
     CheckAndClearException(env);
 
     static jmethodID mid2 = env->GetMethodID(
@@ -80,7 +78,7 @@ FontCustomPlatformData* createFontCustomPlatformData(SharedBuffer* buffer)
             (jobject) sharedBuffer));
     CheckAndClearException(env);
 
-    return data ? new FontCustomPlatformData(data) : NULL;
+    return data ? std::make_unique<FontCustomPlatformData>(data) : nullptr;
 }
 
 bool FontCustomPlatformData::supportsFormat(const String& format)

@@ -21,7 +21,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include "config.h"
@@ -51,7 +51,7 @@
 #include "JSValueRef.h"
 #include "ObjectConstructor.h"
 #include "ObjectPrototype.h"
-#include "Operations.h"
+#include "JSCInlines.h"
 #include "PropertyNameArray.h"
 #include "RegExpConstructor.h"
 
@@ -105,7 +105,7 @@ JSObjectRef JSObjectMakeFunctionWithCallback(JSContextRef ctx, JSStringRef name,
     }
     ExecState* exec = toJS(ctx);
     APIEntryShim entryShim(exec);
-    return toRef(JSCallbackFunction::create(exec, exec->lexicalGlobalObject(), callAsFunction, name ? name->string() : ASCIILiteral("anonymous")));
+    return toRef(JSCallbackFunction::create(exec->vm(), exec->lexicalGlobalObject(), callAsFunction, name ? name->string() : ASCIILiteral("anonymous")));
 }
 
 JSObjectRef JSObjectMakeConstructor(JSContextRef ctx, JSClassRef jsClass, JSObjectCallAsConstructorCallback callAsConstructor)
@@ -135,6 +135,7 @@ JSObjectRef JSObjectMakeFunction(JSContextRef ctx, JSStringRef name, unsigned pa
     ExecState* exec = toJS(ctx);
     APIEntryShim entryShim(exec);
 
+    startingLineNumber = std::max(1, startingLineNumber);
     Identifier nameID = name ? name->identifier(&exec->vm()) : Identifier(exec, "anonymous");
     
     MarkedArgumentBuffer args;
@@ -277,7 +278,7 @@ void JSObjectSetPrototype(JSContextRef ctx, JSObjectRef object, JSValueRef value
     JSObject* jsObject = toJS(object);
     JSValue jsValue = toJS(exec, value);
 
-    jsObject->setPrototypeWithCycleCheck(exec->vm(), jsValue.isObject() ? jsValue : jsNull());
+    jsObject->setPrototypeWithCycleCheck(exec, jsValue.isObject() ? jsValue : jsNull());
 }
 
 bool JSObjectHasProperty(JSContextRef ctx, JSObjectRef object, JSStringRef propertyName)
@@ -327,10 +328,11 @@ void JSObjectSetProperty(JSContextRef ctx, JSObjectRef object, JSStringRef prope
     Identifier name(propertyName->identifier(&exec->vm()));
     JSValue jsValue = toJS(exec, value);
 
-    if (attributes && !jsObject->hasProperty(exec, name))
-        jsObject->methodTable()->putDirectVirtual(jsObject, exec, name, jsValue, attributes);
-    else {
-        PutPropertySlot slot;
+    if (attributes && !jsObject->hasProperty(exec, name)) {
+        PropertyDescriptor desc(jsValue, attributes);
+        jsObject->methodTable()->defineOwnProperty(jsObject, exec, name, desc, false);
+    } else {
+        PutPropertySlot slot(jsObject);
         jsObject->methodTable()->put(jsObject, exec, name, jsValue, slot);
     }
 
@@ -406,12 +408,12 @@ void* JSObjectGetPrivate(JSObjectRef object)
 {
     JSObject* jsObject = uncheckedToJS(object);
     
-    if (jsObject->inherits(&JSCallbackObject<JSGlobalObject>::s_info))
+    if (jsObject->inherits(JSCallbackObject<JSGlobalObject>::info()))
         return jsCast<JSCallbackObject<JSGlobalObject>*>(jsObject)->getPrivate();
-    if (jsObject->inherits(&JSCallbackObject<JSDestructibleObject>::s_info))
+    if (jsObject->inherits(JSCallbackObject<JSDestructibleObject>::info()))
         return jsCast<JSCallbackObject<JSDestructibleObject>*>(jsObject)->getPrivate();
 #if JSC_OBJC_API_ENABLED
-    if (jsObject->inherits(&JSCallbackObject<JSAPIWrapperObject>::s_info))
+    if (jsObject->inherits(JSCallbackObject<JSAPIWrapperObject>::info()))
         return jsCast<JSCallbackObject<JSAPIWrapperObject>*>(jsObject)->getPrivate();
 #endif
     
@@ -422,16 +424,16 @@ bool JSObjectSetPrivate(JSObjectRef object, void* data)
 {
     JSObject* jsObject = uncheckedToJS(object);
     
-    if (jsObject->inherits(&JSCallbackObject<JSGlobalObject>::s_info)) {
+    if (jsObject->inherits(JSCallbackObject<JSGlobalObject>::info())) {
         jsCast<JSCallbackObject<JSGlobalObject>*>(jsObject)->setPrivate(data);
         return true;
     }
-    if (jsObject->inherits(&JSCallbackObject<JSDestructibleObject>::s_info)) {
+    if (jsObject->inherits(JSCallbackObject<JSDestructibleObject>::info())) {
         jsCast<JSCallbackObject<JSDestructibleObject>*>(jsObject)->setPrivate(data);
         return true;
     }
 #if JSC_OBJC_API_ENABLED
-    if (jsObject->inherits(&JSCallbackObject<JSAPIWrapperObject>::s_info)) {
+    if (jsObject->inherits(JSCallbackObject<JSAPIWrapperObject>::info())) {
         jsCast<JSCallbackObject<JSAPIWrapperObject>*>(jsObject)->setPrivate(data);
         return true;
     }
@@ -447,12 +449,12 @@ JSValueRef JSObjectGetPrivateProperty(JSContextRef ctx, JSObjectRef object, JSSt
     JSObject* jsObject = toJS(object);
     JSValue result;
     Identifier name(propertyName->identifier(&exec->vm()));
-    if (jsObject->inherits(&JSCallbackObject<JSGlobalObject>::s_info))
+    if (jsObject->inherits(JSCallbackObject<JSGlobalObject>::info()))
         result = jsCast<JSCallbackObject<JSGlobalObject>*>(jsObject)->getPrivateProperty(name);
-    else if (jsObject->inherits(&JSCallbackObject<JSDestructibleObject>::s_info))
+    else if (jsObject->inherits(JSCallbackObject<JSDestructibleObject>::info()))
         result = jsCast<JSCallbackObject<JSDestructibleObject>*>(jsObject)->getPrivateProperty(name);
 #if JSC_OBJC_API_ENABLED
-    else if (jsObject->inherits(&JSCallbackObject<JSAPIWrapperObject>::s_info))
+    else if (jsObject->inherits(JSCallbackObject<JSAPIWrapperObject>::info()))
         result = jsCast<JSCallbackObject<JSAPIWrapperObject>*>(jsObject)->getPrivateProperty(name);
 #endif
     return toRef(exec, result);
@@ -465,16 +467,16 @@ bool JSObjectSetPrivateProperty(JSContextRef ctx, JSObjectRef object, JSStringRe
     JSObject* jsObject = toJS(object);
     JSValue jsValue = value ? toJS(exec, value) : JSValue();
     Identifier name(propertyName->identifier(&exec->vm()));
-    if (jsObject->inherits(&JSCallbackObject<JSGlobalObject>::s_info)) {
+    if (jsObject->inherits(JSCallbackObject<JSGlobalObject>::info())) {
         jsCast<JSCallbackObject<JSGlobalObject>*>(jsObject)->setPrivateProperty(exec->vm(), name, jsValue);
         return true;
     }
-    if (jsObject->inherits(&JSCallbackObject<JSDestructibleObject>::s_info)) {
+    if (jsObject->inherits(JSCallbackObject<JSDestructibleObject>::info())) {
         jsCast<JSCallbackObject<JSDestructibleObject>*>(jsObject)->setPrivateProperty(exec->vm(), name, jsValue);
         return true;
     }
 #if JSC_OBJC_API_ENABLED
-    if (jsObject->inherits(&JSCallbackObject<JSAPIWrapperObject>::s_info)) {
+    if (jsObject->inherits(JSCallbackObject<JSAPIWrapperObject>::info())) {
         jsCast<JSCallbackObject<JSAPIWrapperObject>*>(jsObject)->setPrivateProperty(exec->vm(), name, jsValue);
         return true;
     }
@@ -488,16 +490,16 @@ bool JSObjectDeletePrivateProperty(JSContextRef ctx, JSObjectRef object, JSStrin
     APIEntryShim entryShim(exec);
     JSObject* jsObject = toJS(object);
     Identifier name(propertyName->identifier(&exec->vm()));
-    if (jsObject->inherits(&JSCallbackObject<JSGlobalObject>::s_info)) {
+    if (jsObject->inherits(JSCallbackObject<JSGlobalObject>::info())) {
         jsCast<JSCallbackObject<JSGlobalObject>*>(jsObject)->deletePrivateProperty(name);
         return true;
     }
-    if (jsObject->inherits(&JSCallbackObject<JSDestructibleObject>::s_info)) {
+    if (jsObject->inherits(JSCallbackObject<JSDestructibleObject>::info())) {
         jsCast<JSCallbackObject<JSDestructibleObject>*>(jsObject)->deletePrivateProperty(name);
         return true;
     }
 #if JSC_OBJC_API_ENABLED
-    if (jsObject->inherits(&JSCallbackObject<JSAPIWrapperObject>::s_info)) {
+    if (jsObject->inherits(JSCallbackObject<JSAPIWrapperObject>::info())) {
         jsCast<JSCallbackObject<JSAPIWrapperObject>*>(jsObject)->deletePrivateProperty(name);
         return true;
     }
@@ -528,8 +530,6 @@ JSValueRef JSObjectCallAsFunction(JSContextRef ctx, JSObjectRef object, JSObject
     if (!jsThisObject)
         jsThisObject = exec->globalThisValue();
 
-    jsThisObject = jsThisObject->methodTable()->toThisObject(jsThisObject, exec);
-    
     MarkedArgumentBuffer argList;
     for (size_t i = 0; i < argumentCount; i++)
         argList.append(toJS(exec, arguments[i]));
@@ -597,7 +597,7 @@ public:
     
     unsigned refCount;
     VM* vm;
-    Vector<JSRetainPtr<JSStringRef> > array;
+    Vector<JSRetainPtr<JSStringRef>> array;
 };
 
 JSPropertyNameArrayRef JSObjectCopyPropertyNames(JSContextRef ctx, JSObjectRef object)

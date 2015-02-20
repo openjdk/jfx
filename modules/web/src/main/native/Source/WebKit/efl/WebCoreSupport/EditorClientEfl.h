@@ -40,6 +40,7 @@
 #include "TextCheckerClient.h"
 #include <wtf/Deque.h>
 #include <wtf/Forward.h>
+#include <wtf/text/StringView.h>
 
 struct Ewk_Should_Insert_Node_Event {
     WebCore::Node* node;
@@ -61,7 +62,7 @@ struct Ewk_Should_Change_Selected_Range_Event {
 };
 
 struct Ewk_Should_Apply_Style_Event {
-    WebCore::StylePropertySet* style;
+    WebCore::StyleProperties* style;
     WebCore::Range* range;
 };
 
@@ -80,7 +81,6 @@ public:
 
     // from EditorClient
     virtual void pageDestroyed();
-    virtual void frameWillDetachPage(Frame*) { }
 
     virtual bool shouldDeleteRange(Range*);
     virtual bool smartInsertDeleteEnabled();
@@ -97,7 +97,7 @@ public:
     virtual bool shouldInsertText(const String&, Range*, EditorInsertAction);
     virtual bool shouldChangeSelectedRange(Range* fromRange, Range* toRange, EAffinity, bool stillSelecting);
 
-    virtual bool shouldApplyStyle(StylePropertySet*, Range*);
+    virtual bool shouldApplyStyle(StyleProperties*, Range*);
 
     virtual bool shouldMoveRangeAfterDelete(Range*, Range*);
 
@@ -108,7 +108,6 @@ public:
     virtual void willWriteSelectionToPasteboard(WebCore::Range*);
     virtual void didWriteSelectionToPasteboard();
     virtual void getClientPasteboardDataForRange(WebCore::Range*, Vector<String>& pasteboardTypes, Vector<RefPtr<WebCore::SharedBuffer> >& pasteboardData);
-    virtual void didSetSelectionTypesForPasteboard();
 
     virtual void registerUndoStep(WTF::PassRefPtr<UndoStep>);
     virtual void registerRedoStep(WTF::PassRefPtr<UndoStep>);
@@ -137,9 +136,9 @@ public:
     virtual bool shouldEraseMarkersAfterChangeSelection(TextCheckingType) const;
     virtual void ignoreWordInSpellDocument(const String&);
     virtual void learnWord(const String&);
-    virtual void checkSpellingOfString(const UChar*, int length, int* misspellingLocation, int* misspellingLength);
+    virtual void checkSpellingOfString(StringView, int* misspellingLocation, int* misspellingLength);
     virtual String getAutoCorrectSuggestionForMisspelledWord(const String& misspelledWord);
-    virtual void checkGrammarOfString(const UChar*, int length, WTF::Vector<GrammarDetail>&, int* badGrammarLocation, int* badGrammarLength);
+    virtual void checkGrammarOfString(StringView, WTF::Vector<GrammarDetail>&, int* badGrammarLocation, int* badGrammarLength);
     virtual void updateSpellingUIWithGrammarString(const String&, const GrammarDetail&);
     virtual void updateSpellingUIWithMisspelledWord(const String&);
     virtual void showSpellingUI(bool show);
@@ -149,7 +148,7 @@ public:
     virtual void setInputMethodState(bool enabled);
     virtual void requestCheckingOfString(WTF::PassRefPtr<WebCore::TextCheckingRequest>) { }
 #if USE(UNIFIED_TEXT_CHECKING)
-    virtual void checkTextOfParagraph(const UChar*, int, TextCheckingTypeMask, Vector<TextCheckingResult>&) { }
+    virtual Vector<TextCheckingResult> checkTextOfParagraph(StringView, TextCheckingTypeMask) { return Vector<TextCheckingResult>(); }
 #endif
     virtual TextCheckerClient* textChecker() { return this; }
 

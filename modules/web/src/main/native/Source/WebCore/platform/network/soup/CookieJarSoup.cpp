@@ -22,11 +22,11 @@
 #include "CookieJarSoup.h"
 
 #include "Cookie.h"
-#include "GOwnPtrSoup.h"
-#include "KURL.h"
+#include "GUniquePtrSoup.h"
+#include "URL.h"
 #include "NetworkingContext.h"
 #include "PlatformCookieJar.h"
-#include "ResourceHandle.h"
+#include "SoupNetworkSession.h"
 #include <wtf/gobject/GRefPtr.h>
 #include <wtf/text/CString.h>
 
@@ -34,9 +34,7 @@ namespace WebCore {
 
 static SoupCookieJar* cookieJarForSession(const NetworkStorageSession& session)
 {
-    if (!session.soupSession())
-        return soupCookieJar();
-    return SOUP_COOKIE_JAR(soup_session_get_feature(session.soupSession(), SOUP_TYPE_COOKIE_JAR));
+    return session.soupNetworkSession().cookieJar();
 }
 
 static GRefPtr<SoupCookieJar>& defaultCookieJar()
@@ -53,6 +51,15 @@ SoupCookieJar* soupCookieJar()
     SoupCookieJar* jar = soup_cookie_jar_new();
     soup_cookie_jar_set_accept_policy(jar, SOUP_COOKIE_JAR_ACCEPT_NO_THIRD_PARTY);
     setSoupCookieJar(jar);
+    return jar;
+}
+
+SoupCookieJar* createPrivateBrowsingCookieJar()
+{
+    SoupCookieJar* jar = soup_cookie_jar_new();
+
+    soup_cookie_jar_set_accept_policy(jar, SOUP_COOKIE_JAR_ACCEPT_NO_THIRD_PARTY);
+
     return jar;
 }
 
@@ -75,14 +82,14 @@ static inline bool httpOnlyCookieExists(const GSList* cookies, const gchar* name
     return false;
 }
 
-void setCookiesFromDOM(const NetworkStorageSession& session, const KURL& firstParty, const KURL& url, const String& value)
+void setCookiesFromDOM(const NetworkStorageSession& session, const URL& firstParty, const URL& url, const String& value)
 {
     SoupCookieJar* jar = cookieJarForSession(session);
     if (!jar)
         return;
 
-    GOwnPtr<SoupURI> origin(soup_uri_new(url.string().utf8().data()));
-    GOwnPtr<SoupURI> firstPartyURI(soup_uri_new(firstParty.string().utf8().data()));
+    GUniquePtr<SoupURI> origin = url.createSoupURI();
+    GUniquePtr<SoupURI> firstPartyURI = firstParty.createSoupURI();
 
     // Get existing cookies for this origin.
     GSList* existingCookies = soup_cookie_jar_get_cookie_list(jar, origin.get(), TRUE);
@@ -91,7 +98,7 @@ void setCookiesFromDOM(const NetworkStorageSession& session, const KURL& firstPa
     value.split('\n', cookies);
     const size_t cookiesCount = cookies.size();
     for (size_t i = 0; i < cookiesCount; ++i) {
-        GOwnPtr<SoupCookie> cookie(soup_cookie_parse(cookies[i].utf8().data(), origin.get()));
+        GUniquePtr<SoupCookie> cookie(soup_cookie_parse(cookies[i].utf8().data(), origin.get()));
         if (!cookie)
             continue;
 
@@ -109,41 +116,41 @@ void setCookiesFromDOM(const NetworkStorageSession& session, const KURL& firstPa
     soup_cookies_free(existingCookies);
 }
 
-static String cookiesForSession(const NetworkStorageSession& session, const KURL& url, bool forHTTPHeader)
+static String cookiesForSession(const NetworkStorageSession& session, const URL& url, bool forHTTPHeader)
 {
     SoupCookieJar* jar = cookieJarForSession(session);
     if (!jar)
         return String();
 
-    GOwnPtr<SoupURI> uri(soup_uri_new(url.string().utf8().data()));
-    GOwnPtr<char> cookies(soup_cookie_jar_get_cookies(jar, uri.get(), forHTTPHeader));
+    GUniquePtr<SoupURI> uri = url.createSoupURI();
+    GUniquePtr<char> cookies(soup_cookie_jar_get_cookies(jar, uri.get(), forHTTPHeader));
     return String::fromUTF8(cookies.get());
 }
 
-String cookiesForDOM(const NetworkStorageSession& session, const KURL&, const KURL& url)
+String cookiesForDOM(const NetworkStorageSession& session, const URL&, const URL& url)
 {
     return cookiesForSession(session, url, false);
 }
 
-String cookieRequestHeaderFieldValue(const NetworkStorageSession& session, const KURL& /*firstParty*/, const KURL& url)
+String cookieRequestHeaderFieldValue(const NetworkStorageSession& session, const URL& /*firstParty*/, const URL& url)
 {
     return cookiesForSession(session, url, true);
 }
 
-bool cookiesEnabled(const NetworkStorageSession& session, const KURL& /*firstParty*/, const KURL& /*url*/)
+bool cookiesEnabled(const NetworkStorageSession& session, const URL& /*firstParty*/, const URL& /*url*/)
 {
     return !!cookieJarForSession(session);
 }
 
-bool getRawCookies(const NetworkStorageSession& session, const KURL& /*firstParty*/, const KURL& url, Vector<Cookie>& rawCookies)
+bool getRawCookies(const NetworkStorageSession& session, const URL& /*firstParty*/, const URL& url, Vector<Cookie>& rawCookies)
 {
     rawCookies.clear();
     SoupCookieJar* jar = cookieJarForSession(session);
     if (!jar)
         return false;
 
-    GOwnPtr<SoupURI> uri(soup_uri_new(url.string().utf8().data()));
-    GOwnPtr<GSList> cookies(soup_cookie_jar_get_cookie_list(jar, uri.get(), TRUE));
+    GUniquePtr<SoupURI> uri = url.createSoupURI();
+    GUniquePtr<GSList> cookies(soup_cookie_jar_get_cookie_list(jar, uri.get(), TRUE));
     if (!cookies)
         return false;
 
@@ -158,14 +165,14 @@ bool getRawCookies(const NetworkStorageSession& session, const KURL& /*firstPart
     return true;
 }
 
-void deleteCookie(const NetworkStorageSession& session, const KURL& url, const String& name)
+void deleteCookie(const NetworkStorageSession& session, const URL& url, const String& name)
 {
     SoupCookieJar* jar = cookieJarForSession(session);
     if (!jar)
         return;
 
-    GOwnPtr<SoupURI> uri(soup_uri_new(url.string().utf8().data()));
-    GOwnPtr<GSList> cookies(soup_cookie_jar_get_cookie_list(jar, uri.get(), TRUE));
+    GUniquePtr<SoupURI> uri = url.createSoupURI();
+    GUniquePtr<GSList> cookies(soup_cookie_jar_get_cookie_list(jar, uri.get(), TRUE));
     if (!cookies)
         return;
 
@@ -184,11 +191,11 @@ void deleteCookie(const NetworkStorageSession& session, const KURL& url, const S
 void getHostnamesWithCookies(const NetworkStorageSession& session, HashSet<String>& hostnames)
 {
     SoupCookieJar* cookieJar = cookieJarForSession(session);
-    GOwnPtr<GSList> cookies(soup_cookie_jar_all_cookies(cookieJar));
+    GUniquePtr<GSList> cookies(soup_cookie_jar_all_cookies(cookieJar));
     for (GSList* item = cookies.get(); item; item = g_slist_next(item)) {
         SoupCookie* cookie = static_cast<SoupCookie*>(item->data);
         if (cookie->domain)
-        hostnames.add(String::fromUTF8(cookie->domain));
+            hostnames.add(String::fromUTF8(cookie->domain));
         soup_cookie_free(cookie);
     }
 }
@@ -197,7 +204,7 @@ void deleteCookiesForHostname(const NetworkStorageSession& session, const String
 {
     CString hostNameString = hostname.utf8();
     SoupCookieJar* cookieJar = cookieJarForSession(session);
-    GOwnPtr<GSList> cookies(soup_cookie_jar_all_cookies(cookieJar));
+    GUniquePtr<GSList> cookies(soup_cookie_jar_all_cookies(cookieJar));
     for (GSList* item = cookies.get(); item; item = g_slist_next(item)) {
         SoupCookie* cookie = static_cast<SoupCookie*>(item->data);
         if (soup_cookie_domain_matches(cookie, hostNameString.data()))
@@ -209,12 +216,16 @@ void deleteCookiesForHostname(const NetworkStorageSession& session, const String
 void deleteAllCookies(const NetworkStorageSession& session)
 {
     SoupCookieJar* cookieJar = cookieJarForSession(session);
-    GOwnPtr<GSList> cookies(soup_cookie_jar_all_cookies(cookieJar));
+    GUniquePtr<GSList> cookies(soup_cookie_jar_all_cookies(cookieJar));
     for (GSList* item = cookies.get(); item; item = g_slist_next(item)) {
         SoupCookie* cookie = static_cast<SoupCookie*>(item->data);
         soup_cookie_jar_delete_cookie(cookieJar, cookie);
         soup_cookie_free(cookie);
     }
+}
+
+void deleteAllCookiesModifiedAfterDate(const NetworkStorageSession&, double)
+{
 }
 
 }

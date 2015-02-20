@@ -26,8 +26,10 @@
 #ifndef BlockAllocator_h
 #define BlockAllocator_h
 
+#include "GCActivityCallback.h"
 #include "HeapBlock.h"
 #include "Region.h"
+#include <condition_variable>
 #include <wtf/DoublyLinkedList.h>
 #include <wtf/Forward.h>
 #include <wtf/PageAllocationAligned.h>
@@ -37,11 +39,13 @@
 namespace JSC {
 
 class BlockAllocator;
+class CodeBlock;
 class CopiedBlock;
 class CopyWorkListSegment;
+template <typename T> class GCArraySegment;
 class HandleBlock;
+class JSCell;
 class VM;
-class MarkStackSegment;
 class MarkedBlock;
 class WeakBlock;
 
@@ -59,9 +63,9 @@ public:
     template <typename T> void deallocateCustomSize(T*);
 
 private:
-    void waitForRelativeTimeWhileHoldingLock(double relative);
-    void waitForRelativeTime(double relative);
+    void waitForDuration(std::chrono::milliseconds);
 
+    friend ThreadIdentifier createBlockFreeingThread(BlockAllocator*);
     void blockFreeingThreadMain();
     static void blockFreeingThreadStartFunc(void* heap);
 
@@ -93,7 +97,7 @@ private:
     SuperRegion m_superRegion;
     RegionSet m_copiedRegionSet;
     RegionSet m_markedRegionSet;
-    // WeakBlocks and MarkStackSegments use the same RegionSet since they're the same size.
+    // WeakBlocks and GCArraySegments use the same RegionSet since they're the same size.
     RegionSet m_fourKBBlockRegionSet;
     RegionSet m_workListRegionSet;
 
@@ -103,8 +107,8 @@ private:
     bool m_isCurrentlyAllocating;
     bool m_blockFreeingThreadShouldQuit;
     SpinLock m_regionLock;
-    Mutex m_emptyRegionConditionLock;
-    ThreadCondition m_emptyRegionCondition;
+    std::mutex m_emptyRegionConditionMutex;
+    std::condition_variable m_emptyRegionCondition;
     ThreadIdentifier m_blockFreeingThread;
 };
 
@@ -121,14 +125,14 @@ inline DeadBlock* BlockAllocator::tryAllocateFromRegion(RegionSet& set, DoublyLi
             set.m_numberOfPartialRegions++;
             region = m_emptyRegions.removeHead()->reset(set.m_blockSize);
             set.m_partialRegions.push(region);
-    }
+        }
 
         DeadBlock* block = region->allocate();
 
         if (region->isFull()) {
             set.m_numberOfPartialRegions--;
             set.m_fullRegions.push(set.m_partialRegions.removeHead());
-}
+        }
 
         return block;
     }
@@ -197,9 +201,12 @@ inline void BlockAllocator::deallocate(T* block)
     }
 
     if (shouldWakeBlockFreeingThread) {
-        MutexLocker mutexLocker(m_emptyRegionConditionLock);
-        m_emptyRegionCondition.signal();
+        std::lock_guard<std::mutex> lock(m_emptyRegionConditionMutex);
+        m_emptyRegionCondition.notify_one();
     }
+
+    if (!m_blockFreeingThread)
+        releaseFreeRegions();
 }
 
 template<typename T>
@@ -211,77 +218,27 @@ inline void BlockAllocator::deallocateCustomSize(T* block)
     region->destroy();
 }
 
-template <>
-inline BlockAllocator::RegionSet& BlockAllocator::regionSetFor<CopiedBlock>()
-{
-    return m_copiedRegionSet;
-}
+#define REGION_SET_FOR(blockType, set) \
+    template <> \
+    inline BlockAllocator::RegionSet& BlockAllocator::regionSetFor<blockType>() \
+    { \
+        return set; \
+    } \
+    template <> \
+    inline BlockAllocator::RegionSet& BlockAllocator::regionSetFor<HeapBlock<blockType>>() \
+    { \
+        return set; \
+    } \
 
-template <>
-inline BlockAllocator::RegionSet& BlockAllocator::regionSetFor<MarkedBlock>()
-{
-    return m_markedRegionSet;
-}
+REGION_SET_FOR(MarkedBlock, m_markedRegionSet);
+REGION_SET_FOR(CopiedBlock, m_copiedRegionSet);
+REGION_SET_FOR(WeakBlock, m_fourKBBlockRegionSet);
+REGION_SET_FOR(GCArraySegment<const JSCell*>, m_fourKBBlockRegionSet);
+REGION_SET_FOR(GCArraySegment<CodeBlock*>, m_fourKBBlockRegionSet);
+REGION_SET_FOR(CopyWorkListSegment, m_workListRegionSet);
+REGION_SET_FOR(HandleBlock, m_fourKBBlockRegionSet);
 
-template <>
-inline BlockAllocator::RegionSet& BlockAllocator::regionSetFor<WeakBlock>()
-{
-    return m_fourKBBlockRegionSet;
-}
-
-template <>
-inline BlockAllocator::RegionSet& BlockAllocator::regionSetFor<MarkStackSegment>()
-{
-    return m_fourKBBlockRegionSet;
-}
-
-template <>
-inline BlockAllocator::RegionSet& BlockAllocator::regionSetFor<CopyWorkListSegment>()
-{
-    return m_workListRegionSet;
-}
-
-template <>
-inline BlockAllocator::RegionSet& BlockAllocator::regionSetFor<HandleBlock>()
-{
-    return m_fourKBBlockRegionSet;
-}
-
-template <>
-inline BlockAllocator::RegionSet& BlockAllocator::regionSetFor<HeapBlock<CopiedBlock> >()
-{
-    return m_copiedRegionSet;
-}
-
-template <>
-inline BlockAllocator::RegionSet& BlockAllocator::regionSetFor<HeapBlock<MarkedBlock> >()
-{
-    return m_markedRegionSet;
-}
-
-template <>
-inline BlockAllocator::RegionSet& BlockAllocator::regionSetFor<HeapBlock<WeakBlock> >()
-{
-    return m_fourKBBlockRegionSet;
-}
-
-template <>
-inline BlockAllocator::RegionSet& BlockAllocator::regionSetFor<HeapBlock<MarkStackSegment> >()
-{
-    return m_fourKBBlockRegionSet;
-}
-
-template <>
-inline BlockAllocator::RegionSet& BlockAllocator::regionSetFor<HeapBlock<CopyWorkListSegment> >()
-{
-    return m_workListRegionSet;
-}
-
-template <>
-inline BlockAllocator::RegionSet& BlockAllocator::regionSetFor<HeapBlock<HandleBlock> >()
-{
-    return m_fourKBBlockRegionSet;
-}
+#undef REGION_SET_FOR
 
 template <typename T>
 inline BlockAllocator::RegionSet& BlockAllocator::regionSetFor()

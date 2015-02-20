@@ -19,7 +19,7 @@
  * Boston, MA 02110-1301, USA.
  */
 
-    interface HTMLLinkElement : HTMLElement {
+interface HTMLLinkElement : HTMLElement {
     [Reflect] attribute boolean disabled;
     [Reflect] attribute DOMString charset;
     [Reflect, URL] attribute DOMString href;
@@ -33,12 +33,12 @@
     [Reflect] attribute DOMString target;
     [Reflect] attribute DOMString type;
 
-        // DOM Level 2 Style
-        readonly attribute StyleSheet sheet;
+    // DOM Level 2 Style
+    readonly attribute StyleSheet sheet;
 
 #if defined(LANGUAGE_OBJECTIVE_C) && LANGUAGE_OBJECTIVE_C
-        // Objective-C extension:
-        readonly attribute URL absoluteLinkURL;
+    // Objective-C extension:
+    readonly attribute URL absoluteLinkURL;
 #endif
-    };
+};
 

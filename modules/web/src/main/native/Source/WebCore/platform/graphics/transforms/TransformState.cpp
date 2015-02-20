@@ -73,13 +73,13 @@ void TransformState::move(const LayoutSize& offset, TransformAccumulation accumu
         m_accumulatedOffset += offset;
     else {
         applyAccumulatedOffset();
-    if (m_accumulatingTransform && m_accumulatedTransform) {
-        // If we're accumulating into an existing transform, apply the translation.
+        if (m_accumulatingTransform && m_accumulatedTransform) {
+            // If we're accumulating into an existing transform, apply the translation.
             translateTransform(offset);
-        
-        // Then flatten if necessary.
-        if (accumulate == FlattenTransform)
-            flatten();
+
+            // Then flatten if necessary.
+            if (accumulate == FlattenTransform)
+                flatten();
         } else
             // Just move the point and/or quad.
             translateMappedCoordinates(offset);

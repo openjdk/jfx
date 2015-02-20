@@ -19,19 +19,15 @@
  */
 
 #include "config.h"
-
-#if ENABLE(SVG)
 #include "RenderSVGResourceLinearGradient.h"
 
-#include "LinearGradientAttributes.h"
-#include "SVGLinearGradientElement.h"
 
 namespace WebCore {
 
 RenderSVGResourceType RenderSVGResourceLinearGradient::s_resourceType = LinearGradientResourceType;
 
-RenderSVGResourceLinearGradient::RenderSVGResourceLinearGradient(SVGLinearGradientElement* node)
-    : RenderSVGResourceGradient(node)
+RenderSVGResourceLinearGradient::RenderSVGResourceLinearGradient(SVGLinearGradientElement& element, PassRef<RenderStyle> style)
+    : RenderSVGResourceGradient(element, std::move(style))
 {
 }
 
@@ -39,20 +35,20 @@ RenderSVGResourceLinearGradient::~RenderSVGResourceLinearGradient()
 {
 }
 
-bool RenderSVGResourceLinearGradient::collectGradientAttributes(SVGGradientElement* gradientElement)
+bool RenderSVGResourceLinearGradient::collectGradientAttributes()
 {
     m_attributes = LinearGradientAttributes();
-    return static_cast<SVGLinearGradientElement*>(gradientElement)->collectGradientAttributes(m_attributes);
+    return linearGradientElement().collectGradientAttributes(m_attributes);
 }
 
 FloatPoint RenderSVGResourceLinearGradient::startPoint(const LinearGradientAttributes& attributes) const
 {
-    return SVGLengthContext::resolvePoint(static_cast<const SVGElement*>(node()), attributes.gradientUnits(), attributes.x1(), attributes.y1());
+    return SVGLengthContext::resolvePoint(&linearGradientElement(), attributes.gradientUnits(), attributes.x1(), attributes.y1());
 }
 
 FloatPoint RenderSVGResourceLinearGradient::endPoint(const LinearGradientAttributes& attributes) const
 {
-    return SVGLengthContext::resolvePoint(static_cast<const SVGElement*>(node()), attributes.gradientUnits(), attributes.x2(), attributes.y2());
+    return SVGLengthContext::resolvePoint(&linearGradientElement(), attributes.gradientUnits(), attributes.x2(), attributes.y2());
 }
 
 void RenderSVGResourceLinearGradient::buildGradient(GradientData* gradientData) const
@@ -63,5 +59,3 @@ void RenderSVGResourceLinearGradient::buildGradient(GradientData* gradientData) 
 }
 
 }
-
-#endif

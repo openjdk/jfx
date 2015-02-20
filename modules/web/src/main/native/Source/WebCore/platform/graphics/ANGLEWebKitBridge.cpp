@@ -28,7 +28,8 @@
 #if USE(3D_GRAPHICS)
 
 #include "ANGLEWebKitBridge.h"
-#include <wtf/OwnArrayPtr.h>
+#include "Logging.h"
+#include <wtf/StdLibExtras.h>
 
 namespace WebCore {
 
@@ -57,6 +58,9 @@ static bool getSymbolInfo(ShHandle compiler, ShShaderInfo symbolType, Vector<ANG
     case SH_ACTIVE_UNIFORMS:
         symbolMaxNameLengthType = SH_ACTIVE_UNIFORM_MAX_LENGTH;
         break;
+    case SH_VARYINGS:
+        symbolMaxNameLengthType = SH_VARYING_MAX_LENGTH;
+        break;
     default:
         ASSERT_NOT_REACHED();
         return false;
@@ -79,14 +83,20 @@ static bool getSymbolInfo(ShHandle compiler, ShShaderInfo symbolType, Vector<ANG
     for (ANGLEGetInfoType i = 0; i < numSymbols; ++i) {
         ANGLEShaderSymbol symbol;
         ANGLEGetInfoType nameLength = 0;
+        ShPrecisionType precision;
+        int staticUse;
         switch (symbolType) {
         case SH_ACTIVE_ATTRIBUTES:
             symbol.symbolType = SHADER_SYMBOL_TYPE_ATTRIBUTE;
-            ShGetActiveAttrib(compiler, i, &nameLength, &symbol.size, &symbol.dataType, nameBuffer.data(), mappedNameBuffer.data());
+            ShGetVariableInfo(compiler, symbolType, i, &nameLength, &symbol.size, &symbol.dataType, &precision, &staticUse, nameBuffer.data(), mappedNameBuffer.data());
             break;
         case SH_ACTIVE_UNIFORMS:
             symbol.symbolType = SHADER_SYMBOL_TYPE_UNIFORM;
-            ShGetActiveUniform(compiler, i, &nameLength, &symbol.size, &symbol.dataType, nameBuffer.data(), mappedNameBuffer.data());
+            ShGetVariableInfo(compiler, symbolType, i, &nameLength, &symbol.size, &symbol.dataType, &precision, &staticUse, nameBuffer.data(), mappedNameBuffer.data());
+            break;
+        case SH_VARYINGS:
+            symbol.symbolType = SHADER_SYMBOL_TYPE_VARYING;
+            ShGetVariableInfo(compiler, symbolType, i, &nameLength, &symbol.size, &symbol.dataType, &precision, &staticUse, nameBuffer.data(), mappedNameBuffer.data());
             break;
         default:
             ASSERT_NOT_REACHED();
@@ -102,6 +112,7 @@ static bool getSymbolInfo(ShHandle compiler, ShShaderInfo symbolType, Vector<ANG
 
         String name = String(nameBuffer.data());
         String mappedName = String(mappedNameBuffer.data());
+        LOG(WebGL, "Map shader symbol %s -> %s\n", name.utf8().data(), mappedName.utf8().data());
         
         // ANGLE returns array names in the format "array[0]".
         // The only way to know if a symbol is an array is to check if it ends with "[0]".
@@ -115,6 +126,8 @@ static bool getSymbolInfo(ShHandle compiler, ShShaderInfo symbolType, Vector<ANG
 
         symbol.name = name;
         symbol.mappedName = mappedName;
+        symbol.precision = precision;
+        symbol.staticUse = staticUse;
         symbols.append(symbol);
     
         if (symbol.isArray) {
@@ -189,11 +202,11 @@ bool ANGLEWebKitBridge::compileShaderSource(const char* shaderSource, ANGLEShade
 
     const char* const shaderSourceStrings[] = { shaderSource };
 
-    bool validateSuccess = ShCompile(compiler, shaderSourceStrings, 1, SH_OBJECT_CODE | SH_ATTRIBUTES_UNIFORMS | extraCompileOptions);
+    bool validateSuccess = ShCompile(compiler, shaderSourceStrings, 1, SH_OBJECT_CODE | SH_VARIABLES | extraCompileOptions);
     if (!validateSuccess) {
         int logSize = getValidationResultValue(compiler, SH_INFO_LOG_LENGTH);
         if (logSize > 1) {
-            OwnArrayPtr<char> logBuffer = adoptArrayPtr(new char[logSize]);
+            auto logBuffer = std::make_unique<char[]>(logSize);
             if (logBuffer) {
                 ShGetInfoLog(compiler, logBuffer.get());
                 shaderValidationLog = logBuffer.get();
@@ -204,16 +217,18 @@ bool ANGLEWebKitBridge::compileShaderSource(const char* shaderSource, ANGLEShade
 
     int translationLength = getValidationResultValue(compiler, SH_OBJECT_CODE_LENGTH);
     if (translationLength > 1) {
-        OwnArrayPtr<char> translationBuffer = adoptArrayPtr(new char[translationLength]);
+        auto translationBuffer = std::make_unique<char[]>(translationLength);
         if (!translationBuffer)
             return false;
         ShGetObjectCode(compiler, translationBuffer.get());
         translatedShaderSource = translationBuffer.get();
     }
-
+    
     if (!getSymbolInfo(compiler, SH_ACTIVE_ATTRIBUTES, symbols))
         return false;
     if (!getSymbolInfo(compiler, SH_ACTIVE_UNIFORMS, symbols))
+        return false;
+    if (!getSymbolInfo(compiler, SH_VARYINGS, symbols))
         return false;
 
     return true;

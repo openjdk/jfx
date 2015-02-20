@@ -37,25 +37,25 @@ class NameConstructor : public InternalFunction {
 public:
     typedef InternalFunction Base;
 
-    static NameConstructor* create(ExecState* exec, JSGlobalObject* globalObject, Structure* structure, NamePrototype* prototype)
+    static NameConstructor* create(VM& vm, Structure* structure, NamePrototype* prototype)
     {
-        NameConstructor* constructor = new (NotNull, allocateCell<NameConstructor>(*exec->heap())) NameConstructor(globalObject, structure);
-        constructor->finishCreation(exec, prototype);
+        NameConstructor* constructor = new (NotNull, allocateCell<NameConstructor>(vm.heap)) NameConstructor(vm, structure);
+        constructor->finishCreation(vm, prototype);
         return constructor;
     }
 
-    static const ClassInfo s_info;
+    DECLARE_INFO;
 
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype) 
     { 
-        return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), &s_info); 
+        return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info()); 
     }
 
 protected:
-    void finishCreation(ExecState*, NamePrototype*);
+    void finishCreation(VM&, NamePrototype*);
     
 private:
-    NameConstructor(JSGlobalObject*, Structure*);
+    NameConstructor(VM&, Structure*);
     static ConstructType getConstructData(JSCell*, ConstructData&);
     static CallType getCallData(JSCell*, CallData&);
 };

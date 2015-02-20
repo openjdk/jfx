@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012, 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2012, 2013, 2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,7 +28,7 @@
 
 #include "JSGlobalObject.h"
 #include "ObjectConstructor.h"
-#include "Operations.h"
+#include "JSCInlines.h"
 #include "ProfilerDatabase.h"
 #include <wtf/StringPrintStream.h>
 
@@ -37,6 +37,7 @@ namespace JSC { namespace Profiler {
 Compilation::Compilation(Bytecodes* bytecodes, CompilationKind kind)
     : m_bytecodes(bytecodes)
     , m_kind(kind)
+    , m_jettisonReason(NotJettisoned)
     , m_numInlinedGetByIds(0)
     , m_numInlinedPutByIds(0)
     , m_numInlinedCalls(0)
@@ -67,16 +68,18 @@ void Compilation::addDescription(const CompiledBytecode& compiledBytecode)
     m_descriptions.append(compiledBytecode);
 }
 
+void Compilation::addDescription(const OriginStack& stack, const CString& description)
+{
+    addDescription(CompiledBytecode(stack, description));
+}
+
 ExecutionCounter* Compilation::executionCounterFor(const OriginStack& origin)
 {
-    HashMap<OriginStack, OwnPtr<ExecutionCounter> >::iterator iter = m_counters.find(origin);
-    if (iter != m_counters.end())
-        return iter->value.get();
-    
-    OwnPtr<ExecutionCounter> counter = adoptPtr(new ExecutionCounter());
-    ExecutionCounter* result = counter.get();
-    m_counters.add(origin, counter.release());
-    return result;
+    std::unique_ptr<ExecutionCounter>& counter = m_counters.add(origin, nullptr).iterator->value;
+    if (!counter)
+        counter = std::make_unique<ExecutionCounter>();
+
+    return counter.get();
 }
 
 void Compilation::addOSRExitSite(const Vector<const void*>& codeAddresses)
@@ -108,11 +111,10 @@ JSValue Compilation::toJS(ExecState* exec) const
     result->putDirect(exec->vm(), exec->propertyNames().descriptions, descriptions);
     
     JSArray* counters = constructEmptyArray(exec, 0);
-    HashMap<OriginStack, OwnPtr<ExecutionCounter> >::const_iterator end = m_counters.end();
-    for (HashMap<OriginStack, OwnPtr<ExecutionCounter> >::const_iterator iter = m_counters.begin(); iter != end; ++iter) {
+    for (auto it = m_counters.begin(), end = m_counters.end(); it != end; ++it) {
         JSObject* counterEntry = constructEmptyObject(exec);
-        counterEntry->putDirect(exec->vm(), exec->propertyNames().origin, iter->key.toJS(exec));
-        counterEntry->putDirect(exec->vm(), exec->propertyNames().executionCount, jsNumber(iter->value->count()));
+        counterEntry->putDirect(exec->vm(), exec->propertyNames().origin, it->key.toJS(exec));
+        counterEntry->putDirect(exec->vm(), exec->propertyNames().executionCount, jsNumber(it->value->count()));
         counters->push(exec, counterEntry);
     }
     result->putDirect(exec->vm(), exec->propertyNames().counters, counters);
@@ -130,6 +132,7 @@ JSValue Compilation::toJS(ExecState* exec) const
     result->putDirect(exec->vm(), exec->propertyNames().numInlinedGetByIds, jsNumber(m_numInlinedGetByIds));
     result->putDirect(exec->vm(), exec->propertyNames().numInlinedPutByIds, jsNumber(m_numInlinedPutByIds));
     result->putDirect(exec->vm(), exec->propertyNames().numInlinedCalls, jsNumber(m_numInlinedCalls));
+    result->putDirect(exec->vm(), exec->propertyNames().jettisonReason, jsString(exec, String::fromUTF8(toCString(m_jettisonReason))));
     
     return result;
 }

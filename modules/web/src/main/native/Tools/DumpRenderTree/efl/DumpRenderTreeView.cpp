@@ -38,7 +38,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <inttypes.h>
-#include <wtf/NotFound.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/WTFString.h>
 
@@ -135,7 +134,21 @@ static uint64_t onExceededDatabaseQuota(Ewk_View_Smart_Data* smartData, Evas_Obj
             databaseName);
     ewk_security_origin_free(origin);
 
-    return 5 * 1024 * 1024;
+    uint64_t defaultQuota = 5 * 1024 * 1024;
+    double testDefaultQuota = gTestRunner->databaseDefaultQuota();
+    if (testDefaultQuota >= 0)
+        defaultQuota = testDefaultQuota;
+
+    uint64_t newQuota = defaultQuota;
+
+    double maxQuota = gTestRunner->databaseMaxQuota();
+    if (maxQuota >= 0) {
+        if (defaultQuota < expectedSize && expectedSize <= maxQuota) {
+            newQuota = expectedSize;
+            printf("UI DELEGATE DATABASE CALLBACK: increased quota to %" PRIu64 "\n", expectedSize);
+        }
+    }
+    return newQuota;
 }
 
 static int64_t onExceededApplicationCacheQuota(Ewk_View_Smart_Data*, Ewk_Security_Origin *origin, int64_t defaultOriginQuota, int64_t totalSpaceNeeded)
@@ -157,17 +170,6 @@ static int64_t onExceededApplicationCacheQuota(Ewk_View_Smart_Data*, Ewk_Securit
         return 0;
 
     return defaultOriginQuota;
-}
-
-static bool shouldUseTiledBackingStore()
-{
-    const char* useTiledBackingStore = getenv("DRT_USE_TILED_BACKING_STORE");
-    return useTiledBackingStore && *useTiledBackingStore == '1';
-}
-
-static bool chooseAndInitializeAppropriateSmartClass(Ewk_View_Smart_Class* api)
-{
-    return !shouldUseTiledBackingStore() ? ewk_view_single_smart_set(api) : ewk_view_tiled_smart_set(api);
 }
 
 // Taken from the file "WebKit/Tools/DumpRenderTree/chromium/WebViewHost.cpp".
@@ -214,11 +216,11 @@ Evas_Object* drtViewAdd(Evas* evas)
 {
     static Ewk_View_Smart_Class api = EWK_VIEW_SMART_CLASS_INIT_NAME_VERSION("DRT_View");
 
-    if (!chooseAndInitializeAppropriateSmartClass(&api))
+    if (!ewk_view_smart_set(&api))
         return 0;
 
     if (EINA_UNLIKELY(!gParentSmartClass.sc.add))
-        ewk_view_base_smart_set(&gParentSmartClass);
+        ewk_view_smart_set(&gParentSmartClass);
 
     api.add_console_message = onConsoleMessage;
     api.run_javascript_alert = onJavaScriptAlert;

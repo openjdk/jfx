@@ -38,6 +38,7 @@ namespace WebCore {
 class CompositeEditCommand;
 class Document;
 class Element;
+class Frame;
 
 class EditCommand : public RefCounted<EditCommand> {
 public:
@@ -50,6 +51,10 @@ public:
     const VisibleSelection& startingSelection() const { return m_startingSelection; }
     const VisibleSelection& endingSelection() const { return m_endingSelection; }
 
+#if PLATFORM(IOS)
+    virtual bool isInsertTextCommand() const { return false; }
+#endif
+    
     virtual bool isSimpleEditCommand() const { return false; }
     virtual bool isCompositeEditCommand() const { return false; }
     virtual bool isEditCommandComposition() const { return false; }
@@ -58,16 +63,17 @@ public:
     virtual void doApply() = 0;
 
 protected:
-    explicit EditCommand(Document*);
-    EditCommand(Document*, const VisibleSelection&, const VisibleSelection&);
+    explicit EditCommand(Document&);
+    EditCommand(Document&, const VisibleSelection&, const VisibleSelection&);
 
-    Document* document() const { return m_document.get(); }
+    Frame& frame();
+    Document& document() { return m_document.get(); }
     CompositeEditCommand* parent() const { return m_parent; }
     void setStartingSelection(const VisibleSelection&);
     void setEndingSelection(const VisibleSelection&);
 
 private:
-    RefPtr<Document> m_document;
+    Ref<Document> m_document;
     VisibleSelection m_startingSelection;
     VisibleSelection m_endingSelection;
     CompositeEditCommand* m_parent;
@@ -88,14 +94,14 @@ public:
 #endif
 
 protected:
-    explicit SimpleEditCommand(Document* document) : EditCommand(document) { }
+    explicit SimpleEditCommand(Document& document) : EditCommand(document) { }
 
 #ifndef NDEBUG
     void addNodeAndDescendants(Node*, HashSet<Node*>&);
 #endif
 
 private:
-    virtual bool isSimpleEditCommand() const OVERRIDE { return true; }
+    virtual bool isSimpleEditCommand() const override { return true; }
 };
 
 inline SimpleEditCommand* toSimpleEditCommand(EditCommand* command)

@@ -29,11 +29,12 @@
 #ifndef Panner_h
 #define Panner_h
 
-#include <wtf/PassOwnPtr.h>
+#include <memory>
 
 namespace WebCore {
 
 class AudioBus;
+class HRTFDatabaseLoader;
 
 // Abstract base class for panning a mono or stereo source.
 
@@ -47,7 +48,7 @@ public:
     
     typedef unsigned PanningModel;
 
-    static PassOwnPtr<Panner> create(PanningModel, float sampleRate);
+    static std::unique_ptr<Panner> create(PanningModel, float sampleRate, HRTFDatabaseLoader*);
 
     virtual ~Panner() { };
 

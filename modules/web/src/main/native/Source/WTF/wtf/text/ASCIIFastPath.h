@@ -22,15 +22,22 @@
 #ifndef ASCIIFastPath_h
 #define ASCIIFastPath_h
 
+#include <stdint.h>
+#include <unicode/utypes.h>
+#include <wtf/StdLibExtras.h>
+#include <wtf/text/LChar.h>
+
 #if OS(DARWIN) && (CPU(X86) || CPU(X86_64))
 #include <emmintrin.h>
 #endif
-#include <stdint.h>
-#include <wtf/Alignment.h>
-#include <wtf/StdLibExtras.h>
-#include <wtf/unicode/Unicode.h>
 
 namespace WTF {
+
+template <uintptr_t mask>
+inline bool isAlignedTo(const void* pointer)
+{
+    return !(reinterpret_cast<uintptr_t>(pointer) & mask);
+}
 
 // Assuming that a pointer is the size of a "machine word", then
 // uintptr_t is an integer type that is also a machine word.
@@ -39,7 +46,7 @@ const uintptr_t machineWordAlignmentMask = sizeof(MachineWord) - 1;
 
 inline bool isAlignedToMachineWord(const void* pointer)
 {
-    return !(reinterpret_cast<uintptr_t>(pointer) & machineWordAlignmentMask);
+    return isAlignedTo<machineWordAlignmentMask>(pointer);
 }
 
 template<typename T> inline T* alignToMachineWord(T* pointer)
@@ -132,6 +139,27 @@ inline void copyLCharsFromUCharSource(LChar* destination, const UChar* source, s
         ASSERT(!(source[i] & 0xff00));
         destination[i] = static_cast<LChar>(source[i]);
     }
+#elif COMPILER(GCC) && CPU(ARM64) && defined(NDEBUG)
+    const LChar* const end = destination + length;
+    const uintptr_t memoryAccessSize = 16;
+
+    if (length >= memoryAccessSize) {
+        const uintptr_t memoryAccessMask = memoryAccessSize - 1;
+
+        // Vector interleaved unpack, we only store the lower 8 bits.
+        const uintptr_t lengthLeft = end - destination;
+        const LChar* const simdEnd = destination + (lengthLeft & ~memoryAccessMask);
+        do {
+            asm("ld2   { v0.16B, v1.16B }, [%[SOURCE]], #32\n\t"
+                "st1   { v0.16B }, [%[DESTINATION]], #16\n\t"
+                : [SOURCE]"+r" (source), [DESTINATION]"+r" (destination)
+                :
+                : "memory", "v0", "v1");
+        } while (destination != simdEnd);
+    }
+
+    while (destination != end)
+        *destination++ = static_cast<LChar>(*source++);
 #elif COMPILER(GCC) && CPU(ARM_NEON) && !(PLATFORM(BIG_ENDIAN) || PLATFORM(MIDDLE_ENDIAN)) && defined(NDEBUG)
     const LChar* const end = destination + length;
     const uintptr_t memoryAccessSize = 8;

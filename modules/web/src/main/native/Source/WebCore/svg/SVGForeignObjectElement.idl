@@ -23,16 +23,11 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
-[
-        Conditional=SVG
-] interface SVGForeignObjectElement : SVGStyledElement,
-                                                          SVGTests,
-                                                          SVGLangSpace,
-                                                          SVGExternalResourcesRequired,
-                                                          SVGTransformable {
-        readonly attribute SVGAnimatedLength x;
-        readonly attribute SVGAnimatedLength y;
-        readonly attribute SVGAnimatedLength width;
-        readonly attribute SVGAnimatedLength height;
-    };
+interface SVGForeignObjectElement : SVGGraphicsElement {
+    readonly attribute SVGAnimatedLength x;
+    readonly attribute SVGAnimatedLength y;
+    readonly attribute SVGAnimatedLength width;
+    readonly attribute SVGAnimatedLength height;
+};
 
+SVGForeignObjectElement implements SVGExternalResourcesRequired;

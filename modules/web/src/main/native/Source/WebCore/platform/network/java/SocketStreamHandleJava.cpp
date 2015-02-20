@@ -20,7 +20,7 @@ static jclass GetSocketStreamHandleClass(JNIEnv* env)
     return socketStreamHandleClass;
 }
 
-SocketStreamHandle::SocketStreamHandle(const KURL& url, Page* page,
+SocketStreamHandle::SocketStreamHandle(const URL& url, Page* page,
                                        SocketStreamHandleClient* client)
     : SocketStreamHandleBase(url, client)
 {

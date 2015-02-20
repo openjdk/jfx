@@ -29,10 +29,11 @@
 
 #include "AffineTransform.h"
 #include "GraphicsContext.h"
-#include <ApplicationServices/ApplicationServices.h>
+
+#include <CoreGraphics/CoreGraphics.h>
 #include <wtf/MainThread.h>
 
-#if PLATFORM(MAC)
+#if PLATFORM(COCOA)
 #include "WebCoreSystemInterface.h"
 #endif
 

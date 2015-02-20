@@ -26,8 +26,6 @@
 #ifndef PlatformCAAnimation_h
 #define PlatformCAAnimation_h
 
-#if USE(ACCELERATED_COMPOSITING)
-
 #include "Color.h"
 #include "FilterOperation.h"
 #include "FloatPoint3D.h"
@@ -36,7 +34,7 @@
 #include <wtf/RetainPtr.h>
 #include <wtf/Vector.h>
 
-#if PLATFORM(MAC)
+#if PLATFORM(COCOA)
 OBJC_CLASS CAPropertyAnimation;
 typedef CAPropertyAnimation* PlatformAnimationRef;
 #elif PLATFORM(WIN)
@@ -53,6 +51,11 @@ class TimingFunction;
 class PlatformCAAnimation : public RefCounted<PlatformCAAnimation> {
 public:
     friend class PlatformCALayer;
+#if PLATFORM(COCOA)
+    friend class PlatformCALayerMac;
+#elif PLATFORM(WIN)
+    friend class PlatformCALayerWin;
+#endif
     
     enum AnimationType { Basic, Keyframe };
     enum FillModeType { NoFillMode, Forwards, Backwards, Both };
@@ -62,8 +65,6 @@ public:
     static PassRefPtr<PlatformCAAnimation> create(PlatformAnimationRef);
 
     ~PlatformCAAnimation();
-    
-    static bool supportsValueFunction();
     
     PassRefPtr<PlatformCAAnimation> copy() const;
 
@@ -130,7 +131,7 @@ public:
     void setValues(const Vector<FloatPoint3D>&);
     void setValues(const Vector<WebCore::Color>&);
 #if ENABLE(CSS_FILTERS)
-    void setValues(const Vector<RefPtr<FilterOperation> >&, int internalFilterPropertyIndex);
+    void setValues(const Vector<RefPtr<FilterOperation>>&, int internalFilterPropertyIndex);
 #endif
     void copyValuesFrom(const PlatformCAAnimation*);
 
@@ -139,7 +140,7 @@ public:
 
     void setTimingFunctions(const Vector<const TimingFunction*>&, bool reverse = false);
     void copyTimingFunctionsFrom(const PlatformCAAnimation*);
-    
+
 protected:
     PlatformCAAnimation(AnimationType, const String& keyPath);
     PlatformCAAnimation(PlatformAnimationRef);
@@ -149,11 +150,11 @@ protected:
         if (beginTime() <= 0)
             setBeginTime(t);
     }
-    
+
 private:
     AnimationType m_type;
     
-#if PLATFORM(MAC)
+#if PLATFORM(COCOA)
     RetainPtr<CAPropertyAnimation> m_animation;
 #elif PLATFORM(WIN)
     RetainPtr<CACFAnimationRef> m_animation;
@@ -161,7 +162,5 @@ private:
 };
 
 }
-
-#endif // USE(ACCELERATED_COMPOSITING)
 
 #endif // PlatformCAAnimation_h

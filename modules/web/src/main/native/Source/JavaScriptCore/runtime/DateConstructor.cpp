@@ -31,12 +31,17 @@
 #include "JSString.h"
 #include "JSStringBuilder.h"
 #include "ObjectPrototype.h"
-#include "Operations.h"
+#include "JSCInlines.h"
 #include <math.h>
 #include <time.h>
 #include <wtf/MathExtras.h>
 
-#if OS(WINCE) && !PLATFORM(QT)
+#if ENABLE(WEB_REPLAY)
+#include "InputCursor.h"
+#include "JSReplayInputs.h"
+#endif
+
+#if OS(WINCE)
 extern "C" time_t time(time_t* timer); // Provided by libce.
 #endif
 
@@ -72,57 +77,75 @@ const ClassInfo DateConstructor::s_info = { "Function", &InternalFunction::s_inf
 @end
 */
 
-ASSERT_HAS_TRIVIAL_DESTRUCTOR(DateConstructor);
+#if ENABLE(WEB_REPLAY)
+static double deterministicCurrentTime(JSGlobalObject* globalObject)
+{
+    double currentTime = jsCurrentTime();
+    InputCursor& cursor = globalObject->inputCursor();
+    if (cursor.isCapturing())
+        cursor.appendInput<GetCurrentTime>(currentTime);
 
-DateConstructor::DateConstructor(JSGlobalObject* globalObject, Structure* structure)
-    : InternalFunction(globalObject, structure)
+    if (cursor.isReplaying()) {
+        if (GetCurrentTime* input = cursor.fetchInput<GetCurrentTime>())
+            currentTime = input->currentTime();
+    }
+    return currentTime;
+}
+#endif
+
+#if ENABLE(WEB_REPLAY)
+#define NORMAL_OR_DETERMINISTIC_FUNCTION(a, b) (b)
+#else
+#define NORMAL_OR_DETERMINISTIC_FUNCTION(a, b) (a)
+#endif
+
+STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(DateConstructor);
+
+DateConstructor::DateConstructor(VM& vm, Structure* structure)
+    : InternalFunction(vm, structure)
 {
 }
 
-void DateConstructor::finishCreation(ExecState* exec, DatePrototype* datePrototype)
+void DateConstructor::finishCreation(VM& vm, DatePrototype* datePrototype)
 {
-    Base::finishCreation(exec->vm(), datePrototype->classInfo()->className);
-    putDirectWithoutTransition(exec->vm(), exec->propertyNames().prototype, datePrototype, DontEnum | DontDelete | ReadOnly);
-    putDirectWithoutTransition(exec->vm(), exec->propertyNames().length, jsNumber(7), ReadOnly | DontEnum | DontDelete);
+    Base::finishCreation(vm, datePrototype->classInfo()->className);
+    putDirectWithoutTransition(vm, vm.propertyNames->prototype, datePrototype, DontEnum | DontDelete | ReadOnly);
+    putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(7), ReadOnly | DontEnum | DontDelete);
 }
 
-bool DateConstructor::getOwnPropertySlot(JSCell* cell, ExecState* exec, PropertyName propertyName, PropertySlot &slot)
+bool DateConstructor::getOwnPropertySlot(JSObject* object, ExecState* exec, PropertyName propertyName, PropertySlot &slot)
 {
-    return getStaticFunctionSlot<InternalFunction>(exec, ExecState::dateConstructorTable(exec), jsCast<DateConstructor*>(cell), propertyName, slot);
-}
-
-bool DateConstructor::getOwnPropertyDescriptor(JSObject* object, ExecState* exec, PropertyName propertyName, PropertyDescriptor& descriptor)
-{
-    return getStaticFunctionDescriptor<InternalFunction>(exec, ExecState::dateConstructorTable(exec), jsCast<DateConstructor*>(object), propertyName, descriptor);
+    return getStaticFunctionSlot<InternalFunction>(exec, ExecState::dateConstructorTable(exec->vm()), jsCast<DateConstructor*>(object), propertyName, slot);
 }
 
 // ECMA 15.9.3
 JSObject* constructDate(ExecState* exec, JSGlobalObject* globalObject, const ArgList& args)
 {
+    VM& vm = exec->vm();
     int numArgs = args.size();
 
     double value;
 
     if (numArgs == 0) // new Date() ECMA 15.9.3.3
-        value = jsCurrentTime();
+        value = NORMAL_OR_DETERMINISTIC_FUNCTION(jsCurrentTime(), deterministicCurrentTime(globalObject));
     else if (numArgs == 1) {
-        if (args.at(0).inherits(&DateInstance::s_info))
+        if (args.at(0).inherits(DateInstance::info()))
             value = asDateInstance(args.at(0))->internalNumber();
         else {
             JSValue primitive = args.at(0).toPrimitive(exec);
             if (primitive.isString())
-                value = parseDate(exec, primitive.getString(exec));
+                value = parseDate(vm, primitive.getString(exec));
             else
                 value = primitive.toNumber(exec);
         }
     } else {
         double doubleArguments[7] = {
-            args.at(0).toNumber(exec),
-            args.at(1).toNumber(exec),
-            args.at(2).toNumber(exec),
-            args.at(3).toNumber(exec),
-            args.at(4).toNumber(exec),
-            args.at(5).toNumber(exec),
+            args.at(0).toNumber(exec), 
+            args.at(1).toNumber(exec), 
+            args.at(2).toNumber(exec), 
+            args.at(3).toNumber(exec), 
+            args.at(4).toNumber(exec), 
+            args.at(5).toNumber(exec), 
             args.at(6).toNumber(exec)
         };
         if (!std::isfinite(doubleArguments[0])
@@ -144,13 +167,13 @@ JSObject* constructDate(ExecState* exec, JSGlobalObject* globalObject, const Arg
             t.setSecond(JSC::toInt32(doubleArguments[5]));
             t.setIsDST(-1);
             double ms = (numArgs >= 7) ? doubleArguments[6] : 0;
-            value = gregorianDateTimeToMS(exec, t, ms, false);
+            value = gregorianDateTimeToMS(vm, t, ms, false);
         }
     }
 
-    return DateInstance::create(exec, globalObject->dateStructure(), value);
+    return DateInstance::create(vm, globalObject->dateStructure(), value);
 }
-
+    
 static EncodedJSValue JSC_HOST_CALL constructWithDateConstructor(ExecState* exec)
 {
     ArgList args(exec);
@@ -166,9 +189,10 @@ ConstructType DateConstructor::getConstructData(JSCell*, ConstructData& construc
 // ECMA 15.9.2
 static EncodedJSValue JSC_HOST_CALL callDate(ExecState* exec)
 {
+    VM& vm = exec->vm();
     GregorianDateTime ts;
-    msToGregorianDateTime(exec, currentTimeMS(), false, ts);
-    return JSValue::encode(jsNontrivialString(exec, formatDateTime(ts, DateTimeFormatDateAndTime, false)));
+    msToGregorianDateTime(vm, currentTimeMS(), false, ts);
+    return JSValue::encode(jsNontrivialString(&vm, formatDateTime(ts, DateTimeFormatDateAndTime, false)));
 }
 
 CallType DateConstructor::getCallData(JSCell*, CallData& callData)
@@ -179,23 +203,27 @@ CallType DateConstructor::getCallData(JSCell*, CallData& callData)
 
 static EncodedJSValue JSC_HOST_CALL dateParse(ExecState* exec)
 {
-    return JSValue::encode(jsNumber(parseDate(exec, exec->argument(0).toString(exec)->value(exec))));
+    return JSValue::encode(jsNumber(parseDate(exec->vm(), exec->argument(0).toString(exec)->value(exec))));
 }
 
-static EncodedJSValue JSC_HOST_CALL dateNow(ExecState*)
+static EncodedJSValue JSC_HOST_CALL dateNow(ExecState* exec)
 {
-    return JSValue::encode(jsNumber(jsCurrentTime()));
+#if !ENABLE(WEB_REPLAY)
+    UNUSED_PARAM(exec);
+#endif
+
+    return JSValue::encode(jsNumber(NORMAL_OR_DETERMINISTIC_FUNCTION(jsCurrentTime(), deterministicCurrentTime(exec->lexicalGlobalObject()))));
 }
 
-static EncodedJSValue JSC_HOST_CALL dateUTC(ExecState* exec)
+static EncodedJSValue JSC_HOST_CALL dateUTC(ExecState* exec) 
 {
     double doubleArguments[7] = {
-        exec->argument(0).toNumber(exec),
-        exec->argument(1).toNumber(exec),
-        exec->argument(2).toNumber(exec),
-        exec->argument(3).toNumber(exec),
-        exec->argument(4).toNumber(exec),
-        exec->argument(5).toNumber(exec),
+        exec->argument(0).toNumber(exec), 
+        exec->argument(1).toNumber(exec), 
+        exec->argument(2).toNumber(exec), 
+        exec->argument(3).toNumber(exec), 
+        exec->argument(4).toNumber(exec), 
+        exec->argument(5).toNumber(exec), 
         exec->argument(6).toNumber(exec)
     };
     int n = exec->argumentCount();
@@ -217,7 +245,7 @@ static EncodedJSValue JSC_HOST_CALL dateUTC(ExecState* exec)
     t.setMinute(JSC::toInt32(doubleArguments[4]));
     t.setSecond(JSC::toInt32(doubleArguments[5]));
     double ms = (n >= 7) ? doubleArguments[6] : 0;
-    return JSValue::encode(jsNumber(timeClip(gregorianDateTimeToMS(exec, t, ms, true))));
+    return JSValue::encode(jsNumber(timeClip(gregorianDateTimeToMS(exec->vm(), t, ms, true))));
 }
 
 } // namespace JSC

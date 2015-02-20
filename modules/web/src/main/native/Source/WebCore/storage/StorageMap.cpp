@@ -189,13 +189,13 @@ void StorageMap::importItems(const HashMap<String, String>& items)
         const String& value = it->value;
 
         HashMap<String, String>::AddResult result = m_map.add(key, value);
-    ASSERT_UNUSED(result, result.isNewEntry); // True if the key didn't exist previously.
+        ASSERT_UNUSED(result, result.isNewEntry); // True if the key didn't exist previously.
 
-    ASSERT(m_currentLength + key.length() >= m_currentLength);
-    m_currentLength += key.length();
-    ASSERT(m_currentLength + value.length() >= m_currentLength);
-    m_currentLength += value.length();
-}
+        ASSERT(m_currentLength + key.length() >= m_currentLength);
+        m_currentLength += key.length();
+        ASSERT(m_currentLength + value.length() >= m_currentLength);
+        m_currentLength += value.length();
+    }
 }
 
 }

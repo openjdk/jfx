@@ -54,6 +54,11 @@ public:
         const AtomicString m_namespace;
         mutable AtomicString m_localNameUpper;
 
+#if ENABLE(CSS_SELECTOR_JIT)
+        static ptrdiff_t localNameMemoryOffset() { return OBJECT_OFFSETOF(QualifiedNameImpl, m_localName); }
+        static ptrdiff_t namespaceMemoryOffset() { return OBJECT_OFFSETOF(QualifiedNameImpl, m_namespace); }
+#endif // ENABLE(CSS_SELECTOR_JIT)
+
     private:
         QualifiedNameImpl(const AtomicString& prefix, const AtomicString& localName, const AtomicString& namespaceURI)
             : m_existingHash(0)
@@ -66,7 +71,7 @@ public:
     };
 
     QualifiedName(const AtomicString& prefix, const AtomicString& localName, const AtomicString& namespaceURI);
-    QualifiedName(WTF::HashTableDeletedValueType) : m_impl(hashTableDeletedValue()) { }
+    explicit QualifiedName(WTF::HashTableDeletedValueType) : m_impl(hashTableDeletedValue()) { }
     bool isHashTableDeletedValue() const { return m_impl == hashTableDeletedValue(); }
     ~QualifiedName();
 #ifdef QNAME_DEFAULT_CONSTRUCTOR || PLATFORM(JAVA)
@@ -81,6 +86,8 @@ public:
 
     bool matches(const QualifiedName& other) const { return m_impl == other.m_impl || (localName() == other.localName() && namespaceURI() == other.namespaceURI()); }
 
+    bool matchesIgnoringCaseForLocalName(const QualifiedName& other, bool shouldIgnoreCase) const { return m_impl == other.m_impl || (equalPossiblyIgnoringCase(localName(), other.localName(), shouldIgnoreCase) && namespaceURI() == other.namespaceURI()); }
+
     bool hasPrefix() const { return m_impl->m_prefix != nullAtom; }
     void setPrefix(const AtomicString& prefix) { *this = QualifiedName(prefix, localName(), namespaceURI()); }
 
@@ -94,6 +101,9 @@ public:
     String toString() const;
 
     QualifiedNameImpl* impl() const { return m_impl; }
+#if ENABLE(CSS_SELECTOR_JIT)
+    static ptrdiff_t implMemoryOffset() { return OBJECT_OFFSETOF(QualifiedName, m_impl); }
+#endif // ENABLE(CSS_SELECTOR_JIT)
     
     // Init routine for globals
     static void init();

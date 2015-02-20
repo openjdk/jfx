@@ -46,7 +46,7 @@ class SocketStreamHandleClient;
 
 class SocketStreamHandle : public RefCounted<SocketStreamHandle>, public SocketStreamHandleBase {
 public:
-    static PassRefPtr<SocketStreamHandle> create(const KURL& url, Page* page, SocketStreamHandleClient* client) { return adoptRef(new SocketStreamHandle(url, page, client)); }
+    static PassRefPtr<SocketStreamHandle> create(const URL& url, Page* page, SocketStreamHandleClient* client) { return adoptRef(new SocketStreamHandle(url, page, client)); }
 
     virtual ~SocketStreamHandle();
 
@@ -57,11 +57,11 @@ public:
 
 protected:
     // SocketStreamHandleBase functions.
-    virtual int platformSend(const char* data, int length) OVERRIDE;
-    virtual void platformClose() OVERRIDE;
+    virtual int platformSend(const char* data, int length) override;
+    virtual void platformClose() override;
 
 private:
-    SocketStreamHandle(const KURL&, Page*, SocketStreamHandleClient*);
+    SocketStreamHandle(const URL&, Page*, SocketStreamHandleClient*);
 
     JGObject m_ref;
 };

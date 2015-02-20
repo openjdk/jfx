@@ -37,11 +37,9 @@
 #include <algorithm>
 #include <wtf/PassOwnPtr.h>
 
-using namespace std;
-
 namespace WebCore {
 
-#if !ENABLE(SMOOTH_SCROLLING)
+#if !ENABLE(SMOOTH_SCROLLING) && !PLATFORM(IOS)
 PassOwnPtr<ScrollAnimator> ScrollAnimator::create(ScrollableArea* scrollableArea)
 {
     return adoptPtr(new ScrollAnimator(scrollableArea));
@@ -83,6 +81,16 @@ void ScrollAnimator::scrollToOffsetWithoutAnimation(const FloatPoint& offset)
 
 bool ScrollAnimator::handleWheelEvent(const PlatformWheelEvent& e)
 {
+#if PLATFORM(COCOA)
+    // Events in the PlatformWheelEventPhaseMayBegin phase have no deltas, and therefore never passes through the scroll handling logic below.
+    // This causes us to return with an 'unhandled' return state, even though this event was successfully processed.
+    //
+    // We receive at least one PlatformWheelEventPhaseMayBegin when starting main-thread scrolling (see FrameView::wheelEvent), which can
+    // fool the scrolling thread into attempting to handle the scroll, unless we treat the event as handled here.
+    if (e.phase() == PlatformWheelEventPhaseMayBegin)
+        return true;
+#endif
+
     Scrollbar* horizontalScrollbar = m_scrollableArea->horizontalScrollbar();
     Scrollbar* verticalScrollbar = m_scrollableArea->verticalScrollbar();
 
@@ -105,7 +113,7 @@ bool ScrollAnimator::handleWheelEvent(const PlatformWheelEvent& e)
         if (deltaY) {
             if (e.granularity() == ScrollByPageWheelEvent) {
                 bool negative = deltaY < 0;
-                deltaY = max(max(static_cast<float>(m_scrollableArea->visibleHeight()) * Scrollbar::minFractionToStepWhenPaging(), static_cast<float>(m_scrollableArea->visibleHeight() - Scrollbar::maxOverlapBetweenPages())), 1.0f);
+                deltaY = std::max(std::max(static_cast<float>(m_scrollableArea->visibleHeight()) * Scrollbar::minFractionToStepWhenPaging(), static_cast<float>(m_scrollableArea->visibleHeight() - Scrollbar::maxOverlapBetweenPages())), 1.0f);
                 if (negative)
                     deltaY = -deltaY;
             }
@@ -115,7 +123,7 @@ bool ScrollAnimator::handleWheelEvent(const PlatformWheelEvent& e)
         if (deltaX) {
             if (e.granularity() == ScrollByPageWheelEvent) {
                 bool negative = deltaX < 0;
-                deltaX = max(max(static_cast<float>(m_scrollableArea->visibleWidth()) * Scrollbar::minFractionToStepWhenPaging(), static_cast<float>(m_scrollableArea->visibleWidth() - Scrollbar::maxOverlapBetweenPages())), 1.0f);
+                deltaX = std::max(std::max(static_cast<float>(m_scrollableArea->visibleWidth()) * Scrollbar::minFractionToStepWhenPaging(), static_cast<float>(m_scrollableArea->visibleWidth() - Scrollbar::maxOverlapBetweenPages())), 1.0f);
                 if (negative)
                     deltaX = -deltaX;
             }
@@ -124,6 +132,13 @@ bool ScrollAnimator::handleWheelEvent(const PlatformWheelEvent& e)
     }
     return handled;
 }
+
+#if ENABLE(TOUCH_EVENTS)
+bool ScrollAnimator::handleTouchEvent(const PlatformTouchEvent&)
+{
+    return false;
+}
+#endif
 
 void ScrollAnimator::setCurrentPosition(const FloatPoint& position)
 {

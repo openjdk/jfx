@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2011, 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,7 +30,9 @@
 
 #include "DFGGraph.h"
 #include "DFGScoreBoard.h"
-#include "JSCellInlines.h"
+#include "JSCInlines.h"
+#include "StackAlignment.h"
+#include <wtf/StdLibExtras.h>
 
 namespace JSC { namespace DFG {
 
@@ -43,30 +45,16 @@ public:
     
     bool run()
     {
-#if DFG_ENABLE(DEBUG_VERBOSE)
-        dataLogF("Preserved vars: ");
-        m_graph.m_preservedVars.dump(WTF::dataFile());
-        dataLogF("\n");
-#endif
-        ScoreBoard scoreBoard(m_graph.m_preservedVars);
+        ScoreBoard scoreBoard(m_graph.m_nextMachineLocal);
         scoreBoard.assertClear();
-#if DFG_ENABLE(DEBUG_PROPAGATION_VERBOSE)
-        bool needsNewLine = false;
-#endif
-        for (size_t blockIndex = 0; blockIndex < m_graph.m_blocks.size(); ++blockIndex) {
-            BasicBlock* block = m_graph.m_blocks[blockIndex].get();
+        for (size_t blockIndex = 0; blockIndex < m_graph.numBlocks(); ++blockIndex) {
+            BasicBlock* block = m_graph.block(blockIndex);
             if (!block)
                 continue;
             if (!block->isReachable)
                 continue;
             for (size_t indexInBlock = 0; indexInBlock < block->size(); ++indexInBlock) {
                 Node* node = block->at(indexInBlock);
-#if DFG_ENABLE(DEBUG_PROPAGATION_VERBOSE)
-                if (needsNewLine)
-                    dataLogF("\n");
-                dataLogF("   @%u:", node->index());
-                needsNewLine = true;
-#endif
         
                 if (!node->shouldGenerate())
                     continue;
@@ -100,11 +88,6 @@ public:
                     continue;
 
                 VirtualRegister virtualRegister = scoreBoard.allocate();
-#if DFG_ENABLE(DEBUG_PROPAGATION_VERBOSE)
-                dataLogF(
-                    " Assigning virtual register %u to node %u.",
-                    virtualRegister, node->index());
-#endif
                 node->setVirtualRegister(virtualRegister);
                 // 'mustGenerate' nodes have their useCount artificially elevated,
                 // call use now to account for this.
@@ -113,29 +96,11 @@ public:
             }
             scoreBoard.assertClear();
         }
-#if DFG_ENABLE(DEBUG_PROPAGATION_VERBOSE)
-        if (needsNewLine)
-            dataLogF("\n");
-#endif
-
-        // 'm_numCalleeRegisters' is the number of locals and temporaries allocated
-        // for the function (and checked for on entry). Since we perform a new and
-        // different allocation of temporaries, more registers may now be required.
-        unsigned calleeRegisters = scoreBoard.highWatermark() + m_graph.m_parameterSlots;
-        size_t inlineCallFrameCount = codeBlock()->inlineCallFrames().size();
-        for (size_t i = 0; i < inlineCallFrameCount; i++) {
-            InlineCallFrame& inlineCallFrame = codeBlock()->inlineCallFrames()[i];
-            CodeBlock* codeBlock = baselineCodeBlockForInlineCallFrame(&inlineCallFrame);
-            unsigned requiredCalleeRegisters = inlineCallFrame.stackOffset + codeBlock->m_numCalleeRegisters;
-            if (requiredCalleeRegisters > calleeRegisters)
-                calleeRegisters = requiredCalleeRegisters;
-        }
-        if ((unsigned)codeBlock()->m_numCalleeRegisters < calleeRegisters)
-            codeBlock()->m_numCalleeRegisters = calleeRegisters;
-#if DFG_ENABLE(DEBUG_VERBOSE)
-        dataLogF("Num callee registers: %u\n", calleeRegisters);
-#endif
         
+        // Record the number of virtual registers we're using. This is used by calls
+        // to figure out where to put the parameters.
+        m_graph.m_nextMachineLocal = scoreBoard.highWatermark();
+
         return true;
     }
 };

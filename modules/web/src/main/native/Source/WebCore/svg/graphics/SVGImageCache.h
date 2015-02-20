@@ -20,12 +20,10 @@
 #ifndef SVGImageCache_h
 #define SVGImageCache_h
 
-#if ENABLE(SVG)
 #include "FloatSize.h"
 #include "Image.h"
 #include "IntSize.h"
 #include <wtf/HashMap.h>
-#include <wtf/PassOwnPtr.h>
 #include <wtf/RefPtr.h>
 
 namespace WebCore {
@@ -40,12 +38,8 @@ class RenderObject;
 class SVGImageCache {
     WTF_MAKE_FAST_ALLOCATED;
 public:
+    explicit SVGImageCache(SVGImage*);
     ~SVGImageCache();
-
-    static PassOwnPtr<SVGImageCache> create(SVGImage* image)
-    {
-        return adoptPtr(new SVGImageCache(image));
-    }
 
     void removeClientFromCache(const CachedImageClient*);
 
@@ -55,9 +49,7 @@ public:
     Image* imageForRenderer(const RenderObject*);
 
 private:
-    SVGImageCache(SVGImage*);
-
-    typedef HashMap<const CachedImageClient*, RefPtr<SVGImageForContainer> > ImageForContainerMap;
+    typedef HashMap<const CachedImageClient*, RefPtr<SVGImageForContainer>> ImageForContainerMap;
 
     SVGImage* m_svgImage;
     ImageForContainerMap m_imageForContainerMap;
@@ -65,5 +57,4 @@ private:
 
 } // namespace WebCore
 
-#endif // ENABLE(SVG)
 #endif // SVGImageCache_h

@@ -20,7 +20,7 @@
 
 #include "config.h"
 
-#if ENABLE(SVG) && ENABLE(FILTERS)
+#if ENABLE(FILTERS)
 #include "SVGFETurbulenceElement.h"
 
 #include "Attribute.h"
@@ -48,7 +48,7 @@ BEGIN_REGISTER_ANIMATED_PROPERTIES(SVGFETurbulenceElement)
     REGISTER_PARENT_ANIMATED_PROPERTIES(SVGFilterPrimitiveStandardAttributes)
 END_REGISTER_ANIMATED_PROPERTIES
 
-inline SVGFETurbulenceElement::SVGFETurbulenceElement(const QualifiedName& tagName, Document* document)
+inline SVGFETurbulenceElement::SVGFETurbulenceElement(const QualifiedName& tagName, Document& document)
     : SVGFilterPrimitiveStandardAttributes(tagName, document)
     , m_numOctaves(1)
     , m_stitchTiles(SVG_STITCHTYPE_NOSTITCH)
@@ -58,7 +58,7 @@ inline SVGFETurbulenceElement::SVGFETurbulenceElement(const QualifiedName& tagNa
     registerAnimatedPropertiesForSVGFETurbulenceElement();
 }
 
-PassRefPtr<SVGFETurbulenceElement> SVGFETurbulenceElement::create(const QualifiedName& tagName, Document* document)
+PassRefPtr<SVGFETurbulenceElement> SVGFETurbulenceElement::create(const QualifiedName& tagName, Document& document)
 {
     return adoptRef(new SVGFETurbulenceElement(tagName, document));
 }
@@ -85,7 +85,7 @@ bool SVGFETurbulenceElement::isSupportedAttribute(const QualifiedName& attrName)
         supportedAttributes.add(SVGNames::stitchTilesAttr);
         supportedAttributes.add(SVGNames::typeAttr);
     }
-    return supportedAttributes.contains<QualifiedName, SVGAttributeHashTranslator>(attrName);
+    return supportedAttributes.contains<SVGAttributeHashTranslator>(attrName);
 }
 
 void SVGFETurbulenceElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
@@ -179,4 +179,4 @@ PassRefPtr<FilterEffect> SVGFETurbulenceElement::build(SVGFilterBuilder*, Filter
 
 }
 
-#endif // ENABLE(SVG)
+#endif // ENABLE(FILTERS)

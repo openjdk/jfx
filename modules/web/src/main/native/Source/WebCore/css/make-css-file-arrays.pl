@@ -46,18 +46,10 @@ for my $in (@ARGV) {
 
     # Slurp in the CSS file.
     my $text;
-    # We should not set --defines option and run "moc" preprocessor on Qt.
-    # See http://webkit.org/b/37296.
-    if (!$defines) {
-        open IN, "<", $in or die;
-        { local $/; $text = <IN>; }
-        close IN;
-        # Remove preprocessor directives.
-        $text =~ s|^#.*?$||mg;
-    } else {
-        require preprocessor;
-        $text = join('', applyPreprocessor($in, $defines, $preprocessor));
-    }
+    # todo tav don't work w/o push
+    push (@INC, "../../../../src/main/native/Source/WebCore/bindings/scripts");
+    require preprocessor;
+    $text = join('', applyPreprocessor($in, $defines, $preprocessor));
 
     # Remove comments in a simple-minded way that will work fine for our files.
     # Could do this a fancier way if we were worried about arbitrary CSS source.

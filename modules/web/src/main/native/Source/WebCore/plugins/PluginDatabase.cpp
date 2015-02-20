@@ -28,17 +28,13 @@
 #include "PluginDatabase.h"
 
 #include "Frame.h"
-#include "KURL.h"
+#include "URL.h"
 #include "PluginPackage.h"
 #if ENABLE(NETSCAPE_PLUGIN_METADATA_CACHE)
 #include "FileSystem.h"
 #endif
 #include <stdlib.h>
 #include <wtf/text/CString.h>
-
-#if PLATFORM(BLACKBERRY)
-#include <BlackBerryPlatformSettings.h>
-#endif
 
 namespace WebCore {
 
@@ -281,7 +277,7 @@ String PluginDatabase::MIMETypeForExtension(const String& extension) const
     return mimeTypeForPlugin.get(pluginChoices[0]);
 }
 
-PluginPackage* PluginDatabase::findPlugin(const KURL& url, String& mimeType)
+PluginPackage* PluginDatabase::findPlugin(const URL& url, String& mimeType)
 {
     if (!mimeType.isEmpty())
         return pluginForMIMEType(mimeType);
@@ -371,17 +367,17 @@ void PluginDatabase::clear()
 
 bool PluginDatabase::removeDisabledPluginFile(const String& fileName)
 {
-    if (!m_disabledPluginFiles.contains(fileName))
-        return false;
-
-    m_disabledPluginFiles.remove(fileName);
-    return true;
+    return m_disabledPluginFiles.remove(fileName);
 }
 
 bool PluginDatabase::addDisabledPluginFile(const String& fileName)
 {
     return m_disabledPluginFiles.add(fileName).isNewEntry;
 }
+
+#if PLATFORM(JAVA)
+#define ENABLE_NETSCAPE_PLUGIN_API 0 // todo tav where it's set to 1 ???
+#endif
 
 #if (!OS(WINCE)) && (!OS(WINDOWS) || !ENABLE(NETSCAPE_PLUGIN_API))
 // For Safari/Win the following three methods are implemented
@@ -393,7 +389,7 @@ Vector<String> PluginDatabase::defaultPluginDirectories()
     Vector<String> paths;
 
     // Add paths specific to each platform
-#if defined(XP_UNIX) && !PLATFORM(BLACKBERRY)
+#if defined(XP_UNIX)
     String userPluginPath = homeDirectoryPath();
     userPluginPath.append(String("/.mozilla/plugins"));
     paths.append(userPluginPath);
@@ -429,8 +425,6 @@ Vector<String> PluginDatabase::defaultPluginDirectories()
     String mozPath(getenv("MOZ_PLUGIN_PATH"));
     mozPath.split(UChar(':'), /* allowEmptyEntries */ false, mozPaths);
     paths.appendVector(mozPaths);
-#elif PLATFORM(BLACKBERRY)
-    paths.append(BlackBerry::Platform::Settings::instance()->applicationPluginDirectory().c_str());
 #elif defined(XP_MACOSX)
     String userPluginPath = homeDirectoryPath();
     userPluginPath.append(String("/Library/Internet Plug-Ins"));
@@ -442,14 +436,6 @@ Vector<String> PluginDatabase::defaultPluginDirectories()
     paths.append(userPluginPath);
 #endif
 
-    // Add paths specific to each port
-#if PLATFORM(QT)
-    Vector<String> qtPaths;
-    String qtPath(qgetenv("QTWEBKIT_PLUGIN_PATH").constData());
-    qtPath.split(UChar(':'), /* allowEmptyEntries */ false, qtPaths);
-    paths.appendVector(qtPaths);
-#endif
-
     return paths;
 }
 
@@ -457,10 +443,8 @@ bool PluginDatabase::isPreferredPluginDirectory(const String& path)
 {
     String preferredPath = homeDirectoryPath();
 
-#if defined(XP_UNIX) && !PLATFORM(BLACKBERRY)
+#if defined(XP_UNIX)
     preferredPath.append(String("/.mozilla/plugins"));
-#elif PLATFORM(BLACKBERRY)
-    preferredPath = BlackBerry::Platform::Settings::instance()->applicationPluginDirectory().c_str();
 #elif defined(XP_MACOSX)
     preferredPath.append(String("/Library/Internet Plug-Ins"));
 #elif defined(XP_WIN)

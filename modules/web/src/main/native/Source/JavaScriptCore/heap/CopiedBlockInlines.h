@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2012, 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,17 +26,36 @@
 #ifndef CopiedBlockInlines_h
 #define CopiedBlockInlines_h
 
+#include "ClassInfo.h"
 #include "CopiedBlock.h"
 #include "Heap.h"
+#include "MarkedBlock.h"
 
 namespace JSC {
     
-inline void CopiedBlock::reportLiveBytes(JSCell* owner, unsigned bytes)
+inline bool CopiedBlock::shouldReportLiveBytes(SpinLockHolder&, JSCell* owner)
 {
-#if ENABLE(PARALLEL_GC)
-    SpinLockHolder locker(&m_workListLock);
+    // We want to add to live bytes if the owner isn't part of the remembered set or
+    // if this block was allocated during the last cycle. 
+    // If we always added live bytes we would double count for elements in the remembered
+    // set across collections. 
+    // If we didn't always add live bytes to new blocks, we'd get too few.
+    bool ownerIsRemembered = MarkedBlock::blockFor(owner)->isRemembered(owner);
+    return !ownerIsRemembered || !m_isOld;
+}
+
+inline void CopiedBlock::reportLiveBytes(SpinLockHolder&, JSCell* owner, CopyToken token, unsigned bytes)
+{
+    checkConsistency();
+#ifndef NDEBUG
+    m_liveObjects++;
 #endif
     m_liveBytes += bytes;
+    checkConsistency();
+    ASSERT(m_liveBytes <= CopiedBlock::blockSize);
+
+    if (isPinned())
+        return;
 
     if (!shouldEvacuate()) {
         pin();
@@ -46,7 +65,20 @@ inline void CopiedBlock::reportLiveBytes(JSCell* owner, unsigned bytes)
     if (!m_workList)
         m_workList = adoptPtr(new CopyWorkList(Heap::heap(owner)->blockAllocator()));
 
-    m_workList->append(owner);
+    m_workList->append(CopyWorklistItem(owner, token));
+}
+
+inline void CopiedBlock::reportLiveBytesDuringCopying(unsigned bytes)
+{
+    checkConsistency();
+    // This doesn't need to be locked because the thread that calls this function owns the current block.
+    m_isOld = true;
+#ifndef NDEBUG
+    m_liveObjects++;
+#endif
+    m_liveBytes += bytes;
+    checkConsistency();
+    ASSERT(m_liveBytes <= CopiedBlock::blockSize);
 }
 
 } // namespace JSC

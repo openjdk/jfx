@@ -23,15 +23,14 @@
 
 #include "config.h"
 #include "NinePieceImage.h"
+#include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
 
 static DataRef<NinePieceImageData>& defaultData()
 {
-    static DataRef<NinePieceImageData>* data = new DataRef<NinePieceImageData>;
-    if (!data->get())
-        data->init();
-    return *data;
+    static NeverDestroyed<DataRef<NinePieceImageData>> data(NinePieceImageData::create());
+    return data.get();
 }
 
 NinePieceImage::NinePieceImage()
@@ -40,12 +39,12 @@ NinePieceImage::NinePieceImage()
 }
 
 NinePieceImage::NinePieceImage(PassRefPtr<StyleImage> image, LengthBox imageSlices, bool fill, LengthBox borderSlices, LengthBox outset, ENinePieceImageRule horizontalRule, ENinePieceImageRule verticalRule)
+    : m_data(NinePieceImageData::create())
 {
-    m_data.init();
     m_data.access()->image = image;
-    m_data.access()->imageSlices = imageSlices;
-    m_data.access()->borderSlices = borderSlices;
-    m_data.access()->outset = outset;
+    m_data.access()->imageSlices = std::move(imageSlices);
+    m_data.access()->borderSlices = std::move(borderSlices);
+    m_data.access()->outset = std::move(outset);
     m_data.access()->fill = fill;
     m_data.access()->horizontalRule = horizontalRule;
     m_data.access()->verticalRule = verticalRule;
@@ -62,7 +61,7 @@ NinePieceImageData::NinePieceImageData()
 {
 }
 
-NinePieceImageData::NinePieceImageData(const NinePieceImageData& other)
+inline NinePieceImageData::NinePieceImageData(const NinePieceImageData& other)
     : RefCounted<NinePieceImageData>()
     , fill(other.fill)
     , horizontalRule(other.horizontalRule)
@@ -72,6 +71,11 @@ NinePieceImageData::NinePieceImageData(const NinePieceImageData& other)
     , borderSlices(other.borderSlices)
     , outset(other.outset)
 {
+}
+
+PassRef<NinePieceImageData> NinePieceImageData::copy() const
+{
+    return adoptRef(*new NinePieceImageData(*this));
 }
 
 bool NinePieceImageData::operator==(const NinePieceImageData& other) const

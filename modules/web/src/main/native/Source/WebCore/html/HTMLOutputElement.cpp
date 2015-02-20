@@ -37,7 +37,7 @@
 
 namespace WebCore {
 
-inline HTMLOutputElement::HTMLOutputElement(const QualifiedName& tagName, Document* document, HTMLFormElement* form)
+inline HTMLOutputElement::HTMLOutputElement(const QualifiedName& tagName, Document& document, HTMLFormElement* form)
     : HTMLFormControlElement(tagName, document, form)
     , m_isDefaultValueMode(true)
     , m_isSetTextContentInProgress(false)
@@ -46,7 +46,7 @@ inline HTMLOutputElement::HTMLOutputElement(const QualifiedName& tagName, Docume
 {
 }
 
-PassRefPtr<HTMLOutputElement> HTMLOutputElement::create(const QualifiedName& tagName, Document* document, HTMLFormElement* form)
+PassRefPtr<HTMLOutputElement> HTMLOutputElement::create(const QualifiedName& tagName, Document& document, HTMLFormElement* form)
 {
     return adoptRef(new HTMLOutputElement(tagName, document, form));
 }
@@ -80,11 +80,11 @@ void HTMLOutputElement::setFor(const String& value)
     m_tokens->setValue(value);
 }
 
-void HTMLOutputElement::childrenChanged(bool createdByParser, Node* beforeChange, Node* afterChange, int childCountDelta)
+void HTMLOutputElement::childrenChanged(const ChildChange& change)
 {
-    HTMLFormControlElement::childrenChanged(createdByParser, beforeChange, afterChange, childCountDelta);
+    HTMLFormControlElement::childrenChanged(change);
 
-    if (createdByParser || m_isSetTextContentInProgress) {
+    if (change.source == ChildChangeSourceParser || m_isSetTextContentInProgress) {
         m_isSetTextContentInProgress = false;
         return;
     }

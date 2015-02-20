@@ -38,8 +38,6 @@
 
 namespace JSC {
 
-static const double D32 = 4294967296.0;
-
 // ECMA 9.4
 double JSValue::toInteger(ExecState* exec) const
 {
@@ -76,13 +74,17 @@ JSObject* JSValue::toObjectSlowCase(ExecState* exec, JSGlobalObject* globalObjec
         return constructBooleanFromImmediateBoolean(exec, globalObject, asValue());
 
     ASSERT(isUndefinedOrNull());
-    throwError(exec, createNotAnObjectError(exec, *this));
-    return JSNotAnObject::create(exec);
+    VM& vm = exec->vm();
+    vm.throwException(exec, createNotAnObjectError(exec, *this));
+    return JSNotAnObject::create(vm);
 }
 
-JSObject* JSValue::toThisObjectSlowCase(ExecState* exec) const
+JSValue JSValue::toThisSlowCase(ExecState* exec, ECMAMode ecmaMode) const
 {
     ASSERT(!isCell());
+
+    if (ecmaMode == StrictMode)
+        return *this;
 
     if (isInt32() || isDouble())
         return constructNumber(exec, exec->lexicalGlobalObject(), asValue());
@@ -105,8 +107,9 @@ JSObject* JSValue::synthesizePrototype(ExecState* exec) const
         return exec->lexicalGlobalObject()->booleanPrototype();
 
     ASSERT(isUndefinedOrNull());
-    throwError(exec, createNotAnObjectError(exec, *this));
-    return JSNotAnObject::create(exec);
+    VM& vm = exec->vm();
+    vm.throwException(exec, createNotAnObjectError(exec, *this));
+    return JSNotAnObject::create(vm);
 }
 
 // ECMA 8.7.2
@@ -141,26 +144,13 @@ void JSValue::putToPrimitive(ExecState* exec, PropertyName propertyName, JSValue
         if (offset != invalidOffset) {
             if (attributes & ReadOnly) {
                 if (slot.isStrictMode())
-                    throwError(exec, createTypeError(exec, StrictModeReadonlyPropertyWriteError));
+                    exec->vm().throwException(exec, createTypeError(exec, StrictModeReadonlyPropertyWriteError));
                 return;
             }
 
             JSValue gs = obj->getDirect(offset);
             if (gs.isGetterSetter()) {
-                JSObject* setterFunc = asGetterSetter(gs)->setter();        
-                if (!setterFunc) {
-                    if (slot.isStrictMode())
-                        throwError(exec, createTypeError(exec, ASCIILiteral("setting a property that has only a getter")));
-                    return;
-                }
-                
-                CallData callData;
-                CallType callType = setterFunc->methodTable()->getCallData(setterFunc, callData);
-                MarkedArgumentBuffer args;
-                args.append(value);
-
-                // If this is WebCore's global object then we need to substitute the shell.
-                call(exec, setterFunc, callType, callData, *this, args);
+                callSetter(exec, *this, gs, value, slot.isStrictMode() ? StrictMode : NotStrictMode);
                 return;
             }
 
@@ -182,7 +172,7 @@ void JSValue::putToPrimitive(ExecState* exec, PropertyName propertyName, JSValue
 void JSValue::putToPrimitiveByIndex(ExecState* exec, unsigned propertyName, JSValue value, bool shouldThrow)
 {
     if (propertyName > MAX_ARRAY_INDEX) {
-        PutPropertySlot slot(shouldThrow);
+        PutPropertySlot slot(*this, shouldThrow);
         putToPrimitive(exec, Identifier::from(exec, propertyName), value, slot);
         return;
     }
@@ -195,6 +185,11 @@ void JSValue::putToPrimitiveByIndex(ExecState* exec, unsigned propertyName, JSVa
 }
 
 void JSValue::dump(PrintStream& out) const
+{
+    dumpInContext(out, 0);
+}
+
+void JSValue::dumpInContext(PrintStream& out, DumpContext* context) const
 {
     if (!*this)
         out.print("<JSValue()>");
@@ -212,24 +207,27 @@ void JSValue::dump(PrintStream& out) const
         out.printf("Double: %08x:%08x, %lf", u.asTwoInt32s[1], u.asTwoInt32s[0], asDouble());
 #endif
     } else if (isCell()) {
-        if (asCell()->inherits(&JSString::s_info)) {
+        if (asCell()->inherits(JSString::info())) {
             JSString* string = jsCast<JSString*>(asCell());
-            out.print("String: ");
+            out.print("String");
             if (string->isRope())
-                out.print("(rope) ");
-            out.print(string->tryGetValue());
-        } else if (asCell()->inherits(&Structure::s_info)) {
-            Structure* structure = jsCast<Structure*>(asCell());
-            out.print(
-                "Structure: ", RawPointer(structure), ": ", structure->classInfo()->className,
-                ", ", IndexingTypeDump(structure->indexingTypeIncludingHistory()));
-        } else {
+                out.print(" (rope)");
+            const StringImpl* impl = string->tryGetValueImpl();
+            if (impl) {
+                if (impl->isAtomic())
+                    out.print(" (atomic)");
+                if (impl->isIdentifier())
+                    out.print(" (identifier)");
+                if (impl->isEmptyUnique())
+                    out.print(" (unique)");
+            } else
+                out.print(" (unresolved)");
+            out.print(": ", impl);
+        } else if (asCell()->inherits(Structure::info()))
+            out.print("Structure: ", inContext(*jsCast<Structure*>(asCell()), context));
+        else {
             out.print("Cell: ", RawPointer(asCell()));
-            if (isObject() && asObject(*this)->butterfly())
-                out.print("->", RawPointer(asObject(*this)->butterfly()));
-            out.print(
-                " (", RawPointer(asCell()->structure()), ": ", asCell()->structure()->classInfo()->className,
-                ", ", IndexingTypeDump(asCell()->structure()->indexingTypeIncludingHistory()), ")");
+            out.print(" (", inContext(*asCell()->structure(), context), ")");
         }
     } else if (isTrue())
         out.print("True");

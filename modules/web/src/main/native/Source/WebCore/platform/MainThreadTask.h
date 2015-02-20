@@ -37,7 +37,6 @@
 #include <wtf/MainThread.h>
 #include <wtf/PassOwnPtr.h>
 #include <wtf/PassRefPtr.h>
-#include <wtf/TypeTraits.h>
 
 namespace WebCore {
 
@@ -50,11 +49,11 @@ template<typename T> struct MainThreadTaskTraits<T*> {
     typedef T* ParamType;
 };
 
-template<typename T> struct MainThreadTaskTraits<PassRefPtr<T> > {
+template<typename T> struct MainThreadTaskTraits<PassRefPtr<T>> {
     typedef PassRefPtr<T> ParamType;
 };
 
-template<typename T> struct MainThreadTaskTraits<PassOwnPtr<T> > {
+template<typename T> struct MainThreadTaskTraits<PassOwnPtr<T>> {
     typedef PassOwnPtr<T> ParamType;
 };
 
@@ -86,7 +85,7 @@ private:
     {
     }
 
-    virtual void performTask() OVERRIDE
+    virtual void performTask() override
     {
         (*m_method)(m_parameter1);
     }
@@ -117,7 +116,7 @@ private:
     {
     }
 
-    virtual void performTask() OVERRIDE
+    virtual void performTask() override
     {
         (*m_method)(m_parameter1, m_parameter2);
     }
@@ -151,7 +150,7 @@ private:
     {
     }
 
-    virtual void performTask() OVERRIDE
+    virtual void performTask() override
     {
         (*m_method)(m_parameter1, m_parameter2, m_parameter3);
     }
@@ -188,7 +187,7 @@ private:
     {
     }
 
-    virtual void performTask() OVERRIDE
+    virtual void performTask() override
     {
         (*m_method)(m_parameter1, m_parameter2, m_parameter3, m_parameter4);
     }
@@ -228,7 +227,7 @@ private:
     {
     }
 
-    virtual void performTask() OVERRIDE
+    virtual void performTask() override
     {
         (*m_method)(m_parameter1, m_parameter2, m_parameter3, m_parameter4, m_parameter5);
     }
@@ -271,7 +270,7 @@ private:
     {
     }
 
-    virtual void performTask() OVERRIDE
+    virtual void performTask() override
     {
         (*m_method)(m_parameter1, m_parameter2, m_parameter3, m_parameter4, m_parameter5, m_parameter6);
     }
@@ -317,7 +316,7 @@ private:
     {
     }
 
-    virtual void performTask() OVERRIDE
+    virtual void performTask() override
     {
         (*m_method)(m_parameter1, m_parameter2, m_parameter3, m_parameter4, m_parameter5, m_parameter6, m_parameter7);
     }
@@ -366,7 +365,7 @@ private:
     {
     }
     
-    virtual void performTask() OVERRIDE
+    virtual void performTask() override
     {
         (*m_method)(m_parameter1, m_parameter2, m_parameter3, m_parameter4, m_parameter5, m_parameter6, m_parameter7, m_parameter8);
     }

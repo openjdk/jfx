@@ -30,26 +30,32 @@
 #include "DeviceOrientationClient.h"
 #include "DeviceOrientationData.h"
 #include "DeviceOrientationEvent.h"
-#include "InspectorInstrumentation.h"
+#include "Page.h"
 
 namespace WebCore {
 
-DeviceOrientationController::DeviceOrientationController(Page* page, DeviceOrientationClient* client)
+DeviceOrientationController::DeviceOrientationController(DeviceOrientationClient* client)
     : DeviceController(client)
-    , m_page(page)
 {
+#if PLATFORM(IOS)
+    // FIXME: Temporarily avoid asserting while OpenSource is using a different design.
+    // We should reconcile the differences between OpenSource and iOS so that we can
+    // remove this code path.
+    if (m_client)
+        deviceOrientationClient()->setController(this);
+#else
     ASSERT(m_client);
     deviceOrientationClient()->setController(this);
+#endif
 }
 
-PassOwnPtr<DeviceOrientationController> DeviceOrientationController::create(Page* page, DeviceOrientationClient* client)
+PassOwnPtr<DeviceOrientationController> DeviceOrientationController::create(DeviceOrientationClient* client)
 {
-    return adoptPtr(new DeviceOrientationController(page, client));
+    return adoptPtr(new DeviceOrientationController(client));
 }
 
 void DeviceOrientationController::didChangeDeviceOrientation(DeviceOrientationData* orientation)
 {
-    orientation = InspectorInstrumentation::overrideDeviceOrientation(m_page, orientation);
     dispatchDeviceEvent(DeviceOrientationEvent::create(eventNames().deviceorientationEvent, orientation));
 }
 
@@ -58,6 +64,21 @@ DeviceOrientationClient* DeviceOrientationController::deviceOrientationClient()
     return static_cast<DeviceOrientationClient*>(m_client);
 }
 
+#if PLATFORM(IOS)
+// FIXME: We should look to reconcile the iOS and OpenSource differences with this class
+// so that we can either remove these methods or remove the PLATFORM(IOS)-guard.
+void DeviceOrientationController::suspendUpdates()
+{
+    if (m_client)
+        m_client->stopUpdating();
+}
+
+void DeviceOrientationController::resumeUpdates()
+{
+    if (m_client && !m_listeners.isEmpty())
+        m_client->startUpdating();
+}
+#else
 bool DeviceOrientationController::hasLastData()
 {
     return deviceOrientationClient()->lastOrientation();
@@ -67,6 +88,7 @@ PassRefPtr<Event> DeviceOrientationController::getLastEvent()
 {
     return DeviceOrientationEvent::create(eventNames().deviceorientationEvent, deviceOrientationClient()->lastOrientation());
 }
+#endif // PLATFORM(IOS)
 
 const char* DeviceOrientationController::supplementName()
 {
@@ -87,7 +109,7 @@ bool DeviceOrientationController::isActiveAt(Page* page)
 
 void provideDeviceOrientationTo(Page* page, DeviceOrientationClient* client)
 {
-    DeviceOrientationController::provideTo(page, DeviceOrientationController::supplementName(), DeviceOrientationController::create(page, client));
+    DeviceOrientationController::provideTo(page, DeviceOrientationController::supplementName(), DeviceOrientationController::create(client));
 }
 
 } // namespace WebCore

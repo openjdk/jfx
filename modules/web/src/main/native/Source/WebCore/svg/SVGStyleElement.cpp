@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2004, 2005 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2004, 2005, 2006, 2007 Rob Buis <buis@kde.org>
- * Copyright (C) 2006 Apple Inc. All rights reserved.
+ * Copyright (C) 2006, 2013 Apple Inc. All rights reserved.
  * Copyright (C) 2009 Cameron McCormack <cam@mcc.id.au>
  *
  * This library is free software; you can redistribute it and/or
@@ -21,8 +21,6 @@
  */
 
 #include "config.h"
-
-#if ENABLE(SVG)
 #include "SVGStyleElement.h"
 
 #include "Attribute.h"
@@ -34,9 +32,9 @@
 
 namespace WebCore {
 
-inline SVGStyleElement::SVGStyleElement(const QualifiedName& tagName, Document* document, bool createdByParser)
+inline SVGStyleElement::SVGStyleElement(const QualifiedName& tagName, Document& document, bool createdByParser)
     : SVGElement(tagName, document)
-    , StyleElement(document, createdByParser)
+    , m_styleSheetOwner(document, createdByParser)
     , m_svgLoadEventTimer(this, &SVGElement::svgLoadEventTimerFired)
 {
     ASSERT(hasTagName(SVGNames::styleTag));
@@ -44,20 +42,17 @@ inline SVGStyleElement::SVGStyleElement(const QualifiedName& tagName, Document* 
 
 SVGStyleElement::~SVGStyleElement()
 {
-    StyleElement::clearDocumentData(document(), this);
+    m_styleSheetOwner.clearDocumentData(document(), *this);
 }
 
-PassRefPtr<SVGStyleElement> SVGStyleElement::create(const QualifiedName& tagName, Document* document, bool createdByParser)
+PassRefPtr<SVGStyleElement> SVGStyleElement::create(const QualifiedName& tagName, Document& document, bool createdByParser)
 {
     return adoptRef(new SVGStyleElement(tagName, document, createdByParser));
 }
 
 bool SVGStyleElement::disabled() const
 {
-    if (!m_sheet)
-        return false;
-    
-    return m_sheet->disabled();
+    return sheet() && sheet()->disabled();
 }
 
 void SVGStyleElement::setDisabled(bool setDisabled)
@@ -106,8 +101,10 @@ bool SVGStyleElement::isSupportedAttribute(const QualifiedName& attrName)
     if (supportedAttributes.isEmpty()) {
         SVGLangSpace::addSupportedAttributes(supportedAttributes);
         supportedAttributes.add(SVGNames::titleAttr);
+        supportedAttributes.add(SVGNames::mediaAttr);
+        supportedAttributes.add(SVGNames::typeAttr);
     }
-    return supportedAttributes.contains<QualifiedName, SVGAttributeHashTranslator>(attrName);
+    return supportedAttributes.contains<SVGAttributeHashTranslator>(attrName);
 }
 
 void SVGStyleElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
@@ -116,13 +113,19 @@ void SVGStyleElement::parseAttribute(const QualifiedName& name, const AtomicStri
         SVGElement::parseAttribute(name, value);
         return;
     }
-
     if (name == SVGNames::titleAttr) {
-        if (m_sheet)
-            m_sheet->setTitle(value);
+        if (sheet())
+            sheet()->setTitle(value);
         return;
     }
-
+    if (name == SVGNames::typeAttr) {
+        m_styleSheetOwner.setContentType(value);
+        return;
+    }
+    if (name == SVGNames::mediaAttr) {
+        m_styleSheetOwner.setMedia(value);
+        return;
+    }
     if (SVGLangSpace::parseAttribute(name, value))
         return;
 
@@ -131,31 +134,29 @@ void SVGStyleElement::parseAttribute(const QualifiedName& name, const AtomicStri
 
 void SVGStyleElement::finishParsingChildren()
 {
-    StyleElement::finishParsingChildren(this);
+    m_styleSheetOwner.finishParsingChildren(*this);
     SVGElement::finishParsingChildren();
 }
 
-Node::InsertionNotificationRequest SVGStyleElement::insertedInto(ContainerNode* rootParent)
+Node::InsertionNotificationRequest SVGStyleElement::insertedInto(ContainerNode& rootParent)
 {
     SVGElement::insertedInto(rootParent);
-    if (rootParent->inDocument())
-        StyleElement::insertedIntoDocument(document(), this);
+    if (rootParent.inDocument())
+        m_styleSheetOwner.insertedIntoDocument(document(), *this);
     return InsertionDone;
 }
 
-void SVGStyleElement::removedFrom(ContainerNode* rootParent)
+void SVGStyleElement::removedFrom(ContainerNode& rootParent)
 {
     SVGElement::removedFrom(rootParent);
-    if (rootParent->inDocument())
-        StyleElement::removedFromDocument(document(), this);
+    if (rootParent.inDocument())
+        m_styleSheetOwner.removedFromDocument(document(), *this);
 }
 
-void SVGStyleElement::childrenChanged(bool changedByParser, Node* beforeChange, Node* afterChange, int childCountDelta)
+void SVGStyleElement::childrenChanged(const ChildChange& change)
 {
-    SVGElement::childrenChanged(changedByParser, beforeChange, afterChange, childCountDelta);
-    StyleElement::childrenChanged(this);
+    SVGElement::childrenChanged(change);
+    m_styleSheetOwner.childrenChanged(*this);
 }
 
 }
-
-#endif // ENABLE(SVG)

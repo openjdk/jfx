@@ -29,28 +29,22 @@ static jmethodID wcWriteUrlMID;
 
 namespace WebCore {
 
-Pasteboard *Pasteboard::generalPasteboard()
-{
-    static Pasteboard* pasteboard = new Pasteboard();
-    return pasteboard;
-}
-
 Pasteboard::Pasteboard()
 : m_pasteboardClass(WebCore_GetJavaEnv()->FindClass("com/sun/webkit/WCPasteboard"))
 {
 }
 
 void Pasteboard::writeSelection(
-    Range *selectedRange,
+    Range& selectedRange,
     bool canSmartCopyOrDelete,
-    Frame *frame,
+    Frame& frame,
     ShouldSerializeSelectedTextForClipboard shouldSerializeSelectedTextForClipboard)
 {
     String markup = createMarkup(selectedRange, 0, AnnotateForInterchange, false, ResolveNonLocalURLs);
 
     String plainText = shouldSerializeSelectedTextForClipboard == IncludeImageAltTextForClipboard
-        ? frame->editor().selectedTextForClipboard()
-        : frame->editor().selectedText();
+        ? frame.editor().selectedTextForClipboard()
+        : frame.editor().selectedText();
 
 #if OS(WINDOWS)
     replaceNewlinesWithWindowsStyleNewlines(plainText);
@@ -65,37 +59,34 @@ void Pasteboard::writeSelection(
     CheckAndClearException(env);
 }
 
-void Pasteboard::writeURL(
-    const KURL &url,
-    const String &titleString,
-    Frame *frame)
+void Pasteboard::write(const PasteboardURL& pasteboardURL)
 {
-    ASSERT(!url.isEmpty());
+    ASSERT(!pasteboardURL.url.isEmpty());
 
-    String title(titleString);
+    String title(pasteboardURL.title);
     if (title.isEmpty()) {
-        title = url.lastPathComponent();
+        title = pasteboardURL.url.lastPathComponent();
         if (title.isEmpty()) {
-            title = url.host();
+            title = pasteboardURL.url.host();
         }
     }
-    String markup(urlToMarkup(url, title));
+    String markup(urlToMarkup(pasteboardURL.url, title));
 
     JNIEnv* env = WebCore_GetJavaEnv();
     env->CallStaticVoidMethod(m_pasteboardClass, wcWriteUrlMID,
-        (jstring)url.string().toJavaString(env),
+        (jstring)pasteboardURL.url.string().toJavaString(env),
         (jstring)markup.toJavaString(env));
     CheckAndClearException(env);
 }
 
 void Pasteboard::writeImage(
-    Node* node,
-    const KURL &,
+    Element& node,
+    const URL &,
     const String & /*title*/)
 {
-    ASSERT(node && node->renderer() && node->renderer()->isImage());
+    ASSERT(node.renderer() && node.renderer()->isImage());
 
-    RenderImage* renderer = static_cast<RenderImage*>(node->renderer());
+    RenderImage* renderer = static_cast<RenderImage*>(node.renderer());
     ASSERT(renderer);
     CachedImage* cachedImage = static_cast<CachedImage*>(renderer->cachedImage());
     ASSERT(cachedImage);
@@ -107,15 +98,86 @@ void Pasteboard::writeImage(
     CheckAndClearException(env);
 }
 
-void Pasteboard::writeClipboard(Clipboard*)
+PassOwnPtr<Pasteboard> Pasteboard::createForCopyAndPaste()
 {
-    notImplemented();
+    notImplemented(); // todo tav
+    return nullptr;
+}
+
+String Pasteboard::readString(const String& type)
+{
+    notImplemented(); // todo tav
+    return String("");
+}
+
+bool Pasteboard::writeString(const String& type, const String& data)
+{
+    notImplemented(); // todo tav
+    return false;
+}
+
+PassOwnPtr<Pasteboard> Pasteboard::createPrivate()
+{
+    notImplemented(); // todo tav
+    return nullptr;
 }
 
 void Pasteboard::clear()
 {
     notImplemented();
 }
+
+Vector<String> Pasteboard::types()
+{
+    notImplemented(); // todo tav
+    return Vector<String>();
+}
+
+bool Pasteboard::hasData()
+{
+    notImplemented(); // todo tav
+    return false;
+}
+
+void Pasteboard::clear(const String& type)
+{
+    notImplemented(); // todo tav
+}
+
+Vector<String> Pasteboard::readFilenames()
+{
+    notImplemented(); // todo tav
+    return Vector<String>();
+}
+
+void Pasteboard::read(PasteboardPlainText&)
+{
+    notImplemented(); // todo tav
+}
+
+void Pasteboard::read(PasteboardWebContentReader&)
+{
+    notImplemented(); // todo tav
+}
+
+#if ENABLE(DRAG_SUPPORT)
+void Pasteboard::setDragImage(DragImageRef, const IntPoint& hotSpot)
+{
+    notImplemented(); // todo tav
+}
+
+PassOwnPtr<Pasteboard> Pasteboard::createForDragAndDrop()
+{
+    notImplemented(); // todo tav
+    return nullptr;
+}
+
+PassOwnPtr<Pasteboard> Pasteboard::createForDragAndDrop(const DragData&)
+{
+    notImplemented(); // todo tav
+    return nullptr;
+}
+#endif
 
 bool Pasteboard::canSmartReplace()
 {
@@ -124,19 +186,17 @@ bool Pasteboard::canSmartReplace()
 }
 
 PassRefPtr<DocumentFragment> Pasteboard::documentFragment(
-    Frame *frame,
-    PassRefPtr<Range> range,
+    Frame& frame,
+    Range& range,
     bool allowPlainText,
     bool &chosePlainText)
 {
-    ASSERT(frame);
-
     chosePlainText = false;
 
     String htmlString = html();
     if (!htmlString.isNull()) {
         PassRefPtr<DocumentFragment> fragment = createFragmentFromMarkup(
-            frame->document(),
+            *frame.document(),
             htmlString,
             String(),
             DisallowScriptingContent);
@@ -150,7 +210,7 @@ PassRefPtr<DocumentFragment> Pasteboard::documentFragment(
         if (!plainTextString.isNull()) {
             chosePlainText = true;
             PassRefPtr<DocumentFragment> fragment = createFragmentFromText(
-                range.get(),
+                range,
                 plainTextString);
             if (fragment) {
                 return fragment;
@@ -161,7 +221,7 @@ PassRefPtr<DocumentFragment> Pasteboard::documentFragment(
     return 0;
 }
 
-String Pasteboard::plainText(Frame* frame)
+String Pasteboard::plainText(Frame& frame)
 {
     JNIEnv* env = WebCore_GetJavaEnv();
 
@@ -181,6 +241,11 @@ String Pasteboard::html() const
     CheckAndClearException(env);
 
     return html ? String(env, html) : String();
+}
+
+void Pasteboard::writePasteboard(const Pasteboard& sourcePasteboard)
+{
+    notImplemented(); // todo tav
 }
 
 void Pasteboard::writePlainText(const String& text, SmartReplaceOption)

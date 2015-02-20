@@ -1,5 +1,5 @@
 /*
- * Copyright 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2010 Apple Inc. All rights reserved.
  * Copyright (C) 2012 Samsung Electronics. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,6 +28,7 @@
 #define DeviceMotionController_h
 
 #include "DeviceController.h"
+#include <wtf/Noncopyable.h>
 
 namespace WebCore {
 
@@ -35,16 +36,24 @@ class DeviceMotionClient;
 class DeviceMotionData;
 
 class DeviceMotionController : public DeviceController {
+    WTF_MAKE_NONCOPYABLE(DeviceMotionController);
 public:
     ~DeviceMotionController() { };
 
     static PassOwnPtr<DeviceMotionController> create(DeviceMotionClient*);
 
+#if PLATFORM(IOS)
+    // FIXME: We should look to reconcile the iOS and OpenSource differences with this class
+    // so that we can either remove these methods or remove the PLATFORM(IOS)-guard.
+    void suspendUpdates();
+    void resumeUpdates();
+#endif
+
     void didChangeDeviceMotion(DeviceMotionData*);
     DeviceMotionClient* deviceMotionClient();
 
-    virtual bool hasLastData() OVERRIDE;
-    virtual PassRefPtr<Event> getLastEvent() OVERRIDE;
+    virtual bool hasLastData() override;
+    virtual PassRefPtr<Event> getLastEvent() override;
 
     static const char* supplementName();
     static DeviceMotionController* from(Page*);

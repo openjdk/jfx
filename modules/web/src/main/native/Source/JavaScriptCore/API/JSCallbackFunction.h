@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
 #ifndef JSCallbackFunction_h
@@ -32,29 +32,28 @@
 namespace JSC {
 
 class JSCallbackFunction : public InternalFunction {
-protected:
-    JSCallbackFunction(JSGlobalObject*, Structure*, JSObjectCallAsFunctionCallback);
-    void finishCreation(VM&, const String& name);
-
+    friend struct APICallbackFunction;
 public:
     typedef InternalFunction Base;
 
-    static JSCallbackFunction* create(ExecState*, JSGlobalObject*, JSObjectCallAsFunctionCallback, const String& name);
+    static JSCallbackFunction* create(VM&, JSGlobalObject*, JSObjectCallAsFunctionCallback, const String& name);
 
-    static const ClassInfo s_info;
-
-    // InternalFunction mish-mashes constructor and function behavior -- we should
+    DECLARE_INFO;
+    
+    // InternalFunction mish-mashes constructor and function behavior -- we should 
     // refactor the code so this override isn't necessary
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue proto) 
-    {
-        return Structure::create(vm, globalObject, proto, TypeInfo(ObjectType, StructureFlags), &s_info); 
+    { 
+        return Structure::create(vm, globalObject, proto, TypeInfo(ObjectType, StructureFlags), info()); 
     }
 
-protected:
+private:
+    JSCallbackFunction(VM&, Structure*, JSObjectCallAsFunctionCallback);
+    void finishCreation(VM&, const String& name);
+
     static CallType getCallData(JSCell*, CallData&);
 
-private:
-    static EncodedJSValue JSC_HOST_CALL call(ExecState*);
+    JSObjectCallAsFunctionCallback functionCallback() { return m_callback; }
 
     JSObjectCallAsFunctionCallback m_callback;
 };

@@ -30,7 +30,7 @@
 
 namespace WebCore {
 
-UnlinkCommand::UnlinkCommand(Document* document)
+UnlinkCommand::UnlinkCommand(Document& document)
     : CompositeEditCommand(document)
 {
 }

@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
 #ifndef JSContextRefPrivate_h
@@ -40,21 +40,12 @@ extern "C" {
 
 /*!
 @function
-@abstract Gets the global context of a JavaScript execution context.
-@param ctx The JSContext whose global context you want to get.
-@result ctx's global context.
-*/
-JS_EXPORT JSGlobalContextRef JSContextGetGlobalContext(JSContextRef ctx);
-
-
-/*!
-@function
 @abstract Gets a Backtrace for the existing context
 @param ctx The JSContext whose backtrace you want to get
 @result A string containing the backtrace
 */
-JS_EXPORT JSStringRef JSContextCreateBacktrace(JSContextRef ctx, unsigned maxStackSize) AVAILABLE_IN_WEBKIT_VERSION_4_0;
-
+JS_EXPORT JSStringRef JSContextCreateBacktrace(JSContextRef ctx, unsigned maxStackSize) CF_AVAILABLE(10_6, 7_0);
+    
 
 /*! 
 @typedef JSShouldTerminateCallback
@@ -94,14 +85,14 @@ typedef bool
  need to call JSContextGroupSetExecutionTimeLimit before you start executing
  any scripts.
 */
-JS_EXPORT void JSContextGroupSetExecutionTimeLimit(JSContextGroupRef, double limit, JSShouldTerminateCallback, void* context) AVAILABLE_IN_WEBKIT_VERSION_4_0;
+JS_EXPORT void JSContextGroupSetExecutionTimeLimit(JSContextGroupRef, double limit, JSShouldTerminateCallback, void* context) CF_AVAILABLE(10_6, 7_0);
 
 /*!
 @function
 @abstract Clears the script execution time limit.
 @param group The JavaScript context group that the time limit is cleared on.
 */
-JS_EXPORT void JSContextGroupClearExecutionTimeLimit(JSContextGroupRef) AVAILABLE_IN_WEBKIT_VERSION_4_0;
+JS_EXPORT void JSContextGroupClearExecutionTimeLimit(JSContextGroupRef) CF_AVAILABLE(10_6, 7_0);
 
 #ifdef __cplusplus
 }

@@ -27,9 +27,7 @@
 #ifndef WorkerLocation_h
 #define WorkerLocation_h
 
-#if ENABLE(WORKERS)
-
-#include "KURL.h"
+#include "URL.h"
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
@@ -39,12 +37,12 @@ namespace WebCore {
 
     class WorkerLocation : public RefCounted<WorkerLocation> {
     public:
-        static PassRefPtr<WorkerLocation> create(const KURL& url)
+        static PassRefPtr<WorkerLocation> create(const URL& url)
         {
             return adoptRef(new WorkerLocation(url));
         }
 
-        const KURL& url() const { return m_url; }
+        const URL& url() const { return m_url; }
 
         String href() const;
 
@@ -60,13 +58,11 @@ namespace WebCore {
         String toString() const { return href(); }
 
     private:
-        explicit WorkerLocation(const KURL& url) : m_url(url) { }
+        explicit WorkerLocation(const URL& url) : m_url(url) { }
 
-        KURL m_url;
+        URL m_url;
     };
 
 } // namespace WebCore
-
-#endif // ENABLE(WORKERS)
 
 #endif // WorkerLocation_h

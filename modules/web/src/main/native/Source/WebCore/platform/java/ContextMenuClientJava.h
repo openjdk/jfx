@@ -21,7 +21,7 @@ namespace WebCore {
         virtual PlatformMenuDescription getCustomMenuFromDefaultItems(ContextMenu*);
         virtual void contextMenuItemSelected(ContextMenuItem*, const ContextMenu*);
 
-        virtual void downloadURL(const KURL& url);
+        virtual void downloadURL(const URL& url);
         virtual void searchWithGoogle(const Frame*);
         virtual void lookUpInDictionary(Frame*);
         virtual bool isSpeaking();

@@ -226,7 +226,7 @@ void PluginWidgetJava::convertToPage(IntRect& rect)
 
 void PluginWidgetJava::setFrameRect(const IntRect& rect)
 {
-    if (m_element->document()->printing())
+    if (m_element->document().printing())
         return;
 
     if (rect != frameRect())

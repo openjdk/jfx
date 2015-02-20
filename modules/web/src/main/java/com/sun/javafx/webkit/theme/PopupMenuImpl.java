@@ -33,13 +33,14 @@ import javafx.event.EventHandler;
 
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.MenuItem;
+import javafx.scene.web.WebView;
 import javafx.stage.WindowEvent;
 
 import com.sun.webkit.Invoker;
 import com.sun.webkit.graphics.WCFont;
 import com.sun.webkit.graphics.WCPoint;
 import com.sun.webkit.WebPage;
-import com.sun.javafx.webkit.WebPageClientImpl;
+import com.sun.webkit.WebPageClient;
 
 public final class PopupMenuImpl extends com.sun.webkit.PopupMenu {
 
@@ -112,7 +113,7 @@ public final class PopupMenuImpl extends com.sun.webkit.PopupMenu {
     }
 
     static void doShow(final ContextMenu popup, WebPage page, int anchorX, int anchorY) {
-        WebPageClientImpl client = (WebPageClientImpl)page.getPageClient();
+        WebPageClient<WebView> client = page.getPageClient();
         assert (client != null);
         WCPoint pt = client.windowToScreen(new WCPoint(anchorX, anchorY));
         popup.show(client.getContainer().getScene().getWindow(), pt.getX(), pt.getY());

@@ -33,8 +33,6 @@
 #include "HRTFDatabaseLoader.h"
 #include <algorithm>
 #include <wtf/MainThread.h>
-
-using namespace std;
  
 namespace WebCore {
     
@@ -116,7 +114,7 @@ void OfflineAudioDestinationNode::offlineRender()
         
     // Synchronize with HRTFDatabaseLoader.
     // The database must be loaded before we can proceed.
-    HRTFDatabaseLoader* loader = HRTFDatabaseLoader::loader();
+    HRTFDatabaseLoader* loader = context()->hrtfDatabaseLoader();
     ASSERT(loader);
     if (!loader)
         return;
@@ -133,7 +131,7 @@ void OfflineAudioDestinationNode::offlineRender()
         // Render one render quantum.
         render(0, m_renderBus.get(), renderQuantumSize);
         
-        size_t framesAvailableToCopy = min(framesToProcess, renderQuantumSize);
+        size_t framesAvailableToCopy = std::min(framesToProcess, renderQuantumSize);
         
         for (unsigned channelIndex = 0; channelIndex < numberOfChannels; ++channelIndex) {
             const float* source = m_renderBus->channel(channelIndex)->data();

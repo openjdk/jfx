@@ -33,18 +33,18 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-inline HTMLParagraphElement::HTMLParagraphElement(const QualifiedName& tagName, Document* document)
+inline HTMLParagraphElement::HTMLParagraphElement(const QualifiedName& tagName, Document& document)
     : HTMLElement(tagName, document)
 {
     ASSERT(hasTagName(pTag));
 }
 
-PassRefPtr<HTMLParagraphElement> HTMLParagraphElement::create(Document* document)
+PassRefPtr<HTMLParagraphElement> HTMLParagraphElement::create(Document& document)
 {
     return adoptRef(new HTMLParagraphElement(pTag, document));
 }
 
-PassRefPtr<HTMLParagraphElement> HTMLParagraphElement::create(const QualifiedName& tagName, Document* document)
+PassRefPtr<HTMLParagraphElement> HTMLParagraphElement::create(const QualifiedName& tagName, Document& document)
 {
     return adoptRef(new HTMLParagraphElement(tagName, document));
 }
@@ -56,7 +56,7 @@ bool HTMLParagraphElement::isPresentationAttribute(const QualifiedName& name) co
     return HTMLElement::isPresentationAttribute(name);
 }
 
-void HTMLParagraphElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomicString& value, MutableStylePropertySet* style)
+void HTMLParagraphElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomicString& value, MutableStyleProperties& style)
 {
     if (name == alignAttr) {
         if (equalIgnoringCase(value, "middle") || equalIgnoringCase(value, "center"))

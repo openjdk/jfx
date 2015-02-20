@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2009, 2013, 2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,8 +29,8 @@
 
 #include "WebGLRenderingContext.h"
 
+#include "ANGLEInstancedArrays.h"
 #include "CachedImage.h"
-#include "CheckedInt.h"
 #include "DOMWindow.h"
 #include "EXTDrawBuffers.h"
 #include "EXTTextureFilterAnisotropic.h"
@@ -46,11 +46,14 @@
 #include "ImageBuffer.h"
 #include "ImageData.h"
 #include "IntSize.h"
+#include "Logging.h"
 #include "NotImplemented.h"
 #include "OESElementIndexUint.h"
 #include "OESStandardDerivatives.h"
 #include "OESTextureFloat.h"
+#include "OESTextureFloatLinear.h"
 #include "OESTextureHalfFloat.h"
+#include "OESTextureHalfFloatLinear.h"
 #include "OESVertexArrayObject.h"
 #include "Page.h"
 #include "RenderBox.h"
@@ -75,15 +78,12 @@
 #include "WebGLTexture.h"
 #include "WebGLUniformLocation.h"
 
-#include <wtf/OwnArrayPtr.h>
-#include <wtf/PassOwnArrayPtr.h>
-#include <wtf/Uint16Array.h>
-#include <wtf/Uint32Array.h>
+#include <runtime/JSCInlines.h>
+#include <runtime/TypedArrayInlines.h>
+#include <runtime/Uint32Array.h>
+#include <wtf/StdLibExtras.h>
+#include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
-
-#if PLATFORM(QT)
-#undef emit
-#endif
 
 namespace WebCore {
 
@@ -196,7 +196,7 @@ namespace {
         }
 
     private:
-        bool hasMoreCharacters()
+        bool hasMoreCharacters() const
         {
             return (m_position < m_length);
         }
@@ -213,7 +213,7 @@ namespace {
 
         void process(UChar);
 
-        bool peek(UChar& character)
+        bool peek(UChar& character) const
         {
             if (m_position + 1 >= m_length)
                 return false;
@@ -221,7 +221,7 @@ namespace {
             return true;
         }
 
-        UChar current()
+        UChar current() const
         {
             ASSERT_WITH_SECURITY_IMPLICATION(m_position < m_length);
             return m_sourceString[m_position];
@@ -232,7 +232,7 @@ namespace {
             ++m_position;
         }
 
-        bool isNewline(UChar character)
+        bool isNewline(UChar character) const
         {
             // Don't attempt to canonicalize newline related characters.
             return (character == '\n' || character == '\r');
@@ -361,30 +361,11 @@ namespace {
     }
 } // namespace anonymous
 
-class WebGLStateRestorer {
-public:
-    WebGLStateRestorer(WebGLRenderingContext* context,
-                       bool changed)
-        : m_context(context)
-        , m_changed(changed)
-    {
-    }
-
-    ~WebGLStateRestorer()
-    {
-        m_context->cleanupAfterGraphicsCall(m_changed);
-    }
-
-private:
-    WebGLRenderingContext* m_context;
-    bool m_changed;
-};
-
 class WebGLRenderingContextLostCallback : public GraphicsContext3D::ContextLostCallback {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     explicit WebGLRenderingContextLostCallback(WebGLRenderingContext* cb) : m_context(cb) { }
-    virtual void onContextLost() { m_context->forceLostContext(WebGLRenderingContext::RealLostContext); }
+    virtual void onContextLost() override { m_context->forceLostContext(WebGLRenderingContext::RealLostContext); }
     virtual ~WebGLRenderingContextLostCallback() {}
 private:
     WebGLRenderingContext* m_context;
@@ -394,7 +375,7 @@ class WebGLRenderingContextErrorMessageCallback : public GraphicsContext3D::Erro
     WTF_MAKE_FAST_ALLOCATED;
 public:
     explicit WebGLRenderingContextErrorMessageCallback(WebGLRenderingContext* cb) : m_context(cb) { }
-    virtual void onErrorMessage(const String& message, GC3Dint)
+    virtual void onErrorMessage(const String& message, GC3Dint) override
     {
         if (m_context->m_synthesizedErrorsToConsole)
             m_context->printGLErrorToConsole(message);
@@ -404,33 +385,37 @@ private:
     WebGLRenderingContext* m_context;
 };
 
-PassOwnPtr<WebGLRenderingContext> WebGLRenderingContext::create(HTMLCanvasElement* canvas, WebGLContextAttributes* attrs)
+OwnPtr<WebGLRenderingContext> WebGLRenderingContext::create(HTMLCanvasElement* canvas, WebGLContextAttributes* attrs)
 {
-    Document* document = canvas->document();
-    Frame* frame = document->frame();
+    Document& document = canvas->document();
+    Frame* frame = document.frame();
     if (!frame)
         return nullptr;
-    Settings* settings = frame->settings();
 
     // The FrameLoaderClient might creation of a new WebGL context despite the page settings; in
     // particular, if WebGL contexts were lost one or more times via the GL_ARB_robustness extension.
-    if (!frame->loader()->client()->allowWebGL(settings && settings->webGLEnabled())) {
+    if (!frame->loader().client().allowWebGL(frame->settings().webGLEnabled())) {
         canvas->dispatchEvent(WebGLContextEvent::create(eventNames().webglcontextcreationerrorEvent, false, true, "Web page was not allowed to create a WebGL context."));
         return nullptr;
     }
 
-    HostWindow* hostWindow = document->view()->root()->hostWindow();
+    HostWindow* hostWindow = document.view()->root()->hostWindow();
     GraphicsContext3D::Attributes attributes = attrs ? attrs->attributes() : GraphicsContext3D::Attributes();
 
     if (attributes.antialias) {
-        if (settings && !settings->openGLMultisamplingEnabled())
+        if (!frame->settings().openGLMultisamplingEnabled())
             attributes.antialias = false;
     }
 
     attributes.noExtensions = true;
     attributes.shareResources = false;
     attributes.preferDiscreteGPU = true;
-    attributes.topDocumentURL = document->topDocument()->url();
+
+    if (frame->settings().multithreadedWebGLEnabled())
+        attributes.multithreaded = true;
+
+    if (frame->settings().forceSoftwareWebGLRendering())
+        attributes.forceSoftwareRenderer = true;
 
     RefPtr<GraphicsContext3D> context(GraphicsContext3D::create(attributes, hostWindow));
 
@@ -452,13 +437,13 @@ PassOwnPtr<WebGLRenderingContext> WebGLRenderingContext::create(HTMLCanvasElemen
 WebGLRenderingContext::WebGLRenderingContext(HTMLCanvasElement* passedCanvas, PassRefPtr<GraphicsContext3D> context,
                                              GraphicsContext3D::Attributes attributes)
     : CanvasRenderingContext(passedCanvas)
-    , ActiveDOMObject(passedCanvas->document())
+    , ActiveDOMObject(&passedCanvas->document())
     , m_context(context)
     , m_drawingBuffer(0)
     , m_dispatchContextLostEventTimer(this, &WebGLRenderingContext::dispatchContextLostEvent)
     , m_restoreAllowed(false)
     , m_restoreTimer(this, &WebGLRenderingContext::maybeRestoreContext)
-    , m_videoCache(4)
+    , m_generatedImageCache(4)
     , m_contextLost(false)
     , m_contextLostMode(SyntheticLostContext)
     , m_attributes(attributes)
@@ -564,9 +549,8 @@ void WebGLRenderingContext::setupFlags()
 {
     ASSERT(m_context);
 
-    Page* p = canvas()->document()->page();
-    if (p)
-        m_synthesizedErrorsToConsole = p->settings()->webGLErrorsToConsoleEnabled();
+    if (Page* page = canvas()->document().page())
+        m_synthesizedErrorsToConsole = page->settings().webGLErrorsToConsoleEnabled();
 
     m_isGLES2Compliant = m_context->isGLES2Compliant();
     m_isErrorGeneratedOnOutOfBoundsAccesses = m_context->getExtensions()->isEnabled("GL_CHROMIUM_strict_attribs");
@@ -583,9 +567,8 @@ void WebGLRenderingContext::setupFlags()
 
 bool WebGLRenderingContext::allowPrivilegedExtensions() const
 {
-    Page* p = canvas()->document()->page();
-    if (p && p->settings())
-        return p->settings()->privilegedWebGLExtensionsEnabled();
+    if (Page* page = canvas()->document().page())
+        return page->settings().privilegedWebGLExtensionsEnabled();
     return false;
 }
 
@@ -599,21 +582,21 @@ WebGLRenderingContext::~WebGLRenderingContext()
 {
     // Remove all references to WebGLObjects so if they are the last reference
     // they will be freed before the last context is removed from the context group.
-    m_boundArrayBuffer = 0;
-    m_defaultVertexArrayObject = 0;
-    m_boundVertexArrayObject = 0;
-    m_vertexAttrib0Buffer = 0;
-    m_currentProgram = 0;
-    m_framebufferBinding = 0;
-    m_renderbufferBinding = 0;
+    m_boundArrayBuffer = nullptr;
+    m_defaultVertexArrayObject = nullptr;
+    m_boundVertexArrayObject = nullptr;
+    m_vertexAttrib0Buffer = nullptr;
+    m_currentProgram = nullptr;
+    m_framebufferBinding = nullptr;
+    m_renderbufferBinding = nullptr;
 
     for (size_t i = 0; i < m_textureUnits.size(); ++i) {
-      m_textureUnits[i].m_texture2DBinding = 0;
-      m_textureUnits[i].m_textureCubeMapBinding = 0;
+        m_textureUnits[i].texture2DBinding = nullptr;
+        m_textureUnits[i].textureCubeMapBinding = nullptr;
     }
 
-    m_blackTexture2D = 0;
-    m_blackTextureCubeMap = 0;
+    m_blackTexture2D = nullptr;
+    m_blackTextureCubeMap = nullptr;
 
     detachAndRemoveAllObjects();
     destroyGraphicsContext3D();
@@ -628,8 +611,8 @@ void WebGLRenderingContext::destroyGraphicsContext3D()
         m_drawingBuffer.clear();
 
     if (m_context) {
-    m_context->setContextLostCallback(nullptr);
-    m_context->setErrorMessageCallback(nullptr);
+        m_context->setContextLostCallback(nullptr);
+        m_context->setErrorMessageCallback(nullptr);
         m_context.clear();
     }
 }
@@ -645,21 +628,17 @@ void WebGLRenderingContext::markContextChanged()
         m_drawingBuffer->markContentsChanged();
 
     m_layerCleared = false;
-#if USE(ACCELERATED_COMPOSITING)
     RenderBox* renderBox = canvas()->renderBox();
     if (renderBox && renderBox->hasAcceleratedCompositing()) {
         m_markedCanvasDirty = true;
         canvas()->clearCopiedImage();
         renderBox->contentChanged(CanvasChanged);
     } else {
-#endif
         if (!m_markedCanvasDirty) {
             m_markedCanvasDirty = true;
             canvas()->didDraw(FloatRect(FloatPoint(0, 0), clampedCanvasSize()));
         }
-#if USE(ACCELERATED_COMPOSITING)
     }
-#endif
 }
 
 bool WebGLRenderingContext::clearIfComposited(GC3Dbitfield mask)
@@ -738,7 +717,7 @@ void WebGLRenderingContext::markLayerComposited()
 
 void WebGLRenderingContext::paintRenderingResultsToCanvas()
 {
-    if (canvas()->document()->printing())
+    if (canvas()->document().printing())
         canvas()->clearPresentationCopy();
 
     // Until the canvas is written to by the application, the clear that
@@ -800,11 +779,9 @@ void WebGLRenderingContext::reshape(int width, int height)
     height = clamp(height, 1, maxHeight);
 
     if (m_needsUpdate) {
-#if USE(ACCELERATED_COMPOSITING)
         RenderBox* renderBox = canvas()->renderBox();
         if (renderBox && renderBox->hasAcceleratedCompositing())
             renderBox->contentChanged(CanvasChanged);
-#endif
         m_needsUpdate = false;
     }
 
@@ -816,7 +793,7 @@ void WebGLRenderingContext::reshape(int width, int height)
     } else
         m_context->reshape(width, height);
 
-    m_context->bindTexture(GraphicsContext3D::TEXTURE_2D, objectOrZero(m_textureUnits[m_activeTextureUnit].m_texture2DBinding.get()));
+    m_context->bindTexture(GraphicsContext3D::TEXTURE_2D, objectOrZero(m_textureUnits[m_activeTextureUnit].texture2DBinding.get()));
     m_context->bindRenderbuffer(GraphicsContext3D::RENDERBUFFER, objectOrZero(m_renderbufferBinding.get()));
     if (m_framebufferBinding)
       m_context->bindFramebuffer(GraphicsContext3D::FRAMEBUFFER, objectOrZero(m_framebufferBinding.get()));
@@ -874,8 +851,6 @@ void WebGLRenderingContext::activeTexture(GC3Denum texture, ExceptionCode& ec)
 
     if (m_drawingBuffer)
         m_drawingBuffer->setActiveTextureUnit(texture);
-
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::attachShader(WebGLProgram* program, WebGLShader* shader, ExceptionCode& ec)
@@ -889,7 +864,6 @@ void WebGLRenderingContext::attachShader(WebGLProgram* program, WebGLShader* sha
     }
     m_context->attachShader(objectOrZero(program), objectOrZero(shader));
     shader->onAttached();
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::bindAttribLocation(WebGLProgram* program, GC3Duint index, const String& name, ExceptionCode& ec)
@@ -910,7 +884,6 @@ void WebGLRenderingContext::bindAttribLocation(WebGLProgram* program, GC3Duint i
         return;
     }
     m_context->bindAttribLocation(objectOrZero(program), index, name);
-    cleanupAfterGraphicsCall(false);
 }
 
 bool WebGLRenderingContext::checkObjectToBeBound(const char* functionName, WebGLObject* object, bool& deleted)
@@ -952,7 +925,6 @@ void WebGLRenderingContext::bindBuffer(GC3Denum target, WebGLBuffer* buffer, Exc
     m_context->bindBuffer(target, objectOrZero(buffer));
     if (buffer)
         buffer->setTarget(target);
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::bindFramebuffer(GC3Denum target, WebGLFramebuffer* buffer, ExceptionCode& ec)
@@ -978,7 +950,6 @@ void WebGLRenderingContext::bindFramebuffer(GC3Denum target, WebGLFramebuffer* b
     if (buffer)
         buffer->setHasEverBeenBound();
     applyStencilTest();
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::bindRenderbuffer(GC3Denum target, WebGLRenderbuffer* renderBuffer, ExceptionCode& ec)
@@ -997,7 +968,6 @@ void WebGLRenderingContext::bindRenderbuffer(GC3Denum target, WebGLRenderbuffer*
     m_context->bindRenderbuffer(target, objectOrZero(renderBuffer));
     if (renderBuffer)
         renderBuffer->setHasEverBeenBound();
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::bindTexture(GC3Denum target, WebGLTexture* texture, ExceptionCode& ec)
@@ -1014,14 +984,14 @@ void WebGLRenderingContext::bindTexture(GC3Denum target, WebGLTexture* texture, 
     }
     GC3Dint maxLevel = 0;
     if (target == GraphicsContext3D::TEXTURE_2D) {
-        m_textureUnits[m_activeTextureUnit].m_texture2DBinding = texture;
+        m_textureUnits[m_activeTextureUnit].texture2DBinding = texture;
         maxLevel = m_maxTextureLevel;
 
         if (m_drawingBuffer && !m_activeTextureUnit)
             m_drawingBuffer->setTexture2DBinding(objectOrZero(texture));
 
     } else if (target == GraphicsContext3D::TEXTURE_CUBE_MAP) {
-        m_textureUnits[m_activeTextureUnit].m_textureCubeMapBinding = texture;
+        m_textureUnits[m_activeTextureUnit].textureCubeMapBinding = texture;
         maxLevel = m_maxCubeMapTextureLevel;
     } else {
         synthesizeGLError(GraphicsContext3D::INVALID_ENUM, "bindTexture", "invalid target");
@@ -1039,8 +1009,6 @@ void WebGLRenderingContext::bindTexture(GC3Denum target, WebGLTexture* texture, 
     // platforms is fairly involved (will require a HashMap from texture ID
     // in all ports), and we have not had any complaints, so the logic has
     // been removed.
-
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::blendColor(GC3Dfloat red, GC3Dfloat green, GC3Dfloat blue, GC3Dfloat alpha)
@@ -1048,7 +1016,6 @@ void WebGLRenderingContext::blendColor(GC3Dfloat red, GC3Dfloat green, GC3Dfloat
     if (isContextLost())
         return;
     m_context->blendColor(red, green, blue, alpha);
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::blendEquation(GC3Denum mode)
@@ -1056,7 +1023,6 @@ void WebGLRenderingContext::blendEquation(GC3Denum mode)
     if (isContextLost() || !validateBlendEquation("blendEquation", mode))
         return;
     m_context->blendEquation(mode);
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::blendEquationSeparate(GC3Denum modeRGB, GC3Denum modeAlpha)
@@ -1064,7 +1030,6 @@ void WebGLRenderingContext::blendEquationSeparate(GC3Denum modeRGB, GC3Denum mod
     if (isContextLost() || !validateBlendEquation("blendEquation", modeRGB) || !validateBlendEquation("blendEquation", modeAlpha))
         return;
     m_context->blendEquationSeparate(modeRGB, modeAlpha);
-    cleanupAfterGraphicsCall(false);
 }
 
 
@@ -1073,7 +1038,6 @@ void WebGLRenderingContext::blendFunc(GC3Denum sfactor, GC3Denum dfactor)
     if (isContextLost() || !validateBlendFuncFactors("blendFunc", sfactor, dfactor))
         return;
     m_context->blendFunc(sfactor, dfactor);
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::blendFuncSeparate(GC3Denum srcRGB, GC3Denum dstRGB, GC3Denum srcAlpha, GC3Denum dstAlpha)
@@ -1082,7 +1046,6 @@ void WebGLRenderingContext::blendFuncSeparate(GC3Denum srcRGB, GC3Denum dstRGB, 
     if (isContextLost() || !validateBlendFuncFactors("blendFunc", srcRGB, dstRGB))
         return;
     m_context->blendFuncSeparate(srcRGB, dstRGB, srcAlpha, dstAlpha);
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::bufferData(GC3Denum target, long long size, GC3Denum usage, ExceptionCode& ec)
@@ -1109,7 +1072,6 @@ void WebGLRenderingContext::bufferData(GC3Denum target, long long size, GC3Denum
     }
 
     m_context->bufferData(target, static_cast<GC3Dsizeiptr>(size), usage);
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::bufferData(GC3Denum target, ArrayBuffer* data, GC3Denum usage, ExceptionCode& ec)
@@ -1132,7 +1094,6 @@ void WebGLRenderingContext::bufferData(GC3Denum target, ArrayBuffer* data, GC3De
     }
 
     m_context->bufferData(target, data->byteLength(), data->data(), usage);
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::bufferData(GC3Denum target, ArrayBufferView* data, GC3Denum usage, ExceptionCode& ec)
@@ -1155,7 +1116,6 @@ void WebGLRenderingContext::bufferData(GC3Denum target, ArrayBufferView* data, G
     }
 
     m_context->bufferData(target, data->byteLength(), data->baseAddress(), usage);
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::bufferSubData(GC3Denum target, long long offset, ArrayBuffer* data, ExceptionCode& ec)
@@ -1180,7 +1140,6 @@ void WebGLRenderingContext::bufferSubData(GC3Denum target, long long offset, Arr
     }
 
     m_context->bufferSubData(target, static_cast<GC3Dintptr>(offset), data->byteLength(), data->data());
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::bufferSubData(GC3Denum target, long long offset, ArrayBufferView* data, ExceptionCode& ec)
@@ -1205,7 +1164,6 @@ void WebGLRenderingContext::bufferSubData(GC3Denum target, long long offset, Arr
     }
 
     m_context->bufferSubData(target, static_cast<GC3Dintptr>(offset), data->byteLength(), data->baseAddress());
-    cleanupAfterGraphicsCall(false);
 }
 
 GC3Denum WebGLRenderingContext::checkFramebufferStatus(GC3Denum target)
@@ -1225,7 +1183,6 @@ GC3Denum WebGLRenderingContext::checkFramebufferStatus(GC3Denum target)
         return result;
     }
     result = m_context->checkFramebufferStatus(target);
-    cleanupAfterGraphicsCall(false);
     return result;
 }
 
@@ -1244,7 +1201,7 @@ void WebGLRenderingContext::clear(GC3Dbitfield mask)
     }
     if (!clearIfComposited(mask))
         m_context->clear(mask);
-    cleanupAfterGraphicsCall(true);
+    markContextChanged();
 }
 
 void WebGLRenderingContext::clearColor(GC3Dfloat r, GC3Dfloat g, GC3Dfloat b, GC3Dfloat a)
@@ -1264,7 +1221,6 @@ void WebGLRenderingContext::clearColor(GC3Dfloat r, GC3Dfloat g, GC3Dfloat b, GC
     m_clearColor[2] = b;
     m_clearColor[3] = a;
     m_context->clearColor(r, g, b, a);
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::clearDepth(GC3Dfloat depth)
@@ -1273,7 +1229,6 @@ void WebGLRenderingContext::clearDepth(GC3Dfloat depth)
         return;
     m_clearDepth = depth;
     m_context->clearDepth(depth);
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::clearStencil(GC3Dint s)
@@ -1282,7 +1237,6 @@ void WebGLRenderingContext::clearStencil(GC3Dint s)
         return;
     m_clearStencil = s;
     m_context->clearStencil(s);
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::colorMask(GC3Dboolean red, GC3Dboolean green, GC3Dboolean blue, GC3Dboolean alpha)
@@ -1294,7 +1248,6 @@ void WebGLRenderingContext::colorMask(GC3Dboolean red, GC3Dboolean green, GC3Dbo
     m_colorMask[2] = blue;
     m_colorMask[3] = alpha;
     m_context->colorMask(red, green, blue, alpha);
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::compileShader(WebGLShader* shader, ExceptionCode& ec)
@@ -1303,7 +1256,9 @@ void WebGLRenderingContext::compileShader(WebGLShader* shader, ExceptionCode& ec
     if (isContextLost() || !validateWebGLObject("compileShader", shader))
         return;
     m_context->compileShader(objectOrZero(shader));
-    cleanupAfterGraphicsCall(false);
+    GC3Dint value;
+    m_context->getShaderiv(objectOrZero(shader), GraphicsContext3D::COMPILE_STATUS, &value);
+    shader->setValid(value);
 }
 
 void WebGLRenderingContext::compressedTexImage2D(GC3Denum target, GC3Dint level, GC3Denum internalformat, GC3Dsizei width,
@@ -1322,7 +1277,7 @@ void WebGLRenderingContext::compressedTexImage2D(GC3Denum target, GC3Dint level,
         synthesizeGLError(GraphicsContext3D::INVALID_VALUE, "compressedTexImage2D", "border not 0");
         return;
     }
-    if (!validateCompressedTexDimensions("compressedTexImage2D", level, width, height, internalformat))
+    if (!validateCompressedTexDimensions("compressedTexImage2D", target, level, width, height, internalformat))
         return;
     if (!validateCompressedTexFuncData("compressedTexImage2D", width, height, internalformat, data))
         return;
@@ -1339,7 +1294,7 @@ void WebGLRenderingContext::compressedTexImage2D(GC3Denum target, GC3Dint level,
     graphicsContext3D()->compressedTexImage2D(target, level, internalformat, width, height,
                                               border, data->byteLength(), data->baseAddress());
     tex->setLevelInfo(target, level, internalformat, width, height, GraphicsContext3D::UNSIGNED_BYTE);
-    cleanupAfterGraphicsCall(false);
+    tex->setCompressed();
 }
 
 void WebGLRenderingContext::compressedTexSubImage2D(GC3Denum target, GC3Dint level, GC3Dint xoffset, GC3Dint yoffset,
@@ -1370,7 +1325,7 @@ void WebGLRenderingContext::compressedTexSubImage2D(GC3Denum target, GC3Dint lev
 
     graphicsContext3D()->compressedTexSubImage2D(target, level, xoffset, yoffset,
                                                  width, height, format, data->byteLength(), data->baseAddress());
-    cleanupAfterGraphicsCall(false);
+    tex->setCompressed();
 }
 
 bool WebGLRenderingContext::validateSettableTexFormat(const char* functionName, GC3Denum format)
@@ -1426,7 +1381,6 @@ void WebGLRenderingContext::copyTexImage2D(GC3Denum target, GC3Dint level, GC3De
     }
     // FIXME: if the framebuffer is not complete, none of the below should be executed.
     tex->setLevelInfo(target, level, internalformat, width, height, GraphicsContext3D::UNSIGNED_BYTE);
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::copyTexSubImage2D(GC3Denum target, GC3Dint level, GC3Dint xoffset, GC3Dint yoffset, GC3Dint x, GC3Dint y, GC3Dsizei width, GC3Dsizei height)
@@ -1471,7 +1425,7 @@ void WebGLRenderingContext::copyTexSubImage2D(GC3Denum target, GC3Dint level, GC
         if (clip2D(x, y, width, height, getBoundFramebufferWidth(), getBoundFramebufferHeight(), &clippedX, &clippedY, &clippedWidth, &clippedHeight)) {
             GC3Denum format = tex->getInternalFormat(target, level);
             GC3Denum type = tex->getType(target, level);
-            OwnArrayPtr<unsigned char> zero;
+            std::unique_ptr<unsigned char[]> zero;
             if (width && height) {
                 unsigned int size;
                 GC3Denum error = m_context->computeImageSizeInBytes(format, type, width, height, m_unpackAlignment, &size, 0);
@@ -1479,7 +1433,7 @@ void WebGLRenderingContext::copyTexSubImage2D(GC3Denum target, GC3Dint level, GC
                     synthesizeGLError(error, "copyTexSubImage2D", "bad dimensions");
                     return;
                 }
-                zero = adoptArrayPtr(new unsigned char[size]);
+                zero = std::make_unique<unsigned char[]>(size);
                 if (!zero) {
                     synthesizeGLError(GraphicsContext3D::INVALID_VALUE, "copyTexSubImage2D", "out of memory");
                     return;
@@ -1497,7 +1451,6 @@ void WebGLRenderingContext::copyTexSubImage2D(GC3Denum target, GC3Dint level, GC
             m_context->copyTexSubImage2D(target, level, xoffset, yoffset, x, y, width, height);
         }
     }
-    cleanupAfterGraphicsCall(false);
 }
 
 PassRefPtr<WebGLBuffer> WebGLRenderingContext::createBuffer()
@@ -1565,7 +1518,6 @@ void WebGLRenderingContext::cullFace(GC3Denum mode)
     if (isContextLost())
         return;
     m_context->cullFace(mode);
-    cleanupAfterGraphicsCall(false);
 }
 
 bool WebGLRenderingContext::deleteObject(WebGLObject* object)
@@ -1635,10 +1587,10 @@ void WebGLRenderingContext::deleteTexture(WebGLTexture* texture)
     if (!deleteObject(texture))
         return;
     for (size_t i = 0; i < m_textureUnits.size(); ++i) {
-        if (texture == m_textureUnits[i].m_texture2DBinding)
-            m_textureUnits[i].m_texture2DBinding = 0;
-        if (texture == m_textureUnits[i].m_textureCubeMapBinding)
-            m_textureUnits[i].m_textureCubeMapBinding = 0;
+        if (texture == m_textureUnits[i].texture2DBinding)
+            m_textureUnits[i].texture2DBinding = nullptr;
+        if (texture == m_textureUnits[i].textureCubeMapBinding)
+            m_textureUnits[i].textureCubeMapBinding = nullptr;
     }
     if (m_framebufferBinding)
         m_framebufferBinding->removeAttachmentFromBoundFramebuffer(texture);
@@ -1649,7 +1601,6 @@ void WebGLRenderingContext::depthFunc(GC3Denum func)
     if (isContextLost())
         return;
     m_context->depthFunc(func);
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::depthMask(GC3Dboolean flag)
@@ -1658,7 +1609,6 @@ void WebGLRenderingContext::depthMask(GC3Dboolean flag)
         return;
     m_depthMask = flag;
     m_context->depthMask(flag);
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::depthRange(GC3Dfloat zNear, GC3Dfloat zFar)
@@ -1670,7 +1620,6 @@ void WebGLRenderingContext::depthRange(GC3Dfloat zNear, GC3Dfloat zFar)
         return;
     }
     m_context->depthRange(zNear, zFar);
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::detachShader(WebGLProgram* program, WebGLShader* shader, ExceptionCode& ec)
@@ -1684,7 +1633,6 @@ void WebGLRenderingContext::detachShader(WebGLProgram* program, WebGLShader* sha
     }
     m_context->detachShader(objectOrZero(program), objectOrZero(shader));
     shader->onDetached(graphicsContext3D());
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::disable(GC3Denum cap)
@@ -1694,7 +1642,6 @@ void WebGLRenderingContext::disable(GC3Denum cap)
     if (cap == GraphicsContext3D::STENCIL_TEST) {
         m_stencilEnabled = false;
         applyStencilTest();
-        cleanupAfterGraphicsCall(false);
         return;
     }
     if (cap == GraphicsContext3D::SCISSOR_TEST) {
@@ -1703,7 +1650,6 @@ void WebGLRenderingContext::disable(GC3Denum cap)
             m_drawingBuffer->setScissorEnabled(m_scissorEnabled);
     }
     m_context->disable(cap);
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::disableVertexAttribArray(GC3Duint index, ExceptionCode& ec)
@@ -1719,10 +1665,8 @@ void WebGLRenderingContext::disableVertexAttribArray(GC3Duint index, ExceptionCo
     WebGLVertexArrayObjectOES::VertexAttribState& state = m_boundVertexArrayObject->getVertexAttribState(index);
     state.enabled = false;
 
-    if (index > 0 || isGLES2Compliant()) {
+    if (index > 0 || isGLES2Compliant())
         m_context->disableVertexAttribArray(index);
-        cleanupAfterGraphicsCall(false);
-    }
 }
 
 bool WebGLRenderingContext::validateElementArraySize(GC3Dsizei count, GC3Denum type, GC3Dintptr offset)
@@ -1792,14 +1736,14 @@ bool WebGLRenderingContext::validateIndexArrayConservative(GC3Denum type, unsign
         case GraphicsContext3D::UNSIGNED_BYTE: {
             const GC3Dubyte* p = static_cast<const GC3Dubyte*>(buffer->data());
             for (GC3Dsizeiptr i = 0; i < numElements; i++)
-                maxIndex = max(maxIndex, static_cast<int>(p[i]));
+                maxIndex = std::max(maxIndex, static_cast<int>(p[i]));
             break;
         }
         case GraphicsContext3D::UNSIGNED_SHORT: {
             numElements /= sizeof(GC3Dushort);
             const GC3Dushort* p = static_cast<const GC3Dushort*>(buffer->data());
             for (GC3Dsizeiptr i = 0; i < numElements; i++)
-                maxIndex = max(maxIndex, static_cast<int>(p[i]));
+                maxIndex = std::max(maxIndex, static_cast<int>(p[i]));
             break;
         }
         case GraphicsContext3D::UNSIGNED_INT: {
@@ -1808,7 +1752,7 @@ bool WebGLRenderingContext::validateIndexArrayConservative(GC3Denum type, unsign
             numElements /= sizeof(GC3Duint);
             const GC3Duint* p = static_cast<const GC3Duint*>(buffer->data());
             for (GC3Dsizeiptr i = 0; i < numElements; i++)
-                maxIndex = max(maxIndex, static_cast<int>(p[i]));
+                maxIndex = std::max(maxIndex, static_cast<int>(p[i]));
             break;
         }
         default:
@@ -1880,30 +1824,31 @@ bool WebGLRenderingContext::validateIndexArrayPrecise(GC3Dsizei count, GC3Denum 
     return numElementsRequired > 0;
 }
 
-bool WebGLRenderingContext::validateRenderingState(unsigned numElementsRequired)
+bool WebGLRenderingContext::validateVertexAttributes(unsigned elementCount, unsigned primitiveCount)
 {
     if (!m_currentProgram)
         return false;
 
     // Look in each enabled vertex attrib and check if they've been bound to a buffer.
     for (unsigned i = 0; i < m_maxVertexAttribs; ++i) {
-        const WebGLVertexArrayObjectOES::VertexAttribState& state = m_boundVertexArrayObject->getVertexAttribState(i);
-        if (state.enabled
-            && (!state.bufferBinding || !state.bufferBinding->object()))
+        if (!m_boundVertexArrayObject->getVertexAttribState(i).validateBinding())
             return false;
     }
 
-    if (numElementsRequired <= 0)
+    if (elementCount <= 0)
         return true;
 
-    // Look in each consumed vertex attrib (by the current program) and find the smallest buffer size
-    unsigned smallestNumElements = UINT_MAX;
+
+    // Look in each consumed vertex attrib (by the current program).
+    bool sawNonInstancedAttrib = false;
+    bool sawEnabledAttrib = false;
     int numActiveAttribLocations = m_currentProgram->numActiveAttribLocations();
     for (int i = 0; i < numActiveAttribLocations; ++i) {
         int loc = m_currentProgram->getActiveAttribLocation(i);
         if (loc >= 0 && loc < static_cast<int>(m_maxVertexAttribs)) {
             const WebGLVertexArrayObjectOES::VertexAttribState& state = m_boundVertexArrayObject->getVertexAttribState(loc);
             if (state.enabled) {
+                sawEnabledAttrib = true;
                 // Avoid off-by-one errors in numElements computation.
                 // For the last element, we will only touch the data for the
                 // element and nothing beyond it.
@@ -1912,16 +1857,18 @@ bool WebGLRenderingContext::validateRenderingState(unsigned numElementsRequired)
                 ASSERT(state.stride > 0);
                 if (bytesRemaining >= state.bytesPerElement)
                     numElements = 1 + (bytesRemaining - state.bytesPerElement) / state.stride;
-                if (numElements < smallestNumElements)
-                    smallestNumElements = numElements;
+                if (!state.divisor)
+                    sawNonInstancedAttrib = true;
+                if ((!state.divisor && elementCount > numElements) || (state.divisor && primitiveCount > numElements))
+                    return false;
             }
         }
     }
 
-    if (smallestNumElements == INT_MAX)
-        smallestNumElements = 0;
+    if (!sawNonInstancedAttrib && sawEnabledAttrib)
+        return false;
 
-    return numElementsRequired <= smallestNumElements;
+    return true;
 }
 
 bool WebGLRenderingContext::validateWebGLObject(const char* functionName, WebGLObject* object)
@@ -1937,47 +1884,61 @@ bool WebGLRenderingContext::validateWebGLObject(const char* functionName, WebGLO
     return true;
 }
 
-void WebGLRenderingContext::drawArrays(GC3Denum mode, GC3Dint first, GC3Dsizei count, ExceptionCode& ec)
+bool WebGLRenderingContext::validateDrawArrays(const char* functionName, GC3Denum mode, GC3Dint first, GC3Dsizei count, GC3Dsizei primcount)
 {
-    UNUSED_PARAM(ec);
+    if (isContextLost() || !validateDrawMode(functionName, mode))
+        return false;
 
-    if (isContextLost() || !validateDrawMode("drawArrays", mode))
-        return;
-
-    if (!validateStencilSettings("drawArrays"))
-        return;
+    if (!validateStencilSettings(functionName))
+        return false;
 
     if (first < 0 || count < 0) {
-        synthesizeGLError(GraphicsContext3D::INVALID_VALUE, "drawArrays", "first or count < 0");
-        return;
+        synthesizeGLError(GraphicsContext3D::INVALID_VALUE, functionName, "first or count < 0");
+        return false;
     }
 
     if (!count) {
-        cleanupAfterGraphicsCall(true);
-        return;
+        markContextChanged();
+        return false;
+    }
+
+    if (primcount < 0) {
+        synthesizeGLError(GraphicsContext3D::INVALID_VALUE, functionName, "primcount < 0");
+        return false;
     }
 
     if (!isErrorGeneratedOnOutOfBoundsAccesses()) {
         // Ensure we have a valid rendering state
-        CheckedInt<GC3Dint> checkedFirst(first);
-        CheckedInt<GC3Dint> checkedCount(count);
-        CheckedInt<GC3Dint> checkedSum = checkedFirst + checkedCount;
-        if (!checkedSum.isValid() || !validateRenderingState(checkedSum.value())) {
-            synthesizeGLError(GraphicsContext3D::INVALID_OPERATION, "drawArrays", "attempt to access out of bounds arrays");
-            return;
+        Checked<GC3Dint, RecordOverflow> checkedFirst(first);
+        Checked<GC3Dint, RecordOverflow> checkedCount(count);
+        Checked<GC3Dint, RecordOverflow> checkedSum = checkedFirst + checkedCount;
+        Checked<GC3Dint, RecordOverflow> checkedPrimCount(primcount);
+        if (checkedSum.hasOverflowed() || checkedPrimCount.hasOverflowed() || !validateVertexAttributes(checkedSum.unsafeGet(), checkedPrimCount.unsafeGet())) {
+            synthesizeGLError(GraphicsContext3D::INVALID_OPERATION, functionName, "attempt to access out of bounds arrays");
+            return false;
         }
     } else {
-        if (!validateRenderingState(0)) {
-            synthesizeGLError(GraphicsContext3D::INVALID_OPERATION, "drawArrays", "attribs not setup correctly");
-            return;
+        if (!validateVertexAttributes(0)) {
+            synthesizeGLError(GraphicsContext3D::INVALID_OPERATION, functionName, "attribs not setup correctly");
+            return false;
         }
     }
 
     const char* reason = "framebuffer incomplete";
     if (m_framebufferBinding && !m_framebufferBinding->onAccess(graphicsContext3D(), !isResourceSafe(), &reason)) {
-        synthesizeGLError(GraphicsContext3D::INVALID_FRAMEBUFFER_OPERATION, "drawArrays", reason);
-        return;
+        synthesizeGLError(GraphicsContext3D::INVALID_FRAMEBUFFER_OPERATION, functionName, reason);
+        return false;
     }
+
+    return true;
+}
+
+void WebGLRenderingContext::drawArrays(GC3Denum mode, GC3Dint first, GC3Dsizei count, ExceptionCode& ec)
+{
+    UNUSED_PARAM(ec);
+
+    if (!validateDrawArrays("drawArrays", mode, first, count, 0))
+        return;
 
     clearIfComposited();
 
@@ -1985,24 +1946,22 @@ void WebGLRenderingContext::drawArrays(GC3Denum mode, GC3Dint first, GC3Dsizei c
     if (!isGLES2Compliant())
         vertexAttrib0Simulated = simulateVertexAttrib0(first + count - 1);
     if (!isGLES2NPOTStrict())
-        handleNPOTTextures("drawArrays", true);
+        checkTextureCompleteness("drawArrays", true);
     m_context->drawArrays(mode, first, count);
     if (!isGLES2Compliant() && vertexAttrib0Simulated)
         restoreStatesAfterVertexAttrib0Simulation();
     if (!isGLES2NPOTStrict())
-        handleNPOTTextures("drawArrays", false);
-    cleanupAfterGraphicsCall(true);
+        checkTextureCompleteness("drawArrays", false);
+    markContextChanged();
 }
 
-void WebGLRenderingContext::drawElements(GC3Denum mode, GC3Dsizei count, GC3Denum type, long long offset, ExceptionCode& ec)
+bool WebGLRenderingContext::validateDrawElements(const char* functionName, GC3Denum mode, GC3Dsizei count, GC3Denum type, long long offset, unsigned& numElements)
 {
-    UNUSED_PARAM(ec);
+    if (isContextLost() || !validateDrawMode(functionName, mode))
+        return false;
 
-    if (isContextLost() || !validateDrawMode("drawElements", mode))
-        return;
-
-    if (!validateStencilSettings("drawElements"))
-        return;
+    if (!validateStencilSettings(functionName))
+        return false;
 
     switch (type) {
     case GraphicsContext3D::UNSIGNED_BYTE:
@@ -2011,55 +1970,66 @@ void WebGLRenderingContext::drawElements(GC3Denum mode, GC3Dsizei count, GC3Denu
     case GraphicsContext3D::UNSIGNED_INT:
         if (m_oesElementIndexUint)
             break;
-        synthesizeGLError(GraphicsContext3D::INVALID_ENUM, "drawElements", "invalid type");
-        return;
+        synthesizeGLError(GraphicsContext3D::INVALID_ENUM, functionName, "invalid type");
+        return false;
     default:
-        synthesizeGLError(GraphicsContext3D::INVALID_ENUM, "drawElements", "invalid type");
-        return;
+        synthesizeGLError(GraphicsContext3D::INVALID_ENUM, functionName, "invalid type");
+        return false;
     }
 
     if (count < 0 || offset < 0) {
-        synthesizeGLError(GraphicsContext3D::INVALID_VALUE, "drawElements", "count or offset < 0");
-        return;
+        synthesizeGLError(GraphicsContext3D::INVALID_VALUE, functionName, "count or offset < 0");
+        return false;
     }
 
     if (!count) {
-        cleanupAfterGraphicsCall(true);
-        return;
+        markContextChanged();
+        return false;
     }
 
     if (!m_boundVertexArrayObject->getElementArrayBuffer()) {
-        synthesizeGLError(GraphicsContext3D::INVALID_OPERATION, "drawElements", "no ELEMENT_ARRAY_BUFFER bound");
-        return;
+        synthesizeGLError(GraphicsContext3D::INVALID_OPERATION, functionName, "no ELEMENT_ARRAY_BUFFER bound");
+        return false;
     }
 
-    unsigned numElements = 0;
     if (!isErrorGeneratedOnOutOfBoundsAccesses()) {
         // Ensure we have a valid rendering state
         if (!validateElementArraySize(count, type, static_cast<GC3Dintptr>(offset))) {
-            synthesizeGLError(GraphicsContext3D::INVALID_OPERATION, "drawElements", "request out of bounds for current ELEMENT_ARRAY_BUFFER");
-            return;
+            synthesizeGLError(GraphicsContext3D::INVALID_OPERATION, functionName, "request out of bounds for current ELEMENT_ARRAY_BUFFER");
+            return false;
         }
         if (!count)
-            return;
-        if (!validateIndexArrayConservative(type, numElements) || !validateRenderingState(numElements)) {
-            if (!validateIndexArrayPrecise(count, type, static_cast<GC3Dintptr>(offset), numElements) || !validateRenderingState(numElements)) {
-                synthesizeGLError(GraphicsContext3D::INVALID_OPERATION, "drawElements", "attempt to access out of bounds arrays");
-                return;
+            return false;
+        if (!validateIndexArrayConservative(type, numElements) || !validateVertexAttributes(numElements)) {
+            if (!validateIndexArrayPrecise(count, type, static_cast<GC3Dintptr>(offset), numElements) || !validateVertexAttributes(numElements)) {
+                synthesizeGLError(GraphicsContext3D::INVALID_OPERATION, functionName, "attempt to access out of bounds arrays");
+                return false;
             }
         }
     } else {
-        if (!validateRenderingState(0)) {
-            synthesizeGLError(GraphicsContext3D::INVALID_OPERATION, "drawElements", "attribs not setup correctly");
-            return;
+        if (!validateVertexAttributes(0)) {
+            synthesizeGLError(GraphicsContext3D::INVALID_OPERATION, functionName, "attribs not setup correctly");
+            return false;
         }
     }
 
     const char* reason = "framebuffer incomplete";
     if (m_framebufferBinding && !m_framebufferBinding->onAccess(graphicsContext3D(), !isResourceSafe(), &reason)) {
-        synthesizeGLError(GraphicsContext3D::INVALID_FRAMEBUFFER_OPERATION, "drawElements", reason);
-        return;
+        synthesizeGLError(GraphicsContext3D::INVALID_FRAMEBUFFER_OPERATION, functionName, reason);
+        return false;
     }
+
+    return true;
+}
+
+void WebGLRenderingContext::drawElements(GC3Denum mode, GC3Dsizei count, GC3Denum type, long long offset, ExceptionCode& ec)
+{
+    UNUSED_PARAM(ec);
+
+    unsigned numElements = 0;
+    if (!validateDrawElements("drawElements", mode, count, type, offset, numElements))
+        return;
+
     clearIfComposited();
 
     bool vertexAttrib0Simulated = false;
@@ -2069,13 +2039,13 @@ void WebGLRenderingContext::drawElements(GC3Denum mode, GC3Dsizei count, GC3Denu
         vertexAttrib0Simulated = simulateVertexAttrib0(numElements);
     }
     if (!isGLES2NPOTStrict())
-        handleNPOTTextures("drawElements", true);
+        checkTextureCompleteness("drawElements", true);
     m_context->drawElements(mode, count, type, static_cast<GC3Dintptr>(offset));
     if (!isGLES2Compliant() && vertexAttrib0Simulated)
         restoreStatesAfterVertexAttrib0Simulation();
     if (!isGLES2NPOTStrict())
-        handleNPOTTextures("drawElements", false);
-    cleanupAfterGraphicsCall(true);
+        checkTextureCompleteness("drawElements", false);
+    markContextChanged();
 }
 
 void WebGLRenderingContext::enable(GC3Denum cap)
@@ -2085,7 +2055,6 @@ void WebGLRenderingContext::enable(GC3Denum cap)
     if (cap == GraphicsContext3D::STENCIL_TEST) {
         m_stencilEnabled = true;
         applyStencilTest();
-        cleanupAfterGraphicsCall(false);
         return;
     }
     if (cap == GraphicsContext3D::SCISSOR_TEST) {
@@ -2094,7 +2063,6 @@ void WebGLRenderingContext::enable(GC3Denum cap)
             m_drawingBuffer->setScissorEnabled(m_scissorEnabled);
     }
     m_context->enable(cap);
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::enableVertexAttribArray(GC3Duint index, ExceptionCode& ec)
@@ -2111,7 +2079,6 @@ void WebGLRenderingContext::enableVertexAttribArray(GC3Duint index, ExceptionCod
     state.enabled = true;
 
     m_context->enableVertexAttribArray(index);
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::finish()
@@ -2119,7 +2086,6 @@ void WebGLRenderingContext::finish()
     if (isContextLost())
         return;
     m_context->finish();
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::flush()
@@ -2127,7 +2093,6 @@ void WebGLRenderingContext::flush()
     if (isContextLost())
         return;
     m_context->flush();
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::framebufferRenderbuffer(GC3Denum target, GC3Denum attachment, GC3Denum renderbuffertarget, WebGLRenderbuffer* buffer, ExceptionCode& ec)
@@ -2161,7 +2126,6 @@ void WebGLRenderingContext::framebufferRenderbuffer(GC3Denum target, GC3Denum at
     }
     m_framebufferBinding->setAttachmentForBoundFramebuffer(attachment, buffer);
     applyStencilTest();
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::framebufferTexture2D(GC3Denum target, GC3Denum attachment, GC3Denum textarget, WebGLTexture* texture, GC3Dint level, ExceptionCode& ec)
@@ -2201,7 +2165,6 @@ void WebGLRenderingContext::framebufferTexture2D(GC3Denum target, GC3Denum attac
     }
     m_framebufferBinding->setAttachmentForBoundFramebuffer(attachment, textarget, texture, level);
     applyStencilTest();
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::frontFace(GC3Denum mode)
@@ -2209,7 +2172,6 @@ void WebGLRenderingContext::frontFace(GC3Denum mode)
     if (isContextLost())
         return;
     m_context->frontFace(mode);
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::generateMipmap(GC3Denum target)
@@ -2221,6 +2183,11 @@ void WebGLRenderingContext::generateMipmap(GC3Denum target)
         return;
     if (!tex->canGenerateMipmaps()) {
         synthesizeGLError(GraphicsContext3D::INVALID_OPERATION, "generateMipmap", "level 0 not power of 2 or not all the same size");
+        return;
+    }
+    // FIXME: https://bugs.webkit.org/show_bug.cgi?id=123916. Compressed textures should be allowed in WebGL 2:
+    if (tex->isCompressed()) {
+        synthesizeGLError(GraphicsContext3D::INVALID_OPERATION, "generateMipmap", "trying to generate mipmaps from compressed texture");
         return;
     }
     if (!validateSettableTexFormat("generateMipmap", tex->getInternalFormat(target, 0)))
@@ -2241,7 +2208,6 @@ void WebGLRenderingContext::generateMipmap(GC3Denum target)
         m_context->texParameteri(target, GraphicsContext3D::TEXTURE_MIN_FILTER, tex->getMinFilter());
 #endif
     tex->generateMipmapLevelInfo();
-    cleanupAfterGraphicsCall(false);
 }
 
 PassRefPtr<WebGLActiveInfo> WebGLRenderingContext::getActiveAttrib(WebGLProgram* program, GC3Duint index, ExceptionCode& ec)
@@ -2252,6 +2218,9 @@ PassRefPtr<WebGLActiveInfo> WebGLRenderingContext::getActiveAttrib(WebGLProgram*
     ActiveInfo info;
     if (!m_context->getActiveAttrib(objectOrZero(program), index, info))
         return 0;
+
+    LOG(WebGL, "Returning active attribute %d: %s", index, info.name.utf8().data());
+
     return WebGLActiveInfo::create(info.name, info.type, info.size);
 }
 
@@ -2266,10 +2235,13 @@ PassRefPtr<WebGLActiveInfo> WebGLRenderingContext::getActiveUniform(WebGLProgram
     if (!isGLES2Compliant())
         if (info.size > 1 && !info.name.endsWith("[0]"))
             info.name.append("[0]");
+
+    LOG(WebGL, "Returning active uniform %d: %s", index, info.name.utf8().data());
+
     return WebGLActiveInfo::create(info.name, info.type, info.size);
 }
 
-bool WebGLRenderingContext::getAttachedShaders(WebGLProgram* program, Vector<RefPtr<WebGLShader> >& shaderObjects, ExceptionCode& ec)
+bool WebGLRenderingContext::getAttachedShaders(WebGLProgram* program, Vector<RefPtr<WebGLShader>>& shaderObjects, ExceptionCode& ec)
 {
     UNUSED_PARAM(ec);
     shaderObjects.clear();
@@ -2300,7 +2272,7 @@ GC3Dint WebGLRenderingContext::getAttribLocation(WebGLProgram* program, const St
         return -1;
     if (!program->getLinkStatus()) {
         synthesizeGLError(GraphicsContext3D::INVALID_OPERATION, "getAttribLocation", "program not linked");
-        return 0;
+        return -1;
     }
     return m_context->getAttribLocation(objectOrZero(program), name);
 }
@@ -2320,7 +2292,6 @@ WebGLGetInfo WebGLRenderingContext::getBufferParameter(GC3Denum target, GC3Denum
         return WebGLGetInfo();
     }
 
-    WebGLStateRestorer(this, false);
     GC3Dint value = 0;
     m_context->getBufferParameteriv(target, pname, &value);
     if (pname == GraphicsContext3D::BUFFER_SIZE)
@@ -2385,6 +2356,14 @@ WebGLExtension* WebGLRenderingContext::getExtension(const String& name)
         }
         return m_oesTextureFloat.get();
     }
+    if (equalIgnoringCase(name, "OES_texture_float_linear")
+        && m_context->getExtensions()->supports("GL_OES_texture_float_linear")) {
+        if (!m_oesTextureFloatLinear) {
+            m_context->getExtensions()->ensureEnabled("GL_OES_texture_float_linear");
+            m_oesTextureFloatLinear = OESTextureFloatLinear::create(this);
+        }
+        return m_oesTextureFloatLinear.get();
+    }
     if (equalIgnoringCase(name, "OES_texture_half_float")
         && m_context->getExtensions()->supports("GL_OES_texture_half_float")) {
         if (!m_oesTextureHalfFloat) {
@@ -2392,6 +2371,14 @@ WebGLExtension* WebGLRenderingContext::getExtension(const String& name)
             m_oesTextureHalfFloat = OESTextureHalfFloat::create(this);
         }
         return m_oesTextureHalfFloat.get();
+    }
+    if (equalIgnoringCase(name, "OES_texture_half_float_linear")
+        && m_context->getExtensions()->supports("GL_OES_texture_half_float_linear")) {
+        if (!m_oesTextureHalfFloatLinear) {
+            m_context->getExtensions()->ensureEnabled("GL_OES_texture_half_float_linear");
+            m_oesTextureHalfFloatLinear = OESTextureHalfFloatLinear::create(this);
+        }
+        return m_oesTextureHalfFloatLinear.get();
     }
     if (equalIgnoringCase(name, "OES_vertex_array_object")
         && m_context->getExtensions()->supports("GL_OES_vertex_array_object")) {
@@ -2409,11 +2396,7 @@ WebGLExtension* WebGLRenderingContext::getExtension(const String& name)
         }
         return m_oesElementIndexUint.get();
     }
-    if (equalIgnoringCase(name, "WEBGL_lose_context")
-        // FIXME: remove this after a certain grace period.
-        || equalIgnoringCase(name, "WEBKIT_WEBGL_lose_context")
-        // FIXME: Is it safe to remove WEBKIT_lose_context now?
-        || equalIgnoringCase(name, "WEBKIT_lose_context")) {
+    if (equalIgnoringCase(name, "WEBGL_lose_context")) {
         if (!m_webglLoseContext)
             m_webglLoseContext = WebGLLoseContext::create(this);
         return m_webglLoseContext.get();
@@ -2429,17 +2412,13 @@ WebGLExtension* WebGLRenderingContext::getExtension(const String& name)
         if (!m_webglCompressedTexturePVRTC)
             m_webglCompressedTexturePVRTC = WebGLCompressedTexturePVRTC::create(this);
     }
-    if ((equalIgnoringCase(name, "WEBGL_compressed_texture_s3tc")
-         // FIXME: remove this after a certain grace period.
-         || equalIgnoringCase(name, "WEBKIT_WEBGL_compressed_texture_s3tc"))
+    if (equalIgnoringCase(name, "WEBGL_compressed_texture_s3tc")
         && WebGLCompressedTextureS3TC::supported(this)) {
         if (!m_webglCompressedTextureS3TC)
             m_webglCompressedTextureS3TC = WebGLCompressedTextureS3TC::create(this);
         return m_webglCompressedTextureS3TC.get();
     }
-    if ((equalIgnoringCase(name, "WEBGL_depth_texture")
-        // FIXME: remove this after a certain grace period.
-        || equalIgnoringCase(name, "WEBKIT_WEBGL_depth_texture"))
+    if (equalIgnoringCase(name, "WEBGL_depth_texture")
         && WebGLDepthTexture::supported(graphicsContext3D())) {
         if (!m_webglDepthTexture) {
             m_context->getExtensions()->ensureEnabled("GL_CHROMIUM_depth_texture");
@@ -2453,6 +2432,13 @@ WebGLExtension* WebGLRenderingContext::getExtension(const String& name)
             m_extDrawBuffers = EXTDrawBuffers::create(this);
         }
         return m_extDrawBuffers.get();
+    }
+    if (equalIgnoringCase(name, "ANGLE_instanced_arrays") && ANGLEInstancedArrays::supported(this)) {
+        if (!m_angleInstancedArrays) {
+            m_context->getExtensions()->ensureEnabled("GL_ANGLE_instanced_arrays");
+            m_angleInstancedArrays = ANGLEInstancedArrays::create(this);
+        }
+        return m_angleInstancedArrays.get();
     }
     if (allowPrivilegedExtensions()) {
         if (equalIgnoringCase(name, "WEBGL_debug_renderer_info")) {
@@ -2502,7 +2488,6 @@ WebGLGetInfo WebGLRenderingContext::getFramebufferAttachmentParameter(GC3Denum t
         case GraphicsContext3D::FRAMEBUFFER_ATTACHMENT_TEXTURE_LEVEL:
         case GraphicsContext3D::FRAMEBUFFER_ATTACHMENT_TEXTURE_CUBE_MAP_FACE:
             {
-                WebGLStateRestorer(this, false);
                 GC3Dint value = 0;
                 m_context->getFramebufferAttachmentParameteriv(target, attachment, pname, &value);
                 return WebGLGetInfo(value);
@@ -2530,7 +2515,6 @@ WebGLGetInfo WebGLRenderingContext::getParameter(GC3Denum pname, ExceptionCode& 
     if (isContextLost())
         return WebGLGetInfo();
     const int intZero = 0;
-    WebGLStateRestorer(this, false);
     switch (pname) {
     case GraphicsContext3D::ACTIVE_TEXTURE:
         return getUnsignedIntParameter(pname);
@@ -2692,9 +2676,9 @@ WebGLGetInfo WebGLRenderingContext::getParameter(GC3Denum pname, ExceptionCode& 
     case GraphicsContext3D::SUBPIXEL_BITS:
         return getIntParameter(pname);
     case GraphicsContext3D::TEXTURE_BINDING_2D:
-        return WebGLGetInfo(PassRefPtr<WebGLTexture>(m_textureUnits[m_activeTextureUnit].m_texture2DBinding));
+        return WebGLGetInfo(PassRefPtr<WebGLTexture>(m_textureUnits[m_activeTextureUnit].texture2DBinding));
     case GraphicsContext3D::TEXTURE_BINDING_CUBE_MAP:
-        return WebGLGetInfo(PassRefPtr<WebGLTexture>(m_textureUnits[m_activeTextureUnit].m_textureCubeMapBinding));
+        return WebGLGetInfo(PassRefPtr<WebGLTexture>(m_textureUnits[m_activeTextureUnit].textureCubeMapBinding));
     case GraphicsContext3D::UNPACK_ALIGNMENT:
         return getIntParameter(pname);
     case GraphicsContext3D::UNPACK_FLIP_Y_WEBGL:
@@ -2769,7 +2753,6 @@ WebGLGetInfo WebGLRenderingContext::getProgramParameter(WebGLProgram* program, G
     if (isContextLost() || !validateWebGLObject("getProgramParameter", program))
         return WebGLGetInfo();
 
-    WebGLStateRestorer(this, false);
     GC3Dint value = 0;
     switch (pname) {
     case GraphicsContext3D::DELETE_STATUS:
@@ -2780,9 +2763,11 @@ WebGLGetInfo WebGLRenderingContext::getProgramParameter(WebGLProgram* program, G
     case GraphicsContext3D::LINK_STATUS:
         return WebGLGetInfo(program->getLinkStatus());
     case GraphicsContext3D::ATTACHED_SHADERS:
+        m_context->getProgramiv(objectOrZero(program), pname, &value);
+        return WebGLGetInfo(value);
     case GraphicsContext3D::ACTIVE_ATTRIBUTES:
     case GraphicsContext3D::ACTIVE_UNIFORMS:
-        m_context->getProgramiv(objectOrZero(program), pname, &value);
+        m_context->getNonBuiltInActiveSymbolCount(objectOrZero(program), pname, &value);
         return WebGLGetInfo(value);
     default:
         synthesizeGLError(GraphicsContext3D::INVALID_ENUM, "getProgramParameter", "invalid parameter name");
@@ -2797,7 +2782,6 @@ String WebGLRenderingContext::getProgramInfoLog(WebGLProgram* program, Exception
         return String();
     if (!validateWebGLObject("getProgramInfoLog", program))
         return "";
-    WebGLStateRestorer(this, false);
     return ensureNotNull(m_context->getProgramInfoLog(objectOrZero(program)));
 }
 
@@ -2847,7 +2831,6 @@ WebGLGetInfo WebGLRenderingContext::getRenderbufferParameter(GC3Denum target, GC
         return WebGLGetInfo(value);
     }
 
-    WebGLStateRestorer(this, false);
     GC3Dint value = 0;
     switch (pname) {
     case GraphicsContext3D::RENDERBUFFER_WIDTH:
@@ -2873,7 +2856,6 @@ WebGLGetInfo WebGLRenderingContext::getShaderParameter(WebGLShader* shader, GC3D
     UNUSED_PARAM(ec);
     if (isContextLost() || !validateWebGLObject("getShaderParameter", shader))
         return WebGLGetInfo();
-    WebGLStateRestorer(this, false);
     GC3Dint value = 0;
     switch (pname) {
     case GraphicsContext3D::DELETE_STATUS:
@@ -2897,7 +2879,6 @@ String WebGLRenderingContext::getShaderInfoLog(WebGLShader* shader, ExceptionCod
         return String();
     if (!validateWebGLObject("getShaderInfoLog", shader))
         return "";
-    WebGLStateRestorer(this, false);
     return ensureNotNull(m_context->getShaderInfoLog(objectOrZero(shader)));
 }
 
@@ -2948,6 +2929,12 @@ Vector<String> WebGLRenderingContext::getSupportedExtensions()
     Vector<String> result;
     if (m_context->getExtensions()->supports("GL_OES_texture_float"))
         result.append("OES_texture_float");
+    if (m_context->getExtensions()->supports("GL_OES_texture_float_linear"))
+        result.append("OES_texture_float_linear");
+    if (m_context->getExtensions()->supports("GL_OES_texture_half_float"))
+        result.append("OES_texture_half_float");
+    if (m_context->getExtensions()->supports("GL_OES_texture_half_float_linear"))
+        result.append("OES_texture_half_float_linear");
     if (m_context->getExtensions()->supports("GL_OES_standard_derivatives"))
         result.append("OES_standard_derivatives");
     if (m_context->getExtensions()->supports("GL_EXT_texture_filter_anisotropic"))
@@ -2962,11 +2949,13 @@ Vector<String> WebGLRenderingContext::getSupportedExtensions()
     if (WebGLCompressedTexturePVRTC::supported(this))
         result.append("WEBKIT_WEBGL_compressed_texture_pvrtc");
     if (WebGLCompressedTextureS3TC::supported(this))
-        result.append("WEBKIT_WEBGL_compressed_texture_s3tc");
+        result.append("WEBGL_compressed_texture_s3tc");
     if (WebGLDepthTexture::supported(graphicsContext3D()))
-        result.append("WEBKIT_WEBGL_depth_texture");
+        result.append("WEBGL_depth_texture");
     if (supportsDrawBuffers())
         result.append("EXT_draw_buffers");
+    if (ANGLEInstancedArrays::supported(this))
+        result.append("ANGLE_instanced_arrays");
 
     if (allowPrivilegedExtensions()) {
         if (m_context->getExtensions()->supports("GL_ANGLE_translated_shader_source"))
@@ -2985,7 +2974,6 @@ WebGLGetInfo WebGLRenderingContext::getTexParameter(GC3Denum target, GC3Denum pn
     WebGLTexture* tex = validateTextureBinding("getTexParameter", target, false);
     if (!tex)
         return WebGLGetInfo();
-    WebGLStateRestorer(this, false);
     GC3Dint value = 0;
     switch (pname) {
     case GraphicsContext3D::TEXTURE_MAG_FILTER:
@@ -3018,143 +3006,118 @@ WebGLGetInfo WebGLRenderingContext::getUniform(WebGLProgram* program, const WebG
     }
     GC3Dint location = uniformLocation->location();
 
-    WebGLStateRestorer(this, false);
-    // FIXME: make this more efficient using WebGLUniformLocation and caching types in it
-    GC3Dint activeUniforms = 0;
-    m_context->getProgramiv(objectOrZero(program), GraphicsContext3D::ACTIVE_UNIFORMS, &activeUniforms);
-    for (GC3Dint i = 0; i < activeUniforms; i++) {
-        ActiveInfo info;
-        if (!m_context->getActiveUniform(objectOrZero(program), i, info))
-            return WebGLGetInfo();
-        // Strip "[0]" from the name if it's an array.
-        if (info.size > 1 && info.name.endsWith("[0]"))
-            info.name = info.name.left(info.name.length() - 3);
-        // If it's an array, we need to iterate through each element, appending "[index]" to the name.
-        for (GC3Dint index = 0; index < info.size; ++index) {
-            String name = info.name;
-            if (info.size > 1 && index >= 1) {
-                name.append('[');
-                name.append(String::number(index));
-                name.append(']');
-            }
-            // Now need to look this up by name again to find its location
-            GC3Dint loc = m_context->getUniformLocation(objectOrZero(program), name);
-            if (loc == location) {
-                // Found it. Use the type in the ActiveInfo to determine the return type.
-                GC3Denum baseType;
-                unsigned int length;
-                switch (info.type) {
-                case GraphicsContext3D::BOOL:
-                    baseType = GraphicsContext3D::BOOL;
-                    length = 1;
-                    break;
-                case GraphicsContext3D::BOOL_VEC2:
-                    baseType = GraphicsContext3D::BOOL;
-                    length = 2;
-                    break;
-                case GraphicsContext3D::BOOL_VEC3:
-                    baseType = GraphicsContext3D::BOOL;
-                    length = 3;
-                    break;
-                case GraphicsContext3D::BOOL_VEC4:
-                    baseType = GraphicsContext3D::BOOL;
-                    length = 4;
-                    break;
-                case GraphicsContext3D::INT:
-                    baseType = GraphicsContext3D::INT;
-                    length = 1;
-                    break;
-                case GraphicsContext3D::INT_VEC2:
-                    baseType = GraphicsContext3D::INT;
-                    length = 2;
-                    break;
-                case GraphicsContext3D::INT_VEC3:
-                    baseType = GraphicsContext3D::INT;
-                    length = 3;
-                    break;
-                case GraphicsContext3D::INT_VEC4:
-                    baseType = GraphicsContext3D::INT;
-                    length = 4;
-                    break;
-                case GraphicsContext3D::FLOAT:
-                    baseType = GraphicsContext3D::FLOAT;
-                    length = 1;
-                    break;
-                case GraphicsContext3D::FLOAT_VEC2:
-                    baseType = GraphicsContext3D::FLOAT;
-                    length = 2;
-                    break;
-                case GraphicsContext3D::FLOAT_VEC3:
-                    baseType = GraphicsContext3D::FLOAT;
-                    length = 3;
-                    break;
-                case GraphicsContext3D::FLOAT_VEC4:
-                    baseType = GraphicsContext3D::FLOAT;
-                    length = 4;
-                    break;
-                case GraphicsContext3D::FLOAT_MAT2:
-                    baseType = GraphicsContext3D::FLOAT;
-                    length = 4;
-                    break;
-                case GraphicsContext3D::FLOAT_MAT3:
-                    baseType = GraphicsContext3D::FLOAT;
-                    length = 9;
-                    break;
-                case GraphicsContext3D::FLOAT_MAT4:
-                    baseType = GraphicsContext3D::FLOAT;
-                    length = 16;
-                    break;
-                case GraphicsContext3D::SAMPLER_2D:
-                case GraphicsContext3D::SAMPLER_CUBE:
-                    baseType = GraphicsContext3D::INT;
-                    length = 1;
-                    break;
-                default:
-                    // Can't handle this type
-                    synthesizeGLError(GraphicsContext3D::INVALID_VALUE, "getUniform", "unhandled type");
-                    return WebGLGetInfo();
-                }
-                switch (baseType) {
-                case GraphicsContext3D::FLOAT: {
-                    GC3Dfloat value[16] = {0};
-                    if (m_isRobustnessEXTSupported)
-                        m_context->getExtensions()->getnUniformfvEXT(objectOrZero(program), location, 16 * sizeof(GC3Dfloat), value);
-                    else
-                    m_context->getUniformfv(objectOrZero(program), location, value);
-                    if (length == 1)
-                        return WebGLGetInfo(value[0]);
-                    return WebGLGetInfo(Float32Array::create(value, length));
-                }
-                case GraphicsContext3D::INT: {
-                    GC3Dint value[4] = {0};
-                    if (m_isRobustnessEXTSupported)
-                        m_context->getExtensions()->getnUniformivEXT(objectOrZero(program), location, 4 * sizeof(GC3Dint), value);
-                    else
-                    m_context->getUniformiv(objectOrZero(program), location, value);
-                    if (length == 1)
-                        return WebGLGetInfo(value[0]);
-                    return WebGLGetInfo(Int32Array::create(value, length));
-                }
-                case GraphicsContext3D::BOOL: {
-                    GC3Dint value[4] = {0};
-                    if (m_isRobustnessEXTSupported)
-                        m_context->getExtensions()->getnUniformivEXT(objectOrZero(program), location, 4 * sizeof(GC3Dint), value);
-                    else
-                    m_context->getUniformiv(objectOrZero(program), location, value);
-                    if (length > 1) {
-                        bool boolValue[16] = {0};
-                        for (unsigned j = 0; j < length; j++)
-                            boolValue[j] = static_cast<bool>(value[j]);
-                        return WebGLGetInfo(boolValue, length);
-                    }
-                    return WebGLGetInfo(static_cast<bool>(value[0]));
-                }
-                default:
-                    notImplemented();
-                }
-            }
-        }
+    GC3Denum baseType;
+    unsigned length;
+    switch (uniformLocation->type()) {
+    case GraphicsContext3D::BOOL:
+        baseType = GraphicsContext3D::BOOL;
+        length = 1;
+        break;
+    case GraphicsContext3D::BOOL_VEC2:
+        baseType = GraphicsContext3D::BOOL;
+        length = 2;
+        break;
+    case GraphicsContext3D::BOOL_VEC3:
+        baseType = GraphicsContext3D::BOOL;
+        length = 3;
+        break;
+    case GraphicsContext3D::BOOL_VEC4:
+        baseType = GraphicsContext3D::BOOL;
+        length = 4;
+        break;
+    case GraphicsContext3D::INT:
+        baseType = GraphicsContext3D::INT;
+        length = 1;
+        break;
+    case GraphicsContext3D::INT_VEC2:
+        baseType = GraphicsContext3D::INT;
+        length = 2;
+        break;
+    case GraphicsContext3D::INT_VEC3:
+        baseType = GraphicsContext3D::INT;
+        length = 3;
+        break;
+    case GraphicsContext3D::INT_VEC4:
+        baseType = GraphicsContext3D::INT;
+        length = 4;
+        break;
+    case GraphicsContext3D::FLOAT:
+        baseType = GraphicsContext3D::FLOAT;
+        length = 1;
+        break;
+    case GraphicsContext3D::FLOAT_VEC2:
+        baseType = GraphicsContext3D::FLOAT;
+        length = 2;
+        break;
+    case GraphicsContext3D::FLOAT_VEC3:
+        baseType = GraphicsContext3D::FLOAT;
+        length = 3;
+        break;
+    case GraphicsContext3D::FLOAT_VEC4:
+        baseType = GraphicsContext3D::FLOAT;
+        length = 4;
+        break;
+    case GraphicsContext3D::FLOAT_MAT2:
+        baseType = GraphicsContext3D::FLOAT;
+        length = 4;
+        break;
+    case GraphicsContext3D::FLOAT_MAT3:
+        baseType = GraphicsContext3D::FLOAT;
+        length = 9;
+        break;
+    case GraphicsContext3D::FLOAT_MAT4:
+        baseType = GraphicsContext3D::FLOAT;
+        length = 16;
+        break;
+    case GraphicsContext3D::SAMPLER_2D:
+    case GraphicsContext3D::SAMPLER_CUBE:
+        baseType = GraphicsContext3D::INT;
+        length = 1;
+        break;
+    default:
+        // Can't handle this type
+        synthesizeGLError(GraphicsContext3D::INVALID_VALUE, "getUniform", "unhandled type");
+        return WebGLGetInfo();
     }
+    switch (baseType) {
+    case GraphicsContext3D::FLOAT: {
+        GC3Dfloat value[16] = {0};
+        if (m_isRobustnessEXTSupported)
+            m_context->getExtensions()->getnUniformfvEXT(objectOrZero(program), location, 16 * sizeof(GC3Dfloat), value);
+        else
+            m_context->getUniformfv(objectOrZero(program), location, value);
+        if (length == 1)
+            return WebGLGetInfo(value[0]);
+        return WebGLGetInfo(Float32Array::create(value, length));
+    }
+    case GraphicsContext3D::INT: {
+        GC3Dint value[4] = {0};
+        if (m_isRobustnessEXTSupported)
+            m_context->getExtensions()->getnUniformivEXT(objectOrZero(program), location, 4 * sizeof(GC3Dint), value);
+        else
+            m_context->getUniformiv(objectOrZero(program), location, value);
+        if (length == 1)
+            return WebGLGetInfo(value[0]);
+        return WebGLGetInfo(Int32Array::create(value, length));
+    }
+    case GraphicsContext3D::BOOL: {
+        GC3Dint value[4] = {0};
+        if (m_isRobustnessEXTSupported)
+            m_context->getExtensions()->getnUniformivEXT(objectOrZero(program), location, 4 * sizeof(GC3Dint), value);
+        else
+            m_context->getUniformiv(objectOrZero(program), location, value);
+        if (length > 1) {
+            bool boolValue[16] = {0};
+            for (unsigned j = 0; j < length; j++)
+                boolValue[j] = static_cast<bool>(value[j]);
+            return WebGLGetInfo(boolValue, length);
+        }
+        return WebGLGetInfo(static_cast<bool>(value[0]));
+    }
+    default:
+        notImplemented();
+    }
+
     // If we get here, something went wrong in our unfortunately complex logic above
     synthesizeGLError(GraphicsContext3D::INVALID_VALUE, "getUniform", "unknown error");
     return WebGLGetInfo();
@@ -3164,35 +3127,58 @@ PassRefPtr<WebGLUniformLocation> WebGLRenderingContext::getUniformLocation(WebGL
 {
     UNUSED_PARAM(ec);
     if (isContextLost() || !validateWebGLObject("getUniformLocation", program))
-        return 0;
+        return nullptr;
     if (!validateLocationLength("getUniformLocation", name))
-        return 0;
+        return nullptr;
     if (!validateString("getUniformLocation", name))
-        return 0;
+        return nullptr;
     if (isPrefixReserved(name))
-        return 0;
+        return nullptr;
     if (!program->getLinkStatus()) {
         synthesizeGLError(GraphicsContext3D::INVALID_OPERATION, "getUniformLocation", "program not linked");
-        return 0;
+        return nullptr;
     }
-    WebGLStateRestorer(this, false);
     GC3Dint uniformLocation = m_context->getUniformLocation(objectOrZero(program), name);
     if (uniformLocation == -1)
-        return 0;
-    return WebGLUniformLocation::create(program, uniformLocation);
+        return nullptr;
+
+    GC3Dint activeUniforms = 0;
+    m_context->getProgramiv(objectOrZero(program), GraphicsContext3D::ACTIVE_UNIFORMS, &activeUniforms);
+    for (GC3Dint i = 0; i < activeUniforms; i++) {
+        ActiveInfo info;
+        if (!m_context->getActiveUniform(objectOrZero(program), i, info))
+            return 0;
+        // Strip "[0]" from the name if it's an array.
+        if (info.name.endsWith("[0]"))
+            info.name = info.name.left(info.name.length() - 3);
+        // If it's an array, we need to iterate through each element, appending "[index]" to the name.
+        for (GC3Dint index = 0; index < info.size; ++index) {
+            String uniformName = info.name + "[" + String::number(index) + "]";
+
+            if (name == uniformName || name == info.name)
+                return WebGLUniformLocation::create(program, uniformLocation, info.type);
+        }
+    }
+    return nullptr;
 }
 
 WebGLGetInfo WebGLRenderingContext::getVertexAttrib(GC3Duint index, GC3Denum pname, ExceptionCode& ec)
 {
     UNUSED_PARAM(ec);
+
     if (isContextLost())
         return WebGLGetInfo();
-    WebGLStateRestorer(this, false);
+
     if (index >= m_maxVertexAttribs) {
         synthesizeGLError(GraphicsContext3D::INVALID_VALUE, "getVertexAttrib", "index out of range");
         return WebGLGetInfo();
     }
+
     const WebGLVertexArrayObjectOES::VertexAttribState& state = m_boundVertexArrayObject->getVertexAttribState(index);
+
+    if (m_angleInstancedArrays && pname == GraphicsContext3D::VERTEX_ATTRIB_ARRAY_DIVISOR_ANGLE)
+        return WebGLGetInfo(state.divisor);
+
     switch (pname) {
     case GraphicsContext3D::VERTEX_ATTRIB_ARRAY_BUFFER_BINDING:
         if ((!isGLES2Compliant() && !index && m_boundVertexArrayObject->getVertexAttribState(0).bufferBinding == m_vertexAttrib0Buffer)
@@ -3223,7 +3209,6 @@ long long WebGLRenderingContext::getVertexAttribOffset(GC3Duint index, GC3Denum 
     if (isContextLost())
         return 0;
     GC3Dsizeiptr result = m_context->getVertexAttribOffset(index, pname);
-    cleanupAfterGraphicsCall(false);
     return static_cast<long long>(result);
 }
 
@@ -3246,7 +3231,6 @@ void WebGLRenderingContext::hint(GC3Denum target, GC3Denum mode)
         return;
     }
     m_context->hint(target, mode);
-    cleanupAfterGraphicsCall(false);
 }
 
 GC3Dboolean WebGLRenderingContext::isBuffer(WebGLBuffer* buffer)
@@ -3260,7 +3244,7 @@ GC3Dboolean WebGLRenderingContext::isBuffer(WebGLBuffer* buffer)
     return m_context->isBuffer(buffer->object());
 }
 
-bool WebGLRenderingContext::isContextLost()
+bool WebGLRenderingContext::isContextLost() const
 {
     return m_contextLost;
 }
@@ -3328,7 +3312,6 @@ void WebGLRenderingContext::lineWidth(GC3Dfloat width)
     if (isContextLost())
         return;
     m_context->lineWidth(width);
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::linkProgram(WebGLProgram* program, ExceptionCode& ec)
@@ -3337,7 +3320,9 @@ void WebGLRenderingContext::linkProgram(WebGLProgram* program, ExceptionCode& ec
     if (isContextLost() || !validateWebGLObject("linkProgram", program))
         return;
     if (!isGLES2Compliant()) {
-        if (!program->getAttachedShader(GraphicsContext3D::VERTEX_SHADER) || !program->getAttachedShader(GraphicsContext3D::FRAGMENT_SHADER)) {
+        WebGLShader* vertexShader = program->getAttachedShader(GraphicsContext3D::VERTEX_SHADER);
+        WebGLShader* fragmentShader = program->getAttachedShader(GraphicsContext3D::FRAGMENT_SHADER);
+        if (!vertexShader || !vertexShader->isValid() || !fragmentShader || !fragmentShader->isValid() || !m_context->precisionsMatch(objectOrZero(vertexShader), objectOrZero(fragmentShader))) {
             program->setLinkStatus(false);
             return;
         }
@@ -3345,7 +3330,6 @@ void WebGLRenderingContext::linkProgram(WebGLProgram* program, ExceptionCode& ec
 
     m_context->linkProgram(objectOrZero(program));
     program->increaseLinkCount();
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::pixelStorei(GC3Denum pname, GC3Dint param)
@@ -3375,7 +3359,6 @@ void WebGLRenderingContext::pixelStorei(GC3Denum pname, GC3Dint param)
             else // GraphicsContext3D::UNPACK_ALIGNMENT:
                 m_unpackAlignment = param;
             m_context->pixelStorei(pname, param);
-            cleanupAfterGraphicsCall(false);
         } else {
             synthesizeGLError(GraphicsContext3D::INVALID_VALUE, "pixelStorei", "invalid parameter for alignment");
             return;
@@ -3392,7 +3375,6 @@ void WebGLRenderingContext::polygonOffset(GC3Dfloat factor, GC3Dfloat units)
     if (isContextLost())
         return;
     m_context->polygonOffset(factor, units);
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::readPixels(GC3Dint x, GC3Dint y, GC3Dsizei width, GC3Dsizei height, GC3Denum format, GC3Denum type, ArrayBufferView* pixels, ExceptionCode&)
@@ -3431,7 +3413,7 @@ void WebGLRenderingContext::readPixels(GC3Dint x, GC3Dint y, GC3Dsizei width, GC
         return;
     }
     // Validate array type against pixel type.
-    if (pixels->getType() != ArrayBufferView::TypeUint8) {
+    if (pixels->getType() != JSC::TypeUint8) {
         synthesizeGLError(GraphicsContext3D::INVALID_OPERATION, "readPixels", "ArrayBufferView not Uint8Array");
         return;
     }
@@ -3444,15 +3426,15 @@ void WebGLRenderingContext::readPixels(GC3Dint x, GC3Dint y, GC3Dsizei width, GC
     unsigned int totalBytesRequired = 0;
     unsigned int padding = 0;
     if (!m_isRobustnessEXTSupported) {
-    GC3Denum error = m_context->computeImageSizeInBytes(format, type, width, height, m_packAlignment, &totalBytesRequired, &padding);
-    if (error != GraphicsContext3D::NO_ERROR) {
-        synthesizeGLError(error, "readPixels", "invalid dimensions");
-        return;
-    }
-    if (pixels->byteLength() < totalBytesRequired) {
-        synthesizeGLError(GraphicsContext3D::INVALID_OPERATION, "readPixels", "ArrayBufferView not large enough for dimensions");
-        return;
-    }
+        GC3Denum error = m_context->computeImageSizeInBytes(format, type, width, height, m_packAlignment, &totalBytesRequired, &padding);
+        if (error != GraphicsContext3D::NO_ERROR) {
+            synthesizeGLError(error, "readPixels", "invalid dimensions");
+            return;
+        }
+        if (pixels->byteLength() < totalBytesRequired) {
+            synthesizeGLError(GraphicsContext3D::INVALID_OPERATION, "readPixels", "ArrayBufferView not large enough for dimensions");
+            return;
+        }
     }
 
     clearIfComposited();
@@ -3463,14 +3445,14 @@ void WebGLRenderingContext::readPixels(GC3Dint x, GC3Dint y, GC3Dsizei width, GC
         if (m_isRobustnessEXTSupported)
             m_context->getExtensions()->readnPixelsEXT(x, y, width, height, format, type, pixels->byteLength(), data);
         else
-        m_context->readPixels(x, y, width, height, format, type, data);
+            m_context->readPixels(x, y, width, height, format, type, data);
     }
 
-#if OS(DARWIN) || OS(QNX)
+#if OS(DARWIN)
     if (m_isRobustnessEXTSupported) // we haven't computed padding
         m_context->computeImageSizeInBytes(format, type, width, height, m_packAlignment, &totalBytesRequired, &padding);
     // FIXME: remove this section when GL driver bug on Mac AND the GLES driver bug
-    // on QC & Imagination QNX is fixed, i.e., when alpha is off, readPixels should
+    // on QC is fixed, i.e., when alpha is off, readPixels should
     // set alpha to 255 instead of 0.
     if (!m_framebufferBinding && !m_context->getContextAttributes().alpha) {
         unsigned char* pixels = reinterpret_cast<unsigned char*>(data);
@@ -3483,7 +3465,6 @@ void WebGLRenderingContext::readPixels(GC3Dint x, GC3Dint y, GC3Dsizei width, GC
         }
     }
 #endif
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::releaseShaderCompiler()
@@ -3491,7 +3472,6 @@ void WebGLRenderingContext::releaseShaderCompiler()
     if (isContextLost())
         return;
     m_context->releaseShaderCompiler();
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::renderbufferStorage(GC3Denum target, GC3Denum internalformat, GC3Dsizei width, GC3Dsizei height)
@@ -3518,12 +3498,10 @@ void WebGLRenderingContext::renderbufferStorage(GC3Denum target, GC3Denum intern
         m_renderbufferBinding->setInternalFormat(internalformat);
         m_renderbufferBinding->setIsValid(true);
         m_renderbufferBinding->setSize(width, height);
-        cleanupAfterGraphicsCall(false);
         break;
     case GraphicsContext3D::DEPTH_STENCIL:
         if (isDepthStencilSupported()) {
             m_context->renderbufferStorage(target, Extensions3D::DEPTH24_STENCIL8, width, height);
-            cleanupAfterGraphicsCall(false);
         }
         m_renderbufferBinding->setSize(width, height);
         m_renderbufferBinding->setIsValid(isDepthStencilSupported());
@@ -3541,7 +3519,6 @@ void WebGLRenderingContext::sampleCoverage(GC3Dfloat value, GC3Dboolean invert)
     if (isContextLost())
         return;
     m_context->sampleCoverage(value, invert);
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::scissor(GC3Dint x, GC3Dint y, GC3Dsizei width, GC3Dsizei height)
@@ -3551,7 +3528,6 @@ void WebGLRenderingContext::scissor(GC3Dint x, GC3Dint y, GC3Dsizei width, GC3Ds
     if (!validateSize("scissor", width, height))
         return;
     m_context->scissor(x, y, width, height);
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::shaderSource(WebGLShader* shader, const String& string, ExceptionCode& ec)
@@ -3564,7 +3540,6 @@ void WebGLRenderingContext::shaderSource(WebGLShader* shader, const String& stri
         return;
     shader->setSource(string);
     m_context->shaderSource(objectOrZero(shader), stringWithoutComments);
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::stencilFunc(GC3Denum func, GC3Dint ref, GC3Duint mask)
@@ -3578,7 +3553,6 @@ void WebGLRenderingContext::stencilFunc(GC3Denum func, GC3Dint ref, GC3Duint mas
     m_stencilFuncMask = mask;
     m_stencilFuncMaskBack = mask;
     m_context->stencilFunc(func, ref, mask);
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::stencilFuncSeparate(GC3Denum face, GC3Denum func, GC3Dint ref, GC3Duint mask)
@@ -3607,7 +3581,6 @@ void WebGLRenderingContext::stencilFuncSeparate(GC3Denum face, GC3Denum func, GC
         return;
     }
     m_context->stencilFuncSeparate(face, func, ref, mask);
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::stencilMask(GC3Duint mask)
@@ -3617,7 +3590,6 @@ void WebGLRenderingContext::stencilMask(GC3Duint mask)
     m_stencilMask = mask;
     m_stencilMaskBack = mask;
     m_context->stencilMask(mask);
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::stencilMaskSeparate(GC3Denum face, GC3Duint mask)
@@ -3640,7 +3612,6 @@ void WebGLRenderingContext::stencilMaskSeparate(GC3Denum face, GC3Duint mask)
         return;
     }
     m_context->stencilMaskSeparate(face, mask);
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::stencilOp(GC3Denum fail, GC3Denum zfail, GC3Denum zpass)
@@ -3648,7 +3619,6 @@ void WebGLRenderingContext::stencilOp(GC3Denum fail, GC3Denum zfail, GC3Denum zp
     if (isContextLost())
         return;
     m_context->stencilOp(fail, zfail, zpass);
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::stencilOpSeparate(GC3Denum face, GC3Denum fail, GC3Denum zfail, GC3Denum zpass)
@@ -3656,12 +3626,11 @@ void WebGLRenderingContext::stencilOpSeparate(GC3Denum face, GC3Denum fail, GC3D
     if (isContextLost())
         return;
     m_context->stencilOpSeparate(face, fail, zfail, zpass);
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::texImage2DBase(GC3Denum target, GC3Dint level, GC3Denum internalformat, GC3Dsizei width, GC3Dsizei height, GC3Dint border, GC3Denum format, GC3Denum type, const void* pixels, ExceptionCode& ec)
 {
-    // FIXME: For now we ignore any errors returned
+    // FIXME: For now we ignore any errors returned.
     ec = 0;
     WebGLTexture* tex = validateTextureBinding("texImage2D", target, true);
     ASSERT(validateTexFuncParameters("texImage2D", NotTexSubImage2D, target, level, internalformat, width, height, border, format, type));
@@ -3686,7 +3655,6 @@ void WebGLRenderingContext::texImage2DBase(GC3Denum target, GC3Dint level, GC3De
                               border, format, type, pixels);
     }
     tex->setLevelInfo(target, level, internalformat, width, height, type);
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::texImage2DImpl(GC3Denum target, GC3Dint level, GC3Denum internalformat, GC3Denum format, GC3Denum type, Image* image, GraphicsContext3D::ImageHtmlDomSource domSource, bool flipY, bool premultiplyAlpha, ExceptionCode& ec)
@@ -3721,13 +3689,6 @@ void WebGLRenderingContext::texImage2DImpl(GC3Denum target, GC3Dint level, GC3De
 
 bool WebGLRenderingContext::validateTexFunc(const char* functionName, TexFuncValidationFunctionType functionType, TexFuncValidationSourceType sourceType, GC3Denum target, GC3Dint level, GC3Denum internalformat, GC3Dsizei width, GC3Dsizei height, GC3Dint border, GC3Denum format, GC3Denum type, GC3Dint xoffset, GC3Dint yoffset)
 {
-    // FIXME: Uploading {ImageData, HTMLImageElement, HTMLCanvasElement, HTMLVideoElement} to half floating point texture is not supported yet.
-    // See https://bugs.webkit.org/show_bug.cgi?id=110936.
-    if (sourceType != SourceArrayBufferView && type == GraphicsContext3D::HALF_FLOAT_OES) {
-        synthesizeGLError(GraphicsContext3D::INVALID_OPERATION, functionName, "Operation not supported yet");
-        return false;
-    }
-
     if (!validateTexFuncParameters(functionName, functionType, target, level, internalformat, width, height, border, format, type))
         return false;
 
@@ -3810,10 +3771,10 @@ void WebGLRenderingContext::texImage2D(GC3Denum target, GC3Dint level, GC3Denum 
     if (!m_unpackFlipY && !m_unpackPremultiplyAlpha && format == GraphicsContext3D::RGBA && type == GraphicsContext3D::UNSIGNED_BYTE)
         needConversion = false;
     else {
-    if (!m_context->extractImageData(pixels, format, type, m_unpackFlipY, m_unpackPremultiplyAlpha, data)) {
-        synthesizeGLError(GraphicsContext3D::INVALID_VALUE, "texImage2D", "bad image data");
-        return;
-    }
+        if (!m_context->extractImageData(pixels, format, type, m_unpackFlipY, m_unpackPremultiplyAlpha, data)) {
+            synthesizeGLError(GraphicsContext3D::INVALID_VALUE, "texImage2D", "bad image data");
+            return;
+        }
     }
     if (m_unpackAlignment != 1)
         m_context->pixelStorei(GraphicsContext3D::UNPACK_ALIGNMENT, 1);
@@ -3822,17 +3783,37 @@ void WebGLRenderingContext::texImage2D(GC3Denum target, GC3Dint level, GC3Denum 
         m_context->pixelStorei(GraphicsContext3D::UNPACK_ALIGNMENT, m_unpackAlignment);
 }
 
+PassRefPtr<Image> WebGLRenderingContext::drawImageIntoBuffer(Image* image, int width, int height, int deviceScaleFactor)
+{
+    IntSize size(width, height);
+    size.scale(deviceScaleFactor);
+    ImageBuffer* buf = m_generatedImageCache.imageBuffer(size);
+    if (!buf) {
+        synthesizeGLError(GraphicsContext3D::OUT_OF_MEMORY, "texImage2D", "out of memory");
+        return 0;
+    }
+
+    IntRect srcRect(IntPoint(), image->size());
+    IntRect destRect(IntPoint(), size);
+    buf->context()->drawImage(image, ColorSpaceDeviceRGB, destRect, srcRect);
+    return buf->copyImage(ImageBuffer::fastCopyImageMode());
+}
+
 void WebGLRenderingContext::texImage2D(GC3Denum target, GC3Dint level, GC3Denum internalformat,
                                        GC3Denum format, GC3Denum type, HTMLImageElement* image, ExceptionCode& ec)
 {
     ec = 0;
     if (isContextLost() || !validateHTMLImageElement("texImage2D", image, ec))
         return;
-    Image* imageForRender = image->cachedImage()->imageForRenderer(image->renderer());
+
+    RefPtr<Image> imageForRender = image->cachedImage()->imageForRenderer(image->renderer());
+    if (imageForRender->isSVGImage())
+        imageForRender = drawImageIntoBuffer(imageForRender.get(), image->width(), image->height(), canvas()->deviceScaleFactor());
+
     if (!imageForRender || !validateTexFunc("texImage2D", NotTexSubImage2D, SourceHTMLImageElement, target, level, internalformat, imageForRender->width(), imageForRender->height(), 0, format, type, 0, 0))
         return;
 
-    texImage2DImpl(target, level, internalformat, format, type, imageForRender, GraphicsContext3D::HtmlDomImage, m_unpackFlipY, m_unpackPremultiplyAlpha, ec);
+    texImage2DImpl(target, level, internalformat, format, type, imageForRender.get(), GraphicsContext3D::HtmlDomImage, m_unpackFlipY, m_unpackPremultiplyAlpha, ec);
 }
 
 void WebGLRenderingContext::texImage2D(GC3Denum target, GC3Dint level, GC3Denum internalformat,
@@ -3853,7 +3834,6 @@ void WebGLRenderingContext::texImage2D(GC3Denum target, GC3Dint level, GC3Denum 
         ImageBuffer* buffer = canvas->buffer();
         if (buffer && buffer->copyToPlatformTexture(*m_context.get(), texture->object(), internalformat, m_unpackPremultiplyAlpha, m_unpackFlipY)) {
             texture->setLevelInfo(target, level, internalformat, canvas->width(), canvas->height(), type);
-            cleanupAfterGraphicsCall(false);
             return;
         }
     }
@@ -3869,7 +3849,7 @@ void WebGLRenderingContext::texImage2D(GC3Denum target, GC3Dint level, GC3Denum 
 PassRefPtr<Image> WebGLRenderingContext::videoFrameToImage(HTMLVideoElement* video, BackingStoreCopy backingStoreCopy, ExceptionCode&)
 {
     IntSize size(video->videoWidth(), video->videoHeight());
-    ImageBuffer* buf = m_videoCache.imageBuffer(size);
+    ImageBuffer* buf = m_generatedImageCache.imageBuffer(size);
     if (!buf) {
         synthesizeGLError(GraphicsContext3D::OUT_OF_MEMORY, "texImage2D", "out of memory");
         return 0;
@@ -3900,7 +3880,6 @@ void WebGLRenderingContext::texImage2D(GC3Denum target, GC3Dint level, GC3Denum 
         && !level) {
         if (video->copyVideoTextureToPlatformTexture(m_context.get(), texture->object(), level, type, internalformat, m_unpackPremultiplyAlpha, m_unpackFlipY)) {
             texture->setLevelInfo(target, level, internalformat, video->videoWidth(), video->videoHeight(), type);
-            cleanupAfterGraphicsCall(false);
             return;
         }
     }
@@ -3949,7 +3928,6 @@ void WebGLRenderingContext::texParameter(GC3Denum target, GC3Denum pname, GC3Dfl
         tex->setParameteri(pname, parami);
         m_context->texParameteri(target, pname, parami);
     }
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::texParameterf(GC3Denum target, GC3Denum pname, GC3Dfloat param)
@@ -3982,7 +3960,6 @@ void WebGLRenderingContext::texSubImage2DBase(GC3Denum target, GC3Dint level, GC
     ASSERT(tex->getInternalFormat(target, level) == format);
     ASSERT(tex->getType(target, level) == type);
     m_context->texSubImage2D(target, level, xoffset, yoffset, width, height, format, type, pixels);
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::texSubImage2DImpl(GC3Denum target, GC3Dint level, GC3Dint xoffset, GC3Dint yoffset, GC3Denum format, GC3Denum type, Image* image, GraphicsContext3D::ImageHtmlDomSource domSource, bool flipY, bool premultiplyAlpha, ExceptionCode& ec)
@@ -4056,10 +4033,10 @@ void WebGLRenderingContext::texSubImage2D(GC3Denum target, GC3Dint level, GC3Din
     if (format == GraphicsContext3D::RGBA && type == GraphicsContext3D::UNSIGNED_BYTE && !m_unpackFlipY && !m_unpackPremultiplyAlpha)
         needConversion = false;
     else {
-    if (!m_context->extractImageData(pixels, format, type, m_unpackFlipY, m_unpackPremultiplyAlpha, data)) {
-        synthesizeGLError(GraphicsContext3D::INVALID_VALUE, "texSubImage2D", "bad image data");
-        return;
-    }
+        if (!m_context->extractImageData(pixels, format, type, m_unpackFlipY, m_unpackPremultiplyAlpha, data)) {
+            synthesizeGLError(GraphicsContext3D::INVALID_VALUE, "texSubImage2D", "bad image data");
+            return;
+        }
     }
     if (m_unpackAlignment != 1)
         m_context->pixelStorei(GraphicsContext3D::UNPACK_ALIGNMENT, 1);
@@ -4074,11 +4051,15 @@ void WebGLRenderingContext::texSubImage2D(GC3Denum target, GC3Dint level, GC3Din
     ec = 0;
     if (isContextLost() || !validateHTMLImageElement("texSubImage2D", image, ec))
         return;
-    Image* imageForRender = image->cachedImage()->imageForRenderer(image->renderer());
+
+    RefPtr<Image> imageForRender = image->cachedImage()->imageForRenderer(image->renderer());
+    if (imageForRender->isSVGImage())
+        imageForRender = drawImageIntoBuffer(imageForRender.get(), image->width(), image->height(), canvas()->deviceScaleFactor());
+
     if (!imageForRender || !validateTexFunc("texSubImage2D", TexSubImage2D, SourceHTMLImageElement, target, level, format, imageForRender->width(), imageForRender->height(), 0, format, type, xoffset, yoffset))
         return;
 
-    texSubImage2DImpl(target, level, xoffset, yoffset, format, type, imageForRender, GraphicsContext3D::HtmlDomImage, m_unpackFlipY, m_unpackPremultiplyAlpha, ec);
+    texSubImage2DImpl(target, level, xoffset, yoffset, format, type, imageForRender.get(), GraphicsContext3D::HtmlDomImage, m_unpackFlipY, m_unpackPremultiplyAlpha, ec);
 }
 
 void WebGLRenderingContext::texSubImage2D(GC3Denum target, GC3Dint level, GC3Dint xoffset, GC3Dint yoffset,
@@ -4124,7 +4105,6 @@ void WebGLRenderingContext::uniform1f(const WebGLUniformLocation* location, GC3D
     }
 
     m_context->uniform1f(location->location(), x);
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::uniform1fv(const WebGLUniformLocation* location, Float32Array* v, ExceptionCode& ec)
@@ -4134,7 +4114,6 @@ void WebGLRenderingContext::uniform1fv(const WebGLUniformLocation* location, Flo
         return;
 
     m_context->uniform1fv(location->location(), v->length(), v->data());
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::uniform1fv(const WebGLUniformLocation* location, GC3Dfloat* v, GC3Dsizei size, ExceptionCode& ec)
@@ -4144,7 +4123,6 @@ void WebGLRenderingContext::uniform1fv(const WebGLUniformLocation* location, GC3
         return;
 
     m_context->uniform1fv(location->location(), size, v);
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::uniform1i(const WebGLUniformLocation* location, GC3Dint x, ExceptionCode& ec)
@@ -4158,8 +4136,12 @@ void WebGLRenderingContext::uniform1i(const WebGLUniformLocation* location, GC3D
         return;
     }
 
+    if ((location->type() == GraphicsContext3D::SAMPLER_2D || location->type() == GraphicsContext3D::SAMPLER_CUBE) && x >= (int)m_textureUnits.size()) {
+        synthesizeGLError(GraphicsContext3D::INVALID_VALUE, "uniform1i", "invalid texture unit");
+        return;
+    }
+
     m_context->uniform1i(location->location(), x);
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::uniform1iv(const WebGLUniformLocation* location, Int32Array* v, ExceptionCode& ec)
@@ -4168,8 +4150,16 @@ void WebGLRenderingContext::uniform1iv(const WebGLUniformLocation* location, Int
     if (isContextLost() || !validateUniformParameters("uniform1iv", location, v, 1))
         return;
 
+    if (location->type() == GraphicsContext3D::SAMPLER_2D || location->type() == GraphicsContext3D::SAMPLER_CUBE)
+        for (unsigned i = 0; i < v->length(); ++i) {
+            if (v->data()[i] >= static_cast<int>(m_textureUnits.size())) {
+                LOG(WebGL, "Texture unit size=%zu, v[%d]=%d. Location type = %04X.", m_textureUnits.size(), i, v->data()[i], location->type());
+                synthesizeGLError(GraphicsContext3D::INVALID_VALUE, "uniform1iv", "invalid texture unit");
+                return;
+            }
+        }
+
     m_context->uniform1iv(location->location(), v->length(), v->data());
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::uniform1iv(const WebGLUniformLocation* location, GC3Dint* v, GC3Dsizei size, ExceptionCode& ec)
@@ -4178,8 +4168,15 @@ void WebGLRenderingContext::uniform1iv(const WebGLUniformLocation* location, GC3
     if (isContextLost() || !validateUniformParameters("uniform1iv", location, v, size, 1))
         return;
 
+    if (location->type() == GraphicsContext3D::SAMPLER_2D || location->type() == GraphicsContext3D::SAMPLER_CUBE)
+        for (unsigned i = 0; i < static_cast<unsigned>(size); ++i) {
+            if (((GC3Dint*)v)[i] >= static_cast<int>(m_textureUnits.size())) {
+                synthesizeGLError(GraphicsContext3D::INVALID_VALUE, "uniform1iv", "invalid texture unit");
+                return;
+            }
+        }
+
     m_context->uniform1iv(location->location(), size, v);
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::uniform2f(const WebGLUniformLocation* location, GC3Dfloat x, GC3Dfloat y, ExceptionCode& ec)
@@ -4194,7 +4191,6 @@ void WebGLRenderingContext::uniform2f(const WebGLUniformLocation* location, GC3D
     }
 
     m_context->uniform2f(location->location(), x, y);
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::uniform2fv(const WebGLUniformLocation* location, Float32Array* v, ExceptionCode& ec)
@@ -4204,7 +4200,6 @@ void WebGLRenderingContext::uniform2fv(const WebGLUniformLocation* location, Flo
         return;
 
     m_context->uniform2fv(location->location(), v->length() / 2, v->data());
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::uniform2fv(const WebGLUniformLocation* location, GC3Dfloat* v, GC3Dsizei size, ExceptionCode& ec)
@@ -4214,7 +4209,6 @@ void WebGLRenderingContext::uniform2fv(const WebGLUniformLocation* location, GC3
         return;
 
     m_context->uniform2fv(location->location(), size / 2, v);
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::uniform2i(const WebGLUniformLocation* location, GC3Dint x, GC3Dint y, ExceptionCode& ec)
@@ -4229,7 +4223,6 @@ void WebGLRenderingContext::uniform2i(const WebGLUniformLocation* location, GC3D
     }
 
     m_context->uniform2i(location->location(), x, y);
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::uniform2iv(const WebGLUniformLocation* location, Int32Array* v, ExceptionCode& ec)
@@ -4239,7 +4232,6 @@ void WebGLRenderingContext::uniform2iv(const WebGLUniformLocation* location, Int
         return;
 
     m_context->uniform2iv(location->location(), v->length() / 2, v->data());
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::uniform2iv(const WebGLUniformLocation* location, GC3Dint* v, GC3Dsizei size, ExceptionCode& ec)
@@ -4249,7 +4241,6 @@ void WebGLRenderingContext::uniform2iv(const WebGLUniformLocation* location, GC3
         return;
 
     m_context->uniform2iv(location->location(), size / 2, v);
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::uniform3f(const WebGLUniformLocation* location, GC3Dfloat x, GC3Dfloat y, GC3Dfloat z, ExceptionCode& ec)
@@ -4264,7 +4255,6 @@ void WebGLRenderingContext::uniform3f(const WebGLUniformLocation* location, GC3D
     }
 
     m_context->uniform3f(location->location(), x, y, z);
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::uniform3fv(const WebGLUniformLocation* location, Float32Array* v, ExceptionCode& ec)
@@ -4274,7 +4264,6 @@ void WebGLRenderingContext::uniform3fv(const WebGLUniformLocation* location, Flo
         return;
 
     m_context->uniform3fv(location->location(), v->length() / 3, v->data());
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::uniform3fv(const WebGLUniformLocation* location, GC3Dfloat* v, GC3Dsizei size, ExceptionCode& ec)
@@ -4284,7 +4273,6 @@ void WebGLRenderingContext::uniform3fv(const WebGLUniformLocation* location, GC3
         return;
 
     m_context->uniform3fv(location->location(), size / 3, v);
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::uniform3i(const WebGLUniformLocation* location, GC3Dint x, GC3Dint y, GC3Dint z, ExceptionCode& ec)
@@ -4299,7 +4287,6 @@ void WebGLRenderingContext::uniform3i(const WebGLUniformLocation* location, GC3D
     }
 
     m_context->uniform3i(location->location(), x, y, z);
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::uniform3iv(const WebGLUniformLocation* location, Int32Array* v, ExceptionCode& ec)
@@ -4309,7 +4296,6 @@ void WebGLRenderingContext::uniform3iv(const WebGLUniformLocation* location, Int
         return;
 
     m_context->uniform3iv(location->location(), v->length() / 3, v->data());
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::uniform3iv(const WebGLUniformLocation* location, GC3Dint* v, GC3Dsizei size, ExceptionCode& ec)
@@ -4319,7 +4305,6 @@ void WebGLRenderingContext::uniform3iv(const WebGLUniformLocation* location, GC3
         return;
 
     m_context->uniform3iv(location->location(), size / 3, v);
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::uniform4f(const WebGLUniformLocation* location, GC3Dfloat x, GC3Dfloat y, GC3Dfloat z, GC3Dfloat w, ExceptionCode& ec)
@@ -4334,7 +4319,6 @@ void WebGLRenderingContext::uniform4f(const WebGLUniformLocation* location, GC3D
     }
 
     m_context->uniform4f(location->location(), x, y, z, w);
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::uniform4fv(const WebGLUniformLocation* location, Float32Array* v, ExceptionCode& ec)
@@ -4344,7 +4328,6 @@ void WebGLRenderingContext::uniform4fv(const WebGLUniformLocation* location, Flo
         return;
 
     m_context->uniform4fv(location->location(), v->length() / 4, v->data());
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::uniform4fv(const WebGLUniformLocation* location, GC3Dfloat* v, GC3Dsizei size, ExceptionCode& ec)
@@ -4354,7 +4337,6 @@ void WebGLRenderingContext::uniform4fv(const WebGLUniformLocation* location, GC3
         return;
 
     m_context->uniform4fv(location->location(), size / 4, v);
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::uniform4i(const WebGLUniformLocation* location, GC3Dint x, GC3Dint y, GC3Dint z, GC3Dint w, ExceptionCode& ec)
@@ -4369,7 +4351,6 @@ void WebGLRenderingContext::uniform4i(const WebGLUniformLocation* location, GC3D
     }
 
     m_context->uniform4i(location->location(), x, y, z, w);
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::uniform4iv(const WebGLUniformLocation* location, Int32Array* v, ExceptionCode& ec)
@@ -4379,7 +4360,6 @@ void WebGLRenderingContext::uniform4iv(const WebGLUniformLocation* location, Int
         return;
 
     m_context->uniform4iv(location->location(), v->length() / 4, v->data());
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::uniform4iv(const WebGLUniformLocation* location, GC3Dint* v, GC3Dsizei size, ExceptionCode& ec)
@@ -4389,7 +4369,6 @@ void WebGLRenderingContext::uniform4iv(const WebGLUniformLocation* location, GC3
         return;
 
     m_context->uniform4iv(location->location(), size / 4, v);
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::uniformMatrix2fv(const WebGLUniformLocation* location, GC3Dboolean transpose, Float32Array* v, ExceptionCode& ec)
@@ -4398,7 +4377,6 @@ void WebGLRenderingContext::uniformMatrix2fv(const WebGLUniformLocation* locatio
     if (isContextLost() || !validateUniformMatrixParameters("uniformMatrix2fv", location, transpose, v, 4))
         return;
     m_context->uniformMatrix2fv(location->location(), v->length() / 4, transpose, v->data());
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::uniformMatrix2fv(const WebGLUniformLocation* location, GC3Dboolean transpose, GC3Dfloat* v, GC3Dsizei size, ExceptionCode& ec)
@@ -4407,7 +4385,6 @@ void WebGLRenderingContext::uniformMatrix2fv(const WebGLUniformLocation* locatio
     if (isContextLost() || !validateUniformMatrixParameters("uniformMatrix2fv", location, transpose, v, size, 4))
         return;
     m_context->uniformMatrix2fv(location->location(), size / 4, transpose, v);
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::uniformMatrix3fv(const WebGLUniformLocation* location, GC3Dboolean transpose, Float32Array* v, ExceptionCode& ec)
@@ -4416,7 +4393,6 @@ void WebGLRenderingContext::uniformMatrix3fv(const WebGLUniformLocation* locatio
     if (isContextLost() || !validateUniformMatrixParameters("uniformMatrix3fv", location, transpose, v, 9))
         return;
     m_context->uniformMatrix3fv(location->location(), v->length() / 9, transpose, v->data());
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::uniformMatrix3fv(const WebGLUniformLocation* location, GC3Dboolean transpose, GC3Dfloat* v, GC3Dsizei size, ExceptionCode& ec)
@@ -4425,7 +4401,6 @@ void WebGLRenderingContext::uniformMatrix3fv(const WebGLUniformLocation* locatio
     if (isContextLost() || !validateUniformMatrixParameters("uniformMatrix3fv", location, transpose, v, size, 9))
         return;
     m_context->uniformMatrix3fv(location->location(), size / 9, transpose, v);
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::uniformMatrix4fv(const WebGLUniformLocation* location, GC3Dboolean transpose, Float32Array* v, ExceptionCode& ec)
@@ -4434,7 +4409,6 @@ void WebGLRenderingContext::uniformMatrix4fv(const WebGLUniformLocation* locatio
     if (isContextLost() || !validateUniformMatrixParameters("uniformMatrix4fv", location, transpose, v, 16))
         return;
     m_context->uniformMatrix4fv(location->location(), v->length() / 16, transpose, v->data());
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::uniformMatrix4fv(const WebGLUniformLocation* location, GC3Dboolean transpose, GC3Dfloat* v, GC3Dsizei size, ExceptionCode& ec)
@@ -4443,7 +4417,6 @@ void WebGLRenderingContext::uniformMatrix4fv(const WebGLUniformLocation* locatio
     if (isContextLost() || !validateUniformMatrixParameters("uniformMatrix4fv", location, transpose, v, size, 16))
         return;
     m_context->uniformMatrix4fv(location->location(), size / 16, transpose, v);
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::useProgram(WebGLProgram* program, ExceptionCode& ec)
@@ -4456,7 +4429,6 @@ void WebGLRenderingContext::useProgram(WebGLProgram* program, ExceptionCode& ec)
         program = 0;
     if (program && !program->getLinkStatus()) {
         synthesizeGLError(GraphicsContext3D::INVALID_OPERATION, "useProgram", "program not valid");
-        cleanupAfterGraphicsCall(false);
         return;
     }
     if (m_currentProgram != program) {
@@ -4467,7 +4439,6 @@ void WebGLRenderingContext::useProgram(WebGLProgram* program, ExceptionCode& ec)
         if (program)
             program->onAttached();
     }
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::validateProgram(WebGLProgram* program, ExceptionCode& ec)
@@ -4476,7 +4447,6 @@ void WebGLRenderingContext::validateProgram(WebGLProgram* program, ExceptionCode
     if (isContextLost() || !validateWebGLObject("validateProgram", program))
         return;
     m_context->validateProgram(objectOrZero(program));
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::vertexAttrib1f(GC3Duint index, GC3Dfloat v0)
@@ -4581,7 +4551,6 @@ void WebGLRenderingContext::vertexAttribPointer(GC3Duint index, GC3Dint size, GC
 
     m_boundVertexArrayObject->setVertexAttribState(index, bytesPerElement, size, type, normalized, stride, static_cast<GC3Dintptr>(offset), m_boundArrayBuffer);
     m_context->vertexAttribPointer(index, size, type, normalized, stride, static_cast<GC3Dintptr>(offset));
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::viewport(GC3Dint x, GC3Dint y, GC3Dsizei width, GC3Dsizei height)
@@ -4591,7 +4560,6 @@ void WebGLRenderingContext::viewport(GC3Dint x, GC3Dint y, GC3Dsizei width, GC3D
     if (!validateSize("viewport", width, height))
         return;
     m_context->viewport(x, y, width, height);
-    cleanupAfterGraphicsCall(false);
 }
 
 void WebGLRenderingContext::forceLostContext(WebGLRenderingContext::LostContextMode mode)
@@ -4615,10 +4583,8 @@ void WebGLRenderingContext::loseContextImpl(WebGLRenderingContext::LostContextMo
     if (mode == RealLostContext) {
         // Inform the embedder that a lost context was received. In response, the embedder might
         // decide to take action such as asking the user for permission to use WebGL again.
-        if (Document* document = canvas()->document()) {
-            if (Frame* frame = document->frame())
-                frame->loader()->client()->didLoseWebGLContext(m_context->getExtensions()->getGraphicsResetStatusARB());
-        }
+        if (Frame* frame = canvas()->document().frame())
+            frame->loader().client().didLoseWebGLContext(m_context->getExtensions()->getGraphicsResetStatusARB());
     }
 
     detachAndRemoveAllObjects();
@@ -4666,12 +4632,10 @@ void WebGLRenderingContext::forceRestoreContext()
         m_restoreTimer.startOneShot(0);
 }
 
-#if USE(ACCELERATED_COMPOSITING)
 PlatformLayer* WebGLRenderingContext::platformLayer() const
 {
-    return m_context->platformLayer();
+    return (!isContextLost()) ? m_context->platformLayer() : 0;
 }
-#endif
 
 void WebGLRenderingContext::removeSharedObject(WebGLSharedObject* object)
 {
@@ -4798,12 +4762,14 @@ WebGLGetInfo WebGLRenderingContext::getWebGLIntArrayParameter(GC3Denum pname)
     return WebGLGetInfo(Int32Array::create(value, length));
 }
 
-void WebGLRenderingContext::handleNPOTTextures(const char* functionName, bool prepareToDraw)
+void WebGLRenderingContext::checkTextureCompleteness(const char* functionName, bool prepareToDraw)
 {
     bool resetActiveUnit = false;
+    WebGLTexture::TextureExtensionFlag extensions = static_cast<WebGLTexture::TextureExtensionFlag>((m_oesTextureFloatLinear ? WebGLTexture::TextureExtensionFloatLinearEnabled : 0) | (m_oesTextureHalfFloatLinear ? WebGLTexture::TextureExtensionHalfFloatLinearEnabled : 0));
+
     for (unsigned ii = 0; ii < m_textureUnits.size(); ++ii) {
-        if ((m_textureUnits[ii].m_texture2DBinding && m_textureUnits[ii].m_texture2DBinding->needToUseBlackTexture())
-            || (m_textureUnits[ii].m_textureCubeMapBinding && m_textureUnits[ii].m_textureCubeMapBinding->needToUseBlackTexture())) {
+        if ((m_textureUnits[ii].texture2DBinding && m_textureUnits[ii].texture2DBinding->needToUseBlackTexture(extensions))
+            || (m_textureUnits[ii].textureCubeMapBinding && m_textureUnits[ii].textureCubeMapBinding->needToUseBlackTexture(extensions))) {
             if (ii != m_activeTextureUnit) {
                 m_context->activeTexture(ii);
                 resetActiveUnit = true;
@@ -4815,17 +4781,18 @@ void WebGLRenderingContext::handleNPOTTextures(const char* functionName, bool pr
             WebGLTexture* texCubeMap;
             if (prepareToDraw) {
                 String msg(String("texture bound to texture unit ") + String::number(ii)
-                    + " is not renderable. It maybe non-power-of-2 and have incompatible texture filtering or is not 'texture complete'");
+                    + " is not renderable. It maybe non-power-of-2 and have incompatible texture filtering or is not 'texture complete',"
+                    + " or it is a float/half-float type with linear filtering and without the relevant float/half-float linear extension enabled.");
                 printGLWarningToConsole(functionName, msg.utf8().data());
                 tex2D = m_blackTexture2D.get();
                 texCubeMap = m_blackTextureCubeMap.get();
             } else {
-                tex2D = m_textureUnits[ii].m_texture2DBinding.get();
-                texCubeMap = m_textureUnits[ii].m_textureCubeMapBinding.get();
+                tex2D = m_textureUnits[ii].texture2DBinding.get();
+                texCubeMap = m_textureUnits[ii].textureCubeMapBinding.get();
             }
-            if (m_textureUnits[ii].m_texture2DBinding && m_textureUnits[ii].m_texture2DBinding->needToUseBlackTexture())
+            if (m_textureUnits[ii].texture2DBinding && m_textureUnits[ii].texture2DBinding->needToUseBlackTexture(extensions))
                 m_context->bindTexture(GraphicsContext3D::TEXTURE_2D, objectOrZero(tex2D));
-            if (m_textureUnits[ii].m_textureCubeMapBinding && m_textureUnits[ii].m_textureCubeMapBinding->needToUseBlackTexture())
+            if (m_textureUnits[ii].textureCubeMapBinding && m_textureUnits[ii].textureCubeMapBinding->needToUseBlackTexture(extensions))
                 m_context->bindTexture(GraphicsContext3D::TEXTURE_CUBE_MAP, objectOrZero(texCubeMap));
         }
     }
@@ -4891,10 +4858,10 @@ int WebGLRenderingContext::getBoundFramebufferHeight()
 
 WebGLTexture* WebGLRenderingContext::validateTextureBinding(const char* functionName, GC3Denum target, bool useSixEnumsForCubeMap)
 {
-    WebGLTexture* tex = 0;
+    WebGLTexture* texture = nullptr;
     switch (target) {
     case GraphicsContext3D::TEXTURE_2D:
-        tex = m_textureUnits[m_activeTextureUnit].m_texture2DBinding.get();
+        texture = m_textureUnits[m_activeTextureUnit].texture2DBinding.get();
         break;
     case GraphicsContext3D::TEXTURE_CUBE_MAP_POSITIVE_X:
     case GraphicsContext3D::TEXTURE_CUBE_MAP_NEGATIVE_X:
@@ -4904,24 +4871,24 @@ WebGLTexture* WebGLRenderingContext::validateTextureBinding(const char* function
     case GraphicsContext3D::TEXTURE_CUBE_MAP_NEGATIVE_Z:
         if (!useSixEnumsForCubeMap) {
             synthesizeGLError(GraphicsContext3D::INVALID_ENUM, functionName, "invalid texture target");
-            return 0;
+            return nullptr;
         }
-        tex = m_textureUnits[m_activeTextureUnit].m_textureCubeMapBinding.get();
+        texture = m_textureUnits[m_activeTextureUnit].textureCubeMapBinding.get();
         break;
     case GraphicsContext3D::TEXTURE_CUBE_MAP:
         if (useSixEnumsForCubeMap) {
             synthesizeGLError(GraphicsContext3D::INVALID_ENUM, functionName, "invalid texture target");
-            return 0;
+            return nullptr;
         }
-        tex = m_textureUnits[m_activeTextureUnit].m_textureCubeMapBinding.get();
+        texture = m_textureUnits[m_activeTextureUnit].textureCubeMapBinding.get();
         break;
     default:
         synthesizeGLError(GraphicsContext3D::INVALID_ENUM, functionName, "invalid texture target");
-        return 0;
+        return nullptr;
     }
-    if (!tex)
+    if (!texture)
         synthesizeGLError(GraphicsContext3D::INVALID_OPERATION, functionName, "no texture");
-    return tex;
+    return texture;
 }
 
 bool WebGLRenderingContext::validateLocationLength(const char* functionName, const String& string)
@@ -5077,7 +5044,7 @@ bool WebGLRenderingContext::validateTexFuncLevel(const char* functionName, GC3De
     }
     switch (target) {
     case GraphicsContext3D::TEXTURE_2D:
-        if (level > m_maxTextureLevel) {
+        if (level >= m_maxTextureLevel) {
             synthesizeGLError(GraphicsContext3D::INVALID_VALUE, functionName, "level out of range");
             return false;
         }
@@ -5088,7 +5055,7 @@ bool WebGLRenderingContext::validateTexFuncLevel(const char* functionName, GC3De
     case GraphicsContext3D::TEXTURE_CUBE_MAP_NEGATIVE_Y:
     case GraphicsContext3D::TEXTURE_CUBE_MAP_POSITIVE_Z:
     case GraphicsContext3D::TEXTURE_CUBE_MAP_NEGATIVE_Z:
-        if (level > m_maxCubeMapTextureLevel) {
+        if (level >= m_maxCubeMapTextureLevel) {
             synthesizeGLError(GraphicsContext3D::INVALID_VALUE, functionName, "level out of range");
             return false;
         }
@@ -5117,9 +5084,10 @@ bool WebGLRenderingContext::validateTexFuncParameters(const char* functionName,
         return false;
     }
 
+    GC3Dint maxTextureSizeForLevel = pow(2.0, m_maxTextureLevel - 1 - level);
     switch (target) {
     case GraphicsContext3D::TEXTURE_2D:
-        if (width > m_maxTextureSize || height > m_maxTextureSize) {
+        if (width > maxTextureSizeForLevel || height > maxTextureSizeForLevel) {
             synthesizeGLError(GraphicsContext3D::INVALID_VALUE, functionName, "width or height out of range");
             return false;
         }
@@ -5131,12 +5099,12 @@ bool WebGLRenderingContext::validateTexFuncParameters(const char* functionName,
     case GraphicsContext3D::TEXTURE_CUBE_MAP_POSITIVE_Z:
     case GraphicsContext3D::TEXTURE_CUBE_MAP_NEGATIVE_Z:
         if (functionType != TexSubImage2D && width != height) {
-          synthesizeGLError(GraphicsContext3D::INVALID_VALUE, functionName, "width != height for cube map");
-          return false;
+            synthesizeGLError(GraphicsContext3D::INVALID_VALUE, functionName, "width != height for cube map");
+            return false;
         }
         // No need to check height here. For texImage width == height.
         // For texSubImage that will be checked when checking yoffset + height is in range.
-        if (width > m_maxCubeMapTextureSize) {
+        if (width > maxTextureSizeForLevel) {
             synthesizeGLError(GraphicsContext3D::INVALID_VALUE, functionName, "width or height out of range for cube map");
             return false;
         }
@@ -5179,7 +5147,7 @@ bool WebGLRenderingContext::validateTexFuncData(const char* functionName, GC3Din
 
     switch (type) {
     case GraphicsContext3D::UNSIGNED_BYTE:
-        if (pixels->getType() != ArrayBufferView::TypeUint8) {
+        if (pixels->getType() != JSC::TypeUint8) {
             synthesizeGLError(GraphicsContext3D::INVALID_OPERATION, functionName, "type UNSIGNED_BYTE but ArrayBufferView not Uint8Array");
             return false;
         }
@@ -5187,13 +5155,13 @@ bool WebGLRenderingContext::validateTexFuncData(const char* functionName, GC3Din
     case GraphicsContext3D::UNSIGNED_SHORT_5_6_5:
     case GraphicsContext3D::UNSIGNED_SHORT_4_4_4_4:
     case GraphicsContext3D::UNSIGNED_SHORT_5_5_5_1:
-        if (pixels->getType() != ArrayBufferView::TypeUint16) {
+        if (pixels->getType() != JSC::TypeUint16) {
             synthesizeGLError(GraphicsContext3D::INVALID_OPERATION, functionName, "type UNSIGNED_SHORT but ArrayBufferView not Uint16Array");
             return false;
         }
         break;
     case GraphicsContext3D::FLOAT: // OES_texture_float
-        if (pixels->getType() != ArrayBufferView::TypeFloat32) {
+        if (pixels->getType() != JSC::TypeFloat32) {
             synthesizeGLError(GraphicsContext3D::INVALID_OPERATION, functionName, "type FLOAT but ArrayBufferView not Float32Array");
             return false;
         }
@@ -5253,48 +5221,45 @@ bool WebGLRenderingContext::validateCompressedTexFuncData(const char* functionNa
     switch (format) {
     case Extensions3D::COMPRESSED_RGB_S3TC_DXT1_EXT:
     case Extensions3D::COMPRESSED_RGBA_S3TC_DXT1_EXT:
+    case Extensions3D::COMPRESSED_ATC_RGB_AMD:
         {
+            const int kBlockSize = 8;
             const int kBlockWidth = 4;
             const int kBlockHeight = 4;
-            const int kBlockSize = 8;
             int numBlocksAcross = (width + kBlockWidth - 1) / kBlockWidth;
             int numBlocksDown = (height + kBlockHeight - 1) / kBlockHeight;
-            int numBlocks = numBlocksAcross * numBlocksDown;
-            bytesRequired = numBlocks * kBlockSize;
+            bytesRequired = numBlocksAcross * numBlocksDown * kBlockSize;
         }
         break;
     case Extensions3D::COMPRESSED_RGBA_S3TC_DXT3_EXT:
     case Extensions3D::COMPRESSED_RGBA_S3TC_DXT5_EXT:
-        {
-            const int kBlockWidth = 4;
-            const int kBlockHeight = 4;
-            const int kBlockSize = 16;
-            int numBlocksAcross = (width + kBlockWidth - 1) / kBlockWidth;
-            int numBlocksDown = (height + kBlockHeight - 1) / kBlockHeight;
-            int numBlocks = numBlocksAcross * numBlocksDown;
-            bytesRequired = numBlocks * kBlockSize;
-        }
-        break;
-    case Extensions3D::COMPRESSED_ATC_RGB_AMD:
-        {
-            bytesRequired = floor(static_cast<double>((width + 3) / 4)) * floor(static_cast<double>((height + 3) / 4)) * 8;
-        }
-        break;
     case Extensions3D::COMPRESSED_ATC_RGBA_EXPLICIT_ALPHA_AMD:
     case Extensions3D::COMPRESSED_ATC_RGBA_INTERPOLATED_ALPHA_AMD:
         {
-            bytesRequired = floor(static_cast<double>((width + 3) / 4)) * floor(static_cast<double>((height + 3) / 4)) * 16;
+            const int kBlockSize = 16;
+            const int kBlockWidth = 4;
+            const int kBlockHeight = 4;
+            int numBlocksAcross = (width + kBlockWidth - 1) / kBlockWidth;
+            int numBlocksDown = (height + kBlockHeight - 1) / kBlockHeight;
+            bytesRequired = numBlocksAcross * numBlocksDown * kBlockSize;
         }
+        break;
     case Extensions3D::COMPRESSED_RGB_PVRTC_4BPPV1_IMG:
     case Extensions3D::COMPRESSED_RGBA_PVRTC_4BPPV1_IMG:
         {
-            bytesRequired = max(width, 8) * max(height, 8) / 2;
+            const int kBlockSize = 8;
+            const int kBlockWidth = 8;
+            const int kBlockHeight = 8;
+            bytesRequired = (std::max(width, kBlockWidth) * std::max(height, kBlockHeight) * 4 + 7) / kBlockSize;
         }
         break;
     case Extensions3D::COMPRESSED_RGB_PVRTC_2BPPV1_IMG:
     case Extensions3D::COMPRESSED_RGBA_PVRTC_2BPPV1_IMG:
         {
-            bytesRequired = max(width, 8) * max(height, 8) / 4;
+            const int kBlockSize = 8;
+            const int kBlockWidth = 16;
+            const int kBlockHeight = 8;
+            bytesRequired = (std::max(width, kBlockWidth) * std::max(height, kBlockHeight) * 2 + 7) / kBlockSize;
         }
         break;
     default:
@@ -5310,20 +5275,22 @@ bool WebGLRenderingContext::validateCompressedTexFuncData(const char* functionNa
     return true;
 }
 
-bool WebGLRenderingContext::validateCompressedTexDimensions(const char* functionName, GC3Dint level, GC3Dsizei width, GC3Dsizei height, GC3Denum format)
+bool WebGLRenderingContext::validateCompressedTexDimensions(const char* functionName, GC3Denum target, GC3Dint level, GC3Dsizei width, GC3Dsizei height, GC3Denum format)
 {
     switch (format) {
     case Extensions3D::COMPRESSED_RGB_S3TC_DXT1_EXT:
     case Extensions3D::COMPRESSED_RGBA_S3TC_DXT1_EXT:
     case Extensions3D::COMPRESSED_RGBA_S3TC_DXT3_EXT:
     case Extensions3D::COMPRESSED_RGBA_S3TC_DXT5_EXT: {
-        const int kBlockWidth = 4;
-        const int kBlockHeight = 4;
-        bool widthValid = (level && width == 1) || (level && width == 2) || !(width % kBlockWidth);
-        bool heightValid = (level && height == 1) || (level && height == 2) || !(height % kBlockHeight);
+        const GC3Dsizei kBlockWidth = 4;
+        const GC3Dsizei kBlockHeight = 4;
+        const GC3Dint maxTextureSize = target ? m_maxTextureSize : m_maxCubeMapTextureSize;
+        const GC3Dsizei maxCompressedDimension = maxTextureSize >> level;
+        bool widthValid = (level && width == 1) || (level && width == 2) || (!(width % kBlockWidth) && width <= maxCompressedDimension);
+        bool heightValid = (level && height == 1) || (level && height == 2) || (!(height % kBlockHeight) && height <= maxCompressedDimension);
         if (!widthValid || !heightValid) {
-          synthesizeGLError(GraphicsContext3D::INVALID_OPERATION, functionName, "width or height invalid for level");
-          return false;
+            synthesizeGLError(GraphicsContext3D::INVALID_OPERATION, functionName, "width or height invalid for level");
+            return false;
         }
         return true;
     }
@@ -5356,7 +5323,7 @@ bool WebGLRenderingContext::validateCompressedTexSubDimensions(const char* funct
             synthesizeGLError(GraphicsContext3D::INVALID_OPERATION, functionName, "dimensions out of range");
             return false;
         }
-        return validateCompressedTexDimensions(functionName, level, width, height, format);
+        return validateCompressedTexDimensions(functionName, target, level, width, height, format);
     }
     default:
         return false;
@@ -5423,10 +5390,7 @@ void WebGLRenderingContext::printWarningToConsole(const String& message)
 {
     if (!canvas())
         return;
-    Document* document = canvas()->document();
-    if (!document)
-        return;
-    document->addConsoleMessage(RenderingMessageSource, WarningMessageLevel, message);
+    canvas()->document().addConsoleMessage(MessageSource::Rendering, MessageLevel::Warning, message);
 }
 
 bool WebGLRenderingContext::validateFramebufferFuncParameters(const char* functionName, GC3Denum target, GC3Denum attachment)
@@ -5585,7 +5549,7 @@ bool WebGLRenderingContext::validateHTMLImageElement(const char* functionName, H
         synthesizeGLError(GraphicsContext3D::INVALID_VALUE, functionName, "no image");
         return false;
     }
-    const KURL& url = image->cachedImage()->response().url();
+    const URL& url = image->cachedImage()->response().url();
     if (url.isNull() || url.isEmpty() || !url.isValid()) {
         synthesizeGLError(GraphicsContext3D::INVALID_VALUE, functionName, "invalid image");
         return false;
@@ -5649,7 +5613,6 @@ void WebGLRenderingContext::vertexAttribfImpl(const char* functionName, GC3Duint
             m_context->vertexAttrib4f(index, v0, v1, v2, v3);
             break;
         }
-        cleanupAfterGraphicsCall(false);
     }
     VertexAttribValue& attribValue = m_vertexAttribValue[index];
     attribValue.value[0] = v0;
@@ -5701,7 +5664,6 @@ void WebGLRenderingContext::vertexAttribfvImpl(const char* functionName, GC3Duin
             m_context->vertexAttrib4fv(index, v);
             break;
         }
-        cleanupAfterGraphicsCall(false);
     }
     VertexAttribValue& attribValue = m_vertexAttribValue[index];
     attribValue.initValue();
@@ -5756,7 +5718,7 @@ bool WebGLRenderingContext::simulateVertexAttrib0(GC3Dsizei numVertex)
             || attribValue.value[1] != m_vertexAttrib0BufferValue[1]
             || attribValue.value[2] != m_vertexAttrib0BufferValue[2]
             || attribValue.value[3] != m_vertexAttrib0BufferValue[3])) {
-        OwnArrayPtr<GC3Dfloat> bufferData = adoptArrayPtr(new GC3Dfloat[(numVertex + 1) * 4]);
+        auto bufferData = std::make_unique<GC3Dfloat[]>((numVertex + 1) * 4);
         for (GC3Dsizei ii = 0; ii < numVertex + 1; ++ii) {
             bufferData[ii * 4] = attribValue.value[0];
             bufferData[ii * 4 + 1] = attribValue.value[1];
@@ -5835,14 +5797,11 @@ void WebGLRenderingContext::maybeRestoreContext(Timer<WebGLRenderingContext>*)
         break;
     }
 
-    Document* document = canvas()->document();
-    if (!document)
-        return;
-    Frame* frame = document->frame();
+    Frame* frame = canvas()->document().frame();
     if (!frame)
         return;
 
-    if (!frame->loader()->client()->allowWebGL(frame->settings() && frame->settings()->webGLEnabled()))
+    if (!frame->loader().client().allowWebGL(frame->settings().webGLEnabled()))
         return;
 
     FrameView* view = frame->view();
@@ -5889,7 +5848,7 @@ String WebGLRenderingContext::ensureNotNull(const String& text) const
 }
 
 WebGLRenderingContext::LRUImageBufferCache::LRUImageBufferCache(int capacity)
-    : m_buffers(adoptArrayPtr(new OwnPtr<ImageBuffer>[capacity]))
+    : m_buffers(std::make_unique<std::unique_ptr<ImageBuffer>[]>(capacity))
     , m_capacity(capacity)
 {
 }
@@ -5907,11 +5866,11 @@ ImageBuffer* WebGLRenderingContext::LRUImageBufferCache::imageBuffer(const IntSi
         return buf;
     }
 
-    OwnPtr<ImageBuffer> temp = ImageBuffer::create(size, 1);
+    std::unique_ptr<ImageBuffer> temp = ImageBuffer::create(size, 1);
     if (!temp)
         return 0;
     i = std::min(m_capacity - 1, i);
-    m_buffers[i] = temp.release();
+    m_buffers[i] = std::move(temp);
 
     ImageBuffer* buf = m_buffers[i].get();
     bubbleToFront(i);
@@ -6029,7 +5988,7 @@ void WebGLRenderingContext::restoreCurrentFramebuffer()
 void WebGLRenderingContext::restoreCurrentTexture2D()
 {
     ExceptionCode ec;
-    bindTexture(GraphicsContext3D::TEXTURE_2D, m_textureUnits[m_activeTextureUnit].m_texture2DBinding.get(), ec);
+    bindTexture(GraphicsContext3D::TEXTURE_2D, m_textureUnits[m_activeTextureUnit].texture2DBinding.get(), ec);
 }
 
 bool WebGLRenderingContext::supportsDrawBuffers()
@@ -6040,6 +5999,86 @@ bool WebGLRenderingContext::supportsDrawBuffers()
     }
     return m_drawBuffersSupported;
 }
+
+void WebGLRenderingContext::drawArraysInstanced(GC3Denum mode, GC3Dint first, GC3Dsizei count, GC3Dsizei primcount)
+{
+    if (!validateDrawArrays("drawArraysInstanced", mode, first, count, primcount))
+        return;
+
+    if (primcount < 0) {
+        synthesizeGLError(GraphicsContext3D::INVALID_VALUE, "drawArraysInstanced", "primcount < 0");
+        return;
+    }
+
+    if (!primcount) {
+        markContextChanged();
+        return;
+    }
+
+    clearIfComposited();
+
+    bool vertexAttrib0Simulated = false;
+    if (!isGLES2Compliant())
+        vertexAttrib0Simulated = simulateVertexAttrib0(first + count - 1);
+    if (!isGLES2NPOTStrict())
+        checkTextureCompleteness("drawArraysInstanced", true);
+    UNUSED_PARAM(primcount);
+    m_context->drawArraysInstanced(mode, first, count, primcount);
+    if (!isGLES2Compliant() && vertexAttrib0Simulated)
+        restoreStatesAfterVertexAttrib0Simulation();
+    if (!isGLES2NPOTStrict())
+        checkTextureCompleteness("drawArraysInstanced", false);
+    markContextChanged();
+}
+
+void WebGLRenderingContext::drawElementsInstanced(GC3Denum mode, GC3Dsizei count, GC3Denum type, long long offset, GC3Dsizei primcount)
+{
+    unsigned numElements = 0;
+    if (!validateDrawElements("drawElementsInstanced", mode, count, type, offset, numElements))
+        return;
+
+    if (primcount < 0) {
+        synthesizeGLError(GraphicsContext3D::INVALID_VALUE, "drawElementsInstanced", "primcount < 0");
+        return;
+    }
+
+    if (!primcount) {
+        markContextChanged();
+        return;
+    }
+
+    clearIfComposited();
+
+    bool vertexAttrib0Simulated = false;
+    if (!isGLES2Compliant()) {
+        if (!numElements)
+            validateIndexArrayPrecise(count, type, static_cast<GC3Dintptr>(offset), numElements);
+        vertexAttrib0Simulated = simulateVertexAttrib0(numElements);
+    }
+    if (!isGLES2NPOTStrict())
+        checkTextureCompleteness("drawElementsInstanced", true);
+    m_context->drawElementsInstanced(mode, count, type, static_cast<GC3Dintptr>(offset), primcount);
+    if (!isGLES2Compliant() && vertexAttrib0Simulated)
+        restoreStatesAfterVertexAttrib0Simulation();
+    if (!isGLES2NPOTStrict())
+        checkTextureCompleteness("drawElementsInstanced", false);
+    markContextChanged();
+}
+
+void WebGLRenderingContext::vertexAttribDivisor(GC3Duint index, GC3Duint divisor)
+{
+    if (isContextLost())
+        return;
+
+    if (index >= m_maxVertexAttribs) {
+        synthesizeGLError(GraphicsContext3D::INVALID_VALUE, "vertexAttribDivisor", "index out of range");
+        return;
+    }
+
+    m_boundVertexArrayObject->setVertexAttribDivisor(index, divisor);
+    m_context->vertexAttribDivisor(index, divisor);
+}
+
 
 } // namespace WebCore
 

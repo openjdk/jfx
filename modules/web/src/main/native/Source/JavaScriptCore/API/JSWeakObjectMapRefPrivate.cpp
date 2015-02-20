@@ -31,7 +31,7 @@
 #include "JSCJSValue.h"
 #include "JSCallbackObject.h"
 #include "JSWeakObjectMapRefInternal.h"
-#include "Operations.h"
+#include "JSCInlines.h"
 #include "Weak.h"
 #include <wtf/HashMap.h>
 #include <wtf/text/StringHash.h>
@@ -63,7 +63,7 @@ void JSWeakObjectMapSet(JSContextRef ctx, JSWeakObjectMapRef map, void* key, JSO
     JSObject* obj = toJS(object);
     if (!obj)
         return;
-    ASSERT(obj->inherits(&JSCallbackObject<JSGlobalObject>::s_info) || obj->inherits(&JSCallbackObject<JSDestructibleObject>::s_info));
+    ASSERT(obj->inherits(JSCallbackObject<JSGlobalObject>::info()) || obj->inherits(JSCallbackObject<JSDestructibleObject>::info()));
     map->map().set(key, obj);
 }
 

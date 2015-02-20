@@ -19,7 +19,6 @@
 
 #include "config.h"
 
-#if USE(ACCELERATED_COMPOSITING)
 #include "GraphicsLayerAnimation.h"
 
 #include "LayoutSize.h"
@@ -106,7 +105,7 @@ static double normalizedAnimationValueForFillsForwards(double iterationCount, An
     if (direction == Animation::AnimationDirectionReverse)
         return 0;
     return shouldReverseAnimationValue(direction, iterationCount) ? 1 : 0;
-    }
+}
 
 static float applyOpacityAnimation(float fromOpacity, float toOpacity, double progress)
 {
@@ -216,7 +215,7 @@ static const TimingFunction* timingFunctionForAnimationValue(const AnimationValu
 GraphicsLayerAnimation::GraphicsLayerAnimation(const String& name, const KeyframeValueList& keyframes, const IntSize& boxSize, const Animation* animation, double startTime, bool listsMatch)
     : m_keyframes(keyframes)
     , m_boxSize(boxSize)
-    , m_animation(Animation::create(animation))
+    , m_animation(Animation::create(*animation))
     , m_name(name)
     , m_listsMatch(listsMatch)
     , m_startTime(startTime)
@@ -258,8 +257,8 @@ bool GraphicsLayerAnimations::hasActiveAnimationsOfType(AnimatedPropertyID type)
 {
     for (size_t i = 0; i < m_animations.size(); ++i) {
         if (m_animations[i].isActive() && m_animations[i].property() == type)
-                return true;
-        }
+            return true;
+    }
     return false;
 }
 
@@ -267,8 +266,8 @@ bool GraphicsLayerAnimations::hasRunningAnimations() const
 {
     for (size_t i = 0; i < m_animations.size(); ++i) {
         if (m_animations[i].state() == GraphicsLayerAnimation::PlayingState)
-                return true;
-        }
+            return true;
+    }
 
     return false;
 }
@@ -323,7 +322,7 @@ double GraphicsLayerAnimation::computeTotalRunningTime()
         return m_pauseTime;
 
     double oldLastRefreshedTime = m_lastRefreshedTime;
-    m_lastRefreshedTime = WTF::currentTime();
+    m_lastRefreshedTime = monotonicallyIncreasingTime();
     m_totalRunningTime += m_lastRefreshedTime - oldLastRefreshedTime;
     return m_totalRunningTime;
 }
@@ -332,13 +331,13 @@ void GraphicsLayerAnimation::pause(double time)
 {
     setState(PausedState);
     m_pauseTime = time;
-    }
+}
 
 void GraphicsLayerAnimation::resume()
 {
     setState(PlayingState);
     m_totalRunningTime = m_pauseTime;
-    m_lastRefreshedTime = WTF::currentTime();
+    m_lastRefreshedTime = monotonicallyIncreasingTime();
 }
 
 void GraphicsLayerAnimations::add(const GraphicsLayerAnimation& animation)
@@ -397,9 +396,7 @@ GraphicsLayerAnimations GraphicsLayerAnimations::getActiveAnimations() const
     for (size_t i = 0; i < m_animations.size(); ++i) {
         if (m_animations[i].isActive())
             active.add(m_animations[i]);
-}
+    }
     return active;
 }
 }
-#endif
-

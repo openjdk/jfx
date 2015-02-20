@@ -19,21 +19,21 @@
  */
 
 [
-        JSGenerateToNativeObject,
+    JSGenerateToNativeObject,
     NamedConstructor=Option([Default=NullString] optional DOMString data, [Default=NullString] optional DOMString value, [Default=Undefined] optional boolean defaultSelected, [Default=Undefined] optional boolean selected),
-        ConstructorRaisesException
+    ConstructorRaisesException
 ] interface HTMLOptionElement : HTMLElement {
     [Reflect] attribute boolean disabled;
-        readonly attribute HTMLFormElement form;
-        attribute DOMString label;
+    readonly attribute HTMLFormElement form;
+    attribute DOMString label;
     [Reflect=selected] attribute boolean defaultSelected;
-        attribute boolean selected;
-        attribute DOMString value;
+    attribute boolean selected;
+    attribute DOMString value;
 
 #if defined(LANGUAGE_JAVASCRIPT) && LANGUAGE_JAVASCRIPT
-        attribute DOMString text setter raises(DOMException);
+    [SetterRaisesException] attribute DOMString text;
 #else
-        readonly attribute DOMString text;
+    readonly attribute DOMString text;
 #endif
-        readonly attribute long index;
-    };
+    readonly attribute long index;
+};

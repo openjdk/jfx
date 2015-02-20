@@ -6,13 +6,13 @@
  * are met:
  *
  * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
+ *     notice, this list of conditions and the following disclaimer. 
  * 2.  Redistributions in binary form must reproduce the above copyright
  *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution.
+ *     documentation and/or other materials provided with the distribution. 
  * 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
  *     its contributors may be used to endorse or promote products derived
- *     from this software without specific prior written permission.
+ *     from this software without specific prior written permission. 
  *
  * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
  * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -33,6 +33,10 @@
 #include <wtf/OwnPtr.h>
 #include <wtf/PassOwnPtr.h>
 
+#if PLATFORM(JAVA) // tav todo temp
+#include <JSExportMacros.h>
+#endif
+
 #if USE(CF)
 #include <CoreFoundation/CoreFoundation.h>
 #endif
@@ -50,6 +54,8 @@ public:
     bool isEnabled() const { return m_enabled; }
     void setEnabled(bool enabled) { m_enabled = enabled; }
 
+    static bool s_shouldCreateGCTimer;
+
 protected:
 #if USE(CF)
     GCActivityCallback(VM* vm, CFRunLoopRef runLoop)
@@ -57,7 +63,13 @@ protected:
         , m_enabled(true)
     {
     }
-# else
+#elif PLATFORM(EFL)
+    GCActivityCallback(VM* vm, bool flag)
+        : HeapTimer(vm)
+        , m_enabled(flag)
+    {
+    }
+#else
     GCActivityCallback(VM* vm)
         : HeapTimer(vm)
         , m_enabled(true)
@@ -74,21 +86,21 @@ public:
 
     DefaultGCActivityCallback(Heap*);
 
-    virtual void didAllocate(size_t);
-    virtual void willCollect();
-    virtual void cancel();
-    
-    virtual void doWork();
+    JS_EXPORT_PRIVATE virtual void didAllocate(size_t) override;
+    JS_EXPORT_PRIVATE virtual void willCollect() override;
+    JS_EXPORT_PRIVATE virtual void cancel() override;
+
+    JS_EXPORT_PRIVATE virtual void doWork() override;
 
 #if USE(CF)
 protected:
-    DefaultGCActivityCallback(Heap*, CFRunLoopRef);
+    JS_EXPORT_PRIVATE DefaultGCActivityCallback(Heap*, CFRunLoopRef);
 #endif
-#if USE(CF) || PLATFORM(QT)
+#if USE(CF) || PLATFORM(EFL)
 protected:
     void cancelTimer();
     void scheduleTimer(double);
-    
+
 private:
     double m_delay;
 #endif
@@ -96,7 +108,7 @@ private:
 
 inline PassOwnPtr<DefaultGCActivityCallback> DefaultGCActivityCallback::create(Heap* heap)
 {
-    return adoptPtr(new DefaultGCActivityCallback(heap));
+    return GCActivityCallback::s_shouldCreateGCTimer ? adoptPtr(new DefaultGCActivityCallback(heap)) : nullptr;
 }
 
 }

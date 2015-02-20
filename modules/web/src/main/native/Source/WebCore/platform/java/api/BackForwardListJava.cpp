@@ -5,7 +5,8 @@
 
 #include "Frame.h"
 #include "FrameLoader.h"
-#include "BackForwardListImpl.h"
+#include "BackForwardList.h"
+#include "BackForwardController.h"
 #include "HistoryItem.h"
 #include "Image.h"
 #include "JavaEnv.h"
@@ -25,7 +26,7 @@ static Page* getPage(jlong jpage)
 
 static BackForwardList* getBfl(jlong jpage)
 {
-    return getPage(jpage)->backForwardList();
+    return static_cast<WebCore::BackForwardList*>(getPage(jpage)->backForward().client());
 }
 
 static HistoryItem* getItem(jlong jitem)
@@ -137,9 +138,10 @@ JNIEXPORT jobject JNICALL Java_com_sun_webkit_BackForwardList_bflItemGetIcon(JNI
 // entry.getLastVisited()
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_BackForwardList_bflItemGetLastVisitedDate(JNIEnv* env, jclass z, jlong jitem)
 {
-    HistoryItem* item = getItem(jitem);
-    double lastVisitedDate = item->lastVisitedTime();
-    return (jlong) (lastVisitedDate * 1000);
+//    HistoryItem* item = getItem(jitem);
+//    double lastVisitedDate = item->lastVisitedTime();
+//    return (jlong) (lastVisitedDate * 1000);
+    return 0; // todo tav where is lastVisitedDate field?
 }
 
 // entry.isTargetItem()
@@ -198,14 +200,14 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_BackForwardList_bflSize(JNIEnv* env, 
 // BackForwardList.getMaximumSize()
 JNIEXPORT jint JNICALL Java_com_sun_webkit_BackForwardList_bflGetMaximumSize(JNIEnv* env, jclass z, jlong jpage)
 {
-    BackForwardListImpl* bfl = static_cast<BackForwardListImpl *>(getBfl(jpage));
+    BackForwardList* bfl = static_cast<BackForwardList *>(getBfl(jpage));
     return bfl->capacity();
 }
 
 // BackForwardList.setMaximumSize()
 JNIEXPORT void JNICALL Java_com_sun_webkit_BackForwardList_bflSetMaximumSize(JNIEnv* env, jclass z, jlong jpage, jint size)
 {
-    BackForwardListImpl* bfl = static_cast<BackForwardListImpl *>(getBfl(jpage));
+    BackForwardList* bfl = static_cast<BackForwardList *>(getBfl(jpage));
     bfl->setCapacity(size);
 }
 
@@ -219,14 +221,14 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_BackForwardList_bflGetCurrentIndex(JN
 // BackForwardList.setEnabled()
 JNIEXPORT void JNICALL Java_com_sun_webkit_BackForwardList_bflSetEnabled(JNIEnv* env, jclass z, jlong jpage, jboolean flag)
 {
-    BackForwardListImpl* bfl = static_cast<BackForwardListImpl *>(getBfl(jpage));
+    BackForwardList* bfl = static_cast<BackForwardList *>(getBfl(jpage));
     bfl->setEnabled(flag);
 }
 
 // BackForwardList.isEnabled()
 JNIEXPORT jboolean JNICALL Java_com_sun_webkit_BackForwardList_bflIsEnabled(JNIEnv* env, jclass z, jlong jpage)
 {
-    BackForwardListImpl* bfl = static_cast<BackForwardListImpl *>(getBfl(jpage));
+    BackForwardList* bfl = static_cast<BackForwardList *>(getBfl(jpage));
     return bfl->enabled();
 }
 
@@ -254,11 +256,11 @@ JNIEXPORT jobject JNICALL Java_com_sun_webkit_BackForwardList_bflGet(JNIEnv* env
 JNIEXPORT jint JNICALL Java_com_sun_webkit_BackForwardList_bflSetCurrentIndex(JNIEnv* env, jclass z, jlong jpage, jint index)
 {
     Page* page = getPage(jpage);
-    BackForwardList* bfl = page->backForwardList();
+    BackForwardList* bfl = static_cast<BackForwardList*>(page->backForward().client());
     if (index < 0 || index >= getSize(bfl))
         return -1;
     int distance = index - bfl->backListCount();
-    page->goBackOrForward(distance);
+    page->backForward().goBackOrForward(distance);
     return index;
 }
 

@@ -10,7 +10,7 @@
 #include "StringHash.h"
 #include <wtf/ListHashSet.h>
 #include <wtf/Vector.h>
-#include <KURL.h>
+#include <URL.h>
 
 //#define DS(x) String(x).charactersWithNullTermination()
 
@@ -19,7 +19,7 @@ namespace WebCore {
     // during a drag-n-drop operation.  This is the data that WebCore is aware
     // of and is not specific to a platform.
     class DataObjectJava : public RefCounted<DataObjectJava> {
-        static const KURL   &emptyURL(){ static KURL r; return r; }
+        static const URL   &emptyURL(){ static URL r; return r; }
         static const String &emptyString(){ static String r; return r; }
     public:
         static const String &mimePlainText()    { static String r("text/plain"); return r; }
@@ -63,7 +63,7 @@ namespace WebCore {
         }
 
         //setters
-        void setUrl(const KURL &_url, const String &_urlTitle) {
+        void setUrl(const URL &_url, const String &_urlTitle) {
             availMimeTypes.add(mimeURIList());
             availMimeTypes.add(mimeShortcutName());
             url = _url;
@@ -81,7 +81,7 @@ namespace WebCore {
             availMimeTypes.add( mimePlainText() );
             plainText = _plainText;
         }
-        void setHTML(const String &_textHtml, const KURL &_htmlBaseUrl){
+        void setHTML(const String &_textHtml, const URL &_htmlBaseUrl){
             availMimeTypes.add( mimeHTML() );
             textHtml = _textHtml;
             htmlBaseUrl = _htmlBaseUrl;
@@ -91,7 +91,7 @@ namespace WebCore {
             bool succeeded = true;
             String canonicalMimeType = normalizeMIMEType(mimeType);
             if (canonicalMimeType == mimeURIList())
-                setUrl(KURL(ParsedURLString, data), emptyString());
+                setUrl(URL(ParsedURLString, data), emptyString());
             else if (canonicalMimeType == mimeHTML())
                 setHTML(data, emptyURL());
             else if (canonicalMimeType == mimePlainText()) // two special cases for IE compatibility
@@ -187,7 +187,7 @@ namespace WebCore {
         ListHashSet<String> availMimeTypes;
 
         //URL
-        KURL url;
+        URL url;
         String urlTitle;
         Vector<String> m_filenames;
 
@@ -196,7 +196,7 @@ namespace WebCore {
 
         //html text
         String textHtml;
-        KURL   htmlBaseUrl;
+        URL   htmlBaseUrl;
 
         DataObjectJava() {
         }

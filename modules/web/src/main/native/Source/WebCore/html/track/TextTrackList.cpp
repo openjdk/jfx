@@ -34,7 +34,6 @@
 #include "InbandTextTrack.h"
 #include "InbandTextTrackPrivate.h"
 #include "LoadableTextTrack.h"
-#include "TextTrack.h"
 
 using namespace WebCore;
 
@@ -105,7 +104,7 @@ int TextTrackList::getTrackIndexRelativeToRenderedTracks(TextTrack *textTrack)
     return -1;
 }
 
-TextTrack* TextTrackList::item(unsigned index)
+TextTrack* TextTrackList::item(unsigned index) const
 {
     // 4.8.10.12.1 Text track model
     // The text tracks are sorted as follows:
@@ -128,9 +127,25 @@ TextTrack* TextTrackList::item(unsigned index)
     return 0;
 }
 
+TextTrack* TextTrackList::getTrackById(const AtomicString& id)
+{
+    // 4.8.10.12.5 Text track API
+    // The getTrackById(id) method must return the first TextTrack in the
+    // TextTrackList object whose id IDL attribute would return a value equal
+    // to the value of the id argument.
+    for (unsigned i = 0; i < length(); ++i) {
+        TextTrack* track = item(i);
+        if (track->id() == id)
+            return track;
+    }
+
+    // When no tracks match the given argument, the method must return null.
+    return nullptr;
+}
+
 void TextTrackList::invalidateTrackIndexesAfterTrack(TextTrack* track)
 {
-    Vector<RefPtr<TrackBase> >* tracks = 0;
+    Vector<RefPtr<TrackBase>>* tracks = 0;
 
     if (track->trackType() == TextTrack::TrackElement) {
         tracks = &m_elementTracks;
@@ -183,7 +198,7 @@ void TextTrackList::append(PassRefPtr<TextTrack> prpTrack)
 void TextTrackList::remove(TrackBase* track)
 {
     TextTrack* textTrack = toTextTrack(track);
-    Vector<RefPtr<TrackBase> >* tracks = 0;
+    Vector<RefPtr<TrackBase>>* tracks = 0;
     if (textTrack->trackType() == TextTrack::TrackElement)
         tracks = &m_elementTracks;
     else if (textTrack->trackType() == TextTrack::AddTrack)
@@ -209,7 +224,7 @@ void TextTrackList::remove(TrackBase* track)
 
 bool TextTrackList::contains(TrackBase* track) const
 {
-    const Vector<RefPtr<TrackBase> >* tracks = 0;
+    const Vector<RefPtr<TrackBase>>* tracks = 0;
     TextTrack::TextTrackType type = toTextTrack(track)->trackType();
     if (type == TextTrack::TrackElement)
         tracks = &m_elementTracks;
@@ -223,9 +238,9 @@ bool TextTrackList::contains(TrackBase* track) const
     return tracks->find(track) != notFound;
 }
 
-const AtomicString& TextTrackList::interfaceName() const
+EventTargetInterface TextTrackList::eventTargetInterface() const
 {
-    return eventNames().interfaceForTextTrackList;
+    return TextTrackListEventTargetInterfaceType;
 }
 
 #endif

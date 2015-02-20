@@ -31,13 +31,12 @@
 #include "config.h"
 #include "ElementRareData.h"
 
-#include "RenderStyle.h"
-
 namespace WebCore {
 
 struct SameSizeAsElementRareData : NodeRareData {
     short indices[2];
     unsigned bitfields;
+    RegionOversetState regionOversetState;
     LayoutSize sizeForResizing;
     IntSize scrollOffset;
     void* pointers[7];

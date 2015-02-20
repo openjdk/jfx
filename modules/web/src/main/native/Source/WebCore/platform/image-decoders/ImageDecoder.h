@@ -77,6 +77,7 @@ namespace WebCore {
         // These do not touch other metadata, only the raw pixel data.
         void clearPixelData();
         void zeroFillPixelData();
+        void zeroFillFrameRect(const IntRect&);
 
         // Makes this frame have an independent copy of the provided image's
         // pixel data, so that modifications in one frame are not reflected in
@@ -136,6 +137,11 @@ namespace WebCore {
 #if PLATFORM(JAVA)
     friend class BitmapImage;
 #endif
+
+        inline bool hasPixelData() const
+        {
+            return m_bytes;
+        }
 
         // Use fix point multiplier instead of integer division or floating point math.
         // This multipler produces exactly the same result for all values in range 0 - 255.

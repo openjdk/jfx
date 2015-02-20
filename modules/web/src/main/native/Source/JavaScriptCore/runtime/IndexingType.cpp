@@ -26,7 +26,6 @@
 #include "config.h"
 #include "IndexingType.h"
 
-#include <stdio.h>
 #include <wtf/StringExtras.h>
 
 namespace JSC {
@@ -50,11 +49,11 @@ IndexingType leastUpperBoundOfIndexingTypeAndType(IndexingType indexingType, Spe
     case ALL_INT32_INDEXING_TYPES:
         if (isInt32Speculation(type))
             return (indexingType & ~IndexingShapeMask) | Int32Shape;
-        if (isNumberSpeculation(type))
+        if (isFullNumberSpeculation(type))
             return (indexingType & ~IndexingShapeMask) | DoubleShape;
         return (indexingType & ~IndexingShapeMask) | ContiguousShape;
     case ALL_DOUBLE_INDEXING_TYPES:
-        if (isNumberSpeculation(type))
+        if (isFullNumberSpeculation(type))
             return indexingType;
         return (indexingType & ~IndexingShapeMask) | ContiguousShape;
     case ALL_CONTIGUOUS_INDEXING_TYPES:

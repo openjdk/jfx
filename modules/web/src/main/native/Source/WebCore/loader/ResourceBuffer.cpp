@@ -35,7 +35,7 @@ ResourceBuffer::ResourceBuffer()
 {
 }
 
-ResourceBuffer::ResourceBuffer(const char* data, int size)
+ResourceBuffer::ResourceBuffer(const char* data, unsigned size)
     : m_sharedBuffer(SharedBuffer::create(data, size))
 {
 }
@@ -112,11 +112,17 @@ bool ResourceBuffer::hasPurgeableBuffer() const
     return m_sharedBuffer->hasPurgeableBuffer();
 }
 
+#if PLATFORM(IOS)
+void ResourceBuffer::setShouldUsePurgeableMemory(bool shouldUsePurgeableMemory)
+{
+    ASSERT(m_sharedBuffer);
+    sharedBuffer()->shouldUsePurgeableMemory(shouldUsePurgeableMemory);
+}
+#endif
+
 void ResourceBuffer::createPurgeableBuffer() const
 {
     ASSERT(m_sharedBuffer);
-    if (!sharedBuffer()->hasOneRef())
-        return;
     sharedBuffer()->createPurgeableBuffer();
 }
 
@@ -126,9 +132,17 @@ PassOwnPtr<PurgeableBuffer> ResourceBuffer::releasePurgeableBuffer()
 }
 
 #if USE(CF)
-CFDataRef ResourceBuffer::createCFData()
+RetainPtr<CFDataRef> ResourceBuffer::createCFData()
 {
     return m_sharedBuffer->createCFData();
+}
+#endif
+
+#if ENABLE(DISK_IMAGE_CACHE)
+bool ResourceBuffer::isUsingDiskImageCache() const
+{
+    ASSERT(m_sharedBuffer);
+    return m_sharedBuffer && m_sharedBuffer->isAllowedToBeMemoryMapped();
 }
 #endif
 

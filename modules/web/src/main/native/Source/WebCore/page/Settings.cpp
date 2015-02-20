@@ -26,61 +26,44 @@
 #include "config.h"
 #include "Settings.h"
 
+#include "AudioSession.h"
 #include "BackForwardController.h"
 #include "CachedResourceLoader.h"
 #include "CookieStorage.h"
 #include "DOMTimer.h"
 #include "Database.h"
 #include "Document.h"
-#include "Frame.h"
+#include "Font.h"
+#include "FontGenericFamilies.h"
 #include "FrameTree.h"
 #include "FrameView.h"
 #include "HTMLMediaElement.h"
 #include "HistoryItem.h"
 #include "InspectorInstrumentation.h"
+#include "MainFrame.h"
 #include "Page.h"
 #include "PageCache.h"
 #include "StorageMap.h"
 #include "TextAutosizer.h"
 #include <limits>
-
-using namespace std;
+#include <wtf/NeverDestroyed.h>
+#include <wtf/StdLibExtras.h>
 
 namespace WebCore {
 
 static void setImageLoadingSettings(Page* page)
 {
-    for (Frame* frame = page->mainFrame(); frame; frame = frame->tree()->traverseNext()) {
-        frame->document()->cachedResourceLoader()->setImagesEnabled(page->settings()->areImagesEnabled());
-        frame->document()->cachedResourceLoader()->setAutoLoadImages(page->settings()->loadsImagesAutomatically());
-}
+    for (Frame* frame = &page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
+        frame->document()->cachedResourceLoader()->setImagesEnabled(page->settings().areImagesEnabled());
+        frame->document()->cachedResourceLoader()->setAutoLoadImages(page->settings().loadsImagesAutomatically());
+    }
 }
 
-// Sets the entry in the font map for the given script. If family is the empty string, removes the entry instead.
-static inline void setGenericFontFamilyMap(ScriptFontFamilyMap& fontMap, const AtomicString& family, UScriptCode script, Page* page)
+static void invalidateAfterGenericFamilyChange(Page* page)
 {
-    ScriptFontFamilyMap::iterator it = fontMap.find(static_cast<int>(script));
-    if (family.isEmpty()) {
-        if (it == fontMap.end())
-            return;
-        fontMap.remove(it);
-    } else if (it != fontMap.end() && it->value == family)
-        return;
-    else
-        fontMap.set(static_cast<int>(script), family);
-
+    invalidateFontGlyphsCache();
     if (page)
         page->setNeedsRecalcStyleInAllFrames();
-}
-
-static inline const AtomicString& getGenericFontFamilyForScript(const ScriptFontFamilyMap& fontMap, UScriptCode script)
-{
-    ScriptFontFamilyMap::const_iterator it = fontMap.find(static_cast<int>(script));
-    if (it != fontMap.end())
-        return it->value;
-    if (script != USCRIPT_COMMON)
-        return getGenericFontFamilyForScript(fontMap, USCRIPT_COMMON);
-    return emptyAtom;
 }
 
 double Settings::gDefaultMinDOMTimerInterval = 0.010; // 10 milliseconds
@@ -95,8 +78,12 @@ bool Settings::gShouldPaintNativeControls = true;
 bool Settings::gAVFoundationEnabled = false;
 #endif
 
-#if PLATFORM(MAC) || (PLATFORM(QT) && USE(QTKIT))
+#if PLATFORM(COCOA)
 bool Settings::gQTKitEnabled = true;
+#endif
+
+#if ENABLE(PLUGIN_PROXY_FOR_VIDEO)
+bool Settings::gVideoPluginProxyEnabled = true;
 #endif
 
 bool Settings::gMockScrollbarsEnabled = false;
@@ -107,6 +94,12 @@ bool Settings::gShouldUseHighResolutionTimers = true;
 #endif
     
 bool Settings::gShouldRespectPriorityInCSSAttributeSetters = false;
+bool Settings::gLowPowerVideoAudioBufferSizeEnabled = false;
+
+#if PLATFORM(IOS)
+bool Settings::gNetworkDataUsageTrackingEnabled = false;
+bool Settings::gAVKitEnabled = false;
+#endif
 
 // NOTEs
 //  1) EditingMacBehavior comprises Tiger, Leopard, SnowLeopard and iOS builds, as well as QtWebKit when built on Mac;
@@ -129,6 +122,20 @@ static EditingBehaviorType editingBehaviorTypeForPlatform()
     ;
 }
 
+#if PLATFORM(IOS)
+static const bool defaultFixedPositionCreatesStackingContext = true;
+static const bool defaultAcceleratedCompositingForFixedPositionEnabled = true;
+static const bool defaultMediaPlaybackAllowsInline = false;
+static const bool defaultMediaPlaybackRequiresUserGesture = true;
+static const bool defaultShouldRespectImageOrientation = true;
+#else
+static const bool defaultFixedPositionCreatesStackingContext = false;
+static const bool defaultAcceleratedCompositingForFixedPositionEnabled = false;
+static const bool defaultMediaPlaybackAllowsInline = true;
+static const bool defaultMediaPlaybackRequiresUserGesture = false;
+static const bool defaultShouldRespectImageOrientation = false;
+#endif
+
 static const double defaultIncrementalRenderingSuppressionTimeoutInSeconds = 5;
 #if USE(UNIFIED_TEXT_CHECKING)
 static const bool defaultUnifiedTextCheckerEnabled = true;
@@ -138,10 +145,17 @@ static const bool defaultUnifiedTextCheckerEnabled = false;
 static const bool defaultSmartInsertDeleteEnabled = true;
 static const bool defaultSelectTrailingWhitespaceEnabled = false;
 
+// This amount of time must have elapsed before we will even consider scheduling a layout without a delay.
+// FIXME: For faster machines this value can really be lowered to 200. 250 is adequate, but a little high
+// for dual G5s. :)
+static const auto layoutScheduleThreshold = std::chrono::milliseconds(250);
+
 Settings::Settings(Page* page)
     : m_page(0)
     , m_mediaTypeOverride("screen")
+    , m_fontGenericFamilies(std::make_unique<FontGenericFamilies>())
     , m_storageBlockingPolicy(SecurityOrigin::AllowAllStorage)
+    , m_layoutInterval(layoutScheduleThreshold)
 #if ENABLE(TEXT_AUTOSIZING)
     , m_textAutosizingFontScaleFactor(1)
 #if HACK_FORCE_TEXT_AUTOSIZING_ON_DESKTOP
@@ -152,6 +166,7 @@ Settings::Settings(Page* page)
 #endif
 #endif
     SETTINGS_INITIALIZER_LIST
+    , m_screenFontSubstitutionEnabled(shouldEnableScreenFontSubstitutionByDefault())
     , m_isJavaEnabled(false)
     , m_isJavaEnabledForLocalFiles(true)
     , m_loadsImagesAutomatically(false)
@@ -162,15 +177,9 @@ Settings::Settings(Page* page)
     , m_needsAdobeFrameReloadingQuirk(false)
     , m_usesPageCache(false)
     , m_fontRenderingMode(0)
-    , m_isCSSCustomFilterEnabled(false)
-#if ENABLE(CSS_STICKY_POSITION)
-    , m_cssStickyPositionEnabled(true)
-#endif
-#if ENABLE(CSS_VARIABLES)
-    , m_cssVariablesEnabled(false)
-#endif
     , m_showTiledScrollingIndicator(false)
     , m_tiledBackingStoreEnabled(false)
+    , m_backgroundShouldExtendBeyondPage(false)
     , m_dnsPrefetchingEnabled(false)
 #if ENABLE(TOUCH_EVENTS)
     , m_touchEventEmulationEnabled(false)
@@ -185,6 +194,7 @@ Settings::Settings(Page* page)
 #if ENABLE(PAGE_VISIBILITY_API)
     , m_hiddenPageCSSAnimationSuspensionEnabled(false)
 #endif
+    , m_fontFallbackPrefersPictographs(false)
 {
     // A Frame may not have been created yet, so we initialize the AtomicString
     // hash before trying to use it.
@@ -193,10 +203,14 @@ Settings::Settings(Page* page)
     m_page = page; // Page is not yet fully initialized wen constructing Settings, so keeping m_page null over initializeDefaultFontFamilies() call.
 }
 
-PassOwnPtr<Settings> Settings::create(Page* page)
+Settings::~Settings()
 {
-    return adoptPtr(new Settings(page));
-} 
+}
+
+PassRefPtr<Settings> Settings::create(Page* page)
+{
+    return adoptRef(new Settings(page));
+}
 
 SETTINGS_SETTER_BODIES
 
@@ -210,7 +224,14 @@ double Settings::hiddenPageDOMTimerAlignmentInterval()
     return gHiddenPageDOMTimerAlignmentInterval;
 }
 
-#if !PLATFORM(MAC) && !PLATFORM(BLACKBERRY)
+#if !PLATFORM(COCOA)
+bool Settings::shouldEnableScreenFontSubstitutionByDefault()
+{
+    return true;
+}
+#endif
+
+#if !PLATFORM(COCOA)
 void Settings::initializeDefaultFontFamilies()
 {
     // Other platforms can set up fonts from a client, but on Mac, we want it in WebCore to share code between WebKit1 and WebKit2.
@@ -219,72 +240,86 @@ void Settings::initializeDefaultFontFamilies()
 
 const AtomicString& Settings::standardFontFamily(UScriptCode script) const
 {
-    return getGenericFontFamilyForScript(m_standardFontFamilyMap, script);
+    return m_fontGenericFamilies->standardFontFamily(script);
 }
 
 void Settings::setStandardFontFamily(const AtomicString& family, UScriptCode script)
 {
-    setGenericFontFamilyMap(m_standardFontFamilyMap, family, script, m_page);
+    bool changes = m_fontGenericFamilies->setStandardFontFamily(family, script);
+    if (changes)
+        invalidateAfterGenericFamilyChange(m_page);
 }
 
 const AtomicString& Settings::fixedFontFamily(UScriptCode script) const
 {
-    return getGenericFontFamilyForScript(m_fixedFontFamilyMap, script);
+    return m_fontGenericFamilies->fixedFontFamily(script);
 }
 
 void Settings::setFixedFontFamily(const AtomicString& family, UScriptCode script)
 {
-    setGenericFontFamilyMap(m_fixedFontFamilyMap, family, script, m_page);
+    bool changes = m_fontGenericFamilies->setFixedFontFamily(family, script);
+    if (changes)
+        invalidateAfterGenericFamilyChange(m_page);
 }
 
 const AtomicString& Settings::serifFontFamily(UScriptCode script) const
 {
-    return getGenericFontFamilyForScript(m_serifFontFamilyMap, script);
+    return m_fontGenericFamilies->serifFontFamily(script);
 }
 
 void Settings::setSerifFontFamily(const AtomicString& family, UScriptCode script)
 {
-     setGenericFontFamilyMap(m_serifFontFamilyMap, family, script, m_page);
+    bool changes = m_fontGenericFamilies->setSerifFontFamily(family, script);
+    if (changes)
+        invalidateAfterGenericFamilyChange(m_page);
 }
 
 const AtomicString& Settings::sansSerifFontFamily(UScriptCode script) const
 {
-    return getGenericFontFamilyForScript(m_sansSerifFontFamilyMap, script);
+    return m_fontGenericFamilies->sansSerifFontFamily(script);
 }
 
 void Settings::setSansSerifFontFamily(const AtomicString& family, UScriptCode script)
 {
-    setGenericFontFamilyMap(m_sansSerifFontFamilyMap, family, script, m_page);
+    bool changes = m_fontGenericFamilies->setSansSerifFontFamily(family, script);
+    if (changes)
+        invalidateAfterGenericFamilyChange(m_page);
 }
 
 const AtomicString& Settings::cursiveFontFamily(UScriptCode script) const
 {
-    return getGenericFontFamilyForScript(m_cursiveFontFamilyMap, script);
+    return m_fontGenericFamilies->cursiveFontFamily(script);
 }
 
 void Settings::setCursiveFontFamily(const AtomicString& family, UScriptCode script)
 {
-    setGenericFontFamilyMap(m_cursiveFontFamilyMap, family, script, m_page);
+    bool changes = m_fontGenericFamilies->setCursiveFontFamily(family, script);
+    if (changes)
+        invalidateAfterGenericFamilyChange(m_page);
 }
 
 const AtomicString& Settings::fantasyFontFamily(UScriptCode script) const
 {
-    return getGenericFontFamilyForScript(m_fantasyFontFamilyMap, script);
+    return m_fontGenericFamilies->fantasyFontFamily(script);
 }
 
 void Settings::setFantasyFontFamily(const AtomicString& family, UScriptCode script)
 {
-    setGenericFontFamilyMap(m_fantasyFontFamilyMap, family, script, m_page);
+    bool changes = m_fontGenericFamilies->setFantasyFontFamily(family, script);
+    if (changes)
+        invalidateAfterGenericFamilyChange(m_page);
 }
 
 const AtomicString& Settings::pictographFontFamily(UScriptCode script) const
 {
-    return getGenericFontFamilyForScript(m_pictographFontFamilyMap, script);
+    return m_fontGenericFamilies->pictographFontFamily(script);
 }
 
 void Settings::setPictographFontFamily(const AtomicString& family, UScriptCode script)
 {
-    setGenericFontFamilyMap(m_pictographFontFamilyMap, family, script, m_page);
+    bool changes = m_fontGenericFamilies->setPictographFontFamily(family, script);
+    if (changes)
+        invalidateAfterGenericFamilyChange(m_page);
 }
 
 #if ENABLE(TEXT_AUTOSIZING)
@@ -311,7 +346,7 @@ void Settings::setTextAutosizingFontScaleFactor(float fontScaleFactor)
     m_textAutosizingFontScaleFactor = fontScaleFactor;
 
     // FIXME: I wonder if this needs to traverse frames like in WebViewImpl::resize, or whether there is only one document per Settings instance?
-    for (Frame* frame = m_page->mainFrame(); frame; frame = frame->tree()->traverseNext())
+    for (Frame* frame = m_page->mainFrame(); frame; frame = frame->tree().traverseNext())
         frame->document()->textAutosizer()->recalculateMultipliers();
 
     m_page->setNeedsRecalcStyleInAllFrames();
@@ -326,9 +361,7 @@ void Settings::setMediaTypeOverride(const String& mediaTypeOverride)
 
     m_mediaTypeOverride = mediaTypeOverride;
 
-    Frame* mainFrame = m_page->mainFrame();
-    ASSERT(mainFrame);
-    FrameView* view = mainFrame->view();
+    FrameView* view = m_page->mainFrame().view();
     ASSERT(view);
 
     view->setMediaType(mediaTypeOverride);
@@ -356,7 +389,15 @@ void Settings::imageLoadingSettingsTimerFired(Timer<Settings>*)
 
 void Settings::setScriptEnabled(bool isScriptEnabled)
 {
+#if PLATFORM(IOS)
+    if (m_isScriptEnabled == isScriptEnabled)
+        return;
+#endif
+
     m_isScriptEnabled = isScriptEnabled;
+#if PLATFORM(IOS)
+    m_page->setNeedsRecalcStyleInAllFrames();
+#endif
     InspectorInstrumentation::scriptsEnabled(m_page, m_isScriptEnabled);
 }
 
@@ -380,7 +421,11 @@ void Settings::setImagesEnabled(bool areImagesEnabled)
 
 void Settings::setPluginsEnabled(bool arePluginsEnabled)
 {
+    if (m_arePluginsEnabled == arePluginsEnabled)
+        return;
+
     m_arePluginsEnabled = arePluginsEnabled;
+    Page::refreshPlugins(false);
 }
 
 void Settings::setPrivateBrowsingEnabled(bool privateBrowsingEnabled)
@@ -392,7 +437,7 @@ void Settings::setPrivateBrowsingEnabled(bool privateBrowsingEnabled)
     m_page->privateBrowsingStateChanged();
 }
 
-void Settings::setUserStyleSheetLocation(const KURL& userStyleSheetLocation)
+void Settings::setUserStyleSheetLocation(const URL& userStyleSheetLocation)
 {
     if (m_userStyleSheetLocation == userStyleSheetLocation)
         return;
@@ -439,14 +484,16 @@ double Settings::defaultDOMTimerAlignmentInterval()
     return gDefaultDOMTimerAlignmentInterval;
 }
 
-void Settings::setDOMTimerAlignmentInterval(double interval)
-{
-    m_page->setTimerAlignmentInterval(interval);
-}
-
 double Settings::domTimerAlignmentInterval() const
 {
     return m_page->timerAlignmentInterval();
+}
+
+void Settings::setLayoutInterval(std::chrono::milliseconds layoutInterval)
+{
+    // FIXME: It seems weird that this function may disregard the specified layout interval.
+    // We should either expose layoutScheduleThreshold or better communicate this invariant.
+    m_layoutInterval = std::max(layoutInterval, layoutScheduleThreshold);
 }
 
 void Settings::setUsesPageCache(bool usesPageCache)
@@ -456,11 +503,19 @@ void Settings::setUsesPageCache(bool usesPageCache)
         
     m_usesPageCache = usesPageCache;
     if (!m_usesPageCache) {
-        int first = -m_page->backForward()->backCount();
-        int last = m_page->backForward()->forwardCount();
+        int first = -m_page->backForward().backCount();
+        int last = m_page->backForward().forwardCount();
         for (int i = first; i <= last; i++)
-            pageCache()->remove(m_page->backForward()->itemAtIndex(i));
+            pageCache()->remove(m_page->backForward().itemAtIndex(i));
     }
+}
+
+void Settings::setScreenFontSubstitutionEnabled(bool enabled)
+{
+    if (m_screenFontSubstitutionEnabled == enabled)
+        return;
+    m_screenFontSubstitutionEnabled = enabled;
+    m_page->setNeedsRecalcStyleInAllFrames();
 }
 
 void Settings::setFontRenderingMode(FontRenderingMode mode)
@@ -520,9 +575,18 @@ void Settings::setTiledBackingStoreEnabled(bool enabled)
 {
     m_tiledBackingStoreEnabled = enabled;
 #if USE(TILED_BACKING_STORE)
-    if (m_page->mainFrame())
-        m_page->mainFrame()->setTiledBackingStoreEnabled(enabled);
+    m_page->mainFrame().setTiledBackingStoreEnabled(enabled);
 #endif
+}
+
+void Settings::setBackgroundShouldExtendBeyondPage(bool shouldExtend)
+{
+    if (m_backgroundShouldExtendBeyondPage == shouldExtend)
+        return;
+
+    m_backgroundShouldExtendBeyondPage = shouldExtend;
+
+    m_page->mainFrame().view()->setBackgroundExtendsBeyondPage(shouldExtend);
 }
 
 #if USE(AVFOUNDATION)
@@ -536,7 +600,7 @@ void Settings::setAVFoundationEnabled(bool enabled)
 }
 #endif
 
-#if PLATFORM(MAC) || (PLATFORM(QT) && USE(QTKIT))
+#if PLATFORM(COCOA)
 void Settings::setQTKitEnabled(bool enabled)
 {
     if (gQTKitEnabled == enabled)
@@ -547,12 +611,23 @@ void Settings::setQTKitEnabled(bool enabled)
 }
 #endif
 
+#if ENABLE(PLUGIN_PROXY_FOR_VIDEO)
+void Settings::setVideoPluginProxyEnabled(bool enabled)
+{
+    if (gVideoPluginProxyEnabled == enabled)
+        return;
+
+    gVideoPluginProxyEnabled = enabled;
+    HTMLMediaElement::resetMediaEngines();
+}
+#endif
+
 void Settings::setScrollingPerformanceLoggingEnabled(bool enabled)
 {
     m_scrollingPerformanceLoggingEnabled = enabled;
 
-    if (m_page->mainFrame() && m_page->mainFrame()->view())
-        m_page->mainFrame()->view()->setScrollingPerformanceLoggingEnabled(enabled);
+    if (m_page->mainFrame().view())
+        m_page->mainFrame().view()->setScrollingPerformanceLoggingEnabled(enabled);
 }
     
 void Settings::setAggressiveTileRetentionEnabled(bool enabled)
@@ -563,6 +638,7 @@ void Settings::setAggressiveTileRetentionEnabled(bool enabled)
 void Settings::setMockScrollbarsEnabled(bool flag)
 {
     gMockScrollbarsEnabled = flag;
+    // FIXME: This should update scroll bars in existing pages.
 }
 
 bool Settings::mockScrollbarsEnabled()
@@ -573,6 +649,7 @@ bool Settings::mockScrollbarsEnabled()
 void Settings::setUsesOverlayScrollbars(bool flag)
 {
     gUsesOverlayScrollbars = flag;
+    // FIXME: This should update scroll bars in existing pages.
 }
 
 bool Settings::usesOverlayScrollbars()
@@ -596,7 +673,7 @@ void Settings::setHiddenPageDOMTimerThrottlingEnabled(bool flag)
     if (m_hiddenPageDOMTimerThrottlingEnabled == flag)
         return;
     m_hiddenPageDOMTimerThrottlingEnabled = flag;
-    m_page->hiddenPageDOMTimerThrottlingStateChanged();
+    m_page->pageThrottler().hiddenPageDOMTimerThrottlingStateChanged();
 }
 #endif
 
@@ -607,6 +684,58 @@ void Settings::setHiddenPageCSSAnimationSuspensionEnabled(bool flag)
         return;
     m_hiddenPageCSSAnimationSuspensionEnabled = flag;
     m_page->hiddenPageCSSAnimationSuspensionStateChanged();
+}
+#endif
+
+void Settings::setFontFallbackPrefersPictographs(bool preferPictographs)
+{
+    if (m_fontFallbackPrefersPictographs == preferPictographs)
+        return;
+
+    m_fontFallbackPrefersPictographs = preferPictographs;
+    m_page->setNeedsRecalcStyleInAllFrames();
+}
+
+void Settings::setLowPowerVideoAudioBufferSizeEnabled(bool flag)
+{
+    gLowPowerVideoAudioBufferSizeEnabled = flag;
+}
+
+#if PLATFORM(IOS)
+void Settings::setAudioSessionCategoryOverride(unsigned sessionCategory)
+{
+    AudioSession::sharedSession().setCategoryOverride(static_cast<AudioSession::CategoryType>(sessionCategory));
+}
+
+unsigned Settings::audioSessionCategoryOverride()
+{
+    return AudioSession::sharedSession().categoryOverride();
+}
+
+void Settings::setNetworkDataUsageTrackingEnabled(bool trackingEnabled)
+{
+    gNetworkDataUsageTrackingEnabled = trackingEnabled;
+}
+
+bool Settings::networkDataUsageTrackingEnabled()
+{
+    return gNetworkDataUsageTrackingEnabled;
+}
+
+static String& sharedNetworkInterfaceNameGlobal()
+{
+    static NeverDestroyed<String> networkInterfaceName;
+    return networkInterfaceName;
+}
+
+void Settings::setNetworkInterfaceName(const String& networkInterfaceName)
+{
+    sharedNetworkInterfaceNameGlobal() = networkInterfaceName;
+}
+
+const String& Settings::networkInterfaceName()
+{
+    return sharedNetworkInterfaceNameGlobal();
 }
 #endif
 

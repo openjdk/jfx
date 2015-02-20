@@ -18,11 +18,11 @@
  * Boston, MA 02110-1301, USA.
  */
 
-    // Introduced in DOM Level 2:
+// Introduced in DOM Level 2:
 [
     JSGenerateToJSObject,
     JSGenerateToNativeObject,
 ] interface CSSFontFaceRule : CSSRule {
-        readonly attribute CSSStyleDeclaration style;
-    };
+    readonly attribute CSSStyleDeclaration style;
+};
 

@@ -30,11 +30,6 @@
 
 namespace WebCore {
 
-PassOwnPtr<IdTargetObserverRegistry> IdTargetObserverRegistry::create()
-{
-    return adoptPtr(new IdTargetObserverRegistry());
-}
-
 void IdTargetObserverRegistry::addObserver(const AtomicString& id, IdTargetObserver* observer)
 {
     if (id.isEmpty())
@@ -42,7 +37,7 @@ void IdTargetObserverRegistry::addObserver(const AtomicString& id, IdTargetObser
     
     IdToObserverSetMap::AddResult result = m_registry.add(id.impl(), nullptr);
     if (result.isNewEntry)
-        result.iterator->value = adoptPtr(new ObserverSet());
+        result.iterator->value = std::make_unique<ObserverSet>();
 
     result.iterator->value->add(observer);
 }
@@ -60,12 +55,11 @@ void IdTargetObserverRegistry::removeObserver(const AtomicString& id, IdTargetOb
         m_registry.remove(iter);
 }
 
-void IdTargetObserverRegistry::notifyObserversInternal(const AtomicString& id)
+void IdTargetObserverRegistry::notifyObserversInternal(const AtomicStringImpl& id)
 {
-    ASSERT(!id.isEmpty());
     ASSERT(!m_registry.isEmpty());
 
-    m_notifyingObserversInSet = m_registry.get(id.impl());
+    m_notifyingObserversInSet = m_registry.get(&id);
     if (!m_notifyingObserversInSet)
         return;
 
@@ -77,7 +71,7 @@ void IdTargetObserverRegistry::notifyObserversInternal(const AtomicString& id)
     }
 
     if (m_notifyingObserversInSet->isEmpty())
-        m_registry.remove(id.impl());
+        m_registry.remove(&id);
 
     m_notifyingObserversInSet = 0;
 }

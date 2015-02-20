@@ -35,7 +35,7 @@ LocalCurrentGraphicsContext::LocalCurrentGraphicsContext(GraphicsContext* graphi
         m_savedNSGraphicsContext = 0;
         return;
     }
-    
+
     m_savedNSGraphicsContext = [[NSGraphicsContext currentContext] retain];
     NSGraphicsContext* newContext = [NSGraphicsContext graphicsContextWithGraphicsPort:cgContext flipped:YES];
     [NSGraphicsContext setCurrentContext:newContext];

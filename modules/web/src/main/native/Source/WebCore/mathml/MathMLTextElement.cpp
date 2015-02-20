@@ -32,27 +32,61 @@
 
 #include "MathMLNames.h"
 #include "RenderMathMLOperator.h"
+#include "RenderMathMLSpace.h"
+#include "RenderMathMLToken.h"
 
 namespace WebCore {
     
 using namespace MathMLNames;
 
-inline MathMLTextElement::MathMLTextElement(const QualifiedName& tagName, Document* document)
+inline MathMLTextElement::MathMLTextElement(const QualifiedName& tagName, Document& document)
     : MathMLElement(tagName, document)
 {
+    setHasCustomStyleResolveCallbacks();
 }
 
-PassRefPtr<MathMLTextElement> MathMLTextElement::create(const QualifiedName& tagName, Document* document)
+PassRefPtr<MathMLTextElement> MathMLTextElement::create(const QualifiedName& tagName, Document& document)
 {
     return adoptRef(new MathMLTextElement(tagName, document));
 }
 
-RenderObject* MathMLTextElement::createRenderer(RenderArena* arena, RenderStyle* style)
+void MathMLTextElement::didAttachRenderers()
+{
+    MathMLElement::didAttachRenderers();
+    if (renderer()) {
+        if (renderer()->isRenderMathMLToken())
+            toRenderMathMLToken(renderer())->updateTokenContent();
+        else
+            renderer()->updateFromElement();
+    }
+}
+
+void MathMLTextElement::childrenChanged(const ChildChange& change)
+{
+    MathMLElement::childrenChanged(change);
+    if (renderer()) {
+        if (renderer()->isRenderMathMLToken())
+            toRenderMathMLToken(renderer())->updateTokenContent();
+        else
+            renderer()->updateFromElement();
+    }
+}
+
+RenderPtr<RenderElement> MathMLTextElement::createElementRenderer(PassRef<RenderStyle> style)
 {
     if (hasLocalName(MathMLNames::moTag))
-        return new (arena) RenderMathMLOperator(this);
+        return createRenderer<RenderMathMLOperator>(*this, std::move(style));
+    if (hasLocalName(MathMLNames::miTag))
+        return createRenderer<RenderMathMLToken>(*this, std::move(style));
+    if (hasLocalName(MathMLNames::mspaceTag))
+        return createRenderer<RenderMathMLSpace>(*this, std::move(style));
 
-    return MathMLElement::createRenderer(arena, style);
+    return MathMLElement::createElementRenderer(std::move(style));
+}
+
+bool MathMLTextElement::childShouldCreateRenderer(const Node& child) const
+{
+    return !hasLocalName(mspaceTag) && child.isTextNode();
 }
 
 }

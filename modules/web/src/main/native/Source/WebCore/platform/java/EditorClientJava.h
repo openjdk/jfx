@@ -23,92 +23,90 @@ public:
     EditorClientJava(const JLObject &webPage);
     virtual ~EditorClientJava();
 
-    virtual void pageDestroyed() OVERRIDE;
-    virtual void frameWillDetachPage(Frame*) OVERRIDE;
+    virtual void pageDestroyed() override;
 
-    virtual bool shouldDeleteRange(Range*) OVERRIDE;
-    virtual bool smartInsertDeleteEnabled() OVERRIDE; 
-    virtual bool isSelectTrailingWhitespaceEnabled() OVERRIDE;
-    virtual bool isContinuousSpellCheckingEnabled() OVERRIDE;
-    virtual void toggleContinuousSpellChecking() OVERRIDE;
-    virtual bool isGrammarCheckingEnabled() OVERRIDE;
-    virtual void toggleGrammarChecking() OVERRIDE;
-    virtual int spellCheckerDocumentTag() OVERRIDE;
+    virtual bool shouldDeleteRange(Range*) override;
+    virtual bool smartInsertDeleteEnabled() override; 
+    virtual bool isSelectTrailingWhitespaceEnabled() override;
+    virtual bool isContinuousSpellCheckingEnabled() override;
+    virtual void toggleContinuousSpellChecking() override;
+    virtual bool isGrammarCheckingEnabled() override;
+    virtual void toggleGrammarChecking() override;
+    virtual int spellCheckerDocumentTag() override;
 
-    virtual bool shouldBeginEditing(Range*) OVERRIDE;
-    virtual bool shouldEndEditing(Range*) OVERRIDE;
-    virtual bool shouldInsertNode(Node*, Range*, EditorInsertAction) OVERRIDE;
-    virtual bool shouldInsertText(const String&, Range*, EditorInsertAction) OVERRIDE;
-    virtual bool shouldChangeSelectedRange(Range* fromRange, Range* toRange, EAffinity, bool stillSelecting) OVERRIDE;
+    virtual bool shouldBeginEditing(Range*) override;
+    virtual bool shouldEndEditing(Range*) override;
+    virtual bool shouldInsertNode(Node*, Range*, EditorInsertAction) override;
+    virtual bool shouldInsertText(const String&, Range*, EditorInsertAction) override;
+    virtual bool shouldChangeSelectedRange(Range* fromRange, Range* toRange, EAffinity, bool stillSelecting) override;
 
-    virtual bool shouldApplyStyle(StylePropertySet*, Range*) OVERRIDE;
-    virtual bool shouldMoveRangeAfterDelete(Range*, Range*) OVERRIDE;
+    virtual bool shouldApplyStyle(StyleProperties*, Range*) override;
+    virtual bool shouldMoveRangeAfterDelete(Range*, Range*) override;
 
-    virtual void didBeginEditing() OVERRIDE;
-    virtual void respondToChangedContents() OVERRIDE;
-    virtual void respondToChangedSelection(Frame*) OVERRIDE;
-    virtual void didEndEditing() OVERRIDE;
-    virtual void willWriteSelectionToPasteboard(Range*) OVERRIDE;
-    virtual void didWriteSelectionToPasteboard() OVERRIDE;
-    virtual void getClientPasteboardDataForRange(Range*, Vector<String>& pasteboardTypes, Vector<RefPtr<SharedBuffer> >& pasteboardData) OVERRIDE;
-    virtual void didSetSelectionTypesForPasteboard() OVERRIDE;
+    virtual void didBeginEditing() override;
+    virtual void respondToChangedContents() override;
+    virtual void respondToChangedSelection(Frame*) override;
+    virtual void didEndEditing() override;
+    virtual void willWriteSelectionToPasteboard(Range*) override;
+    virtual void didWriteSelectionToPasteboard() override;
+    virtual void getClientPasteboardDataForRange(Range*, Vector<String>& pasteboardTypes, Vector<RefPtr<SharedBuffer> >& pasteboardData) override;
 
-    virtual void registerUndoStep(PassRefPtr<UndoStep>) OVERRIDE;
-    virtual void registerRedoStep(PassRefPtr<UndoStep>) OVERRIDE;
-    virtual void clearUndoRedoOperations() OVERRIDE;
+    virtual void registerUndoStep(PassRefPtr<UndoStep>) override;
+    virtual void registerRedoStep(PassRefPtr<UndoStep>) override;
+    virtual void clearUndoRedoOperations() override;
 
-    virtual bool canCopyCut(Frame*, bool defaultValue) const OVERRIDE;
-    virtual bool canPaste(Frame*, bool defaultValue) const OVERRIDE;
-    virtual bool canUndo() const OVERRIDE;
-    virtual bool canRedo() const OVERRIDE;
+    virtual bool canCopyCut(Frame*, bool defaultValue) const override;
+    virtual bool canPaste(Frame*, bool defaultValue) const override;
+    virtual bool canUndo() const override;
+    virtual bool canRedo() const override;
 
-    virtual void undo() OVERRIDE;
-    virtual void redo() OVERRIDE;
+    virtual void undo() override;
+    virtual void redo() override;
 
-    virtual void handleKeyboardEvent(KeyboardEvent*) OVERRIDE;
-    virtual void handleInputMethodKeydown(KeyboardEvent*) OVERRIDE;
+    virtual void handleKeyboardEvent(KeyboardEvent*) override;
+    virtual void handleInputMethodKeydown(KeyboardEvent*) override;
 
-    virtual void textFieldDidBeginEditing(Element*) OVERRIDE;
-    virtual void textFieldDidEndEditing(Element*) OVERRIDE;
-    virtual void textDidChangeInTextField(Element*) OVERRIDE;
-    virtual bool doTextFieldCommandFromEvent(Element*, KeyboardEvent*) OVERRIDE;
-    virtual void textWillBeDeletedInTextField(Element*) OVERRIDE;
-    virtual void textDidChangeInTextArea(Element*) OVERRIDE;
+    virtual void textFieldDidBeginEditing(Element*) override;
+    virtual void textFieldDidEndEditing(Element*) override;
+    virtual void textDidChangeInTextField(Element*) override;
+    virtual bool doTextFieldCommandFromEvent(Element*, KeyboardEvent*) override;
+    virtual void textWillBeDeletedInTextField(Element*) override;
+    virtual void textDidChangeInTextArea(Element*) override;
 
 #if USE(APPKIT)
-    virtual void uppercaseWord() OVERRIDE;
-    virtual void lowercaseWord() OVERRIDE;
-    virtual void capitalizeWord() OVERRIDE;
+    virtual void uppercaseWord() override;
+    virtual void lowercaseWord() override;
+    virtual void capitalizeWord() override;
 #endif
 
 #if USE(AUTOMATIC_TEXT_REPLACEMENT)
-    virtual void showSubstitutionsPanel(bool show) OVERRIDE;
-    virtual bool substitutionsPanelIsShowing() OVERRIDE;
-    virtual void toggleSmartInsertDelete() OVERRIDE;
-    virtual bool isAutomaticQuoteSubstitutionEnabled() OVERRIDE;
-    virtual void toggleAutomaticQuoteSubstitution() OVERRIDE;
-    virtual bool isAutomaticLinkDetectionEnabled() OVERRIDE;
-    virtual void toggleAutomaticLinkDetection() OVERRIDE;
-    virtual bool isAutomaticDashSubstitutionEnabled() OVERRIDE;
-    virtual void toggleAutomaticDashSubstitution() OVERRIDE;
-    virtual bool isAutomaticTextReplacementEnabled() OVERRIDE;
-    virtual void toggleAutomaticTextReplacement() OVERRIDE;
-    virtual bool isAutomaticSpellingCorrectionEnabled() OVERRIDE;
-    virtual void toggleAutomaticSpellingCorrection() OVERRIDE;
+    virtual void showSubstitutionsPanel(bool show) override;
+    virtual bool substitutionsPanelIsShowing() override;
+    virtual void toggleSmartInsertDelete() override;
+    virtual bool isAutomaticQuoteSubstitutionEnabled() override;
+    virtual void toggleAutomaticQuoteSubstitution() override;
+    virtual bool isAutomaticLinkDetectionEnabled() override;
+    virtual void toggleAutomaticLinkDetection() override;
+    virtual bool isAutomaticDashSubstitutionEnabled() override;
+    virtual void toggleAutomaticDashSubstitution() override;
+    virtual bool isAutomaticTextReplacementEnabled() override;
+    virtual void toggleAutomaticTextReplacement() override;
+    virtual bool isAutomaticSpellingCorrectionEnabled() override;
+    virtual void toggleAutomaticSpellingCorrection() override;
 #endif
 
 #if ENABLE(DELETION_UI)
-    virtual bool shouldShowDeleteInterface(HTMLElement*) OVERRIDE;
+    virtual bool shouldShowDeleteInterface(HTMLElement*) override;
 #endif
 
-    virtual TextCheckerClient* textChecker() OVERRIDE { return static_cast<TextCheckerClient*>(this); }
+    virtual TextCheckerClient* textChecker() override { return static_cast<TextCheckerClient*>(this); }
 
-    virtual void updateSpellingUIWithGrammarString(const String&, const GrammarDetail& detail) OVERRIDE;
-    virtual void updateSpellingUIWithMisspelledWord(const String&) OVERRIDE;
-    virtual void showSpellingUI(bool show) OVERRIDE;
-    virtual bool spellingUIIsShowing() OVERRIDE;
-    virtual void willSetInputMethodState() OVERRIDE;
-    virtual void setInputMethodState(bool enabled) OVERRIDE;
+    virtual void updateSpellingUIWithGrammarString(const String&, const GrammarDetail& detail) override;
+    virtual void updateSpellingUIWithMisspelledWord(const String&) override;
+    virtual void showSpellingUI(bool show) override;
+    virtual bool spellingUIIsShowing() override;
+    virtual void willSetInputMethodState() override;
+    virtual void setInputMethodState(bool enabled) override;
 
 protected:
     bool m_isInRedo;

@@ -80,14 +80,13 @@ java/
         self.assertEqual(expected, port.name())
 
     def test_tests_for_other_platforms(self):
-        platforms = ['mac', 'chromium-linux', 'mac-snowleopard']
+        platforms = ['mac', 'mac-snowleopard']
         port = self.make_port(port_name='mac-snowleopard')
         platform_dir_paths = map(port._webkit_baseline_path, platforms)
         # Replace our empty mock file system with one which has our expected platform directories.
         port._filesystem = MockFileSystem(dirs=platform_dir_paths)
 
         dirs_to_skip = port._tests_for_other_platforms()
-        self.assertIn('platform/chromium-linux', dirs_to_skip)
         self.assertNotIn('platform/mac', dirs_to_skip)
         self.assertNotIn('platform/mac-snowleopard', dirs_to_skip)
 
@@ -100,16 +99,14 @@ java/
         self.assert_name('mac', 'snowleopard', 'mac-snowleopard')
         self.assert_name('mac-snowleopard', 'leopard', 'mac-snowleopard')
         self.assert_name('mac-snowleopard', 'lion', 'mac-snowleopard')
-
         self.assert_name('mac', 'lion', 'mac-lion')
         self.assert_name('mac-lion', 'lion', 'mac-lion')
-
         self.assert_name('mac', 'mountainlion', 'mac-mountainlion')
         self.assert_name('mac-mountainlion', 'lion', 'mac-mountainlion')
-
+        self.assert_name('mac', 'mavericks', 'mac-mavericks')
+        self.assert_name('mac-mavericks', 'mountainlion', 'mac-mavericks')
         self.assert_name('mac', 'future', 'mac-future')
         self.assert_name('mac-future', 'future', 'mac-future')
-
         self.assertRaises(AssertionError, self.assert_name, 'mac-tiger', 'leopard', 'mac-leopard')
 
     def test_setup_environ_for_server(self):
@@ -126,13 +123,15 @@ java/
 
     def test_baseline_search_path(self):
         # Note that we don't need total coverage here, just path coverage, since this is all data driven.
-        self._assert_search_path('mac-snowleopard', 'mac-snowleopard', ['mac-snowleopard', 'mac-lion', 'mac'])
-        self._assert_search_path('mac-lion', 'mac-lion', ['mac-lion', 'mac'])
-        self._assert_search_path('mac-mountainlion', 'mac', ['mac'])
-        self._assert_search_path('mac-future', 'mac', ['mac'])
-        self._assert_search_path('mac-snowleopard', 'mac-wk2', ['mac-wk2', 'wk2', 'mac-snowleopard', 'mac-lion', 'mac'], use_webkit2=True)
-        self._assert_search_path('mac-lion', 'mac-wk2', ['mac-wk2', 'wk2', 'mac-lion', 'mac'], use_webkit2=True)
-        self._assert_search_path('mac-mountainlion', 'mac-wk2', ['mac-wk2', 'wk2', 'mac'], use_webkit2=True)
+        self._assert_search_path('mac-snowleopard', 'mac-snowleopard', ['mac-snowleopard', 'mac-lion', 'mac-mountainlion', 'mac-wk1', 'mac'])
+        self._assert_search_path('mac-lion', 'mac-lion', ['mac-lion', 'mac-mountainlion', 'mac-wk1', 'mac'])
+        self._assert_search_path('mac-mountainlion', 'mac-mountainlion', ['mac-mountainlion', 'mac-wk1', 'mac'])
+        self._assert_search_path('mac-mavericks', 'mac-wk1', ['mac-wk1', 'mac'])
+        self._assert_search_path('mac-future', 'mac-wk1', ['mac-wk1', 'mac'])
+        self._assert_search_path('mac-snowleopard', 'mac-wk2', ['mac-wk2', 'wk2', 'mac-snowleopard', 'mac-lion', 'mac-mountainlion', 'mac'], use_webkit2=True)
+        self._assert_search_path('mac-lion', 'mac-wk2', ['mac-wk2', 'wk2', 'mac-lion', 'mac-mountainlion', 'mac'], use_webkit2=True)
+        self._assert_search_path('mac-mountainlion', 'mac-wk2', ['mac-wk2', 'wk2', 'mac-mountainlion', 'mac'], use_webkit2=True)
+        self._assert_search_path('mac-mavericks', 'mac-wk2', ['mac-wk2', 'wk2', 'mac'], use_webkit2=True)
         self._assert_search_path('mac-future', 'mac-wk2', ['mac-wk2', 'wk2', 'mac'], use_webkit2=True)
 
     def test_show_results_html_file(self):

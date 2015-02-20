@@ -2460,7 +2460,7 @@ project(":web") {
                           IS_64 ? "${t.name}-amd64" : "${t.name}-i586"
         dependencies {
             webkit group: "com.sun.webkit", name: "webview-deps",
-                   version: "1.2", classifier: "$classifier", ext: "zip"
+                   version: "1.3", classifier: "$classifier", ext: "zip"
         }
 
         def webkitOutputDir = "$buildDir/${t.name}"
@@ -2478,7 +2478,7 @@ project(":web") {
             exec {
                 workingDir("$projectDir/src/main/native")
                 commandLine("perl", "Tools/Scripts/set-webkit-configuration", "--$webkitConfig")
-                environment(["WEBKITOUTPUTDIR" : webkitOutputDir])
+                environment(["WEBKIT_OUTPUTDIR" : webkitOutputDir])
             }
 
             exec {
@@ -2488,7 +2488,7 @@ project(":web") {
                     String parfaitPath = IS_COMPILE_PARFAIT ? System.getenv().get("PARFAIT_PATH") + ";" : "";
                     Map environmentSettings = new HashMap(WINDOWS_NATIVE_COMPILE_ENVIRONMENT)
                     environmentSettings["PATH"] = parfaitPath + "$WINDOWS_VS_PATH;$qtDir/bin;$qtDir/qt/bin"
-                    environmentSettings["QMAKESPEC"] = "win32-msvc2008"
+                    environmentSettings["QMAKESPEC"] = "win32-msvc2013"
                     environment(environmentSettings)
                     /* To build with ICU:
                     1. Download http://javaweb.us.oracle.com/jcg/fx-webrevs/RT-17164/WebKitLibrariesICU.zip
@@ -2501,7 +2501,7 @@ project(":web") {
                     // args("--icu-unicode")
                 } else if (t.name == "mac") {
                     environment([
-                        "QMAKESPEC"      : "macx-g++",
+                        "QMAKESPEC"      : "macx-clang",
                         "QMAKE_CFLAGS"   : "-m64",
                         "QMAKE_LFLAGS"   : "-m64",
                     ])
@@ -2546,7 +2546,7 @@ load(qt_config)""")
                 }
                 environment([
                     "JAVA_HOME"       : JDK_HOME,
-                    "WEBKITOUTPUTDIR" : webkitOutputDir,
+                    "WEBKIT_OUTPUTDIR" : webkitOutputDir,
                 ])
 
                 if (IS_COMPILE_PARFAIT) {
@@ -2561,7 +2561,7 @@ load(qt_config)""")
                         "QMAKE_LINK": "parfait-g++",
                     ])
                 }
-                commandLine("perl", "Tools/Scripts/build-webkit", "--java", "--imageio")
+                commandLine("perl", "Tools/Scripts/build-webkit", "--java", "--imageio", "--icu-unicode")
             }
 
             def library = rootProject.ext[t.upper].library

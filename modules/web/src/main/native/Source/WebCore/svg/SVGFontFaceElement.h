@@ -30,9 +30,9 @@ namespace WebCore {
 class SVGFontElement;
 class StyleRuleFontFace;
 
-class SVGFontFaceElement FINAL : public SVGElement {
+class SVGFontFaceElement final : public SVGElement {
 public:
-    static PassRefPtr<SVGFontFaceElement> create(const QualifiedName&, Document*);
+    static PassRefPtr<SVGFontFaceElement> create(const QualifiedName&, Document&);
 
     unsigned unitsPerEm() const;
     int xHeight() const;
@@ -52,17 +52,21 @@ public:
     StyleRuleFontFace* fontFaceRule() const { return m_fontFaceRule.get(); }
 
 private:
-    SVGFontFaceElement(const QualifiedName&, Document*);
+    SVGFontFaceElement(const QualifiedName&, Document&);
 
-    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
 
-    virtual void childrenChanged(bool changedByParser = false, Node* beforeChange = 0, Node* afterChange = 0, int childCountDelta = 0);
-    virtual InsertionNotificationRequest insertedInto(ContainerNode*) OVERRIDE;
-    virtual void removedFrom(ContainerNode*) OVERRIDE;
+    virtual void childrenChanged(const ChildChange&) override;
+    virtual InsertionNotificationRequest insertedInto(ContainerNode&) override;
+    virtual void removedFrom(ContainerNode&) override;
+
+    virtual bool rendererIsNeeded(const RenderStyle&) override { return false; }
 
     RefPtr<StyleRuleFontFace> m_fontFaceRule;
     SVGFontElement* m_fontElement;
 };
+
+NODE_TYPE_CASTS(SVGFontFaceElement)
 
 } // namespace WebCore
 

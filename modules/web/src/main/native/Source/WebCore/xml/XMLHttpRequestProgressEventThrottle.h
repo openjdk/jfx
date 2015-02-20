@@ -30,6 +30,7 @@
 #include "Timer.h"
 #include "wtf/PassRefPtr.h"
 #include "wtf/Vector.h"
+#include <wtf/Forward.h>
 
 namespace WebCore {
 
@@ -48,10 +49,10 @@ public:
     explicit XMLHttpRequestProgressEventThrottle(EventTarget*);
     virtual ~XMLHttpRequestProgressEventThrottle();
 
-    void dispatchProgressEvent(bool lengthComputable, unsigned long long loaded, unsigned long long total);
+    void dispatchThrottledProgressEvent(bool lengthComputable, unsigned long long loaded, unsigned long long total);
     void dispatchReadyStateChangeEvent(PassRefPtr<Event>, ProgressEventAction = DoNotFlushProgressEvent);
     void dispatchEvent(PassRefPtr<Event>);
-    void dispatchEventAndLoadEnd(PassRefPtr<Event>);
+    void dispatchProgressEvent(const AtomicString&);
 
     void suspend();
     void resume();
@@ -68,13 +69,14 @@ private:
     // Weak pointer to our XMLHttpRequest object as it is the one holding us.
     EventTarget* m_target;
 
+    bool m_hasThrottledProgressEvent;
     bool m_lengthComputable;
     unsigned long long m_loaded;
     unsigned long long m_total;
 
     bool m_deferEvents;
     RefPtr<Event> m_deferredProgressEvent;
-    Vector<RefPtr<Event> > m_deferredEvents;
+    Vector<RefPtr<Event>> m_deferredEvents;
     Timer<XMLHttpRequestProgressEventThrottle> m_dispatchDeferredEventsTimer;
 };
 

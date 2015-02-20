@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2005 Frerich Raabe <raabe@kde.org>
- * Copyright (C) 2006, 2009 Apple Inc.
+ * Copyright (C) 2006, 2009, 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,75 +27,64 @@
 #ifndef XPathExpressionNode_h
 #define XPathExpressionNode_h
 
-#include "Node.h"
 #include "XPathValue.h"
-#include <wtf/HashMap.h>
-#include <wtf/Vector.h>
-#include <wtf/text/StringHash.h>
 
 namespace WebCore {
+namespace XPath {
 
-    namespace XPath {
-        
-        struct EvaluationContext {
-            WTF_MAKE_FAST_ALLOCATED;
-        public:
-            RefPtr<Node> node;
-            unsigned long size;
-            unsigned long position;
-            HashMap<String, String> variableBindings;
+struct EvaluationContext {
+    RefPtr<Node> node;
+    unsigned size;
+    unsigned position;
+    HashMap<String, String> variableBindings;
 
-            bool hadTypeConversionError;
-        };
+    bool hadTypeConversionError;
+};
 
-        class ParseNode {
-        public:
-            virtual ~ParseNode() { }
-        };
+class Expression {
+    WTF_MAKE_NONCOPYABLE(Expression); WTF_MAKE_FAST_ALLOCATED;
+public:
+    static EvaluationContext& evaluationContext();
 
-        class Expression : public ParseNode {
-            WTF_MAKE_NONCOPYABLE(Expression); WTF_MAKE_FAST_ALLOCATED;
-        public:
-            static EvaluationContext& evaluationContext();
+    virtual ~Expression() { }
 
-            Expression();
-            virtual ~Expression();
+    virtual Value evaluate() const = 0;
+    virtual Value::Type resultType() const = 0;
 
-            virtual Value evaluate() const = 0;
+    bool isContextNodeSensitive() const { return m_isContextNodeSensitive; }
+    bool isContextPositionSensitive() const { return m_isContextPositionSensitive; }
+    bool isContextSizeSensitive() const { return m_isContextSizeSensitive; }
 
-            void addSubExpression(Expression* expr)
-            {
-                m_subExpressions.append(expr);
-                m_isContextNodeSensitive |= expr->m_isContextNodeSensitive;
-                m_isContextPositionSensitive |= expr->m_isContextPositionSensitive;
-                m_isContextSizeSensitive |= expr->m_isContextSizeSensitive;
-            }
+protected:
+    Expression();
 
-            bool isContextNodeSensitive() const { return m_isContextNodeSensitive; }
-            bool isContextPositionSensitive() const { return m_isContextPositionSensitive; }
-            bool isContextSizeSensitive() const { return m_isContextSizeSensitive; }
-            void setIsContextNodeSensitive(bool value) { m_isContextNodeSensitive = value; }
-            void setIsContextPositionSensitive(bool value) { m_isContextPositionSensitive = value; }
-            void setIsContextSizeSensitive(bool value) { m_isContextSizeSensitive = value; }
+    unsigned subexpressionCount() const { return m_subexpressions.size(); }
+    const Expression& subexpression(unsigned i) const { return *m_subexpressions[i]; }
 
-            virtual Value::Type resultType() const = 0;
-
-        protected:
-            unsigned subExprCount() const { return m_subExpressions.size(); }
-            Expression* subExpr(unsigned i) { return m_subExpressions[i]; }
-            const Expression* subExpr(unsigned i) const { return m_subExpressions[i]; }
-
-        private:
-            Vector<Expression*> m_subExpressions;
-
-            // Evaluation details that can be used for optimization.
-            bool m_isContextNodeSensitive;
-            bool m_isContextPositionSensitive;
-            bool m_isContextSizeSensitive;
-        };
-
+    void addSubexpression(std::unique_ptr<Expression> expression)
+    {
+        m_isContextNodeSensitive |= expression->m_isContextNodeSensitive;
+        m_isContextPositionSensitive |= expression->m_isContextPositionSensitive;
+        m_isContextSizeSensitive |= expression->m_isContextSizeSensitive;
+        m_subexpressions.append(std::move(expression));
     }
 
-}
+    void setSubexpressions(Vector<std::unique_ptr<Expression>>);
 
-#endif // EXPRESSION_H
+    void setIsContextNodeSensitive(bool value) { m_isContextNodeSensitive = value; }
+    void setIsContextPositionSensitive(bool value) { m_isContextPositionSensitive = value; }
+    void setIsContextSizeSensitive(bool value) { m_isContextSizeSensitive = value; }
+
+private:
+    Vector<std::unique_ptr<Expression>> m_subexpressions;
+
+    // Evaluation details that can be used for optimization.
+    bool m_isContextNodeSensitive;
+    bool m_isContextPositionSensitive;
+    bool m_isContextSizeSensitive;
+};
+
+} // namespace XPath
+} // namespace WebCore
+
+#endif // XPathExpressionNode_h

@@ -29,7 +29,7 @@
 #ifndef AudioBuffer_h
 #define AudioBuffer_h
 
-#include <wtf/Float32Array.h>
+#include <runtime/Float32Array.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
@@ -38,7 +38,7 @@
 namespace WebCore {
 
 class AudioBus;
-    
+
 typedef int ExceptionCode;
 
 class AudioBuffer : public RefCounted<AudioBuffer> {
@@ -55,7 +55,7 @@ public:
 
     // Channel data access
     unsigned numberOfChannels() const { return m_channels.size(); }
-    Float32Array* getChannelData(unsigned channelIndex, ExceptionCode&);
+    PassRefPtr<Float32Array> getChannelData(unsigned channelIndex, ExceptionCode&);
     Float32Array* getChannelData(unsigned channelIndex);
     void zero();
 
@@ -67,7 +67,7 @@ public:
     // releaseMemory() can be called when the AudioContext goes away, so we can release the memory earlier than when the garbage collection happens.
     // Careful! Only call this when the page unloads, after the AudioContext is no longer processing.
     void releaseMemory();
-    
+
     size_t memoryCost() const;
     
 protected:
@@ -78,7 +78,7 @@ protected:
     float m_sampleRate;
     size_t m_length;
 
-    Vector<RefPtr<Float32Array> > m_channels;
+    Vector<RefPtr<Float32Array>> m_channels;
 };
 
 } // namespace WebCore
