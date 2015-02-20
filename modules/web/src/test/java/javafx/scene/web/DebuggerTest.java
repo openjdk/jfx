@@ -32,11 +32,13 @@ import java.util.List;
 import javafx.util.Callback;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.After;
 
 public class DebuggerTest extends TestBase {
 
+    @Ignore("RT-40076")
     @Test
     public void testSimpleMessageExchange() {
         submit(() -> {

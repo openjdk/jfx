@@ -25,15 +25,20 @@
 
 package javafx.scene.web;
 
+import com.sun.javafx.PlatformUtil;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadMXBean;
 import javafx.event.EventHandler;
 import netscape.javascript.JSException;
+import org.junit.Assume;
 import org.junit.Test;
 
 public class IrresponsiveScriptTest extends TestBase {
 
     @Test public void testInfiniteLoopInScript() {
+        // Ignore test on Linux until RT-40077 is fixed
+        Assume.assumeTrue(!PlatformUtil.isLinux());
+
         try {
             // This infinite loop should get interrupted by Webkit in about 10s.
             // If it doesn't, test times out.
