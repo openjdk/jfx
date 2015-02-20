@@ -3036,6 +3036,14 @@ compileTargets { t ->
                 }
                 if (IS_WINDOWS) {
                     from ("modules/graphics/build/libs/prismD3D/${t.name}/${library(targetProperties.prismD3D.lib)}");
+
+                    // Copy VS2013 runtime libs to sdk
+                    if ("${targetProperties.MSVCRTDIR}" != "") {
+                        from("${targetProperties.MSVCRTDIR}") {
+                            include "msvcr${WINDOWS_VS_VER}.dll",
+                                    "msvcp${WINDOWS_VS_VER}.dll"
+                        }
+                    }
                 }
                 if (IS_COMPILE_WEBKIT) {
                     from ("modules/web/build/libs/${t.name}/${library('jfxwebkit')}")

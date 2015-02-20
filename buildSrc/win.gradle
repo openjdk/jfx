@@ -64,7 +64,7 @@ setupTools("windows_tools",
         }
     },
     { properties ->
-        defineProperty("WINDOWS_VS_VSINSTALLDIR", properties, "c:/Program Files (x86)/Microsoft Visual Studio 10.0");
+        defineProperty("WINDOWS_VS_VSINSTALLDIR", properties, "c:/Program Files (x86)/Microsoft Visual Studio 12.0");
         defineProperty("WINDOWS_SDK_DIR", properties, System.getenv().get("WINSDK_DIR"))
         defineProperty("WINDOWS_VS_VCINSTALLDIR", properties, "$WINDOWS_VS_VSINSTALLDIR/VC")
         defineProperty("WINDOWS_VS_DEVENVDIR", properties, "$WINDOWS_VS_VSINSTALLDIR/Common7/IDE")
@@ -72,7 +72,7 @@ setupTools("windows_tools",
         defineProperty("WINDOWS_VS_MSVCDIR", properties, WINDOWS_VS_VCINSTALLDIR)
         defineProperty("WINDOWS_DXSDK_DIR", properties, System.getenv().get("DXSDK_DIR"))
         defineProperty("WINDOWS_VS_INCLUDE", properties, "$WINDOWS_VS_VCINSTALLDIR/INCLUDE;" + "$WINDOWS_SDK_DIR/include;")
-        defineProperty("WINDOWS_VS_VER", properties, "70")
+        defineProperty("WINDOWS_VS_VER", properties, "120")
         defineProperty("WINDOWS_VS_LIB", properties, "$WINDOWS_VS_VCINSTALLDIR/LIB;" + "$WINDOWS_SDK_DIR/lib;")
         defineProperty("WINDOWS_VS_LIBPATH", properties, "$WINDOWS_VS_VCINSTALLDIR/LIB;")
         def parfaitPath = IS_COMPILE_PARFAIT ? System.getenv().get("PARFAIT_PATH") + ";" : "";
@@ -140,6 +140,11 @@ ext.FXC = cygpath("$WINDOWS_DXSDK_DIR/utilities/bin/x86/fxc.exe")
 ext.MC = cygpath("$winSdkBinDir/mt.exe")
 ext.MSVCR = cygpath("${WINDOWS_VS_MSVCDIR}/redist/${IS_64 ? 'x64' : 'x86'}/Microsoft.VC${WINDOWS_VS_VER}.CRT/msvcr${WINDOWS_VS_VER}.dll")
 ext.MSVCP = cygpath("${WINDOWS_VS_MSVCDIR}/redist/${IS_64 ? 'x64' : 'x86'}/Microsoft.VC${WINDOWS_VS_VER}.CRT/msvcp${WINDOWS_VS_VER}.dll")
+
+// Set up path to redistributable MS VC libraries if we are using a different
+// version of Visual Studio than the JDK
+def msvcrtDir = WINDOWS_VS_VER == "100" ? "" : cygpath("${WINDOWS_VS_MSVCDIR}/redist/${IS_64 ? 'x64' : 'x86'}/Microsoft.VC${WINDOWS_VS_VER}.CRT")
+WIN.MSVCRTDIR = msvcrtDir
 
 if (!file(RC).exists()) throw new GradleException("FAIL: cannot find RC")
 
@@ -303,7 +308,7 @@ WIN.font.javahInclude = [
         "com/sun/javafx/text/**/*"]
 WIN.font.nativeSource = [file("modules/graphics/src/main/native-font")]
 WIN.font.compiler = compiler
-WIN.font.ccFlags = ["/DJFXFONT_PLUS", ccFlags].flatten()
+WIN.font.ccFlags = ["/DJFXFONT_PLUS", "/D_WIN32_WINNT=0x0601", ccFlags].flatten()
 WIN.font.ccFlags -= ["/DUNICODE", "/D_UNICODE"]
 WIN.font.linker = linker
 WIN.font.linkFlags = [linkFlags, "advapi32.lib", "gdi32.lib", "user32.lib", "dwrite.lib", "d2d1.lib", "windowscodecs.lib", "ole32.lib"].flatten()
