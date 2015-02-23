@@ -1199,7 +1199,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             addTrailingCells(true);
         }
 
-        computeBarVisiblity(true);
+        computeBarVisiblity();
         updateScrollBarsAndCells(recreatedOrRebuilt);
 
         lastWidth = getWidth();
@@ -1415,7 +1415,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     /**
      * @return true if bar visibility changed
      */
-    private boolean computeBarVisiblity(boolean changeVisibility) {
+    private boolean computeBarVisiblity() {
         if (cells.isEmpty()) {
             // In case no cells are set yet, we assume no bars are needed
             needLengthBar = false;
@@ -1459,15 +1459,11 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
             setViewportLength((isVertical ? getHeight() : getWidth()) - (needBreadthBar ? breadthBarLength : 0));
             setViewportBreadth((isVertical ? getWidth() : getHeight()) - (needLengthBar ? lengthBarBreadth : 0));
 
-            if (changeVisibility) {
-                breadthBar.setVisible(needBreadthBar);
-                lengthBar.setVisible(needLengthBar);
-            }
+            breadthBar.setVisible(needBreadthBar);
+            lengthBar.setVisible(needLengthBar);
         } else {
-            if (changeVisibility) {
-                breadthBar.setVisible(needBreadthBar && tempVisibility);
-                lengthBar.setVisible(needLengthBar && tempVisibility);
-            }
+            breadthBar.setVisible(needBreadthBar && tempVisibility);
+            lengthBar.setVisible(needLengthBar && tempVisibility);
         }
 
         return barVisibilityChanged;
@@ -1489,8 +1485,6 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         // will want to do some stuff TODO.
         breadthBar.setVirtual(false);
         lengthBar.setVirtual(true);
-
-        computeBarVisiblity(false);
     }
 
     @Override protected void setWidth(double value) {
