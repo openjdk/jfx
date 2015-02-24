@@ -592,12 +592,16 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                 filesToCheck.add(new String[] {APP_RESOURCES.fetchFrom(params).getBaseDirectory().toString(), s});
             }
         } else {
-            RelativeFileSet rfs = APP_RESOURCES.fetchFrom(params);
-            if (rfs == null) {
+            List<RelativeFileSet> rfsl = APP_RESOURCES_LIST.fetchFrom(params);
+            if (rfsl == null || rfsl.isEmpty()) {
                 return;
             }
-            for (String s : rfs.getIncludedFiles()) {
-                filesToCheck.add(new String[]{rfs.getBaseDirectory().toString(), s});
+            for (RelativeFileSet rfs : rfsl) {
+                if (rfs == null) continue;
+                
+                for (String s : rfs.getIncludedFiles()) {
+                    filesToCheck.add(new String[]{rfs.getBaseDirectory().toString(), s});
+                }
             }
         }
 

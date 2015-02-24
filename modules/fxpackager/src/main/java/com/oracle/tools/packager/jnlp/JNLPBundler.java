@@ -183,21 +183,21 @@ public class JNLPBundler extends AbstractBundler {
             p -> 0,
             (s, p) -> Integer.parseInt(s));
     
-    public static final StandardBundlerParam<Integer> EMBEDDED_WIDTH = new StandardBundlerParam<>(
+    public static final StandardBundlerParam<String> EMBEDDED_WIDTH = new StandardBundlerParam<>(
             I18N.getString("param.embedded-width.name"),
             I18N.getString("param.embedded-width.description"),
             "jnlp.embeddedWidth",
-            Integer.class,
-            WIDTH::fetchFrom,
-            (s, p) -> Integer.parseInt(s));
+            String.class,
+            p -> Integer.toString(WIDTH.fetchFrom(p)),
+            (s, p) -> s);
     
-    public static final StandardBundlerParam<Integer> EMBEDDED_HEIGHT = new StandardBundlerParam<>(
+    public static final StandardBundlerParam<String> EMBEDDED_HEIGHT = new StandardBundlerParam<>(
             I18N.getString("param.embedded-height.name"),
             I18N.getString("param.embedded-height.description"),
             "jnlp.embeddedHeight",
-            Integer.class,
-            HEIGHT::fetchFrom,
-            (s, p) -> Integer.parseInt(s));
+            String.class,
+            p -> Integer.toString(HEIGHT.fetchFrom(p)),
+            (s, p) -> s);
     
     public static final StandardBundlerParam<String> FALLBACK_APP = new StandardBundlerParam<>(
             I18N.getString("param.fallback-app.name"),
@@ -376,7 +376,9 @@ public class JNLPBundler extends AbstractBundler {
                     I18N.getString("error.no-app-resources"),
                     I18N.getString("error.no-app-resources.advice"));
         }
-        StandardBundlerParam.validateMainClassInfoFromAppResources(params);
+        if (!EXTENSION.fetchFrom(params)) {
+            StandardBundlerParam.validateMainClassInfoFromAppResources(params);
+        }
         return true;
     }
 
@@ -995,8 +997,8 @@ public class JNLPBundler extends AbstractBundler {
         }
         addToList(p_app, "url", jnlpfile_browser, true);
         addToList(p_app, "placeholder", placeholder, false);
-        addToList(p_app, "width", EMBEDDED_WIDTH.fetchFrom(params).toString(), true);
-        addToList(p_app, "height", EMBEDDED_HEIGHT.fetchFrom(params).toString(), true);
+        addToList(p_app, "width", EMBEDDED_WIDTH.fetchFrom(params), true);
+        addToList(p_app, "height", EMBEDDED_HEIGHT.fetchFrom(params), true);
         if (jnlp_content_browser != null) {
             addToList(p_app, "jnlp_content", jnlp_content_browser, true);
         }
