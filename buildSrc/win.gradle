@@ -86,6 +86,14 @@ setupTools("windows_tools",
     }
 )
 
+if (WINDOWS_SDK_DIR == null || WINDOWS_SDK_DIR == "") {
+    throw new GradleException("FAIL: WINSDK_DIR not defined");
+}
+
+if (WINDOWS_DXSDK_DIR == null || WINDOWS_DXSDK_DIR == "") {
+    throw new GradleException("FAIL: DXSDK_DIR not defined");
+}
+
 // Define set of flags shared for all targets that support debug compilation
 def ccDebugFlags =
     IS_DEBUG_NATIVE ? ["/MDd", "/Od", "/Zi", "/DDEBUG"] : ["/O2", "/MD", "/DNDEBUG"]
@@ -141,7 +149,8 @@ ext.MC = cygpath("$winSdkBinDir/mt.exe")
 ext.MSVCR = cygpath("${WINDOWS_VS_MSVCDIR}/redist/${IS_64 ? 'x64' : 'x86'}/Microsoft.VC${WINDOWS_VS_VER}.CRT/msvcr${WINDOWS_VS_VER}.dll")
 ext.MSVCP = cygpath("${WINDOWS_VS_MSVCDIR}/redist/${IS_64 ? 'x64' : 'x86'}/Microsoft.VC${WINDOWS_VS_VER}.CRT/msvcp${WINDOWS_VS_VER}.dll")
 
-if (!file(RC).exists()) throw new GradleException("FAIL: cannot find RC")
+if (!file(RC).exists()) throw new GradleException("FAIL: cannot find RC: " + RC)
+if (!file(FXC).exists()) throw new GradleException("FAIL: cannot find FXC: " + FXC)
 
 def rcFlags = [
     "/d", "\"JFX_COMPANY=${COMPANY_NAME}\"",
