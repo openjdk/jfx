@@ -537,14 +537,17 @@ public class MacAppBundler extends AbstractBundler {
     }
 
     private void copyClassPathEntries(File javaDirectory, Map<String, ? super Object> params) throws IOException {
-        RelativeFileSet classPath = APP_RESOURCES.fetchFrom(params);
-        if (classPath == null) {
+        List<RelativeFileSet> resourcesList = APP_RESOURCES_LIST.fetchFrom(params);
+        if (resourcesList == null) {
             throw new RuntimeException(I18N.getString("message.null-classpath"));
         }
-        File srcdir = classPath.getBaseDirectory();
-        for (String fname : classPath.getIncludedFiles()) {
-            IOUtils.copyFile(
-                    new File(srcdir, fname), new File(javaDirectory, fname));
+        
+        for (RelativeFileSet classPath : resourcesList) {
+            File srcdir = classPath.getBaseDirectory();
+            for (String fname : classPath.getIncludedFiles()) {
+                IOUtils.copyFile(
+                        new File(srcdir, fname), new File(javaDirectory, fname));
+            }
         }
     }
 
@@ -1015,6 +1018,7 @@ public class MacAppBundler extends AbstractBundler {
         return Arrays.asList(
                 APP_NAME,
                 APP_RESOURCES,
+                // APP_RESOURCES_LIST, // ??
                 ARGUMENTS,
                 BUNDLE_ID_SIGNING_PREFIX,
                 CLASSPATH,

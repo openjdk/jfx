@@ -25,13 +25,22 @@
 
 package com.oracle.tools.packager;
 
-import com.oracle.tools.packager.Log;
 import java.io.File;
 
 import java.util.LinkedHashSet;
 import java.util.Set;
 
 public class RelativeFileSet {
+
+    public static enum Type {
+        UNKNOWN, jnlp, jar, nativelib, icon, license, data
+    }
+
+    private Type type = Type.UNKNOWN;
+    private String mode;
+    private String os;
+    private String arch;
+
     private File basedir;
     Set<String> files = new LinkedHashSet<>();
 
@@ -45,7 +54,7 @@ public class RelativeFileSet {
                         " does not belong to "+baseAbsolute);
             }
             if (!absolute.equals(baseAbsolute)) { //possible in javapackager case
-               this.files.add(absolute.substring(baseAbsolute.length()+1));
+                this.files.add(absolute.substring(baseAbsolute.length()+1));
             }
         }
     }
@@ -87,7 +96,39 @@ public class RelativeFileSet {
         }
         Log.verbose("\n========");
     }
-    
+
+    public Type getType() {
+        return type;
+    }
+
+    public void setType(Type type) {
+        this.type = type;
+    }
+
+    public String getMode() {
+        return mode;
+    }
+
+    public void setMode(String mode) {
+        this.mode = mode;
+    }
+
+    public String getOs() {
+        return os;
+    }
+
+    public void setOs(String os) {
+        this.os = os;
+    }
+
+    public String getArch() {
+        return arch;
+    }
+
+    public void setArch(String arch) {
+        this.arch = arch;
+    }
+
     @Override
     public String toString() {
         return "RelativeFileSet{basedir:" + basedir + ", files:" + files + "}";

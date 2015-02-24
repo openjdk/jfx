@@ -26,6 +26,7 @@
 package com.sun.javafx.tools.resource;
 
 import java.io.File;
+import java.io.IOException;
 
 public class PackagerResource {
     private static final ResourceFilter ACCEPT_ALL_FILTER =
@@ -65,7 +66,14 @@ public class PackagerResource {
 
             if (nrmFile.equals(nrmBaseDir)) {
                 this.file = nrmFile;
-                this.baseDir = nrmFile;
+                
+                File base;
+                try {
+                    base = nrmFile.getCanonicalFile();
+                } catch (IOException e) {
+                    base = nrmFile;
+                }
+                this.baseDir = base;
                 this.relativePath = "";
                 return;
             }
@@ -77,7 +85,13 @@ public class PackagerResource {
             while (tempFile != null) {
                 if (tempFile.equals(nrmBaseDir)) {
                     this.file = nrmFile;
-                    this.baseDir = nrmBaseDir;
+                    File base;
+                    try {
+                        base = nrmBaseDir.getCanonicalFile();
+                    } catch (IOException e) {
+                        base = nrmBaseDir;
+                    }
+                    this.baseDir = base;
                     this.relativePath = relativePathBuilder.toString();
                     return;
                 }
@@ -91,7 +105,13 @@ public class PackagerResource {
         final File nrmParentFile = nrmFile.getParentFile();
 
         this.file = nrmFile;
-        this.baseDir = (nrmParentFile != null) ? nrmParentFile : nrmFile;
+        File base;
+        try {
+            base = (nrmParentFile != null) ? nrmParentFile.getCanonicalFile() : nrmFile.getCanonicalFile();
+        } catch (IOException ioe) {
+            base = (nrmParentFile != null) ? nrmParentFile : nrmFile;
+        }
+        this.baseDir = base;
         this.relativePath = nrmFile.getName();
     }
 

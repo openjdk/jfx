@@ -426,6 +426,10 @@ public class BundleParams {
         putUnlessNull(PARAM_APP_RESOURCES, fs);
     }
 
+    public void setAppResourcesList(List<com.oracle.tools.packager.RelativeFileSet> rfs) {
+        putUnlessNull(APP_RESOURCES_LIST.getID(), rfs);
+    }
+
     public File getIcon() {
         return fetchParam(ICON);
     }

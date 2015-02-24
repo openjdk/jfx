@@ -45,8 +45,10 @@ import java.util.zip.ZipInputStream;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
+
 import static org.junit.Assert.*;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
@@ -62,12 +64,32 @@ public class PackagerLibTest {
     public TemporaryFolder dest = new TemporaryFolder();
     @Rule
     public TemporaryFolder src = new TemporaryFolder();
+    static boolean retain = false;
+    File srcRoot;
+    File destRoot;
 
     private PackagerLib lib;
+
+    @BeforeClass
+    public static void prepareApp() {
+        retain = Boolean.parseBoolean(System.getProperty("RETAIN_PACKAGER_TESTS"));
+        System.out.println(retain?"Retain apps" : "destroy apps");
+    }
 
     @Before
     public void setUp() {
         lib = new PackagerLib();
+        if (retain) {
+            srcRoot = new File("build/tmp/tests/packagerlib/src");
+            destRoot = new File("build/tmp/tests/packagerlib/dest");
+            srcRoot.mkdirs();
+            destRoot.mkdirs();
+        } else {
+            srcRoot = src.getRoot();
+            destRoot = dest.getRoot();
+        }
+        System.out.println("src " + srcRoot);
+        System.out.println("dest " + destRoot);
     }
 
     @Test(expected=IllegalArgumentException.class)
@@ -112,7 +134,7 @@ public class PackagerLibTest {
     public void testPackageAsJar_longArgValue() throws PackagerException, IOException {
         CreateJarParams params = defaultParams();
         params.manifestAttrs = new HashMap<>();
-        params.arguments = new ArrayList<String>();
+        params.arguments = new ArrayList<>();
 
         // added to manifest as JavaFX-Argument-1
         // note that this value will be base64 encoded
@@ -269,15 +291,16 @@ public class PackagerLibTest {
     @Test
     public void testGenerateDeploymentPackages() throws PackagerException, IOException {
         DeployParams params = new DeployParams();
-        params.outdir = dest.getRoot();
+        params.outdir = destRoot;
         params.outfile = "temp";
+        params.setApplicationClass(DUMMY_APP_MAIN);
         File j1 = createTestJar(null, DUMMY_APP_MAIN);
         params.addResource(j1.getParentFile(), j1);
 
         lib.generateDeploymentPackages(params);
 
-        File jnlpFile = new File(dest.getRoot(), "temp.jnlp");
-        File htmlFile = new File(dest.getRoot(), "temp.html");
+        File jnlpFile = new File(destRoot, "temp.jnlp");
+        File htmlFile = new File(destRoot, "temp.html");
         assertTrue(jnlpFile.exists() && jnlpFile.canRead());
         assertTrue(htmlFile.exists() && htmlFile.canRead());
 
@@ -290,15 +313,16 @@ public class PackagerLibTest {
     //extension JNLP with 1 jar
     public void testGenerateExtensionJNLP_basic() throws PackagerException, IOException {
         DeployParams params = new DeployParams();
-        params.outdir = dest.getRoot();
+        params.outdir = destRoot;
         params.outfile = "temp";
         params.isExtension = true;
+        params.setApplicationClass(DUMMY_APP_MAIN);
         File j1 = createTestJar(null, DUMMY_APP_MAIN);
         params.addResource(j1.getParentFile(), j1);
 
         lib.generateDeploymentPackages(params);
 
-        File jnlpFile = new File(dest.getRoot(), "temp.jnlp");
+        File jnlpFile = new File(destRoot, "temp.jnlp");
         assertTrue(jnlpFile.exists() && jnlpFile.canRead());
 
         validateJNLP(jnlpFile);
@@ -308,9 +332,10 @@ public class PackagerLibTest {
     //extension JNLP with 2 jars
     public void testGenerateExtensionJNLP_multi() throws PackagerException, IOException {
         DeployParams params = new DeployParams();
-        params.outdir = dest.getRoot();
+        params.outdir = destRoot;
         params.outfile = "temp";
         params.isExtension = true;
+        params.setApplicationClass(DUMMY_APP_MAIN);
         File j1 = createTestJar(null, DUMMY_APP_MAIN);
         File j2 = createTestJar(null, DUMMY_APP_MAIN);
         params.addResource(j1.getParentFile(), j1);
@@ -318,7 +343,7 @@ public class PackagerLibTest {
 
         lib.generateDeploymentPackages(params);
 
-        File jnlpFile = new File(dest.getRoot(), "temp.jnlp");
+        File jnlpFile = new File(destRoot, "temp.jnlp");
         assertTrue(jnlpFile.exists() && jnlpFile.canRead());
 
         validateJNLP(jnlpFile);
@@ -328,9 +353,10 @@ public class PackagerLibTest {
     //extension JNLP with several jars. jars may be platform specific
     public void testGenerateExtensionJNLP_multi_mix() throws PackagerException, IOException {
         DeployParams params = new DeployParams();
-        params.outdir = dest.getRoot();
+        params.outdir = destRoot;
         params.outfile = "temp";
         params.isExtension = true;
+        params.setApplicationClass(DUMMY_APP_MAIN);
         File j1 = createTestJar(null, DUMMY_APP_MAIN);
         File j2 = createTestJar(null, DUMMY_APP_MAIN);
         File j3 = createTestJar(null, DUMMY_APP_MAIN);
@@ -341,7 +367,7 @@ public class PackagerLibTest {
 
         lib.generateDeploymentPackages(params);
 
-        File jnlpFile = new File(dest.getRoot(), "temp.jnlp");
+        File jnlpFile = new File(destRoot, "temp.jnlp");
         assertTrue(jnlpFile.exists() && jnlpFile.canRead());
 
         validateJNLP(jnlpFile);

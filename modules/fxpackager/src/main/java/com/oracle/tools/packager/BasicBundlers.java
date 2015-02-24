@@ -25,6 +25,7 @@
 
 package com.oracle.tools.packager;
 
+import com.oracle.tools.packager.jnlp.JNLPBundler;
 import com.oracle.tools.packager.linux.LinuxRpmBundler;
 import com.oracle.tools.packager.mac.MacAppStoreBundler;
 import com.oracle.tools.packager.mac.MacDmgBundler;
@@ -77,7 +78,7 @@ public class BasicBundlers implements Bundlers {
                 return getBundlers();
             default:
                 return Arrays.asList(getBundlers().stream()
-                        .filter(b -> type.equals(b.getBundleType()))
+                        .filter(b -> type.equalsIgnoreCase(b.getBundleType()))
                         .toArray(Bundler[]::new));
         }
     }
@@ -123,7 +124,7 @@ public class BasicBundlers implements Bundlers {
         bundlers.add(new MacPkgBundler());
         bundlers.add(new MacAppStoreBundler());
 
-        //bundlers.add(new JNLPBundler());
+        bundlers.add(new JNLPBundler());
 
         defaultsLoaded = true;
     }

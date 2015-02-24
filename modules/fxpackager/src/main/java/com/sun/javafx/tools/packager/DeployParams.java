@@ -25,7 +25,9 @@
 
 package com.sun.javafx.tools.packager;
 
-import com.oracle.tools.packager.StandardBundlerParam;
+import com.oracle.tools.packager.*;
+import com.oracle.tools.packager.RelativeFileSet;
+import com.oracle.tools.packager.jnlp.JNLPBundler;
 import com.sun.javafx.tools.ant.Callback;
 import com.sun.javafx.tools.packager.bundlers.*;
 import com.sun.javafx.tools.packager.bundlers.Bundler.BundleType;
@@ -34,13 +36,19 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.stream.Collectors;
+
+import static com.oracle.tools.packager.jnlp.JNLPBundler.*;
 
 public class DeployParams extends CommonParams {
     public enum RunMode {
@@ -93,7 +101,7 @@ public class DeployParams extends CommonParams {
     // for web deployment with the application
     boolean includeDT;
 
-    String placeholder = null;
+    String placeholder = "'javafx-app-placeholder'";
     String appId = null;
 
     // didn't have a setter...
@@ -240,6 +248,7 @@ public class DeployParams extends CommonParams {
         this.embedJNLP = embedJNLP;
     }
 
+    @Deprecated
     public void setEmbedCertifcates(boolean v) {
         if (v) {
             System.out.println("JavaFX Packager no longer supports embedding certificates in JNLP files.  Setting will be ignored.");
@@ -502,94 +511,171 @@ public class DeployParams extends CommonParams {
     }
 
     public BundleParams getBundleParams() {
-        if (bundleType != BundleType.NONE) {
-            BundleParams bundleParams = new BundleParams();
+        BundleParams bundleParams = new BundleParams();
 
-            //construct app resources
-            //  relative to output folder!
-            Set<File> files = new HashSet<>();
-            String currentOS = System.getProperty("os.name").toLowerCase();
-            String currentArch = getArch();
+        //construct app resources
+        //  relative to output folder!
+        String currentOS = System.getProperty("os.name").toLowerCase();
+        String currentArch = getArch();
 
-            for (DeployResource r: resources) {
-                String os = r.getOs();
-                String arch = r.getArch();
-                //skip resources for other OS
-                // and nativelib jars (we are including raw libraries)
-                if ((os == null || currentOS.contains(os.toLowerCase())) &&
-                        (arch == null || currentArch.startsWith(arch.toLowerCase()))
-                        && r.getType() != DeployResource.Type.nativelib) {
-                    files.add(new File(outdir, r.getRelativePath()));
-                    if (r.getType() == DeployResource.Type.license) {
-                        bundleParams.addLicenseFile(r.getRelativePath());
-                    }
+        Map<File, Set<File>> fileResources = new LinkedHashMap<>();
+        
+        for (DeployResource r: resources) {
+            String os = r.getOs();
+            String arch = r.getArch();
+            //skip resources for other OS
+            // and nativelib jars (we are including raw libraries)
+            if ((os == null || currentOS.contains(os.toLowerCase())) &&
+                    (arch == null || currentArch.startsWith(arch.toLowerCase()))
+                    && r.getType() != DeployResource.Type.nativelib) {
+                if (r.getType() == DeployResource.Type.license) {
+                    bundleParams.addLicenseFile(r.getRelativePath());
+                }
+                Set<File> files = fileResources.get(r.getBaseDir());
+                if (files == null) {
+                    fileResources.put(r.getBaseDir(), files = new LinkedHashSet<>());
+                }
+                files.add(new File(r.getBaseDir(), r.getRelativePath()));
+            }
+        }
+        
+        bundleParams.setAppResourcesList(fileResources.entrySet().stream()
+                .map(e -> new RelativeFileSet(e.getKey(), e.getValue()))
+                .collect(Collectors.toList()));
+
+        bundleParams.setIdentifier(id);
+
+        if (javaRuntimeWasSet) {
+            bundleParams.setRuntime(javaRuntimeToUse);
+        }
+        bundleParams.setApplicationClass(applicationClass);
+        bundleParams.setPrelaoderClass(preloader);
+        bundleParams.setName(this.appName);
+        bundleParams.setAppVersion(version);
+        bundleParams.setType(bundleType);
+        bundleParams.setBundleFormat(targetFormat);
+        bundleParams.setVendor(vendor);
+        bundleParams.setEmail(email);
+        bundleParams.setShortcutHint(needShortcut);
+        bundleParams.setMenuHint(needMenu);
+        bundleParams.setSystemWide(systemWide);
+        bundleParams.setServiceHint(serviceHint);
+        bundleParams.setSignBundle(signBundle);
+        bundleParams.setCopyright(copyright);
+        bundleParams.setApplicationCategory(category);
+        bundleParams.setLicenseType(licenseType);
+        bundleParams.setDescription(description);
+        bundleParams.setTitle(title);
+        if (verbose) bundleParams.setVerbose(true);
+
+        bundleParams.setJvmProperties(properties);
+        bundleParams.setJvmargs(jvmargs);
+        bundleParams.setJvmUserArgs(jvmUserArgs);
+        bundleParams.setArguments(arguments);
+
+        File appIcon = null;
+        for (Icon ic: icons) {
+            //NB: in theory we should be paying attention to RunMode but
+            // currently everything is marked as webstart internally and runmode
+            // is not publicly documented property
+            if (/* (ic.mode == RunMode.ALL || ic.mode == RunMode.STANDALONE) && */
+                (ic.kind == null || ic.kind.equals("default"))) {
+                //could be full path or something relative to the output folder
+                appIcon = new File(ic.href);
+                if (!appIcon.exists()) {
+                    com.oracle.tools.packager.Log.debug("Icon [" + ic.href + "] is not valid absolute path. " +
+                            "Assume it is relative to the output dir.");
+                    appIcon = new File(outdir, ic.href);
                 }
             }
-            com.oracle.tools.packager.RelativeFileSet appResources = new com.oracle.tools.packager.RelativeFileSet(outdir, files);
+        }
 
-            bundleParams.setIdentifier(id);
-            bundleParams.setAppResource(appResources);
+        bundleParams.setIcon(appIcon);
 
-            if (javaRuntimeWasSet) {
-                bundleParams.setRuntime(javaRuntimeToUse);
+        Map<String, String> paramsMap = new TreeMap<>();
+        if (params != null) {
+            for (Param p : params) {
+                paramsMap.put(p.name, p.value);
             }
-            bundleParams.setApplicationClass(applicationClass);
-            bundleParams.setPrelaoderClass(preloader);
-            bundleParams.setName(this.appName);
-            bundleParams.setAppVersion(version);
-            bundleParams.setType(bundleType);
-            bundleParams.setBundleFormat(targetFormat);
-            bundleParams.setVendor(vendor);
-            bundleParams.setEmail(email);
-            bundleParams.setShortcutHint(needShortcut);
-            bundleParams.setMenuHint(needMenu);
-            bundleParams.setSystemWide(systemWide);
-            bundleParams.setServiceHint(serviceHint);
-            bundleParams.setSignBundle(signBundle);
-            bundleParams.setCopyright(copyright);
-            bundleParams.setApplicationCategory(category);
-            bundleParams.setLicenseType(licenseType);
-            bundleParams.setDescription(description);
-            bundleParams.setTitle(title);
-            if (verbose) bundleParams.setVerbose(true);
-
-            bundleParams.setJvmProperties(properties);
-            bundleParams.setJvmargs(jvmargs);
-            bundleParams.setJvmUserArgs(jvmUserArgs);
-            bundleParams.setArguments(arguments);
-
-            File appIcon = null;
-            for (Icon ic: icons) {
-                //NB: in theory we should be paying attention to RunMode but
-                // currently everything is marked as webstart internally and runmode
-                // is not publicly documented property
-                if (/* (ic.mode == RunMode.ALL || ic.mode == RunMode.STANDALONE) && */
-                    (ic.kind == null || ic.kind.equals("default"))) {
-                    //could be full path or something relative to the output folder
-                    appIcon = new File(ic.href);
-                    if (!appIcon.exists()) {
-                        com.oracle.tools.packager.Log.debug("Icon [" + ic.href + "] is not valid absolute path. " +
-                                "Assume it is relative to the output dir.");
-                        appIcon = new File(outdir, ic.href);
-                    }
+        }
+        putUnlessNullOrEmpty(JNLPBundler.APP_PARAMS.getID(), paramsMap);
+        
+        Map<String, String> unescapedHtmlParams = new TreeMap<>();
+        Map<String, String> escapedHtmlParams = new TreeMap<>();
+        if (htmlParams != null) {
+            for (HtmlParam hp : htmlParams) {
+                if (hp.needEscape) {
+                    escapedHtmlParams.put(hp.name, hp.value);
+                } else {
+                    unescapedHtmlParams.put(hp.name, hp.value);
                 }
             }
+        }
+        putUnlessNullOrEmpty(JNLPBundler.APPLET_PARAMS.getID(), unescapedHtmlParams);
+        putUnlessNullOrEmpty(ESCAPED_APPLET_PARAMS.getID(), escapedHtmlParams);
+        
 
-            bundleParams.setIcon(appIcon);
+        putUnlessNull(WIDTH.getID(), width);
+        putUnlessNull(HEIGHT.getID(), height);
+        putUnlessNull(EMBEDDED_WIDTH.getID(), embeddedWidth);
+        putUnlessNull(EMBEDDED_HEIGHT.getID(), embeddedHeight);
+        
+        putUnlessNull(CODEBASE.getID(), codebase);
+        putUnlessNull(EMBED_JNLP.getID(), embedJNLP);
+        // embedCertificates
+        putUnlessNull(ALL_PERMISSIONS.getID(), allPermissions);
+        putUnlessNull(UPDATE_MODE.getID(), updateMode);
+        putUnlessNull(EXTENSION.getID(), isExtension);
+        putUnlessNull(SWING_APP.getID(), isSwingApp);
 
-            // check for collisions
-            TreeSet<String> keys = new TreeSet<>(bundlerArguments.keySet());
-            keys.retainAll(bundleParams.getBundleParamsAsMap().keySet());
-
-            if (!keys.isEmpty()) {
-                throw new RuntimeException("Deploy Params and Bundler Arguments overlap in the following values:" + keys.toString());
+        putUnlessNull(OUT_FILE.getID(), outfile);
+        putUnlessNull(INCLUDE_DT.getID(), includeDT);
+        putUnlessNull(PLACEHOLDER.getID(), placeholder);
+        putUnlessNull(OFFLINE_ALLOWED.getID(), offlineAllowed);
+        
+        Map<String, String> callbacksMap = new TreeMap<>();
+        if (callbacks != null) {
+            for (JSCallback callback : callbacks) {
+                callbacksMap.put(callback.getName(), callback.getCmd());
             }
-            
-            bundleParams.addAllBundleParams(bundlerArguments);
-            
-            return bundleParams;
-        } else {
-            return null;
+        }
+        putUnlessNull(JS_CALLBACKS.getID(), callbacksMap);
+
+        Map<File, File> templatesMap = new TreeMap<>();
+        if (templates != null) {
+            for (Template template : templates) {
+                templatesMap.put(template.in, template.out);
+            }
+        }
+        putUnlessNull(TEMPLATES.getID(), templatesMap);
+
+        putUnlessNull(FX_PLATFORM.getID(), fxPlatform);
+        putUnlessNull(JRE_PLATFORM.getID(), jrePlatform);
+
+        putUnlessNull(FALLBACK_APP.getID(), fallbackApp);
+        
+        // check for collisions
+        TreeSet<String> keys = new TreeSet<>(bundlerArguments.keySet());
+        keys.retainAll(bundleParams.getBundleParamsAsMap().keySet());
+
+        if (!keys.isEmpty()) {
+            throw new RuntimeException("Deploy Params and Bundler Arguments overlap in the following values:" + keys.toString());
+        }
+        
+        bundleParams.addAllBundleParams(bundlerArguments);
+        
+        return bundleParams;
+    }
+
+    public void putUnlessNull(String param, Object value) {
+        if (value != null) {
+            bundlerArguments.put(param, value);
+        }
+    }
+
+    public void putUnlessNullOrEmpty(String param, Map value) {
+        if (value != null && !value.isEmpty()) {
+            bundlerArguments.put(param, value);
         }
     }
 }

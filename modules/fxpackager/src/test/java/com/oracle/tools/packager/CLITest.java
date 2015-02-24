@@ -77,7 +77,7 @@ public class CLITest {
                 "-outdir", workDir.getCanonicalPath(),
                 "-outfile", "SimpleTest",
                 "-appclass", "hello.HelloRectangle",
-                "-native",
+                "-native", "jnlp",
                 "-name", "SimpleTest");
     }
 
