@@ -281,7 +281,9 @@ public class HTMLEditorSkin extends BehaviorSkinBase<HTMLEditor, HTMLEditorBehav
         webView.addEventHandler(MouseEvent.MOUSE_RELEASED, event2 -> {
             Platform.runLater(new Runnable() {
                 @Override public void run() {
+                    enableAtomicityCheck = true;
                     updateToolbarState(true);
+                    enableAtomicityCheck = false;
                 }
             });
         });
@@ -830,10 +832,15 @@ public class HTMLEditorSkin extends BehaviorSkinBase<HTMLEditor, HTMLEditorBehav
 
     }
 
+    private boolean enableAtomicityCheck = false;
+    private int atomicityCount = 0;
+
     private void updateToolbarState(final boolean updateAlignment) {
         if (!webView.isFocused()) {
             return;
         }
+
+        atomicityCount++;
 
         // These command aways return true.
         copyButton.setDisable(!isCommandEnabled(CUT_COMMAND));
@@ -982,6 +989,8 @@ public class HTMLEditorSkin extends BehaviorSkinBase<HTMLEditor, HTMLEditorBehav
             Color c = Color.web(rgbToHex((String)backgroundColorValue));
             bgColorButton.setValue(c);
         }
+
+        atomicityCount = atomicityCount == 0 ? 0 : --atomicityCount;
     }
 
     private void enableToolbar(final boolean enable) {
@@ -1029,7 +1038,12 @@ public class HTMLEditorSkin extends BehaviorSkinBase<HTMLEditor, HTMLEditorBehav
     }
 
     private boolean executeCommand(String command, String value) {
-        return webPage.executeCommand(command, value);
+        // The mentions of atomicity throughout this class relate back to RT-39941,
+        // refer to that jira issue for more context.
+        if (!enableAtomicityCheck || (enableAtomicityCheck && atomicityCount == 0)) {
+            return webPage.executeCommand(command, value);
+        }
+        return false;
     }
 
     private boolean isCommandEnabled(String command) {
