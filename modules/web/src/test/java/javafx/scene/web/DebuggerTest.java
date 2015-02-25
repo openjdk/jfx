@@ -32,13 +32,11 @@ import java.util.List;
 import javafx.util.Callback;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.After;
 
 public class DebuggerTest extends TestBase {
 
-    @Ignore("RT-40076")
     @Test
     public void testSimpleMessageExchange() {
         submit(() -> {
@@ -51,9 +49,9 @@ public class DebuggerTest extends TestBase {
             });
             debugger.setEnabled(true);
             debugger.sendMessage(q(
-                    "{'method':'Debugger.causesRecompilation','id':16}"));
+                    "{'method':'Debugger.pause','id':16}"));
             assertEquals(
-                    Arrays.asList(q("{'result':{'result':true},'id':16}")),
+                    Arrays.asList(q("{'result':{},'id':16}")),
                     callbackMessages);
         });
     }
