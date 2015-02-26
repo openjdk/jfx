@@ -20,7 +20,7 @@
         <ant dir="ColorCube" target="clean" inheritAll="true"/>
         <ant dir="FX8-3DFeatures" target="clean" inheritAll="true"/>
         <ant dir="PickTest3D" target="clean" inheritAll="true"/>
-        <ant dir="Shape3DToy" target="jar" inheritAll="true"/>
+        <ant dir="Shape3DToy" target="clean" inheritAll="true"/>
     </target>
 
 </project>
