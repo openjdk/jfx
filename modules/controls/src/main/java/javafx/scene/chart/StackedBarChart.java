@@ -345,6 +345,9 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
     }
 
     @Override protected void seriesRemoved(final Series<X, Y> series) {
+        // Added for RT-40104
+        seriesDefaultColorIndex--;
+
         // remove all symbol nodes
         if (shouldAnimate()) {
             ParallelTransition pt = new ParallelTransition();
