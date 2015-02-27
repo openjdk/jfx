@@ -25,6 +25,9 @@
 
 package javafx.scene.control;
 
+import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
+import javafx.beans.WeakInvalidationListener;
 import javafx.collections.WeakListChangeListener;
 import com.sun.javafx.scene.control.skin.ComboBoxListViewSkin;
 import javafx.beans.property.*;
@@ -39,6 +42,8 @@ import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 import javafx.util.Callback;
 import javafx.util.StringConverter;
+
+import java.lang.ref.WeakReference;
 
 /**
  * An implementation of the {@link ComboBoxBase} abstract class for the most common
@@ -277,20 +282,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
     /**
      * The list of items to show within the ComboBox popup.
      */
-    private ObjectProperty<ObservableList<T>> items = new SimpleObjectProperty<ObservableList<T>>(this, "items") {
-        @Override protected void invalidated() {
-            // FIXME temporary fix for RT-15793. This will need to be
-            // properly fixed when time permits
-            if (getSelectionModel() instanceof ComboBoxSelectionModel) {
-                ((ComboBoxSelectionModel<T>)getSelectionModel()).updateItemsObserver(null, getItems());
-            }
-            if (getSkin() instanceof ComboBoxListViewSkin) {
-                ComboBoxListViewSkin<?> skin = (ComboBoxListViewSkin<?>) getSkin();
-                skin.updateComboBoxItems();
-                skin.updateListViewItems();
-            }
-        }
-    };
+    private ObjectProperty<ObservableList<T>> items = new SimpleObjectProperty<ObservableList<T>>(this, "items");
     public final void setItems(ObservableList<T> value) { itemsProperty().set(value); }
     public final ObservableList<T> getItems() {return items.get(); }
     public ObjectProperty<ObservableList<T>> itemsProperty() { return items; }
@@ -510,8 +502,16 @@ public class ComboBox<T> extends ComboBoxBase<T> {
              * so far as to actually watch for all changes to the items list,
              * rechecking each time.
              */
+            itemsObserver = new InvalidationListener() {
+                private WeakReference<ObservableList<T>> weakItemsRef = new WeakReference<>(comboBox.getItems());
 
-            this.comboBox.itemsProperty().addListener(weakItemsObserver);
+                @Override public void invalidated(Observable observable) {
+                    ObservableList<T> oldItems = weakItemsRef.get();
+                    weakItemsRef = new WeakReference<>(comboBox.getItems());
+                    updateItemsObserver(oldItems, comboBox.getItems());
+                }
+            };
+            this.comboBox.itemsProperty().addListener(new WeakInvalidationListener(itemsObserver));
             if (comboBox.getItems() != null) {
                 this.comboBox.getItems().addListener(weakItemsContentObserver);
             }
@@ -551,16 +551,12 @@ public class ComboBox<T> extends ComboBoxBase<T> {
         };
         
         // watching for changes to the items list
-        private final ChangeListener<ObservableList<T>> itemsObserver = (valueModel, oldList, newList) -> {
-                updateItemsObserver(oldList, newList);
-        };
-        
+        private final InvalidationListener itemsObserver;
+
         private WeakListChangeListener<T> weakItemsContentObserver =
                 new WeakListChangeListener<T>(itemsContentObserver);
         
-        private WeakChangeListener<ObservableList<T>> weakItemsObserver = 
-                new WeakChangeListener<ObservableList<T>>(itemsObserver);
-        
+
         private void updateItemsObserver(ObservableList<T> oldList, ObservableList<T> newList) {
             // update listeners
             if (oldList != null) {
