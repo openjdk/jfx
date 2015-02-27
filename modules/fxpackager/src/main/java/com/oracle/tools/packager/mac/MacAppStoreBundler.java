@@ -64,7 +64,7 @@ public class MacAppStoreBundler extends MacBaseInstallerBundler {
             I18N.getString("param.signing-key-app.description"),
             "mac.signing-key-app",
             String.class,
-            params -> MacBaseInstallerBundler.findKey("3rd Party Mac Developer Application: " + SIGNING_KEY_USER.fetchFrom(params), VERBOSE.fetchFrom(params)),
+            params -> MacBaseInstallerBundler.findKey("3rd Party Mac Developer Application: " + SIGNING_KEY_USER.fetchFrom(params), SIGNING_KEYCHAIN.fetchFrom(params), VERBOSE.fetchFrom(params)),
             (s, p) -> s);
 
     public static final BundlerParamInfo<String> MAC_APP_STORE_PKG_SIGNING_KEY = new StandardBundlerParam<>(
@@ -72,7 +72,7 @@ public class MacAppStoreBundler extends MacBaseInstallerBundler {
             I18N.getString("param.signing-key-pkg.description"),
             "mac.signing-key-pkg",
             String.class,
-            params -> MacBaseInstallerBundler.findKey("3rd Party Mac Developer Installer: " + SIGNING_KEY_USER.fetchFrom(params), VERBOSE.fetchFrom(params)),
+            params -> MacBaseInstallerBundler.findKey("3rd Party Mac Developer Installer: " + SIGNING_KEY_USER.fetchFrom(params), SIGNING_KEYCHAIN.fetchFrom(params), VERBOSE.fetchFrom(params)),
             (s, p) -> s);
 
     public static final StandardBundlerParam<File> MAC_APP_STORE_ENTITLEMENTS  = new StandardBundlerParam<>(
@@ -138,11 +138,24 @@ public class MacAppStoreBundler extends MacBaseInstallerBundler {
                     + ".pkg");
             outdir.mkdirs();
 
-            pb = new ProcessBuilder("productbuild",
-                    "--component", appLocation.toString(), "/Applications",
-                    "--sign", MAC_APP_STORE_PKG_SIGNING_KEY.fetchFrom(p),
-                    "--product", appLocation + "/Contents/Info.plist",
-                    finalPKG.getAbsolutePath());
+            List<String> buildOptions = new ArrayList<>();
+            buildOptions.add("productbuild");
+            buildOptions.add("--component");
+            buildOptions.add(appLocation.toString());
+            buildOptions.add("/Applications");
+            buildOptions.add("--sign");
+            buildOptions.add(MAC_APP_STORE_PKG_SIGNING_KEY.fetchFrom(p));
+            buildOptions.add("--product");
+            buildOptions.add(appLocation + "/Contents/Info.plist");
+            String keychainName = SIGNING_KEYCHAIN.fetchFrom(p);
+            if (keychainName != null && !keychainName.isEmpty()) {
+                buildOptions.add("--keychain");
+                buildOptions.add(keychainName);
+            }
+            buildOptions.add(finalPKG.getAbsolutePath());
+
+            pb = new ProcessBuilder(buildOptions);
+
             IOUtils.exec(pb, VERBOSE.fetchFrom(p));
             return finalPKG;
         } catch (Exception ex) {
@@ -320,10 +333,11 @@ public class MacAppStoreBundler extends MacBaseInstallerBundler {
         results.addAll(getAppBundleParameters());
         results.remove(DEVELOPER_ID_APP_SIGNING_KEY);
         results.addAll(Arrays.asList(
+                INSTALLER_SUFFIX,
                 MAC_APP_STORE_APP_SIGNING_KEY,
                 MAC_APP_STORE_ENTITLEMENTS,
-                INSTALLER_SUFFIX,
-                MAC_APP_STORE_PKG_SIGNING_KEY
+                MAC_APP_STORE_PKG_SIGNING_KEY,
+                SIGNING_KEYCHAIN
         ));
 
         return results;

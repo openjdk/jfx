@@ -245,6 +245,7 @@ public class MacAppStoreBundlerTest {
         bundleParams.put(MAIN_JAR.getID(), "mainApp.jar");
         bundleParams.put(PREFERENCES_ID.getID(), "everything/preferences/id");
         bundleParams.put(PRELOADER_CLASS.getID(), "hello.HelloPreloader");
+        bundleParams.put(SIGNING_KEYCHAIN.getID(), "");
         bundleParams.put(USER_JVM_OPTIONS.getID(), "-Xmx=256M\n");
         bundleParams.put(VERSION.getID(), "1.2.3.4");
 

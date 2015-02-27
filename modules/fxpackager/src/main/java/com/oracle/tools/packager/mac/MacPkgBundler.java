@@ -97,7 +97,7 @@ public class MacPkgBundler extends MacBaseInstallerBundler {
             I18N.getString("param.signing-key-developer-id-installer.description"),
             "mac.signing-key-developer-id-installer",
             String.class,
-            params -> MacBaseInstallerBundler.findKey("Developer ID Installer: " + SIGNING_KEY_USER.fetchFrom(params), VERBOSE.fetchFrom(params)),
+            params -> MacBaseInstallerBundler.findKey("Developer ID Installer: " + SIGNING_KEY_USER.fetchFrom(params), SIGNING_KEYCHAIN.fetchFrom(params), VERBOSE.fetchFrom(params)),
             (s, p) -> s);
 
     public static final BundlerParamInfo<String> INSTALLER_SUFFIX = new StandardBundlerParam<> (
@@ -428,6 +428,12 @@ public class MacPkgBundler extends MacBaseInstallerBundler {
                     commandLine.add("--sign");
                     commandLine.add(signingIdentity);
                 }
+
+                String keychainName = SIGNING_KEYCHAIN.fetchFrom(params);
+                if (keychainName != null && !keychainName.isEmpty()) {
+                    commandLine.add("--keychain");
+                    commandLine.add(keychainName);
+                }
             }
 
             commandLine.add("--distribution");
@@ -491,9 +497,9 @@ public class MacPkgBundler extends MacBaseInstallerBundler {
                 DEVELOPER_ID_INSTALLER_SIGNING_KEY,
                 //IDENTIFIER,
                 INSTALLER_SUFFIX,
-                LICENSE_FILE
-                //SERVICE_HINT
-        ));
+                LICENSE_FILE,
+                //SERVICE_HINT,
+                SIGNING_KEYCHAIN));
 
         return results;
     }

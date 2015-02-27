@@ -45,6 +45,7 @@ import java.text.MessageFormat;
 import java.util.*;
 
 import static com.oracle.tools.packager.StandardBundlerParam.*;
+import static com.oracle.tools.packager.mac.MacBaseInstallerBundler.SIGNING_KEYCHAIN;
 import static com.oracle.tools.packager.mac.MacBaseInstallerBundler.SIGNING_KEY_USER;
 import static com.oracle.tools.packager.mac.MacBaseInstallerBundler.getPredefinedImage;
 
@@ -215,7 +216,7 @@ public class MacAppBundler extends AbstractBundler {
             I18N.getString("param.signing-key-developer-id-app.description"),
             "mac.signing-key-developer-id-app",
             String.class,
-            params -> MacBaseInstallerBundler.findKey("Developer ID Application: " + SIGNING_KEY_USER.fetchFrom(params), VERBOSE.fetchFrom(params)),
+            params -> MacBaseInstallerBundler.findKey("Developer ID Application: " + SIGNING_KEY_USER.fetchFrom(params), SIGNING_KEYCHAIN.fetchFrom(params), VERBOSE.fetchFrom(params)),
             (s, p) -> s);
 
     public static final BundlerParamInfo<String> BUNDLE_ID_SIGNING_PREFIX = new StandardBundlerParam<>(
@@ -1035,6 +1036,7 @@ public class MacAppBundler extends AbstractBundler {
                 MAIN_JAR,
                 PREFERENCES_ID,
                 PRELOADER_CLASS,
+                SIGNING_KEYCHAIN,
                 USER_JVM_OPTIONS,
                 VERSION
         );

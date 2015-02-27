@@ -41,6 +41,7 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -52,6 +53,7 @@ import java.util.TreeMap;
 import static com.oracle.tools.packager.StandardBundlerParam.*;
 import static com.oracle.tools.packager.mac.MacAppBundler.*;
 import static com.oracle.tools.packager.mac.MacBaseInstallerBundler.MAC_APP_IMAGE;
+import static com.oracle.tools.packager.mac.MacBaseInstallerBundler.SIGNING_KEYCHAIN;
 import static com.oracle.tools.packager.mac.MacPkgBundler.DEVELOPER_ID_INSTALLER_SIGNING_KEY;
 import static com.oracle.tools.packager.mac.MacPkgBundler.INSTALLER_SUFFIX;
 import static org.junit.Assert.*;
@@ -68,6 +70,9 @@ public class MacPkgBundlerTest {
     static String runtimeJdk;
     static Set<File> appResources;
     static boolean retain = false;
+    static boolean signingKeysPresent = false;
+    
+    static final File FAKE_CERT_ROOT = new File("build/tmp/tests/cert/");
 
     @BeforeClass
     public static void prepareApp() {
@@ -94,6 +99,8 @@ public class MacPkgBundlerTest {
                 new File(appResourcesDir, "LICENSE"),
                 new File(appResourcesDir, "LICENSE2")
         ));
+
+        signingKeysPresent = DEVELOPER_ID_INSTALLER_SIGNING_KEY.fetchFrom(new TreeMap<>()) != null;
     }
 
     @Before
@@ -105,12 +112,84 @@ public class MacPkgBundlerTest {
         }
         tmpBase.mkdir();
     }
+    
+    public String createFakeCerts(Map<String, ? super Object> p) {
+        File config = new File(FAKE_CERT_ROOT, "pkg-cert.cfg");
+        config.getParentFile().mkdirs();
+        try {
+            // create the config file holding the key config
+            Files.write(config.toPath(), Arrays.<String>asList("[ codesign ]",
+                    "keyUsage=critical,digitalSignature",
+                    "basicConstraints=critical,CA:false",
+                    "extendedKeyUsage=critical,codeSigning",
+                    "[ productbuild ]",
+                    "basicConstraints=critical,CA:false",
+                    "keyUsage=critical,digitalSignature",
+                    "extendedKeyUsage=critical,1.2.840.113635.100.4.13",
+                    "1.2.840.113635.100.6.1.14=critical,DER:0500"));
+
+            // create the SSL keys
+            ProcessBuilder pb = new ProcessBuilder("openssl", "req",
+                    "-newkey", "rsa:2048",
+                    "-nodes",
+                    "-out", FAKE_CERT_ROOT + "/pkg.csr",
+                    "-keyout", FAKE_CERT_ROOT + "/pkg.key",
+                    "-subj", "/CN=Developer ID Application: Insecure Test Cert/OU=JavaFX Dev/O=Oracle/C=US");
+            IOUtils.exec(pb, VERBOSE.fetchFrom(p));
+
+            // first, for the app
+            // create the cert
+            pb = new ProcessBuilder("openssl", "x509",
+                    "-req",
+                    "-days", "1",
+                    "-in", FAKE_CERT_ROOT + "/pkg.csr",
+                    "-signkey", FAKE_CERT_ROOT + "/pkg.key",
+                    "-out", FAKE_CERT_ROOT + "/pkg-app.crt",
+                    "-extfile", FAKE_CERT_ROOT + "/pkg.cnf",
+                    "-extensions", "codesign");
+            IOUtils.exec(pb, VERBOSE.fetchFrom(p));
+
+            // create and add it to the keychain
+            pb = new ProcessBuilder("certtool",
+                    "i", FAKE_CERT_ROOT + "/pkg-app.crt",
+                    "k=" + FAKE_CERT_ROOT + "/pkg.keychain",
+                    "r=" + FAKE_CERT_ROOT + "/pkg.key",
+                    "c",
+                    "p=");
+            IOUtils.exec(pb, VERBOSE.fetchFrom(p));
+            
+            // now for the pkg cert
+            pb = new ProcessBuilder("openssl", "x509",
+                        "-req",
+                        "-days", "10",
+                        "-in", FAKE_CERT_ROOT + "/pkg.csr",
+                        "-signkey", FAKE_CERT_ROOT + "/pkg.key",
+                        "-out", FAKE_CERT_ROOT + "/pkg-pkg.crt",
+                        "-extfile",FAKE_CERT_ROOT + "/png.cnf",
+                        "-extensions", "productbuild");
+            IOUtils.exec(pb, VERBOSE.fetchFrom(p));
+
+            // create and add it to the keychain
+            pb = new ProcessBuilder("certtool",
+                    "i", FAKE_CERT_ROOT + "/pkg-pkg.crt",
+                    "k=" + FAKE_CERT_ROOT + "/pkg.keychain",
+                    "r=" + FAKE_CERT_ROOT + "/pkg.key");
+            IOUtils.exec(pb, VERBOSE.fetchFrom(p));
+            
+            return FAKE_CERT_ROOT + "/pkg.keychain";
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        
+        return null;
+    }
 
     @After
     public void maybeCleanupTmpDir() {
         if (!retain) {
             attemptDelete(tmpBase);
         }
+        attemptDelete(FAKE_CERT_ROOT);
     }
 
     private void attemptDelete(File tmpBase) {
@@ -160,8 +239,7 @@ public class MacPkgBundlerTest {
         bundleParams.put(CLASSPATH.getID(), "mainApp.jar");
         bundleParams.put(VERBOSE.getID(), true);
         bundleParams.put(LICENSE_FILE.getID(), Arrays.asList("LICENSE", "LICENSE2"));
-        bundleParams.put(DEVELOPER_ID_APP_SIGNING_KEY.getID(), null); // force no signing
-        bundleParams.put(DEVELOPER_ID_INSTALLER_SIGNING_KEY.getID(), null); // force no signing
+        bundleParams.put(SIGN_BUNDLE.getID(), false); // force no signing
 
         if (runtimeJdk != null) {
             bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
@@ -182,6 +260,7 @@ public class MacPkgBundlerTest {
      */
     @Test
     public void quarantinedAppTest() throws IOException, ConfigException, UnsupportedPlatformException {
+
         AbstractBundler bundler = new MacPkgBundler();
 
         assertNotNull(bundler.getName());
@@ -203,6 +282,12 @@ public class MacPkgBundlerTest {
             bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
         }
 
+        if (!signingKeysPresent) {
+            String keychain = createFakeCerts(bundleParams);
+            Assume.assumeNotNull(keychain);
+            bundleParams.put(SIGNING_KEYCHAIN.getID(), keychain);
+        }
+
         boolean valid = bundler.validate(bundleParams);
         assertTrue(valid);
 
@@ -211,6 +296,7 @@ public class MacPkgBundlerTest {
         assertNotNull(result);
         assertTrue(result.exists());
         assertTrue(result.length() > MIN_SIZE);
+        validateSignatures(result);
 
         // mark it as though it's been downloaded
         ProcessBuilder pb = new ProcessBuilder(
@@ -243,6 +329,14 @@ public class MacPkgBundlerTest {
             bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
         }
 
+        String keychain = null;
+        if (!signingKeysPresent) {
+            keychain = createFakeCerts(bundleParams);
+            if (keychain != null) {
+                bundleParams.put(SIGNING_KEYCHAIN.getID(), keychain);
+            }
+        }
+
         boolean valid = bundler.validate(bundleParams);
         assertTrue(valid);
 
@@ -251,6 +345,9 @@ public class MacPkgBundlerTest {
         assertNotNull(output);
         assertTrue(output.exists());
         assertTrue(output.length() > MIN_SIZE);
+        if (signingKeysPresent || keychain != null) {
+            validateSignatures(output);
+        }
     }
 
     /**
@@ -275,12 +372,23 @@ public class MacPkgBundlerTest {
             bundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
         }
 
+        String keychain = null;
+        if (!signingKeysPresent) {
+            keychain = createFakeCerts(bundleParams);
+            if (keychain != null) {
+                bundleParams.put(SIGNING_KEYCHAIN.getID(), keychain);
+            }
+        }
+
         bundler.validate(bundleParams);
 
         File output = bundler.execute(bundleParams, new File(workDir, "Unicode"));
         System.err.println("Bundle at - " + output);
         assertNotNull(output);
         assertTrue(output.exists());
+        if (signingKeysPresent || keychain != null) {
+            validateSignatures(output);
+        }
     }
 
     /**
@@ -307,6 +415,14 @@ public class MacPkgBundlerTest {
             appBundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
         }
 
+        String keychain = null;
+        if (!signingKeysPresent) {
+            keychain = createFakeCerts(appBundleParams);
+            if (keychain != null) {
+                appBundleParams.put(SIGNING_KEYCHAIN.getID(), keychain);
+            }
+        }
+        
         boolean valid = appBundler.validate(appBundleParams);
         assertTrue(valid);
 
@@ -331,6 +447,9 @@ public class MacPkgBundlerTest {
         if (runtimeJdk != null) {
             pkgBundleParams.put(MAC_RUNTIME.getID(), runtimeJdk);
         }
+        if (keychain != null) {
+            pkgBundleParams.put(SIGNING_KEYCHAIN.getID(), keychain);
+        }
 
         valid = pkgBundler.validate(pkgBundleParams);
         assertTrue(valid);
@@ -340,6 +459,11 @@ public class MacPkgBundlerTest {
         assertNotNull(pkgOutput);
         assertTrue(pkgOutput.exists());
         assertTrue(pkgOutput.length() > MIN_SIZE);
+
+        if (signingKeysPresent || keychain != null) {
+            validateSignatures(pkgOutput);
+        }
+        
     }
 
     @Test(expected = ConfigException.class)
@@ -466,6 +590,7 @@ public class MacPkgBundlerTest {
         bundleParams.put(MAIN_JAR.getID(), "mainApp.jar");
         bundleParams.put(PREFERENCES_ID.getID(), "everything/preferences/id");
         bundleParams.put(PRELOADER_CLASS.getID(), "hello.HelloPreloader");
+        bundleParams.put(SIGNING_KEYCHAIN.getID(), "");
         bundleParams.put(USER_JVM_OPTIONS.getID(), "-Xmx=256M\n");
         bundleParams.put(VERSION.getID(), "1.2.3.4");
 
@@ -515,4 +640,13 @@ public class MacPkgBundlerTest {
         assertTrue(result.exists());
         assertTrue(result.length() > MIN_SIZE);
     }
+
+    public void validateSignatures(File appLocation) throws IOException {
+        // Check the signatures with pkgUtil
+        ProcessBuilder pb = new ProcessBuilder(
+                "pkgutil", "--check-signature",
+                appLocation.getCanonicalPath());
+        IOUtils.exec(pb, true);
+    }
+
 }
