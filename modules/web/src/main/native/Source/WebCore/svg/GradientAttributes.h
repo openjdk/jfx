@@ -20,9 +20,8 @@
 #ifndef GradientAttributes_h
 #define GradientAttributes_h
 
-#if ENABLE(SVG)
 #include "SVGGradientElement.h"
-#include "SVGLength.h"
+#include "SVGUnitTypes.h"
 
 namespace WebCore {
 
@@ -96,5 +95,4 @@ COMPILE_ASSERT(sizeof(GradientAttributes) == sizeof(SameSizeAsGradientAttributes
 
 } // namespace WebCore
 
-#endif // ENABLE(SVG)
 #endif

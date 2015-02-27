@@ -43,16 +43,16 @@ public:
     static PassRefPtr<AccessibilityTableHeaderContainer> create();
     virtual ~AccessibilityTableHeaderContainer();
     
-    virtual AccessibilityRole roleValue() const { return TableHeaderContainerRole; }
+    virtual AccessibilityRole roleValue() const override { return TableHeaderContainerRole; }
     
-    virtual void addChildren();
+    virtual void addChildren() override;
     
-    virtual LayoutRect elementRect() const;
+    virtual LayoutRect elementRect() const override;
     
 private:
     LayoutRect m_headerRect;
     
-    virtual bool computeAccessibilityIsIgnored() const;
+    virtual bool computeAccessibilityIsIgnored() const override;
 }; 
     
 } // namespace WebCore 

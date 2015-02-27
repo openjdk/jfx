@@ -144,8 +144,13 @@ public:
     String filenameExtension() const;
 
     bool isSizeAvailable();
-    IntSize size(RespectImageOrientationEnum = DoNotRespectImageOrientation) const;
-    IntSize frameSizeAtIndex(size_t, RespectImageOrientationEnum = DoNotRespectImageOrientation) const;
+    IntSize size(ImageOrientationDescription = ImageOrientationDescription()) const;
+    IntSize frameSizeAtIndex(size_t, ImageOrientationDescription = ImageOrientationDescription()) const;
+
+#if PLATFORM(IOS)
+    IntSize originalSize(RespectImageOrientationEnum = DoNotRespectImageOrientation) const;
+    bool isSubsampled() const { return m_baseSubsampling; }
+#endif
 
     bool getHotSpot(IntPoint&) const;
 
@@ -157,7 +162,7 @@ public:
 
     // Callers should not call this after calling clear() with a higher index;
     // see comments on clear() above.
-    PassNativeImagePtr createFrameAtIndex(size_t);
+    PassNativeImagePtr createFrameAtIndex(size_t, float* scale = 0);
 
     float frameDurationAtIndex(size_t);
     bool frameHasAlphaAtIndex(size_t); // Whether or not the frame actually used any alpha.
@@ -173,6 +178,11 @@ public:
     static void setMaxPixelsPerDecodedImage(unsigned maxPixels) { s_maxPixelsPerDecodedImage = maxPixels; }
 #endif
 
+#if PLATFORM(IOS)
+    static bool acceleratedImageDecodingEnabled() { return s_acceleratedImageDecoding; }
+    static void setAcceleratedImageDecodingEnabled(bool flag) { s_acceleratedImageDecoding = flag; }
+#endif
+
 private:
     NativeImageDecoderPtr m_decoder;
 
@@ -182,6 +192,12 @@ private:
 #endif
 #if ENABLE(IMAGE_DECODER_DOWN_SAMPLING)
     static unsigned s_maxPixelsPerDecodedImage;
+#endif
+#if PLATFORM(IOS)
+    mutable int m_baseSubsampling;
+    mutable bool m_isProgressive;
+    CFDictionaryRef imageSourceOptions(ShouldSkipMetadata, int subsampling = 0) const;
+    static bool s_acceleratedImageDecoding;
 #endif
 #if PLATFORM(JAVA) && USE(IMAGEIO)
     friend class BitmapImage;

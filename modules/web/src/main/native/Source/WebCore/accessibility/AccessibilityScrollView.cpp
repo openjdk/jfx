@@ -31,7 +31,7 @@
 #include "Frame.h"
 #include "FrameView.h"
 #include "HTMLFrameOwnerElement.h"
-#include "RenderPart.h"
+#include "RenderElement.h"
 #include "ScrollView.h"
 #include "Widget.h"
 
@@ -48,9 +48,9 @@ AccessibilityScrollView::~AccessibilityScrollView()
     ASSERT(isDetached());
 }
 
-void AccessibilityScrollView::detach()
+void AccessibilityScrollView::detach(AccessibilityDetachmentType detachmentType, AXObjectCache* cache)
 {
-    AccessibilityObject::detach();
+    AccessibilityObject::detach(detachmentType, cache);
     m_scrollView = 0;
 }
 
@@ -86,6 +86,24 @@ Widget* AccessibilityScrollView::widgetForAttachmentView() const
     return m_scrollView;
 }
     
+bool AccessibilityScrollView::canSetFocusAttribute() const
+{
+    AccessibilityObject* webArea = webAreaObject();
+    return webArea && webArea->canSetFocusAttribute();
+}
+    
+bool AccessibilityScrollView::isFocused() const
+{
+    AccessibilityObject* webArea = webAreaObject();
+    return webArea && webArea->isFocused();
+}
+    
+void AccessibilityScrollView::setFocused(bool focused)
+{
+    if (AccessibilityObject* webArea = webAreaObject())
+        webArea->setFocused(focused);
+}
+
 void AccessibilityScrollView::updateChildrenIfNecessary()
 {
     if (m_childrenDirty)
@@ -131,7 +149,11 @@ AccessibilityScrollbar* AccessibilityScrollView::addChildScrollbar(Scrollbar* sc
     if (!scrollbar)
         return 0;
     
-    AccessibilityScrollbar* scrollBarObject = static_cast<AccessibilityScrollbar*>(axObjectCache()->getOrCreate(scrollbar));
+    AXObjectCache* cache = axObjectCache();
+    if (!cache)
+        return nullptr;
+
+    AccessibilityScrollbar* scrollBarObject = toAccessibilityScrollbar(cache->getOrCreate(scrollbar));
     scrollBarObject->setParent(this);
     m_children.append(scrollBarObject);
     return scrollBarObject;
@@ -170,11 +192,14 @@ AccessibilityObject* AccessibilityScrollView::webAreaObject() const
     if (!m_scrollView || !m_scrollView->isFrameView())
         return 0;
     
-    Document* doc = toFrameView(m_scrollView)->frame()->document();
-    if (!doc || !doc->renderer())
+    Document* doc = toFrameView(m_scrollView)->frame().document();
+    if (!doc || !doc->hasLivingRenderTree())
         return 0;
 
-    return axObjectCache()->getOrCreate(doc);
+    if (AXObjectCache* cache = axObjectCache())
+        return cache->getOrCreate(doc);
+    
+    return nullptr;
 }
 
 AccessibilityObject* AccessibilityScrollView::accessibilityHitTest(const IntPoint& point) const
@@ -211,10 +236,14 @@ AccessibilityObject* AccessibilityScrollView::parentObject() const
 {
     if (!m_scrollView || !m_scrollView->isFrameView())
         return 0;
-    
-    HTMLFrameOwnerElement* owner = toFrameView(m_scrollView)->frame()->ownerElement();
+
+    AXObjectCache* cache = axObjectCache();
+    if (!cache)
+        return nullptr;
+
+    HTMLFrameOwnerElement* owner = toFrameView(m_scrollView)->frame().ownerElement();
     if (owner && owner->renderer())
-        return axObjectCache()->getOrCreate(owner);
+        return cache->getOrCreate(owner);
 
     return 0;
 }
@@ -224,9 +253,13 @@ AccessibilityObject* AccessibilityScrollView::parentObjectIfExists() const
     if (!m_scrollView || !m_scrollView->isFrameView())
         return 0;
     
-    HTMLFrameOwnerElement* owner = toFrameView(m_scrollView)->frame()->ownerElement();
+    AXObjectCache* cache = axObjectCache();
+    if (!cache)
+        return nullptr;
+
+    HTMLFrameOwnerElement* owner = toFrameView(m_scrollView)->frame().ownerElement();
     if (owner && owner->renderer())
-        return axObjectCache()->get(owner);
+        return cache->get(owner);
     
     return 0;
 }
@@ -239,7 +272,7 @@ ScrollableArea* AccessibilityScrollView::getScrollableAreaIfScrollable() const
 void AccessibilityScrollView::scrollTo(const IntPoint& point) const
 {
     if (m_scrollView)
-    m_scrollView->setScrollPosition(point);
+        m_scrollView->setScrollPosition(point);
 }
 
 } // namespace WebCore    

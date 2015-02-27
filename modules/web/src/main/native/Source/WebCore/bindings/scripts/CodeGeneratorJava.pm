@@ -743,6 +743,9 @@ sub GetJavaToNativeReturnValue
         $returnType = "Node";
         $interfaceCast = "(EventTarget)";
     }
+    if ($returnType eq "ProcessingInstruction") {
+        $interfaceCast = "(ProcessingInstruction)";
+    }
     return $interfaceCast . GetTransferTypeName($returnType) . ".getImpl("
            . $twkFunctionCall
            . ")";
@@ -902,6 +905,9 @@ sub Generate
         $includesCPP{"EventTarget.h"} = 1;
         $javaParentClassName = "JSObject";
     }
+    if ($javaClassName eq "CharacterDataImpl" || $javaClassName eq "ProcessingInstructionImpl") {
+        $importsJava{"org.w3c.dom.Node"} = 1;
+    }
 
     my $pkg = $class2pkg{$javaInterfaceName};
     $importsJava{"${pkg}.${javaInterfaceName}"} = 1 if $pkg;
@@ -918,6 +924,8 @@ sub Generate
 
     # Common header
     my $instanceType = GetJavaParamClassName($interfaceName);
+    # adjust the inatnce type for know exceptions
+
     if ($isBaseClass) {
         if ($isBaseEventTarget) {
             map { $includesCPP{$_} = 1; } @{[
@@ -1107,8 +1115,14 @@ sub Generate
         push(@contentJava, "    }\n\n");
     }
 
-    push(@contentJava, "    static ${instanceType} getImpl(long peer) {\n");
-    push(@contentJava, "        return (${instanceType})create(peer);\n");
+    my $getImplType = $instanceType;
+    
+    if ($javaClassName eq "CharacterDataImpl" || $javaClassName eq "ProcessingInstructionImpl") {
+        $getImplType = "Node";
+    }
+
+    push(@contentJava, "    static ${getImplType} getImpl(long peer) {\n");
+    push(@contentJava, "        return (${getImplType})create(peer);\n");
     push(@contentJava, "    }\n\n");
 
     # customization
@@ -1169,7 +1183,14 @@ sub Generate
 
             my $camelName = ucfirst($attributeName);
             my $getterName = "get" . $camelName;
-            my $getterExceptionSuffix = GetExceptionSuffix($attribute->getterExceptions);
+
+            my $getterExceptionSuffix = "";
+	    if ($attribute->signature->extendedAttributes->{"GetterRaisesException"} ||
+                $attribute->signature->extendedAttributes->{"RaisesException"})
+	    {
+                GetJavaParamClassName("DOMExceptionJSC"); # call this just to have DOMException added to the list of imports
+		$getterExceptionSuffix = " throws DOMException";
+	    }
 
             my $javaGetterName = GetJavaMethodName($interfaceName, $getterName);
             my $property
@@ -1189,8 +1210,11 @@ sub Generate
 
             # CPP getter
             my ($functionName, @arguments) = $codeGenerator->GetterExpression(\%includesCPP, $interfaceName, $attribute);
-            my $getterExceptionCPPParam = GetExceptionCPPParam($attribute->getterExceptions);
-            push(@arguments, $getterExceptionCPPParam) if $getterExceptionCPPParam;
+	    if ($attribute->signature->extendedAttributes->{"GetterRaisesException"} ||
+		$attribute->signature->extendedAttributes->{"RaisesException"})
+	    {
+		push(@arguments, "JavaException(env, JavaDOMException)");
+	    }
 
             my $functionCPPAltName = $attribute->signature->extendedAttributes->{"ImplementedAs"};
             my $functionCPPName = $functionCPPAltName ? $functionCPPAltName : $functionName;
@@ -1214,7 +1238,13 @@ sub Generate
             if (!$attributeIsReadonly and !$attribute->signature->extendedAttributes->{"Replaceable"}) {
                 my $setterName = "set" . $camelName;
                 my $javaSetterName = GetJavaMethodName($interfaceName, $setterName);
-                my $setterExceptionSuffix = GetExceptionSuffix($attribute->setterExceptions);
+		my $setterExceptionSuffix = "";
+		if ($attribute->signature->extendedAttributes->{"SetterRaisesException"} ||
+		    $attribute->signature->extendedAttributes->{"RaisesException"})
+		{
+                    GetJavaParamClassName("DOMExceptionJSC"); # call this just to have DOMException added to the list of imports
+		    $setterExceptionSuffix = " throws DOMException";
+		}
 
                 $property .= "    public void ${javaSetterName}(";
                 $property .= $isStringAttr ? "String" : $attributeType;
@@ -1231,11 +1261,20 @@ sub Generate
 
                 # CPP setter
                 my ($functionName, @arguments) = $codeGenerator->SetterExpression(\%includesCPP, $interfaceName, $attribute);
-                my $setterExceptionCPPParam = GetExceptionCPPParam($attribute->setterExceptions);
+		my $setterExceptionCPPParam;
+		if ($attribute->signature->extendedAttributes->{"SetterRaisesException"} ||
+		    $attribute->signature->extendedAttributes->{"RaisesException"})
+		{
+		    $setterExceptionCPPParam = "JavaException(env, JavaDOMException)";
+		}
+
                 push(@arguments, GetJavaCPPNativeArgValue($attributeType, "value"));
                 push(@arguments, $setterExceptionCPPParam) if $setterExceptionCPPParam;
 
                 my $functionCPPAltName = $attribute->signature->extendedAttributes->{"ImplementedAs"};
+		if (defined $functionCPPAltName) {
+		    $functionCPPAltName = "set" . ucfirst($functionCPPAltName);
+		}
                 my $functionCPPName = $functionCPPAltName ? $functionCPPAltName : $functionName;
 
                 $cppBody .= "${functionExportPrefix} void "
@@ -1275,7 +1314,11 @@ sub Generate
             my $functionName = $function->signature->name;
             my $javaFunctionName = GetJavaMethodName($interfaceName, $functionName);
             my $returnType = GetJavaParamClassName($function->signature->type);
-            my $exceptionSuffix = GetExceptionSuffix($function->raisesExceptions);
+            my $exceptionSuffix = "";
+	    if ($function->signature->extendedAttributes->{"RaisesException"}) {
+                GetJavaParamClassName("DOMExceptionJSC"); # call this just to have DOMException added to the list of imports
+		$exceptionSuffix = " throws DOMException";
+	    }
 
             my $numberOfParameters = @{$function->parameters};
 
@@ -1286,7 +1329,10 @@ sub Generate
                 . "(long peer";
             my $javaTWKCallParams = "getPeer()";
 
-            my $functionExceptionCPPParam = GetExceptionCPPParam($function->raisesExceptions);
+            my $functionExceptionCPPParam = "";
+	    if ($function->signature->extendedAttributes->{"RaisesException"}) {
+		$functionExceptionCPPParam = "JavaException(env, JavaDOMException)";
+	    }
             my $CPPTWKCall        = "${functionExportPrefix} "
                 . GetJavaCPPNativeType($returnType)
                 . " ${functionNamePrefix}${javaClassName}_"

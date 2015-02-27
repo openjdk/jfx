@@ -24,30 +24,32 @@
  */
 
 [
-        Conditional=VIDEO,
-        JSGenerateToNativeObject
+    Conditional=VIDEO,
+    JSGenerateToNativeObject,
 ] interface HTMLVideoElement : HTMLMediaElement {
     [Reflect] attribute unsigned long width;
     [Reflect] attribute unsigned long height;
-        readonly attribute unsigned long videoWidth;
-        readonly attribute unsigned long videoHeight;
+    readonly attribute unsigned long videoWidth;
+    readonly attribute unsigned long videoHeight;
     [Reflect, URL] attribute DOMString poster;
 
-        readonly attribute boolean webkitSupportsFullscreen;
-        readonly attribute boolean webkitDisplayingFullscreen;
+    readonly attribute boolean webkitSupportsFullscreen;
+    readonly attribute boolean webkitDisplayingFullscreen;
 
-        void webkitEnterFullscreen() raises (DOMException);
-        void webkitExitFullscreen();
+    [RaisesException] void webkitEnterFullscreen();
+    void webkitExitFullscreen();
 
-        // Note the different capitalization of the "S" in FullScreen.
-        void webkitEnterFullScreen() raises (DOMException);
-        void webkitExitFullScreen();
+    // Note the different capitalization of the "S" in FullScreen.
+    [RaisesException] void webkitEnterFullScreen();
+    void webkitExitFullScreen();
 
-        // The number of frames that have been decoded and made available for
-        // playback.
+    [Conditional=IOS_AIRPLAY] attribute boolean webkitWirelessVideoPlaybackDisabled;
+
+    // The number of frames that have been decoded and made available for
+    // playback.
     [Conditional=MEDIA_STATISTICS] readonly attribute unsigned long webkitDecodedFrameCount;
 
-        // The number of decoded frames that have been dropped by the player
-        // for performance reasons during playback.
+    // The number of decoded frames that have been dropped by the player
+    // for performance reasons during playback.
     [Conditional=MEDIA_STATISTICS] readonly attribute unsigned long webkitDroppedFrameCount;
-    };
+};

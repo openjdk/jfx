@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2009, 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,7 +29,6 @@
 #include "WebGLSharedObject.h"
 
 #include <wtf/PassRefPtr.h>
-#include <wtf/RefCounted.h>
 
 namespace WebCore {
 
@@ -44,15 +43,19 @@ public:
 
     void setSource(const String& source) { m_source = source; }
 
+    bool isValid() const { return m_isValid; }
+    void setValid(bool valid) { m_isValid = valid; }
+
 private:
     WebGLShader(WebGLRenderingContext*, GC3Denum);
 
-    virtual void deleteObjectImpl(GraphicsContext3D*, Platform3DObject);
+    virtual void deleteObjectImpl(GraphicsContext3D*, Platform3DObject) override;
 
-    virtual bool isShader() const { return true; }
+    virtual bool isShader() const override { return true; }
 
     GC3Denum m_type;
     String m_source;
+    bool m_isValid;
 };
 
 } // namespace WebCore

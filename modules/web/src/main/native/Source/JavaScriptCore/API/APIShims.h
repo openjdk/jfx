@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
 #ifndef APIShims_h
@@ -56,17 +56,15 @@ protected:
 
 class APIEntryShim : public APIEntryShimWithoutLock {
 public:
-    // Normal API entry
     APIEntryShim(ExecState* exec, bool registerThread = true)
         : APIEntryShimWithoutLock(&exec->vm(), registerThread)
-        , m_lockHolder(exec)
+        , m_lockHolder(exec->vm().exclusiveThread ? 0 : exec)
     {
     }
 
-    // JSPropertyNameAccumulator only has a vm.
     APIEntryShim(VM* vm, bool registerThread = true)
         : APIEntryShimWithoutLock(vm, registerThread)
-        , m_lockHolder(vm)
+        , m_lockHolder(vm->exclusiveThread ? 0 : vm)
     {
     }
 
@@ -83,8 +81,15 @@ private:
 class APICallbackShim {
 public:
     APICallbackShim(ExecState* exec)
-        : m_dropAllLocks(exec)
+        : m_dropAllLocks(shouldDropAllLocks(exec->vm()) ? exec : nullptr)
         , m_vm(&exec->vm())
+    {
+        wtfThreadData().resetCurrentIdentifierTable();
+    }
+
+    APICallbackShim(VM& vm)
+        : m_dropAllLocks(shouldDropAllLocks(vm) ? &vm : nullptr)
+        , m_vm(&vm)
     {
         wtfThreadData().resetCurrentIdentifierTable();
     }
@@ -95,6 +100,20 @@ public:
     }
 
 private:
+    static bool shouldDropAllLocks(VM& vm)
+    {
+        if (vm.exclusiveThread)
+            return false;
+
+        // If the VM is in the middle of being destroyed then we don't want to resurrect it
+        // by allowing DropAllLocks to ref it. By this point the APILock has already been 
+        // released anyways, so it doesn't matter that DropAllLocks is a no-op.
+        if (!vm.refCount())
+            return false;
+
+        return true;
+    }
+
     JSLock::DropAllLocks m_dropAllLocks;
     VM* m_vm;
 };

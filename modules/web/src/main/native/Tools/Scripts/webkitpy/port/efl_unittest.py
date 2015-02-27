@@ -48,3 +48,7 @@ class EflPortTest(port_testcase.PortTestCase):
         port._executive = MockExecutive(should_log=True)
         expected_logs = "MOCK run_command: ['Tools/Scripts/run-launcher', '--release', '--efl', 'file://test.html'], cwd=/mock-checkout\n"
         OutputCapture().assert_outputs(self, port.show_results_html_file, ["test.html"], expected_logs=expected_logs)
+
+    def test_get_crash_log(self):
+        # This function tested in linux_get_crash_log_unittest.py
+        pass

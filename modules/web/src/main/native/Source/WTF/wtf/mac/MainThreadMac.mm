@@ -36,6 +36,10 @@
 #import <wtf/HashSet.h>
 #import <wtf/Threading.h>
 
+#if USE(WEB_THREAD)
+#include <wtf/ios/WebCoreThread.h>
+#endif
+
 @interface JSWTFMainThreadCaller : NSObject {
 }
 - (void)call;
@@ -58,15 +62,26 @@ static bool mainThreadEstablishedAsPthreadMain;
 static pthread_t mainThreadPthread;
 static NSThread* mainThreadNSThread;
 
+#if USE(WEB_THREAD)
+static ThreadIdentifier sApplicationUIThreadIdentifier;
+static ThreadIdentifier sWebThreadIdentifier;
+#endif
+
 void initializeMainThreadPlatform()
 {
     ASSERT(!staticMainThreadCaller);
     staticMainThreadCaller = [[JSWTFMainThreadCaller alloc] init];
 
+#if !USE(WEB_THREAD)
     mainThreadEstablishedAsPthreadMain = false;
     mainThreadPthread = pthread_self();
     mainThreadNSThread = [[NSThread currentThread] retain];
-    
+#else
+    mainThreadEstablishedAsPthreadMain = true;
+    ASSERT(!mainThreadPthread);
+    ASSERT(!mainThreadNSThread);
+#endif
+
     initializeGCThreads();
 }
 
@@ -109,7 +124,7 @@ void scheduleDispatchFunctionsOnMainThread()
 {
     ASSERT(staticMainThreadCaller);
 
-    if (isMainThread()) {
+    if (isWebThread()) {
         postTimer();
         return;
     }
@@ -124,6 +139,60 @@ void scheduleDispatchFunctionsOnMainThread()
     [staticMainThreadCaller performSelector:@selector(call) onThread:mainThreadNSThread withObject:nil waitUntilDone:NO];
 }
 
+#if USE(WEB_THREAD)
+static bool webThreadIsUninitializedOrLockedOrDisabled()
+{
+    return !WebCoreWebThreadIsLockedOrDisabled || WebCoreWebThreadIsLockedOrDisabled();
+}
+
+bool isMainThread()
+{
+    return (isWebThread() || pthread_main_np()) && webThreadIsUninitializedOrLockedOrDisabled();
+}
+
+bool isUIThread()
+{
+    return pthread_main_np();
+}
+
+bool isWebThread()
+{
+    return pthread_equal(pthread_self(), mainThreadPthread);
+}
+
+void initializeApplicationUIThreadIdentifier()
+{
+    ASSERT(pthread_main_np());
+    sApplicationUIThreadIdentifier = currentThread();
+}
+
+void initializeWebThreadIdentifier()
+{
+    ASSERT(!pthread_main_np());
+    sWebThreadIdentifier = currentThread();
+}
+
+void initializeWebThreadPlatform()
+{
+    ASSERT(!pthread_main_np());
+
+    mainThreadEstablishedAsPthreadMain = false;
+    mainThreadPthread = pthread_self();
+    mainThreadNSThread = [[NSThread currentThread] retain];
+}
+
+bool canAccessThreadLocalDataForThread(ThreadIdentifier threadId)
+{
+    ThreadIdentifier currentThreadId = currentThread();
+    if (threadId == currentThreadId)
+        return true;
+
+    if (threadId == sWebThreadIdentifier || threadId == sApplicationUIThreadIdentifier)
+        return (currentThreadId == sWebThreadIdentifier || currentThreadId == sApplicationUIThreadIdentifier) && webThreadIsUninitializedOrLockedOrDisabled();
+
+    return false;
+}
+#else
 bool isMainThread()
 {
     if (mainThreadEstablishedAsPthreadMain) {
@@ -132,17 +201,6 @@ bool isMainThread()
     }
 
     ASSERT(mainThreadPthread);
-    return pthread_equal(pthread_self(), mainThreadPthread);
-}
-
-#if USE(WEB_THREAD)
-bool isUIThread()
-{
-    return pthread_main_np();
-}
-
-bool isWebThread()
-{
     return pthread_equal(pthread_self(), mainThreadPthread);
 }
 #endif // USE(WEB_THREAD)

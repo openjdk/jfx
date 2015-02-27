@@ -29,10 +29,8 @@
 
 #include "WebGLBuffer.h"
 
-#include "CheckedInt.h"
 #include "WebGLContextGroup.h"
 #include "WebGLRenderingContext.h"
-#include <wtf/ArrayBufferView.h>
 
 namespace WebCore {
 
@@ -102,14 +100,14 @@ bool WebGLBuffer::associateBufferData(ArrayBuffer* array)
 {
     if (!array)
         return false;
-    return associateBufferDataImpl(array ? array->data() : 0, array ? array->byteLength() : 0);
+    return associateBufferDataImpl(array->data(), array->byteLength());
 }
 
 bool WebGLBuffer::associateBufferData(ArrayBufferView* array)
 {
     if (!array)
         return false;
-    return associateBufferDataImpl(array ? array->baseAddress() : 0, array ? array->byteLength() : 0);
+    return associateBufferDataImpl(array->baseAddress(), array->byteLength());
 }
 
 bool WebGLBuffer::associateBufferSubDataImpl(GC3Dintptr offset, const void* data, GC3Dsizeiptr byteLength)
@@ -118,10 +116,10 @@ bool WebGLBuffer::associateBufferSubDataImpl(GC3Dintptr offset, const void* data
         return false;
 
     if (byteLength) {
-        CheckedInt<GC3Dintptr> checkedBufferOffset(offset);
-        CheckedInt<GC3Dsizeiptr> checkedDataLength(byteLength);
-        CheckedInt<GC3Dintptr> checkedBufferMax = checkedBufferOffset + checkedDataLength;
-        if (!checkedBufferMax.isValid() || offset > m_byteLength || checkedBufferMax.value() > m_byteLength)
+        Checked<GC3Dintptr, RecordOverflow> checkedBufferOffset(offset);
+        Checked<GC3Dsizeiptr, RecordOverflow> checkedDataLength(byteLength);
+        Checked<GC3Dintptr, RecordOverflow> checkedBufferMax = checkedBufferOffset + checkedDataLength;
+        if (checkedBufferMax.hasOverflowed() || offset > m_byteLength || checkedBufferMax.unsafeGet() > m_byteLength)
             return false;
     }
 

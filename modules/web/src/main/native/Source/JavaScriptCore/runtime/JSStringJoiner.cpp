@@ -29,7 +29,7 @@
 #include "ExceptionHelpers.h"
 #include "JSScope.h"
 #include "JSString.h"
-#include "Operations.h"
+#include "JSCInlines.h"
 #include <wtf/text/StringImpl.h>
 
 namespace JSC {
@@ -80,7 +80,7 @@ static inline PassRefPtr<StringImpl> joinStrings(const Vector<String>& strings, 
     CharacterType* data;
     RefPtr<StringImpl> outputStringImpl = StringImpl::tryCreateUninitialized(outputLength, data);
     if (!outputStringImpl)
-        return PassRefPtr<StringImpl>();
+        return nullptr;
 
     const String firstString = strings.first();
     appendStringToData(data, firstString);
@@ -90,7 +90,7 @@ static inline PassRefPtr<StringImpl> joinStrings(const Vector<String>& strings, 
         appendStringToData(data, strings[i]);
     }
 
-    ASSERT(data == (outputStringImpl->getCharacters<CharacterType>() + outputStringImpl->length()));
+    ASSERT(data == (outputStringImpl->characters<CharacterType>() + outputStringImpl->length()));
     return outputStringImpl.release();
 }
 
@@ -111,7 +111,7 @@ JSValue JSStringJoiner::join(ExecState* exec)
     size_t finalSize;
     if (outputStringSize.safeGet(finalSize) == CheckedState::DidOverflow)
         return throwOutOfMemoryError(exec);
-
+        
     if (!outputStringSize)
         return jsEmptyString(exec);
 

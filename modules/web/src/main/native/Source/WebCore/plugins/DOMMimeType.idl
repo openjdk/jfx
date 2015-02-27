@@ -19,11 +19,11 @@
 */
 
 [
-        InterfaceName=MimeType
+    InterfaceName=MimeType
 ] interface DOMMimeType {
-        readonly attribute DOMString type;
-        readonly attribute DOMString suffixes;
-        readonly attribute DOMString description;
-        readonly attribute DOMPlugin enabledPlugin;
-    };
+    readonly attribute DOMString type;
+    readonly attribute DOMString suffixes;
+    readonly attribute DOMString description;
+    readonly attribute DOMPlugin enabledPlugin;
+};
 

@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2004, 2005 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2004, 2005, 2006, 2007 Rob Buis <buis@kde.org>
+ * Copyright (C) 2013 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -21,54 +22,54 @@
 #ifndef SVGStyleElement_h
 #define SVGStyleElement_h
 
-#if ENABLE(SVG)
+#include "InlineStyleSheetOwner.h"
 #include "SVGElement.h"
-#include "SVGLangSpace.h"
-#include "StyleElement.h"
 
 namespace WebCore {
 
-class SVGStyleElement FINAL : public SVGElement
-                      , public SVGLangSpace
-                      , public StyleElement {
+class SVGStyleElement final : public SVGElement {
 public:
-    static PassRefPtr<SVGStyleElement> create(const QualifiedName&, Document*, bool createdByParser);
+    static PassRefPtr<SVGStyleElement> create(const QualifiedName&, Document&, bool createdByParser);
     virtual ~SVGStyleElement();
 
-    using StyleElement::sheet;
+    CSSStyleSheet* sheet() const { return m_styleSheetOwner.sheet(); }
 
     bool disabled() const;
     void setDisabled(bool);
                           
-    virtual const AtomicString& type() const;
+    const AtomicString& type() const;
     void setType(const AtomicString&, ExceptionCode&);
 
-    virtual const AtomicString& media() const;
+    const AtomicString& media() const;
     void setMedia(const AtomicString&, ExceptionCode&);
 
-    virtual String title() const;
+    String title() const override;
     void setTitle(const AtomicString&, ExceptionCode&);
 
 private:
-    SVGStyleElement(const QualifiedName&, Document*, bool createdByParser);
+    SVGStyleElement(const QualifiedName&, Document&, bool createdByParser);
 
     bool isSupportedAttribute(const QualifiedName&);
-    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
-    virtual InsertionNotificationRequest insertedInto(ContainerNode*) OVERRIDE;
-    virtual void removedFrom(ContainerNode*) OVERRIDE;
-    virtual void childrenChanged(bool changedByParser = false, Node* beforeChange = 0, Node* afterChange = 0, int childCountDelta = 0);
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
+    virtual InsertionNotificationRequest insertedInto(ContainerNode&) override;
+    virtual void removedFrom(ContainerNode&) override;
+    virtual void childrenChanged(const ChildChange&) override;
 
-    virtual void finishParsingChildren();
+    virtual bool rendererIsNeeded(const RenderStyle&) override { return false; }
 
-    virtual bool isLoading() const { return StyleElement::isLoading(); }
-    virtual bool sheetLoaded() { return StyleElement::sheetLoaded(document()); }
-    virtual void startLoadingDynamicSheet() { StyleElement::startLoadingDynamicSheet(document()); }
-    virtual Timer<SVGElement>* svgLoadEventTimer() OVERRIDE { return &m_svgLoadEventTimer; }
+    virtual void finishParsingChildren() override;
 
+    virtual bool isLoading() const { return m_styleSheetOwner.isLoading(); }
+    virtual bool sheetLoaded() override { return m_styleSheetOwner.sheetLoaded(document()); }
+    virtual void startLoadingDynamicSheet() override { m_styleSheetOwner.startLoadingDynamicSheet(document()); }
+    virtual Timer<SVGElement>* svgLoadEventTimer() override { return &m_svgLoadEventTimer; }
+
+    InlineStyleSheetOwner m_styleSheetOwner;
     Timer<SVGElement> m_svgLoadEventTimer;
 };
 
+NODE_TYPE_CASTS(SVGStyleElement)
+
 } // namespace WebCore
 
-#endif // ENABLE(SVG)
 #endif // SVGStyleElement_h

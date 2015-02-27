@@ -21,13 +21,13 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef InspectorClient_h
 #define InspectorClient_h
 
-#include "InspectorStateClient.h"
+#include "InspectorForwarding.h"
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
@@ -35,11 +35,10 @@
 namespace WebCore {
 
 class InspectorController;
-class InspectorFrontendChannel;
 class Frame;
 class Page;
 
-class InspectorClient : public InspectorStateClient {
+class InspectorClient {
 public:
     virtual ~InspectorClient() { }
 
@@ -50,30 +49,21 @@ public:
     virtual void bringFrontendToFront() = 0;
     virtual void didResizeMainFrame(Frame*) { }
 
+#if ENABLE(REMOTE_INSPECTOR)
+    virtual pid_t parentProcessIdentifier() const { return 0; }
+#endif
+
     virtual void highlight() = 0;
     virtual void hideHighlight() = 0;
+
+    virtual void indicate() { }
+    virtual void hideIndication() { }
 
     virtual bool canClearBrowserCache() { return false; }
     virtual void clearBrowserCache() { }
     virtual bool canClearBrowserCookies() { return false; }
     virtual void clearBrowserCookies() { }
     virtual bool canMonitorMainThread() { return false; }
-
-    typedef void (*TraceEventCallback)(char phase, const unsigned char*, const char* name, unsigned long long id,
-        int numArgs, const char* const* argNames, const unsigned char* argTypes, const unsigned long long* argValues,
-        unsigned char flags);
-    virtual void setTraceEventCallback(TraceEventCallback) { }
-
-    virtual bool canOverrideDeviceMetrics() { return false; }
-
-    virtual void overrideDeviceMetrics(int /*width*/, int /*height*/, float /*fontScaleFactor*/, bool /*fitWindow*/)
-    {
-        // FIXME: Platforms may want to implement this (see https://bugs.webkit.org/show_bug.cgi?id=82886).
-    }
-    virtual void autoZoomPageToFitWidth()
-    {
-        // FIXME: Platforms may want to implement this (see https://bugs.webkit.org/show_bug.cgi?id=82886).
-    }
 
     virtual bool overridesShowPaintRects() { return false; }
     virtual void setShowPaintRects(bool) { }
@@ -89,14 +79,12 @@ public:
 
     virtual bool supportsFrameInstrumentation() { return false; }
 
+    virtual void didSetSearchingForNode(bool) { }
+
     virtual void getAllocatedObjects(HashSet<const void*>&) { }
     virtual void dumpUncountedAllocatedObjects(const HashMap<const void*, size_t>&) { }
 
-    virtual bool captureScreenshot(String*) { return false; }
-
     virtual bool handleJavaScriptDialog(bool, const String*) { return false; }
-
-    virtual bool canSetFileInputFiles() { return false; }
 
     static bool doDispatchMessageOnFrontendPage(Page* frontendPage, const String& message);
 };

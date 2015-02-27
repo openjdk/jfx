@@ -36,8 +36,6 @@
 
 #include "stdio.h"
 
-using namespace std;
-
 namespace WebCore {
 
 class TextRunIterator {
@@ -64,7 +62,7 @@ public:
     void increment() { m_offset++; }
     bool atEnd() const { return !m_textRun || m_offset >= m_textRun->length(); }
     UChar current() const { return (*m_textRun)[m_offset]; }
-    WTF::Unicode::Direction direction() const { return atEnd() ? WTF::Unicode::OtherNeutral : WTF::Unicode::direction(current()); }
+    UCharDirection direction() const { return atEnd() ? U_OTHER_NEUTRAL : u_charDirection(current()); }
 
     bool operator==(const TextRunIterator& other)
     {
@@ -78,12 +76,23 @@ private:
     int m_offset;
 };
 
+#if !PLATFORM(IOS)
 GraphicsContext::GraphicsContext(PlatformGraphicsContext* platformGraphicsContext)
     : m_updatingControlTints(false)
     , m_transparencyCount(0)
+    , m_pixelSnappingFactor(1)
 {
     platformInit(platformGraphicsContext);
 }
+#else
+GraphicsContext::GraphicsContext(PlatformGraphicsContext* platformGraphicsContext, bool shouldUseContextColors)
+    : m_updatingControlTints(false)
+    , m_transparencyCount(0)
+    , m_pixelSnappingFactor(1)
+{
+    platformInit(platformGraphicsContext, shouldUseContextColors);
+}
+#endif
 
 GraphicsContext::~GraphicsContext()
 {
@@ -116,6 +125,28 @@ void GraphicsContext::restore()
 
     restorePlatformState();
 }
+
+#if PLATFORM(IOS)
+void GraphicsContext::drawRaisedEllipse(const FloatRect& rect, const Color& ellipseColor, ColorSpace ellipseColorSpace, const Color& shadowColor, ColorSpace shadowColorSpace)
+{
+    if (paintingDisabled())
+        return;
+
+    save();
+
+    setStrokeColor(shadowColor, shadowColorSpace);
+    setFillColor(shadowColor, shadowColorSpace);
+
+    drawEllipse(FloatRect(rect.x(), rect.y() + 1, rect.width(), rect.height()));
+
+    setStrokeColor(ellipseColor, ellipseColorSpace);
+    setFillColor(ellipseColor, ellipseColorSpace);
+
+    drawEllipse(rect);  
+
+    restore();
+}
+#endif
 
 void GraphicsContext::setStrokeThickness(float thickness)
 {
@@ -189,7 +220,7 @@ bool GraphicsContext::hasBlurredShadow() const
     return m_state.shadowColor.isValid() && m_state.shadowColor.alpha() && m_state.shadowBlur;
 }
 
-#if PLATFORM(QT) || USE(CAIRO)
+#if USE(CAIRO)
 bool GraphicsContext::mustUseShadowBlur() const
 {
     // We can't avoid ShadowBlur if the shadow has blur.
@@ -380,12 +411,10 @@ void GraphicsContext::endTransparencyLayer()
     --m_transparencyCount;
 }
 
-#if !PLATFORM(QT)
 bool GraphicsContext::isInTransparencyLayer() const
 {
     return (m_transparencyCount > 0) && supportsTransparencyLayers();
 }
-#endif
 
 bool GraphicsContext::updatingControlTints() const
 {
@@ -408,7 +437,10 @@ bool GraphicsContext::paintingDisabled() const
     return m_state.paintingDisabled;
 }
 
-#if !OS(WINCE) || PLATFORM(QT)
+// FIXME: Replace the non-iOS implementation with the iOS implementation since the latter computes returns
+// the width of the drawn text. Ensure that there aren't noticeable differences in layout.
+#if !PLATFORM(IOS)
+#if !USE(WINGDI)
 void GraphicsContext::drawText(const Font& font, const TextRun& run, const FloatPoint& point, int from, int to)
 {
     if (paintingDisabled())
@@ -417,6 +449,15 @@ void GraphicsContext::drawText(const Font& font, const TextRun& run, const Float
     font.drawText(this, run, point, from, to);
 }
 #endif
+#else
+float GraphicsContext::drawText(const Font& font, const TextRun& run, const FloatPoint& point, int from, int to)
+{
+    if (paintingDisabled())
+        return 0;
+
+    return font.drawText(this, run, point, from, to);
+}
+#endif // !PLATFORM(IOS)
 
 void GraphicsContext::drawEmphasisMarks(const Font& font, const TextRun& run, const AtomicString& mark, const FloatPoint& point, int from, int to)
 {
@@ -426,21 +467,44 @@ void GraphicsContext::drawEmphasisMarks(const Font& font, const TextRun& run, co
     font.drawEmphasisMarks(this, run, mark, point, from, to);
 }
 
+// FIXME: Better merge the iOS and non-iOS differences. In particular, make this method use the
+// returned width of the drawn text, Font::drawText(), instead of computing it. Ensure that there
+// aren't noticeable differences in layout with such a change.
+#if !PLATFORM(IOS)
 void GraphicsContext::drawBidiText(const Font& font, const TextRun& run, const FloatPoint& point, Font::CustomFontNotReadyAction customFontNotReadyAction)
+#else
+float GraphicsContext::drawBidiText(const Font& font, const TextRun& run, const FloatPoint& point, Font::CustomFontNotReadyAction customFontNotReadyAction, BidiStatus* status, int length)
+#endif
 {
     if (paintingDisabled())
+#if !PLATFORM(IOS)
         return;
+#else
+        return 0;
+#endif
 
     BidiResolver<TextRunIterator, BidiCharacterRun> bidiResolver;
+#if !PLATFORM(IOS)
     bidiResolver.setStatus(BidiStatus(run.direction(), run.directionalOverride()));
+#else
+    bidiResolver.setStatus(status ? *status : BidiStatus(run.direction(), run.directionalOverride()));
+#endif
     bidiResolver.setPositionIgnoringNestedIsolates(TextRunIterator(&run, 0));
 
     // FIXME: This ownership should be reversed. We should pass BidiRunList
     // to BidiResolver in createBidiRunsForLine.
     BidiRunList<BidiCharacterRun>& bidiRuns = bidiResolver.runs();
+#if !PLATFORM(IOS)
     bidiResolver.createBidiRunsForLine(TextRunIterator(&run, run.length()));
+#else
+    bidiResolver.createBidiRunsForLine(TextRunIterator(&run, length < 0 ? run.length() : length));
+#endif    
     if (!bidiRuns.runCount())
+#if !PLATFORM(IOS)
         return;
+#else
+        return 0;
+#endif
 
     FloatPoint currPoint = point;
     BidiCharacterRun* bidiRun = bidiRuns.firstRun();
@@ -450,15 +514,30 @@ void GraphicsContext::drawBidiText(const Font& font, const TextRun& run, const F
         subrun.setDirection(isRTL ? RTL : LTR);
         subrun.setDirectionalOverride(bidiRun->dirOverride(false));
 
+#if !PLATFORM(IOS)
         font.drawText(this, subrun, currPoint, 0, -1, customFontNotReadyAction);
 
         bidiRun = bidiRun->next();
         // FIXME: Have Font::drawText return the width of what it drew so that we don't have to re-measure here.
         if (bidiRun)
             currPoint.move(font.width(subrun), 0);
+#else
+        float width = font.drawText(this, subrun, currPoint, 0, -1, customFontNotReadyAction);
+        currPoint.move(width, 0);
+
+        bidiRun = bidiRun->next();
+#endif
     }
 
+#if PLATFORM(IOS)
+    if (status)
+        *status = bidiResolver.status();
+#endif
     bidiRuns.deleteRuns();
+
+#if PLATFORM(IOS)
+    return currPoint.x() - static_cast<float>(point.x());
+#endif
 }
 
 void GraphicsContext::drawHighlightForText(const Font& font, const TextRun& run, const FloatPoint& point, int h, const Color& backgroundColor, ColorSpace colorSpace, int from, int to)
@@ -469,28 +548,28 @@ void GraphicsContext::drawHighlightForText(const Font& font, const TextRun& run,
     fillRect(font.selectionRectForText(run, point, h, from, to), backgroundColor, colorSpace);
 }
 
-void GraphicsContext::drawImage(Image* image, ColorSpace styleColorSpace, const IntPoint& p, CompositeOperator op, RespectImageOrientationEnum shouldRespectImageOrientation)
+void GraphicsContext::drawImage(Image* image, ColorSpace styleColorSpace, const IntPoint& p, CompositeOperator op, ImageOrientationDescription description)
 {
     if (!image)
         return;
-    drawImage(image, styleColorSpace, FloatRect(IntRect(p, image->size())), FloatRect(FloatPoint(), FloatSize(image->size())), op, shouldRespectImageOrientation);
+    drawImage(image, styleColorSpace, FloatRect(IntRect(p, image->size())), FloatRect(FloatPoint(), FloatSize(image->size())), op, description);
 }
 
-void GraphicsContext::drawImage(Image* image, ColorSpace styleColorSpace, const IntRect& r, CompositeOperator op, RespectImageOrientationEnum shouldRespectImageOrientation, bool useLowQualityScale)
+void GraphicsContext::drawImage(Image* image, ColorSpace styleColorSpace, const IntRect& r, CompositeOperator op, ImageOrientationDescription description, bool useLowQualityScale)
 {
     if (!image)
         return;
-    drawImage(image, styleColorSpace, FloatRect(r), FloatRect(FloatPoint(), FloatSize(image->size())), op, shouldRespectImageOrientation, useLowQualityScale);
+    drawImage(image, styleColorSpace, FloatRect(r), FloatRect(FloatPoint(), FloatSize(image->size())), op, description, useLowQualityScale);
 }
 
-void GraphicsContext::drawImage(Image* image, ColorSpace styleColorSpace, const IntPoint& dest, const IntRect& srcRect, CompositeOperator op, RespectImageOrientationEnum shouldRespectImageOrientation)
+void GraphicsContext::drawImage(Image* image, ColorSpace styleColorSpace, const IntPoint& dest, const IntRect& srcRect, CompositeOperator op, ImageOrientationDescription description)
 {
-    drawImage(image, styleColorSpace, FloatRect(IntRect(dest, srcRect.size())), FloatRect(srcRect), op, shouldRespectImageOrientation);
+    drawImage(image, styleColorSpace, FloatRect(IntRect(dest, srcRect.size())), FloatRect(srcRect), op, description);
 }
 
-void GraphicsContext::drawImage(Image* image, ColorSpace styleColorSpace, const FloatRect& dest, const FloatRect& src, CompositeOperator op, RespectImageOrientationEnum shouldRespectImageOrientation, bool useLowQualityScale)
+void GraphicsContext::drawImage(Image* image, ColorSpace styleColorSpace, const FloatRect& dest, const FloatRect& src, CompositeOperator op, ImageOrientationDescription description, bool useLowQualityScale)
 {
-    drawImage(image, styleColorSpace, dest, src, op, BlendModeNormal, shouldRespectImageOrientation, useLowQualityScale);
+    drawImage(image, styleColorSpace, dest, src, op, BlendModeNormal, description, useLowQualityScale);
 }
 
 void GraphicsContext::drawImage(Image* image, ColorSpace styleColorSpace, const FloatRect& dest)
@@ -500,7 +579,7 @@ void GraphicsContext::drawImage(Image* image, ColorSpace styleColorSpace, const 
     drawImage(image, styleColorSpace, dest, FloatRect(IntRect(IntPoint(), image->size())));
 }
 
-void GraphicsContext::drawImage(Image* image, ColorSpace styleColorSpace, const FloatRect& dest, const FloatRect& src, CompositeOperator op, BlendMode blendMode, RespectImageOrientationEnum shouldRespectImageOrientation, bool useLowQualityScale)
+void GraphicsContext::drawImage(Image* image, ColorSpace styleColorSpace, const FloatRect& dest, const FloatRect& src, CompositeOperator op, BlendMode blendMode, ImageOrientationDescription description, bool useLowQualityScale)
 {    if (paintingDisabled() || !image)
         return;
 
@@ -512,7 +591,7 @@ void GraphicsContext::drawImage(Image* image, ColorSpace styleColorSpace, const 
         setImageInterpolationQuality(InterpolationNone);
     }
 
-    image->draw(this, dest, src, styleColorSpace, op, blendMode, shouldRespectImageOrientation);
+    image->draw(this, dest, src, styleColorSpace, op, blendMode, description);
 
     if (useLowQualityScale)
         setImageInterpolationQuality(previousInterpolationQuality);
@@ -599,12 +678,10 @@ void GraphicsContext::drawImageBuffer(ImageBuffer* image, ColorSpace styleColorS
         image->draw(this, styleColorSpace, dest, src, op, blendMode, useLowQualityScale);
 }
 
-#if !PLATFORM(QT)
 void GraphicsContext::clip(const IntRect& rect)
 {
     clip(FloatRect(rect));
 }
-#endif
 
 void GraphicsContext::clipRoundedRect(const RoundedRect& rect)
 {
@@ -618,6 +695,18 @@ void GraphicsContext::clipRoundedRect(const RoundedRect& rect)
 
     Path path;
     path.addRoundedRect(rect);
+    clip(path);
+}
+
+// FIXME: Consider writing this in terms of a specialized RoundedRect that uses FloatRect and FloatSize radii.
+void GraphicsContext::clipRoundedRect(const FloatRect& rect, const FloatSize& topLeft, const FloatSize& topRight,
+    const FloatSize& bottomLeft, const FloatSize& bottomRight)
+{
+    if (paintingDisabled())
+        return;
+
+    Path path;
+    path.addRoundedRect(rect, topLeft, topRight, bottomLeft, bottomRight);
     clip(path);
 }
 
@@ -643,7 +732,7 @@ void GraphicsContext::clipToImageBuffer(ImageBuffer* buffer, const FloatRect& re
     buffer->clip(this, rect);
 }
 
-#if !USE(CG) && !PLATFORM(QT) && !USE(CAIRO)
+#if !USE(CG) && !USE(CAIRO) && !PLATFORM(JAVA)
 IntRect GraphicsContext::clipBounds() const
 {
     ASSERT_NOT_REACHED();
@@ -684,7 +773,6 @@ void GraphicsContext::fillRect(const FloatRect& rect, const Color& color, ColorS
 
 void GraphicsContext::fillRoundedRect(const RoundedRect& rect, const Color& color, ColorSpace colorSpace, BlendMode blendMode)
 {
-
     if (rect.isRounded()) {
         setCompositeOperation(compositeOperation(), blendMode);
     fillRoundedRect(rect.rect(), rect.radii().topLeft(), rect.radii().topRight(), rect.radii().bottomLeft(), rect.radii().bottomRight(), color, colorSpace);
@@ -693,7 +781,7 @@ void GraphicsContext::fillRoundedRect(const RoundedRect& rect, const Color& colo
         fillRect(rect.rect(), color, colorSpace, compositeOperation(), blendMode);
 }
 
-#if !USE(CG) && !PLATFORM(QT)
+#if !USE(CG) && !USE(CAIRO)
 void GraphicsContext::fillRectWithRoundedHole(const IntRect& rect, const RoundedRect& roundedHoleRect, const Color& color, ColorSpace colorSpace)
 {
     if (paintingDisabled())
@@ -738,6 +826,28 @@ BlendMode GraphicsContext::blendModeOperation() const
     return m_state.blendMode;
 }
 
+#if PLATFORM(IOS)
+bool GraphicsContext::emojiDrawingEnabled()
+{
+    return m_state.emojiDrawingEnabled;
+}
+
+void GraphicsContext::setEmojiDrawingEnabled(bool emojiDrawingEnabled)
+{
+    m_state.emojiDrawingEnabled = emojiDrawingEnabled;
+}
+#endif
+
+void GraphicsContext::setDrawLuminanceMask(bool drawLuminanceMask)
+{
+    m_state.drawLuminanceMask = drawLuminanceMask;
+}
+
+bool GraphicsContext::drawLuminanceMask() const
+{
+    return m_state.drawLuminanceMask;
+}
+
 #if !USE(CG) && !PLATFORM(JAVA)
 // Implement this if you want to go ahead and push the drawing mode into your native context
 // immediately.
@@ -746,7 +856,7 @@ void GraphicsContext::setPlatformTextDrawingMode(TextDrawingModeFlags)
 }
 #endif
 
-#if !PLATFORM(QT) && !USE(CAIRO) & !PLATFORM(JAVA)
+#if !USE(CAIRO) & !PLATFORM(JAVA)
 void GraphicsContext::setPlatformStrokeStyle(StrokeStyle)
 {
 }
@@ -799,7 +909,7 @@ static bool scalesMatch(AffineTransform a, AffineTransform b)
     return a.xScale() == b.xScale() && a.yScale() == b.yScale();
 }
 
-PassOwnPtr<ImageBuffer> GraphicsContext::createCompatibleBuffer(const IntSize& size, bool hasAlpha) const
+std::unique_ptr<ImageBuffer> GraphicsContext::createCompatibleBuffer(const IntSize& size, bool hasAlpha) const
 {
     // Make the buffer larger if the context's transform is scaling it so we need a higher
     // resolution than one pixel per unit. Also set up a corresponding scale factor on the
@@ -808,14 +918,14 @@ PassOwnPtr<ImageBuffer> GraphicsContext::createCompatibleBuffer(const IntSize& s
     AffineTransform transform = getCTM(DefinitelyIncludeDeviceScale);
     IntSize scaledSize(static_cast<int>(ceil(size.width() * transform.xScale())), static_cast<int>(ceil(size.height() * transform.yScale())));
 
-    OwnPtr<ImageBuffer> buffer = ImageBuffer::createCompatibleBuffer(scaledSize, 1, ColorSpaceDeviceRGB, this, hasAlpha);
+    std::unique_ptr<ImageBuffer> buffer = ImageBuffer::createCompatibleBuffer(scaledSize, 1, ColorSpaceDeviceRGB, this, hasAlpha);
     if (!buffer)
         return nullptr;
 
     buffer->context()->scale(FloatSize(static_cast<float>(scaledSize.width()) / size.width(),
         static_cast<float>(scaledSize.height()) / size.height()));
 
-    return buffer.release();
+    return buffer;
 }
 
 bool GraphicsContext::isCompatibleWithBuffer(ImageBuffer* buffer) const

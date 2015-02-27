@@ -40,27 +40,30 @@ public:
     {
         return adoptRef(new TextTrackList(element, context));
     }
-    ~TextTrackList();
+    virtual ~TextTrackList();
 
-    virtual unsigned length() const OVERRIDE;
+    virtual unsigned length() const override;
     int getTrackIndex(TextTrack*);
     int getTrackIndexRelativeToRenderedTracks(TextTrack*);
-    virtual bool contains(TrackBase*) const OVERRIDE;
+    virtual bool contains(TrackBase*) const override;
 
-    TextTrack* item(unsigned index);
+    TextTrack* item(unsigned index) const;
+    TextTrack* getTrackById(const AtomicString&);
+    TextTrack* lastItem() const { return item(length() - 1); }
+
     void append(PassRefPtr<TextTrack>);
-    virtual void remove(TrackBase*) OVERRIDE;
+    virtual void remove(TrackBase*) override;
 
     // EventTarget
-    virtual const AtomicString& interfaceName() const OVERRIDE;
+    virtual EventTargetInterface eventTargetInterface() const override;
 
 private:
     TextTrackList(HTMLMediaElement*, ScriptExecutionContext*);
 
     void invalidateTrackIndexesAfterTrack(TextTrack*);
 
-    Vector<RefPtr<TrackBase> > m_addTrackTracks;
-    Vector<RefPtr<TrackBase> > m_elementTracks;
+    Vector<RefPtr<TrackBase>> m_addTrackTracks;
+    Vector<RefPtr<TrackBase>> m_elementTracks;
 };
 
 } // namespace WebCore

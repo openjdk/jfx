@@ -6,6 +6,7 @@
 #include "FileSystem.h"
 #include "FileMetadata.h"
 #include "JavaEnv.h"
+#include <text/CString.h>
 
 static jclass GetFileSystemClass(JNIEnv* env)
 {
@@ -74,6 +75,12 @@ bool getFileSize(const String& path, long long& result)
 bool getFileModificationTime(const String&, time_t& result)
 {
     notImplemented();
+    return false;
+}
+
+bool getFileCreationTime(const String&, time_t& result)
+{
+    notImplemented(); // todo tav
     return false;
 }
 

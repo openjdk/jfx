@@ -29,9 +29,13 @@
 #include "config.h"
 #include "SymbolTable.h"
 
+#include "JSDestructibleObject.h"
+#include "JSCInlines.h"
+#include "SlotVisitorInlines.h"
+
 namespace JSC {
 
-const ClassInfo SharedSymbolTable::s_info = { "SharedSymbolTable", 0, 0, 0, CREATE_METHOD_TABLE(SharedSymbolTable) };
+const ClassInfo SymbolTable::s_info = { "SymbolTable", 0, 0, 0, CREATE_METHOD_TABLE(SymbolTable) };
 
 SymbolTableEntry& SymbolTableEntry::copySlow(const SymbolTableEntry& other)
 {
@@ -42,10 +46,10 @@ SymbolTableEntry& SymbolTableEntry::copySlow(const SymbolTableEntry& other)
     return *this;
 }
 
-void SharedSymbolTable::destroy(JSCell* cell)
+void SymbolTable::destroy(JSCell* cell)
 {
-    SharedSymbolTable* thisObject = jsCast<SharedSymbolTable*>(cell);
-    thisObject->SharedSymbolTable::~SharedSymbolTable();
+    SymbolTable* thisObject = jsCast<SymbolTable*>(cell);
+    thisObject->SymbolTable::~SymbolTable();
 }
 
 void SymbolTableEntry::freeFatEntrySlow()
@@ -54,41 +58,33 @@ void SymbolTableEntry::freeFatEntrySlow()
     delete fatEntry();
 }
 
-bool SymbolTableEntry::couldBeWatched()
+JSValue SymbolTableEntry::inferredValue()
 {
     if (!isFat())
-        return false;
-    WatchpointSet* watchpoints = fatEntry()->m_watchpoints.get();
-    if (!watchpoints)
-        return false;
-    return watchpoints->isStillValid();
+        return JSValue();
+    return fatEntry()->m_watchpoints->inferredValue();
 }
 
-void SymbolTableEntry::attemptToWatch()
+void SymbolTableEntry::prepareToWatch()
 {
     FatEntry* entry = inflate();
-    if (!entry->m_watchpoints)
-        entry->m_watchpoints = adoptRef(new WatchpointSet(InitializedWatching));
-}
-
-bool* SymbolTableEntry::addressOfIsWatched()
-{
-    ASSERT(couldBeWatched());
-    return fatEntry()->m_watchpoints->addressOfIsWatched();
+    if (entry->m_watchpoints)
+        return;
+    entry->m_watchpoints = adoptRef(new VariableWatchpointSet());
 }
 
 void SymbolTableEntry::addWatchpoint(Watchpoint* watchpoint)
 {
-    ASSERT(couldBeWatched());
     fatEntry()->m_watchpoints->add(watchpoint);
 }
 
-void SymbolTableEntry::notifyWriteSlow()
+void SymbolTableEntry::notifyWriteSlow(JSValue value)
 {
-    WatchpointSet* watchpoints = fatEntry()->m_watchpoints.get();
+    VariableWatchpointSet* watchpoints = fatEntry()->m_watchpoints.get();
     if (!watchpoints)
         return;
-    watchpoints->notifyWrite();
+    
+    watchpoints->notifyWrite(value);
 }
 
 SymbolTableEntry::FatEntry* SymbolTableEntry::inflateSlow()
@@ -96,6 +92,72 @@ SymbolTableEntry::FatEntry* SymbolTableEntry::inflateSlow()
     FatEntry* entry = new FatEntry(m_bits);
     m_bits = bitwise_cast<intptr_t>(entry);
     return entry;
+}
+
+SymbolTable::SymbolTable(VM& vm)
+    : JSCell(vm, vm.symbolTableStructure.get())
+    , m_parameterCountIncludingThis(0)
+    , m_usesNonStrictEval(false)
+    , m_captureStart(0)
+    , m_captureEnd(0)
+    , m_functionEnteredOnce(ClearWatchpoint)
+{
+}
+
+SymbolTable::~SymbolTable() { }
+
+void SymbolTable::visitChildren(JSCell* thisCell, SlotVisitor& visitor)
+{
+    SymbolTable* thisSymbolTable = jsCast<SymbolTable*>(thisCell);
+    if (!thisSymbolTable->m_watchpointCleanup) {
+        thisSymbolTable->m_watchpointCleanup =
+            std::make_unique<WatchpointCleanup>(thisSymbolTable);
+    }
+    
+    visitor.addUnconditionalFinalizer(thisSymbolTable->m_watchpointCleanup.get());
+}
+
+SymbolTable::WatchpointCleanup::WatchpointCleanup(SymbolTable* symbolTable)
+    : m_symbolTable(symbolTable)
+{
+}
+
+SymbolTable::WatchpointCleanup::~WatchpointCleanup() { }
+
+void SymbolTable::WatchpointCleanup::finalizeUnconditionally()
+{
+    Map::iterator iter = m_symbolTable->m_map.begin();
+    Map::iterator end = m_symbolTable->m_map.end();
+    for (; iter != end; ++iter) {
+        if (VariableWatchpointSet* set = iter->value.watchpointSet())
+            set->finalizeUnconditionally();
+    }
+}
+
+SymbolTable* SymbolTable::cloneCapturedNames(VM& vm)
+{
+    SymbolTable* result = SymbolTable::create(vm);
+    
+    result->m_parameterCountIncludingThis = m_parameterCountIncludingThis;
+    result->m_usesNonStrictEval = m_usesNonStrictEval;
+    result->m_captureStart = m_captureStart;
+    result->m_captureEnd = m_captureEnd;
+
+    for (auto iter = m_map.begin(), end = m_map.end(); iter != end; ++iter) {
+        if (!isCaptured(iter->value.getIndex()))
+            continue;
+        result->m_map.add(
+            iter->key,
+            SymbolTableEntry(iter->value.getIndex(), iter->value.getAttributes()));
+    }
+    
+    if (m_slowArguments) {
+        result->m_slowArguments = std::make_unique<SlowArgument[]>(parameterCount());
+        for (unsigned i = parameterCount(); i--;)
+            result->m_slowArguments[i] = m_slowArguments[i];
+    }
+    
+    return result;
 }
 
 } // namespace JSC

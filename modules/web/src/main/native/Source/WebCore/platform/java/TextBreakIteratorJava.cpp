@@ -128,8 +128,9 @@ TextBreakIterator* acquireLineBreakIterator(const UChar* string, int length, con
     return setUpIterator(JNI_EXPAND(LINE_ITERATOR), string, length);
 }
 
-void releaseLineBreakIterator(TextBreakIterator* iterator)
-{
+// tav todo see TextBreakIterator impl
+//void releaseLineBreakIterator(TextBreakIterator* iterator)
+//{
 //    ASSERT(createdLineBreakIterator);
 //    ASSERT(iterator);
 
@@ -137,51 +138,61 @@ void releaseLineBreakIterator(TextBreakIterator* iterator)
 //        staticLineBreakIterator = iterator;
 //    else
 //        delete iterator;
-}
+//}
 
 TextBreakIterator* sentenceBreakIterator(const UChar* string, int length)
 {
     return setUpIterator(JNI_EXPAND(SENTENCE_ITERATOR), string, length);
 }
 
-int textBreakFirst(TextBreakIterator* bi) {
-    return invokeTextBreakMethod(bi, JNI_EXPAND(TEXT_BREAK_FIRST), 0);
-}
+// tav todo see TextBreakIterator impl
+//int textBreakFirst(TextBreakIterator* bi) {
+//    return invokeTextBreakMethod(bi, JNI_EXPAND(TEXT_BREAK_FIRST), 0);
+//}
 
-int textBreakLast(TextBreakIterator* bi) {
-    return invokeTextBreakMethod(bi, JNI_EXPAND(TEXT_BREAK_LAST), 0);
-}
+// tav todo see TextBreakIterator impl
+// int textBreakLast(TextBreakIterator* bi) {
+//     return invokeTextBreakMethod(bi, JNI_EXPAND(TEXT_BREAK_LAST), 0);
+// }
 
-int textBreakNext(TextBreakIterator* bi) {
-    return invokeTextBreakMethod(bi, JNI_EXPAND(TEXT_BREAK_NEXT), 0);
-}
+// tav todo see TextBreakIterator impl
+// int textBreakNext(TextBreakIterator* bi) {
+//     return invokeTextBreakMethod(bi, JNI_EXPAND(TEXT_BREAK_NEXT), 0);
+// }
 
-int textBreakPrevious(TextBreakIterator* bi) {
-    return invokeTextBreakMethod(bi, JNI_EXPAND(TEXT_BREAK_PREVIOUS), 0);
-}
+// tav todo see TextBreakIterator impl
+// int textBreakPrevious(TextBreakIterator* bi) {
+//     return invokeTextBreakMethod(bi, JNI_EXPAND(TEXT_BREAK_PREVIOUS), 0);
+// }
 
-int textBreakCurrent(TextBreakIterator* bi) {
-    return invokeTextBreakMethod(bi, JNI_EXPAND(TEXT_BREAK_CURRENT), 0);
-}
+// tav todo see TextBreakIterator impl
+// int textBreakCurrent(TextBreakIterator* bi) {
+//     return invokeTextBreakMethod(bi, JNI_EXPAND(TEXT_BREAK_CURRENT), 0);
+// }
 
-int textBreakPreceding(TextBreakIterator* bi, int pos) {
-    return invokeTextBreakMethod(bi, JNI_EXPAND(TEXT_BREAK_PRECEDING), pos);
-}
+// tav todo see TextBreakIterator impl
+// int textBreakPreceding(TextBreakIterator* bi, int pos) {
+//     return invokeTextBreakMethod(bi, JNI_EXPAND(TEXT_BREAK_PRECEDING), pos);
+// }
 
-int textBreakFollowing(TextBreakIterator* bi, int pos) {
-    return invokeTextBreakMethod(bi, JNI_EXPAND(TEXT_BREAK_FOLLOWING), pos);
-}
+// tav todo see TextBreakIterator impl
+// int textBreakFollowing(TextBreakIterator* bi, int pos) {
+//     return invokeTextBreakMethod(bi, JNI_EXPAND(TEXT_BREAK_FOLLOWING), pos);
+// }
 
-bool isTextBreak(TextBreakIterator* bi, int pos) {
-    return invokeTextBreakMethod(bi, JNI_EXPAND(IS_TEXT_BREAK), pos);
-}
+// tav todo see TextBreakIterator impl
+// bool isTextBreak(TextBreakIterator* bi, int pos) {
+//     return invokeTextBreakMethod(bi, JNI_EXPAND(IS_TEXT_BREAK), pos);
+// }
 
-bool isWordTextBreak(TextBreakIterator* bi)
-{
-    return invokeTextBreakMethod(bi, JNI_EXPAND(IS_WORD_TEXT_BREAK), 0);
-}
+// tav todo see TextBreakIterator impl
+// bool isWordTextBreak(TextBreakIterator* bi)
+// {
+//     return invokeTextBreakMethod(bi, JNI_EXPAND(IS_WORD_TEXT_BREAK), 0);
+// }
 
-static TextBreakIterator* nonSharedCharacterBreakIterator;
+// tav todo see TextBreakIterator impl
+//static TextBreakIterator* nonSharedCharacterBreakIterator;
 
 inline bool _weakCompareAndSwap(void*volatile* location, void *expected, void *newValue)
 {
@@ -196,26 +207,28 @@ inline bool _weakCompareAndSwap(void*volatile* location, void *expected, void *n
 #endif
 }
 
-NonSharedCharacterBreakIterator::NonSharedCharacterBreakIterator(const UChar* buffer, int length)
-{
-    m_iterator = nonSharedCharacterBreakIterator;
-    bool createdIterator = m_iterator && _weakCompareAndSwap(reinterpret_cast<void**>(&nonSharedCharacterBreakIterator), m_iterator, 0);
-    if (!createdIterator) {
-        m_iterator = setUpIterator(JNI_EXPAND(CHARACTER_ITERATOR), buffer, length, true);
-    }
-}
+// tav todo see TextBreakIterator impl
+// NonSharedCharacterBreakIterator::NonSharedCharacterBreakIterator(StringView string)
+// {
+//     m_iterator = nonSharedCharacterBreakIterator;
+//     bool createdIterator = m_iterator && _weakCompareAndSwap(reinterpret_cast<void**>(&nonSharedCharacterBreakIterator), m_iterator, 0);
+//     if (!createdIterator) {
+//          m_iterator = setUpIterator(JNI_EXPAND(CHARACTER_ITERATOR), string.characters16(), string.length(), true);
+//     }
+// }
 
-NonSharedCharacterBreakIterator::~NonSharedCharacterBreakIterator()
-{
-    if (!_weakCompareAndSwap(reinterpret_cast<void**>(&nonSharedCharacterBreakIterator), 0, m_iterator)) {
-        //delete m_iterator;
-        JNIEnv* env = JavaScriptCore_GetJavaEnv();
-        if (env && m_iterator) {
-            //uta: that is ok - m_iterator is a global java object
-            env->DeleteGlobalRef(reinterpret_cast<jobject>(m_iterator));
-        }
-    }
-}
+// tav todo see TextBreakIterator impl
+// NonSharedCharacterBreakIterator::~NonSharedCharacterBreakIterator()
+// {
+//     if (!_weakCompareAndSwap(reinterpret_cast<void**>(&nonSharedCharacterBreakIterator), 0, m_iterator)) {
+//         //delete m_iterator;
+//         JNIEnv* env = JavaScriptCore_GetJavaEnv();
+//         if (env && m_iterator) {
+//             //uta: that is ok - m_iterator is a global java object
+//             env->DeleteGlobalRef(reinterpret_cast<jobject>(m_iterator));
+//         }
+//     }
+// }
 
 } // namespace WebCore
 

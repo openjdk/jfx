@@ -54,32 +54,32 @@ using namespace HTMLNames;
 bool JSHTMLDocument::canGetItemsForName(ExecState*, HTMLDocument* document, PropertyName propertyName)
 {
     AtomicStringImpl* atomicPropertyName = findAtomicString(propertyName);
-    return atomicPropertyName && document->documentNamedItemMap().contains(atomicPropertyName);
+    return atomicPropertyName && document->hasDocumentNamedItem(*atomicPropertyName);
 }
 
-JSValue JSHTMLDocument::nameGetter(ExecState* exec, JSValue slotBase, PropertyName propertyName)
+EncodedJSValue JSHTMLDocument::nameGetter(ExecState* exec, JSObject* slotBase, EncodedJSValue, PropertyName propertyName)
 {
-    JSHTMLDocument* thisObj = jsCast<JSHTMLDocument*>(asObject(slotBase));
-    HTMLDocument* document = toHTMLDocument(thisObj->impl());
+    JSHTMLDocument* thisObj = jsCast<JSHTMLDocument*>(slotBase);
+    HTMLDocument& document = thisObj->impl();
 
     AtomicStringImpl* atomicPropertyName = findAtomicString(propertyName);
-    if (!atomicPropertyName || !document->documentNamedItemMap().contains(atomicPropertyName))
-        return jsUndefined();
+    if (!atomicPropertyName || !document.hasDocumentNamedItem(*atomicPropertyName))
+        return JSValue::encode(jsUndefined());
 
-    if (UNLIKELY(!document->documentNamedItemMap().containsSingle(atomicPropertyName))) {
-        RefPtr<HTMLCollection> collection = document->documentNamedItems(atomicPropertyName);
-        ASSERT(!collection->isEmpty());
-        ASSERT(!collection->hasExactlyOneItem());
-        return toJS(exec, thisObj->globalObject(), WTF::getPtr(collection));
+    if (UNLIKELY(document.documentNamedItemContainsMultipleElements(*atomicPropertyName))) {
+        RefPtr<HTMLCollection> collection = document.documentNamedItems(atomicPropertyName);
+        ASSERT(collection->length() > 1);
+        return JSValue::encode(toJS(exec, thisObj->globalObject(), WTF::getPtr(collection)));
     }
 
-    Node* node = document->documentNamedItemMap().getElementByDocumentNamedItem(atomicPropertyName, document);
-        Frame* frame;
-        if (node->hasTagName(iframeTag) && (frame = static_cast<HTMLIFrameElement*>(node)->contentFrame()))
-            return toJS(exec, frame);
+    Element* element = document.documentNamedItem(*atomicPropertyName);
+    if (UNLIKELY(element->hasTagName(iframeTag))) {
+        if (Frame* frame = toHTMLIFrameElement(element)->contentFrame())
+            return JSValue::encode(toJS(exec, frame));
+    }
 
-        return toJS(exec, thisObj->globalObject(), node);
-    } 
+    return JSValue::encode(toJS(exec, thisObj->globalObject(), element));
+}
 
 // Custom attributes
 
@@ -90,7 +90,7 @@ JSValue JSHTMLDocument::all(ExecState* exec) const
     if (v)
         return v;
 
-    return toJS(exec, globalObject(), toHTMLDocument(impl())->all());
+    return toJS(exec, globalObject(), impl().all());
 }
 
 void JSHTMLDocument::setAll(ExecState* exec, JSValue value)
@@ -105,8 +105,7 @@ JSValue JSHTMLDocument::open(ExecState* exec)
 {
     // For compatibility with other browsers, pass open calls with more than 2 parameters to the window.
     if (exec->argumentCount() > 2) {
-        Frame* frame = toHTMLDocument(impl())->frame();
-        if (frame) {
+        if (Frame* frame = impl().frame()) {
             JSDOMWindowShell* wrapper = toJSDOMWindowShell(frame, currentWorld(exec));
             if (wrapper) {
                 JSValue function = wrapper->get(exec, Identifier(exec, "open"));
@@ -122,10 +121,10 @@ JSValue JSHTMLDocument::open(ExecState* exec)
 
     // document.open clobbers the security context of the document and
     // aliases it with the active security context.
-    Document* activeDocument = asJSDOMWindow(exec->lexicalGlobalObject())->impl()->document();
+    Document* activeDocument = asJSDOMWindow(exec->lexicalGlobalObject())->impl().document();
 
     // In the case of two parameters or fewer, do a normal document open.
-    toHTMLDocument(impl())->open(activeDocument);
+    impl().open(activeDocument);
     return this;
 }
 
@@ -144,7 +143,7 @@ static inline void documentWrite(ExecState* exec, HTMLDocument* document, Newlin
             segmentedString.clear();
         else {
             for (size_t i = 1; i < size; ++i) {
-                String subsequentString = exec->argument(i).toString(exec)->value(exec);
+                String subsequentString = exec->uncheckedArgument(i).toString(exec)->value(exec);
                 segmentedString.append(SegmentedString(subsequentString));
             }
         }
@@ -152,19 +151,19 @@ static inline void documentWrite(ExecState* exec, HTMLDocument* document, Newlin
     if (addNewline)
         segmentedString.append(SegmentedString(String(&newlineCharacter, 1)));
 
-    Document* activeDocument = asJSDOMWindow(exec->lexicalGlobalObject())->impl()->document();
+    Document* activeDocument = asJSDOMWindow(exec->lexicalGlobalObject())->impl().document();
     document->write(segmentedString, activeDocument);
 }
 
 JSValue JSHTMLDocument::write(ExecState* exec)
 {
-    documentWrite(exec, toHTMLDocument(impl()), DoNotAddNewline);
+    documentWrite(exec, &impl(), DoNotAddNewline);
     return jsUndefined();
 }
 
 JSValue JSHTMLDocument::writeln(ExecState* exec)
 {
-    documentWrite(exec, toHTMLDocument(impl()), DoAddNewline);
+    documentWrite(exec, &impl(), DoAddNewline);
     return jsUndefined();
 }
 

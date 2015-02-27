@@ -65,9 +65,7 @@ public:
     void sizeChanged();
     void timeChanged();
     void didEnd();
-#if USE(ACCELERATED_COMPOSITING)
     void layerHostChanged(PlatformLayer* rootLayer);
-#endif
 
 private:
     MediaPlayerPrivateQTKit(MediaPlayer*);
@@ -75,10 +73,7 @@ private:
     // engine support
     static PassOwnPtr<MediaPlayerPrivateInterface> create(MediaPlayer*);
     static void getSupportedTypes(HashSet<String>& types);
-    static MediaPlayer::SupportsType supportsType(const String& type, const String& codecs, const KURL&);
-#if ENABLE(ENCRYPTED_MEDIA) || ENABLE(ENCRYPTED_MEDIA_V2)
-    static MediaPlayer::SupportsType extendedSupportsType(const String& type, const String& codecs, const String& keySystem, const KURL&);
-#endif
+    static MediaPlayer::SupportsType supportsType(const MediaEngineSupportParameters&);
 
     static void getSitesInMediaCache(Vector<String>&);
     static void clearMediaCache();
@@ -86,9 +81,7 @@ private:
     static bool isAvailable();
 
     PlatformMedia platformMedia() const;
-#if USE(ACCELERATED_COMPOSITING) && !(PLATFORM(QT) && USE(QTKIT))
     PlatformLayer* platformLayer() const;
-#endif
 
     IntSize naturalSize() const;
     bool hasVideo() const;
@@ -97,6 +90,9 @@ private:
     virtual bool supportsScanning() const { return true; }
     
     void load(const String& url);
+#if ENABLE(MEDIA_SOURCE)
+    virtual void load(const String&, MediaSourcePrivateClient*);
+#endif
     void cancelLoad();
     void loadInternal(const String& url);
     void resumeLoad();
@@ -138,11 +134,8 @@ private:
     void paintCurrentFrameInContext(GraphicsContext*, const IntRect&);
     virtual void prepareForRendering();
 
-
-#if USE(ACCELERATED_COMPOSITING) && !(PLATFORM(QT) && USE(QTKIT))
     bool supportsAcceleratedRendering() const;
     void acceleratedRenderingStateChanged();
-#endif
 
     bool hasSingleSecurityOrigin() const;
     MediaPlayer::MovieLoadType movieLoadType() const;
@@ -173,7 +166,7 @@ private:
     void updateStates();
     void doSeek();
     void cancelSeek();
-    void seekTimerFired(Timer<MediaPlayerPrivateQTKit>*);
+    void seekTimerFired(Timer<MediaPlayerPrivateQTKit>&);
     float maxTimeLoaded() const;
     void disableUnsupportedTracks();
     

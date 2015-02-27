@@ -27,11 +27,10 @@
 
 #include "Filter.h"
 #include "GraphicsContext.h"
-#include "RenderTreeAsText.h"
 #include "TextStream.h"
 
+#include <runtime/Uint8ClampedArray.h>
 #include <wtf/MathExtras.h>
-#include <wtf/Uint8ClampedArray.h>
 
 namespace WebCore {
 
@@ -126,7 +125,7 @@ void effectType(Uint8ClampedArray* pixelArray, const Vector<float>& values)
             case FECOLORMATRIX_TYPE_MATRIX:
                 matrix(red, green, blue, alpha, values);
                 break;
-            case FECOLORMATRIX_TYPE_SATURATE: 
+            case FECOLORMATRIX_TYPE_SATURATE:
             case FECOLORMATRIX_TYPE_HUEROTATE:
                 saturateAndHueRotate(red, green, blue, components);
                 break;

@@ -21,7 +21,6 @@
 #ifndef SVGCursorElement_h
 #define SVGCursorElement_h
 
-#if ENABLE(SVG)
 #include "SVGAnimatedBoolean.h"
 #include "SVGAnimatedLength.h"
 #include "SVGAnimatedString.h"
@@ -32,12 +31,12 @@
 
 namespace WebCore {
 
-class SVGCursorElement FINAL : public SVGElement,
-                         public SVGTests,
-                         public SVGExternalResourcesRequired,
-                         public SVGURIReference {
+class SVGCursorElement final : public SVGElement,
+                               public SVGTests,
+                               public SVGExternalResourcesRequired,
+                               public SVGURIReference {
 public:
-    static PassRefPtr<SVGCursorElement> create(const QualifiedName&, Document*);
+    static PassRefPtr<SVGCursorElement> create(const QualifiedName&, Document&);
 
     virtual ~SVGCursorElement();
 
@@ -46,15 +45,17 @@ public:
     void removeReferencedElement(SVGElement*);
 
 private:
-    SVGCursorElement(const QualifiedName&, Document*);
+    SVGCursorElement(const QualifiedName&, Document&);
 
-    virtual bool isValid() const { return SVGTests::isValid(); }
+    virtual bool isValid() const override { return SVGTests::isValid(); }
 
     bool isSupportedAttribute(const QualifiedName&);
-    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
-    virtual void svgAttributeChanged(const QualifiedName&);
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
+    virtual void svgAttributeChanged(const QualifiedName&) override;
 
-    virtual void addSubresourceAttributeURLs(ListHashSet<KURL>&) const;
+    virtual bool rendererIsNeeded(const RenderStyle&) override { return false; }
+
+    virtual void addSubresourceAttributeURLs(ListHashSet<URL>&) const override;
 
     BEGIN_DECLARE_ANIMATED_PROPERTIES(SVGCursorElement)
         DECLARE_ANIMATED_LENGTH(X, x)
@@ -64,14 +65,15 @@ private:
     END_DECLARE_ANIMATED_PROPERTIES
 
     // SVGTests
-    virtual void synchronizeRequiredFeatures() { SVGTests::synchronizeRequiredFeatures(this); }
-    virtual void synchronizeRequiredExtensions() { SVGTests::synchronizeRequiredExtensions(this); }
-    virtual void synchronizeSystemLanguage() { SVGTests::synchronizeSystemLanguage(this); }
+    virtual void synchronizeRequiredFeatures() override { SVGTests::synchronizeRequiredFeatures(this); }
+    virtual void synchronizeRequiredExtensions() override { SVGTests::synchronizeRequiredExtensions(this); }
+    virtual void synchronizeSystemLanguage() override { SVGTests::synchronizeSystemLanguage(this); }
 
     HashSet<SVGElement*> m_clients;
 };
 
+NODE_TYPE_CASTS(SVGCursorElement)
+
 } // namespace WebCore
 
-#endif // ENABLE(SVG)
 #endif

@@ -37,14 +37,8 @@
 #include "HTMLInputElement.h"
 #include "InputTypeNames.h"
 #include "LocalizedStrings.h"
-#include <wtf/PassOwnPtr.h>
 
 namespace WebCore {
-
-PassOwnPtr<InputType> ResetInputType::create(HTMLInputElement* element)
-{
-    return adoptPtr(new ResetInputType(element));
-}
 
 const AtomicString& ResetInputType::formControlType() const
 {
@@ -58,9 +52,9 @@ bool ResetInputType::supportsValidation() const
 
 void ResetInputType::handleDOMActivateEvent(Event* event)
 {
-    if (element()->isDisabledFormControl() || !element()->form())
+    if (element().isDisabledFormControl() || !element().form())
         return;
-    element()->form()->reset();
+    element().form()->reset();
     event->setDefaultHandled();
 }
 

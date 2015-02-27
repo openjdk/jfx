@@ -37,12 +37,12 @@ public:
     String listStyle() const { return m_listStyle ? m_listStyle->getStringValue() : String(); }
     String separator() const { return m_separator ? m_separator->getStringValue() : String(); }
 
-    int listStyleIdent() const { return m_listStyle ? m_listStyle->getIdent() : 0; }
+    CSSValueID listStyleIdent() const { return m_listStyle ? m_listStyle->getValueID() : CSSValueInvalid; }
 
     void setIdentifier(PassRefPtr<CSSPrimitiveValue> identifier) { m_identifier = identifier; }
     void setListStyle(PassRefPtr<CSSPrimitiveValue> listStyle) { m_listStyle = listStyle; }
     void setSeparator(PassRefPtr<CSSPrimitiveValue> separator) { m_separator = separator; }
-    
+
     bool equals(const Counter& other) const
     {
         return identifier() == other.identifier()

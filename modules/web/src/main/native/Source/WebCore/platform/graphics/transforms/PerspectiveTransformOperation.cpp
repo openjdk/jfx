@@ -29,8 +29,6 @@
 #include "AnimationUtilities.h"
 #include <wtf/MathExtras.h>
 
-using namespace std;
-
 namespace WebCore {
 
 PassRefPtr<TransformOperation> PerspectiveTransformOperation::blend(const TransformOperation* from, double progress, bool blendToIdentity)
@@ -53,8 +51,8 @@ PassRefPtr<TransformOperation> PerspectiveTransformOperation::blend(const Transf
     fromT.applyPerspective(floatValueForLength(fromP, 1));
     toT.applyPerspective(floatValueForLength(toP, 1));
     toT.blend(fromT, progress);
-    TransformationMatrix::DecomposedType decomp;
-    toT.decompose(decomp);
+    TransformationMatrix::Decomposed4Type decomp;
+    toT.decompose4(decomp);
 
     if (decomp.perspectiveZ) {
         double val = -1.0 / decomp.perspectiveZ;

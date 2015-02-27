@@ -28,31 +28,33 @@
 
 #if ENABLE(MATHML)
 
+#include "MathMLInlineContainerElement.h"
 #include "RenderMathMLOperator.h"
 #include "RenderMathMLRow.h"
 
 namespace WebCore {
     
-class RenderMathMLFenced : public RenderMathMLRow {
+class RenderMathMLFenced final : public RenderMathMLRow {
 public:
-    RenderMathMLFenced(Element*);
-    virtual void addChild(RenderObject* child, RenderObject* beforeChild = 0);
-    virtual void updateFromElement();
+    RenderMathMLFenced(MathMLInlineContainerElement&, PassRef<RenderStyle>);
+    MathMLInlineContainerElement& element() { return static_cast<MathMLInlineContainerElement&>(nodeForNonAnonymous()); }
     
 private:
-    virtual bool isRenderMathMLFenced() const { return true; }
-    virtual const char* renderName() const { return "RenderMathMLFenced"; }
+    virtual bool isRenderMathMLFenced() const override { return true; }
+    virtual const char* renderName() const override { return "RenderMathMLFenced"; }
+    virtual void addChild(RenderObject* child, RenderObject* beforeChild) override;
+    virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
 
-    RenderMathMLOperator* createMathMLOperator(UChar, RenderMathMLOperator::OperatorType);
+    virtual void updateFromElement() override;
+
+    RenderPtr<RenderMathMLOperator> createMathMLOperator(UChar, RenderMathMLOperator::OperatorType);
     void makeFences();
-    
-    virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle) OVERRIDE;
 
     UChar m_open;
     UChar m_close;
     RefPtr<StringImpl> m_separators;
     
-    RenderObject* m_closeFenceRenderer;
+    RenderMathMLOperator* m_closeFenceRenderer;
 };
     
 }

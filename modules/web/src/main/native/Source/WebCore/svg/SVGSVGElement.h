@@ -21,16 +21,13 @@
 #ifndef SVGSVGElement_h
 #define SVGSVGElement_h
 
-#if ENABLE(SVG)
 #include "SVGAnimatedBoolean.h"
 #include "SVGAnimatedLength.h"
 #include "SVGAnimatedPreserveAspectRatio.h"
 #include "SVGAnimatedRect.h"
 #include "SVGExternalResourcesRequired.h"
 #include "SVGFitToViewBox.h"
-#include "SVGLangSpace.h"
-#include "SVGStyledTransformableElement.h"
-#include "SVGTests.h"
+#include "SVGGraphicsElement.h"
 #include "SVGZoomAndPan.h"
 
 namespace WebCore {
@@ -42,20 +39,18 @@ class SVGViewSpec;
 class SVGViewElement;
 class SMILTimeContainer;
 
-class SVGSVGElement FINAL : public SVGStyledTransformableElement,
-                      public SVGTests,
-                      public SVGLangSpace,
-                      public SVGExternalResourcesRequired,
-                      public SVGFitToViewBox,
-                      public SVGZoomAndPan {
+class SVGSVGElement final : public SVGGraphicsElement,
+                            public SVGExternalResourcesRequired,
+                            public SVGFitToViewBox,
+                            public SVGZoomAndPan {
 public:
-    static PassRefPtr<SVGSVGElement> create(const QualifiedName&, Document*);
+    static PassRefPtr<SVGSVGElement> create(const QualifiedName&, Document&);
 
-    using SVGStyledTransformableElement::ref;
-    using SVGStyledTransformableElement::deref;
+    using SVGGraphicsElement::ref;
+    using SVGGraphicsElement::deref;
 
-    virtual bool isValid() const { return SVGTests::isValid(); }
-    virtual bool supportsFocus() const OVERRIDE { return true; }
+    virtual bool isValid() const override { return SVGTests::isValid(); }
+    virtual bool supportsFocus() const override { return true; }
 
     // 'SVGSVGElement' functions
     const AtomicString& contentScriptType() const;
@@ -88,7 +83,7 @@ public:
     float currentScale() const;
     void setCurrentScale(float scale);
 
-    FloatPoint& currentTranslate() { return m_translation; }
+    SVGPoint& currentTranslate() { return m_translation; }
     void setCurrentTranslate(const FloatPoint&);
 
     // Only used from the bindings.
@@ -110,14 +105,14 @@ public:
 
     PassRefPtr<NodeList> getIntersectionList(const FloatRect&, SVGElement* referenceElement) const;
     PassRefPtr<NodeList> getEnclosureList(const FloatRect&, SVGElement* referenceElement) const;
-    bool checkIntersection(SVGElement*, const FloatRect&) const;
-    bool checkEnclosure(SVGElement*, const FloatRect&) const;
+    bool checkIntersection(const SVGElement*, const FloatRect&) const;
+    bool checkEnclosure(const SVGElement*, const FloatRect&) const;
     void deselectAll();
 
     static float createSVGNumber();
     static SVGLength createSVGLength();
     static SVGAngle createSVGAngle();
-    static FloatPoint createSVGPoint();
+    static SVGPoint createSVGPoint();
     static SVGMatrix createSVGMatrix();
     static FloatRect createSVGRect();
     static SVGTransform createSVGTransform();
@@ -127,7 +122,7 @@ public:
 
     void setupInitialView(const String& fragmentIdentifier, Element* anchorNode);
 
-    Element* getElementById(const AtomicString&) const;
+    Element* getElementById(const AtomicString&);
 
     bool widthAttributeEstablishesViewport() const;
     bool heightAttributeEstablishesViewport() const;
@@ -137,26 +132,23 @@ public:
 
     bool hasEmptyViewBox() const { return viewBoxIsValid() && viewBox().isEmpty(); }
 
-protected:
-    virtual void didMoveToNewDocument(Document* oldDocument) OVERRIDE;
-
 private:
-    SVGSVGElement(const QualifiedName&, Document*);
+    SVGSVGElement(const QualifiedName&, Document&);
     virtual ~SVGSVGElement();
 
-    virtual bool isSVGSVGElement() const OVERRIDE { return true; }
-    
-    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
+    virtual void didMoveToNewDocument(Document* oldDocument) override;
 
-    virtual bool rendererIsNeeded(const NodeRenderingContext&) OVERRIDE;
-    virtual RenderObject* createRenderer(RenderArena*, RenderStyle*);
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
 
-    virtual InsertionNotificationRequest insertedInto(ContainerNode*) OVERRIDE;
-    virtual void removedFrom(ContainerNode*) OVERRIDE;
+    virtual bool rendererIsNeeded(const RenderStyle&) override;
+    virtual RenderPtr<RenderElement> createElementRenderer(PassRef<RenderStyle>) override;
 
-    virtual void svgAttributeChanged(const QualifiedName&);
+    virtual InsertionNotificationRequest insertedInto(ContainerNode&) override;
+    virtual void removedFrom(ContainerNode&) override;
 
-    virtual bool selfHasRelativeLengths() const;
+    virtual void svgAttributeChanged(const QualifiedName&) override;
+
+    virtual bool selfHasRelativeLengths() const override;
 
     void inheritViewAttributes(SVGViewElement*);
 
@@ -177,31 +169,20 @@ private:
         DECLARE_ANIMATED_PRESERVEASPECTRATIO(PreserveAspectRatio, preserveAspectRatio)
     END_DECLARE_ANIMATED_PROPERTIES
 
-    // SVGTests
-    virtual void synchronizeRequiredFeatures() { SVGTests::synchronizeRequiredFeatures(this); }
-    virtual void synchronizeRequiredExtensions() { SVGTests::synchronizeRequiredExtensions(this); }
-    virtual void synchronizeSystemLanguage() { SVGTests::synchronizeSystemLanguage(this); }
+    virtual void documentWillSuspendForPageCache() override;
+    virtual void documentDidResumeFromPageCache() override;
 
-    virtual void documentWillSuspendForPageCache();
-    virtual void documentDidResumeFromPageCache();
-
-    virtual AffineTransform localCoordinateSpaceTransform(SVGLocatable::CTMScope) const;
+    virtual AffineTransform localCoordinateSpaceTransform(SVGLocatable::CTMScope) const override;
 
     bool m_useCurrentView;
     SVGZoomAndPanType m_zoomAndPan;
     RefPtr<SMILTimeContainer> m_timeContainer;
-    FloatPoint m_translation;
+    SVGPoint m_translation;
     RefPtr<SVGViewSpec> m_viewSpec;
 };
 
-inline SVGSVGElement* toSVGSVGElement(Node* node)
-{
-    ASSERT_WITH_SECURITY_IMPLICATION(!node || node->isSVGElement());
-    ASSERT_WITH_SECURITY_IMPLICATION(!node || toSVGElement(node)->isSVGSVGElement());
-    return static_cast<SVGSVGElement*>(node);
-}
+NODE_TYPE_CASTS(SVGSVGElement)
 
 } // namespace WebCore
 
-#endif // ENABLE(SVG)
 #endif

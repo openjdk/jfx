@@ -38,7 +38,7 @@
 
 #include <wtf/platform.h>
 #include <WebCore/BString.h>
-#include <WebCore/KURL.h>
+#include <WebCore/URL.h>
 #include <WebCore/LocalizedStrings.h>
 #include <WebCore/ResourceHandle.h>
 #include <shlobj.h>
@@ -47,7 +47,7 @@
 
 using namespace WebCore;
 
-static String CFHTTPMessageCopyLocalizedShortDescriptionForStatusCode(CFIndex statusCode)
+static String localizedShortDescriptionForStatusCode(int statusCode)
 {
     String result;
     if (statusCode < 100 || statusCode >= 600)
@@ -226,7 +226,7 @@ WebURLResponse* WebURLResponse::createInstance()
 {
     WebURLResponse* instance = new WebURLResponse();
     // fake an http response - so it has the IWebHTTPURLResponse interface
-    instance->m_response = ResourceResponse(KURL(ParsedURLString, "http://"), String(), 0, String(), String());
+    instance->m_response = ResourceResponse(WebCore::URL(ParsedURLString, "http://"), String(), 0, String(), String());
     instance->AddRef();
     return instance;
 }
@@ -372,7 +372,7 @@ HRESULT STDMETHODCALLTYPE WebURLResponse::localizedStringForStatusCode(
     ASSERT(m_response.isHTTP());
     if (statusString)
         *statusString = 0;
-    String statusText = CFHTTPMessageCopyLocalizedShortDescriptionForStatusCode(statusCode);
+    const String& statusText = localizedShortDescriptionForStatusCode(statusCode);
     if (!statusText)
         return E_FAIL;
     if (statusString)

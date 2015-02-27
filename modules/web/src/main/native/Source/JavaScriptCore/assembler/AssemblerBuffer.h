@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
 #ifndef AssemblerBuffer_h
@@ -30,7 +30,6 @@
 
 #include "ExecutableAllocator.h"
 #include "JITCompilationEffort.h"
-#include "VM.h"
 #include "stdint.h"
 #include <string.h>
 #include <wtf/Assertions.h>
@@ -128,23 +127,6 @@ namespace JSC {
         AssemblerLabel label() const
         {
             return AssemblerLabel(m_index);
-        }
-
-        PassRefPtr<ExecutableMemoryHandle> executableCopy(VM& vm, void* ownerUID, JITCompilationEffort effort)
-        {
-            if (!m_index)
-                return 0;
-
-            RefPtr<ExecutableMemoryHandle> result = vm.executableAllocator.allocate(vm, m_index, ownerUID, effort);
-
-            if (!result)
-                return 0;
-
-            ExecutableAllocator::makeWritable(result->start(), result->sizeInBytes());
-
-            memcpy(result->start(), m_buffer, m_index);
-
-            return result.release();
         }
 
         unsigned debugOffset() { return m_index; }

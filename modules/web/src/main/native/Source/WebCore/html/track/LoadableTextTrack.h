@@ -30,21 +30,12 @@
 
 #include "TextTrack.h"
 #include "TextTrackLoader.h"
-#include <wtf/PassRefPtr.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
 
 class HTMLTrackElement;
 class LoadableTextTrack;
-
-class LoadableTextTrackClient : public TextTrackClient {
-public:
-    virtual ~LoadableTextTrackClient() { }
-    
-    virtual bool canLoadUrl(LoadableTextTrack*, const KURL&) { return false; }
-    virtual void loadingCompleted(LoadableTextTrack*, bool /* loadingFailed */) { }
-};
 
 class LoadableTextTrack : public TextTrack, private TextTrackLoaderClient {
 public:
@@ -54,35 +45,36 @@ public:
     }
     virtual ~LoadableTextTrack();
 
-    void scheduleLoad(const KURL&);
+    void scheduleLoad(const URL&);
 
-    virtual void clearClient();
+    virtual void clearClient() override;
+
+    virtual AtomicString id() const override;
 
     size_t trackElementIndex();
     HTMLTrackElement* trackElement() { return m_trackElement; }
-    virtual Element* element() OVERRIDE;
+    void setTrackElement(HTMLTrackElement*);
+    virtual Element* element() override;
 
-    virtual bool isDefault() const OVERRIDE { return m_isDefault; }
-    virtual void setIsDefault(bool isDefault) OVERRIDE  { m_isDefault = isDefault; }
+    virtual bool isDefault() const override { return m_isDefault; }
+    virtual void setIsDefault(bool isDefault) override  { m_isDefault = isDefault; }
 
 private:
     // TextTrackLoaderClient
-    virtual bool shouldLoadCues(TextTrackLoader*) { return true; }
-    virtual void newCuesAvailable(TextTrackLoader*);
-    virtual void cueLoadingStarted(TextTrackLoader*);
-    virtual void cueLoadingCompleted(TextTrackLoader*, bool loadingFailed);
+    virtual void newCuesAvailable(TextTrackLoader*) override;
+    virtual void cueLoadingCompleted(TextTrackLoader*, bool loadingFailed) override;
 #if ENABLE(WEBVTT_REGIONS)
     virtual void newRegionsAvailable(TextTrackLoader*);
 #endif
 
     LoadableTextTrack(HTMLTrackElement*, const String& kind, const String& label, const String& language);
 
-    void loadTimerFired(Timer<LoadableTextTrack>*);
+    void loadTimerFired(Timer<LoadableTextTrack>&);
 
     HTMLTrackElement* m_trackElement;
     Timer<LoadableTextTrack> m_loadTimer;
     OwnPtr<TextTrackLoader> m_loader;
-    KURL m_url;
+    URL m_url;
     bool m_isDefault;
 };
 } // namespace WebCore

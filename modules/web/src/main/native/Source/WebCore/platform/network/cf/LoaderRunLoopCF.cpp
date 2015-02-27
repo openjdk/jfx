@@ -29,25 +29,29 @@
 #if USE(CFNETWORK)
 
 #include <CoreFoundation/CoreFoundation.h>
+#include <condition_variable>
 #include <limits>
 #include <wtf/AutodrainedPool.h>
 #include <wtf/MainThread.h>
+#include <wtf/NeverDestroyed.h>
 #include <wtf/Threading.h>
 
 namespace WebCore {
 
 static CFRunLoopRef loaderRunLoopObject = 0;
 
-static Mutex& loaderRunLoopMutex()
+static std::mutex& loaderRunLoopMutex()
 {
-    DEFINE_STATIC_LOCAL(Mutex, mutex, ());
+    static NeverDestroyed<std::mutex> mutex;
+
     return mutex;
 }
 
-static ThreadCondition& loaderRunLoopCondition()
+static std::condition_variable& loaderRunLoopConditionVariable()
 {
-    DEFINE_STATIC_LOCAL(ThreadCondition, threadCondition, ());
-    return threadCondition;
+    static NeverDestroyed<std::condition_variable> conditionVariable;
+
+    return conditionVariable;
 }
 
 static void emptyPerform(void*) 
@@ -57,15 +61,16 @@ static void emptyPerform(void*)
 static void runLoaderThread(void*)
 {
     {
-        MutexLocker lock(loaderRunLoopMutex());
-    loaderRunLoopObject = CFRunLoopGetCurrent();
+        std::lock_guard<std::mutex> lock(loaderRunLoopMutex());
 
-    // Must add a source to the run loop to prevent CFRunLoopRun() from exiting.
+        loaderRunLoopObject = CFRunLoopGetCurrent();
+
+        // Must add a source to the run loop to prevent CFRunLoopRun() from exiting.
         CFRunLoopSourceContext ctxt = {0, (void*)1 /*must be non-null*/, 0, 0, 0, 0, 0, 0, 0, emptyPerform};
-    CFRunLoopSourceRef bogusSource = CFRunLoopSourceCreate(0, 0, &ctxt);
-    CFRunLoopAddSource(loaderRunLoopObject, bogusSource, kCFRunLoopDefaultMode);
+        CFRunLoopSourceRef bogusSource = CFRunLoopSourceCreate(0, 0, &ctxt);
+        CFRunLoopAddSource(loaderRunLoopObject, bogusSource, kCFRunLoopDefaultMode);
 
-        loaderRunLoopCondition().signal();
+        loaderRunLoopConditionVariable().notify_one();
     }
 
     SInt32 result;
@@ -79,11 +84,14 @@ CFRunLoopRef loaderRunLoop()
 {
     ASSERT(isMainThread());
 
-    MutexLocker lock(loaderRunLoopMutex());
+    std::unique_lock<std::mutex> lock(loaderRunLoopMutex());
+
     if (!loaderRunLoopObject) {
         createThread(runLoaderThread, 0, "WebCore: CFNetwork Loader");
-        loaderRunLoopCondition().wait(loaderRunLoopMutex());
+
+        loaderRunLoopConditionVariable().wait(lock, [] { return loaderRunLoopObject; });
     }
+
     return loaderRunLoopObject;
 }
 

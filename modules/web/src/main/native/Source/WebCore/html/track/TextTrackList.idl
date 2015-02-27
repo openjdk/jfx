@@ -24,16 +24,17 @@
  */
 
 [
-        Conditional=VIDEO_TRACK,
+    Conditional=VIDEO_TRACK,
     GenerateIsReachable=ImplElementRoot,
-        IndexedGetter,
-        EventTarget,
-    JSCustomMarkFunction
+    EventTarget,
+    JSCustomMarkFunction,
 ] interface TextTrackList {
-        readonly attribute unsigned long length;
-    TextTrack item(unsigned long index);
+    readonly attribute unsigned long length;
+    getter TextTrack item(unsigned long index);
+    TextTrack getTrackById(DOMString id);
 
-        attribute EventListener onaddtrack;
+    attribute EventListener onaddtrack;
+    attribute EventListener onchange;
     attribute EventListener onremovetrack;
 
     void addEventListener(DOMString type,
@@ -42,7 +43,6 @@
     void removeEventListener(DOMString type,
                              EventListener listener,
                              optional boolean useCapture);
-    boolean dispatchEvent(Event evt)
-            raises(EventException);
-    };
+    [RaisesException] boolean dispatchEvent(Event evt);
+};
 

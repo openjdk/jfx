@@ -27,19 +27,19 @@
 
 namespace WebCore {
 
-class HTMLLIElement FINAL : public HTMLElement {
+class HTMLLIElement final : public HTMLElement {
 public:
-    static PassRefPtr<HTMLLIElement> create(Document*);
-    static PassRefPtr<HTMLLIElement> create(const QualifiedName&, Document*);
+    static PassRefPtr<HTMLLIElement> create(Document&);
+    static PassRefPtr<HTMLLIElement> create(const QualifiedName&, Document&);
 
 private:
-    HTMLLIElement(const QualifiedName&, Document*);
+    HTMLLIElement(const QualifiedName&, Document&);
 
-    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
-    virtual bool isPresentationAttribute(const QualifiedName&) const OVERRIDE;
-    virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStylePropertySet*) OVERRIDE;
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
+    virtual bool isPresentationAttribute(const QualifiedName&) const override;
+    virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStyleProperties&) override;
 
-    virtual void attach();
+    virtual void didAttachRenderers() override;
 
     void parseValue(const AtomicString&);
 };

@@ -25,13 +25,15 @@
  */
 
 #include "Image.h"
+#include <runtime/Uint8ClampedArray.h>
 #include <wtf/CheckedArithmetic.h>
 #include <wtf/RefPtr.h>
 #include <wtf/RetainPtr.h>
-#include <wtf/Uint8ClampedArray.h>
 
-#if (PLATFORM(MAC) && USE(CA) && (PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070))
+#if PLATFORM(COCOA) && USE(CA)
+#if !PLATFORM(IOS_SIMULATOR)
 #define WTF_USE_IOSURFACE_CANVAS_BACKING_STORE 1
+#endif // !PLATFORM(IOS_SIMULATOR)
 #endif
 
 typedef struct __IOSurface *IOSurfaceRef;
@@ -54,9 +56,7 @@ public:
     Checked<unsigned, RecordOverflow> m_bytesPerRow;
     CGColorSpaceRef m_colorSpace;
     RetainPtr<IOSurfaceRef> m_surface;
-#if !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED == 1070
-    mutable double m_lastFlushTime;
-#endif
+    IntSize m_backingStoreSize;
 
     PassRefPtr<Uint8ClampedArray> getData(const IntRect&, const IntSize&, bool accelerateRendering, bool unmultiplied, float resolutionScale) const;
     void putData(Uint8ClampedArray*& source, const IntSize& sourceSize, const IntRect& sourceRect, const IntPoint& destPoint, const IntSize&, bool accelerateRendering, bool unmultiplied, float resolutionScale);

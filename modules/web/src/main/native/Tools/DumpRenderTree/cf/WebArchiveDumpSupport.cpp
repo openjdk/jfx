@@ -144,7 +144,7 @@ static CFComparisonResult compareResourceURLs(const void *val1, const void *val2
 {
     CFStringRef url1 = static_cast<CFStringRef>(CFDictionaryGetValue(static_cast<CFDictionaryRef>(val1), CFSTR("WebResourceURL")));
     CFStringRef url2 = static_cast<CFStringRef>(CFDictionaryGetValue(static_cast<CFDictionaryRef>(val2), CFSTR("WebResourceURL")));
- 
+
     return CFStringCompare(url1, url2, kCFCompareAnchored);
 }
 

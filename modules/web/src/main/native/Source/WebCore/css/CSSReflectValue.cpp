@@ -29,27 +29,16 @@
 #include "CSSPrimitiveValue.h"
 #include <wtf/text/StringBuilder.h>
 
-using namespace std;
-
 namespace WebCore {
 
-String CSSReflectValue::customCssText() const
+String CSSReflectValue::customCSSText() const
 {
     if (m_mask)
         return m_direction->cssText() + ' ' + m_offset->cssText() + ' ' + m_mask->cssText();
     return m_direction->cssText() + ' ' + m_offset->cssText();
-    }
-
-#if ENABLE(CSS_VARIABLES)
-String CSSReflectValue::customSerializeResolvingVariables(const HashMap<AtomicString, String>& variables) const
-{
-    if (m_mask)
-        return m_direction->customSerializeResolvingVariables(variables) + ' ' + m_offset->customSerializeResolvingVariables(variables) + ' ' + m_mask->serializeResolvingVariables(variables);
-    return m_direction->customSerializeResolvingVariables(variables) + ' ' + m_offset->customSerializeResolvingVariables(variables);
 }
-#endif
 
-void CSSReflectValue::addSubresourceStyleURLs(ListHashSet<KURL>& urls, const StyleSheetContents* styleSheet) const
+void CSSReflectValue::addSubresourceStyleURLs(ListHashSet<URL>& urls, const StyleSheetContents* styleSheet) const
 {
     if (m_mask)
         m_mask->addSubresourceStyleURLs(urls, styleSheet);

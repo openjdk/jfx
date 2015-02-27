@@ -954,7 +954,7 @@ uloc_acceptLanguageFromHTTP(char *result, int32_t resultAvailable,
  * @param result - buffer to accept the result locale
  * @param resultAvailable the size of the result buffer.
  * @param outResult - An out parameter that contains the fallback status
- * @param acceptList -list of acceptable languages
+ * @param acceptList - list of acceptable languages
  * @param acceptListCount - count of acceptList items
  * @param availableLocales - list of available locales to match
  * @param status Error status, may be BUFFER_OVERFLOW_ERROR

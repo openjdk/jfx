@@ -105,9 +105,9 @@ void PopupMenuJava::show(const IntRect& r, FrameView* frameView, int index)
 {
     JNIEnv* env = WebCore_GetJavaEnv();
 
-    ASSERT(frameView->frame()->page());
+    ASSERT(frameView->frame().page());
 
-    createPopupMenuJava(frameView->frame()->page());
+    createPopupMenuJava(frameView->frame().page());
     populate();
     setSelectedItem(m_popup, index);
 
@@ -123,7 +123,7 @@ void PopupMenuJava::show(const IntRect& r, FrameView* frameView, int index)
     env->CallVoidMethod(
             m_popup,
             mid,
-            (jobject) WebPage::jobjectFromPage(frameView->frame()->page()),
+            (jobject) WebPage::jobjectFromPage(frameView->frame().page()),
             wr.x(),
             wr.y() + wr.height(),
             wr.width());

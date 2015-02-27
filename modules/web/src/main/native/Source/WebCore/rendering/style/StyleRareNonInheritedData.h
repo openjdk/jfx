@@ -30,10 +30,10 @@
 #include "CounterDirectives.h"
 #include "CursorData.h"
 #include "DataRef.h"
-#include "ExclusionShapeValue.h"
 #include "FillLayer.h"
 #include "LineClampValue.h"
 #include "NinePieceImage.h"
+#include "ShapeValue.h"
 #include <wtf/OwnPtr.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/Vector.h>
@@ -77,8 +77,8 @@ enum PageSizeType {
 // actually uses one of these properties.
 class StyleRareNonInheritedData : public RefCounted<StyleRareNonInheritedData> {
 public:
-    static PassRefPtr<StyleRareNonInheritedData> create() { return adoptRef(new StyleRareNonInheritedData); }
-    PassRefPtr<StyleRareNonInheritedData> copy() const { return adoptRef(new StyleRareNonInheritedData(*this)); }
+    static PassRef<StyleRareNonInheritedData> create() { return adoptRef(*new StyleRareNonInheritedData); }
+    PassRef<StyleRareNonInheritedData> copy() const;
     ~StyleRareNonInheritedData();
     
     bool operator==(const StyleRareNonInheritedData&) const;
@@ -90,8 +90,10 @@ public:
     bool reflectionDataEquivalent(const StyleRareNonInheritedData&) const;
     bool animationDataEquivalent(const StyleRareNonInheritedData&) const;
     bool transitionDataEquivalent(const StyleRareNonInheritedData&) const;
+    bool hasFilters() const;
+    bool hasOpacity() const { return opacity < 1; }
 
-    float opacity; // Whether or not we're transparent.
+    float opacity;
 
     float m_aspectRatioDenominator;
     float m_aspectRatioNumerator;
@@ -103,9 +105,6 @@ public:
     LineClampValue lineClamp; // An Apple extension.
 #if ENABLE(DASHBOARD_SUPPORT)
     Vector<StyleDashboardRegion> m_dashboardRegions;
-#endif
-#if ENABLE(DRAGGABLE_REGION)
-    DraggableRegionMode m_draggableRegionMode;
 #endif
 
     DataRef<StyleDeprecatedFlexibleBoxData> m_deprecatedFlexibleBox; // Flexible box properties
@@ -121,10 +120,11 @@ public:
     DataRef<StyleGridData> m_grid;
     DataRef<StyleGridItemData> m_gridItem;
 
-    OwnPtr<ContentData> m_content;
+    std::unique_ptr<ContentData> m_content;
     OwnPtr<CounterDirectiveMap> m_counterDirectives;
+    String m_altText;
 
-    OwnPtr<ShadowData> m_boxShadow;  // For box-shadow decorations.
+    std::unique_ptr<ShadowData> m_boxShadow; // For box-shadow decorations.
     
     RefPtr<StyleReflection> m_boxReflect;
 
@@ -136,17 +136,20 @@ public:
 
     LengthSize m_pageSize;
 
-    RefPtr<ExclusionShapeValue> m_shapeInside;
-    RefPtr<ExclusionShapeValue> m_shapeOutside;
+#if ENABLE(CSS_SHAPES) && ENABLE(CSS_SHAPE_INSIDE)
+    RefPtr<ShapeValue> m_shapeInside;
+#endif
+#if ENABLE(CSS_SHAPES)
+    RefPtr<ShapeValue> m_shapeOutside;
     Length m_shapeMargin;
     Length m_shapePadding;
-    
+    float m_shapeImageThreshold;
+#endif
+
     RefPtr<ClipPathOperation> m_clipPath;
 
-#if ENABLE(CSS3_TEXT)
     Color m_textDecorationColor;
     Color m_visitedLinkTextDecorationColor;
-#endif // CSS3_TEXT
     Color m_visitedLinkBackgroundColor;
     Color m_visitedLinkOutlineColor;
     Color m_visitedLinkBorderLeftColor;
@@ -158,7 +161,7 @@ public:
 
     AtomicString m_flowThread;
     AtomicString m_regionThread;
-    unsigned m_regionOverflow : 1; // RegionOverflow
+    unsigned m_regionFragment : 1; // RegionFragment
 
     unsigned m_regionBreakAfter : 2; // EPageBreak
     unsigned m_regionBreakBefore : 2; // EPageBreak
@@ -181,22 +184,19 @@ public:
     unsigned m_borderFit : 1; // EBorderFit
     unsigned m_textCombine : 1; // CSS3 text-combine properties
 
-#if ENABLE(CSS3_TEXT)
     unsigned m_textDecorationStyle : 3; // TextDecorationStyle
-    unsigned m_textUnderlinePosition : 3; // TextUnderlinePosition
-#endif // CSS3_TEXT
     unsigned m_wrapFlow: 3; // WrapFlow
     unsigned m_wrapThrough: 1; // WrapThrough
 
-#if USE(ACCELERATED_COMPOSITING)
     unsigned m_runningAcceleratedAnimation : 1;
-#endif
 
-    unsigned m_hasAspectRatio : 1; // Whether or not an aspect ratio has been specified.
+    unsigned m_aspectRatioType : 2;
 
 #if ENABLE(CSS_COMPOSITING)
     unsigned m_effectiveBlendMode: 5; // EBlendMode
 #endif
+
+    unsigned m_objectFit : 3; // ObjectFit
 
 private:
     StyleRareNonInheritedData();

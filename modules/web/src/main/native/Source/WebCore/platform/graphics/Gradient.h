@@ -42,23 +42,9 @@ typedef struct CGContext* CGContextRef;
 typedef struct CGGradient* CGGradientRef;
 typedef CGGradientRef PlatformGradient;
 
-#elif PLATFORM(QT)
-QT_BEGIN_NAMESPACE
-class QGradient;
-QT_END_NAMESPACE
-typedef QGradient* PlatformGradient;
 #elif USE(CAIRO)
 typedef struct _cairo_pattern cairo_pattern_t;
 typedef cairo_pattern_t* PlatformGradient;
-#elif PLATFORM(BLACKBERRY)
-namespace BlackBerry {
-namespace Platform {
-namespace Graphics {
-class Gradient;
-}
-}
-}
-typedef BlackBerry::Platform::Graphics::Gradient* PlatformGradient;
 #else
 typedef void* PlatformGradient;
 #endif
@@ -138,7 +124,7 @@ namespace WebCore {
 
         float aspectRatio() const { return m_aspectRatio; }
 
-#if (OS(WINCE) && !PLATFORM(QT)) || PLATFORM(JAVA)
+#if USE(WINGDI) || PLATFORM(JAVA)
         const Vector<ColorStop, 2>& getStops() const;
 #else
         PlatformGradient platformGradient();

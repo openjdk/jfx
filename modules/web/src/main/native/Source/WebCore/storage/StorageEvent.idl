@@ -24,7 +24,7 @@
  */
 
 [
-    ConstructorTemplate=Event
+    ConstructorTemplate=Event,
 ] interface StorageEvent : Event {
     [InitializedByEventConstructor] readonly attribute DOMString key;
     [InitializedByEventConstructor, TreatReturnedNullStringAs=Null] readonly attribute DOMString oldValue;
@@ -41,7 +41,7 @@
                           [Default=Undefined] optional DOMString urlArg, 
                           [Default=Undefined] optional Storage storageAreaArg);
 
-        // Needed once we support init<blank>EventNS
+    // Needed once we support init<blank>EventNS
     // void initStorageEventNS(DOMString namespaceURI, DOMString typeArg, boolean canBubbleArg, boolean cancelableArg, DOMString keyArg, DOMString oldValueArg, DOMString newValueArg, DOMString urlArg, Storage storageAreaArg);
-    };
+};
 

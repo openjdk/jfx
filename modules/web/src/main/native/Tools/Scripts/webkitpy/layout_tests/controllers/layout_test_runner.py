@@ -93,10 +93,10 @@ class LayoutTestRunner(object):
         self._remaining_locked_shards = []
         self._has_http_lock = False
         self._printer.num_tests = len(test_inputs)
-        self._printer.num_completed = 0
+        self._printer.num_started = 0
 
         if not retrying:
-            self._printer.print_expected(run_results, self._expectations.get_tests_with_result_type)
+            self._printer.print_expected(run_results, self._expectations.model().get_tests_with_result_type)
 
         for test_name in set(tests_to_skip):
             result = test_results.TestResult(test_name)
@@ -116,7 +116,7 @@ class LayoutTestRunner(object):
 
         all_shards = locked_shards + unlocked_shards
         self._remaining_locked_shards = locked_shards
-        if self._port.requires_http_server() or (locked_shards and self._options.http):
+        if locked_shards and self._options.http:
             self.start_servers_with_lock(2 * min(num_workers, len(locked_shards)))
 
         num_workers = min(num_workers, len(all_shards))
@@ -188,8 +188,8 @@ class LayoutTestRunner(object):
             expected = True
         else:
             expected = self._expectations.matches_an_expected_result(result.test_name, result.type, self._options.pixel_tests or result.reftest_type)
-            exp_str = self._expectations.get_expectations_string(result.test_name)
-            got_str = self._expectations.expectation_to_string(result.type)
+            exp_str = self._expectations.model().get_expectations_string(result.test_name)
+            got_str = self._expectations.model().expectation_to_string(result.type)
 
         run_results.add(result, expected, self._test_is_slow(result.test_name))
 
@@ -239,7 +239,7 @@ class LayoutTestRunner(object):
         index = find(list_name, self._remaining_locked_shards)
         if index >= 0:
             self._remaining_locked_shards.pop(index)
-            if not self._remaining_locked_shards and not self._port.requires_http_server():
+            if not self._remaining_locked_shards:
                 self.stop_servers_with_lock()
 
     def _handle_finished_test(self, worker_name, result, log_messages=[]):

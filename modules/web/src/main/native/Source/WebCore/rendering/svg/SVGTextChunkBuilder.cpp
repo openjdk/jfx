@@ -18,11 +18,8 @@
  */
 
 #include "config.h"
-
-#if ENABLE(SVG)
 #include "SVGTextChunkBuilder.h"
 
-#include "RenderSVGInlineText.h"
 #include "SVGElement.h"
 #include "SVGInlineTextBox.h"
 #include "SVGLengthContext.h"
@@ -62,7 +59,7 @@ void SVGTextChunkBuilder::buildTextChunks(Vector<SVGInlineTextBox*>& lineLayoutB
             lastChunkStartPosition = boxPosition;
             foundStart = true;
         } else {
-            ASSERT(boxPosition > lastChunkStartPosition);
+            ASSERT_WITH_SECURITY_IMPLICATION(boxPosition > lastChunkStartPosition);
             addTextChunk(lineLayoutBoxes, lastChunkStartPosition, boxPosition - lastChunkStartPosition);
             lastChunkStartPosition = boxPosition;
         }
@@ -93,28 +90,23 @@ void SVGTextChunkBuilder::addTextChunk(Vector<SVGInlineTextBox*>& lineLayoutBoxe
     SVGInlineTextBox* textBox = lineLayoutBoxes[boxStart];
     ASSERT(textBox);
 
-    RenderSVGInlineText* textRenderer = toRenderSVGInlineText(textBox->textRenderer());
-    ASSERT(textRenderer);
+    const RenderStyle& style = textBox->renderer().style();
 
-    const RenderStyle* style = textRenderer->style();
-    ASSERT(style);
-
-    const SVGRenderStyle* svgStyle = style->svgStyle();
-    ASSERT(svgStyle);
+    const SVGRenderStyle& svgStyle = style.svgStyle();
 
     // Build chunk style flags.
     unsigned chunkStyle = SVGTextChunk::DefaultStyle;
 
     // Handle 'direction' property.
-    if (!style->isLeftToRightDirection())
+    if (!style.isLeftToRightDirection())
         chunkStyle |= SVGTextChunk::RightToLeftText;
 
     // Handle 'writing-mode' property.
-    if (svgStyle->isVerticalWritingMode())
+    if (svgStyle.isVerticalWritingMode())
         chunkStyle |= SVGTextChunk::VerticalText;
 
     // Handle 'text-anchor' property.
-    switch (svgStyle->textAnchor()) {
+    switch (svgStyle.textAnchor()) {
     case TA_START:
         break;
     case TA_MIDDLE:
@@ -127,7 +119,7 @@ void SVGTextChunkBuilder::addTextChunk(Vector<SVGInlineTextBox*>& lineLayoutBoxe
 
     // Handle 'lengthAdjust' property.
     float desiredTextLength = 0;
-    if (SVGTextContentElement* textContentElement = SVGTextContentElement::elementFromRenderer(textRenderer->parent())) {
+    if (SVGTextContentElement* textContentElement = SVGTextContentElement::elementFromRenderer(textBox->renderer().parent())) {
         SVGLengthContext lengthContext(textContentElement);
         desiredTextLength = textContentElement->specifiedTextLength().value(lengthContext);
 
@@ -262,5 +254,3 @@ void SVGTextChunkBuilder::buildSpacingAndGlyphsTransform(bool isVerticalText, fl
 }
 
 }
-
-#endif // ENABLE(SVG)

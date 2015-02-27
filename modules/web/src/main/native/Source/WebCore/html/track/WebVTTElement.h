@@ -41,13 +41,12 @@ enum WebVTTNodeType {
     WebVTTNodeTypeVoice
 };
 
-class WebVTTElement FINAL : public Element {
+class WebVTTElement final : public Element {
 public:
-    static PassRefPtr<WebVTTElement> create(const WebVTTNodeType, Document*);
-    static PassRefPtr<WebVTTElement> create(const QualifiedName&, Document*);
-    PassRefPtr<HTMLElement> createEquivalentHTMLElement(Document*);
+    static PassRefPtr<WebVTTElement> create(const WebVTTNodeType, Document&);
+    PassRefPtr<HTMLElement> createEquivalentHTMLElement(Document&);
 
-    virtual PassRefPtr<Element> cloneElementWithoutAttributesAndChildren() OVERRIDE;
+    virtual PassRefPtr<Element> cloneElementWithoutAttributesAndChildren() override;
 
     void setWebVTTNodeType(WebVTTNodeType type) { m_webVTTNodeType = static_cast<unsigned>(type); }
     WebVTTNodeType webVTTNodeType() const { return static_cast<WebVTTNodeType>(m_webVTTNodeType); }
@@ -55,9 +54,8 @@ public:
     bool isPastNode() const { return m_isPastNode; }
     void setIsPastNode(bool value) { m_isPastNode = value; }
 
-    virtual bool isWebVTTElement() const OVERRIDE { return true; }
     AtomicString language() const { return m_language; }
-    void setLanguage(AtomicString value) { m_language = value; }
+    void setLanguage(const AtomicString& value) { m_language = value; }
 
     static const QualifiedName& voiceAttributeName()
     {
@@ -72,8 +70,9 @@ public:
     }
 
 private:
-    WebVTTElement(const QualifiedName&, Document*);
-    WebVTTElement(WebVTTNodeType, Document*);
+    WebVTTElement(WebVTTNodeType, Document&);
+
+    virtual bool isWebVTTElement() const override { return true; }
 
     unsigned m_isPastNode : 1;
     unsigned m_webVTTNodeType : 4;
@@ -81,15 +80,9 @@ private:
     AtomicString m_language;
 };
 
-inline WebVTTElement* toWebVTTElement(Node* node)
-{
-    ASSERT_WITH_SECURITY_IMPLICATION(!node || node->isWebVTTElement());
-    return static_cast<WebVTTElement*>(node);
-}
-
-// This will catch anyone doing an unnecessary cast.
-void toWebVTTElement(const WebVTTElement*);
-
+void isWebVTTElement(const WebVTTElement&); // Catch unnecessary runtime check of type known at compile time.
+inline bool isWebVTTElement(const Node& node) { return node.isWebVTTElement(); }
+NODE_TYPE_CASTS(WebVTTElement)
 
 } // namespace WebCore
 

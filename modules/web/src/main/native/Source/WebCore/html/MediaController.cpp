@@ -29,7 +29,6 @@
 #include "MediaController.h"
 
 #include "Clock.h"
-#include "ExceptionCode.h"
 #include "HTMLMediaElement.h"
 #include "TimeRanges.h"
 #include <wtf/CurrentTime.h>
@@ -37,14 +36,13 @@
 #include <wtf/text/AtomicString.h>
 
 using namespace WebCore;
-using namespace std;
 
-PassRefPtr<MediaController> MediaController::create(ScriptExecutionContext* context)
+PassRefPtr<MediaController> MediaController::create(ScriptExecutionContext& context)
 {
     return adoptRef(new MediaController(context));
 }
 
-MediaController::MediaController(ScriptExecutionContext* context)
+MediaController::MediaController(ScriptExecutionContext& context)
     : m_paused(false)
     , m_defaultPlaybackRate(1)
     , m_volume(1)
@@ -138,7 +136,7 @@ double MediaController::duration() const
         double duration = m_mediaElements[index]->duration();
         if (std::isnan(duration))
             continue;
-        maxDuration = max(maxDuration, duration);
+        maxDuration = std::max(maxDuration, duration);
     }
     return maxDuration;
 }
@@ -149,31 +147,31 @@ double MediaController::currentTime() const
         return 0;
 
     if (m_position == MediaPlayer::invalidTime()) {
-    // Some clocks may return times outside the range of [0..duration].
-        m_position = max(0.0, min(duration(), m_clock->currentTime()));
+        // Some clocks may return times outside the range of [0..duration].
+        m_position = std::max<double>(0, std::min(duration(), m_clock->currentTime()));
         m_clearPositionTimer.startOneShot(0);
-}
+    }
 
     return m_position;
 }
 
-void MediaController::setCurrentTime(double time, ExceptionCode& code)
+void MediaController::setCurrentTime(double time)
 {
     // When the user agent is to seek the media controller to a particular new playback position, 
     // it must follow these steps:
     // If the new playback position is less than zero, then set it to zero.
-    time = max(0.0, time);
+    time = std::max(0.0, time);
     
     // If the new playback position is greater than the media controller duration, then set it 
     // to the media controller duration.
-    time = min(time, duration());
+    time = std::min(time, duration());
     
     // Set the media controller position to the new playback position.
     m_clock->setCurrentTime(time);
     
     // Seek each slaved media element to the new playback position relative to the media element timeline.
     for (size_t index = 0; index < m_mediaElements.size(); ++index)
-        m_mediaElements[index]->seek(time, code);
+        m_mediaElements[index]->seek(time);
 
     scheduleTimeupdateEvent();
 }
@@ -183,7 +181,6 @@ void MediaController::unpause()
     // When the unpause() method is invoked, if the MediaController is a paused media controller,
     if (!m_paused)
         return;
-
     // the user agent must change the MediaController into a playing media controller,
     m_paused = false;
     // queue a task to fire a simple event named play at the MediaController,
@@ -361,7 +358,7 @@ void MediaController::updateReadyState()
         // slaved media elements.
         newReadyState = m_mediaElements.first()->readyState();
         for (size_t index = 1; index < m_mediaElements.size(); ++index)
-            newReadyState = min(newReadyState, m_mediaElements[index]->readyState());
+            newReadyState = std::min(newReadyState, m_mediaElements[index]->readyState());
     }
 
     if (newReadyState == oldReadyState) 
@@ -481,7 +478,7 @@ void MediaController::bringElementUpToSpeed(HTMLMediaElement* element)
     // When the user agent is to bring a media element up to speed with its new media controller,
     // it must seek that media element to the MediaController's media controller position relative
     // to the media element's timeline.
-    element->seek(currentTime(), IGNORE_EXCEPTION);
+    element->seek(currentTime());
 }
 
 bool MediaController::isBlocked() const
@@ -540,17 +537,17 @@ void MediaController::scheduleEvent(const AtomicString& eventName)
         m_asyncEventTimer.startOneShot(0);
 }
 
-void MediaController::asyncEventTimerFired(Timer<MediaController>*)
+void MediaController::asyncEventTimerFired(Timer<MediaController>&)
 {
-    Vector<RefPtr<Event> > pendingEvents;
-    
+    Vector<RefPtr<Event>> pendingEvents;
+
     m_pendingEvents.swap(pendingEvents);
     size_t count = pendingEvents.size();
     for (size_t index = 0; index < count; ++index)
         dispatchEvent(pendingEvents[index].release(), IGNORE_EXCEPTION);
 }
 
-void MediaController::clearPositionTimerFired(Timer<MediaController>*)
+void MediaController::clearPositionTimerFired(Timer<MediaController>&)
 {
     m_position = MediaPlayer::invalidTime();
 }
@@ -650,11 +647,6 @@ void MediaController::returnToRealtime()
         m_mediaElements[index]->returnToRealtime();
 }
 
-const AtomicString& MediaController::interfaceName() const
-{
-    return eventNames().interfaceForMediaController;
-}
-
 // The spec says to fire periodic timeupdate events (those sent while playing) every
 // "15 to 250ms", we choose the slowest frequency
 static const double maxTimeupdateEventFrequency = 0.25;
@@ -667,14 +659,14 @@ void MediaController::startTimeupdateTimer()
     m_timeupdateTimer.startRepeating(maxTimeupdateEventFrequency);
 }
 
-void MediaController::timeupdateTimerFired(Timer<MediaController>*)
+void MediaController::timeupdateTimerFired(Timer<MediaController>&)
 {
     scheduleTimeupdateEvent();
 }
 
 void MediaController::scheduleTimeupdateEvent()
 {
-    double now = WTF::currentTime();
+    double now = monotonicallyIncreasingTime();
     double timedelta = now - m_previousTimeupdateTime;
 
     if (timedelta < maxTimeupdateEventFrequency)

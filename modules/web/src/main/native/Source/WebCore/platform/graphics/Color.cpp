@@ -33,8 +33,6 @@
 #include <wtf/MathExtras.h>
 #include <wtf/text/StringBuilder.h>
 
-using namespace std;
-
 namespace WebCore {
 
 #if !COMPILER(MSVC)
@@ -51,18 +49,18 @@ static const RGBA32 darkenedWhite = 0xFFABABAB;
 
 RGBA32 makeRGB(int r, int g, int b)
 {
-    return 0xFF000000 | max(0, min(r, 255)) << 16 | max(0, min(g, 255)) << 8 | max(0, min(b, 255));
+    return 0xFF000000 | std::max(0, std::min(r, 255)) << 16 | std::max(0, std::min(g, 255)) << 8 | std::max(0, std::min(b, 255));
 }
 
 RGBA32 makeRGBA(int r, int g, int b, int a)
 {
-    return max(0, min(a, 255)) << 24 | max(0, min(r, 255)) << 16 | max(0, min(g, 255)) << 8 | max(0, min(b, 255));
+    return std::max(0, std::min(a, 255)) << 24 | std::max(0, std::min(r, 255)) << 16 | std::max(0, std::min(g, 255)) << 8 | std::max(0, std::min(b, 255));
 }
 
 static int colorFloatToRGBAByte(float f)
 {
     // We use lroundf and 255 instead of nextafterf(256, 0) to match CG's rounding
-    return max(0, min(static_cast<int>(lroundf(255.0f * f)), 255));
+    return std::max(0, std::min(static_cast<int>(lroundf(255.0f * f)), 255));
 }
 
 RGBA32 makeRGBA32FromFloats(float r, float g, float b, float a)
@@ -167,7 +165,7 @@ bool Color::parseHexColor(const String& name, RGBA32& rgb)
         return false;
     if (name.is8Bit())
         return parseHexColor(name.characters8(), name.length(), rgb);
-    return parseHexColor(name.characters(), name.length(), rgb);
+    return parseHexColor(name.deprecatedCharacters(), name.length(), rgb);
 }
 
 int differenceSquared(const Color& c1, const Color& c2)
@@ -184,7 +182,7 @@ Color::Color(const String& name)
         if (name.is8Bit())
             m_valid = parseHexColor(name.characters8() + 1, name.length() - 1, m_color);
         else
-        m_valid = parseHexColor(name.characters() + 1, name.length() - 1, m_color);
+            m_valid = parseHexColor(name.deprecatedCharacters() + 1, name.length() - 1, m_color);
     } else
         setNamedColor(name);
 }
@@ -278,13 +276,13 @@ Color Color::light() const
     float r, g, b, a;
     getRGBA(r, g, b, a);
 
-    float v = max(r, max(g, b));
+    float v = std::max(r, std::max(g, b));
 
     if (v == 0.0f)
         // Lightened black with alpha.
         return Color(0x54, 0x54, 0x54, alpha());
 
-    float multiplier = min(1.0f, v + 0.33f) / v;
+    float multiplier = std::min(1.0f, v + 0.33f) / v;
 
     return Color(static_cast<int>(multiplier * r * scaleFactor),
                  static_cast<int>(multiplier * g * scaleFactor),
@@ -303,13 +301,24 @@ Color Color::dark() const
     float r, g, b, a;
     getRGBA(r, g, b, a);
 
-    float v = max(r, max(g, b));
-    float multiplier = max(0.0f, (v - 0.33f) / v);
+    float v = std::max(r, std::max(g, b));
+    float multiplier = std::max(0.0f, (v - 0.33f) / v);
 
     return Color(static_cast<int>(multiplier * r * scaleFactor),
                  static_cast<int>(multiplier * g * scaleFactor),
                  static_cast<int>(multiplier * b * scaleFactor),
                  alpha());
+}
+
+bool Color::isDark() const
+{
+    float red;
+    float green;
+    float blue;
+    float alpha;
+    getRGBA(red, green, blue, alpha);
+    float largestNonAlphaChannel = std::max(red, std::max(green, blue));
+    return alpha > 0.5 && largestNonAlphaChannel < 0.5;
 }
 
 static int blendComponent(int c, int a)
@@ -422,7 +431,7 @@ Color colorFromPremultipliedARGB(RGBA32 pixelColor)
             redChannel(pixelColor) * 255 / alpha,
             greenChannel(pixelColor) * 255 / alpha,
             blueChannel(pixelColor) * 255 / alpha,
-                          alpha);
+            alpha);
     } else
         return Color(pixelColor);
 }

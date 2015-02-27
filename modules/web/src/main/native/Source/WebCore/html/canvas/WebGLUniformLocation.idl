@@ -25,6 +25,6 @@
  */
 
 [
-        Conditional=WEBGL
+    Conditional=WEBGL
 ] interface WebGLUniformLocation {
-    };
+};

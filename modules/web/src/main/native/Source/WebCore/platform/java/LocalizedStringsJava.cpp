@@ -107,6 +107,16 @@ String contextMenuItemTagDownloadImageToDisk()
     return String(); // UNSUPPORTED: getLocalizedProperty("contextMenuItemTagDownloadImageToDisk");
 }
 
+String contextMenuItemTagDownloadAudioToDisk()
+{
+    return String(); // UNSUPPORTED
+}
+
+String contextMenuItemTagDownloadVideoToDisk()
+{
+    return String(); // UNSUPPORTED
+}
+
 String contextMenuItemTagCopyImageToClipboard()
 {
     return getLocalizedProperty("contextMenuItemTagCopyImageToClipboard");

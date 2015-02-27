@@ -27,7 +27,6 @@
 
 #include "Attribute.h"
 #include "Document.h"
-#include "ElementShadow.h"
 #include "FormDataList.h"
 #include "HTMLNames.h"
 #include "HTMLSelectElement.h"
@@ -43,15 +42,15 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-class KeygenSelectElement FINAL : public HTMLSelectElement {
+class KeygenSelectElement final : public HTMLSelectElement {
 public:
-    static PassRefPtr<KeygenSelectElement> create(Document* document)
+    static PassRefPtr<KeygenSelectElement> create(Document& document)
     {
         return adoptRef(new KeygenSelectElement(document));
     }
 
 protected:
-    KeygenSelectElement(Document* document)
+    KeygenSelectElement(Document& document)
         : HTMLSelectElement(selectTag, document, 0)
     {
         DEFINE_STATIC_LOCAL(AtomicString, pseudoId, ("-webkit-keygen-select", AtomicString::ConstructFromLiteral));
@@ -59,13 +58,13 @@ protected:
     }
 
 private:
-    virtual PassRefPtr<Element> cloneElementWithoutAttributesAndChildren()
+    virtual PassRefPtr<Element> cloneElementWithoutAttributesAndChildren() override
     {
         return create(document());
     }
 };
 
-inline HTMLKeygenElement::HTMLKeygenElement(const QualifiedName& tagName, Document* document, HTMLFormElement* form)
+inline HTMLKeygenElement::HTMLKeygenElement(const QualifiedName& tagName, Document& document, HTMLFormElement* form)
     : HTMLFormControlElementWithState(tagName, document, form)
 {
     ASSERT(hasTagName(keygenTag));
@@ -81,10 +80,10 @@ inline HTMLKeygenElement::HTMLKeygenElement(const QualifiedName& tagName, Docume
         option->appendChild(Text::create(document, keys[i]), IGNORE_EXCEPTION);
     }
 
-    ensureUserAgentShadowRoot()->appendChild(select, IGNORE_EXCEPTION);
+    ensureUserAgentShadowRoot().appendChild(select, IGNORE_EXCEPTION);
 }
 
-PassRefPtr<HTMLKeygenElement> HTMLKeygenElement::create(const QualifiedName& tagName, Document* document, HTMLFormElement* form)
+PassRefPtr<HTMLKeygenElement> HTMLKeygenElement::create(const QualifiedName& tagName, Document& document, HTMLFormElement* form)
 {
     return adoptRef(new HTMLKeygenElement(tagName, document, form));
 }
@@ -104,7 +103,7 @@ bool HTMLKeygenElement::appendFormData(FormDataList& encoded_values, bool)
     const AtomicString& keyType = fastGetAttribute(keytypeAttr);
     if (!keyType.isNull() && !equalIgnoringCase(keyType, "rsa"))
         return false;
-    String value = signedPublicKeyAndChallengeString(shadowSelect()->selectedIndex(), fastGetAttribute(challengeAttr), document()->baseURL());
+    String value = signedPublicKeyAndChallengeString(shadowSelect()->selectedIndex(), fastGetAttribute(challengeAttr), document().baseURL());
     if (value.isNull())
         return false;
     encoded_values.appendData(name(), value.utf8());

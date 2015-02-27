@@ -31,9 +31,8 @@
 #include "DocumentFragment.h"
 #include "Editor.h"
 #include "Frame.h"
+#include "ReplaceSelectionCommand.h"
 #include "SetSelectionCommand.h"
-#include "TextIterator.h"
-#include "TypingCommand.h"
 #include "markup.h"
 
 namespace WebCore {
@@ -43,12 +42,12 @@ namespace WebCore {
 // This information is needed by spell checking service to update user specific data.
 class SpellingCorrectionRecordUndoCommand : public SimpleEditCommand {
 public:
-    static PassRefPtr<SpellingCorrectionRecordUndoCommand> create(Document* document, const String& corrected, const String& correction)
+    static PassRefPtr<SpellingCorrectionRecordUndoCommand> create(Document& document, const String& corrected, const String& correction)
     {
         return adoptRef(new SpellingCorrectionRecordUndoCommand(document, corrected, correction));
     }
 private:
-    SpellingCorrectionRecordUndoCommand(Document* document, const String& corrected, const String& correction)
+    SpellingCorrectionRecordUndoCommand(Document& document, const String& corrected, const String& correction)
         : SimpleEditCommand(document)
         , m_corrected(corrected)
         , m_correction(correction)
@@ -56,21 +55,21 @@ private:
     {
     }
 
-    virtual void doApply() OVERRIDE
+    virtual void doApply() override
     {
     }
 
-    virtual void doUnapply() OVERRIDE
+    virtual void doUnapply() override
     {
         if (!m_hasBeenUndone) {
-            document()->frame()->editor().unappliedSpellCorrection(startingSelection(), m_corrected, m_correction);
+            frame().editor().unappliedSpellCorrection(startingSelection(), m_corrected, m_correction);
             m_hasBeenUndone = true;
         }
         
     }
 
 #ifndef NDEBUG
-    virtual void getNodesInCommand(HashSet<Node*>&) OVERRIDE
+    virtual void getNodesInCommand(HashSet<Node*>&) override
     {
     }
 #endif
@@ -95,22 +94,25 @@ void SpellingCorrectionCommand::doApply()
     if (!m_corrected.length())
         return;
 
-    if (!document()->frame()->selection()->shouldChangeSelection(m_selectionToBeCorrected))
+    if (!frame().selection().shouldChangeSelection(m_selectionToBeCorrected))
         return;
 
-    applyCommandToComposite(SetSelectionCommand::create(m_selectionToBeCorrected, FrameSelection::SpellCorrectionTriggered | FrameSelection::CloseTyping | FrameSelection::ClearTypingStyle));
+    if (!m_rangeToBeCorrected)
+        return;
+
+    RefPtr<DocumentFragment> fragment = createFragmentFromText(*m_rangeToBeCorrected, m_correction);
+    if (!fragment)
+        return;
+
+    applyCommandToComposite(SetSelectionCommand::create(m_selectionToBeCorrected, FrameSelection::defaultSetSelectionOptions() | FrameSelection::SpellCorrectionTriggered));
 #if USE(AUTOCORRECTION_PANEL)
     applyCommandToComposite(SpellingCorrectionRecordUndoCommand::create(document(), m_corrected, m_correction));
 #endif
-    TypingCommand::insertText(document(), m_correction, TypingCommand::PreventSpellChecking);
+
+    applyCommandToComposite(ReplaceSelectionCommand::create(document(), fragment.release(), ReplaceSelectionCommand::MatchStyle, EditActionPaste));
 }
 
 bool SpellingCorrectionCommand::shouldRetainAutocorrectionIndicator() const
-{
-    return true;
-}
-
-bool SpellingCorrectionCommand::callsAppliedEditingInDoApply() const
 {
     return true;
 }

@@ -18,8 +18,6 @@
  */
 
 #include "config.h"
-
-#if ENABLE(SVG)
 #include "SVGAnimatedPath.h"
 
 #include "SVGAnimateElement.h"
@@ -33,24 +31,24 @@ SVGAnimatedPathAnimator::SVGAnimatedPathAnimator(SVGAnimationElement* animationE
 {
 }
 
-PassOwnPtr<SVGAnimatedType> SVGAnimatedPathAnimator::constructFromString(const String& string)
+std::unique_ptr<SVGAnimatedType> SVGAnimatedPathAnimator::constructFromString(const String& string)
 {
-    OwnPtr<SVGPathByteStream> byteStream = SVGPathByteStream::create();
+    auto byteStream = std::make_unique<SVGPathByteStream>();
     buildSVGPathByteStreamFromString(string, byteStream.get(), UnalteredParsing);
-    return SVGAnimatedType::createPath(byteStream.release());
+    return SVGAnimatedType::createPath(std::move(byteStream));
 }
 
-PassOwnPtr<SVGAnimatedType> SVGAnimatedPathAnimator::startAnimValAnimation(const SVGElementAnimatedPropertyList& animatedTypes)
+std::unique_ptr<SVGAnimatedType> SVGAnimatedPathAnimator::startAnimValAnimation(const SVGElementAnimatedPropertyList& animatedTypes)
 {
     ASSERT(animatedTypes.size() >= 1);
     SVGAnimatedPathSegListPropertyTearOff* property = castAnimatedPropertyToActualType<SVGAnimatedPathSegListPropertyTearOff>(animatedTypes[0].properties[0].get());
     const SVGPathSegList& baseValue = property->currentBaseValue();
 
     // Build initial path byte stream.
-    OwnPtr<SVGPathByteStream> byteStream = SVGPathByteStream::create();
+    auto byteStream = std::make_unique<SVGPathByteStream>();
     buildSVGPathByteStreamFromSVGPathSegList(baseValue, byteStream.get(), UnalteredParsing);
 
-    Vector<RefPtr<SVGAnimatedPathSegListPropertyTearOff> > result;
+    Vector<RefPtr<SVGAnimatedPathSegListPropertyTearOff>> result;
 
     SVGElementAnimatedPropertyList::const_iterator end = animatedTypes.end();
     for (SVGElementAnimatedPropertyList::const_iterator it = animatedTypes.begin(); it != end; ++it)
@@ -62,7 +60,7 @@ PassOwnPtr<SVGAnimatedType> SVGAnimatedPathAnimator::startAnimValAnimation(const
     for (size_t i = 0; i < resultSize; ++i)
         result[i]->animationStarted(byteStream.get(), &baseValue);
 
-    return SVGAnimatedType::createPath(byteStream.release());
+    return SVGAnimatedType::createPath(std::move(byteStream));
 }
 
 void SVGAnimatedPathAnimator::stopAnimValAnimation(const SVGElementAnimatedPropertyList& animatedTypes)
@@ -112,7 +110,7 @@ void SVGAnimatedPathAnimator::calculateAnimatedValue(float percentage, unsigned 
     SVGPathByteStream* toAtEndOfDurationPath = toAtEndOfDuration->path();
     SVGPathByteStream* animatedPath = animated->path();
 
-    OwnPtr<SVGPathByteStream> underlyingPath;
+    std::unique_ptr<SVGPathByteStream> underlyingPath;
     bool isToAnimation = m_animationElement->animationMode() == ToAnimation;
     if (isToAnimation) {
         underlyingPath = animatedPath->copy();
@@ -120,7 +118,7 @@ void SVGAnimatedPathAnimator::calculateAnimatedValue(float percentage, unsigned 
     }
 
     // Cache the current animated value before the buildAnimatedSVGPathByteStream() clears animatedPath.
-    OwnPtr<SVGPathByteStream> lastAnimatedPath;
+    std::unique_ptr<SVGPathByteStream> lastAnimatedPath;
     if (!fromPath->size() || (m_animationElement->isAdditive() && !isToAnimation))
         lastAnimatedPath = animatedPath->copy();
 
@@ -138,7 +136,7 @@ void SVGAnimatedPathAnimator::calculateAnimatedValue(float percentage, unsigned 
     if (m_animationElement->isAccumulated() && repeatCount)
         addToSVGPathByteStream(animatedPath, toAtEndOfDurationPath, repeatCount);
 }
-   
+
 float SVGAnimatedPathAnimator::calculateDistance(const String&, const String&)
 {
     // FIXME: Support paced animations.
@@ -146,5 +144,3 @@ float SVGAnimatedPathAnimator::calculateDistance(const String&, const String&)
 }
 
 }
-
-#endif // ENABLE(SVG)

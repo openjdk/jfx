@@ -17,10 +17,10 @@
  * Boston, MA 02110-1301, USA.
  */
 
-    interface HTMLOListElement : HTMLElement {
+interface HTMLOListElement : HTMLElement {
     [Reflect] attribute boolean compact;
-        attribute long start;
+    attribute long start;
     [Reflect] attribute boolean reversed;
     [Reflect] attribute DOMString type;
-    };
+};
 

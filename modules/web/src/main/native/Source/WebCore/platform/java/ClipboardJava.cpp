@@ -25,6 +25,7 @@
 #include "Range.h"
 #include "RenderImage.h"
 #include "StringBuilder.h"
+#include "Pasteboard.h"
 
 #include <wtf/HashSet.h>
 #include <wtf/text/WTFString.h>
@@ -50,7 +51,7 @@ static CachedImage* getCachedImage(Element* element)
 static void writeImageToDataObject(
     DataObjectJava* dataObject,
     Element* element,
-    const KURL& url)
+    const URL& url)
 {
     // Shove image data into a DataObject for use as a file
     CachedImage* cachedImage = getCachedImage(element);
@@ -102,18 +103,12 @@ static String imageToMarkup(const String& url, Element* element)
     return markup.toString();
 }
 
-PassRefPtr<Clipboard> Clipboard::create(ClipboardAccessPolicy policy, DragData* dragData, Frame* frame)
-{
-    return ClipboardJava::create(policy, DragAndDrop, dragData->platformData(), frame);
-}
-
-
 ClipboardJava::ClipboardJava(
     ClipboardAccessPolicy policy,
     ClipboardType type,
     PassRefPtr<DataObjectJava> dataObject,
     Frame *frame)
-: Clipboard(policy, type)
+  : Clipboard(policy, nullptr, type) // todo tav new param
 , m_dataObject(dataObject)
 , m_frame(frame)
 {}
@@ -202,8 +197,8 @@ void ClipboardJava::setDragImage(CachedImage* image, Node* node, const IntPoint&
     if (m_dragImage)
         m_dragImage->addClient(this);
 
-    m_dragLoc = loc;
-    m_dragImageElement = node;
+    m_dragLocation = loc;
+    m_dragImageElement = static_cast<Element*>(node);
 }
 
 void ClipboardJava::setDragImage(CachedImage* img, const IntPoint& loc)
@@ -216,21 +211,7 @@ void ClipboardJava::setDragImageElement(Node* node, const IntPoint& loc)
     setDragImage(0, node, loc);
 }
 
-DragImageRef ClipboardJava::createDragImage(IntPoint& offset) const
-{
-    DragImageRef result = 0;
-    if (bool(m_dragImageElement) && bool(m_frame)) {
-        result = m_frame->nodeImage(m_dragImageElement.get());
-        offset = m_dragLoc;
-    } else if (m_dragImage) {
-        result = createDragImageFromImage(m_dragImage->image());
-        offset = m_dragLoc;
-    }
-    return result;
-}
-
-
-void ClipboardJava::declareAndWriteDragImage(Element* element, const KURL& url, const String& title, Frame* frame)
+void ClipboardJava::declareAndWriteDragImage(Element* element, const URL& url, const String& title, Frame* frame)
 {
     if (!m_dataObject)
         return;
@@ -254,7 +235,7 @@ void ClipboardJava::declareAndWriteDragImage(Element* element, const KURL& url, 
         frame->document()->url());
 }
 
-void ClipboardJava::writeURL(const KURL& url, const String& title, Frame* frame)
+void ClipboardJava::writeURL(const URL& url, const String& title, Frame* frame)
 {
     if (!m_dataObject)
         return;
@@ -274,7 +255,7 @@ void ClipboardJava::writeRange(Range* selectedRange, Frame* frame)
          return;
 
     m_dataObject->setHTML(
-        createMarkup(selectedRange, 0, AnnotateForInterchange, false, ResolveAllURLs),
+        createMarkup(*selectedRange, 0, AnnotateForInterchange, false, ResolveAllURLs),
         frame->document()->url());
 
     String str = frame->editor().selectedText();

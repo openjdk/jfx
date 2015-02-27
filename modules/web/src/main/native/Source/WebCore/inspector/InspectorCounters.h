@@ -31,10 +31,13 @@
 #ifndef InspectorCounters_h
 #define InspectorCounters_h
 
-#include <wtf/FastAllocBase.h>
+#include <wtf/FastMalloc.h>
 
 #if !ASSERT_DISABLED
 #include <wtf/MainThread.h>
+#if PLATFORM(IOS)
+#include "WebCoreThread.h"
+#endif
 #endif
 
 namespace WebCore {

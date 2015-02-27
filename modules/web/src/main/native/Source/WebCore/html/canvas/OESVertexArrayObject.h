@@ -28,7 +28,6 @@
 
 #include "GraphicsTypes3D.h"
 #include "WebGLExtension.h"
-#include "WebGLVertexArrayObjectOES.h"
 #include <wtf/PassOwnPtr.h>
 
 namespace WebCore {
@@ -40,10 +39,10 @@ typedef int ExceptionCode;
 
 class OESVertexArrayObject : public WebGLExtension {
 public:
-    static PassOwnPtr<OESVertexArrayObject> create(WebGLRenderingContext*);
+    static OwnPtr<OESVertexArrayObject> create(WebGLRenderingContext*);
 
     virtual ~OESVertexArrayObject();
-    virtual ExtensionName getName() const;
+    virtual ExtensionName getName() const override;
     
     PassRefPtr<WebGLVertexArrayObjectOES> createVertexArrayOES();
     void deleteVertexArrayOES(WebGLVertexArrayObjectOES*);

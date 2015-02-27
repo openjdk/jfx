@@ -30,6 +30,7 @@
 
 #include "Executable.h"
 #include "JSInterfaceJIT.h"
+#include "JSStack.h"
 #include "LinkBuffer.h"
 
 namespace JSC {
@@ -37,56 +38,80 @@ namespace JSC {
     class SpecializedThunkJIT : public JSInterfaceJIT {
     public:
         static const int ThisArgument = -1;
-        SpecializedThunkJIT(int expectedArgCount)
+        SpecializedThunkJIT(VM* vm, int expectedArgCount)
+            : JSInterfaceJIT(vm)
         {
+            emitFunctionPrologue();
             // Check that we have the expected number of arguments
             m_failures.append(branch32(NotEqual, payloadFor(JSStack::ArgumentCount), TrustedImm32(expectedArgCount + 1)));
         }
-
+        
+        explicit SpecializedThunkJIT(VM* vm)
+            : JSInterfaceJIT(vm)
+        {
+            emitFunctionPrologue();
+        }
+        
         void loadDoubleArgument(int argument, FPRegisterID dst, RegisterID scratch)
         {
             unsigned src = CallFrame::argumentOffset(argument);
             m_failures.append(emitLoadDouble(src, dst, scratch));
         }
-
+        
         void loadCellArgument(int argument, RegisterID dst)
         {
             unsigned src = CallFrame::argumentOffset(argument);
             m_failures.append(emitLoadJSCell(src, dst));
         }
-
+        
         void loadJSStringArgument(VM& vm, int argument, RegisterID dst)
         {
             loadCellArgument(argument, dst);
             m_failures.append(branchPtr(NotEqual, Address(dst, JSCell::structureOffset()), TrustedImmPtr(vm.stringStructure.get())));
         }
-
+        
+        void loadArgumentWithSpecificClass(const ClassInfo* classInfo, int argument, RegisterID dst, RegisterID scratch)
+        {
+            loadCellArgument(argument, dst);
+            loadPtr(Address(dst, JSCell::structureOffset()), scratch);
+            appendFailure(branchPtr(NotEqual, Address(scratch, Structure::classInfoOffset()), TrustedImmPtr(classInfo)));
+        }
+        
         void loadInt32Argument(int argument, RegisterID dst, Jump& failTarget)
         {
             unsigned src = CallFrame::argumentOffset(argument);
             failTarget = emitLoadInt32(src, dst);
         }
-
+        
         void loadInt32Argument(int argument, RegisterID dst)
         {
             Jump conversionFailed;
             loadInt32Argument(argument, dst, conversionFailed);
             m_failures.append(conversionFailed);
         }
-
+        
         void appendFailure(const Jump& failure)
         {
             m_failures.append(failure);
         }
-
+#if USE(JSVALUE64)
         void returnJSValue(RegisterID src)
         {
             if (src != regT0)
                 move(src, regT0);
-            loadPtr(payloadFor(JSStack::CallerFrame, callFrameRegister), callFrameRegister);
+            emitFunctionEpilogue();
             ret();
         }
-
+#else
+        void returnJSValue(RegisterID payload, RegisterID tag)
+        {
+            ASSERT_UNUSED(payload, payload == regT0);
+            ASSERT_UNUSED(tag, tag == regT1);
+            emitFunctionEpilogue();
+            ret();
+        }
+#endif
+        
         void returnDouble(FPRegisterID src)
         {
 #if USE(JSVALUE64)
@@ -98,9 +123,14 @@ namespace JSC {
             move(tagTypeNumberRegister, regT0);
             done.link(this);
 #else
+#if !CPU(X86)
+            // The src register is not clobbered by moveDoubleToInts with ARM, MIPS and SH4 macro assemblers, so let's use it.
+            moveDoubleToInts(src, regT0, regT1);
+#else
             storeDouble(src, Address(stackPointerRegister, -(int)sizeof(double)));
             loadPtr(Address(stackPointerRegister, OBJECT_OFFSETOF(JSValue, u.asBits.tag) - sizeof(double)), regT1);
             loadPtr(Address(stackPointerRegister, OBJECT_OFFSETOF(JSValue, u.asBits.payload) - sizeof(double)), regT0);
+#endif
             Jump lowNonZero = branchTestPtr(NonZero, regT1);
             Jump highNonZero = branchTestPtr(NonZero, regT0);
             move(TrustedImm32(0), regT0);
@@ -108,7 +138,7 @@ namespace JSC {
             lowNonZero.link(this);
             highNonZero.link(this);
 #endif
-            loadPtr(payloadFor(JSStack::CallerFrame, callFrameRegister), callFrameRegister);
+            emitFunctionEpilogue();
             ret();
         }
 
@@ -117,7 +147,7 @@ namespace JSC {
             if (src != regT0)
                 move(src, regT0);
             tagReturnAsInt32();
-            loadPtr(payloadFor(JSStack::CallerFrame, callFrameRegister), callFrameRegister);
+            emitFunctionEpilogue();
             ret();
         }
 
@@ -126,13 +156,13 @@ namespace JSC {
             if (src != regT0)
                 move(src, regT0);
             tagReturnAsJSCell();
-            loadPtr(payloadFor(JSStack::CallerFrame, callFrameRegister), callFrameRegister);
+            emitFunctionEpilogue();
             ret();
         }
-
-        MacroAssemblerCodeRef finalize(VM& vm, MacroAssemblerCodePtr fallback, const char* thunkKind)
+        
+        MacroAssemblerCodeRef finalize(MacroAssemblerCodePtr fallback, const char* thunkKind)
         {
-            LinkBuffer patchBuffer(vm, this, GLOBAL_THUNK_ID);
+            LinkBuffer patchBuffer(*m_vm, this, GLOBAL_THUNK_ID);
             patchBuffer.link(m_failures, CodeLocationLabel(fallback));
             for (unsigned i = 0; i < m_calls.size(); i++)
                 patchBuffer.link(m_calls[i].first, m_calls[i].second);
@@ -145,7 +175,7 @@ namespace JSC {
         {
             m_calls.append(std::make_pair(call(), function));
         }
-
+        
         void callDoubleToDoublePreservingReturn(FunctionPtr function)
         {
             if (!isX86())
@@ -172,9 +202,9 @@ namespace JSC {
             move(TrustedImm32(JSValue::CellTag), regT1);
 #endif
         }
-
+        
         MacroAssembler::JumpList m_failures;
-        Vector<std::pair<Call, FunctionPtr> > m_calls;
+        Vector<std::pair<Call, FunctionPtr>> m_calls;
     };
 
 }

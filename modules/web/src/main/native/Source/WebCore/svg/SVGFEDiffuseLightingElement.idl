@@ -24,13 +24,13 @@
  */
 
 [
-        Conditional=SVG&FILTERS
-] interface SVGFEDiffuseLightingElement : SVGStyledElement,
-                                                              SVGFilterPrimitiveStandardAttributes {
-        readonly attribute SVGAnimatedString in1;
-        readonly attribute SVGAnimatedNumber surfaceScale;
-        readonly attribute SVGAnimatedNumber diffuseConstant;
-        readonly attribute SVGAnimatedNumber kernelUnitLengthX;
-        readonly attribute SVGAnimatedNumber kernelUnitLengthY;
-    };
+    Conditional=FILTERS
+] interface SVGFEDiffuseLightingElement : SVGElement {
+    readonly attribute SVGAnimatedString in1;
+    readonly attribute SVGAnimatedNumber surfaceScale;
+    readonly attribute SVGAnimatedNumber diffuseConstant;
+    readonly attribute SVGAnimatedNumber kernelUnitLengthX;
+    readonly attribute SVGAnimatedNumber kernelUnitLengthY;
+};
 
+SVGFEDiffuseLightingElement implements SVGFilterPrimitiveStandardAttributes;

@@ -11,6 +11,8 @@
 #include <wtf/Assertions.h>
 #include <wtf/text/WTFString.h>
 
+#include <wtf/PassOwnPtr.h> // todo tav remove when building w/ pch
+
 namespace WebCore {
 
 PassRefPtr<RQRef> FontPlatformData::getJavaFont(const String& family, float size, bool italic, bool bold)

@@ -34,7 +34,7 @@ namespace WebCore {
 
 // These names must be kept in sync with TransformOperationType.
 const char* const transformNamePrefixes[] = {
-     0,
+    0,
     "translate(",
     "translateX(",
     "translateY(",
@@ -73,17 +73,10 @@ WebKitCSSTransformValue::WebKitCSSTransformValue(TransformOperationType op)
 {
 }
 
-String WebKitCSSTransformValue::customCssText() const
+String WebKitCSSTransformValue::customCSSText() const
 {
-    return transformValueToCssString(m_type, CSSValueList::customCssText());
+    return transformValueToCssString(m_type, CSSValueList::customCSSText());
 }
-
-#if ENABLE(CSS_VARIABLES)
-String WebKitCSSTransformValue::customSerializeResolvingVariables(const HashMap<AtomicString, String>& variables) const
-{
-    return transformValueToCssString(m_type, CSSValueList::customSerializeResolvingVariables(variables));
-}
-#endif
 
 WebKitCSSTransformValue::WebKitCSSTransformValue(const WebKitCSSTransformValue& cloneFrom)
     : CSSValueList(cloneFrom)

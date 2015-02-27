@@ -23,7 +23,6 @@
 #if ENABLE(SVG_FONTS)
 #include "SurrogatePairAwareTextIterator.h"
 #include "SVGGlyph.h"
-#include "SVGGlyphElement.h"
 
 #include <wtf/HashMap.h>
 #include <wtf/Vector.h>
@@ -33,7 +32,7 @@ namespace WebCore {
 struct GlyphMapNode;
 class SVGFontData;
 
-typedef HashMap<UChar32, RefPtr<GlyphMapNode> > GlyphMapLayer;
+typedef HashMap<UChar32, RefPtr<GlyphMapNode>> GlyphMapLayer;
 
 struct GlyphMapNode : public RefCounted<GlyphMapNode> {
 private:
@@ -69,7 +68,7 @@ public:
 
         UChar32 character = 0;
         unsigned clusterLength = 0;
-        SurrogatePairAwareTextIterator textIterator(unicodeString.characters(), 0, length, length);
+        SurrogatePairAwareTextIterator textIterator(unicodeString.deprecatedCharacters(), 0, length, length);
         while (textIterator.consume(character, clusterLength)) {
             node = currentLayer->get(character);
             if (!node) {
@@ -114,7 +113,7 @@ public:
     {
         GlyphMapLayer* currentLayer = &m_rootLayer;
 
-        const UChar* characters = string.characters();
+        const UChar* characters = string.deprecatedCharacters();
         size_t length = string.length();
 
         UChar32 character = 0;

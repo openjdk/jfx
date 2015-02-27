@@ -40,7 +40,7 @@
 #include <libkern/OSCacheControl.h>
 #endif
 
-#if OS(IOS) || OS(QNX)
+#if OS(IOS)
 #include <sys/mman.h>
 #endif
 
@@ -78,21 +78,6 @@ void releaseExecutableMemory(VM&);
 
 static const unsigned jitAllocationGranule = 32;
 
-inline size_t roundUpAllocationSize(size_t request, size_t granularity)
-{
-    RELEASE_ASSERT((std::numeric_limits<size_t>::max() - granularity) > request);
-    
-    // Round up to next page boundary
-    size_t size = request + (granularity - 1);
-    size = size & ~(granularity - 1);
-    ASSERT(size >= request);
-    return size;
-}
-
-}
-
-namespace JSC {
-
 typedef WTF::MetaAllocatorHandle ExecutableMemoryHandle;
 
 #if ENABLE(ASSEMBLER)
@@ -102,7 +87,7 @@ class DemandExecutableAllocator;
 #endif
 
 #if ENABLE(EXECUTABLE_ALLOCATOR_FIXED)
-#if CPU(ARM)
+#if CPU(ARM) || CPU(ARM64)
 static const size_t fixedExecutableMemoryPoolSize = 16 * 1024 * 1024;
 #elif CPU(X86_64)
 static const size_t fixedExecutableMemoryPoolSize = 1024 * 1024 * 1024;

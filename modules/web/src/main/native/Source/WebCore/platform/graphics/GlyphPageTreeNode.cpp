@@ -35,16 +35,12 @@
 #include <wtf/text/CString.h>
 #include <wtf/text/WTFString.h>
 #include <wtf/unicode/CharacterNames.h>
-#include <wtf/unicode/Unicode.h>
 
 #if ENABLE(OPENTYPE_VERTICAL)
 #include "OpenTypeVerticalData.h"
 #endif
 
 namespace WebCore {
-
-using std::max;
-using std::min;
 
 HashMap<int, GlyphPageTreeNode*>* GlyphPageTreeNode::roots = 0;
 GlyphPageTreeNode* GlyphPageTreeNode::pageZeroRoot = 0;
@@ -66,9 +62,9 @@ GlyphPageTreeNode* GlyphPageTreeNode::getRoot(unsigned pageNumber)
 
     GlyphPageTreeNode* node = new GlyphPageTreeNode;
 #ifndef NDEBUG
-        node->m_pageNumber = pageNumber;
+    node->m_pageNumber = pageNumber;
 #endif
-            roots->set(pageNumber, node);
+    roots->set(pageNumber, node);
     return node;
 }
 
@@ -203,7 +199,7 @@ void GlyphPageTreeNode::initializePage(const FontData* fontData, unsigned pageNu
                     buffer[i * 2 + 1] = U16_TRAIL(c);
                 }
             }
-            
+
             // Now that we have a buffer full of characters, we want to get back an array
             // of glyph indices.  This part involves calling into the platform-specific 
             // routine of our glyph map for actually filling in the page with the glyphs.
@@ -215,6 +211,14 @@ void GlyphPageTreeNode::initializePage(const FontData* fontData, unsigned pageNu
                     m_page = GlyphPage::createForMixedFontData(this);
                 else
                     m_page = GlyphPage::createForSingleFontData(this, static_cast<const SimpleFontData*>(fontData));
+#if PLATFORM(IOS)
+                // FIXME: Times New Roman contains Arabic glyphs, but Core Text doesn't know how to shape them. See <rdar://problem/9823975>.
+                // Once we have the fix for <rdar://problem/9823975> then remove this code together with SimpleFontData::shouldNotBeUsedForArabic()
+                // in <rdar://problem/12096835>.
+                if (pageNumber == 6 && static_cast<const SimpleFontData*>(fontData)->shouldNotBeUsedForArabic())
+                    haveGlyphs = false;
+                else
+#endif
                 haveGlyphs = fill(m_page.get(), 0, GlyphPage::size, buffer, bufferLength, static_cast<const SimpleFontData*>(fontData));
             } else {
                 m_page = GlyphPage::createForMixedFontData(this);
@@ -229,8 +233,8 @@ void GlyphPageTreeNode::initializePage(const FontData* fontData, unsigned pageNu
                     const FontDataRange& range = segmentedFontData->rangeAt(i);
                     // all this casting is to ensure all the parameters to min and max have the same type,
                     // to avoid ambiguous template parameter errors on Windows
-                    int from = max(0, static_cast<int>(range.from()) - static_cast<int>(start));
-                    int to = 1 + min(static_cast<int>(range.to()) - static_cast<int>(start), static_cast<int>(GlyphPage::size) - 1);
+                    int from = std::max(0, static_cast<int>(range.from()) - static_cast<int>(start));
+                    int to = 1 + std::min(static_cast<int>(range.to()) - static_cast<int>(start), static_cast<int>(GlyphPage::size) - 1);
                     if (from < static_cast<int>(GlyphPage::size) && to > 0) {
                         if (haveGlyphs && !scratchPage) {
                             scratchPage = GlyphPage::createForMixedFontData(this);
@@ -327,24 +331,24 @@ GlyphPageTreeNode* GlyphPageTreeNode::getChild(const FontData* fontData, unsigne
         return foundChild;
 
     GlyphPageTreeNode* child = new GlyphPageTreeNode;
-        child->m_parent = this;
-        child->m_level = m_level + 1;
-        if (fontData && fontData->isCustomFont()) {
-            for (GlyphPageTreeNode* curr = this; curr; curr = curr->m_parent)
-                curr->m_customFontCount++;
-        }
+    child->m_parent = this;
+    child->m_level = m_level + 1;
+    if (fontData && fontData->isCustomFont()) {
+        for (GlyphPageTreeNode* curr = this; curr; curr = curr->m_parent)
+            curr->m_customFontCount++;
+    }
 
 #ifndef NDEBUG
-        child->m_pageNumber = m_pageNumber;
+    child->m_pageNumber = m_pageNumber;
 #endif
-        if (fontData) {
+    if (fontData) {
         m_children.set(fontData, adoptPtr(child));
-            fontData->setMaxGlyphPageTreeLevel(max(fontData->maxGlyphPageTreeLevel(), child->m_level));
-        } else {
+        fontData->setMaxGlyphPageTreeLevel(std::max(fontData->maxGlyphPageTreeLevel(), child->m_level));
+    } else {
         m_systemFallbackChild = adoptPtr(child);
-            child->m_isSystemFallback = true;
-        }
-        child->initializePage(fontData, pageNumber);
+        child->m_isSystemFallback = true;
+    }
+    child->initializePage(fontData, pageNumber);
     return child;
 }
 
@@ -356,7 +360,7 @@ void GlyphPageTreeNode::pruneCustomFontData(const FontData* fontData)
     // Prune any branch that contains this FontData.
     if (OwnPtr<GlyphPageTreeNode> node = m_children.take(fontData)) {
         if (unsigned customFontCount = node->m_customFontCount + 1) {
-        for (GlyphPageTreeNode* curr = this; curr; curr = curr->m_parent)
+            for (GlyphPageTreeNode* curr = this; curr; curr = curr->m_parent)
                 curr->m_customFontCount -= customFontCount;
         }
     }

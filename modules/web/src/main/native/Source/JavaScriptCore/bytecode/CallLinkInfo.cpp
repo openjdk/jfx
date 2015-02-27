@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2012, 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,7 @@
 
 #include "DFGOperations.h"
 #include "DFGThunks.h"
+#include "JSCInlines.h"
 #include "RepatchBuffer.h"
 
 #if ENABLE(JIT)
@@ -37,15 +38,15 @@ void CallLinkInfo::unlink(VM& vm, RepatchBuffer& repatchBuffer)
 {
     ASSERT(isLinked());
     
+    if (Options::showDisassembly())
+        dataLog("Unlinking call from ", callReturnLocation, " to ", pointerDump(repatchBuffer.codeBlock()), "\n");
+
     repatchBuffer.revertJumpReplacementToBranchPtrWithPatch(RepatchBuffer::startOfBranchPtrWithPatchOnRegister(hotPathBegin), static_cast<MacroAssembler::RegisterID>(calleeGPR), 0);
-    if (isDFG) {
-#if ENABLE(DFG_JIT)
-        repatchBuffer.relink(callReturnLocation, (callType == Construct ? vm.getCTIStub(DFG::linkConstructThunkGenerator) : vm.getCTIStub(DFG::linkCallThunkGenerator)).code());
-#else
-        RELEASE_ASSERT_NOT_REACHED();
-#endif
-    } else
-        repatchBuffer.relink(callReturnLocation, callType == Construct ? vm.getCTIStub(linkConstructGenerator).code() : vm.getCTIStub(linkCallGenerator).code());
+    repatchBuffer.relink(
+        callReturnLocation,
+        vm.getCTIStub(linkThunkGeneratorFor(
+            callType == Construct ? CodeForConstruct : CodeForCall,
+            isFTL ? MustPreserveRegisters : RegisterPreservationNotRequired)).code());
     hasSeenShouldRepatch = false;
     callee.clear();
     stub.clear();

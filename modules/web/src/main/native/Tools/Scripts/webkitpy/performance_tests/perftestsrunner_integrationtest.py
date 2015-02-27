@@ -38,51 +38,12 @@ from webkitpy.common.host_mock import MockHost
 from webkitpy.common.system.outputcapture import OutputCapture
 from webkitpy.port.driver import DriverOutput
 from webkitpy.port.test import TestPort
-from webkitpy.performance_tests.perftest import ChromiumStylePerfTest
 from webkitpy.performance_tests.perftest import PerfTest
 from webkitpy.performance_tests.perftestsrunner import PerfTestsRunner
 
 
-class InspectorPassTestData:
-    text = 'RESULT group_name: test_name= 42 ms'
-    output = """Running inspector/pass.html (2 of 2)
-RESULT group_name: test_name= 42 ms
-Finished: 0.1 s
-
-"""
-
-
 class EventTargetWrapperTestData:
-    text = """Running 20 times
-Ignoring warm-up run (1502)
-1504
-1505
-1510
-1504
-1507
-1509
-1510
-1487
-1488
-1472
-1472
-1488
-1473
-1472
-1475
-1487
-1486
-1486
-1475
-1471
-
-Time:
-values 1486, 1471, 1510, 1505, 1478, 1490 ms
-avg 1490 ms
-median 1488 ms
-stdev 15.13935 ms
-min 1471 ms
-max 1510 ms
+    text = """:Time -> [1486, 1471, 1510, 1505, 1478, 1490] ms
 """
 
     output = """Running Bindings/event-target-wrapper.html (1 of 2)
@@ -97,16 +58,7 @@ Finished: 0.1 s
 
 
 class SomeParserTestData:
-    text = """Running 20 times
-Ignoring warm-up run (1115)
-
-Time:
-values 1080, 1120, 1095, 1101, 1104 ms
-avg 1100 ms
-median 1101 ms
-stdev 14.50861 ms
-min 1080 ms
-max 1120 ms
+    text = """:Time -> [1080, 1120, 1095, 1101, 1104] ms
 """
 
     output = """Running Parser/some-parser.html (2 of 2)
@@ -116,34 +68,16 @@ Finished: 0.1 s
 
 """
 
+    results = {'url': 'http://trac.webkit.org/browser/trunk/PerformanceTests/Parser/some-parser.html',
+        'metrics': {'Time': {'current': [[1080.0, 1120.0, 1095.0, 1101.0, 1104.0]] * 4}}}
+
 
 class MemoryTestData:
-    text = """Running 20 times
-Ignoring warm-up run (1115)
+    text = """:Time -> [1080, 1120, 1095, 1101, 1104] ms
 
-Time:
-values 1080, 1120, 1095, 1101, 1104 ms
-avg 1100 ms
-median 1101 ms
-stdev 14.50861 ms
-min 1080 ms
-max 1120 ms
+:JSHeap -> [825000, 811000, 848000, 837000, 829000] bytes
 
-JS Heap:
-values 825000, 811000, 848000, 837000, 829000 bytes
-avg 830000 bytes
-median 829000 bytes
-stdev 13784.04875 bytes
-min 811000 bytes
-max 848000 bytes
-
-Malloc:
-values 529000, 511000, 548000, 536000, 521000 bytes
-avg 529000 bytes
-median 529000 bytes
-stdev 14124.44689 bytes
-min 511000 bytes
-max 548000 bytes
+:Malloc -> [529000, 511000, 548000, 536000, 521000] bytes
 """
 
     output = """Running 1 tests
@@ -162,13 +96,42 @@ Finished: 0.1 s
     malloc_results = {'current': [[529000, 511000, 548000, 536000, 521000]] * 4}
 
 
+class TestWithSubtestsData:
+    text = """subtest:Time -> [1, 2, 3, 4, 5] ms
+total-test:Time:Total -> [1, 2, 3, 4, 5] ms
+total-test/subsubtest:Time -> [1, 2, 3, 4, 5] ms
+:Time -> [1080, 1120, 1095, 1101, 1104] ms
+"""
+
+    output = """Running 1 tests
+Running Parser/test-with-subtests.html (1 of 1)
+RESULT Parser: test-with-subtests: Time= 1100.0 ms
+median= 1101.0 ms, stdev= 13.31402 ms, min= 1080.0 ms, max= 1120.0 ms
+Finished: 0.1 s
+"""
+
+    results = {'url': 'http://trac.webkit.org/browser/trunk/PerformanceTests/Parser/test-with-subtests.html',
+        'metrics': {'Time': {'current': [[1080.0, 1120.0, 1095.0, 1101.0, 1104.0]] * 4}},
+        'tests': {
+            'subtest': {
+                'url': 'http://trac.webkit.org/browser/trunk/PerformanceTests/Parser/test-with-subtests.html',
+                'metrics': {'Time': {'current': [[1.0, 2.0, 3.0, 4.0, 5.0]] * 4}}},
+            'total-test': {
+                'url': 'http://trac.webkit.org/browser/trunk/PerformanceTests/Parser/test-with-subtests.html',
+                'metrics': {'Time': {'current': [[1.0, 2.0, 3.0, 4.0, 5.0]] * 4, "aggregators": ["Total"]}},
+                'tests': {
+                    'subsubtest':
+                        {'url': 'http://trac.webkit.org/browser/trunk/PerformanceTests/Parser/test-with-subtests.html',
+                        'metrics': {'Time': {'current': [[1.0, 2.0, 3.0, 4.0, 5.0]] * 4}}}}}}}
+
+
 class TestDriver:
     def run_test(self, driver_input, stop_when_done):
         text = ''
         timeout = False
         crash = False
         if driver_input.test_name.endswith('pass.html'):
-            text = InspectorPassTestData.text
+            text = SomeParserTestData.text
         elif driver_input.test_name.endswith('timeout.html'):
             timeout = True
         elif driver_input.test_name.endswith('failed.html'):
@@ -183,6 +146,8 @@ class TestDriver:
             text = SomeParserTestData.text
         elif driver_input.test_name.endswith('memory-test.html'):
             text = MemoryTestData.text
+        elif driver_input.test_name.endswith('test-with-subtests.html'):
+            text = TestWithSubtestsData.text
         return DriverOutput(text, '', '', '', crash=crash, timeout=timeout)
 
     def start(self):
@@ -214,7 +179,7 @@ class MainTest(unittest.TestCase):
 
     def run_test(self, test_name):
         runner, port = self.create_runner()
-        tests = [ChromiumStylePerfTest(port, test_name, runner._host.filesystem.join('some-dir', test_name))]
+        tests = [PerfTest(port, test_name, runner._host.filesystem.join('some-dir', test_name))]
         return runner._run_tests_set(tests) == 0
 
     def test_run_passing_test(self):
@@ -241,24 +206,8 @@ class MainTest(unittest.TestCase):
         for test in test_names:
             path = filesystem.join(runner._base_path, test)
             dirname = filesystem.dirname(path)
-            if test.startswith('inspector/'):
-                tests.append(ChromiumStylePerfTest(runner._port, test, path))
-            else:
-                tests.append(PerfTest(runner._port, test, path))
+            tests.append(PerfTest(runner._port, test, path))
         return tests
-
-    def test_run_test_set(self):
-        runner, port = self.create_runner()
-        tests = self._tests_for_runner(runner, ['inspector/pass.html', 'inspector/silent.html', 'inspector/failed.html',
-            'inspector/tonguey.html', 'inspector/timeout.html', 'inspector/crash.html'])
-        output = OutputCapture()
-        output.capture_output()
-        try:
-            unexpected_result_count = runner._run_tests_set(tests)
-        finally:
-            stdout, stderr, log = output.restore_output()
-        self.assertEqual(unexpected_result_count, len(tests) - 1)
-        self.assertTrue('\nRESULT group_name: test_name= 42 ms\n' in log)
 
     def test_run_test_set_kills_drt_per_run(self):
 
@@ -273,7 +222,7 @@ class MainTest(unittest.TestCase):
             'inspector/tonguey.html', 'inspector/timeout.html', 'inspector/crash.html'])
         unexpected_result_count = runner._run_tests_set(tests)
 
-        self.assertEqual(TestDriverWithStopCount.stop_count, 6)
+        self.assertEqual(TestDriverWithStopCount.stop_count, 9)
 
     def test_run_test_set_for_parser_tests(self):
         runner, port = self.create_runner()
@@ -305,8 +254,26 @@ class MainTest(unittest.TestCase):
         self.assertEqual(parser_tests['memory-test']['metrics']['JSHeap'], MemoryTestData.js_heap_results)
         self.assertEqual(parser_tests['memory-test']['metrics']['Malloc'], MemoryTestData.malloc_results)
 
+    def test_run_test_with_subtests(self):
+        runner, port = self.create_runner_and_setup_results_template()
+        runner._timestamp = 123456789
+        port.host.filesystem.write_text_file(runner._base_path + '/Parser/test-with-subtests.html', 'some content')
+
+        output = OutputCapture()
+        output.capture_output()
+        try:
+            unexpected_result_count = runner.run()
+        finally:
+            stdout, stderr, log = output.restore_output()
+
+        self.assertEqual(unexpected_result_count, 0)
+        self.assertEqual(self._normalize_output(log), TestWithSubtestsData.output + '\nMOCK: user.open_url: file://...\n')
+        parser_tests = self._load_output_json(runner)[0]['tests']['Parser']['tests']
+        self.maxDiff = None
+        self.assertEqual(parser_tests['test-with-subtests'], TestWithSubtestsData.results)
+
     def _test_run_with_json_output(self, runner, filesystem, upload_succeeds=False, results_shown=True, expected_exit_code=0, repeat=1, compare_logs=True):
-        filesystem.write_text_file(runner._base_path + '/inspector/pass.html', 'some content')
+        filesystem.write_text_file(runner._base_path + '/Parser/some-parser.html', 'some content')
         filesystem.write_text_file(runner._base_path + '/Bindings/event-target-wrapper.html', 'some content')
 
         uploaded = [False]
@@ -333,7 +300,7 @@ class MainTest(unittest.TestCase):
             expected_logs = ''
             for i in xrange(repeat):
                 runs = ' (Run %d of %d)' % (i + 1, repeat) if repeat > 1 else ''
-                expected_logs += 'Running 2 tests%s\n' % runs + EventTargetWrapperTestData.output + InspectorPassTestData.output
+                expected_logs += 'Running 2 tests%s\n' % runs + EventTargetWrapperTestData.output + SomeParserTestData.output
             if results_shown:
                 expected_logs += 'MOCK: user.open_url: file://...\n'
             self.assertEqual(self._normalize_output(logs), expected_logs)
@@ -345,7 +312,10 @@ class MainTest(unittest.TestCase):
     _event_target_wrapper_and_inspector_results = {
         "Bindings":
             {"url": "http://trac.webkit.org/browser/trunk/PerformanceTests/Bindings",
-            "tests": {"event-target-wrapper": EventTargetWrapperTestData.results}}}
+            "tests": {"event-target-wrapper": EventTargetWrapperTestData.results}},
+        "Parser":
+            {"url": "http://trac.webkit.org/browser/trunk/PerformanceTests/Parser",
+            "tests": {"some-parser": SomeParserTestData.results}}}
 
     def test_run_with_json_output(self):
         runner, port = self.create_runner_and_setup_results_template(args=['--output-json-path=/mock-checkout/output.json',
@@ -538,7 +508,7 @@ class MainTest(unittest.TestCase):
         self.assertEqual(output['builderName'], 'builder1')
         self.assertEqual(output['builderKey'], 'value1')
         self.assertEqual(output['revisions'], {'WebKit': {'revision': '5678', 'timestamp': '2013-02-01 08:48:05 +0000'}})
-        self.assertEqual(output['tests'].keys(), ['Bindings'])
+        self.assertEqual(output['tests'].keys(), ['Bindings', 'Parser'])
         self.assertEqual(sorted(output['tests']['Bindings'].keys()), ['tests', 'url'])
         self.assertEqual(output['tests']['Bindings']['url'], 'http://trac.webkit.org/browser/trunk/PerformanceTests/Bindings')
         self.assertEqual(output['tests']['Bindings']['tests'].keys(), ['event-target-wrapper'])

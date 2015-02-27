@@ -19,14 +19,13 @@
  */
 
 #include "config.h"
-
-#if ENABLE(SVG)
 #include "SVGCursorElement.h"
 
 #include "Attr.h"
 #include "Document.h"
 #include "SVGElementInstance.h"
 #include "SVGNames.h"
+#include "XLinkNames.h"
 
 namespace WebCore {
 
@@ -44,7 +43,7 @@ BEGIN_REGISTER_ANIMATED_PROPERTIES(SVGCursorElement)
     REGISTER_PARENT_ANIMATED_PROPERTIES(SVGTests)
 END_REGISTER_ANIMATED_PROPERTIES
 
-inline SVGCursorElement::SVGCursorElement(const QualifiedName& tagName, Document* document)
+inline SVGCursorElement::SVGCursorElement(const QualifiedName& tagName, Document& document)
     : SVGElement(tagName, document)
     , m_x(LengthModeWidth)
     , m_y(LengthModeHeight)
@@ -53,7 +52,7 @@ inline SVGCursorElement::SVGCursorElement(const QualifiedName& tagName, Document
     registerAnimatedPropertiesForSVGCursorElement();
 }
 
-PassRefPtr<SVGCursorElement> SVGCursorElement::create(const QualifiedName& tagName, Document* document)
+PassRefPtr<SVGCursorElement> SVGCursorElement::create(const QualifiedName& tagName, Document& document)
 {
     return adoptRef(new SVGCursorElement(tagName, document));
 }
@@ -75,7 +74,7 @@ bool SVGCursorElement::isSupportedAttribute(const QualifiedName& attrName)
         supportedAttributes.add(SVGNames::xAttr);
         supportedAttributes.add(SVGNames::yAttr);
     }
-    return supportedAttributes.contains<QualifiedName, SVGAttributeHashTranslator>(attrName);
+    return supportedAttributes.contains<SVGAttributeHashTranslator>(attrName);
 }
 
 void SVGCursorElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
@@ -105,11 +104,8 @@ void SVGCursorElement::addClient(SVGElement* element)
 
 void SVGCursorElement::removeClient(SVGElement* element)
 {
-    HashSet<SVGElement*>::iterator it = m_clients.find(element);
-    if (it != m_clients.end()) {
-        m_clients.remove(it);
+    if (m_clients.remove(element))
         element->cursorElementRemoved();
-    }
 }
 
 void SVGCursorElement::removeReferencedElement(SVGElement* element)
@@ -134,13 +130,11 @@ void SVGCursorElement::svgAttributeChanged(const QualifiedName& attrName)
         (*it)->setNeedsStyleRecalc();
 }
 
-void SVGCursorElement::addSubresourceAttributeURLs(ListHashSet<KURL>& urls) const
+void SVGCursorElement::addSubresourceAttributeURLs(ListHashSet<URL>& urls) const
 {
     SVGElement::addSubresourceAttributeURLs(urls);
 
-    addSubresourceURL(urls, document()->completeURL(href()));
+    addSubresourceURL(urls, document().completeURL(href()));
 }
 
 }
-
-#endif // ENABLE(SVG)

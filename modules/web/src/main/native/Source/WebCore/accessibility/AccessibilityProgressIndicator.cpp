@@ -45,7 +45,7 @@ PassRefPtr<AccessibilityProgressIndicator> AccessibilityProgressIndicator::creat
     return adoptRef(new AccessibilityProgressIndicator(renderer));
 }
 #endif 
-
+    
 #if ENABLE(METER_ELEMENT)
 AccessibilityProgressIndicator::AccessibilityProgressIndicator(RenderMeter* renderer)
     : AccessibilityRenderObject(renderer)

@@ -18,8 +18,6 @@
  */
 
 #include "config.h"
-
-#if ENABLE(SVG)
 #include "JSSVGPathSeg.h"
 
 #include "JSDOMBinding.h"
@@ -48,11 +46,14 @@
 #include "SVGPathSegCurvetoCubic.h"
 #include "SVGPathSegCurvetoCubicSmooth.h"
 #include "SVGPathSegCurvetoQuadratic.h"
-#include "SVGPathSegCurvetoQuadraticSmooth.h"
-#include "SVGPathSegLineto.h"
+#include "SVGPathSegCurvetoQuadraticSmoothAbs.h"
+#include "SVGPathSegCurvetoQuadraticSmoothRel.h"
+#include "SVGPathSegLinetoAbs.h"
 #include "SVGPathSegLinetoHorizontal.h"
+#include "SVGPathSegLinetoRel.h"
 #include "SVGPathSegLinetoVertical.h"
-#include "SVGPathSegMoveto.h"
+#include "SVGPathSegMovetoAbs.h"
+#include "SVGPathSegMovetoRel.h"
 
 using namespace JSC;
 
@@ -63,7 +64,7 @@ JSValue toJS(ExecState* exec, JSDOMGlobalObject* globalObject, SVGPathSeg* objec
     if (!object)
         return jsNull();
 
-    if (JSDOMWrapper* wrapper = getCachedWrapper(currentWorld(exec), object))
+    if (JSObject* wrapper = getCachedWrapper(currentWorld(exec), object))
         return wrapper;
 
     switch (object->pathSegType()) {
@@ -112,5 +113,3 @@ JSValue toJS(ExecState* exec, JSDOMGlobalObject* globalObject, SVGPathSeg* objec
 }
 
 }
-
-#endif // ENABLE(SVG)

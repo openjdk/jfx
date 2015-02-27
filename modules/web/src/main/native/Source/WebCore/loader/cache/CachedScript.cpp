@@ -33,6 +33,7 @@
 #include "MIMETypeRegistry.h"
 #include "MemoryCache.h"
 #include "ResourceBuffer.h"
+#include "RuntimeApplicationChecks.h"
 #include "TextResourceDecoder.h"
 #include <wtf/Vector.h>
 
@@ -40,7 +41,7 @@ namespace WebCore {
 
 CachedScript::CachedScript(const ResourceRequest& resourceRequest, const String& charset)
     : CachedResource(resourceRequest, Script)
-    , m_decoder(TextResourceDecoder::create("application/javascript", charset))
+    , m_decoder(TextResourceDecoder::create(ASCIILiteral("application/javascript"), charset))
 {
     // It's javascript we want.
     // But some websites think their scripts are <some wrong mimetype here>
@@ -76,20 +77,16 @@ const String& CachedScript::script()
         m_script.append(m_decoder->flush());
         setDecodedSize(m_script.sizeInBytes());
     }
-    m_decodedDataDeletionTimer.startOneShot(0);
+    m_decodedDataDeletionTimer.restart();
     
     return m_script;
 }
 
-void CachedScript::data(PassRefPtr<ResourceBuffer> data, bool allDataReceived)
+void CachedScript::finishLoading(ResourceBuffer* data)
 {
-    if (!allDataReceived)
-        return;
-
     m_data = data;
     setEncodedSize(m_data.get() ? m_data->size() : 0);
-    setLoading(false);
-    checkNotify();
+    CachedResource::finishLoading(data);
 }
 
 void CachedScript::destroyDecodedData()
@@ -106,5 +103,19 @@ bool CachedScript::mimeTypeAllowedByNosniff() const
     return !parseContentTypeOptionsHeader(m_response.httpHeaderField("X-Content-Type-Options")) == ContentTypeOptionsNosniff || MIMETypeRegistry::isSupportedJavaScriptMIMEType(mimeType());
 }
 #endif
+
+bool CachedScript::shouldIgnoreHTTPStatusCodeErrors() const
+{
+    // This is a workaround for <rdar://problem/13916291>
+    // REGRESSION (r119759): Adobe Flash Player "smaller" installer relies on the incorrect firing
+    // of a load event and needs an app-specific hack for compatibility.
+    // The installer in question tries to load .js file that doesn't exist, causing the server to
+    // return a 404 response. Normally, this would trigger an error event to be dispatched, but the
+    // installer expects a load event instead so we work around it here.
+    if (applicationIsSolidStateNetworksDownloader())
+        return true;
+
+    return CachedResource::shouldIgnoreHTTPStatusCodeErrors();
+}
 
 } // namespace WebCore

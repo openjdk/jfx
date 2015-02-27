@@ -27,9 +27,9 @@
 #define History_h
 
 #include "DOMWindowProperty.h"
-#include "KURL.h"
 #include "ScriptWrappable.h"
 #include "SerializedScriptValue.h"
+#include "URL.h"
 #include <wtf/Forward.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
@@ -57,16 +57,16 @@ public:
     bool stateChanged() const;
     bool isSameAsCurrentState(SerializedScriptValue*) const;
 
-    enum StateObjectType {
-        StateObjectPush,
-        StateObjectReplace
+    enum class StateObjectType {
+        Push,
+        Replace
     };
     void stateObjectAdded(PassRefPtr<SerializedScriptValue>, const String& title, const String& url, StateObjectType, ExceptionCode&);
 
 private:
     explicit History(Frame*);
 
-    KURL urlForState(const String& url);
+    URL urlForState(const String& url);
 
     PassRefPtr<SerializedScriptValue> stateInternal() const;
 

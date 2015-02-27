@@ -30,21 +30,22 @@
 #include "config.h"
 
 #include "CSSBasicShapes.h"
-#include "CSSPrimitiveValueMappings.h"
 
+#include "CSSPrimitiveValueMappings.h"
+#include "Pair.h"
 #include <wtf/text/StringBuilder.h>
 
 using namespace WTF;
 
 namespace WebCore {
 
-static String buildRectangleString(const String& x, const String& y, const String& width, const String& height, const String& radiusX, const String& radiusY)
+static String buildRectangleString(const String& x, const String& y, const String& width, const String& height, const String& radiusX, const String& radiusY, const String& box)
 {
     char opening[] = "rectangle(";
     char separator[] = ", ";
     StringBuilder result;
     // Compute the required capacity in advance to reduce allocations.
-    result.reserveCapacity((sizeof(opening) - 1) + (5 * (sizeof(separator) -1 )) + 1 + x.length() + y.length() + width.length() + height.length() + radiusX.length() + radiusY.length());
+    result.reserveCapacity((sizeof(opening) - 1) + (5 * (sizeof(separator) - 1)) + 1 + x.length() + y.length() + width.length() + height.length() + radiusX.length() + radiusY.length() + (box.length() ? box.length() + 1 : 0));
     result.appendLiteral(opening);
     result.append(x);
     result.appendLiteral(separator);
@@ -62,6 +63,10 @@ static String buildRectangleString(const String& x, const String& y, const Strin
         }
     }
     result.append(')');
+    if (box.length()) {
+        result.append(' ');
+        result.append(box);
+    }
     return result.toString();
 }
 
@@ -72,12 +77,13 @@ String CSSBasicShapeRectangle::cssText() const
         m_width->cssText(),
         m_height->cssText(),
         m_radiusX.get() ? m_radiusX->cssText() : String(),
-        m_radiusY.get() ? m_radiusY->cssText() : String());
+        m_radiusY.get() ? m_radiusY->cssText() : String(),
+        m_layoutBox ? m_layoutBox->cssText() : String());
 }
 
 bool CSSBasicShapeRectangle::equals(const CSSBasicShape& shape) const
 {
-    if (shape.type() != CSS_BASIC_SHAPE_RECTANGLE)
+    if (shape.type() != CSSBasicShapeRectangleType)
         return false;
 
     const CSSBasicShapeRectangle& other = static_cast<const CSSBasicShapeRectangle&>(shape);
@@ -86,109 +92,191 @@ bool CSSBasicShapeRectangle::equals(const CSSBasicShape& shape) const
         && compareCSSValuePtr(m_width, other.m_width)
         && compareCSSValuePtr(m_height, other.m_height)
         && compareCSSValuePtr(m_radiusX, other.m_radiusX)
-        && compareCSSValuePtr(m_radiusY, other.m_radiusY);
+        && compareCSSValuePtr(m_radiusY, other.m_radiusY)
+        && compareCSSValuePtr(m_layoutBox, other.m_layoutBox);
 }
 
-#if ENABLE(CSS_VARIABLES)
-String CSSBasicShapeRectangle::serializeResolvingVariables(const HashMap<AtomicString, String>& variables) const
+static String buildCircleString(const String& radius, const String& centerX, const String& centerY, const String& box)
 {
-    return buildRectangleString(m_x->serializeResolvingVariables(variables),
-        m_y->serializeResolvingVariables(variables),
-        m_width->serializeResolvingVariables(variables),
-        m_height->serializeResolvingVariables(variables),
-        m_radiusX.get() ? m_radiusX->serializeResolvingVariables(variables) : String(),
-        m_radiusY.get() ? m_radiusY->serializeResolvingVariables(variables) : String());
-}
+    char opening[] = "circle(";
+    char at[] = "at";
+    char separator[] = " ";
+    StringBuilder result;
+    result.appendLiteral(opening);
+    if (!radius.isNull()) 
+        result.append(radius);
 
-bool CSSBasicShapeRectangle::hasVariableReference() const
-{
-    return m_x->hasVariableReference()
-        || m_y->hasVariableReference()
-        || m_width->hasVariableReference()
-        || m_height->hasVariableReference()
-        || (m_radiusX.get() && m_radiusX->hasVariableReference())
-        || (m_radiusY.get() && m_radiusY->hasVariableReference());
-}
-#endif
-
-static String buildCircleString(const String& x, const String& y, const String& radius)
-{
-    return "circle(" + x + ", " + y + ", " + radius + ')';
+    if (!centerX.isNull() || !centerY.isNull()) {
+        if (!radius.isNull())
+            result.appendLiteral(separator);
+        result.appendLiteral(at);
+        result.appendLiteral(separator);
+        result.append(centerX);
+        result.appendLiteral(separator);
+        result.append(centerY);
+    }
+    result.appendLiteral(")");
+    if (box.length()) {
+        result.appendLiteral(separator);
+        result.append(box);
+    }
+    return result.toString();
 }
 
 String CSSBasicShapeCircle::cssText() const
 {
-    return buildCircleString(m_centerX->cssText(), m_centerY->cssText(), m_radius->cssText());
+    return buildCircleString(m_radius ? m_radius->cssText() : String(),
+        m_centerX ? m_centerX->cssText() : String(),
+        m_centerY ? m_centerY->cssText() : String(),
+        m_layoutBox ? m_layoutBox->cssText() : String());
 }
 
 bool CSSBasicShapeCircle::equals(const CSSBasicShape& shape) const
 {
-    if (shape.type() != CSS_BASIC_SHAPE_CIRCLE)
+    if (shape.type() != CSSBasicShapeCircleType)
         return false;
 
     const CSSBasicShapeCircle& other = static_cast<const CSSBasicShapeCircle&>(shape);
     return compareCSSValuePtr(m_centerX, other.m_centerX)
         && compareCSSValuePtr(m_centerY, other.m_centerY)
-        && compareCSSValuePtr(m_radius, other.m_radius);
+        && compareCSSValuePtr(m_radius, other.m_radius)
+        && compareCSSValuePtr(m_layoutBox, other.m_layoutBox);
 }
 
-#if ENABLE(CSS_VARIABLES)
-String CSSBasicShapeCircle::serializeResolvingVariables(const HashMap<AtomicString, String>& variables) const
+static String buildDeprecatedCircleString(const String& x, const String& y, const String& radius, const String& box)
 {
-    return buildCircleString(m_centerX->serializeResolvingVariables(variables),
-        m_centerY->serializeResolvingVariables(variables),
-        m_radius->serializeResolvingVariables(variables));
+    StringBuilder result;
+    char opening[] = "circle(";
+    char separator[] = ", ";
+    result.appendLiteral(opening);
+    result.append(x);
+    result.appendLiteral(separator);
+    result.append(y);
+    result.appendLiteral(separator);
+    result.append(radius);
+    result.append(')');
+    if (box.length()) {
+        result.append(' ');
+        result.append(box);
+    }
+    return result.toString();
 }
 
-bool CSSBasicShapeCircle::hasVariableReference() const
+String CSSDeprecatedBasicShapeCircle::cssText() const
 {
-    return m_centerX->hasVariableReference()
-        || m_centerY->hasVariableReference()
-        || m_radius->hasVariableReference();
+    return buildDeprecatedCircleString(m_centerX->cssText(), m_centerY->cssText(), m_radius->cssText(), m_layoutBox ? m_layoutBox->cssText() : String());
 }
-#endif
 
-static String buildEllipseString(const String& x, const String& y, const String& radiusX, const String& radiusY)
+bool CSSDeprecatedBasicShapeCircle::equals(const CSSBasicShape& shape) const
 {
-    return "ellipse(" + x + ", " + y + ", " + radiusX + ", " + radiusY + ')';
+    if (shape.type() != CSSDeprecatedBasicShapeCircleType)
+        return false;
+
+    const CSSDeprecatedBasicShapeCircle& other = static_cast<const CSSDeprecatedBasicShapeCircle&>(shape);
+    return compareCSSValuePtr(m_centerX, other.m_centerX)
+        && compareCSSValuePtr(m_centerY, other.m_centerY)
+        && compareCSSValuePtr(m_radius, other.m_radius)
+        && compareCSSValuePtr(m_layoutBox, other.m_layoutBox);
+}
+
+static String buildEllipseString(const String& radiusX, const String& radiusY, const String& centerX, const String& centerY, const String& box)
+{
+    char opening[] = "ellipse(";
+    char at[] = "at";
+    char separator[] = " ";
+    StringBuilder result;
+    result.appendLiteral(opening);
+    bool needsSeparator = false;
+    if (!radiusX.isNull()) {
+        result.append(radiusX);
+        needsSeparator = true;
+    }
+    if (!radiusY.isNull()) {
+        if (needsSeparator)
+            result.appendLiteral(separator);
+        result.append(radiusY);
+        needsSeparator = true;
+    }
+
+    if (!centerX.isNull() || !centerY.isNull()) {
+        if (needsSeparator)
+            result.appendLiteral(separator);
+        result.appendLiteral(at);
+        result.appendLiteral(separator);
+        result.append(centerX);
+        result.appendLiteral(separator);
+        result.append(centerY);
+    }
+    result.appendLiteral(")");
+    if (box.length()) {
+        result.appendLiteral(separator);
+        result.append(box);
+    }
+    return result.toString();
 }
 
 String CSSBasicShapeEllipse::cssText() const
 {
-    return buildEllipseString(m_centerX->cssText(), m_centerY->cssText(), m_radiusX->cssText(), m_radiusY->cssText());
+    return buildEllipseString(m_radiusX ? m_radiusX->cssText() : String(),
+        m_radiusY ? m_radiusY->cssText() : String(),
+        m_centerX ? m_centerX->cssText() : String(),
+        m_centerY ? m_centerY->cssText() : String(),
+        m_layoutBox ? m_layoutBox->cssText() : String());
 }
 
 bool CSSBasicShapeEllipse::equals(const CSSBasicShape& shape) const
 {
-    if (shape.type() != CSS_BASIC_SHAPE_ELLIPSE)
+    if (shape.type() != CSSBasicShapeEllipseType)
         return false;
 
     const CSSBasicShapeEllipse& other = static_cast<const CSSBasicShapeEllipse&>(shape);
     return compareCSSValuePtr(m_centerX, other.m_centerX)
         && compareCSSValuePtr(m_centerY, other.m_centerY)
         && compareCSSValuePtr(m_radiusX, other.m_radiusX)
-        && compareCSSValuePtr(m_radiusY, other.m_radiusY);
+        && compareCSSValuePtr(m_radiusY, other.m_radiusY)
+        && compareCSSValuePtr(m_layoutBox, other.m_layoutBox);
 }
 
-#if ENABLE(CSS_VARIABLES)
-String CSSBasicShapeEllipse::serializeResolvingVariables(const HashMap<AtomicString, String>& variables) const
+static String buildDeprecatedEllipseString(const String& x, const String& y, const String& radiusX, const String& radiusY, const String& box)
 {
-    return buildEllipseString(m_centerX->serializeResolvingVariables(variables),
-        m_centerY->serializeResolvingVariables(variables),
-        m_radiusX->serializeResolvingVariables(variables),
-        m_radiusY->serializeResolvingVariables(variables));
+    StringBuilder result;
+    char opening[] = "ellipse(";
+    char separator[] = ", ";
+    result.appendLiteral(opening);
+    result.append(x);
+    result.appendLiteral(separator);
+    result.append(y);
+    result.appendLiteral(separator);
+    result.append(radiusX);
+    result.appendLiteral(separator);
+    result.append(radiusY);
+    result.append(')');
+    if (box.length()) {
+        result.append(' ');
+        result.append(box);
+    }
+    return result.toString();
 }
 
-bool CSSBasicShapeEllipse::hasVariableReference() const
+String CSSDeprecatedBasicShapeEllipse::cssText() const
 {
-    return m_centerX->hasVariableReference()
-        || m_centerY->hasVariableReference()
-        || m_radiusX->hasVariableReference()
-        || m_radiusY->hasVariableReference();
+    return buildDeprecatedEllipseString(m_centerX->cssText(), m_centerY->cssText(), m_radiusX->cssText(), m_radiusY->cssText(), m_layoutBox ? m_layoutBox->cssText() : String());
 }
-#endif
 
-static String buildPolygonString(const WindRule& windRule, const Vector<String>& points)
+bool CSSDeprecatedBasicShapeEllipse::equals(const CSSBasicShape& shape) const
+{
+    if (shape.type() != CSSDeprecatedBasicShapeEllipseType)
+        return false;
+
+    const CSSDeprecatedBasicShapeEllipse& other = static_cast<const CSSDeprecatedBasicShapeEllipse&>(shape);
+    return compareCSSValuePtr(m_centerX, other.m_centerX)
+        && compareCSSValuePtr(m_centerY, other.m_centerY)
+        && compareCSSValuePtr(m_radiusX, other.m_radiusX)
+        && compareCSSValuePtr(m_radiusY, other.m_radiusY)
+        && compareCSSValuePtr(m_layoutBox, other.m_layoutBox);
+}
+
+static String buildPolygonString(const WindRule& windRule, const Vector<String>& points, const String& box)
 {
     ASSERT(!(points.size() % 2));
 
@@ -206,6 +294,10 @@ static String buildPolygonString(const WindRule& windRule, const Vector<String>&
         // add length of two strings, plus one for the space separator.
         length += points[i].length() + 1 + points[i + 1].length();
     }
+
+    if (box.length())
+        length += box.length() + 1;
+
     result.reserveCapacity(length);
 
     if (windRule == RULE_EVENODD)
@@ -223,6 +315,11 @@ static String buildPolygonString(const WindRule& windRule, const Vector<String>&
 
     result.append(')');
 
+    if (box.length()) {
+        result.append(' ');
+        result.append(box);
+    }
+
     return result.toString();
 }
 
@@ -234,39 +331,192 @@ String CSSBasicShapePolygon::cssText() const
     for (size_t i = 0; i < m_values.size(); ++i)
         points.append(m_values.at(i)->cssText());
 
-    return buildPolygonString(m_windRule, points);
+    return buildPolygonString(m_windRule, points, m_layoutBox ? m_layoutBox->cssText() : String());
 }
 
 bool CSSBasicShapePolygon::equals(const CSSBasicShape& shape) const
 {
-    if (shape.type() != CSS_BASIC_SHAPE_POLYGON)
+    if (shape.type() != CSSBasicShapePolygonType)
         return false;
 
     const CSSBasicShapePolygon& rhs = static_cast<const CSSBasicShapePolygon&>(shape);
-    return compareCSSValueVector<CSSPrimitiveValue>(m_values, rhs.m_values);
+    return compareCSSValuePtr(m_layoutBox, rhs.m_layoutBox)
+        && compareCSSValueVector<CSSPrimitiveValue>(m_values, rhs.m_values);
 }
 
-#if ENABLE(CSS_VARIABLES)
-String CSSBasicShapePolygon::serializeResolvingVariables(const HashMap<AtomicString, String>& variables) const
+static String buildInsetRectangleString(const String& top, const String& right, const String& bottom, const String& left, const String& radiusX, const String& radiusY, const String& box)
 {
-    Vector<String> points;
-    points.reserveInitialCapacity(m_values.size());
-
-    for (size_t i = 0; i < m_values.size(); ++i)
-        points.append(m_values.at(i)->serializeResolvingVariables(variables));
-
-    return buildPolygonString(m_windRule, points);
-}
-
-bool CSSBasicShapePolygon::hasVariableReference() const
-{
-    for (size_t i = 0; i < m_values.size(); ++i) {
-        if (m_values.at(i)->hasVariableReference())
-            return true;
+    char opening[] = "inset-rectangle(";
+    char separator[] = ", ";
+    StringBuilder result;
+    // Compute the required capacity in advance to reduce allocations.
+    result.reserveCapacity((sizeof(opening) - 1) + (5 * (sizeof(separator) - 1)) + 1 + top.length() + right.length() + bottom.length() + left.length() + radiusX.length() + radiusY.length() + (box.length() ? box.length() + 1 : 0));
+    result.appendLiteral(opening);
+    result.append(top);
+    result.appendLiteral(separator);
+    result.append(right);
+    result.appendLiteral(separator);
+    result.append(bottom);
+    result.appendLiteral(separator);
+    result.append(left);
+    if (!radiusX.isNull()) {
+        result.appendLiteral(separator);
+        result.append(radiusX);
+        if (!radiusY.isNull()) {
+            result.appendLiteral(separator);
+            result.append(radiusY);
+        }
     }
-    return false;
+    result.append(')');
+    if (box.length()) {
+        result.append(' ');
+        result.append(box);
+    }
+    return result.toString();
 }
-#endif
+
+String CSSBasicShapeInsetRectangle::cssText() const
+{
+    return buildInsetRectangleString(m_top->cssText(),
+        m_right->cssText(),
+        m_bottom->cssText(),
+        m_left->cssText(),
+        m_radiusX.get() ? m_radiusX->cssText() : String(),
+        m_radiusY.get() ? m_radiusY->cssText() : String(),
+        m_layoutBox ? m_layoutBox->cssText() : String());
+}
+
+bool CSSBasicShapeInsetRectangle::equals(const CSSBasicShape& shape) const
+{
+    if (shape.type() != CSSBasicShapeInsetRectangleType)
+        return false;
+
+    const CSSBasicShapeInsetRectangle& other = static_cast<const CSSBasicShapeInsetRectangle&>(shape);
+    return compareCSSValuePtr(m_top, other.m_top)
+        && compareCSSValuePtr(m_right, other.m_right)
+        && compareCSSValuePtr(m_bottom, other.m_bottom)
+        && compareCSSValuePtr(m_left, other.m_left)
+        && compareCSSValuePtr(m_radiusX, other.m_radiusX)
+        && compareCSSValuePtr(m_radiusY, other.m_radiusY)
+        && compareCSSValuePtr(m_layoutBox, other.m_layoutBox);
+}
+
+static String buildInsetString(const String& top, const String& right, const String& bottom, const String& left,
+    const String& topLeftRadiusWidth, const String& topLeftRadiusHeight,
+    const String& topRightRadiusWidth, const String& topRightRadiusHeight,
+    const String& bottomRightRadiusWidth, const String& bottomRightRadiusHeight,
+    const String& bottomLeftRadiusWidth, const String& bottomLeftRadiusHeight,
+    const String& box)
+{
+    char opening[] = "inset(";
+    char separator[] = " ";
+    char cornersSeparator[] = "round";
+    StringBuilder result;
+    result.appendLiteral(opening);
+    result.append(top);
+    if (!right.isNull()) {
+        result.appendLiteral(separator);
+        result.append(right);
+    }
+    if (!bottom.isNull()) {
+        result.appendLiteral(separator);
+        result.append(bottom);
+    }
+    if (!left.isNull()) {
+        result.appendLiteral(separator);
+        result.append(left);
+    }
+
+    if (!topLeftRadiusWidth.isNull() && !topLeftRadiusHeight.isNull()) {
+        result.appendLiteral(separator);
+        result.appendLiteral(cornersSeparator);
+        result.appendLiteral(separator);
+
+        result.append(topLeftRadiusWidth);
+        result.appendLiteral(separator);
+        result.append(topRightRadiusWidth);
+        result.appendLiteral(separator);
+        result.append(bottomRightRadiusWidth);
+        result.appendLiteral(separator);
+        result.append(bottomLeftRadiusWidth);
+
+        result.appendLiteral(separator);
+        result.append('/');
+        result.appendLiteral(separator);
+
+        result.append(topLeftRadiusHeight);
+        result.appendLiteral(separator);
+        result.append(topRightRadiusHeight);
+        result.appendLiteral(separator);
+        result.append(bottomRightRadiusHeight);
+        result.appendLiteral(separator);
+        result.append(bottomLeftRadiusHeight);
+    }
+    result.append(')');
+    if (box.length()) {
+        result.append(' ');
+        result.append(box);
+    }
+    return result.toString();
+}
+
+static inline void updateCornerRadiusWidthAndHeight(CSSPrimitiveValue* corner, String& width, String& height)
+{
+    if (!corner)
+        return;
+
+    Pair* radius = corner->getPairValue();
+    width = radius->first() ? radius->first()->cssText() : String("0");
+    if (radius->second())
+        height = radius->second()->cssText();
+}
+
+String CSSBasicShapeInset::cssText() const
+{
+    String topLeftRadiusWidth;
+    String topLeftRadiusHeight;
+    String topRightRadiusWidth;
+    String topRightRadiusHeight;
+    String bottomRightRadiusWidth;
+    String bottomRightRadiusHeight;
+    String bottomLeftRadiusWidth;
+    String bottomLeftRadiusHeight;
+
+    updateCornerRadiusWidthAndHeight(topLeftRadius(), topLeftRadiusWidth, topLeftRadiusHeight);
+    updateCornerRadiusWidthAndHeight(topRightRadius(), topRightRadiusWidth, topRightRadiusHeight);
+    updateCornerRadiusWidthAndHeight(bottomRightRadius(), bottomRightRadiusWidth, bottomRightRadiusHeight);
+    updateCornerRadiusWidthAndHeight(bottomLeftRadius(), bottomLeftRadiusWidth, bottomLeftRadiusHeight);
+
+    return buildInsetString(m_top ? m_top->cssText() : String(),
+        m_right ? m_right->cssText() : String(),
+        m_bottom ? m_bottom->cssText() : String(),
+        m_left ? m_left->cssText() : String(),
+        topLeftRadiusWidth,
+        topLeftRadiusHeight,
+        topRightRadiusWidth,
+        topRightRadiusHeight,
+        bottomRightRadiusWidth,
+        bottomRightRadiusHeight,
+        bottomLeftRadiusWidth,
+        bottomLeftRadiusHeight,
+        m_layoutBox ? m_layoutBox->cssText() : String());
+}
+
+bool CSSBasicShapeInset::equals(const CSSBasicShape& shape) const
+{
+    if (shape.type() != CSSBasicShapeInsetType)
+        return false;
+
+    const CSSBasicShapeInset& other = static_cast<const CSSBasicShapeInset&>(shape);
+    return compareCSSValuePtr(m_top, other.m_top)
+        && compareCSSValuePtr(m_right, other.m_right)
+        && compareCSSValuePtr(m_bottom, other.m_bottom)
+        && compareCSSValuePtr(m_left, other.m_left)
+        && compareCSSValuePtr(m_topLeftRadius, other.m_topLeftRadius)
+        && compareCSSValuePtr(m_topRightRadius, other.m_topRightRadius)
+        && compareCSSValuePtr(m_bottomRightRadius, other.m_bottomRightRadius)
+        && compareCSSValuePtr(m_bottomLeftRadius, other.m_bottomLeftRadius);
+}
 
 } // namespace WebCore
 

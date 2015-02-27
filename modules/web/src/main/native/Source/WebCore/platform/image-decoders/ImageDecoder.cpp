@@ -25,12 +25,7 @@
 #include "BMPImageDecoder.h"
 #include "GIFImageDecoder.h"
 #include "ICOImageDecoder.h"
-#if PLATFORM(QT)
-#include "ImageDecoderQt.h"
-#endif
-#if !PLATFORM(QT) || USE(LIBJPEG)
 #include "JPEGImageDecoder.h"
-#endif
 #include "PNGImageDecoder.h"
 #include "SharedBuffer.h"
 #if USE(WEBP)
@@ -111,18 +106,14 @@ ImageDecoder* ImageDecoder::create(const SharedBuffer& data, ImageSource::AlphaO
     if (matchesGIFSignature(contents))
         return new GIFImageDecoder(alphaOption, gammaAndColorProfileOption);
 
-#if !PLATFORM(QT) || (PLATFORM(QT) && USE(LIBPNG))
     if (matchesPNGSignature(contents))
         return new PNGImageDecoder(alphaOption, gammaAndColorProfileOption);
 
     if (matchesICOSignature(contents) || matchesCURSignature(contents))
         return new ICOImageDecoder(alphaOption, gammaAndColorProfileOption);
-#endif
 
-#if !PLATFORM(QT) || (PLATFORM(QT) && USE(LIBJPEG))
     if (matchesJPEGSignature(contents))
         return new JPEGImageDecoder(alphaOption, gammaAndColorProfileOption);
-#endif
 
 #if USE(WEBP)
     if (matchesWebPSignature(contents))
@@ -132,9 +123,6 @@ ImageDecoder* ImageDecoder::create(const SharedBuffer& data, ImageSource::AlphaO
     if (matchesBMPSignature(contents))
         return new BMPImageDecoder(alphaOption, gammaAndColorProfileOption);
 
-#if PLATFORM(QT)
-    return new ImageDecoderQt(alphaOption, gammaAndColorProfileOption);
-#endif
     return 0;
 }
 
@@ -176,6 +164,23 @@ void ImageFrame::zeroFillPixelData()
 {
     memset(m_bytes, 0, m_size.width() * m_size.height() * sizeof(PixelData));
     m_hasAlpha = true;
+}
+
+void ImageFrame::zeroFillFrameRect(const IntRect& rect)
+{
+    ASSERT(IntRect(IntPoint(), m_size).contains(rect));
+
+    if (rect.isEmpty())
+        return;
+
+    size_t rectWidthInBytes = rect.width() * sizeof(PixelData);
+    PixelData* start = m_bytes + (rect.y() * width()) + rect.x();
+    for (int i = 0; i < rect.height(); ++i) {
+        memset(start, 0, rectWidthInBytes);
+        start += width();
+    }
+
+    setHasAlpha(true);
 }
 
 bool ImageFrame::copyBitmapData(const ImageFrame& other)

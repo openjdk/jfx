@@ -25,15 +25,16 @@
 
 #include "config.h"
 
-#if USE(ACCELERATED_COMPOSITING)
 #if ENABLE(WEBGL)
 
 #import "WebGLLayer.h"
 
 #import "GraphicsContext3D.h"
 #import "GraphicsLayer.h"
+#if !PLATFORM(IOS)
 #import <OpenGL/OpenGL.h>
 #import <OpenGL/gl.h>
+#endif
 #import <wtf/FastMalloc.h>
 #import <wtf/RetainPtr.h>
 
@@ -48,6 +49,7 @@ using namespace WebCore;
     return self;
 }
 
+#if !PLATFORM(IOS)
 -(CGLPixelFormatObj)copyCGLPixelFormatForDisplayMask:(uint32_t)mask
 {
     // FIXME: The mask param tells you which display (on a multi-display system)
@@ -108,9 +110,14 @@ static void freeData(void *, const void *data, size_t /* size */)
 {
     fastFree(const_cast<void *>(data));
 }
+#endif
 
 -(CGImageRef)copyImageSnapshotWithColorSpace:(CGColorSpaceRef)colorSpace
 {
+#if PLATFORM(IOS)
+    UNUSED_PARAM(colorSpace);
+    return 0;
+#else
     CGLSetCurrentContext(m_context->platformGraphicsContext3D());
 
     RetainPtr<CGColorSpaceRef> imageColorSpace = colorSpace;
@@ -138,30 +145,18 @@ static void freeData(void *, const void *data, size_t /* size */)
                                                  kCGRenderingIntentDefault);
     CGDataProviderRelease(provider);
     return image;
+#endif
 }
 
 - (void)display
 {
+#if PLATFORM(IOS)
+    m_context->endPaint();
+#else
     [super display];
-    if (m_layerOwner)
-        m_layerOwner->layerDidDisplay(self);
-}
-
-@end
-
-@implementation WebGLLayer(WebGLLayerAdditions)
-
--(void)setLayerOwner:(GraphicsLayer*)aLayer
-{
-    m_layerOwner = aLayer;
-}
-
--(GraphicsLayer*)layerOwner
-{
-    return m_layerOwner;
+#endif
 }
 
 @end
 
 #endif // ENABLE(WEBGL)
-#endif // USE(ACCELERATED_COMPOSITING)

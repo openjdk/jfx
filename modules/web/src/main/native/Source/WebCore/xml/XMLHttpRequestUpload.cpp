@@ -28,8 +28,6 @@
 
 #include "Event.h"
 #include "EventException.h"
-#include "EventNames.h"
-#include "XMLHttpRequest.h"
 #include "XMLHttpRequestProgressEvent.h"
 #include <wtf/Assertions.h>
 #include <wtf/text/AtomicString.h>
@@ -38,37 +36,33 @@ namespace WebCore {
 
 XMLHttpRequestUpload::XMLHttpRequestUpload(XMLHttpRequest* xmlHttpRequest)
     : m_xmlHttpRequest(xmlHttpRequest)
+    , m_lengthComputable(false)
+    , m_loaded(0)
+    , m_total(0)
 {
 }
 
-const AtomicString& XMLHttpRequestUpload::interfaceName() const
+void XMLHttpRequestUpload::dispatchThrottledProgressEvent(bool lengthComputable, unsigned long long loaded, unsigned long long total)
 {
-    return eventNames().interfaceForXMLHttpRequestUpload;
+    m_lengthComputable = lengthComputable;
+    m_loaded = loaded;
+    m_total = total;
+
+    dispatchEvent(XMLHttpRequestProgressEvent::create(eventNames().progressEvent, lengthComputable, loaded, total));
 }
 
-ScriptExecutionContext* XMLHttpRequestUpload::scriptExecutionContext() const
+void XMLHttpRequestUpload::dispatchProgressEvent(const AtomicString &type)
 {
-    return m_xmlHttpRequest->scriptExecutionContext();
+    ASSERT(type == eventNames().loadstartEvent || type == eventNames().progressEvent || type == eventNames().loadEvent || type == eventNames().loadendEvent || type == eventNames().abortEvent || type == eventNames().errorEvent || type == eventNames().timeoutEvent);
+
+    if (type == eventNames().loadstartEvent) {
+        m_lengthComputable = false;
+        m_loaded = 0;
+        m_total = 0;
+    }
+
+    dispatchEvent(XMLHttpRequestProgressEvent::create(type, m_lengthComputable, m_loaded, m_total));
 }
-
-EventTargetData* XMLHttpRequestUpload::eventTargetData()
-{
-    return &m_eventTargetData;
-}
-
-EventTargetData* XMLHttpRequestUpload::ensureEventTargetData()
-{
-    return &m_eventTargetData;
-}
-
-void XMLHttpRequestUpload::dispatchEventAndLoadEnd(PassRefPtr<Event> event)
-{
-    ASSERT(event->type() == eventNames().loadEvent || event->type() == eventNames().abortEvent || event->type() == eventNames().errorEvent || event->type() == eventNames().timeoutEvent);
-
-    dispatchEvent(event);
-    dispatchEvent(XMLHttpRequestProgressEvent::create(eventNames().loadendEvent));
-}
-
 
 
 } // namespace WebCore

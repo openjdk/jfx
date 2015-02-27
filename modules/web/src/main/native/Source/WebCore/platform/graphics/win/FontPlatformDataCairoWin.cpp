@@ -56,12 +56,13 @@ void FontPlatformData::platformDataInit(HFONT font, float size, HDC hdc, WCHAR* 
     cairo_font_face_destroy(fontFace);
 }
 
-FontPlatformData::FontPlatformData(cairo_font_face_t* fontFace, float size, bool bold, bool oblique)
-    : m_font(0)
+FontPlatformData::FontPlatformData(GDIObject<HFONT> font, cairo_font_face_t* fontFace, float size, bool bold, bool oblique)
+    : m_font(SharedGDIObject<HFONT>::create(std::move(font)))
     , m_size(size)
     , m_orientation(Horizontal)
     , m_widthVariant(RegularWidth)
     , m_scaledFont(0)
+    , m_isCompositeFontReference(false)
     , m_isColorBitmapFont(false)
     , m_syntheticBold(bold)
     , m_syntheticOblique(oblique)

@@ -33,8 +33,6 @@
 #include "AccessibilityTable.h"
 #include "AccessibilityTableRow.h"
 
-using namespace std;
-
 namespace WebCore {
     
 AccessibilityARIAGridCell::AccessibilityARIAGridCell(RenderObject* renderer)
@@ -51,26 +49,26 @@ PassRefPtr<AccessibilityARIAGridCell> AccessibilityARIAGridCell::create(RenderOb
     return adoptRef(new AccessibilityARIAGridCell(renderer));
 }
 
-AccessibilityObject* AccessibilityARIAGridCell::parentTable() const
+AccessibilityTable* AccessibilityARIAGridCell::parentTable() const
 {
     AccessibilityObject* parent = parentObjectUnignored();
     if (!parent)
-        return 0;
+        return nullptr;
     
     if (parent->isAccessibilityTable())
-        return parent;
+        return toAccessibilityTable(parent);
 
     // It could happen that we hadn't reached the parent table yet (in
     // case objects for rows were not ignoring accessibility) so for
     // that reason we need to run parentObjectUnignored once again.
     parent = parent->parentObjectUnignored();
     if (!parent || !parent->isAccessibilityTable())
-        return 0;
+        return nullptr;
     
-    return parent;
+    return toAccessibilityTable(parent);
 }
     
-void AccessibilityARIAGridCell::rowIndexRange(pair<unsigned, unsigned>& rowRange)
+void AccessibilityARIAGridCell::rowIndexRange(std::pair<unsigned, unsigned>& rowRange)
 {
     AccessibilityObject* parent = parentObjectUnignored();
     if (!parent)
@@ -78,15 +76,15 @@ void AccessibilityARIAGridCell::rowIndexRange(pair<unsigned, unsigned>& rowRange
 
     if (parent->isTableRow()) {
         // We already got a table row, use its API.
-        rowRange.first = static_cast<AccessibilityTableRow*>(parent)->rowIndex();
+        rowRange.first = toAccessibilityTableRow(parent)->rowIndex();
     } else if (parent->isAccessibilityTable()) {
         // We reached the parent table, so we need to inspect its
         // children to determine the row index for the cell in it.
-        unsigned columnCount = static_cast<AccessibilityTable*>(parent)->columnCount();
+        unsigned columnCount = toAccessibilityTable(parent)->columnCount();
         if (!columnCount)
             return;
 
-        AccessibilityChildrenVector siblings = parent->children();
+        const auto& siblings = parent->children();
         unsigned childrenSize = siblings.size();
         for (unsigned k = 0; k < childrenSize; ++k) {
             if (siblings[k].get() == this) {
@@ -100,7 +98,7 @@ void AccessibilityARIAGridCell::rowIndexRange(pair<unsigned, unsigned>& rowRange
     rowRange.second = 1;
 }
 
-void AccessibilityARIAGridCell::columnIndexRange(pair<unsigned, unsigned>& columnRange)
+void AccessibilityARIAGridCell::columnIndexRange(std::pair<unsigned, unsigned>& columnRange)
 {
     AccessibilityObject* parent = parentObjectUnignored();
     if (!parent)
@@ -109,7 +107,7 @@ void AccessibilityARIAGridCell::columnIndexRange(pair<unsigned, unsigned>& colum
     if (!parent->isTableRow() && !parent->isAccessibilityTable())
         return;
 
-    AccessibilityChildrenVector siblings = parent->children();
+    const AccessibilityChildrenVector& siblings = parent->children();
     unsigned childrenSize = siblings.size();
     for (unsigned k = 0; k < childrenSize; ++k) {
         if (siblings[k].get() == this) {

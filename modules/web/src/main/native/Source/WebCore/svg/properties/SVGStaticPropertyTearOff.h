@@ -20,7 +20,6 @@
 #ifndef SVGStaticPropertyTearOff_h
 #define SVGStaticPropertyTearOff_h
 
-#if ENABLE(SVG)
 #include "SVGPropertyTearOff.h"
 
 namespace WebCore {
@@ -38,10 +37,9 @@ public:
 
     // Used for non-animated POD types that are not associated with a SVGAnimatedProperty object, nor with a XML DOM attribute
     // (for example: SVGSVGElement::currentTranslate).
-    static PassRefPtr<Self> create(ContextElement* contextElement, PropertyType& value, UpdateMethod update)
+    static PassRefPtr<Self> create(ContextElement& contextElement, PropertyType& value, UpdateMethod update)
     {
-        ASSERT(contextElement);
-        return adoptRef(new Self(contextElement, value, update));
+        return adoptRef(new Self(&contextElement, value, update));
     }
 
     virtual void commitChange() { (m_contextElement.get()->*m_update)(); }
@@ -63,5 +61,4 @@ private:
 
 }
 
-#endif // ENABLE(SVG)
 #endif // SVGStaticPropertyTearOff_h

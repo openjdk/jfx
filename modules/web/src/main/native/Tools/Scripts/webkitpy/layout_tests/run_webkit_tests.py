@@ -104,15 +104,22 @@ def parse_args(args):
             default=False, help="Prefix used when spawning the Web process (Debug mode only)"),
     ]))
 
+    option_group_definitions.append(("Feature Switches", [
+        optparse.make_option("--complex-text", action="store_true", default=False,
+            help="Use the complex text code path for all text (OS X and Windows only)"),
+        optparse.make_option("--accelerated-drawing", action="store_true", default=False,
+            help="Use accelerated drawing (OS X only)"),
+        optparse.make_option("--remote-layer-tree", action="store_true", default=False,
+            help="Use the remote layer tree drawing model (OS X WebKit2 only)"),
+    ]))
+
     option_group_definitions.append(("WebKit Options", [
         optparse.make_option("--gc-between-tests", action="store_true", default=False,
             help="Force garbage collection between each test"),
-        optparse.make_option("--complex-text", action="store_true", default=False,
-            help="Use the complex text code path for all text (Mac OS X and Windows only)"),
         optparse.make_option("-l", "--leaks", action="store_true", default=False,
-            help="Enable leaks checking (Mac OS X only)"),
+            help="Enable leaks checking (OS X and Gtk+ only)"),
         optparse.make_option("-g", "--guard-malloc", action="store_true", default=False,
-            help="Enable Guard Malloc (Mac OS X only)"),
+            help="Enable Guard Malloc (OS X only)"),
         optparse.make_option("--threaded", action="store_true", default=False,
             help="Run a concurrent JavaScript thread with each test"),
         optparse.make_option("--webkit-test-runner", "-2", action="store_true",
@@ -128,7 +135,7 @@ def parse_args(args):
         optparse.make_option("--no-pixel", "--no-pixel-tests", action="store_false",
             dest="pixel_tests", help="Disable pixel-to-pixel PNG comparisons"),
         optparse.make_option("--no-sample-on-timeout", action="store_false",
-            dest="sample_on_timeout", help="Don't run sample on timeout (Mac OS X only)"),
+            dest="sample_on_timeout", help="Don't run sample on timeout (OS X only)"),
         optparse.make_option("--no-ref-tests", action="store_true",
             dest="no_ref_tests", help="Skip all ref tests"),
         optparse.make_option("--tolerance",
@@ -149,6 +156,8 @@ def parse_args(args):
         optparse.make_option("--no-new-test-results", action="store_false",
             dest="new_test_results", default=True,
             help="Don't create new baselines when no expected results exist"),
+        optparse.make_option("--treat-ref-tests-as-pixel-tests", action="store_true", default=False,
+            help="Run ref tests, but treat them as if they were traditional pixel tests"),
 
         #FIXME: we should support a comma separated list with --pixel-test-directory as well.
         optparse.make_option("--pixel-test-directory", action="append", default=[], dest="pixel_test_directories",
@@ -196,7 +205,9 @@ def parse_args(args):
         optparse.make_option("--nocheck-sys-deps", action="store_true",
             default=False,
             help="Don't check the system dependencies (themes)"),
-
+        optparse.make_option("--nojava", action="store_true",
+            default=False,
+            help="Don't build java support files"),
     ]))
 
     option_group_definitions.append(("Testing Options", [
@@ -224,8 +235,8 @@ def parse_args(args):
                  "'ignore' == Run them anyway, "
                  "'only' == only run the SKIP tests, "
                  "'always' == always skip, even if listed on the command line.")),
-        optparse.make_option("--force", dest="skipped", action="store_const", const='ignore',
-            help="Run all tests, even those marked SKIP in the test list (same as --skipped=ignore)"),
+        optparse.make_option("--force", action="store_true", default=False,
+            help="Run all tests with PASS as expected result, even those marked SKIP in the test list (implies --skipped=ignore)"),
         optparse.make_option("--time-out-ms",
             help="Set the timeout for each test"),
         optparse.make_option("--order", action="store", default="natural",
@@ -282,16 +293,21 @@ def parse_args(args):
     option_group_definitions.append(("Result JSON Options", [
         optparse.make_option("--master-name", help="The name of the buildbot master."),
         optparse.make_option("--builder-name", default="",
-            help=("The name of the builder shown on the waterfall running "
-                  "this script e.g. WebKit.")),
+            help=("The name of the builder shown on the waterfall running this script. e.g. Apple MountainLion Release WK2 (Tests).")),
         optparse.make_option("--build-name", default="DUMMY_BUILD_NAME",
-            help=("The name of the builder used in its path, e.g. "
-                  "webkit-rel.")),
+            help=("The name of the builder used in its path, e.g. webkit-rel.")),
+        optparse.make_option("--build-slave", default="DUMMY_BUILD_SLAVE",
+            help=("The name of the buildslave used. e.g. apple-macpro-6.")),
         optparse.make_option("--build-number", default="DUMMY_BUILD_NUMBER",
             help=("The build number of the builder running this script.")),
         optparse.make_option("--test-results-server", default="",
-            help=("If specified, upload results json files to this appengine "
-                  "server.")),
+            help=("If specified, upload results json files to this appengine server.")),
+        optparse.make_option("--results-server-host", default="",
+            help=("If specified, upload results JSON file to this results server.")),
+        optparse.make_option("--additional-repository-name",
+            help=("The name of an additional subversion or git checkout")),
+        optparse.make_option("--additional-repository-path",
+            help=("The path to an additional subversion or git checkout (requires --additional-repository-name)")),
     ]))
 
     option_parser = optparse.OptionParser()
@@ -329,6 +345,11 @@ def _set_up_derived_options(port, options):
         for path in options.additional_platform_directory:
             additional_platform_directories.append(port.host.filesystem.abspath(path))
         options.additional_platform_directory = additional_platform_directories
+
+    if options.force:
+        if options.skipped not in ('ignore', 'default'):
+            _log.warning("--force overrides --skipped=%s" % (options.skipped))
+        options.skipped = 'ignore'
 
     if not options.http and options.skipped in ('ignore', 'only'):
         _log.warning("--force/--skipped=%s overrides --no-http." % (options.skipped))

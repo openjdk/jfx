@@ -1,9 +1,10 @@
 #!/usr/bin/perl -w
 
-# Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012 Apple Inc. All rights reserved.
+# Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014 Apple Inc. All rights reserved.
 # Copyright (C) 2009 Google Inc. All rights reserved.
 # Copyright (C) 2010 moiji-mobile.com All rights reserved.
 # Copyright (C) 2011 Research In Motion Limited. All rights reserved.
+# Copyright (C) 2013 Nokia Corporation and/or its subsidiary(-ies).
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -36,9 +37,10 @@ use File::Basename;
 use File::Find;
 use File::Spec;
 use FindBin;
-use Getopt::Long qw(:config pass_through);
+use Getopt::Long qw(:config pass_through no_auto_abbrev);
 use lib $FindBin::Bin;
 use webkitdirs;
+use List::Util qw(first);
 use webkitperl::FeatureList qw(getFeatureOptionList);
 use POSIX;
 
@@ -51,7 +53,6 @@ chdirWebKit();
 
 my $showHelp = 0;
 my $clean = 0;
-my $useGYP = 0;
 my $minimal = 0;
 my $installHeaders;
 my $installLibs;
@@ -65,28 +66,6 @@ my $coverageSupport = 0;
 my $startTime = time();
 
 my @features = getFeatureOptionList();
-
-# Update defaults from Qt's project file
-if (isQt()) {
-    # Take a sneek peek at the arguments, since we will need the qmake binary early
-    # on to do profile parsing. We also need to know if we're showing the help-text.
-    foreach (@ARGV) {
-        if (/^--qmake=(.*)/) {
-            setQmakeBinaryPath($1);
-        } elsif (/^--help$/) {
-            $showHelp = 1;
-        }
-    }
-
-    my %qtDefaults;
-    if ($showHelp) {
-        %qtDefaults = qtFeatureDefaults();
-    }
-
-    foreach (@features) {
-        $_->{default} = (%qtDefaults ? $qtDefaults{$_->{define}} || 0 : -1);
-    }
-}
 
 # Additional environment parameters
 push @ARGV, split(/ /, $ENV{'BUILD_WEBKIT_ARGS'}) if ($ENV{'BUILD_WEBKIT_ARGS'});
@@ -113,30 +92,23 @@ Usage: $programName [options] [options to pass to build system]
   --sdk=<sdk>                       Use a specific Xcode SDK (iOS and Mac only)
   --device                          Use the current iphoneos.internal SDK (iOS only)
   --simulator                       Use the current iphonesimulator SDK (iOS only)
-  --gyp                             Use GYP-generated project files
   --coverage                        Enable Code Coverage support (Mac only)
 
-  --blackberry                      Build the BlackBerry port on Mac/Linux
   --efl                             Build the EFL port
   --gtk                             Build the GTK+ port
-  --qt                              Build the Qt port
   --wincairo                        Build using Cairo (rather than CoreGraphics) on Windows
   --wince                           Build the WinCE port
 
   --inspector-frontend              Copy changes to the inspector front-end files to the build directory
 
-  --install-headers=<path>          Set installation path for the headers (Qt only)
-  --install-libs=<path>             Set installation path for the libraries (Qt only)
-
-  --prefix=<path>                   Set installation prefix to the given path (Gtk/Efl/BlackBerry only)
+  --prefix=<path>                   Set installation prefix to the given path (Gtk/Efl only)
   --makeargs=<arguments>            Optional Makefile flags
-  --qmakearg=<arguments>            Optional qmake flags (Qt only, e.g. --qmakearg="CONFIG+=webkit2" to build WebKit2)
   --cmakeargs=<arguments>           Optional CMake flags (e.g. --cmakeargs="-DFOO=bar -DCMAKE_PREFIX_PATH=/usr/local")
 
   --minimal                         No optional features, unless explicitly enabled
 
   --only-webkit                     Build only the WebKit project
-  --no-webkit1                      Omit WebKit1 code from the build (Qt/EFL/GTK only)
+  --no-webkit1                      Omit WebKit1 code from the build (EFL/GTK only)
   --no-webkit2                      Omit WebKit2 code from the build
 
 EOF
@@ -144,7 +116,6 @@ EOF
 my %options = (
     'help' => \$showHelp,
     'clean' => \$clean,
-    'gyp' => \$useGYP,
     'install-headers=s' => \$installHeaders,
     'install-libs=s' => \$installLibs,
     'prefix=s' => \$prefixPath,
@@ -176,9 +147,6 @@ setConfiguration();
 
 my $productDir = productDir();
 
-# Remove 0 byte sized files from productDir after slave lost for Qt buildbots.
-File::Find::find(\&unlinkZeroFiles, $productDir) if (isQt() && -e $productDir);
-
 sub unlinkZeroFiles()
 {
     my $file = $File::Find::name;
@@ -195,7 +163,7 @@ sub unlinkZeroFiles()
 my @projects = ("Source/JavaScriptCore", "Source/WebCore", "Source/WebKit");
 
 # Build WTF as a separate static library on ports which support it.
-splice @projects, 0, 0, "Source/WTF" if isAppleMacWebKit() or isAppleWinWebKit();
+splice @projects, 0, 0, "Source/WTF" if isAppleMacWebKit() or isAppleWinWebKit() or isWinCairo();
 
 for my $dir (@projects) {
     if (! -d $dir) {
@@ -203,20 +171,15 @@ for my $dir (@projects) {
     }
 }
 
-if (!isQt() && !isJava() && !-d "WebKitLibraries") {
+if (!isIOSWebKit() && !isJava() && !-d "WebKitLibraries") {
     die "Error: No WebKitLibraries directory found. Please do a fresh checkout.\n";
 }
 
-# Generate the generate project files from .gyp files
-if ($useGYP) {
-    system("perl", "Tools/Scripts/generate-project-files") == 0 or die "Failed to run generate-project-files";
-}
-
 my @options = ();
+my $hasFTLJIT = 0;
 
 if (isAppleMacWebKit()) {
     push @options, XcodeOptions();
-
     sub option($$$)
     {
         my ($feature, $isEnabled, $defaultValue) = @_;
@@ -226,46 +189,53 @@ if (isAppleMacWebKit()) {
 
     foreach (@features) {
         my $option = option($_->{define}, ${$_->{value}}, $_->{default});
+        $hasFTLJIT = 1 if ($_->{define} eq "ENABLE_FTL_JIT") and (${$_->{value}});
         push @options, $option unless $option eq "";
+    }
+
+    if (isIOSWebKit()) {
+        # FIXME: Remove the inclusion of both WebKit System Interface and WebKit Additions projects
+        # once the iOS build is stable.
+
+        # WebKitSystemInterface should always be built just before WebKit.
+        my $webKitIndex = first { $projects[$_] eq "Source/WebKit" } 0..$#projects;
+        splice(@projects, $webKitIndex, 0, "../Internal/WebKitSystemInterface");
+
+        # WebKitAdditions must come before WebCore
+        splice(@projects, 0, 0, "../Internal/WebKitAdditions");
     }
 
     # ANGLE must come before WebCore
     splice @projects, 0, 0, "Source/ThirdParty/ANGLE";
 
-    # WebKit2 is only supported in SnowLeopard and later at present.
-    push @projects, ("Source/WebKit2", "Tools/MiniBrowser") if osXVersion()->{"minor"} >= 6 and !$noWebKit2;
+    if (!isIOSWebKit()) {
+        # WebKit2 is only supported in SnowLeopard and later at present.
+        push @projects, ("Source/WebKit2", "Tools/MiniBrowser") if osXVersion()->{"minor"} >= 6 and !$noWebKit2;
+
+        # WebInspectorUI must come before WebKit and WebKit2
+        unshift @projects, ("Source/WebInspectorUI");
+
+        # Copy library and header from WebKitLibraries to a findable place in the product directory.
+        my @copyLibrariesArgs = ("perl", "Tools/Scripts/copy-webkitlibraries-to-product-directory", "--wksi");
+        if ($hasFTLJIT) {
+            push @copyLibrariesArgs, "--llvm";
+        }
+        push @copyLibrariesArgs, productDir();
+        print(join(" ", @copyLibrariesArgs) . "\n");
+        (system(@copyLibrariesArgs) == 0) or die;
+    } else {
+        push @projects, ("Source/WebKit2") if !$noWebKit2;
+    }
 
     # Build Tools needed for Apple ports
     push @projects, ("Tools/DumpRenderTree", "Tools/WebKitTestRunner", "Source/ThirdParty/gtest", "Tools/TestWebKitAPI");
-    
-    # Copy library and header from WebKitLibraries to a findable place in the product directory.
-    (system("perl", "Tools/Scripts/copy-webkitlibraries-to-product-directory", $productDir) == 0) or die;
+
 } elsif (isWinCairo()) {
     (system("perl Tools/Scripts/update-webkit-wincairo-libs") == 0) or die;
 } elsif (isAppleWinWebKit()) {
     # Copy WebKitSupportLibrary to the correct location in WebKitLibraries so it can be found.
     # Will fail if WebKitSupportLibrary.zip is not in source root.
     (system("perl Tools/Scripts/update-webkit-support-libs") == 0) or die;
-} elsif (isQt()) {
-    push @options, "--install-headers=" . $installHeaders if defined($installHeaders);
-    push @options, "--install-libs=" . $installLibs if defined($installLibs);
-    push @options, "--makeargs=" . $makeArgs if $makeArgs;
-    push @options, "WEBKIT_CONFIG-=build_webkit1" if $noWebKit1;
-    push @options, "WEBKIT_CONFIG-=build_webkit2" if $noWebKit2;
-
-    if (checkForArgumentAndRemoveFromARGV("-2")) {
-        print "Note: WebKit2 is now built by default, you don't need to pass -2. Disable using --no-webkit2\n";
-    }
-
-    @options = (@ARGV, @options);
-
-    foreach (@features) {
-        if ($_->{define} && ${$_->{value}} != $_->{default}) {
-            my $define = lc($_->{define});
-            $define =~ s/^enable_//;
-            push @options, "WEBKIT_CONFIG" . (${$_->{value}} == 1 ? "+" : "-") . "=" . $define;
-        }
-    }
 } elsif (isJava()) {
     @options = ();
     foreach (@features) {
@@ -278,45 +248,29 @@ if (isAppleMacWebKit()) {
 # build options, etc.
 @projects = ("Source/WebKit") if $onlyWebKitProject;
 
-if (isInspectorFrontend()) {
-    exit exitStatus(copyInspectorFrontendFiles());
-}
-
 my $result = 0;
 
-if (isEfl()) {
-    # By default we build using all of the available CPUs.
-    $makeArgs .= ($makeArgs ? " " : "") . "-j" . numberOfCPUs() if $makeArgs !~ /-j\s*\d+/;
+if (isInspectorFrontend()) {
+    $result = copyInspectorFrontendFiles();
+    exit exitStatus($result) if exitStatus($result);
+    @projects = ("Source/WebInspectorUI");
+}
+
+if (isCMakeBuild()) {
     $cmakeArgs = "-DENABLE_WEBKIT=OFF "  . $cmakeArgs if $noWebKit1;
     $cmakeArgs = "-DENABLE_WEBKIT2=OFF " . $cmakeArgs if $noWebKit2;
 
+    # By default we build using all of the available CPUs.
+    if (!isWinCE()) {
+        $makeArgs .= ($makeArgs ? " " : "") . "-j" . numberOfCPUs() if $makeArgs !~ /-j\s*\d+/;
+    }
+
     # We remove CMakeCache to avoid the bots to reuse cached flags when
     # we enable new features. This forces a reconfiguration.
-    removeCMakeCache();
+    my @featureArgs = cMakeArgsFromFeatures();
+    removeCMakeCache(@featureArgs);
 
-    buildCMakeProjectOrExit($clean, "Efl", $prefixPath, $makeArgs, (cmakeBasedPortArguments(), cMakeArgsFromFeatures()), $cmakeArgs);
-}
-
-if (isWinCE()) {
-    buildCMakeProjectOrExit($clean, "WinCE", $prefixPath, $makeArgs, (cmakeBasedPortArguments(), cMakeArgsFromFeatures()), $cmakeArgs);
-}
-
-if (isBlackBerry()) {
-    my $numberOfJobs;
-    if ($ENV{"USE_ICECC"}) {
-        $numberOfJobs = 50; # 50 is the number we choose for internal development
-    } else {
-        $numberOfJobs = numberOfCPUs();
-    }
-    $makeArgs .= ($makeArgs ? " " : "") . "-j" . $numberOfJobs if $makeArgs !~ /-j\s*\d+/;
-    $prefixPath = $ENV{"STAGE_DIR"} unless $prefixPath;
-    buildCMakeProjectOrExit($clean, "BlackBerry", $prefixPath, $makeArgs, (cmakeBasedPortArguments(), cMakeArgsFromFeatures()), $cmakeArgs);
-}
-
-if (isQt()) {
-    @projects = (); # An empty projects list will build the default projects
-    $result = buildQMakeProjects(\@projects, $clean, @options);
-    exit exitStatus($result) if exitStatus($result);
+    buildCMakeProjectOrExit($clean, cmakeBasedPortName(), $prefixPath, $makeArgs, (cmakeBasedPortArguments(), @featureArgs), $cmakeArgs);
 }
 
 # Build, and abort if the build fails.
@@ -325,30 +279,36 @@ for my $dir (@projects) {
     $result = 0;
 
     # For Gtk the WebKit project builds all others
-    if ((isGtk()|| isJava()) && $dir ne "Source/WebKit") {
+    if ((isJava() || isGtkAutotools()) && $dir ne "Source/WebKit") {
         chdirWebKit();
         next;
     }
 
     my $project = basename($dir);
-    if (isGtk()) {
+    my $baseProductDir = baseProductDir();
+    if (isGtkAutotools()) {
         $result = buildGtkProject($project, $clean, $prefixPath, $makeArgs, $noWebKit1, $noWebKit2, @features);
     } elsif (isJava()) {
         $result = buildQMakeJavaProject("java", $dir, $clean, @options);
     } elsif (isAppleMacWebKit()) {
         my @local_options = @options;
-        push @local_options, XcodeCoverageSupportOptions() if $coverageSupport && $project ne "ANGLE";
-        my $useGYPProject = $useGYP && ($project =~ "WebCore|JavaScriptCore");
-        my $projectPath = $useGYPProject ? "gyp/$project" : $project;
-        $projectPath = $project =~ /gtest/ ? "xcode/gtest" : $project;
+        push @local_options, XcodeCoverageSupportOptions() if $coverageSupport;
+        my $projectPath = $project =~ /gtest/ ? "xcode/gtest" : $project;
+        if (isIOSWebKit()){
+            push @local_options, qw(-target WebKitTestRunnerApp) if ($project eq "WebKitTestRunner") && !$clean;
+        }
         $result = buildXCodeProject($projectPath, $clean, @local_options, @ARGV);
-    } elsif (isAppleWinWebKit()) {
+    } elsif (isAppleWinWebKit() || isWinCairo()) {
         if ($project eq "WebKit") {
             my $webkitSolutionPath = "WebKit.vcxproj/WebKit.sln";
-            if (visualStudioVersion() eq "8") {
-                $webkitSolutionPath = "win/WebKit.vcproj/WebKit.sln";
-            }
             $result = buildVisualStudioProject($webkitSolutionPath, $clean);
+            my $vsConfiguration = configuration();
+            if (usingVisualStudioExpress()) {
+                # Visual Studio Express is so lame it can't stdout build failures.
+                # So we find its logs and dump them to the console ourselves.
+                open(my $OUTPUT_HANDLE, '<', "$baseProductDir/$vsConfiguration/BuildOutput.htm") or die "Could not open build log file at $baseProductDir/$vsConfiguration/BuildOutput.htm";
+                print while (<$OUTPUT_HANDLE>);
+            }
         }
     }
     # Various build* calls above may change the CWD.
@@ -356,15 +316,9 @@ for my $dir (@projects) {
 
     if (exitStatus($result)) {
         my $scriptDir = relativeScriptsDir();
-        if (usingVisualStudioExpress()) {
-            # Visual Studio Express is so lame it can't stdout build failures.
-            # So we find its logs and dump them to the console ourselves.
-            system(File::Spec->catfile($scriptDir, "print-vse-failure-logs"));
-        }
-        if (isAppleWinWebKit()) {
+        if (isAppleWinWebKit() || isWinCairo()) {
             print "\n\n===== BUILD FAILED ======\n\n";
             print "Please ensure you have run $scriptDir/update-webkit to install dependencies.\n\n";
-            my $baseProductDir = baseProductDir();
             print "You can view build errors by checking the BuildLog.htm files located at:\n$baseProductDir/obj/<project>/<config>.\n";
         }
         exit exitStatus($result);
@@ -423,7 +377,9 @@ sub writeCongrats()
     print "\n";
     print "====================================================================\n";
     print " WebKit is now built ($buildTime). \n";
-    print " To run $launcherName with this newly-built code, use the\n";
-    print " \"$launcherPath\" script.\n";
+    if ($launcherPath && $launcherName) {
+        print " To run $launcherName with this newly-built code, use the\n";
+        print " \"$launcherPath\" script.\n";
+    }
     print "====================================================================\n";
 }

@@ -27,8 +27,7 @@
 #define InbandTextTrackPrivateClient_h
 
 #include "Color.h"
-#include <wtf/RefCounted.h>
-#include <wtf/text/WTFString.h>
+#include "TrackPrivateBase.h"
 
 #if ENABLE(VIDEO_TRACK)
 
@@ -129,7 +128,9 @@ private:
     Status m_status;
 };
 
-class InbandTextTrackPrivateClient {
+class WebVTTCueData;
+
+class InbandTextTrackPrivateClient : public TrackPrivateBaseClient {
 public:
     virtual ~InbandTextTrackPrivateClient() { }
 
@@ -137,7 +138,7 @@ public:
     virtual void updateGenericCue(InbandTextTrackPrivate*, GenericCueData*) = 0;
     virtual void removeGenericCue(InbandTextTrackPrivate*, GenericCueData*) = 0;
 
-    virtual void willRemoveTextTrackPrivate(InbandTextTrackPrivate*) = 0;
+    virtual void parseWebVTTCueData(InbandTextTrackPrivate*, const char* data, unsigned length) = 0;
 };
 
 } // namespace WebCore
