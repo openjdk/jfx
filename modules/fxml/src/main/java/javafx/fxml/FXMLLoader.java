@@ -2399,14 +2399,6 @@ public class FXMLLoader {
      * Loads an object hierarchy from a FXML document. The location from which
      * the document will be loaded must have been set by a prior call to
      * {@link #setLocation(URL)}.
-     * <p>
-     * When the "template" flag is set to <tt>false</tt> (the default), this
-     * method will clear the imports before loading the document's content.
-     * When "template" is <tt>true</tt>, the imports will not be cleared, and
-     * the root value will be set to <tt>null</tt> before the content is
-     * loaded. This helps improve performance on subsequent loads by
-     * eliminating the overhead of loading the classes referred to by the
-     * document.
      *
      * @return
      * The loaded object hierarchy.

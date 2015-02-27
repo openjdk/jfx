@@ -92,27 +92,7 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
 
 
         final Node popupContent = getPopupContent();
-        popupContent.applyCss();
-
-        if (popupContent instanceof Region) {
-            // snap to pixel
-            final Region r = (Region) popupContent;
-
-            final double prefWidth = r.prefWidth(-1);
-            final double minWidth = r.minWidth(-1);
-            final double maxWidth = r.maxWidth(-1);
-            final double w = Math.min(Math.max(prefWidth, minWidth), Math.max(minWidth, maxWidth));
-
-            final double prefHeight = r.prefHeight(-1);
-            final double minHeight = r.minHeight(-1);
-            final double maxHeight = r.maxHeight(-1);
-            final double h = Math.min(Math.max(prefHeight, minHeight), Math.max(minHeight, maxHeight));
-
-            popupContent.resize(snapSize(w), snapSize(h));
-        } else {
-            popupContent.autosize();
-        }
-
+        sizePopup();
 
         Point2D p = getPrefPopupPosition();
 
@@ -125,6 +105,33 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
                 snapPosition(p.getY()));
 
         popupContent.requestFocus();
+
+        // second call to sizePopup here to enable proper sizing _after_ the popup
+        // has been displayed. See RT-37622 for more detail.
+        sizePopup();
+    }
+
+    private void sizePopup() {
+        final Node popupContent = getPopupContent();
+
+        if (popupContent instanceof Region) {
+            // snap to pixel
+            final Region r = (Region) popupContent;
+
+            final double prefWidth = r.prefWidth(-1);
+            final double minWidth = r.minWidth(-1);
+            final double maxWidth = r.maxWidth(-1);
+            final double w = snapSize(Math.min(Math.max(prefWidth, minWidth), Math.max(minWidth, maxWidth)));
+
+            final double prefHeight = r.prefHeight(w);
+            final double minHeight = r.minHeight(w);
+            final double maxHeight = r.maxHeight(w);
+            final double h = snapSize(Math.min(Math.max(prefHeight, minHeight), Math.max(minHeight, maxHeight)));
+
+            popupContent.resize(w, h);
+        } else {
+            popupContent.autosize();
+        }
     }
     
     private void createPopup() {

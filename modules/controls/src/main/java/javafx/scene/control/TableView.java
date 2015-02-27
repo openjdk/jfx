@@ -32,9 +32,8 @@ import com.sun.javafx.scene.control.Logging;
 import com.sun.javafx.scene.control.SelectedCellsMap;
 import com.sun.javafx.scene.control.behavior.TableCellBehavior;
 import com.sun.javafx.scene.control.behavior.TableCellBehaviorBase;
-import javafx.beans.DefaultProperty;
-import javafx.beans.InvalidationListener;
-import javafx.beans.WeakInvalidationListener;
+import javafx.beans.*;
+import javafx.beans.Observable;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
@@ -44,6 +43,8 @@ import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.MapChangeListener;
@@ -834,19 +835,6 @@ public class TableView<S> extends Control {
                 // Fix for RT-35763
                 if (! (newItems instanceof SortedList)) {
                     getSortOrder().clear();
-                }
-
-                // FIXME temporary fix for RT-15793. This will need to be
-                // properly fixed when time permits
-                if (getSelectionModel() instanceof TableViewArrayListSelectionModel) {
-                    ((TableViewArrayListSelectionModel<S>)getSelectionModel()).updateItemsObserver(oldItems, newItems);
-                }
-                if (getFocusModel() != null) {
-                    getFocusModel().updateItemsObserver(oldItems, newItems);
-                }
-                if (getSkin() instanceof TableViewSkin) {
-                    TableViewSkin<S> skin = (TableViewSkin<S>) getSkin();
-                    skin.updateTableItems(oldItems, newItems);
                 }
 
                 oldItemsRef = new WeakReference<>(newItems);
@@ -2055,6 +2043,16 @@ public class TableView<S> extends Control {
             super(tableView);
             this.tableView = tableView;
 
+            this.tableView.itemsProperty().addListener(new InvalidationListener() {
+                private WeakReference<ObservableList<S>> weakItemsRef = new WeakReference<>(tableView.getItems());
+
+                @Override public void invalidated(Observable observable) {
+                    ObservableList<S> oldItems = weakItemsRef.get();
+                    weakItemsRef = new WeakReference<>(tableView.getItems());
+                    updateItemsObserver(oldItems, tableView.getItems());
+                }
+            });
+
             selectedCellsMap = new SelectedCellsMap<TablePosition<S,?>>(c -> handleSelectedCellsListChangeEvent(c)) {
                 @Override public boolean isCellSelectionEnabled() {
                     return TableViewArrayListSelectionModel.this.isCellSelectionEnabled();
@@ -3138,6 +3136,16 @@ public class TableView<S> extends Control {
             if (tableView.getItems() != null) {
                 this.tableView.getItems().addListener(weakItemsContentListener);
             }
+
+            this.tableView.itemsProperty().addListener(new InvalidationListener() {
+                private WeakReference<ObservableList<S>> weakItemsRef = new WeakReference<>(tableView.getItems());
+
+                @Override public void invalidated(Observable observable) {
+                    ObservableList<S> oldItems = weakItemsRef.get();
+                    weakItemsRef = new WeakReference<>(tableView.getItems());
+                    updateItemsObserver(oldItems, tableView.getItems());
+                }
+            });
 
             updateDefaultFocus();
 

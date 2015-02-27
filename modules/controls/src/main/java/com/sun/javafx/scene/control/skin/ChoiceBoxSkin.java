@@ -25,6 +25,7 @@
 
 package com.sun.javafx.scene.control.skin;
 
+import javafx.beans.WeakInvalidationListener;
 import javafx.util.StringConverter;
 import javafx.beans.InvalidationListener;
 import javafx.collections.ListChangeListener;
@@ -56,6 +57,10 @@ public class ChoiceBoxSkin<T> extends BehaviorSkinBase<ChoiceBox<T>, ChoiceBoxBe
     public ChoiceBoxSkin(ChoiceBox<T> control) {
         super(control, new ChoiceBoxBehavior<T>(control));
         initialize();
+
+        itemsObserver = observable -> updateChoiceBoxItems();
+        control.itemsProperty().addListener(new WeakInvalidationListener(itemsObserver));
+
         control.requestLayout();
         registerChangeListener(control.selectionModelProperty(), "SELECTION_MODEL");
         registerChangeListener(control.showingProperty(), "SHOWING");
@@ -106,6 +111,8 @@ public class ChoiceBoxSkin<T> extends BehaviorSkinBase<ChoiceBox<T>, ChoiceBoxBe
     
     private final WeakListChangeListener<T> weakChoiceBoxItemsListener =
             new WeakListChangeListener<T>(choiceBoxItemsListener);
+
+    private final InvalidationListener itemsObserver;
 
     private void initialize() {
         updateChoiceBoxItems();

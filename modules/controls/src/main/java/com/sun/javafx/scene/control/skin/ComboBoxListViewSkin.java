@@ -27,12 +27,17 @@ package com.sun.javafx.scene.control.skin;
 
 import com.sun.javafx.scene.control.behavior.ComboBoxListViewBehavior;
 import com.sun.javafx.scene.input.ExtendedInputMethodRequests;
+
+import java.lang.ref.WeakReference;
 import java.util.List;
 
 import com.sun.javafx.scene.traversal.Algorithm;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.scene.traversal.ParentTraversalEngine;
 import com.sun.javafx.scene.traversal.TraversalContext;
+import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
+import javafx.beans.WeakInvalidationListener;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
@@ -100,6 +105,8 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
             getSkinnable().requestLayout();
         }
     };
+
+    private final InvalidationListener itemsObserver;
     
     private final WeakListChangeListener<T> weakListViewItemsListener =
             new WeakListChangeListener<T>(listViewItemsListener);
@@ -133,6 +140,12 @@ public class ComboBoxListViewSkin<T> extends ComboBoxPopupControl<T> {
         super(comboBox, new ComboBoxListViewBehavior<T>(comboBox));
         this.comboBox = comboBox;
         updateComboBoxItems();
+
+        itemsObserver = observable -> {
+            updateComboBoxItems();
+            updateListViewItems();
+        };
+        this.comboBox.itemsProperty().addListener(new WeakInvalidationListener(itemsObserver));
         
         // editable input node
         this.textField = comboBox.isEditable() ? getEditableInputNode() : null;

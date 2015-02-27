@@ -1428,15 +1428,16 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
         VirtualScrollBar breadthBar = isVertical ? hbar : vbar;
         VirtualScrollBar lengthBar = isVertical ? vbar : hbar;
-        double breadthBarLength = snapSize(isVertical ? hbar.prefHeight(-1) : vbar.prefWidth(-1));
-        double lengthBarBreadth = snapSize(isVertical ? vbar.prefWidth(-1) : hbar.prefHeight(-1));
 
         final double viewportBreadth = getViewportBreadth();
 
         final int cellsSize = cells.size();
         for (int i = 0; i < 2; i++) {
-            final boolean lengthBarVisible = getPosition() > 0 || cellCount > cellsSize ||
-                    (cellCount == cellsSize && (getCellPosition(cells.getLast()) + getCellLength(cells.getLast())) > getViewportLength());
+            final boolean lengthBarVisible = getPosition() > 0
+                    || cellCount > cellsSize
+                    || (cellCount == cellsSize && (getCellPosition(cells.getLast()) + getCellLength(cells.getLast())) > getViewportLength())
+                    || (cellCount == cellsSize - 1 && barVisibilityChanged && needBreadthBar);
+
             if (lengthBarVisible ^ needLengthBar) {
                 needLengthBar = lengthBarVisible;
                 barVisibilityChanged = true;
@@ -1456,9 +1457,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         // bars actually is needed, then we will perform a cleanup pass
 
         if (!BehaviorSkinBase.IS_TOUCH_SUPPORTED) {
-            setViewportLength((isVertical ? getHeight() : getWidth()) - (needBreadthBar ? breadthBarLength : 0));
-            setViewportBreadth((isVertical ? getWidth() : getHeight()) - (needLengthBar ? lengthBarBreadth : 0));
-
+            updateViewportDimensions();
             breadthBar.setVisible(needBreadthBar);
             lengthBar.setVisible(needLengthBar);
         } else {
@@ -1469,14 +1468,21 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         return barVisibilityChanged;
     }
 
+    private void updateViewportDimensions() {
+        final boolean isVertical = isVertical();
+        final double breadthBarLength = snapSize(isVertical ? hbar.prefHeight(-1) : vbar.prefWidth(-1));
+        final double lengthBarBreadth = snapSize(isVertical ? vbar.prefWidth(-1) : hbar.prefHeight(-1));
+
+        setViewportBreadth((isVertical ? getWidth() : getHeight()) - (needLengthBar ? lengthBarBreadth : 0));
+        setViewportLength((isVertical ? getHeight() : getWidth()) - (needBreadthBar ? breadthBarLength : 0));
+    }
+
     private void initViewport() {
         // Initialize the viewportLength and viewportBreadth to match the
         // width/height of the flow
         final boolean isVertical = isVertical();
-        double width = getWidth();
-        double height = getHeight();
-        setViewportLength(snapSize(isVertical ? height : width));
-        setViewportBreadth(snapSize(isVertical ? width : height));
+
+        updateViewportDimensions();
 
         VirtualScrollBar breadthBar = isVertical ? hbar : vbar;
         VirtualScrollBar lengthBar = isVertical ? vbar : hbar;

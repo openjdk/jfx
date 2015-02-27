@@ -33,6 +33,8 @@ import java.util.List;
 import com.sun.javafx.scene.control.behavior.ListCellBehavior;
 import com.sun.javafx.scene.control.skin.TableViewSkinBase;
 import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
+import javafx.beans.WeakInvalidationListener;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
@@ -407,31 +409,7 @@ public class ListView<T> extends Control {
      */
     public final ObjectProperty<ObservableList<T>> itemsProperty() {
         if (items == null) {
-            items = new SimpleObjectProperty<ObservableList<T>>(this, "items") {
-                WeakReference<ObservableList<T>> oldItemsRef;
-
-                @Override
-                protected void invalidated() {
-                    ObservableList<T> oldItems = oldItemsRef == null ? null : oldItemsRef.get();
-                    
-                    // FIXME temporary fix for RT-15793. This will need to be
-                    // properly fixed when time permits
-                    if (getSelectionModel() instanceof ListView.ListViewBitSetSelectionModel) {
-                        ((ListView.ListViewBitSetSelectionModel<T>)getSelectionModel()).updateItemsObserver(oldItems, getItems());
-                    }
-                    if (getFocusModel() instanceof ListView.ListViewFocusModel) {
-                        ((ListView.ListViewFocusModel<T>)getFocusModel()).updateItemsObserver(oldItems, getItems());
-                    }
-                    if (getSkin() instanceof ListViewSkin) {
-                        ListViewSkin<?> skin = (ListViewSkin<?>) getSkin();
-                        skin.updateListViewItems();
-                    }
-                    
-                    oldItemsRef = new WeakReference<ObservableList<T>>(getItems());
-                }
-                
-                
-            };
+            items = new SimpleObjectProperty<>(this, "items");
         }
         return items;
     }
@@ -1210,11 +1188,19 @@ public class ListView<T> extends Control {
              * so far as to actually watch for all changes to the items list,
              * rechecking each time.
              */
+            itemsObserver = new InvalidationListener() {
+                private WeakReference<ObservableList<T>> weakItemsRef = new WeakReference<>(listView.getItems());
 
-            this.listView.itemsProperty().addListener(weakItemsObserver);
+                @Override public void invalidated(Observable observable) {
+                    ObservableList<T> oldItems = weakItemsRef.get();
+                    weakItemsRef = new WeakReference<>(listView.getItems());
+                    updateItemsObserver(oldItems, listView.getItems());
+                }
+            };
+
+            this.listView.itemsProperty().addListener(new WeakInvalidationListener(itemsObserver));
             if (listView.getItems() != null) {
                 this.listView.getItems().addListener(weakItemsContentObserver);
-//                updateItemsObserver(null, this.listView.getItems());
             }
             
             updateItemCount();
@@ -1264,16 +1250,12 @@ public class ListView<T> extends Control {
         };
         
         // watching for changes to the items list
-        private final ChangeListener<ObservableList<T>> itemsObserver = (valueModel, oldList, newList) -> {
-                updateItemsObserver(oldList, newList);
-        };
+        private final InvalidationListener itemsObserver;
         
         private WeakListChangeListener<T> weakItemsContentObserver =
-                new WeakListChangeListener<T>(itemsContentObserver);
+                new WeakListChangeListener<>(itemsContentObserver);
         
-        private WeakChangeListener<ObservableList<T>> weakItemsObserver = 
-                new WeakChangeListener<ObservableList<T>>(itemsObserver);
-        
+
 
 
         /***********************************************************************
@@ -1517,7 +1499,17 @@ public class ListView<T> extends Control {
             }
 
             this.listView = listView;
-            this.listView.itemsProperty().addListener(weakItemsListener);
+
+            InvalidationListener itemsObserver = new InvalidationListener() {
+                private WeakReference<ObservableList<T>> weakItemsRef = new WeakReference<>(listView.getItems());
+
+                @Override public void invalidated(Observable observable) {
+                    ObservableList<T> oldItems = weakItemsRef.get();
+                    weakItemsRef = new WeakReference<>(listView.getItems());
+                    updateItemsObserver(oldItems, listView.getItems());
+                }
+            };
+            this.listView.itemsProperty().addListener(new WeakInvalidationListener(itemsObserver));
             if (listView.getItems() != null) {
                 this.listView.getItems().addListener(weakItemsContentListener);
             }
@@ -1529,13 +1521,7 @@ public class ListView<T> extends Control {
             }
         }
 
-        private ChangeListener<ObservableList<T>> itemsListener = (observable, oldList, newList) -> {
-                updateItemsObserver(oldList, newList);
-        };
-        
-        private WeakChangeListener<ObservableList<T>> weakItemsListener = 
-                new WeakChangeListener<>(itemsListener);
-        
+
         private void updateItemsObserver(ObservableList<T> oldList, ObservableList<T> newList) {
             // the listview items list has changed, we need to observe
             // the new list, and remove any observer we had from the old list

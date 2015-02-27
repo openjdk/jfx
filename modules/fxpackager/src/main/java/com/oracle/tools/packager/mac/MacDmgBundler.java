@@ -184,12 +184,26 @@ public class MacDmgBundler extends MacBaseInstallerBundler {
 
     private void prepareLicense(Map<String, ? super Object> params) {
         try {
-            if (LICENSE_FILE.fetchFrom(params).isEmpty()) {
+            File licFile = null;
+            
+            List<String> licFiles = LICENSE_FILE.fetchFrom(params);
+            if (licFiles.isEmpty()) {
                 return;
             }
-
-            File licFile = new File(APP_RESOURCES.fetchFrom(params).getBaseDirectory(),
-                    LICENSE_FILE.fetchFrom(params).get(0));
+            String licFileStr = licFiles.get(0);
+            
+            for (RelativeFileSet rfs : APP_RESOURCES_LIST.fetchFrom(params)) {
+                if (rfs.contains(licFileStr)) {
+                    licFile = new File(rfs.getBaseDirectory(), licFileStr);
+                    break;
+                }
+            }
+            
+            if (licFile == null) {
+                // this is NPE protection, validate should have caught it's absence
+                // so we don't complain or throw an error
+                return;
+            }
 
             byte[] licenseContentOriginal = IOUtils.readFully(licFile);
             String licenseInBase64 = Base64.getEncoder().encodeToString(licenseContentOriginal);
@@ -505,13 +519,17 @@ public class MacDmgBundler extends MacBaseInstallerBundler {
 
             // validate license file, if used, exists in the proper place
             if (params.containsKey(LICENSE_FILE.getID())) {
-                RelativeFileSet appResources = APP_RESOURCES.fetchFrom(params);
+                List<RelativeFileSet> appResourcesList = APP_RESOURCES_LIST.fetchFrom(params);
                 for (String license : LICENSE_FILE.fetchFrom(params)) {
-                    if (!appResources.contains(license)) {
+                    boolean found = false;
+                    for (RelativeFileSet appResources : appResourcesList) {
+                        found = found || appResources.contains(license);
+                    }
+                    if (!found) {
                         throw new ConfigException(
                                 I18N.getString("error.license-missing"),
                                 MessageFormat.format(I18N.getString("error.license-missing.advice"),
-                                        license, appResources.getBaseDirectory().toString()));
+                                        license));
                     }
                 }
             }

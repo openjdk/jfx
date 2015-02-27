@@ -90,7 +90,8 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
 {
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
     {
-        GET_MAIN_JENV;
+        assert(pthread_main_np() == 1);
+        JNIEnv *env = jEnv;
         if (env != NULL)
         {
             (*env)->CallVoidMethod(env, self->jRunnable, jRunnableRun);
@@ -104,7 +105,8 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
 
 - (void)dealloc
 {
-    GET_MAIN_JENV;
+    assert(pthread_main_np() == 1);
+    JNIEnv *env = jEnv;
     if (env != NULL)
     {
         (*env)->DeleteGlobalRef(env, self->jRunnable);

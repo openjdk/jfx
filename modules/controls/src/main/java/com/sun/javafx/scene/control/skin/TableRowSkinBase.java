@@ -153,7 +153,10 @@ public abstract class TableRowSkinBase<T,
         getVisibleLeafColumns().addListener(weakVisibleLeafColumnsListener);
         // --- end init bindings
 
-        registerChangeListener(control.itemProperty(), "ITEM");
+
+        // use invalidation listener here to update even when item equality is true
+        // (e.g. see RT-22463)
+        control.itemProperty().addListener(o -> requestCellUpdate());
         registerChangeListener(control.indexProperty(), "INDEX");
 
         if (fixedCellSizeProperty() != null) {
@@ -230,8 +233,6 @@ public abstract class TableRowSkinBase<T,
             if (getSkinnable().isEmpty()) {
                 requestCellUpdate();
             }
-        } else if ("ITEM".equals(p)) {
-            requestCellUpdate();
         } else if ("FIXED_CELL_SIZE".equals(p)) {
             fixedCellSize = fixedCellSizeProperty().get();
             fixedCellSizeEnabled = fixedCellSize > 0;

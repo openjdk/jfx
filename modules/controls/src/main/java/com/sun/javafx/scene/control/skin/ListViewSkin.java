@@ -25,8 +25,13 @@
 
 package com.sun.javafx.scene.control.skin;
 
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
+
+import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
+import javafx.beans.WeakInvalidationListener;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.MapChangeListener;
@@ -80,6 +85,7 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
             AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("com.sun.javafx.scene.control.skin.ListViewSkin.pannable"));
 
     private ObservableList<T> listViewItems;
+    private final InvalidationListener itemsChangeListener = observable -> updateListViewItems();
 
     public ListViewSkin(final ListView<T> listView) {
         super(listView, new ListViewBehavior<T>(listView));
@@ -115,6 +121,8 @@ public class ListViewSkin<T> extends VirtualContainerBase<ListView<T>, ListViewB
         flow.getHbar().addEventFilter(MouseEvent.MOUSE_PRESSED, ml);
         
         updateRowCount();
+
+        listView.itemsProperty().addListener(new WeakInvalidationListener(itemsChangeListener));
 
         final ObservableMap<Object, Object> properties = listView.getProperties();
         properties.remove(RECREATE);

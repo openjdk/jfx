@@ -29,6 +29,7 @@ import com.sun.javafx.scene.control.behavior.BehaviorBase;
 
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
 import javafx.beans.value.ChangeListener;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
@@ -48,6 +49,7 @@ import javafx.util.Callback;
 import javafx.collections.WeakListChangeListener;
 import com.sun.javafx.scene.control.skin.resources.ControlResources;
 
+import java.lang.ref.WeakReference;
 import java.util.List;
 import javafx.beans.WeakInvalidationListener;
 import javafx.beans.property.BooleanProperty;
@@ -202,6 +204,16 @@ public abstract class TableViewSkinBase<M, S, C extends Control, B extends Behav
         getVisibleLeafColumns().addListener(weakVisibleLeafColumnsListener);
         
         updateTableItems(null, itemsProperty().get());
+        itemsChangeListener = new InvalidationListener() {
+            private WeakReference<ObservableList<S>> weakItemsRef = new WeakReference<>(itemsProperty().get());
+
+            @Override public void invalidated(Observable observable) {
+                ObservableList<S> oldItems = weakItemsRef.get();
+                weakItemsRef = new WeakReference<>(itemsProperty().get());
+                updateTableItems(oldItems, itemsProperty().get());
+            }
+        };
+        weakItemsChangeListener = new WeakInvalidationListener(itemsChangeListener);
         itemsProperty().addListener(weakItemsChangeListener);
 
         final ObservableMap<Object, Object> properties = control.getProperties();
@@ -305,10 +317,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, B extends Behav
         }
     };
     
-    private ChangeListener<ObservableList<S>> itemsChangeListener =
-            (observable, oldList, newList) -> {
-                updateTableItems(oldList, newList);
-            };
+    private InvalidationListener itemsChangeListener;
     
     private WeakListChangeListener<S> weakRowCountListener =
             new WeakListChangeListener<S>(rowCountListener);
@@ -316,8 +325,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, B extends Behav
             new WeakListChangeListener<TC>(visibleLeafColumnsListener);
     private WeakInvalidationListener weakWidthListener = 
             new WeakInvalidationListener(widthListener);
-    private WeakChangeListener<ObservableList<S>> weakItemsChangeListener = 
-            new WeakChangeListener<ObservableList<S>>(itemsChangeListener);
+    private WeakInvalidationListener weakItemsChangeListener;
     
     
     
