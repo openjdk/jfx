@@ -27,6 +27,7 @@ package hello;
 
 import javafx.application.Application;
 import javafx.beans.binding.Bindings;
+import javafx.beans.binding.StringExpression;
 import javafx.css.PseudoClass;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -86,9 +87,46 @@ public class HelloCheckBox extends Application {
 
         VBox vbox = new VBox(7);
         vbox.setAlignment(Pos.CENTER);
-        vbox.getChildren().addAll(label, cbox, new Separator(), steadyState);
+        vbox.getChildren().addAll(label, cbox);
         
-        Scene scene = new Scene(vbox, 400, 400);
+        CheckBox twoStateCheckBox = new CheckBox("Two-state check box");
+        twoStateCheckBox.setAllowIndeterminate(false);
+        twoStateCheckBox.setIndeterminate(false);
+        twoStateCheckBox.setSelected(true);
+        
+        Label twoStateLabel = new Label();
+        twoStateLabel.textProperty().bind(Bindings.when(twoStateCheckBox.selectedProperty()).
+                                             then("Selected"). otherwise("Not selected"));
+        
+        VBox vbox2 = new VBox(7);
+        vbox2.setAlignment(Pos.CENTER);
+        vbox2.getChildren().addAll(twoStateLabel, twoStateCheckBox);
+
+        CheckBox focusCheckBox = new CheckBox("Focus indicator");
+        focusCheckBox.setAllowIndeterminate(false);
+        focusCheckBox.setIndeterminate(false);
+        
+        Label focusLabel = new Label();
+        StringExpression s = Bindings.concat(Bindings.when(focusCheckBox.focusedProperty()).
+                                                then("Focused"). otherwise("Not focused"),
+                                             " and ",
+                                             Bindings.when(focusCheckBox.selectedProperty()).
+                                                then("Selected").otherwise("Not selected")
+                                             );
+        focusLabel.textProperty().bind(s);
+
+        VBox vbox3 = new VBox(7);
+        vbox3.setAlignment(Pos.CENTER);
+        vbox3.getChildren().addAll(focusLabel, focusCheckBox);
+
+        VBox mainbox = new VBox(7);
+        mainbox.setAlignment(Pos.CENTER);
+        mainbox.getChildren().addAll(vbox, new Separator(),
+                                     vbox2, new Separator(),
+                                     vbox3, new Separator(),
+                                     steadyState);
+        
+        Scene scene = new Scene(mainbox, 400, 450);
         scene.setFill(Color.SKYBLUE);
         stage.setTitle("Hello CheckBox");
         stage.setScene(scene);
