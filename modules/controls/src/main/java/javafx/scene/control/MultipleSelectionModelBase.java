@@ -756,13 +756,33 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
 
     private ReadOnlyUnbackedObservableList<Integer> createListFromBitSet(final BitSet bitset) {
         return new ReadOnlyUnbackedObservableList<Integer>() {
-            @Override public Integer get(int index) {
-                if (index < 0 || index >= getItemCount()) return -1;
+            private int lastGetIndex = -1;
+            private int lastGetValue = -1;
 
-                for (int pos = 0, val = bitset.nextSetBit(0);
-                     val >= 0 || pos == index;
-                     pos++, val = bitset.nextSetBit(val+1)) {
-                    if (pos == index) return val;
+            @Override public Integer get(int index) {
+                final int itemCount = getItemCount();
+                if (index < 0 || index >= itemCount) return -1;
+
+                if (index == (lastGetIndex + 1) && lastGetValue < itemCount) {
+                    // we're iterating forward in order, short circuit for
+                    // performance reasons (RT-39776)
+                    lastGetIndex++;
+                    lastGetValue = bitset.nextSetBit(lastGetValue + 1);
+                    return lastGetValue;
+                } else if (index == (lastGetIndex - 1) && lastGetValue > 0) {
+                    // we're iterating backward in order, short circuit for
+                    // performance reasons (RT-39776)
+                    lastGetIndex--;
+                    lastGetValue = bitset.previousSetBit(lastGetValue - 1);
+                    return lastGetValue;
+                } else {
+                    for (lastGetIndex = 0, lastGetValue = bitset.nextSetBit(0);
+                         lastGetValue >= 0 || lastGetIndex == index;
+                         lastGetIndex++, lastGetValue = bitset.nextSetBit(lastGetValue + 1)) {
+                        if (lastGetIndex == index) {
+                            return lastGetValue;
+                        }
+                    }
                 }
 
                 return -1;
