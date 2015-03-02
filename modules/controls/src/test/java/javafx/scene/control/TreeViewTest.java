@@ -3136,4 +3136,106 @@ public class TreeViewTest {
         assertEquals(root, sm.getSelectedItem());
         assertEquals(4, rt_40010_count);
     }
+
+    @Test public void test_rt_39674_staticChildren() {
+        TreeItem<String> item2;
+        TreeItem<String> root = new TreeItem<>("Root");
+        root.setExpanded(true);
+        root.getChildren().addAll(
+            new TreeItem<>("0"),
+            new TreeItem<>("1"),
+            item2 = new TreeItem<>("2"),
+            new TreeItem<>("3"),
+            new TreeItem<>("4"),
+            new TreeItem<>("5")
+        );
+
+        item2.getChildren().addAll(
+            new TreeItem<>("0"),
+            new TreeItem<>("1"),
+            new TreeItem<>("2"),
+            new TreeItem<>("3"),
+            new TreeItem<>("4"),
+            new TreeItem<>("5")
+        );
+
+        TreeView<String> treeView = new TreeView<>(root);
+        sm = treeView.getSelectionModel();
+
+        StageLoader sl = new StageLoader(treeView);
+
+        sm.select(4); // select treeitem "3" in index 4
+        assertEquals(4, sm.getSelectedIndex());
+        assertEquals("3", sm.getSelectedItem().getValue());
+
+        item2.setExpanded(true); // expand item 2. Selection should move to position 9
+        assertEquals(10, sm.getSelectedIndex());
+        assertEquals("3", sm.getSelectedItem().getValue());
+
+        sl.dispose();
+    }
+
+    @Ignore("RT-39674 not yet fixed")
+    @Test public void test_rt_39674_dynamicChildren() {
+        TreeItem<Integer> root = createTreeItem(0);
+        root.setExpanded(true);
+
+        TreeView<Integer> treeView = new TreeView<>(root);
+        SelectionModel<TreeItem<Integer>> sm = treeView.getSelectionModel();
+
+        StageLoader sl = new StageLoader(treeView);
+
+        sm.select(5);
+        assertEquals(5, sm.getSelectedIndex());
+        assertEquals(4, (int)sm.getSelectedItem().getValue());
+
+        root.getChildren().get(2).setExpanded(true);
+        assertEquals(12, sm.getSelectedIndex());
+        assertEquals(4, (int)sm.getSelectedItem().getValue());
+
+        sl.dispose();
+    }
+
+    private TreeItem<Integer> createTreeItem(final int index) {
+        final TreeItem<Integer> node = new TreeItem<Integer>(index) {
+            private boolean isLeaf;
+            private boolean isFirstTimeChildren = true;
+            private boolean isFirstTimeLeaf = true;
+
+            @Override
+            public ObservableList<TreeItem<Integer>> getChildren() {
+                if (isFirstTimeChildren) {
+                    isFirstTimeChildren = false;
+                    super.getChildren().setAll(buildChildren(this));
+                }
+                return super.getChildren();
+            }
+
+            @Override
+            public boolean isLeaf() {
+                if (isFirstTimeLeaf) {
+                    isFirstTimeLeaf = false;
+                    int index = getValue();
+                    isLeaf = index % 2 != 0;
+                }
+
+                return isLeaf;
+            }
+        };
+        return node;
+    }
+
+    private ObservableList<TreeItem<Integer>> buildChildren(TreeItem<Integer> TreeItem) {
+        Integer index = TreeItem.getValue();
+        if (index % 2 == 0) {
+            ObservableList<TreeItem<Integer>> children = FXCollections.observableArrayList();
+            for (int i = 0; i < 5; i++) {
+                children.add(createTreeItem(i));
+            }
+
+            return children;
+        }
+
+        return FXCollections.emptyObservableList();
+    }
 }
