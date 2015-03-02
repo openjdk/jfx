@@ -37,13 +37,13 @@ namespace WebCore {
     
 using namespace SVGNames;
     
-inline SVGFontFaceUriElement::SVGFontFaceUriElement(const QualifiedName& tagName, Document* document)
+inline SVGFontFaceUriElement::SVGFontFaceUriElement(const QualifiedName& tagName, Document& document)
     : SVGElement(tagName, document)
 {
     ASSERT(hasTagName(font_face_uriTag));
 }
 
-PassRefPtr<SVGFontFaceUriElement> SVGFontFaceUriElement::create(const QualifiedName& tagName, Document* document)
+PassRefPtr<SVGFontFaceUriElement> SVGFontFaceUriElement::create(const QualifiedName& tagName, Document& document)
 {
     return adoptRef(new SVGFontFaceUriElement(tagName, document));
 }
@@ -54,12 +54,12 @@ SVGFontFaceUriElement::~SVGFontFaceUriElement()
         m_cachedFont->removeClient(this);
 }
 
-PassRefPtr<CSSFontFaceSrcValue> SVGFontFaceUriElement::srcValue() const
+PassRef<CSSFontFaceSrcValue> SVGFontFaceUriElement::srcValue() const
 {
-    RefPtr<CSSFontFaceSrcValue> src = CSSFontFaceSrcValue::create(getAttribute(XLinkNames::hrefAttr));
+    auto src = CSSFontFaceSrcValue::create(getAttribute(XLinkNames::hrefAttr));
     AtomicString value(fastGetAttribute(formatAttr));
-    src->setFormat(value.isEmpty() ? "svg" : value); // Default format
-    return src.release();
+    src.get().setFormat(value.isEmpty() ? "svg" : value); // Default format
+    return src;
 }
 
 void SVGFontFaceUriElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
@@ -70,19 +70,19 @@ void SVGFontFaceUriElement::parseAttribute(const QualifiedName& name, const Atom
         SVGElement::parseAttribute(name, value);
 }
 
-void SVGFontFaceUriElement::childrenChanged(bool changedByParser, Node* beforeChange, Node* afterChange, int childCountDelta)
+void SVGFontFaceUriElement::childrenChanged(const ChildChange& change)
 {
-    SVGElement::childrenChanged(changedByParser, beforeChange, afterChange, childCountDelta);
+    SVGElement::childrenChanged(change);
 
     if (!parentNode() || !parentNode()->hasTagName(font_face_srcTag))
         return;
     
     ContainerNode* grandparent = parentNode()->parentNode();
     if (grandparent && grandparent->hasTagName(font_faceTag))
-        static_cast<SVGFontFaceElement*>(grandparent)->rebuildFontFace();
+        toSVGFontFaceElement(grandparent)->rebuildFontFace();
 }
 
-Node::InsertionNotificationRequest SVGFontFaceUriElement::insertedInto(ContainerNode* rootParent)
+Node::InsertionNotificationRequest SVGFontFaceUriElement::insertedInto(ContainerNode& rootParent)
 {
     loadFont();
     return SVGElement::insertedInto(rootParent);
@@ -95,8 +95,8 @@ void SVGFontFaceUriElement::loadFont()
 
     const AtomicString& href = getAttribute(XLinkNames::hrefAttr);
     if (!href.isNull()) {
-        CachedResourceLoader* cachedResourceLoader = document()->cachedResourceLoader();
-        CachedResourceRequest request(ResourceRequest(document()->completeURL(href)));
+        CachedResourceLoader* cachedResourceLoader = document().cachedResourceLoader();
+        CachedResourceRequest request(ResourceRequest(document().completeURL(href)));
         request.setInitiator(this);
         m_cachedFont = cachedResourceLoader->requestFont(request);
         if (m_cachedFont) {

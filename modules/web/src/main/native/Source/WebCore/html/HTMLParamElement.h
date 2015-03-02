@@ -27,9 +27,9 @@
 
 namespace WebCore {
 
-class HTMLParamElement FINAL : public HTMLElement {
+class HTMLParamElement final : public HTMLElement {
 public:
-    static PassRefPtr<HTMLParamElement> create(const QualifiedName&, Document*);
+    static PassRefPtr<HTMLParamElement> create(const QualifiedName&, Document&);
 
     String name() const;
     String value() const;
@@ -37,12 +37,13 @@ public:
     static bool isURLParameter(const String&);
 
 private:
-    HTMLParamElement(const QualifiedName&, Document*);
+    HTMLParamElement(const QualifiedName&, Document&);
 
-    virtual bool isURLAttribute(const Attribute&) const OVERRIDE;
-
-    virtual void addSubresourceAttributeURLs(ListHashSet<KURL>&) const;
+    virtual bool isURLAttribute(const Attribute&) const override;
+    virtual void addSubresourceAttributeURLs(ListHashSet<URL>&) const override;
 };
+
+NODE_TYPE_CASTS(HTMLParamElement)
 
 } // namespace WebCore
 

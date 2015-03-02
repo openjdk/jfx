@@ -309,7 +309,7 @@ Call.prototype = {
     {
         return !this._functionName;
     },
-    
+
     /**
      * @return {!Array}
      */
@@ -426,7 +426,7 @@ Call.prototype = {
                     resource.setWrappedObject(replayResult);
             }
         }
-    
+
         this._thisObject = replayObject;
         this._functionName = replayableCall.functionName();
         this._args = replayArgs;
@@ -1391,7 +1391,7 @@ WebGLProgramResource.prototype = {
 
         var originalProgram = /** @type {WebGLProgram} */ (gl.getParameter(gl.CURRENT_PROGRAM));
         var currentProgram = originalProgram;
-        
+
         data.uniforms.forEach(function(uniform) {
             var uniformLocation = gl.getUniformLocation(program, uniform.name);
             if (!uniformLocation)
@@ -1863,7 +1863,7 @@ WebGLRenderingContextResource.prototype = {
 
         var canvas = data.originalCanvas.cloneNode(true);
         var replayContext = null;
-        var contextIds = ["experimental-webgl", "webkit-3d", "3d"];
+        var contextIds = ["webgl", "experimental-webgl", "webkit-3d", "3d"];
         for (var i = 0, contextId; contextId = contextIds[i]; ++i) {
             replayContext = canvas.getContext(contextId, data.originalContextAttributes);
             if (replayContext)

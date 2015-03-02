@@ -36,14 +36,8 @@
 #include "HTMLInputElement.h"
 #include "InputTypeNames.h"
 #include <wtf/Assertions.h>
-#include <wtf/PassOwnPtr.h>
 
 namespace WebCore {
-
-PassOwnPtr<InputType> PasswordInputType::create(HTMLInputElement* element)
-{
-    return adoptPtr(new PasswordInputType(element));
-}
 
 const AtomicString& PasswordInputType::formControlType() const
 {

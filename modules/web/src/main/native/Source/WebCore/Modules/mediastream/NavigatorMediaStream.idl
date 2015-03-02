@@ -18,11 +18,10 @@
  */
 
 [
-        Conditional=MEDIA_STREAM,
+    Conditional=MEDIA_STREAM,
 ] partial interface Navigator {
-    void webkitGetUserMedia(Dictionary options,
+    [RaisesException] void webkitGetUserMedia(Dictionary options,
                                                  NavigatorUserMediaSuccessCallback successCallback,
-                                                 optional NavigatorUserMediaErrorCallback errorCallback)
-            raises(DOMException);
-    };
+                                                 optional NavigatorUserMediaErrorCallback errorCallback);
+};
 

@@ -34,37 +34,29 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-inline HTMLFrameElement::HTMLFrameElement(const QualifiedName& tagName, Document* document)
+inline HTMLFrameElement::HTMLFrameElement(const QualifiedName& tagName, Document& document)
     : HTMLFrameElementBase(tagName, document)
     , m_frameBorder(true)
     , m_frameBorderSet(false)
 {
     ASSERT(hasTagName(frameTag));
+    setHasCustomStyleResolveCallbacks();
 }
 
-PassRefPtr<HTMLFrameElement> HTMLFrameElement::create(const QualifiedName& tagName, Document* document)
+PassRefPtr<HTMLFrameElement> HTMLFrameElement::create(const QualifiedName& tagName, Document& document)
 {
     return adoptRef(new HTMLFrameElement(tagName, document));
 }
 
-bool HTMLFrameElement::rendererIsNeeded(const NodeRenderingContext&)
+bool HTMLFrameElement::rendererIsNeeded(const RenderStyle&)
 {
     // For compatibility, frames render even when display: none is set.
     return isURLAllowed();
 }
 
-RenderObject* HTMLFrameElement::createRenderer(RenderArena* arena, RenderStyle*)
+RenderPtr<RenderElement> HTMLFrameElement::createElementRenderer(PassRef<RenderStyle> style)
 {
-    return new (arena) RenderFrame(this);
-}
-
-static inline HTMLFrameSetElement* containingFrameSetElement(Node* node)
-{
-    while ((node = node->parentNode())) {
-        if (node->hasTagName(framesetTag))
-            return static_cast<HTMLFrameSetElement*>(node);
-    }
-    return 0;
+    return createRenderer<RenderFrame>(*this, std::move(style));
 }
 
 bool HTMLFrameElement::noResize() const
@@ -72,14 +64,14 @@ bool HTMLFrameElement::noResize() const
     return hasAttribute(noresizeAttr);
 }
 
-void HTMLFrameElement::attach()
+void HTMLFrameElement::didAttachRenderers()
 {
-    HTMLFrameElementBase::attach();
-    
-    if (HTMLFrameSetElement* frameSetElement = containingFrameSetElement(this)) {
-        if (!m_frameBorderSet)
-            m_frameBorder = frameSetElement->hasFrameBorder();
-    }
+    HTMLFrameElementBase::didAttachRenderers();
+    const HTMLFrameSetElement* containingFrameSet = HTMLFrameSetElement::findContaining(this);
+    if (!containingFrameSet)
+        return;
+    if (!m_frameBorderSet)
+        m_frameBorder = containingFrameSet->hasFrameBorder();
 }
 
 void HTMLFrameElement::parseAttribute(const QualifiedName& name, const AtomicString& value)

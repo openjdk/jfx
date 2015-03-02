@@ -25,22 +25,21 @@
  */
 
 [
-        CheckSecurity,
-        JSCustomDefineOwnProperty,
-        CustomDeleteProperty,
-        CustomGetOwnPropertySlot,
-        CustomEnumerateProperty,
-        JSCustomMarkFunction,
-        JSCustomToNativeObject,
-        CustomPutFunction,
-        EventTarget,
-        ExtendsDOMGlobalObject,
-        JSGenerateToNativeObject,
-        ReplaceableConstructor,
-        JSLegacyParent=JSDOMWindowBase,
-        InterfaceName=Window
+    CheckSecurity,
+    JSCustomDefineOwnProperty,
+    CustomDeleteProperty,
+    CustomGetOwnPropertySlot,
+    CustomEnumerateProperty,
+    JSCustomMarkFunction,
+    JSCustomToNativeObject,
+    CustomPutFunction,
+    EventTarget,
+    JSGenerateToNativeObject,
+    ReplaceableConstructor,
+    JSLegacyParent=JSDOMWindowBase,
+    InterfaceName=Window,
 ] interface DOMWindow {
-        // DOM Level 0
+    // DOM Level 0
     [Replaceable] readonly attribute Screen screen;
     [Replaceable, DoNotCheckSecurityOnGetter] readonly attribute History history;
     [Replaceable] readonly attribute BarProp locationbar;
@@ -51,22 +50,20 @@
     [Replaceable] readonly attribute BarProp toolbar;
     [Replaceable] readonly attribute Navigator navigator;
     [Replaceable] readonly attribute Navigator clientInformation;
-        readonly attribute Crypto crypto;
-#if !defined(LANGUAGE_CPP) || !LANGUAGE_CPP
-    attribute [DoNotCheckSecurity, CustomSetter] Location location;
-#endif
+    readonly attribute Crypto crypto;
+    [DoNotCheckSecurity, CustomSetter] attribute Location location;
     [Replaceable, CustomGetter] readonly attribute Event event;
 
-        DOMSelection getSelection();
+    DOMSelection getSelection();
 
-        readonly attribute [CheckSecurityForNode] Element frameElement;
+    [CheckSecurityForNode] readonly attribute Element frameElement;
 
-        [DoNotCheckSecurity, CallWith=ScriptExecutionContext] void focus();
-        [DoNotCheckSecurity] void blur();
-        [DoNotCheckSecurity, CallWith=ScriptExecutionContext] void close();
+    [DoNotCheckSecurity, CallWith=ScriptExecutionContext] void focus();
+    [DoNotCheckSecurity] void blur();
+    [DoNotCheckSecurity, CallWith=ScriptExecutionContext] void close();
 
-        void print();
-        void stop();
+    void print();
+    void stop();
 
     [Custom] DOMWindow open(DOMString url,
                             DOMString name,
@@ -101,8 +98,8 @@
     [Replaceable] readonly attribute long screenTop;
     [Replaceable] readonly attribute long scrollX;
     [Replaceable] readonly attribute long scrollY;
-        readonly attribute long pageXOffset;
-        readonly attribute long pageYOffset;
+    readonly attribute long pageXOffset;
+    readonly attribute long pageYOffset;
 
     void scrollBy([Default=Undefined] optional long x, [Default=Undefined] optional long y);
     void scrollTo([Default=Undefined] optional long x, [Default=Undefined] optional long y);
@@ -112,20 +109,20 @@
     void resizeBy([Default=Undefined] optional float x, [Default=Undefined] optional float y); // FIXME: this should take longs not floats.
     void resizeTo([Default=Undefined] optional float width, [Default=Undefined] optional float height); // FIXME: this should take longs not floats.
 
-        readonly attribute [DoNotCheckSecurity] boolean closed;
+    [DoNotCheckSecurity] readonly attribute boolean closed;
 
     [Replaceable, DoNotCheckSecurityOnGetter] readonly attribute unsigned long length;
 
-        attribute DOMString name;
+    attribute DOMString name;
 
-        attribute DOMString status;
-        attribute DOMString defaultStatus;
+    attribute DOMString status;
+    attribute DOMString defaultStatus;
 #if defined(LANGUAGE_JAVASCRIPT) && LANGUAGE_JAVASCRIPT
-        // This attribute is an alias of defaultStatus and is necessary for legacy uses.
-        attribute DOMString defaultstatus;
+    // This attribute is an alias of defaultStatus and is necessary for legacy uses.
+    [ImplementedAs=defaultStatus] attribute DOMString defaultstatus;
 #endif
 
-        // Self referential attributes
+    // Self referential attributes
     [Replaceable, DoNotCheckSecurityOnGetter] readonly attribute DOMWindow self;
     [DoNotCheckSecurity] readonly attribute DOMWindow window;
     [Replaceable, DoNotCheckSecurityOnGetter] readonly attribute  DOMWindow frames;
@@ -134,27 +131,27 @@
     [Replaceable, DoNotCheckSecurityOnGetter] readonly attribute DOMWindow parent;
     [DoNotCheckSecurityOnGetter] readonly attribute DOMWindow top;
 
-        // DOM Level 2 AbstractView Interface
-        readonly attribute Document document;
+    // DOM Level 2 AbstractView Interface
+    readonly attribute Document document;
 
-        // CSSOM View Module
+    // CSSOM View Module
     MediaQueryList matchMedia(DOMString query);
 
-        // styleMedia has been removed from the CSSOM View specification.
-        readonly attribute StyleMedia styleMedia;
+    // styleMedia has been removed from the CSSOM View specification.
+    readonly attribute StyleMedia styleMedia;
 
-        // DOM Level 2 Style Interface
+    // DOM Level 2 Style Interface
     CSSStyleDeclaration getComputedStyle([Default=Undefined] optional Element element,
                                                               [TreatNullAs=NullString, TreatUndefinedAs=NullString,Default=Undefined] optional DOMString pseudoElement);
 
-        // WebKit extensions
+    // WebKit extensions
 #if defined(LANGUAGE_JAVASCRIPT) && LANGUAGE_JAVASCRIPT
     CSSRuleList getMatchedCSSRules([Default=Undefined] optional Element element,
                                    [TreatNullAs=NullString, TreatUndefinedAs=NullString,Default=Undefined] optional DOMString pseudoElement);
 #endif
 
     [Replaceable] readonly attribute double devicePixelRatio;
-        
+    
     WebKitPoint webkitConvertPointFromPageToNode([Default=Undefined] optional Node node, 
                                                  [Default=Undefined] optional WebKitPoint p);
     WebKitPoint webkitConvertPointFromNodeToPage([Default=Undefined] optional Node node, 
@@ -162,39 +159,29 @@
 
     readonly attribute DOMApplicationCache applicationCache;
 
-    readonly attribute Storage sessionStorage
-            getter raises(DOMException);
-    readonly attribute Storage localStorage
-            getter raises(DOMException);
+    [GetterRaisesException] readonly attribute Storage sessionStorage;
+    [GetterRaisesException] readonly attribute Storage localStorage;
 
 #if defined(ENABLE_ORIENTATION_EVENTS) && ENABLE_ORIENTATION_EVENTS
-        // This is the interface orientation in degrees. Some examples are:
-        //  0 is straight up; -90 is when the device is rotated 90 clockwise;
-        //  90 is when rotated counter clockwise.
-        readonly attribute long orientation;
+    // This is the interface orientation in degrees. Some examples are:
+    //  0 is straight up; -90 is when the device is rotated 90 clockwise;
+    //  90 is when rotated counter clockwise.
+    readonly attribute long orientation;
 #endif
 
     [Replaceable] readonly attribute Console console;
 
-        // cross-document messaging
+    // cross-document messaging
 #if defined(LANGUAGE_JAVASCRIPT) && LANGUAGE_JAVASCRIPT
-    [DoNotCheckSecurity, Custom] void postMessage(SerializedScriptValue message, DOMString targetOrigin, optional Array messagePorts)
-            raises(DOMException);
+    [DoNotCheckSecurity, Custom, RaisesException] void postMessage(SerializedScriptValue message, DOMString targetOrigin, optional Array messagePorts);
 #else
-        // There's no good way to expose an array via the ObjC bindings, so for now just allow passing in a single port.
-    [DoNotCheckSecurity, Custom] void postMessage(SerializedScriptValue message, optional MessagePort messagePort, DOMString targetOrigin)
-            raises(DOMException);
+    // There's no good way to expose an array via the ObjC bindings, so for now just allow passing in a single port.
+    [DoNotCheckSecurity, Custom, RaisesException] void postMessage(SerializedScriptValue message, optional MessagePort messagePort, DOMString targetOrigin);
 #endif
 
 #if defined(ENABLE_WEB_TIMING) && ENABLE_WEB_TIMING
     [Replaceable] readonly attribute Performance performance;
 #endif
-
-        // Timers
-    [Custom] long setTimeout(any handler, [Default=Undefined] optional long timeout);
-    void clearTimeout([Default=Undefined] optional long handle);
-    [Custom] long setInterval(any handler, [Default=Undefined] optional long timeout);
-    void clearInterval([Default=Undefined] optional long handle);
 
 #if defined(ENABLE_REQUEST_ANIMATION_FRAME) && ENABLE_REQUEST_ANIMATION_FRAME
     long requestAnimationFrame(RequestAnimationFrameCallback callback);
@@ -204,117 +191,120 @@
     [ImplementedAs=cancelAnimationFrame] void webkitCancelRequestAnimationFrame(long id); // This is a deprecated alias for webkitCancelAnimationFrame(). Remove this when removing vendor prefix.
 #endif
 
-        // Base64
-    DOMString atob([TreatNullAs=NullString,Default=Undefined] optional DOMString string)
-            raises(DOMException);
-    DOMString btoa([TreatNullAs=NullString,Default=Undefined] optional DOMString string)
-            raises(DOMException);
+    [Replaceable,Conditional=CSS3_CONDITIONAL_RULES] readonly attribute DOMWindowCSS CSS;
 
-    readonly attribute [Replaceable,Conditional=CSS3_CONDITIONAL_RULES] DOMWindowCSS CSS;
-
-        // Events
-        attribute EventListener onabort;
-        attribute EventListener onbeforeunload;
-        attribute EventListener onblur;
-        attribute EventListener oncanplay;
-        attribute EventListener oncanplaythrough;
-        attribute EventListener onchange;
-        attribute EventListener onclick;
-        attribute EventListener oncontextmenu;
-        attribute EventListener ondblclick;
-        attribute EventListener ondrag;
-        attribute EventListener ondragend;
-        attribute EventListener ondragenter;
-        attribute EventListener ondragleave;
-        attribute EventListener ondragover;
-        attribute EventListener ondragstart;
-        attribute EventListener ondrop;
-        attribute EventListener ondurationchange;
-        attribute EventListener onemptied;
-        attribute EventListener onended;
-        attribute EventListener onerror;
-        attribute EventListener onfocus;
-        attribute EventListener onhashchange;
-        attribute EventListener oninput;
-        attribute EventListener oninvalid;
-        attribute EventListener onkeydown;
-        attribute EventListener onkeypress;
-        attribute EventListener onkeyup;
-        attribute EventListener onload;
-        attribute EventListener onloadeddata;
-        attribute EventListener onloadedmetadata;
-        attribute EventListener onloadstart;
-        attribute EventListener onmessage;
-        attribute EventListener onmousedown;
+    // Events
+    attribute EventListener onabort;
+    attribute EventListener onbeforeunload;
+    attribute EventListener onblur;
+    attribute EventListener oncanplay;
+    attribute EventListener oncanplaythrough;
+    attribute EventListener onchange;
+    attribute EventListener onclick;
+    attribute EventListener oncontextmenu;
+    attribute EventListener ondblclick;
+    attribute EventListener ondrag;
+    attribute EventListener ondragend;
+    attribute EventListener ondragenter;
+    attribute EventListener ondragleave;
+    attribute EventListener ondragover;
+    attribute EventListener ondragstart;
+    attribute EventListener ondrop;
+    attribute EventListener ondurationchange;
+    attribute EventListener onemptied;
+    attribute EventListener onended;
+    attribute EventListener onerror;
+    attribute EventListener onfocus;
+    attribute EventListener onhashchange;
+    attribute EventListener oninput;
+    attribute EventListener oninvalid;
+    attribute EventListener onkeydown;
+    attribute EventListener onkeypress;
+    attribute EventListener onkeyup;
+    attribute EventListener onload;
+    attribute EventListener onloadeddata;
+    attribute EventListener onloadedmetadata;
+    attribute EventListener onloadstart;
+    attribute EventListener onmessage;
+    attribute EventListener onmousedown;
     attribute EventListener onmouseenter;
     attribute EventListener onmouseleave;
-        attribute EventListener onmousemove;
-        attribute EventListener onmouseout;
-        attribute EventListener onmouseover;
-        attribute EventListener onmouseup;
-        attribute EventListener onmousewheel;
-        attribute EventListener onoffline;
-        attribute EventListener ononline;
-        attribute EventListener onpagehide;
-        attribute EventListener onpageshow;
-        attribute EventListener onpause;
-        attribute EventListener onplay;
-        attribute EventListener onplaying;
-        attribute EventListener onpopstate;
-        attribute EventListener onprogress;
-        attribute EventListener onratechange;
-        attribute EventListener onresize;
-        attribute EventListener onscroll;
-        attribute EventListener onseeked;
-        attribute EventListener onseeking;
-        attribute EventListener onselect;
-        attribute EventListener onstalled;
-        attribute EventListener onstorage;
-        attribute EventListener onsubmit;
-        attribute EventListener onsuspend;
-        attribute EventListener ontimeupdate;
-        attribute EventListener onunload;
-        attribute EventListener onvolumechange;
-        attribute EventListener onwaiting;
+    attribute EventListener onmousemove;
+    attribute EventListener onmouseout;
+    attribute EventListener onmouseover;
+    attribute EventListener onmouseup;
+    attribute EventListener onmousewheel;
+    attribute EventListener onoffline;
+    attribute EventListener ononline;
+    attribute EventListener onpagehide;
+    attribute EventListener onpageshow;
+    attribute EventListener onpause;
+    attribute EventListener onplay;
+    attribute EventListener onplaying;
+    attribute EventListener onpopstate;
+    attribute EventListener onprogress;
+    attribute EventListener onratechange;
+    attribute EventListener onresize;
+    attribute EventListener onscroll;
+    attribute EventListener onseeked;
+    attribute EventListener onseeking;
+    attribute EventListener onselect;
+    attribute EventListener onstalled;
+    attribute EventListener onstorage;
+    attribute EventListener onsubmit;
+    attribute EventListener onsuspend;
+    attribute EventListener ontimeupdate;
+    attribute EventListener onunload;
+    attribute EventListener onvolumechange;
+    attribute EventListener onwaiting;
+    attribute EventListener onwheel;
 
-        // Not implemented yet.
-        // attribute EventListener onafterprint;
-        // attribute EventListener onbeforeprint;
-        // attribute EventListener onreadystatechange;
-        // attribute EventListener onredo;
-        // attribute EventListener onshow;
-        // attribute EventListener onundo;
+    // Not implemented yet.
+    // attribute EventListener onafterprint;
+    // attribute EventListener onbeforeprint;
+    // attribute EventListener onreadystatechange;
+    // attribute EventListener onredo;
+    // attribute EventListener onshow;
+    // attribute EventListener onundo;
 
-        // Webkit extensions
-        attribute EventListener onreset;
-        attribute EventListener onsearch;
-        attribute EventListener onwebkitanimationend;
-        attribute EventListener onwebkitanimationiteration;
-        attribute EventListener onwebkitanimationstart;
-        attribute EventListener onwebkittransitionend;
+    // Webkit extensions
+    attribute EventListener onreset;
+    attribute EventListener onsearch;
+    attribute EventListener onwebkitanimationend;
+    attribute EventListener onwebkitanimationiteration;
+    attribute EventListener onwebkitanimationstart;
+    attribute EventListener onwebkittransitionend;
     attribute EventListener ontransitionend;
 #if defined(ENABLE_ORIENTATION_EVENTS) && ENABLE_ORIENTATION_EVENTS
-        attribute EventListener onorientationchange;
+    attribute EventListener onorientationchange;
 #endif
-    attribute [Conditional=TOUCH_EVENTS] EventListener ontouchstart;
-    attribute [Conditional=TOUCH_EVENTS] EventListener ontouchmove;
-    attribute [Conditional=TOUCH_EVENTS] EventListener ontouchend;
-    attribute [Conditional=TOUCH_EVENTS] EventListener ontouchcancel;
+    [Conditional=TOUCH_EVENTS] attribute EventListener ontouchstart;
+    [Conditional=TOUCH_EVENTS] attribute EventListener ontouchmove;
+    [Conditional=TOUCH_EVENTS] attribute EventListener ontouchend;
+    [Conditional=TOUCH_EVENTS] attribute EventListener ontouchcancel;
 
-    attribute [Conditional=DEVICE_ORIENTATION] EventListener ondevicemotion;
-    attribute [Conditional=DEVICE_ORIENTATION] EventListener ondeviceorientation;
+    [Conditional=IOS_GESTURE_EVENTS] attribute EventListener ongesturestart;
+    [Conditional=IOS_GESTURE_EVENTS] attribute EventListener ongesturechange;
+    [Conditional=IOS_GESTURE_EVENTS] attribute EventListener ongestureend;
 
-    attribute [Conditional=PROXIMITY_EVENTS] EventListener onwebkitdeviceproximity;
+    [Conditional=DEVICE_ORIENTATION] attribute EventListener ondevicemotion;
+    [Conditional=DEVICE_ORIENTATION] attribute EventListener ondeviceorientation;
 
-        // EventTarget interface
+    [Conditional=PROXIMITY_EVENTS] attribute EventListener onwebkitdeviceproximity;
+
+    [Conditional=WILL_REVEAL_EDGE_EVENTS] attribute EventListener onwebkitwillrevealbottom;
+    [Conditional=WILL_REVEAL_EDGE_EVENTS] attribute EventListener onwebkitwillrevealleft;
+    [Conditional=WILL_REVEAL_EDGE_EVENTS] attribute EventListener onwebkitwillrevealright;
+    [Conditional=WILL_REVEAL_EDGE_EVENTS] attribute EventListener onwebkitwillrevealtop;
+
+    // EventTarget interface
     [Custom] void addEventListener(DOMString type,
                                   EventListener listener,
                                   optional boolean useCapture);
     [Custom] void removeEventListener(DOMString type,
                                       EventListener listener,
                                       optional boolean useCapture);
-    boolean dispatchEvent(Event evt)
-            raises(EventException);
+    [RaisesException] boolean dispatchEvent(Event evt);
 
     void captureEvents(/*in long eventFlags*/);
     void releaseEvents(/*in long eventFlags*/);
@@ -322,9 +312,13 @@
 #if defined(LANGUAGE_JAVASCRIPT) && LANGUAGE_JAVASCRIPT
     // Additional constructors.
     [CustomGetter, CustomConstructor] attribute HTMLImageElementNamedConstructor Image; // Usable with new operator
-        // Mozilla has a separate XMLDocument object for XML documents. 
-        // We just use Document for this.
-        attribute DocumentConstructor XMLDocument;
+    // Mozilla has a separate XMLDocument object for XML documents.
+    // We just use Document for this.
+    attribute DocumentConstructor XMLDocument;
+
+    [Conditional=IOS_TOUCH_EVENTS, CustomGetter] attribute TouchConstructor Touch; // Usable with the new operator
+    [Conditional=IOS_TOUCH_EVENTS, CustomGetter] attribute TouchListConstructor TouchList; // Usable with the new operator
+
     [Conditional=BLOB] attribute DOMURLConstructor webkitURL; // FIXME: deprecate this.
     attribute MutationObserverConstructor WebKitMutationObserver; // FIXME: Add metrics to determine when we can remove this.
     [Conditional=INDEXED_DATABASE] attribute IDBCursorConstructor webkitIDBCursor;
@@ -336,4 +330,7 @@
     [Conditional=INDEXED_DATABASE] attribute IDBRequestConstructor webkitIDBRequest;
     [Conditional=INDEXED_DATABASE] attribute IDBTransactionConstructor webkitIDBTransaction;
 #endif // defined(LANGUAGE_JAVASCRIPT)
-    };
+};
+
+DOMWindow implements WindowTimers;
+DOMWindow implements WindowBase64;

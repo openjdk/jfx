@@ -21,26 +21,28 @@
 #ifndef SVGFEGaussianBlurElement_h
 #define SVGFEGaussianBlurElement_h
 
-#if ENABLE(SVG) && ENABLE(FILTERS)
+#if ENABLE(FILTERS)
 #include "FEGaussianBlur.h"
+#include "SVGAnimatedEnumeration.h"
 #include "SVGAnimatedNumber.h"
+#include "SVGFEConvolveMatrixElement.h"
 #include "SVGFilterPrimitiveStandardAttributes.h"
 
 namespace WebCore {
 
-class SVGFEGaussianBlurElement FINAL : public SVGFilterPrimitiveStandardAttributes {
+class SVGFEGaussianBlurElement final : public SVGFilterPrimitiveStandardAttributes {
 public:
-    static PassRefPtr<SVGFEGaussianBlurElement> create(const QualifiedName&, Document*);
+    static PassRefPtr<SVGFEGaussianBlurElement> create(const QualifiedName&, Document&);
 
     void setStdDeviation(float stdDeviationX, float stdDeviationY);
 
 private:
-    SVGFEGaussianBlurElement(const QualifiedName&, Document*);
+    SVGFEGaussianBlurElement(const QualifiedName&, Document&);
 
     bool isSupportedAttribute(const QualifiedName&);
-    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
-    virtual void svgAttributeChanged(const QualifiedName&);
-    virtual PassRefPtr<FilterEffect> build(SVGFilterBuilder*, Filter*);
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
+    virtual void svgAttributeChanged(const QualifiedName&) override;
+    virtual PassRefPtr<FilterEffect> build(SVGFilterBuilder*, Filter*) override;
 
     static const AtomicString& stdDeviationXIdentifier();
     static const AtomicString& stdDeviationYIdentifier();
@@ -49,10 +51,11 @@ private:
         DECLARE_ANIMATED_STRING(In1, in1)
         DECLARE_ANIMATED_NUMBER(StdDeviationX, stdDeviationX)
         DECLARE_ANIMATED_NUMBER(StdDeviationY, stdDeviationY)
+        DECLARE_ANIMATED_ENUMERATION(EdgeMode, edgeMode, EdgeModeType)
     END_DECLARE_ANIMATED_PROPERTIES
 };
 
 } // namespace WebCore
 
-#endif // ENABLE(SVG)
+#endif // ENABLE(FILTERS)
 #endif

@@ -33,45 +33,50 @@
 
 #if ENABLE(INSPECTOR)
 
-#include "InspectorFrontend.h"
-#include "InspectorRuntimeAgent.h"
-#include "ScriptState.h"
-#include <wtf/PassOwnPtr.h>
+#include <inspector/InspectorJSFrontendDispatchers.h>
+#include <inspector/agents/InspectorRuntimeAgent.h>
+
+namespace JSC {
+class ExecState;
+}
+
+namespace Inspector {
+class InjectedScriptManager;
+}
 
 namespace WebCore {
 
 class InspectorPageAgent;
+class Frame;
 class Page;
 class SecurityOrigin;
+typedef String ErrorString;
 
-class PageRuntimeAgent : public InspectorRuntimeAgent {
+class PageRuntimeAgent final : public Inspector::InspectorRuntimeAgent {
 public:
-    static PassOwnPtr<PageRuntimeAgent> create(InstrumentingAgents* instrumentingAgents, InspectorCompositeState* state, InjectedScriptManager* injectedScriptManager, Page* page, InspectorPageAgent* pageAgent)
-    {
-        return adoptPtr(new PageRuntimeAgent(instrumentingAgents, state, injectedScriptManager, page, pageAgent));
-    }
-    virtual ~PageRuntimeAgent();
-    virtual void setFrontend(InspectorFrontend*);
-    virtual void clearFrontend();
-    virtual void restore();
-    virtual void enable(ErrorString*);
-    virtual void disable(ErrorString*);
+    PageRuntimeAgent(Inspector::InjectedScriptManager*, Page*, InspectorPageAgent*);
+    virtual ~PageRuntimeAgent() { }
+    
+    virtual void didCreateFrontendAndBackend(Inspector::InspectorFrontendChannel*, Inspector::InspectorBackendDispatcher*) override;
+    virtual void willDestroyFrontendAndBackend(Inspector::InspectorDisconnectReason) override;
+    virtual void enable(ErrorString*) override;
+    virtual void disable(ErrorString*) override;
 
     void didCreateMainWorldContext(Frame*);
-    void didCreateIsolatedContext(Frame*, ScriptState*, SecurityOrigin*);
+    void didCreateIsolatedContext(Frame*, JSC::ExecState*, SecurityOrigin*);
 
 private:
-    PageRuntimeAgent(InstrumentingAgents*, InspectorCompositeState*, InjectedScriptManager*, Page*, InspectorPageAgent*);
-
-    virtual InjectedScript injectedScriptForEval(ErrorString*, const int* executionContextId);
-    virtual void muteConsole();
-    virtual void unmuteConsole();
+    virtual JSC::VM* globalVM() override;
+    virtual Inspector::InjectedScript injectedScriptForEval(ErrorString*, const int* executionContextId) override;
+    virtual void muteConsole() override;
+    virtual void unmuteConsole() override;
     void reportExecutionContextCreation();
-    void notifyContextCreated(const String& frameId, ScriptState*, SecurityOrigin*, bool isPageContext);
+    void notifyContextCreated(const String& frameId, JSC::ExecState*, SecurityOrigin*, bool isPageContext);
 
     Page* m_inspectedPage;
     InspectorPageAgent* m_pageAgent;
-    InspectorFrontend::Runtime* m_frontend;
+    std::unique_ptr<Inspector::InspectorRuntimeFrontendDispatcher> m_frontendDispatcher;
+    RefPtr<Inspector::InspectorRuntimeBackendDispatcher> m_backendDispatcher;
     bool m_mainWorldContextCreated;
 };
 

@@ -24,22 +24,23 @@
 #include "config.h"
 #include "HTMLAppletElement.h"
 
-#include "Attribute.h"
+#include "ElementIterator.h"
 #include "Frame.h"
 #include "FrameLoader.h"
 #include "HTMLDocument.h"
 #include "HTMLNames.h"
 #include "HTMLParamElement.h"
-#include "RenderApplet.h"
+#include "RenderEmbeddedObject.h"
 #include "SecurityOrigin.h"
 #include "Settings.h"
+#include "SubframeLoader.h"
 #include "Widget.h"
 
 namespace WebCore {
 
 using namespace HTMLNames;
 
-HTMLAppletElement::HTMLAppletElement(const QualifiedName& tagName, Document* document, bool createdByParser)
+HTMLAppletElement::HTMLAppletElement(const QualifiedName& tagName, Document& document, bool createdByParser)
     : HTMLPlugInImageElement(tagName, document, createdByParser, ShouldNotPreferPlugInsForImages)
 {
     ASSERT(hasTagName(appletTag));
@@ -47,7 +48,7 @@ HTMLAppletElement::HTMLAppletElement(const QualifiedName& tagName, Document* doc
     m_serviceType = "application/x-java-applet";
 }
 
-PassRefPtr<HTMLAppletElement> HTMLAppletElement::create(const QualifiedName& tagName, Document* document, bool createdByParser)
+PassRefPtr<HTMLAppletElement> HTMLAppletElement::create(const QualifiedName& tagName, Document& document, bool createdByParser)
 {
     return adoptRef(new HTMLAppletElement(tagName, document, createdByParser));
 }
@@ -67,42 +68,54 @@ void HTMLAppletElement::parseAttribute(const QualifiedName& name, const AtomicSt
     HTMLPlugInImageElement::parseAttribute(name, value);
 }
 
-bool HTMLAppletElement::rendererIsNeeded(const NodeRenderingContext& context)
+bool HTMLAppletElement::rendererIsNeeded(const RenderStyle& style)
 {
     if (!fastHasAttribute(codeAttr))
         return false;
-    return HTMLPlugInImageElement::rendererIsNeeded(context);
+    return HTMLPlugInImageElement::rendererIsNeeded(style);
 }
 
-RenderObject* HTMLAppletElement::createRenderer(RenderArena*, RenderStyle* style)
+RenderPtr<RenderElement> HTMLAppletElement::createElementRenderer(PassRef<RenderStyle> style)
 {
     if (!canEmbedJava())
-        return RenderObject::createObject(this, style);
+        return RenderElement::createFor(*this, std::move(style));
 
-    return new (document()->renderArena()) RenderApplet(this);
-    }
+    return RenderEmbeddedObject::createForApplet(*this, std::move(style));
+}
 
 RenderWidget* HTMLAppletElement::renderWidgetForJSBindings() const
 {
     if (!canEmbedJava())
         return 0;
 
-    document()->updateLayoutIgnorePendingStylesheets();
-    return renderPart();
+    document().updateLayoutIgnorePendingStylesheets();
+    return renderWidget();
 }
 
-void HTMLAppletElement::updateWidget(PluginCreationOption)
+void HTMLAppletElement::updateWidget(PluginCreationOption pluginCreationOption)
 {
     setNeedsWidgetUpdate(false);
     // FIXME: This should ASSERT isFinishedParsingChildren() instead.
     if (!isFinishedParsingChildren())
         return;
 
+#if PLATFORM(IOS)
+    UNUSED_PARAM(pluginCreationOption);
+#else
+    // FIXME: It's sadness that we have this special case here.
+    //        See http://trac.webkit.org/changeset/25128 and
+    //        plugins/netscape-plugin-setwindow-size.html
+    if (pluginCreationOption == CreateOnlyNonNetscapePlugins) {
+        // Ensure updateWidget() is called again during layout to create the Netscape plug-in.
+        setNeedsWidgetUpdate(true);
+        return;
+    }
+
     RenderEmbeddedObject* renderer = renderEmbeddedObject();
 
-    LayoutUnit contentWidth = renderer->style()->width().isFixed() ? LayoutUnit(renderer->style()->width().value()) :
+    LayoutUnit contentWidth = renderer->style().width().isFixed() ? LayoutUnit(renderer->style().width().value()) :
         renderer->width() - renderer->borderAndPaddingWidth();
-    LayoutUnit contentHeight = renderer->style()->height().isFixed() ? LayoutUnit(renderer->style()->height().value()) :
+    LayoutUnit contentHeight = renderer->style().height().isFixed() ? LayoutUnit(renderer->style().height().value()) :
         renderer->height() - renderer->borderAndPaddingHeight();
 
     Vector<String> paramNames;
@@ -117,7 +130,7 @@ void HTMLAppletElement::updateWidget(PluginCreationOption)
         paramValues.append(codeBase.string());
     }
 
-    const AtomicString& name = document()->isHTMLDocument() ? getNameAttribute() : getIdAttribute();
+    const AtomicString& name = document().isHTMLDocument() ? getNameAttribute() : getIdAttribute();
     if (!name.isNull()) {
         paramNames.append("name");
         paramValues.append(name.string());
@@ -130,7 +143,7 @@ void HTMLAppletElement::updateWidget(PluginCreationOption)
     }
 
     paramNames.append("baseURL");
-    paramValues.append(document()->baseURL().string());
+    paramValues.append(document().baseURL().string());
 
     const AtomicString& mayScript = getAttribute(mayscriptAttr);
     if (!mayScript.isNull()) {
@@ -138,37 +151,34 @@ void HTMLAppletElement::updateWidget(PluginCreationOption)
         paramValues.append(mayScript.string());
     }
 
-    for (Node* child = firstChild(); child; child = child->nextSibling()) {
-        if (!child->hasTagName(paramTag))
+    for (auto& param : childrenOfType<HTMLParamElement>(*this)) {
+        if (param.name().isEmpty())
             continue;
 
-        HTMLParamElement* param = static_cast<HTMLParamElement*>(child);
-        if (param->name().isEmpty())
-            continue;
-
-        paramNames.append(param->name());
-        paramValues.append(param->value());
+        paramNames.append(param.name());
+        paramValues.append(param.value());
     }
 
-    Frame* frame = document()->frame();
+    Frame* frame = document().frame();
     ASSERT(frame);
 
-    renderer->setWidget(frame->loader()->subframeLoader()->createJavaAppletWidget(roundedIntSize(LayoutSize(contentWidth, contentHeight)), this, paramNames, paramValues));
+    renderer->setWidget(frame->loader().subframeLoader().createJavaAppletWidget(roundedIntSize(LayoutSize(contentWidth, contentHeight)), *this, paramNames, paramValues));
+#endif // !PLATFORM(IOS)
 }
 
 bool HTMLAppletElement::canEmbedJava() const
 {
-    if (document()->isSandboxed(SandboxPlugins))
+    if (document().isSandboxed(SandboxPlugins))
         return false;
 
-    Settings* settings = document()->settings();
+    Settings* settings = document().settings();
     if (!settings)
         return false;
 
     if (!settings->isJavaEnabled())
         return false;
 
-    if (document()->securityOrigin()->isLocal() && !settings->isJavaEnabledForLocalFiles())
+    if (document().securityOrigin()->isLocal() && !settings->isJavaEnabledForLocalFiles())
         return false;
 
     return true;

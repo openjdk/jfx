@@ -31,12 +31,7 @@
 #include "config.h"
 #include "LayoutRect.h"
 
-#include "FloatRect.h"
-#include "LayoutUnit.h"
 #include <algorithm>
-
-using std::max;
-using std::min;
 
 namespace WebCore {
 
@@ -62,8 +57,8 @@ bool LayoutRect::contains(const LayoutRect& other) const
 
 void LayoutRect::intersect(const LayoutRect& other)
 {
-    LayoutPoint newLocation(max(x(), other.x()), max(y(), other.y()));
-    LayoutPoint newMaxPoint(min(maxX(), other.maxX()), min(maxY(), other.maxY()));
+    LayoutPoint newLocation(std::max(x(), other.x()), std::max(y(), other.y()));
+    LayoutPoint newMaxPoint(std::min(maxX(), other.maxX()), std::min(maxY(), other.maxY()));
 
     // Return a clean empty rectangle for non-intersecting cases.
     if (newLocation.x() >= newMaxPoint.x() || newLocation.y() >= newMaxPoint.y()) {
@@ -85,8 +80,8 @@ void LayoutRect::unite(const LayoutRect& other)
         return;
     }
 
-    LayoutPoint newLocation(min(x(), other.x()), min(y(), other.y()));
-    LayoutPoint newMaxPoint(max(maxX(), other.maxX()), max(maxY(), other.maxY()));
+    LayoutPoint newLocation(std::min(x(), other.x()), std::min(y(), other.y()));
+    LayoutPoint newMaxPoint(std::max(maxX(), other.maxX()), std::max(maxY(), other.maxY()));
 
     m_location = newLocation;
     m_size = newMaxPoint - newLocation;
@@ -102,8 +97,8 @@ void LayoutRect::uniteIfNonZero(const LayoutRect& other)
         return;
     }
 
-    LayoutPoint newLocation(min(x(), other.x()), min(y(), other.y()));
-    LayoutPoint newMaxPoint(max(maxX(), other.maxX()), max(maxY(), other.maxY()));
+    LayoutPoint newLocation(std::min(x(), other.x()), std::min(y(), other.y()));
+    LayoutPoint newMaxPoint(std::max(maxX(), other.maxX()), std::max(maxY(), other.maxY()));
 
     m_location = newLocation;
     m_size = newMaxPoint - newLocation;
@@ -113,6 +108,12 @@ void LayoutRect::scale(float s)
 {
     m_location.scale(s, s);
     m_size.scale(s);
+}
+
+void LayoutRect::scale(float xScale, float yScale)
+{
+    m_location.scale(xScale, yScale);
+    m_size.scale(xScale, yScale);
 }
 
 LayoutRect unionRect(const Vector<LayoutRect>& rects)

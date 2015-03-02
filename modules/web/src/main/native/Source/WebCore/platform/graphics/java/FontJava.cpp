@@ -34,10 +34,10 @@ static JLString getJavaString(const TextRun& run)
     return ret.toJavaString(WebCore_GetJavaEnv());
 }
 
-void Font::drawComplexText(GraphicsContext* gc, const TextRun & run, const FloatPoint & point, int from, int to) const
+float Font::drawComplexText(GraphicsContext* gc, const TextRun & run, const FloatPoint & point, int from, int to) const
 {
     if (!gc) {
-        return;
+        return 0;
     }
 
     JNIEnv* env = WebCore_GetJavaEnv();
@@ -64,6 +64,8 @@ void Font::drawComplexText(GraphicsContext* gc, const TextRun & run, const Float
         << (jint)to
         << (jfloat)point.x()
         << (jfloat)point.y();
+
+    return 0; // tav todo
 }
 
 float Font::floatWidthForComplexText(const TextRun& run, HashSet<const SimpleFontData*>* fallbackFonts, GlyphOverflow* /* glyphOverflow */) const

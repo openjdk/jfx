@@ -23,6 +23,9 @@
 #include "config.h"
 #include "MemoryCache.h"
 
+#include "BitmapImage.h"
+#include "CachedImage.h"
+#include "CachedImageClient.h"
 #include "CachedResource.h"
 #include "CachedResourceHandle.h"
 #include "CrossThreadTask.h"
@@ -35,7 +38,7 @@
 #include "PublicSuffix.h"
 #include "SecurityOrigin.h"
 #include "SecurityOriginHash.h"
-#include "WorkerContext.h"
+#include "WorkerGlobalScope.h"
 #include "WorkerLoaderProxy.h"
 #include "WorkerThread.h"
 #include <stdio.h>
@@ -44,7 +47,10 @@
 #include <wtf/TemporaryChange.h>
 #include <wtf/text/CString.h>
 
-using namespace std;
+#if ENABLE(DISK_IMAGE_CACHE)
+#include "DiskImageCacheIOS.h"
+#include "ResourceBuffer.h"
+#endif
 
 namespace WebCore {
 
@@ -74,7 +80,7 @@ MemoryCache::MemoryCache()
 {
 }
 
-KURL MemoryCache::removeFragmentIdentifierIfNeeded(const KURL& originalURL)
+URL MemoryCache::removeFragmentIdentifierIfNeeded(const URL& originalURL)
 {
     if (!originalURL.hasFragmentIdentifier())
         return originalURL;
@@ -83,7 +89,7 @@ KURL MemoryCache::removeFragmentIdentifierIfNeeded(const KURL& originalURL)
     // to be unique even when they differ by the fragment identifier only.
     if (!originalURL.protocolIsInHTTPFamily())
         return originalURL;
-    KURL url = originalURL;
+    URL url = originalURL;
     url.removeFragmentIdentifier();
     return url;
 }
@@ -163,7 +169,7 @@ void MemoryCache::revalidationFailed(CachedResource* revalidatingResource)
     revalidatingResource->clearResourceToRevalidate();
 }
 
-CachedResource* MemoryCache::resourceForURL(const KURL& resourceURL)
+CachedResource* MemoryCache::resourceForURL(const URL& resourceURL)
 {
     return resourceForRequest(ResourceRequest(resourceURL));
 }
@@ -171,7 +177,7 @@ CachedResource* MemoryCache::resourceForURL(const KURL& resourceURL)
 CachedResource* MemoryCache::resourceForRequest(const ResourceRequest& request)
 {
     ASSERT(WTF::isMainThread());
-    KURL url = removeFragmentIdentifierIfNeeded(request.url());
+    URL url = removeFragmentIdentifierIfNeeded(request.url());
 #if ENABLE(CACHE_PARTITIONING)
     CachedResourceItem* item = m_resources.get(url);
     CachedResource* resource = 0;
@@ -195,9 +201,9 @@ CachedResource* MemoryCache::resourceForRequest(const ResourceRequest& request)
 unsigned MemoryCache::deadCapacity() const 
 {
     // Dead resource capacity is whatever space is not occupied by live resources, bounded by an independent minimum and maximum.
-    unsigned capacity = m_capacity - min(m_liveSize, m_capacity); // Start with available capacity.
-    capacity = max(capacity, m_minDeadCapacity); // Make sure it's above the minimum.
-    capacity = min(capacity, m_maxDeadCapacity); // Make sure it's below the maximum.
+    unsigned capacity = m_capacity - std::min(m_liveSize, m_capacity); // Start with available capacity.
+    capacity = std::max(capacity, m_minDeadCapacity); // Make sure it's above the minimum.
+    capacity = std::min(capacity, m_maxDeadCapacity); // Make sure it's below the maximum.
     return capacity;
 }
 
@@ -207,18 +213,79 @@ unsigned MemoryCache::liveCapacity() const
     return m_capacity - deadCapacity();
 }
 
-void MemoryCache::pruneLiveResources()
+#if USE(CG)
+// FIXME: Remove the USE(CG) once we either make NativeImagePtr a smart pointer on all platforms or
+// remove the usage of CFRetain() in MemoryCache::addImageToCache() so as to make the code platform-independent.
+static CachedImageClient& dummyCachedImageClient()
+{
+    DEFINE_STATIC_LOCAL(CachedImageClient, client, ());
+    return client;
+}
+
+bool MemoryCache::addImageToCache(NativeImagePtr image, const URL& url, const String& cachePartition)
+{
+    ASSERT(image);
+    removeImageFromCache(url, cachePartition); // Remove cache entry if it already exists.
+
+    RefPtr<BitmapImage> bitmapImage = BitmapImage::create(image, nullptr);
+    if (!bitmapImage)
+        return false;
+
+    std::unique_ptr<CachedImage> cachedImage = std::make_unique<CachedImage>(url, bitmapImage.get(), CachedImage::ManuallyCached);
+
+    // Actual release of the CGImageRef is done in BitmapImage.
+    CFRetain(image);
+    cachedImage->addClient(&dummyCachedImageClient());
+    cachedImage->setDecodedSize(bitmapImage->decodedSize());
+#if ENABLE(CACHE_PARTITIONING)
+    cachedImage->resourceRequest().setCachePartition(cachePartition);
+#endif
+    add(cachedImage.release());
+    return true;
+}
+
+void MemoryCache::removeImageFromCache(const URL& url, const String& cachePartition)
+{
+#if ENABLE(CACHE_PARTITIONING)
+    CachedResource* resource;
+    if (CachedResourceItem* item = m_resources.get(url))
+        resource = item->get(ResourceRequest::partitionName(cachePartition));
+    else
+        resource = nullptr;
+#else
+    UNUSED_PARAM(cachePartition);
+    CachedResource* resource = m_resources.get(url);
+#endif
+    if (!resource)
+        return;
+
+    // A resource exists and is not a manually cached image, so just remove it.
+    if (!resource->isImage() || !toCachedImage(resource)->isManuallyCached()) {
+        evict(resource);
+        return;
+    }
+
+    // Removing the last client of a CachedImage turns the resource
+    // into a dead resource which will eventually be evicted when
+    // dead resources are pruned. That might be immediately since
+    // removing the last client triggers a MemoryCache::prune, so the
+    // resource may be deleted after this call.
+    toCachedImage(resource)->removeClient(&dummyCachedImageClient());
+}
+#endif
+
+void MemoryCache::pruneLiveResources(bool shouldDestroyDecodedDataForAllLiveResources)
 {
     if (!m_pruneEnabled)
         return;
 
-    unsigned capacity = liveCapacity();
+    unsigned capacity = shouldDestroyDecodedDataForAllLiveResources ? 0 : liveCapacity();
     if (capacity && m_liveSize <= capacity)
         return;
 
     unsigned targetSize = static_cast<unsigned>(capacity * cTargetPrunePercentage); // Cut by a percentage to avoid immediately pruning again.
 
-    pruneLiveResourcesToSize(targetSize);
+    pruneLiveResourcesToSize(targetSize, shouldDestroyDecodedDataForAllLiveResources);
 }
 
 void MemoryCache::pruneLiveResourcesToPercentage(float prunePercentage)
@@ -235,7 +302,7 @@ void MemoryCache::pruneLiveResourcesToPercentage(float prunePercentage)
     pruneLiveResourcesToSize(targetSize);
 }
 
-void MemoryCache::pruneLiveResourcesToSize(unsigned targetSize)
+void MemoryCache::pruneLiveResourcesToSize(unsigned targetSize, bool shouldDestroyDecodedDataForAllLiveResources)
 {
     if (m_inPruneResources)
         return;
@@ -243,7 +310,7 @@ void MemoryCache::pruneLiveResourcesToSize(unsigned targetSize)
 
     double currentTime = FrameView::currentPaintTimeStamp();
     if (!currentTime) // In case prune is called directly, outside of a Frame paint.
-        currentTime = WTF::currentTime();
+        currentTime = monotonicallyIncreasingTime();
     
     // Destroy any decoded data in live objects that we can.
     // Start from the tail, since this is the least recently accessed of the objects.
@@ -260,7 +327,7 @@ void MemoryCache::pruneLiveResourcesToSize(unsigned targetSize)
         if (current->isLoaded() && current->decodedSize()) {
             // Check to see if the remaining resources are too new to prune.
             double elapsedTime = currentTime - current->m_lastDecodedAccessTime;
-            if (elapsedTime < cMinDelayBeforeLiveDecodedPrune)
+            if (!shouldDestroyDecodedDataForAllLiveResources && elapsedTime < cMinDelayBeforeLiveDecodedPrune)
                 return;
 
             // Destroy our decoded data. This will remove us from 
@@ -341,7 +408,7 @@ void MemoryCache::pruneDeadResourcesToSize(unsigned targetSize)
                 // m_liveDecodedResources, and possibly move us to a different 
                 // LRU list in m_allResources.
                 current->destroyDecodedData();
-                
+
                 if (targetSize && m_deadSize <= targetSize)
                     return;
             }
@@ -377,6 +444,45 @@ void MemoryCache::pruneDeadResourcesToSize(unsigned targetSize)
             m_allResources.resize(i);
     }
 }
+
+#if ENABLE(DISK_IMAGE_CACHE)
+void MemoryCache::flushCachedImagesToDisk()
+{
+    if (!diskImageCache().isEnabled())
+        return;
+
+#ifndef NDEBUG
+    double start = WTF::currentTimeMS();
+    unsigned resourceCount = 0;
+    unsigned cachedSize = 0;
+#endif
+
+    for (size_t i = m_allResources.size(); i; ) {
+        --i;
+        CachedResource* current = m_allResources[i].m_tail;
+        while (current) {
+            CachedResource* previous = current->m_prevInAllResourcesList;
+
+            if (!current->isUsingDiskImageCache() && current->canUseDiskImageCache()) {
+                current->useDiskImageCache();
+                current->destroyDecodedData();
+#ifndef NDEBUG
+                LOG(DiskImageCache, "Cache::diskCacheResources(): attempting to save (%d) bytes", current->resourceBuffer()->sharedBuffer()->size());
+                ++resourceCount;
+                cachedSize += current->resourceBuffer()->sharedBuffer()->size();
+#endif
+            }
+
+            current = previous;
+        }
+    }
+
+#ifndef NDEBUG
+    double end = WTF::currentTimeMS();
+    LOG(DiskImageCache, "DiskImageCache: took (%f) ms to cache (%d) bytes for (%d) resources", end - start, cachedSize, resourceCount);
+#endif
+}
+#endif // ENABLE(DISK_IMAGE_CACHE)
 
 void MemoryCache::setCapacities(unsigned minDeadBytes, unsigned maxDeadBytes, unsigned totalBytes)
 {
@@ -423,7 +529,7 @@ void MemoryCache::evict(CachedResource* resource)
         if (item) {
             item->remove(resource->cachePartition());
             if (!item->size())
-        m_resources.remove(resource->url());
+                m_resources.remove(resource->url());
         }
 #else
         m_resources.remove(resource->url());
@@ -451,7 +557,7 @@ void MemoryCache::evict(CachedResource* resource)
 
 MemoryCache::LRUList* MemoryCache::lruListFor(CachedResource* resource)
 {
-    unsigned accessCount = max(resource->accessCount(), 1U);
+    unsigned accessCount = std::max(resource->accessCount(), 1U);
     unsigned queueIndex = WTF::fastLog2(resource->size() / accessCount);
 #ifndef NDEBUG
     resource->m_lruIndex = queueIndex;
@@ -580,11 +686,11 @@ void MemoryCache::removeResourcesWithOrigin(SecurityOrigin* origin)
 #else
             CachedResource* resource = it->value;
 #endif
-        RefPtr<SecurityOrigin> resourceOrigin = SecurityOrigin::createFromString(resource->url());
-        if (!resourceOrigin)
-            continue;
-        if (resourceOrigin->equal(origin))
-            resourcesWithOrigin.append(resource);
+            RefPtr<SecurityOrigin> resourceOrigin = SecurityOrigin::createFromString(resource->url());
+            if (!resourceOrigin)
+                continue;
+            if (resourceOrigin->equal(origin))
+                resourcesWithOrigin.append(resource);
 #if ENABLE(CACHE_PARTITIONING)
         }
 #endif
@@ -709,13 +815,10 @@ void MemoryCache::removeUrlFromCache(ScriptExecutionContext* context, const Stri
 
 void MemoryCache::removeRequestFromCache(ScriptExecutionContext* context, const ResourceRequest& request)
 {
-#if ENABLE(WORKERS)
-    if (context->isWorkerContext()) {
-      WorkerContext* workerContext = static_cast<WorkerContext*>(context);
-        workerContext->thread()->workerLoaderProxy().postTaskToLoader(createCallbackTask(&crossThreadRemoveRequestFromCache, request));
-      return;
+    if (context->isWorkerGlobalScope()) {
+        toWorkerGlobalScope(context)->thread().workerLoaderProxy().postTaskToLoader(createCallbackTask(&crossThreadRemoveRequestFromCache, request));
+        return;
     }
-#endif
 
     removeRequestFromCacheImpl(context, request);
 }
@@ -743,6 +846,10 @@ void MemoryCache::TypeStatistic::addResource(CachedResource* o)
     decodedSize += o->decodedSize();
     purgeableSize += purgeable ? pageSize : 0;
     purgedSize += purged ? pageSize : 0;
+#if ENABLE(DISK_IMAGE_CACHE)
+    // Only the data inside the resource was mapped, not the entire resource.
+    mappedSize += o->isUsingDiskImageCache() ? o->resourceBuffer()->sharedBuffer()->size() : 0;
+#endif
 }
 
 MemoryCache::Statistics MemoryCache::getStatistics()
@@ -756,27 +863,27 @@ MemoryCache::Statistics MemoryCache::getStatistics()
 #else
             CachedResource* resource = i->value;
 #endif
-        switch (resource->type()) {
-        case CachedResource::ImageResource:
-            stats.images.addResource(resource);
-            break;
-        case CachedResource::CSSStyleSheet:
-            stats.cssStyleSheets.addResource(resource);
-            break;
-        case CachedResource::Script:
-            stats.scripts.addResource(resource);
-            break;
+            switch (resource->type()) {
+            case CachedResource::ImageResource:
+                stats.images.addResource(resource);
+                break;
+            case CachedResource::CSSStyleSheet:
+                stats.cssStyleSheets.addResource(resource);
+                break;
+            case CachedResource::Script:
+                stats.scripts.addResource(resource);
+                break;
 #if ENABLE(XSLT)
-        case CachedResource::XSLStyleSheet:
-            stats.xslStyleSheets.addResource(resource);
-            break;
+            case CachedResource::XSLStyleSheet:
+                stats.xslStyleSheets.addResource(resource);
+                break;
 #endif
-        case CachedResource::FontResource:
-            stats.fonts.addResource(resource);
-            break;
-        default:
-            break;
-        }
+            case CachedResource::FontResource:
+                stats.fonts.addResource(resource);
+                break;
+            default:
+                break;
+            }
 #if ENABLE(CACHE_PARTITIONING)
         }
 #endif
@@ -814,7 +921,7 @@ void MemoryCache::evictResources()
 
 void MemoryCache::prune()
 {
-    if (m_liveSize + m_deadSize <= m_capacity && m_maxDeadCapacity && m_deadSize <= m_maxDeadCapacity) // Fast path.
+    if (m_liveSize + m_deadSize <= m_capacity && m_deadSize <= m_maxDeadCapacity) // Fast path.
         return;
         
     pruneDeadResources(); // Prune dead first, in case it was "borrowing" capacity from live.
@@ -832,9 +939,15 @@ void MemoryCache::pruneToPercentage(float targetPercentLive)
 void MemoryCache::dumpStats()
 {
     Statistics s = getStatistics();
+#if ENABLE(DISK_IMAGE_CACHE)
+    printf("%-13s %-13s %-13s %-13s %-13s %-13s %-13s %-13s %-13s\n", "", "Count", "Size", "LiveSize", "DecodedSize", "PurgeableSize", "PurgedSize", "Mapped", "\"Real\"");
+    printf("%-13s %-13s %-13s %-13s %-13s %-13s %-13s %-13s %-13s\n", "-------------", "-------------", "-------------", "-------------", "-------------", "-------------", "-------------", "-------------", "-------------");
+    printf("%-13s %13d %13d %13d %13d %13d %13d %13d %13d\n", "Images", s.images.count, s.images.size, s.images.liveSize, s.images.decodedSize, s.images.purgeableSize, s.images.purgedSize, s.images.mappedSize, s.images.size - s.images.mappedSize);
+#else
     printf("%-13s %-13s %-13s %-13s %-13s %-13s %-13s\n", "", "Count", "Size", "LiveSize", "DecodedSize", "PurgeableSize", "PurgedSize");
     printf("%-13s %-13s %-13s %-13s %-13s %-13s %-13s\n", "-------------", "-------------", "-------------", "-------------", "-------------", "-------------", "-------------");
     printf("%-13s %13d %13d %13d %13d %13d %13d\n", "Images", s.images.count, s.images.size, s.images.liveSize, s.images.decodedSize, s.images.purgeableSize, s.images.purgedSize);
+#endif
     printf("%-13s %13d %13d %13d %13d %13d %13d\n", "CSS", s.cssStyleSheets.count, s.cssStyleSheets.size, s.cssStyleSheets.liveSize, s.cssStyleSheets.decodedSize, s.cssStyleSheets.purgeableSize, s.cssStyleSheets.purgedSize);
 #if ENABLE(XSLT)
     printf("%-13s %13d %13d %13d %13d %13d %13d\n", "XSL", s.xslStyleSheets.count, s.xslStyleSheets.size, s.xslStyleSheets.liveSize, s.xslStyleSheets.decodedSize, s.xslStyleSheets.purgeableSize, s.xslStyleSheets.purgedSize);
@@ -846,7 +959,11 @@ void MemoryCache::dumpStats()
 
 void MemoryCache::dumpLRULists(bool includeLive) const
 {
+#if ENABLE(DISK_IMAGE_CACHE)
+    printf("LRU-SP lists in eviction order (Kilobytes decoded, Kilobytes encoded, Access count, Referenced, isPurgeable, wasPurged, isMemoryMapped):\n");
+#else
     printf("LRU-SP lists in eviction order (Kilobytes decoded, Kilobytes encoded, Access count, Referenced, isPurgeable, wasPurged):\n");
+#endif
 
     int size = m_allResources.size();
     for (int i = size - 1; i >= 0; i--) {
@@ -855,7 +972,11 @@ void MemoryCache::dumpLRULists(bool includeLive) const
         while (current) {
             CachedResource* prev = current->m_prevInAllResourcesList;
             if (includeLive || !current->hasClients())
+#if ENABLE(DISK_IMAGE_CACHE)
+                printf("(%.1fK, %.1fK, %uA, %dR, %d, %d, %d); ", current->decodedSize() / 1024.0f, (current->encodedSize() + current->overheadSize()) / 1024.0f, current->accessCount(), current->hasClients(), current->isPurgeable(), current->wasPurged(), current->isUsingDiskImageCache());
+#else
                 printf("(%.1fK, %.1fK, %uA, %dR, %d, %d); ", current->decodedSize() / 1024.0f, (current->encodedSize() + current->overheadSize()) / 1024.0f, current->accessCount(), current->hasClients(), current->isPurgeable(), current->wasPurged());
+#endif
 
             current = prev;
         }

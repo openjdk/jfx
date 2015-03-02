@@ -3,47 +3,8 @@ noinst_PROGRAMS += \
 
 if ENABLE_WEBKIT1
 noinst_PROGRAMS += \
-	Programs/DumpRenderTree \
-	Programs/GtkLauncher
+	Programs/DumpRenderTree
 endif
-
-# GtkLauncher
-Programs_GtkLauncher_CPPFLAGS = \
-	-I$(srcdir)/Source/WebKit/gtk \
-	-I$(srcdir)/Source/WebCore/platform/network/soup/cache/ \
-	-I$(top_builddir)/Source/WebKit/gtk \
-	-I$(top_builddir)/DerivedSources \
-	-DWEBKIT_EXEC_PATH=\"${shell pwd}/$(top_builddir)/Programs/\" \
-	$(global_cppflags) \
-	$(javascriptcore_cppflags)
-
-Programs_GtkLauncher_SOURCES = \
-	Tools/GtkLauncher/LauncherInspectorWindow.c \
-	Tools/GtkLauncher/LauncherInspectorWindow.h \
-	Tools/GtkLauncher/main.c
-
-Programs_GtkLauncher_CFLAGS = \
-	-ansi \
-	-fno-strict-aliasing \
-	$(global_cflags) \
-	$(FREETYPE_CFLAGS) \
-	$(GTK_CFLAGS) \
-	$(LIBSOUP_CFLAGS) \
-	$(GSTREAMER_CFLAGS)
-
-Programs_GtkLauncher_LDADD = \
-	libwebkitgtk-@WEBKITGTK_API_MAJOR_VERSION@.@WEBKITGTK_API_MINOR_VERSION@.la \
-	libjavascriptcoregtk-@WEBKITGTK_API_MAJOR_VERSION@.@WEBKITGTK_API_MINOR_VERSION@.la \
-	$(FREETYPE_LIBS) \
-	$(GTK_LIBS) \
-	$(GLIB_LIBS) \
-	$(LIBSOUP_LIBS) \
-	$(WINMM_LIBS) \
-	$(GSTREAMER_LIBS)
-
-Programs_GtkLauncher_LDFLAGS = \
-	-no-fast-install \
-	-no-install
 
 # libWebCoreInternals
 # We must split off the window.internals implementation into a separate
@@ -54,6 +15,7 @@ libWebCoreInternals_la_SOURCES = \
 	Source/WebCore/bindings/js/JSDOMWrapper.cpp \
 	Source/WebCore/bindings/js/JSDOMWrapper.h \
 	Source/WebCore/testing/MallocStatistics.h \
+	Source/WebCore/testing/MemoryInfo.h \
 	Source/WebCore/testing/Internals.cpp \
 	Source/WebCore/testing/Internals.h \
 	Source/WebCore/testing/InternalSettings.cpp \
@@ -67,6 +29,8 @@ libwebcoreinternals_built_sources += \
 	DerivedSources/WebCore/InternalSettingsGenerated.h   \
 	DerivedSources/WebCore/JSMallocStatistics.cpp \
 	DerivedSources/WebCore/JSMallocStatistics.h   \
+	DerivedSources/WebCore/JSMemoryInfo.cpp \
+	DerivedSources/WebCore/JSMemoryInfo.h \
 	DerivedSources/WebCore/JSInternals.cpp \
 	DerivedSources/WebCore/JSInternals.h   \
 	DerivedSources/WebCore/JSInternalSettings.cpp \
@@ -119,7 +83,7 @@ Programs_DumpRenderTree_CPPFLAGS = \
 	$(platformgtk_cppflags) \
 	$(webcore_cppflags)
 
-if TARGET_X11
+if TARGET_X11_OR_WAYLAND
 Programs_DumpRenderTree_CPPFLAGS += \
 	-DTEST_PLUGIN_DIR=\"${shell pwd}/${top_builddir}/TestNetscapePlugin/.libs\" \
 	-DFONTS_CONF_DIR=\"${shell pwd}/${srcdir}/Tools/DumpRenderTree/gtk/fonts\"
@@ -152,11 +116,12 @@ Programs_DumpRenderTree_SOURCES = \
 	Tools/DumpRenderTree/atk/AccessibilityCallbacks.h \
 	Tools/DumpRenderTree/atk/AccessibilityCallbacksAtk.cpp \
 	Tools/DumpRenderTree/atk/AccessibilityControllerAtk.cpp \
+	Tools/DumpRenderTree/atk/AccessibilityNotificationHandlerAtk.cpp \
+	Tools/DumpRenderTree/atk/AccessibilityNotificationHandlerAtk.h \
 	Tools/DumpRenderTree/atk/AccessibilityUIElementAtk.cpp \
 	Tools/DumpRenderTree/cairo/PixelDumpSupportCairo.cpp \
 	Tools/DumpRenderTree/cairo/PixelDumpSupportCairo.h \
 	Tools/DumpRenderTree/gtk/AccessibilityControllerGtk.cpp \
-	Tools/DumpRenderTree/gtk/AccessibilityUIElementGtk.cpp \
 	Tools/DumpRenderTree/gtk/DumpRenderTree.cpp \
 	Tools/DumpRenderTree/gtk/DumpRenderTreeGtk.h \
 	Tools/DumpRenderTree/gtk/EditingCallbacks.h \
@@ -179,7 +144,6 @@ Programs_DumpRenderTree_CXXFLAGS = \
 Programs_DumpRenderTree_CFLAGS = \
 	-fno-strict-aliasing \
 	$(global_cflags) \
-	$(GLOBALDEPS_CFLAGS) \
 	$(CAIRO_CFLAGS) \
 	$(GTK_CFLAGS) \
 	$(LIBSOUP_CFLAGS)
@@ -192,7 +156,6 @@ Programs_DumpRenderTree_LDADD = \
 	libWebCorePlatform.la \
 	libWebCoreModules.la \
 	libWebCoreInternals.la \
-	$(GLOBALDEPS_LIBS) \
 	$(CAIRO_LIBS) \
 	$(GTK_LIBS) \
 	$(GLIB_LIBS) \
@@ -203,7 +166,6 @@ Programs_DumpRenderTree_LDADD = \
 	$(XT_LIBS)
 
 Programs_DumpRenderTree_LDFLAGS = \
-	-no-fast-install \
 	-no-install
 
 # ImageDiff
@@ -220,14 +182,12 @@ Programs_ImageDiff_CXXFLAGS = \
 Programs_ImageDiff_CFLAGS = \
    -fno-strict-aliasing \
    $(global_cflags) \
-   $(GLOBALDEPS_CFLAGS) \
    $(GTK_CFLAGS)
 
 Programs_ImageDiff_LDADD = \
    $(GTK_LIBS)
 
 Programs_ImageDiff_LDFLAGS = \
-   -no-fast-install \
    -no-install
 
 # clean target
@@ -241,9 +201,9 @@ if TARGET_X11
 # Build TestNetscapePlugin only for X11
 # since we don't support plugins for non-X11 builds at the moment.
 noinst_LTLIBRARIES += \
-	TestNetscapePlugin/libtestnetscapeplugin.la
+	TestNetscapePlugin/libTestNetscapePlugin.la
 
-TestNetscapePlugin_libtestnetscapeplugin_la_CPPFLAGS = \
+TestNetscapePlugin_libTestNetscapePlugin_la_CPPFLAGS = \
 	-I$(srcdir)/Tools/DumpRenderTree \
 	-I$(srcdir)/Source/WebCore \
 	-I$(srcdir)/Source/WebCore/bridge \
@@ -251,19 +211,20 @@ TestNetscapePlugin_libtestnetscapeplugin_la_CPPFLAGS = \
 	-I$(srcdir)/Tools/DumpRenderTree/TestNetscapePlugIn \
 	-I$(srcdir)/Tools/DumpRenderTree/TestNetscapePlugIn/unix/ForwardingHeaders \
 	$(global_cppflags) \
-	$(javascriptcore_cppflags)
+	$(javascriptcore_cppflags) \
+	-Wno-missing-format-attribute
 
 # For the Gtk port we want to use XP_UNIX both on X11 and Mac
 if !TARGET_WIN32
-TestNetscapePlugin_libtestnetscapeplugin_la_CPPFLAGS += -DXP_UNIX
+TestNetscapePlugin_libTestNetscapePlugin_la_CPPFLAGS += -DXP_UNIX
 endif
 
 # Add MOZ_X11 only for X11 targets
 if TARGET_X11
-TestNetscapePlugin_libtestnetscapeplugin_la_CPPFLAGS += -DMOZ_X11
+TestNetscapePlugin_libTestNetscapePlugin_la_CPPFLAGS += -DMOZ_X11
 endif
 
-TestNetscapePlugin_libtestnetscapeplugin_la_SOURCES = \
+TestNetscapePlugin_libTestNetscapePlugin_la_SOURCES = \
 	Tools/DumpRenderTree/TestNetscapePlugIn/Tests/DocumentOpenInDestroyStream.cpp \
 	Tools/DumpRenderTree/TestNetscapePlugIn/Tests/EvaluateJSAfterRemovingPluginElement.cpp \
 	Tools/DumpRenderTree/TestNetscapePlugIn/Tests/FormValue.cpp \
@@ -295,134 +256,21 @@ TestNetscapePlugin_libtestnetscapeplugin_la_SOURCES = \
 	Tools/DumpRenderTree/TestNetscapePlugIn/unix/ForwardingHeaders/WebKit/npfunctions.h \
 	Tools/DumpRenderTree/TestNetscapePlugIn/unix/ForwardingHeaders/WebKit/npruntime.h
 
-TestNetscapePlugin_libtestnetscapeplugin_la_LDFLAGS = \
+TestNetscapePlugin_libTestNetscapePlugin_la_LDFLAGS = \
 	-rpath ${shell pwd}/$(top_builddir)/../unix/TestNetscapePlugin/.libs \
 	$(no_undefined) \
 	-avoid-version \
 	-module
 
-CLEANFILES += TestNetscapePlugin/libtestnetscapeplugin.la
+CLEANFILES += TestNetscapePlugin/libTestNetscapePlugin.la
 endif
 
 check-local:
 	$(top_srcdir)/Tools/Scripts/run-gtk-tests --timeout=-1
 
 EXTRA_DIST += \
-	Tools/gtk/common.py \
-	Tools/gtk/generate-feature-defines-files \
-	Tools/gtk/generate-gtkdoc \
-	Tools/gtk/gtkdoc.py \
 	Tools/jhbuild/jhbuildutils.py \
 	Tools/Scripts/VCSUtils.pm \
 	Tools/Scripts/run-gtk-tests \
 	Tools/Scripts/webkit-build-directory \
 	Tools/Scripts/webkitdirs.pm
-
-docs: docs-build.stamp
-.PHONY : docs
-DISTCLEANFILES += docs-build.stamp
-
-docs_build_stamp_list = \
-	Source/WebKit/gtk/docs/webkitenvironment.xml
-
-if ENABLE_WEBKIT1
-docs_build_stamp_list += \
-	libwebkitgtk-@WEBKITGTK_API_MAJOR_VERSION@.@WEBKITGTK_API_MINOR_VERSION@.la \
-	Source/WebKit/gtk/docs/webkitgtk-docs.sgml \
-	Source/WebKit/gtk/docs/webkitgtk-sections.txt
-endif
-
-if ENABLE_WEBKIT2
-docs_build_stamp_list += \
-	libwebkit2gtk-@WEBKITGTK_API_MAJOR_VERSION@.@WEBKITGTK_API_MINOR_VERSION@.la \
-	Source/WebKit2/UIProcess/API/gtk/docs/webkit2gtk-docs.sgml \
-	Source/WebKit2/UIProcess/API/gtk/docs/webkit2gtk-sections.txt
-endif
-
-docs-build.stamp: $(docs_build_stamp_list)
-	CC=$(CC) $(srcdir)/Tools/gtk/generate-gtkdoc
-	@touch docs-build.stamp
-
-clean-local: doc-clean-local
-doc-clean-local:
-	@rm -f Documentation/webkitgtk/*~ Documentation/webkitgtk*.bak
-	@rm -f Documentation/webkit2gtk/*~ Documentation/webkit2gtk*.bak
-distclean-local: doc-distclean-local
-doc-distclean-local:
-	@rm -rf Documentation
-maintainer-clean-local: doc-maintainer-clean-local
-doc-maintainer-clean-local: clean
-	@rm -rf Documentation/webkitgtk Documentation/webkit2gtk
-	-@rmdir Documentation
-
-install-data-local:
-if ENABLE_WEBKIT1
-	@installfiles=`echo ./Documentation/webkitgtk/html/*`; \
-	if test "$$installfiles" = './Documentation/webkitgtk/html/*'; \
-	then echo 1>&2 'No documentation to install' ; \
-	else \
-	  DOC_MODULE_VERSION=`cat ./Documentation/webkitgtk/version.xml`; \
-	  if test -n "$(DOC_MODULE_VERSION)"; then \
-	    installdir="$(DESTDIR)$(HTML_DIR)/webkitgtk-$(DOC_MODULE_VERSION)"; \
-	  else \
-	    installdir="$(DESTDIR)$(HTML_DIR)/webkitgtk"; \
-	  fi; \
-	  $(mkinstalldirs) $${installdir} ; \
-	  for i in $$installfiles; do \
-	    echo ' $(INSTALL_DATA) '$$i ; \
-	    $(INSTALL_DATA) $$i $${installdir}; \
-	  done; \
-	  if test -n "$(DOC_MODULE_VERSION)"; then \
-	    mv -f $${installdir}/webkitgtk.devhelp2 \
-	      $${installdir}/webkitgtk-$(DOC_MODULE_VERSION).devhelp2; \
-	  fi; \
-	fi
-endif
-if ENABLE_WEBKIT2
-	@installfiles=`echo ./Documentation/webkit2gtk/html/*`; \
-	if test "$$installfiles" = './Documentation/webkit2gtk/html/*'; \
-	then echo 1>&2 'No documentation to install' ; \
-	else \
-	  DOC_MODULE_VERSION=`cat ./Documentation/webkit2gtk/version.xml`; \
-	  if test -n "$(DOC_MODULE_VERSION)"; then \
-	    installdir="$(DESTDIR)$(HTML_DIR)/webkit2gtk-$(DOC_MODULE_VERSION)"; \
-	  else \
-	    installdir="$(DESTDIR)$(HTML_DIR)/webkit2gtk"; \
-	  fi; \
-	  $(mkinstalldirs) $${installdir} ; \
-	  for i in $$installfiles; do \
-	    echo ' $(INSTALL_DATA) '$$i ; \
-	    $(INSTALL_DATA) $$i $${installdir}; \
-	  done; \
-	  if test -n "$(DOC_MODULE_VERSION)"; then \
-	    mv -f $${installdir}/webkit2gtk.devhelp2 \
-	      $${installdir}/webkit2gtk-$(DOC_MODULE_VERSION).devhelp2; \
-	  fi; \
-	fi
-endif
-	@$(AM_V_GEN)$(PYTHON) $(srcdir)/Tools/gtk/generate-gtkdoc --rebase --virtual-root=$${DESTDIR}
-
-uninstall-local:
-if ENABLE_WEBKIT1
-	@DOC_MODULE_VERSION=`cat ./Documentation/webkitgtk/version.xml`; \
-	if test -n "$(DOC_MODULE_VERSION)"; then \
-	  installdir="$(DESTDIR)$(HTML_DIR)/webkitgtk-$(DOC_MODULE_VERSION)"; \
-	else \
-	  installdir="$(DESTDIR)$(HTML_DIR)/webkitgtk"; \
-	fi; \
-	rm -rf $${installdir}
-endif
-if ENABLE_WEBKIT2
-	@DOC_MODULE_VERSION=`cat ./Documentation/webkit2gtk/version.xml`; \
-	if test -n "$(DOC_MODULE_VERSION)"; then \
-	  installdir="$(DESTDIR)$(HTML_DIR)/webkit2gtk-$(DOC_MODULE_VERSION)"; \
-	else \
-	  installdir="$(DESTDIR)$(HTML_DIR)/webkit2gtk"; \
-	fi; \
-	rm -rf $${installdir}
-endif
-
-if ENABLE_GTK_DOC
-noinst_DATA += docs-build.stamp
-endif
-

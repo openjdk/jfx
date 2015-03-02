@@ -22,7 +22,6 @@
 
 #include "config.h"
 
-#if ENABLE(SVG)
 #include "CSSInheritedValue.h"
 #include "CSSInitialValue.h"
 #include "CSSParser.h"
@@ -32,8 +31,6 @@
 #include "RenderTheme.h"
 #include "SVGPaint.h"
 
-using namespace std;
-
 namespace WebCore {
 
 bool CSSParser::parseSVGValue(CSSPropertyID propId, bool important)
@@ -42,7 +39,7 @@ bool CSSParser::parseSVGValue(CSSPropertyID propId, bool important)
     if (!value)
         return false;
 
-    int id = value->id;
+    CSSValueID id = value->id;
 
     bool valid_primitive = false;
     RefPtr<CSSValue> parsedValue;
@@ -167,7 +164,8 @@ bool CSSParser::parseSVGValue(CSSPropertyID propId, bool important)
             valid_primitive = true;
             break;
         }
-    /* fallthrough intentional */
+        FALLTHROUGH;
+
     case CSSPropertyGlyphOrientationHorizontal: // <angle> (restricted to _deg_ per SVG 1.1 spec) | inherit
         if (value->unit == CSSPrimitiveValue::CSS_DEG || value->unit == CSSPrimitiveValue::CSS_NUMBER) {
             parsedValue = CSSPrimitiveValue::create(value->fValue, CSSPrimitiveValue::CSS_DEG);
@@ -272,6 +270,7 @@ bool CSSParser::parseSVGValue(CSSPropertyID propId, bool important)
             }
             return false;
         }
+        break;
 
     case CSSPropertyMaskType: // luminance | alpha | inherit
         if (id == CSSValueLuminance || id == CSSValueAlpha)
@@ -365,5 +364,3 @@ PassRefPtr<CSSValue> CSSParser::parseSVGColor()
 }
 
 }
-
-#endif // ENABLE(SVG)

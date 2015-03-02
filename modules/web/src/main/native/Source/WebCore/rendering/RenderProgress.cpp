@@ -29,12 +29,10 @@
 #include <wtf/CurrentTime.h>
 #include <wtf/RefPtr.h>
 
-using namespace std;
-
 namespace WebCore {
 
-RenderProgress::RenderProgress(HTMLElement* element)
-    : RenderBlock(element)
+RenderProgress::RenderProgress(HTMLElement& element, PassRef<RenderStyle> style)
+    : RenderBlockFlow(element, std::move(style))
     , m_position(HTMLProgressElement::InvalidPosition)
     , m_animationStartTime(0)
     , m_animationRepeatInterval(0)
@@ -57,17 +55,25 @@ void RenderProgress::updateFromElement()
 
     updateAnimationState();
     repaint();
-    RenderBlock::updateFromElement();
+    RenderBlockFlow::updateFromElement();
 }
 
-bool RenderProgress::canBeReplacedWithInlineRunIn() const
+void RenderProgress::computeLogicalHeight(LayoutUnit logicalHeight, LayoutUnit logicalTop, LogicalExtentComputedValues& computedValues) const
 {
-    return false;
+    RenderBox::computeLogicalHeight(logicalHeight, logicalTop, computedValues);
+
+    LayoutRect frame = frameRect();
+    if (isHorizontalWritingMode())
+        frame.setHeight(computedValues.m_extent);
+    else
+        frame.setWidth(computedValues.m_extent);
+    IntSize frameSize = theme().progressBarRectForBounds(this, pixelSnappedIntRect(frame)).size();
+    computedValues.m_extent = isHorizontalWritingMode() ? frameSize.height() : frameSize.width();
 }
 
 double RenderProgress::animationProgress() const
 {
-    return m_animating ? (fmod((currentTime() - m_animationStartTime), m_animationDuration) / m_animationDuration) : 0;
+    return m_animating ? (fmod((monotonicallyIncreasingTime() - m_animationStartTime), m_animationDuration) / m_animationDuration) : 0;
 }
 
 bool RenderProgress::isDeterminate() const
@@ -76,7 +82,7 @@ bool RenderProgress::isDeterminate() const
             && HTMLProgressElement::InvalidPosition != position());
 }
 
-void RenderProgress::animationTimerFired(Timer<RenderProgress>*)
+void RenderProgress::animationTimerFired(Timer<RenderProgress>&)
 {
     repaint();
     if (!m_animationTimer.isActive() && m_animating)
@@ -85,16 +91,16 @@ void RenderProgress::animationTimerFired(Timer<RenderProgress>*)
 
 void RenderProgress::updateAnimationState()
 {
-    m_animationDuration = theme()->animationDurationForProgressBar(this);
-    m_animationRepeatInterval = theme()->animationRepeatIntervalForProgressBar(this);
+    m_animationDuration = theme().animationDurationForProgressBar(this);
+    m_animationRepeatInterval = theme().animationRepeatIntervalForProgressBar(this);
 
-    bool animating = style()->hasAppearance() && m_animationDuration > 0;
+    bool animating = style().hasAppearance() && m_animationDuration > 0;
     if (animating == m_animating)
         return;
 
     m_animating = animating;
     if (m_animating) {
-        m_animationStartTime = currentTime();
+        m_animationStartTime = monotonicallyIncreasingTime();
         m_animationTimer.startOneShot(m_animationRepeatInterval);
     } else
         m_animationTimer.stop();
@@ -102,14 +108,14 @@ void RenderProgress::updateAnimationState()
 
 HTMLProgressElement* RenderProgress::progressElement() const
 {
-    if (!node())
+    if (!element())
         return 0;
 
-    if (isHTMLProgressElement(node()))
-        return toHTMLProgressElement(node());
+    if (isHTMLProgressElement(element()))
+        return toHTMLProgressElement(element());
 
-    ASSERT(node()->shadowHost());
-    return toHTMLProgressElement(node()->shadowHost());
+    ASSERT(element()->shadowHost());
+    return toHTMLProgressElement(element()->shadowHost());
 }    
 
 } // namespace WebCore

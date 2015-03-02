@@ -26,19 +26,94 @@
 #ifndef ThunkGenerators_h
 #define ThunkGenerators_h
 
+#include "CodeSpecializationKind.h"
+#include "RegisterPreservationMode.h"
 #include "ThunkGenerator.h"
 
 #if ENABLE(JIT)
 namespace JSC {
 
-MacroAssemblerCodeRef linkCallGenerator(VM*);
-MacroAssemblerCodeRef linkConstructGenerator(VM*);
-MacroAssemblerCodeRef linkClosureCallGenerator(VM*);
-MacroAssemblerCodeRef virtualCallGenerator(VM*);
-MacroAssemblerCodeRef virtualConstructGenerator(VM*);
-MacroAssemblerCodeRef stringLengthTrampolineGenerator(VM*);
+MacroAssemblerCodeRef throwExceptionFromCallSlowPathGenerator(VM*);
+
+MacroAssemblerCodeRef linkCallThunkGenerator(VM*);
+MacroAssemblerCodeRef linkConstructThunkGenerator(VM*);
+MacroAssemblerCodeRef linkCallThatPreservesRegsThunkGenerator(VM*);
+MacroAssemblerCodeRef linkConstructThatPreservesRegsThunkGenerator(VM*);
+
+inline ThunkGenerator linkThunkGeneratorFor(
+    CodeSpecializationKind kind, RegisterPreservationMode registers)
+{
+    switch (kind) {
+    case CodeForCall:
+        switch (registers) {
+        case RegisterPreservationNotRequired:
+            return linkCallThunkGenerator;
+        case MustPreserveRegisters:
+            return linkCallThatPreservesRegsThunkGenerator;
+        }
+        break;
+    case CodeForConstruct:
+        switch (registers) {
+        case RegisterPreservationNotRequired:
+            return linkConstructThunkGenerator;
+        case MustPreserveRegisters:
+            return linkConstructThatPreservesRegsThunkGenerator;
+        }
+        break;
+    }
+    RELEASE_ASSERT_NOT_REACHED();
+    return 0;
+}
+
+MacroAssemblerCodeRef linkClosureCallThunkGenerator(VM*);
+MacroAssemblerCodeRef linkClosureCallThatPreservesRegsThunkGenerator(VM*);
+
+inline ThunkGenerator linkClosureCallThunkGeneratorFor(RegisterPreservationMode registers)
+{
+    switch (registers) {
+    case RegisterPreservationNotRequired:
+        return linkClosureCallThunkGenerator;
+    case MustPreserveRegisters:
+        return linkClosureCallThatPreservesRegsThunkGenerator;
+    }
+    RELEASE_ASSERT_NOT_REACHED();
+    return 0;
+}
+
+MacroAssemblerCodeRef virtualCallThunkGenerator(VM*);
+MacroAssemblerCodeRef virtualConstructThunkGenerator(VM*);
+MacroAssemblerCodeRef virtualCallThatPreservesRegsThunkGenerator(VM*);
+MacroAssemblerCodeRef virtualConstructThatPreservesRegsThunkGenerator(VM*);
+
+inline ThunkGenerator virtualThunkGeneratorFor(
+    CodeSpecializationKind kind, RegisterPreservationMode registers)
+{
+    switch (kind) {
+    case CodeForCall:
+        switch (registers) {
+        case RegisterPreservationNotRequired:
+            return virtualCallThunkGenerator;
+        case MustPreserveRegisters:
+            return virtualCallThatPreservesRegsThunkGenerator;
+        }
+        break;
+    case CodeForConstruct:
+        switch (registers) {
+        case RegisterPreservationNotRequired:
+            return virtualConstructThunkGenerator;
+        case MustPreserveRegisters:
+            return virtualConstructThatPreservesRegsThunkGenerator;
+        }
+        break;
+    }
+    RELEASE_ASSERT_NOT_REACHED();
+    return 0;
+}
+
 MacroAssemblerCodeRef nativeCallGenerator(VM*);
 MacroAssemblerCodeRef nativeConstructGenerator(VM*);
+MacroAssemblerCodeRef nativeTailCallGenerator(VM*);
+MacroAssemblerCodeRef arityFixup(VM*);
 
 MacroAssemblerCodeRef charCodeAtThunkGenerator(VM*);
 MacroAssemblerCodeRef charAtThunkGenerator(VM*);
@@ -52,6 +127,8 @@ MacroAssemblerCodeRef roundThunkGenerator(VM*);
 MacroAssemblerCodeRef sqrtThunkGenerator(VM*);
 MacroAssemblerCodeRef powThunkGenerator(VM*);
 MacroAssemblerCodeRef imulThunkGenerator(VM*);
+MacroAssemblerCodeRef arrayIteratorNextKeyThunkGenerator(VM*);
+MacroAssemblerCodeRef arrayIteratorNextValueThunkGenerator(VM*);
 
 }
 #endif // ENABLE(JIT)

@@ -38,7 +38,7 @@
 #include <Evas.h>
 #include <new>
 #include <string>
-#include <wtf/OwnArrayPtr.h>
+#include <wtf/StdLibExtras.h>
 #include <wtf/text/CString.h>
 
 using namespace std;
@@ -90,30 +90,18 @@ static void scrollbarEflEdjeMessage(void* data, Evas_Object*, Edje_Message_Type 
     that->scrollableArea()->scrollToOffsetWithoutAnimation(that->orientation(), value);
 }
 
-void ScrollbarEfl::show()
-{
-    if (Evas_Object* object = evasObject())
-        evas_object_show(object);
-}
-
-void ScrollbarEfl::hide()
-{
-    if (Evas_Object* object = evasObject())
-        evas_object_hide(object);
-}
-
 void ScrollbarEfl::setParent(ScrollView* view)
 {
     Widget::setParent(view);
 
     if (!view || !view->evasObject())
-            return;
+        return;
 
-    Frame* frame = toFrameView(view)->frame();
-    if (!frame || !frame->page())
-            return;
+    Frame& frame = toFrameView(view)->frame();
+    if (!frame.page())
+        return;
 
-    String theme = static_cast<RenderThemeEfl*>(frame->page()->theme())->themePath();
+    String theme = static_cast<RenderThemeEfl&>(frame.page()->theme()).themePath();
 
     const char* group = (orientation() == HorizontalScrollbar) ? "scrollbar.horizontal" : "scrollbar.vertical";
     if (theme.isEmpty()) {
@@ -125,8 +113,8 @@ void ScrollbarEfl::setParent(ScrollView* view)
         setEvasObject(edje_object_add(evas_object_evas_get(view->evasObject())));
         if (!evasObject()) {
             EINA_LOG_ERR("Could not create edje object for view=%p", view);
-        return;
-    }
+            return;
+        }
         frameRectsChanged();
         edje_object_message_handler_set(evasObject(), scrollbarEflEdjeMessage, this);
     }
@@ -171,7 +159,7 @@ void ScrollbarEfl::updateThumbPositionAndProportion()
     m_lastTotalSize = tSize;
     m_lastVisibleSize = vSize;
 
-    OwnArrayPtr<char> buffer = adoptArrayPtr(new char[sizeof(Edje_Message_Float_Set) + sizeof(double)]);
+    auto buffer = std::make_unique<char[]>(sizeof(Edje_Message_Float_Set) + sizeof(double));
     Edje_Message_Float_Set* message = new(buffer.get()) Edje_Message_Float_Set;
     message->count = 2;
 
@@ -211,4 +199,16 @@ void ScrollbarEfl::frameRectsChanged()
     evas_object_geometry_get(root()->evasObject(), &x, &y, 0, 0);
     evas_object_move(object, x + rect.x(), y + rect.y());
     evas_object_resize(object, rect.width(), rect.height());
+}
+
+void ScrollbarEfl::invalidate()
+{
+    if (Evas_Object* object = evasObject()) {
+        if (suppressInvalidation())
+            evas_object_hide(object);
+        else
+            evas_object_show(object);
+    }
+
+    Widget::invalidate();
 }

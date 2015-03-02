@@ -24,12 +24,11 @@
  */
 
 [
-        Conditional=SVG&FILTERS
-] interface SVGFEImageElement : SVGStyledElement,
-                                                            SVGURIReference,
-                                                            SVGLangSpace,
-                                                            SVGExternalResourcesRequired,
-                                                            SVGFilterPrimitiveStandardAttributes {
-        readonly attribute SVGAnimatedPreserveAspectRatio preserveAspectRatio;
-    };
+    Conditional=FILTERS
+] interface SVGFEImageElement : SVGElement {
+    readonly attribute SVGAnimatedPreserveAspectRatio preserveAspectRatio;
+};
 
+SVGFEImageElement implements SVGExternalResourcesRequired;
+SVGFEImageElement implements SVGFilterPrimitiveStandardAttributes;
+SVGFEImageElement implements SVGURIReference;

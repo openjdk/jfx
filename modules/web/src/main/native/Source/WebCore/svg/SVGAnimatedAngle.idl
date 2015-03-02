@@ -24,10 +24,9 @@
  */
 
 [
-    Conditional=SVG,
     SkipVTableValidation
 ] interface SVGAnimatedAngle {
-        readonly attribute SVGAngle baseVal;
-        readonly attribute SVGAngle animVal;
-    };
+    readonly attribute SVGAngle baseVal;
+    readonly attribute SVGAngle animVal;
+};
 

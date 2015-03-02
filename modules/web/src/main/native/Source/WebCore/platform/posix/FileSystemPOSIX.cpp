@@ -183,6 +183,28 @@ bool getFileSize(const String& path, long long& result)
     return true;
 }
 
+bool getFileCreationTime(const String& path, time_t& result)
+{
+#if OS(DARWIN) || OS(OPENBSD) || OS(NETBSD) || OS(FREEBSD)
+    CString fsRep = fileSystemRepresentation(path);
+
+    if (!fsRep.data() || fsRep.data()[0] == '\0')
+        return false;
+
+    struct stat fileInfo;
+
+    if (stat(fsRep.data(), &fileInfo))
+        return false;
+
+    result = fileInfo.st_birthtime;
+    return true;
+#else
+    UNUSED_PARAM(path);
+    UNUSED_PARAM(result);
+    return false;
+#endif
+}
+
 bool getFileModificationTime(const String& path, time_t& result)
 {
     CString fsRep = fileSystemRepresentation(path);
@@ -290,7 +312,7 @@ Vector<String> listDirectory(const String& path, const String& filter)
 }
 #endif
 
-#if !PLATFORM(MAC)
+#if !OS(DARWIN) || PLATFORM(EFL) || PLATFORM(GTK)
 String openTemporaryFile(const String& prefix, PlatformFileHandle& handle)
 {
     char buffer[PATH_MAX];

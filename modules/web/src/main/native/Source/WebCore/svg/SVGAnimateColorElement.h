@@ -22,21 +22,19 @@
 #ifndef SVGAnimateColorElement_h
 #define SVGAnimateColorElement_h
 
-#if ENABLE(SVG)
 #include "SVGAnimateElement.h"
 
 namespace WebCore {
 
-class SVGAnimateColorElement FINAL : public SVGAnimateElement {
+class SVGAnimateColorElement final : public SVGAnimateElement {
 public:
-    static PassRefPtr<SVGAnimateColorElement> create(const QualifiedName&, Document*);
+    static PassRefPtr<SVGAnimateColorElement> create(const QualifiedName&, Document&);
 
 private:
-    SVGAnimateColorElement(const QualifiedName&, Document*);
-    virtual void determinePropertyValueTypes(const String& from, const String& to);
+    SVGAnimateColorElement(const QualifiedName&, Document&);
+    virtual void determinePropertyValueTypes(const String& from, const String& to) override;
 };
 
 } // namespace WebCore
 
-#endif // ENABLE(SVG)
 #endif // SVGAnimateColorElement_h

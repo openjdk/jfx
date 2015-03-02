@@ -1,6 +1,6 @@
 /*
  * Copyright 2005 Frerich Raabe <raabe@kde.org>
- * Copyright (C) 2006 Apple Computer, Inc.
+ * Copyright (C) 2006, 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,94 +28,91 @@
 #define XPathPredicate_h
 
 #include "XPathExpressionNode.h"
-#include "XPathValue.h"
 
 namespace WebCore {
 
     namespace XPath {
         
-        class Number : public Expression {
+        class Number final : public Expression {
         public:
             explicit Number(double);
+
         private:
-            virtual Value evaluate() const;
-            virtual Value::Type resultType() const { return Value::NumberValue; }
+            virtual Value evaluate() const override;
+            virtual Value::Type resultType() const override { return Value::NumberValue; }
 
             Value m_value;
         };
 
-        class StringExpression : public Expression {
+        class StringExpression final : public Expression {
         public:
-            explicit StringExpression(const String&);
+            explicit StringExpression(String&&);
+
         private:
-            virtual Value evaluate() const;
-            virtual Value::Type resultType() const { return Value::StringValue; }
+            virtual Value evaluate() const override;
+            virtual Value::Type resultType() const override { return Value::StringValue; }
 
             Value m_value;
         };
 
-        class Negative : public Expression {
+        class Negative final : public Expression {
+        public:
+            explicit Negative(std::unique_ptr<Expression>);
+
         private:
-            virtual Value evaluate() const;
-            virtual Value::Type resultType() const { return Value::NumberValue; }
+            virtual Value evaluate() const override;
+            virtual Value::Type resultType() const override { return Value::NumberValue; }
         };
 
-        class NumericOp : public Expression {
+        class NumericOp final : public Expression {
         public:
-            enum Opcode {
-                OP_Add, OP_Sub, OP_Mul, OP_Div, OP_Mod
-            };
-            NumericOp(Opcode, Expression* lhs, Expression* rhs);
+            enum Opcode { OP_Add, OP_Sub, OP_Mul, OP_Div, OP_Mod };
+            NumericOp(Opcode, std::unique_ptr<Expression> lhs, std::unique_ptr<Expression> rhs);
+
         private:
-            virtual Value evaluate() const;
-            virtual Value::Type resultType() const { return Value::NumberValue; }
+            virtual Value evaluate() const override;
+            virtual Value::Type resultType() const override { return Value::NumberValue; }
 
             Opcode m_opcode;
         };
 
-        class EqTestOp : public Expression {
+        class EqTestOp final : public Expression {
         public:
             enum Opcode { OP_EQ, OP_NE, OP_GT, OP_LT, OP_GE, OP_LE };
-            EqTestOp(Opcode, Expression* lhs, Expression* rhs);
-            virtual Value evaluate() const;
+            EqTestOp(Opcode, std::unique_ptr<Expression> lhs, std::unique_ptr<Expression> rhs);
+            virtual Value evaluate() const override;
+
         private:
-            virtual Value::Type resultType() const { return Value::BooleanValue; }
+            virtual Value::Type resultType() const override { return Value::BooleanValue; }
             bool compare(const Value&, const Value&) const;
 
             Opcode m_opcode;
         };
 
-        class LogicalOp : public Expression {
+        class LogicalOp final : public Expression {
         public:
             enum Opcode { OP_And, OP_Or };
-            LogicalOp(Opcode, Expression* lhs, Expression* rhs);
+            LogicalOp(Opcode, std::unique_ptr<Expression> lhs, std::unique_ptr<Expression> rhs);
+
         private:
-            virtual Value::Type resultType() const { return Value::BooleanValue; }
+            virtual Value::Type resultType() const override { return Value::BooleanValue; }
             bool shortCircuitOn() const;
-            virtual Value evaluate() const;
+            virtual Value evaluate() const override;
 
             Opcode m_opcode;
         };
 
-        class Union : public Expression {
-        private:
-            virtual Value evaluate() const;
-            virtual Value::Type resultType() const { return Value::NodeSetValue; }
-        };
-
-        class Predicate {
-            WTF_MAKE_NONCOPYABLE(Predicate); WTF_MAKE_FAST_ALLOCATED;
+        class Union final : public Expression {
         public:
-            explicit Predicate(Expression*);
-            ~Predicate();
-            bool evaluate() const;
-
-            bool isContextPositionSensitive() const { return m_expr->isContextPositionSensitive() || m_expr->resultType() == Value::NumberValue; }
-            bool isContextSizeSensitive() const { return m_expr->isContextSizeSensitive(); }
+            Union(std::unique_ptr<Expression>, std::unique_ptr<Expression>);
 
         private:
-            Expression* m_expr;
+            virtual Value evaluate() const override;
+            virtual Value::Type resultType() const override { return Value::NodeSetValue; }
         };
+
+        bool evaluatePredicate(const Expression&);
+        bool predicateIsContextPositionSensitive(const Expression&);
 
     }
 

@@ -11,8 +11,8 @@ DEFINES += \
     BUILDING_JAVA__ \
     USE_SYSTEM_MALLOC \
     STATICALLY_LINKED_WITH_WebCore \
-    STATICALLY_LINKED_WITH_JavaScriptCore 
-
+    STATICALLY_LINKED_WITH_JavaScriptCore \
+    STATICALLY_LINKED_WITH_WTF
 
 *-cross-* {
     INCLUDEPATH += $$(WK_INCLUDE)
@@ -28,6 +28,11 @@ DEFINES += \
     QMAKE_CXXFLAGS += -Wreturn-type -fno-strict-aliasing
 }
 
+mac*|linux* {
+    QMAKE_CXXFLAGS -= -std=c++11
+    QMAKE_CXXFLAGS += -std=c++11
+}
+
 INCLUDEPATH += $(JAVA_HOME)/include
 
 linux-*|solaris-* {
@@ -38,7 +43,9 @@ linux-*|solaris-* {
     LIBS += -lpthread
 
     linux-* {
-        INCLUDEPATH += $(JAVA_HOME)/include/linux
+        INCLUDEPATH += \
+		    $(JAVA_HOME)/include/linux \
+		    $(WEBKIT_OUTPUTDIR)/import/include
     }
 
     solaris-* {
@@ -78,23 +85,25 @@ CONFIG(release, debug|release) {
 
 win32-* {
     INCLUDEPATH += $$BASE_DIR/JavaScriptCore/os-win32
-    contains(DEFINES, ICU_UNICODE=1) {
-#       INCLUDEPATH += $$BASE_DIR/WTF/icu
-        INCLUDEPATH += $(WEBKITOUTPUTDIR)/import/include/icu
-        LIBS += -licuuc -licuin
-    }
+
+    # static icu libraries on windows
+    QMAKE_CXXFLAGS += -DU_STATIC_IMPLEMENTATION
+    QMAKE_CFLAGS += -DU_STATIC_IMPLEMENTATION
 
     INCLUDEPATH += \
-        $(WEBKITOUTPUTDIR)/import/include \
+        $(WEBKIT_OUTPUTDIR)/import/include \
         $(JAVA_HOME)/include/win32
     LIBS += \
-        -L$(WEBKITOUTPUTDIR)/import/lib \
+        -L$(WEBKIT_OUTPUTDIR)/import/lib \
         -lwinmm
 
     QMAKE_CXXFLAGS -= -Zc:wchar_t-
-    QMAKE_CXXFLAGS += -w34100 -w34189 -wd4291 -wd4344 -wd4996 -MP4 -Zc:wchar_t /D _STATIC_CPPLIB
+    QMAKE_CXXFLAGS += -w34100 -w34189 -wd4291 -wd4344 -wd4996 -MP4 -Zc:wchar_t #/D _STATIC_CPPLIB
 #    QMAKE_CXXFLAGS_RELEASE += /O2 - QMAKE does it by default
     QMAKE_LFLAGS += /MAP
+
+    DEFINES += \
+        NOMINMAX # disable min/max macro defines in Windows.h
 }
 
 QMAKE_EXTRA_TARGETS += generated_files

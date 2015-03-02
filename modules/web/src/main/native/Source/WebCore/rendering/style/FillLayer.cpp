@@ -54,6 +54,7 @@ FillLayer::FillLayer(EFillLayerType type)
     , m_composite(FillLayer::initialFillComposite(type))
     , m_sizeType(FillLayer::initialFillSizeType(type))
     , m_blendMode(FillLayer::initialFillBlendMode(type))
+    , m_maskSourceType(FillLayer::initialMaskSourceType(type))
     , m_imageSet(false)
     , m_attachmentSet(false)
     , m_clipSet(false)
@@ -67,6 +68,7 @@ FillLayer::FillLayer(EFillLayerType type)
     , m_backgroundYOrigin(TopEdge)
     , m_compositeSet(type == MaskFillLayer)
     , m_blendModeSet(false)
+    , m_maskSourceTypeSet(false)
     , m_type(type)
 {
 }
@@ -85,6 +87,7 @@ FillLayer::FillLayer(const FillLayer& o)
     , m_composite(o.m_composite)
     , m_sizeType(o.m_sizeType)
     , m_blendMode(o.m_blendMode)
+    , m_maskSourceType(o.m_maskSourceType)
     , m_imageSet(o.m_imageSet)
     , m_attachmentSet(o.m_attachmentSet)
     , m_clipSet(o.m_clipSet)
@@ -98,6 +101,7 @@ FillLayer::FillLayer(const FillLayer& o)
     , m_backgroundYOrigin(o.m_backgroundYOrigin)
     , m_compositeSet(o.m_compositeSet)
     , m_blendModeSet(o.m_blendModeSet)
+    , m_maskSourceTypeSet(o.m_maskSourceTypeSet)
     , m_type(o.m_type)
 {
 }
@@ -129,6 +133,7 @@ FillLayer& FillLayer::operator=(const FillLayer& o)
     m_repeatX = o.m_repeatX;
     m_repeatY = o.m_repeatY;
     m_sizeType = o.m_sizeType;
+    m_maskSourceType = o.m_maskSourceType;
 
     m_imageSet = o.m_imageSet;
     m_attachmentSet = o.m_attachmentSet;
@@ -140,7 +145,8 @@ FillLayer& FillLayer::operator=(const FillLayer& o)
     m_repeatYSet = o.m_repeatYSet;
     m_xPosSet = o.m_xPosSet;
     m_yPosSet = o.m_yPosSet;
-    
+    m_maskSourceTypeSet = o.m_maskSourceTypeSet;
+
     m_type = o.m_type;
 
     return *this;
@@ -153,9 +159,10 @@ bool FillLayer::operator==(const FillLayer& o) const
     return StyleImage::imagesEquivalent(m_image.get(), o.m_image.get()) && m_xPosition == o.m_xPosition && m_yPosition == o.m_yPosition
             && m_backgroundXOrigin == o.m_backgroundXOrigin && m_backgroundYOrigin == o.m_backgroundYOrigin
             && m_attachment == o.m_attachment && m_clip == o.m_clip && m_composite == o.m_composite
-            && m_blendModeSet == o.m_blendModeSet && m_origin == o.m_origin && m_repeatX == o.m_repeatX
-            && m_repeatY == o.m_repeatY && m_sizeType == o.m_sizeType && m_sizeLength == o.m_sizeLength
-            && m_type == o.m_type && ((m_next && o.m_next) ? *m_next == *o.m_next : m_next == o.m_next);
+            && m_blendMode == o.m_blendMode && m_origin == o.m_origin && m_repeatX == o.m_repeatX
+            && m_repeatY == o.m_repeatY && m_sizeType == o.m_sizeType && m_maskSourceType == o.m_maskSourceType
+            && m_sizeLength == o.m_sizeLength && m_type == o.m_type
+            && ((m_next && o.m_next) ? *m_next == *o.m_next : m_next == o.m_next);
 }
 
 void FillLayer::fillUnsetProperties()
@@ -190,7 +197,7 @@ void FillLayer::fillUnsetProperties()
                 pattern = this;
         }
     }
-    
+
     for (curr = this; curr && curr->isAttachmentSet(); curr = curr->next()) { }
     if (curr && curr != this) {
         // We need to fill in the remaining values with the pattern specified.
@@ -343,13 +350,16 @@ bool FillLayer::imagesAreLoaded() const
     return true;
 }
 
-bool FillLayer::hasOpaqueImage(const RenderObject* renderer) const
+bool FillLayer::hasOpaqueImage(const RenderElement* renderer) const
 {
     if (!m_image)
         return false;
 
     if (m_composite == CompositeClear || m_composite == CompositeCopy)
         return true;
+
+    if (m_blendMode != BlendModeNormal)
+        return false;
 
     if (m_composite == CompositeSourceOver)
         return m_image->knownToBeOpaque(renderer);

@@ -33,7 +33,7 @@
 
 #include "IconDatabaseBase.h"
 #include "IconURL.h"
-#include "KURL.h"
+#include "URL.h"
 
 namespace WebCore {
 
@@ -44,10 +44,10 @@ class IconController {
     WTF_MAKE_NONCOPYABLE(IconController);
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    explicit IconController(Frame*);
+    explicit IconController(Frame&);
     ~IconController();
 
-    KURL url();
+    URL url();
     IconURLs urlsForTypes(int iconTypesMask);
     IconURL iconURL(IconType) const;
 
@@ -57,15 +57,15 @@ public:
     void loadDecisionReceived(IconLoadDecision);
     void continueLoadWithDecision(IconLoadDecision);
 
-    void commitToDatabase(const KURL& icon);
+    void commitToDatabase(const URL& icon);
 
 private:
     bool appendToIconURLs(IconType, IconURLs*);
     IconURL defaultURL(IconType);
 
-    Frame* m_frame;
+    Frame& m_frame;
 
-    OwnPtr<IconLoader> m_iconLoader;
+    std::unique_ptr<IconLoader> m_iconLoader;
     bool m_waitingForLoadDecision;
 };
 

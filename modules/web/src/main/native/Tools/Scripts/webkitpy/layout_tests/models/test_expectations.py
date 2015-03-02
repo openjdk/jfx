@@ -209,7 +209,7 @@ class TestExpectationParser(object):
 
     # FIXME: Update the original modifiers and remove this once the old syntax is gone.
     _configuration_tokens_list = [
-        'Mac', 'SnowLeopard', 'Lion', 'MountainLion',
+        'Mac', 'SnowLeopard', 'Lion', 'MountainLion', 'Mavericks',
         'Win', 'XP', 'Vista', 'Win7',
         'Linux',
         'Android',
@@ -715,17 +715,17 @@ class TestExpectations(object):
     in which case the expectations apply to all test cases in that
     directory and any subdirectory. The format is along the lines of:
 
-      LayoutTests/fast/js/fixme.js [ Failure ]
-      LayoutTests/fast/js/flaky.js [ Failure Pass ]
-      LayoutTests/fast/js/crash.js [ Crash Failure Pass Timeout ]
+      LayoutTests/js/fixme.js [ Failure ]
+      LayoutTests/js/flaky.js [ Failure Pass ]
+      LayoutTests/js/crash.js [ Crash Failure Pass Timeout ]
       ...
 
     To add modifiers:
-      LayoutTests/fast/js/no-good.js
-      [ Debug ] LayoutTests/fast/js/no-good.js [ Pass Timeout ]
-      [ Debug ] LayoutTests/fast/js/no-good.js [ Pass Skip Timeout ]
-      [ Linux Debug ] LayoutTests/fast/js/no-good.js [ Pass Skip Timeout ]
-      [ Linux Win ] LayoutTests/fast/js/no-good.js [ Pass Skip Timeout ]
+      LayoutTests/js/no-good.js
+      [ Debug ] LayoutTests/js/no-good.js [ Pass Timeout ]
+      [ Debug ] LayoutTests/js/no-good.js [ Pass Skip Timeout ]
+      [ Linux Debug ] LayoutTests/js/no-good.js [ Pass Skip Timeout ]
+      [ Linux Win ] LayoutTests/js/no-good.js [ Pass Skip Timeout ]
 
     Skip: Doesn't run the test.
     Slow: The test takes a long time to run, but does not timeout indefinitely.
@@ -830,10 +830,7 @@ class TestExpectations(object):
             suffixes.add('wav')
         return set(suffixes)
 
-    # FIXME: This constructor does too much work. We should move the actual parsing of
-    # the expectations into separate routines so that linting and handling overrides
-    # can be controlled separately, and the constructor can be more of a no-op.
-    def __init__(self, port, tests=None, include_generic=True, include_overrides=True, expectations_to_lint=None):
+    def __init__(self, port, tests=None, include_generic=True, include_overrides=True, expectations_to_lint=None, force_expectations_pass=False):
         self._full_test_list = tests
         self._test_config = port.test_configuration()
         self._is_lint_mode = expectations_to_lint is not None
@@ -842,36 +839,46 @@ class TestExpectations(object):
         self._port = port
         self._skipped_tests_warnings = []
         self._expectations = []
+        self._force_expectations_pass = force_expectations_pass
+        self._include_generic = include_generic
+        self._include_overrides = include_overrides
+        self._expectations_to_lint = expectations_to_lint
 
-        expectations_dict = expectations_to_lint or port.expectations_dict()
-
-        expectations_dict_index = 0
-        # Populate generic expectations (if enabled by include_generic).
-        if port.path_to_generic_test_expectations_file() in expectations_dict:
-            if include_generic:
-                expectations = self._parser.parse(expectations_dict.keys()[expectations_dict_index], expectations_dict.values()[expectations_dict_index])
+    def parse_generic_expectations(self):
+        if self._port.path_to_generic_test_expectations_file() in self._expectations_dict:
+            if self._include_generic:
+                expectations = self._parser.parse(self._expectations_dict.keys()[self._expectations_dict_index], self._expectations_dict.values()[self._expectations_dict_index])
                 self._add_expectations(expectations)
                 self._expectations += expectations
-            expectations_dict_index += 1
+            self._expectations_dict_index += 1
 
-        # Populate default port expectations (always enabled).
-        if len(expectations_dict) > expectations_dict_index:
-            expectations = self._parser.parse(expectations_dict.keys()[expectations_dict_index], expectations_dict.values()[expectations_dict_index])
+    def parse_default_port_expectations(self):
+        if len(self._expectations_dict) > self._expectations_dict_index:
+            expectations = self._parser.parse(self._expectations_dict.keys()[self._expectations_dict_index], self._expectations_dict.values()[self._expectations_dict_index])
             self._add_expectations(expectations)
             self._expectations += expectations
-            expectations_dict_index += 1
+            self._expectations_dict_index += 1
 
-        # Populate override expectations (if enabled by include_overrides).
-        while len(expectations_dict) > expectations_dict_index and include_overrides:
-            expectations = self._parser.parse(expectations_dict.keys()[expectations_dict_index], expectations_dict.values()[expectations_dict_index])
+    def parse_override_expectations(self):
+        while len(self._expectations_dict) > self._expectations_dict_index and self._include_overrides:
+            expectations = self._parser.parse(self._expectations_dict.keys()[self._expectations_dict_index], self._expectations_dict.values()[self._expectations_dict_index])
             self._add_expectations(expectations)
             self._expectations += expectations
-            expectations_dict_index += 1
+            self._expectations_dict_index += 1
 
-        # FIXME: move ignore_tests into port.skipped_layout_tests()
-        self.add_skipped_tests(port.skipped_layout_tests(tests).union(set(port.get_option('ignore_tests', []))))
+    def parse_all_expectations(self):
+        self._expectations_dict = self._expectations_to_lint or self._port.expectations_dict()
+        self._expectations_dict_index = 0
 
         self._has_warnings = False
+
+        self.parse_generic_expectations()
+        self.parse_default_port_expectations()
+        self.parse_override_expectations()
+
+        # FIXME: move ignore_tests into port.skipped_layout_tests()
+        self.add_skipped_tests(self._port.skipped_layout_tests(self._full_test_list).union(set(self._port.get_option('ignore_tests', []))))
+
         self._report_warnings()
         self._process_tests_without_expectations()
 
@@ -882,36 +889,6 @@ class TestExpectations(object):
 
     def get_rebaselining_failures(self):
         return self._model.get_test_set(REBASELINE)
-
-    # FIXME: Change the callsites to use TestExpectationsModel and remove.
-    def get_expectations(self, test):
-        return self._model.get_expectations(test)
-
-    # FIXME: Change the callsites to use TestExpectationsModel and remove.
-    def has_modifier(self, test, modifier):
-        return self._model.has_modifier(test, modifier)
-
-    # FIXME: Change the callsites to use TestExpectationsModel and remove.
-    def get_tests_with_result_type(self, result_type):
-        return self._model.get_tests_with_result_type(result_type)
-
-    # FIXME: Change the callsites to use TestExpectationsModel and remove.
-    def get_test_set(self, modifier, expectation=None, include_skips=True):
-        return self._model.get_test_set(modifier, expectation, include_skips)
-
-    # FIXME: Change the callsites to use TestExpectationsModel and remove.
-    def get_modifiers(self, test):
-        return self._model.get_modifiers(test)
-
-    # FIXME: Change the callsites to use TestExpectationsModel and remove.
-    def get_tests_with_timeline(self, timeline):
-        return self._model.get_tests_with_timeline(timeline)
-
-    def get_expectations_string(self, test):
-        return self._model.get_expectations_string(test)
-
-    def expectation_to_string(self, expectation):
-        return self._model.expectation_to_string(expectation)
 
     def matches_an_expected_result(self, test, result, pixel_tests_are_enabled):
         expected_results = self._model.get_expectations(test)
@@ -990,7 +967,11 @@ class TestExpectations(object):
 
     def _add_expectations(self, expectation_list):
         for expectation_line in expectation_list:
-            if not expectation_line.expectations:
+            if self._force_expectations_pass:
+                expectation_line.expectations = ['PASS']
+                expectation_line.parsed_expectations = set([PASS])
+
+            elif not expectation_line.expectations:
                 continue
 
             if self._is_lint_mode or self._test_config in expectation_line.matching_configurations:

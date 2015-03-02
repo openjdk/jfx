@@ -32,13 +32,13 @@ class Document;
 
 class HTMLParserOptions {
 public:
+    explicit HTMLParserOptions();
+    explicit HTMLParserOptions(Document&);
+
     bool scriptEnabled;
     bool pluginsEnabled;
     bool usePreHTML5ParserQuirks;
-    bool useThreading;
     unsigned maximumDOMTreeDepth;
-
-    explicit HTMLParserOptions(Document* = 0);
 };
 
 }

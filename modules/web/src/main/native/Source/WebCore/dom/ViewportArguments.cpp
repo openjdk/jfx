@@ -36,13 +36,14 @@
 #include "IntSize.h"
 #include "Page.h"
 #include "ScriptableDocumentParser.h"
-#include <wtf/text/WTFString.h>
 
-using namespace std;
+#if PLATFORM(IOS)
+#include "WebCoreSystemInterface.h"
+#endif
 
 namespace WebCore {
 
-#if PLATFORM(BLACKBERRY) || PLATFORM(EFL) || PLATFORM(GTK) || PLATFORM(QT)
+#if PLATFORM(GTK)
 const float ViewportArguments::deprecatedTargetDPI = 160;
 #endif
 
@@ -57,7 +58,7 @@ static const float& compareIgnoringAuto(const float& value1, const float& value2
         return value1;
 
     return compare(value1, value2);
-    }
+}
 
 static inline float clampLengthValue(float value)
 {
@@ -66,7 +67,7 @@ static inline float clampLengthValue(float value)
 
     // Limits as defined in the css-device-adapt spec.
     if (value != ViewportArguments::ValueAuto)
-        return min(float(10000), max(value, float(1)));
+        return std::min<float>(10000, std::max<float>(value, 1));
     return value;
 }
 
@@ -77,7 +78,7 @@ static inline float clampScaleValue(float value)
 
     // Limits as defined in the css-device-adapt spec.
     if (value != ViewportArguments::ValueAuto)
-        return min(float(10), max(value, float(0.1)));
+        return std::min<float>(10, std::max<float>(value, 0.1));
     return value;
 }
 
@@ -150,16 +151,16 @@ ViewportAttributes ViewportArguments::resolve(const FloatSize& initialViewportSi
         }
 
         if (resultMinWidth != ViewportArguments::ValueAuto || resultMaxWidth != ViewportArguments::ValueAuto)
-            resultWidth = compareIgnoringAuto(resultMinWidth, compareIgnoringAuto(resultMaxWidth, deviceSize.width(), min), max);
+            resultWidth = compareIgnoringAuto(resultMinWidth, compareIgnoringAuto(resultMaxWidth, deviceSize.width(), std::min), std::max);
 
         if (resultMinHeight != ViewportArguments::ValueAuto || resultMaxHeight != ViewportArguments::ValueAuto)
-            resultHeight = compareIgnoringAuto(resultMinHeight, compareIgnoringAuto(resultMaxHeight, deviceSize.height(), min), max);
+            resultHeight = compareIgnoringAuto(resultMinHeight, compareIgnoringAuto(resultMaxHeight, deviceSize.height(), std::min), std::max);
 
         if (resultMinZoom != ViewportArguments::ValueAuto && resultMaxZoom != ViewportArguments::ValueAuto)
-            resultMaxZoom = max(resultMinZoom, resultMaxZoom);
+            resultMaxZoom = std::max(resultMinZoom, resultMaxZoom);
 
         if (resultZoom != ViewportArguments::ValueAuto)
-            resultZoom = compareIgnoringAuto(resultMinZoom, compareIgnoringAuto(resultMaxZoom, resultZoom, min), max);
+            resultZoom = compareIgnoringAuto(resultMinZoom, compareIgnoringAuto(resultMaxZoom, resultZoom, std::min), std::max);
 
         if (resultWidth == ViewportArguments::ValueAuto && resultZoom == ViewportArguments::ValueAuto)
             resultWidth = deviceSize.width();
@@ -174,12 +175,12 @@ ViewportAttributes ViewportArguments::resolve(const FloatSize& initialViewportSi
             resultHeight = resultWidth * deviceSize.height() / deviceSize.width();
 
         if (resultZoom != ViewportArguments::ValueAuto || resultMaxZoom != ViewportArguments::ValueAuto) {
-            resultWidth = compareIgnoringAuto(resultWidth, deviceSize.width() / compareIgnoringAuto(resultZoom, resultMaxZoom, min), max);
-            resultHeight = compareIgnoringAuto(resultHeight, deviceSize.height() / compareIgnoringAuto(resultZoom, resultMaxZoom, min), max);
+            resultWidth = compareIgnoringAuto(resultWidth, deviceSize.width() / compareIgnoringAuto(resultZoom, resultMaxZoom, std::min), std::max);
+            resultHeight = compareIgnoringAuto(resultHeight, deviceSize.height() / compareIgnoringAuto(resultZoom, resultMaxZoom, std::min), std::max);
         }
 
-        resultWidth = max<float>(1, resultWidth);
-        resultHeight = max<float>(1, resultHeight);
+        resultWidth = std::max<float>(1, resultWidth);
+        resultHeight = std::max<float>(1, resultHeight);
     }
 
     if (type != ViewportArguments::CSSDeviceAdaptation && type != ViewportArguments::Implicit) {
@@ -201,11 +202,11 @@ ViewportAttributes ViewportArguments::resolve(const FloatSize& initialViewportSi
         result.minimumScale = resultMinZoom;
 
     if (resultMaxZoom == ViewportArguments::ValueAuto) {
-        result.maximumScale = float(5.0);
-        result.minimumScale = min(float(5.0), result.minimumScale);
+        result.maximumScale = 5;
+        result.minimumScale = std::min<float>(5, result.minimumScale);
     } else
         result.maximumScale = resultMaxZoom;
-    result.maximumScale = max(result.minimumScale, result.maximumScale);
+    result.maximumScale = std::max(result.minimumScale, result.maximumScale);
 
     // Resolve initial-scale value.
     result.initialScale = resultZoom;
@@ -215,12 +216,12 @@ ViewportAttributes ViewportArguments::resolve(const FloatSize& initialViewportSi
             result.initialScale = initialViewportSize.width() / resultWidth;
         if (resultHeight != ViewportArguments::ValueAuto) {
             // if 'auto', the initial-scale will be negative here and thus ignored.
-            result.initialScale = max<float>(result.initialScale, initialViewportSize.height() / resultHeight);
+            result.initialScale = std::max<float>(result.initialScale, initialViewportSize.height() / resultHeight);
         }
     }
 
     // Constrain initial-scale value to minimum-scale/maximum-scale range.
-    result.initialScale = min(result.maximumScale, max(result.minimumScale, result.initialScale));
+    result.initialScale = std::min(result.maximumScale, std::max(result.minimumScale, result.initialScale));
 
     // Resolve width value.
     if (resultWidth == ViewportArguments::ValueAuto) {
@@ -237,9 +238,9 @@ ViewportAttributes ViewportArguments::resolve(const FloatSize& initialViewportSi
         resultHeight = resultWidth * (initialViewportSize.height() / initialViewportSize.width());
 
     if (type == ViewportArguments::ViewportMeta) {
-    // Extend width and height to fill the visual viewport for the resolved initial-scale.
-        resultWidth = max<float>(resultWidth, initialViewportSize.width() / result.initialScale);
-        resultHeight = max<float>(resultHeight, initialViewportSize.height() / result.initialScale);
+        // Extend width and height to fill the visual viewport for the resolved initial-scale.
+        resultWidth = std::max<float>(resultWidth, initialViewportSize.width() / result.initialScale);
+        resultHeight = std::max<float>(resultHeight, initialViewportSize.height() / result.initialScale);
     }
 
     result.layoutSize.setWidth(resultWidth);
@@ -262,10 +263,17 @@ static FloatSize convertToUserSpace(const FloatSize& deviceSize, float devicePix
     if (devicePixelRatio != 1)
         result.scale(1 / devicePixelRatio);
     return result;
-    }
+}
 
 ViewportAttributes computeViewportAttributes(ViewportArguments args, int desktopWidth, int deviceWidth, int deviceHeight, float devicePixelRatio, IntSize visibleViewport)
 {
+#if PLATFORM(IOS)
+    // FIXME: This should probably be fixed elsewhere on iOS. iOS may only use computeViewportAttributes for tests.
+    CGSize screenSize = wkGetViewportScreenSize();
+    visibleViewport.setWidth(screenSize.width);
+    visibleViewport.setHeight(screenSize.height);
+#endif
+
     FloatSize initialViewportSize = convertToUserSpace(visibleViewport, devicePixelRatio);
     FloatSize deviceSize = convertToUserSpace(FloatSize(deviceWidth, deviceHeight), devicePixelRatio);
 
@@ -275,14 +283,14 @@ ViewportAttributes computeViewportAttributes(ViewportArguments args, int desktop
 float computeMinimumScaleFactorForContentContained(const ViewportAttributes& result, const IntSize& visibleViewport, const IntSize& contentsSize)
 {
     FloatSize viewportSize(visibleViewport);
-    return max<float>(result.minimumScale, max(viewportSize.width() / contentsSize.width(), viewportSize.height() / contentsSize.height()));
-    }
+    return std::max<float>(result.minimumScale, std::max(viewportSize.width() / contentsSize.width(), viewportSize.height() / contentsSize.height()));
+}
 
 void restrictMinimumScaleFactorToViewportSize(ViewportAttributes& result, IntSize visibleViewport, float devicePixelRatio)
 {
     FloatSize viewportSize = convertToUserSpace(visibleViewport, devicePixelRatio);
 
-    result.minimumScale = max<float>(result.minimumScale, max(viewportSize.width() / result.layoutSize.width(), viewportSize.height() / result.layoutSize.height()));
+    result.minimumScale = std::max<float>(result.minimumScale, std::max(viewportSize.width() / result.layoutSize.width(), viewportSize.height() / result.layoutSize.height()));
 }
 
 void restrictScaleFactorToInitialScaleIfNotUserScalable(ViewportAttributes& result)
@@ -399,9 +407,30 @@ void setViewportFeature(const String& keyString, const String& valueString, Docu
         arguments->maxZoom = findScaleValue(keyString, valueString, document);
     else if (keyString == "user-scalable")
         arguments->userZoom = findUserScalableValue(keyString, valueString, document);
+#if PLATFORM(IOS)
+    else if (keyString == "minimal-ui")
+        arguments->minimalUI = true;
+#endif
     else
         reportViewportWarning(document, UnrecognizedViewportArgumentKeyError, keyString, String());
 }
+
+#if PLATFORM(IOS)
+void finalizeViewportArguments(ViewportArguments& arguments)
+{
+    CGSize screenSize = wkGetViewportScreenSize();
+
+    if (arguments.width == ViewportArguments::ValueDeviceWidth)
+        arguments.width = screenSize.width;
+    else if (arguments.width == ViewportArguments::ValueDeviceHeight)
+        arguments.width = screenSize.height;
+
+    if (arguments.height == ViewportArguments::ValueDeviceWidth)
+        arguments.height = screenSize.width;
+    else if (arguments.height == ViewportArguments::ValueDeviceHeight)
+        arguments.height = screenSize.height;
+}
+#endif
 
 static const char* viewportErrorMessageTemplate(ViewportErrorCode errorCode)
 {
@@ -419,15 +448,15 @@ static MessageLevel viewportErrorMessageLevel(ViewportErrorCode errorCode)
 {
     switch (errorCode) {
     case TruncatedViewportArgumentValueError:
-        return WarningMessageLevel;
+        return MessageLevel::Warning;
     case UnrecognizedViewportArgumentKeyError:
     case UnrecognizedViewportArgumentValueError:
     case MaximumScaleTooLargeError:
-        return ErrorMessageLevel;
+        return MessageLevel::Error;
     }
 
     ASSERT_NOT_REACHED();
-    return ErrorMessageLevel;
+    return MessageLevel::Error;
 }
 
 void reportViewportWarning(Document* document, ViewportErrorCode errorCode, const String& replacement1, const String& replacement2)
@@ -446,7 +475,7 @@ void reportViewportWarning(Document* document, ViewportErrorCode errorCode, cons
         message.append(" Note that ';' is not a separator in viewport values. The list should be comma-separated.");
 
     // FIXME: This message should be moved off the console once a solution to https://bugs.webkit.org/show_bug.cgi?id=103274 exists.
-    document->addConsoleMessage(RenderingMessageSource, viewportErrorMessageLevel(errorCode), message);
+    document->addConsoleMessage(MessageSource::Rendering, viewportErrorMessageLevel(errorCode), message);
 }
 
 } // namespace WebCore

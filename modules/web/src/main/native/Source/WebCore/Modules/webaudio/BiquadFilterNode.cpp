@@ -36,7 +36,7 @@ BiquadFilterNode::BiquadFilterNode(AudioContext* context, float sampleRate)
     : AudioBasicProcessorNode(context, sampleRate)
 {
     // Initially setup as lowpass filter.
-    m_processor = adoptPtr(new BiquadProcessor(context, sampleRate, 1, false));
+    m_processor = std::make_unique<BiquadProcessor>(context, sampleRate, 1, false);
     setNodeType(NodeTypeBiquadFilter);
 }
 
@@ -63,8 +63,8 @@ String BiquadFilterNode::type() const
         ASSERT_NOT_REACHED();
         return "lowpass";
     }
-    }
-    
+}
+
 void BiquadFilterNode::setType(const String& type)
 {
     if (type == "lowpass")

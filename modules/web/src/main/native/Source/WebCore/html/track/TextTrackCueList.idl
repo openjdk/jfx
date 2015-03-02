@@ -24,12 +24,11 @@
  */
 
 [
-        Conditional=VIDEO_TRACK,
-    IndexedGetter,
-    ImplementationLacksVTable
+    Conditional=VIDEO_TRACK,
+    ImplementationLacksVTable,
 ] interface TextTrackCueList {
-        readonly attribute unsigned long length;
-    TextTrackCue item(unsigned long index);
+    readonly attribute unsigned long length;
+    getter TextTrackCue item(unsigned long index);
     TextTrackCue getCueById(DOMString id);
-    };
+};
 

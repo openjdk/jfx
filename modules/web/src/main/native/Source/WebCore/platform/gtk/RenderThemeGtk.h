@@ -79,14 +79,16 @@ public:
     virtual void platformColorsDidChange();
 
     // System fonts and colors.
-    virtual void systemFont(int propId, FontDescription&) const;
-    virtual Color systemColor(int cssValueId) const;
+    virtual void systemFont(CSSValueID, FontDescription&) const;
+    virtual Color systemColor(CSSValueID) const;
 
-    virtual bool popsMenuBySpaceOrReturn() const OVERRIDE { return true; }
+    virtual bool popsMenuBySpaceOrReturn() const override { return true; }
 
 #if ENABLE(VIDEO)
     virtual String extraMediaControlsStyleSheet();
     virtual String formatMediaControlsCurrentTime(float currentTime, float duration) const;
+    virtual bool supportsClosedCaptioning() const override { return true; }
+    virtual String mediaControlsScript();
 
 #if ENABLE(FULLSCREEN_API)
     virtual String extraFullScreenStyleSheet();
@@ -136,10 +138,10 @@ protected:
     virtual void adjustMenuListStyle(StyleResolver*, RenderStyle*, Element*) const;
     virtual void adjustMenuListButtonStyle(StyleResolver*, RenderStyle*, Element*) const;
     virtual bool paintMenuList(RenderObject*, const PaintInfo&, const IntRect&);
-    virtual bool paintMenuListButton(RenderObject*, const PaintInfo&, const IntRect&);
+    virtual bool paintMenuListButtonDecorations(RenderObject*, const PaintInfo&, const IntRect&);
 
-    virtual void adjustSearchFieldResultsDecorationStyle(StyleResolver*, RenderStyle*, Element*) const;
-    virtual bool paintSearchFieldResultsDecoration(RenderObject*, const PaintInfo&, const IntRect&);
+    virtual void adjustSearchFieldResultsDecorationPartStyle(StyleResolver*, RenderStyle*, Element*) const;
+    virtual bool paintSearchFieldResultsDecorationPart(RenderObject*, const PaintInfo&, const IntRect&);
 
     virtual void adjustSearchFieldStyle(StyleResolver*, RenderStyle*, Element*) const;
     virtual bool paintSearchField(RenderObject*, const PaintInfo&, const IntRect&);
@@ -173,6 +175,9 @@ protected:
     virtual bool paintMediaVolumeSliderTrack(RenderObject*, const PaintInfo&, const IntRect&);
     virtual bool paintMediaVolumeSliderThumb(RenderObject*, const PaintInfo&, const IntRect&);
     virtual bool paintMediaCurrentTime(RenderObject*, const PaintInfo&, const IntRect&);
+#if ENABLE(VIDEO_TRACK)
+    virtual bool paintMediaToggleClosedCaptionsButton(RenderObject*, const PaintInfo&, const IntRect&);
+#endif
 #endif
 
 #if ENABLE(PROGRESS_ELEMENT)
@@ -188,7 +193,7 @@ protected:
     virtual bool paintInnerSpinButton(RenderObject*, const PaintInfo&, const IntRect&);
 
 private:
-    virtual String fileListNameForWidth(const FileList*, const Font&, int width, bool multipleFilesAllowed) const OVERRIDE;
+    virtual String fileListNameForWidth(const FileList*, const Font&, int width, bool multipleFilesAllowed) const override;
 
     void platformInit();
     static void setTextInputBorders(RenderStyle*);

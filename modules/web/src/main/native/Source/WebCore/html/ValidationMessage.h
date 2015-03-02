@@ -49,15 +49,15 @@ class ValidationMessageClient;
 class ValidationMessage {
     WTF_MAKE_NONCOPYABLE(ValidationMessage); WTF_MAKE_FAST_ALLOCATED;
 public:
-    static PassOwnPtr<ValidationMessage> create(HTMLFormControlElement*);
+    static OwnPtr<ValidationMessage> create(HTMLFormControlElement*);
     ~ValidationMessage();
     void updateValidationMessage(const String&);
     void requestToHideMessage();
     bool isVisible() const;
-    bool shadowTreeContains(Node*) const;
+    bool shadowTreeContains(const Node&) const;
 
 private:
-    ValidationMessage(HTMLFormControlElement*);
+    explicit ValidationMessage(HTMLFormControlElement*);
     ValidationMessageClient* validationMessageClient() const;
     void setMessage(const String&);
     void setMessageDOMAndStartTimer(Timer<ValidationMessage>* = 0);
@@ -66,7 +66,7 @@ private:
 
     HTMLFormControlElement* m_element;
     String m_message;
-    OwnPtr<Timer<ValidationMessage> > m_timer;
+    OwnPtr<Timer<ValidationMessage>> m_timer;
     RefPtr<HTMLElement> m_bubble;
     RefPtr<HTMLElement> m_messageHeading;
     RefPtr<HTMLElement> m_messageBody;

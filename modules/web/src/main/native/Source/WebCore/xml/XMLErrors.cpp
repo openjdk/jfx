@@ -33,12 +33,9 @@
 #include "Element.h"
 #include "Frame.h"
 #include "HTMLNames.h"
+#include "SVGNames.h"
 #include "Text.h"
 #include <wtf/text/WTFString.h>
-
-#if ENABLE(SVG)
-#include "SVGNames.h"
-#endif
 
 namespace WebCore {
 
@@ -127,31 +124,20 @@ void XMLErrors::insertErrorMessageBlock()
         RefPtr<Element> body = m_document->createElement(bodyTag, true);
         rootElement->parserAppendChild(body);
         m_document->parserAppendChild(rootElement);
-        if (m_document->attached() && !rootElement->attached())
-            rootElement->attach();
         documentElement = body.get();
     }
-#if ENABLE(SVG)
     else if (documentElement->namespaceURI() == SVGNames::svgNamespaceURI) {
         RefPtr<Element> rootElement = m_document->createElement(htmlTag, true);
         RefPtr<Element> body = m_document->createElement(bodyTag, true);
         rootElement->parserAppendChild(body);
 
-        documentElement->parentNode()->parserRemoveChild(documentElement.get());
-        if (documentElement->attached())
-            documentElement->detach();
+        documentElement->parentNode()->parserRemoveChild(*documentElement);
 
         body->parserAppendChild(documentElement);
         m_document->parserAppendChild(rootElement.get());
 
-        if (m_document->attached())
-            // In general, rootElement shouldn't be attached right now, but it will be if there is a style element
-            // in the SVG content.
-            rootElement->reattach();
-
         documentElement = body.get();
     }
-#endif
 
     String errorMessages = m_errorMessages.toString();
     RefPtr<Element> reportElement = createXHTMLParserErrorHeader(m_document, errorMessages);
@@ -172,9 +158,6 @@ void XMLErrors::insertErrorMessageBlock()
         documentElement->parserInsertBefore(reportElement, documentElement->firstChild());
     else
         documentElement->parserAppendChild(reportElement);
-
-    if (documentElement->attached() && !reportElement->attached())
-        reportElement->attach();
 
     m_document->updateStyleIfNeeded();
 }

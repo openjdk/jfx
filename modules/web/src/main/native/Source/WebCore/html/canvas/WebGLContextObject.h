@@ -26,7 +26,6 @@
 #ifndef WebGLContextObject_h
 #define WebGLContextObject_h
 
-#include "GraphicsContext3D.h"
 #include "WebGLObject.h"
 
 namespace WebCore {
@@ -42,7 +41,7 @@ public:
 
     WebGLRenderingContext* context() const { return m_context; }
 
-    virtual bool validate(const WebGLContextGroup*, const WebGLRenderingContext* context) const
+    virtual bool validate(const WebGLContextGroup*, const WebGLRenderingContext* context) const override
     {
         return context == m_context;
     }
@@ -52,12 +51,12 @@ public:
 protected:
     WebGLContextObject(WebGLRenderingContext*);
 
-    virtual bool hasGroupOrContext() const
+    virtual bool hasGroupOrContext() const override
     {
         return m_context;
     }
 
-    virtual GraphicsContext3D* getAGraphicsContext3D() const;
+    virtual GraphicsContext3D* getAGraphicsContext3D() const override;
 
 private:
     WebGLRenderingContext* m_context;

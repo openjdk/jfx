@@ -34,7 +34,7 @@
 #include "FrameLoader.h"
 #include "FrameLoaderClient.h"
 #include "InspectorInstrumentation.h"
-#include "KURL.h"
+#include "URL.h"
 #include "LoaderStrategy.h"
 #include "Logging.h"
 #include "MemoryCache.h"
@@ -54,10 +54,14 @@
 #include <wtf/text/CString.h>
 #include <wtf/Vector.h>
 
+#if USE(QUICK_LOOK)
+#include "QuickLook.h"
+#endif
+
 using namespace WTF;
 
 namespace WebCore {
-    
+
 // These response headers are not copied from a revalidated response to the
 // cached response headers. For compatibility, this list is based on Chromium's
 // net/http/http_response_headers.cc.
@@ -90,11 +94,11 @@ const char* const headerPrefixesToIgnoreAfterRevalidation[] = {
 static inline bool shouldUpdateHeaderAfterRevalidation(const AtomicString& header)
 {
     for (size_t i = 0; i < WTF_ARRAY_LENGTH(headersToIgnoreAfterRevalidation); i++) {
-        if (header == headersToIgnoreAfterRevalidation[i])
+        if (equalIgnoringCase(header, headersToIgnoreAfterRevalidation[i]))
             return false;
     }
     for (size_t i = 0; i < WTF_ARRAY_LENGTH(headerPrefixesToIgnoreAfterRevalidation); i++) {
-        if (header.startsWith(headerPrefixesToIgnoreAfterRevalidation[i]))
+        if (header.startsWith(headerPrefixesToIgnoreAfterRevalidation[i], false))
             return false;
     }
     return true;
@@ -105,82 +109,41 @@ static ResourceLoadPriority defaultPriorityForResourceType(CachedResource::Type 
     switch (type) {
     case CachedResource::MainResource:
         return ResourceLoadPriorityVeryHigh;
-        case CachedResource::CSSStyleSheet:
-            return ResourceLoadPriorityHigh;
-        case CachedResource::Script:
-        case CachedResource::FontResource:
-        case CachedResource::RawResource:
-            return ResourceLoadPriorityMedium;
-        case CachedResource::ImageResource:
-            return ResourceLoadPriorityLow;
+    case CachedResource::CSSStyleSheet:
+        return ResourceLoadPriorityHigh;
+    case CachedResource::Script:
+    case CachedResource::FontResource:
+    case CachedResource::RawResource:
+        return ResourceLoadPriorityMedium;
+    case CachedResource::ImageResource:
+        return ResourceLoadPriorityLow;
 #if ENABLE(XSLT)
-        case CachedResource::XSLStyleSheet:
-            return ResourceLoadPriorityHigh;
+    case CachedResource::XSLStyleSheet:
+        return ResourceLoadPriorityHigh;
 #endif
-#if ENABLE(SVG)
-        case CachedResource::SVGDocumentResource:
-            return ResourceLoadPriorityLow;
-#endif
+    case CachedResource::SVGDocumentResource:
+        return ResourceLoadPriorityLow;
 #if ENABLE(LINK_PREFETCH)
-        case CachedResource::LinkPrefetch:
-            return ResourceLoadPriorityVeryLow;
-        case CachedResource::LinkSubresource:
-            return ResourceLoadPriorityVeryLow;
+    case CachedResource::LinkPrefetch:
+        return ResourceLoadPriorityVeryLow;
+    case CachedResource::LinkSubresource:
+        return ResourceLoadPriorityVeryLow;
 #endif
 #if ENABLE(VIDEO_TRACK)
-        case CachedResource::TextTrackResource:
-            return ResourceLoadPriorityLow;
-#endif
-#if ENABLE(CSS_SHADERS)
-        case CachedResource::ShaderResource:
-            return ResourceLoadPriorityMedium;
+    case CachedResource::TextTrackResource:
+        return ResourceLoadPriorityLow;
 #endif
     }
     ASSERT_NOT_REACHED();
     return ResourceLoadPriorityLow;
 }
 
-#if PLATFORM(BLACKBERRY)
-static ResourceRequest::TargetType cachedResourceTypeToTargetType(CachedResource::Type type)
+static double deadDecodedDataDeletionIntervalForResourceType(CachedResource::Type type)
 {
-    switch (type) {
-    case CachedResource::MainResource:
-        return ResourceRequest::TargetIsMainFrame;
-    case CachedResource::CSSStyleSheet:
-#if ENABLE(XSLT)
-    case CachedResource::XSLStyleSheet:
-#endif
-        return ResourceRequest::TargetIsStyleSheet;
-    case CachedResource::Script: 
-        return ResourceRequest::TargetIsScript;
-    case CachedResource::FontResource:
-        return ResourceRequest::TargetIsFontResource;
-    case CachedResource::ImageResource:
-        return ResourceRequest::TargetIsImage;
-#if ENABLE(CSS_SHADERS)
-    case CachedResource::ShaderResource:
-#endif
-    case CachedResource::RawResource:
-        return ResourceRequest::TargetIsSubresource;    
-#if ENABLE(LINK_PREFETCH)
-    case CachedResource::LinkPrefetch:
-        return ResourceRequest::TargetIsPrefetch;
-    case CachedResource::LinkSubresource:
-        return ResourceRequest::TargetIsSubresource;
-#endif
-#if ENABLE(VIDEO_TRACK)
-    case CachedResource::TextTrackResource:
-        return ResourceRequest::TargetIsTextTrack;
-#endif
-#if ENABLE(SVG)
-    case CachedResource::SVGDocumentResource:
-        return ResourceRequest::TargetIsImage;
-#endif
-    }
-    ASSERT_NOT_REACHED();
-    return ResourceRequest::TargetIsSubresource;
+    if (type == CachedResource::Script)
+        return 0;
+    return memoryCache()->deadDecodedDataDeletionInterval();
 }
-#endif
 
 DEFINE_DEBUG_ONLY_GLOBAL(RefCountedLeakCounter, cachedResourceLeakCounter, ("CachedResource"));
 
@@ -188,7 +151,7 @@ CachedResource::CachedResource(const ResourceRequest& request, Type type)
     : m_resourceRequest(request)
     , m_loadPriority(defaultPriorityForResourceType(type))
     , m_responseTimestamp(currentTime())
-    , m_decodedDataDeletionTimer(this, &CachedResource::decodedDataDeletionTimerFired)
+    , m_decodedDataDeletionTimer(this, &CachedResource::decodedDataDeletionTimerFired, deadDecodedDataDeletionIntervalForResourceType(type))
     , m_lastDecodedAccessTime(0)
     , m_loadFinishTime(0)
     , m_encodedSize(0)
@@ -223,7 +186,7 @@ CachedResource::CachedResource(const ResourceRequest& request, Type type)
 
     if (!m_resourceRequest.url().hasFragmentIdentifier())
         return;
-    KURL urlForCache = MemoryCache::removeFragmentIdentifierIfNeeded(m_resourceRequest.url());
+    URL urlForCache = MemoryCache::removeFragmentIdentifierIfNeeded(m_resourceRequest.url());
     if (urlForCache.hasFragmentIdentifier())
         return;
     m_fragmentIdentifierForRequest = m_resourceRequest.url().fragmentIdentifier();
@@ -237,7 +200,7 @@ CachedResource::~CachedResource()
     ASSERT(!inCache());
     ASSERT(!m_deleted);
     ASSERT(url().isNull() || memoryCache()->resourceForRequest(resourceRequest()) != this);
-    
+
 #ifndef NDEBUG
     m_deleted = true;
     cachedResourceLeakCounter.decrement();
@@ -262,12 +225,12 @@ void CachedResource::addAdditionalRequestHeaders(CachedResourceLoader* cachedRes
     // the Content-Security-Policy at the CachedResourceLoader layer so we can
     // handle different resource types differently.
 
-    FrameLoader* frameLoader = cachedResourceLoader->frame()->loader();
+    FrameLoader& frameLoader = cachedResourceLoader->frame()->loader();
     String outgoingReferrer;
     String outgoingOrigin;
     if (m_resourceRequest.httpReferrer().isNull()) {
-        outgoingReferrer = frameLoader->outgoingReferrer();
-        outgoingOrigin = frameLoader->outgoingOrigin();
+        outgoingReferrer = frameLoader.outgoingReferrer();
+        outgoingOrigin = frameLoader.outgoingOrigin();
     } else {
         outgoingReferrer = m_resourceRequest.httpReferrer();
         outgoingOrigin = SecurityOrigin::createFromString(outgoingReferrer)->toString();
@@ -280,7 +243,7 @@ void CachedResource::addAdditionalRequestHeaders(CachedResourceLoader* cachedRes
         m_resourceRequest.setHTTPReferrer(outgoingReferrer);
     FrameLoader::addHTTPOriginIfNeeded(m_resourceRequest, outgoingOrigin);
 
-    frameLoader->addExtraFieldsToSubresourceRequest(m_resourceRequest);
+    frameLoader.addExtraFieldsToSubresourceRequest(m_resourceRequest);
 }
 
 void CachedResource::load(CachedResourceLoader* cachedResourceLoader, const ResourceLoaderOptions& options)
@@ -290,8 +253,8 @@ void CachedResource::load(CachedResourceLoader* cachedResourceLoader, const Reso
         return;
     }
 
-    FrameLoader* frameLoader = cachedResourceLoader->frame()->loader();
-    if (options.securityCheck == DoSecurityCheck && (frameLoader->state() == FrameStateProvisional || !frameLoader->activeDocumentLoader() || frameLoader->activeDocumentLoader()->isStopping())) {
+    FrameLoader& frameLoader = cachedResourceLoader->frame()->loader();
+    if (options.securityCheck == DoSecurityCheck && (frameLoader.state() == FrameStateProvisional || !frameLoader.activeDocumentLoader() || frameLoader.activeDocumentLoader()->isStopping())) {
         failBeforeStarting();
         return;
     }
@@ -299,9 +262,14 @@ void CachedResource::load(CachedResourceLoader* cachedResourceLoader, const Reso
     m_options = options;
     m_loading = true;
 
-#if PLATFORM(BLACKBERRY)
-    if (m_resourceRequest.targetType() == ResourceRequest::TargetIsUnspecified)
-        m_resourceRequest.setTargetType(cachedResourceTypeToTargetType(type()));
+#if USE(QUICK_LOOK)
+    if (!m_resourceRequest.isNull() && m_resourceRequest.url().protocolIs(QLPreviewProtocol())) {
+        // When QuickLook is invoked to convert a document, it returns a unique URL in the
+        // NSURLReponse for the main document. To make safeQLURLForDocumentURLAndResourceURL()
+        // work, we need to use the QL URL not the original URL.
+        const URL& documentURL = cachedResourceLoader->frame() ? cachedResourceLoader->frame()->loader().documentLoader()->response().url() : cachedResourceLoader->document()->url();
+        m_resourceRequest.setURL(safeQLURLForDocumentURLAndResourceURL(documentURL, url()));
+    }
 #endif
 
     if (!accept().isEmpty())
@@ -329,7 +297,7 @@ void CachedResource::load(CachedResourceLoader* cachedResourceLoader, const Reso
         m_resourceRequest.setHTTPHeaderField("Purpose", "prefetch");
 #endif
     m_resourceRequest.setPriority(loadPriority());
-    
+
     if (type() != MainResource)
         addAdditionalRequestHeaders(cachedResourceLoader);
 
@@ -337,7 +305,7 @@ void CachedResource::load(CachedResourceLoader* cachedResourceLoader, const Reso
     // We should look into removing the expectation of that knowledge from the platform network stacks.
     ResourceRequest request(m_resourceRequest);
     if (!m_fragmentIdentifierForRequest.isNull()) {
-        KURL url = request.url();
+        URL url = request.url();
         url.setFragmentIdentifier(m_fragmentIdentifierForRequest);
         request.setURL(url);
         m_fragmentIdentifierForRequest = String();
@@ -362,11 +330,18 @@ void CachedResource::checkNotify()
         c->notifyFinished(this);
 }
 
-void CachedResource::data(PassRefPtr<ResourceBuffer>, bool allDataReceived)
+void CachedResource::addDataBuffer(ResourceBuffer*)
 {
-    if (!allDataReceived)
-        return;
-    
+    ASSERT(m_options.dataBufferingPolicy == BufferData);
+}
+
+void CachedResource::addData(const char*, unsigned)
+{
+    ASSERT(m_options.dataBufferingPolicy == DoNotBufferData);
+}
+
+void CachedResource::finishLoading(ResourceBuffer*)
+{
     setLoading(false);
     checkNotify();
 }
@@ -377,6 +352,16 @@ void CachedResource::error(CachedResource::Status status)
     ASSERT(errorOccurred());
     m_data.clear();
 
+    setLoading(false);
+    checkNotify();
+}
+    
+void CachedResource::cancelLoad()
+{
+    if (!isLoading())
+        return;
+
+    setStatus(LoadError);
     setLoading(false);
     checkNotify();
 }
@@ -400,7 +385,7 @@ bool CachedResource::isExpired() const
 
     return currentAge() > freshnessLifetime();
 }
-    
+
 double CachedResource::currentAge() const
 {
     // RFC2616 13.2.3
@@ -412,15 +397,18 @@ double CachedResource::currentAge() const
     double residentTime = currentTime() - m_responseTimestamp;
     return correctedReceivedAge + residentTime;
 }
-    
+
 double CachedResource::freshnessLifetime() const
 {
-    if (SchemeRegistry::shouldCacheResponsesFromURLSchemeIndefinitely(m_response.url().protocol()))
-        return std::numeric_limits<double>::max();
+    if (!m_response.url().protocolIsInHTTPFamily()) {
+        // Don't cache non-HTTP main resources since we can't check for freshness.
+        // FIXME: We should not cache subresources either, but when we tried this
+        // it caused performance and flakiness issues in our test infrastructure.
+        if (m_type == MainResource && !SchemeRegistry::shouldCacheResponsesFromURLSchemeIndefinitely(m_response.url().protocol()))
+            return 0;
 
-    // Don't cache other non-HTTP resources since we can't check for freshness.
-    if (!m_response.url().protocolIsInHTTPFamily())
-        return 0;
+        return std::numeric_limits<double>::max();
+    }
 
     // RFC2616 13.2.4
     double maxAgeValue = m_response.cacheControlMaxAge();
@@ -447,21 +435,10 @@ void CachedResource::responseReceived(const ResourceResponse& response)
         setEncoding(encoding);
 }
 
-void CachedResource::stopLoading()
+void CachedResource::clearLoader()
 {
-    ASSERT(m_loader);            
+    ASSERT(m_loader);
     m_loader = 0;
-
-    CachedResourceHandle<CachedResource> protect(this);
-
-    // All loads finish with data(allDataReceived = true) or error(), except for
-    // canceled loads, which silently set our request to 0. Be sure to notify our
-    // client in that case, so we don't seem to continue loading forever.
-    if (isLoading()) {
-        setLoading(false);
-        setStatus(LoadError);
-        checkNotify();
-    }
 }
 
 void CachedResource::addClient(CachedResourceClient* client)
@@ -528,11 +505,11 @@ void CachedResource::removeClient(CachedResourceClient* client)
     bool deleted = deleteIfPossible();
     if (!deleted && !hasClients()) {
         if (inCache()) {
-        memoryCache()->removeFromLiveResourcesSize(this);
-        memoryCache()->removeFromLiveDecodedResourcesList(this);
+            memoryCache()->removeFromLiveResourcesSize(this);
+            memoryCache()->removeFromLiveDecodedResourcesList(this);
         }
         if (!m_switchingClientsToRevalidatedResource)
-        allClientsRemoved();
+            allClientsRemoved();
         destroyDecodedDataIfNeeded();
         if (response().cacheControlContainsNoStore()) {
             // RFC2616 14.9.2:
@@ -551,12 +528,12 @@ void CachedResource::destroyDecodedDataIfNeeded()
 {
     if (!m_decodedSize)
         return;
-
-    if (double interval = memoryCache()->deadDecodedDataDeletionInterval())
-        m_decodedDataDeletionTimer.startOneShot(interval);
+    if (!memoryCache()->deadDecodedDataDeletionInterval())
+        return;
+    m_decodedDataDeletionTimer.restart();
 }
 
-void CachedResource::decodedDataDeletionTimerFired(Timer<CachedResource>*)
+void CachedResource::decodedDataDeletionTimerFired(DeferrableOneShotTimer<CachedResource>&)
 {
     destroyDecodedData();
 }
@@ -570,7 +547,7 @@ bool CachedResource::deleteIfPossible()
     }
     return false;
 }
-    
+
 void CachedResource::setDecodedSize(unsigned size)
 {
     if (size == m_decodedSize)
@@ -729,24 +706,22 @@ void CachedResource::switchClientsToRevalidatedResource()
     }
     m_switchingClientsToRevalidatedResource = false;
 }
-    
+
 void CachedResource::updateResponseAfterRevalidation(const ResourceResponse& validatingResponse)
 {
     m_responseTimestamp = currentTime();
 
     // RFC2616 10.3.5
     // Update cached headers from the 304 response
-    const HTTPHeaderMap& newHeaders = validatingResponse.httpHeaderFields();
-    HTTPHeaderMap::const_iterator end = newHeaders.end();
-    for (HTTPHeaderMap::const_iterator it = newHeaders.begin(); it != end; ++it) {
+    for (const auto& header : validatingResponse.httpHeaderFields()) {
         // Entity headers should not be sent by servers when generating a 304
         // response; misconfigured servers send them anyway. We shouldn't allow
         // such headers to update the original request. We'll base this on the
         // list defined by RFC2616 7.1, with a few additions for extension headers
         // we care about.
-        if (!shouldUpdateHeaderAfterRevalidation(it->key))
+        if (!shouldUpdateHeaderAfterRevalidation(header.key))
             continue;
-        m_response.setHTTPHeaderField(it->key, it->value);
+        m_response.setHTTPHeaderField(header.key, header.value);
     }
 }
 
@@ -810,6 +785,14 @@ bool CachedResource::mustRevalidateDueToCacheHeaders(CachePolicy cachePolicy) co
 
 bool CachedResource::isSafeToMakePurgeable() const
 { 
+#if ENABLE(DISK_IMAGE_CACHE)
+    // It does not make sense to have a resource in the disk image cache
+    // (memory mapped on disk) and purgeable (in memory). So do not allow
+    // disk image cached resources to be purgeable.
+    if (isUsingDiskImageCache())
+        return false;
+#endif
+
     return !hasClients() && !m_proxyResource && !m_resourceToRevalidate;
 }
 
@@ -828,13 +811,13 @@ bool CachedResource::makePurgeable(bool purgeable)
         // Should not make buffer purgeable if it has refs other than this since we don't want two copies.
         if (!m_data->hasOneRef())
             return false;
-        
+
         m_data->createPurgeableBuffer();
         if (!m_data->hasPurgeableBuffer())
             return false;
 
-            m_purgeableData = m_data->releasePurgeableBuffer();
-            m_purgeableData->setPurgePriority(purgePriority());
+        m_purgeableData = m_data->releasePurgeableBuffer();
+        m_purgeableData->setPurgePriority(purgePriority());
         m_purgeableData->makePurgeable(true);
         m_data.clear();
         return true;
@@ -867,9 +850,9 @@ unsigned CachedResource::overheadSize() const
     static const int kAverageClientsHashMapSize = 384;
     return sizeof(CachedResource) + m_response.memoryUsage() + kAverageClientsHashMapSize + m_resourceRequest.url().string().length() * 2;
 }
-    
-void CachedResource::setLoadPriority(ResourceLoadPriority loadPriority) 
-{ 
+
+void CachedResource::setLoadPriority(ResourceLoadPriority loadPriority)
+{
     if (loadPriority == ResourceLoadPriorityUnresolved)
         loadPriority = defaultPriorityForResourceType(type());
     if (loadPriority == m_loadPriority)
@@ -878,7 +861,6 @@ void CachedResource::setLoadPriority(ResourceLoadPriority loadPriority)
     if (m_loader)
         m_loader->didChangePriority(loadPriority);
 }
-
 
 CachedResource::CachedResourceCallback::CachedResourceCallback(CachedResource* resource, CachedResourceClient* client)
     : m_resource(resource)
@@ -894,12 +876,19 @@ void CachedResource::CachedResourceCallback::cancel()
         m_callbackTimer.stop();
 }
 
-void CachedResource::CachedResourceCallback::timerFired(Timer<CachedResourceCallback>*)
+void CachedResource::CachedResourceCallback::timerFired(Timer<CachedResourceCallback>&)
 {
     m_resource->didAddClient(m_client);
 }
 
-#if PLATFORM(MAC)
+#if ENABLE(DISK_IMAGE_CACHE)
+bool CachedResource::isUsingDiskImageCache() const
+{
+    return m_data && m_data->isUsingDiskImageCache();
+}
+#endif
+
+#if USE(FOUNDATION)
 void CachedResource::tryReplaceEncodedData(PassRefPtr<SharedBuffer> newBuffer)
 {
     if (!m_data)

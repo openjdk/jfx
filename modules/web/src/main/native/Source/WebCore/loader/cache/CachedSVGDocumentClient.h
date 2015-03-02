@@ -23,8 +23,6 @@
 #ifndef CachedSVGDocumentClient_h
 #define CachedSVGDocumentClient_h
 
-#if ENABLE(SVG)
-
 #include "CachedResourceClient.h"
 
 namespace WebCore {
@@ -35,11 +33,9 @@ class CachedSVGDocumentClient : public CachedResourceClient {
 public:
     virtual ~CachedSVGDocumentClient() { }
     static CachedResourceClientType expectedType() { return SVGDocumentType; }
-    virtual CachedResourceClientType resourceClientType() const { return expectedType(); }
+    virtual CachedResourceClientType resourceClientType() const override { return expectedType(); }
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(SVG)
 
 #endif // CachedSVGDocumentClient_h

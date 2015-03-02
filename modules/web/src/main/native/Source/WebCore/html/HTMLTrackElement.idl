@@ -24,20 +24,20 @@
  */
 
 [
-        Conditional=VIDEO_TRACK,
+    Conditional=VIDEO_TRACK,
 ] interface HTMLTrackElement : HTMLElement {
-        attribute DOMString kind;
+    attribute DOMString kind;
     [Reflect, URL] attribute DOMString src;
-        attribute DOMString srclang;
-        attribute DOMString label;
+    attribute DOMString srclang;
+    attribute DOMString label;
     [Reflect] attribute boolean default;
 
-        const unsigned short NONE = 0;
-        const unsigned short LOADING = 1;
-        const unsigned short LOADED = 2;
-        // Reflect is used for ERROR because it conflicts with a windows define.
-        [Reflect=TRACK_ERROR] const unsigned short ERROR = 3;
-        readonly attribute unsigned short readyState;
+    const unsigned short NONE = 0;
+    const unsigned short LOADING = 1;
+    const unsigned short LOADED = 2;
+    // Reflect is used for ERROR because it conflicts with a windows define.
+    [Reflect=TRACK_ERROR] const unsigned short ERROR = 3;
+    readonly attribute unsigned short readyState;
 
-        readonly attribute TextTrack track;
+    readonly attribute TextTrack track;
 };

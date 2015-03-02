@@ -38,7 +38,7 @@
 #include "PasteboardHelper.h"
 #include "PlatformKeyboardEvent.h"
 #include "Settings.h"
-#include "StylePropertySet.h"
+#include "StyleProperties.h"
 #include "UndoStep.h"
 #include "WebKitDOMCSSStyleDeclarationPrivate.h"
 #include "WebKitDOMHTMLElementPrivate.h"
@@ -177,10 +177,11 @@ bool EditorClient::shouldChangeSelectedRange(Range* fromRange, Range* toRange, E
     return accept;
 }
 
-bool EditorClient::shouldApplyStyle(WebCore::StylePropertySet* set, WebCore::Range* range)
+bool EditorClient::shouldApplyStyle(WebCore::StyleProperties* set, WebCore::Range* range)
 {
     gboolean accept = TRUE;
-    GRefPtr<WebKitDOMCSSStyleDeclaration> kitDeclaration(kit(set->mutableCopy()->ensureCSSStyleDeclaration()));
+    Ref<MutableStyleProperties> mutableStyle(set->mutableCopy());
+    GRefPtr<WebKitDOMCSSStyleDeclaration> kitDeclaration(kit(mutableStyle->ensureCSSStyleDeclaration()));
     GRefPtr<WebKitDOMRange> kitRange(adoptGRef(kit(range)));
     g_signal_emit_by_name(m_webView, "should-apply-style", kitDeclaration.get(), kitRange.get(), &accept);
     return accept;
@@ -209,14 +210,14 @@ static void collapseSelection(GtkClipboard* clipboard, WebKitWebView* webView)
         return;
 
     WebCore::Page* corePage = core(webView);
-    if (!corePage || !corePage->focusController())
+    if (!corePage)
         return;
 
-    Frame* frame = corePage->focusController()->focusedOrMainFrame();
+    Frame& frame = corePage->focusController().focusedOrMainFrame();
 
     // Collapse the selection without clearing it
-    ASSERT(frame);
-    frame->selection()->setBase(frame->selection()->extent(), frame->selection()->affinity());
+    const VisibleSelection& selection = frame.selection().selection();
+    frame.selection().setBase(selection.extent(), selection.affinity());
 }
 
 #if PLATFORM(X11)
@@ -228,13 +229,13 @@ static void setSelectionPrimaryClipboardIfNeeded(WebKitWebView* webView)
     GtkClipboard* clipboard = gtk_widget_get_clipboard(GTK_WIDGET(webView), GDK_SELECTION_PRIMARY);
     DataObjectGtk* dataObject = DataObjectGtk::forClipboard(clipboard);
     WebCore::Page* corePage = core(webView);
-    Frame* targetFrame = corePage->focusController()->focusedOrMainFrame();
+    Frame& targetFrame = corePage->focusController().focusedOrMainFrame();
 
-    if (!targetFrame->selection()->isRange())
+    if (!targetFrame.selection().isRange())
         return;
 
     dataObject->clearAll();
-    dataObject->setRange(targetFrame->selection()->toNormalizedRange());
+    dataObject->setRange(targetFrame.selection().toNormalizedRange());
 
     viewSettingClipboard = webView;
     GClosure* callback = g_cclosure_new_object(G_CALLBACK(collapseSelection), G_OBJECT(webView));
@@ -275,11 +276,6 @@ void EditorClient::willWriteSelectionToPasteboard(WebCore::Range*)
 
 void EditorClient::getClientPasteboardDataForRange(WebCore::Range*, Vector<String>&, Vector<RefPtr<WebCore::SharedBuffer> >&)
 {
-}
-
-void EditorClient::didSetSelectionTypesForPasteboard()
-{
-    notImplemented();
 }
 
 void EditorClient::registerUndoStep(WTF::PassRefPtr<WebCore::UndoStep> step)
@@ -365,7 +361,7 @@ bool EditorClient::smartInsertDeleteEnabled()
     WebCore::Page* corePage = core(m_webView);
     if (!corePage)
         return false;
-    return corePage->settings()->smartInsertDeleteEnabled();
+    return corePage->settings().smartInsertDeleteEnabled();
 }
 
 bool EditorClient::isSelectTrailingWhitespaceEnabled()
@@ -373,7 +369,7 @@ bool EditorClient::isSelectTrailingWhitespaceEnabled()
     WebCore::Page* corePage = core(m_webView);
     if (!corePage)
         return false;
-    return corePage->settings()->selectTrailingWhitespaceEnabled();
+    return corePage->settings().selectTrailingWhitespaceEnabled();
 }
 
 void EditorClient::toggleContinuousSpellChecking()
@@ -429,7 +425,7 @@ void EditorClient::handleKeyboardEvent(KeyboardEvent* event)
 {
     Node* node = event->target()->toNode();
     ASSERT(node);
-    Frame* frame = node->document()->frame();
+    Frame* frame = node->document().frame();
     ASSERT(frame);
 
     const PlatformKeyboardEvent* platformEvent = event->keyEvent();

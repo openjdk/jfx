@@ -26,15 +26,13 @@
 #include "Font.h"
 
 #include "ComplexTextController.h"
-#include "FontFallbackList.h"
+#include "FontGlyphs.h"
 #include "GlyphBuffer.h"
 #include "GraphicsContext.h"
 #include "IntRect.h"
 #include "SimpleFontData.h"
 #include "TextRun.h"
 #include <wtf/MathExtras.h>
-
-using namespace std;
 
 namespace WebCore {
 
@@ -79,7 +77,7 @@ float Font::getGlyphsAndAdvancesForComplexText(const TextRun& run, int from, int
     return initialAdvance;
 }
 
-void Font::drawComplexText(GraphicsContext* context, const TextRun& run, const FloatPoint& point, int from, int to) const
+float Font::drawComplexText(GraphicsContext* context, const TextRun& run, const FloatPoint& point, int from, int to) const
 {
     // This glyph buffer holds our glyphs + advances + font data for each glyph.
     GlyphBuffer glyphBuffer;
@@ -88,11 +86,13 @@ void Font::drawComplexText(GraphicsContext* context, const TextRun& run, const F
 
     // We couldn't generate any glyphs for the run.  Give up.
     if (glyphBuffer.isEmpty())
-        return;
+        return 0;
 
     // Draw the glyph buffer now at the starting point returned in startX.
     FloatPoint startPoint(startX, point.y());
     drawGlyphBuffer(context, run, glyphBuffer, startPoint);
+
+    return startPoint.x() - startX;
 }
 
 void Font::drawEmphasisMarksForComplexText(GraphicsContext* context, const TextRun& run, const AtomicString& mark, const FloatPoint& point, int from, int to) const
@@ -110,10 +110,10 @@ float Font::floatWidthForComplexText(const TextRun& run, HashSet<const SimpleFon
 {
     ComplexTextController controller(this, run, true, fallbackFonts);
     if (glyphOverflow) {
-        glyphOverflow->top = max<int>(glyphOverflow->top, ceilf(-controller.minGlyphBoundingBoxY()) - (glyphOverflow->computeBounds ? 0 : fontMetrics().ascent()));
-        glyphOverflow->bottom = max<int>(glyphOverflow->bottom, ceilf(controller.maxGlyphBoundingBoxY()) - (glyphOverflow->computeBounds ? 0 : fontMetrics().descent()));
-        glyphOverflow->left = max<int>(0, ceilf(-controller.minGlyphBoundingBoxX()));
-        glyphOverflow->right = max<int>(0, ceilf(controller.maxGlyphBoundingBoxX() - controller.totalWidth()));
+        glyphOverflow->top = std::max<int>(glyphOverflow->top, ceilf(-controller.minGlyphBoundingBoxY()) - (glyphOverflow->computeBounds ? 0 : fontMetrics().ascent()));
+        glyphOverflow->bottom = std::max<int>(glyphOverflow->bottom, ceilf(controller.maxGlyphBoundingBoxY()) - (glyphOverflow->computeBounds ? 0 : fontMetrics().descent()));
+        glyphOverflow->left = std::max<int>(0, ceilf(-controller.minGlyphBoundingBoxX()));
+        glyphOverflow->right = std::max<int>(0, ceilf(controller.maxGlyphBoundingBoxX() - controller.totalWidth()));
     }
     return controller.totalWidth();
 }
@@ -143,6 +143,10 @@ const SimpleFontData* Font::fontDataForCombiningCharacterSequence(const UChar* c
     unsigned i = 0;
     for (const FontData* fontData = fontDataAt(0); fontData; fontData = fontDataAt(++i)) {
         const SimpleFontData* simpleFontData = fontData->fontDataForCharacter(baseCharacter);
+#if PLATFORM(IOS)
+        if (baseCharacter >= 0x0600 && baseCharacter <= 0x06ff && simpleFontData->shouldNotBeUsedForArabic())
+            continue;
+#endif
         if (variant == NormalVariant) {
             if (simpleFontData->platformData().orientation() == Vertical) {
                 if (isCJKIdeographOrSymbol(baseCharacter) && !simpleFontData->hasVerticalGlyphs()) {

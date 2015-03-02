@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2002 Cyrus Patel <cyp@fb14.uni-mainz.de>
- *           (C) 2007 Apple Inc. All rights reserved.
+ *           (C) 2007, 2013 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -24,10 +24,8 @@
 #if ENABLE(FTPDIR)
 #include "FTPDirectoryParser.h"
 
-#if PLATFORM(QT)
-#include <QDateTime>
 // On Windows, use the threadsafe *_r functions provided by pthread.
-#elif OS(WINDOWS) && (USE(PTHREADS) || HAVE(PTHREAD_H))
+#if OS(WINDOWS) && (USE(PTHREADS) || HAVE(PTHREAD_H))
 #include <pthread.h>
 #endif
 
@@ -37,43 +35,8 @@
 using namespace WTF;
 
 namespace WebCore {
-#if PLATFORM(QT) && defined(Q_WS_WIN32)
-
-// Replacement for gmtime_r() which is not available on MinGW.
-// We use this on Win32 Qt platform for portability.
-struct tm gmtimeQt(const QDateTime& input)
-{
-    tm result;
-
-    QDate date(input.date());
-    result.tm_year = date.year() - 1900;
-    result.tm_mon = date.month();
-    result.tm_mday = date.day();
-    result.tm_wday = date.dayOfWeek();
-    result.tm_yday = date.dayOfYear();
-
-    QTime time(input.time());
-    result.tm_sec = time.second();
-    result.tm_min = time.minute();
-    result.tm_hour = time.hour();
-
-    return result;
-}
-
-static struct tm *gmtimeQt(const time_t *const timep, struct tm *result)
-{
-    const QDateTime dt(QDateTime::fromTime_t(*timep));
-    *result = WebCore::gmtimeQt(dt);
-    return result;
-}
-
-#define gmtime_r(x, y) gmtimeQt(x, y)
-#elif OS(WINDOWS) && !defined(gmtime_r)
-#if defined(_MSC_VER) && (_MSC_VER >= 1400) 
+#if OS(WINDOWS) && !defined(gmtime_r)
 #define gmtime_r(x, y) gmtime_s((y), (x))
-#else /* !_MSC_VER */ 
-#define gmtime_r(x,y) (gmtime(x)?(*(y)=*gmtime(x),(y)):0)
-#endif
 #endif
 
 static inline FTPEntryType ParsingFailed(ListState& state)
@@ -188,11 +151,7 @@ FTPEntryType parseOneFTPLine(const char* line, ListState& state, ListResult& res
               if (pos < linelen && line[pos] == ',')
               {
                 unsigned long long seconds = 0;
-#if OS(WINDOWS)
-                sscanf(p + 1, "%I64u", &seconds);
-#else
                 sscanf(p + 1, "%llu", &seconds);
-#endif
                 time_t t = static_cast<time_t>(seconds);
 
                 // FIXME: This code has the year 2038 bug

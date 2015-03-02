@@ -20,31 +20,28 @@
 
 #ifndef SVGTitleElement_h
 #define SVGTitleElement_h
-#if ENABLE(SVG)
 
-#include "SVGLangSpace.h"
-#include "SVGStyledElement.h"
+#include "SVGElement.h"
+#include "SVGNames.h"
 
 namespace WebCore {
 
-class SVGTitleElement FINAL : public SVGStyledElement,
-                        public SVGLangSpace {
+class SVGTitleElement final : public SVGElement {
 public:
-    static PassRefPtr<SVGTitleElement> create(const QualifiedName&, Document*);
+    static PassRefPtr<SVGTitleElement> create(const QualifiedName&, Document&);
 
 private:
-    SVGTitleElement(const QualifiedName&, Document*);
+    SVGTitleElement(const QualifiedName&, Document&);
 
-    virtual InsertionNotificationRequest insertedInto(ContainerNode*) OVERRIDE;
-    virtual void removedFrom(ContainerNode*) OVERRIDE;
-    virtual void childrenChanged(bool changedByParser = false, Node* beforeChange = 0, Node* afterChange = 0, int childCountDelta = 0);
+    virtual InsertionNotificationRequest insertedInto(ContainerNode&) override;
+    virtual void removedFrom(ContainerNode&) override;
+    virtual void childrenChanged(const ChildChange&) override;
 
-    virtual bool rendererIsNeeded(const NodeRenderingContext&) { return false; }
+    virtual bool rendererIsNeeded(const RenderStyle&) override { return false; }
 };
+
+NODE_TYPE_CASTS(SVGTitleElement)
 
 } // namespace WebCore
 
-#endif // ENABLE(SVG)
 #endif
-
-// vim:ts=4:noet

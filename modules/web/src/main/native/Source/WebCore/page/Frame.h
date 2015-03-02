@@ -29,7 +29,6 @@
 #define Frame_h
 
 #include "AdjustViewSizeOrNot.h"
-#include "DragImage.h"
 #include "FrameLoader.h"
 #include "FrameTree.h"
 #include "IntRect.h"
@@ -37,6 +36,11 @@
 #include "ScrollTypes.h"
 #include "UserScriptTypes.h"
 #include <wtf/RefCounted.h>
+
+#if PLATFORM(IOS)
+#include "ViewportArguments.h"
+#include "VisibleSelection.h"
+#endif
 
 #if PLATFORM(WIN)
 #include "FrameWin.h"
@@ -46,9 +50,20 @@
 #include "TiledBackingStoreClient.h"
 #endif
 
+#if PLATFORM(IOS)
+OBJC_CLASS DOMCSSStyleDeclaration;
+OBJC_CLASS DOMNode;
+OBJC_CLASS NSArray;
+OBJC_CLASS NSString;
+#endif
+
 #if PLATFORM(WIN)
 typedef struct HBITMAP__* HBITMAP;
 #endif
+
+namespace JSC { namespace Yarr {
+class RegularExpression;
+} }
 
 namespace WebCore {
 
@@ -58,32 +73,51 @@ namespace WebCore {
     class Editor;
     class Element;
     class EventHandler;
+    class FloatSize;
     class FrameDestructionObserver;
     class FrameSelection;
     class FrameView;
+    class HTMLFrameOwnerElement;
     class HTMLTableCellElement;
+    class HitTestResult;
+    class ImageBuffer;
     class IntRect;
+    class MainFrame;
     class Node;
-    class RegularExpression;
-    class RenderPart;
+    class Range;
+    class RenderLayer;
     class RenderView;
+    class RenderWidget;
     class ScriptController;
     class Settings;
     class TiledBackingStore;
-    class TreeScope;
     class VisiblePosition;
+    class Widget;
+
+#if PLATFORM(IOS)
+    enum {
+        OverflowScrollNone = 0,
+        OverflowScrollLeft = 1 << 0,
+        OverflowScrollRight = 1 << 1,
+        OverflowScrollUp = 1 << 2,
+        OverflowScrollDown = 1 << 3
+    };
+
+    enum OverflowScrollAction { DoNotPerformOverflowScroll, PerformOverflowScroll };
+    typedef Node* (*NodeQualifier)(const HitTestResult&, Node* terminationNode, IntRect* nodeBounds);
+#endif
 
 #if !USE(TILED_BACKING_STORE)
     class TiledBackingStoreClient { };
 #endif
-
 
     enum {
         LayerTreeFlagsIncludeDebugInfo = 1 << 0,
         LayerTreeFlagsIncludeVisibleRects = 1 << 1,
         LayerTreeFlagsIncludeTileCaches = 1 << 2,
         LayerTreeFlagsIncludeRepaintRects = 1 << 3,
-        LayerTreeFlagsIncludePaintingPhases = 1 << 4
+        LayerTreeFlagsIncludePaintingPhases = 1 << 4,
+        LayerTreeFlagsIncludeContentLayers = 1 << 5
     };
     typedef unsigned LayerTreeFlags;
 
@@ -92,13 +126,17 @@ namespace WebCore {
         static PassRefPtr<Frame> create(Page*, HTMLFrameOwnerElement*, FrameLoaderClient*);
 
         void init();
+#if PLATFORM(IOS)
+        // Creates <html><body style="..."></body></html> doing minimal amount of work.
+        void initWithSimpleHTMLDocument(const String& style, const URL&);
+#endif
         void setView(PassRefPtr<FrameView>);
         void createView(const IntSize&, const Color&, bool,
             const IntSize& fixedLayoutSize = IntSize(), const IntRect& fixedVisibleContentRect = IntRect(),
             bool useFixedLayout = false, ScrollbarMode = ScrollbarAuto, bool horizontalLock = false,
             ScrollbarMode = ScrollbarAuto, bool verticalLock = false);
 
-        ~Frame();
+        virtual ~Frame();
 
         void addDestructionObserver(FrameDestructionObserver*);
         void removeDestructionObserver(FrameDestructionObserver*);
@@ -107,6 +145,9 @@ namespace WebCore {
         void detachFromPage();
         void disconnectOwnerElement();
 
+        MainFrame& mainFrame() const;
+        bool isMainFrame() const;
+
         Page* page() const;
         HTMLFrameOwnerElement* ownerElement() const;
 
@@ -114,24 +155,18 @@ namespace WebCore {
         FrameView* view() const;
 
         Editor& editor() const;
-        EventHandler* eventHandler() const;
-        FrameLoader* loader() const;
-        NavigationScheduler* navigationScheduler() const;
-        FrameSelection* selection() const;
-        FrameTree* tree() const;
-        AnimationController* animation() const;
-        ScriptController* script();
+        EventHandler& eventHandler() const;
+        FrameLoader& loader() const;
+        NavigationScheduler& navigationScheduler() const;
+        FrameSelection& selection() const;
+        FrameTree& tree() const;
+        AnimationController& animation() const;
+        ScriptController& script();
         
         RenderView* contentRenderer() const; // Root of the render tree for the document contained in this frame.
-        RenderPart* ownerRenderer() const; // Renderer for the element that contains this frame.
-
-#if ENABLE(PAGE_VISIBILITY_API)
-        void dispatchVisibilityStateChangeEvent();
-#endif
+        RenderWidget* ownerRenderer() const; // Renderer for the element that contains this frame.
 
     // ======== All public functions below this point are candidates to move out of Frame into another class. ========
-
-        bool inScope(TreeScope*) const;
 
         void injectUserScripts(UserScriptInjectionTime);
         
@@ -140,14 +175,11 @@ namespace WebCore {
 
         static Frame* frameForWidget(const Widget*);
 
-        Settings* settings() const; // can be NULL
+        Settings& settings() const { return *m_settings; }
 
         void setPrinting(bool printing, const FloatSize& pageSize, const FloatSize& originalPageSize, float maximumShrinkRatio, AdjustViewSizeOrNot);
         bool shouldUsePrintingLayout() const;
         FloatSize resizePageRectsKeepingRatio(const FloatSize& originalSize, const FloatSize& expectedSize);
-
-        bool inViewSourceMode() const;
-        void setInViewSourceMode(bool = true);
 
         void setDocument(PassRefPtr<Document>);
 
@@ -160,8 +192,30 @@ namespace WebCore {
         // Scale factor of this frame with respect to the container.
         float frameScaleFactor() const;
 
-#if USE(ACCELERATED_COMPOSITING)
         void deviceOrPageScaleFactorChanged();
+
+#if PLATFORM(IOS)
+        const ViewportArguments& viewportArguments() const;
+        void setViewportArguments(const ViewportArguments&);
+
+        Node* deepestNodeAtLocation(const FloatPoint& viewportLocation);
+        Node* nodeRespondingToClickEvents(const FloatPoint& viewportLocation, FloatPoint& adjustedViewportLocation);
+        Node* nodeRespondingToScrollWheelEvents(const FloatPoint& viewportLocation);
+
+        int indexCountOfWordPrecedingSelection(NSString* word) const;
+        NSArray* wordsInCurrentParagraph() const;
+        CGRect renderRectForPoint(CGPoint, bool* isReplaced, float* fontSize) const;
+
+        void setSelectionChangeCallbacksDisabled(bool = true);
+        bool selectionChangeCallbacksDisabled() const;
+
+        enum ViewportOffsetChangeType { IncrementalScrollOffset, CompletedScrollOffset };
+        void viewportOffsetChanged(ViewportOffsetChangeType);
+        bool containsTiledBackingLayers() const;
+
+        void overflowScrollPositionChangedForNode(const IntPoint&, Node*, bool isUserScroll);
+
+        void resetAllGeolocationPermission();
 #endif
 
 #if ENABLE(ORIENTATION_EVENTS)
@@ -175,40 +229,66 @@ namespace WebCore {
         void clearTimers();
         static void clearTimers(FrameView*, Document*);
 
-        String documentTypeString() const;
-
         String displayStringModifiedByEncoding(const String&) const;
-
-        DragImageRef nodeImage(Node*);
-        DragImageRef dragImageForSelection();
 
         VisiblePosition visiblePositionForPoint(const IntPoint& framePoint);
         Document* documentAtPoint(const IntPoint& windowPoint);
         PassRefPtr<Range> rangeForPoint(const IntPoint& framePoint);
 
-        String searchForLabelsAboveCell(RegularExpression*, HTMLTableCellElement*, size_t* resultDistanceFromStartOfCell);
+        String searchForLabelsAboveCell(JSC::Yarr::RegularExpression*, HTMLTableCellElement*, size_t* resultDistanceFromStartOfCell);
         String searchForLabelsBeforeElement(const Vector<String>& labels, Element*, size_t* resultDistance, bool* resultIsInCellAbove);
         String matchLabelsAgainstElement(const Vector<String>& labels, Element*);
 
+#if ENABLE(IOS_TEXT_AUTOSIZING)
+        void setTextAutosizingWidth(float);
+        float textAutosizingWidth() const;
+#endif
+
+#if PLATFORM(IOS)
+        // Scroll the selection in an overflow layer on iOS.
+        void scrollOverflowLayer(RenderLayer* , const IntRect& visibleRect, const IntRect& exposeRect);
+
+        int preferredHeight() const;
+        int innerLineHeight(DOMNode*) const;
+        void updateLayout() const;
+        NSRect caretRect() const;
+        NSRect rectForScrollToVisible() const;
+        DOMCSSStyleDeclaration* styleAtSelectionStart() const;
+        unsigned formElementsCharacterCount() const;
+        void setTimersPaused(bool);
+        bool timersPaused() const { return m_timersPausedCount; }
+        void dispatchPageHideEventBeforePause();
+        void dispatchPageShowEventBeforeResume();
+        void setRangedSelectionBaseToCurrentSelection();
+        void setRangedSelectionBaseToCurrentSelectionStart();
+        void setRangedSelectionBaseToCurrentSelectionEnd();
+        void clearRangedSelectionInitialExtent();
+        void setRangedSelectionInitialExtentToCurrentSelectionStart();
+        void setRangedSelectionInitialExtentToCurrentSelectionEnd();
+        VisibleSelection rangedSelectionBase() const;
+        VisibleSelection rangedSelectionInitialExtent() const;
+        void recursiveSetUpdateAppearanceEnabled(bool);
+        NSArray* interpretationsForCurrentRoot() const;
+#endif
         void suspendActiveDOMObjectsAndAnimations();
         void resumeActiveDOMObjectsAndAnimations();
         bool activeDOMObjectsAndAnimationsSuspended() const { return m_activeDOMObjectsAndAnimationsSuspendedCount > 0; }
 
-        // Should only be called on the main frame of a page.
-        void notifyChromeClientWheelEventHandlerCountChanged() const;
-
-        bool isURLAllowed(const KURL&) const;
+        bool isURLAllowed(const URL&) const;
 
     // ========
 
-    private:
-        Frame(Page*, HTMLFrameOwnerElement*, FrameLoaderClient*);
+    protected:
+        Frame(Page&, HTMLFrameOwnerElement*, FrameLoaderClient&);
 
-        void injectUserScriptsForWorld(DOMWrapperWorld*, const UserScriptVector&, UserScriptInjectionTime);
+    private:
+        void injectUserScriptsForWorld(DOMWrapperWorld&, const UserScriptVector&, UserScriptInjectionTime);
 
         HashSet<FrameDestructionObserver*> m_destructionObservers;
 
+        MainFrame& m_mainFrame;
         Page* m_page;
+        const RefPtr<Settings> m_settings;
         mutable FrameTree m_treeNode;
         mutable FrameLoader m_loader;
         mutable NavigationScheduler m_navigationScheduler;
@@ -217,11 +297,36 @@ namespace WebCore {
         RefPtr<FrameView> m_view;
         RefPtr<Document> m_doc;
 
-        OwnPtr<ScriptController> m_script;
+        const std::unique_ptr<ScriptController> m_script;
         const OwnPtr<Editor> m_editor;
-        OwnPtr<FrameSelection> m_selection;
-        OwnPtr<EventHandler> m_eventHandler;
-        OwnPtr<AnimationController> m_animationController;
+        const OwnPtr<FrameSelection> m_selection;
+        const OwnPtr<EventHandler> m_eventHandler;
+        const std::unique_ptr<AnimationController> m_animationController;
+
+#if PLATFORM(IOS)
+        void betterApproximateNode(const IntPoint& testPoint, NodeQualifier, Node*& best, Node* failedNode, IntPoint& bestPoint, IntRect& bestRect, const IntRect& testRect);
+        bool hitTestResultAtViewportLocation(const FloatPoint& viewportLocation, HitTestResult&, IntPoint& center);
+        Node* qualifyingNodeAtViewportLocation(const FloatPoint& viewportLocation, FloatPoint& adjustedViewportLocation, NodeQualifier, bool shouldApproximate);
+
+        void overflowAutoScrollTimerFired(Timer<Frame>*);
+        void startOverflowAutoScroll(const IntPoint&);
+        int checkOverflowScroll(OverflowScrollAction);
+
+        void setTimersPausedInternal(bool);
+
+        Timer<Frame> m_overflowAutoScrollTimer;
+        float m_overflowAutoScrollDelta;
+        IntPoint m_overflowAutoScrollPos;
+        ViewportArguments m_viewportArguments;
+        bool m_selectionChangeCallbacksDisabled;
+        int m_timersPausedCount;
+        VisibleSelection m_rangedSelectionBase;
+        VisibleSelection m_rangedSelectionInitialExtent;
+#endif
+
+#if ENABLE(IOS_TEXT_AUTOSIZING)
+        float m_textAutosizingWidth;
+#endif
 
         float m_pageZoomFactor;
         float m_textZoomFactor;
@@ -229,8 +334,6 @@ namespace WebCore {
 #if ENABLE(ORIENTATION_EVENTS)
         int m_orientation;
 #endif
-
-        bool m_inViewSourceMode;
 
 #if USE(TILED_BACKING_STORE)
     // FIXME: The tiled backing store belongs in FrameView, not Frame.
@@ -241,12 +344,12 @@ namespace WebCore {
 
     private:
         // TiledBackingStoreClient interface
-        virtual void tiledBackingStorePaintBegin();
-        virtual void tiledBackingStorePaint(GraphicsContext*, const IntRect&);
-        virtual void tiledBackingStorePaintEnd(const Vector<IntRect>& paintedArea);
-        virtual IntRect tiledBackingStoreContentsRect();
-        virtual IntRect tiledBackingStoreVisibleRect();
-        virtual Color tiledBackingStoreBackgroundColor() const;
+        virtual void tiledBackingStorePaintBegin() override final;
+        virtual void tiledBackingStorePaint(GraphicsContext*, const IntRect&) override final;
+        virtual void tiledBackingStorePaintEnd(const Vector<IntRect>& paintedArea) override final;
+        virtual IntRect tiledBackingStoreContentsRect() override final;
+        virtual IntRect tiledBackingStoreVisibleRect() override final;
+        virtual Color tiledBackingStoreBackgroundColor() const override final;
 
         OwnPtr<TiledBackingStore> m_tiledBackingStore;
 #endif
@@ -259,14 +362,14 @@ namespace WebCore {
         m_loader.init();
     }
 
-    inline FrameLoader* Frame::loader() const
+    inline FrameLoader& Frame::loader() const
     {
-        return &m_loader;
+        return m_loader;
     }
 
-    inline NavigationScheduler* Frame::navigationScheduler() const
+    inline NavigationScheduler& Frame::navigationScheduler() const
     {
-        return &m_navigationScheduler;
+        return m_navigationScheduler;
     }
 
     inline FrameView* Frame::view() const
@@ -274,9 +377,9 @@ namespace WebCore {
         return m_view.get();
     }
 
-    inline ScriptController* Frame::script()
+    inline ScriptController& Frame::script()
     {
-        return m_script.get();
+        return *m_script;
     }
 
     inline Document* Frame::document() const
@@ -284,9 +387,9 @@ namespace WebCore {
         return m_doc.get();
     }
 
-    inline FrameSelection* Frame::selection() const
+    inline FrameSelection& Frame::selection() const
     {
-        return m_selection.get();
+        return *m_selection;
     }
 
     inline Editor& Frame::editor() const
@@ -294,9 +397,9 @@ namespace WebCore {
         return *m_editor;
     }
 
-    inline AnimationController* Frame::animation() const
+    inline AnimationController& Frame::animation() const
     {
-        return m_animationController.get();
+        return *m_animationController;
     }
 
     inline HTMLFrameOwnerElement* Frame::ownerElement() const
@@ -304,19 +407,9 @@ namespace WebCore {
         return m_ownerElement;
     }
 
-    inline bool Frame::inViewSourceMode() const
+    inline FrameTree& Frame::tree() const
     {
-        return m_inViewSourceMode;
-    }
-
-    inline void Frame::setInViewSourceMode(bool mode)
-    {
-        m_inViewSourceMode = mode;
-    }
-
-    inline FrameTree* Frame::tree() const
-    {
-        return &m_treeNode;
+        return m_treeNode;
     }
 
     inline Page* Frame::page() const
@@ -329,9 +422,14 @@ namespace WebCore {
         m_page = 0;
     }
 
-    inline EventHandler* Frame::eventHandler() const
+    inline EventHandler& Frame::eventHandler() const
     {
-        return m_eventHandler.get();
+        return *m_eventHandler;
+    }
+
+    inline MainFrame& Frame::mainFrame() const
+    {
+        return m_mainFrame;
     }
 
 } // namespace WebCore

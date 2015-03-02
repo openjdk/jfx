@@ -23,6 +23,10 @@
 #include <runtime/JSArray.h>
 #include <runtime/JSLock.h>
 #include <wtf/text/WTFString.h>
+#include <APICast.h>
+#include <API/OpaqueJSString.h>
+#include <API/JSBase.h>
+#include <API/JSStringRef.h>
 #include "com_sun_webkit_dom_JSObject.h"
 
 #if 1
@@ -127,9 +131,9 @@ JSValueRef Java_Object_to_JSValue(
         case com_sun_webkit_dom_JSObject_JS_DOM_WINDOW_OBJECT:
             {
                 JSDOMGlobalObject* globalObject = toJSDOMGlobalObject(
-                    (peer_type == com_sun_webkit_dom_JSObject_JS_DOM_WINDOW_OBJECT)
+                    ((peer_type == com_sun_webkit_dom_JSObject_JS_DOM_WINDOW_OBJECT)
                         ? static_cast<DOMWindow*>(jlong_to_ptr(peer))->document()
-                        : static_cast<Node*>(jlong_to_ptr(peer))->document(),
+                        : &static_cast<Node*>(jlong_to_ptr(peer))->document()),
                     exec);
                 return toRef(exec,
                     (peer_type == com_sun_webkit_dom_JSObject_JS_DOM_WINDOW_OBJECT)
@@ -265,11 +269,11 @@ PassRefPtr<JSC::Bindings::RootObject> checkJSPeer(
         {
             WebCore::Frame* frame = (peer_type == com_sun_webkit_dom_JSObject_JS_DOM_WINDOW_OBJECT)
                 ? static_cast<WebCore::DOMWindow*>(jlong_to_ptr(peer))->document()->frame()
-                : static_cast<WebCore::Node*>(jlong_to_ptr(peer))->document()->frame();
+                : static_cast<WebCore::Node*>(jlong_to_ptr(peer))->document().frame();
 
-            rootObject = frame->script()->createRootObject(frame).leakRef();
+            rootObject = frame->script().createRootObject(frame).leakRef();
             if (rootObject) {
-                context = WebCore::getGlobalContext(frame->script());
+                context = WebCore::getGlobalContext(&frame->script());
                 JSC::ExecState* exec = toJS(context);
 
                 object = const_cast<JSObjectRef>(toRef(exec,

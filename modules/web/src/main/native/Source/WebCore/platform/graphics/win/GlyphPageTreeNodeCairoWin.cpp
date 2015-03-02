@@ -29,6 +29,7 @@
 #include "config.h"
 #include "GlyphPageTreeNode.h"
 
+#include "HWndDC.h"
 #include "SimpleFontData.h"
 
 namespace WebCore {
@@ -42,12 +43,9 @@ bool GlyphPage::fill(unsigned offset, unsigned length, UChar* buffer, unsigned b
 
     bool haveGlyphs = false;
 
-    HDC dc = GetDC((HWND)0);
+    HWndDC dc(0);
     SaveDC(dc);
     SelectObject(dc, fontData->platformData().hfont());
-
-    TEXTMETRIC tm;
-    GetTextMetrics(dc, &tm);
 
     WORD localGlyphBuffer[GlyphPage::size * 2];
     DWORD result = GetGlyphIndices(dc, buffer, bufferLength, localGlyphBuffer, 0);
@@ -64,7 +62,6 @@ bool GlyphPage::fill(unsigned offset, unsigned length, UChar* buffer, unsigned b
         }
     }
     RestoreDC(dc, -1);
-    ReleaseDC(0, dc);
 
     return haveGlyphs;
 }

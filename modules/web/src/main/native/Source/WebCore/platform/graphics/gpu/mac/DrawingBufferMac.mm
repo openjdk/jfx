@@ -94,31 +94,15 @@ DrawingBuffer::~DrawingBuffer()
     clear();
 }
 
-#if USE(ACCELERATED_COMPOSITING)
 PlatformLayer* DrawingBuffer::platformLayer()
 {
     return m_platformLayer.get();
-}
-
-void DrawingBuffer::prepareBackBuffer()
-{
-}
-
-bool DrawingBuffer::requiresCopyFromBackToFrontBuffer() const
-{
-    return false;
 }
 
 unsigned DrawingBuffer::frontColorBuffer() const
 {
     return colorBuffer();
 }
-
-void DrawingBuffer::clearPlatformLayer()
-{
-    // Don't need to do anything on this platform.
-}
-#endif
 
 }
 

@@ -26,8 +26,6 @@
 #ifndef LayerFlushScheduler_h
 #define LayerFlushScheduler_h
 
-#if USE(ACCELERATED_COMPOSITING)
-
 #include "LayerFlushSchedulerClient.h"
 #include <wtf/Noncopyable.h>
 #include <wtf/RetainPtr.h>
@@ -38,7 +36,7 @@ class LayerFlushScheduler {
     WTF_MAKE_NONCOPYABLE(LayerFlushScheduler);
 public:
     LayerFlushScheduler(LayerFlushSchedulerClient*);
-    ~LayerFlushScheduler();
+    virtual ~LayerFlushScheduler();
 
     void schedule();
     void invalidate();
@@ -52,15 +50,15 @@ private:
     bool m_isSuspended;
     LayerFlushSchedulerClient* m_client;
     
-#if PLATFORM(MAC)
+#if PLATFORM(COCOA)
     RetainPtr<CFRunLoopObserverRef> m_runLoopObserver;
     static void runLoopObserverCallback(CFRunLoopObserverRef, CFRunLoopActivity, void* context);
-    void runLoopObserverCallback();
+
+protected:
+    virtual void runLoopObserverCallback();
 #endif
 };
 
 } // namespace WebCore
-
-#endif // USE(ACCELERATED_COMPOSITING)
 
 #endif // LayerFlushScheduler_h

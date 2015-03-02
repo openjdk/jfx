@@ -28,6 +28,7 @@
 #define StringBuilder_h
 
 #include <wtf/text/AtomicString.h>
+#include <wtf/text/StringView.h>
 #include <wtf/text/WTFString.h>
 
 namespace WTF {
@@ -89,6 +90,14 @@ public:
             append(other.characters16(), other.m_length);
     }
 
+    void append(StringView stringView)
+    {
+        if (stringView.is8Bit())
+            append(stringView.characters8(), stringView.length());
+        else
+            append(stringView.characters16(), stringView.length());
+    }
+    
     void append(const String& string, unsigned offset, unsigned length)
     {
         if (!string.length())
@@ -113,7 +122,7 @@ public:
     {
         if (m_buffer && m_length < m_buffer->length() && m_string.isNull()) {
             if (!m_is8Bit) {
-            m_bufferCharacters16[m_length++] = c;
+                m_bufferCharacters16[m_length++] = c;
                 return;
             }
 
@@ -122,7 +131,7 @@ public:
                 return;
             }
         }
-            append(&c, 1);
+        append(&c, 1);
     }
 
     void append(LChar c)
@@ -135,7 +144,7 @@ public:
         } else
             append(&c, 1);
     }
-    
+
     void append(char c)
     {
         append(static_cast<LChar>(c));
@@ -160,6 +169,9 @@ public:
     WTF_EXPORT_PRIVATE void appendNumber(unsigned long);
     WTF_EXPORT_PRIVATE void appendNumber(long long);
     WTF_EXPORT_PRIVATE void appendNumber(unsigned long long);
+    WTF_EXPORT_PRIVATE void appendNumber(double, unsigned precision = 6, TrailingZerosTruncatingPolicy = TruncateTrailingZeros);
+    WTF_EXPORT_PRIVATE void appendECMAScriptNumber(double);
+    WTF_EXPORT_PRIVATE void appendFixedWidthNumber(double, unsigned decimalPlaces);
 
     String toString()
     {
@@ -245,21 +257,21 @@ public:
         return m_buffer->characters16();
     }
     
-    const UChar* characters() const
+    const UChar* deprecatedCharacters() const
     {
         if (!m_length)
             return 0;
         if (!m_string.isNull())
-            return m_string.characters();
+            return m_string.deprecatedCharacters();
         ASSERT(m_buffer);
         if (m_buffer->has16BitShadow() && m_valid16BitShadowLength < m_length)
             m_buffer->upconvertCharacters(m_valid16BitShadowLength, m_length);
 
         m_valid16BitShadowLength = m_length;
 
-        return m_buffer->characters();
+        return m_buffer->deprecatedCharacters();
     }
-    
+
     bool is8Bit() const { return m_is8Bit; }
 
     void clear()

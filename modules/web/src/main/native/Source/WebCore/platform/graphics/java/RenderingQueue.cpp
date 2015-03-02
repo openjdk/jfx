@@ -6,6 +6,7 @@
 #include "RQRef.h"
 #include "JavaRef.h"
 #include "JavaEnv.h"
+#include <wtf/HashMap.h>
 
 #include "com_sun_webkit_graphics_WCRenderQueue.h"
 

@@ -141,6 +141,12 @@ static RetainPtr<CFStringRef> substringFromIndex(CFStringRef string, CFIndex ind
     return adoptCF(CFStringCreateWithSubstring(kCFAllocatorDefault, string, CFRangeMake(index, CFStringGetLength(string) - index)));
 }
 
+static wstring lastPathComponentAsWString(CFURLRef url)
+{
+    RetainPtr<CFStringRef> lastPathComponent = adoptCF(CFURLCopyLastPathComponent(url));
+    return cfStringRefToWString(lastPathComponent.get());
+}
+
 wstring urlSuitableForTestResult(const wstring& urlString)
 {
     RetainPtr<CFURLRef> url = adoptCF(CFURLCreateWithBytes(kCFAllocatorDefault, reinterpret_cast<const UInt8*>(urlString.c_str()), urlString.length() * sizeof(wstring::value_type), kCFStringEncodingUTF16, 0));
@@ -152,16 +158,16 @@ wstring urlSuitableForTestResult(const wstring& urlString)
     COMPtr<IWebDataSource> dataSource;
     if (FAILED(frame->dataSource(&dataSource))) {
         if (FAILED(frame->provisionalDataSource(&dataSource)))
-            return urlString;
+            return lastPathComponentAsWString(url.get());
     }
 
     COMPtr<IWebMutableURLRequest> request;
     if (FAILED(dataSource->request(&request)))
-        return urlString;
+        return lastPathComponentAsWString(url.get());
 
     _bstr_t requestURLString;
     if (FAILED(request->URL(requestURLString.GetAddress())))
-        return urlString;
+        return lastPathComponentAsWString(url.get());
 
     RetainPtr<CFURLRef> requestURL = adoptCF(CFURLCreateWithBytes(kCFAllocatorDefault, reinterpret_cast<const UInt8*>(requestURLString.GetBSTR()), requestURLString.length() * sizeof(OLECHAR), kCFStringEncodingUTF16, 0));
     RetainPtr<CFURLRef> baseURL = adoptCF(CFURLCreateCopyDeletingLastPathComponent(kCFAllocatorDefault, requestURL.get()));
@@ -169,7 +175,10 @@ wstring urlSuitableForTestResult(const wstring& urlString)
     RetainPtr<CFStringRef> basePath = adoptCF(CFURLCopyPath(baseURL.get()));
     RetainPtr<CFStringRef> path = adoptCF(CFURLCopyPath(url.get()));
 
-    return cfStringRefToWString(substringFromIndex(path.get(), CFStringGetLength(basePath.get())).get());
+    if (basePath.get() && CFStringHasPrefix(path.get(), basePath.get()))
+        return cfStringRefToWString(substringFromIndex(path.get(), CFStringGetLength(basePath.get())).get());
+
+    return lastPathComponentAsWString(url.get());
 }
 
 wstring lastPathComponent(const wstring& urlString)
@@ -668,7 +677,7 @@ static void dumpBackForwardList(IWebView* webView)
         item->QueryInterface(&itemUnknown);
         itemsToPrint.append(itemUnknown);
     }
-    
+
     COMPtr<IWebHistoryItem> currentItem;
     if (FAILED(bfList->currentItem(&currentItem)))
         return;
@@ -849,6 +858,7 @@ static void resetDefaultsToConsistentValues(IWebPreferences* preferences)
     preferences->setDefaultFontSize(16);
     preferences->setDefaultFixedFontSize(13);
     preferences->setMinimumFontSize(0);
+    preferences->setDefaultTextEncodingName(L"ISO-8859-1");
     preferences->setJavaEnabled(FALSE);
     preferences->setPlugInsEnabled(TRUE);
     preferences->setDOMPasteAllowed(TRUE);
@@ -860,8 +870,10 @@ static void resetDefaultsToConsistentValues(IWebPreferences* preferences)
     preferences->setJavaScriptEnabled(TRUE);
     preferences->setTabsToLinks(FALSE);
     preferences->setShouldPrintBackgrounds(TRUE);
+    preferences->setCacheModel(WebCacheModelDocumentBrowser);
     preferences->setLoadsImagesAutomatically(TRUE);
-    preferences->setSeamlessIFramesEnabled(TRUE);
+    preferences->setTextAreasAreResizable(TRUE);
+    preferences->setCSSRegionsEnabled(TRUE);
 
     if (persistentUserStyleSheetLocation) {
         Vector<wchar_t> urlCharacters(CFStringGetLength(persistentUserStyleSheetLocation.get()));
@@ -885,6 +897,13 @@ static void resetDefaultsToConsistentValues(IWebPreferences* preferences)
         prefsPrivate->setXSSAuditorEnabled(FALSE);
         prefsPrivate->setOfflineWebApplicationCacheEnabled(TRUE);
         prefsPrivate->setLoadsSiteIconsIgnoringImageLoadingPreference(FALSE);
+        prefsPrivate->setFrameFlatteningEnabled(FALSE);
+        prefsPrivate->setFullScreenEnabled(TRUE);
+#if USE(CG)
+        prefsPrivate->setAcceleratedCompositingEnabled(TRUE);
+#endif
+        prefsPrivate->setMockScrollbarsEnabled(TRUE);
+        prefsPrivate->setScreenFontSubstitutionEnabled(TRUE);
     }
     setAlwaysAcceptCookies(false);
 
@@ -959,6 +978,76 @@ static void sizeWebViewForCurrentTest()
     ::SetWindowPos(webViewWindow, 0, 0, 0, width, height, SWP_NOMOVE);
 }
 
+static String findFontFallback(const char* pathOrUrl)
+{
+    String pathToFontFallback = WebCore::directoryName(pathOrUrl);
+
+    wchar_t fullPath[_MAX_PATH];
+    if (!_wfullpath(fullPath, pathToFontFallback.charactersWithNullTermination().data(), _MAX_PATH))
+        return emptyString();
+
+    if (!::PathIsDirectoryW(fullPath))
+        return emptyString();
+
+    String pathToCheck = fullPath;
+
+    static const String layoutTests = "LayoutTests";
+
+    // Find the layout test root on the current path:
+    size_t location = pathToCheck.find(layoutTests);
+    if (WTF::notFound == location)
+        return emptyString();
+
+    String pathToTest = pathToCheck.substring(location + layoutTests.length() + 1);
+    String possiblePathToLogue = WebCore::pathByAppendingComponent(pathToCheck.substring(0, location + layoutTests.length() + 1), "platform\\win");
+
+    Vector<String> possiblePaths;
+    possiblePaths.append(WebCore::pathByAppendingComponent(possiblePathToLogue, pathToTest));
+
+    size_t nextCandidateEnd = pathToTest.reverseFind('\\');
+    while (nextCandidateEnd && nextCandidateEnd != WTF::notFound) {
+        pathToTest = pathToTest.substring(0, nextCandidateEnd);
+        possiblePaths.append(WebCore::pathByAppendingComponent(possiblePathToLogue, pathToTest));
+        nextCandidateEnd = pathToTest.reverseFind('\\');
+    }
+
+    for (Vector<String>::iterator pos = possiblePaths.begin(); pos != possiblePaths.end(); ++pos) {
+        pathToFontFallback = WebCore::pathByAppendingComponent(*pos, "resources\\"); 
+
+        if (::PathIsDirectoryW(pathToFontFallback.charactersWithNullTermination().data()))
+            return pathToFontFallback;
+    }
+
+    return emptyString();
+}
+
+static void addFontFallbackIfPresent(const String& fontFallbackPath)
+{
+    if (fontFallbackPath.isEmpty())
+        return;
+
+    String fontFallback = WebCore::pathByAppendingComponent(fontFallbackPath, "Mac-compatible-font-fallback.css");
+
+    if (!::PathFileExistsW(fontFallback.charactersWithNullTermination().data()))
+        return;
+
+    ::setPersistentUserStyleSheetLocation(fontFallback.createCFString().get());
+}
+
+static void removeFontFallbackIfPresent(const String& fontFallbackPath)
+{
+    if (fontFallbackPath.isEmpty())
+        return;
+
+    String fontFallback = WebCore::pathByAppendingComponent(fontFallbackPath, "Mac-compatible-font-fallback.css");
+
+    if (!::PathFileExistsW(fontFallback.charactersWithNullTermination().data()))
+        return;
+
+    ::setPersistentUserStyleSheetLocation(0);
+}
+
+
 static void runTest(const string& inputLine)
 {
     TestCommand command = parseInputLine(inputLine);
@@ -977,6 +1066,8 @@ static void runTest(const string& inputLine)
 
     CFRelease(str);
 
+    String fallbackPath = findFontFallback(pathOrURL.c_str());
+
     str = CFURLGetString(url);
 
     CFIndex length = CFStringGetLength(str);
@@ -991,6 +1082,8 @@ static void runTest(const string& inputLine)
     ::gTestRunner = TestRunner::create(pathOrURL, command.expectedPixelHash);
     done = false;
     topLoadingFrame = 0;
+
+    addFontFallbackIfPresent(fallbackPath);
 
     sizeWebViewForCurrentTest();
     gTestRunner->setIconDatabaseEnabled(false);
@@ -1049,7 +1142,13 @@ static void runTest(const string& inputLine)
     frame->loadRequest(request.get());
 
     MSG msg;
-    while (GetMessage(&msg, 0, 0, 0)) {
+    while (true) {
+#if USE(CF)
+        CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, true);
+#endif
+        if (!GetMessage(&msg, 0, 0, 0))
+            break;
+
         // We get spurious WM_MOUSELEAVE events which make event handling machinery think that mouse button
         // is released during dragging (see e.g. fast\dynamic\layer-hit-test-crash.html).
         // Mouse can never leave WebView during normal DumpRenderTree operation, so we just ignore all such events.
@@ -1083,6 +1182,7 @@ static void runTest(const string& inputLine)
     }
 
 exit:
+    removeFontFallbackIfPresent(fallbackPath);
     SysFreeString(urlBStr);
     ::gTestRunner.clear();
 
@@ -1103,8 +1203,8 @@ WindowToWebViewMap& windowToWebViewMap()
 
 IWebView* createWebViewAndOffscreenWindow(HWND* webViewWindow)
 {
-    unsigned maxViewWidth = TestRunner::viewWidth;
-    unsigned maxViewHeight = TestRunner::viewHeight;
+    int maxViewWidth = TestRunner::viewWidth;
+    int maxViewHeight = TestRunner::viewHeight;
     HWND hostWindow = CreateWindowEx(WS_EX_TOOLWINDOW, kDumpRenderTreeClassName, TEXT("DumpRenderTree"), WS_POPUP,
       -maxViewWidth, -maxViewHeight, maxViewWidth, maxViewHeight, 0, 0, GetModuleHandle(0), 0);
 
@@ -1208,7 +1308,7 @@ static LONG WINAPI exceptionFilter(EXCEPTION_POINTERS*)
     return EXCEPTION_CONTINUE_SEARCH;
 }
 
-extern "C" __declspec(dllexport) int WINAPI dllLauncherEntryPoint(int argc, const char* argv[])
+int main(int argc, const char* argv[])
 {
     // Cygwin calls ::SetErrorMode(SEM_FAILCRITICALERRORS), which we will inherit. This is bad for
     // testing/debugging, as it causes the post-mortem debugger not to be invoked. We reset the
@@ -1274,7 +1374,10 @@ extern "C" __declspec(dllexport) int WINAPI dllLauncherEntryPoint(int argc, cons
     standardPreferencesPrivate->setShouldPaintNativeControls(FALSE);
     standardPreferences->setJavaScriptEnabled(TRUE);
     standardPreferences->setDefaultFontSize(16);
-    standardPreferences->setAcceleratedCompositingEnabled(true);
+#if USE(CG)
+    standardPreferences->setAcceleratedCompositingEnabled(TRUE);
+    standardPreferences->setAVFoundationEnabled(TRUE);
+#endif
     standardPreferences->setContinuousSpellCheckingEnabled(TRUE);
 
     if (printSupportedFeatures) {
@@ -1367,4 +1470,9 @@ extern "C" __declspec(dllexport) int WINAPI dllLauncherEntryPoint(int argc, cons
     shutDownWebKit();
 
     return 0;
+}
+
+extern "C" __declspec(dllexport) int WINAPI dllLauncherEntryPoint(int argc, const char* argv[])
+{
+    return main(argc, argv);
 }

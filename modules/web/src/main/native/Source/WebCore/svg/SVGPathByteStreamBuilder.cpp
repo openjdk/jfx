@@ -18,14 +18,11 @@
  */
 
 #include "config.h"
-
-#if ENABLE(SVG)
 #include "SVGPathByteStreamBuilder.h"
 
 #include "SVGPathParser.h"
 #include "SVGPathSeg.h"
 #include "SVGPathStringSource.h"
-#include <wtf/OwnPtr.h>
 
 namespace WebCore {
 
@@ -113,5 +110,3 @@ void SVGPathByteStreamBuilder::closePath()
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(SVG)

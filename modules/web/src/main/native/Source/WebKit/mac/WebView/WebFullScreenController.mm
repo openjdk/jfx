@@ -23,7 +23,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#if ENABLE(FULLSCREEN_API)
+#if ENABLE(FULLSCREEN_API) && !PLATFORM(IOS)
 
 #import "WebFullScreenController.h"
 
@@ -33,6 +33,8 @@
 #import <WebCore/Document.h>
 #import <WebCore/Element.h>
 #import <WebCore/FloatRect.h>
+#import <WebCore/Frame.h>
+#import <WebCore/FrameView.h>
 #import <WebCore/HTMLElement.h>
 #import <WebCore/IntRect.h>
 #import <WebCore/Page.h>
@@ -56,7 +58,7 @@ static IntRect screenRectOfContents(Element* element)
     if (element->renderer() && element->renderer()->hasLayer() && element->renderer()->enclosingLayer()->isComposited()) {
         FloatQuad contentsBox = static_cast<FloatRect>(element->renderer()->enclosingLayer()->backing()->contentsBox());
         contentsBox = element->renderer()->localToAbsoluteQuad(contentsBox);
-        return element->renderer()->view()->frameView()->contentsToScreen(contentsBox.enclosingBoundingBox());
+        return element->renderer()->view().frameView().contentsToScreen(contentsBox.enclosingBoundingBox());
     }
     return element->screenRect();
 }
@@ -69,20 +71,10 @@ static IntRect screenRectOfContents(Element* element)
 - (void)_startExitFullScreenAnimationWithDuration:(NSTimeInterval)duration;
 @end
 
-#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
 static NSRect convertRectToScreen(NSWindow *window, NSRect rect)
 {
     return [window convertRectToScreen:rect];
 }
-#else
-static NSRect convertRectToScreen(NSWindow *window, NSRect rect)
-{
-    NSRect frame = [window frame];
-    rect.origin.x += frame.origin.x;
-    rect.origin.y += frame.origin.y;
-    return rect;
-}
-#endif
 
 @interface NSWindow(IsOnActiveSpaceAdditionForTigerAndLeopard)
 - (BOOL)isOnActiveSpace;
@@ -236,6 +228,7 @@ static NSRect convertRectToScreen(NSWindow *window, NSRect rect)
         [_webViewPlaceholder.get() setWantsLayer:YES];
     }
     [[_webViewPlaceholder.get() layer] setContents:(id)webViewContents.get()];
+    _scrollPosition = [_webView _mainCoreFrame]->view()->scrollPosition();
     [self _swapView:_webView with:_webViewPlaceholder.get()];
     
     // Then insert the WebView into the full screen window
@@ -275,16 +268,12 @@ static NSRect convertRectToScreen(NSWindow *window, NSRect rect)
         WKWindowSetClipRect([self window], windowBounds);
         
         NSWindow *webWindow = [_webViewPlaceholder.get() window];
-#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
         // In Lion, NSWindow will animate into and out of orderOut operations. Suppress that
         // behavior here, making sure to reset the animation behavior afterward.
         NSWindowAnimationBehavior animationBehavior = [webWindow animationBehavior];
         [webWindow setAnimationBehavior:NSWindowAnimationBehaviorNone];
-#endif
         [webWindow orderOut:self];
-#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
         [webWindow setAnimationBehavior:animationBehavior];
-#endif
         
         [_fadeAnimation.get() stopAnimation];
         [_fadeAnimation.get() setWindow:nil];
@@ -301,7 +290,7 @@ static NSRect convertRectToScreen(NSWindow *window, NSRect rect)
 {
     if (!_element)
         return;
-    _element->document()->webkitCancelFullScreen();
+    _element->document().webkitCancelFullScreen();
 }
 
 - (void)exitFullScreen
@@ -325,12 +314,10 @@ static NSRect convertRectToScreen(NSWindow *window, NSRect rect)
     [self _updateMenuAndDockForFullScreen];
     
     NSWindow* webWindow = [_webViewPlaceholder.get() window];
-#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     // In Lion, NSWindow will animate into and out of orderOut operations. Suppress that
     // behavior here, making sure to reset the animation behavior afterward.
     NSWindowAnimationBehavior animationBehavior = [webWindow animationBehavior];
     [webWindow setAnimationBehavior:NSWindowAnimationBehaviorNone];
-#endif
     // If the user has moved the fullScreen window into a new space, temporarily change
     // the collectionBehavior of the webView's window so that it is pulled into the active space:
     if (!([webWindow respondsToSelector:@selector(isOnActiveSpace)] ? [webWindow isOnActiveSpace] : YES)) {
@@ -340,9 +327,7 @@ static NSRect convertRectToScreen(NSWindow *window, NSRect rect)
         [webWindow setCollectionBehavior:behavior];
     } else
         [webWindow orderWindow:NSWindowBelow relativeTo:[[self window] windowNumber]];
-#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     [webWindow setAnimationBehavior:animationBehavior];
-#endif
 
     [self _startExitFullScreenAnimationWithDuration:defaultAnimationDuration];
     _isExitingFullScreen = YES;    
@@ -364,6 +349,7 @@ static NSRect convertRectToScreen(NSWindow *window, NSRect rect)
     
     NSResponder *firstResponder = [[self window] firstResponder];
     [self _swapView:_webViewPlaceholder.get() with:_webView];
+    [_webView _mainCoreFrame]->view()->setScrollPosition(_scrollPosition);
     [[_webView window] makeResponder:firstResponder firstResponderIfDescendantOfView:_webView];
     
     NSRect windowBounds = [[self window] frame];
@@ -449,7 +435,7 @@ static NSRect convertRectToScreen(NSWindow *window, NSRect rect)
 
 - (Document*)_document 
 {
-    return _element->document();
+    return &_element->document();
 }
 
 - (void)_swapView:(NSView*)view with:(NSView*)otherView
@@ -504,7 +490,10 @@ static NSRect windowFrameFromApparentFrames(NSRect screenFrame, NSRect initialFr
     
     // WKWindowSetClipRect takes window coordinates, so convert from screen coordinates here:
     NSRect finalBounds = _finalFrame;
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     finalBounds.origin = [[self window] convertScreenToBase:finalBounds.origin];
+#pragma clang diagnostic pop
     WKWindowSetClipRect([self window], finalBounds);
     
     [[self window] makeKeyAndOrderFront:self];
@@ -573,7 +562,10 @@ static NSRect windowFrameFromApparentFrames(NSRect screenFrame, NSRect initialFr
     
     // WKWindowSetClipRect takes window coordinates, so convert from screen coordinates here:
     NSRect finalBounds = _finalFrame;
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     finalBounds.origin = [[self window] convertScreenToBase:finalBounds.origin];
+#pragma clang diagnostic pop
     WKWindowSetClipRect([self window], finalBounds);
     
     [[self window] setAutodisplay:YES];
@@ -586,4 +578,4 @@ static NSRect windowFrameFromApparentFrames(NSRect screenFrame, NSRect initialFr
 @end
 
 
-#endif /* ENABLE(FULLSCREEN_API) */
+#endif /* ENABLE(FULLSCREEN_API) && !PLATFORM(IOS) */

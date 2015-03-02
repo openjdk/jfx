@@ -22,7 +22,7 @@
 #define CSSValue_h
 
 #include "ExceptionCode.h"
-#include "KURLHash.h"
+#include "URLHash.h"
 #include <wtf/ListHashSet.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
@@ -59,20 +59,21 @@ public:
 
     String cssText() const;
     void setCssText(const String&, ExceptionCode&) { } // FIXME: Not implemented.
-#if ENABLE(CSS_VARIABLES)
-    String serializeResolvingVariables(const HashMap<AtomicString, String>&) const;
-#endif
 
     bool isPrimitiveValue() const { return m_classType == PrimitiveClass; }
     bool isValueList() const { return m_classType >= ValueListClass; }
-
+    
     bool isBaseValueList() const { return m_classType == ValueListClass; }
         
 
     bool isAspectRatioValue() const { return m_classType == AspectRatioClass; }
     bool isBorderImageSliceValue() const { return m_classType == BorderImageSliceClass; }
+    bool isCanvasValue() const { return m_classType == CanvasClass; }
+    bool isCrossfadeValue() const { return m_classType == CrossfadeClass; }
     bool isCursorImageValue() const { return m_classType == CursorImageClass; }
+    bool isFunctionValue() const { return m_classType == FunctionClass; }
     bool isFontFeatureValue() const { return m_classType == FontFeatureClass; }
+    bool isFontFaceSrcValue() const { return m_classType == FontFaceSrcClass; }
     bool isFontValue() const { return m_classType == FontClass; }
     bool isImageGeneratorValue() const { return m_classType >= CanvasClass && m_classType <= RadialGradientClass; }
     bool isGradientValue() const { return m_classType >= LinearGradientClass && m_classType <= RadialGradientClass; }
@@ -83,45 +84,35 @@ public:
     bool isImplicitInitialValue() const;
     bool isInheritedValue() const { return m_classType == InheritedClass; }
     bool isInitialValue() const { return m_classType == InitialClass; }
+    bool isLinearGradientValue() const { return m_classType == LinearGradientClass; }
+    bool isRadialGradientValue() const { return m_classType == RadialGradientClass; }
     bool isReflectValue() const { return m_classType == ReflectClass; }
     bool isShadowValue() const { return m_classType == ShadowClass; }
     bool isCubicBezierTimingFunctionValue() const { return m_classType == CubicBezierTimingFunctionClass; }
-    bool isLinearTimingFunctionValue() const { return m_classType == LinearTimingFunctionClass; }
     bool isStepsTimingFunctionValue() const { return m_classType == StepsTimingFunctionClass; }
     bool isWebKitCSSTransformValue() const { return m_classType == WebKitCSSTransformClass; }
-    bool isCSSLineBoxContainValue() const { return m_classType == LineBoxContainClass; }
-    bool isCalculationValue() const {return m_classType == CalculationClass; }
+    bool isLineBoxContainValue() const { return m_classType == LineBoxContainClass; }
+    bool isCalcValue() const {return m_classType == CalculationClass; }
 #if ENABLE(CSS_FILTERS)
+    bool isFilterImageValue() const { return m_classType == FilterImageClass; }
     bool isWebKitCSSFilterValue() const { return m_classType == WebKitCSSFilterClass; }
-#if ENABLE(CSS_SHADERS)
-    bool isWebKitCSSArrayFunctionValue() const { return m_classType == WebKitCSSArrayFunctionValueClass; }
-    bool isWebKitCSSMatFunctionValue() const { return m_classType == WebKitCSSMatFunctionValueClass; }
-    bool isWebKitCSSMixFunctionValue() const { return m_classType == WebKitCSSMixFunctionValueClass; }
-    bool isWebKitCSSShaderValue() const { return m_classType == WebKitCSSShaderClass; }
-#endif
 #endif // ENABLE(CSS_FILTERS)
-#if ENABLE(CSS_VARIABLES)
-    bool isVariableValue() const { return m_classType == VariableClass; }
-#endif
-#if ENABLE(SVG)
+    bool isGridTemplateAreasValue() const { return m_classType == GridTemplateAreasClass; }
     bool isSVGColor() const { return m_classType == SVGColorClass || m_classType == SVGPaintClass; }
     bool isSVGPaint() const { return m_classType == SVGPaintClass; }
-    bool isWebKitCSSSVGDocumentValue() const { return m_classType == WebKitCSSSVGDocumentClass; }
-#endif
-    
+    bool isUnicodeRangeValue() const { return m_classType == UnicodeRangeClass; }
+
     bool isCSSOMSafe() const { return m_isCSSOMSafe; }
     bool isSubtypeExposedToCSSOM() const
     { 
         return isPrimitiveValue() 
-#if ENABLE(SVG)
             || isSVGColor()
-#endif
             || isValueList();
     }
 
     PassRefPtr<CSSValue> cloneForCSSOM() const;
 
-    void addSubresourceStyleURLs(ListHashSet<KURL>&, const StyleSheetContents*) const;
+    void addSubresourceStyleURLs(ListHashSet<URL>&, const StyleSheetContents*) const;
 
     bool hasFailedOrCanceledSubresources() const;
 
@@ -140,12 +131,14 @@ protected:
         // Image generator classes.
         CanvasClass,
         CrossfadeClass,
+#if ENABLE(CSS_FILTERS)
+        FilterImageClass,
+#endif
         LinearGradientClass,
         RadialGradientClass,
 
         // Timing function classes.
         CubicBezierTimingFunctionClass,
-        LinearTimingFunctionClass,
         StepsTimingFunctionClass,
 
         // Other class types.
@@ -164,17 +157,9 @@ protected:
         UnicodeRangeClass,
         LineBoxContainClass,
         CalculationClass,
-#if ENABLE(CSS_FILTERS) && ENABLE(CSS_SHADERS)
-        WebKitCSSShaderClass,
-#endif
-#if ENABLE(CSS_VARIABLES)
-        VariableClass,
-#endif
-#if ENABLE(SVG)
+        GridTemplateAreasClass,
         SVGColorClass,
         SVGPaintClass,
-        WebKitCSSSVGDocumentClass,
-#endif
 
         // List class types must appear after ValueListClass.
         ValueListClass,
@@ -183,11 +168,6 @@ protected:
 #endif
 #if ENABLE(CSS_FILTERS)
         WebKitCSSFilterClass,
-#if ENABLE(CSS_SHADERS)
-        WebKitCSSArrayFunctionValueClass,
-        WebKitCSSMatFunctionValueClass,
-        WebKitCSSMixFunctionValueClass,
-#endif
 #endif
         WebKitCSSTransformClass,
         // Do not append non-list class types here.
@@ -239,7 +219,7 @@ private:
 };
 
 template<typename CSSValueType>
-inline bool compareCSSValueVector(const Vector<RefPtr<CSSValueType> >& firstVector, const Vector<RefPtr<CSSValueType> >& secondVector)
+inline bool compareCSSValueVector(const Vector<RefPtr<CSSValueType>>& firstVector, const Vector<RefPtr<CSSValueType>>& secondVector)
 {
     size_t size = firstVector.size();
     if (size != secondVector.size())
@@ -260,6 +240,15 @@ inline bool compareCSSValuePtr(const RefPtr<CSSValueType>& first, const RefPtr<C
 {
     return first ? second && first->equals(*second) : !second;
 }
+
+template<typename CSSValueType>
+inline bool compareCSSValue(const Ref<CSSValueType>& first, const Ref<CSSValueType>& second)
+{
+    return first.get().equals(second.get());
+}
+
+#define CSS_VALUE_TYPE_CASTS(ToValueTypeName, predicate) \
+    TYPE_CASTS_BASE(ToValueTypeName, CSSValue, value, value->predicate, value.predicate)
 
 } // namespace WebCore
 

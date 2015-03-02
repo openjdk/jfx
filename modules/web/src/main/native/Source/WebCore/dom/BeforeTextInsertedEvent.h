@@ -39,8 +39,8 @@ public:
         return adoptRef(new BeforeTextInsertedEvent(text));
     }
 
-    virtual const AtomicString& interfaceName() const;
-    virtual bool isBeforeTextInsertedEvent() const { return true; }
+    virtual EventInterface eventInterface() const override;
+    virtual bool isBeforeTextInsertedEvent() const override { return true; }
 
     const String& text() const { return m_text; }
     void setText(const String& s) { m_text = s; }
@@ -50,6 +50,8 @@ private:
 
     String m_text;
 };
+
+EVENT_TYPE_CASTS(BeforeTextInsertedEvent)
 
 } // namespace
 

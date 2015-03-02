@@ -26,6 +26,8 @@
 #ifndef ScrollTypes_h
 #define ScrollTypes_h
 
+#ifdef __cplusplus
+
 namespace WebCore {
 
     enum ScrollDirection {
@@ -156,9 +158,28 @@ namespace WebCore {
         ScrollbarOverlayStyleDark,
         ScrollbarOverlayStyleLight
     };
-    
+
+    enum ScrollbarOverlayState {
+        ScrollbarOverlayStateHidden,
+        ScrollbarOverlayStateThumbShown,
+        ScrollbarOverlayStateAllShown,
+        ScrollbarOverlayStatePulseThumb
+    };
+
     typedef unsigned ScrollbarControlPartMask;
 
+    enum ScrollPinningBehavior {
+        DoNotPin,
+        PinToTop,
+        PinToBottom
+    };
+
+    enum ScrollBehaviorForFixedElements {
+        StickToDocumentBounds,
+        StickToViewportBounds
+    };
 }
+
+#endif // __cplusplus
 
 #endif

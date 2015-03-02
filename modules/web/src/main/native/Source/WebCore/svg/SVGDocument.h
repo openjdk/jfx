@@ -20,7 +20,6 @@
 
 #ifndef SVGDocument_h
 #define SVGDocument_h
-#if ENABLE(SVG)
 
 #include "Document.h"
 #include "FloatPoint.h"
@@ -31,9 +30,9 @@ class DOMImplementation;
 class SVGElement;
 class SVGSVGElement;
 
-class SVGDocument FINAL : public Document {
+class SVGDocument final : public Document {
 public:
-    static PassRefPtr<SVGDocument> create(Frame* frame, const KURL& url)
+    static PassRefPtr<SVGDocument> create(Frame* frame, const URL& url)
     {
         return adoptRef(new SVGDocument(frame, url));
     }
@@ -49,31 +48,20 @@ public:
     void updatePan(const FloatPoint& pos) const;
 
 private:
-    SVGDocument(Frame*, const KURL&);
+    SVGDocument(Frame*, const URL&);
 
-    virtual bool childShouldCreateRenderer(const NodeRenderingContext&) const;
+    virtual bool childShouldCreateRenderer(const Node&) const override;
+
+    virtual PassRefPtr<Document> cloneDocumentWithoutChildren() const override;
 
     FloatPoint m_translate;
 };
 
-inline SVGDocument* toSVGDocument(Document* document)
-{
-    ASSERT_WITH_SECURITY_IMPLICATION(!document || document->isSVGDocument());
-    return static_cast<SVGDocument*>(document);
-}
+inline bool isSVGDocument(const Document& document) { return document.isSVGDocument(); }
+void isSVGDocument(const SVGDocument&); // Catch unnecessary runtime check of type known at compile time.
 
-inline const SVGDocument* toSVGDocument(const Document* document)
-{
-    ASSERT_WITH_SECURITY_IMPLICATION(!document || document->isSVGDocument());
-    return static_cast<const SVGDocument*>(document);
-}
-
-// This will catch anyone doing an unnecessary cast.
-void toSVGDocument(const SVGDocument*);
+DOCUMENT_TYPE_CASTS(SVGDocument)
 
 } // namespace WebCore
 
-#endif // ENABLE(SVG)
 #endif // SVGDocument_h
-
-// vim:ts=4:noet

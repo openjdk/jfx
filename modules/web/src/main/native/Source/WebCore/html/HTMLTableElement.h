@@ -35,10 +35,10 @@ class HTMLTableCaptionElement;
 class HTMLTableRowsCollection;
 class HTMLTableSectionElement;
 
-class HTMLTableElement FINAL : public HTMLElement {
+class HTMLTableElement final : public HTMLElement {
 public:
-    static PassRefPtr<HTMLTableElement> create(Document*);
-    static PassRefPtr<HTMLTableElement> create(const QualifiedName&, Document*);
+    static PassRefPtr<HTMLTableElement> create(Document&);
+    static PassRefPtr<HTMLTableElement> create(const QualifiedName&, Document&);
 
     HTMLTableCaptionElement* caption() const;
     void setCaption(PassRefPtr<HTMLTableCaptionElement>, ExceptionCode&);
@@ -65,28 +65,28 @@ public:
     String rules() const;
     String summary() const;
 
-    const StylePropertySet* additionalCellStyle();
-    const StylePropertySet* additionalGroupStyle(bool rows);
+    const StyleProperties* additionalCellStyle();
+    const StyleProperties* additionalGroupStyle(bool rows);
 
 private:
-    HTMLTableElement(const QualifiedName&, Document*);
+    HTMLTableElement(const QualifiedName&, Document&);
 
-    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
-    virtual bool isPresentationAttribute(const QualifiedName&) const OVERRIDE;
-    virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStylePropertySet*) OVERRIDE;
-    virtual bool isURLAttribute(const Attribute&) const OVERRIDE;
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
+    virtual bool isPresentationAttribute(const QualifiedName&) const override;
+    virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStyleProperties&) override;
+    virtual bool isURLAttribute(const Attribute&) const override;
 
     // Used to obtain either a solid or outset border decl and to deal with the frame and rules attributes.
-    virtual const StylePropertySet* additionalPresentationAttributeStyle() OVERRIDE;
+    virtual const StyleProperties* additionalPresentationAttributeStyle() override;
 
-    virtual void addSubresourceAttributeURLs(ListHashSet<KURL>&) const;
+    virtual void addSubresourceAttributeURLs(ListHashSet<URL>&) const override;
 
     enum TableRules { UnsetRules, NoneRules, GroupsRules, RowsRules, ColsRules, AllRules };
     enum CellBorders { NoBorders, SolidBorders, InsetBorders, SolidBordersColsOnly, SolidBordersRowsOnly };
 
     CellBorders cellBorders() const;
 
-    PassRefPtr<StylePropertySet> createSharedCellStyle();
+    PassRefPtr<StyleProperties> createSharedCellStyle();
 
     HTMLTableSectionElement* lastBody() const;
 
@@ -97,8 +97,10 @@ private:
                                 // are present, to none otherwise).
 
     unsigned short m_padding;
-    RefPtr<StylePropertySet> m_sharedCellStyle;
+    RefPtr<StyleProperties> m_sharedCellStyle;
 };
+
+NODE_TYPE_CASTS(HTMLTableElement)
 
 } //namespace
 

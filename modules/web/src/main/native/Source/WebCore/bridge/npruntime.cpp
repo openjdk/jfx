@@ -87,7 +87,7 @@ void NPN_InitializeVariantWithStringCopy(NPVariant* variant, const NPString* val
     variant->value.stringValue.UTF8Length = value->UTF8Length;
     // Switching to fastMalloc would be better to avoid length check but this is not desirable
     // as NPN_MemAlloc is using malloc and there might be plugins that mix NPN_MemAlloc and malloc too.
-    variant->value.stringValue.UTF8Characters = (NPUTF8 *)malloc(sizeof(NPUTF8) * value->UTF8Length);
+    variant->value.stringValue.UTF8Characters = (NPUTF8*)malloc(sizeof(NPUTF8) * value->UTF8Length);
     if (value->UTF8Length && !variant->value.stringValue.UTF8Characters)
         CRASH();
     memcpy((void*)variant->value.stringValue.UTF8Characters, value->UTF8Characters, sizeof(NPUTF8) * value->UTF8Length);

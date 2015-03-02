@@ -28,16 +28,18 @@
 
 #include "ResourceRequest.h"
 
-using namespace std;
-
 namespace WebCore {
 
-#if !USE(SOUP) && (!PLATFORM(MAC) || USE(CFNETWORK)) && !PLATFORM(QT)
+#if !USE(SOUP) && (!PLATFORM(COCOA) || USE(CFNETWORK))
 double ResourceRequestBase::s_defaultTimeoutInterval = INT_MAX;
 #else
 // Will use NSURLRequest default timeout unless set to a non-zero value with setDefaultTimeoutInterval().
 // For libsoup the timeout enabled with integer milliseconds. We set 0 as the default value to avoid integer overflow.
 double ResourceRequestBase::s_defaultTimeoutInterval = 0;
+#endif
+
+#if PLATFORM(IOS)
+bool ResourceRequestBase::s_defaultAllowCookies = true;
 #endif
 
 inline const ResourceRequest& ResourceRequestBase::asResourceRequest() const
@@ -113,14 +115,14 @@ bool ResourceRequestBase::isNull() const
     return m_url.isNull();
 }
 
-const KURL& ResourceRequestBase::url() const 
+const URL& ResourceRequestBase::url() const 
 {
     updateResourceRequest(); 
     
     return m_url;
 }
 
-void ResourceRequestBase::setURL(const KURL& url)
+void ResourceRequestBase::setURL(const URL& url)
 { 
     updateResourceRequest(); 
 
@@ -182,14 +184,14 @@ void ResourceRequestBase::setTimeoutInterval(double timeoutInterval)
         m_platformRequestUpdated = false;
 }
 
-const KURL& ResourceRequestBase::firstPartyForCookies() const
+const URL& ResourceRequestBase::firstPartyForCookies() const
 {
     updateResourceRequest(); 
     
     return m_firstPartyForCookies;
 }
 
-void ResourceRequestBase::setFirstPartyForCookies(const KURL& firstPartyForCookies)
+void ResourceRequestBase::setFirstPartyForCookies(const URL& firstPartyForCookies)
 { 
     updateResourceRequest(); 
     
@@ -410,9 +412,8 @@ void ResourceRequestBase::addHTTPHeaderField(const AtomicString& name, const Str
 
 void ResourceRequestBase::addHTTPHeaderFields(const HTTPHeaderMap& headerFields)
 {
-    HTTPHeaderMap::const_iterator end = headerFields.end();
-    for (HTTPHeaderMap::const_iterator it = headerFields.begin(); it != end; ++it)
-        addHTTPHeaderField(it->key, it->value);
+    for (const auto& header : headerFields)
+        addHTTPHeaderField(header.key, header.value);
 }
 
 bool equalIgnoringHeaderFields(const ResourceRequestBase& a, const ResourceRequestBase& b)
@@ -496,8 +497,8 @@ void ResourceRequestBase::updatePlatformRequest(HTTPBodyUpdatePolicy bodyPolicy)
     if (!m_platformRequestUpdated) {
         //ASSERT(m_resourceRequestUpdated);
         //const_cast<ResourceRequest&>(asResourceRequest()).doUpdatePlatformRequest();
-    m_platformRequestUpdated = true;
-}
+        m_platformRequestUpdated = true;
+    }
 
     if (!m_platformRequestBodyUpdated && bodyPolicy == UpdateHTTPBody) {
         //ASSERT(m_resourceRequestBodyUpdated);
@@ -511,8 +512,8 @@ void ResourceRequestBase::updateResourceRequest(HTTPBodyUpdatePolicy bodyPolicy)
     if (!m_resourceRequestUpdated) {
         //ASSERT(m_platformRequestUpdated);
         //const_cast<ResourceRequest&>(asResourceRequest()).doUpdateResourceRequest();
-    m_resourceRequestUpdated = true;
-}
+        m_resourceRequestUpdated = true;
+    }
 
     if (!m_resourceRequestBodyUpdated && bodyPolicy == UpdateHTTPBody) {
         //ASSERT(m_platformRequestBodyUpdated);
@@ -521,12 +522,24 @@ void ResourceRequestBase::updateResourceRequest(HTTPBodyUpdatePolicy bodyPolicy)
     }
 }
 
-#if !PLATFORM(MAC) && !USE(CFNETWORK) && !USE(SOUP) && !PLATFORM(QT) && !PLATFORM(JAVA) && !PLATFORM(BLACKBERRY)
+#if !PLATFORM(COCOA) && !USE(CFNETWORK) && !USE(SOUP) && !PLATFORM(JAVA)
 unsigned initializeMaximumHTTPConnectionCountPerHost()
 {
     // This is used by the loader to control the number of issued parallel load requests. 
     // Four seems to be a common default in HTTP frameworks.
     return 4;
+}
+#endif
+
+#if PLATFORM(IOS)
+void ResourceRequestBase::setDefaultAllowCookies(bool allowCookies)
+{
+    s_defaultAllowCookies = allowCookies;
+}
+
+bool ResourceRequestBase::defaultAllowCookies()
+{
+    return s_defaultAllowCookies;
 }
 #endif
 

@@ -60,15 +60,15 @@ LinkLoader::~LinkLoader()
         m_cachedLinkResource->removeClient(this);
 }
 
-void LinkLoader::linkLoadTimerFired(Timer<LinkLoader>* timer)
+void LinkLoader::linkLoadTimerFired(Timer<LinkLoader>& timer)
 {
-    ASSERT_UNUSED(timer, timer == &m_linkLoadTimer);
+    ASSERT_UNUSED(timer, &timer == &m_linkLoadTimer);
     m_client->linkLoaded();
 }
 
-void LinkLoader::linkLoadingErrorTimerFired(Timer<LinkLoader>* timer)
+void LinkLoader::linkLoadingErrorTimerFired(Timer<LinkLoader>& timer)
 {
-    ASSERT_UNUSED(timer, timer == &m_linkLoadingErrorTimer);
+    ASSERT_UNUSED(timer, &timer == &m_linkLoadingErrorTimer);
     m_client->linkLoadingErrored();
 }
 
@@ -86,7 +86,7 @@ void LinkLoader::notifyFinished(CachedResource* resource)
 }
 
 bool LinkLoader::loadLink(const LinkRelAttribute& relAttribute, const String& type,
-                          const String& sizes, const KURL& href, Document* document)
+                          const String& sizes, const URL& href, Document* document)
 {
     // We'll record this URL per document, even if we later only use it in top level frames
     if (relAttribute.m_iconType != InvalidIcon && href.isValid() && !href.isEmpty()) {

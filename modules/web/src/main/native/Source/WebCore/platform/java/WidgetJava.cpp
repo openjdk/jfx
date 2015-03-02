@@ -140,7 +140,7 @@ void Widget::setCursor(const Cursor& cursor)
         return;
     }
 
-    env->CallVoidMethod(j, wcWidgetSetCursorMID, cursor.impl());
+    env->CallVoidMethod(j, wcWidgetSetCursorMID, cursor.platformCursor());
     CheckAndClearException(env);
 }
 

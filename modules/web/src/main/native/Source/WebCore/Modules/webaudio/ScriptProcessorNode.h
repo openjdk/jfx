@@ -47,8 +47,7 @@ class AudioProcessingEvent;
 // The "onaudioprocess" attribute is an event listener which will get called periodically with an AudioProcessingEvent which has
 // AudioBuffers for each input and output.
 
-// FIXME: EventTarget should be introduced at the base of the inheritance hierarchy (i.e., as a base class for AudioNode).
-class ScriptProcessorNode : public AudioNode, public EventTarget {
+class ScriptProcessorNode : public AudioNode {
 public:
     // bufferSize must be one of the following values: 256, 512, 1024, 2048, 4096, 8192, 16384.
     // This value controls how frequently the onaudioprocess event handler is called and how many sample-frames need to be processed each call.
@@ -59,28 +58,19 @@ public:
     virtual ~ScriptProcessorNode();
 
     // AudioNode
-    virtual void process(size_t framesToProcess);
-    virtual void reset();
-    virtual void initialize();
-    virtual void uninitialize();
-
-    // EventTarget
-    virtual const AtomicString& interfaceName() const;
-    virtual ScriptExecutionContext* scriptExecutionContext() const;
-    virtual EventTargetData* eventTargetData() { return &m_eventTargetData; }
-    virtual EventTargetData* ensureEventTargetData()  { return &m_eventTargetData; }
+    virtual void process(size_t framesToProcess) override;
+    virtual void reset() override;
+    virtual void initialize() override;
+    virtual void uninitialize() override;
 
     size_t bufferSize() const { return m_bufferSize; }
 
-    DEFINE_ATTRIBUTE_EVENT_LISTENER(audioprocess);
-
-    // Reconcile ref/deref which are defined both in AudioNode and EventTarget.
-    using AudioNode::ref;
-    using AudioNode::deref;
+    EventListener* onaudioprocess() { return getAttributeEventListener(eventNames().audioprocessEvent); }
+    void setOnaudioprocess(PassRefPtr<EventListener>);
     
 private:
-    virtual double tailTime() const OVERRIDE;
-    virtual double latencyTime() const OVERRIDE;
+    virtual double tailTime() const override;
+    virtual double latencyTime() const override;
 
     ScriptProcessorNode(AudioContext*, float sampleRate, size_t bufferSize, unsigned numberOfInputChannels, unsigned numberOfOutputChannels);
 
@@ -92,12 +82,8 @@ private:
     void swapBuffers() { m_doubleBufferIndex = 1 - m_doubleBufferIndex; }
     unsigned m_doubleBufferIndex;
     unsigned m_doubleBufferIndexForEvent;
-    Vector<RefPtr<AudioBuffer> > m_inputBuffers;
-    Vector<RefPtr<AudioBuffer> > m_outputBuffers;
-
-    virtual void refEventTarget() { ref(); }
-    virtual void derefEventTarget() { deref(); }
-    EventTargetData m_eventTargetData;
+    Vector<RefPtr<AudioBuffer>> m_inputBuffers;
+    Vector<RefPtr<AudioBuffer>> m_outputBuffers;
 
     size_t m_bufferSize;
     unsigned m_bufferReadWriteIndex;
@@ -107,6 +93,7 @@ private:
     unsigned m_numberOfOutputChannels;
 
     RefPtr<AudioBus> m_internalInputBus;
+    bool m_hasAudioProcessListener;
 };
 
 } // namespace WebCore

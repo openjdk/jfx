@@ -32,44 +32,42 @@
 #include "ExceptionCode.h"
 #include "HTMLDataListElement.h"
 #include "HTMLNames.h"
+#include "HTMLOptGroupElement.h"
 #include "HTMLParserIdioms.h"
 #include "HTMLSelectElement.h"
 #include "NodeRenderStyle.h"
-#include "NodeRenderingContext.h"
 #include "NodeTraversal.h"
 #include "RenderMenuList.h"
 #include "RenderTheme.h"
 #include "ScriptElement.h"
 #include "StyleResolver.h"
 #include "Text.h"
-#include <wtf/StdLibExtras.h>
-#include <wtf/Vector.h>
-#include <wtf/text/StringBuilder.h>
+#include <wtf/Ref.h>
 
 namespace WebCore {
 
 using namespace HTMLNames;
 
-HTMLOptionElement::HTMLOptionElement(const QualifiedName& tagName, Document* document)
+HTMLOptionElement::HTMLOptionElement(const QualifiedName& tagName, Document& document)
     : HTMLElement(tagName, document)
     , m_disabled(false)
     , m_isSelected(false)
 {
     ASSERT(hasTagName(optionTag));
-    setHasCustomStyleCallbacks();
+    setHasCustomStyleResolveCallbacks();
 }
 
-PassRefPtr<HTMLOptionElement> HTMLOptionElement::create(Document* document)
+PassRefPtr<HTMLOptionElement> HTMLOptionElement::create(Document& document)
 {
     return adoptRef(new HTMLOptionElement(optionTag, document));
 }
 
-PassRefPtr<HTMLOptionElement> HTMLOptionElement::create(const QualifiedName& tagName, Document* document)
+PassRefPtr<HTMLOptionElement> HTMLOptionElement::create(const QualifiedName& tagName, Document& document)
 {
     return adoptRef(new HTMLOptionElement(tagName, document));
 }
 
-PassRefPtr<HTMLOptionElement> HTMLOptionElement::createForJSConstructor(Document* document, const String& data, const String& value,
+PassRefPtr<HTMLOptionElement> HTMLOptionElement::createForJSConstructor(Document& document, const String& data, const String& value,
         bool defaultSelected, bool selected, ExceptionCode& ec)
 {
     RefPtr<HTMLOptionElement> element = adoptRef(new HTMLOptionElement(optionTag, document));
@@ -90,9 +88,8 @@ PassRefPtr<HTMLOptionElement> HTMLOptionElement::createForJSConstructor(Document
     return element.release();
 }
 
-void HTMLOptionElement::attach()
+void HTMLOptionElement::didAttachRenderers()
 {
-    HTMLElement::attach();
     // If after attaching nothing called styleForRenderer() on this node we
     // manually cache the value. This happens if our parent doesn't have a
     // renderer like <optgroup> or if it doesn't allow children like <select>.
@@ -100,15 +97,9 @@ void HTMLOptionElement::attach()
         updateNonRenderStyle();
 }
 
-void HTMLOptionElement::detach()
+void HTMLOptionElement::willDetachRenderers()
 {
     m_style.clear();
-    HTMLElement::detach();
-}
-
-bool HTMLOptionElement::supportsFocus() const
-{
-    return HTMLElement::supportsFocus();
 }
 
 bool HTMLOptionElement::isFocusable() const
@@ -119,11 +110,10 @@ bool HTMLOptionElement::isFocusable() const
 
 String HTMLOptionElement::text() const
 {
-    Document* document = this->document();
     String text;
 
     // WinIE does not use the label attribute, so as a quirk, we ignore it.
-    if (!document->inQuirksMode())
+    if (!document().inQuirksMode())
         text = fastGetAttribute(labelAttr);
 
     // FIXME: The following treats an element with the label attribute set to
@@ -134,12 +124,12 @@ String HTMLOptionElement::text() const
 
     // FIXME: Is displayStringModifiedByEncoding helpful here?
     // If it's correct here, then isn't it needed in the value and label functions too?
-    return document->displayStringModifiedByEncoding(text).stripWhiteSpace(isHTMLSpace).simplifyWhiteSpace(isHTMLSpace);
+    return document().displayStringModifiedByEncoding(text).stripWhiteSpace(isHTMLSpace).simplifyWhiteSpace(isHTMLSpace);
 }
 
 void HTMLOptionElement::setText(const String &text, ExceptionCode& ec)
 {
-    RefPtr<Node> protectFromMutationEvents(this);
+    Ref<HTMLOptionElement> protectFromMutationEvents(*this);
 
     // Changing the text causes a recalc of a select's items, which will reset the selected
     // index to the first item if the select is single selection with a menu list. We attempt to
@@ -181,7 +171,7 @@ int HTMLOptionElement::index() const
     const Vector<HTMLElement*>& items = selectElement->listItems();
     size_t length = items.size();
     for (size_t i = 0; i < length; ++i) {
-        if (!items[i]->hasTagName(optionTag))
+        if (!isHTMLOptionElement(items[i]))
             continue;
         if (items[i] == this)
             return optionIndex;
@@ -204,8 +194,8 @@ void HTMLOptionElement::parseAttribute(const QualifiedName& name, const AtomicSt
         m_disabled = !value.isNull();
         if (oldDisabled != m_disabled) {
             didAffectSelector(AffectedSelectorDisabled | AffectedSelectorEnabled);
-            if (renderer() && renderer()->style()->hasAppearance())
-                renderer()->theme()->stateChanged(renderer(), EnabledState);
+            if (renderer() && renderer()->style().hasAppearance())
+                renderer()->theme().stateChanged(renderer(), EnabledState);
         }
     } else if (name == selectedAttr) {
         // FIXME: This doesn't match what the HTML specification says.
@@ -262,7 +252,7 @@ void HTMLOptionElement::setSelectedState(bool selected)
         select->invalidateSelectedItems();
 }
 
-void HTMLOptionElement::childrenChanged(bool changedByParser, Node* beforeChange, Node* afterChange, int childCountDelta)
+void HTMLOptionElement::childrenChanged(const ChildChange& change)
 {
 #if ENABLE(DATALIST_ELEMENT)
     if (HTMLDataListElement* dataList = ownerDataListElement())
@@ -271,7 +261,7 @@ void HTMLOptionElement::childrenChanged(bool changedByParser, Node* beforeChange
 #endif
     if (HTMLSelectElement* select = ownerSelectElement())
         select->optionElementChildrenChanged();
-    HTMLElement::childrenChanged(changedByParser, beforeChange, afterChange, childCountDelta);
+    HTMLElement::childrenChanged(change);
 }
 
 #if ENABLE(DATALIST_ELEMENT)
@@ -279,7 +269,7 @@ HTMLDataListElement* HTMLOptionElement::ownerDataListElement() const
 {
     for (ContainerNode* parent = parentNode(); parent ; parent = parent->parentNode()) {
         if (parent->hasTagName(datalistTag))
-            return static_cast<HTMLDataListElement*>(parent);
+            return toHTMLDataListElement(parent);
     }
     return 0;
 }
@@ -312,7 +302,7 @@ void HTMLOptionElement::setLabel(const String& label)
 
 void HTMLOptionElement::updateNonRenderStyle()
 {
-    m_style = document()->ensureStyleResolver()->styleForElement(this);
+    m_style = document().ensureStyleResolver().styleForElement(this);
 }
 
 RenderStyle* HTMLOptionElement::nonRendererStyle() const
@@ -328,12 +318,12 @@ PassRefPtr<RenderStyle> HTMLOptionElement::customStyleForRenderer()
     return m_style;
 }
 
-void HTMLOptionElement::didRecalcStyle(StyleChange)
+void HTMLOptionElement::didRecalcStyle(Style::Change)
 {
     // FIXME: This is nasty, we ask our owner select to repaint even if the new
     // style is exactly the same.
-    if (HTMLSelectElement* select = ownerSelectElement()) {
-        if (RenderObject* renderer = select->renderer())
+    if (auto select = ownerSelectElement()) {
+        if (auto renderer = select->renderer())
             renderer->repaint();
     }
 }
@@ -341,7 +331,7 @@ void HTMLOptionElement::didRecalcStyle(StyleChange)
 String HTMLOptionElement::textIndentedToRespectGroupLabel() const
 {
     ContainerNode* parent = parentNode();
-    if (parent && parent->hasTagName(optgroupTag))
+    if (parent && isHTMLOptGroupElement(parent))
         return "    " + text();
     return text();
 }
@@ -354,11 +344,11 @@ bool HTMLOptionElement::isDisabledFormControl() const
     if (!parentNode() || !parentNode()->isHTMLElement())
         return false;
 
-    HTMLElement* parentElement = static_cast<HTMLElement*>(parentNode());
-    return parentElement->hasTagName(optgroupTag) && parentElement->isDisabledFormControl();
+    HTMLElement& parentElement = toHTMLElement(*parentNode());
+    return isHTMLOptGroupElement(parentElement) && parentElement.isDisabledFormControl();
 }
 
-Node::InsertionNotificationRequest HTMLOptionElement::insertedInto(ContainerNode* insertionPoint)
+Node::InsertionNotificationRequest HTMLOptionElement::insertedInto(ContainerNode& insertionPoint)
 {
     if (HTMLSelectElement* select = ownerSelectElement()) {
         select->setRecalcListItems();
@@ -388,21 +378,5 @@ String HTMLOptionElement::collectOptionInnerText() const
     }
     return text.toString();
 }
-
-#ifndef NDEBUG
-
-HTMLOptionElement* toHTMLOptionElement(Node* node)
-{
-    ASSERT_WITH_SECURITY_IMPLICATION(!node || node->hasTagName(optionTag));
-    return static_cast<HTMLOptionElement*>(node);
-}
-
-const HTMLOptionElement* toHTMLOptionElement(const Node* node)
-{
-    ASSERT_WITH_SECURITY_IMPLICATION(!node || node->hasTagName(optionTag));
-    return static_cast<const HTMLOptionElement*>(node);
-}
-
-#endif
 
 } // namespace

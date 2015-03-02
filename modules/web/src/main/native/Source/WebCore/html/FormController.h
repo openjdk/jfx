@@ -23,7 +23,6 @@
 #define FormController_h
 
 #include "CheckedRadioButtons.h"
-#include <wtf/Deque.h>
 #include <wtf/Forward.h>
 #include <wtf/ListHashSet.h>
 #include <wtf/Vector.h>
@@ -75,16 +74,19 @@ inline void FormControlState::append(const String& value)
 class FormController {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    static PassOwnPtr<FormController> create()
+    static OwnPtr<FormController> create()
     {
         return adoptPtr(new FormController);
     }
     ~FormController();
 
     CheckedRadioButtons& checkedRadioButtons() { return m_checkedRadioButtons; }
-    
-    void registerFormElementWithState(HTMLFormControlElementWithState* control) { m_formElementsWithState.add(control); }
-    void unregisterFormElementWithState(HTMLFormControlElementWithState* control) { m_formElementsWithState.remove(control); }
+
+    void registerFormElementWithState(HTMLFormControlElementWithState*);
+    void unregisterFormElementWithState(HTMLFormControlElementWithState*);
+
+    unsigned formElementsCharacterCount() const;
+
     // This should be callled only by Document::formElementsState().
     Vector<String> formElementsState() const;
     // This should be callled only by Document::setStateForNewFormElements().
@@ -96,11 +98,11 @@ public:
     static Vector<String> getReferencedFilePaths(const Vector<String>& stateVector);
 
 private:
-    typedef ListHashSet<HTMLFormControlElementWithState*, 64> FormElementListHashSet;
-    typedef HashMap<RefPtr<AtomicStringImpl>, OwnPtr<SavedFormState> > SavedFormStateMap;
+    typedef ListHashSet<RefPtr<HTMLFormControlElementWithState>, 64> FormElementListHashSet;
+    typedef HashMap<RefPtr<AtomicStringImpl>, OwnPtr<SavedFormState>> SavedFormStateMap;
 
     FormController();
-    static PassOwnPtr<SavedFormStateMap> createSavedFormStateMap(const FormElementListHashSet&);
+    static OwnPtr<SavedFormStateMap> createSavedFormStateMap(const FormElementListHashSet&);
     FormControlState takeStateForFormElement(const HTMLFormControlElementWithState&);
     static void formStatesFromStateVector(const Vector<String>&, SavedFormStateMap&);
 

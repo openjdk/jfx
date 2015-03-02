@@ -35,48 +35,50 @@ class HTMLNameCollection : public HTMLCollection {
 public:
     ~HTMLNameCollection();
 
+    Document& document() { return toDocument(ownerNode()); }
+
 protected:
-    HTMLNameCollection(Node*, CollectionType, const AtomicString& name);
+    HTMLNameCollection(Document&, CollectionType, const AtomicString& name);
 
     AtomicString m_name;
 };
 
-class WindowNameCollection : public HTMLNameCollection {
+class WindowNameCollection final : public HTMLNameCollection {
 public:
-    static PassRefPtr<WindowNameCollection> create(Node* document, CollectionType type, const AtomicString& name)
+    static PassRef<WindowNameCollection> create(Document& document, CollectionType type, const AtomicString& name)
     {
-        return adoptRef(new WindowNameCollection(document, type, name));
+        return adoptRef(*new WindowNameCollection(document, type, name));
     }
 
-    bool nodeMatches(Element* element) const { return nodeMatches(element, m_name); }
+    bool nodeMatches(Element* element) const { return nodeMatches(element, m_name.impl()); }
 
     static bool nodeMatchesIfIdAttributeMatch(Element*) { return true; }
     static bool nodeMatchesIfNameAttributeMatch(Element*);
-    static bool nodeMatches(Element*, const AtomicString&);
+    static bool nodeMatches(Element*, const AtomicStringImpl*);
 
 private:
-    WindowNameCollection(Node* document, CollectionType type, const AtomicString& name)
+    WindowNameCollection(Document& document, CollectionType type, const AtomicString& name)
         : HTMLNameCollection(document, type, name)
     {
         ASSERT(type == WindowNamedItems);
     }
 };
 
-class DocumentNameCollection : public HTMLNameCollection {
+class DocumentNameCollection final : public HTMLNameCollection {
 public:
-    static PassRefPtr<DocumentNameCollection> create(Node* document, CollectionType type, const AtomicString& name)
+    static PassRef<DocumentNameCollection> create(Document& document, CollectionType type, const AtomicString& name)
     {
-        return adoptRef(new DocumentNameCollection(document, type, name));
+        return adoptRef(*new DocumentNameCollection(document, type, name));
     }
 
     static bool nodeMatchesIfIdAttributeMatch(Element*);
     static bool nodeMatchesIfNameAttributeMatch(Element*);
-    bool nodeMatches(Element* element) const { return nodeMatches(element, m_name); }
+    bool nodeMatches(Element* element) const { return nodeMatches(element, m_name.impl()); }
 
-    static bool nodeMatches(Element*, const AtomicString&);
+    static bool nodeMatches(Element*, const AtomicStringImpl*);
 
 private:
-    DocumentNameCollection(Node* document, CollectionType type, const AtomicString& name)
+    DocumentNameCollection(Document& document, CollectionType type, const AtomicString& name)
         : HTMLNameCollection(document, type, name)
     {
         ASSERT(type == DocumentNamedItems);

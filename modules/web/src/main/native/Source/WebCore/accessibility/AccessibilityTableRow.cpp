@@ -30,14 +30,13 @@
 #include "AccessibilityTableRow.h"
 
 #include "AXObjectCache.h"
+#include "AccessibilityTable.h"
 #include "AccessibilityTableCell.h"
 #include "HTMLNames.h"
 #include "HTMLTableRowElement.h"
 #include "RenderObject.h"
 #include "RenderTableCell.h"
 #include "RenderTableRow.h"
-
-using namespace std;
 
 namespace WebCore {
     
@@ -67,7 +66,7 @@ AccessibilityRole AccessibilityTableRow::determineAccessibilityRole()
     AccessibilityRole ariaRole = ariaRoleAttribute();
     if (ariaRole != UnknownRole)
         return ariaRole;
-    
+
     return RowRole;
 }
 
@@ -100,7 +99,7 @@ bool AccessibilityTableRow::computeAccessibilityIsIgnored() const
     return false;
 }
     
-AccessibilityObject* AccessibilityTableRow::parentTable() const
+AccessibilityTable* AccessibilityTableRow::parentTable() const
 {
     // The parent table might not be the direct ancestor of the row unfortunately. ARIA states that role="grid" should
     // only have "row" elements, but if not, we still should handle it gracefully by finding the right table.
@@ -108,10 +107,10 @@ AccessibilityObject* AccessibilityTableRow::parentTable() const
         // If this is a table object, but not an accessibility table, we should stop because we don't want to
         // choose another ancestor table as this row's table.
         if (parent->isTable())
-            return parent->isAccessibilityTable() ? parent : 0;
+            return parent->isAccessibilityTable() ? toAccessibilityTable(parent) : 0;
     }
     
-        return 0;
+    return 0;
 }
     
 AccessibilityObject* AccessibilityTableRow::headerObject()
@@ -119,7 +118,7 @@ AccessibilityObject* AccessibilityTableRow::headerObject()
     if (!m_renderer || !m_renderer->isTableRow())
         return 0;
     
-    AccessibilityChildrenVector rowChildren = children();
+    const auto& rowChildren = children();
     if (!rowChildren.size())
         return 0;
     
@@ -128,7 +127,7 @@ AccessibilityObject* AccessibilityTableRow::headerObject()
     if (!cell->isTableCell())
         return 0;
     
-    RenderObject* cellRenderer = static_cast<AccessibilityTableCell*>(cell)->renderer();
+    RenderObject* cellRenderer = toAccessibilityTableCell(cell)->renderer();
     if (!cellRenderer)
         return 0;
     

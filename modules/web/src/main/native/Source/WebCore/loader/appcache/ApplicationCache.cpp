@@ -36,7 +36,7 @@
 
 namespace WebCore {
  
-static inline bool fallbackURLLongerThan(const std::pair<KURL, KURL>& lhs, const std::pair<KURL, KURL>& rhs)
+static inline bool fallbackURLLongerThan(const std::pair<URL, URL>& lhs, const std::pair<URL, URL>& rhs)
 {
     return lhs.first.string().length() > rhs.first.string().length();
 }
@@ -102,23 +102,23 @@ void ApplicationCache::addResource(PassRefPtr<ApplicationCacheResource> resource
 
 unsigned ApplicationCache::removeResource(const String& url)
 {
-    HashMap<String, RefPtr<ApplicationCacheResource> >::iterator it = m_resources.find(url);
+    HashMap<String, RefPtr<ApplicationCacheResource>>::iterator it = m_resources.find(url);
     if (it == m_resources.end())
         return 0;
 
     // The resource exists, get its type so we can return it.
     unsigned type = it->value->type();
 
-    m_resources.remove(it);
-
     m_estimatedSizeInStorage -= it->value->estimatedSizeInStorage();
+
+    m_resources.remove(it);
 
     return type;
 }    
     
 ApplicationCacheResource* ApplicationCache::resourceForURL(const String& url)
 {
-    ASSERT(!KURL(ParsedURLString, url).hasFragmentIdentifier());
+    ASSERT(!URL(ParsedURLString, url).hasFragmentIdentifier());
     return m_resources.get(url);
 }    
 
@@ -139,20 +139,20 @@ ApplicationCacheResource* ApplicationCache::resourceForRequest(const ResourceReq
     if (!requestIsHTTPOrHTTPSGet(request))
         return 0;
 
-    KURL url(request.url());
+    URL url(request.url());
     if (url.hasFragmentIdentifier())
         url.removeFragmentIdentifier();
 
     return resourceForURL(url);
 }
 
-void ApplicationCache::setOnlineWhitelist(const Vector<KURL>& onlineWhitelist)
+void ApplicationCache::setOnlineWhitelist(const Vector<URL>& onlineWhitelist)
 {
     ASSERT(m_onlineWhitelist.isEmpty());
     m_onlineWhitelist = onlineWhitelist; 
 }
 
-bool ApplicationCache::isURLInOnlineWhitelist(const KURL& url)
+bool ApplicationCache::isURLInOnlineWhitelist(const URL& url)
 {
     size_t whitelistSize = m_onlineWhitelist.size();
     for (size_t i = 0; i < whitelistSize; ++i) {
@@ -170,7 +170,7 @@ void ApplicationCache::setFallbackURLs(const FallbackURLVector& fallbackURLs)
     std::stable_sort(m_fallbackURLs.begin(), m_fallbackURLs.end(), fallbackURLLongerThan);
 }
 
-bool ApplicationCache::urlMatchesFallbackNamespace(const KURL& url, KURL* fallbackURL)
+bool ApplicationCache::urlMatchesFallbackNamespace(const URL& url, URL* fallbackURL)
 {
     size_t fallbackCount = m_fallbackURLs.size();
     for (size_t i = 0; i < fallbackCount; ++i) {
@@ -187,21 +187,20 @@ void ApplicationCache::clearStorageID()
 {
     m_storageID = 0;
     
-    ResourceMap::const_iterator end = m_resources.end();
-    for (ResourceMap::const_iterator it = m_resources.begin(); it != end; ++it)
-        it->value->clearStorageID();
+    for (const auto& resource : m_resources.values())
+        resource->clearStorageID();
 }
     
 void ApplicationCache::deleteCacheForOrigin(SecurityOrigin* origin)
 {
 #if !PLATFORM(JAVA)
-    Vector<KURL> urls;
+    Vector<URL> urls;
     if (!cacheStorage().manifestURLs(&urls)) {
         LOG_ERROR("Failed to retrieve ApplicationCache manifest URLs");
         return;
     }
 
-    KURL originURL(KURL(), origin->toString());
+    URL originURL(URL(), origin->toString());
 
     size_t count = urls.size();
     for (size_t i = 0; i < count; ++i) {
@@ -228,9 +227,9 @@ int64_t ApplicationCache::diskUsageForOrigin(SecurityOrigin* origin)
 #ifndef NDEBUG
 void ApplicationCache::dump()
 {
-    HashMap<String, RefPtr<ApplicationCacheResource> >::const_iterator end = m_resources.end();
+    HashMap<String, RefPtr<ApplicationCacheResource>>::const_iterator end = m_resources.end();
     
-    for (HashMap<String, RefPtr<ApplicationCacheResource> >::const_iterator it = m_resources.begin(); it != end; ++it) {
+    for (HashMap<String, RefPtr<ApplicationCacheResource>>::const_iterator it = m_resources.begin(); it != end; ++it) {
         printf("%s ", it->key.ascii().data());
         ApplicationCacheResource::dumpType(it->value->type());
     }

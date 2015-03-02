@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007 Apple Inc.  All rights reserved.
+ * Copyright (C) 2007, 2013 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,14 +33,13 @@
 
 namespace WebCore {
 
-class RenderArena;
 class RenderBlock;
+class RenderBlockFlow;
 class RenderBox;
-class RenderObject;
+class RenderElement;
 class RenderFlowThread;
-#if ENABLE(CSS_EXCLUSIONS)
-class ExclusionShapeInsideInfo;
-#endif
+class RenderObject;
+class ShapeInsideInfo;
 
 class LayoutState {
     WTF_MAKE_NONCOPYABLE(LayoutState);
@@ -53,29 +52,20 @@ public:
         , m_layoutDeltaXSaturated(false)
         , m_layoutDeltaYSaturated(false)
 #endif
-        , m_columnInfo(0)
-        , m_lineGrid(0)
-        , m_next(0)
-#if ENABLE(CSS_EXCLUSIONS)
-        , m_exclusionShapeInsideInfo(0)
+        , m_columnInfo(nullptr)
+        , m_lineGrid(nullptr)
+#if ENABLE(CSS_SHAPES) && ENABLE(CSS_SHAPE_INSIDE)
+        , m_shapeInsideInfo(nullptr)
 #endif
         , m_pageLogicalHeight(0)
 #ifndef NDEBUG
-        , m_renderer(0)
+        , m_renderer(nullptr)
 #endif
     {
     }
 
-    LayoutState(LayoutState*, RenderBox*, const LayoutSize& offset, LayoutUnit pageHeight, bool pageHeightChanged, ColumnInfo*);
-    LayoutState(RenderObject*);
-
-    void destroy(RenderArena*);
-
-    // Overloaded new operator.
-    void* operator new(size_t, RenderArena*);
-
-    // Overridden to prevent the normal delete from being called.
-    void operator delete(void*, size_t);
+    LayoutState(std::unique_ptr<LayoutState> state, RenderBox*, const LayoutSize& offset, LayoutUnit pageHeight, bool pageHeightChanged, ColumnInfo*);
+    explicit LayoutState(RenderObject&);
 
     void clearPaginationInformation();
     bool isPaginatingColumns() const { return m_columnInfo && m_columnInfo->paginationUnit() == ColumnInfo::Column; }
@@ -90,43 +80,44 @@ public:
     LayoutUnit pageLogicalHeight() const { return m_pageLogicalHeight; }
     bool pageLogicalHeightChanged() const { return m_pageLogicalHeightChanged; }
 
-    RenderBlock* lineGrid() const { return m_lineGrid; }
+    RenderBlockFlow* lineGrid() const { return m_lineGrid; }
     LayoutSize lineGridOffset() const { return m_lineGridOffset; }
     LayoutSize lineGridPaginationOrigin() const { return m_lineGridPaginationOrigin; }
 
     LayoutSize layoutOffset() const { return m_layoutOffset; }
 
+    LayoutSize pageOffset() const { return m_pageOffset; }
+    void setLineGridPaginationOrigin(const LayoutSize& origin) { m_lineGridPaginationOrigin = origin; }
+    
     bool needsBlockDirectionLocationSetBeforeLayout() const { return m_lineGrid || (m_isPaginated && m_pageLogicalHeight); }
 
-#if ENABLE(CSS_EXCLUSIONS)
-    ExclusionShapeInsideInfo* exclusionShapeInsideInfo() const { return m_exclusionShapeInsideInfo; }
+#if ENABLE(CSS_SHAPES) && ENABLE(CSS_SHAPE_INSIDE)
+    ShapeInsideInfo* shapeInsideInfo() const { return m_shapeInsideInfo; }
 #endif
 private:
-    // The normal operator new is disallowed.
-    void* operator new(size_t) throw();
-
     void propagateLineGridInfo(RenderBox*);
-    void establishLineGrid(RenderBlock*);
+    void establishLineGrid(RenderBlockFlow*);
 
     void computeLineGridPaginationOrigin(RenderBox*);
 
 public:
     // Do not add anything apart from bitfields until after m_columnInfo. See https://bugs.webkit.org/show_bug.cgi?id=100173
-    bool m_clipped:1;
-    bool m_isPaginated:1;
+    bool m_clipped : 1;
+    bool m_isPaginated : 1;
     // If our page height has changed, this will force all blocks to relayout.
-    bool m_pageLogicalHeightChanged:1;
+    bool m_pageLogicalHeightChanged : 1;
 #if !ASSERT_DISABLED && ENABLE(SATURATED_LAYOUT_ARITHMETIC)
-    bool m_layoutDeltaXSaturated:1;
-    bool m_layoutDeltaYSaturated:1;
+    bool m_layoutDeltaXSaturated : 1;
+    bool m_layoutDeltaYSaturated : 1;
 #endif
+
     // If the enclosing pagination model is a column model, then this will store column information for easy retrieval/manipulation.
     ColumnInfo* m_columnInfo;
     // The current line grid that we're snapping to and the offset of the start of the grid.
-    RenderBlock* m_lineGrid;
-    LayoutState* m_next;
-#if ENABLE(CSS_EXCLUSIONS)
-    ExclusionShapeInsideInfo* m_exclusionShapeInsideInfo;
+    RenderBlockFlow* m_lineGrid;
+    std::unique_ptr<LayoutState> m_next;
+#if ENABLE(CSS_SHAPES) && ENABLE(CSS_SHAPE_INSIDE)
+    ShapeInsideInfo* m_shapeInsideInfo;
 #endif
 
     // FIXME: Distinguish between the layout clip rect and the paint clip rect which may be larger,

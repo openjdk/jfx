@@ -27,6 +27,7 @@
 #define CSSSelectorList_h
 
 #include "CSSSelector.h"
+#include <memory>
 
 namespace WebCore {
 
@@ -41,7 +42,8 @@ public:
     ~CSSSelectorList();
 
     void adopt(CSSSelectorList& list);
-    void adoptSelectorVector(Vector<OwnPtr<CSSParserSelector> >& selectorVector);
+    void adoptSelectorVector(Vector<std::unique_ptr<CSSParserSelector>>& selectorVector);
+    void adoptSelectorArray(CSSSelector* selectors) { ASSERT(!m_selectorArray); m_selectorArray = selectors; }
 
     bool isValid() const { return !!m_selectorArray; }
     const CSSSelector* first() const { return m_selectorArray; }
@@ -63,8 +65,9 @@ public:
 
     String selectorsText() const;
 
+    unsigned componentCount() const;
+
 private:
-    unsigned length() const;
     void deleteSelectors();
 
     // End of a multipart selector is indicated by m_isLastInTagHistory bit in the last item.

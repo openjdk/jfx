@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2009, 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,9 +28,10 @@
 #define SerializedScriptValue_h
 
 #include "ScriptState.h"
+#include <bindings/ScriptValue.h>
 #include <heap/Strong.h>
+#include <runtime/ArrayBuffer.h>
 #include <runtime/JSCJSValue.h>
-#include <wtf/ArrayBuffer.h>
 #include <wtf/Forward.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
@@ -43,7 +44,7 @@ namespace WebCore {
 
 class MessagePort;
 typedef Vector<RefPtr<MessagePort>, 1> MessagePortArray;
-typedef Vector<RefPtr<WTF::ArrayBuffer>, 1> ArrayBufferArray;
+typedef Vector<RefPtr<JSC::ArrayBuffer>, 1> ArrayBufferArray;
  
 enum SerializationReturnCode {
     SuccessfullyCompleted,
@@ -57,7 +58,6 @@ enum SerializationReturnCode {
     
 enum SerializationErrorMode { NonThrowing, Throwing };
 
-class ScriptValue;
 class SharedBuffer;
 
 class SerializedScriptValue :
@@ -67,10 +67,7 @@ class SerializedScriptValue :
     public RefCounted<SerializedScriptValue> {
 #endif
 public:
-    static PassRefPtr<SerializedScriptValue> create(JSC::ExecState*, JSC::JSValue, MessagePortArray*, ArrayBufferArray*,
-                                                    SerializationErrorMode = Throwing);
-    static PassRefPtr<SerializedScriptValue> create(JSContextRef, JSValueRef, MessagePortArray*, ArrayBufferArray*, JSValueRef* exception);
-    static PassRefPtr<SerializedScriptValue> create(JSContextRef, JSValueRef, JSValueRef* exception);
+    static PassRefPtr<SerializedScriptValue> create(JSC::ExecState*, JSC::JSValue, MessagePortArray*, ArrayBufferArray*, SerializationErrorMode = Throwing);
 
     static PassRefPtr<SerializedScriptValue> create(const String&);
     static PassRefPtr<SerializedScriptValue> adopt(Vector<uint8_t>& buffer)
@@ -78,30 +75,25 @@ public:
         return adoptRef(new SerializedScriptValue(buffer));
     }
 
-    static PassRefPtr<SerializedScriptValue> create();
     static PassRefPtr<SerializedScriptValue> nullValue();
-    static PassRefPtr<SerializedScriptValue> undefinedValue();
-    static PassRefPtr<SerializedScriptValue> booleanValue(bool value);
+
+    JSC::JSValue deserialize(JSC::ExecState*, JSC::JSGlobalObject*, MessagePortArray*, SerializationErrorMode = Throwing);
 
     static uint32_t wireFormatVersion();
 
     String toString();
-    
-    JSC::JSValue deserialize(JSC::ExecState*, JSC::JSGlobalObject*, MessagePortArray*, SerializationErrorMode = Throwing);
-    JSValueRef deserialize(JSContextRef, JSValueRef* exception, MessagePortArray*);
+
+    // API implementation helpers. These don't expose special behavior for ArrayBuffers or MessagePorts.
+    static PassRefPtr<SerializedScriptValue> create(JSContextRef, JSValueRef, JSValueRef* exception);
     JSValueRef deserialize(JSContextRef, JSValueRef* exception);
 
-#if ENABLE(INSPECTOR)
-    ScriptValue deserializeForInspector(ScriptState*);
-#endif
-
-    const Vector<uint8_t>& data() { return m_data; }
+    const Vector<uint8_t>& data() const { return m_data; }
     const Vector<String>& blobURLs() const { return m_blobURLs; }
 
 #if ENABLE(INDEXED_DATABASE)
-    static PassRefPtr<SerializedScriptValue> create(JSC::ExecState*, JSC::JSValue);
+    // FIXME: Get rid of these. The only caller immediately deserializes the result, so it's a very roundabout way to create a JSValue.
     static PassRefPtr<SerializedScriptValue> numberValue(double value);
-    JSC::JSValue deserialize(JSC::ExecState*, JSC::JSGlobalObject*);
+    static PassRefPtr<SerializedScriptValue> undefinedValue();
 #endif
 
     static PassRefPtr<SerializedScriptValue> createFromWireBytes(const Vector<uint8_t>& data)
@@ -113,15 +105,16 @@ public:
     ~SerializedScriptValue();
 
 private:
-    typedef Vector<WTF::ArrayBufferContents> ArrayBufferContentsArray;
+    typedef Vector<JSC::ArrayBufferContents> ArrayBufferContentsArray;
     static void maybeThrowExceptionIfSerializationFailed(JSC::ExecState*, SerializationReturnCode);
     static bool serializationDidCompleteSuccessfully(SerializationReturnCode);
-    static PassOwnPtr<ArrayBufferContentsArray> transferArrayBuffers(ArrayBufferArray&, SerializationReturnCode&);
+    static PassOwnPtr<ArrayBufferContentsArray> transferArrayBuffers(JSC::ExecState*, ArrayBufferArray&, SerializationReturnCode&);
 
     SerializedScriptValue(const Vector<unsigned char>&);
     SerializedScriptValue(Vector<unsigned char>&);
     SerializedScriptValue(Vector<unsigned char>&, Vector<String>& blobURLs);
     SerializedScriptValue(Vector<unsigned char>&, Vector<String>& blobURLs, PassOwnPtr<ArrayBufferContentsArray>);
+
     Vector<unsigned char> m_data;
     OwnPtr<ArrayBufferContentsArray> m_arrayBufferContentsArray;
     Vector<String> m_blobURLs;

@@ -38,7 +38,7 @@ public:
     static PassRefPtr<BatteryManager> create(Navigator*);
 
     // EventTarget implementation.
-    virtual const WTF::AtomicString& interfaceName() const { return eventNames().interfaceForBatteryManager; }
+    virtual EventTargetInterface eventTargetInterface() const { return BatteryManagerEventTargetInterfaceType; }
     virtual ScriptExecutionContext* scriptExecutionContext() const { return ActiveDOMObject::scriptExecutionContext(); }
 
     bool charging();
@@ -66,7 +66,7 @@ public:
 
 protected:
     virtual EventTargetData* eventTargetData() { return &m_eventTargetData; }
-    virtual EventTargetData* ensureEventTargetData() { return &m_eventTargetData; }
+    virtual EventTargetData& ensureEventTargetData() { return m_eventTargetData; }
 
 private:
     explicit BatteryManager(Navigator*);

@@ -19,8 +19,6 @@
  */
 
 #include "config.h"
-
-#if ENABLE(SVG)
 #include "SVGFitToViewBox.h"
 
 #include "AffineTransform.h"
@@ -37,7 +35,7 @@ namespace WebCore {
 
 bool SVGFitToViewBox::parseViewBox(Document* doc, const String& s, FloatRect& viewBox)
 {
-    const UChar* c = s.characters();
+    const UChar* c = s.deprecatedCharacters();
     const UChar* end = c + s.length();
     return parseViewBox(doc, c, end, viewBox, true);
 }
@@ -100,5 +98,3 @@ void SVGFitToViewBox::addSupportedAttributes(HashSet<QualifiedName>& supportedAt
 }
 
 }
-
-#endif // ENABLE(SVG)

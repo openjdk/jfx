@@ -20,7 +20,7 @@
 
 #include "config.h"
 
-#if ENABLE(SVG) && ENABLE(FILTERS)
+#if ENABLE(FILTERS)
 #include "SVGComponentTransferFunctionElement.h"
 
 #include "Attribute.h"
@@ -50,7 +50,7 @@ BEGIN_REGISTER_ANIMATED_PROPERTIES(SVGComponentTransferFunctionElement)
     REGISTER_LOCAL_ANIMATED_PROPERTY(offset)
 END_REGISTER_ANIMATED_PROPERTIES
 
-SVGComponentTransferFunctionElement::SVGComponentTransferFunctionElement(const QualifiedName& tagName, Document* document)
+SVGComponentTransferFunctionElement::SVGComponentTransferFunctionElement(const QualifiedName& tagName, Document& document)
     : SVGElement(tagName, document)
     , m_type(FECOMPONENTTRANSFER_TYPE_IDENTITY)
     , m_slope(1)
@@ -72,7 +72,7 @@ bool SVGComponentTransferFunctionElement::isSupportedAttribute(const QualifiedNa
         supportedAttributes.add(SVGNames::exponentAttr);
         supportedAttributes.add(SVGNames::offsetAttr);
     }
-    return supportedAttributes.contains<QualifiedName, SVGAttributeHashTranslator>(attrName);
+    return supportedAttributes.contains<SVGAttributeHashTranslator>(attrName);
 }
 
 void SVGComponentTransferFunctionElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
@@ -152,4 +152,4 @@ ComponentTransferFunction SVGComponentTransferFunctionElement::transferFunction(
 
 }
 
-#endif // ENABLE(SVG)
+#endif

@@ -52,7 +52,7 @@ void EditorClientJava::pageDestroyed()
 void dump(int indent, Node* node)
 {
     for (int i=0; i<indent; i++) cout << " ";
-    cout << node->nodeType() << node->nodeName().characters() << endl;
+    cout << node->nodeType() << node->nodeName().deprecatedCharacters() << endl;
     for (int i=0; i<node->childNodes()->length(); i++) {
         dump(indent+2, node->childNodes()->item(i));
     }
@@ -281,7 +281,7 @@ bool EditorClientJava::handleEditingKeyboardEvent(KeyboardEvent* evt)
     if (!keyEvent)
         return false;
 
-    Frame* frame = evt->target()->toNode()->document()->frame();
+    Frame* frame = evt->target()->toNode()->document().frame();
     if (!frame)
         return false;
 
@@ -414,7 +414,7 @@ bool EditorClientJava::shouldChangeSelectedRange(Range*, Range*, EAffinity, bool
     return true;
 }
 
-bool EditorClientJava::shouldApplyStyle(StylePropertySet*, Range*)
+bool EditorClientJava::shouldApplyStyle(StyleProperties*, Range*)
 {
     return true;
 }
@@ -455,11 +455,6 @@ void EditorClientJava::didEndEditing()
 }
 
 void EditorClientJava::didWriteSelectionToPasteboard()
-{
-    notImplemented();
-}
-
-void EditorClientJava::didSetSelectionTypesForPasteboard()
 {
     notImplemented();
 }
@@ -614,11 +609,6 @@ bool EditorClientJava::canCopyCut(Frame*, bool defaultValue) const
 bool EditorClientJava::canPaste(Frame*, bool defaultValue) const
 {
     return defaultValue;
-}
-
-void EditorClientJava::frameWillDetachPage(Frame*)
-{
-    notImplemented();
 }
 
 const int gc_maximumm_undoStackDepth = 1000;

@@ -24,8 +24,8 @@
  */
 
 [
-        Conditional=INPUT_SPEECH,
+    Conditional=INPUT_SPEECH,
 ] interface SpeechInputEvent : Event {
-        readonly attribute SpeechInputResultList results;
-    };
+    readonly attribute SpeechInputResultList results;
+};
 

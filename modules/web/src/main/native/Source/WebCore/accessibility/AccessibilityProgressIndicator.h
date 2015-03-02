@@ -35,7 +35,7 @@ class RenderMeter;
 class HTMLProgressElement;
 class RenderProgress;
 #endif
-
+    
 class AccessibilityProgressIndicator : public AccessibilityRenderObject {
 public:
 #if ENABLE(PROGRESS_ELEMENT)
@@ -46,13 +46,13 @@ public:
 #endif
 
 private:
-    virtual AccessibilityRole roleValue() const { return ProgressIndicatorRole; }
+    virtual AccessibilityRole roleValue() const override { return ProgressIndicatorRole; }
 
-    virtual bool isProgressIndicator() const { return true; }
+    virtual bool isProgressIndicator() const override { return true; }
 
-    virtual float valueForRange() const;
-    virtual float maxValueForRange() const;
-    virtual float minValueForRange() const;
+    virtual float valueForRange() const override;
+    virtual float maxValueForRange() const override;
+    virtual float minValueForRange() const override;
 
 #if ENABLE(PROGRESS_ELEMENT)
     explicit AccessibilityProgressIndicator(RenderProgress*);
@@ -62,8 +62,8 @@ private:
     explicit AccessibilityProgressIndicator(RenderMeter*);
     HTMLMeterElement* meterElement() const;
 #endif
-
-    virtual bool computeAccessibilityIsIgnored() const;
+    
+    virtual bool computeAccessibilityIsIgnored() const override;
 };
 
 

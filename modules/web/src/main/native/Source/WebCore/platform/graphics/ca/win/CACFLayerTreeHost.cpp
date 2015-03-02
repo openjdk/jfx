@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2009, 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,19 +26,18 @@
 #include "config.h"
 #include "CACFLayerTreeHost.h"
 
-#if USE(ACCELERATED_COMPOSITING)
-
 #include "CACFLayerTreeHostClient.h"
 #include "DefWndProcWindowClass.h"
 #include "LayerChangesFlusher.h"
 #include "LegacyCACFLayerTreeHost.h"
-#include "PlatformCALayer.h"
+#include "PlatformCALayerWin.h"
 #include "WKCACFViewLayerTreeHost.h"
 #include "WebCoreInstanceHandle.h"
 #include <limits.h>
 #include <QuartzCore/CABase.h>
 #include <wtf/CurrentTime.h>
-#include <wtf/OwnArrayPtr.h>
+#include <wtf/StdLibExtras.h>
+#include <wtf/win/GDIObject.h>
 
 #ifdef DEBUG_ALL
 #pragma comment(lib, "QuartzCore_debug")
@@ -122,7 +121,7 @@ PassRefPtr<CACFLayerTreeHost> CACFLayerTreeHost::create()
 
 CACFLayerTreeHost::CACFLayerTreeHost()
     : m_client(0)
-    , m_rootLayer(PlatformCALayer::create(PlatformCALayer::LayerTypeRootLayer, 0))
+    , m_rootLayer(PlatformCALayerWin::create(PlatformCALayer::LayerTypeRootLayer, 0))
     , m_window(0)
     , m_shouldFlushPendingGraphicsLayerChanges(false)
     , m_isFlushingLayerChanges(false)
@@ -239,7 +238,7 @@ static void getDirtyRects(HWND window, Vector<CGRect>& outRects)
     if (!GetClientRect(window, &clientRect))
         return;
 
-    OwnPtr<HRGN> region = adoptPtr(CreateRectRgn(0, 0, 0, 0));
+    auto region = adoptGDIObject(::CreateRectRgn(0, 0, 0, 0));
     int regionType = GetUpdateRgn(window, region.get(), false);
     if (regionType != COMPLEXREGION) {
         RECT dirtyRect;
@@ -248,10 +247,10 @@ static void getDirtyRects(HWND window, Vector<CGRect>& outRects)
         return;
     }
 
-    DWORD dataSize = GetRegionData(region.get(), 0, 0);
-    OwnArrayPtr<unsigned char> regionDataBuffer = adoptArrayPtr(new unsigned char[dataSize]);
+    DWORD dataSize = ::GetRegionData(region.get(), 0, 0);
+    auto regionDataBuffer = std::make_unique<unsigned char[]>(dataSize);
     RGNDATA* regionData = reinterpret_cast<RGNDATA*>(regionDataBuffer.get());
-    if (!GetRegionData(region.get(), dataSize, regionData))
+    if (!::GetRegionData(region.get(), dataSize, regionData))
         return;
 
     outRects.resize(regionData->rdh.nCount);
@@ -309,7 +308,7 @@ void CACFLayerTreeHost::notifyAnimationsStarted()
     // Send currentTime to the pending animations. This function is called by CACF in a callback
     // which occurs after the drawInContext calls. So currentTime is very close to the time
     // the animations actually start
-    double currentTime = WTF::currentTime();
+    double currentTime = monotonicallyIncreasingTime();
 
     HashSet<RefPtr<PlatformCALayer> >::iterator end = m_pendingAnimatedLayers.end();
     for (HashSet<RefPtr<PlatformCALayer> >::iterator it = m_pendingAnimatedLayers.begin(); it != end; ++it)
@@ -327,5 +326,3 @@ CGRect CACFLayerTreeHost::bounds() const
 }
 
 }
-
-#endif // USE(ACCELERATED_COMPOSITING)

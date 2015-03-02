@@ -33,7 +33,7 @@
     [InitializedByEventConstructor] readonly attribute EventTarget      relatedTarget;
     [Conditional=POINTER_LOCK]      readonly attribute long             webkitMovementX;
     [Conditional=POINTER_LOCK]      readonly attribute long             webkitMovementY;
-
+    
     [ObjCLegacyUnnamedParameters] void initMouseEvent([Default=Undefined] optional DOMString type, 
                                        [Default=Undefined] optional boolean canBubble, 
                                        [Default=Undefined] optional boolean cancelable, 
@@ -50,16 +50,16 @@
                                        [Default=Undefined] optional unsigned short button, 
                                        [Default=Undefined] optional EventTarget relatedTarget);
 
-        // extensions
-        readonly attribute long             offsetX;
-        readonly attribute long             offsetY;
-        readonly attribute long             x;
-        readonly attribute long             y;
-        readonly attribute Node             fromElement;
-        readonly attribute Node             toElement;
+    // extensions
+    readonly attribute long             offsetX;
+    readonly attribute long             offsetY;
+    readonly attribute long             x;
+    readonly attribute long             y;
+    readonly attribute Node             fromElement;
+    readonly attribute Node             toElement;
 
 #if defined(LANGUAGE_JAVASCRIPT) && LANGUAGE_JAVASCRIPT
-        readonly attribute Clipboard        dataTransfer;
+    readonly attribute Clipboard        dataTransfer;
 #endif
-    };
+};
 

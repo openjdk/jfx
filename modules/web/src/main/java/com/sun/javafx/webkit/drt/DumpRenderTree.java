@@ -26,15 +26,11 @@
 package com.sun.javafx.webkit.drt;
 
 import com.sun.javafx.application.PlatformImpl;
-import com.sun.webkit.BackForwardList;
-import com.sun.webkit.Invoker;
-import com.sun.webkit.LoadListenerClient;
-import com.sun.webkit.PageCache;
-import com.sun.webkit.WebPage;
-import com.sun.webkit.WebPageClient;
-import com.sun.webkit.graphics.WCPageBackBuffer;
-import com.sun.webkit.graphics.WCPoint;
-import com.sun.webkit.graphics.WCRectangle;
+import com.sun.javafx.webkit.Accessor;
+import com.sun.javafx.webkit.ThemeClientImpl;
+import com.sun.webkit.*;
+import com.sun.webkit.graphics.*;
+
 import static com.sun.webkit.network.URLs.newURL;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -45,6 +41,7 @@ import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.ByteBuffer;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -83,6 +80,75 @@ public final class DumpRenderTree {
     private boolean waiting;
     private boolean complete;
 
+    class ThemeClientImplStub extends ThemeClient {
+        @Override
+        protected RenderTheme createRenderTheme() {
+            return new RenderThemeStub();
+        }
+
+        @Override
+        protected ScrollBarTheme createScrollBarTheme() {
+            return new ScrollBarThemeStub();
+        }
+    };
+
+    class RenderThemeStub extends RenderTheme {
+        @Override
+        protected Ref createWidget(long id, int widgetIndex, int state, int w, int h, int bgColor, ByteBuffer extParams) {
+            return null;
+        }
+
+        @Override
+        public void drawWidget(WCGraphicsContext g, Ref widget, int x, int y) {
+        }
+
+        @Override
+        protected int getRadioButtonSize() {
+            return 0;
+        }
+
+        @Override
+        protected int getSelectionColor(int index) {
+            return 0;
+        }
+    }
+
+    class ScrollBarThemeStub extends ScrollBarTheme {
+        @Override
+        protected Ref createWidget(long id, int w, int h, int orientation, int value, int visibleSize, int totalSize) {
+            return null;
+        }
+
+        @Override
+        public void paint(WCGraphicsContext g, Ref sbRef, int x, int y, int pressedPart, int hoveredPart) {
+        }
+
+        @Override
+        protected int hitTest(int w, int h, int orientation, int value, int visibleSize, int totalSize, int x, int y) {
+            return 0;
+        }
+
+        @Override
+        protected int getThumbPosition(int w, int h, int orientation, int value, int visibleSize, int totalSize) {
+            return 0;
+        }
+
+        @Override
+        protected int getThumbLength(int w, int h, int orientation, int value, int visibleSize, int totalSize) {
+            return 0;
+        }
+
+        @Override
+        protected int getTrackPosition(int w, int h, int orientation) {
+            return 0;
+        }
+
+        @Override
+        protected int getTrackLength(int w, int h, int orientation) {
+            return 0;
+        }
+    }
+
     // called on FX thread
     private DumpRenderTree(String testString, CountDownLatch latch) {
         int t = testString.indexOf("'");
@@ -96,7 +162,7 @@ public final class DumpRenderTree {
 
         uiClient = new UIClientImpl();
         webPage = new WebPage(new WebPageClientImpl(), uiClient, null, null,
-                              null, false);
+                              new ThemeClientImplStub(), false);
         uiClient.setWebPage(webPage);
         eventSender = new EventSender(webPage);
 

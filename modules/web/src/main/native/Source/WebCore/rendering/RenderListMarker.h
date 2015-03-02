@@ -33,10 +33,9 @@ String listMarkerText(EListStyleType, int value);
 
 // Used to render the list item's marker.
 // The RenderListMarker always has to be a child of a RenderListItem.
-class RenderListMarker : public RenderBox {
+class RenderListMarker final : public RenderBox {
 public:
-    static RenderListMarker* createAnonymous(RenderListItem*);
-
+    RenderListMarker(RenderListItem&, PassRef<RenderStyle>);
     virtual ~RenderListMarker();
 
     const String& text() const { return m_text; }
@@ -47,59 +46,46 @@ public:
     void updateMarginsAndContent();
 
 private:
-    RenderListMarker(RenderListItem*);
+    void element() const = delete;
 
-    virtual const char* renderName() const { return "RenderListMarker"; }
-    virtual void computePreferredLogicalWidths() OVERRIDE;
+    virtual const char* renderName() const override { return "RenderListMarker"; }
+    virtual void computePreferredLogicalWidths() override;
 
-    virtual bool isListMarker() const { return true; }
+    virtual bool isListMarker() const override { return true; }
+    virtual bool canHaveChildren() const override { return false; }
 
-    virtual void paint(PaintInfo&, const LayoutPoint&);
+    virtual void paint(PaintInfo&, const LayoutPoint&) override;
 
-    virtual void layout();
+    virtual void layout() override;
 
-    virtual void imageChanged(WrappedImagePtr, const IntRect* = 0);
+    virtual void imageChanged(WrappedImagePtr, const IntRect* = 0) override;
 
-    virtual InlineBox* createInlineBox();
+    virtual std::unique_ptr<InlineElementBox> createInlineBox() override;
 
-    virtual LayoutUnit lineHeight(bool firstLine, LineDirectionMode, LinePositionMode = PositionOnContainingLine) const;
-    virtual int baselinePosition(FontBaseline, bool firstLine, LineDirectionMode, LinePositionMode = PositionOnContainingLine) const;
+    virtual LayoutUnit lineHeight(bool firstLine, LineDirectionMode, LinePositionMode = PositionOnContainingLine) const override;
+    virtual int baselinePosition(FontBaseline, bool firstLine, LineDirectionMode, LinePositionMode = PositionOnContainingLine) const override;
 
-    bool isImage() const;
+    virtual bool isImage() const override;
     bool isText() const { return !isImage(); }
 
-    virtual void setSelectionState(SelectionState);
-    virtual LayoutRect selectionRectForRepaint(const RenderLayerModelObject* repaintContainer, bool clipToVisibleContent = true) OVERRIDE;
-    virtual bool canBeSelectionLeaf() const { return true; }
+    virtual void setSelectionState(SelectionState) override;
+    virtual LayoutRect selectionRectForRepaint(const RenderLayerModelObject* repaintContainer, bool clipToVisibleContent = true) override;
+    virtual bool canBeSelectionLeaf() const override { return true; }
 
     void updateMargins();
     void updateContent();
 
-    virtual void styleWillChange(StyleDifference, const RenderStyle* newStyle);
-    virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle);
+    virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
 
     IntRect getRelativeMarkerRect();
     LayoutRect localSelectionRect();
 
     String m_text;
     RefPtr<StyleImage> m_image;
-    RenderListItem* m_listItem;
+    RenderListItem& m_listItem;
 };
 
-inline RenderListMarker* toRenderListMarker(RenderObject* object)
-{
-    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isListMarker());
-    return static_cast<RenderListMarker*>(object);
-}
-
-inline const RenderListMarker* toRenderListMarker(const RenderObject* object)
-{
-    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isListMarker());
-    return static_cast<const RenderListMarker*>(object);
-}
-
-// This will catch anyone doing an unnecessary cast.
-void toRenderListMarker(const RenderListMarker*);
+RENDER_OBJECT_TYPE_CASTS(RenderListMarker, isListMarker())
 
 } // namespace WebCore
 

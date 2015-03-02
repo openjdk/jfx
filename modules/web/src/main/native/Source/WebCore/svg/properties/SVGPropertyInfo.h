@@ -20,7 +20,6 @@
 #ifndef SVGPropertyInfo_h
 #define SVGPropertyInfo_h
 
-#if ENABLE(SVG)
 #include "QualifiedName.h"
 #include <wtf/PassRefPtr.h>
 
@@ -63,15 +62,7 @@ public:
 
     SVGPropertyInfo(AnimatedPropertyType newType, AnimatedPropertyState newState, const QualifiedName& newAttributeName,
                     const AtomicString& newPropertyIdentifier, SynchronizeProperty newSynchronizeProperty,
-                    LookupOrCreateWrapperForAnimatedProperty newLookupOrCreateWrapperForAnimatedProperty)
-        : animatedPropertyType(newType)
-        , animatedPropertyState(newState)
-        , attributeName(newAttributeName)
-        , propertyIdentifier(newPropertyIdentifier)
-        , synchronizeProperty(newSynchronizeProperty)
-        , lookupOrCreateWrapperForAnimatedProperty(newLookupOrCreateWrapperForAnimatedProperty)
-    {
-    }
+                    LookupOrCreateWrapperForAnimatedProperty newLookupOrCreateWrapperForAnimatedProperty);
 
     AnimatedPropertyType animatedPropertyType;
     AnimatedPropertyState animatedPropertyState;
@@ -83,5 +74,4 @@ public:
 
 }
 
-#endif // ENABLE(SVG)
 #endif // SVGPropertyInfo_h

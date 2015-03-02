@@ -31,89 +31,75 @@ enum XMLHttpRequestResponseType {
     "arraybuffer",
     "blob",
     "document",
-//    FIXME: enable once support for json responseText is completed. (bug #73648)
-//    "json",
+    "json",
     "text"
 };
 
 [
-        ActiveDOMObject,
-        Constructor,
-        CallWith=ScriptExecutionContext,
-        JSCustomMarkFunction,
-        EventTarget,
-        JSNoStaticTables
+    GlobalContext=DOMWindow&WorkerGlobalScope,
+    ActiveDOMObject,
+    Constructor,
+    ConstructorCallWith=ScriptExecutionContext,
+    JSCustomMarkFunction,
+    EventTarget,
+    JSNoStaticTables,
 ] interface XMLHttpRequest {
-        // From XMLHttpRequestEventTarget
-        // event handler attributes
-        attribute EventListener onabort;
-        attribute EventListener onerror;
-        attribute EventListener onload;
-        attribute EventListener onloadend;
-        attribute EventListener onloadstart;
-        attribute EventListener onprogress;
+    // From XMLHttpRequestEventTarget
+    // event handler attributes
+    attribute EventListener onabort;
+    attribute EventListener onerror;
+    attribute EventListener onload;
+    attribute EventListener onloadend;
+    attribute EventListener onloadstart;
+    attribute EventListener onprogress;
     [Conditional=XHR_TIMEOUT] attribute EventListener ontimeout;
 
-        // event handler attributes
-        attribute EventListener onreadystatechange;
+    // event handler attributes
+    attribute EventListener onreadystatechange;
 
-        // state
-        const unsigned short UNSENT = 0;
-        const unsigned short OPENED = 1;
-        const unsigned short HEADERS_RECEIVED = 2;
-        const unsigned short LOADING = 3;
-        const unsigned short DONE = 4;
+    // state
+    const unsigned short UNSENT = 0;
+    const unsigned short OPENED = 1;
+    const unsigned short HEADERS_RECEIVED = 2;
+    const unsigned short LOADING = 3;
+    const unsigned short DONE = 4;
 
-    [Conditional=XHR_TIMEOUT] attribute unsigned long timeout
-        setter raises(DOMException);
-        readonly attribute unsigned short readyState;
+    [Conditional=XHR_TIMEOUT, SetterRaisesException] attribute unsigned long timeout;
+    readonly attribute unsigned short readyState;
 
-        attribute boolean withCredentials
-            setter raises(DOMException);
+    [SetterRaisesException] attribute boolean withCredentials;
 
-    [Custom] void open(DOMString method, DOMString url, optional boolean async, optional DOMString user, optional DOMString password)
-            raises(DOMException);
+    [Custom, RaisesException] void open(DOMString method, DOMString url, optional boolean async, optional DOMString user, optional DOMString password);
 
-    void setRequestHeader(DOMString header, DOMString value)
-            raises(DOMException);
+    [RaisesException] void setRequestHeader(DOMString header, DOMString value);
 
-        [Custom] void send()
-            raises(DOMException);
+    [Custom, RaisesException] void send();
 
-        void abort();
+    void abort();
 
-        readonly attribute XMLHttpRequestUpload upload;
+    readonly attribute XMLHttpRequestUpload upload;
 
-        // response
-        [TreatReturnedNullStringAs=Undefined] DOMString getAllResponseHeaders()
-            raises(DOMException);
-    [TreatReturnedNullStringAs=Null] DOMString getResponseHeader(DOMString header)
-            raises(DOMException);
-    [CustomGetter] readonly attribute DOMString responseText // The custom getter implements TreatReturnedNullStringAs=Null
-            getter raises(DOMException);
-        readonly attribute Document responseXML
-            getter raises(DOMException);
+    // response
+    [TreatReturnedNullStringAs=Undefined] DOMString getAllResponseHeaders();
+    [TreatReturnedNullStringAs=Null] DOMString getResponseHeader(DOMString header);
+    [GetterRaisesException, CustomGetter] readonly attribute DOMString responseText; // The custom getter implements TreatReturnedNullStringAs=Null
+    [GetterRaisesException] readonly attribute Document responseXML;
 
-    attribute XMLHttpRequestResponseType responseType
-            setter raises(DOMException);
-    [CustomGetter] readonly attribute Object response
-            getter raises(DOMException);
+    [SetterRaisesException] attribute XMLHttpRequestResponseType responseType;
+    [GetterRaisesException, CachedAttribute, CustomGetter] readonly attribute Object response;
 
-        readonly attribute unsigned short status
-            getter raises(DOMException);
-        readonly attribute DOMString statusText
-            getter raises(DOMException);
+    [GetterRaisesException] readonly attribute unsigned short status;
+    [GetterRaisesException] readonly attribute DOMString statusText;
 
-        // Extension
+    // Extension
     void overrideMimeType(DOMString override);
 
-        // EventTarget interface
+    // EventTarget interface
     void addEventListener(DOMString type, 
                           EventListener listener, 
                           optional boolean useCapture);
     void removeEventListener(DOMString type, 
                              EventListener listener, 
                              optional boolean useCapture);
-    boolean dispatchEvent(Event evt)
-            raises(EventException);
-    };
+    [RaisesException] boolean dispatchEvent(Event evt);
+};

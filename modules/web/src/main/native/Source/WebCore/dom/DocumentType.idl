@@ -18,23 +18,21 @@
  */
 
 [
-        JSGenerateToNativeObject
+    JSGenerateToNativeObject,
 ] interface DocumentType : Node {
 
-        // DOM Level 1
+    // DOM Level 1
 
-        readonly attribute DOMString name;
-        readonly attribute NamedNodeMap entities;
-        readonly attribute NamedNodeMap notations;
+    readonly attribute DOMString name;
+    readonly attribute NamedNodeMap entities;
+    readonly attribute NamedNodeMap notations;
 
-        // DOM Level 2
+    // DOM Level 2
 
     [TreatReturnedNullStringAs=Null] readonly attribute DOMString publicId;
     [TreatReturnedNullStringAs=Null] readonly attribute DOMString systemId;
     [TreatReturnedNullStringAs=Null] readonly attribute DOMString internalSubset;        
+};
 
-    // DOM 4
-    void remove()
-        raises(DOMException);
-    };
+DocumentType implements ChildNode;
 
