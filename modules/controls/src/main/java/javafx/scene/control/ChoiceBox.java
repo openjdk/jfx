@@ -35,6 +35,7 @@ import javafx.collections.ObservableList;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
 import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.AccessibleRole;
@@ -286,6 +287,35 @@ public class ChoiceBox<T> extends Control {
     };
     public final void setValue(T value) { valueProperty().set(value); }
     public final T getValue() { return valueProperty().get(); }
+
+
+    // --- On Action
+    /**
+     * The ChoiceBox action, which is invoked whenever the ChoiceBox
+     * {@link #valueProperty() value} property is changed. This
+     * may be due to the value property being programmatically changed or when the
+     * user selects an item in a popup menu.
+     *
+     * @since JavaFX 8u60
+     */
+    public final ObjectProperty<EventHandler<ActionEvent>> onActionProperty() { return onAction; }
+    public final void setOnAction(EventHandler<ActionEvent> value) { onActionProperty().set(value); }
+    public final EventHandler<ActionEvent> getOnAction() { return onActionProperty().get(); }
+    private ObjectProperty<EventHandler<ActionEvent>> onAction = new ObjectPropertyBase<EventHandler<ActionEvent>>() {
+        @Override protected void invalidated() {
+            setEventHandler(ActionEvent.ACTION, get());
+        }
+
+        @Override
+        public Object getBean() {
+            return ChoiceBox.this;
+        }
+
+        @Override
+        public String getName() {
+            return "onAction";
+        }
+    };
 
     /***************************************************************************
      *                                                                         *
