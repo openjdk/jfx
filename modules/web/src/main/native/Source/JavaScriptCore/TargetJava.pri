@@ -500,7 +500,6 @@ SOURCES += \
     runtime/TypedArrayController.cpp \
     runtime/TypedArrayType.cpp \
     runtime/Watchdog.cpp \
-    runtime/WatchdogNone.cpp \
     runtime/WatchdogJava.cpp \
     runtime/WeakMapConstructor.cpp \
     runtime/WeakMapData.cpp \
