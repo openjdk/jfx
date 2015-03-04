@@ -79,7 +79,7 @@ import javafx.scene.layout.BackgroundSize;
 import javafx.scene.layout.BorderStrokeStyle;
 import javafx.scene.layout.BorderWidths;
 import javafx.scene.layout.CornerRadii;
-import javafx.scene.layout.CornerRadiiConverter;
+import com.sun.javafx.scene.layout.region.CornerRadiiConverter;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.CycleMethod;
 import javafx.scene.paint.Paint;

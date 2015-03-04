@@ -43,6 +43,7 @@ import com.sun.javafx.css.converters.PaintConverter;
 import com.sun.javafx.css.converters.URLConverter;
 import com.sun.javafx.scene.layout.region.LayeredBackgroundPositionConverter;
 import com.sun.javafx.scene.layout.region.LayeredBackgroundSizeConverter;
+import com.sun.javafx.scene.layout.region.CornerRadiiConverter;
 import com.sun.javafx.scene.layout.region.RepeatStruct;
 import com.sun.javafx.scene.layout.region.RepeatStructConverter;
 import com.sun.javafx.tk.Toolkit;
