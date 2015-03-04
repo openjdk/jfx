@@ -672,17 +672,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
     }
 
     @Override public void clearSelection() {
-        List<Integer> removed = new AbstractList<Integer>() {
-            final BitSet clone = (BitSet) selectedIndices.clone();
-
-            @Override public Integer get(int index) {
-                return clone.nextSetBit(index);
-            }
-
-            @Override public int size() {
-                return clone.cardinality();
-            }
-        };
+        List<Integer> removed = createListFromBitSet((BitSet) selectedIndices.clone());
 
         quietClearSelection();
 

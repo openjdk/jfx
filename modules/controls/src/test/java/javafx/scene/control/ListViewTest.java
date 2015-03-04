@@ -36,6 +36,7 @@ import static org.junit.Assert.fail;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import com.sun.javafx.scene.control.behavior.ListCellBehavior;
@@ -1704,5 +1705,24 @@ public class ListViewTest {
         items.removeAll(items.get(1), items.get(3));
         assertEquals("sanity: selectedItem unchanged", lastItem, sm.getSelectedItem());
         assertEquals("must not fire on unchanged selected item", 0, rt_40012_count);
+    }
+
+    @Test public void test_rt_40185() {
+        final ListView<String> lv = new ListView<>();
+        final ArrayList<Integer> expected = new ArrayList<>();
+        Collections.addAll(expected, 1, 2);
+
+        lv.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+        lv.getSelectionModel().getSelectedIndices().addListener((ListChangeListener<Integer>) change -> {
+            while (change.next()) {
+                if (change.wasRemoved()) {
+                    assertEquals(expected, change.getRemoved());
+                }
+            }
+        });
+
+        lv.getItems().addAll("-0-","-1-","-2-");
+        lv.getSelectionModel().selectIndices(1, 2);
+        lv.getSelectionModel().clearSelection();
     }
 }
