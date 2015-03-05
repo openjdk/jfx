@@ -69,6 +69,7 @@ public class DeployParams extends CommonParams {
     Boolean systemWide;
     Boolean serviceHint;
     Boolean signBundle;
+    Boolean installdirChooser;
 
     String applicationClass;
     String preloader;
@@ -167,6 +168,10 @@ public class DeployParams extends CommonParams {
         this.serviceHint = serviceHint;
     }
 
+    public void setInstalldirChooser(Boolean installdirChooser) {
+        this.installdirChooser = installdirChooser;
+    }
+    
     public void setSignBundle(Boolean signBundle) {
         this.signBundle = signBundle;
     }
@@ -560,6 +565,7 @@ public class DeployParams extends CommonParams {
         bundleParams.setMenuHint(needMenu);
         bundleParams.setSystemWide(systemWide);
         bundleParams.setServiceHint(serviceHint);
+        bundleParams.setInstalldirChooser(installdirChooser);
         bundleParams.setSignBundle(signBundle);
         bundleParams.setCopyright(copyright);
         bundleParams.setApplicationCategory(category);

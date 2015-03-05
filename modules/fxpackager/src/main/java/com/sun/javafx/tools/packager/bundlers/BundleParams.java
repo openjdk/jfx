@@ -100,6 +100,9 @@ public class BundleParams {
     /* Main application class. Not used directly but used to derive default values */
     public static final String PARAM_APPLICATION_CLASS      = "applicationClass"; // String
 
+    /* Adds a dialog to let the user choose a directory where the product will be installed. */
+    public static final String PARAM_INSTALLDIR_CHOOSER     = "installdirChooser"; // Boolean
+    
     /**
      * create a new bundle with all default values
      */
@@ -239,6 +242,10 @@ public class BundleParams {
 
     public void setServiceHint(Boolean b) {
         putUnlessNull(PARAM_SERVICE_HINT, b);
+    }
+    
+    public void setInstalldirChooser(Boolean b) {
+        putUnlessNull(PARAM_INSTALLDIR_CHOOSER, b);
     }
     
     public void setSignBundle(Boolean b) { putUnlessNull(SIGN_BUNDLE.getID(), b); }

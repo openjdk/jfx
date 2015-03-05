@@ -54,8 +54,9 @@ import static com.oracle.tools.packager.StandardBundlerParam.*;
 import static com.oracle.tools.packager.windows.WinAppBundler.ICON_ICO;
 import static com.oracle.tools.packager.windows.WindowsBundlerParam.WIN_RUNTIME;
 import static com.oracle.tools.packager.windows.WindowsBundlerParam.MENU_GROUP;
+import static com.oracle.tools.packager.windows.WindowsBundlerParam.INSTALLDIR_CHOOSER;
 import static org.junit.Assert.*;
-
+ 
 public class WinExeBundlerTest {
 
     static File tmpBase;
@@ -302,6 +303,7 @@ public class WinExeBundlerTest {
 //                START_ON_INSTALL,
 //                STOP_ON_UNINSTALL,
         bundleParams.put(SYSTEM_WIDE.getID(), false);
+        bundleParams.put(INSTALLDIR_CHOOSER.getID(), true);
         bundleParams.put(TITLE.getID(), "Everything Title");
         bundleParams.put(VENDOR.getID(), "Packager Tests");
 
