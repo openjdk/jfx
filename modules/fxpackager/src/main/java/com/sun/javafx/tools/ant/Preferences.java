@@ -125,7 +125,7 @@ public class Preferences extends DataType {
         return get().installRequested;
     }
     
-    boolean getInstalldirChooser() {
+    Boolean getInstalldirChooser() {
         return get().installdirChooserRequested;
     }
 }
