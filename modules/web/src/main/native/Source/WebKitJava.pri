@@ -33,6 +33,11 @@ mac*|linux* {
     QMAKE_CXXFLAGS += -std=c++11
 }
 
+mac*|linux*|solaris* {
+    QMAKE_RPATHDIR=
+}
+
+
 INCLUDEPATH += $(JAVA_HOME)/include
 
 linux-*|solaris-* {
