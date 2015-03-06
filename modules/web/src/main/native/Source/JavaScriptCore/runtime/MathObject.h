@@ -27,29 +27,27 @@ namespace JSC {
 
     class MathObject : public JSNonFinalObject {
     private:
-        MathObject(JSGlobalObject*, Structure*);
+        MathObject(VM&, Structure*);
 
     public:
         typedef JSNonFinalObject Base;
 
-        static MathObject* create(ExecState* exec, JSGlobalObject* globalObject, Structure* structure)
+        static MathObject* create(VM& vm, JSGlobalObject* globalObject, Structure* structure)
         {
-            MathObject* object = new (NotNull, allocateCell<MathObject>(*exec->heap())) MathObject(globalObject, structure);
-            object->finishCreation(exec, globalObject);
+            MathObject* object = new (NotNull, allocateCell<MathObject>(vm.heap)) MathObject(vm, structure);
+            object->finishCreation(vm, globalObject);
             return object;
         }
-        static bool getOwnPropertySlot(JSCell*, ExecState*, PropertyName, PropertySlot&);
-        static bool getOwnPropertyDescriptor(JSObject*, ExecState*, PropertyName, PropertyDescriptor&);
 
-        static const ClassInfo s_info;
+        DECLARE_INFO;
 
         static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
         {
-            return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), &s_info);
+            return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info());
         }
 
     protected:
-        void finishCreation(ExecState*, JSGlobalObject*);
+        void finishCreation(VM&, JSGlobalObject*);
         static const unsigned StructureFlags = OverridesGetOwnPropertySlot | JSObject::StructureFlags;
     };
 

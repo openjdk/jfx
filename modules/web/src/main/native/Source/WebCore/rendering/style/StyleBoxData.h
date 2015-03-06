@@ -34,8 +34,8 @@ namespace WebCore {
 
 class StyleBoxData : public RefCounted<StyleBoxData> {
 public:
-    static PassRefPtr<StyleBoxData> create() { return adoptRef(new StyleBoxData); }
-    PassRefPtr<StyleBoxData> copy() const { return adoptRef(new StyleBoxData(*this)); }
+    static PassRef<StyleBoxData> create() { return adoptRef(*new StyleBoxData); }
+    PassRef<StyleBoxData> copy() const;
 
     bool operator==(const StyleBoxData& o) const;
     bool operator!=(const StyleBoxData& o) const
@@ -43,16 +43,16 @@ public:
         return !(*this == o);
     }
 
-    Length width() const { return m_width; }
-    Length height() const { return m_height; }
+    const Length& width() const { return m_width; }
+    const Length& height() const { return m_height; }
     
-    Length minWidth() const { return m_minWidth; }
-    Length minHeight() const { return m_minHeight; }
+    const Length& minWidth() const { return m_minWidth; }
+    const Length& minHeight() const { return m_minHeight; }
     
-    Length maxWidth() const { return m_maxWidth; }
-    Length maxHeight() const { return m_maxHeight; }
+    const Length& maxWidth() const { return m_maxWidth; }
+    const Length& maxHeight() const { return m_maxHeight; }
     
-    Length verticalAlign() const { return m_verticalAlign; }
+    const Length& verticalAlign() const { return m_verticalAlign; }
     
     int zIndex() const { return m_zIndex; }
     bool hasAutoZIndex() const { return m_hasAutoZIndex; }

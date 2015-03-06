@@ -47,7 +47,7 @@ Path::Path()
 Path::~Path()
 {
     if (m_path)
-    delete m_path;
+        delete m_path;
 }
 
 Path::Path(const Path& other)
@@ -79,10 +79,10 @@ Path& Path::operator=(const Path& other)
             m_path = 0;
         }
     } else {
-    clear();
+        clear();
         cairo_t* cr = ensurePlatformPath()->context();
-    OwnPtr<cairo_path_t> pathCopy = adoptPtr(cairo_copy_path(other.platformPath()->context()));
-    cairo_append_path(cr, pathCopy.get());
+        OwnPtr<cairo_path_t> pathCopy = adoptPtr(cairo_copy_path(other.platformPath()->context()));
+        cairo_append_path(cr, pathCopy.get());
     }
 
     return *this;

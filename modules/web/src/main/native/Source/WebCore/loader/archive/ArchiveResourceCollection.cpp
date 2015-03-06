@@ -41,12 +41,12 @@ void ArchiveResourceCollection::addAllResources(Archive* archive)
     if (!archive)
         return;
 
-    const Vector<RefPtr<ArchiveResource> >& subresources = archive->subresources();
-    for (Vector<RefPtr<ArchiveResource> >::const_iterator iterator = subresources.begin(); iterator != subresources.end(); ++iterator)
+    const Vector<RefPtr<ArchiveResource>>& subresources = archive->subresources();
+    for (Vector<RefPtr<ArchiveResource>>::const_iterator iterator = subresources.begin(); iterator != subresources.end(); ++iterator)
         m_subresources.set((*iterator)->url(), iterator->get());
 
-    const Vector<RefPtr<Archive> >& subframes = archive->subframeArchives();
-    for (Vector<RefPtr<Archive> >::const_iterator iterator = subframes.begin(); iterator != subframes.end(); ++iterator) {
+    const Vector<RefPtr<Archive>>& subframes = archive->subframeArchives();
+    for (Vector<RefPtr<Archive>>::const_iterator iterator = subframes.begin(); iterator != subframes.end(); ++iterator) {
         RefPtr<Archive> archive = *iterator;
         ASSERT(archive->mainResource());
 
@@ -68,11 +68,11 @@ void ArchiveResourceCollection::addResource(PassRefPtr<ArchiveResource> resource
     if (!resource)
         return;
 
-    const KURL& url = resource->url(); // get before passing PassRefPtr (which sets it to 0)
+    const URL& url = resource->url(); // get before passing PassRefPtr (which sets it to 0)
     m_subresources.set(url, resource);
 }
 
-ArchiveResource* ArchiveResourceCollection::archiveResourceForURL(const KURL& url)
+ArchiveResource* ArchiveResourceCollection::archiveResourceForURL(const URL& url)
 {
     ArchiveResource* resource = m_subresources.get(url);
     if (!resource)
@@ -81,7 +81,7 @@ ArchiveResource* ArchiveResourceCollection::archiveResourceForURL(const KURL& ur
     return resource;
 }
 
-PassRefPtr<Archive> ArchiveResourceCollection::popSubframeArchive(const String& frameName, const KURL& url)
+PassRefPtr<Archive> ArchiveResourceCollection::popSubframeArchive(const String& frameName, const URL& url)
 {
     RefPtr<Archive> archive = m_subframes.take(frameName);
     if (archive)

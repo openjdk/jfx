@@ -71,8 +71,8 @@ public:
 
 private:
     ScriptedAnimationController(Document*, PlatformDisplayID);
-    
-    typedef Vector<RefPtr<RequestAnimationFrameCallback> > CallbackList;
+
+    typedef Vector<RefPtr<RequestAnimationFrameCallback>> CallbackList;
     CallbackList m_callbacks;
 
     Document* m_document;
@@ -82,13 +82,13 @@ private:
     void scheduleAnimation();
 
 #if USE(REQUEST_ANIMATION_FRAME_TIMER)
-    void animationTimerFired(Timer<ScriptedAnimationController>*);
+    void animationTimerFired(Timer<ScriptedAnimationController>&);
     Timer<ScriptedAnimationController> m_animationTimer;
     double m_lastAnimationFrameTimeMonotonic;
 
 #if USE(REQUEST_ANIMATION_FRAME_DISPLAY_MONITOR)
     // Override for DisplayRefreshMonitorClient
-    virtual void displayRefreshFired(double timestamp);
+    virtual void displayRefreshFired(double timestamp) override;
 
     bool m_isUsingTimer;
     bool m_isThrottled;

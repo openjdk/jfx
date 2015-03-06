@@ -27,7 +27,10 @@
  */
 
 #import <WebKit/WebPreferences.h>
+
+#if !TARGET_OS_IPHONE
 #import <Quartz/Quartz.h>
+#endif
 
 typedef enum {
     WebKitEditableLinkDefaultBehavior,
@@ -76,6 +79,7 @@ extern NSString *WebPreferencesCacheModelChangedInternalNotification;
 - (BOOL)usesEncodingDetector;
 - (void)setUsesEncodingDetector:(BOOL)flag;
 
+#if !TARGET_OS_IPHONE
 - (BOOL)respectStandardStyleKeyEquivalents;
 - (void)setRespectStandardStyleKeyEquivalents:(BOOL)flag;
 
@@ -90,6 +94,7 @@ extern NSString *WebPreferencesCacheModelChangedInternalNotification;
 
 - (PDFDisplayMode)PDFDisplayMode;
 - (void)setPDFDisplayMode:(PDFDisplayMode)mode;
+#endif
 
 - (BOOL)shrinksStandaloneImagesToFit;
 - (void)setShrinksStandaloneImagesToFit:(BOOL)flag;
@@ -108,6 +113,11 @@ extern NSString *WebPreferencesCacheModelChangedInternalNotification;
 
 - (BOOL)databasesEnabled;
 - (void)setDatabasesEnabled:(BOOL)databasesEnabled;
+
+#if TARGET_OS_IPHONE
+- (BOOL)storageTrackerEnabled;
+- (void)setStorageTrackerEnabled:(BOOL)storageTrackerEnabled;
+#endif
 
 - (BOOL)localStorageEnabled;
 - (void)setLocalStorageEnabled:(BOOL)localStorageEnabled;
@@ -139,9 +149,11 @@ extern NSString *WebPreferencesCacheModelChangedInternalNotification;
 - (BOOL)isSpatialNavigationEnabled;
 - (void)setSpatialNavigationEnabled:(BOOL)flag;
 
+#if !TARGET_OS_IPHONE
 // zero means do AutoScale
 - (float)PDFScaleFactor;
 - (void)setPDFScaleFactor:(float)scale;
+#endif
 
 - (int64_t)applicationCacheTotalQuota;
 - (void)setApplicationCacheTotalQuota:(int64_t)quota;
@@ -187,9 +199,6 @@ extern NSString *WebPreferencesCacheModelChangedInternalNotification;
 - (BOOL)acceleratedCompositingEnabled;
 - (void)setAcceleratedCompositingEnabled:(BOOL)enabled;
 
-- (BOOL)cssCustomFilterEnabled;
-- (void)setCSSCustomFilterEnabled:(BOOL)enabled;
-
 - (BOOL)cssRegionsEnabled;
 - (void)setCSSRegionsEnabled:(BOOL)enabled;
 
@@ -211,14 +220,17 @@ extern NSString *WebPreferencesCacheModelChangedInternalNotification;
 - (BOOL)webGLEnabled;
 - (void)setWebGLEnabled:(BOOL)enabled;
 
+- (BOOL)multithreadedWebGLEnabled;
+- (void)setMultithreadedWebGLEnabled:(BOOL)enabled;
+
+- (BOOL)forceSoftwareWebGLRendering;
+- (void)setForceSoftwareWebGLRendering:(BOOL)forced;
+
 - (BOOL)accelerated2dCanvasEnabled;
 - (void)setAccelerated2dCanvasEnabled:(BOOL)enabled;
 
 - (BOOL)paginateDuringLayoutEnabled;
 - (void)setPaginateDuringLayoutEnabled:(BOOL)flag;
-
-- (BOOL)memoryInfoEnabled;
-- (void)setMemoryInfoEnabled:(BOOL)enabled;
 
 - (BOOL)hyperlinkAuditingEnabled;
 - (void)setHyperlinkAuditingEnabled:(BOOL)enabled;
@@ -239,11 +251,74 @@ extern NSString *WebPreferencesCacheModelChangedInternalNotification;
 - (BOOL)mockScrollbarsEnabled;
 - (void)setMockScrollbarsEnabled:(BOOL)flag;
 
+#if TARGET_OS_IPHONE
 // This is a global setting.
-- (BOOL)seamlessIFramesEnabled;
-- (void)setSeamlessIFramesEnabled:(BOOL)enabled;
+- (unsigned)audioSessionCategoryOverride;
+- (void)setAudioSessionCategoryOverride:(unsigned)override;
+
+- (BOOL)avKitEnabled;
+- (void)setAVKitEnabled:(bool)flag;
+
+// WARNING: this affect network performance. This must not be enabled for production use.
+// Enabling this makes WebCore reports the network data usage.
+// This is a global setting.
+- (void)setNetworkDataUsageTrackingEnabled:(bool)trackingEnabled;
+- (BOOL)networkDataUsageTrackingEnabled;
+
+- (void)setNetworkInterfaceName:(NSString *)name;
+- (NSString *)networkInterfaceName;
+
+- (void)_setMinimumZoomFontSize:(float)size;
+- (float)_minimumZoomFontSize;
+
+- (BOOL)diskImageCacheEnabled;
+- (void)setDiskImageCacheEnabled:(BOOL)enabled;
+
+- (unsigned)diskImageCacheMinimumImageSize;
+- (void)setDiskImageCacheMinimumImageSize:(unsigned)minimumSize;
+
+- (unsigned)diskImageCacheMaximumCacheSize;
+- (void)setDiskImageCacheMaximumCacheSize:(unsigned)maximumSize;
+
+- (NSString *)_diskImageCacheSavedCacheDirectory;
+- (void)_setDiskImageCacheSavedCacheDirectory:(NSString *)path;
+
+- (void)setMediaPlaybackAllowsAirPlay:(BOOL)flag;
+- (BOOL)mediaPlaybackAllowsAirPlay;
+#endif
 
 // Other private methods
+#if TARGET_OS_IPHONE
+- (size_t)_maximumImageSize;
+- (BOOL)_standalone;
+- (void)_setStandalone:(BOOL)flag;
+- (void)_setTelephoneNumberParsingEnabled:(BOOL)flag;
+- (BOOL)_telephoneNumberParsingEnabled;
+- (void)_setAlwaysUseBaselineOfPrimaryFont:(BOOL)flag;
+- (BOOL)_alwaysUseBaselineOfPrimaryFont;
+- (void)_setAllowMultiElementImplicitFormSubmission:(BOOL)flag;
+- (BOOL)_allowMultiElementImplicitFormSubmission;
+- (void)_setAlwaysRequestGeolocationPermission:(BOOL)flag;
+- (BOOL)_alwaysRequestGeolocationPermission;
+- (void)_setAlwaysUseAcceleratedOverflowScroll:(BOOL)flag;
+- (BOOL)_alwaysUseAcceleratedOverflowScroll;
+- (void)_setLayoutInterval:(int)l;
+- (int)_layoutInterval;
+- (void)_setMaxParseDuration:(float)d;
+- (float)_maxParseDuration;
+- (void)_setPageCacheSize:(int)size;
+- (int)_pageCacheSize;
+- (void)_setObjectCacheSize:(int)size;
+- (int)_objectCacheSize;
+- (void)_setNSURLMemoryCacheSize:(int)size;
+- (int)_NSURLMemoryCacheSize;
+- (void)_setNSURLDiskCacheSize:(int)size;
+- (int)_NSURLDiskCacheSize;
+- (void)_setInterpolationQuality:(int)quality;
+- (int)_interpolationQuality;
+- (BOOL)_allowPasswordEcho;
+- (float)_passwordEchoDuration;
+#endif
 - (void)_postPreferencesChangedNotification;
 - (void)_postPreferencesChangedAPINotification;
 + (WebPreferences *)_getInstanceForIdentifier:(NSString *)identifier;
@@ -286,12 +361,22 @@ extern NSString *WebPreferencesCacheModelChangedInternalNotification;
 - (void)setQTKitEnabled:(BOOL)flag;
 - (BOOL)isQTKitEnabled;
 
+// VideoPluginProxy support is dependent on WebCore/WebKit being
+// compiled with ENABLE_PLUGIN_PROXY_FOR_VIDEO.
+- (void)setVideoPluginProxyEnabled:(BOOL)flag;
+- (BOOL)isVideoPluginProxyEnabled;
+
 // WebSocket support depends on ENABLE(WEB_SOCKETS).
 - (void)setHixie76WebSocketProtocolEnabled:(BOOL)flag;
 - (BOOL)isHixie76WebSocketProtocolEnabled;
 
 - (void)setRegionBasedColumnsEnabled:(BOOL)flag;
 - (BOOL)regionBasedColumnsEnabled;
+
+#if TARGET_OS_IPHONE
+- (void)_invalidateCachedPreferences;
+- (void)_synchronizeWebStoragePolicyWithCookiePolicy;
+#endif
 
 - (void)setBackspaceKeyNavigationEnabled:(BOOL)flag;
 - (BOOL)backspaceKeyNavigationEnabled;
@@ -337,5 +422,17 @@ extern NSString *WebPreferencesCacheModelChangedInternalNotification;
 
 - (BOOL)hiddenPageCSSAnimationSuspensionEnabled;
 - (void)setHiddenPageCSSAnimationSuspensionEnabled:(BOOL)flag;
+
+- (BOOL)lowPowerVideoAudioBufferSizeEnabled;
+- (void)setLowPowerVideoAudioBufferSizeEnabled:(BOOL)enabled;
+
+- (void)setUseLegacyTextAlignPositionedElementBehavior:(BOOL)flag;
+- (BOOL)useLegacyTextAlignPositionedElementBehavior;
+
+- (void)setMediaSourceEnabled:(BOOL)flag;
+- (BOOL)mediaSourceEnabled;
+
+- (void)setShouldConvertPositionStyleOnCopy:(BOOL)flag;
+- (BOOL)shouldConvertPositionStyleOnCopy;
 
 @end

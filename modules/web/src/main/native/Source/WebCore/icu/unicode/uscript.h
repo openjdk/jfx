@@ -1,17 +1,17 @@
 /*
-**********************************************************************
+ **********************************************************************
  *   Copyright (C) 1997-2010, International Business Machines
-*   Corporation and others.  All Rights Reserved.
-**********************************************************************
-*
-* File USCRIPT.H
-*
-* Modification History:
-*
-*   Date        Name        Description
-*   07/06/2001    Ram         Creation.
-******************************************************************************
-*/
+ *   Corporation and others.  All Rights Reserved.
+ **********************************************************************
+ *
+ * File USCRIPT.H
+ *
+ * Modification History:
+ *
+ *   Date        Name        Description
+ *   07/06/2001    Ram         Creation.
+ ******************************************************************************
+ */
 
 #ifndef USCRIPT_H
 #define USCRIPT_H
@@ -45,7 +45,7 @@
  */
 typedef enum UScriptCode {
       USCRIPT_INVALID_CODE = -1,
-      USCRIPT_COMMON       =  0 , /* Zyyy */
+      USCRIPT_COMMON       =  0,  /* Zyyy */
       USCRIPT_INHERITED    =  1,  /* Zinh */ /* "Code for inherited script", for non-spacing combining marks; also Qaai */
       USCRIPT_ARABIC       =  2,  /* Arab */
       USCRIPT_ARMENIAN     =  3,  /* Armn */
@@ -107,7 +107,7 @@ typedef enum UScriptCode {
 
       /** New script code in Unicode 4.0.1 @stable ICU 3.0 */
       USCRIPT_KATAKANA_OR_HIRAGANA = 54,/*Hrkt */
-      
+
       /* New scripts in Unicode 4.1 @stable ICU 3.4 */
       USCRIPT_BUGINESE      = 55, /* Bugi */
       USCRIPT_GLAGOLITIC    = 56, /* Glag */
@@ -162,7 +162,7 @@ typedef enum UScriptCode {
       USCRIPT_EASTERN_SYRIAC                = 97, /* Syrn */
       USCRIPT_TENGWAR                       = 98, /* Teng */
       USCRIPT_VAI                           = 99, /* Vaii */
-      USCRIPT_VISIBLE_SPEECH                = 100, /* Visp */
+      USCRIPT_VISIBLE_SPEECH                = 100,/* Visp */
       USCRIPT_CUNEIFORM                     = 101,/* Xsux */
       USCRIPT_UNWRITTEN_LANGUAGES           = 102,/* Zxxx */
       USCRIPT_UNKNOWN                       = 103,/* Zzzz */ /* Unknown="Code for uncoded script", for unassigned code points */
@@ -218,7 +218,7 @@ typedef enum UScriptCode {
       USCRIPT_SINDHI                        = 145,/* Sind */
       USCRIPT_WARANG_CITI                   = 146,/* Wara */
 
-      /* Private use codes from Qaaa - Qabx are not supported*/
+      /* Private use codes from Qaaa - Qabx are not supported */
       USCRIPT_CODE_LIMIT    = 147
 } UScriptCode;
 
@@ -265,7 +265,7 @@ uscript_getName(UScriptCode scriptCode);
 U_STABLE const char*  U_EXPORT2 
 uscript_getShortName(UScriptCode scriptCode);
 
-/** 
+/**
  * Gets the script code associated with the given codepoint.
  * Returns USCRIPT_MALAYALAM given 0x0D02 
  * @param codepoint UChar32 codepoint

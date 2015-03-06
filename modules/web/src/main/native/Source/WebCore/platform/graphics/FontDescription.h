@@ -34,8 +34,9 @@
 #include "NonCJKGlyphOrientation.h"
 #include "TextRenderingMode.h"
 #include "WebKitFontFamilyNames.h"
+#include <unicode/uscript.h>
 #include <wtf/MathExtras.h>
-
+#include <wtf/RefCountedArray.h>
 #include <wtf/RefPtr.h>
 
 namespace WebCore {
@@ -103,11 +104,11 @@ public:
 
     bool operator==(const FontDescription&) const;
     bool operator!=(const FontDescription& other) const { return !(*this == other); }
-    
+
     unsigned familyCount() const { return m_families.size(); }
     const AtomicString& firstFamily() const { return familyAt(0); }
     const AtomicString& familyAt(unsigned i) const { return m_families[i]; }
-    const Vector<AtomicString, 1>& families() const { return m_families; }
+    const RefCountedArray<AtomicString>& families() const { return m_families; }
 
     float specifiedSize() const { return m_specifiedSize; }
     float computedSize() const { return m_computedSize; }
@@ -141,8 +142,8 @@ public:
     FontDescription makeNormalFeatureSettings() const;
 
     void setOneFamily(const AtomicString& family) { ASSERT(m_families.size() == 1); m_families[0] = family; }
-    void setFamilies(const Vector<AtomicString, 1>& families) { m_families = families; }
-    void adoptFamilies(Vector<AtomicString, 1>& families) { m_families.swap(families); }
+    void setFamilies(const Vector<AtomicString>& families) { m_families = RefCountedArray<AtomicString>(families); }
+    void setFamilies(const RefCountedArray<AtomicString>& families) { m_families = families; }
     void setComputedSize(float s) { m_computedSize = clampToFloat(s); }
     void setSpecifiedSize(float s) { m_specifiedSize = clampToFloat(s); }
     void setItalic(FontItalic i) { m_italic = i; }
@@ -168,8 +169,22 @@ public:
     void setScript(UScriptCode s) { m_script = s; }
     void setFeatureSettings(PassRefPtr<FontFeatureSettings> settings) { m_featureSettings = settings; }
 
+#if ENABLE(IOS_TEXT_AUTOSIZING)
+    bool familiesEqualForTextAutoSizing(const FontDescription& other) const;
+
+    bool equalForTextAutoSizing(const FontDescription& other) const
+    {
+        return familiesEqualForTextAutoSizing(other)
+            && m_specifiedSize == other.m_specifiedSize
+            && m_smallCaps == other.m_smallCaps
+            && m_isAbsoluteSize == other.m_isAbsoluteSize
+            && m_genericFamily == other.m_genericFamily
+            && m_usePrinterFont == other.m_usePrinterFont;
+    }
+#endif
+
 private:
-    Vector<AtomicString, 1> m_families;
+    RefCountedArray<AtomicString> m_families;
     RefPtr<FontFeatureSettings> m_featureSettings;
 
     float m_specifiedSize;   // Specified CSS value. Independent of rendering issues such as integer

@@ -47,3 +47,40 @@ LIBSQLITE3 (all platforms)
     CFLAGS='-m64 -fPIC' ./configure --disable-readline --disable-threadsafe --disable-dynamic-extensions
    for 64-bit build. This turns off unneeded features and makes library smaller
 4. Run make (nmake on Windows). Libraries will be created in the .libs subdirectory. You need the static linkage library
+
+ICU static libraries (Windows only)
+===================================
+
+1. Download ICU source package:
+    http://download.icu-project.org/files/icu4c/4.6.1/icu4c-4_6_1-src.tgz
+2. Extract source files:
+    tar -xzvf ../icu4c-4_6_1-src.tgz
+3. Prepare build environment.
+    In windows cmd shell execute following commands:
+    ** x64*
+    call g:\tools\VS2012\VC\bin\x86_amd64\vcvarsx86_amd64.bat
+   
+    ** x86*
+    call g:\tools\VS2012\VC\bin\vcvars32.bat
+   
+    call c:\cygwin\Cygwin.bat
+    In cygwin shell, update PATH in order to get VS link.exe first:
+     export PATH="$(echo $PATH | sed -e 's#^/usr/local/bin:/usr/bin:##g'):/usr/local/bin:/usr/bin"
+3. Configure build:  go to icu/source directory
+    * Debug build*
+     CFLAGS=/Z7 CXXFLAGS=/Z7 bash ./runConfigureICU Cygwin/MSVC --enable-debug --enable-static  --with-data-packaging=static  --enable-renaming=no --enable-shared=no  --disable-dyload --enable-release=no --prefix=/your/destination/dir
+    * Release build*
+     bash ./runConfigureICU Cygwin/MSVC --enable-static  --with-data-packaging=static --enable-renaming=no --enable-shared=no  --disable-dyload --prefix=/your/destination/dir
+4. make & install
+    make
+    * workaround a peculiarity in the installation routine
+    * debug build
+    cp data/out/tmp/icudt46.lib lib/icudtd.lib
+    * release build
+    cp data/out/tmp/icudt46.lib lib/icudt.lib
+    make install
+
+You need following include files and following libraries:
+release: sicuin.lib, sicuuc.lib
+debug: sicuind.lib, sicuucd.lib
+data library (common for debug and release): icudt.lib

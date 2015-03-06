@@ -28,13 +28,13 @@
 
 #include <JavaScriptCore/JSObjectRef.h>
 
-#if PLATFORM(MAC)
+#if PLATFORM(MAC) && !PLATFORM(IOS)
 #define SUPPORTS_AX_TEXTMARKERS 1
 #else
 #define SUPPORTS_AX_TEXTMARKERS 0
 #endif
 
-#if PLATFORM(MAC)
+#if PLATFORM(COCOA)
 #include <wtf/RetainPtr.h>
 typedef CFTypeRef PlatformTextMarker;
 typedef CFTypeRef PlatformTextMarkerRange;
@@ -58,7 +58,7 @@ public:
     
 private:
     static JSClassRef getJSClass();
-#if PLATFORM(MAC)
+#if SUPPORTS_AX_TEXTMARKERS
     RetainPtr<PlatformTextMarker> m_textMarker;
 #else
     PlatformTextMarker m_textMarker;
@@ -78,7 +78,7 @@ public:
     
 private:
     static JSClassRef getJSClass();
-#if PLATFORM(MAC)
+#if SUPPORTS_AX_TEXTMARKERS
     RetainPtr<PlatformTextMarkerRange> m_textMarkerRange;
 #else
     PlatformTextMarkerRange m_textMarkerRange;

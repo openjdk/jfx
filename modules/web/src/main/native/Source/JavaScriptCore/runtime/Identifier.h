@@ -44,7 +44,7 @@ namespace JSC {
         template<unsigned charactersCount>
         Identifier(VM* vm, const char (&characters)[charactersCount]) : m_string(add(vm, characters)) { }
 
-        Identifier(ExecState* exec, StringImpl* rep) : m_string(add(exec, rep)) { } 
+        Identifier(ExecState* exec, StringImpl* rep) : m_string(add(exec, rep)) { }
         Identifier(ExecState* exec, const String& s) : m_string(add(exec, s.impl())) { }
 
         Identifier(VM* vm, const LChar* s, int length) : m_string(add(vm, s, length)) { }
@@ -55,10 +55,18 @@ namespace JSC {
         const String& string() const { return m_string; }
         StringImpl* impl() const { return m_string.impl(); }
         
-        const UChar* characters() const { return m_string.characters(); }
+        const UChar* deprecatedCharacters() const { return m_string.deprecatedCharacters(); }
         int length() const { return m_string.length(); }
         
         CString ascii() const { return m_string.ascii(); }
+        CString utf8() const { return m_string.utf8(); }
+        
+        static Identifier from(const PrivateName& name)
+        {
+            Identifier result;
+            result.m_string = name.uid();
+            return result;
+        }
 
         static Identifier createLCharFromUChar(VM* vm, const UChar* s, int length) { return Identifier(vm, add8(vm, s, length)); }
 
@@ -87,8 +95,8 @@ namespace JSC {
         static bool equal(const StringImpl* a, const StringImpl* b) { return ::equal(a, b); }
 
         // Only to be used with string literals.
-        static PassRefPtr<StringImpl> add(VM*, const char*);
-        JS_EXPORT_PRIVATE static PassRefPtr<StringImpl> add(ExecState*, const char*);
+        JS_EXPORT_PRIVATE static PassRef<StringImpl> add(VM*, const char*);
+        JS_EXPORT_PRIVATE static PassRef<StringImpl> add(ExecState*, const char*);
 
     private:
         String m_string;
@@ -99,31 +107,31 @@ namespace JSC {
         static bool equal(const Identifier& a, const Identifier& b) { return a.m_string.impl() == b.m_string.impl(); }
         static bool equal(const Identifier& a, const LChar* b) { return equal(a.m_string.impl(), b); }
 
-        template <typename T> static PassRefPtr<StringImpl> add(VM*, const T*, int length);
-        static PassRefPtr<StringImpl> add8(VM*, const UChar*, int length);
+        template <typename T> static PassRef<StringImpl> add(VM*, const T*, int length);
+        static PassRef<StringImpl> add8(VM*, const UChar*, int length);
         template <typename T> ALWAYS_INLINE static bool canUseSingleCharacterString(T);
 
-        static PassRefPtr<StringImpl> add(ExecState* exec, StringImpl* r)
+        static PassRef<StringImpl> add(ExecState* exec, StringImpl* r)
         {
 #ifndef NDEBUG
             checkCurrentIdentifierTable(exec);
 #endif
             if (r->isIdentifier())
-                return r;
+                return *r;
             return addSlowCase(exec, r);
         }
-        static PassRefPtr<StringImpl> add(VM* vm, StringImpl* r)
+        static PassRef<StringImpl> add(VM* vm, StringImpl* r)
         {
 #ifndef NDEBUG
             checkCurrentIdentifierTable(vm);
 #endif
             if (r->isIdentifier())
-                return r;
+                return *r;
             return addSlowCase(vm, r);
         }
 
-        JS_EXPORT_PRIVATE static PassRefPtr<StringImpl> addSlowCase(ExecState*, StringImpl* r);
-        JS_EXPORT_PRIVATE static PassRefPtr<StringImpl> addSlowCase(VM*, StringImpl* r);
+        JS_EXPORT_PRIVATE static PassRef<StringImpl> addSlowCase(ExecState*, StringImpl* r);
+        JS_EXPORT_PRIVATE static PassRef<StringImpl> addSlowCase(VM*, StringImpl* r);
 
         JS_EXPORT_PRIVATE static void checkCurrentIdentifierTable(ExecState*);
         JS_EXPORT_PRIVATE static void checkCurrentIdentifierTable(VM*);
@@ -161,16 +169,16 @@ namespace JSC {
         static void translate(StringImpl*& location, const CharBuffer<T>& buf, unsigned hash)
         {
             T* d;
-            StringImpl* r = StringImpl::createUninitialized(buf.length, d).leakRef();
+            StringImpl& r = StringImpl::createUninitialized(buf.length, d).leakRef();
             for (unsigned i = 0; i != buf.length; i++)
                 d[i] = buf.s[i];
-            r->setHash(hash);
-            location = r; 
+            r.setHash(hash);
+            location = &r;
         }
     };
 
     template <typename T>
-    PassRefPtr<StringImpl> Identifier::add(VM* vm, const T* s, int length)
+    PassRef<StringImpl> Identifier::add(VM* vm, const T* s, int length)
     {
         if (length == 1) {
             T c = s[0];
@@ -179,13 +187,13 @@ namespace JSC {
         }
         
         if (!length)
-            return StringImpl::empty();
+            return *StringImpl::empty();
         CharBuffer<T> buf = { s, static_cast<unsigned>(length) };
-        HashSet<StringImpl*>::AddResult addResult = vm->identifierTable->add<CharBuffer<T>, IdentifierCharBufferTranslator<T> >(buf);
+        HashSet<StringImpl*>::AddResult addResult = vm->identifierTable->add<CharBuffer<T>, IdentifierCharBufferTranslator<T>>(buf);
         
         // If the string is newly-translated, then we need to adopt it.
         // The boolean in the pair tells us if that is so.
-        return addResult.isNewEntry ? adoptRef(*addResult.iterator) : *addResult.iterator;
+        return addResult.isNewEntry ? adoptRef(**addResult.iterator) : **addResult.iterator;
     }
 
     inline bool operator==(const Identifier& a, const Identifier& b)
@@ -236,7 +244,7 @@ namespace JSC {
     IdentifierTable* createIdentifierTable();
     void deleteIdentifierTable(IdentifierTable*);
 
-    struct IdentifierRepHash : PtrHash<RefPtr<StringImpl> > {
+    struct IdentifierRepHash : PtrHash<RefPtr<StringImpl>> {
         static unsigned hash(const RefPtr<StringImpl>& key) { return key->existingHash(); }
         static unsigned hash(StringImpl* key) { return key->existingHash(); }
     };
@@ -246,12 +254,13 @@ namespace JSC {
         static const bool emptyValueIsZero = false;
     };
 
-    typedef HashMap<RefPtr<StringImpl>, int, IdentifierRepHash, HashTraits<RefPtr<StringImpl> >, IdentifierMapIndexHashTraits> IdentifierMap;
+    typedef HashMap<RefPtr<StringImpl>, int, IdentifierRepHash, HashTraits<RefPtr<StringImpl>>, IdentifierMapIndexHashTraits> IdentifierMap;
+    typedef HashMap<StringImpl*, int, IdentifierRepHash, HashTraits<StringImpl*>, IdentifierMapIndexHashTraits> BorrowedIdentifierMap;
 
     template<typename U, typename V>
     HashSet<StringImpl*>::AddResult IdentifierTable::add(U value)
     {
-        HashSet<StringImpl*>::AddResult result = m_table.add<U, V>(value);
+        HashSet<StringImpl*>::AddResult result = m_table.add<V>(value);
         (*result.iterator)->setIsIdentifier(true);
         return result;
     }

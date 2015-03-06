@@ -249,7 +249,7 @@ bool URLLoader::AsynchronousTarget::willSendRequest(
     ResourceHandleClient* client = m_handle->client();
     if (client) {
         ResourceRequest request = m_handle->firstRequest();
-        request.setURL(KURL(KURL(), newUrl));
+        request.setURL(URL(URL(), newUrl));
         request.setHTTPMethod(newMethod);
         client->willSendRequest(m_handle, request, response);
     }
@@ -314,7 +314,7 @@ bool URLLoader::SynchronousTarget::willSendRequest(
     // The following code was adapted from the Windows port
     // FIXME: This needs to be fixed to follow redirects correctly even
     // for cross-domain requests
-    if (!protocolHostAndPortAreEqual(m_request.url(), KURL(KURL(), newUrl))) {
+    if (!protocolHostAndPortAreEqual(m_request.url(), URL(URL(), newUrl))) {
         didFail(ResourceError(
                 String(),
                 com_sun_webkit_LoadListenerClient_INVALID_RESPONSE,
@@ -407,11 +407,11 @@ static void setupResponse(ResourceResponse& response,
         splitPos = headersString.find("\n");
     }
 
-    KURL kurl = KURL(KURL(), String(env, url));
+    URL kurl = URL(URL(), String(env, url));
     response.setURL(kurl);
 
     // Setup mime type for local resources
-    if (kurl.hasPath() && kurl.protocol() == String("file")) {
+    if (/*kurl.hasPath()*/kurl.pathEnd() != kurl.pathStart() && kurl.protocol() == String("file")) {
         response.setMimeType(MIMETypeRegistry::getMIMETypeForPath(kurl.path()));
     }
 }

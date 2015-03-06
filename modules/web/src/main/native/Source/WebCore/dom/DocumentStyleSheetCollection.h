@@ -3,7 +3,7 @@
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2001 Dirk Mueller (mueller@kde.org)
  *           (C) 2006 Alexey Proskuryakov (ap@webkit.org)
- * Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2012, 2013 Apple Inc. All rights reserved.
  * Copyright (C) 2008, 2009 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
  * Copyright (C) 2010 Nokia Corporation and/or its subsidiary(-ies)
  * Copyright (C) 2011 Google Inc. All rights reserved.
@@ -28,7 +28,7 @@
 #ifndef DocumentStyleSheetCollection_h
 #define DocumentStyleSheetCollection_h
 
-#include <wtf/FastAllocBase.h>
+#include <wtf/FastMalloc.h>
 #include <wtf/ListHashSet.h>
 #include <wtf/RefPtr.h>
 #include <wtf/Vector.h>
@@ -46,34 +46,44 @@ class StyleSheetList;
 class DocumentStyleSheetCollection {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    static PassOwnPtr<DocumentStyleSheetCollection> create(Document* document) { return adoptPtr(new DocumentStyleSheetCollection(document)); }
+    explicit DocumentStyleSheetCollection(Document&);
 
-    ~DocumentStyleSheetCollection();
+    const Vector<RefPtr<StyleSheet>>& styleSheetsForStyleSheetList() const { return m_styleSheetsForStyleSheetList; }
 
-    const Vector<RefPtr<StyleSheet> >& styleSheetsForStyleSheetList() const { return m_styleSheetsForStyleSheetList; }
-
-    const Vector<RefPtr<CSSStyleSheet> >& activeAuthorStyleSheets() const { return m_activeAuthorStyleSheets; }
+    const Vector<RefPtr<CSSStyleSheet>>& activeAuthorStyleSheets() const { return m_activeAuthorStyleSheets; }
 
     CSSStyleSheet* pageUserSheet();
-    const Vector<RefPtr<CSSStyleSheet> >& documentUserStyleSheets() const { return m_userStyleSheets; }
-    const Vector<RefPtr<CSSStyleSheet> >& documentAuthorStyleSheets() const { return m_authorStyleSheets; }
-    const Vector<RefPtr<CSSStyleSheet> >& injectedUserStyleSheets() const;
-    const Vector<RefPtr<CSSStyleSheet> >& injectedAuthorStyleSheets() const;
+    const Vector<RefPtr<CSSStyleSheet>>& documentUserStyleSheets() const { return m_userStyleSheets; }
+    const Vector<RefPtr<CSSStyleSheet>>& documentAuthorStyleSheets() const { return m_authorStyleSheets; }
+    const Vector<RefPtr<CSSStyleSheet>>& injectedUserStyleSheets() const;
+    const Vector<RefPtr<CSSStyleSheet>>& injectedAuthorStyleSheets() const;
 
-    void addStyleSheetCandidateNode(Node*, bool createdByParser);
-    void removeStyleSheetCandidateNode(Node*);
+    void addStyleSheetCandidateNode(Node&, bool createdByParser);
+    void removeStyleSheetCandidateNode(Node&);
 
     void clearPageUserSheet();
     void updatePageUserSheet();
     void invalidateInjectedStyleSheetCache();
     void updateInjectedStyleSheetCache() const;
 
-    void addAuthorSheet(PassRefPtr<StyleSheetContents> authorSheet);
-    void addUserSheet(PassRefPtr<StyleSheetContents> userSheet);
+    void addAuthorSheet(PassRef<StyleSheetContents> authorSheet);
+    void addUserSheet(PassRef<StyleSheetContents> userSheet);
 
-    bool needsUpdateActiveStylesheetsOnStyleRecalc() const { return m_needsUpdateActiveStylesheetsOnStyleRecalc; }
+    enum UpdateFlag { NoUpdate = 0, OptimizedUpdate, FullUpdate };
 
-    enum UpdateFlag { FullUpdate, OptimizedUpdate };
+    UpdateFlag pendingUpdateType() const { return m_pendingUpdateType; }
+    void setPendingUpdateType(UpdateFlag updateType)
+    {
+        if (updateType > m_pendingUpdateType)
+            m_pendingUpdateType = updateType;
+    }
+
+    void flushPendingUpdates()
+    {
+        if (m_pendingUpdateType != NoUpdate)
+            updateActiveStyleSheets(m_pendingUpdateType);
+    }
+
     bool updateActiveStyleSheets(UpdateFlag);
 
     String preferredStylesheetSetName() const { return m_preferredStylesheetSetName; }
@@ -103,21 +113,26 @@ public:
     void combineCSSFeatureFlags();
     void resetCSSFeatureFlags();
 
-private:
-    DocumentStyleSheetCollection(Document*);
+    bool activeStyleSheetsContains(const CSSStyleSheet*) const;
 
-    void collectActiveStyleSheets(Vector<RefPtr<StyleSheet> >&);
+    void detachFromDocument();
+
+private:
+    void collectActiveStyleSheets(Vector<RefPtr<StyleSheet>>&);
     enum StyleResolverUpdateType {
         Reconstruct,
         Reset,
         Additive
     };
-    void analyzeStyleSheetChange(UpdateFlag, const Vector<RefPtr<CSSStyleSheet> >& newStylesheets, StyleResolverUpdateType&, bool& requiresFullStyleRecalc);
+    void analyzeStyleSheetChange(UpdateFlag, const Vector<RefPtr<CSSStyleSheet>>& newStylesheets, StyleResolverUpdateType&, bool& requiresFullStyleRecalc);
 
-    Document* m_document;
+    Document& m_document;
 
-    Vector<RefPtr<StyleSheet> > m_styleSheetsForStyleSheetList;
-    Vector<RefPtr<CSSStyleSheet> > m_activeAuthorStyleSheets;
+    Vector<RefPtr<StyleSheet>> m_styleSheetsForStyleSheetList;
+    Vector<RefPtr<CSSStyleSheet>> m_activeAuthorStyleSheets;
+
+    // This is a mirror of m_activeAuthorStyleSheets that gets populated on demand for activeStyleSheetsContains().
+    mutable OwnPtr<HashSet<const CSSStyleSheet*>> m_weakCopyOfActiveStyleSheetListForFastLookup;
 
     // Track the number of currently loading top-level stylesheets needed for rendering.
     // Sheets loaded using the @import directive are not included in this count.
@@ -127,15 +142,15 @@ private:
 
     RefPtr<CSSStyleSheet> m_pageUserSheet;
 
-    mutable Vector<RefPtr<CSSStyleSheet> > m_injectedUserStyleSheets;
-    mutable Vector<RefPtr<CSSStyleSheet> > m_injectedAuthorStyleSheets;
+    mutable Vector<RefPtr<CSSStyleSheet>> m_injectedUserStyleSheets;
+    mutable Vector<RefPtr<CSSStyleSheet>> m_injectedAuthorStyleSheets;
     mutable bool m_injectedStyleSheetCacheValid;
 
-    Vector<RefPtr<CSSStyleSheet> > m_userStyleSheets;
-    Vector<RefPtr<CSSStyleSheet> > m_authorStyleSheets;
+    Vector<RefPtr<CSSStyleSheet>> m_userStyleSheets;
+    Vector<RefPtr<CSSStyleSheet>> m_authorStyleSheets;
 
     bool m_hadActiveLoadingStylesheet;
-    bool m_needsUpdateActiveStylesheetsOnStyleRecalc;
+    UpdateFlag m_pendingUpdateType;
 
     typedef ListHashSet<Node*, 32> StyleSheetCandidateListHashSet;
     StyleSheetCandidateListHashSet m_styleSheetCandidateNodes;

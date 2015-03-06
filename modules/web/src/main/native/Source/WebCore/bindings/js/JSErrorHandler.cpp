@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2010 Google Inc. All rights reserved.
+ * Copyright (C) 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -32,19 +33,22 @@
 
 #include "JSErrorHandler.h"
 
+#include "Document.h"
 #include "ErrorEvent.h"
 #include "Event.h"
 #include "EventNames.h"
 #include "JSEvent.h"
 #include "JSMainThreadExecState.h"
 #include <runtime/JSLock.h>
+#include <runtime/VMEntryScope.h>
+#include <wtf/Ref.h>
 
 using namespace JSC;
 
 namespace WebCore {
 
-JSErrorHandler::JSErrorHandler(JSObject* function, JSObject* wrapper, bool isAttribute, DOMWrapperWorld* isolatedWorld)
-    : JSEventListener(function, wrapper, isAttribute, isolatedWorld)
+JSErrorHandler::JSErrorHandler(JSObject* function, JSObject* wrapper, bool isAttribute, DOMWrapperWorld& world)
+    : JSEventListener(function, wrapper, isAttribute, world)
 {
 }
 
@@ -54,14 +58,15 @@ JSErrorHandler::~JSErrorHandler()
 
 void JSErrorHandler::handleEvent(ScriptExecutionContext* scriptExecutionContext, Event* event)
 {
-    if (!event->hasInterface(eventNames().interfaceForErrorEvent))
+
+    if (event->eventInterface() != ErrorEventInterfaceType)
         return JSEventListener::handleEvent(scriptExecutionContext, event);
 
     ASSERT(scriptExecutionContext);
     if (!scriptExecutionContext)
         return;
 
-    ErrorEvent* errorEvent = static_cast<ErrorEvent*>(event);
+    ErrorEvent* errorEvent = toErrorEvent(event);
 
     JSLockHolder lock(scriptExecutionContext->vm());
 
@@ -79,7 +84,7 @@ void JSErrorHandler::handleEvent(ScriptExecutionContext* scriptExecutionContext,
     CallType callType = jsFunction->methodTable()->getCallData(jsFunction, callData);
 
     if (callType != CallTypeNone) {
-        RefPtr<JSErrorHandler> protectedctor(this);
+        Ref<JSErrorHandler> protectedctor(*this);
 
         Event* savedEvent = globalObject->currentEvent();
         globalObject->setCurrentEvent(event);
@@ -88,15 +93,14 @@ void JSErrorHandler::handleEvent(ScriptExecutionContext* scriptExecutionContext,
         args.append(jsStringWithCache(exec, errorEvent->message()));
         args.append(jsStringWithCache(exec, errorEvent->filename()));
         args.append(jsNumber(errorEvent->lineno()));
+        args.append(jsNumber(errorEvent->colno()));
 
         VM& vm = globalObject->vm();
-        DynamicGlobalObjectScope globalObjectScope(vm, vm.dynamicGlobalObject ? vm.dynamicGlobalObject : globalObject);
-
-        JSValue thisValue = globalObject->methodTable()->toThisObject(globalObject, exec);
+        VMEntryScope entryScope(vm, vm.entryScope ? vm.entryScope->globalObject() : globalObject);
 
         JSValue returnValue = scriptExecutionContext->isDocument()
-            ? JSMainThreadExecState::call(exec, jsFunction, callType, callData, thisValue, args)
-            : JSC::call(exec, jsFunction, callType, callData, thisValue, args);
+            ? JSMainThreadExecState::call(exec, jsFunction, callType, callData, globalObject, args)
+            : JSC::call(exec, jsFunction, callType, callData, globalObject, args);
 
         globalObject->setCurrentEvent(savedEvent);
 

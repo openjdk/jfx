@@ -34,42 +34,38 @@
 
 #include "InspectorCanvasAgent.h"
 
-#include "BindingVisitors.h"
 #include "DOMWindow.h"
-#include "Frame.h"
 #include "HTMLCanvasElement.h"
 #include "HTMLNames.h"
-#include "InjectedScript.h"
 #include "InjectedScriptCanvasModule.h"
-#include "InjectedScriptManager.h"
-#include "InspectorFrontend.h"
 #include "InspectorPageAgent.h"
-#include "InspectorState.h"
+#include "InspectorWebFrontendDispatchers.h"
 #include "InstrumentingAgents.h"
+#include "MainFrame.h"
+#include "NodeList.h"
 #include "Page.h"
-#include "ScriptObject.h"
 #include "ScriptProfiler.h"
 #include "ScriptState.h"
+#include <bindings/ScriptObject.h>
+#include <inspector/InjectedScript.h>
+#include <inspector/InjectedScriptManager.h>
 
-using WebCore::TypeBuilder::Array;
-using WebCore::TypeBuilder::Canvas::ResourceId;
-using WebCore::TypeBuilder::Canvas::ResourceInfo;
-using WebCore::TypeBuilder::Canvas::ResourceState;
-using WebCore::TypeBuilder::Canvas::TraceLog;
-using WebCore::TypeBuilder::Canvas::TraceLogId;
-using WebCore::TypeBuilder::Network::FrameId;
+using Inspector::TypeBuilder::Array;
+using Inspector::TypeBuilder::Canvas::ResourceId;
+using Inspector::TypeBuilder::Canvas::ResourceInfo;
+using Inspector::TypeBuilder::Canvas::ResourceState;
+using Inspector::TypeBuilder::Canvas::TraceLog;
+using Inspector::TypeBuilder::Canvas::TraceLogId;
+using Inspector::TypeBuilder::Network::FrameId;
+
+using namespace Inspector;
 
 namespace WebCore {
 
-namespace CanvasAgentState {
-static const char canvasAgentEnabled[] = "canvasAgentEnabled";
-};
-
-InspectorCanvasAgent::InspectorCanvasAgent(InstrumentingAgents* instrumentingAgents, InspectorCompositeState* state, InspectorPageAgent* pageAgent, InjectedScriptManager* injectedScriptManager)
-    : InspectorBaseAgent<InspectorCanvasAgent>("Canvas", instrumentingAgents, state)
+InspectorCanvasAgent::InspectorCanvasAgent(InstrumentingAgents* instrumentingAgents, InspectorPageAgent* pageAgent, InjectedScriptManager* injectedScriptManager)
+    : InspectorAgentBase(ASCIILiteral("Canvas"), instrumentingAgents)
     , m_pageAgent(pageAgent)
     , m_injectedScriptManager(injectedScriptManager)
-    , m_frontend(0)
     , m_enabled(false)
 {
 }
@@ -78,24 +74,18 @@ InspectorCanvasAgent::~InspectorCanvasAgent()
 {
 }
 
-void InspectorCanvasAgent::setFrontend(InspectorFrontend* frontend)
+void InspectorCanvasAgent::didCreateFrontendAndBackend(Inspector::InspectorFrontendChannel* frontendChannel, InspectorBackendDispatcher* backendDispatcher)
 {
-    ASSERT(frontend);
-    m_frontend = frontend->canvas();
+    m_frontendDispatcher = std::make_unique<InspectorCanvasFrontendDispatcher>(frontendChannel);
+    m_backendDispatcher = InspectorCanvasBackendDispatcher::create(backendDispatcher, this);
 }
 
-void InspectorCanvasAgent::clearFrontend()
+void InspectorCanvasAgent::willDestroyFrontendAndBackend(InspectorDisconnectReason)
 {
-    m_frontend = 0;
-    disable(0);
-}
+    m_frontendDispatcher = nullptr;
+    m_backendDispatcher.clear();
 
-void InspectorCanvasAgent::restore()
-{
-    if (m_state->getBoolean(CanvasAgentState::canvasAgentEnabled)) {
-        ErrorString error;
-        enable(&error);
-    }
+    disable(nullptr);
 }
 
 void InspectorCanvasAgent::enable(ErrorString*)
@@ -103,7 +93,6 @@ void InspectorCanvasAgent::enable(ErrorString*)
     if (m_enabled)
         return;
     m_enabled = true;
-    m_state->setBoolean(CanvasAgentState::canvasAgentEnabled, m_enabled);
     m_instrumentingAgents->setInspectorCanvasAgent(this);
     findFramesWithUninstrumentedCanvases();
 }
@@ -111,8 +100,7 @@ void InspectorCanvasAgent::enable(ErrorString*)
 void InspectorCanvasAgent::disable(ErrorString*)
 {
     m_enabled = false;
-    m_state->setBoolean(CanvasAgentState::canvasAgentEnabled, m_enabled);
-    m_instrumentingAgents->setInspectorCanvasAgent(0);
+    m_instrumentingAgents->setInspectorCanvasAgent(nullptr);
     m_framesWithUninstrumentedCanvases.clear();
 }
 
@@ -141,7 +129,7 @@ void InspectorCanvasAgent::captureFrame(ErrorString* errorString, const FrameId*
     Frame* frame = frameId ? m_pageAgent->assertFrame(errorString, *frameId) : m_pageAgent->mainFrame();
     if (!frame)
         return;
-    InjectedScriptCanvasModule module = injectedScriptCanvasModule(errorString, mainWorldScriptState(frame));
+    InjectedScriptCanvasModule module = injectedScriptCanvasModule(errorString, mainWorldExecState(frame));
     if (!module.hasNoValue())
         module.captureFrame(errorString, traceLogId);
 }
@@ -151,7 +139,7 @@ void InspectorCanvasAgent::startCapturing(ErrorString* errorString, const FrameI
     Frame* frame = frameId ? m_pageAgent->assertFrame(errorString, *frameId) : m_pageAgent->mainFrame();
     if (!frame)
         return;
-    InjectedScriptCanvasModule module = injectedScriptCanvasModule(errorString, mainWorldScriptState(frame));
+    InjectedScriptCanvasModule module = injectedScriptCanvasModule(errorString, mainWorldExecState(frame));
     if (!module.hasNoValue())
         module.startCapturing(errorString, traceLogId);
 }
@@ -191,41 +179,41 @@ void InspectorCanvasAgent::getResourceState(ErrorString* errorString, const Trac
         module.resourceState(errorString, traceLogId, resourceId, &result);
 }
 
-ScriptObject InspectorCanvasAgent::wrapCanvas2DRenderingContextForInstrumentation(const ScriptObject& context)
+Deprecated::ScriptObject InspectorCanvasAgent::wrapCanvas2DRenderingContextForInstrumentation(const Deprecated::ScriptObject& context)
 {
     ErrorString error;
     InjectedScriptCanvasModule module = injectedScriptCanvasModule(&error, context);
     if (module.hasNoValue())
-        return ScriptObject();
+        return Deprecated::ScriptObject();
     return notifyRenderingContextWasWrapped(module.wrapCanvas2DContext(context));
 }
 
 #if ENABLE(WEBGL)
-ScriptObject InspectorCanvasAgent::wrapWebGLRenderingContextForInstrumentation(const ScriptObject& glContext)
+Deprecated::ScriptObject InspectorCanvasAgent::wrapWebGLRenderingContextForInstrumentation(const Deprecated::ScriptObject& glContext)
 {
     ErrorString error;
     InjectedScriptCanvasModule module = injectedScriptCanvasModule(&error, glContext);
     if (module.hasNoValue())
-        return ScriptObject();
+        return Deprecated::ScriptObject();
     return notifyRenderingContextWasWrapped(module.wrapWebGLContext(glContext));
 }
 #endif
 
-ScriptObject InspectorCanvasAgent::notifyRenderingContextWasWrapped(const ScriptObject& wrappedContext)
+Deprecated::ScriptObject InspectorCanvasAgent::notifyRenderingContextWasWrapped(const Deprecated::ScriptObject& wrappedContext)
 {
-    ASSERT(m_frontend);
-    ScriptState* scriptState = wrappedContext.scriptState();
-    DOMWindow* domWindow = scriptState ? domWindowFromScriptState(scriptState) : 0;
-    Frame* frame = domWindow ? domWindow->frame() : 0;
+    ASSERT(m_frontendDispatcher);
+    JSC::ExecState* scriptState = wrappedContext.scriptState();
+    DOMWindow* domWindow = scriptState ? domWindowFromExecState(scriptState) : nullptr;
+    Frame* frame = domWindow ? domWindow->frame() : nullptr;
     if (frame && !m_framesWithUninstrumentedCanvases.contains(frame))
         m_framesWithUninstrumentedCanvases.set(frame, false);
     String frameId = m_pageAgent->frameId(frame);
     if (!frameId.isEmpty())
-        m_frontend->contextCreated(frameId);
+        m_frontendDispatcher->contextCreated(frameId);
     return wrappedContext;
 }
 
-InjectedScriptCanvasModule InspectorCanvasAgent::injectedScriptCanvasModule(ErrorString* errorString, ScriptState* scriptState)
+InjectedScriptCanvasModule InspectorCanvasAgent::injectedScriptCanvasModule(ErrorString* errorString, JSC::ExecState* scriptState)
 {
     if (!checkIsEnabled(errorString))
         return InjectedScriptCanvasModule();
@@ -237,13 +225,13 @@ InjectedScriptCanvasModule InspectorCanvasAgent::injectedScriptCanvasModule(Erro
     return module;
 }
 
-InjectedScriptCanvasModule InspectorCanvasAgent::injectedScriptCanvasModule(ErrorString* errorString, const ScriptObject& scriptObject)
+InjectedScriptCanvasModule InspectorCanvasAgent::injectedScriptCanvasModule(ErrorString* errorString, const Deprecated::ScriptObject& scriptObject)
 {
     if (!checkIsEnabled(errorString))
         return InjectedScriptCanvasModule();
     if (scriptObject.hasNoValue()) {
         ASSERT_NOT_REACHED();
-        *errorString = "Internal error: original ScriptObject has no value";
+        *errorString = "Internal error: original Deprecated::ScriptObject has no value";
         return InjectedScriptCanvasModule();
     }
     return injectedScriptCanvasModule(errorString, scriptObject.scriptState());
@@ -263,40 +251,28 @@ InjectedScriptCanvasModule InspectorCanvasAgent::injectedScriptCanvasModule(Erro
 
 void InspectorCanvasAgent::findFramesWithUninstrumentedCanvases()
 {
-    class NodeVisitor : public WrappedNodeVisitor {
-    public:
-        NodeVisitor(Page* page, FramesWithUninstrumentedCanvases& result)
-            : m_page(page)
-            , m_framesWithUninstrumentedCanvases(result)
-        {
-        }
-
-        virtual void visitNode(Node* node) OVERRIDE
-        {
-            if (!node->hasTagName(HTMLNames::canvasTag) || !node->document() || !node->document()->frame())
-                return;
-            
-            Frame* frame = node->document()->frame();
-            if (frame->page() != m_page)
-                return;
-
-            HTMLCanvasElement* canvas = static_cast<HTMLCanvasElement*>(node);
-            if (canvas->renderingContext())
-                m_framesWithUninstrumentedCanvases.set(frame, true);
-        }
-
-    private:
-        Page* m_page;
-        FramesWithUninstrumentedCanvases& m_framesWithUninstrumentedCanvases;
-    } nodeVisitor(m_pageAgent->page(), m_framesWithUninstrumentedCanvases);
-
     m_framesWithUninstrumentedCanvases.clear();
-    ScriptProfiler::visitNodeWrappers(&nodeVisitor);
+
+    for (Frame* frame = &m_pageAgent->page()->mainFrame(); frame; frame = frame->tree().traverseNext()) {
+        if (!frame->document())
+            continue;
+
+        RefPtr<NodeList> canvases = frame->document()->getElementsByTagName(HTMLNames::canvasTag.localName());
+        if (canvases) {
+            for (unsigned i = 0, length = canvases->length(); i < length; i++) {
+                const HTMLCanvasElement* canvas = toHTMLCanvasElement(canvases->item(i));
+                if (canvas->renderingContext()) {
+                    m_framesWithUninstrumentedCanvases.set(frame, true);
+                    break;
+                }
+            }
+        }
+    }
 
     for (FramesWithUninstrumentedCanvases::iterator it = m_framesWithUninstrumentedCanvases.begin(); it != m_framesWithUninstrumentedCanvases.end(); ++it) {
         String frameId = m_pageAgent->frameId(it->key);
         if (!frameId.isEmpty())
-            m_frontend->contextCreated(frameId);
+            m_frontendDispatcher->contextCreated(frameId);
     }
 }
 
@@ -315,16 +291,16 @@ void InspectorCanvasAgent::frameNavigated(Frame* frame)
     if (frame == m_pageAgent->mainFrame()) {
         for (FramesWithUninstrumentedCanvases::iterator it = m_framesWithUninstrumentedCanvases.begin(); it != m_framesWithUninstrumentedCanvases.end(); ++it)
             m_framesWithUninstrumentedCanvases.set(it->key, false);
-        m_frontend->traceLogsRemoved(0, 0);
+        m_frontendDispatcher->traceLogsRemoved(nullptr, nullptr);
     } else {
         while (frame) {
             if (m_framesWithUninstrumentedCanvases.contains(frame))
                 m_framesWithUninstrumentedCanvases.set(frame, false);
             if (m_pageAgent->hasIdForFrame(frame)) {
                 String frameId = m_pageAgent->frameId(frame);
-                m_frontend->traceLogsRemoved(&frameId, 0);
+                m_frontendDispatcher->traceLogsRemoved(&frameId, nullptr);
             }
-            frame = frame->tree()->traverseNext();
+            frame = frame->tree().traverseNext();
         }
     }
 }
@@ -341,7 +317,7 @@ void InspectorCanvasAgent::didBeginFrame()
         return;
     ErrorString error;
     for (FramesWithUninstrumentedCanvases::iterator it = m_framesWithUninstrumentedCanvases.begin(); it != m_framesWithUninstrumentedCanvases.end(); ++it) {
-        InjectedScriptCanvasModule module = injectedScriptCanvasModule(&error, mainWorldScriptState(it->key));
+        InjectedScriptCanvasModule module = injectedScriptCanvasModule(&error, mainWorldExecState(it->key));
         if (!module.hasNoValue())
             module.markFrameEnd();
     }

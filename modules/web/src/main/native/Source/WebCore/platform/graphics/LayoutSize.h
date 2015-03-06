@@ -35,17 +35,14 @@
 #include "IntSize.h"
 #include "LayoutUnit.h"
 
-#if PLATFORM(QT)
-#include <qglobal.h>
-QT_BEGIN_NAMESPACE
-class QSize;
-class QSizeF;
-QT_END_NAMESPACE
-#endif
-
 namespace WebCore {
 
 class LayoutPoint;
+
+enum AspectRatioFit {
+    AspectRatioFitShrink,
+    AspectRatioFitGrow
+};
 
 class LayoutSize {
 public:
@@ -120,11 +117,18 @@ public:
         return LayoutSize(m_height, m_width);
     }
 
-#if PLATFORM(QT)
-    explicit LayoutSize(const QSize&);
-    explicit LayoutSize(const QSizeF&);
-    operator QSizeF() const;
-#endif
+    operator FloatSize() const { return FloatSize(m_width, m_height); }
+
+    LayoutSize fitToAspectRatio(const LayoutSize& aspectRatio, AspectRatioFit fit) const
+    {
+        float heightScale = height().toFloat() / aspectRatio.height().toFloat();
+        float widthScale = width().toFloat() / aspectRatio.width().toFloat();
+
+        if ((widthScale > heightScale) != (fit == AspectRatioFitGrow))
+            return LayoutSize(height() * aspectRatio.width() / aspectRatio.height(), height());
+
+        return LayoutSize(width(), width() * aspectRatio.height() / aspectRatio.width());
+    }
 
 private:
     LayoutUnit m_width, m_height;

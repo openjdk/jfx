@@ -23,7 +23,7 @@
  * questions.
  */
 
-include "base", "graphics", "controls", "swing", "swt", "fxml", "builders", "fxpackager", "jmx", "web", "media", "extensions", "systemTests"
+include "base", "graphics", "controls", "swing", "swt", "fxml", "fxpackager", "jmx", "web", "media", "extensions", "systemTests"
 
 project(":base").projectDir = file("modules/base")
 project(":graphics").projectDir = file("modules/graphics")
@@ -31,7 +31,6 @@ project(":controls").projectDir = file("modules/controls")
 project(":swing").projectDir = file("modules/swing")
 project(":swt").projectDir = file("modules/swt")
 project(":fxml").projectDir = file("modules/fxml")
-project(":builders").projectDir = file("modules/builders")
 project(":fxpackager").projectDir = file("modules/fxpackager")
 project(":jmx").projectDir = file("modules/jmx")
 project(":web").projectDir = file("modules/web")

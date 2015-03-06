@@ -35,19 +35,10 @@
 #include "CanvasPattern.h"
 #include "GraphicsContext.h"
 #include "HTMLCanvasElement.h"
-#include "StylePropertySet.h"
-#include <wtf/Assertions.h>
-#include <wtf/PassRefPtr.h>
+#include "StyleProperties.h"
 
 #if USE(CG)
 #include <CoreGraphics/CGContext.h>
-#endif
-
-#if PLATFORM(QT)
-#include <QPainter>
-#include <QBrush>
-#include <QPen>
-#include <QColor>
 #endif
 
 namespace WebCore {
@@ -76,7 +67,7 @@ RGBA32 currentColor(HTMLCanvasElement* canvas)
 
 bool parseColorOrCurrentColor(RGBA32& parsedColor, const String& colorString, HTMLCanvasElement* canvas)
 {
-    ColorParseResult parseResult = parseColor(parsedColor, colorString, canvas ? canvas->document() : 0);
+    ColorParseResult parseResult = parseColor(parsedColor, colorString, canvas ? &canvas->document() : 0);
     switch (parseResult) {
     case ParsedRGBA:
     case ParsedSystemColor:
@@ -238,13 +229,8 @@ CanvasStyle::CanvasStyle(const CanvasStyle& other)
 CanvasStyle& CanvasStyle::operator=(const CanvasStyle& other)
 {
     if (this != &other) {
-        memcpy(this, &other, sizeof(CanvasStyle));
-        if (m_type == Gradient)
-            m_gradient->ref();
-        else if (m_type == ImagePattern)
-            m_pattern->ref();
-        else if (m_type == CMYKA)
-            m_cmyka = new CMYKAValues(other.m_cmyka->rgba, other.m_cmyka->c, other.m_cmyka->m, other.m_cmyka->y, other.m_cmyka->k, other.m_cmyka->a);
+        this->~CanvasStyle();
+        new (this) CanvasStyle(other);
     }
     return *this;
 }
@@ -262,12 +248,6 @@ void CanvasStyle::applyStrokeColor(GraphicsContext* context) const
         // We'll need a fancier Color abstraction to support CMYKA correctly
 #if USE(CG)
         CGContextSetCMYKStrokeColor(context->platformContext(), m_cmyka->c, m_cmyka->m, m_cmyka->y, m_cmyka->k, m_cmyka->a);
-#elif PLATFORM(QT)
-        QPen currentPen = context->platformContext()->pen();
-        QColor clr;
-        clr.setCmykF(m_cmyka->c, m_cmyka->m, m_cmyka->y, m_cmyka->k, m_cmyka->a);
-        currentPen.setColor(clr);
-        context->platformContext()->setPen(currentPen);
 #else
         context->setStrokeColor(m_cmyka->rgba, ColorSpaceDeviceRGB);
 #endif
@@ -300,12 +280,6 @@ void CanvasStyle::applyFillColor(GraphicsContext* context) const
         // We'll need a fancier Color abstraction to support CMYKA correctly
 #if USE(CG)
         CGContextSetCMYKFillColor(context->platformContext(), m_cmyka->c, m_cmyka->m, m_cmyka->y, m_cmyka->k, m_cmyka->a);
-#elif PLATFORM(QT)
-        QBrush currentBrush = context->platformContext()->brush();
-        QColor clr;
-        clr.setCmykF(m_cmyka->c, m_cmyka->m, m_cmyka->y, m_cmyka->k, m_cmyka->a);
-        currentBrush.setColor(clr);
-        context->platformContext()->setBrush(currentBrush);
 #else
         context->setFillColor(m_cmyka->rgba, ColorSpaceDeviceRGB);
 #endif

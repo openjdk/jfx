@@ -27,18 +27,16 @@
 #include "IndentOutdentCommand.h"
 
 #include "Document.h"
+#include "ElementTraversal.h"
 #include "HTMLElement.h"
 #include "HTMLNames.h"
 #include "InsertLineBreakCommand.h"
 #include "InsertListCommand.h"
-#include "Range.h"
 #include "RenderObject.h"
 #include "SplitElementCommand.h"
 #include "Text.h"
-#include "TextIterator.h"
 #include "VisibleUnits.h"
 #include "htmlediting.h"
-#include <wtf/StdLibExtras.h>
 
 namespace WebCore {
 
@@ -49,7 +47,7 @@ static bool isListOrIndentBlockquote(const Node* node)
     return node && (node->hasTagName(ulTag) || node->hasTagName(olTag) || node->hasTagName(blockquoteTag));
 }
 
-IndentOutdentCommand::IndentOutdentCommand(Document* document, EIndentType typeOfAction, int marginInPixels)
+IndentOutdentCommand::IndentOutdentCommand(Document& document, EIndentType typeOfAction, int marginInPixels)
     : ApplyBlockElementCommand(document, blockquoteTag, "margin: 0 0 0 40px; border: none; padding: 0px;")
     , m_typeOfAction(typeOfAction)
     , m_marginInPixels(marginInPixels)
@@ -65,24 +63,24 @@ bool IndentOutdentCommand::tryIndentingAsListItem(const Position& start, const P
         return false;
 
     // Find the block that we want to indent.  If it's not a list item (e.g., a div inside a list item), we bail out.
-    Element* selectedListItem = enclosingBlock(lastNodeInSelectedParagraph);
+    RefPtr<Element> selectedListItem = enclosingBlock(lastNodeInSelectedParagraph);
 
     // FIXME: we need to deal with the case where there is no li (malformed HTML)
     if (!selectedListItem->hasTagName(liTag))
         return false;
     
     // FIXME: previousElementSibling does not ignore non-rendered content like <span></span>.  Should we?
-    Element* previousList = selectedListItem->previousElementSibling();
-    Element* nextList = selectedListItem->nextElementSibling();
+    RefPtr<Element> previousList = ElementTraversal::previousSibling(selectedListItem.get());
+    RefPtr<Element> nextList = ElementTraversal::nextSibling(selectedListItem.get());
 
-    RefPtr<Element> newList = document()->createElement(listNode->tagQName(), false);
+    RefPtr<Element> newList = document().createElement(listNode->tagQName(), false);
     insertNodeBefore(newList, selectedListItem);
 
-    moveParagraphWithClones(start, end, newList.get(), selectedListItem);
+    moveParagraphWithClones(start, end, newList.get(), selectedListItem.get());
 
-    if (canMergeLists(previousList, newList.get()))
+    if (canMergeLists(previousList.get(), newList.get()))
         mergeIdenticalElements(previousList, newList);
-    if (canMergeLists(newList.get(), nextList))
+    if (canMergeLists(newList.get(), nextList.get()))
         mergeIdenticalElements(newList, nextList);
 
     return true;
@@ -126,7 +124,7 @@ void IndentOutdentCommand::outdentParagraph()
     VisiblePosition visibleEndOfParagraph = endOfParagraph(visibleStartOfParagraph);
 
     Node* enclosingNode = enclosingNodeOfType(visibleStartOfParagraph.deepEquivalent(), &isListOrIndentBlockquote);
-    if (!enclosingNode || !enclosingNode->parentNode()->rendererIsEditable()) // We can't outdent if there is no place to go!
+    if (!enclosingNode || !enclosingNode->parentNode()->hasEditableStyle()) // We can't outdent if there is no place to go!
         return;
 
     // Use InsertListCommand to remove the selection from the list
@@ -157,12 +155,12 @@ void IndentOutdentCommand::outdentParagraph()
             if (ContainerNode* splitPointParent = splitPoint->parentNode()) {
                 if (splitPointParent->hasTagName(blockquoteTag)
                     && !splitPoint->hasTagName(blockquoteTag)
-                    && splitPointParent->parentNode()->rendererIsEditable()) // We can't outdent if there is no place to go!
+                    && splitPointParent->parentNode()->hasEditableStyle()) // We can't outdent if there is no place to go!
                     splitElement(toElement(splitPointParent), splitPoint);
             }
         }
 
-        document()->updateLayoutIgnorePendingStylesheets();
+        document().updateLayoutIgnorePendingStylesheets();
         visibleStartOfParagraph = VisiblePosition(visibleStartOfParagraph.deepEquivalent());
         visibleEndOfParagraph = VisiblePosition(visibleEndOfParagraph.deepEquivalent());
         if (visibleStartOfParagraph.isNotNull() && !isStartOfParagraph(visibleStartOfParagraph))

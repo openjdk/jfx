@@ -38,7 +38,7 @@
 #include "Document.h"
 #include "NotificationClient.h"
 #include "SecurityOrigin.h"
-#include "WorkerContext.h"
+#include "WorkerGlobalScope.h"
 
 namespace WebCore {
 
@@ -129,10 +129,10 @@ void NotificationCenter::NotificationRequestCallback::startTimer()
     m_timer.startOneShot(0);
 }
 
-void NotificationCenter::NotificationRequestCallback::timerFired(Timer<NotificationCenter::NotificationRequestCallback>*)
+void NotificationCenter::NotificationRequestCallback::timerFired(Timer<NotificationCenter::NotificationRequestCallback>&)
 {
     if (m_callback)
-    m_callback->handleEvent();
+        m_callback->handleEvent();
     m_notificationCenter->requestTimedOut(this);
 }
 

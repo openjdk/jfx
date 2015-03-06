@@ -18,13 +18,13 @@
  * Boston, MA 02110-1301, USA.
  */
 
-    interface HTMLTableElement : HTMLElement {
-        attribute HTMLTableCaptionElement caption setter raises(DOMException);
-        attribute HTMLTableSectionElement tHead setter raises(DOMException);
-        attribute HTMLTableSectionElement tFoot setter raises(DOMException);
+interface HTMLTableElement : HTMLElement {
+    [SetterRaisesException] attribute HTMLTableCaptionElement caption;
+    [SetterRaisesException] attribute HTMLTableSectionElement tHead;
+    [SetterRaisesException] attribute HTMLTableSectionElement tFoot;
 
-        readonly attribute HTMLCollection rows;
-        readonly attribute HTMLCollection tBodies;
+    readonly attribute HTMLCollection rows;
+    readonly attribute HTMLCollection tBodies;
     [Reflect] attribute DOMString align;
     [Reflect] attribute DOMString bgColor;
     [Reflect] attribute DOMString border;
@@ -37,15 +37,15 @@
     [Reflect] attribute DOMString summary;
     [Reflect] attribute DOMString width;
 
-        HTMLElement createTHead();
-        void deleteTHead();
-        HTMLElement createTFoot();
-        void deleteTFoot();
-        HTMLElement createTBody();
-        HTMLElement createCaption();
-        void deleteCaption();
+    HTMLElement createTHead();
+    void deleteTHead();
+    HTMLElement createTFoot();
+    void deleteTFoot();
+    HTMLElement createTBody();
+    HTMLElement createCaption();
+    void deleteCaption();
 
-    HTMLElement insertRow([Default=Undefined] optional long index) raises(DOMException);
-    void deleteRow([Default=Undefined] optional long index) raises(DOMException);
-    };
+    [RaisesException] HTMLElement insertRow([Default=Undefined] optional long index);
+    [RaisesException] void deleteRow([Default=Undefined] optional long index);
+};
 

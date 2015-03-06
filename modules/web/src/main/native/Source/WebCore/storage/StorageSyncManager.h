@@ -29,35 +29,34 @@
 #include <wtf/Forward.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
-#include <wtf/OwnPtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
-    class StorageThread;
-    class StorageAreaSync;
+class StorageThread;
+class StorageAreaSync;
 
-    class StorageSyncManager : public RefCounted<StorageSyncManager> {
-    public:
-        static PassRefPtr<StorageSyncManager> create(const String& path);
-        ~StorageSyncManager();
+class StorageSyncManager : public RefCounted<StorageSyncManager> {
+public:
+    static PassRefPtr<StorageSyncManager> create(const String& path);
+    ~StorageSyncManager();
 
     void dispatch(const Function<void ()>&);
-        void close();
+    void close();
 
-    private:
+private:
     explicit StorageSyncManager(const String& path);
 
-        OwnPtr<StorageThread> m_thread;
+    std::unique_ptr<StorageThread> m_thread;
 
-    // The following members are subject to thread synchronization issues
-    public:
-        // To be called from the background thread:
-        String fullDatabaseFilename(const String& databaseIdentifier);
+// The following members are subject to thread synchronization issues
+public:
+    // To be called from the background thread:
+    String fullDatabaseFilename(const String& databaseIdentifier);
 
-    private:
-        String m_path;
-    };
+private:
+    String m_path;
+};
 
 } // namespace WebCore
 

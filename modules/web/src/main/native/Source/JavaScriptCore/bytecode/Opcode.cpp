@@ -31,8 +31,8 @@
 #include "Opcode.h"
 
 #if ENABLE(OPCODE_STATS)
-#include <stdio.h>
-#include <wtf/FixedArray.h>
+#include <array>
+#include <wtf/DataLog.h>
 #endif
 
 using namespace std;
@@ -78,9 +78,9 @@ static int compareOpcodeIndices(const void* left, const void* right)
 
 static int compareOpcodePairIndices(const void* left, const void* right)
 {
-    pair<int, int> leftPair = *(pair<int, int>*) left;
+    std::pair<int, int> leftPair = *(pair<int, int>*) left;
     long long leftValue = OpcodeStats::opcodePairCounts[leftPair.first][leftPair.second];
-    pair<int, int> rightPair = *(pair<int, int>*) right;
+    std::pair<int, int> rightPair = *(pair<int, int>*) right;
     long long rightValue = OpcodeStats::opcodePairCounts[rightPair.first][rightPair.second];
     
     if (leftValue < rightValue)
@@ -102,17 +102,17 @@ OpcodeStats::~OpcodeStats()
         for (int j = 0; j < numOpcodeIDs; ++j)
             totalInstructionPairs += opcodePairCounts[i][j];
 
-    FixedArray<int, numOpcodeIDs> sortedIndices;
+    std::array<int, numOpcodeIDs> sortedIndices;
     for (int i = 0; i < numOpcodeIDs; ++i)
         sortedIndices[i] = i;
     qsort(sortedIndices.data(), numOpcodeIDs, sizeof(int), compareOpcodeIndices);
     
-    pair<int, int> sortedPairIndices[numOpcodeIDs * numOpcodeIDs];
-    pair<int, int>* currentPairIndex = sortedPairIndices;
+    std::pair<int, int> sortedPairIndices[numOpcodeIDs * numOpcodeIDs];
+    std::pair<int, int>* currentPairIndex = sortedPairIndices;
     for (int i = 0; i < numOpcodeIDs; ++i)
         for (int j = 0; j < numOpcodeIDs; ++j)
-            *(currentPairIndex++) = make_pair(i, j);
-    qsort(sortedPairIndices, numOpcodeIDs * numOpcodeIDs, sizeof(pair<int, int>), compareOpcodePairIndices);
+            *(currentPairIndex++) = std::make_pair(i, j);
+    qsort(sortedPairIndices, numOpcodeIDs * numOpcodeIDs, sizeof(std::pair<int, int>), compareOpcodePairIndices);
     
     dataLogF("\nExecuted opcode statistics\n"); 
     
@@ -129,7 +129,7 @@ OpcodeStats::~OpcodeStats()
     dataLogF("2-opcode sequences by frequency: %lld\n\n", totalInstructions);
     
     for (int i = 0; i < numOpcodeIDs * numOpcodeIDs; ++i) {
-        pair<int, int> indexPair = sortedPairIndices[i];
+        std::pair<int, int> indexPair = sortedPairIndices[i];
         long long count = opcodePairCounts[indexPair.first][indexPair.second];
         
         if (!count)
@@ -150,7 +150,7 @@ OpcodeStats::~OpcodeStats()
         dataLogF("\n%s:%s %lld - %.2f%%\n", opcodeNames[index], padOpcodeName((OpcodeID)index, 28), opcodeCount, opcodeProportion * 100.0);
 
         for (int j = 0; j < numOpcodeIDs * numOpcodeIDs; ++j) {
-            pair<int, int> indexPair = sortedPairIndices[j];
+            std::pair<int, int> indexPair = sortedPairIndices[j];
             long long pairCount = opcodePairCounts[indexPair.first][indexPair.second];
             double pairProportion = ((double) pairCount) / ((double) totalInstructionPairs);
         

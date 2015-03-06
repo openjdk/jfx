@@ -30,13 +30,17 @@
 #ifndef FontCache_h
 #define FontCache_h
 
+#include "FontDescription.h"
 #include <limits.h>
 #include <wtf/Forward.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefPtr.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
-#include <wtf/unicode/Unicode.h>
+
+#if PLATFORM(IOS)
+#include <CoreText/CTFont.h>
+#endif
 
 #if OS(WINDOWS)
 #include <windows.h>
@@ -49,7 +53,6 @@ namespace WebCore {
 class Font;
 class FontPlatformData;
 class FontData;
-class FontDescription;
 class FontSelector;
 class OpenTypeVerticalData;
 class SimpleFontData;
@@ -61,6 +64,43 @@ typedef IMLangFontLink2 IMLangFontLinkType;
 typedef IMLangFontLink IMLangFontLinkType;
 #endif
 #endif
+
+// This key contains the FontDescription fields other than family that matter when fetching FontDatas (platform fonts).
+struct FontDescriptionFontDataCacheKey {
+    explicit FontDescriptionFontDataCacheKey(unsigned size = 0)
+        : size(size)
+        , weight(0)
+        , flags(0)
+    { }
+    FontDescriptionFontDataCacheKey(const FontDescription& description)
+        : size(description.computedPixelSize())
+        , weight(description.weight())
+        , flags(makeFlagKey(description))
+    { }
+    static unsigned makeFlagKey(const FontDescription& description)
+    {
+        return static_cast<unsigned>(description.widthVariant()) << 4
+            | static_cast<unsigned>(description.orientation()) << 3
+            | static_cast<unsigned>(description.italic()) << 2
+            | static_cast<unsigned>(description.usePrinterFont()) << 1
+            | static_cast<unsigned>(description.renderingMode());
+    }
+    bool operator==(const FontDescriptionFontDataCacheKey& other) const
+    {
+        return size == other.size && weight == other.weight && flags == other.flags;
+    }
+    bool operator!=(const FontDescriptionFontDataCacheKey& other) const
+    {
+        return !(*this == other);
+    }
+    inline unsigned computeHash() const
+    {
+        return StringHasher::hashMemory<sizeof(FontDescriptionFontDataCacheKey)>(this);
+    }
+    unsigned size;
+    unsigned weight;
+    unsigned flags;
+};
 
 class FontCache {
     friend class FontCachePurgePreventer;
@@ -80,6 +120,9 @@ public:
     // Also implemented by the platform.
     void platformInit();
 
+#if PLATFORM(IOS)
+    static float weightOfCTFont(CTFontRef);
+#endif
 #if PLATFORM(WIN)
     IMLangFontLinkType* getFontLinkInterface();
     static void comInitialize();
@@ -117,11 +160,7 @@ public:
         bool isBold;
         bool isItalic;
     };
-#if PLATFORM(BLACKBERRY)
-    static void getFontFamilyForCharacters(const UChar* characters, size_t numCharacters, const char* preferredLocale, const FontDescription&, SimpleFontFamily*);
-#else
     static void getFontFamilyForCharacters(const UChar* characters, size_t numCharacters, const char* preferredLocale, SimpleFontFamily*);
-#endif
 
 private:
     FontCache();
@@ -141,8 +180,12 @@ private:
     FontPlatformData* getCachedFontPlatformData(const FontDescription&, const AtomicString& family, bool checkingAlternateName = false);
 
     // These methods are implemented by each platform.
+#if PLATFORM(IOS)
+    FontPlatformData* getCustomFallbackFont(const UInt32, const FontDescription&);
+    PassRefPtr<SimpleFontData> getSystemFontFallbackForCharacters(const FontDescription&, const SimpleFontData*, const UChar* characters, int length);
+#endif
     PassOwnPtr<FontPlatformData> createFontPlatformData(const FontDescription&, const AtomicString& family);
-#if PLATFORM(MAC)
+#if PLATFORM(COCOA)
     PassRefPtr<SimpleFontData> similarFontPlatformData(const FontDescription&);
 #endif
 
@@ -151,7 +194,7 @@ private:
     // Don't purge if this count is > 0;
     int m_purgePreventCount;
 
-#if PLATFORM(MAC)
+#if PLATFORM(COCOA)
     friend class ComplexTextController;
 #endif
     friend class SimpleFontData; // For getCachedFontData(const FontPlatformData*)

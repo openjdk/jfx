@@ -24,6 +24,7 @@
 #include "PropertyOffset.h"
 #include "Structure.h"
 #include "WriteBarrier.h"
+#include <wtf/CryptographicallyRandomNumber.h>
 #include <wtf/HashTable.h>
 #include <wtf/MathExtras.h>
 #include <wtf/PassOwnPtr.h>
@@ -133,11 +134,11 @@ public:
     static const bool hasImmortalStructure = true;
     static void destroy(JSCell*);
 
-    static JS_EXPORTDATA const ClassInfo s_info;
+    DECLARE_EXPORT_INFO;
 
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
     {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(CompoundType, OverridesVisitChildren), &s_info);
+        return Structure::create(vm, globalObject, prototype, TypeInfo(CompoundType, OverridesVisitChildren), info());
     }
 
     static void visitChildren(JSCell*, SlotVisitor&);
@@ -250,7 +251,7 @@ private:
     unsigned* m_index;
     unsigned m_keyCount;
     unsigned m_deletedCount;
-    OwnPtr< Vector<PropertyOffset> > m_deletedOffsets;
+    OwnPtr< Vector<PropertyOffset>> m_deletedOffsets;
 
     static const unsigned MinimumTableSize = 8;
     static const unsigned EmptyEntryIndex = 0;
@@ -449,7 +450,7 @@ inline PropertyOffset PropertyTable::nextOffset(PropertyOffset inlineCapacity)
 {
     if (hasDeletedOffset())
         return getDeletedOffset();
-    
+
     return offsetForPropertyNumber(size(), inlineCapacity);
 }
 

@@ -44,27 +44,27 @@ namespace WebCore {
 
 class SQLTransactionBackend;
 
-    class SQLTransactionCoordinator {
-        WTF_MAKE_NONCOPYABLE(SQLTransactionCoordinator); WTF_MAKE_FAST_ALLOCATED;
-    public:
+class SQLTransactionCoordinator {
+    WTF_MAKE_NONCOPYABLE(SQLTransactionCoordinator); WTF_MAKE_FAST_ALLOCATED;
+public:
     SQLTransactionCoordinator();
     void acquireLock(SQLTransactionBackend*);
     void releaseLock(SQLTransactionBackend*);
-        void shutdown();
-    private:
-    typedef Deque<RefPtr<SQLTransactionBackend> > TransactionsQueue;
-        struct CoordinationInfo {
-            TransactionsQueue pendingTransactions;
-        HashSet<RefPtr<SQLTransactionBackend> > activeReadTransactions;
+    void shutdown();
+private:
+    typedef Deque<RefPtr<SQLTransactionBackend>> TransactionsQueue;
+    struct CoordinationInfo {
+        TransactionsQueue pendingTransactions;
+        HashSet<RefPtr<SQLTransactionBackend>> activeReadTransactions;
         RefPtr<SQLTransactionBackend> activeWriteTransaction;
-        };
-        // Maps database names to information about pending transactions
-        typedef HashMap<String, CoordinationInfo> CoordinationInfoMap;
-        CoordinationInfoMap m_coordinationInfoMap;
+    };
+    // Maps database names to information about pending transactions
+    typedef HashMap<String, CoordinationInfo> CoordinationInfoMap;
+    CoordinationInfoMap m_coordinationInfoMap;
     bool m_isShuttingDown;
 
     void processPendingTransactions(CoordinationInfo&);
-    };
+};
 
 } // namespace WebCore
 

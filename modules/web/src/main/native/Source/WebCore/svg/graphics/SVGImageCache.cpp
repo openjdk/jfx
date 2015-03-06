@@ -21,7 +21,6 @@
 #include "config.h"
 #include "SVGImageCache.h"
 
-#if ENABLE(SVG)
 #include "FrameView.h"
 #include "GraphicsContext.h"
 #include "ImageBuffer.h"
@@ -47,8 +46,7 @@ void SVGImageCache::removeClientFromCache(const CachedImageClient* client)
 {
     ASSERT(client);
 
-    if (m_imageForContainerMap.contains(client))
-        m_imageForContainerMap.remove(client);
+    m_imageForContainerMap.remove(client);
 }
 
 void SVGImageCache::setContainerSizeForRenderer(const CachedImageClient* client, const IntSize& containerSize, float containerZoom)
@@ -95,5 +93,3 @@ Image* SVGImageCache::imageForRenderer(const RenderObject* renderer)
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(SVG)

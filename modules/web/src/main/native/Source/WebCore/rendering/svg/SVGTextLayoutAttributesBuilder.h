@@ -20,9 +20,7 @@
 #ifndef SVGTextLayoutAttributesBuilder_h
 #define SVGTextLayoutAttributesBuilder_h
 
-#if ENABLE(SVG)
 #include "SVGTextMetricsBuilder.h"
-#include <wtf/Vector.h>
 
 namespace WebCore {
 
@@ -44,7 +42,7 @@ class SVGTextLayoutAttributesBuilder {
 public:
     SVGTextLayoutAttributesBuilder();
     bool buildLayoutAttributesForForSubtree(RenderSVGText*);
-    void buildLayoutAttributesForTextRenderer(RenderSVGInlineText*);
+    void buildLayoutAttributesForTextRenderer(RenderSVGInlineText&);
 
     void rebuildMetricsForTextRenderer(RenderSVGInlineText*);
 
@@ -67,7 +65,7 @@ private:
     };
 
     void buildCharacterDataMap(RenderSVGText*);
-    void collectTextPositioningElements(RenderObject*, const UChar*& lastCharacter);
+    void collectTextPositioningElements(RenderObject*, bool& lastCharacterWasSpace);
     void fillCharacterDataMap(const TextPosition&);
 
 private:
@@ -79,5 +77,4 @@ private:
 
 } // namespace WebCore
 
-#endif // ENABLE(SVG)
 #endif

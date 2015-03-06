@@ -85,7 +85,7 @@ String formatDateTime(const GregorianDateTime& t, DateTimeFormat format, bool as
         }
         builder.append(' ');
         appendNumber<4>(builder, t.year());
-}
+    }
 
     if (appendDate && appendTime)
         builder.append(' ');
@@ -110,16 +110,16 @@ String formatDateTime(const GregorianDateTime& t, DateTimeFormat format, bool as
             const WCHAR* timeZoneName = t.isDST() ? timeZoneInformation.DaylightName : timeZoneInformation.StandardName;
 #else
             struct tm gtm = t;
-    char timeZoneName[70];
-    strftime(timeZoneName, sizeof(timeZoneName), "%Z", &gtm);
+            char timeZoneName[70];
+            strftime(timeZoneName, sizeof(timeZoneName), "%Z", &gtm);
 #endif
-    if (timeZoneName[0]) {
+            if (timeZoneName[0]) {
                 builder.appendLiteral(" (");
                 builder.append(timeZoneName);
                 builder.append(')');
             }
+        }
     }
-}
 
     return builder.toString().impl();
 }

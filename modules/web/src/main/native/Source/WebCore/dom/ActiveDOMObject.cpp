@@ -28,7 +28,7 @@
 #include "ActiveDOMObject.h"
 
 #include "ScriptExecutionContext.h"
-#include "WorkerContext.h"
+#include "WorkerGlobalScope.h"
 #include "WorkerThread.h"
 
 namespace WebCore {
@@ -61,9 +61,9 @@ ActiveDOMObject::~ActiveDOMObject()
     // inherit). Hence, we should ensure that this is not 0 before use it
     // here.
     if (m_scriptExecutionContext) {
-    ASSERT(m_scriptExecutionContext->isContextThread());
-    m_scriptExecutionContext->willDestroyActiveDOMObject(this);
-}
+        ASSERT(m_scriptExecutionContext->isContextThread());
+        m_scriptExecutionContext->willDestroyActiveDOMObject(this);
+    }
 }
 
 void ActiveDOMObject::suspendIfNeeded()

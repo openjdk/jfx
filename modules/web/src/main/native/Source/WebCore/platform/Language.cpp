@@ -30,7 +30,7 @@
 #include <wtf/RetainPtr.h>
 #include <wtf/text/WTFString.h>
 
-#if PLATFORM(MAC)
+#if USE(CF) && !PLATFORM(WIN)
 #include <CoreFoundation/CoreFoundation.h>
 #endif
 
@@ -133,7 +133,7 @@ size_t indexOfBestMatchingLanguageInList(const String& language, const Vector<St
         }
     }
 
-    // If we have both a language-only match and a languge-but-not-locale match, return the 
+    // If we have both a language-only match and a languge-but-not-locale match, return the
     // languge-only match as is considered a "better" match. For example, if the list
     // provided has both "en-GB" and "en" and the user prefers "en-US" we will return "en".
     if (languageWithoutLocaleMatch.length())
@@ -141,13 +141,13 @@ size_t indexOfBestMatchingLanguageInList(const String& language, const Vector<St
 
     if (languageMatchButNotLocale.length())
         return languageMatchButNotLocaleMatchIndex;
-    
+
     return languageList.size();
 }
 
 String displayNameForLanguageLocale(const String& localeName)
 {
-#if PLATFORM(MAC)
+#if USE(CF) && !PLATFORM(WIN)
     if (!localeName.isNull() && !localeName.isEmpty()) {
         RetainPtr<CFLocaleRef> currentLocale = adoptCF(CFLocaleCopyCurrent());
         return CFLocaleCopyDisplayNameForPropertyValue(currentLocale.get(), kCFLocaleIdentifier, localeName.createCFString().get());
@@ -155,5 +155,5 @@ String displayNameForLanguageLocale(const String& localeName)
 #endif
     return localeName;
 }
-    
+
 }

@@ -42,7 +42,7 @@ public:
     static PassRefPtr<DocumentMarkerDescription> create(const String&);
 
     const String& description() const { return m_description; }
-    virtual bool isDescription() const { return true; }
+    virtual bool isDescription() const override { return true; }
 
 private:
     DocumentMarkerDescription(const String& description)
@@ -71,7 +71,7 @@ public:
     static PassRefPtr<DocumentMarkerTextMatch> instanceFor(bool);
 
     bool activeMatch() const { return m_match; }
-    virtual bool isTextMatch() const { return true; }
+    virtual bool isTextMatch() const override { return true; }
 
 private:
     explicit DocumentMarkerTextMatch(bool match)
@@ -84,8 +84,8 @@ private:
 
 PassRefPtr<DocumentMarkerTextMatch> DocumentMarkerTextMatch::instanceFor(bool match)
 {
-    DEFINE_STATIC_LOCAL(RefPtr<DocumentMarkerTextMatch>, trueInstance, (adoptRef(new DocumentMarkerTextMatch(true))));
-    DEFINE_STATIC_LOCAL(RefPtr<DocumentMarkerTextMatch>, falseInstance, (adoptRef(new DocumentMarkerTextMatch(false))));
+    static DocumentMarkerTextMatch* trueInstance = adoptRef(new DocumentMarkerTextMatch(true)).leakRef();
+    static DocumentMarkerTextMatch* falseInstance = adoptRef(new DocumentMarkerTextMatch(false)).leakRef();
     return match ? trueInstance : falseInstance;
 }
 

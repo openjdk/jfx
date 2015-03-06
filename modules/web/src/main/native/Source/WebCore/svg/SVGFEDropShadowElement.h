@@ -20,26 +20,26 @@
 #ifndef SVGFEDropShadowElement_h
 #define SVGFEDropShadowElement_h
 
-#if ENABLE(SVG) && ENABLE(FILTERS)
+#if ENABLE(FILTERS)
 #include "FEDropShadow.h"
 #include "SVGAnimatedNumber.h"
 #include "SVGFilterPrimitiveStandardAttributes.h"
 
 namespace WebCore {
     
-class SVGFEDropShadowElement FINAL : public SVGFilterPrimitiveStandardAttributes {
+class SVGFEDropShadowElement final : public SVGFilterPrimitiveStandardAttributes {
 public:
-    static PassRefPtr<SVGFEDropShadowElement> create(const QualifiedName&, Document*);
+    static PassRefPtr<SVGFEDropShadowElement> create(const QualifiedName&, Document&);
     
     void setStdDeviation(float stdDeviationX, float stdDeviationY);
     
 private:
-    SVGFEDropShadowElement(const QualifiedName&, Document*);
+    SVGFEDropShadowElement(const QualifiedName&, Document&);
     
     bool isSupportedAttribute(const QualifiedName&);
-    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
-    virtual void svgAttributeChanged(const QualifiedName&);
-    virtual PassRefPtr<FilterEffect> build(SVGFilterBuilder*, Filter*);
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
+    virtual void svgAttributeChanged(const QualifiedName&) override;
+    virtual PassRefPtr<FilterEffect> build(SVGFilterBuilder*, Filter*) override;
     
     static const AtomicString& stdDeviationXIdentifier();
     static const AtomicString& stdDeviationYIdentifier();
@@ -55,5 +55,5 @@ private:
     
 } // namespace WebCore
 
-#endif // ENABLE(SVG)
+#endif // ENABLE(FILTERS)
 #endif

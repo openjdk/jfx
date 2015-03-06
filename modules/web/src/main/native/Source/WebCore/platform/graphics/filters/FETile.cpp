@@ -46,7 +46,6 @@ PassRefPtr<FETile> FETile::create(Filter* filter)
 void FETile::platformApplySoftware()
 {
 // FIXME: See bug 47315. This is a hack to work around a compile failure, but is incorrect behavior otherwise.
-#if ENABLE(SVG)
     FilterEffect* in = inputEffect(0);
 
     ImageBuffer* resultImage = createImageBufferResult();
@@ -66,7 +65,7 @@ void FETile::platformApplySoftware()
         tileRect.scale(filter->filterResolution().width(), filter->filterResolution().height());
     }
 
-    OwnPtr<ImageBuffer> tileImage;
+    std::unique_ptr<ImageBuffer> tileImage;
     if (!SVGRenderingContext::createImageBufferForPattern(tileRect, tileRect, tileImage, ColorSpaceDeviceRGB, filter()->renderingMode()))
         return;
 
@@ -82,7 +81,6 @@ void FETile::platformApplySoftware()
     GraphicsContext* filterContext = resultImage->context();
     filterContext->setFillPattern(pattern);
     filterContext->fillRect(FloatRect(FloatPoint(), absolutePaintRect().size()));
-#endif
 }
 
 void FETile::dump()

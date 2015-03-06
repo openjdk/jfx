@@ -25,10 +25,10 @@
  */
 
 [
-        Conditional=NOTIFICATIONS|LEGACY_NOTIFICATIONS,
+    Conditional=NOTIFICATIONS|LEGACY_NOTIFICATIONS,
 ] partial interface DOMWindow {
 #if defined(ENABLE_LEGACY_NOTIFICATIONS) && ENABLE_LEGACY_NOTIFICATIONS
     readonly attribute NotificationCenter webkitNotifications;
 #endif
-    };
+};
 

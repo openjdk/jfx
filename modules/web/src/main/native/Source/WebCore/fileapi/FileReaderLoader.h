@@ -34,11 +34,15 @@
 #if ENABLE(BLOB)
 
 #include "FileError.h"
-#include "KURL.h"
+#include "URL.h"
 #include "TextEncoding.h"
 #include "ThreadableLoaderClient.h"
 #include <wtf/Forward.h>
 #include <wtf/text/WTFString.h>
+
+namespace JSC {
+class ArrayBuffer;
+}
 
 namespace WebCore {
 
@@ -72,20 +76,14 @@ public:
     virtual void didFail(const ResourceError&);
 
     String stringResult();
-    PassRefPtr<ArrayBuffer> arrayBufferResult() const;
-#if ENABLE(STREAM)
-    PassRefPtr<Blob> blobResult();
-#endif // ENABLE(STREAM)
+    PassRefPtr<JSC::ArrayBuffer> arrayBufferResult() const;
     unsigned bytesLoaded() const { return m_bytesLoaded; }
     unsigned totalBytes() const { return m_totalBytes; }
     int errorCode() const { return m_errorCode; }
 
     void setEncoding(const String&);
     void setDataType(const String& dataType) { m_dataType = dataType; }
-#if ENABLE(STREAM)
-    void setRange(unsigned, unsigned);
-#endif // ENABLE(STREAM)
-    
+
 private:
     void terminate();
     void cleanup();
@@ -102,10 +100,10 @@ private:
     TextEncoding m_encoding;
     String m_dataType;
 
-    KURL m_urlForReading;
+    URL m_urlForReading;
     RefPtr<ThreadableLoader> m_loader;
 
-    RefPtr<ArrayBuffer> m_rawData;
+    RefPtr<JSC::ArrayBuffer> m_rawData;
     bool m_isRawDataConverted;
 
     String m_stringResult;

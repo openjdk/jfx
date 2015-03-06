@@ -26,14 +26,14 @@ unsigned EventHandler::accessKeyModifiers()
 
 PassRefPtr<Clipboard> EventHandler::createDraggingClipboard() const
 {
-    return ClipboardJava::create(ClipboardWritable, Clipboard::DragAndDrop, DataObjectJava::create(), m_frame);
+    return ClipboardJava::create(ClipboardWritable, Clipboard::DragAndDrop, DataObjectJava::create(), &m_frame);
 }
 
 void EventHandler::focusDocumentView()
 {
-    Page* page = m_frame->page();
+    Page* page = m_frame.page();
     if (page) {
-        page->focusController()->setFocusedFrame(m_frame);
+        page->focusController().setFocusedFrame(&m_frame);
     }
 }
 
@@ -50,7 +50,7 @@ bool EventHandler::eventActivatedView(const PlatformMouseEvent &) const
 
 bool EventHandler::passMousePressEventToSubframe(MouseEventWithHitTestResults& event, Frame* subFrame)
 {
-    subFrame->eventHandler()->handleMousePressEvent(event.event());
+    subFrame->eventHandler().handleMousePressEvent(event.event());
     return true;
 }
 
@@ -58,13 +58,13 @@ bool EventHandler::passMouseMoveEventToSubframe(MouseEventWithHitTestResults& ev
 {
     if (m_mouseDownMayStartDrag && !m_mouseDownWasInSubframe)
         return false;
-    subFrame->eventHandler()->handleMouseMoveEvent(event.event(), hoveredNode);
+    subFrame->eventHandler().handleMouseMoveEvent(event.event(), hoveredNode);
     return true;
 }
 
 bool EventHandler::passMouseReleaseEventToSubframe(MouseEventWithHitTestResults& event, Frame* subFrame)
 {
-    subFrame->eventHandler()->handleMouseReleaseEvent(event.event());
+    subFrame->eventHandler().handleMouseReleaseEvent(event.event());
     return true;
 }
 
@@ -81,7 +81,7 @@ bool EventHandler::passWheelEventToWidget(const PlatformWheelEvent& ev, Widget* 
     }
 
     FrameView* frameView = static_cast<FrameView*>(widget);
-    return frameView->frame()->eventHandler()->handleWheelEvent(ev);
+    return frameView->frame().eventHandler().handleWheelEvent(ev);
 }
 
 bool EventHandler::tabsToAllFormControls(KeyboardEvent *) const

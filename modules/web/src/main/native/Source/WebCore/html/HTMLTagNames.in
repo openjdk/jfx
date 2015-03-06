@@ -3,138 +3,136 @@ namespacePrefix="xhtml"
 namespaceURI="http://www.w3.org/1999/xhtml"
 fallbackInterfaceName="HTMLUnknownElement"
 
-a interfaceName=HTMLAnchorElement
+a interfaceName=HTMLAnchorElement, generateTypeHelpers
 abbr interfaceName=HTMLElement
 acronym interfaceName=HTMLElement
 address interfaceName=HTMLElement
-applet constructorNeedsCreatedByParser
-area
+applet constructorNeedsCreatedByParser, generateTypeHelpers
+area generateTypeHelpers
 article interfaceName=HTMLElement
 aside interfaceName=HTMLElement
-audio wrapperOnlyIfMediaIsAvailable, conditional=VIDEO, constructorNeedsCreatedByParser
+audio wrapperOnlyIfMediaIsAvailable, conditional=VIDEO, constructorNeedsCreatedByParser, generateTypeHelpers
 b interfaceName=HTMLElement
-base
+base generateTypeHelpers
 basefont interfaceName=HTMLBaseFontElement
 bdi interfaceName=HTMLBDIElement, JSInterfaceName=HTMLElement
 bdo interfaceName=HTMLElement
 bgsound interfaceName=HTMLElement
 big interfaceName=HTMLElement
 blockquote interfaceName=HTMLQuoteElement
-body
+body generateTypeHelpers
 br interfaceName=HTMLBRElement
 button constructorNeedsFormElement
-canvas
-caption interfaceName=HTMLTableCaptionElement
+canvas generateTypeHelpers
+caption interfaceName=HTMLTableCaptionElement, generateTypeHelpers
 center interfaceName=HTMLElement
 cite interfaceName=HTMLElement
 code interfaceName=HTMLElement
 col interfaceName=HTMLTableColElement
 colgroup interfaceName=HTMLTableColElement
 command interfaceName=HTMLElement
-content interfaceName=HTMLContentElement, conditional=SHADOW_DOM, runtimeConditional=shadowDOM
 webkitShadowContent interfaceName=HTMLElement, noConstructor
-datalist interfaceName=HTMLDataListElement, conditional=DATALIST_ELEMENT
+datalist interfaceName=HTMLDataListElement, conditional=DATALIST_ELEMENT, generateTypeHelpers
 dd interfaceName=HTMLElement
 del interfaceName=HTMLModElement
-details conditional=DETAILS_ELEMENT
+details conditional=DETAILS_ELEMENT, generateTypeHelpers 
 dfn interfaceName=HTMLElement
 dir interfaceName=HTMLDirectoryElement
-dialog conditional=DIALOG_ELEMENT, contextConditional=dialogElement
 div
 dl interfaceName=HTMLDListElement
 dt interfaceName=HTMLElement
 em interfaceName=HTMLElement
-embed constructorNeedsCreatedByParser
-fieldset interfaceName=HTMLFieldSetElement, constructorNeedsFormElement
+embed constructorNeedsCreatedByParser, generateTypeHelpers
+fieldset interfaceName=HTMLFieldSetElement, constructorNeedsFormElement, generateTypeHelpers
 figcaption interfaceName=HTMLElement
 figure interfaceName=HTMLElement
 font
 footer interfaceName=HTMLElement
-form
-frame
-frameset interfaceName=HTMLFrameSetElement
+form generateTypeHelpers
+frame generateTypeHelpers
+frameset interfaceName=HTMLFrameSetElement, generateTypeHelpers
 h1 interfaceName=HTMLHeadingElement
 h2 interfaceName=HTMLHeadingElement
 h3 interfaceName=HTMLHeadingElement
 h4 interfaceName=HTMLHeadingElement
 h5 interfaceName=HTMLHeadingElement
 h6 interfaceName=HTMLHeadingElement
-head
+head generateTypeHelpers
 header interfaceName=HTMLElement
 hgroup interfaceName=HTMLElement
 hr interfaceName=HTMLHRElement
-html
+html generateTypeHelpers
 i interfaceName=HTMLElement
-iframe interfaceName=HTMLIFrameElement
-image mapToTagName=img
-img interfaceName=HTMLImageElement, constructorNeedsFormElement
-input constructorNeedsFormElement, constructorNeedsCreatedByParser
+iframe interfaceName=HTMLIFrameElement, generateTypeHelpers
+image interfaceName=HTMLUnknownElement
+img interfaceName=HTMLImageElement, constructorNeedsFormElement, generateTypeHelpers
+input constructorNeedsFormElement, constructorNeedsCreatedByParser, generateTypeHelpers
 ins interfaceName=HTMLModElement
 isindex interfaceName=HTMLUnknownElement
 kbd interfaceName=HTMLElement
 keygen constructorNeedsFormElement
-label
+label generateTypeHelpers
 layer interfaceName=HTMLElement
-legend
+legend generateTypeHelpers
 li interfaceName=HTMLLIElement
-link constructorNeedsCreatedByParser
+link constructorNeedsCreatedByParser, generateTypeHelpers
 listing interfaceName=HTMLPreElement
 main interfaceName=HTMLElement
-map
+map generateTypeHelpers
 mark interfaceName=HTMLElement
-marquee
+marquee generateTypeHelpers
 menu
-meta
-meter interfaceName=HTMLMeterElement, conditional=METER_ELEMENT
+meta generateTypeHelpers
+meter interfaceName=HTMLMeterElement, conditional=METER_ELEMENT, generateTypeHelpers
 nav interfaceName=HTMLElement
 nobr interfaceName=HTMLElement
 noembed interfaceName=HTMLElement
 noframes interfaceName=HTMLElement
 nolayer interfaceName=HTMLElement
-object constructorNeedsFormElement, constructorNeedsCreatedByParser
-ol interfaceName=HTMLOListElement
-optgroup interfaceName=HTMLOptGroupElement
-option
+object constructorNeedsFormElement, constructorNeedsCreatedByParser, generateTypeHelpers
+ol interfaceName=HTMLOListElement, generateTypeHelpers
+optgroup interfaceName=HTMLOptGroupElement, generateTypeHelpers
+option generateTypeHelpers
 output constructorNeedsFormElement
 p interfaceName=HTMLParagraphElement
-param
+param generateTypeHelpers
 plaintext interfaceName=HTMLElement
 pre
-progress interfaceName=HTMLProgressElement, conditional=PROGRESS_ELEMENT
+progress interfaceName=HTMLProgressElement, conditional=PROGRESS_ELEMENT, generateTypeHelpers
 q interfaceName=HTMLQuoteElement
 rp interfaceName=HTMLElement
 rt interfaceName=HTMLElement
 ruby interfaceName=HTMLElement
 s interfaceName=HTMLElement
 samp interfaceName=HTMLElement
-script constructorNeedsCreatedByParser
+script constructorNeedsCreatedByParser, generateTypeHelpers
 section interfaceName=HTMLElement
-select constructorNeedsFormElement
+select constructorNeedsFormElement, generateTypeHelpers
 small interfaceName=HTMLElement
-source wrapperOnlyIfMediaIsAvailable, conditional=VIDEO
+source wrapperOnlyIfMediaIsAvailable, conditional=VIDEO, generateTypeHelpers
 span
 strike interfaceName=HTMLElement
 strong interfaceName=HTMLElement
-style constructorNeedsCreatedByParser
+style constructorNeedsCreatedByParser, generateTypeHelpers
 sub interfaceName=HTMLElement
-summary interfaceName=HTMLSummaryElement, JSInterfaceName=HTMLElement, conditional=DETAILS_ELEMENT
+summary interfaceName=HTMLSummaryElement, JSInterfaceName=HTMLElement, conditional=DETAILS_ELEMENT, generateTypeHelpers
 sup interfaceName=HTMLElement
-table
+table generateTypeHelpers
 tbody interfaceName=HTMLTableSectionElement
 td interfaceName=HTMLTableCellElement
-template conditional=TEMPLATE_ELEMENT
-textarea interfaceName=HTMLTextAreaElement, constructorNeedsFormElement
+template conditional=TEMPLATE_ELEMENT, generateTypeHelpers
+textarea interfaceName=HTMLTextAreaElement, constructorNeedsFormElement, generateTypeHelpers
 tfoot interfaceName=HTMLTableSectionElement
 th interfaceName=HTMLTableCellElement
 thead interfaceName=HTMLTableSectionElement
-title
-tr interfaceName=HTMLTableRowElement
-track wrapperOnlyIfMediaIsAvailable, conditional=VIDEO_TRACK
+title generateTypeHelpers
+tr interfaceName=HTMLTableRowElement, generateTypeHelpers
+track wrapperOnlyIfMediaIsAvailable, conditional=VIDEO_TRACK, generateTypeHelpers
 tt interfaceName=HTMLElement
 u interfaceName=HTMLElement
 ul interfaceName=HTMLUListElement
 var interfaceName=HTMLElement
-video wrapperOnlyIfMediaIsAvailable, conditional=VIDEO, constructorNeedsCreatedByParser
+video wrapperOnlyIfMediaIsAvailable, conditional=VIDEO, constructorNeedsCreatedByParser, generateTypeHelpers
 wbr interfaceName=HTMLElement
 xmp interfaceName=HTMLPreElement
 noscript interfaceName=HTMLElement

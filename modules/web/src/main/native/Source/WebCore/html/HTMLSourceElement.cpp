@@ -34,13 +34,11 @@
 #include "HTMLNames.h"
 #include "Logging.h"
 
-using namespace std;
-
 namespace WebCore {
 
 using namespace HTMLNames;
 
-inline HTMLSourceElement::HTMLSourceElement(const QualifiedName& tagName, Document* document)
+inline HTMLSourceElement::HTMLSourceElement(const QualifiedName& tagName, Document& document)
     : HTMLElement(tagName, document)
     , m_errorEventTimer(this, &HTMLSourceElement::errorEventTimerFired)
 {
@@ -48,27 +46,27 @@ inline HTMLSourceElement::HTMLSourceElement(const QualifiedName& tagName, Docume
     ASSERT(hasTagName(sourceTag));
 }
 
-PassRefPtr<HTMLSourceElement> HTMLSourceElement::create(const QualifiedName& tagName, Document* document)
+PassRefPtr<HTMLSourceElement> HTMLSourceElement::create(const QualifiedName& tagName, Document& document)
 {
     return adoptRef(new HTMLSourceElement(tagName, document));
 }
 
-Node::InsertionNotificationRequest HTMLSourceElement::insertedInto(ContainerNode* insertionPoint)
+Node::InsertionNotificationRequest HTMLSourceElement::insertedInto(ContainerNode& insertionPoint)
 {
     HTMLElement::insertedInto(insertionPoint);
     Element* parent = parentElement();
     if (parent && parent->isMediaElement())
-        static_cast<HTMLMediaElement*>(parentNode())->sourceWasAdded(this);
+        toHTMLMediaElement(parentNode())->sourceWasAdded(this);
     return InsertionDone;
 }
 
-void HTMLSourceElement::removedFrom(ContainerNode* removalRoot)
+void HTMLSourceElement::removedFrom(ContainerNode& removalRoot)
 {
     Element* parent = parentElement();
-    if (!parent && removalRoot->isElementNode())
-        parent = toElement(removalRoot);
+    if (!parent && removalRoot.isElementNode())
+        parent = &toElement(removalRoot);
     if (parent && parent->isMediaElement())
-        toMediaElement(parent)->sourceWasRemoved(this);
+        toHTMLMediaElement(parent)->sourceWasRemoved(this);
     HTMLElement::removedFrom(removalRoot);
 }
 
@@ -112,7 +110,7 @@ void HTMLSourceElement::cancelPendingErrorEvent()
     m_errorEventTimer.stop();
 }
 
-void HTMLSourceElement::errorEventTimerFired(Timer<HTMLSourceElement>*)
+void HTMLSourceElement::errorEventTimerFired(Timer<HTMLSourceElement>&)
 {
     LOG(Media, "HTMLSourceElement::errorEventTimerFired - %p", this);
     dispatchEvent(Event::create(eventNames().errorEvent, false, true));
@@ -122,18 +120,6 @@ bool HTMLSourceElement::isURLAttribute(const Attribute& attribute) const
 {
     return attribute.name() == srcAttr || HTMLElement::isURLAttribute(attribute);
 }
-
-#if ENABLE(MICRODATA)
-String HTMLSourceElement::itemValueText() const
-{
-    return getURLAttribute(srcAttr);
-}
-
-void HTMLSourceElement::setItemValueText(const String& value, ExceptionCode&)
-{
-    setAttribute(srcAttr, value);
-}
-#endif
 
 }
 

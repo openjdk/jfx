@@ -26,10 +26,10 @@
 #include "config.h"
 #include "MIMETypeRegistry.h"
 
-#include "WindowsExtras.h"
 #include <wtf/Assertions.h>
 #include <wtf/HashMap.h>
 #include <wtf/MainThread.h>
+#include <wtf/WindowsExtras.h>
 
 namespace WebCore {
 
@@ -40,14 +40,14 @@ static String mimeTypeForExtension(const String& extension)
     DWORD contentTypeStrLen = sizeof(contentTypeStr);
     DWORD keyType;
 
-    HRESULT result = getRegistryValue(HKEY_CLASSES_ROOT, ext.charactersWithNullTermination(), L"Content Type", &keyType, contentTypeStr, &contentTypeStrLen);
+    HRESULT result = getRegistryValue(HKEY_CLASSES_ROOT, ext.charactersWithNullTermination().data(), L"Content Type", &keyType, contentTypeStr, &contentTypeStrLen);
 
-    if (result == ERROR_SUCCESS && keyType == REG_SZ) 
+    if (result == ERROR_SUCCESS && keyType == REG_SZ)
         return String(contentTypeStr, contentTypeStrLen / sizeof(contentTypeStr[0]) - 1);
 
     return String();
 }
-   
+
 String MIMETypeRegistry::getPreferredExtensionForMIMEType(const String& type)
 {
     String path = "MIME\\Database\\Content Type\\" + type;
@@ -55,9 +55,9 @@ String MIMETypeRegistry::getPreferredExtensionForMIMEType(const String& type)
     DWORD extStrLen = sizeof(extStr);
     DWORD keyType;
 
-    HRESULT result = getRegistryValue(HKEY_CLASSES_ROOT, path.charactersWithNullTermination(), L"Extension", &keyType, extStr, &extStrLen);
+    HRESULT result = getRegistryValue(HKEY_CLASSES_ROOT, path.charactersWithNullTermination().data(), L"Extension", &keyType, extStr, &extStrLen);
 
-    if (result == ERROR_SUCCESS && keyType == REG_SZ) 
+    if (result == ERROR_SUCCESS && keyType == REG_SZ)
         return String(extStr + 1, extStrLen / sizeof(extStr[0]) - 2);
 
     return String();

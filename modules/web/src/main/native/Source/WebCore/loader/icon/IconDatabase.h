@@ -51,10 +51,11 @@ class IntSize;
 class IconDatabaseClient;
 class IconRecord;
 class IconSnapshot;
-class KURL;
+class URL;
 class PageURLRecord;
 class PageURLSnapshot;
 class SharedBuffer;
+class SuddenTerminationDisabler;
 
 #if ENABLE(ICONDATABASE)
 class SQLTransaction;
@@ -127,13 +128,13 @@ private:
 
     void wakeSyncThread();
     void scheduleOrDeferSyncTimer();
-    void syncTimerFired(Timer<IconDatabase>*);
+    void syncTimerFired(Timer<IconDatabase>&);
     
     Timer<IconDatabase> m_syncTimer;
     ThreadIdentifier m_syncThread;
     bool m_syncThreadRunning;
     
-    HashSet<RefPtr<DocumentLoader> > m_loadersPendingDecision;
+    HashSet<RefPtr<DocumentLoader>> m_loadersPendingDecision;
 
     RefPtr<IconRecord> m_defaultIconRecord;
 
@@ -141,6 +142,7 @@ private:
     void performScheduleOrDeferSyncTimer();
 
     bool m_scheduleOrDeferSyncTimerRequested;
+    std::unique_ptr<SuddenTerminationDisabler> m_disableSuddenTerminationWhileSyncTimerScheduled;
 
 // *** Any Thread ***
 public:
@@ -165,7 +167,7 @@ private:
     bool m_removeIconsRequested;
     bool m_iconURLImportComplete;
     bool m_syncThreadHasWorkToDo;
-    bool m_disabledSuddenTerminationForSyncThread;
+    std::unique_ptr<SuddenTerminationDisabler> m_disableSuddenTerminationWhileSyncThreadHasWorkToDo;
 
     Mutex m_urlAndIconLock;
     // Holding m_urlAndIconLock is required when accessing any of the following data structures or the objects they contain
@@ -213,7 +215,7 @@ private:
     void* cleanupSyncThread();
     void performRetainIconForPageURL(const String&, int retainCount);
     void performReleaseIconForPageURL(const String&, int releaseCount);
-
+    
     bool wasExcludedFromBackup();
     void setWasExcludedFromBackup();
 

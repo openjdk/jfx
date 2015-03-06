@@ -37,19 +37,18 @@ namespace WebCore {
 
 class PasswordInputType : public BaseTextInputType {
 public:
-    static PassOwnPtr<InputType> create(HTMLInputElement*);
+    explicit PasswordInputType(HTMLInputElement& element) : BaseTextInputType(element) { }
 
 private:
-    PasswordInputType(HTMLInputElement* element) : BaseTextInputType(element) { }
-    virtual const AtomicString& formControlType() const OVERRIDE;
-    virtual bool shouldSaveAndRestoreFormControlState() const OVERRIDE;
-    virtual FormControlState saveFormControlState() const OVERRIDE;
-    virtual void restoreFormControlState(const FormControlState&) OVERRIDE;
-    virtual bool shouldUseInputMethod() const OVERRIDE;
-    virtual bool shouldResetOnDocumentActivation() OVERRIDE;
-    virtual bool shouldRespectListAttribute() OVERRIDE;
-    virtual bool shouldRespectSpeechAttribute() OVERRIDE;
-    virtual bool isPasswordField() const OVERRIDE;
+    virtual const AtomicString& formControlType() const override;
+    virtual bool shouldSaveAndRestoreFormControlState() const override;
+    virtual FormControlState saveFormControlState() const override;
+    virtual void restoreFormControlState(const FormControlState&) override;
+    virtual bool shouldUseInputMethod() const override;
+    virtual bool shouldResetOnDocumentActivation() override;
+    virtual bool shouldRespectListAttribute() override;
+    virtual bool shouldRespectSpeechAttribute() override;
+    virtual bool isPasswordField() const override;
 };
 
 } // namespace WebCore

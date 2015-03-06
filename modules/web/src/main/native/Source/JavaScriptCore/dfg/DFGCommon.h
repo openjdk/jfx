@@ -28,48 +28,13 @@
 
 #include <wtf/Platform.h>
 
+#include "DFGCompilationMode.h"
+
 #if ENABLE(DFG_JIT)
 
 #include "CodeOrigin.h"
 #include "Options.h"
 #include "VirtualRegister.h"
-
-/* DFG_ENABLE() - turn on a specific features in the DFG JIT */
-#define DFG_ENABLE(DFG_FEATURE) (defined DFG_ENABLE_##DFG_FEATURE && DFG_ENABLE_##DFG_FEATURE)
-
-// Emit various logging information for debugging, including dumping the dataflow graphs.
-#define DFG_ENABLE_DEBUG_VERBOSE 0
-// Emit dumps during propagation, in addition to just after.
-#define DFG_ENABLE_DEBUG_PROPAGATION_VERBOSE 0
-// Emit logging for OSR exit value recoveries at every node, not just nodes that
-// actually has speculation checks.
-#define DFG_ENABLE_VERBOSE_VALUE_RECOVERIES 0
-// Enable generation of dynamic checks into the instruction stream.
-#if !ASSERT_DISABLED
-#define DFG_ENABLE_JIT_ASSERT 1
-#else
-#define DFG_ENABLE_JIT_ASSERT 0
-#endif
-// Consistency check contents compiler data structures.
-#define DFG_ENABLE_CONSISTENCY_CHECK 0
-// Emit a breakpoint into the head of every generated function, to aid debugging in GDB.
-#define DFG_ENABLE_JIT_BREAK_ON_EVERY_FUNCTION 0
-// Emit a breakpoint into the head of every generated block, to aid debugging in GDB.
-#define DFG_ENABLE_JIT_BREAK_ON_EVERY_BLOCK 0
-// Emit a breakpoint into the head of every generated node, to aid debugging in GDB.
-#define DFG_ENABLE_JIT_BREAK_ON_EVERY_NODE 0
-// Emit a pair of xorPtr()'s on regT0 with the node index to make it easy to spot node boundaries in disassembled code.
-#define DFG_ENABLE_XOR_DEBUG_AID 0
-// Emit a breakpoint into the speculation failure code.
-#define DFG_ENABLE_JIT_BREAK_ON_SPECULATION_FAILURE 0
-// Disable the DFG JIT without having to touch Platform.h
-#define DFG_DEBUG_LOCAL_DISBALE 0
-// Enable OSR entry from baseline JIT.
-#define DFG_ENABLE_OSR_ENTRY ENABLE(DFG_JIT)
-// Generate stats on how successful we were in making use of the DFG jit, and remaining on the hot path.
-#define DFG_ENABLE_SUCCESS_STATS 0
-// Enable verification that the DFG is able to insert code for control flow edges.
-#define DFG_ENABLE_EDGE_CODE_VERIFICATION 0
 
 namespace JSC { namespace DFG {
 
@@ -80,7 +45,7 @@ static const BlockIndex NoBlock = UINT_MAX;
 
 struct NodePointerTraits {
     static Node* defaultValue() { return 0; }
-    static void dump(Node* value, PrintStream& out);
+    static bool isEmptyForDump(Node* value) { return !value; }
 };
 
 // Use RefChildren if the child ref counts haven't already been adjusted using
@@ -100,31 +65,19 @@ enum RefNodeMode {
     DontRefNode
 };
 
-inline bool verboseCompilationEnabled()
+inline bool verboseCompilationEnabled(CompilationMode mode = DFGMode)
 {
-#if DFG_ENABLE(DEBUG_VERBOSE)
-    return true;
-#else
-    return Options::verboseCompilation() || Options::dumpGraphAtEachPhase();
-#endif
+    return Options::verboseCompilation() || Options::dumpGraphAtEachPhase() || (isFTL(mode) && Options::verboseFTLCompilation());
 }
 
-inline bool logCompilationChanges()
+inline bool logCompilationChanges(CompilationMode mode = DFGMode)
 {
-#if DFG_ENABLE(DEBUG_VERBOSE)
-    return true;
-#else
-    return verboseCompilationEnabled() || Options::logCompilationChanges();
-#endif
+    return verboseCompilationEnabled(mode) || Options::logCompilationChanges();
 }
 
 inline bool shouldDumpGraphAtEachPhase()
 {
-#if DFG_ENABLE(DEBUG_PROPAGATION_VERBOSE)
-    return true;
-#else
     return Options::dumpGraphAtEachPhase();
-#endif
 }
 
 inline bool validationEnabled()
@@ -133,6 +86,15 @@ inline bool validationEnabled()
     return true;
 #else
     return Options::validateGraph() || Options::validateGraphAtEachPhase();
+#endif
+}
+
+inline bool enableInt52()
+{
+#if USE(JSVALUE64)
+    return true;
+#else
+    return false;
 #endif
 }
 
@@ -187,7 +149,10 @@ enum GraphForm {
     //
     // ThreadedCPS form is suitable for data flow analysis (CFA, prediction
     // propagation), register allocation, and code generation.
-    ThreadedCPS
+    ThreadedCPS,
+    
+    // SSA form. See DFGSSAConversionPhase.h for a description.
+    SSA
 };
 
 // Describes the state of the UnionFind structure of VariableAccessData's.
@@ -210,8 +175,6 @@ enum RefCountState {
 
 enum OperandSpeculationMode { AutomaticOperandSpeculation, ManualOperandSpeculation };
 
-enum SpeculationDirection { ForwardSpeculation, BackwardSpeculation };
-
 enum ProofStatus { NeedsCheck, IsProved };
 
 inline bool isProved(ProofStatus proofStatus)
@@ -223,6 +186,19 @@ inline bool isProved(ProofStatus proofStatus)
 inline ProofStatus proofStatusForIsProved(bool isProved)
 {
     return isProved ? IsProved : NeedsCheck;
+}
+
+enum KillStatus { DoesNotKill, DoesKill };
+
+inline bool doesKill(KillStatus killStatus)
+{
+    ASSERT(killStatus == DoesNotKill || killStatus == DoesKill);
+    return killStatus == DoesKill;
+}
+
+inline KillStatus killStatusForDoesKill(bool doesKill)
+{
+    return doesKill ? DoesKill : DoesNotKill;
 }
 
 template<typename T, typename U>
@@ -252,14 +228,74 @@ namespace JSC { namespace DFG {
 
 // Put things here that must be defined even if ENABLE(DFG_JIT) is false.
 
-enum CapabilityLevel { CannotCompile, MayInline, CanCompile, CapabilityLevelNotSet };
+enum CapabilityLevel {
+    CannotCompile,
+    CanInline,
+    CanCompile,
+    CanCompileAndInline,
+    CapabilityLevelNotSet
+};
+
+inline bool canCompile(CapabilityLevel level)
+{
+    switch (level) {
+    case CanCompile:
+    case CanCompileAndInline:
+        return true;
+    default:
+        return false;
+    }
+}
+
+inline bool canInline(CapabilityLevel level)
+{
+    switch (level) {
+    case CanInline:
+    case CanCompileAndInline:
+        return true;
+    default:
+        return false;
+    }
+}
+
+inline CapabilityLevel leastUpperBound(CapabilityLevel a, CapabilityLevel b)
+{
+    switch (a) {
+    case CannotCompile:
+        return CannotCompile;
+    case CanInline:
+        switch (b) {
+        case CanInline:
+        case CanCompileAndInline:
+            return CanInline;
+        default:
+            return CannotCompile;
+        }
+    case CanCompile:
+        switch (b) {
+        case CanCompile:
+        case CanCompileAndInline:
+            return CanCompile;
+        default:
+            return CannotCompile;
+        }
+    case CanCompileAndInline:
+        return b;
+    case CapabilityLevelNotSet:
+        ASSERT_NOT_REACHED();
+        return CannotCompile;
+    }
+    ASSERT_NOT_REACHED();
+    return CannotCompile;
+}
 
 // Unconditionally disable DFG disassembly support if the DFG is not compiled in.
-inline bool shouldShowDisassembly()
+inline bool shouldShowDisassembly(CompilationMode mode = DFGMode)
 {
 #if ENABLE(DFG_JIT)
-    return Options::showDisassembly() || Options::showDFGDisassembly();
+    return Options::showDisassembly() || Options::showDFGDisassembly() || (isFTL(mode) && Options::showFTLDisassembly());
 #else
+    UNUSED_PARAM(mode);
     return false;
 #endif
 }

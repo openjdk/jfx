@@ -28,4 +28,4 @@
     JSNoStaticTables
 ] interface IDBCursorWithValue : IDBCursor {
     readonly attribute any value;
-    };
+};

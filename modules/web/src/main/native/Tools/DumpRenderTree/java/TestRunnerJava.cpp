@@ -434,17 +434,6 @@ void TestRunner::clearAllApplicationCaches()
     // FIXME: implement to support Application Cache quotas.
 }
 
-
-//void TestRunner::dumpConfigurationForViewport(int /*deviceDPI*/, int /*deviceWidth*/, int /*deviceHeight*/, int /*availableWidth*/, int /*availableHeight*/)
-//{
-//    // FIXME: Implement this.
-//}
-
-void TestRunner::setApplicationCacheOriginQuota(unsigned long long quota)
-{
-    // FIXME: implement to support Application Cache quotas.
-}
-
 void TestRunner::setGeolocationPermission(bool allow)
 {
     // FIXME: Implement for Geolocation layout tests.

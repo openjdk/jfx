@@ -26,7 +26,6 @@
 #include "Attribute.h"
 #include "CSSPropertyNames.h"
 #include "CSSValueKeywords.h"
-#include "EventPathWalker.h"
 #include "HTMLNames.h"
 #include "RenderListItem.h"
 
@@ -34,18 +33,19 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-HTMLLIElement::HTMLLIElement(const QualifiedName& tagName, Document* document)
+HTMLLIElement::HTMLLIElement(const QualifiedName& tagName, Document& document)
     : HTMLElement(tagName, document)
 {
     ASSERT(hasTagName(liTag));
+    setHasCustomStyleResolveCallbacks();
 }
 
-PassRefPtr<HTMLLIElement> HTMLLIElement::create(Document* document)
+PassRefPtr<HTMLLIElement> HTMLLIElement::create(Document& document)
 {
     return adoptRef(new HTMLLIElement(liTag, document));
 }
 
-PassRefPtr<HTMLLIElement> HTMLLIElement::create(const QualifiedName& tagName, Document* document)
+PassRefPtr<HTMLLIElement> HTMLLIElement::create(const QualifiedName& tagName, Document& document)
 {
     return adoptRef(new HTMLLIElement(tagName, document));
 }
@@ -57,7 +57,7 @@ bool HTMLLIElement::isPresentationAttribute(const QualifiedName& name) const
     return HTMLElement::isPresentationAttribute(name);
 }
 
-void HTMLLIElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomicString& value, MutableStylePropertySet* style)
+void HTMLLIElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomicString& value, MutableStyleProperties& style)
 {
     if (name == typeAttr) {
         if (value == "a")
@@ -85,33 +85,29 @@ void HTMLLIElement::parseAttribute(const QualifiedName& name, const AtomicString
         HTMLElement::parseAttribute(name, value);
 }
 
-void HTMLLIElement::attach()
+void HTMLLIElement::didAttachRenderers()
 {
-    ASSERT(!attached());
+    if (!renderer() || !renderer()->isListItem())
+        return;
+    RenderListItem* listItemRenderer = toRenderListItem(renderer());
 
-    HTMLElement::attach();
-
-    if (renderer() && renderer()->isListItem()) {
-        RenderListItem* listItemRenderer = toRenderListItem(renderer());
-
-        // Find the enclosing list node.
-        Element* listNode = 0;
-        Element* current = this;
-        while (!listNode) {
-            current = current->parentElement();
-            if (!current)
-                break;
-            if (current->hasTagName(ulTag) || current->hasTagName(olTag))
-                listNode = current;
-        }
-
-        // If we are not in a list, tell the renderer so it can position us inside.
-        // We don't want to change our style to say "inside" since that would affect nested nodes.
-        if (!listNode)
-            listItemRenderer->setNotInList(true);
-
-        parseValue(fastGetAttribute(valueAttr));
+    // Find the enclosing list node.
+    Element* listNode = 0;
+    Element* current = this;
+    while (!listNode) {
+        current = current->parentElement();
+        if (!current)
+            break;
+        if (current->hasTagName(ulTag) || current->hasTagName(olTag))
+            listNode = current;
     }
+
+    // If we are not in a list, tell the renderer so it can position us inside.
+    // We don't want to change our style to say "inside" since that would affect nested nodes.
+    if (!listNode)
+        listItemRenderer->setNotInList(true);
+
+    parseValue(fastGetAttribute(valueAttr));
 }
 
 inline void HTMLLIElement::parseValue(const AtomicString& value)

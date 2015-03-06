@@ -28,7 +28,6 @@
 
 #include "Attr.h"
 #include "Element.h"
-#include "Node.h"
 #include "NodeTraversal.h"
 
 namespace WebCore {
@@ -44,7 +43,7 @@ static inline Node* parentWithDepth(unsigned depth, const Vector<Node*>& parents
     return parents[parents.size() - 1 - depth];
 }
 
-static void sortBlock(unsigned from, unsigned to, Vector<Vector<Node*> >& parentMatrix, bool mayContainAttributeNodes)
+static void sortBlock(unsigned from, unsigned to, Vector<Vector<Node*>>& parentMatrix, bool mayContainAttributeNodes)
 {
     ASSERT(from + 1 < to); // Should not call this function with less that two nodes to sort.
     unsigned minDepth = UINT_MAX;
@@ -96,7 +95,7 @@ static void sortBlock(unsigned from, unsigned to, Vector<Vector<Node*> >& parent
         // FIXME: namespace nodes are not implemented.
         for (unsigned i = sortedEnd; i < to; ++i) {
             Node* n = parentMatrix[i][0];
-            if (n->isAttributeNode() && static_cast<Attr*>(n)->ownerElement() == commonAncestor)
+            if (n->isAttributeNode() && toAttr(n)->ownerElement() == commonAncestor)
                 parentMatrix[i].swap(parentMatrix[sortedEnd++]);
         }
         if (sortedEnd != from) {
@@ -142,7 +141,7 @@ void NodeSet::sort() const
 
     unsigned nodeCount = m_nodes.size();
     if (nodeCount < 2) {
-        const_cast<bool&>(m_isSorted) = true;
+        m_isSorted = true;
         return;
     }
 
@@ -153,13 +152,13 @@ void NodeSet::sort() const
 
     bool containsAttributeNodes = false;
     
-    Vector<Vector<Node*> > parentMatrix(nodeCount);
+    Vector<Vector<Node*>> parentMatrix(nodeCount);
     for (unsigned i = 0; i < nodeCount; ++i) {
         Vector<Node*>& parentsVector = parentMatrix[i];
         Node* n = m_nodes[i].get();
         parentsVector.append(n);
         if (n->isAttributeNode()) {
-            n = static_cast<Attr*>(n)->ownerElement();
+            n = toAttr(n)->ownerElement();
             parentsVector.append(n);
             containsAttributeNodes = true;
         }
@@ -169,20 +168,21 @@ void NodeSet::sort() const
     sortBlock(0, nodeCount, parentMatrix, containsAttributeNodes);
     
     // It is not possible to just assign the result to m_nodes, because some nodes may get dereferenced and destroyed.
-    Vector<RefPtr<Node> > sortedNodes;
+    Vector<RefPtr<Node>> sortedNodes;
     sortedNodes.reserveInitialCapacity(nodeCount);
     for (unsigned i = 0; i < nodeCount; ++i)
         sortedNodes.append(parentMatrix[i][0]);
     
-    const_cast<Vector<RefPtr<Node> >&>(m_nodes).swap(sortedNodes);
+    m_nodes = std::move(sortedNodes);
+    m_isSorted = true;
 }
 
 static Node* findRootNode(Node* node)
 {
     if (node->isAttributeNode())
-        node = static_cast<Attr*>(node)->ownerElement();
+        node = toAttr(node)->ownerElement();
     if (node->inDocument())
-        node = node->document();
+        node = &node->document();
     else {
         while (Node* parent = node->parentNode())
             node = parent;
@@ -204,7 +204,7 @@ void NodeSet::traversalSort() const
             containsAttributeNodes = true;
     }
 
-    Vector<RefPtr<Node> > sortedNodes;
+    Vector<RefPtr<Node>> sortedNodes;
     sortedNodes.reserveInitialCapacity(nodeCount);
 
     for (Node* n = findRootNode(m_nodes.first().get()); n; n = NodeTraversal::next(n)) {
@@ -218,36 +218,22 @@ void NodeSet::traversalSort() const
         if (!element->hasAttributes())
             continue;
 
-        unsigned attributeCount = element->attributeCount();
-        for (unsigned i = 0; i < attributeCount; ++i) {
-            RefPtr<Attr> attr = element->attrIfExists(element->attributeItem(i)->name());
+        for (const Attribute& attribute : element->attributesIterator()) {
+            RefPtr<Attr> attr = element->attrIfExists(attribute.name());
             if (attr && nodes.contains(attr.get()))
                 sortedNodes.append(attr);
         }
     }
 
     ASSERT(sortedNodes.size() == nodeCount);
-    const_cast<Vector<RefPtr<Node> >&>(m_nodes).swap(sortedNodes);
-}
-
-void NodeSet::reverse()
-{
-    if (m_nodes.isEmpty())
-        return;
-
-    unsigned from = 0;
-    unsigned to = m_nodes.size() - 1;
-    while (from < to) {
-        m_nodes[from].swap(m_nodes[to]);
-        ++from;
-        --to;
-    }
+    m_nodes = std::move(sortedNodes);
+    m_isSorted = true;
 }
 
 Node* NodeSet::firstNode() const
 {
     if (isEmpty())
-        return 0;
+        return nullptr;
 
     sort(); // FIXME: fully sorting the node-set just to find its first node is wasteful.
     return m_nodes.at(0).get();
@@ -256,7 +242,7 @@ Node* NodeSet::firstNode() const
 Node* NodeSet::anyNode() const
 {
     if (isEmpty())
-        return 0;
+        return nullptr;
 
     return m_nodes.at(0).get();
 }

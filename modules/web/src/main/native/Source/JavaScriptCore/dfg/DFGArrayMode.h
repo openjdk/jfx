@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2012, 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -81,6 +81,7 @@ enum Type {
 
 enum Class {
     NonArray, // Definitely some object that is not a JSArray.
+    OriginalNonArray, // Definitely some object that is not a JSArray, but that object has the original structure.
     Array, // Definitely a JSArray, and may or may not have custom properties or have undergone some other bizarre transitions.
     OriginalArray, // Definitely a JSArray, and still has one of the primordial JSArray structures for the global object that this code block (possibly inlined code block) belongs to.
     PossiblyArray // Some object that may or may not be a JSArray.
@@ -104,6 +105,13 @@ const char* arrayClassToString(Array::Class);
 const char* arraySpeculationToString(Array::Speculation);
 const char* arrayConversionToString(Array::Conversion);
 
+IndexingType toIndexingShape(Array::Type);
+
+TypedArrayType toTypedArrayType(Array::Type);
+Array::Type toArrayType(TypedArrayType);
+
+bool permitsBoundsCheckLowering(Array::Type);
+
 class ArrayMode {
 public:
     ArrayMode()
@@ -118,6 +126,14 @@ public:
     {
         u.asBytes.type = type;
         u.asBytes.arrayClass = Array::NonArray;
+        u.asBytes.speculation = Array::InBounds;
+        u.asBytes.conversion = Array::AsIs;
+    }
+    
+    ArrayMode(Array::Type type, Array::Class arrayClass)
+    {
+        u.asBytes.type = type;
+        u.asBytes.arrayClass = arrayClass;
         u.asBytes.speculation = Array::InBounds;
         u.asBytes.conversion = Array::AsIs;
     }
@@ -150,34 +166,45 @@ public:
         return ArrayMode(word);
     }
     
-    static ArrayMode fromObserved(ArrayProfile*, Array::Action, bool makeSafe);
+    static ArrayMode fromObserved(const ConcurrentJITLocker&, ArrayProfile*, Array::Action, bool makeSafe);
     
     ArrayMode withSpeculation(Array::Speculation speculation) const
     {
         return ArrayMode(type(), arrayClass(), speculation, conversion());
     }
     
-    ArrayMode withProfile(ArrayProfile* profile, bool makeSafe) const
+    ArrayMode withArrayClass(Array::Class arrayClass) const
+    {
+        return ArrayMode(type(), arrayClass, speculation(), conversion());
+    }
+    
+    ArrayMode withSpeculationFromProfile(const ConcurrentJITLocker& locker, ArrayProfile* profile, bool makeSafe) const
     {
         Array::Speculation mySpeculation;
-        Array::Class myArrayClass;
-        
+
         if (makeSafe)
             mySpeculation = Array::OutOfBounds;
-        else if (profile->mayStoreToHole())
+        else if (profile->mayStoreToHole(locker))
             mySpeculation = Array::ToHole;
         else
             mySpeculation = Array::InBounds;
         
+        return withSpeculation(mySpeculation);
+    }
+    
+    ArrayMode withProfile(const ConcurrentJITLocker& locker, ArrayProfile* profile, bool makeSafe) const
+    {
+        Array::Class myArrayClass;
+        
         if (isJSArray()) {
-            if (profile->usesOriginalArrayStructures() && benefitsFromOriginalArray())
+            if (profile->usesOriginalArrayStructures(locker) && benefitsFromOriginalArray())
                 myArrayClass = Array::OriginalArray;
             else
                 myArrayClass = Array::Array;
         } else
             myArrayClass = arrayClass();
         
-        return ArrayMode(type(), myArrayClass, mySpeculation, conversion());
+        return withArrayClass(myArrayClass).withSpeculationFromProfile(locker, profile, makeSafe);
     }
     
     ArrayMode withType(Array::Type type) const
@@ -195,7 +222,7 @@ public:
         return ArrayMode(type, arrayClass(), speculation(), conversion);
     }
     
-    ArrayMode refine(SpeculatedType base, SpeculatedType index, SpeculatedType value = SpecNone, NodeFlags = 0) const;
+    ArrayMode refine(Graph&, CodeOrigin, SpeculatedType base, SpeculatedType index, SpeculatedType value = SpecNone, NodeFlags = 0) const;
     
     bool alreadyChecked(Graph&, Node*, AbstractValue&) const;
     
@@ -278,7 +305,17 @@ public:
     
     bool lengthNeedsStorage() const
     {
-        return isJSArray();
+        switch (type()) {
+        case Array::Undecided:
+        case Array::Int32:
+        case Array::Double:
+        case Array::Contiguous:
+        case Array::ArrayStorage:
+        case Array::SlowPutArrayStorage:
+            return true;
+        default:
+            return false;
+        }
     }
     
     ArrayMode modeForPut() const
@@ -328,6 +365,8 @@ public:
         }
     }
     
+    bool permitsBoundsCheckLowering() const;
+    
     bool benefitsFromOriginalArray() const
     {
         switch (type()) {
@@ -345,27 +384,14 @@ public:
     Structure* originalArrayStructure(Graph&, const CodeOrigin&) const;
     Structure* originalArrayStructure(Graph&, Node*) const;
     
-    bool benefitsFromStructureCheck() const
-    {
-        switch (type()) {
-        case Array::SelectUsingPredictions:
-            // It might benefit from structure checks! If it ends up not benefiting, we can just
-            // remove it. The FixupPhase does this: if it finds a CheckStructure just before an
-            // array op and it had turned that array op into either generic or conversion mode,
-            // it will remove the CheckStructure.
-            return true;
-        case Array::Unprofiled:
-        case Array::ForceExit:
-        case Array::Generic:
-            return false;
-        default:
-            return conversion() == Array::AsIs;
-        }
-    }
-    
     bool doesConversion() const
     {
         return conversion() != Array::AsIs;
+    }
+
+    bool structureWouldPassArrayModeFiltering(Structure* structure)
+    {
+        return arrayModesAlreadyChecked(arrayModeFromStructure(structure), arrayModesThatPassFiltering());
     }
     
     ArrayModes arrayModesThatPassFiltering() const
@@ -393,6 +419,16 @@ public:
         return type() == Array::String;
     }
     
+    IndexingType shapeMask() const
+    {
+        return toIndexingShape(type());
+    }
+    
+    TypedArrayType typedArrayType() const
+    {
+        return toTypedArrayType(type());
+    }
+    
     bool operator==(const ArrayMode& other) const
     {
         return type() == other.type()
@@ -415,6 +451,7 @@ private:
     {
         switch (arrayClass()) {
         case Array::NonArray:
+        case Array::OriginalNonArray:
             return asArrayModes(shape);
         case Array::Array:
         case Array::OriginalArray:
@@ -448,6 +485,11 @@ static inline bool canCSEStorage(const ArrayMode& arrayMode)
 static inline bool lengthNeedsStorage(const ArrayMode& arrayMode)
 {
     return arrayMode.lengthNeedsStorage();
+}
+
+static inline bool neverNeedsStorage(const ArrayMode&)
+{
+    return false;
 }
 
 } } // namespace JSC::DFG

@@ -31,27 +31,28 @@ class CSSParserValueList;
 
 class CSSValueList : public CSSValue {
 public:
-    static PassRefPtr<CSSValueList> createCommaSeparated()
+    static PassRef<CSSValueList> createCommaSeparated()
     {
-        return adoptRef(new CSSValueList(CommaSeparator));
+        return adoptRef(*new CSSValueList(CommaSeparator));
     }
-    static PassRefPtr<CSSValueList> createSpaceSeparated()
+    static PassRef<CSSValueList> createSpaceSeparated()
     {
-        return adoptRef(new CSSValueList(SpaceSeparator));
+        return adoptRef(*new CSSValueList(SpaceSeparator));
     }
-    static PassRefPtr<CSSValueList> createSlashSeparated()
+    static PassRef<CSSValueList> createSlashSeparated()
     {
-        return adoptRef(new CSSValueList(SlashSeparator));
+        return adoptRef(*new CSSValueList(SlashSeparator));
     }
-    static PassRefPtr<CSSValueList> createFromParserValueList(CSSParserValueList* list)
+    static PassRef<CSSValueList> createFromParserValueList(CSSParserValueList& list)
     {
-        return adoptRef(new CSSValueList(list));
+        return adoptRef(*new CSSValueList(list));
     }
 
     size_t length() const { return m_values.size(); }
     CSSValue* item(size_t index) { return index < m_values.size() ? m_values[index].get() : 0; }
     const CSSValue* item(size_t index) const { return index < m_values.size() ? m_values[index].get() : 0; }
     CSSValue* itemWithoutBoundsCheck(size_t index) { return m_values[index].get(); }
+    const CSSValue* itemWithoutBoundsCheck(size_t index) const { ASSERT(index < m_values.size()); return m_values[index].get(); }
 
     void append(PassRefPtr<CSSValue> value) { m_values.append(value); }
     void prepend(PassRefPtr<CSSValue> value) { m_values.insert(0, value); }
@@ -59,15 +60,12 @@ public:
     bool hasValue(CSSValue*) const;
     PassRefPtr<CSSValueList> copy();
 
-    String customCssText() const;
+    String customCSSText() const;
     bool equals(const CSSValueList&) const;
     bool equals(const CSSValue&) const;
-#if ENABLE(CSS_VARIABLES)
-    String customSerializeResolvingVariables(const HashMap<AtomicString, String>&) const;
-#endif
 
-    void addSubresourceStyleURLs(ListHashSet<KURL>&, const StyleSheetContents*) const;
-    
+    void addSubresourceStyleURLs(ListHashSet<URL>&, const StyleSheetContents*) const;
+
     bool hasFailedOrCanceledSubresources() const;
     
     PassRefPtr<CSSValueList> cloneForCSSOM() const;
@@ -78,16 +76,18 @@ protected:
 
 private:
     explicit CSSValueList(ValueListSeparator);
-    explicit CSSValueList(CSSParserValueList*);
+    explicit CSSValueList(CSSParserValueList&);
 
     Vector<RefPtr<CSSValue>, 4> m_values;
 };
+
+CSS_VALUE_TYPE_CASTS(CSSValueList, isValueList())
 
 // Objects of this class are intended to be stack-allocated and scoped to a single function.
 // Please take care not to pass these around as they do hold onto a raw pointer.
 class CSSValueListInspector {
 public:
-    CSSValueListInspector(CSSValue* value) : m_list((value && value->isValueList()) ? static_cast<CSSValueList*>(value) : 0) { }
+    CSSValueListInspector(CSSValue* value) : m_list((value && value->isValueList()) ? toCSSValueList(value) : 0) { }
     CSSValue* item(size_t index) const { ASSERT_WITH_SECURITY_IMPLICATION(index < length()); return m_list->itemWithoutBoundsCheck(index); }
     CSSValue* first() const { return item(0); }
     CSSValue* second() const { return item(1); }

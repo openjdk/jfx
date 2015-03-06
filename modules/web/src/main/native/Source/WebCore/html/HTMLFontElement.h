@@ -28,17 +28,17 @@
 
 namespace WebCore {
 
-class HTMLFontElement FINAL : public HTMLElement {
+class HTMLFontElement final : public HTMLElement {
 public:
-    static PassRefPtr<HTMLFontElement> create(const QualifiedName&, Document*);
+    static PassRefPtr<HTMLFontElement> create(const QualifiedName&, Document&);
     
-    static bool cssValueFromFontSizeNumber(const String&, int&);
+    static bool cssValueFromFontSizeNumber(const String&, CSSValueID&);
 
 private:
-    HTMLFontElement(const QualifiedName&, Document*);
+    HTMLFontElement(const QualifiedName&, Document&);
 
-    virtual bool isPresentationAttribute(const QualifiedName&) const OVERRIDE;
-    virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStylePropertySet*) OVERRIDE;
+    virtual bool isPresentationAttribute(const QualifiedName&) const override;
+    virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStyleProperties&) override;
 };
 
 } // namespace

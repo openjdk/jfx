@@ -26,13 +26,12 @@
 
 [
     NoInterfaceObject,
-        Conditional=SVG,
-        ObjCProtocol
+    ObjCProtocol
 ] interface SVGFilterPrimitiveStandardAttributes {
-        readonly attribute SVGAnimatedLength x;
-        readonly attribute SVGAnimatedLength y;
-        readonly attribute SVGAnimatedLength width;
-        readonly attribute SVGAnimatedLength height;
-        readonly attribute SVGAnimatedString result;
-    };
+    readonly attribute SVGAnimatedLength x;
+    readonly attribute SVGAnimatedLength y;
+    readonly attribute SVGAnimatedLength width;
+    readonly attribute SVGAnimatedLength height;
+    readonly attribute SVGAnimatedString result;
+};
 

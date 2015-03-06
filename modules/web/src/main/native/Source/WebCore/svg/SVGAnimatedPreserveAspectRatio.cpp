@@ -18,27 +18,25 @@
  */
 
 #include "config.h"
-
-#if ENABLE(SVG)
 #include "SVGAnimatedPreserveAspectRatio.h"
 
 #include "SVGAnimateElement.h"
 
 namespace WebCore {
-    
+
 SVGAnimatedPreserveAspectRatioAnimator::SVGAnimatedPreserveAspectRatioAnimator(SVGAnimationElement* animationElement, SVGElement* contextElement)
     : SVGAnimatedTypeAnimator(AnimatedPreserveAspectRatio, animationElement, contextElement)
 {
 }
 
-PassOwnPtr<SVGAnimatedType> SVGAnimatedPreserveAspectRatioAnimator::constructFromString(const String& string)
+std::unique_ptr<SVGAnimatedType> SVGAnimatedPreserveAspectRatioAnimator::constructFromString(const String& string)
 {
-    OwnPtr<SVGAnimatedType> animatedType = SVGAnimatedType::createPreserveAspectRatio(new SVGPreserveAspectRatio);
+    auto animatedType = SVGAnimatedType::createPreserveAspectRatio(std::make_unique<SVGPreserveAspectRatio>());
     animatedType->preserveAspectRatio().parse(string);
-    return animatedType.release();
+    return animatedType;
 }
 
-PassOwnPtr<SVGAnimatedType> SVGAnimatedPreserveAspectRatioAnimator::startAnimValAnimation(const SVGElementAnimatedPropertyList& animatedTypes)
+std::unique_ptr<SVGAnimatedType> SVGAnimatedPreserveAspectRatioAnimator::startAnimValAnimation(const SVGElementAnimatedPropertyList& animatedTypes)
 {
     return SVGAnimatedType::createPreserveAspectRatio(constructFromBaseValue<SVGAnimatedPreserveAspectRatio>(animatedTypes));
 }
@@ -87,5 +85,3 @@ float SVGAnimatedPreserveAspectRatioAnimator::calculateDistance(const String&, c
 }
 
 }
-
-#endif // ENABLE(SVG)

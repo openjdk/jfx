@@ -20,8 +20,6 @@
  */
 
 #include "config.h"
-
-#if ENABLE(SVG)
 #include "RenderSVGForeignObject.h"
 
 #include "GraphicsContext.h"
@@ -39,14 +37,19 @@
 
 namespace WebCore {
 
-RenderSVGForeignObject::RenderSVGForeignObject(SVGForeignObjectElement* node) 
-    : RenderSVGBlock(node)
+RenderSVGForeignObject::RenderSVGForeignObject(SVGForeignObjectElement& element, PassRef<RenderStyle> style)
+    : RenderSVGBlock(element, std::move(style))
     , m_needsTransformUpdate(true)
 {
 }
 
 RenderSVGForeignObject::~RenderSVGForeignObject()
 {
+}
+
+SVGForeignObjectElement& RenderSVGForeignObject::foreignObjectElement() const
+{
+    return toSVGForeignObjectElement(RenderSVGBlock::graphicsElement());
 }
 
 void RenderSVGForeignObject::paint(PaintInfo& paintInfo, const LayoutPoint&)
@@ -59,13 +62,13 @@ void RenderSVGForeignObject::paint(PaintInfo& paintInfo, const LayoutPoint&)
     GraphicsContextStateSaver stateSaver(*childPaintInfo.context);
     childPaintInfo.applyTransform(localTransform());
 
-    if (SVGRenderSupport::isOverflowHidden(this))
+    if (SVGRenderSupport::isOverflowHidden(*this))
         childPaintInfo.context->clip(m_viewport);
 
     SVGRenderingContext renderingContext;
     bool continueRendering = true;
     if (paintInfo.phase == PaintPhaseForeground) {
-        renderingContext.prepareToRenderSVGContent(this, childPaintInfo);
+        renderingContext.prepareToRenderSVGContent(*this, childPaintInfo);
         continueRendering = renderingContext.isRenderingPrepared();
     }
 
@@ -91,12 +94,12 @@ void RenderSVGForeignObject::paint(PaintInfo& paintInfo, const LayoutPoint&)
 
 LayoutRect RenderSVGForeignObject::clippedOverflowRectForRepaint(const RenderLayerModelObject* repaintContainer) const
 {
-    return SVGRenderSupport::clippedOverflowRectForRepaint(this, repaintContainer);
+    return SVGRenderSupport::clippedOverflowRectForRepaint(*this, repaintContainer);
 }
 
 void RenderSVGForeignObject::computeFloatRectForRepaint(const RenderLayerModelObject* repaintContainer, FloatRect& repaintRect, bool fixed) const
 {
-    SVGRenderSupport::computeFloatRectForRepaint(this, repaintContainer, repaintRect, fixed);
+    SVGRenderSupport::computeFloatRectForRepaint(*this, repaintContainer, repaintRect, fixed);
 }
 
 const AffineTransform& RenderSVGForeignObject::localToParentTransform() const
@@ -126,14 +129,13 @@ void RenderSVGForeignObject::layout()
 {
     StackStats::LayoutCheckPoint layoutCheckPoint;
     ASSERT(needsLayout());
-    ASSERT(!view()->layoutStateEnabled()); // RenderSVGRoot disables layoutState for the SVG rendering tree.
+    ASSERT(!view().layoutStateEnabled()); // RenderSVGRoot disables layoutState for the SVG rendering tree.
 
-    LayoutRepainter repainter(*this, SVGRenderSupport::checkForSVGRepaintDuringLayout(this));
-    SVGForeignObjectElement* foreign = static_cast<SVGForeignObjectElement*>(node());
+    LayoutRepainter repainter(*this, SVGRenderSupport::checkForSVGRepaintDuringLayout(*this));
 
     bool updateCachedBoundariesInParents = false;
     if (m_needsTransformUpdate) {
-        m_localTransform = foreign->animatedLocalTransform();
+        m_localTransform = foreignObjectElement().animatedLocalTransform();
         m_needsTransformUpdate = false;
         updateCachedBoundariesInParents = true;
     }
@@ -141,9 +143,9 @@ void RenderSVGForeignObject::layout()
     FloatRect oldViewport = m_viewport;
 
     // Cache viewport boundaries
-    SVGLengthContext lengthContext(foreign);
-    FloatPoint viewportLocation(foreign->x().value(lengthContext), foreign->y().value(lengthContext));
-    m_viewport = FloatRect(viewportLocation, FloatSize(foreign->width().value(lengthContext), foreign->height().value(lengthContext)));
+    SVGLengthContext lengthContext(&foreignObjectElement());
+    FloatPoint viewportLocation(foreignObjectElement().x().value(lengthContext), foreignObjectElement().y().value(lengthContext));
+    m_viewport = FloatRect(viewportLocation, FloatSize(foreignObjectElement().width().value(lengthContext), foreignObjectElement().height().value(lengthContext)));
     if (!updateCachedBoundariesInParents)
         updateCachedBoundariesInParents = oldViewport != m_viewport;
 
@@ -164,7 +166,7 @@ void RenderSVGForeignObject::layout()
 
     // Invalidate all resources of this client if our layout changed.
     if (layoutChanged)
-        SVGResourcesCache::clientLayoutChanged(this);
+        SVGResourcesCache::clientLayoutChanged(*this);
 
     repainter.repaintAfterLayout();
 }
@@ -178,7 +180,7 @@ bool RenderSVGForeignObject::nodeAtFloatPoint(const HitTestRequest& request, Hit
     FloatPoint localPoint = localTransform().inverse().mapPoint(pointInParent);
 
     // Early exit if local point is not contained in clipped viewport area
-    if (SVGRenderSupport::isOverflowHidden(this) && !m_viewport.contains(localPoint))
+    if (SVGRenderSupport::isOverflowHidden(*this) && !m_viewport.contains(localPoint))
         return false;
 
     // FOs establish a stacking context, so we need to hit-test all layers.
@@ -196,14 +198,12 @@ bool RenderSVGForeignObject::nodeAtPoint(const HitTestRequest&, HitTestResult&, 
 
 void RenderSVGForeignObject::mapLocalToContainer(const RenderLayerModelObject* repaintContainer, TransformState& transformState, MapCoordinatesFlags, bool* wasFixed) const
 {
-    SVGRenderSupport::mapLocalToContainer(this, repaintContainer, transformState, wasFixed);
+    SVGRenderSupport::mapLocalToContainer(*this, repaintContainer, transformState, wasFixed);
 }
 
 const RenderObject* RenderSVGForeignObject::pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap& geometryMap) const
 {
-    return SVGRenderSupport::pushMappingToContainer(this, ancestorToStopAt, geometryMap);
+    return SVGRenderSupport::pushMappingToContainer(*this, ancestorToStopAt, geometryMap);
 }
 
 }
-
-#endif

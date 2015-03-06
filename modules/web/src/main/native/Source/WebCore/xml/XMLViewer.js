@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2011 Google Inc. All rights reserved.
+ * Copyright (C) 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -27,6 +28,7 @@
  */
 
 var nodeParentPairs = [];
+var sourceXML;
 
 // Script entry point.
 
@@ -40,9 +42,7 @@ function prepareWebKitXMLViewer(noStyleMessage)
     head.appendChild(style);
     var body = createHTMLElement('body');
     html.appendChild(body);
-    var sourceXML = createHTMLElement('div');
-    sourceXML.id = 'webkit-xml-viewer-source-xml';
-    body.appendChild(sourceXML);
+    sourceXML = createHTMLElement('div');
 
     var child;
     while (child = document.firstChild) {
@@ -69,12 +69,6 @@ function prepareWebKitXMLViewer(noStyleMessage)
 
 function sourceXMLLoaded()
 {
-    var sourceXML = document.getElementById('webkit-xml-viewer-source-xml');
-    if (!sourceXML)
-        return; // Stop if some XML tree extension is already processing this document
-    //var style = document.head.firstChild;
-    //document.head.removeChild(style);
-    //document.head.appendChild(style);
     var root = document.getElementById('tree');
 
     for (var child = sourceXML.firstChild; child; child = child.nextSibling)
@@ -290,7 +284,6 @@ function createComment(commentString)
 {
     var comment = createHTMLElement('span');
     comment.classList.add('comment');
-    comment.classList.add('webkit-html-comment');
     comment.textContent = commentString;
     return comment;
 }
@@ -313,7 +306,7 @@ function createLine()
 function createTag(node, isClosing, isEmpty)
 {
     var tag = createHTMLElement('span');
-    tag.classList.add('webkit-html-tag');
+    tag.classList.add('tag');
 
     var stringBeforeAttrs = '<';
     if (isClosing)
@@ -340,17 +333,16 @@ function createTag(node, isClosing, isEmpty)
 function createAttribute(attributeNode)
 {
     var attribute = createHTMLElement('span');
-    attribute.classList.add('webkit-html-attribute');
 
     var attributeName = createHTMLElement('span');
-    attributeName.classList.add('webkit-html-attribute-name');
+    attributeName.classList.add('attribute-name');
     attributeName.textContent = attributeNode.name;
 
     var textBefore = document.createTextNode(' ');
     var textBetween = document.createTextNode('="');
 
     var attributeValue = createHTMLElement('span');
-    attributeValue.classList.add('webkit-html-attribute-value');
+    attributeValue.classList.add('attribute-value');
     attributeValue.textContent = attributeNode.value;
 
     var textAfter = document.createTextNode('"');
@@ -392,8 +384,7 @@ function drawArrows()
 
 function expandFunction(sectionId)
 {
-    return function()
-    {
+    return function() {
         document.querySelector('#' + sectionId + ' > .expanded').className = 'expanded';
         document.querySelector('#' + sectionId + ' > .collapsed').className = 'collapsed hidden';
     };
@@ -401,8 +392,7 @@ function expandFunction(sectionId)
 
 function collapseFunction(sectionId)
 {
-    return function()
-    {
+    return function() {
         document.querySelector('#' + sectionId + ' > .expanded').className = 'expanded hidden';
         document.querySelector('#' + sectionId + ' > .collapsed').className = 'collapsed';
     };
@@ -425,7 +415,6 @@ function initButtons()
         expandButton.onclick = expandFunction(sectionId);
         expandButton.onmousedown = handleButtonMouseDown;
     }
-
 }
 
 function handleButtonMouseDown(e)

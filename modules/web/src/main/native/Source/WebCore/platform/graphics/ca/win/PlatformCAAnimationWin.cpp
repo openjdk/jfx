@@ -25,8 +25,6 @@
 
 #include "config.h"
 
-#if USE(ACCELERATED_COMPOSITING)
-
 #include "PlatformCAAnimation.h"
 
 #include "FloatConversion.h"
@@ -121,12 +119,23 @@ static PlatformCAAnimation::ValueFunctionType fromCACFValueFunctionType(CFString
     return PlatformCAAnimation::NoValueFunction;
 }
 
-static RetainPtr<CACFTimingFunctionRef> toCACFTimingFunction(const TimingFunction* timingFunction)
+static RetainPtr<CACFTimingFunctionRef> toCACFTimingFunction(const TimingFunction* timingFunction, bool reverse)
 {
     ASSERT(timingFunction);
     if (timingFunction->isCubicBezierTimingFunction()) {
+        RefPtr<CubicBezierTimingFunction> reversed;
         const CubicBezierTimingFunction* ctf = static_cast<const CubicBezierTimingFunction*>(timingFunction);
-        return adoptCF(CACFTimingFunctionCreate(static_cast<float>(ctf->x1()), static_cast<float>(ctf->y1()), static_cast<float>(ctf->x2()), static_cast<float>(ctf->y2())));
+
+        if (reverse) {
+            reversed = ctf->createReversed();
+            ctf = reversed.get();
+        }
+
+        float x1 = static_cast<float>(ctf->x1());
+        float y1 = static_cast<float>(ctf->y1());
+        float x2 = static_cast<float>(ctf->x2());
+        float y2 = static_cast<float>(ctf->y2());
+        return adoptCF(CACFTimingFunctionCreate(x1, y1, x2, y2));
     }
     
     return CACFTimingFunctionGetFunctionWithName(kCACFTimingFunctionLinear);
@@ -199,11 +208,6 @@ PassRefPtr<PlatformCAAnimation> PlatformCAAnimation::copy() const
 
 PlatformCAAnimation::~PlatformCAAnimation()
 {
-}
-
-bool PlatformCAAnimation::supportsValueFunction()
-{
-    return true;
 }
 
 PlatformAnimationRef PlatformCAAnimation::platformAnimation() const
@@ -289,7 +293,7 @@ void PlatformCAAnimation::setFillMode(FillModeType value)
 void PlatformCAAnimation::setTimingFunction(const TimingFunction* value, bool reverse)
 {
     UNUSED_PARAM(reverse);
-    CACFAnimationSetTimingFunction(m_animation.get(), toCACFTimingFunction(value).get());
+    CACFAnimationSetTimingFunction(m_animation.get(), toCACFTimingFunction(value, reverse).get());
 }
 
 void PlatformCAAnimation::copyTimingFunctionFrom(const PlatformCAAnimation* value)
@@ -354,7 +358,7 @@ void PlatformCAAnimation::setFromValue(const FloatPoint3D& value)
     if (animationType() != Basic)
         return;
 
-    float a[3] = { value.x(), value.y(), value.z() };
+    CGFloat a[3] = { value.x(), value.y(), value.z() };
     RetainPtr<CACFVectorRef> v = adoptCF(CACFVectorCreate(3, a));
     CACFAnimationSetFromValue(m_animation.get(), v.get());
 }
@@ -364,7 +368,7 @@ void PlatformCAAnimation::setFromValue(const WebCore::Color& value)
     if (animationType() != Basic)
         return;
 
-    float a[4] = { value.red(), value.green(), value.blue(), value.alpha() };
+    CGFloat a[4] = { value.red(), value.green(), value.blue(), value.alpha() };
     RetainPtr<CACFVectorRef> v = adoptCF(CACFVectorCreate(4, a));
     CACFAnimationSetFromValue(m_animation.get(), v.get());
 }
@@ -407,7 +411,7 @@ void PlatformCAAnimation::setToValue(const FloatPoint3D& value)
     if (animationType() != Basic)
         return;
 
-    float a[3] = { value.x(), value.y(), value.z() };
+    CGFloat a[3] = { value.x(), value.y(), value.z() };
     RetainPtr<CACFVectorRef> v = adoptCF(CACFVectorCreate(3, a));
     CACFAnimationSetToValue(m_animation.get(), v.get());
 }
@@ -417,7 +421,7 @@ void PlatformCAAnimation::setToValue(const WebCore::Color& value)
     if (animationType() != Basic)
         return;
 
-    float a[4] = { value.red(), value.green(), value.blue(), value.alpha() };
+    CGFloat a[4] = { value.red(), value.green(), value.blue(), value.alpha() };
     RetainPtr<CACFVectorRef> v = adoptCF(CACFVectorCreate(4, a));
     CACFAnimationSetToValue(m_animation.get(), v.get());
 }
@@ -474,7 +478,7 @@ void PlatformCAAnimation::setValues(const Vector<FloatPoint3D>& value)
         
     RetainPtr<CFMutableArrayRef> array = adoptCF(CFArrayCreateMutable(0, value.size(), &kCFTypeArrayCallBacks));
     for (size_t i = 0; i < value.size(); ++i) {
-        float a[3] = { value[i].x(), value[i].y(), value[i].z() };
+        CGFloat a[3] = { value[i].x(), value[i].y(), value[i].z() };
         RetainPtr<CACFVectorRef> v = adoptCF(CACFVectorCreate(3, a));
         CFArrayAppendValue(array.get(), v.get());
     }
@@ -489,7 +493,7 @@ void PlatformCAAnimation::setValues(const Vector<WebCore::Color>& value)
         
     RetainPtr<CFMutableArrayRef> array = adoptCF(CFArrayCreateMutable(0, value.size(), &kCFTypeArrayCallBacks));
     for (size_t i = 0; i < value.size(); ++i) {
-        float a[4] = { value[i].red(), value[i].green(), value[i].blue(), value[i].alpha() };
+        CGFloat a[4] = { value[i].red(), value[i].green(), value[i].blue(), value[i].alpha() };
         RetainPtr<CACFVectorRef> v = adoptCF(CACFVectorCreate(4, a));
         CFArrayAppendValue(array.get(), v.get());
     }
@@ -543,7 +547,7 @@ void PlatformCAAnimation::setTimingFunctions(const Vector<const TimingFunction*>
     RetainPtr<CFMutableArrayRef> array = adoptCF(CFArrayCreateMutable(0, value.size(), &kCFTypeArrayCallBacks));
     for (size_t i = 0; i < value.size(); ++i) {
         RetainPtr<CFNumberRef> v = adoptCF(CFNumberCreate(0, kCFNumberFloatType, &value[i]));
-        CFArrayAppendValue(array.get(), toCACFTimingFunction(value[i]).get());
+        CFArrayAppendValue(array.get(), toCACFTimingFunction(value[i], reverse).get());
     }
 
     CACFAnimationSetTimingFunctions(m_animation.get(), array.get());
@@ -553,5 +557,3 @@ void PlatformCAAnimation::copyTimingFunctionsFrom(const PlatformCAAnimation* val
 {
     CACFAnimationSetTimingFunctions(m_animation.get(), CACFAnimationGetTimingFunctions(value->platformAnimation()));
 }
-
-#endif // USE(ACCELERATED_COMPOSITING)

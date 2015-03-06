@@ -61,13 +61,14 @@
 #include "RenderBox.h"
 #include "RenderObject.h"
 #include "ScriptController.h"
-#include "ScriptValue.h"
 #include "SecurityOrigin.h"
 #include "Settings.h"
+#include "UserGestureIndicator.h"
 #include "WheelEvent.h"
 #include "c_instance.h"
 #include "npruntime_impl.h"
 #include "runtime_root.h"
+#include <bindings/ScriptValue.h>
 #include <runtime/JSCJSValue.h>
 #include <runtime/JSLock.h>
 #include <wtf/ASCIICType.h>
@@ -102,7 +103,7 @@ static InstanceMap& instanceMap()
     return map;
 }
 
-static String scriptStringIfJavaScriptURL(const KURL& url)
+static String scriptStringIfJavaScriptURL(const URL& url)
 {
     if (!protocolIsJavaScript(url))
         return String();
@@ -124,7 +125,7 @@ IntRect PluginView::windowClipRect() const
     IntRect clipRect(m_windowRect);
     
     // Take our element and get the clip rect from the enclosing layer and frame view.
-    FrameView* parentView = m_element->document()->view();
+    FrameView* parentView = m_element->document().view();
     clipRect.intersect(parentView->windowClipRectForFrameOwner(m_element, true));
 
     return clipRect;
@@ -132,7 +133,7 @@ IntRect PluginView::windowClipRect() const
 
 void PluginView::setFrameRect(const IntRect& rect)
 {
-    if (m_element->document()->printing())
+    if (m_element->document().printing())
         return;
 
     if (rect != frameRect())
@@ -173,7 +174,7 @@ void PluginView::handleEvent(Event* event)
     else if (event->isKeyboardEvent())
         handleKeyboardEvent(static_cast<KeyboardEvent*>(event));
 #if defined(XP_MACOSX)
-    else if (event->type() == eventNames().mousewheelEvent)
+    else if (event->type() == eventNames().wheelEvent || event->type() == eventNames().mousewheelEvent)
         handleWheelEvent(static_cast<WheelEvent*>(event));
 #endif
     else if (event->type() == eventNames().contextmenuEvent)
@@ -284,7 +285,7 @@ void PluginView::mediaCanStart()
 {
     ASSERT(!m_isStarted);
     if (!start())
-        parentFrame()->loader()->client()->dispatchDidFailToStartPlugin(this);
+        parentFrame()->loader().client().dispatchDidFailToStartPlugin(this);
 }
 
 PluginView::~PluginView()
@@ -308,7 +309,7 @@ PluginView::~PluginView()
 
     platformDestroy();
 
-    m_parentFrame->script()->cleanupScriptObjectsForPlugin(this);
+    m_parentFrame->script().cleanupScriptObjectsForPlugin(this);
 
     if (m_plugin && !(m_plugin->quirks().contains(PluginQuirkDontUnloadPlugin)))
         m_plugin->unload();
@@ -422,12 +423,13 @@ void PluginView::performRequest(PluginRequest* request)
     // don't let a plugin start any loads if it is no longer part of a document that is being 
     // displayed unless the loads are in the same frame as the plugin.
     const String& targetFrameName = request->frameLoadRequest().frameName();
-    if (m_parentFrame->loader()->documentLoader() != m_parentFrame->loader()->activeDocumentLoader() &&
-        (targetFrameName.isNull() || m_parentFrame->tree()->find(targetFrameName) != m_parentFrame))
+    if (m_parentFrame->loader().documentLoader() != m_parentFrame->loader().activeDocumentLoader() && (targetFrameName.isNull() || m_parentFrame->tree().find(targetFrameName) != m_parentFrame))
         return;
 
-    KURL requestURL = request->frameLoadRequest().resourceRequest().url();
+    URL requestURL = request->frameLoadRequest().resourceRequest().url();
     String jsString = scriptStringIfJavaScriptURL(requestURL);
+
+    UserGestureIndicator gestureIndicator(request->shouldAllowPopups() ? DefinitelyProcessingUserGesture : PossiblyProcessingUserGesture);
 
     if (jsString.isNull()) {
         // if this is not a targeted request, create a stream for it. otherwise,
@@ -444,7 +446,7 @@ void PluginView::performRequest(PluginRequest* request)
             FrameLoadRequest frameRequest(m_parentFrame.get(), request->frameLoadRequest().resourceRequest());
             frameRequest.setFrameName(targetFrameName);
             frameRequest.setShouldCheckNewWindowPolicy(true);
-            m_parentFrame->loader()->load(frameRequest);
+            m_parentFrame->loader().load(frameRequest);
 
             // FIXME: <rdar://problem/4807469> This should be sent when the document has finished loading
             if (request->sendNotification()) {
@@ -461,16 +463,16 @@ void PluginView::performRequest(PluginRequest* request)
 
     // Targeted JavaScript requests are only allowed on the frame that contains the JavaScript plugin
     // and this has been made sure in ::load.
-    ASSERT(targetFrameName.isEmpty() || m_parentFrame->tree()->find(targetFrameName) == m_parentFrame);
+    ASSERT(targetFrameName.isEmpty() || m_parentFrame->tree().find(targetFrameName) == m_parentFrame);
     
     // Executing a script can cause the plugin view to be destroyed, so we keep a reference to it.
     RefPtr<PluginView> protector(this);
-    ScriptValue result = m_parentFrame->script()->executeScript(jsString, request->shouldAllowPopups());
+    Deprecated::ScriptValue result = m_parentFrame->script().executeScript(jsString, request->shouldAllowPopups());
 
     if (targetFrameName.isNull()) {
         String resultString;
 
-        ScriptState* scriptState = m_parentFrame->script()->globalObject(pluginWorld())->globalExec();
+        JSC::ExecState* scriptState = m_parentFrame->script().globalObject(pluginWorld())->globalExec();
         CString cstr;
         if (result.getString(scriptState, resultString))
             cstr = resultString.utf8();
@@ -510,13 +512,13 @@ NPError PluginView::load(const FrameLoadRequest& frameLoadRequest, bool sendNoti
 {
     ASSERT(frameLoadRequest.resourceRequest().httpMethod() == "GET" || frameLoadRequest.resourceRequest().httpMethod() == "POST");
 
-    KURL url = frameLoadRequest.resourceRequest().url();
+    URL url = frameLoadRequest.resourceRequest().url();
     
     if (url.isEmpty())
         return NPERR_INVALID_URL;
 
     // Don't allow requests to be made when the document loader is stopping all loaders.
-    DocumentLoader* loader = m_parentFrame->loader()->documentLoader();
+    DocumentLoader* loader = m_parentFrame->loader().documentLoader();
     if (!loader || loader->isStopping())
         return NPERR_GENERIC_ERROR;
 
@@ -525,11 +527,11 @@ NPError PluginView::load(const FrameLoadRequest& frameLoadRequest, bool sendNoti
 
     if (!jsString.isNull()) {
         // Return NPERR_GENERIC_ERROR if JS is disabled. This is what Mozilla does.
-        if (!m_parentFrame->script()->canExecuteScripts(NotAboutToExecuteScript))
+        if (!m_parentFrame->script().canExecuteScripts(NotAboutToExecuteScript))
             return NPERR_GENERIC_ERROR;
 
         // For security reasons, only allow JS requests to be made on the frame that contains the plug-in.
-        if (!targetFrameName.isNull() && m_parentFrame->tree()->find(targetFrameName) != m_parentFrame)
+        if (!targetFrameName.isNull() && m_parentFrame->tree().find(targetFrameName) != m_parentFrame)
             return NPERR_INVALID_PARAM;
     } else if (!m_parentFrame->document()->securityOrigin()->canDisplay(url))
         return NPERR_GENERIC_ERROR;
@@ -539,7 +541,7 @@ NPError PluginView::load(const FrameLoadRequest& frameLoadRequest, bool sendNoti
     return NPERR_NO_ERROR;
 }
 
-static KURL makeURL(const KURL& baseURL, const char* relativeURLString)
+static URL makeURL(const URL& baseURL, const char* relativeURLString)
 {
     String urlString = relativeURLString;
 
@@ -547,7 +549,7 @@ static KURL makeURL(const KURL& baseURL, const char* relativeURLString)
     urlString.replaceWithLiteral('\n', "");
     urlString.replaceWithLiteral('\r', "");
 
-    return KURL(baseURL, urlString);
+    return URL(baseURL, urlString);
 }
 
 NPError PluginView::getURLNotify(const char* url, const char* target, void* notifyData)
@@ -634,11 +636,7 @@ NPError PluginView::setValue(NPPVariable variable, void* value)
         NPDrawingModel newDrawingModel = NPDrawingModel(uintptr_t(value));
         switch (newDrawingModel) {
         case NPDrawingModelCoreGraphics:
-            m_drawingModel = newDrawingModel;
             return NPERR_NO_ERROR;
-#ifndef NP_NO_QUICKDRAW
-        case NPDrawingModelQuickDraw:
-#endif
         case NPDrawingModelCoreAnimation:
         default:
             LOG(Plugins, "Plugin asked for unsupported drawing model: %s",
@@ -654,13 +652,8 @@ NPError PluginView::setValue(NPPVariable variable, void* value)
 
         NPEventModel newEventModel = NPEventModel(uintptr_t(value));
         switch (newEventModel) {
-#ifndef NP_NO_CARBON
-        case NPEventModelCarbon:
-#endif
         case NPEventModelCocoa:
-            m_eventModel = newEventModel;
             return NPERR_NO_ERROR;
-
         default:
             LOG(Plugins, "Plugin asked for unsupported event model: %s",
                     prettyNameForEventModel(newEventModel));
@@ -759,7 +752,7 @@ PassRefPtr<JSC::Bindings::Instance> PluginView::bindingInstance()
         return 0;
     }
 
-    RefPtr<JSC::Bindings::RootObject> root = m_parentFrame->script()->createRootObject(this);
+    RefPtr<JSC::Bindings::RootObject> root = m_parentFrame->script().createRootObject(this);
     RefPtr<JSC::Bindings::Instance> instance = JSC::Bindings::CInstance::create(object, root.release());
 
     _NPN_ReleaseObject(object);
@@ -803,7 +796,7 @@ void PluginView::setParameters(const Vector<String>& paramNames, const Vector<St
     m_paramCount = paramCount;
 }
 
-PluginView::PluginView(Frame* parentFrame, const IntSize& size, PluginPackage* plugin, HTMLPlugInElement* element, const KURL& url, const Vector<String>& paramNames, const Vector<String>& paramValues, const String& mimeType, bool loadManually)
+PluginView::PluginView(Frame* parentFrame, const IntSize& size, PluginPackage* plugin, HTMLPlugInElement* element, const URL& url, const Vector<String>& paramNames, const Vector<String>& paramValues, const String& mimeType, bool loadManually)
     : m_parentFrame(parentFrame)
     , m_plugin(plugin)
     , m_element(element)
@@ -840,14 +833,11 @@ PluginView::PluginView(Frame* parentFrame, const IntSize& size, PluginPackage* p
     , m_wmPrintHDC(0)
     , m_haveUpdatedPluginWidget(false)
 #endif
-#if (PLATFORM(QT) && OS(WINDOWS)) || defined(XP_MACOSX) || PLATFORM(EFL)
+#if PLATFORM(EFL)
     , m_window(0)
 #endif
 #if defined(XP_MACOSX)
-    , m_drawingModel(NPDrawingModel(-1))
-    , m_eventModel(NPEventModel(-1))
     , m_contextRef(0)
-    , m_fakeWindow(0)
 #endif
 #if defined(XP_UNIX) && ENABLE(NETSCAPE_PLUGIN_API)
     , m_hasPendingGeometryChange(true)
@@ -855,9 +845,6 @@ PluginView::PluginView(Frame* parentFrame, const IntSize& size, PluginPackage* p
     , m_visual(0)
     , m_colormap(0)
     , m_pluginDisplay(0)
-#endif
-#if PLATFORM(QT) && defined(MOZ_PLATFORM_MAEMO) && (MOZ_PLATFORM_MAEMO >= 5)
-    , m_renderToImage(false)
 #endif
     , m_loadManually(loadManually)
     , m_manualStream(0)
@@ -887,11 +874,10 @@ PluginView::PluginView(Frame* parentFrame, const IntSize& size, PluginPackage* p
 
 void PluginView::focusPluginElement()
 {
-    // Focus the plugin
     if (Page* page = m_parentFrame->page())
-        page->focusController()->setFocusedElement(m_element, m_parentFrame);
+        page->focusController().setFocusedElement(m_element, m_parentFrame);
     else
-        m_parentFrame->document()->setFocusedNode(m_element);
+        m_parentFrame->document()->setFocusedElement(m_element);
 }
 
 void PluginView::didReceiveResponse(const ResourceResponse& response)
@@ -902,7 +888,7 @@ void PluginView::didReceiveResponse(const ResourceResponse& response)
     ASSERT(m_loadManually);
     ASSERT(!m_manualStream);
 
-    m_manualStream = PluginStream::create(this, m_parentFrame.get(), m_parentFrame->loader()->activeDocumentLoader()->request(), false, 0, plugin()->pluginFuncs(), instance(), m_plugin->quirks());
+    m_manualStream = PluginStream::create(this, m_parentFrame.get(), m_parentFrame->loader().activeDocumentLoader()->request(), false, 0, plugin()->pluginFuncs(), instance(), m_plugin->quirks());
     m_manualStream->setLoadManually(true);
 
     m_manualStream->didReceiveResponse(0, response);
@@ -959,7 +945,7 @@ bool PluginView::isCallingPlugin()
     return s_callingPlugin > 0;
 }
 
-PassRefPtr<PluginView> PluginView::create(Frame* parentFrame, const IntSize& size, HTMLPlugInElement* element, const KURL& url, const Vector<String>& paramNames, const Vector<String>& paramValues, const String& mimeType, bool loadManually)
+PassRefPtr<PluginView> PluginView::create(Frame* parentFrame, const IntSize& size, HTMLPlugInElement* element, const URL& url, const Vector<String>& paramNames, const Vector<String>& paramValues, const String& mimeType, bool loadManually)
 {
     // if we fail to find a plugin for this MIME type, findPlugin will search for
     // a plugin by the file extension and update the MIME type, so pass a mutable String
@@ -1269,7 +1255,7 @@ const char* PluginView::userAgent()
     else if (m_plugin->quirks().contains(PluginQuirkWantsChromeUserAgent))
         return ChromeUserAgent;
     if (m_userAgent.isNull())
-        m_userAgent = m_parentFrame->loader()->userAgent(m_url).utf8();
+        m_userAgent = m_parentFrame->loader().userAgent(m_url).utf8();
 
     return m_userAgent.data();
 }
@@ -1333,7 +1319,7 @@ NPError PluginView::getValue(NPNVariable variable, void* value)
         if (m_isJavaScriptPaused)
             return NPERR_GENERIC_ERROR;
 
-        NPObject* windowScriptObject = m_parentFrame->script()->windowScriptNPObject();
+        NPObject* windowScriptObject = m_parentFrame->script().windowScriptNPObject();
 
         // Return value is expected to be retained, as described here: <http://www.mozilla.org/projects/plugin/npruntime.html>
         if (windowScriptObject)
@@ -1368,7 +1354,7 @@ NPError PluginView::getValue(NPNVariable variable, void* value)
         Page* page = m_parentFrame->page();
         if (!page)
             return NPERR_GENERIC_ERROR;
-        *((NPBool*)value) = !page->settings() || page->settings()->privateBrowsingEnabled();
+        *((NPBool*)value) = page->settings().privateBrowsingEnabled();
         return NPERR_NO_ERROR;
     }
 
@@ -1382,13 +1368,7 @@ static Frame* getFrame(Frame* parentFrame, Element* element)
     if (parentFrame)
         return parentFrame;
     
-    Document* document = element->document();
-    if (!document)
-        document = element->ownerDocument();
-    if (document)
-        return document->frame();
-    
-    return 0;
+    return element->document().frame();
 }
 
 NPError PluginView::getValueForURL(NPNURLVariable variable, const char* url, char** value, uint32_t* len)
@@ -1399,7 +1379,7 @@ NPError PluginView::getValueForURL(NPNURLVariable variable, const char* url, cha
 
     switch (variable) {
     case NPNURLVCookie: {
-        KURL u(m_parentFrame->document()->baseURL(), url);
+        URL u(m_parentFrame->document()->baseURL(), url);
         if (u.isValid()) {
             Frame* frame = getFrame(parentFrame(), m_element);
             if (frame) {
@@ -1421,10 +1401,10 @@ NPError PluginView::getValueForURL(NPNURLVariable variable, const char* url, cha
         break;
     }
     case NPNURLVProxy: {
-        KURL u(m_parentFrame->document()->baseURL(), url);
+        URL u(m_parentFrame->document()->baseURL(), url);
         if (u.isValid()) {
             Frame* frame = getFrame(parentFrame(), m_element);
-            const FrameLoader* frameLoader = frame ? frame->loader() : 0;
+            const FrameLoader* frameLoader = frame ? &frame->loader() : 0;
             const NetworkingContext* context = frameLoader ? frameLoader->networkingContext() : 0;
             const CString proxyStr = toString(proxyServersForURL(u, context)).utf8();
             if (!proxyStr.isNull()) {
@@ -1460,7 +1440,7 @@ NPError PluginView::setValueForURL(NPNURLVariable variable, const char* url, con
 
     switch (variable) {
     case NPNURLVCookie: {
-        KURL u(m_parentFrame->document()->baseURL(), url);
+        URL u(m_parentFrame->document()->baseURL(), url);
         if (u.isValid()) {
             const String cookieStr = String::fromUTF8(value, len);
             Frame* frame = getFrame(parentFrame(), m_element);

@@ -37,14 +37,14 @@ public:
     virtual ~CSSStyleRule();
 
     virtual CSSRule::Type type() const { return STYLE_RULE; }
-    virtual String cssText() const OVERRIDE;
-    virtual void reattach(StyleRuleBase*) OVERRIDE;
+    virtual String cssText() const override;
+    virtual void reattach(StyleRuleBase*) override;
 
     String selectorText() const;
     void setSelectorText(const String&);
 
     CSSStyleDeclaration* style();
-    
+
     // FIXME: Not CSSOM. Remove.
     StyleRule* styleRule() const { return m_styleRule.get(); }
 

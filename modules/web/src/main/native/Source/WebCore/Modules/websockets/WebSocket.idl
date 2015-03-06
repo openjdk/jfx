@@ -30,58 +30,54 @@
  */
 
 [
+    GlobalContext=DOMWindow&WorkerGlobalScope,
     EnabledAtRuntime,
-        Conditional=WEB_SOCKETS,
-        ActiveDOMObject,
+    Conditional=WEB_SOCKETS,
+    ActiveDOMObject,
     Constructor(DOMString url),
     Constructor(DOMString url, sequence<DOMString> protocols),
     Constructor(DOMString url, DOMString protocol),
     ConstructorRaisesException,
-    CallWith=ScriptExecutionContext,
-        EventTarget,
+    ConstructorCallWith=ScriptExecutionContext,
+    EventTarget,
     JSNoStaticTables,
 ] interface WebSocket {
-        readonly attribute DOMString URL; // Lowercased .url is the one in the spec, but leaving .URL for compatibility reasons.
-        readonly attribute DOMString url;
+    readonly attribute DOMString URL; // Lowercased .url is the one in the spec, but leaving .URL for compatibility reasons.
+    readonly attribute DOMString url;
 
-        // ready state
-        const unsigned short CONNECTING = 0;
-        const unsigned short OPEN = 1;
-        const unsigned short CLOSING = 2;
-        const unsigned short CLOSED = 3;
-        readonly attribute unsigned short readyState;
+    // ready state
+    const unsigned short CONNECTING = 0;
+    const unsigned short OPEN = 1;
+    const unsigned short CLOSING = 2;
+    const unsigned short CLOSED = 3;
+    readonly attribute unsigned short readyState;
 
-        readonly attribute unsigned long bufferedAmount;
+    readonly attribute unsigned long bufferedAmount;
 
-        // networking
-        attribute EventListener onopen;
-        attribute EventListener onmessage;
-        attribute EventListener onerror;
-        attribute EventListener onclose;
+    // networking
+    attribute EventListener onopen;
+    attribute EventListener onmessage;
+    attribute EventListener onerror;
+    attribute EventListener onclose;
 
     [TreatReturnedNullStringAs=Undefined] readonly attribute DOMString protocol;
     [TreatReturnedNullStringAs=Undefined] readonly attribute DOMString extensions;
 
     attribute DOMString binaryType;
 
-    void send(ArrayBuffer data)
-        raises(DOMException);
-    void send(ArrayBufferView data)
-        raises(DOMException);
-    void send(Blob data)
-        raises(DOMException);
-    void send(DOMString data)
-        raises(DOMException);
+    [RaisesException] void send(ArrayBuffer data);
+    [RaisesException] void send(ArrayBufferView data);
+    [RaisesException] void send(Blob data);
+    [RaisesException] void send(DOMString data);
 
-    void close([Clamp] optional unsigned short code, optional DOMString reason) raises(DOMException);
+    [RaisesException] void close([Clamp] optional unsigned short code, optional DOMString reason);
 
-        // EventTarget interface
+    // EventTarget interface
     void addEventListener(DOMString type,
                           EventListener listener,
                           optional boolean useCapture);
     void removeEventListener(DOMString type,
                              EventListener listener,
                              optional boolean useCapture);
-    boolean dispatchEvent(Event evt)
-            raises(EventException);
-    };
+    [RaisesException] boolean dispatchEvent(Event evt);
+};

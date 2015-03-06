@@ -33,7 +33,9 @@
 #include <wtf/CurrentTime.h>
 #include <wtf/MainThread.h>
 
-using namespace std;
+#if PLATFORM(IOS)
+#include "WebCoreThread.h"
+#endif
 
 namespace WebCore {
 
@@ -56,7 +58,7 @@ ThreadTimers::ThreadTimers()
     , m_firingTimers(false)
     , m_pendingSharedTimerFireTime(0)
 {
-    if (isMainThread())
+    if (isUIThread())
         setSharedTimer(mainThreadSharedTimer());
 }
 
@@ -95,7 +97,7 @@ void ThreadTimers::updateSharedTimer()
                 return;
         } 
         m_pendingSharedTimerFireTime = nextFireTime;
-        m_sharedTimer->setFireInterval(max(nextFireTime - currentMonotonicTime, 0.0));
+        m_sharedTimer->setFireInterval(std::max(nextFireTime - currentMonotonicTime, 0.0));
     }
 }
 
@@ -107,6 +109,7 @@ void ThreadTimers::sharedTimerFired()
 
 void ThreadTimers::sharedTimerFiredInternal()
 {
+    ASSERT(isMainThread() || (!isWebThread() && !isUIThread()));
     // Do a re-entrancy check.
     if (m_firingTimers)
         return;

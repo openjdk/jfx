@@ -41,13 +41,13 @@ FilePrintStream::~FilePrintStream()
     fclose(m_file);
 }
 
-PassOwnPtr<FilePrintStream> FilePrintStream::open(const char* filename, const char* mode)
+std::unique_ptr<FilePrintStream> FilePrintStream::open(const char* filename, const char* mode)
 {
     FILE* file = fopen(filename, mode);
     if (!file)
-        return PassOwnPtr<FilePrintStream>();
-    
-    return adoptPtr(new FilePrintStream(file));
+        return nullptr;
+
+    return std::make_unique<FilePrintStream>(file);
 }
 
 void FilePrintStream::vprintf(const char* format, va_list argList)

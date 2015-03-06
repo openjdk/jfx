@@ -49,40 +49,45 @@ CSSValuePool::CSSValuePool()
 {
 }
 
-PassRefPtr<CSSPrimitiveValue> CSSValuePool::createIdentifierValue(int ident)
+PassRef<CSSPrimitiveValue> CSSValuePool::createIdentifierValue(CSSValueID ident)
 {
-    if (ident <= 0 || ident >= numCSSValueKeywords)
+    if (!ident)
         return CSSPrimitiveValue::createIdentifier(ident);
 
+    RELEASE_ASSERT(ident > 0 && ident < numCSSValueKeywords);
     if (!m_identifierValueCache[ident])
         m_identifierValueCache[ident] = CSSPrimitiveValue::createIdentifier(ident);
-    return m_identifierValueCache[ident];
+    return *m_identifierValueCache[ident];
 }
 
-PassRefPtr<CSSPrimitiveValue> CSSValuePool::createColorValue(unsigned rgbValue)
+PassRef<CSSPrimitiveValue> CSSValuePool::createIdentifierValue(CSSPropertyID ident)
+{
+    return CSSPrimitiveValue::createIdentifier(ident);
+}
+
+PassRef<CSSPrimitiveValue> CSSValuePool::createColorValue(unsigned rgbValue)
 {
     // These are the empty and deleted values of the hash table.
     if (rgbValue == Color::transparent)
-        return m_colorTransparent;
+        return m_colorTransparent.get();
     if (rgbValue == Color::white)
-        return m_colorWhite;
+        return m_colorWhite.get();
     // Just because it is common.
     if (rgbValue == Color::black)
-        return m_colorBlack;
+        return m_colorBlack.get();
 
-    // Just wipe out the cache and start rebuilding if it gets too big.
+    // Remove one entry at random if the cache grows too large.
     const int maximumColorCacheSize = 512;
-    if (m_colorValueCache.size() > maximumColorCacheSize)
-        m_colorValueCache.clear();
+    if (m_colorValueCache.size() >= maximumColorCacheSize)
+        m_colorValueCache.remove(m_colorValueCache.begin());
 
-    RefPtr<CSSPrimitiveValue> dummyValue;
-    ColorValueCache::AddResult entry = m_colorValueCache.add(rgbValue, dummyValue);
+    ColorValueCache::AddResult entry = m_colorValueCache.add(rgbValue, nullptr);
     if (entry.isNewEntry)
         entry.iterator->value = CSSPrimitiveValue::createColor(rgbValue);
-    return entry.iterator->value;
+    return *entry.iterator->value;
 }
 
-PassRefPtr<CSSPrimitiveValue> CSSValuePool::createValue(double value, CSSPrimitiveValue::UnitTypes type)
+PassRef<CSSPrimitiveValue> CSSValuePool::createValue(double value, CSSPrimitiveValue::UnitTypes type)
 {
     if (value < 0 || value > maximumCacheableIntegerValue)
         return CSSPrimitiveValue::create(value, type);
@@ -108,25 +113,25 @@ PassRefPtr<CSSPrimitiveValue> CSSValuePool::createValue(double value, CSSPrimiti
 
     if (!cache[intValue])
         cache[intValue] = CSSPrimitiveValue::create(value, type);
-    return cache[intValue];
+    return *cache[intValue];
 }
 
-PassRefPtr<CSSPrimitiveValue> CSSValuePool::createFontFamilyValue(const String& familyName)
+PassRef<CSSPrimitiveValue> CSSValuePool::createFontFamilyValue(const String& familyName)
 {
-    RefPtr<CSSPrimitiveValue>& value = m_fontFamilyValueCache.add(familyName, 0).iterator->value;
+    RefPtr<CSSPrimitiveValue>& value = m_fontFamilyValueCache.add(familyName, nullptr).iterator->value;
     if (!value)
         value = CSSPrimitiveValue::create(familyName, CSSPrimitiveValue::CSS_STRING);
-    return value;
+    return *value;
 }
 
 PassRefPtr<CSSValueList> CSSValuePool::createFontFaceValue(const AtomicString& string)
 {
-    // Just wipe out the cache and start rebuilding if it gets too big.
+    // Remove one entry at random if the cache grows too large.
     const int maximumFontFaceCacheSize = 128;
-    if (m_fontFaceValueCache.size() > maximumFontFaceCacheSize)
-        m_fontFaceValueCache.clear();
+    if (m_fontFaceValueCache.size() >= maximumFontFaceCacheSize)
+        m_fontFaceValueCache.remove(m_fontFaceValueCache.begin());
 
-    RefPtr<CSSValueList>& value = m_fontFaceValueCache.add(string, 0).iterator->value;
+    RefPtr<CSSValueList>& value = m_fontFaceValueCache.add(string, nullptr).iterator->value;
     if (!value)
         value = CSSParser::parseFontFaceValue(string);
     return value;
@@ -145,7 +150,7 @@ void CSSValuePool::drain()
         m_pixelValueCache[i] = 0;
         m_percentValueCache[i] = 0;
         m_numberValueCache[i] = 0;
-}
+    }
 }
 
 }

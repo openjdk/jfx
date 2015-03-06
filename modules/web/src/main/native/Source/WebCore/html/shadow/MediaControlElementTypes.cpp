@@ -38,7 +38,7 @@
 #include "MouseEvent.h"
 #include "RenderMedia.h"
 #include "RenderMediaControlElements.h"
-#include "StylePropertySet.h"
+#include "StyleProperties.h"
 
 namespace WebCore {
 
@@ -52,24 +52,23 @@ static const double cSkipTime = 0.2;
 static const double cScanRepeatDelay = 1.5;
 static const double cScanMaximumRate = 8;
 
-HTMLMediaElement* toParentMediaElement(Node* node)
+HTMLMediaElement* parentMediaElement(Node* node)
 {
     if (!node)
-        return 0;
+        return nullptr;
     Node* mediaNode = node->shadowHost();
     if (!mediaNode)
         mediaNode = node;
-    if (!mediaNode || !mediaNode->isElementNode() || !toElement(mediaNode)->isMediaElement())
-        return 0;
-
-    return static_cast<HTMLMediaElement*>(mediaNode);
+    if (!mediaNode->isElementNode() || !toElement(mediaNode)->isMediaElement())
+        return nullptr;
+    return toHTMLMediaElement(mediaNode);
 }
 
 MediaControlElementType mediaControlElementType(Node* node)
 {
     ASSERT_WITH_SECURITY_IMPLICATION(node->isMediaControlElement());
     HTMLElement* element = toHTMLElement(node);
-    if (element->hasTagName(inputTag))
+    if (isHTMLInputElement(element))
         return static_cast<MediaControlInputElement*>(element)->displayType();
     return static_cast<MediaControlDivElement*>(element)->displayType();
 }
@@ -93,7 +92,7 @@ void MediaControlElement::show()
 
 bool MediaControlElement::isShowing() const
 {
-    const StylePropertySet* propertySet = m_element->inlineStyle();
+    const StyleProperties* propertySet = m_element->inlineStyle();
     // Following the code from show() and hide() above, we only have
     // to check for the presense of inline display.
     return (!propertySet || !propertySet->getPropertyCSSValue(CSSPropertyDisplay));
@@ -105,13 +104,13 @@ void MediaControlElement::setDisplayType(MediaControlElementType displayType)
         return;
 
     m_displayType = displayType;
-    if (RenderObject* object = m_element->renderer())
+    if (auto object = m_element->renderer())
         object->repaint();
 }
 
 // ----------------------------
 
-MediaControlDivElement::MediaControlDivElement(Document* document, MediaControlElementType displayType)
+MediaControlDivElement::MediaControlDivElement(Document& document, MediaControlElementType displayType)
     : HTMLDivElement(divTag, document)
     , MediaControlElement(displayType, this)
 {
@@ -119,7 +118,7 @@ MediaControlDivElement::MediaControlDivElement(Document* document, MediaControlE
 
 // ----------------------------
 
-MediaControlInputElement::MediaControlInputElement(Document* document, MediaControlElementType displayType)
+MediaControlInputElement::MediaControlInputElement(Document& document, MediaControlElementType displayType)
     : HTMLInputElement(inputTag, document, 0, false)
     , MediaControlElement(displayType, this)
 {
@@ -127,7 +126,7 @@ MediaControlInputElement::MediaControlInputElement(Document* document, MediaCont
 
 // ----------------------------
 
-MediaControlTimeDisplayElement::MediaControlTimeDisplayElement(Document* document, MediaControlElementType displayType)
+MediaControlTimeDisplayElement::MediaControlTimeDisplayElement(Document& document, MediaControlElementType displayType)
     : MediaControlDivElement(document, displayType)
     , m_currentValue(0)
 {
@@ -140,7 +139,7 @@ void MediaControlTimeDisplayElement::setCurrentValue(double time)
 
 // ----------------------------
 
-MediaControlMuteButtonElement::MediaControlMuteButtonElement(Document* document, MediaControlElementType displayType)
+MediaControlMuteButtonElement::MediaControlMuteButtonElement(Document& document, MediaControlElementType displayType)
     : MediaControlInputElement(document, displayType)
 {
 }
@@ -167,7 +166,7 @@ void MediaControlMuteButtonElement::updateDisplayType()
 
 // ----------------------------
 
-MediaControlSeekButtonElement::MediaControlSeekButtonElement(Document* document, MediaControlElementType displayType)
+MediaControlSeekButtonElement::MediaControlSeekButtonElement(Document& document, MediaControlElementType displayType)
     : MediaControlInputElement(document, displayType)
     , m_actionOnStop(Nothing)
     , m_seekType(Skip)
@@ -236,18 +235,18 @@ double MediaControlSeekButtonElement::nextRate() const
     return rate;
 }
 
-void MediaControlSeekButtonElement::seekTimerFired(Timer<MediaControlSeekButtonElement>*)
+void MediaControlSeekButtonElement::seekTimerFired(Timer<MediaControlSeekButtonElement>&)
 {
     if (m_seekType == Skip) {
         double skipTime = isForwardButton() ? cSkipTime : -cSkipTime;
-        mediaController()->setCurrentTime(mediaController()->currentTime() + skipTime, IGNORE_EXCEPTION);
+        mediaController()->setCurrentTime(mediaController()->currentTime() + skipTime);
     } else
         mediaController()->setPlaybackRate(nextRate());
 }
 
 // ----------------------------
 
-MediaControlVolumeSliderElement::MediaControlVolumeSliderElement(Document* document)
+MediaControlVolumeSliderElement::MediaControlVolumeSliderElement(Document& document)
     : MediaControlInputElement(document, MediaVolumeSlider)
     , m_clearMutedOnUserInteraction(false)
 {
@@ -256,10 +255,10 @@ MediaControlVolumeSliderElement::MediaControlVolumeSliderElement(Document* docum
 void MediaControlVolumeSliderElement::defaultEventHandler(Event* event)
 {
     // Left button is 0. Rejects mouse events not from left button.
-    if (event->isMouseEvent() && static_cast<MouseEvent*>(event)->button())
+    if (event->isMouseEvent() && toMouseEvent(event)->button())
         return;
 
-    if (!attached())
+    if (!renderer())
         return;
 
     MediaControlInputElement::defaultEventHandler(event);
@@ -277,7 +276,7 @@ void MediaControlVolumeSliderElement::defaultEventHandler(Event* event)
 
 bool MediaControlVolumeSliderElement::willRespondToMouseMoveEvents()
 {
-    if (!attached())
+    if (!renderer())
         return false;
 
     return MediaControlInputElement::willRespondToMouseMoveEvents();
@@ -285,7 +284,7 @@ bool MediaControlVolumeSliderElement::willRespondToMouseMoveEvents()
 
 bool MediaControlVolumeSliderElement::willRespondToMouseClickEvents()
 {
-    if (!attached())
+    if (!renderer())
         return false;
 
     return MediaControlInputElement::willRespondToMouseClickEvents();

@@ -29,6 +29,8 @@
 #import "config.h"
 #import "DumpRenderTreeDraggingInfo.h"
 
+#if !PLATFORM(IOS)
+
 #import "DumpRenderTree.h"
 #import "EventSendingController.h"
 #import <WebKit/WebKit.h>
@@ -105,7 +107,6 @@
     return nil;
 }
 
-#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
 - (NSDraggingFormation)draggingFormation
 {
     return NSDraggingFormationDefault;
@@ -140,7 +141,7 @@
 {
     // Ignored.
 }
-#endif // __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
 
 @end
 
+#endif // !PLATFORM(IOS)

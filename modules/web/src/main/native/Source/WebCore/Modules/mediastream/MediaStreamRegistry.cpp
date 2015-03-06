@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2011 Google Inc. All rights reserved.
+ * Copyright (C) 2013 Nokia Corporation and/or its subsidiary(-ies).
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,7 +28,7 @@
 
 #if ENABLE(MEDIA_STREAM)
 
-#include "KURL.h"
+#include "URL.h"
 #include "MediaStream.h"
 #include <wtf/MainThread.h>
 
@@ -41,22 +42,23 @@ MediaStreamRegistry& MediaStreamRegistry::registry()
     return instance;
 }
 
-void MediaStreamRegistry::registerMediaStreamURL(const KURL& url, PassRefPtr<MediaStream> stream)
+void MediaStreamRegistry::registerURL(SecurityOrigin*, const URL& url, URLRegistrable* stream)
 {
+    ASSERT(&stream->registry() == this);
     ASSERT(isMainThread());
-    m_streamDescriptors.set(url.string(), stream->descriptor());
+    m_mediaStreams.set(url.string(), static_cast<MediaStream*>(stream));
 }
 
-void MediaStreamRegistry::unregisterMediaStreamURL(const KURL& url)
+void MediaStreamRegistry::unregisterURL(const URL& url)
 {
     ASSERT(isMainThread());
-    m_streamDescriptors.remove(url.string());
+    m_mediaStreams.remove(url.string());
 }
 
-MediaStreamDescriptor* MediaStreamRegistry::lookupMediaStreamDescriptor(const String& url)
+URLRegistrable* MediaStreamRegistry::lookup(const String& url) const
 {
     ASSERT(isMainThread());
-    return m_streamDescriptors.get(url).get();
+    return m_mediaStreams.get(url);
 }
 
 } // namespace WebCore

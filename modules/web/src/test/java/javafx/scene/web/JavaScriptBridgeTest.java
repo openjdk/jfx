@@ -371,7 +371,7 @@ public class JavaScriptBridgeTest extends TestBase {
         }
     }
     private void executeShouldFail(WebEngine web, String expression) {
-        executeShouldFail(web, expression, "'undefined' is not a function");
+        executeShouldFail(web, expression, "undefined is not a function");
     }
 
     public @Test void testThrowJava() throws InterruptedException {

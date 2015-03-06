@@ -30,18 +30,29 @@
 
 #include "PurgeableBuffer.h"
 
+#if ENABLE(DISK_IMAGE_CACHE)
+#include "DiskImageCacheIOS.h"
+#endif
+
 namespace WebCore {
 
 SharedBuffer::SharedBuffer(CFDataRef cfData)
     : m_size(0)
+    , m_shouldUsePurgeableMemory(false)
+#if ENABLE(DISK_IMAGE_CACHE)
+    , m_isMemoryMapped(false)
+    , m_diskImageCacheId(DiskImageCache::invalidDiskCacheId)
+    , m_notifyMemoryMappedCallback(nullptr)
+    , m_notifyMemoryMappedCallbackData(nullptr)
+#endif
     , m_cfData(cfData)
 {
 }
 
-// Mac is a CF platform but has an even more efficient version of this method,
-// so only use this version for non-Mac
-#if !PLATFORM(MAC) && !(PLATFORM(QT) && USE(QTKIT))
-CFDataRef SharedBuffer::createCFData()
+// Using Foundation allows for an even more efficient implementation of this function,
+// so only use this version for non-Foundation.
+#if !USE(FOUNDATION)
+RetainPtr<CFDataRef> SharedBuffer::createCFData()
 {
     if (m_cfData) {
         CFRetain(m_cfData.get());
@@ -50,7 +61,7 @@ CFDataRef SharedBuffer::createCFData()
 
     // Internal data in SharedBuffer can be segmented. We need to get the contiguous buffer.
     const Vector<char>& contiguousBuffer = buffer();
-    return CFDataCreate(0, reinterpret_cast<const UInt8*>(contiguousBuffer.data()), contiguousBuffer.size());
+    return adoptCF(CFDataCreate(0, reinterpret_cast<const UInt8*>(contiguousBuffer.data()), contiguousBuffer.size()));
 }
 #endif
 
@@ -80,11 +91,11 @@ void SharedBuffer::maybeTransferPlatformData()
         return;
     
     ASSERT(!m_size);
-        
+    
     // Hang on to the m_cfData pointer in a local pointer as append() will re-enter maybeTransferPlatformData()
     // and we need to make sure to early return when it does.
     RetainPtr<CFDataRef> cfData = adoptCF(m_cfData.leakRef());
-        
+
     append(reinterpret_cast<const char*>(CFDataGetBytePtr(cfData.get())), CFDataGetLength(cfData.get()));
 }
 
@@ -110,14 +121,14 @@ void SharedBuffer::append(CFDataRef data)
     m_size += CFDataGetLength(data);
 }
 
-void SharedBuffer::copyDataArrayAndClear(char *destination, unsigned bytesToCopy) const
+void SharedBuffer::copyBufferAndClear(char* destination, unsigned bytesToCopy) const
 {
     if (m_dataArray.isEmpty())
         return;
 
     CFIndex bytesLeft = bytesToCopy;
-    Vector<RetainPtr<CFDataRef> >::const_iterator end = m_dataArray.end();
-    for (Vector<RetainPtr<CFDataRef> >::const_iterator it = m_dataArray.begin(); it != end; ++it) {
+    Vector<RetainPtr<CFDataRef>>::const_iterator end = m_dataArray.end();
+    for (Vector<RetainPtr<CFDataRef>>::const_iterator it = m_dataArray.begin(); it != end; ++it) {
         CFIndex dataLen = CFDataGetLength(it->get());
         ASSERT(bytesLeft >= dataLen);
         memcpy(destination, CFDataGetBytePtr(it->get()), dataLen);
@@ -129,9 +140,9 @@ void SharedBuffer::copyDataArrayAndClear(char *destination, unsigned bytesToCopy
 
 unsigned SharedBuffer::copySomeDataFromDataArray(const char*& someData, unsigned position) const
 {
-    Vector<RetainPtr<CFDataRef> >::const_iterator end = m_dataArray.end();
+    Vector<RetainPtr<CFDataRef>>::const_iterator end = m_dataArray.end();
     unsigned totalOffset = 0;
-    for (Vector<RetainPtr<CFDataRef> >::const_iterator it = m_dataArray.begin(); it != end; ++it) {
+    for (Vector<RetainPtr<CFDataRef>>::const_iterator it = m_dataArray.begin(); it != end; ++it) {
         unsigned dataLen = static_cast<unsigned>(CFDataGetLength(it->get()));
         ASSERT(totalOffset <= position);
         unsigned localOffset = position - totalOffset;

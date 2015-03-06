@@ -235,7 +235,7 @@ u_shapeArabic(const UChar *source, int32_t sourceLength,
 
 
 /** Bit mask for letter shaping options. @stable ICU 2.0 */
-#define U_SHAPE_LETTERS_MASK                    0x18
+#define U_SHAPE_LETTERS_MASK                        0x18
 
 
 /** Digit shaping option: do not perform digit shaping. @stable ICU 2.0 */

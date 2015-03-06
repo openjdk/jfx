@@ -24,10 +24,9 @@
  */
 
 [
-    Conditional=SVG,
     SkipVTableValidation
 ] interface SVGAnimatedLength {
-        readonly attribute SVGLength baseVal;
-        readonly attribute SVGLength animVal;
-    };
+    readonly attribute SVGLength baseVal;
+    readonly attribute SVGLength animVal;
+};
 

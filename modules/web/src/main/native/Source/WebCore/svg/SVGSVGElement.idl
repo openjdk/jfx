@@ -20,45 +20,34 @@
  * Boston, MA 02110-1301, USA.
  */
 
-    // TODO: no css::ViewCSS available!
-    // TODO: Fix SVGSVGElement inheritance (css::DocumentCSS)! 
-    // TODO: no events::DocumentEvent available!
-[
-        Conditional=SVG
-] interface SVGSVGElement : SVGStyledElement,
-                                                SVGTests,
-                                                SVGLangSpace,
-                                                SVGExternalResourcesRequired,
-                                            SVGTransformable,
-                                                SVGFitToViewBox,
-                                                SVGZoomAndPan {
-        readonly attribute SVGAnimatedLength x;
-        readonly attribute SVGAnimatedLength y;
-        readonly attribute SVGAnimatedLength width;
-        readonly attribute SVGAnimatedLength height;
-                 attribute DOMString contentScriptType
-                     /*setter raises(DOMException)*/;
-                 attribute DOMString contentStyleType
-                     /*setter raises(DOMException)*/;
-        readonly attribute SVGRect viewport;
-        readonly attribute float pixelUnitToMillimeterX;
-        readonly attribute float pixelUnitToMillimeterY;
-        readonly attribute float screenPixelToMillimeterX;
-        readonly attribute float screenPixelToMillimeterY;
-        readonly attribute boolean useCurrentView;
-        readonly attribute SVGViewSpec currentView;
-                 attribute float currentScale
-                     /*setter raises(DOMException)*/;
-        readonly attribute SVGPoint currentTranslate;
+// TODO: no css::ViewCSS available!
+// TODO: Fix SVGSVGElement inheritance (css::DocumentCSS)! 
+// TODO: no events::DocumentEvent available!
+interface SVGSVGElement : SVGGraphicsElement {
+    readonly attribute SVGAnimatedLength x;
+    readonly attribute SVGAnimatedLength y;
+    readonly attribute SVGAnimatedLength width;
+    readonly attribute SVGAnimatedLength height;
+             attribute DOMString contentScriptType;
+             attribute DOMString contentStyleType;
+    readonly attribute SVGRect viewport;
+    readonly attribute float pixelUnitToMillimeterX;
+    readonly attribute float pixelUnitToMillimeterY;
+    readonly attribute float screenPixelToMillimeterX;
+    readonly attribute float screenPixelToMillimeterY;
+    readonly attribute boolean useCurrentView;
+    readonly attribute SVGViewSpec currentView;
+             attribute float currentScale;
+    readonly attribute SVGPoint currentTranslate;
 
     unsigned long suspendRedraw([Default=Undefined] optional unsigned long maxWaitMilliseconds);
     void unsuspendRedraw([Default=Undefined] optional unsigned long suspendHandleId);
-        void unsuspendRedrawAll();
-        void forceRedraw();
-        void pauseAnimations();
-        void unpauseAnimations();
-        boolean animationsPaused();
-        float getCurrentTime();
+    void unsuspendRedrawAll();
+    void forceRedraw();
+    void pauseAnimations();
+    void unpauseAnimations();
+    boolean animationsPaused();
+    float getCurrentTime();
     void setCurrentTime([Default=Undefined] optional float seconds);
     NodeList getIntersectionList([Default=Undefined] optional SVGRect rect, 
                                  [Default=Undefined] optional SVGElement referenceElement);
@@ -68,16 +57,19 @@
                               [Default=Undefined] optional SVGRect rect);
     boolean checkEnclosure([Default=Undefined] optional SVGElement element, 
                            [Default=Undefined] optional SVGRect rect);
-        void deselectAll();
+    void deselectAll();
 
-        SVGNumber createSVGNumber();
-        SVGLength createSVGLength();
-        SVGAngle createSVGAngle();
-        SVGPoint createSVGPoint();
-        SVGMatrix createSVGMatrix();
-        SVGRect createSVGRect();
-        SVGTransform createSVGTransform();
+    SVGNumber createSVGNumber();
+    SVGLength createSVGLength();
+    SVGAngle createSVGAngle();
+    SVGPoint createSVGPoint();
+    SVGMatrix createSVGMatrix();
+    SVGRect createSVGRect();
+    SVGTransform createSVGTransform();
     SVGTransform createSVGTransformFromMatrix([Default=Undefined] optional SVGMatrix matrix);
     Element getElementById([Default=Undefined] optional DOMString elementId);
-    };
+};
 
+SVGSVGElement implements SVGExternalResourcesRequired;
+SVGSVGElement implements SVGFitToViewBox;
+SVGSVGElement implements SVGZoomAndPan;

@@ -26,8 +26,6 @@
 #ifndef SMILTimeContainer_h
 #define SMILTimeContainer_h
 
-#if ENABLE(SVG)
-
 #include "QualifiedName.h"
 #include "SMILTime.h"
 #include "Timer.h"
@@ -46,19 +44,19 @@ class SVGSVGElement;
 
 class SMILTimeContainer : public RefCounted<SMILTimeContainer>  {
 public:
-    static PassRefPtr<SMILTimeContainer> create(SVGSVGElement* owner) { return adoptRef(new SMILTimeContainer(owner)); } 
+    static PassRefPtr<SMILTimeContainer> create(SVGSVGElement* owner) { return adoptRef(new SMILTimeContainer(owner)); }
     ~SMILTimeContainer();
 
     void schedule(SVGSMILElement*, SVGElement*, const QualifiedName&);
     void unschedule(SVGSMILElement*, SVGElement*, const QualifiedName&);
     void notifyIntervalsChanged();
-    
+
     SMILTime elapsed() const;
 
     bool isActive() const;
     bool isPaused() const;
     bool isStarted() const;
-    
+
     void begin();
     void pause();
     void resume();
@@ -68,26 +66,27 @@ public:
 
 private:
     SMILTimeContainer(SVGSVGElement* owner);
-    
+
     void timerFired(Timer<SMILTimeContainer>*);
     void startTimer(SMILTime fireTime, SMILTime minimumDelay = 0);
     void updateAnimations(SMILTime elapsed, bool seekToTime = false);
     
     void updateDocumentOrderIndexes();
     void sortByPriority(Vector<SVGSMILElement*>& smilElements, SMILTime elapsed);
-    
+
     double m_beginTime;
     double m_pauseTime;
-    double m_accumulatedPauseTime;
+    double m_accumulatedActiveTime;
+    double m_resumeTime;
     double m_presetStartTime;
 
     bool m_documentOrderIndexesDirty;
     
     Timer<SMILTimeContainer> m_timer;
 
-    typedef pair<SVGElement*, QualifiedName> ElementAttributePair;
+    typedef std::pair<SVGElement*, QualifiedName> ElementAttributePair;
     typedef Vector<SVGSMILElement*> AnimationsVector;
-    typedef HashMap<ElementAttributePair, OwnPtr<AnimationsVector> > GroupedAnimationsMap;
+    typedef HashMap<ElementAttributePair, std::unique_ptr<AnimationsVector>> GroupedAnimationsMap;
     GroupedAnimationsMap m_scheduledAnimations;
 
     SVGSVGElement* m_ownerSVGElement;
@@ -98,5 +97,4 @@ private:
 };
 }
 
-#endif // ENABLE(SVG)
 #endif // SMILTimeContainer_h

@@ -163,7 +163,7 @@ unsigned RenderThemeWinCE::determineClassicState(RenderObject* o)
 ThemeData RenderThemeWinCE::getThemeData(RenderObject* o)
 {
     ThemeData result;
-    switch (o->style()->appearance()) {
+    switch (o->style().appearance()) {
     case PushButtonPart:
     case ButtonPart:
         result.m_part = BP_BUTTON;
@@ -242,22 +242,22 @@ void RenderThemeWinCE::adjustMenuListStyle(StyleResolver* styleResolver, RenderS
     adjustMenuListButtonStyle(styleResolver, style, e);
 }
 
-bool RenderThemeWinCE::paintMenuList(RenderObject* o, const PaintInfo& i, const IntRect& r)
+bool RenderThemeWinCE::paintMenuList(RenderObject* renderer, const PaintInfo& paintInfo, const IntRect& rect)
 {
-    paintTextField(o, i, r);
-    paintMenuListButton(o, i, r);
+    paintTextField(renderer, paintInfo, rect);
+    paintMenuListButtonDecorations(renderer, paintInfo, rect);
     return true;
 }
 
-bool RenderThemeWinCE::paintMenuListButton(RenderObject* o, const PaintInfo& i, const IntRect& r)
+bool RenderThemeWinCE::paintMenuListButtonDecorations(RenderObject* renderer, const PaintInfo& paintInfo, const IntRect& rect)
 {
-    IntRect buttonRect(r.maxX() - dropDownButtonWidth - 1, r.y(), dropDownButtonWidth, r.height());
+    IntRect buttonRect(rect.maxX() - dropDownButtonWidth - 1, rect.y(), dropDownButtonWidth, rect.height());
     buttonRect.inflateY(-1);
-    i.context->drawFrameControl(buttonRect, DFC_SCROLL, DFCS_SCROLLCOMBOBOX | determineClassicState(o));
+    paintInfo.context->drawFrameControl(buttonRect, DFC_SCROLL, DFCS_SCROLLCOMBOBOX | determineClassicState(renderer));
     return true;
 }
 
-void RenderThemeWinCE::systemFont(int propId, FontDescription& fontDescription) const
+void RenderThemeWinCE::systemFont(CSSValueID, FontDescription& fontDescription) const
 {
     notImplemented();
 }
@@ -284,7 +284,7 @@ bool RenderThemeWinCE::supportsHover(const RenderStyle*) const
 }
 
 // Map a CSSValue* system color to an index understood by GetSysColor
-static int cssValueIdToSysColorIndex(int cssValueId)
+static int cssValueIdToSysColorIndex(CSSValueID cssValueId)
 {
     switch (cssValueId) {
     case CSSValueActiveborder: return COLOR_ACTIVEBORDER;
@@ -319,7 +319,7 @@ static int cssValueIdToSysColorIndex(int cssValueId)
     }
 }
 
-Color RenderThemeWinCE::systemColor(int cssValueId) const
+Color RenderThemeWinCE::systemColor(CSSValueID cssValueId) const
 {
     int sysColorIndex = cssValueIdToSysColorIndex(cssValueId);
     if (sysColorIndex == -1)
@@ -400,21 +400,21 @@ void RenderThemeWinCE::adjustSearchFieldCancelButtonStyle(StyleResolver*, Render
     style->setHeight(Length(cancelSize.height(), Fixed));
 }
 
-void RenderThemeWinCE::adjustSearchFieldDecorationStyle(StyleResolver*, RenderStyle* style, Element*) const
+void RenderThemeWinCE::adjustSearchFieldDecorationPartStyle(StyleResolver*, RenderStyle* style, Element*) const
 {
     IntSize emptySize(1, 11);
     style->setWidth(Length(emptySize.width(), Fixed));
     style->setHeight(Length(emptySize.height(), Fixed));
 }
 
-void RenderThemeWinCE::adjustSearchFieldResultsDecorationStyle(StyleResolver*, RenderStyle* style, Element*) const
+void RenderThemeWinCE::adjustSearchFieldResultsDecorationPartStyle(StyleResolver*, RenderStyle* style, Element*) const
 {
     IntSize magnifierSize(15, 11);
     style->setWidth(Length(magnifierSize.width(), Fixed));
     style->setHeight(Length(magnifierSize.height(), Fixed));
 }
 
-bool RenderThemeWinCE::paintSearchFieldResultsDecoration(RenderObject* o, const PaintInfo& paintInfo, const IntRect& r)
+bool RenderThemeWinCE::paintSearchFieldResultsDecorationPart(RenderObject* o, const PaintInfo& paintInfo, const IntRect& r)
 {
     notImplemented();
     return false;
@@ -429,7 +429,7 @@ void RenderThemeWinCE::adjustSearchFieldResultsButtonStyle(StyleResolver*, Rende
 
 bool RenderThemeWinCE::paintSearchFieldResultsButton(RenderObject* o, const PaintInfo& paintInfo, const IntRect& r)
 {
-    paintSearchFieldResultsDecoration(o, paintInfo, r);
+    paintSearchFieldResultsDecorationPart(o, paintInfo, r);
     return false;
 }
 
@@ -454,7 +454,7 @@ void RenderThemeWinCE::adjustMenuListButtonStyle(StyleResolver*, RenderStyle* st
 
     // Calculate our min-height
     int minHeight = style->fontMetrics().height();
-    minHeight = max(minHeight, dropDownBoxMinHeight);
+    minHeight = std::max(minHeight, dropDownBoxMinHeight);
 
     style->setMinHeight(Length(minHeight, Fixed));
 
@@ -485,7 +485,7 @@ static HTMLMediaElement* mediaElementParent(Node* node)
     if (!mediaNode || !mediaNode->isElementNode() || !toElement(mediaNode)->isMediaElement())
         return 0;
 
-    return static_cast<HTMLMediaElement*>(mediaNode);
+    return toHTMLMediaElement(mediaNode);
 }
 #endif
 
@@ -509,7 +509,7 @@ bool RenderThemeWinCE::paintSliderTrack(RenderObject* o, const PaintInfo& i, con
     i.context->setStrokeColor(Color::black, ColorSpaceDeviceRGB);
     i.context->drawLine(left, IntPoint(r.maxX() - 2, left.y()));
     i.context->restore();
-    return rc;
+    return false;
 }
 
 bool RenderThemeWinCE::paintSliderThumb(RenderObject* o, const PaintInfo& i, const IntRect& r)
@@ -518,10 +518,11 @@ bool RenderThemeWinCE::paintSliderThumb(RenderObject* o, const PaintInfo& i, con
     i.context->save();
     i.context->setStrokeColor(Color::black, ColorSpaceDeviceRGB);
     i.context->setFillColor(Color::black, ColorSpaceDeviceRGB);
+    i.context->fillRect(r);
 #if ENABLE(VIDEO)
     HTMLMediaElement* mediaElement = mediaElementParent(o->node());
     if (mediaElement) {
-        float pt = (mediaElement->currentTime() - mediaElement->startTime()) / mediaElement->duration();
+        float pt = mediaElement->currentTime() / mediaElement->duration();
         FloatRect intRect = r;
         intRect.setX(intRect.x() + intRect.width() * pt - 2);
         intRect.setWidth(5);
@@ -529,7 +530,7 @@ bool RenderThemeWinCE::paintSliderThumb(RenderObject* o, const PaintInfo& i, con
     }
 #endif
     i.context->restore();
-    return rc;
+    return false;
 }
 
 void RenderThemeWinCE::adjustSearchFieldStyle(StyleResolver*, RenderStyle* style, Element*) const
@@ -647,5 +648,45 @@ bool RenderThemeWinCE::paintMediaSliderThumb(RenderObject* o, const PaintInfo& p
     return paintSliderThumb(o, paintInfo, r);
 }
 #endif
+
+void RenderThemeWinCE::adjustInnerSpinButtonStyle(StyleResolver*, RenderStyle* style, Element*) const
+{
+    int width = ::GetSystemMetrics(SM_CXVSCROLL);
+    if (width <= 0)
+        width = 17; // Vista's default.
+    style->setWidth(Length(width, Fixed));
+    style->setMinWidth(Length(width, Fixed));
+}
+
+bool RenderThemeWinCE::paintInnerSpinButton(RenderObject* o, const PaintInfo& paintInfo, const IntRect& r)
+{
+    // We split the specified rectangle into two vertically. We can't draw a
+    // spin button of which height is less than 2px.
+    if (r.height() < 2)
+        return false;
+    IntRect upRect(r);
+    upRect.setHeight(r.height() / 2);
+    IntRect downRect(r);
+    downRect.setY(upRect.maxY());
+    downRect.setHeight(r.height() - upRect.height());
+
+    unsigned stateUp = DFCS_SCROLLUP;
+    unsigned stateDown = DFCS_SCROLLDOWN;
+
+    if (!isEnabled(o) || isReadOnlyControl(o)) {
+        stateUp |= DFCS_INACTIVE;
+        stateDown |= DFCS_INACTIVE;
+    } else if (isPressed(o)) {
+        if (isSpinUpButtonPartPressed(o))
+            stateUp |= DFCS_PUSHED;
+        else
+            stateDown |= DFCS_PUSHED;
+    }
+
+    paintInfo.context->drawFrameControl(upRect, DFC_SCROLL, stateUp);
+    paintInfo.context->drawFrameControl(downRect, DFC_SCROLL, stateDown);
+
+    return false;
+}
 
 } // namespace WebCore

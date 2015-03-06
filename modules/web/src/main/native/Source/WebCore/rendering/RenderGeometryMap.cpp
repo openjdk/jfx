@@ -26,6 +26,7 @@
 #include "config.h"
 #include "RenderGeometryMap.h"
 
+#include "RenderFlowThread.h"
 #include "RenderLayer.h"
 #include "RenderView.h"
 #include "TransformState.h"
@@ -158,21 +159,20 @@ void RenderGeometryMap::pushMappingsToAncestor(const RenderObject* renderer, con
     ASSERT(m_mapping.isEmpty() || m_mapping[0].m_renderer->isRenderView());
 }
 
-static bool canMapBetweenRenderers(const RenderObject* renderer, const RenderObject* ancestor)
+static bool canMapBetweenRenderers(const RenderObject& renderer, const RenderObject& ancestor)
 {
-    for (const RenderObject* current = renderer; ; current = current->parent()) {
-        const RenderStyle* style = current->style();
-    if (style->position() == FixedPosition || style->isFlippedBlocksWritingMode())
-        return false;
-    
-        if (current->hasColumns() || current->hasTransform() || current->isRenderFlowThread())
-        return false;
+    for (const RenderObject* current = &renderer; ; current = current->parent()) {
+        const RenderStyle& style = current->style();
+        if (style.position() == FixedPosition || style.isFlippedBlocksWritingMode())
+            return false;
 
-#if ENABLE(SVG)
+        if (current->hasColumns() || current->hasTransform() || current->isRenderFlowThread())
+            return false;
+
         if (current->isSVGRoot())
-        return false;
-#endif
-        if (current == ancestor)
+            return false;
+
+        if (current == &ancestor)
             break;
     }
 
@@ -181,7 +181,7 @@ static bool canMapBetweenRenderers(const RenderObject* renderer, const RenderObj
 
 void RenderGeometryMap::pushMappingsToAncestor(const RenderLayer* layer, const RenderLayer* ancestorLayer)
 {
-    const RenderObject* renderer = layer->renderer();
+    const RenderObject& renderer = layer->renderer();
 
     // We have to visit all the renderers to detect flipped blocks. This might defeat the gains
     // from mapping via layers.
@@ -195,16 +195,16 @@ void RenderGeometryMap::pushMappingsToAncestor(const RenderLayer* layer, const R
         
         // The RenderView must be pushed first.
         if (!m_mapping.size()) {
-            ASSERT(ancestorLayer->renderer()->isRenderView());
-            pushMappingsToAncestor(ancestorLayer->renderer(), 0);
+            ASSERT(ancestorLayer->renderer().isRenderView());
+            pushMappingsToAncestor(&ancestorLayer->renderer(), 0);
         }
 
         TemporaryChange<size_t> positionChange(m_insertionPosition, m_mapping.size());
-        push(renderer, toLayoutSize(layerOffset), /*accumulatingTransform*/ true, /*isNonUniform*/ false, /*isFixedPosition*/ false, /*hasTransform*/ false);
+        push(&renderer, toLayoutSize(layerOffset), /*accumulatingTransform*/ true, /*isNonUniform*/ false, /*isFixedPosition*/ false, /*hasTransform*/ false);
         return;
     }
-    const RenderLayerModelObject* ancestorRenderer = ancestorLayer ? ancestorLayer->renderer() : 0;
-    pushMappingsToAncestor(renderer, ancestorRenderer);
+    const RenderLayerModelObject* ancestorRenderer = ancestorLayer ? &ancestorLayer->renderer() : 0;
+    pushMappingsToAncestor(&renderer, ancestorRenderer);
 }
 
 void RenderGeometryMap::push(const RenderObject* renderer, const LayoutSize& offsetFromContainer, bool accumulatingTransform, bool isNonUniform, bool isFixedPosition, bool hasTransform)
@@ -251,6 +251,12 @@ void RenderGeometryMap::pushView(const RenderView* view, const LayoutSize& scrol
     stepInserted(step);
 }
 
+void RenderGeometryMap::pushRenderFlowThread(const RenderFlowThread* flowThread)
+{
+    m_mapping.append(RenderGeometryMapStep(flowThread, false, false, false, false));
+    stepInserted(m_mapping.last());
+}
+
 void RenderGeometryMap::popMappingsToAncestor(const RenderLayerModelObject* ancestorRenderer)
 {
     ASSERT(m_mapping.size());
@@ -263,7 +269,7 @@ void RenderGeometryMap::popMappingsToAncestor(const RenderLayerModelObject* ance
 
 void RenderGeometryMap::popMappingsToAncestor(const RenderLayer* ancestorLayer)
 {
-    const RenderLayerModelObject* ancestorRenderer = ancestorLayer ? ancestorLayer->renderer() : 0;
+    const RenderLayerModelObject* ancestorRenderer = ancestorLayer ? &ancestorLayer->renderer() : 0;
     popMappingsToAncestor(ancestorRenderer);
 }
 

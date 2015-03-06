@@ -33,18 +33,25 @@
 #include "ErrorEvent.h"
 #include "MessagePort.h"
 #include "PublicURLManager.h"
-#include "ScriptCallStack.h"
 #include "Settings.h"
-#include "WorkerContext.h"
+#include "WorkerGlobalScope.h"
 #include "WorkerThread.h"
+#include <inspector/ScriptCallStack.h>
 #include <wtf/MainThread.h>
+#include <wtf/Ref.h>
 
 // FIXME: This is a layering violation.
 #include "JSDOMWindow.h"
 
+#if PLATFORM(IOS)
+#include "Document.h"
+#endif
+
 #if ENABLE(SQL_DATABASE)
 #include "DatabaseContext.h"
 #endif
+
+using namespace Inspector;
 
 namespace WebCore {
 
@@ -55,7 +62,7 @@ public:
         return adoptPtr(new ProcessMessagesSoonTask);
     }
 
-    virtual void performTask(ScriptExecutionContext* context)
+    virtual void performTask(ScriptExecutionContext* context) override
     {
         context->dispatchMessagePortEvents();
     }
@@ -110,10 +117,6 @@ ScriptExecutionContext::~ScriptExecutionContext()
         ASSERT((*iter)->scriptExecutionContext() == this);
         (*iter)->contextDestroyed();
     }
-#if ENABLE(BLOB)
-    if (m_publicURLManager)
-        m_publicURLManager->contextDestroyed();
-#endif
 }
 
 void ScriptExecutionContext::processMessagePortMessagesSoon()
@@ -123,7 +126,7 @@ void ScriptExecutionContext::processMessagePortMessagesSoon()
 
 void ScriptExecutionContext::dispatchMessagePortEvents()
 {
-    RefPtr<ScriptExecutionContext> protect(this);
+    Ref<ScriptExecutionContext> protect(*this);
 
     // Make a frozen copy.
     Vector<MessagePort*> ports;
@@ -142,10 +145,8 @@ void ScriptExecutionContext::dispatchMessagePortEvents()
 void ScriptExecutionContext::createdMessagePort(MessagePort* port)
 {
     ASSERT(port);
-#if ENABLE(WORKERS)
     ASSERT((isDocument() && isMainThread())
-        || (isWorkerContext() && currentThread() == static_cast<WorkerContext*>(this)->thread()->threadID()));
-#endif
+        || (isWorkerGlobalScope() && currentThread() == toWorkerGlobalScope(this)->thread().threadID()));
 
     m_messagePorts.add(port);
 }
@@ -153,10 +154,8 @@ void ScriptExecutionContext::createdMessagePort(MessagePort* port)
 void ScriptExecutionContext::destroyedMessagePort(MessagePort* port)
 {
     ASSERT(port);
-#if ENABLE(WORKERS)
     ASSERT((isDocument() && isMainThread())
-        || (isWorkerContext() && currentThread() == static_cast<WorkerContext*>(this)->thread()->threadID()));
-#endif
+        || (isWorkerGlobalScope() && currentThread() == toWorkerGlobalScope(this)->thread().threadID()));
 
     m_messagePorts.remove(port);
 }
@@ -180,6 +179,13 @@ bool ScriptExecutionContext::canSuspendActiveDOMObjects()
 
 void ScriptExecutionContext::suspendActiveDOMObjects(ActiveDOMObject::ReasonForSuspension why)
 {
+#if PLATFORM(IOS)
+    if (m_activeDOMObjectsAreSuspended) {
+        ASSERT(m_reasonForSuspendingActiveDOMObjects == ActiveDOMObject::DocumentWillBePaused);
+        return;
+    }
+#endif
+
     // No protection against m_activeDOMObjects changing during iteration: suspend() shouldn't execute arbitrary JS.
     m_iteratingActiveDOMObjects = true;
     ActiveDOMObjectsSet::iterator activeObjectsEnd = m_activeDOMObjects.end();
@@ -277,14 +283,15 @@ void ScriptExecutionContext::closeMessagePorts() {
     }
 }
 
-bool ScriptExecutionContext::sanitizeScriptError(String& errorMessage, int& lineNumber, String& sourceURL, CachedScript* cachedScript)
+bool ScriptExecutionContext::sanitizeScriptError(String& errorMessage, int& lineNumber, int& columnNumber, String& sourceURL, CachedScript* cachedScript)
 {
-    KURL targetURL = completeURL(sourceURL);
+    URL targetURL = completeURL(sourceURL);
     if (securityOrigin()->canRequest(targetURL) || (cachedScript && cachedScript->passesAccessControlCheck(securityOrigin())))
         return false;
     errorMessage = "Script error.";
     sourceURL = String();
     lineNumber = 0;
+    columnNumber = 0;
     return true;
 }
 
@@ -292,13 +299,13 @@ void ScriptExecutionContext::reportException(const String& errorMessage, int lin
 {
     if (m_inDispatchErrorEvent) {
         if (!m_pendingExceptions)
-            m_pendingExceptions = adoptPtr(new Vector<OwnPtr<PendingException> >());
+            m_pendingExceptions = adoptPtr(new Vector<OwnPtr<PendingException>>());
         m_pendingExceptions->append(adoptPtr(new PendingException(errorMessage, lineNumber, columnNumber, sourceURL, callStack)));
         return;
     }
 
     // First report the original exception and only then all the nested ones.
-    if (!dispatchErrorEvent(errorMessage, lineNumber, sourceURL, cachedScript))
+    if (!dispatchErrorEvent(errorMessage, lineNumber, columnNumber, sourceURL, cachedScript))
         logExceptionToConsole(errorMessage, sourceURL, lineNumber, columnNumber, callStack);
 
     if (!m_pendingExceptions)
@@ -311,25 +318,34 @@ void ScriptExecutionContext::reportException(const String& errorMessage, int lin
     m_pendingExceptions.clear();
 }
 
-void ScriptExecutionContext::addConsoleMessage(MessageSource source, MessageLevel level, const String& message, const String& sourceURL, unsigned lineNumber, unsigned columnNumber, ScriptState* state, unsigned long requestIdentifier)
+void ScriptExecutionContext::addConsoleMessage(MessageSource source, MessageLevel level, const String& message, const String& sourceURL, unsigned lineNumber, unsigned columnNumber, JSC::ExecState* state, unsigned long requestIdentifier)
 {
     addMessage(source, level, message, sourceURL, lineNumber, columnNumber, 0, state, requestIdentifier);
 }
 
-bool ScriptExecutionContext::dispatchErrorEvent(const String& errorMessage, int lineNumber, const String& sourceURL, CachedScript* cachedScript)
+bool ScriptExecutionContext::dispatchErrorEvent(const String& errorMessage, int lineNumber, int columnNumber, const String& sourceURL, CachedScript* cachedScript)
 {
     EventTarget* target = errorEventTarget();
     if (!target)
         return false;
 
+#if PLATFORM(IOS)
+    if (target == target->toDOMWindow() && isDocument()) {
+        Settings* settings = static_cast<Document*>(this)->settings();
+        if (settings && !settings->shouldDispatchJavaScriptWindowOnErrorEvents())
+            return false;
+    }
+#endif
+
     String message = errorMessage;
     int line = lineNumber;
+    int column = columnNumber;
     String sourceName = sourceURL;
-    sanitizeScriptError(message, line, sourceName, cachedScript);
+    sanitizeScriptError(message, line, column, sourceName, cachedScript);
 
     ASSERT(!m_inDispatchErrorEvent);
     m_inDispatchErrorEvent = true;
-    RefPtr<ErrorEvent> errorEvent = ErrorEvent::create(message, sourceName, line);
+    RefPtr<ErrorEvent> errorEvent = ErrorEvent::create(message, sourceName, line, column);
     target->dispatchEvent(errorEvent);
     m_inDispatchErrorEvent = false;
     return errorEvent->defaultPrevented();
@@ -347,7 +363,7 @@ int ScriptExecutionContext::circularSequentialID()
 PublicURLManager& ScriptExecutionContext::publicURLManager()
 {
     if (!m_publicURLManager)
-        m_publicURLManager = PublicURLManager::create();
+        m_publicURLManager = PublicURLManager::create(this);
     return *m_publicURLManager;
 }
 #endif
@@ -394,10 +410,8 @@ JSC::VM* ScriptExecutionContext::vm()
      if (isDocument())
         return JSDOMWindow::commonVM();
 
-#if ENABLE(WORKERS)
-    if (isWorkerContext())
-        return static_cast<WorkerContext*>(this)->script()->vm();
-#endif
+    if (isWorkerGlobalScope())
+        return toWorkerGlobalScope(this)->script()->vm();
 
     ASSERT_NOT_REACHED();
     return 0;

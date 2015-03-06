@@ -29,8 +29,8 @@
 
 namespace WebCore {
 
-TextDocument::TextDocument(Frame* frame, const KURL& url)
-    : HTMLDocument(frame, url)
+TextDocument::TextDocument(Frame* frame, const URL& url)
+    : HTMLDocument(frame, url, TextDocumentClass)
 {
     setCompatibilityMode(QuirksMode);
     lockCompatibilityMode();
@@ -38,7 +38,7 @@ TextDocument::TextDocument(Frame* frame, const KURL& url)
 
 PassRefPtr<DocumentParser> TextDocument::createParser()
 {
-    return TextDocumentParser::create(this);
+    return TextDocumentParser::create(*this);
 }
 
 }

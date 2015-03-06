@@ -34,37 +34,39 @@
 
 namespace WebCore {
 
-class PseudoElement FINAL : public Element {
+class PseudoElement final : public Element {
 public:
-    static PassRefPtr<PseudoElement> create(Element* parent, PseudoId pseudoId)
+    static PassRefPtr<PseudoElement> create(Element& host, PseudoId pseudoId)
     {
-        return adoptRef(new PseudoElement(parent, pseudoId));
+        return adoptRef(new PseudoElement(host, pseudoId));
     }
-    ~PseudoElement();
+    virtual ~PseudoElement();
 
-    virtual PassRefPtr<RenderStyle> customStyleForRenderer() OVERRIDE;
-    virtual void attach() OVERRIDE;
-    virtual bool rendererIsNeeded(const NodeRenderingContext&) OVERRIDE;
+    Element* hostElement() const { return m_hostElement; }
+    void clearHostElement() { m_hostElement = nullptr; }
+
+    virtual PassRefPtr<RenderStyle> customStyleForRenderer() override;
+    virtual void didAttachRenderers() override;
+    virtual bool rendererIsNeeded(const RenderStyle&) override;
 
     // As per http://dev.w3.org/csswg/css3-regions/#flow-into, pseudo-elements such as ::first-line, ::first-letter, ::before or ::after
     // cannot be directly collected into a named flow.
-    virtual bool moveToFlowThreadIsNeeded(RefPtr<RenderStyle>& cachedStyle) OVERRIDE
-    {
-        UNUSED_PARAM(cachedStyle);
-        return false;
-    }
+#if ENABLE(CSS_REGIONS)
+    virtual bool shouldMoveToFlowThread(const RenderStyle&) const override { return false; }
+#endif
 
-    virtual bool canStartSelection() const OVERRIDE { return false; }
-    virtual bool canContainRangeEndPoint() const OVERRIDE { return false; }
+    virtual bool canStartSelection() const override { return false; }
+    virtual bool canContainRangeEndPoint() const override { return false; }
 
     static String pseudoElementNameForEvents(PseudoId);
 
 private:
-    PseudoElement(Element*, PseudoId);
+    PseudoElement(Element&, PseudoId);
 
-    virtual void didRecalcStyle(StyleChange) OVERRIDE;
-    virtual PseudoId customPseudoId() const OVERRIDE { return m_pseudoId; }
+    virtual void didRecalcStyle(Style::Change) override;
+    virtual PseudoId customPseudoId() const override { return m_pseudoId; }
 
+    Element* m_hostElement;
     PseudoId m_pseudoId;
 };
 
@@ -72,8 +74,12 @@ const QualifiedName& pseudoElementTagName();
 
 inline bool pseudoElementRendererIsNeeded(const RenderStyle* style)
 {
-    return style && style->display() != NONE && (style->contentData() || !style->regionThread().isEmpty());
+    return style && style->display() != NONE && (style->contentData() || style->hasFlowFrom());
 }
+
+void isPseudoElement(const PseudoElement&); // Catch unnecessary runtime check of type known at compile time.
+inline bool isPseudoElement(const Node& node) { return node.isPseudoElement(); }
+NODE_TYPE_CASTS(PseudoElement)
 
 } // namespace
 

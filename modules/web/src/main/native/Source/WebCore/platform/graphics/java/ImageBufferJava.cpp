@@ -144,6 +144,11 @@ PassRefPtr<Image> ImageBuffer::copyImage(BackingStoreCopy copyBehavior, ScaleBeh
         m_size.width(), m_size.height());
 }
 
+BackingStoreCopy ImageBuffer::fastCopyImageMode()
+{
+    return CopyBackingStore; // todo tav revise
+}
+
 void ImageBuffer::platformTransformColorSpace(const Vector<int> &lookUpTable)
 {
     notImplemented();
@@ -366,7 +371,8 @@ void ImageBuffer::drawPattern(
     const FloatPoint& phase,
     ColorSpace styleColorSpace,
     CompositeOperator op,
-    const FloatRect& destRect)
+    const FloatRect& destRect,
+    BlendMode bm) // todo tav new param
 {
     RefPtr<Image> imageCopy = copyImage();
     imageCopy->drawPattern(

@@ -29,15 +29,15 @@ namespace WebCore {
 
 class HTMLDivElement : public HTMLElement {
 public:
-    static PassRefPtr<HTMLDivElement> create(Document*);
-    static PassRefPtr<HTMLDivElement> create(const QualifiedName&, Document*);
+    static PassRefPtr<HTMLDivElement> create(Document&);
+    static PassRefPtr<HTMLDivElement> create(const QualifiedName&, Document&);
 
 protected:
-    HTMLDivElement(const QualifiedName&, Document*);
+    HTMLDivElement(const QualifiedName&, Document&);
 
 private:
-    virtual bool isPresentationAttribute(const QualifiedName&) const OVERRIDE;
-    virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStylePropertySet*) OVERRIDE;
+    virtual bool isPresentationAttribute(const QualifiedName&) const override;
+    virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStyleProperties&) override;
 };
 
 } // namespace WebCore

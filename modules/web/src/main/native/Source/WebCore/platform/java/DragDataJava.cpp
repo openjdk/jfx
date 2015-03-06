@@ -10,7 +10,7 @@
 #include "Clipboard.h"
 #include "ClipboardJava.h"
 #include "DocumentFragment.h"
-#include "KURL.h"
+#include "URL.h"
 #include "markup.h"
 #include "NotImplemented.h"
 
@@ -88,7 +88,7 @@ bool DragData::containsCompatibleContent() const
         || containsColor();
 }
 
-PassRefPtr<DocumentFragment> DragData::asFragment(Frame* frame, PassRefPtr<Range>, bool, bool&) const
+PassRefPtr<DocumentFragment> DragData::asFragment(Frame* frame, Range&, bool, bool&) const
 {     
     /*
      * Order is richest format first. On OSX this is:
@@ -113,7 +113,7 @@ PassRefPtr<DocumentFragment> DragData::asFragment(Frame* frame, PassRefPtr<Range
         String sBase;
         String sHtml = m_platformDragData->asHTML(&sBase);
         RefPtr<DocumentFragment> fragment = createFragmentFromMarkup(
-            frame->document(),
+            *frame->document(),
             sHtml,
             sBase,
             DisallowScriptingContent);

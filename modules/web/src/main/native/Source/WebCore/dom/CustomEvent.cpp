@@ -27,6 +27,7 @@
 #include "CustomEvent.h"
 
 #include "EventNames.h"
+#include <runtime/JSCInlines.h>
 
 namespace WebCore {
 
@@ -48,7 +49,7 @@ CustomEvent::~CustomEvent()
 {
 }
 
-void CustomEvent::initCustomEvent(const AtomicString& type, bool canBubble, bool cancelable, const ScriptValue& detail)
+void CustomEvent::initCustomEvent(const AtomicString& type, bool canBubble, bool cancelable, const Deprecated::ScriptValue& detail)
 {
     ASSERT(!m_serializedScriptValue.get());
     if (dispatched())
@@ -59,9 +60,9 @@ void CustomEvent::initCustomEvent(const AtomicString& type, bool canBubble, bool
     m_detail = detail;
 }
 
-const AtomicString& CustomEvent::interfaceName() const
+EventInterface CustomEvent::eventInterface() const
 {
-    return eventNames().interfaceForCustomEvent;
+    return CustomEventInterfaceType;
 }
 
 } // namespace WebCore

@@ -53,6 +53,10 @@ public:
     virtual void popGroupMarkerEXT(void);
     virtual void drawBuffersEXT(GC3Dsizei, const GC3Denum*);
 
+    virtual void drawArraysInstanced(GC3Denum mode, GC3Dint first, GC3Dsizei count, GC3Dsizei primcount);
+    virtual void drawElementsInstanced(GC3Denum mode, GC3Dsizei count, GC3Denum type, long long offset, GC3Dsizei primcount);
+    virtual void vertexAttribDivisor(GC3Duint index, GC3Duint divisor);
+
 protected:
     // This class only needs to be instantiated by GraphicsContext3D implementations.
     friend class GraphicsContext3D;
@@ -60,7 +64,7 @@ protected:
 
     virtual bool supportsExtension(const WTF::String&);
     virtual String getExtensions();
-#if (PLATFORM(GTK) || PLATFORM(QT) || PLATFORM(EFL))
+#if (PLATFORM(GTK) || PLATFORM(EFL) || PLATFORM(WIN))
 private:
     bool isVertexArrayObjectSupported();
 #endif

@@ -26,19 +26,21 @@
 #include "CachedResourceClient.h"
 #include "Document.h"
 #include <wtf/HashCountedSet.h>
-#include <wtf/text/AtomicStringHash.h>
 
 namespace WebCore {
 
-class FrameView;
-class HTMLElement;
-
 class HTMLDocument : public Document, public CachedResourceClient {
 public:
-    static PassRefPtr<HTMLDocument> create(Frame* frame, const KURL& url)
+    static PassRefPtr<HTMLDocument> create(Frame* frame, const URL& url)
     {
-        return adoptRef(new HTMLDocument(frame, url));
+        return adoptRef(new HTMLDocument(frame, url, HTMLDocumentClass));
     }
+
+    static PassRefPtr<HTMLDocument> createSynthesizedDocument(Frame* frame, const URL& url)
+    {
+        return adoptRef(new HTMLDocument(frame, url, HTMLDocumentClass, Synthesized));
+    }
+
     virtual ~HTMLDocument();
 
     int width();
@@ -53,15 +55,15 @@ public:
     Element* activeElement();
     bool hasFocus();
 
-    String bgColor();
+    const AtomicString& bgColor() const;
     void setBgColor(const String&);
-    String fgColor();
+    const AtomicString& fgColor() const;
     void setFgColor(const String&);
-    String alinkColor();
+    const AtomicString& alinkColor() const;
     void setAlinkColor(const String&);
-    String linkColor();
+    const AtomicString& linkColor() const;
     void setLinkColor(const String&);
-    String vlinkColor();
+    const AtomicString& vlinkColor() const;
     void setVlinkColor(const String&);
 
     void clear();
@@ -69,38 +71,39 @@ public:
     void captureEvents();
     void releaseEvents();
 
-    DocumentOrderedMap& documentNamedItemMap() { return m_documentNamedItem; }
-    DocumentOrderedMap& windowNamedItemMap() { return m_windowNamedItem; }
+    Element* documentNamedItem(const AtomicStringImpl& name) const { return m_documentNamedItem.getElementByDocumentNamedItem(name, *this); }
+    bool hasDocumentNamedItem(const AtomicStringImpl& name) const { return m_documentNamedItem.contains(name); }
+    bool documentNamedItemContainsMultipleElements(const AtomicStringImpl& name) const { return m_documentNamedItem.containsMultiple(name); }
+    void addDocumentNamedItem(const AtomicStringImpl&, Element&);
+    void removeDocumentNamedItem(const AtomicStringImpl&, Element&);
+
+    Element* windowNamedItem(const AtomicStringImpl& name) const { return m_windowNamedItem.getElementByWindowNamedItem(name, *this); }
+    bool hasWindowNamedItem(const AtomicStringImpl& name) const { return m_windowNamedItem.contains(name); }
+    bool windowNamedItemContainsMultipleElements(const AtomicStringImpl& name) const { return m_windowNamedItem.containsMultiple(name); }
+    void addWindowNamedItem(const AtomicStringImpl&, Element&);
+    void removeWindowNamedItem(const AtomicStringImpl&, Element&);
 
     static bool isCaseSensitiveAttribute(const QualifiedName&);
 
 protected:
-    HTMLDocument(Frame*, const KURL&, DocumentClassFlags = 0);
+    HTMLDocument(Frame*, const URL&, DocumentClassFlags = 0, unsigned constructionFlags = 0);
 
 private:
-    virtual PassRefPtr<Element> createElement(const AtomicString& tagName, ExceptionCode&);
+    virtual PassRefPtr<Element> createElement(const AtomicString& tagName, ExceptionCode&) override;
 
-    virtual bool isFrameSet() const;
-    virtual PassRefPtr<DocumentParser> createParser();
+    virtual bool isFrameSet() const override;
+    virtual PassRefPtr<DocumentParser> createParser() override;
+
+    virtual PassRefPtr<Document> cloneDocumentWithoutChildren() const override final;
 
     DocumentOrderedMap m_documentNamedItem;
     DocumentOrderedMap m_windowNamedItem;
 };
 
-inline HTMLDocument* toHTMLDocument(Document* document)
-{
-    ASSERT_WITH_SECURITY_IMPLICATION(!document || document->isHTMLDocument());
-    return static_cast<HTMLDocument*>(document);
-}
+inline bool isHTMLDocument(const Document& document) { return document.isHTMLDocument(); }
+void isHTMLDocument(const HTMLDocument&); // Catch unnecessary runtime check of type known at compile time.
 
-inline const HTMLDocument* toHTMLDocument(const Document* document)
-{
-    ASSERT_WITH_SECURITY_IMPLICATION(!document || document->isHTMLDocument());
-    return static_cast<const HTMLDocument*>(document);
-}
-
-// This will catch anyone doing an unnecessary cast.
-void toHTMLDocument(const HTMLDocument*);
+DOCUMENT_TYPE_CASTS(HTMLDocument)
 
 } // namespace WebCore
 

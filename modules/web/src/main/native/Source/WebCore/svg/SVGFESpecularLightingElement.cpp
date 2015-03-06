@@ -21,7 +21,7 @@
 
 #include "config.h"
 
-#if ENABLE(SVG) && ENABLE(FILTERS)
+#if ENABLE(FILTERS)
 #include "SVGFESpecularLightingElement.h"
 
 #include "Attribute.h"
@@ -54,7 +54,7 @@ BEGIN_REGISTER_ANIMATED_PROPERTIES(SVGFESpecularLightingElement)
     REGISTER_PARENT_ANIMATED_PROPERTIES(SVGFilterPrimitiveStandardAttributes)
 END_REGISTER_ANIMATED_PROPERTIES
 
-inline SVGFESpecularLightingElement::SVGFESpecularLightingElement(const QualifiedName& tagName, Document* document)
+inline SVGFESpecularLightingElement::SVGFESpecularLightingElement(const QualifiedName& tagName, Document& document)
     : SVGFilterPrimitiveStandardAttributes(tagName, document)
     , m_specularConstant(1)
     , m_specularExponent(1)
@@ -64,7 +64,7 @@ inline SVGFESpecularLightingElement::SVGFESpecularLightingElement(const Qualifie
     registerAnimatedPropertiesForSVGFESpecularLightingElement();
 }
 
-PassRefPtr<SVGFESpecularLightingElement> SVGFESpecularLightingElement::create(const QualifiedName& tagName, Document* document)
+PassRefPtr<SVGFESpecularLightingElement> SVGFESpecularLightingElement::create(const QualifiedName& tagName, Document& document)
 {
     return adoptRef(new SVGFESpecularLightingElement(tagName, document));
 }
@@ -91,7 +91,7 @@ bool SVGFESpecularLightingElement::isSupportedAttribute(const QualifiedName& att
         supportedAttributes.add(SVGNames::surfaceScaleAttr);
         supportedAttributes.add(SVGNames::kernelUnitLengthAttr);
     }
-    return supportedAttributes.contains<QualifiedName, SVGAttributeHashTranslator>(attrName);
+    return supportedAttributes.contains<SVGAttributeHashTranslator>(attrName);
 }
 
 void SVGFESpecularLightingElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
@@ -140,8 +140,7 @@ bool SVGFESpecularLightingElement::setFilterEffectAttribute(FilterEffect* effect
     if (attrName == SVGNames::lighting_colorAttr) {
         RenderObject* renderer = this->renderer();
         ASSERT(renderer);
-        ASSERT(renderer->style());
-        return specularLighting->setLightingColor(renderer->style()->svgStyle()->lightingColor());
+        return specularLighting->setLightingColor(renderer->style().svgStyle().lightingColor());
     }
     if (attrName == SVGNames::surfaceScaleAttr)
         return specularLighting->setSurfaceScale(surfaceScale());
@@ -229,8 +228,7 @@ PassRefPtr<FilterEffect> SVGFESpecularLightingElement::build(SVGFilterBuilder* f
     if (!renderer)
         return 0;
     
-    ASSERT(renderer->style());
-    Color color = renderer->style()->svgStyle()->lightingColor();
+    Color color = renderer->style().svgStyle().lightingColor();
 
     RefPtr<FilterEffect> effect = FESpecularLighting::create(filter, color, surfaceScale(), specularConstant(),
                                           specularExponent(), kernelUnitLengthX(), kernelUnitLengthY(), lightSource.release());
@@ -240,4 +238,4 @@ PassRefPtr<FilterEffect> SVGFESpecularLightingElement::build(SVGFilterBuilder* f
 
 }
 
-#endif // ENABLE(SVG)
+#endif // ENABLE(FILTERS)

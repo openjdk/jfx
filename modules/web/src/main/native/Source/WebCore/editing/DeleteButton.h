@@ -32,12 +32,14 @@ namespace WebCore {
 
 class DeleteButton : public HTMLImageElement {
 public:
-    static PassRefPtr<DeleteButton> create(Document*);
+    static PassRefPtr<DeleteButton> create(Document&);
 
-    virtual bool willRespondToMouseClickEvents() OVERRIDE { return true; }
+#if !PLATFORM(IOS)
+    virtual bool willRespondToMouseClickEvents() override { return true; }
+#endif // !PLATFORM(IOS)
 
 private:
-    explicit DeleteButton(Document*);
+    explicit DeleteButton(Document&);
 
     virtual void defaultEventHandler(Event*);
 };

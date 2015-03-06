@@ -24,14 +24,15 @@
  */
 
 #include "config.h"
-#include "Element.h"
 #include "InsertListCommand.h"
-#include "DocumentFragment.h"
+
+#include "Element.h"
+#include "ElementTraversal.h"
 #include "ExceptionCodePlaceholder.h"
 #include "htmlediting.h"
 #include "HTMLElement.h"
 #include "HTMLNames.h"
-#include "TextIterator.h"
+#include "Range.h"
 #include "VisibleUnits.h"
 
 namespace WebCore {
@@ -46,7 +47,7 @@ static Node* enclosingListChild(Node* node, Node* listNode)
     return listChild;
 }
 
-PassRefPtr<HTMLElement> InsertListCommand::insertList(Document* document, Type type)
+PassRefPtr<HTMLElement> InsertListCommand::insertList(Document& document, Type type)
 {
     RefPtr<InsertListCommand> insertCommand = create(document, type);
     insertCommand->apply();
@@ -70,10 +71,13 @@ PassRefPtr<HTMLElement> InsertListCommand::mergeWithNeighboringLists(PassRefPtr<
     if (canMergeLists(previousList, list.get()))
         mergeIdenticalElements(previousList, list);
 
-    if (!list || !list->nextElementSibling() || !list->nextElementSibling()->isHTMLElement())
+    if (!list)
+        return 0;
+    Element* sibling = ElementTraversal::nextSibling(list.get());
+    if (!sibling || !sibling->isHTMLElement())
         return list.release();
 
-    RefPtr<HTMLElement> nextList = toHTMLElement(list->nextElementSibling());
+    RefPtr<HTMLElement> nextList = toHTMLElement(sibling);
     if (canMergeLists(list.get(), nextList.get())) {
         mergeIdenticalElements(list, nextList);
         return nextList.release();
@@ -99,8 +103,9 @@ bool InsertListCommand::selectionHasListOfType(const VisibleSelection& selection
     return true;
 }
 
-InsertListCommand::InsertListCommand(Document* document, Type type) 
-    : CompositeEditCommand(document), m_type(type)
+InsertListCommand::InsertListCommand(Document& document, Type type)
+    : CompositeEditCommand(document)
+    , m_type(type)
 {
 }
 
@@ -378,7 +383,7 @@ PassRefPtr<HTMLElement> InsertListCommand::listifyParagraph(const VisiblePositio
         // Layout is necessary since start's node's inline renderers may have been destroyed by the insertion
         // The end of the content may have changed after the insertion and layout so update it as well.
         if (insertionPos == start.deepEquivalent()) {
-            listElement->document()->updateLayoutIgnorePendingStylesheets();
+            listElement->document().updateLayoutIgnorePendingStylesheets();
             start = startOfParagraph(originalStart, CanSkipOverEditingBoundary);
             end = endOfParagraph(start, CanSkipOverEditingBoundary);
         }
