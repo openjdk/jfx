@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package com.sun.javafx.css;
 
+import com.sun.javafx.scene.layout.region.CornerRadiiConverter;
 import com.sun.javafx.util.Logging;
 import javafx.css.CssMetaData;
 import javafx.css.ParsedValue;
@@ -264,8 +265,9 @@ public class StyleConverterImpl<F, T> extends StyleConverter<F, T> {
         case "com.sun.javafx.scene.layout.region.Margins$SequenceConverter" :
             styleConverter = com.sun.javafx.scene.layout.region.Margins.SequenceConverter.getInstance();
             break;
-        case "javafx.scene.layout.CornerRadiiConverter" :
-            styleConverter = javafx.scene.layout.CornerRadiiConverter.getInstance();
+        case "javafx.scene.layout.CornerRadiiConverter" :  // Fix for RT-39665
+        case "com.sun.javafx.scene.layout.region.CornerRadiiConverter" :
+            styleConverter = CornerRadiiConverter.getInstance();
             break;
 
         // parser stuff

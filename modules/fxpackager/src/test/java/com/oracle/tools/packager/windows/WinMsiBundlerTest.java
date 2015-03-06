@@ -55,6 +55,7 @@ import static com.oracle.tools.packager.windows.WinAppBundler.ICON_ICO;
 import static com.oracle.tools.packager.windows.WinMsiBundler.PRODUCT_VERSION;
 import static com.oracle.tools.packager.windows.WindowsBundlerParam.WIN_RUNTIME;
 import static com.oracle.tools.packager.windows.WindowsBundlerParam.MENU_GROUP;
+import static com.oracle.tools.packager.windows.WindowsBundlerParam.INSTALLDIR_CHOOSER;
 import static org.junit.Assert.*;
 
 public class WinMsiBundlerTest {
@@ -83,7 +84,10 @@ public class WinMsiBundlerTest {
         appResourcesDir = new File("build/tmp/tests", "appResources");
         fakeMainJar = new File(appResourcesDir, "mainApp.jar");
 
-        appResources = new HashSet<>(Arrays.asList(fakeMainJar));
+        appResources = new HashSet<>(Arrays.asList(fakeMainJar,
+                new File(appResourcesDir, "LICENSE"),
+                new File(appResourcesDir, "LICENSE2")
+        ));
     }
 
     @Before
@@ -148,6 +152,7 @@ public class WinMsiBundlerTest {
         );
         bundleParams.put(CLASSPATH.getID(), "mainApp.jar");
         bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        bundleParams.put(LICENSE_FILE.getID(), Arrays.asList("LICENSE", "LICENSE2"));
         bundleParams.put(VERBOSE.getID(), true);
 
         boolean valid = bundler.validate(bundleParams);
@@ -264,6 +269,20 @@ public class WinMsiBundlerTest {
         assertNull(output);
     }
 
+    @Test(expected = ConfigException.class)
+    public void invalidLicenseFile() throws ConfigException, UnsupportedPlatformException {
+        Bundler bundler = new WinMsiBundler();
+
+        Map<String, Object> bundleParams = new HashMap<>();
+
+        bundleParams.put(BUILD_ROOT.getID(), tmpBase);
+
+        bundleParams.put(APP_RESOURCES.getID(), new RelativeFileSet(appResourcesDir, appResources));
+        bundleParams.put(LICENSE_FILE.getID(), "BOGUS_LICENSE");
+
+        bundler.validate(bundleParams);
+    }
+    
     @Test
     public void testValidateVersion() {
         String validVersions[] = {null, "1", "255", "1.0", "255.255.0", "255.255.6000"};
@@ -304,6 +323,7 @@ public class WinMsiBundlerTest {
         bundleParams.put(WIN_RUNTIME.getID(), System.getProperty("java.home"));
 
         bundleParams.put(DESCRIPTION.getID(), "Everything Description");
+        bundleParams.put(LICENSE_FILE.getID(), "LICENSE");
         bundleParams.put(MENU_GROUP.getID(), "EverythingMenuGroup");
         bundleParams.put(MENU_HINT.getID(), true);
 //                RUN_AT_STARTUP,
@@ -312,6 +332,7 @@ public class WinMsiBundlerTest {
 //                START_ON_INSTALL,
 //                STOP_ON_UNINSTALL,
         bundleParams.put(SYSTEM_WIDE.getID(), false);
+        bundleParams.put(INSTALLDIR_CHOOSER.getID(), true);
         bundleParams.put(VENDOR.getID(), "Everything Vendor");
         System.out.println(bundleParams.keySet());
 

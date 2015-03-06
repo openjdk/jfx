@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -2892,7 +2892,6 @@ public class TableView<S> extends Control {
                 oldList.removeListener(weakItemsContentListener);
             }
             if (newList != null) {
-                newList.removeListener(weakItemsContentListener);
                 newList.addListener(weakItemsContentListener);
             }
 
@@ -3195,10 +3194,7 @@ public class TableView<S> extends Control {
             // the tableview items list has changed, we need to observe
             // the new list, and remove any observer we had from the old list
             if (oldList != null) oldList.removeListener(weakItemsContentListener);
-            if (newList != null) {
-                newList.removeListener(weakItemsContentListener);
-                newList.addListener(weakItemsContentListener);
-            }
+            if (newList != null) newList.addListener(weakItemsContentListener);
 
             updateDefaultFocus();
         }

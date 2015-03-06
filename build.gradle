@@ -3101,6 +3101,8 @@ compileTargets { t ->
             javafxProperties.delete()
             javafxProperties << "javafx.runtime.version=$RAW_VERSION";
             javafxProperties << "\n"
+            javafxProperties << "javafx.runtime.build=b$PROMOTED_BUILD_NUMBER";
+            javafxProperties << "\n"
             // Include any properties that have been defined (most likely in
             // one of the various platform gradle files)
             if (targetProperties.containsKey("javafxProperties")) {
