@@ -759,12 +759,14 @@ public abstract class TextInputControl extends Control {
         int last = wordIterator.following(Utils.clamp(0, getCaretPosition(), textLength-1));
         int current = wordIterator.next();
 
-        // Skip non-word characters to the beginning of next word, but
+        // Skip whitespace characters to the beginning of next word, but
         // stop at newline. Then move the caret or select a range.
         while (current != BreakIterator.DONE) {
             for (int p=last; p<=current; p++) {
                 char ch = text.charAt(Utils.clamp(0, p, textLength-1));
-                if (Character.isLetterOrDigit(ch) || ch == '\n') {
+                // Avoid using Character.isSpaceChar() and Character.isWhitespace(),
+                // because they include LINE_SEPARATOR, PARAGRAPH_SEPARATOR, etc.
+                if (ch != ' ' && ch != '\t') {
                     if (select) {
                         selectRange(getAnchor(), p);
                     } else {
