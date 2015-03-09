@@ -1725,4 +1725,33 @@ public class ListViewTest {
         lv.getSelectionModel().selectIndices(1, 2);
         lv.getSelectionModel().clearSelection();
     }
+
+    /**
+     * ClearAndSelect fires invalid change event if selectedIndex is unchanged.
+     */
+    private int rt_40212_count = 0;
+    @Test public void test_rt_40212() {
+        final ListView<Integer> lv = new ListView<>();
+        for (int i = 0; i < 10; i++) {
+            lv.getItems().add(i);
+        }
+
+        MultipleSelectionModel<Integer> sm = lv.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        sm.selectRange(3, 5);
+        int selected = sm.getSelectedIndex();
+
+        sm.getSelectedIndices().addListener((ListChangeListener<Integer>) change -> {
+            assertEquals("sanity: selectedIndex unchanged", selected, sm.getSelectedIndex());
+            while(change.next()) {
+                assertEquals("single event on clearAndSelect already selected", 1, ++rt_40212_count);
+
+                boolean type = change.wasAdded() || change.wasRemoved() || change.wasPermutated() || change.wasUpdated();
+                assertTrue("at least one of the change types must be true", type);
+            }
+        });
+
+        sm.clearAndSelect(selected);
+    }
 }

@@ -54,6 +54,7 @@ import javafx.beans.binding.Bindings;
 import javafx.beans.binding.ObjectBinding;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
+import javafx.beans.property.ReadOnlyIntegerWrapper;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.beans.property.SimpleObjectProperty;
@@ -5542,5 +5543,47 @@ public class TreeTableViewTest {
         assertEquals(0, sm.getSelectedIndex());
         assertEquals(root, sm.getSelectedItem());
         assertEquals(4, rt_40010_count);
+    }
+
+    /**
+     * ClearAndSelect fires invalid change event if selectedIndex is unchanged.
+     */
+    private int rt_40212_count = 0;
+    @Test public void test_rt_40212() {
+        TreeItem<String> root = new TreeItem<>("Root");
+        root.setExpanded(true);
+        root.getChildren().addAll(
+                new TreeItem<>("0"),
+                new TreeItem<>("1"),
+                new TreeItem<>("2"),
+                new TreeItem<>("3"),
+                new TreeItem<>("4"),
+                new TreeItem<>("5")
+        );
+
+        TreeTableView<String> stringTreeTableView = new TreeTableView<>(root);
+        stringTreeTableView.setShowRoot(false);
+
+        TreeTableView.TreeTableViewSelectionModel<String> sm = stringTreeTableView.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        TreeTableColumn<String,String> column = new TreeTableColumn<>("Column");
+        column.setCellValueFactory(cdf -> new ReadOnlyStringWrapper(cdf.getValue().getValue()));
+        stringTreeTableView.getColumns().add(column);
+
+        sm.selectRange(3, 5);
+        int selected = sm.getSelectedIndex();
+
+        sm.getSelectedIndices().addListener((ListChangeListener<Integer>) change -> {
+            assertEquals("sanity: selectedIndex unchanged", selected, sm.getSelectedIndex());
+            while(change.next()) {
+                assertEquals("single event on clearAndSelect already selected", 1, ++rt_40212_count);
+
+                boolean type = change.wasAdded() || change.wasRemoved() || change.wasPermutated() || change.wasUpdated();
+                assertTrue("at least one of the change types must be true", type);
+            }
+        });
+
+        sm.clearAndSelect(selected);
     }
 }
